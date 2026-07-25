@@ -24,7 +24,7 @@ namespace NoMercy.Tests.Api;
 /// Behavioural guarantees (source flip, auto-skip) are exercised in the
 /// encoder test project via the <c>ContentSegmentPersistenceTests</c> suite.
 /// </summary>
-[Trait(name: "Category", value: "ContentSegments")]
+[Trait("Category", "ContentSegments")]
 public class ContentSegmentManualEditTests
 {
     private static MethodInfo? FindAction(
@@ -35,12 +35,12 @@ public class ContentSegmentManualEditTests
     {
         foreach (
             MethodInfo method in controller
-                .GetMethods(bindingAttr: BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-                .Where(predicate: m => m.GetCustomAttributes<HttpMethodAttribute>().Any())
+                .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                .Where(m => m.GetCustomAttributes<HttpMethodAttribute>().Any())
         )
         {
             HttpMethodAttribute? attr = method
-                .GetCustomAttributes(attributeType: httpVerbAttribute, inherit: false)
+                .GetCustomAttributes(httpVerbAttribute, false)
                 .Cast<HttpMethodAttribute>()
                 .FirstOrDefault();
 
@@ -48,7 +48,7 @@ public class ContentSegmentManualEditTests
                 continue;
 
             string template = attr.Template ?? string.Empty;
-            if (string.Equals(a: template, b: routeSuffix, comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(template, routeSuffix, StringComparison.OrdinalIgnoreCase))
                 return method;
         }
 
@@ -59,14 +59,14 @@ public class ContentSegmentManualEditTests
     public void EditSegment_EndpointExists_OnEncoderContentAnalysisController()
     {
         MethodInfo? method = FindAction(
-            controller: typeof(EncoderContentAnalysisController),
-            httpVerbAttribute: typeof(HttpPutAttribute),
-            routeSuffix: "segments/{segmentId}"
+            typeof(EncoderContentAnalysisController),
+            typeof(HttpPutAttribute),
+            "segments/{segmentId}"
         );
 
         Assert.True(
-            condition: method is not null,
-            userMessage: "PUT segments/{segmentId} is missing from EncoderContentAnalysisController"
+            method is not null,
+            "PUT segments/{segmentId} is missing from EncoderContentAnalysisController"
         );
     }
 
@@ -76,7 +76,7 @@ public class ContentSegmentManualEditTests
         // Verifies the DTO that the endpoint binds from the request body.
         Type dto = typeof(EditSegmentRequest);
 
-        Assert.NotNull(@object: dto.GetProperty(name: nameof(EditSegmentRequest.StartSeconds)));
-        Assert.NotNull(@object: dto.GetProperty(name: nameof(EditSegmentRequest.EndSeconds)));
+        Assert.NotNull(dto.GetProperty(nameof(EditSegmentRequest.StartSeconds)));
+        Assert.NotNull(dto.GetProperty(nameof(EditSegmentRequest.EndSeconds)));
     }
 }

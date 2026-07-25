@@ -22,33 +22,33 @@ public static class CodecDefaults
     public static VideoDefaults For(VideoCodecType codec) =>
         codec switch
         {
-            VideoCodecType.H264 => new(Crf: 22, Preset: "medium", Profile: CodecProfile.High, BitDepth: 8),
-            VideoCodecType.H265 => new(Crf: 20, Preset: "slow", Profile: CodecProfile.Main10, BitDepth: 10),
-            VideoCodecType.Av1 => new(Crf: 30, Preset: "6", Profile: CodecProfile.Main, BitDepth: 10),
-            VideoCodecType.Vp9 => new(Crf: 32, Preset: "good", Profile: CodecProfile.Main, BitDepth: 8),
+            VideoCodecType.H264 => new(22, "medium", CodecProfile.High, 8),
+            VideoCodecType.H265 => new(20, "slow", CodecProfile.Main10, 10),
+            VideoCodecType.Av1 => new(30, "6", CodecProfile.Main, 10),
+            VideoCodecType.Vp9 => new(32, "good", CodecProfile.Main, 8),
             _ => throw new ArgumentOutOfRangeException(
-                paramName: nameof(codec),
-                actualValue: codec,
-                message: $"No defaults for {codec}"
+                nameof(codec),
+                codec,
+                $"No defaults for {codec}"
             ),
         };
 
     public static AudioDefaults For(AudioCodecType codec) =>
         codec switch
         {
-            AudioCodecType.Aac => new(BitrateKbps: 192, Channels: 2, SampleRateHz: 48000),
-            AudioCodecType.Mp3 => new(BitrateKbps: 320, Channels: 2, SampleRateHz: 44100),
-            AudioCodecType.Opus => new(BitrateKbps: 128, Channels: 2, SampleRateHz: 48000),
-            AudioCodecType.Flac => new(BitrateKbps: 0, Channels: 2, SampleRateHz: 48000),
-            AudioCodecType.Ac3 => new(BitrateKbps: 384, Channels: 6, SampleRateHz: 48000),
-            AudioCodecType.Eac3 => new(BitrateKbps: 448, Channels: 6, SampleRateHz: 48000),
-            AudioCodecType.TrueHd => new(BitrateKbps: 0, Channels: 6, SampleRateHz: 48000),
-            AudioCodecType.Dts => new(BitrateKbps: 1536, Channels: 6, SampleRateHz: 48000),
-            AudioCodecType.Vorbis => new(BitrateKbps: 192, Channels: 2, SampleRateHz: 48000),
+            AudioCodecType.Aac => new(192, 2, 48000),
+            AudioCodecType.Mp3 => new(320, 2, 44100),
+            AudioCodecType.Opus => new(128, 2, 48000),
+            AudioCodecType.Flac => new(0, 2, 48000),
+            AudioCodecType.Ac3 => new(384, 6, 48000),
+            AudioCodecType.Eac3 => new(448, 6, 48000),
+            AudioCodecType.TrueHd => new(0, 6, 48000),
+            AudioCodecType.Dts => new(1536, 6, 48000),
+            AudioCodecType.Vorbis => new(192, 2, 48000),
             _ => throw new ArgumentOutOfRangeException(
-                paramName: nameof(codec),
-                actualValue: codec,
-                message: $"No defaults for {codec}"
+                nameof(codec),
+                codec,
+                $"No defaults for {codec}"
             ),
         };
 }

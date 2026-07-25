@@ -16,36 +16,36 @@ namespace NoMercy.Data.Requests;
 
 public class LibraryUpdateRequest
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Ulid? Id { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "image")]
+    [JsonProperty("image")]
     public string? Image { get; set; }
 
-    [JsonProperty(propertyName: "perfectSubtitleMatch")]
+    [JsonProperty("perfectSubtitleMatch")]
     public bool? PerfectSubtitleMatch { get; set; }
 
-    [JsonProperty(propertyName: "realtime")]
+    [JsonProperty("realtime")]
     public bool? Realtime { get; set; }
 
-    [JsonProperty(propertyName: "autoEncodeOnScan")]
+    [JsonProperty("autoEncodeOnScan")]
     public bool? AutoEncodeOnScan { get; set; }
 
-    [JsonProperty(propertyName: "encodePresetId")]
+    [JsonProperty("encodePresetId")]
     public Ulid? EncodePresetId { get; set; }
 
-    [JsonProperty(propertyName: "specialSeasonName")]
+    [JsonProperty("specialSeasonName")]
     public string? SpecialSeasonName { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "folder_library")]
+    [JsonProperty("folder_library")]
     public FolderLibraryDto[]? FolderLibrary { get; set; }
 
-    [JsonProperty(propertyName: "subtitles")]
+    [JsonProperty("subtitles")]
     public string[]? Subtitles { get; set; }
 }

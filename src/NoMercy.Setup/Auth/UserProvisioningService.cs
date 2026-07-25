@@ -10,9 +10,9 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Authorization;
 
 namespace NoMercy.Setup.Auth;
 
@@ -29,10 +29,10 @@ public class UserProvisioningService : IUserProvisioningService
     {
         await using MediaContext mediaContext = await _mediaContextFactory.CreateDbContextAsync();
         await mediaContext
-            .Users.Upsert(entity: user)
-            .On(match: x => x.Id)
+            .Users.Upsert(user)
+            .On(x => x.Id)
             .WhenMatched(
-                updater: (oldUser, newUser) =>
+                (oldUser, newUser) =>
                     new()
                     {
                         Id = newUser.Id,
@@ -48,6 +48,6 @@ public class UserProvisioningService : IUserProvisioningService
             )
             .RunAsync();
 
-        UserCache.Current.AddUser(user: user);
+        UserCache.Current.AddUser(user);
     }
 }

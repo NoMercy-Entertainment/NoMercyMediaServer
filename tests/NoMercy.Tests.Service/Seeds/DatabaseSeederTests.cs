@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Service.Seeds;
 /// folder's own subPath against this driver, so a wrong ID or a non-empty
 /// rootPath here breaks per-folder path isolation for every local folder.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class DatabaseSeederTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -35,16 +35,16 @@ public sealed class DatabaseSeederTests : IDisposable
 
     public DatabaseSeederTests()
     {
-        _connection = new(connectionString: "DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection: _connection,
-                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
+                _connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(options: _options);
+        using MediaContext ctx = new(_options);
         ctx.Database.EnsureCreated();
     }
 
@@ -53,31 +53,31 @@ public sealed class DatabaseSeederTests : IDisposable
     [Fact]
     public async Task SeedSystemLocalDriver_EmptyDrivers_InsertsWellKnownLocalDriver()
     {
-        await using MediaContext context = new(options: _options);
+        await using MediaContext context = new(_options);
 
-        await DatabaseSeeder.SeedSystemLocalDriver(mediaContext: context);
+        await DatabaseSeeder.SeedSystemLocalDriver(context);
 
-        Driver? driver = await context.Drivers.FirstOrDefaultAsync(predicate: d =>
+        Driver? driver = await context.Drivers.FirstOrDefaultAsync(d =>
             d.Id == Driver.SystemLocalDriverId
         );
-        Assert.NotNull(@object: driver);
-        Assert.Equal(expected: "local", actual: driver.Type);
-        Assert.Equal(expected: "{\"rootPath\":\"\"}", actual: driver.Config);
+        Assert.NotNull(driver);
+        Assert.Equal("local", driver.Type);
+        Assert.Equal("{\"rootPath\":\"\"}", driver.Config);
     }
 
     [Fact]
     public async Task SeedSystemLocalDriver_AlreadyExists_DoesNotInsertASecondRow()
     {
-        await using MediaContext seedContext = new(options: _options);
-        await DatabaseSeeder.SeedSystemLocalDriver(mediaContext: seedContext);
+        await using MediaContext seedContext = new(_options);
+        await DatabaseSeeder.SeedSystemLocalDriver(seedContext);
 
-        await using MediaContext context = new(options: _options);
+        await using MediaContext context = new(_options);
 
         // Idempotent re-run must not throw a unique-constraint violation and
         // must not create a duplicate row.
-        await DatabaseSeeder.SeedSystemLocalDriver(mediaContext: context);
+        await DatabaseSeeder.SeedSystemLocalDriver(context);
 
-        int count = await context.Drivers.CountAsync(predicate: d => d.Id == Driver.SystemLocalDriverId);
-        Assert.Equal(expected: 1, actual: count);
+        int count = await context.Drivers.CountAsync(d => d.Id == Driver.SystemLocalDriverId);
+        Assert.Equal(1, count);
     }
 }

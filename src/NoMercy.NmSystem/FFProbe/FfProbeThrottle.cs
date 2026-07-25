@@ -19,7 +19,7 @@ namespace NoMercy.NmSystem.FFProbe;
 public static class FfProbeThrottle
 {
     public static int MaxConcurrentProbes { get; } =
-        Math.Clamp(value: Environment.ProcessorCount / 2, min: 2, max: 8);
+        Math.Clamp(Environment.ProcessorCount / 2, 2, 8);
 
     // Remote probes stream the file header over the network (NFS/SMB/S3/WebDAV)
     // into ffprobe's stdin. Running the local core-count worth of them in
@@ -28,23 +28,23 @@ public static class FfProbeThrottle
     // below the local limit — the bottleneck is link bandwidth, not CPU.
     public static int MaxConcurrentRemoteProbes { get; } = 2;
 
-    private static readonly SemaphoreSlim Semaphore = new(initialCount: MaxConcurrentProbes, maxCount: MaxConcurrentProbes);
+    private static readonly SemaphoreSlim Semaphore = new(MaxConcurrentProbes, MaxConcurrentProbes);
 
     private static readonly SemaphoreSlim RemoteSemaphore = new(
-        initialCount: MaxConcurrentRemoteProbes,
-        maxCount: MaxConcurrentRemoteProbes
+        MaxConcurrentRemoteProbes,
+        MaxConcurrentRemoteProbes
     );
 
     /// <summary>
     /// Acquires a slot to run an ffprobe process. Blocks until a slot is available.
     /// </summary>
-    public static Task WaitAsync(CancellationToken ct = default) => Semaphore.WaitAsync(cancellationToken: ct);
+    public static Task WaitAsync(CancellationToken ct = default) => Semaphore.WaitAsync(ct);
 
     /// <summary>
     /// Acquires a slot asynchronously with a timeout. Returns true if acquired, false on timeout.
     /// </summary>
     public static Task<bool> WaitAsync(TimeSpan timeout, CancellationToken ct = default) =>
-        Semaphore.WaitAsync(timeout: timeout, cancellationToken: ct);
+        Semaphore.WaitAsync(timeout, ct);
 
     /// <summary>
     /// Releases a slot after an ffprobe process has completed.
@@ -57,7 +57,7 @@ public static class FfProbeThrottle
     /// capacity. Returns true if acquired, false on timeout.
     /// </summary>
     public static Task<bool> WaitRemoteAsync(TimeSpan timeout, CancellationToken ct = default) =>
-        RemoteSemaphore.WaitAsync(timeout: timeout, cancellationToken: ct);
+        RemoteSemaphore.WaitAsync(timeout, ct);
 
     /// <summary>
     /// Releases the remote-probe slot after a network-streamed probe completes.

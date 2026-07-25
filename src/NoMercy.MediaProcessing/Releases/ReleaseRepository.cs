@@ -20,14 +20,14 @@ public class ReleaseRepository(MediaContext context) : IReleaseRepository
 {
     public Task Store(Album release)
     {
-        if (string.IsNullOrEmpty(value: release.TitleSort))
+        if (string.IsNullOrEmpty(release.TitleSort))
             release.TitleSort = release.Name.TitleSort();
 
         return context
-            .Albums.Upsert(entity: release)
-            .On(match: e => new { e.Id })
+            .Albums.Upsert(release)
+            .On(e => new { e.Id })
             .WhenMatched(
-                updater: (s, i) =>
+                (s, i) =>
                     new()
                     {
                         Id = i.Id,
@@ -52,18 +52,18 @@ public class ReleaseRepository(MediaContext context) : IReleaseRepository
     public Task LinkToReleaseGroup(AlbumReleaseGroup albumReleaseGroup)
     {
         return context
-            .AlbumReleaseGroup.Upsert(entity: albumReleaseGroup)
-            .On(match: e => new { e.AlbumId, e.ReleaseGroupId })
-            .WhenMatched(updater: (s, i) => new() { AlbumId = i.AlbumId, ReleaseGroupId = i.ReleaseGroupId })
+            .AlbumReleaseGroup.Upsert(albumReleaseGroup)
+            .On(e => new { e.AlbumId, e.ReleaseGroupId })
+            .WhenMatched((s, i) => new() { AlbumId = i.AlbumId, ReleaseGroupId = i.ReleaseGroupId })
             .RunAsync();
     }
 
     public Task LinkToLibrary(AlbumLibrary albumLibrary)
     {
         return context
-            .AlbumLibrary.Upsert(entity: albumLibrary)
-            .On(match: e => new { e.AlbumId, e.LibraryId })
-            .WhenMatched(updater: (s, i) => new() { AlbumId = i.AlbumId, LibraryId = i.LibraryId })
+            .AlbumLibrary.Upsert(albumLibrary)
+            .On(e => new { e.AlbumId, e.LibraryId })
+            .WhenMatched((s, i) => new() { AlbumId = i.AlbumId, LibraryId = i.LibraryId })
             .RunAsync();
     }
 }

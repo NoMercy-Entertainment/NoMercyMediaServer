@@ -33,16 +33,16 @@ internal sealed class PluginRegistry : IPluginRegistry
         {
             LoadedPlugin? replaced = null;
             _plugins.AddOrUpdate(
-                key: id,
-                addValue: value,
-                updateValueFactory: (_, existing) =>
+                id,
+                value,
+                (_, existing) =>
                 {
                     replaced = existing;
                     return value;
                 }
             );
 
-            if (replaced is not null && !ReferenceEquals(objA: replaced, objB: value))
+            if (replaced is not null && !ReferenceEquals(replaced, value))
             {
                 replaced.Instance?.Dispose();
                 replaced.LoadContext?.Unload();
@@ -50,14 +50,14 @@ internal sealed class PluginRegistry : IPluginRegistry
         }
     }
 
-    public bool TryGetValue(Guid id, [MaybeNullWhen(returnValue: false)] out LoadedPlugin plugin)
+    public bool TryGetValue(Guid id, [MaybeNullWhen(false)] out LoadedPlugin plugin)
     {
-        return _plugins.TryGetValue(key: id, value: out plugin);
+        return _plugins.TryGetValue(id, out plugin);
     }
 
-    public bool TryRemove(Guid id, [MaybeNullWhen(returnValue: false)] out LoadedPlugin plugin)
+    public bool TryRemove(Guid id, [MaybeNullWhen(false)] out LoadedPlugin plugin)
     {
-        return _plugins.TryRemove(key: id, value: out plugin);
+        return _plugins.TryRemove(id, out plugin);
     }
 
     public ICollection<LoadedPlugin> Values => _plugins.Values;

@@ -59,7 +59,7 @@ public class SubtitleOcrEngineOcrAsyncTests
         string[]? args = null;
         IReadOnlyDictionary<string, string>? env = null;
         Mock<IProcessRunner> processRunner = CaptureProcess(
-            capture: (a, e, _) =>
+            (a, e, _) =>
             {
                 args = a;
                 env = e;
@@ -67,27 +67,27 @@ public class SubtitleOcrEngineOcrAsyncTests
         );
 
         SubtitleOcrEngine engine = new(
-            options: Options(),
-            processRunner: processRunner.Object,
-            modelManager: ModelManagerMock().Object,
-            storage: StorageMock().Object,
-            logger: NullLogger<SubtitleOcrEngine>.Instance
+            Options(),
+            processRunner.Object,
+            ModelManagerMock().Object,
+            StorageMock().Object,
+            NullLogger<SubtitleOcrEngine>.Instance
         );
 
-        await engine.OcrAsync(inputPath: InputPath, streamIndex: 0, language: "eng", outputFormat: SubtitleCodecType.WebVtt, ct: default);
+        await engine.OcrAsync(InputPath, 0, "eng", SubtitleCodecType.WebVtt, default);
 
-        string filter = Filter(args: args);
-        filter.Should().Contain(expected: "ocr=language=eng");
+        string filter = Filter(args);
+        filter.Should().Contain("ocr=language=eng");
         // datapath= put the model dir into the filtergraph; a drive colon there is
         // unescapable and aborts the parse — it must never come back.
-        filter.Should().NotContain(unexpected: "datapath");
-        env.Should().ContainKey(expected: "TESSDATA_PREFIX");
+        filter.Should().NotContain("datapath");
+        env.Should().ContainKey("TESSDATA_PREFIX");
         // The prefix is the directory that holds the traineddata — the same value
         // the code derives from the model path, separator-normalized per platform.
         env!
-            [key: "TESSDATA_PREFIX"]
+            ["TESSDATA_PREFIX"]
             .Should()
-            .Be(expected: Path.GetDirectoryName(path: Path.Combine(path1: ModelDirectory, path2: "eng.traineddata")));
+            .Be(Path.GetDirectoryName(Path.Combine(ModelDirectory, "eng.traineddata")));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class SubtitleOcrEngineOcrAsyncTests
         string[]? args = null;
         IReadOnlyDictionary<string, string>? env = null;
         Mock<IProcessRunner> processRunner = CaptureProcess(
-            capture: (a, e, _) =>
+            (a, e, _) =>
             {
                 args = a;
                 env = e;
@@ -105,29 +105,29 @@ public class SubtitleOcrEngineOcrAsyncTests
         );
         Mock<ITesseractModelManager> modelManager = new();
         modelManager
-            .Setup(expression: m => m.EnsureLanguageModelAsync("eng", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Path.Combine(path1: windowsModelDir, path2: "eng.traineddata"));
+            .Setup(m => m.EnsureLanguageModelAsync("eng", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Path.Combine(windowsModelDir, "eng.traineddata"));
 
         SubtitleOcrEngine engine = new(
-            options: Options(),
-            processRunner: processRunner.Object,
-            modelManager: modelManager.Object,
-            storage: StorageMock().Object,
-            logger: NullLogger<SubtitleOcrEngine>.Instance
+            Options(),
+            processRunner.Object,
+            modelManager.Object,
+            StorageMock().Object,
+            NullLogger<SubtitleOcrEngine>.Instance
         );
 
-        await engine.OcrAsync(inputPath: InputPath, streamIndex: 0, language: "eng", outputFormat: SubtitleCodecType.WebVtt, ct: default);
+        await engine.OcrAsync(InputPath, 0, "eng", SubtitleCodecType.WebVtt, default);
 
-        string filter = Filter(args: args);
+        string filter = Filter(args);
         // No drive letter and no backslash-escaped drive: the graph stays
         // colon-path-free so ffmpeg can parse it. The raw path rides on the env.
-        filter.Should().NotContain(unexpected: "C:");
-        filter.Should().NotContain(unexpected: @"C\");
-        filter.Should().NotContain(unexpected: "datapath");
+        filter.Should().NotContain("C:");
+        filter.Should().NotContain(@"C\");
+        filter.Should().NotContain("datapath");
         env!
-            [key: "TESSDATA_PREFIX"]
+            ["TESSDATA_PREFIX"]
             .Should()
-            .Be(expected: Path.GetDirectoryName(path: Path.Combine(path1: windowsModelDir, path2: "eng.traineddata")));
+            .Be(Path.GetDirectoryName(Path.Combine(windowsModelDir, "eng.traineddata")));
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public class SubtitleOcrEngineOcrAsyncTests
         string[]? args = null;
         string? workingDirectory = null;
         Mock<IProcessRunner> processRunner = CaptureProcess(
-            capture: (a, _, w) =>
+            (a, _, w) =>
             {
                 args = a;
                 workingDirectory = w;
@@ -144,24 +144,24 @@ public class SubtitleOcrEngineOcrAsyncTests
         );
 
         SubtitleOcrEngine engine = new(
-            options: Options(),
-            processRunner: processRunner.Object,
-            modelManager: ModelManagerMock().Object,
-            storage: StorageMock().Object,
-            logger: NullLogger<SubtitleOcrEngine>.Instance
+            Options(),
+            processRunner.Object,
+            ModelManagerMock().Object,
+            StorageMock().Object,
+            NullLogger<SubtitleOcrEngine>.Instance
         );
 
-        await engine.OcrAsync(inputPath: InputPath, streamIndex: 0, language: "eng", outputFormat: SubtitleCodecType.WebVtt, ct: default);
+        await engine.OcrAsync(InputPath, 0, "eng", SubtitleCodecType.WebVtt, default);
 
-        string filter = Filter(args: args);
-        string fileValue = filter[(filter.IndexOf(value: "file=", comparisonType: StringComparison.Ordinal) + 5)..];
+        string filter = Filter(args);
+        string fileValue = filter[(filter.IndexOf("file=", StringComparison.Ordinal) + 5)..];
         // A bare name — no separators, no colon — so it can never reintroduce a
         // path into the graph. It lands in the working directory the runner is
         // handed, which must therefore be set.
-        fileValue.Should().MatchRegex(regularExpression: @"^ocr-[0-9a-fA-F]+\.txt$");
-        fileValue.Should().NotContain(unexpected: "/");
-        fileValue.Should().NotContain(unexpected: @"\");
-        fileValue.Should().NotContain(unexpected: ":");
+        fileValue.Should().MatchRegex(@"^ocr-[0-9a-fA-F]+\.txt$");
+        fileValue.Should().NotContain("/");
+        fileValue.Should().NotContain(@"\");
+        fileValue.Should().NotContain(":");
         workingDirectory.Should().NotBeNullOrEmpty();
     }
 
@@ -171,22 +171,22 @@ public class SubtitleOcrEngineOcrAsyncTests
     public async Task No_output_directory_keeps_legacy_next_to_input_naming()
     {
         SubtitleOcrEngine engine = new(
-            options: Options(),
-            processRunner: SuccessProcess().Object,
-            modelManager: ModelManagerMock().Object,
-            storage: StorageMock().Object,
-            logger: NullLogger<SubtitleOcrEngine>.Instance
+            Options(),
+            SuccessProcess().Object,
+            ModelManagerMock().Object,
+            StorageMock().Object,
+            NullLogger<SubtitleOcrEngine>.Instance
         );
 
         SubtitleTrack track = await engine.OcrAsync(
-            inputPath: InputPath,
-            streamIndex: 0,
-            language: "eng",
-            outputFormat: SubtitleCodecType.WebVtt,
-            ct: default
+            InputPath,
+            0,
+            "eng",
+            SubtitleCodecType.WebVtt,
+            default
         );
 
-        track.FilePath.Should().Be(expected: Path.Combine(path1: Path.GetDirectoryName(path: InputPath)!, path2: "eng_ocr.vtt"));
+        track.FilePath.Should().Be(Path.Combine(Path.GetDirectoryName(InputPath)!, "eng_ocr.vtt"));
     }
 
     [Fact]
@@ -194,25 +194,25 @@ public class SubtitleOcrEngineOcrAsyncTests
     {
         Mock<IStorage> storage = StorageMock();
         SubtitleOcrEngine engine = new(
-            options: Options(),
-            processRunner: SuccessProcess().Object,
-            modelManager: ModelManagerMock().Object,
-            storage: storage.Object,
-            logger: NullLogger<SubtitleOcrEngine>.Instance
+            Options(),
+            SuccessProcess().Object,
+            ModelManagerMock().Object,
+            storage.Object,
+            NullLogger<SubtitleOcrEngine>.Instance
         );
 
         SubtitleTrack track = await engine.OcrAsync(
-            inputPath: InputPath,
+            InputPath,
             streamIndex: 2,
             language: "eng",
             outputFormat: SubtitleCodecType.WebVtt,
             ct: default,
-            sidecar: Sidecar(storage: storage.Object, variant: "full")
+            sidecar: Sidecar(storage.Object, "full")
         );
 
         track
             .FilePath.Should()
-            .Be(expected: "/encoded/Show.S01E01/subtitles/Show.S01E01.NoMercy.eng.full.vtt");
+            .Be("/encoded/Show.S01E01/subtitles/Show.S01E01.NoMercy.eng.full.vtt");
     }
 
     [Fact]
@@ -220,33 +220,33 @@ public class SubtitleOcrEngineOcrAsyncTests
     {
         Mock<IStorage> storage = StorageMock();
         SubtitleOcrEngine engine = new(
-            options: Options(),
-            processRunner: SuccessProcess().Object,
-            modelManager: ModelManagerMock().Object,
-            storage: storage.Object,
-            logger: NullLogger<SubtitleOcrEngine>.Instance
+            Options(),
+            SuccessProcess().Object,
+            ModelManagerMock().Object,
+            storage.Object,
+            NullLogger<SubtitleOcrEngine>.Instance
         );
 
         SubtitleTrack full = await engine.OcrAsync(
-            inputPath: InputPath,
+            InputPath,
             streamIndex: 2,
             language: "eng",
             outputFormat: SubtitleCodecType.WebVtt,
             ct: default,
-            sidecar: Sidecar(storage: storage.Object, variant: "full")
+            sidecar: Sidecar(storage.Object, "full")
         );
         SubtitleTrack sign = await engine.OcrAsync(
-            inputPath: InputPath,
+            InputPath,
             streamIndex: 5,
             language: "eng",
             outputFormat: SubtitleCodecType.WebVtt,
             ct: default,
-            sidecar: Sidecar(storage: storage.Object, variant: "sign")
+            sidecar: Sidecar(storage.Object, "sign")
         );
 
-        full.FilePath.Should().NotBe(unexpected: sign.FilePath);
-        full.FilePath.Should().EndWith(expected: "Show.S01E01.NoMercy.eng.full.vtt");
-        sign.FilePath.Should().EndWith(expected: "Show.S01E01.NoMercy.eng.sign.vtt");
+        full.FilePath.Should().NotBe(sign.FilePath);
+        full.FilePath.Should().EndWith("Show.S01E01.NoMercy.eng.full.vtt");
+        sign.FilePath.Should().EndWith("Show.S01E01.NoMercy.eng.sign.vtt");
     }
 
     [Fact]
@@ -254,25 +254,25 @@ public class SubtitleOcrEngineOcrAsyncTests
     {
         Mock<IStorage> storage = StorageMock();
         SubtitleOcrEngine engine = new(
-            options: Options(),
-            processRunner: SuccessProcess().Object,
-            modelManager: ModelManagerMock().Object,
-            storage: storage.Object,
-            logger: NullLogger<SubtitleOcrEngine>.Instance
+            Options(),
+            SuccessProcess().Object,
+            ModelManagerMock().Object,
+            storage.Object,
+            NullLogger<SubtitleOcrEngine>.Instance
         );
 
         SubtitleTrack track = await engine.OcrAsync(
-            inputPath: InputPath,
+            InputPath,
             streamIndex: 1,
             language: "spa",
             outputFormat: SubtitleCodecType.Srt,
             ct: default,
-            sidecar: Sidecar(storage: storage.Object, variant: "forced")
+            sidecar: Sidecar(storage.Object, "forced")
         );
 
         track
             .FilePath.Should()
-            .Be(expected: "/encoded/Show.S01E01/subtitles/Show.S01E01.NoMercy.spa.forced.srt");
+            .Be("/encoded/Show.S01E01/subtitles/Show.S01E01.NoMercy.spa.forced.srt");
     }
 
     [Fact]
@@ -280,39 +280,39 @@ public class SubtitleOcrEngineOcrAsyncTests
     {
         Mock<IStorage> destination = StorageMock();
         SubtitleOcrEngine engine = new(
-            options: Options(),
-            processRunner: SuccessProcess().Object,
-            modelManager: ModelManagerMock().Object,
-            storage: StorageMock().Object,
-            logger: NullLogger<SubtitleOcrEngine>.Instance
+            Options(),
+            SuccessProcess().Object,
+            ModelManagerMock().Object,
+            StorageMock().Object,
+            NullLogger<SubtitleOcrEngine>.Instance
         );
 
         await engine.OcrAsync(
-            inputPath: InputPath,
+            InputPath,
             streamIndex: 0,
             language: "eng",
             outputFormat: SubtitleCodecType.WebVtt,
             ct: default,
-            sidecar: Sidecar(storage: destination.Object, variant: "full")
+            sidecar: Sidecar(destination.Object, "full")
         );
 
         destination.Verify(
-            expression: s =>
+            s =>
                 s.WriteAsync(
                     It.Is<string>(p => p.EndsWith("eng.full.vtt")),
                     It.IsAny<byte[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
     private static OcrSidecarTarget Sidecar(IStorage storage, string variant) =>
         new(
-            Storage: storage,
-            OutputDirectory: "/encoded/Show.S01E01",
-            MediaTitle: "Show.S01E01.NoMercy",
-            Variant: variant
+            storage,
+            "/encoded/Show.S01E01",
+            "Show.S01E01.NoMercy",
+            variant
         );
 
     // ── Failure surfacing ─────────────────────────────────────────────────────
@@ -322,7 +322,7 @@ public class SubtitleOcrEngineOcrAsyncTests
     {
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -332,27 +332,27 @@ public class SubtitleOcrEngineOcrAsyncTests
                 )
             )
             .ReturnsAsync(
-                value: new ProcessResult(
-                    ExitCode: 1,
-                    StdOut: "",
-                    StdErr: "Error opening data file /ffmpeg_build/windows/share/tessdata/eng.traineddata",
-                    Duration: TimeSpan.Zero
+                new ProcessResult(
+                    1,
+                    "",
+                    "Error opening data file /ffmpeg_build/windows/share/tessdata/eng.traineddata",
+                    TimeSpan.Zero
                 )
             );
 
         SubtitleOcrEngine engine = new(
-            options: Options(),
-            processRunner: processRunner.Object,
-            modelManager: ModelManagerMock().Object,
-            storage: StorageMock().Object,
-            logger: NullLogger<SubtitleOcrEngine>.Instance
+            Options(),
+            processRunner.Object,
+            ModelManagerMock().Object,
+            StorageMock().Object,
+            NullLogger<SubtitleOcrEngine>.Instance
         );
 
         await engine
-            .Invoking(action: e => e.OcrAsync(inputPath: InputPath, streamIndex: 0, language: "eng", outputFormat: SubtitleCodecType.WebVtt, ct: default))
+            .Invoking(e => e.OcrAsync(InputPath, 0, "eng", SubtitleCodecType.WebVtt, default))
             .Should()
             .ThrowAsync<InvalidOperationException>()
-            .WithMessage(expectedWildcardPattern: "*eng.traineddata*");
+            .WithMessage("*eng.traineddata*");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -360,8 +360,8 @@ public class SubtitleOcrEngineOcrAsyncTests
     private static string Filter(string[]? args)
     {
         args.Should().NotBeNull();
-        int index = Array.IndexOf(array: args!, value: "-filter_complex");
-        index.Should().BeGreaterThan(expected: -1);
+        int index = Array.IndexOf(args!, "-filter_complex");
+        index.Should().BeGreaterThan(-1);
         return args![index + 1];
     }
 
@@ -371,21 +371,21 @@ public class SubtitleOcrEngineOcrAsyncTests
     {
         Mock<ITesseractModelManager> modelManager = new();
         modelManager
-            .Setup(expression: m =>
+            .Setup(m =>
                 m.EnsureLanguageModelAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: Path.Combine(path1: ModelDirectory, path2: "eng.traineddata"));
+            .ReturnsAsync(Path.Combine(ModelDirectory, "eng.traineddata"));
         return modelManager;
     }
 
     private static Mock<IStorage> StorageMock()
     {
         Mock<IStorage> storage = new();
-        storage.Setup(expression: s => s.AcquireLocalPath(It.IsAny<string>())).Returns<string>(valueFunction: p => new(path: p));
-        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: true);
+        storage.Setup(s => s.AcquireLocalPath(It.IsAny<string>())).Returns<string>(p => new(p));
+        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
         storage
-            .Setup(expression: s => s.ReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Encoding.UTF8.GetBytes(s: "pts_time:0\nlavfi.ocr.text=hi\n"));
+            .Setup(s => s.ReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Encoding.UTF8.GetBytes("pts_time:0\nlavfi.ocr.text=hi\n"));
         return storage;
     }
 
@@ -393,7 +393,7 @@ public class SubtitleOcrEngineOcrAsyncTests
     {
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -403,7 +403,7 @@ public class SubtitleOcrEngineOcrAsyncTests
                 )
             )
             .ReturnsAsync(
-                value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                new ProcessResult(0, "", "", TimeSpan.Zero)
             );
         return processRunner;
     }
@@ -414,7 +414,7 @@ public class SubtitleOcrEngineOcrAsyncTests
     {
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -429,9 +429,9 @@ public class SubtitleOcrEngineOcrAsyncTests
                 IReadOnlyDictionary<string, string>?,
                 string?,
                 CancellationToken
-            >(action: (_, args, env, workingDirectory, _) => capture(arg1: args, arg2: env, arg3: workingDirectory))
+            >((_, args, env, workingDirectory, _) => capture(args, env, workingDirectory))
             .ReturnsAsync(
-                value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                new ProcessResult(0, "", "", TimeSpan.Zero)
             );
         return processRunner;
     }

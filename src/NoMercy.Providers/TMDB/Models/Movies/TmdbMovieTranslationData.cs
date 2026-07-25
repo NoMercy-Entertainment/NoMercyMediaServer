@@ -16,6 +16,6 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbMovieTranslationData : TmdbSharedTranslationData
 {
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 }

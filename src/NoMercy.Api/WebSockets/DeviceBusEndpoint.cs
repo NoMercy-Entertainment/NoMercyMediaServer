@@ -28,7 +28,7 @@ namespace NoMercy.Api.WebSockets;
 
 [ApiController]
 [Authorize]
-[Route(template: "ws/device-bus")]
+[Route("ws/device-bus")]
 public sealed class DeviceBusEndpoint(
     IDbContextFactory<MediaContext> contextFactory,
     DeviceBusRegistry registry,
@@ -49,7 +49,7 @@ public sealed class DeviceBusEndpoint(
 
         User? user = HttpContext
             .RequestServices.GetRequiredService<IUserCache>()
-            .GetUser(userId: HttpContext.User.UserId());
+            .GetUser(HttpContext.User.UserId());
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -57,7 +57,7 @@ public sealed class DeviceBusEndpoint(
         }
 
         using WebSocket ws = await HttpContext.WebSockets.AcceptWebSocketAsync();
-        await Pump(ws: ws, user: user, ct: HttpContext.RequestAborted);
+        await Pump(ws, user, HttpContext.RequestAborted);
     }
 
     private async Task Pump(WebSocket ws, User user, CancellationToken ct)
@@ -69,11 +69,11 @@ public sealed class DeviceBusEndpoint(
         {
             while (ws.State == WebSocketState.Open && !ct.IsCancellationRequested)
             {
-                WebSocketReceiveResult result = await ws.ReceiveAsync(buffer: buffer, cancellationToken: ct);
+                WebSocketReceiveResult result = await ws.ReceiveAsync(buffer, ct);
                 if (result.MessageType == WebSocketMessageType.Close)
                     break;
 
-                string json = Encoding.UTF8.GetString(bytes: buffer, index: 0, count: result.Count);
+                string json = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
                 // Malformed payloads (split frames during stream churn,
                 // unicode boundary issues, or buggy clients) used to throw
@@ -83,20 +83,20 @@ public sealed class DeviceBusEndpoint(
                 JsonDocument doc;
                 try
                 {
-                    doc = JsonDocument.Parse(json: json);
+                    doc = JsonDocument.Parse(json);
                 }
                 catch (JsonException)
                 {
                     logger.LogDebug(
-                        message: "device-bus skipping malformed frame ({Bytes} bytes)",
-                        args: result.Count
+                        "device-bus skipping malformed frame ({Bytes} bytes)",
+                        result.Count
                     );
                     continue;
                 }
 
                 using JsonDocument _ = doc;
                 if (
-                    !doc.RootElement.TryGetProperty(propertyName: "type", value: out JsonElement typeElement)
+                    !doc.RootElement.TryGetProperty("type", out JsonElement typeElement)
                     || typeElement.ValueKind != JsonValueKind.String
                 )
                     continue;
@@ -105,32 +105,32 @@ public sealed class DeviceBusEndpoint(
 
                 if (type == "hello")
                 {
-                    device = await HandleHello(root: doc.RootElement, user: user, ws: ws);
+                    device = await HandleHello(doc.RootElement, user, ws);
                     if (device is null)
                         break;
                 }
                 else if (type == "pong" && device is not null)
                 {
-                    registry.Touch(deviceId: device.Id);
+                    registry.Touch(device.Id);
                 }
                 else if (type == "status" && device is not null)
                 {
                     bool foreground =
-                        doc.RootElement.TryGetProperty(propertyName: "foreground", value: out JsonElement fe)
+                        doc.RootElement.TryGetProperty("foreground", out JsonElement fe)
                         && fe.ValueKind == JsonValueKind.True;
                     bool screenOn =
-                        doc.RootElement.TryGetProperty(propertyName: "screen_on", value: out JsonElement se)
+                        doc.RootElement.TryGetProperty("screen_on", out JsonElement se)
                         && se.ValueKind == JsonValueKind.True;
 
-                    registry.UpdateStatus(deviceId: device.Id, foreground: foreground, screenOn: screenOn);
+                    registry.UpdateStatus(device.Id, foreground, screenOn);
                     if (device.OwnerUserId is not null)
-                        await registry.BroadcastChange(ownerUserId: device.OwnerUserId.Value);
+                        await registry.BroadcastChange(device.OwnerUserId.Value);
                 }
             }
         }
         catch (Exception ex)
         {
-            logger.LogDebug(exception: ex, message: "device-bus closed");
+            logger.LogDebug(ex, "device-bus closed");
         }
         finally
         {
@@ -139,15 +139,15 @@ public sealed class DeviceBusEndpoint(
                 if (
                     device.OwnerUserId is not null
                     && musicPlayerStateManager.TryGetValue(
-                        userId: device.OwnerUserId.Value,
-                        state: out MusicPlayerState? playerState
+                        device.OwnerUserId.Value,
+                        out MusicPlayerState? playerState
                     )
                     && string.Equals(
-                        a: playerState.DeviceId,
-                        b: device.DeviceId,
-                        comparisonType: StringComparison.OrdinalIgnoreCase
+                        playerState.DeviceId,
+                        device.DeviceId,
+                        StringComparison.OrdinalIgnoreCase
                     )
-                    && !IsStillOnMusicHub(connectedClients: connectedClients, deviceId: device.DeviceId)
+                    && !IsStillOnMusicHub(connectedClients, device.DeviceId)
                 )
                 {
                     // device-bus is a secondary wake/status channel (30s ping cadence,
@@ -162,25 +162,25 @@ public sealed class DeviceBusEndpoint(
                     // was still fully connected — and still playing — on MusicHub the whole
                     // time. Only fall through when MusicHub agrees the device is gone too.
                     logger.LogInformation(
-                        message: "Active music device {DeviceName} disconnected from device-bus — clearing active",
-                        args: device.Name
+                        "Active music device {DeviceName} disconnected from device-bus — clearing active",
+                        device.Name
                     );
                     playerState.PlayState = false;
                     playerState.DeviceId = null;
                     try
                     {
                         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
-                        User owner = await ctx.Users.FirstAsync(predicate: u =>
+                        User owner = await ctx.Users.FirstAsync(u =>
                             u.Id == device.OwnerUserId.Value
                         );
-                        await musicPlaybackService.UpdatePlaybackState(user: owner, state: playerState);
+                        await musicPlaybackService.UpdatePlaybackState(owner, playerState);
                     }
                     catch
                     {
                         // Best-effort during teardown.
                     }
                 }
-                await registry.Unregister(deviceId: device.Id);
+                await registry.Unregister(device.Id);
             }
         }
     }
@@ -196,9 +196,9 @@ public sealed class DeviceBusEndpoint(
     /// </summary>
     internal static bool IsStillOnMusicHub(ConnectedClients connectedClients, string deviceId)
     {
-        return connectedClients.Clients.Values.Any(predicate: c =>
-            c.DeviceId.Equals(value: deviceId, comparisonType: StringComparison.OrdinalIgnoreCase)
-            && c.Endpoint.Contains(value: "musicHub", comparisonType: StringComparison.OrdinalIgnoreCase)
+        return connectedClients.Clients.Values.Any(c =>
+            c.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+            && c.Endpoint.Contains("musicHub", StringComparison.OrdinalIgnoreCase)
         );
     }
 
@@ -206,34 +206,34 @@ public sealed class DeviceBusEndpoint(
     {
         // Tolerate missing properties — legacy clients sometimes omit name /
         // device_type. Fingerprint is the only hard requirement.
-        string? fingerprint = root.TryGetProperty(propertyName: "fingerprint", value: out JsonElement fpEl)
+        string? fingerprint = root.TryGetProperty("fingerprint", out JsonElement fpEl)
             ? fpEl.GetString()
             : null;
-        if (string.IsNullOrEmpty(value: fingerprint))
+        if (string.IsNullOrEmpty(fingerprint))
             return null;
 
-        string deviceName = root.TryGetProperty(propertyName: "name", value: out JsonElement nameEl)
+        string deviceName = root.TryGetProperty("name", out JsonElement nameEl)
             ? nameEl.GetString() ?? "Android TV"
             : "Android TV";
-        string deviceType = root.TryGetProperty(propertyName: "device_type", value: out JsonElement typeEl)
+        string deviceType = root.TryGetProperty("device_type", out JsonElement typeEl)
             ? typeEl.GetString() ?? "tv"
             : "tv";
 
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
         (Device device, Guid? previousOwner) = await ResolveOwnedDeviceAsync(
-            ctx: ctx,
-            fingerprint: fingerprint,
-            userId: user.Id,
-            deviceName: deviceName,
-            deviceType: deviceType
+            ctx,
+            fingerprint,
+            user.Id,
+            deviceName,
+            deviceType
         );
 
-        await registry.Register(deviceId: device.Id, ws: ws);
+        await registry.Register(device.Id, ws);
 
         // If the device just moved to a different account, refresh the previous
         // owner so the device disappears from their list immediately.
         if (previousOwner is { } previous && previous != user.Id)
-            await registry.BroadcastChange(ownerUserId: previous);
+            await registry.BroadcastChange(previous);
         return device;
     }
 
@@ -258,7 +258,7 @@ public sealed class DeviceBusEndpoint(
         // Fingerprint fallback matches legacy device-bus rows that pre-date the ID
         // alignment. The lookup is intentionally NOT scoped by owner so a device
         // that moves accounts is found and re-owned rather than duplicated.
-        Device? device = await ctx.Devices.FirstOrDefaultAsync(predicate: d =>
+        Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
             d.DeviceId == fingerprint || d.Fingerprint == fingerprint
         );
 
@@ -275,13 +275,13 @@ public sealed class DeviceBusEndpoint(
                 Type = deviceType,
                 IsActive = true,
             };
-            ctx.Devices.Add(entity: device);
+            ctx.Devices.Add(device);
         }
         else
         {
             device.Fingerprint = fingerprint;
             device.OwnerUserId = userId;
-            if (string.IsNullOrEmpty(value: device.Type))
+            if (string.IsNullOrEmpty(device.Type))
                 device.Type = deviceType;
         }
 

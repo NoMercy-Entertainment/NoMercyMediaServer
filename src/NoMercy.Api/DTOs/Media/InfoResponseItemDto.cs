@@ -24,125 +24,125 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record InfoResponseItemDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool? Adult { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "logo")]
+    [JsonProperty("logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "watched")]
+    [JsonProperty("watched")]
     public bool Watched { get; set; }
 
-    [JsonProperty(propertyName: "favorite")]
+    [JsonProperty("favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty(propertyName: "titleSort")]
+    [JsonProperty("titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public int Duration { get; set; }
 
-    [JsonProperty(propertyName: "number_of_items")]
+    [JsonProperty("number_of_items")]
     public int NumberOfItems { get; set; }
 
-    [JsonProperty(propertyName: "have_items")]
+    [JsonProperty("have_items")]
     public int? HaveItems { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int Year { get; set; }
 
-    [JsonProperty(propertyName: "voteAverage")]
+    [JsonProperty("voteAverage")]
     public double VoteAverage { get; set; }
 
-    [JsonProperty(propertyName: "external_ids")]
+    [JsonProperty("external_ids")]
     public ExternalIds? ExternalIds { get; set; }
 
-    [JsonProperty(propertyName: "creator")]
+    [JsonProperty("creator")]
     public PeopleDto? Creator { get; set; }
 
-    [JsonProperty(propertyName: "director")]
+    [JsonProperty("director")]
     public PeopleDto? Director { get; set; }
 
-    [JsonProperty(propertyName: "writer")]
+    [JsonProperty("writer")]
     public PeopleDto? Writer { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string MediaType { get; set; }
 
-    [JsonProperty(propertyName: "total_duration")]
+    [JsonProperty("total_duration")]
     public int TotalDuration { get; set; }
 
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public IEnumerable<GenreDto> Genres { get; set; } = [];
 
-    [JsonProperty(propertyName: "keywords")]
+    [JsonProperty("keywords")]
     public IEnumerable<string> Keywords { get; set; } = [];
 
-    [JsonProperty(propertyName: "videos")]
+    [JsonProperty("videos")]
     public IEnumerable<VideoDto> Videos { get; set; } = [];
 
-    [JsonProperty(propertyName: "backdrops")]
+    [JsonProperty("backdrops")]
     public IEnumerable<ImageDto> Backdrops { get; set; } = [];
 
-    [JsonProperty(propertyName: "posters")]
+    [JsonProperty("posters")]
     public IEnumerable<ImageDto> Posters { get; set; } = [];
 
-    [JsonProperty(propertyName: "similar")]
+    [JsonProperty("similar")]
     public IEnumerable<RelatedDto> Similar { get; set; } = [];
 
-    [JsonProperty(propertyName: "recommendations")]
+    [JsonProperty("recommendations")]
     public IEnumerable<RelatedDto> Recommendations { get; set; } = [];
 
-    [JsonProperty(propertyName: "cast")]
+    [JsonProperty("cast")]
     public IEnumerable<PeopleDto> Cast { get; set; } = [];
 
-    [JsonProperty(propertyName: "crew")]
+    [JsonProperty("crew")]
     public IEnumerable<PeopleDto> Crew { get; set; } = [];
 
-    [JsonProperty(propertyName: "content_ratings")]
+    [JsonProperty("content_ratings")]
     public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public IEnumerable<TranslationDto> Translations { get; set; } = [];
 
-    [JsonProperty(propertyName: "seasons")]
+    [JsonProperty("seasons")]
     public IEnumerable<SeasonDto> Seasons { get; set; } = [];
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; } = null!;
 
-    [JsonProperty(propertyName: "grouped_watch_providers")]
+    [JsonProperty("grouped_watch_providers")]
     public IEnumerable<IGrouping<string, WatchProviderDto>> GroupedWatchProviders { get; set; } =
     [];
 
-    [JsonProperty(propertyName: "watch_providers")]
+    [JsonProperty("watch_providers")]
     public IEnumerable<WatchProviderDto> WatchProviders { get; set; } = [];
 
-    [JsonProperty(propertyName: "companies")]
+    [JsonProperty("companies")]
     public IEnumerable<CompanyDto> Companies { get; set; } = [];
 
-    [JsonProperty(propertyName: "networks")]
+    [JsonProperty("networks")]
     public IEnumerable<NetworkDto> Networks { get; set; } = [];
 
     public InfoResponseItemDto(Movie movie, string? country)
@@ -152,20 +152,20 @@ public record InfoResponseItemDto
         Id = movie.Id;
         Adult = movie.Adult;
         Title = movie.Title;
-        Overview = !string.IsNullOrEmpty(value: overview) ? overview : movie.Overview;
+        Overview = !string.IsNullOrEmpty(overview) ? overview : movie.Overview;
         Type = MediaTypes.MovieMediaType;
         MediaType = MediaTypes.MovieMediaType;
-        Link = new(uriString: $"/movie/{Id}", uriKind: UriKind.Relative);
-        Watched = movie.VideoFiles.Any(predicate: videoFile => videoFile.UserData.Count != 0);
+        Link = new($"/movie/{Id}", UriKind.Relative);
+        Watched = movie.VideoFiles.Any(videoFile => videoFile.UserData.Count != 0);
 
         Favorite = movie.MovieUser.Count != 0;
 
-        TitleSort = movie.Title.TitleSort(date: movie.ReleaseDate);
+        TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
 
         Duration =
             movie.VideoFiles.Count != 0
                 ? movie
-                    .VideoFiles.Select(selector: videoFile => videoFile.Duration?.ToSeconds() ?? 0)
+                    .VideoFiles.Select(videoFile => videoFile.Duration?.ToSeconds() ?? 0)
                     .Average()
                     .ToInt()
                 : movie.Duration ?? 0;
@@ -176,85 +176,85 @@ public record InfoResponseItemDto
         ColorPalette = movie.ColorPalette;
         Backdrop =
             movie
-                .Images.FirstOrDefault(predicate: image => image is { Type: "backdrop", Iso6391: null })
+                .Images.FirstOrDefault(image => image is { Type: "backdrop", Iso6391: null })
                 ?.FilePath
             ?? movie.Backdrop;
         Poster = movie.Poster;
 
         ExternalIds = new() { ImdbId = movie.ImdbId };
 
-        Translations = movie.Translations.Select(selector: translation => new TranslationDto(translation: translation));
+        Translations = movie.Translations.Select(translation => new TranslationDto(translation));
 
         ContentRatings = movie
-            .CertificationMovies.Where(predicate: certificationMovie =>
+            .CertificationMovies.Where(certificationMovie =>
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(selector: certificationMovie => new ContentRating
+            .Select(certificationMovie => new ContentRating
             {
                 Rating = certificationMovie.Certification.Rating,
                 Iso31661 = certificationMovie.Certification.Iso31661,
             });
 
-        Keywords = movie.KeywordMovies.Select(selector: keywordMovie => keywordMovie.Keyword.Name);
+        Keywords = movie.KeywordMovies.Select(keywordMovie => keywordMovie.Keyword.Name);
 
         Logo = movie
-            .Images.OrderByDescending(keySelector: image => image.VoteAverage)
-            .FirstOrDefault(predicate: media => media.Type == "logo")
+            .Images.OrderByDescending(image => image.VoteAverage)
+            .FirstOrDefault(media => media.Type == "logo")
             ?.FilePath;
 
         Videos = movie
-            .Media.Where(predicate: media => media.Type == "Trailer")
-            .Select(selector: media => new VideoDto(media: media));
+            .Media.Where(media => media.Type == "Trailer")
+            .Select(media => new VideoDto(media));
 
         Backdrops = movie
-            .Images.Where(predicate: media => media.Type == "backdrop")
-            .Select(selector: media => new ImageDto(media: media));
+            .Images.Where(media => media.Type == "backdrop")
+            .Select(media => new ImageDto(media));
 
         Posters = movie
-            .Images.Where(predicate: media => media.Type == "poster")
-            .Select(selector: media => new ImageDto(media: media));
+            .Images.Where(media => media.Type == "poster")
+            .Select(media => new ImageDto(media));
 
-        Genres = movie.GenreMovies.Select(selector: genreMovie => new GenreDto(genreMovie: genreMovie));
+        Genres = movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie));
 
-        PeopleDto[] cast = movie.Cast.Select(selector: cast => new PeopleDto(cast: cast)).ToArray();
+        PeopleDto[] cast = movie.Cast.Select(cast => new PeopleDto(cast)).ToArray();
 
-        PeopleDto[] crew = movie.Crew.Select(selector: crew => new PeopleDto(crew: crew)).ToArray();
+        PeopleDto[] crew = movie.Crew.Select(crew => new PeopleDto(crew)).ToArray();
 
         Cast = cast;
         Crew = crew;
 
-        Director = crew.FirstOrDefault(predicate: people => people.Job == "Director");
-        Writer = crew.FirstOrDefault(predicate: people => people.Job == "Writer");
+        Director = crew.FirstOrDefault(people => people.Job == "Director");
+        Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
         Similar = movie
-            .SimilarFrom.Select(selector: similar => new RelatedDto(similar: similar, type: MediaTypes.MovieMediaType))
-            .Where(predicate: related => related.Adult == false)
-            .Where(predicate: item => item.Poster != null);
+            .SimilarFrom.Select(similar => new RelatedDto(similar, MediaTypes.MovieMediaType))
+            .Where(related => related.Adult == false)
+            .Where(item => item.Poster != null);
 
         Recommendations = movie
-            .RecommendationFrom.Select(selector: recommendation => new RelatedDto(
-                recommendation: recommendation,
-                type: MediaTypes.MovieMediaType
+            .RecommendationFrom.Select(recommendation => new RelatedDto(
+                recommendation,
+                MediaTypes.MovieMediaType
             ))
-            .Where(predicate: related => related.Adult == false)
-            .Where(predicate: item => item.Poster != null);
+            .Where(related => related.Adult == false)
+            .Where(item => item.Poster != null);
 
         GroupedWatchProviders = movie
-            .WatchProviderMedia.Select(selector: wpm => new WatchProviderDto(wpm: wpm))
-            .GroupBy(keySelector: p => p.ProviderType);
+            .WatchProviderMedia.Select(wpm => new WatchProviderDto(wpm))
+            .GroupBy(p => p.ProviderType);
 
         WatchProviders = movie
-            .WatchProviderMedia.DistinctBy(keySelector: wpm => wpm.WatchProviderId)
-            .Select(selector: wpm => new WatchProviderDto(wpm: wpm));
+            .WatchProviderMedia.DistinctBy(wpm => wpm.WatchProviderId)
+            .Select(wpm => new WatchProviderDto(wpm));
 
-        Companies = movie.CompaniesMovies.Select(selector: cm => new CompanyDto(ctv: cm));
+        Companies = movie.CompaniesMovies.Select(cm => new CompanyDto(cm));
     }
 
     public InfoResponseItemDto(TmdbMovieAppends tmdbMovie, string? country)
     {
         string? overview = tmdbMovie
-            .Translations.Translations.FirstOrDefault(predicate: translation =>
+            .Translations.Translations.FirstOrDefault(translation =>
                 translation.Iso31661 == country
             )
             ?.Data.Overview;
@@ -262,15 +262,15 @@ public record InfoResponseItemDto
         Id = tmdbMovie.Id;
         Adult = tmdbMovie.Adult;
         Title = tmdbMovie.Title;
-        Overview = !string.IsNullOrEmpty(value: overview) ? overview : tmdbMovie.Overview;
+        Overview = !string.IsNullOrEmpty(overview) ? overview : tmdbMovie.Overview;
         Type = MediaTypes.MovieMediaType;
         MediaType = MediaTypes.MovieMediaType;
-        Link = new(uriString: $"/movie/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         Watched = false;
 
         Favorite = false;
 
-        TitleSort = tmdbMovie.Title.TitleSort(date: tmdbMovie.ReleaseDate);
+        TitleSort = tmdbMovie.Title.TitleSort(tmdbMovie.ReleaseDate);
 
         Duration = tmdbMovie.Runtime * 60;
 
@@ -283,65 +283,65 @@ public record InfoResponseItemDto
 
         ExternalIds = new() { ImdbId = tmdbMovie.ImdbId };
 
-        Translations = tmdbMovie.Translations.Translations.Select(selector: translation => new TranslationDto(
-            translation: translation
+        Translations = tmdbMovie.Translations.Translations.Select(translation => new TranslationDto(
+            translation
         ));
 
-        Keywords = tmdbMovie.Keywords.Results.Select(selector: keywordMovie => keywordMovie.Name);
+        Keywords = tmdbMovie.Keywords.Results.Select(keywordMovie => keywordMovie.Name);
 
         Logo = tmdbMovie
-            .Images.Logos.OrderByDescending(keySelector: image => image.VoteAverage)
-            .FirstOrDefault(predicate: logo => logo.Iso6391 == "en")
+            .Images.Logos.OrderByDescending(image => image.VoteAverage)
+            .FirstOrDefault(logo => logo.Iso6391 == "en")
             ?.FilePath;
 
-        Videos = tmdbMovie.Videos.Results.Select(selector: media => new VideoDto(media: media));
+        Videos = tmdbMovie.Videos.Results.Select(media => new VideoDto(media));
 
         Backdrops = tmdbMovie
-            .Images.Backdrops.Where(predicate: image => image.Iso6391 is "en" or null)
-            .Select(selector: media => new ImageDto(media: media));
+            .Images.Backdrops.Where(image => image.Iso6391 is "en" or null)
+            .Select(media => new ImageDto(media));
 
         Posters = tmdbMovie
-            .Images.Posters.Where(predicate: image => image.Iso6391 is "en" or null)
-            .Select(selector: media => new ImageDto(media: media));
+            .Images.Posters.Where(image => image.Iso6391 is "en" or null)
+            .Select(media => new ImageDto(media));
 
-        Genres = tmdbMovie.Genres.Select(selector: genreMovie => new GenreDto(tmdbGenreMovie: genreMovie));
+        Genres = tmdbMovie.Genres.Select(genreMovie => new GenreDto(genreMovie));
 
-        PeopleDto[] cast = tmdbMovie.Credits.Cast.Select(selector: cast => new PeopleDto(tmdbCast: cast)).ToArray();
+        PeopleDto[] cast = tmdbMovie.Credits.Cast.Select(cast => new PeopleDto(cast)).ToArray();
 
-        PeopleDto[] crew = tmdbMovie.Credits.Crew.Select(selector: crew => new PeopleDto(tmdbCrew: crew)).ToArray();
+        PeopleDto[] crew = tmdbMovie.Credits.Crew.Select(crew => new PeopleDto(crew)).ToArray();
 
         Cast = cast;
         Crew = crew;
 
-        Director = crew.FirstOrDefault(predicate: people => people.Job == "Director");
-        Writer = crew.FirstOrDefault(predicate: people => people.Job == "Writer");
+        Director = crew.FirstOrDefault(people => people.Job == "Director");
+        Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
         Similar = tmdbMovie
-            .Similar.Results.Select(selector: similar => new RelatedDto(tmdbSimilar: similar, type: MediaTypes.MovieMediaType))
-            .Where(predicate: related => related.Adult == false)
-            .Where(predicate: related => related.Poster != null);
+            .Similar.Results.Select(similar => new RelatedDto(similar, MediaTypes.MovieMediaType))
+            .Where(related => related.Adult == false)
+            .Where(related => related.Poster != null);
 
         Recommendations = tmdbMovie
-            .Recommendations.Results.Select(selector: recommendation => new RelatedDto(
-                tmdbSimilar: recommendation,
-                type: MediaTypes.MovieMediaType
+            .Recommendations.Results.Select(recommendation => new RelatedDto(
+                recommendation,
+                MediaTypes.MovieMediaType
             ))
-            .Where(predicate: related => related.Adult == false)
-            .Where(predicate: related => related.Poster != null);
+            .Where(related => related.Adult == false)
+            .Where(related => related.Poster != null);
 
         GroupedWatchProviders = TmdbWatchProviders
-            .ExtractProviders(results: tmdbMovie.WatchProviders.TmdbWatchProviderResults)
-            .Where(predicate: wpm => wpm.CountryCode == country)
-            .Select(selector: wpm => new WatchProviderDto(argKey: wpm))
-            .GroupBy(keySelector: p => p.ProviderType);
+            .ExtractProviders(tmdbMovie.WatchProviders.TmdbWatchProviderResults)
+            .Where(wpm => wpm.CountryCode == country)
+            .Select(wpm => new WatchProviderDto(wpm))
+            .GroupBy(p => p.ProviderType);
 
         WatchProviders = TmdbWatchProviders
-            .ExtractProviders(results: tmdbMovie.WatchProviders.TmdbWatchProviderResults)
-            .Where(predicate: wpm => wpm.CountryCode == country)
-            .DistinctBy(keySelector: wpm => wpm.Provider.ProviderId)
-            .Select(selector: wpm => new WatchProviderDto(argKey: wpm));
+            .ExtractProviders(tmdbMovie.WatchProviders.TmdbWatchProviderResults)
+            .Where(wpm => wpm.CountryCode == country)
+            .DistinctBy(wpm => wpm.Provider.ProviderId)
+            .Select(wpm => new WatchProviderDto(wpm));
 
-        Companies = tmdbMovie.ProductionCompanies.Select(selector: cm => new CompanyDto(ctv: cm));
+        Companies = tmdbMovie.ProductionCompanies.Select(cm => new CompanyDto(cm));
     }
 
     public InfoResponseItemDto(
@@ -355,30 +355,30 @@ public record InfoResponseItemDto
         string? overview = tv.Translations.FirstOrDefault()?.Overview;
 
         Id = tv.Id;
-        Title = !string.IsNullOrEmpty(value: title) ? title : tv.Title;
-        Overview = !string.IsNullOrEmpty(value: overview) ? overview : tv.Overview;
+        Title = !string.IsNullOrEmpty(title) ? title : tv.Title;
+        Overview = !string.IsNullOrEmpty(overview) ? overview : tv.Overview;
         Type = tv.Type ?? MediaTypes.TvMediaType;
         MediaType = MediaTypes.TvMediaType;
-        Link = new(uriString: $"/tv/{Id}", uriKind: UriKind.Relative);
-        Watched = tv.Episodes.Any(predicate: episode =>
-            episode.VideoFiles.Any(predicate: videoFile => videoFile.UserData.Count != 0)
+        Link = new($"/tv/{Id}", UriKind.Relative);
+        Watched = tv.Episodes.Any(episode =>
+            episode.VideoFiles.Any(videoFile => videoFile.UserData.Count != 0)
         );
 
         Favorite = tv.TvUser.Count != 0;
 
-        TitleSort = tv.Title.TitleSort(date: tv.FirstAirDate);
+        TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
 
-        Translations = tv.Translations.Select(selector: translation => new TranslationDto(translation: translation));
+        Translations = tv.Translations.Select(translation => new TranslationDto(translation));
 
         Duration = tv
-            .Episodes.Where(predicate: episode => episode.EpisodeNumber > 0)
-            .SelectMany(selector: episode => episode.VideoFiles)
-            .Select(selector: file => file.Duration?.ToSeconds() ?? 0)
+            .Episodes.Where(episode => episode.EpisodeNumber > 0)
+            .SelectMany(episode => episode.VideoFiles)
+            .Select(file => file.Duration?.ToSeconds() ?? 0)
             .Sum();
 
         NumberOfItems = tv.NumberOfEpisodes;
-        HaveItems = tv.Episodes.Count(predicate: episode =>
-            episode.VideoFiles.Any(predicate: videoFile => videoFile.Folder != null)
+        HaveItems = tv.Episodes.Count(episode =>
+            episode.VideoFiles.Any(videoFile => videoFile.Folder != null)
         );
 
         Year = tv.FirstAirDate.ParseYear();
@@ -386,7 +386,7 @@ public record InfoResponseItemDto
 
         ColorPalette = tv.ColorPalette;
         Backdrop =
-            tv.Images.FirstOrDefault(predicate: image =>
+            tv.Images.FirstOrDefault(image =>
                 image is { Type: "backdrop", Iso6391: null }
             )?.FilePath
             ?? tv.Backdrop;
@@ -395,62 +395,62 @@ public record InfoResponseItemDto
         ExternalIds = new() { ImdbId = tv.ImdbId, TvdbId = tv.TvdbId };
 
         ContentRatings = tv
-            .CertificationTvs.Where(predicate: certificationMovie =>
+            .CertificationTvs.Where(certificationMovie =>
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(selector: certificationTv => new ContentRating
+            .Select(certificationTv => new ContentRating
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
             });
 
-        Keywords = tv.KeywordTvs.Select(selector: keywordTv => keywordTv.Keyword.Name);
+        Keywords = tv.KeywordTvs.Select(keywordTv => keywordTv.Keyword.Name);
 
         Logo = tv
-            .Images.OrderByDescending(keySelector: image => image.VoteAverage)
-            .FirstOrDefault(predicate: media => media.Type == "logo")
+            .Images.OrderByDescending(image => image.VoteAverage)
+            .FirstOrDefault(media => media.Type == "logo")
             ?.FilePath;
 
         Videos = tv
-            .Media.Where(predicate: media => media.Type == "Trailer")
-            .Select(selector: media => new VideoDto(media: media));
+            .Media.Where(media => media.Type == "Trailer")
+            .Select(media => new VideoDto(media));
 
         Backdrops = tv
-            .Images.Where(predicate: media => media.Type == "backdrop")
-            .Select(selector: media => new ImageDto(media: media));
+            .Images.Where(media => media.Type == "backdrop")
+            .Select(media => new ImageDto(media));
 
         Posters = tv
-            .Images.Where(predicate: media => media.Type == "poster")
-            .Select(selector: media => new ImageDto(media: media));
+            .Images.Where(media => media.Type == "poster")
+            .Select(media => new ImageDto(media));
 
-        Genres = tv.GenreTvs.Select(selector: genreTv => new GenreDto(genreTv: genreTv));
+        Genres = tv.GenreTvs.Select(genreTv => new GenreDto(genreTv));
 
         ExternalIds = new() { ImdbId = tv.ImdbId, TvdbId = tv.TvdbId };
 
         PeopleDto[] cast = tv
-            .Episodes.SelectMany(selector: episode => episode.Cast)
-            .Concat(second: tv.Cast)
-            .Select(selector: cast => new PeopleDto(cast: cast))
-            .GroupBy(keySelector: people => people.Id)
-            .Select(selector: group => group.First())
+            .Episodes.SelectMany(episode => episode.Cast)
+            .Concat(tv.Cast)
+            .Select(cast => new PeopleDto(cast))
+            .GroupBy(people => people.Id)
+            .Select(group => group.First())
             .ToArray();
 
         PeopleDto[] crew = tv
-            .Episodes.SelectMany(selector: episode => episode.Crew)
-            .Concat(second: tv.Crew)
-            .Select(selector: crew => new PeopleDto(crew: crew))
-            .GroupBy(keySelector: people => people.Id)
-            .Select(selector: group => group.First())
+            .Episodes.SelectMany(episode => episode.Crew)
+            .Concat(tv.Crew)
+            .Select(crew => new PeopleDto(crew))
+            .GroupBy(people => people.Id)
+            .Select(group => group.First())
             .ToArray();
 
         Cast = cast;
         Crew = crew;
-        Link = new(uriString: $"/tv/{Id}", uriKind: UriKind.Relative);
-        Director = crew.FirstOrDefault(predicate: people => people.Job == "Director");
-        Writer = crew.FirstOrDefault(predicate: people => people.Job == "Writer");
+        Link = new($"/tv/{Id}", UriKind.Relative);
+        Director = crew.FirstOrDefault(people => people.Job == "Director");
+        Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
-        Creator = tv.Creators.Select(selector: people => new PeopleDto(creator: people)).FirstOrDefault();
+        Creator = tv.Creators.Select(people => new PeopleDto(people)).FirstOrDefault();
 
         // Detail-only enrichment: the lite callers pass no related arrays and must
         // not get seasons / watch providers / networks / companies populated.
@@ -458,66 +458,66 @@ public record InfoResponseItemDto
             return;
 
         Similar = tv
-            .SimilarFrom.Select(selector: similar => new RelatedDto(
-                similar: similar,
-                type: MediaTypes.TvMediaType,
-                similars: similars ?? []
+            .SimilarFrom.Select(similar => new RelatedDto(
+                similar,
+                MediaTypes.TvMediaType,
+                similars ?? []
             ))
-            .Where(predicate: item => item.Poster != null);
+            .Where(item => item.Poster != null);
 
         Recommendations = tv
-            .RecommendationFrom.Select(selector: recommendation => new RelatedDto(
-                recommendation: recommendation,
-                type: MediaTypes.TvMediaType,
-                recommendations: recommendations ?? []
+            .RecommendationFrom.Select(recommendation => new RelatedDto(
+                recommendation,
+                MediaTypes.TvMediaType,
+                recommendations ?? []
             ))
-            .Where(predicate: item => item.Poster != null);
+            .Where(item => item.Poster != null);
 
         Seasons = tv
-            .Seasons.OrderBy(keySelector: season => season.SeasonNumber)
-            .Select(selector: season => new SeasonDto(season: season));
+            .Seasons.OrderBy(season => season.SeasonNumber)
+            .Select(season => new SeasonDto(season));
 
         GroupedWatchProviders = tv
-            .WatchProviderMedia.Select(selector: wpm => new WatchProviderDto(wpm: wpm))
-            .GroupBy(keySelector: p => p.ProviderType);
+            .WatchProviderMedia.Select(wpm => new WatchProviderDto(wpm))
+            .GroupBy(p => p.ProviderType);
 
         WatchProviders = tv
-            .WatchProviderMedia.DistinctBy(keySelector: wpm => wpm.WatchProviderId)
-            .Select(selector: wpm => new WatchProviderDto(wpm: wpm));
+            .WatchProviderMedia.DistinctBy(wpm => wpm.WatchProviderId)
+            .Select(wpm => new WatchProviderDto(wpm));
 
-        Networks = tv.NetworkTvs.Select(selector: ntv => new NetworkDto(ntv: ntv));
+        Networks = tv.NetworkTvs.Select(ntv => new NetworkDto(ntv));
 
-        Companies = tv.CompaniesTvs.Select(selector: ctv => new CompanyDto(ctv: ctv));
+        Companies = tv.CompaniesTvs.Select(ctv => new CompanyDto(ctv));
     }
 
     public InfoResponseItemDto(TmdbTvShowAppends tmdbTv, string? country)
     {
         string? title = tmdbTv
-            .Translations.Translations.FirstOrDefault(predicate: translation =>
+            .Translations.Translations.FirstOrDefault(translation =>
                 translation.Iso31661 == country
             )
             ?.Data.Title;
 
         string? overview = tmdbTv
-            .Translations.Translations.FirstOrDefault(predicate: translation =>
+            .Translations.Translations.FirstOrDefault(translation =>
                 translation.Iso31661 == country
             )
             ?.Data.Overview;
 
         Id = tmdbTv.Id;
         Adult = tmdbTv.Adult;
-        Title = !string.IsNullOrEmpty(value: title) ? title : tmdbTv.Name;
-        Overview = !string.IsNullOrEmpty(value: overview) ? overview : tmdbTv.Overview;
+        Title = !string.IsNullOrEmpty(title) ? title : tmdbTv.Name;
+        Overview = !string.IsNullOrEmpty(overview) ? overview : tmdbTv.Overview;
         Type = tmdbTv.Type ?? MediaTypes.TvMediaType;
         MediaType = MediaTypes.TvMediaType;
-        Link = new(uriString: $"/tv/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/tv/{Id}", UriKind.Relative);
         Watched = false;
         Favorite = false;
 
-        TitleSort = tmdbTv.Name.TitleSort(date: tmdbTv.FirstAirDate);
+        TitleSort = tmdbTv.Name.TitleSort(tmdbTv.FirstAirDate);
 
-        Translations = tmdbTv.Translations.Translations.Select(selector: translation => new TranslationDto(
-            translation: translation
+        Translations = tmdbTv.Translations.Translations.Select(translation => new TranslationDto(
+            translation
         ));
 
         Duration =
@@ -532,11 +532,11 @@ public record InfoResponseItemDto
 
         // ColorPalette = tv.ColorPalette;
         Backdrop =
-            tmdbTv.Images.Backdrops.FirstOrDefault(predicate: media => media.Iso6391 is "")?.FilePath
+            tmdbTv.Images.Backdrops.FirstOrDefault(media => media.Iso6391 is "")?.FilePath
             ?? tmdbTv.BackdropPath;
 
         Poster =
-            tmdbTv.Images.Posters.FirstOrDefault(predicate: poster => poster.Iso6391 is "")?.FilePath
+            tmdbTv.Images.Posters.FirstOrDefault(poster => poster.Iso6391 is "")?.FilePath
             ?? tmdbTv.PosterPath;
 
         ExternalIds = new()
@@ -546,74 +546,74 @@ public record InfoResponseItemDto
         };
 
         ContentRatings = tmdbTv
-            .ContentRatings.Results.Where(predicate: certificationMovie =>
+            .ContentRatings.Results.Where(certificationMovie =>
                 certificationMovie.Iso31661 == "US" || certificationMovie.Iso31661 == country
             )
-            .Select(selector: certificationTv => new ContentRating
+            .Select(certificationTv => new ContentRating
             {
                 Rating = certificationTv.Rating,
                 Iso31661 = certificationTv.Iso31661,
             });
 
-        Keywords = tmdbTv.Keywords.Results.Select(selector: keywordTv => keywordTv.Name);
+        Keywords = tmdbTv.Keywords.Results.Select(keywordTv => keywordTv.Name);
 
         Logo = tmdbTv
-            .Images.Logos.OrderByDescending(keySelector: image => image.VoteAverage)
-            .FirstOrDefault(predicate: media => media.Iso6391 == "en")
+            .Images.Logos.OrderByDescending(image => image.VoteAverage)
+            .FirstOrDefault(media => media.Iso6391 == "en")
             ?.FilePath;
 
-        Videos = tmdbTv.Videos.Results.Select(selector: media => new VideoDto(media: media));
+        Videos = tmdbTv.Videos.Results.Select(media => new VideoDto(media));
 
         Backdrops = tmdbTv
-            .Images.Backdrops.Where(predicate: image => image.Iso6391 is "en" or null)
-            .Select(selector: media => new ImageDto(media: media));
+            .Images.Backdrops.Where(image => image.Iso6391 is "en" or null)
+            .Select(media => new ImageDto(media));
 
         Posters = tmdbTv
-            .Images.Posters.Where(predicate: image => image.Iso6391 is "en" or null)
-            .Select(selector: media => new ImageDto(media: media));
+            .Images.Posters.Where(image => image.Iso6391 is "en" or null)
+            .Select(media => new ImageDto(media));
 
-        Genres = tmdbTv.Genres.Select(selector: genreTv => new GenreDto(tmdbGenreMovie: genreTv));
+        Genres = tmdbTv.Genres.Select(genreTv => new GenreDto(genreTv));
 
-        PeopleDto[] cast = tmdbTv.Credits.Cast.Select(selector: cast => new PeopleDto(tmdbCast: cast)).ToArray();
+        PeopleDto[] cast = tmdbTv.Credits.Cast.Select(cast => new PeopleDto(cast)).ToArray();
 
-        PeopleDto[] crew = tmdbTv.Credits.Crew.Select(selector: crew => new PeopleDto(tmdbCrew: crew)).ToArray();
+        PeopleDto[] crew = tmdbTv.Credits.Crew.Select(crew => new PeopleDto(crew)).ToArray();
 
         Cast = cast;
         Crew = crew;
 
-        Director = crew.FirstOrDefault(predicate: people => people.Job == "Director");
-        Writer = crew.FirstOrDefault(predicate: people => people.Job == "Writer");
+        Director = crew.FirstOrDefault(people => people.Job == "Director");
+        Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
-        Creator = tmdbTv.CreatedBy.Select(selector: people => new PeopleDto(crew: people)).FirstOrDefault();
+        Creator = tmdbTv.CreatedBy.Select(people => new PeopleDto(people)).FirstOrDefault();
 
         Similar = tmdbTv
-            .Similar.Results.Select(selector: similar => new RelatedDto(recommendation: similar, type: MediaTypes.TvMediaType))
-            .Where(predicate: item => item.Poster != null);
+            .Similar.Results.Select(similar => new RelatedDto(similar, MediaTypes.TvMediaType))
+            .Where(item => item.Poster != null);
 
         Recommendations = tmdbTv
-            .Recommendations.Results.Select(selector: recommendation => new RelatedDto(
-                recommendation: recommendation,
-                type: MediaTypes.TvMediaType
+            .Recommendations.Results.Select(recommendation => new RelatedDto(
+                recommendation,
+                MediaTypes.TvMediaType
             ))
-            .Where(predicate: item => item.Poster != null);
+            .Where(item => item.Poster != null);
 
         Seasons = [];
 
         GroupedWatchProviders = TmdbWatchProviders
-            .ExtractProviders(results: tmdbTv.WatchProviders.TmdbWatchProviderResults)
-            .Where(predicate: wpm => wpm.CountryCode == country)
-            .Select(selector: wpm => new WatchProviderDto(argKey: wpm))
-            .GroupBy(keySelector: p => p.ProviderType);
+            .ExtractProviders(tmdbTv.WatchProviders.TmdbWatchProviderResults)
+            .Where(wpm => wpm.CountryCode == country)
+            .Select(wpm => new WatchProviderDto(wpm))
+            .GroupBy(p => p.ProviderType);
 
         WatchProviders = TmdbWatchProviders
-            .ExtractProviders(results: tmdbTv.WatchProviders.TmdbWatchProviderResults)
-            .Where(predicate: wpm => wpm.CountryCode == country)
-            .DistinctBy(keySelector: wpm => wpm.Provider.ProviderId)
-            .Select(selector: wpm => new WatchProviderDto(argKey: wpm));
+            .ExtractProviders(tmdbTv.WatchProviders.TmdbWatchProviderResults)
+            .Where(wpm => wpm.CountryCode == country)
+            .DistinctBy(wpm => wpm.Provider.ProviderId)
+            .Select(wpm => new WatchProviderDto(wpm));
 
-        Companies = tmdbTv.ProductionCompanies.Select(selector: cm => new CompanyDto(ctv: cm));
+        Companies = tmdbTv.ProductionCompanies.Select(cm => new CompanyDto(cm));
 
-        Networks = tmdbTv.Networks.Select(selector: ntv => new NetworkDto(ntv: ntv));
+        Networks = tmdbTv.Networks.Select(ntv => new NetworkDto(ntv));
     }
 
     public InfoResponseItemDto(Collection collection, string country)
@@ -623,109 +623,109 @@ public record InfoResponseItemDto
         string? overview = collection.Translations.FirstOrDefault()?.Overview;
 
         Id = collection.Id;
-        Title = !string.IsNullOrEmpty(value: title) ? title : collection.Title;
-        Overview = !string.IsNullOrEmpty(value: overview) ? overview : collection.Overview;
+        Title = !string.IsNullOrEmpty(title) ? title : collection.Title;
+        Overview = !string.IsNullOrEmpty(overview) ? overview : collection.Overview;
         Type = MediaTypes.CollectionMediaType;
         MediaType = MediaTypes.CollectionMediaType;
-        Link = new(uriString: $"/collection/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/collection/{Id}", UriKind.Relative);
         // Watched = tv.Watched;
         // Favorite = tv.Favorite;
         TitleSort = collection.Title.TitleSort(
-            parseYear: collection
-                .CollectionMovies.MinBy(keySelector: collectionMovie => collectionMovie.Movie.ReleaseDate)
+            collection
+                .CollectionMovies.MinBy(collectionMovie => collectionMovie.Movie.ReleaseDate)
                 ?.Movie.ReleaseDate.ParseYear()
         );
 
         Duration = collection
-            .CollectionMovies.SelectMany(selector: collectionMovie => collectionMovie.Movie.VideoFiles)
-            .Select(selector: videoFile => videoFile.Duration?.ToSeconds() ?? 0)
+            .CollectionMovies.SelectMany(collectionMovie => collectionMovie.Movie.VideoFiles)
+            .Select(videoFile => videoFile.Duration?.ToSeconds() ?? 0)
             .Sum();
 
-        Translations = collection.Translations.Select(selector: translation => new TranslationDto(
-            translation: translation
+        Translations = collection.Translations.Select(translation => new TranslationDto(
+            translation
         ));
 
         Year =
             collection
-                .CollectionMovies.MinBy(keySelector: collectionMovie => collectionMovie.Movie.ReleaseDate)
+                .CollectionMovies.MinBy(collectionMovie => collectionMovie.Movie.ReleaseDate)
                 ?.Movie.ReleaseDate.ParseYear()
             ?? 0;
 
         VoteAverage =
-            collection.CollectionMovies.Average(selector: collectionMovie =>
+            collection.CollectionMovies.Average(collectionMovie =>
                 collectionMovie.Movie.VoteAverage
             ) ?? 0;
 
         ColorPalette = collection.ColorPalette;
         Backdrop =
             collection
-                .Images.FirstOrDefault(predicate: image => image is { Type: "backdrop", Iso6391: null })
+                .Images.FirstOrDefault(image => image is { Type: "backdrop", Iso6391: null })
                 ?.FilePath
             ?? collection.Backdrop;
         Poster =
             collection
-                .Images.FirstOrDefault(predicate: image => image is { Type: "poster", Iso6391: null })
+                .Images.FirstOrDefault(image => image is { Type: "poster", Iso6391: null })
                 ?.FilePath
             ?? collection.Poster;
 
-        ContentRatings = collection.CollectionMovies.Select(selector: certificationMovie => new ContentRating
+        ContentRatings = collection.CollectionMovies.Select(certificationMovie => new ContentRating
         {
             Rating = certificationMovie
-                .Movie.CertificationMovies.First(predicate: cert =>
+                .Movie.CertificationMovies.First(cert =>
                     cert.Certification.Iso31661 == "US" || cert.Certification.Iso31661 == country
                 )
                 .Certification.Rating,
             Iso31661 = certificationMovie
-                .Movie.CertificationMovies.First(predicate: cert =>
+                .Movie.CertificationMovies.First(cert =>
                     cert.Certification.Iso31661 == "US" || cert.Certification.Iso31661 == country
                 )
                 .Certification.Iso31661,
         });
 
         Keywords = collection
-            .CollectionMovies.SelectMany(selector: collectionMovie => collectionMovie.Movie.KeywordMovies)
-            .Select(selector: keywordMovie => keywordMovie.Keyword.Name);
+            .CollectionMovies.SelectMany(collectionMovie => collectionMovie.Movie.KeywordMovies)
+            .Select(keywordMovie => keywordMovie.Keyword.Name);
 
         Logo = collection
-            .CollectionMovies.Select(selector: collectionMovie =>
+            .CollectionMovies.Select(collectionMovie =>
                 collectionMovie
-                    .Movie.Images.OrderByDescending(keySelector: image => image.VoteAverage)
-                    .FirstOrDefault(predicate: media => media.Type == "logo")
+                    .Movie.Images.OrderByDescending(image => image.VoteAverage)
+                    .FirstOrDefault(media => media.Type == "logo")
                     ?.FilePath
             )
             .FirstOrDefault();
 
         PeopleDto[] cast = collection
-            .CollectionMovies.SelectMany(selector: collectionMovie => collectionMovie.Movie.Cast)
-            .Where(predicate: cast => cast.Person.Adult == false)
-            .Select(selector: cast => new PeopleDto(cast: cast))
+            .CollectionMovies.SelectMany(collectionMovie => collectionMovie.Movie.Cast)
+            .Where(cast => cast.Person.Adult == false)
+            .Select(cast => new PeopleDto(cast))
             .ToArray();
 
         PeopleDto[] crew = collection
-            .CollectionMovies.SelectMany(selector: collectionMovie => collectionMovie.Movie.Crew)
-            .Where(predicate: crew => crew.Person.Adult == false)
-            .Select(selector: crew => new PeopleDto(crew: crew))
+            .CollectionMovies.SelectMany(collectionMovie => collectionMovie.Movie.Crew)
+            .Where(crew => crew.Person.Adult == false)
+            .Select(crew => new PeopleDto(crew))
             .ToArray();
 
         Cast = cast;
         Crew = crew;
 
-        Director = crew.FirstOrDefault(predicate: people => people.Job == "Director");
+        Director = crew.FirstOrDefault(people => people.Job == "Director");
 
-        Writer = crew.FirstOrDefault(predicate: people => people.Job == "Writer");
+        Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
         GroupedWatchProviders = collection
-            .CollectionMovies.SelectMany(selector: cm => cm.Movie.WatchProviderMedia)
-            .Select(selector: wpm => new WatchProviderDto(wpm: wpm))
-            .GroupBy(keySelector: p => p.ProviderType);
+            .CollectionMovies.SelectMany(cm => cm.Movie.WatchProviderMedia)
+            .Select(wpm => new WatchProviderDto(wpm))
+            .GroupBy(p => p.ProviderType);
 
         WatchProviders = collection
-            .CollectionMovies.SelectMany(selector: cm => cm.Movie.WatchProviderMedia)
-            .DistinctBy(keySelector: wpm => wpm.WatchProviderId)
-            .Select(selector: wpm => new WatchProviderDto(wpm: wpm));
+            .CollectionMovies.SelectMany(cm => cm.Movie.WatchProviderMedia)
+            .DistinctBy(wpm => wpm.WatchProviderId)
+            .Select(wpm => new WatchProviderDto(wpm));
 
         Companies = collection
-            .CollectionMovies.SelectMany(selector: cm => cm.Movie.CompaniesMovies)
-            .Select(selector: ctv => new CompanyDto(ctv: ctv));
+            .CollectionMovies.SelectMany(cm => cm.Movie.CompaniesMovies)
+            .Select(ctv => new CompanyDto(ctv));
     }
 }

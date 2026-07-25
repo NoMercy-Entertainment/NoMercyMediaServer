@@ -30,33 +30,33 @@ public class LiveFfmpegRunnerTests
     }
 
     private static IHardwareCapabilities NoopHardware() =>
-        new HardwareCapabilities(Gpus: [], CpuCores: Environment.ProcessorCount);
+        new HardwareCapabilities([], Environment.ProcessorCount);
 
     private static IResourceBudget NoopBudget()
     {
         Mock<IResourceBudget> mock = new();
-        ResourceLease lease = new(LeaseId: "noop", GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 0);
-        mock.Setup(expression: b => b.Acquire(It.IsAny<ResourceRequirement>())).Returns(value: lease);
-        mock.Setup(expression: b =>
+        ResourceLease lease = new("noop", null, 0, 0);
+        mock.Setup(b => b.Acquire(It.IsAny<ResourceRequirement>())).Returns(lease);
+        mock.Setup(b =>
                 b.AcquireAsync(It.IsAny<ResourceRequirement>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: lease);
-        mock.Setup(expression: b => b.Release(It.IsAny<ResourceLease>()));
+            .ReturnsAsync(lease);
+        mock.Setup(b => b.Release(It.IsAny<ResourceLease>()));
         return mock.Object;
     }
 
-    private static ICodecResolver RealCodecResolver() => new CodecResolver(registry: new CodecRegistry());
+    private static ICodecResolver RealCodecResolver() => new CodecResolver(new CodecRegistry());
 
     private static LiveFfmpegRunner MakeRunner(IProcessRunner? processRunner = null) =>
         new(
-            processRunner: processRunner ?? new FakeProcessRunner(onRun: () => { }),
-            options: new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
-            logger: NullLogger<LiveFfmpegRunner>.Instance,
-            storage: TestStorageFactory.CreateLocal(),
-            nvencSessionCap: NoopCap(),
-            hardware: NoopHardware(),
-            codecResolver: RealCodecResolver(),
-            resourceBudget: NoopBudget()
+            processRunner ?? new FakeProcessRunner(() => { }),
+            new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            NullLogger<LiveFfmpegRunner>.Instance,
+            TestStorageFactory.CreateLocal(),
+            NoopCap(),
+            NoopHardware(),
+            RealCodecResolver(),
+            NoopBudget()
         );
 
     private static LiveQuality MakeQuality(
@@ -93,16 +93,16 @@ public class LiveFfmpegRunnerTests
             SegmentDurationSeconds: 4
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        args.Should().Contain(expected: "-f").And.Contain(expected: "hls");
-        args.Should().Contain(expected: "-hls_time");
-        args[Array.IndexOf(array: args, value: "-hls_time") + 1].Should().Be(expected: "4");
-        args.Should().Contain(expected: "-hls_list_size");
-        args[Array.IndexOf(array: args, value: "-hls_list_size") + 1].Should().Be(expected: "0");
-        args.Should().Contain(expected: "-hls_playlist_type");
-        args[Array.IndexOf(array: args, value: "-hls_playlist_type") + 1].Should().Be(expected: "event");
-        args.Should().Contain(predicate: arg => arg.EndsWith("index.m3u8"));
+        args.Should().Contain("-f").And.Contain("hls");
+        args.Should().Contain("-hls_time");
+        args[Array.IndexOf(args, "-hls_time") + 1].Should().Be("4");
+        args.Should().Contain("-hls_list_size");
+        args[Array.IndexOf(args, "-hls_list_size") + 1].Should().Be("0");
+        args.Should().Contain("-hls_playlist_type");
+        args[Array.IndexOf(args, "-hls_playlist_type") + 1].Should().Be("event");
+        args.Should().Contain(arg => arg.EndsWith("index.m3u8"));
     }
 
     [Fact]
@@ -116,12 +116,12 @@ public class LiveFfmpegRunnerTests
             SegmentDurationSeconds: 6
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        args.Should().NotContain(unexpected: "-ss");
+        args.Should().NotContain("-ss");
         // The first run still numbers its segments from zero.
-        args.Should().Contain(expected: "-start_number");
-        args[Array.IndexOf(array: args, value: "-start_number") + 1].Should().Be(expected: "0");
+        args.Should().Contain("-start_number");
+        args[Array.IndexOf(args, "-start_number") + 1].Should().Be("0");
     }
 
     [Fact]
@@ -135,26 +135,26 @@ public class LiveFfmpegRunnerTests
         LiveRunInput input = new(
             InputPath: "/media/in.mkv",
             OutputDirectory: "/tmp/live",
-            StartPosition: TimeSpan.FromSeconds(value: 120.5),
+            StartPosition: TimeSpan.FromSeconds(120.5),
             Quality: MakeQuality(),
             SegmentDurationSeconds: 6
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int ssIdx = Array.IndexOf(array: args, value: "-ss");
-        ssIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[ssIdx + 1].Should().Be(expected: "120.000");
+        int ssIdx = Array.IndexOf(args, "-ss");
+        ssIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[ssIdx + 1].Should().Be("120.000");
 
-        int startNumberIdx = Array.IndexOf(array: args, value: "-start_number");
-        startNumberIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[startNumberIdx + 1].Should().Be(expected: "20");
+        int startNumberIdx = Array.IndexOf(args, "-start_number");
+        startNumberIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[startNumberIdx + 1].Should().Be("20");
 
         // Muxed PTS is shifted to the segment's true start so hls.js places the
         // seek fragment at 120s (20×6) instead of 0.
-        int offsetIdx = Array.IndexOf(array: args, value: "-output_ts_offset");
-        offsetIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[offsetIdx + 1].Should().Be(expected: "120.000");
+        int offsetIdx = Array.IndexOf(args, "-output_ts_offset");
+        offsetIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[offsetIdx + 1].Should().Be("120.000");
     }
 
     [Fact]
@@ -168,13 +168,13 @@ public class LiveFfmpegRunnerTests
             SegmentDurationSeconds: 4
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int vCodecIdx = Array.IndexOf(array: args, value: "-c:v");
-        args[vCodecIdx + 1].Should().Be(expected: "h264_nvenc");
+        int vCodecIdx = Array.IndexOf(args, "-c:v");
+        args[vCodecIdx + 1].Should().Be("h264_nvenc");
 
-        int bvIdx = Array.IndexOf(array: args, value: "-b:v");
-        args[bvIdx + 1].Should().Be(expected: "3500k");
+        int bvIdx = Array.IndexOf(args, "-b:v");
+        args[bvIdx + 1].Should().Be("3500k");
     }
 
     [Fact]
@@ -184,14 +184,14 @@ public class LiveFfmpegRunnerTests
             InputPath: "/media/in.mkv",
             OutputDirectory: "/tmp/live",
             StartPosition: TimeSpan.Zero,
-            Quality: MakeQuality(width: 1280, height: 720, kbps: 4000),
+            Quality: MakeQuality(1280, 720, 4000),
             SegmentDurationSeconds: 4
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int vfIdx = Array.IndexOf(array: args, value: "-vf");
-        args[vfIdx + 1].Should().Be(expected: "scale=1280:720,format=yuv420p");
+        int vfIdx = Array.IndexOf(args, "-vf");
+        args[vfIdx + 1].Should().Be("scale=1280:720,format=yuv420p");
     }
 
     [Fact]
@@ -205,11 +205,11 @@ public class LiveFfmpegRunnerTests
             SegmentDurationSeconds: 6
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int progIdx = Array.IndexOf(array: args, value: "-progress");
-        progIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[progIdx + 1].Should().Be(expected: "pipe:1");
+        int progIdx = Array.IndexOf(args, "-progress");
+        progIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[progIdx + 1].Should().Be("pipe:1");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -220,49 +220,49 @@ public class LiveFfmpegRunnerTests
     public void ParsePlaylist_ExtractsDurationAndIndexFromEachEntry()
     {
         string path = WritePlaylist(
-            content: """
-                     #EXTM3U
-                     #EXT-X-VERSION:3
-                     #EXT-X-TARGETDURATION:6
-                     #EXT-X-MEDIA-SEQUENCE:0
-                     #EXTINF:6.000000,
-                     seg_00000.ts
-                     #EXTINF:6.000000,
-                     seg_00001.ts
-                     #EXTINF:4.040000,
-                     seg_00002.ts
-                     """
+            """
+            #EXTM3U
+            #EXT-X-VERSION:3
+            #EXT-X-TARGETDURATION:6
+            #EXT-X-MEDIA-SEQUENCE:0
+            #EXTINF:6.000000,
+            seg_00000.ts
+            #EXTINF:6.000000,
+            seg_00001.ts
+            #EXTINF:4.040000,
+            seg_00002.ts
+            """
         );
 
-        IReadOnlyList<(int Index, TimeSpan Duration)> entries = MakeRunner().ParsePlaylist(playlistPath: path);
+        IReadOnlyList<(int Index, TimeSpan Duration)> entries = MakeRunner().ParsePlaylist(path);
 
-        entries.Should().HaveCount(expected: 3);
-        entries[index: 0].Index.Should().Be(expected: 0);
-        entries[index: 0].Duration.Should().Be(expected: TimeSpan.FromSeconds(seconds: 6));
-        entries[index: 1].Index.Should().Be(expected: 1);
-        entries[index: 2].Index.Should().Be(expected: 2);
-        entries[index: 2].Duration.TotalSeconds.Should().BeApproximately(expectedValue: 4.04, precision: 0.001);
+        entries.Should().HaveCount(3);
+        entries[0].Index.Should().Be(0);
+        entries[0].Duration.Should().Be(TimeSpan.FromSeconds(6));
+        entries[1].Index.Should().Be(1);
+        entries[2].Index.Should().Be(2);
+        entries[2].Duration.TotalSeconds.Should().BeApproximately(4.04, 0.001);
     }
 
     [Fact]
     public void ParsePlaylist_IgnoresComments_AndEndlist()
     {
         string path = WritePlaylist(
-            content: """
-                     #EXTM3U
-                     #EXT-X-VERSION:3
-                     #EXT-X-TARGETDURATION:6
-                     #EXT-X-MEDIA-SEQUENCE:0
-                     #EXTINF:6.000000,
-                     seg_00000.ts
-                     #EXT-X-ENDLIST
-                     """
+            """
+            #EXTM3U
+            #EXT-X-VERSION:3
+            #EXT-X-TARGETDURATION:6
+            #EXT-X-MEDIA-SEQUENCE:0
+            #EXTINF:6.000000,
+            seg_00000.ts
+            #EXT-X-ENDLIST
+            """
         );
 
-        IReadOnlyList<(int Index, TimeSpan Duration)> entries = MakeRunner().ParsePlaylist(playlistPath: path);
+        IReadOnlyList<(int Index, TimeSpan Duration)> entries = MakeRunner().ParsePlaylist(path);
 
-        entries.Should().HaveCount(expected: 1);
-        entries[index: 0].Index.Should().Be(expected: 0);
+        entries.Should().HaveCount(1);
+        entries[0].Index.Should().Be(0);
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public class LiveFfmpegRunnerTests
     {
         IReadOnlyList<(int Index, TimeSpan Duration)> entries = MakeRunner()
             .ParsePlaylist(
-                playlistPath: Path.Combine(path1: Path.GetTempPath(), path2: Guid.NewGuid().ToString(), path3: "index.m3u8")
+                Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), "index.m3u8")
             );
 
         entries.Should().BeEmpty();
@@ -283,8 +283,8 @@ public class LiveFfmpegRunnerTests
     [Fact]
     public async Task RunAsync_PushesSegmentsProducedDuringRun()
     {
-        string tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"live-runner-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: tempDir);
+        string tempDir = Path.Combine(Path.GetTempPath(), $"live-runner-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
 
         try
         {
@@ -296,59 +296,59 @@ public class LiveFfmpegRunnerTests
                 SegmentDurationSeconds: 6
             );
 
-            FakeProcessRunner runner = new(onRun: () =>
+            FakeProcessRunner runner = new(() =>
             {
                 // Simulate FFmpeg producing two segments during its run
-                File.WriteAllText(path: Path.Combine(path1: tempDir, path2: "seg_00000.ts"), contents: new(c: 'a', count: 100));
-                File.WriteAllText(path: Path.Combine(path1: tempDir, path2: "seg_00001.ts"), contents: new(c: 'a', count: 100));
+                File.WriteAllText(Path.Combine(tempDir, "seg_00000.ts"), new('a', 100));
+                File.WriteAllText(Path.Combine(tempDir, "seg_00001.ts"), new('a', 100));
                 File.WriteAllText(
-                    path: Path.Combine(path1: tempDir, path2: "index.m3u8"),
-                    contents: """
-                              #EXTM3U
-                              #EXT-X-VERSION:3
-                              #EXT-X-TARGETDURATION:6
-                              #EXT-X-MEDIA-SEQUENCE:0
-                              #EXTINF:6.000000,
-                              seg_00000.ts
-                              #EXTINF:6.000000,
-                              seg_00001.ts
-                              #EXT-X-ENDLIST
-                              """
+                    Path.Combine(tempDir, "index.m3u8"),
+                    """
+                    #EXTM3U
+                    #EXT-X-VERSION:3
+                    #EXT-X-TARGETDURATION:6
+                    #EXT-X-MEDIA-SEQUENCE:0
+                    #EXTINF:6.000000,
+                    seg_00000.ts
+                    #EXTINF:6.000000,
+                    seg_00001.ts
+                    #EXT-X-ENDLIST
+                    """
                 );
             });
 
             LiveFfmpegRunner sut = new(
-                processRunner: runner,
-                options: new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
-                logger: NullLogger<LiveFfmpegRunner>.Instance,
-                storage: TestStorageFactory.CreateLocal(),
-                nvencSessionCap: NoopCap(),
-                hardware: NoopHardware(),
-                codecResolver: RealCodecResolver(),
-                resourceBudget: NoopBudget()
+                runner,
+                new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+                NullLogger<LiveFfmpegRunner>.Instance,
+                TestStorageFactory.CreateLocal(),
+                NoopCap(),
+                NoopHardware(),
+                RealCodecResolver(),
+                NoopBudget()
             );
 
-            LiveSession session = new(sessionId: "sess", quality: MakeQuality());
-            session.SetState(state: LiveSessionState.Transcoding);
+            LiveSession session = new("sess", MakeQuality());
+            session.SetState(LiveSessionState.Transcoding);
 
-            await sut.RunAsync(input: input, session: session, ct: CancellationToken.None);
+            await sut.RunAsync(input, session, CancellationToken.None);
 
             List<Segment> received = [];
             await foreach (Segment segment in session.Segments)
             {
-                received.Add(item: segment);
+                received.Add(segment);
                 if (received.Count >= 2)
                     break;
             }
 
-            received.Should().HaveCount(expected: 2);
-            received.Select(selector: s => s.Index).Should().Equal(elements: [0, 1]);
+            received.Should().HaveCount(2);
+            received.Select(s => s.Index).Should().Equal(0, 1);
         }
         finally
         {
             try
             {
-                Directory.Delete(path: tempDir, recursive: true);
+                Directory.Delete(tempDir, recursive: true);
             }
             catch
             {
@@ -371,10 +371,10 @@ public class LiveFfmpegRunnerTests
     public async Task RunAsync_StillCurrentRunner_CompletesSessionSegmentChannel()
     {
         string tempDir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: $"live-runner-current-{Guid.NewGuid():N}"
+            Path.GetTempPath(),
+            $"live-runner-current-{Guid.NewGuid():N}"
         );
-        Directory.CreateDirectory(path: tempDir);
+        Directory.CreateDirectory(tempDir);
 
         try
         {
@@ -386,25 +386,25 @@ public class LiveFfmpegRunnerTests
                 SegmentDurationSeconds: 6
             );
 
-            LiveFfmpegRunner sut = MakeRunner(processRunner: new FakeProcessRunner(onRun: () => { }));
-            LiveSession session = new(sessionId: "sess-current", quality: MakeQuality());
-            session.SetState(state: LiveSessionState.Transcoding);
+            LiveFfmpegRunner sut = MakeRunner(new FakeProcessRunner(() => { }));
+            LiveSession session = new("sess-current", MakeQuality());
+            session.SetState(LiveSessionState.Transcoding);
 
             // RunAsync invoked with the session's OWN current runner token —
             // mirrors the real _runnerFactory wiring (LiveEncoder.SpawnRunner)
             // where no newer seek has superseded this runner.
-            await sut.RunAsync(input: input, session: session, ct: session.RunnerCancellation);
+            await sut.RunAsync(input, session, session.RunnerCancellation);
 
-            Task drain = DrainAsync(session: session);
-            Task completed = await Task.WhenAny(task1: drain, task2: Task.Delay(delay: TimeSpan.FromSeconds(seconds: 2)));
+            Task drain = DrainAsync(session);
+            Task completed = await Task.WhenAny(drain, Task.Delay(TimeSpan.FromSeconds(2)));
 
-            completed.Should().Be(expected: drain, because: "the current runner must complete the segment channel");
+            completed.Should().Be(drain, "the current runner must complete the segment channel");
         }
         finally
         {
             try
             {
-                Directory.Delete(path: tempDir, recursive: true);
+                Directory.Delete(tempDir, recursive: true);
             }
             catch
             {
@@ -416,8 +416,8 @@ public class LiveFfmpegRunnerTests
     [Fact]
     public async Task RunAsync_SupersededBySeek_DoesNotCompleteSessionSegmentChannel()
     {
-        string tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"live-runner-stale-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: tempDir);
+        string tempDir = Path.Combine(Path.GetTempPath(), $"live-runner-stale-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
 
         try
         {
@@ -429,31 +429,31 @@ public class LiveFfmpegRunnerTests
                 SegmentDurationSeconds: 6
             );
 
-            LiveFfmpegRunner sut = MakeRunner(processRunner: new FakeProcessRunner(onRun: () => { }));
-            LiveSession session = new(sessionId: "sess-stale", quality: MakeQuality());
-            session.SetState(state: LiveSessionState.Transcoding);
+            LiveFfmpegRunner sut = MakeRunner(new FakeProcessRunner(() => { }));
+            LiveSession session = new("sess-stale", MakeQuality());
+            session.SetState(LiveSessionState.Transcoding);
 
             CancellationToken staleToken = session.RunnerCancellation;
 
             // A seek/resume/quality-change swaps in a fresh runner CTS before
             // this (now-superseded) runner's ffmpeg process finishes. No
             // factory is attached, so the seek only replaces the CTS.
-            await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 10), ct: CancellationToken.None);
+            await session.SeekAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
 
-            await sut.RunAsync(input: input, session: session, ct: staleToken);
+            await sut.RunAsync(input, session, staleToken);
 
-            Task drain = DrainAsync(session: session);
-            Task completed = await Task.WhenAny(task1: drain, task2: Task.Delay(delay: TimeSpan.FromMilliseconds(milliseconds: 400)));
+            Task drain = DrainAsync(session);
+            Task completed = await Task.WhenAny(drain, Task.Delay(TimeSpan.FromMilliseconds(400)));
 
             completed
                 .Should()
-                .NotBe(unexpected: drain, because: "a superseded runner must not end the session's segment stream");
+                .NotBe(drain, "a superseded runner must not end the session's segment stream");
         }
         finally
         {
             try
             {
-                Directory.Delete(path: tempDir, recursive: true);
+                Directory.Delete(tempDir, recursive: true);
             }
             catch
             {
@@ -473,26 +473,26 @@ public class LiveFfmpegRunnerTests
     {
         Mock<IStorage> storage = new();
         storage
-            .Setup(expression: s => s.CreateDirectory(It.IsAny<string>()))
-            .Throws(exception: new IOException(message: "disk full"));
+            .Setup(s => s.CreateDirectory(It.IsAny<string>()))
+            .Throws(new IOException("disk full"));
 
-        ResourceLease lease = new(LeaseId: "lease-1", GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 2);
+        ResourceLease lease = new("lease-1", null, 0, 2);
         Mock<IResourceBudget> budget = new();
         budget
-            .Setup(expression: b =>
+            .Setup(b =>
                 b.AcquireAsync(It.IsAny<ResourceRequirement>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: lease);
+            .ReturnsAsync(lease);
 
         LiveFfmpegRunner sut = new(
-            processRunner: new FakeProcessRunner(onRun: () => { }),
-            options: new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
-            logger: NullLogger<LiveFfmpegRunner>.Instance,
-            storage: storage.Object,
-            nvencSessionCap: NoopCap(),
-            hardware: NoopHardware(),
-            codecResolver: RealCodecResolver(),
-            resourceBudget: budget.Object
+            new FakeProcessRunner(() => { }),
+            new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            NullLogger<LiveFfmpegRunner>.Instance,
+            storage.Object,
+            NoopCap(),
+            NoopHardware(),
+            RealCodecResolver(),
+            budget.Object
         );
 
         LiveRunInput input = new(
@@ -502,12 +502,12 @@ public class LiveFfmpegRunnerTests
             Quality: MakeQuality(),
             SegmentDurationSeconds: 6
         );
-        LiveSession session = new(sessionId: "sess-throw", quality: MakeQuality());
+        LiveSession session = new("sess-throw", MakeQuality());
 
-        Func<Task> act = () => sut.RunAsync(input: input, session: session, ct: CancellationToken.None);
+        Func<Task> act = () => sut.RunAsync(input, session, CancellationToken.None);
 
         await act.Should().ThrowAsync<IOException>();
-        budget.Verify(expression: b => b.Release(lease), times: Times.Once);
+        budget.Verify(b => b.Release(lease), Times.Once);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -556,7 +556,7 @@ public class LiveFfmpegRunnerTests
         return new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 120),
+            Duration: TimeSpan.FromMinutes(120),
             OverallBitRateKbps: 43000,
             FileSizeBytes: 40_000_000_000L,
             VideoStreams: [video],
@@ -580,14 +580,14 @@ public class LiveFfmpegRunnerTests
             SourceInfo: MakeMediaInfo(isHdr: true, audioChannels: 2)
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int vfIdx = Array.IndexOf(array: args, value: "-vf");
+        int vfIdx = Array.IndexOf(args, "-vf");
         string vf = args[vfIdx + 1];
-        vf.Should().Contain(expected: "scale=");
-        vf.Should().Contain(expected: "zscale=t=linear");
-        vf.Should().Contain(expected: "tonemap=tonemap=hable");
-        vf.Should().Contain(expected: "format=yuv420p");
+        vf.Should().Contain("scale=");
+        vf.Should().Contain("zscale=t=linear");
+        vf.Should().Contain("tonemap=tonemap=hable");
+        vf.Should().Contain("format=yuv420p");
     }
 
     [Fact]
@@ -604,12 +604,12 @@ public class LiveFfmpegRunnerTests
             SourceInfo: MakeMediaInfo(isHdr: true, audioChannels: 8)
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int vfIdx = Array.IndexOf(array: args, value: "-vf");
+        int vfIdx = Array.IndexOf(args, "-vf");
         string vf = args[vfIdx + 1];
-        vf.Should().NotContain(unexpected: "zscale");
-        vf.Should().NotContain(unexpected: "tonemap");
+        vf.Should().NotContain("zscale");
+        vf.Should().NotContain("tonemap");
     }
 
     [Fact]
@@ -626,10 +626,10 @@ public class LiveFfmpegRunnerTests
             SourceInfo: MakeMediaInfo(isHdr: false, audioChannels: 8)
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int acIdx = Array.IndexOf(array: args, value: "-ac");
-        args[acIdx + 1].Should().Be(expected: "2");
+        int acIdx = Array.IndexOf(args, "-ac");
+        args[acIdx + 1].Should().Be("2");
     }
 
     [Fact]
@@ -646,10 +646,10 @@ public class LiveFfmpegRunnerTests
             SourceInfo: MakeMediaInfo(isHdr: false, audioChannels: 2)
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int acIdx = Array.IndexOf(array: args, value: "-ac");
-        args[acIdx + 1].Should().Be(expected: "2");
+        int acIdx = Array.IndexOf(args, "-ac");
+        args[acIdx + 1].Should().Be("2");
     }
 
     [Fact]
@@ -664,10 +664,10 @@ public class LiveFfmpegRunnerTests
             SegmentDurationSeconds: 4
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int acIdx = Array.IndexOf(array: args, value: "-ac");
-        args[acIdx + 1].Should().Be(expected: "2");
+        int acIdx = Array.IndexOf(args, "-ac");
+        args[acIdx + 1].Should().Be("2");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -690,13 +690,13 @@ public class LiveFfmpegRunnerTests
             SourceInfo: MakeMediaInfo(isHdr: false, audioChannels: 2)
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int vfIdx = Array.IndexOf(array: args, value: "-vf");
+        int vfIdx = Array.IndexOf(args, "-vf");
         string vf = args[vfIdx + 1];
-        vf.Should().NotContain(unexpected: "zscale");
-        vf.Should().NotContain(unexpected: "tonemap");
-        vf.Should().Contain(expected: "format=yuv420p");
+        vf.Should().NotContain("zscale");
+        vf.Should().NotContain("tonemap");
+        vf.Should().Contain("format=yuv420p");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -715,15 +715,15 @@ public class LiveFfmpegRunnerTests
             SourceInfo: MakeMediaInfo(isHdr: false, audioChannels: 2) // FrameRate: 24
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int fkfIdx = Array.IndexOf(array: args, value: "-force_key_frames");
-        fkfIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[fkfIdx + 1].Should().Be(expected: "expr:gte(t,n_forced*4)");
+        int fkfIdx = Array.IndexOf(args, "-force_key_frames");
+        fkfIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[fkfIdx + 1].Should().Be("expr:gte(t,n_forced*4)");
 
-        int gIdx = Array.IndexOf(array: args, value: "-g");
-        gIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[gIdx + 1].Should().Be(expected: "192"); // 24fps * 4s segment * 2
+        int gIdx = Array.IndexOf(args, "-g");
+        gIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[gIdx + 1].Should().Be("192"); // 24fps * 4s segment * 2
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -741,19 +741,19 @@ public class LiveFfmpegRunnerTests
             SegmentDurationSeconds: 4
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int maxrateIdx = Array.IndexOf(array: args, value: "-maxrate");
-        maxrateIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[maxrateIdx + 1].Should().Be(expected: "6000k");
+        int maxrateIdx = Array.IndexOf(args, "-maxrate");
+        maxrateIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[maxrateIdx + 1].Should().Be("6000k");
 
-        int bufsizeIdx = Array.IndexOf(array: args, value: "-bufsize");
-        bufsizeIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[bufsizeIdx + 1].Should().Be(expected: "8000k");
+        int bufsizeIdx = Array.IndexOf(args, "-bufsize");
+        bufsizeIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[bufsizeIdx + 1].Should().Be("8000k");
 
-        int presetIdx = Array.IndexOf(array: args, value: "-preset");
-        presetIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[presetIdx + 1].Should().Be(expected: "veryfast");
+        int presetIdx = Array.IndexOf(args, "-preset");
+        presetIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[presetIdx + 1].Should().Be("veryfast");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -776,7 +776,7 @@ public class LiveFfmpegRunnerTests
         MediaInfo source = new(
             FilePath: "/media/audio-only.flac",
             Format: "flac",
-            Duration: TimeSpan.FromMinutes(minutes: 4),
+            Duration: TimeSpan.FromMinutes(4),
             OverallBitRateKbps: 900,
             FileSizeBytes: 30_000_000,
             VideoStreams: [],
@@ -794,13 +794,13 @@ public class LiveFfmpegRunnerTests
             SourceInfo: source
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        args.Should().NotContain(unexpected: "0:v:0");
-        args.Should().Contain(expected: "-vn");
-        int caIdx = Array.IndexOf(array: args, value: "-c:a");
-        args[caIdx + 1].Should().Be(expected: "aac");
-        args.Should().Contain(expected: "-f").And.Contain(expected: "hls");
+        args.Should().NotContain("0:v:0");
+        args.Should().Contain("-vn");
+        int caIdx = Array.IndexOf(args, "-c:a");
+        args[caIdx + 1].Should().Be("aac");
+        args.Should().Contain("-f").And.Contain("hls");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -820,14 +820,14 @@ public class LiveFfmpegRunnerTests
             VideoOnly: true
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
         // Video is still mapped and encoded, but audio is dropped: no audio map,
         // no audio codec — just "-an". The master playlist supplies the audio.
-        args.Should().Contain(expected: "0:v:0");
-        args.Should().Contain(expected: "-an");
-        args.Should().NotContain(unexpected: "-c:a");
-        args.Should().NotContain(predicate: a => a.StartsWith("0:a:"));
+        args.Should().Contain("0:v:0");
+        args.Should().Contain("-an");
+        args.Should().NotContain("-c:a");
+        args.Should().NotContain(a => a.StartsWith("0:a:"));
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -847,18 +847,18 @@ public class LiveFfmpegRunnerTests
             AudioRenditionOnly: true
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
         // No video is produced or mapped, and the selected language is transcoded
         // to AAC — this is the per-language rendition for a raw multi-audio source.
-        args.Should().Contain(expected: "-vn");
-        args.Should().NotContain(unexpected: "0:v:0");
-        args.Should().NotContain(unexpected: "-c:v");
-        args.Should().Contain(expected: "-map").And.Contain(expected: "0:a:2?");
-        int caIdx = Array.IndexOf(array: args, value: "-c:a");
-        args[caIdx + 1].Should().Be(expected: "aac");
+        args.Should().Contain("-vn");
+        args.Should().NotContain("0:v:0");
+        args.Should().NotContain("-c:v");
+        args.Should().Contain("-map").And.Contain("0:a:2?");
+        int caIdx = Array.IndexOf(args, "-c:a");
+        args[caIdx + 1].Should().Be("aac");
         // Still an HLS output so it can be served and seeked like the video track.
-        args.Should().Contain(expected: "-f").And.Contain(expected: "hls");
+        args.Should().Contain("-f").And.Contain("hls");
     }
 
     [Fact]
@@ -869,18 +869,18 @@ public class LiveFfmpegRunnerTests
         LiveRunInput input = new(
             InputPath: "/media/remux.mkv",
             OutputDirectory: "/tmp/live-audio-eng",
-            StartPosition: TimeSpan.FromSeconds(value: 120.5),
+            StartPosition: TimeSpan.FromSeconds(120.5),
             Quality: MakeQuality(),
             SegmentDurationSeconds: 6,
             AudioStreamIndex: 0,
             AudioRenditionOnly: true
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        args[Array.IndexOf(array: args, value: "-ss") + 1].Should().Be(expected: "120.000");
-        args[Array.IndexOf(array: args, value: "-start_number") + 1].Should().Be(expected: "20");
-        args[Array.IndexOf(array: args, value: "-output_ts_offset") + 1].Should().Be(expected: "120.000");
+        args[Array.IndexOf(args, "-ss") + 1].Should().Be("120.000");
+        args[Array.IndexOf(args, "-start_number") + 1].Should().Be("20");
+        args[Array.IndexOf(args, "-output_ts_offset") + 1].Should().Be("120.000");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -917,7 +917,7 @@ public class LiveFfmpegRunnerTests
         MediaInfo source = new(
             FilePath: "/media/remux.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 90),
+            Duration: TimeSpan.FromMinutes(90),
             OverallBitRateKbps: 5000,
             FileSizeBytes: 1_000_000_000,
             VideoStreams: [video],
@@ -947,15 +947,15 @@ public class LiveFfmpegRunnerTests
             SourceInfo: source
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int vIdx = Array.IndexOf(array: args, value: "-c:v");
-        args[vIdx + 1].Should().Be(expected: "copy");
-        int aIdx = Array.IndexOf(array: args, value: "-c:a");
-        args[aIdx + 1].Should().Be(expected: "copy");
-        args.Should().NotContain(unexpected: "-preset");
-        args.Should().NotContain(unexpected: "-maxrate");
-        args.Should().NotContain(predicate: a => a.StartsWith("scale="));
+        int vIdx = Array.IndexOf(args, "-c:v");
+        args[vIdx + 1].Should().Be("copy");
+        int aIdx = Array.IndexOf(args, "-c:a");
+        args[aIdx + 1].Should().Be("copy");
+        args.Should().NotContain("-preset");
+        args.Should().NotContain("-maxrate");
+        args.Should().NotContain(a => a.StartsWith("scale="));
     }
 
     [Fact]
@@ -980,7 +980,7 @@ public class LiveFfmpegRunnerTests
         MediaInfo source = new(
             FilePath: "/media/transcode.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 90),
+            Duration: TimeSpan.FromMinutes(90),
             OverallBitRateKbps: 4500,
             FileSizeBytes: 1_000_000_000,
             VideoStreams: [video],
@@ -1010,11 +1010,11 @@ public class LiveFfmpegRunnerTests
             SourceInfo: source
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int vIdx = Array.IndexOf(array: args, value: "-c:v");
-        args[vIdx + 1].Should().Be(expected: "libx264");
-        args.Should().Contain(predicate: a => a.StartsWith("scale="));
+        int vIdx = Array.IndexOf(args, "-c:v");
+        args[vIdx + 1].Should().Be("libx264");
+        args.Should().Contain(a => a.StartsWith("scale="));
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -1032,26 +1032,26 @@ public class LiveFfmpegRunnerTests
             SegmentDurationSeconds: 4,
             CustomArguments: new Dictionary<string, string>
             {
-                [key: "-x264-params"] = "nal-hrd=cbr",
-                [key: "-b:v"] = "999k", // reserved — must be skipped, not override the resolved -b:v
+                ["-x264-params"] = "nal-hrd=cbr",
+                ["-b:v"] = "999k", // reserved — must be skipped, not override the resolved -b:v
             }
         );
 
-        string[] args = LiveFfmpegRunner.BuildArguments(input: input);
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
 
-        int customIdx = Array.IndexOf(array: args, value: "-x264-params");
-        customIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[customIdx + 1].Should().Be(expected: "nal-hrd=cbr");
+        int customIdx = Array.IndexOf(args, "-x264-params");
+        customIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[customIdx + 1].Should().Be("nal-hrd=cbr");
 
-        int bvIdx = Array.IndexOf(array: args, value: "-b:v");
-        args[bvIdx + 1].Should().Be(expected: "4000k");
-        args.Should().NotContain(unexpected: "999k");
+        int bvIdx = Array.IndexOf(args, "-b:v");
+        args[bvIdx + 1].Should().Be("4000k");
+        args.Should().NotContain("999k");
     }
 
     private static string WritePlaylist(string content)
     {
-        string path = Path.Combine(path1: Path.GetTempPath(), path2: $"live-pl-{Guid.NewGuid():N}.m3u8");
-        File.WriteAllText(path: path, contents: content.Replace(oldValue: "\r\n", newValue: "\n"));
+        string path = Path.Combine(Path.GetTempPath(), $"live-pl-{Guid.NewGuid():N}.m3u8");
+        File.WriteAllText(path, content.Replace("\r\n", "\n"));
         return path;
     }
 
@@ -1075,7 +1075,7 @@ public class LiveFfmpegRunnerTests
         {
             onRun();
             return Task.FromResult(
-                result: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
         }
 
@@ -1092,7 +1092,7 @@ public class LiveFfmpegRunnerTests
         {
             onRun();
             return Task.FromResult(
-                result: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
         }
 
@@ -1104,7 +1104,7 @@ public class LiveFfmpegRunnerTests
             CancellationToken cancellationToken = default
         ) =>
             Task.FromResult(
-                result: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
     }
 }

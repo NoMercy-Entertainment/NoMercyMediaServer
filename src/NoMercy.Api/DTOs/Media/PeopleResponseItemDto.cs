@@ -19,67 +19,67 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record PeopleResponseItemDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty(propertyName: "also_known_as")]
+    [JsonProperty("also_known_as")]
     public string[]? AlsoKnownAs { get; set; }
 
-    [JsonProperty(propertyName: "biography")]
+    [JsonProperty("biography")]
     public string? Biography { get; set; }
 
-    [JsonProperty(propertyName: "birthday")]
+    [JsonProperty("birthday")]
     public DateTime? Birthday { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "deathday")]
+    [JsonProperty("deathday")]
     public DateTime? DeathDay { get; set; }
 
-    [JsonProperty(propertyName: "gender")]
+    [JsonProperty("gender")]
     public string Gender { get; set; }
 
-    [JsonProperty(propertyName: "homepage")]
+    [JsonProperty("homepage")]
     public string? Homepage { get; set; }
 
-    [JsonProperty(propertyName: "imdb_id")]
+    [JsonProperty("imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty(propertyName: "known_for_department")]
+    [JsonProperty("known_for_department")]
     public string? KnownForDepartment { get; set; }
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string MediaType { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    [JsonProperty(propertyName: "place_of_birth")]
+    [JsonProperty("place_of_birth")]
     public string? PlaceOfBirth { get; set; }
 
-    [JsonProperty(propertyName: "popularity")]
+    [JsonProperty("popularity")]
     public double Popularity { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "profile")]
+    [JsonProperty("profile")]
     public string? Profile { get; set; }
 
-    [JsonProperty(propertyName: "created_at")]
+    [JsonProperty("created_at")]
     public DateTime CreatedAt { get; set; }
 
-    [JsonProperty(propertyName: "updated_at")]
+    [JsonProperty("updated_at")]
     public DateTime UpdatedAt { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
     public PeopleResponseItemDto(Person person)
@@ -107,6 +107,6 @@ public record PeopleResponseItemDto
         CreatedAt = person.CreatedAt;
         MediaType = "person";
         Type = "person";
-        Link = new(uriString: $"/person/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/person/{Id}", UriKind.Relative);
     }
 }

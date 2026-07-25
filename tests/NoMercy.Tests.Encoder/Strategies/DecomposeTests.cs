@@ -34,7 +34,7 @@ public class DecomposeTests
     private static IEncoder MockEncoder()
     {
         Mock<IEncoder> mock = new();
-        mock.Setup(expression: encoder =>
+        mock.Setup(encoder =>
                 encoder.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<NoMercy.Encoder.Progress.IProgressObserver?>(),
@@ -42,12 +42,12 @@ public class DecomposeTests
                 )
             )
             .ReturnsAsync(
-                value: new EncodingResult(
+                new EncodingResult(
                     Success: true,
                     OutputPath: "/out",
                     Duration: TimeSpan.Zero,
                     Error: null,
-                    Metrics: new(OutputSizeBytes: 0, AverageSpeed: 0, AverageFps: 0, EncoderUsed: "test", GpuUsed: null)
+                    Metrics: new(0, 0, 0, "test", null)
                 )
             );
         return mock.Object;
@@ -61,8 +61,8 @@ public class DecomposeTests
     )
     {
         VideoOutputPlan[] videos = Enumerable
-            .Range(start: 0, count: videoCount)
-            .Select(selector: index => new VideoOutputPlan(
+            .Range(0, videoCount)
+            .Select(index => new VideoOutputPlan(
                 Width: index == 0 ? 1920 : 1280,
                 Height: index == 0 ? 1080 : 720,
                 EncoderName: "libx264",
@@ -77,7 +77,7 @@ public class DecomposeTests
                 ExtraFlags: []
             ))
             .ToArray();
-        return BuildPlan(videos: videos, audioCount: audioCount, subtitleCount: subtitleCount, hasThumbnails: hasThumbnails);
+        return BuildPlan(videos, audioCount, subtitleCount, hasThumbnails);
     }
 
     private static OutputPlan MakeMixedCodecPlan()
@@ -86,13 +86,13 @@ public class DecomposeTests
         // collapse to TWO video tasks (one per encoder bucket), not 5.
         VideoOutputPlan[] videos =
         [
-            MakeVideo(width: 3840, height: 2160, encoder: "hevc_nvenc", index: 0),
-            MakeVideo(width: 1920, height: 1080, encoder: "hevc_nvenc", index: 1),
-            MakeVideo(width: 1280, height: 720, encoder: "hevc_nvenc", index: 2),
-            MakeVideo(width: 854, height: 480, encoder: "hevc_nvenc", index: 3),
-            MakeVideo(width: 1920, height: 1080, encoder: "libx264", index: 4),
+            MakeVideo(3840, 2160, "hevc_nvenc", index: 0),
+            MakeVideo(1920, 1080, "hevc_nvenc", index: 1),
+            MakeVideo(1280, 720, "hevc_nvenc", index: 2),
+            MakeVideo(854, 480, "hevc_nvenc", index: 3),
+            MakeVideo(1920, 1080, "libx264", index: 4),
         ];
-        return BuildPlan(videos: videos, audioCount: 0, subtitleCount: 0, hasThumbnails: false);
+        return BuildPlan(videos, audioCount: 0, subtitleCount: 0, hasThumbnails: false);
     }
 
     private static VideoOutputPlan MakeVideo(int width, int height, string encoder, int index) =>
@@ -119,8 +119,8 @@ public class DecomposeTests
     )
     {
         AudioOutputPlan[] audios = Enumerable
-            .Range(start: 0, count: audioCount)
-            .Select(selector: index => new AudioOutputPlan(
+            .Range(0, audioCount)
+            .Select(index => new AudioOutputPlan(
                 EncoderName: "aac",
                 BitrateKbps: 128,
                 Channels: 2,
@@ -132,8 +132,8 @@ public class DecomposeTests
             .ToArray();
 
         SubtitleOutputPlan[] subtitles = Enumerable
-            .Range(start: 0, count: subtitleCount)
-            .Select(selector: index => new SubtitleOutputPlan(
+            .Range(0, subtitleCount)
+            .Select(index => new SubtitleOutputPlan(
                 OutputCodec: SubtitleCodecType.WebVtt,
                 Action: StreamAction.Transcode,
                 Language: "eng",
@@ -143,7 +143,7 @@ public class DecomposeTests
             .ToArray();
 
         ThumbnailOutputPlan? thumbnails = hasThumbnails
-            ? new ThumbnailOutputPlan(Width: 160, Height: 68, IntervalSeconds: 10)
+            ? new ThumbnailOutputPlan(160, 68, 10)
             : null;
 
         return new(
@@ -161,17 +161,17 @@ public class DecomposeTests
     public void HlsSinglePass_Decompose_EmptyPlan_ReturnsSingleWhole()
     {
         HlsSinglePassStrategy strategy = new(
-            encoder: MockEncoder(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan emptyPlan = MakePlan();
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: emptyPlan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(emptyPlan, GroupTag);
 
-        tasks.Should().HaveCount(expected: 1);
-        tasks[0].Kind.Should().Be(expected: EncodeTaskKind.Whole);
-        tasks[0].GroupTag.Should().Be(expected: GroupTag);
+        tasks.Should().HaveCount(1);
+        tasks[0].Kind.Should().Be(EncodeTaskKind.Whole);
+        tasks[0].GroupTag.Should().Be(GroupTag);
     }
 
     [Fact]
@@ -182,23 +182,23 @@ public class DecomposeTests
         // Dispatch-time bundling (in VideoEncodeJob.DispatchDecomposedAsync)
         // packs these into ONE ffmpeg invocation.
         HlsSinglePassStrategy strategy = new(
-            encoder: MockEncoder(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlan(videoCount: 2, audioCount: 1);
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
         DecomposedTask[] videoTasks = tasks
-            .Where(predicate: task => task.Kind == EncodeTaskKind.Video)
+            .Where(task => task.Kind == EncodeTaskKind.Video)
             .ToArray();
 
-        videoTasks.Should().HaveCount(expected: 2);
-        videoTasks[0].OutputIndex.Should().Be(expected: 0);
-        videoTasks[1].OutputIndex.Should().Be(expected: 1);
+        videoTasks.Should().HaveCount(2);
+        videoTasks[0].OutputIndex.Should().Be(0);
+        videoTasks[1].OutputIndex.Should().Be(1);
 
-        tasks.Where(predicate: task => task.Kind == EncodeTaskKind.Audio).Should().HaveCount(expected: 1);
+        tasks.Where(task => task.Kind == EncodeTaskKind.Audio).Should().HaveCount(1);
     }
 
     [Fact]
@@ -208,62 +208,62 @@ public class DecomposeTests
         // packs them into ONE ffmpeg at dispatch — each rung keeps its own
         // -map [vN] -c:v <encoder> block in the bundled invocation.
         HlsSinglePassStrategy strategy = new(
-            encoder: MockEncoder(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakeMixedCodecPlan();
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
         DecomposedTask[] videoTasks = tasks
-            .Where(predicate: task => task.Kind == EncodeTaskKind.Video)
+            .Where(task => task.Kind == EncodeTaskKind.Video)
             .ToArray();
 
-        videoTasks.Should().HaveCount(expected: 5);
+        videoTasks.Should().HaveCount(5);
         videoTasks
-            .Select(selector: task => task.OutputIndex)
+            .Select(task => task.OutputIndex)
             .Should()
-            .BeEquivalentTo(expectation: new[] { 0, 1, 2, 3, 4 });
+            .BeEquivalentTo(new[] { 0, 1, 2, 3, 4 });
     }
 
     [Fact]
     public void HlsSinglePass_Decompose_PerTrackAudioTasks()
     {
         HlsSinglePassStrategy strategy = new(
-            encoder: MockEncoder(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlan(videoCount: 1, audioCount: 3);
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
         DecomposedTask[] audioTasks = tasks
-            .Where(predicate: task => task.Kind == EncodeTaskKind.Audio)
+            .Where(task => task.Kind == EncodeTaskKind.Audio)
             .ToArray();
 
-        audioTasks.Should().HaveCount(expected: 3);
-        audioTasks.Select(selector: task => task.OutputIndex).Should().BeEquivalentTo(expectation: new[] { 0, 1, 2 });
+        audioTasks.Should().HaveCount(3);
+        audioTasks.Select(task => task.OutputIndex).Should().BeEquivalentTo(new[] { 0, 1, 2 });
     }
 
     [Fact]
     public void HlsSinglePass_Decompose_WithThumbnails_IncludesThumbnailsTask()
     {
         HlsSinglePassStrategy strategy = new(
-            encoder: MockEncoder(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlan(videoCount: 1, hasThumbnails: true);
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        DecomposedTask? thumbTask = tasks.FirstOrDefault(predicate: task =>
+        DecomposedTask? thumbTask = tasks.FirstOrDefault(task =>
             task.Kind == EncodeTaskKind.Thumbnails
         );
         thumbTask.Should().NotBeNull();
-        thumbTask!.OutputIndex.Should().Be(expected: 0);
+        thumbTask!.OutputIndex.Should().Be(0);
     }
 
     [Fact]
@@ -271,29 +271,29 @@ public class DecomposeTests
     {
         // Subtitles stay fanned out — each track is cheap and independent.
         HlsSinglePassStrategy strategy = new(
-            encoder: MockEncoder(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlan(videoCount: 1, audioCount: 1, subtitleCount: 2);
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
         DecomposedTask[] subTasks = tasks
-            .Where(predicate: task => task.Kind == EncodeTaskKind.Subtitle)
+            .Where(task => task.Kind == EncodeTaskKind.Subtitle)
             .ToArray();
-        subTasks.Should().HaveCount(expected: 2);
-        subTasks[0].OutputIndex.Should().Be(expected: 0);
-        subTasks[1].OutputIndex.Should().Be(expected: 1);
+        subTasks.Should().HaveCount(2);
+        subTasks[0].OutputIndex.Should().Be(0);
+        subTasks[1].OutputIndex.Should().Be(1);
     }
 
     [Fact]
     public void HlsSinglePass_Decompose_AllTasksShareGroupTag()
     {
         HlsSinglePassStrategy strategy = new(
-            encoder: MockEncoder(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlan(
             videoCount: 2,
@@ -302,9 +302,9 @@ public class DecomposeTests
             hasThumbnails: true
         );
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        tasks.Should().AllSatisfy(expected: task => task.GroupTag.Should().Be(expected: GroupTag));
+        tasks.Should().AllSatisfy(task => task.GroupTag.Should().Be(GroupTag));
     }
 
     // ------------------------------------------------------------------ DASH
@@ -313,32 +313,32 @@ public class DecomposeTests
     public void DashSinglePass_Decompose_EmptyPlan_ReturnsSingleWhole()
     {
         DashSinglePassStrategy strategy = new(
-            encoder: MockEncoder(),
-            logger: NullLogger<DashSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan emptyPlan = MakePlan();
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: emptyPlan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(emptyPlan, GroupTag);
 
-        tasks.Should().HaveCount(expected: 1);
-        tasks[0].Kind.Should().Be(expected: EncodeTaskKind.Whole);
+        tasks.Should().HaveCount(1);
+        tasks[0].Kind.Should().Be(EncodeTaskKind.Whole);
     }
 
     [Fact]
     public void DashSinglePass_Decompose_TwoVideoOneAudio_ReturnsCorrectCount()
     {
         DashSinglePassStrategy strategy = new(
-            encoder: MockEncoder(),
-            logger: NullLogger<DashSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlan(videoCount: 2, audioCount: 2);
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        tasks.Where(predicate: task => task.Kind == EncodeTaskKind.Video).Should().HaveCount(expected: 2);
-        tasks.Where(predicate: task => task.Kind == EncodeTaskKind.Audio).Should().HaveCount(expected: 2);
+        tasks.Where(task => task.Kind == EncodeTaskKind.Video).Should().HaveCount(2);
+        tasks.Where(task => task.Kind == EncodeTaskKind.Audio).Should().HaveCount(2);
     }
 
     // ------------------------------------------------------------------ MP4 / MKV (whole-task strategies)
@@ -347,32 +347,32 @@ public class DecomposeTests
     public void Mp4SinglePass_Decompose_AlwaysReturnsWholeTask()
     {
         IEncodingStrategy strategy = new Mp4SinglePassStrategy(
-            encoder: MockEncoder(),
-            logger: NullLogger<Mp4SinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<Mp4SinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlan(videoCount: 3, audioCount: 2);
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        tasks.Should().HaveCount(expected: 1);
-        tasks[0].Kind.Should().Be(expected: EncodeTaskKind.Whole);
+        tasks.Should().HaveCount(1);
+        tasks[0].Kind.Should().Be(EncodeTaskKind.Whole);
     }
 
     [Fact]
     public void MkvStrategy_Decompose_AlwaysReturnsWholeTask()
     {
         IEncodingStrategy strategy = new MkvStrategy(
-            encoder: MockEncoder(),
-            logger: NullLogger<MkvStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<MkvStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlan(videoCount: 2, audioCount: 1);
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        tasks.Should().HaveCount(expected: 1);
-        tasks[0].Kind.Should().Be(expected: EncodeTaskKind.Whole);
+        tasks.Should().HaveCount(1);
+        tasks[0].Kind.Should().Be(EncodeTaskKind.Whole);
     }
 
     // ------------------------------------------------------------------ TaskIds are unique
@@ -381,9 +381,9 @@ public class DecomposeTests
     public void HlsSinglePass_Decompose_AllTaskIdsAreUnique()
     {
         HlsSinglePassStrategy strategy = new(
-            encoder: MockEncoder(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlan(
             videoCount: 3,
@@ -392,10 +392,10 @@ public class DecomposeTests
             hasThumbnails: true
         );
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        string[] taskIds = tasks.Select(selector: task => task.TaskId).ToArray();
-        taskIds.Should().OnlyHaveUniqueItems(because: "task IDs must be unique within a decomposition run");
+        string[] taskIds = tasks.Select(task => task.TaskId).ToArray();
+        taskIds.Should().OnlyHaveUniqueItems("task IDs must be unique within a decomposition run");
     }
 
     // ------------------------------------------------------------------ Payload round-trip
@@ -414,17 +414,17 @@ public class DecomposeTests
             Label: "1080p libx264"
         );
 
-        string json = JsonConvert.SerializeObject(value: original);
-        DecomposedTask? deserialized = JsonConvert.DeserializeObject<DecomposedTask>(value: json);
+        string json = JsonConvert.SerializeObject(original);
+        DecomposedTask? deserialized = JsonConvert.DeserializeObject<DecomposedTask>(json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.TaskId.Should().Be(expected: original.TaskId);
-        deserialized.ParentJobId.Should().Be(expected: original.ParentJobId);
-        deserialized.GroupTag.Should().Be(expected: original.GroupTag);
-        deserialized.Kind.Should().Be(expected: original.Kind);
-        deserialized.OutputIndex.Should().Be(expected: original.OutputIndex);
-        deserialized.EstimatedCostUnits.Should().Be(expected: original.EstimatedCostUnits);
-        deserialized.Label.Should().Be(expected: original.Label);
+        deserialized!.TaskId.Should().Be(original.TaskId);
+        deserialized.ParentJobId.Should().Be(original.ParentJobId);
+        deserialized.GroupTag.Should().Be(original.GroupTag);
+        deserialized.Kind.Should().Be(original.Kind);
+        deserialized.OutputIndex.Should().Be(original.OutputIndex);
+        deserialized.EstimatedCostUnits.Should().Be(original.EstimatedCostUnits);
+        deserialized.Label.Should().Be(original.Label);
     }
 
     [Fact]
@@ -439,7 +439,7 @@ public class DecomposeTests
             Resources: null
         );
 
-        noDep.DependsOnTaskId.Should().BeNull(because: "default = reads source, exactly as before");
+        noDep.DependsOnTaskId.Should().BeNull("default = reads source, exactly as before");
         noDep.InputArtifactKey.Should().BeNull();
 
         DecomposedTask derived = noDep with
@@ -449,12 +449,12 @@ public class DecomposeTests
         };
 
         DecomposedTask? round = JsonConvert.DeserializeObject<DecomposedTask>(
-            value: JsonConvert.SerializeObject(value: derived)
+            JsonConvert.SerializeObject(derived)
         );
 
         round.Should().NotBeNull();
-        round!.DependsOnTaskId.Should().Be(expected: "tag-mezzanine");
-        round.InputArtifactKey.Should().Be(expected: "mezzanine/sdr_fullres.mkv");
+        round!.DependsOnTaskId.Should().Be("tag-mezzanine");
+        round.InputArtifactKey.Should().Be("mezzanine/sdr_fullres.mkv");
     }
 
     [Fact]
@@ -471,10 +471,10 @@ public class DecomposeTests
                 Resources: null
             );
 
-            string json = JsonConvert.SerializeObject(value: task);
-            DecomposedTask? restored = JsonConvert.DeserializeObject<DecomposedTask>(value: json);
+            string json = JsonConvert.SerializeObject(task);
+            DecomposedTask? restored = JsonConvert.DeserializeObject<DecomposedTask>(json);
 
-            restored!.Kind.Should().Be(expected: kind, because: $"Kind.{kind} should survive JSON round-trip");
+            restored!.Kind.Should().Be(kind, $"Kind.{kind} should survive JSON round-trip");
         }
     }
 }

@@ -22,7 +22,7 @@ public class MusicBrainzReleaseClient : MusicBrainzBaseClient
         : base() { }
 
     public MusicBrainzReleaseClient(Guid? id, string[]? appendices = null)
-        : base(id: (Guid)id!) { }
+        : base((Guid)id!) { }
 
     public Task<MusicBrainzReleaseAppends?> WithAppends(
         Guid? id,
@@ -32,29 +32,29 @@ public class MusicBrainzReleaseClient : MusicBrainzBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "inc"] = string.Join(separator: "+", value: appendices),
-            [key: "fmt"] = "json",
+            ["inc"] = string.Join("+", appendices),
+            ["fmt"] = "json",
         };
 
-        return Get<MusicBrainzReleaseAppends>(url: "release/" + id, query: queryParams, priority: priority);
+        return Get<MusicBrainzReleaseAppends>("release/" + id, queryParams, priority);
     }
 
     public Task<MusicBrainzReleaseAppends?> WithAppends(string[] appendices, bool? priority = false)
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "inc"] = string.Join(separator: "+", value: appendices),
-            [key: "fmt"] = "json",
+            ["inc"] = string.Join("+", appendices),
+            ["fmt"] = "json",
         };
 
-        return Get<MusicBrainzReleaseAppends>(url: "release/" + Id, query: queryParams, priority: priority);
+        return Get<MusicBrainzReleaseAppends>("release/" + Id, queryParams, priority);
     }
 
     public Task<MusicBrainzReleaseAppends?> WithAllAppends(Guid? id, bool? priority = false)
     {
         return WithAppends(
-            id: (Guid)id!,
-            appendices: new[]
+            (Guid)id!,
+            new[]
             {
                 "artists",
                 "labels",
@@ -81,14 +81,13 @@ public class MusicBrainzReleaseClient : MusicBrainzBaseClient
                 "genres",
                 "tags",
             },
-            priority: priority
+            priority
         );
     }
 
     public Task<MusicBrainzReleaseAppends?> WithAllAppends(bool? priority = false)
     {
         return WithAppends(
-            appendices:
             [
                 "artists",
                 "labels",
@@ -115,7 +114,7 @@ public class MusicBrainzReleaseClient : MusicBrainzBaseClient
                 "genres",
                 "tags",
             ],
-            priority: priority
+            priority
         );
     }
 
@@ -126,10 +125,10 @@ public class MusicBrainzReleaseClient : MusicBrainzBaseClient
     {
         Dictionary<string, string?>? queryParams = new()
         {
-            [key: "query"] = query,
-            [key: "inc"] = "recordings",
-            [key: "fmt"] = "json",
+            ["query"] = query,
+            ["inc"] = "recordings",
+            ["fmt"] = "json",
         };
-        return Get<MusicBrainzReleaseSearchResponse>(url: $"release", query: queryParams, priority: priority);
+        return Get<MusicBrainzReleaseSearchResponse>($"release", queryParams, priority);
     }
 }

@@ -22,7 +22,7 @@ public class EncoderProcessRegistryNvencCountTests
     {
         EncoderProcessRegistry registry = MakeRegistry();
 
-        registry.CountConcurrentNvencSessions().Should().Be(expected: 0);
+        registry.CountConcurrentNvencSessions().Should().Be(0);
     }
 
     [Fact]
@@ -31,12 +31,12 @@ public class EncoderProcessRegistryNvencCountTests
         EncoderProcessRegistry registry = MakeRegistry();
 
         registry.RegisterWithArgv(
-            jobId: 1,
-            processId: 101,
-            argv: ["-i", "input.mkv", "-c:v", "h264_nvenc", "out.mp4"]
+            1,
+            101,
+            ["-i", "input.mkv", "-c:v", "h264_nvenc", "out.mp4"]
         );
 
-        registry.CountConcurrentNvencSessions().Should().Be(expected: 1);
+        registry.CountConcurrentNvencSessions().Should().Be(1);
     }
 
     [Fact]
@@ -44,11 +44,11 @@ public class EncoderProcessRegistryNvencCountTests
     {
         EncoderProcessRegistry registry = MakeRegistry();
 
-        registry.RegisterWithArgv(jobId: 1, processId: 101, argv: ["-c:v", "hevc_nvenc"]);
+        registry.RegisterWithArgv(1, 101, ["-c:v", "hevc_nvenc"]);
 
-        registry.RegisterWithArgv(jobId: 2, processId: 102, argv: ["-c:v", "av1_nvenc"]);
+        registry.RegisterWithArgv(2, 102, ["-c:v", "av1_nvenc"]);
 
-        registry.CountConcurrentNvencSessions().Should().Be(expected: 2);
+        registry.CountConcurrentNvencSessions().Should().Be(2);
     }
 
     [Fact]
@@ -57,12 +57,12 @@ public class EncoderProcessRegistryNvencCountTests
         EncoderProcessRegistry registry = MakeRegistry();
 
         registry.RegisterWithArgv(
-            jobId: 1,
-            processId: 101,
-            argv: ["-i", "input.mkv", "-c:v", "libx264", "out.mp4"]
+            1,
+            101,
+            ["-i", "input.mkv", "-c:v", "libx264", "out.mp4"]
         );
 
-        registry.CountConcurrentNvencSessions().Should().Be(expected: 0);
+        registry.CountConcurrentNvencSessions().Should().Be(0);
     }
 
     [Fact]
@@ -70,13 +70,13 @@ public class EncoderProcessRegistryNvencCountTests
     {
         EncoderProcessRegistry registry = MakeRegistry();
 
-        registry.RegisterWithArgv(jobId: 1, processId: 101, argv: ["-c:v", "h264_nvenc"]);
+        registry.RegisterWithArgv(1, 101, ["-c:v", "h264_nvenc"]);
 
-        registry.CountConcurrentNvencSessions().Should().Be(expected: 1);
+        registry.CountConcurrentNvencSessions().Should().Be(1);
 
-        registry.Unregister(jobId: 1, processId: 101);
+        registry.Unregister(1, 101);
 
-        registry.CountConcurrentNvencSessions().Should().Be(expected: 0);
+        registry.CountConcurrentNvencSessions().Should().Be(0);
     }
 
     [Fact]
@@ -84,15 +84,15 @@ public class EncoderProcessRegistryNvencCountTests
     {
         EncoderProcessRegistry registry = MakeRegistry();
 
-        registry.RegisterWithArgv(jobId: 1, processId: 101, argv: ["-c:v", "hevc_nvenc"]);
+        registry.RegisterWithArgv(1, 101, ["-c:v", "hevc_nvenc"]);
 
-        registry.RegisterWithArgv(jobId: 1, processId: 102, argv: ["-c:v", "hevc_nvenc"]);
+        registry.RegisterWithArgv(1, 102, ["-c:v", "hevc_nvenc"]);
 
-        registry.CountConcurrentNvencSessions().Should().Be(expected: 2);
+        registry.CountConcurrentNvencSessions().Should().Be(2);
 
-        registry.UnregisterJob(jobId: 1);
+        registry.UnregisterJob(1);
 
-        registry.CountConcurrentNvencSessions().Should().Be(expected: 0);
+        registry.CountConcurrentNvencSessions().Should().Be(0);
     }
 
     [Fact]
@@ -102,8 +102,8 @@ public class EncoderProcessRegistryNvencCountTests
 
         // Registered via the arg-less overload (e.g. from EventBusProgressObserver)
         // — not counted because argv is unknown
-        registry.Register(jobId: 1, processId: 101);
+        registry.Register(1, 101);
 
-        registry.CountConcurrentNvencSessions().Should().Be(expected: 0);
+        registry.CountConcurrentNvencSessions().Should().Be(0);
     }
 }

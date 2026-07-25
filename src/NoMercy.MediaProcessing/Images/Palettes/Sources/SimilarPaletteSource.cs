@@ -25,11 +25,11 @@ public class SimilarPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         return await db
-            .Similar.Where(predicate: s => s.Id == id)
-            .Select(selector: s => s._colorPalette)
-            .FirstOrDefaultAsync(cancellationToken: ct);
+            .Similar.Where(s => s.Id == id)
+            .Select(s => s._colorPalette)
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -38,21 +38,20 @@ public class SimilarPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
-        Similar? similar = await db.Similar.FirstOrDefaultAsync(predicate: s => s.Id == id, cancellationToken: ct);
+        int id = int.Parse(entityId);
+        Similar? similar = await db.Similar.FirstOrDefaultAsync(s => s.Id == id, ct);
         if (similar is null)
             return PaletteResult.NoImage();
         if (similar.Poster is null && similar.Backdrop is null)
             return PaletteResult.NoImage();
 
-        string json = await MovieDbImageManager.MultiColorPalette(items:
-        [
-            new(key: "poster", path: similar.Poster),
-            new(key: "backdrop", path: similar.Backdrop),
+        string json = await MovieDbImageManager.MultiColorPalette([
+            new("poster", similar.Poster),
+            new("backdrop", similar.Backdrop),
         ]);
-        return string.IsNullOrWhiteSpace(value: json)
+        return string.IsNullOrWhiteSpace(json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json: json);
+            : PaletteResult.Success(json);
     }
 
     public async Task PersistAsync(
@@ -62,9 +61,9 @@ public class SimilarPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         await db
-            .Similar.Where(predicate: s => s.Id == id)
-            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: x => x._colorPalette, valueExpression: json), cancellationToken: ct);
+            .Similar.Where(s => s.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x._colorPalette, json), ct);
     }
 }

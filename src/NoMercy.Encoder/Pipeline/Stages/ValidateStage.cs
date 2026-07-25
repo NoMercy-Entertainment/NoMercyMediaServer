@@ -31,23 +31,23 @@ public class ValidateStage(ILogger<ValidateStage> logger)
     )
     {
         logger.LogInformation(
-            message: "[{CorrelationId}] Validating profile '{ProfileName}'", args: [context.CorrelationId, input.Profile.Name]
+            "[{CorrelationId}] Validating profile '{ProfileName}'", [context.CorrelationId, input.Profile.Name]
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile: input.Profile);
+        ProfileValidationResult result = ProfileValidator.Validate(input.Profile);
 
         if (!result.IsValid)
         {
-            string errors = string.Join(separator: "; ", values: result.Errors);
+            string errors = string.Join("; ", result.Errors);
 
             return Task.FromResult<StageResult>(
-                result: new StageFailure(
-                    Error: new(
-                        Kind: EncodingErrorKind.ProfileInvalid,
-                        Message: $"Profile validation failed: {errors}",
-                        FfmpegStderr: null,
-                        StageName: Name,
-                        Recoverable: false
+                new StageFailure(
+                    new(
+                        EncodingErrorKind.ProfileInvalid,
+                        $"Profile validation failed: {errors}",
+                        null,
+                        Name,
+                        false
                     )
                 )
             );
@@ -55,9 +55,9 @@ public class ValidateStage(ILogger<ValidateStage> logger)
 
         foreach (string warning in result.Warnings)
             logger.LogWarning(
-                message: "[{CorrelationId}] Validation warning: {Message}", args: [context.CorrelationId, warning]
+                "[{CorrelationId}] Validation warning: {Message}", [context.CorrelationId, warning]
             );
 
-        return Task.FromResult<StageResult>(result: new StageSuccess<ValidateInput>(Value: input));
+        return Task.FromResult<StageResult>(new StageSuccess<ValidateInput>(input));
     }
 }

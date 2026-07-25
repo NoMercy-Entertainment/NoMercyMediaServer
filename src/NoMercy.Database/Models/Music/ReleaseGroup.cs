@@ -16,39 +16,39 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Music;
 
-[PrimaryKey(propertyName: nameof(Id))]
+[PrimaryKey(nameof(Id))]
 public class ReleaseGroup : ColorPaletteTimeStamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [MaxLength(length: 4096)]
-    [JsonProperty(propertyName: "description")]
+    [MaxLength(4096)]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int Year { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "library_id")]
+    [JsonProperty("library_id")]
     public Ulid? LibraryId { get; set; }
     public Library? Library { get; set; }
 
-    [JsonProperty(propertyName: "albums")]
+    [JsonProperty("albums")]
     public ICollection<AlbumReleaseGroup> AlbumReleaseGroup { get; set; } = [];
 
-    [JsonProperty(propertyName: "artists")]
+    [JsonProperty("artists")]
     public ICollection<ArtistReleaseGroup> ArtistReleaseGroup { get; set; } = [];
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public ICollection<Translation> Translations { get; set; } = [];
 }

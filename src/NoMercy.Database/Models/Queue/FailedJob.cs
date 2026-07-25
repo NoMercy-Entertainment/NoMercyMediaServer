@@ -15,22 +15,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace NoMercy.Database.Models.Queue;
 
-[PrimaryKey(propertyName: nameof(Id))]
+[PrimaryKey(nameof(Id))]
 public class FailedJob
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long Id { get; set; }
 
     public Guid Uuid { get; set; }
     public string Connection { get; set; } = "default";
 
-    [MaxLength(length: 1024)]
+    [MaxLength(1024)]
     public required string Queue { get; set; }
 
-    [MaxLength(length: 4092)]
+    [MaxLength(4092)]
     public required string Payload { get; set; }
 
-    [MaxLength(length: 4092)]
+    [MaxLength(4092)]
     public required string Exception { get; set; }
     public DateTime FailedAt { get; set; } = DateTime.UtcNow;
 

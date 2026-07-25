@@ -26,10 +26,10 @@ public class PluginManifestParserV2Tests
     [Fact]
     public void Parse_V1Manifest_StillValidatesAndHasNullCapabilities()
     {
-        PluginManifest manifest = PluginManifestParser.Parse(json: V1Json);
-        Assert.Equal(expected: "Internet Radio Provider", actual: manifest.Name);
-        Assert.Null(@object: manifest.Capabilities);
-        Assert.Null(@object: manifest.Signature);
+        PluginManifest manifest = PluginManifestParser.Parse(V1Json);
+        Assert.Equal("Internet Radio Provider", manifest.Name);
+        Assert.Null(manifest.Capabilities);
+        Assert.Null(manifest.Signature);
     }
 
     [Fact]
@@ -43,11 +43,11 @@ public class PluginManifestParserV2Tests
                 "ui":{"mounts":[{"section":"music","label":"Radio","route":"/"}]},
                 "rest":true,"ws":false } }
             """;
-        PluginManifest manifest = PluginManifestParser.Parse(json: json);
-        Assert.NotNull(@object: manifest.Capabilities);
-        Assert.Contains(expected: "mediaSource", collection: manifest.Capabilities!.Hooks);
-        Assert.Equal(expected: "*.somafm.com", actual: manifest.Capabilities.Network!.Hosts[index: 0]);
-        Assert.Equal(expected: "music", actual: manifest.Capabilities.Ui!.Mounts[index: 0].Section);
-        Assert.True(condition: manifest.Capabilities.Rest);
+        PluginManifest manifest = PluginManifestParser.Parse(json);
+        Assert.NotNull(manifest.Capabilities);
+        Assert.Contains("mediaSource", manifest.Capabilities!.Hooks);
+        Assert.Equal("*.somafm.com", manifest.Capabilities.Network!.Hosts[0]);
+        Assert.Equal("music", manifest.Capabilities.Ui!.Mounts[0].Section);
+        Assert.True(manifest.Capabilities.Rest);
     }
 }

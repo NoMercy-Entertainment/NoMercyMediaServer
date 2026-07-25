@@ -31,28 +31,28 @@ public class TesseractModelManager(
     public string ModelDirectory =>
         options.TesseractModelsDirectory
         ?? throw new InvalidOperationException(
-            message: "TesseractModelsDirectory is not configured on EncoderOptions."
+            "TesseractModelsDirectory is not configured on EncoderOptions."
         );
 
     public async Task<string> EnsureLanguageModelAsync(string language, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(value: language))
-            throw new ArgumentException(message: "Language code must be non-empty", paramName: nameof(language));
+        if (string.IsNullOrWhiteSpace(language))
+            throw new ArgumentException("Language code must be non-empty", nameof(language));
 
-        storage.CreateDirectory(path: ModelDirectory);
+        storage.CreateDirectory(ModelDirectory);
 
         string fileName = $"{language}.traineddata";
-        string localPath = Path.Combine(path1: ModelDirectory, path2: fileName);
+        string localPath = Path.Combine(ModelDirectory, fileName);
 
-        if (storage.Exists(path: localPath))
+        if (storage.Exists(localPath))
         {
-            logger.LogDebug(message: "Tesseract model already present: {FileName}", args: fileName);
+            logger.LogDebug("Tesseract model already present: {FileName}", fileName);
             return localPath;
         }
 
         logger.LogInformation(
-            message: "Downloading verified Tesseract model {FileName} from the signed nomercy-tesseract release",
-            args: fileName
+            "Downloading verified Tesseract model {FileName} from the signed nomercy-tesseract release",
+            fileName
         );
 
         // Stream to a temp file then rename — never leave a half-written model on disk
@@ -62,24 +62,24 @@ public class TesseractModelManager(
         string tempPath = $"{localPath}.tmp";
         try
         {
-            await using Stream verified = await downloader.DownloadVerifiedAsync(language: language, ct: ct);
-            await using (Stream file = await storage.OpenWriteAsync(path: tempPath, overwrite: true, ct: ct))
+            await using Stream verified = await downloader.DownloadVerifiedAsync(language, ct);
+            await using (Stream file = await storage.OpenWriteAsync(tempPath, true, ct))
             {
-                await verified.CopyToAsync(destination: file, cancellationToken: ct);
+                await verified.CopyToAsync(file, ct);
             }
 
             // Atomic-ish swap: delete any prior model then move the
             // freshly downloaded temp into its final place.
-            storage.Delete(path: localPath);
-            storage.Move(from: tempPath, to: localPath);
+            storage.Delete(localPath);
+            storage.Move(tempPath, localPath);
         }
         catch
         {
-            storage.Delete(path: tempPath);
+            storage.Delete(tempPath);
             throw;
         }
 
-        logger.LogInformation(message: "Tesseract model saved: {Path}", args: localPath);
+        logger.LogInformation("Tesseract model saved: {Path}", localPath);
         return localPath;
     }
 
@@ -92,15 +92,15 @@ public class TesseractModelManager(
 
     public IReadOnlyList<string> GetDownloadedLanguages()
     {
-        if (!storage.Exists(path: ModelDirectory))
+        if (!storage.Exists(ModelDirectory))
             return [];
 
         return storage
-            .List(path: ModelDirectory, pattern: "*.traineddata", recursive: false)
-            .Where(predicate: e => !e.IsDirectory)
-            .Select(selector: e => Path.GetFileNameWithoutExtension(path: e.Path))
-            .Where(predicate: name => !string.IsNullOrEmpty(value: name))
-            .Select(selector: name => name!)
+            .List(ModelDirectory, "*.traineddata", false)
+            .Where(e => !e.IsDirectory)
+            .Select(e => Path.GetFileNameWithoutExtension(e.Path))
+            .Where(name => !string.IsNullOrEmpty(name))
+            .Select(name => name!)
             .ToArray();
     }
 }

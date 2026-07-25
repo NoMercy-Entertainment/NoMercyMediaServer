@@ -11,7 +11,6 @@
 
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -23,7 +22,7 @@ namespace NoMercy.Tests.Api.Dashboard;
 // seeded SecondaryUserId: Allowed=true, Owner=false, Manage=false) is rejected
 // with a 403; the default test identity (Owner+Manage, which satisfies
 // "Moderator") still gets a 200.
-[Trait(name: "Category", value: "DashboardLogs")]
+[Trait("Category", "DashboardLogs")]
 public class LogControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private const string BaseUrl = "/api/v1/dashboard/logs";
@@ -42,22 +41,22 @@ public class LogControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task GetLogs_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: BaseUrl);
+        HttpResponseMessage response = await _unauthed.GetAsync(BaseUrl);
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetLogs_ReturnsOkWithDataArray_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: BaseUrl);
+        HttpResponseMessage response = await _authed.GetAsync(BaseUrl);
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        doc.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data).Should().BeTrue();
-        data.ValueKind.Should().Be(expected: JsonValueKind.Array);
+        using JsonDocument doc = JsonDocument.Parse(body);
+        doc.RootElement.TryGetProperty("data", out JsonElement data).Should().BeTrue();
+        data.ValueKind.Should().Be(JsonValueKind.Array);
     }
 
     [Fact]
@@ -66,138 +65,138 @@ public class LogControllerTests : IClassFixture<NoMercyApiFactory>
         // LogController requires the "Moderator" policy: a merely-authenticated,
         // non-moderator user (Allowed=true, Owner=false, Manage=false) is
         // rejected — server logs are not readable by any authenticated user.
-        HttpResponseMessage response = await _secondaryUser.GetAsync(requestUri: BaseUrl);
+        HttpResponseMessage response = await _secondaryUser.GetAsync(BaseUrl);
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task GetLogs_ReturnsEmptyData_WhenLimitIsZero()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: $"{BaseUrl}?limit=0");
+        HttpResponseMessage response = await _authed.GetAsync($"{BaseUrl}?limit=0");
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
-        data.GetArrayLength().Should().Be(expected: 0);
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
+        data.GetArrayLength().Should().Be(0);
     }
 
     [Fact]
     public async Task GetLogs_ReturnsEmptyData_WhenTypesFilterMatchesNothing()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: $"{BaseUrl}?types=contract-test-nonexistent-type-zzz"
+            $"{BaseUrl}?types=contract-test-nonexistent-type-zzz"
         );
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
-        data.GetArrayLength().Should().Be(expected: 0, because: "no real log entry can match a garbage type filter");
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
+        data.GetArrayLength().Should().Be(0, "no real log entry can match a garbage type filter");
     }
 
     [Fact]
     public async Task GetLogs_ReturnsEmptyData_WhenLevelsFilterMatchesNothing()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: $"{BaseUrl}?levels=contract-test-nonexistent-level-zzz"
+            $"{BaseUrl}?levels=contract-test-nonexistent-level-zzz"
         );
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
-        data.GetArrayLength().Should().Be(expected: 0, because: "no real log entry can match a garbage level filter");
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
+        data.GetArrayLength().Should().Be(0, "no real log entry can match a garbage level filter");
     }
 
     [Fact]
     public async Task GetLogs_ReturnsEmptyData_WhenMessageFilterMatchesNothing()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: $"{BaseUrl}?filter=contract-test-nonexistent-message-substring-zzz"
+            $"{BaseUrl}?filter=contract-test-nonexistent-message-substring-zzz"
         );
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
         data.GetArrayLength()
             .Should()
-            .Be(expected: 0, because: "no real log entry can match a garbage message substring");
+            .Be(0, "no real log entry can match a garbage message substring");
     }
 
     [Fact]
     public async Task GetLogLevels_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: $"{BaseUrl}/levels");
+        HttpResponseMessage response = await _unauthed.GetAsync($"{BaseUrl}/levels");
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetLogLevels_ReturnsForbidden_WhenSecondaryUserNonModerator()
     {
-        HttpResponseMessage response = await _secondaryUser.GetAsync(requestUri: $"{BaseUrl}/levels");
+        HttpResponseMessage response = await _secondaryUser.GetAsync($"{BaseUrl}/levels");
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task GetLogLevels_ReturnsAllSixSerilogLevelsInOrder_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: $"{BaseUrl}/levels");
+        HttpResponseMessage response = await _authed.GetAsync($"{BaseUrl}/levels");
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
-        data.ValueKind.Should().Be(expected: JsonValueKind.Array);
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
+        data.ValueKind.Should().Be(JsonValueKind.Array);
 
-        string[] levels = data.EnumerateArray().Select(selector: e => e.GetString()!).ToArray();
+        string[] levels = data.EnumerateArray().Select(e => e.GetString()!).ToArray();
 
-        levels.Should().Equal(expected: ["Verbose", "Debug", "Information", "Warning", "Error", "Fatal"]);
+        levels.Should().Equal(["Verbose", "Debug", "Information", "Warning", "Error", "Fatal"]);
     }
 
     [Fact]
     public async Task GetLogTypes_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: $"{BaseUrl}/types");
+        HttpResponseMessage response = await _unauthed.GetAsync($"{BaseUrl}/types");
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetLogTypes_ReturnsForbidden_WhenSecondaryUserNonModerator()
     {
-        HttpResponseMessage response = await _secondaryUser.GetAsync(requestUri: $"{BaseUrl}/types");
+        HttpResponseMessage response = await _secondaryUser.GetAsync($"{BaseUrl}/types");
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task GetLogTypes_ReturnsKnownTypeCatalogueEntries_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: $"{BaseUrl}/types");
+        HttpResponseMessage response = await _authed.GetAsync($"{BaseUrl}/types");
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
-        data.ValueKind.Should().Be(expected: JsonValueKind.Array);
-        data.GetArrayLength().Should().BeGreaterThan(expected: 0);
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
+        data.ValueKind.Should().Be(JsonValueKind.Array);
+        data.GetArrayLength().Should().BeGreaterThan(0);
 
         JsonElement appType = data.EnumerateArray()
-            .First(predicate: e => e.GetProperty(propertyName: "name").GetString() == "app");
+            .First(e => e.GetProperty("name").GetString() == "app");
 
-        appType.GetProperty(propertyName: "display_name").GetString().Should().Be(expected: "App");
-        appType.GetProperty(propertyName: "type").GetString().Should().Be(expected: "System");
-        appType.TryGetProperty(propertyName: "colorHex", value: out _).Should().BeTrue();
+        appType.GetProperty("display_name").GetString().Should().Be("App");
+        appType.GetProperty("type").GetString().Should().Be("System");
+        appType.TryGetProperty("colorHex", out _).Should().BeTrue();
     }
 }

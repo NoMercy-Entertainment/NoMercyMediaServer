@@ -40,15 +40,15 @@ public class Av1ArgumentResolverTests
     [Fact]
     public void LibSvtAv1_HasQualityRange_0To63()
     {
-        EncoderInfo svt = Get(ffmpegName: "libsvtav1");
-        svt.QualityRange.Min.Should().Be(expected: 0);
-        svt.QualityRange.Max.Should().Be(expected: 63, because: "SVT-AV1 CRF caps at 63, not 51 like H264");
+        EncoderInfo svt = Get("libsvtav1");
+        svt.QualityRange.Min.Should().Be(0);
+        svt.QualityRange.Max.Should().Be(63, "SVT-AV1 CRF caps at 63, not 51 like H264");
     }
 
     [Fact]
     public void LibSvtAv1_Supports10BitAndHdr()
     {
-        EncoderInfo svt = Get(ffmpegName: "libsvtav1");
+        EncoderInfo svt = Get("libsvtav1");
         svt.Supports10Bit.Should().BeTrue();
         svt.SupportsHdr.Should().BeTrue();
     }
@@ -58,9 +58,9 @@ public class Av1ArgumentResolverTests
     {
         // libaom-av1's "preset" is actually cpu-used (0=slowest, 8=fastest).
         // ResolvePreset must pass "6" through unmodified.
-        EncoderInfo aom = Get(ffmpegName: "libaom-av1");
-        aom.Presets.Should().BeEquivalentTo(expectation: ["0", "1", "2", "3", "4", "5", "6", "7", "8"]);
-        EncoderArgumentResolver.ResolvePreset(profilePreset: "6", encoder: aom).Should().Be(expected: "6");
+        EncoderInfo aom = Get("libaom-av1");
+        aom.Presets.Should().BeEquivalentTo(["0", "1", "2", "3", "4", "5", "6", "7", "8"]);
+        EncoderArgumentResolver.ResolvePreset("6", aom).Should().Be("6");
     }
 
     [Fact]
@@ -70,10 +70,10 @@ public class Av1ArgumentResolverTests
         // NOT CRF. A profile configured with "Crf=22" (H264-style) would
         // silently map to QP 22/255 = near-lossless. The definition pins
         // the upper bound so any drift is caught.
-        EncoderInfo rav1e = Get(ffmpegName: "librav1e");
-        rav1e.QualityRange.Max.Should().Be(expected: 255);
-        rav1e.SupportedRateControl.Should().NotContain(unexpected: RateControlMode.Crf);
-        rav1e.SupportedRateControl.Should().Contain(expected: RateControlMode.Cqp);
+        EncoderInfo rav1e = Get("librav1e");
+        rav1e.QualityRange.Max.Should().Be(255);
+        rav1e.SupportedRateControl.Should().NotContain(RateControlMode.Crf);
+        rav1e.SupportedRateControl.Should().Contain(RateControlMode.Cqp);
     }
 
     [Fact]
@@ -82,15 +82,15 @@ public class Av1ArgumentResolverTests
         // av1_nvenc uses 0-51 CQ, but the profile's CRF is written in the AV1
         // software reference scale (0-63). Without scaling, CRF 35 would land
         // as -cq 35 on a 0-51 scale = near-lossless. Expected: round(35/63*51)=28.
-        ResolvedCodec nvenc = Resolve(ffmpegName: "av1_nvenc", vendor: GpuVendor.Nvidia, defaultRateControl: RateControlMode.Cq);
+        ResolvedCodec nvenc = Resolve("av1_nvenc", GpuVendor.Nvidia, RateControlMode.Cq);
         Dictionary<string, string> flags = [];
 
-        EncoderArgumentResolver.ResolveQuality(profileCrf: 35, resolved: nvenc, extraFlags: flags);
+        EncoderArgumentResolver.ResolveQuality(35, nvenc, flags);
 
-        flags[key: "-rc"].Should().Be(expected: "vbr");
-        flags[key: "-cq"]
+        flags["-rc"].Should().Be("vbr");
+        flags["-cq"]
             .Should()
-            .Be(expected: "28", because: "35/63 of the 0-51 range = 28; passing 35 raw would be near-lossless");
+            .Be("28", "35/63 of the 0-51 range = 28; passing 35 raw would be near-lossless");
     }
 
     [Fact]
@@ -99,8 +99,8 @@ public class Av1ArgumentResolverTests
         // AMF AV1 QP is 0-255 even though H264/HEVC AMF use 0-51.
         // Critical to get right — CRF 35 passed naively becomes
         // -qp 35 (near-lossless) on av1_amf.
-        EncoderInfo amf = Get(ffmpegName: "av1_amf");
-        amf.QualityRange.Max.Should().Be(expected: 255, because: "AMD AV1 QP range is 0-255, NOT 0-51");
+        EncoderInfo amf = Get("av1_amf");
+        amf.QualityRange.Max.Should().Be(255, "AMD AV1 QP range is 0-255, NOT 0-51");
     }
 
     [Fact]
@@ -110,22 +110,22 @@ public class Av1ArgumentResolverTests
         // 0-255 AMF scale. Without scaling, av1_amf would receive -qp 35,
         // which in a 0-255 range is lossless territory (~10-20x the file
         // size the profile asked for).
-        ResolvedCodec amf = Resolve(ffmpegName: "av1_amf", vendor: GpuVendor.Amd, defaultRateControl: RateControlMode.Cqp);
+        ResolvedCodec amf = Resolve("av1_amf", GpuVendor.Amd, RateControlMode.Cqp);
         Dictionary<string, string> flags = [];
 
-        EncoderArgumentResolver.ResolveQuality(profileCrf: 35, resolved: amf, extraFlags: flags);
+        EncoderArgumentResolver.ResolveQuality(35, amf, flags);
 
-        flags[key: "-rc"].Should().Be(expected: "cqp");
+        flags["-rc"].Should().Be("cqp");
         // round(35/63*255) = 142
-        flags[key: "-qp"].Should().Be(expected: "142");
+        flags["-qp"].Should().Be("142");
     }
 
     [Fact]
     public void ScaleQualityToEncoder_SameRange_ReturnsInput()
     {
         // No drift for the common case where encoder range matches reference.
-        EncoderInfo libsvtav1 = Get(ffmpegName: "libsvtav1"); // 0-63 — matches AV1 ref
-        EncoderArgumentResolver.ScaleQualityToEncoder(profileCrf: 35, encoder: libsvtav1).Should().Be(expected: 35);
+        EncoderInfo libsvtav1 = Get("libsvtav1"); // 0-63 — matches AV1 ref
+        EncoderArgumentResolver.ScaleQualityToEncoder(35, libsvtav1).Should().Be(35);
     }
 
     [Fact]
@@ -133,25 +133,25 @@ public class Av1ArgumentResolverTests
     {
         // If the profile somehow sends CRF 80 (above AV1 sw range), scaling
         // must still produce a value inside the target encoder's [Min, Max].
-        EncoderInfo qsv = Get(ffmpegName: "av1_qsv"); // 1-51
-        int scaled = EncoderArgumentResolver.ScaleQualityToEncoder(profileCrf: 80, encoder: qsv);
-        scaled.Should().BeInRange(minimumValue: 1, maximumValue: 51);
+        EncoderInfo qsv = Get("av1_qsv"); // 1-51
+        int scaled = EncoderArgumentResolver.ScaleQualityToEncoder(80, qsv);
+        scaled.Should().BeInRange(1, 51);
     }
 
     [Fact]
     public void Av1Qsv_QualityStartsAt1_AndLacks10Bit()
     {
-        EncoderInfo qsv = Get(ffmpegName: "av1_qsv");
-        qsv.QualityRange.Min.Should().Be(expected: 1);
+        EncoderInfo qsv = Get("av1_qsv");
+        qsv.QualityRange.Min.Should().Be(1);
         qsv.Supports10Bit.Should().BeFalse();
     }
 
     [Fact]
     public void Av1Vaapi_HasNoPresets_FullQpRange()
     {
-        EncoderInfo vaapi = Get(ffmpegName: "av1_vaapi");
+        EncoderInfo vaapi = Get("av1_vaapi");
         vaapi.Presets.Should().BeEmpty();
-        vaapi.QualityRange.Max.Should().Be(expected: 255);
+        vaapi.QualityRange.Max.Should().Be(255);
     }
 
     [Fact]
@@ -162,12 +162,12 @@ public class Av1ArgumentResolverTests
         // Mac would silently pick a phantom encoder.
         EncoderInfo[] av1Encoders = Registry
             .EnumerateVideoEncoders()
-            .Where(predicate: t => t.CodecType == VideoCodecType.Av1)
-            .Select(selector: t => t.Encoder)
+            .Where(t => t.CodecType == VideoCodecType.Av1)
+            .Select(t => t.Encoder)
             .ToArray();
 
-        av1Encoders.Should().NotContain(predicate: e => e.FfmpegName == "av1_videotoolbox");
-        av1Encoders.Should().NotContain(predicate: e => e.RequiredVendor == GpuVendor.Apple);
+        av1Encoders.Should().NotContain(e => e.FfmpegName == "av1_videotoolbox");
+        av1Encoders.Should().NotContain(e => e.RequiredVendor == GpuVendor.Apple);
     }
 
     private static EncoderInfo Get(string ffmpegName)
@@ -177,7 +177,7 @@ public class Av1ArgumentResolverTests
             if (c == VideoCodecType.Av1 && encoder.FfmpegName == ffmpegName)
                 return encoder;
         }
-        throw new InvalidOperationException(message: $"AV1 encoder {ffmpegName} not registered");
+        throw new InvalidOperationException($"AV1 encoder {ffmpegName} not registered");
     }
 
     private static ResolvedCodec Resolve(
@@ -186,16 +186,16 @@ public class Av1ArgumentResolverTests
         RateControlMode defaultRateControl
     )
     {
-        EncoderInfo encoder = Get(ffmpegName: ffmpegName);
+        EncoderInfo encoder = Get(ffmpegName);
         GpuDevice? device = vendor is null
             ? null
             : new GpuDevice(
-                Vendor: vendor.Value,
-                Name: $"Test {vendor.Value}",
-                VramMb: 16_384,
-                MaxEncoderSessions: 12,
-                SupportedCodecs: [VideoCodecType.Av1]
+                vendor.Value,
+                $"Test {vendor.Value}",
+                16_384,
+                12,
+                [VideoCodecType.Av1]
             );
-        return new(FfmpegEncoderName: ffmpegName, EncoderInfo: encoder, Device: device, DefaultRateControl: defaultRateControl);
+        return new(ffmpegName, encoder, device, defaultRateControl);
     }
 }

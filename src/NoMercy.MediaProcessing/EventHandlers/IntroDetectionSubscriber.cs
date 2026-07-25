@@ -44,8 +44,8 @@ public class IntroDetectionSubscriber(
 ) : IHostedService
 {
     private const int MinEpisodes = 3;
-    private static readonly TimeSpan IntroScanWindow = TimeSpan.FromMinutes(minutes: 3);
-    private static readonly TimeSpan OutroScanWindow = TimeSpan.FromMinutes(minutes: 3);
+    private static readonly TimeSpan IntroScanWindow = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan OutroScanWindow = TimeSpan.FromMinutes(3);
 
     private readonly ConcurrentDictionary<int, byte> _seasonsInFlight = new();
     private readonly List<IDisposable> _subscriptions = [];
@@ -53,16 +53,16 @@ public class IntroDetectionSubscriber(
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _subscriptions.Add(
-            item: eventBus.Subscribe<EncodingCompletedEvent>(
-                handler: (evt, ct) =>
+            eventBus.Subscribe<EncodingCompletedEvent>(
+                (evt, ct) =>
                 {
-                    _ = Task.Run(function: () => OnEncodingCompletedAsync(evt: evt, ct: ct), cancellationToken: ct);
+                    _ = Task.Run(() => OnEncodingCompletedAsync(evt, ct), ct);
                     return Task.CompletedTask;
                 }
             )
         );
 
-        logger.LogInformation(message: "Intro detection subscriber active");
+        logger.LogInformation("Intro detection subscriber active");
         return Task.CompletedTask;
     }
 
@@ -76,7 +76,7 @@ public class IntroDetectionSubscriber(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(exception: ex, message: "Could not dispose intro detection subscription");
+                logger.LogWarning(ex, "Could not dispose intro detection subscription");
             }
         }
         _subscriptions.Clear();
@@ -92,22 +92,22 @@ public class IntroDetectionSubscriber(
 
             Episode? episode = await context
                 .Episodes.AsNoTracking()
-                .Include(navigationPropertyPath: e => e.VideoFiles)
-                .FirstOrDefaultAsync(predicate: e => e.Id == evt.JobId, cancellationToken: ct);
+                .Include(e => e.VideoFiles)
+                .FirstOrDefaultAsync(e => e.Id == evt.JobId, ct);
 
             if (episode is null)
                 return; // Not an episode — movies don't have cross-episode intro matching yet.
 
-            if (!_seasonsInFlight.TryAdd(key: episode.SeasonId, value: 0))
+            if (!_seasonsInFlight.TryAdd(episode.SeasonId, 0))
                 return; // Another encode in the same season is already being processed.
 
             try
             {
-                await DetectAndPersistForSeasonAsync(services: scope.ServiceProvider, seasonId: episode.SeasonId, ct: ct);
+                await DetectAndPersistForSeasonAsync(scope.ServiceProvider, episode.SeasonId, ct);
             }
             finally
             {
-                _seasonsInFlight.TryRemove(key: episode.SeasonId, value: out _);
+                _seasonsInFlight.TryRemove(episode.SeasonId, out _);
             }
         }
         catch (OperationCanceledException)
@@ -116,7 +116,7 @@ public class IntroDetectionSubscriber(
         }
         catch (Exception ex)
         {
-            logger.LogError(exception: ex, message: "Intro detection failed for job {JobId}", args: evt.JobId);
+            logger.LogError(ex, "Intro detection failed for job {JobId}", evt.JobId);
         }
     }
 
@@ -129,15 +129,15 @@ public class IntroDetectionSubscriber(
         MediaContext context = services.GetRequiredService<MediaContext>();
         List<Episode> encodedEpisodes = await context
             .Episodes.AsNoTracking()
-            .Include(navigationPropertyPath: e => e.VideoFiles)
-            .Where(predicate: e => e.SeasonId == seasonId && e.VideoFiles.Count > 0)
-            .OrderBy(keySelector: e => e.EpisodeNumber)
-            .ToListAsync(cancellationToken: ct);
+            .Include(e => e.VideoFiles)
+            .Where(e => e.SeasonId == seasonId && e.VideoFiles.Count > 0)
+            .OrderBy(e => e.EpisodeNumber)
+            .ToListAsync(ct);
 
         if (encodedEpisodes.Count < MinEpisodes)
         {
             logger.LogDebug(
-                message: "Season {SeasonId} only has {Count} encoded episodes — skipping (need {Min})", args: [seasonId, encodedEpisodes.Count, MinEpisodes]
+                "Season {SeasonId} only has {Count} encoded episodes — skipping (need {Min})", [seasonId, encodedEpisodes.Count, MinEpisodes]
             );
             return;
         }
@@ -151,38 +151,38 @@ public class IntroDetectionSubscriber(
         {
             ct.ThrowIfCancellationRequested();
 
-            string? inputPath = ResolveEpisodeInputPath(episode: episode);
+            string? inputPath = ResolveEpisodeInputPath(episode);
             if (inputPath is null)
                 continue;
 
             try
             {
                 AudioFingerprint introPrint = await fingerprinter.FingerprintAsync(
-                    filePath: inputPath,
-                    window: new(Start: TimeSpan.Zero, Duration: IntroScanWindow),
-                    ct: ct
+                    inputPath,
+                    new(TimeSpan.Zero, IntroScanWindow),
+                    ct
                 );
 
-                TimeSpan sourceDuration = ParseDuration(file: episode.VideoFiles.FirstOrDefault());
+                TimeSpan sourceDuration = ParseDuration(episode.VideoFiles.FirstOrDefault());
                 TimeSpan outroStart =
                     sourceDuration > OutroScanWindow
                         ? sourceDuration - OutroScanWindow
                         : TimeSpan.Zero;
 
                 AudioFingerprint outroPrint = await fingerprinter.FingerprintAsync(
-                    filePath: inputPath,
-                    window: new(Start: outroStart, Duration: OutroScanWindow),
-                    ct: ct
+                    inputPath,
+                    new(outroStart, OutroScanWindow),
+                    ct
                 );
 
-                fingerprints[key: episode.Id] = (introPrint, outroPrint);
+                fingerprints[episode.Id] = (introPrint, outroPrint);
             }
             catch (Exception ex)
             {
                 logger.LogWarning(
-                    exception: ex,
-                    message: "Could not fingerprint episode {EpisodeId} — excluding from season scan",
-                    args: episode.Id
+                    ex,
+                    "Could not fingerprint episode {EpisodeId} — excluding from season scan",
+                    episode.Id
                 );
             }
         }
@@ -190,11 +190,11 @@ public class IntroDetectionSubscriber(
         if (fingerprints.Count < MinEpisodes)
             return;
 
-        IReadOnlyList<AudioFingerprint> intros = fingerprints.Values.Select(selector: f => f.Intro).ToList();
-        IReadOnlyList<AudioFingerprint> outros = fingerprints.Values.Select(selector: f => f.Outro).ToList();
+        IReadOnlyList<AudioFingerprint> intros = fingerprints.Values.Select(f => f.Intro).ToList();
+        IReadOnlyList<AudioFingerprint> outros = fingerprints.Values.Select(f => f.Outro).ToList();
 
-        IntroMarker? introMarker = detector.DetectIntro(episodeFingerprints: intros);
-        IntroMarker? outroMarker = detector.DetectOutro(episodeFingerprints: outros);
+        IntroMarker? introMarker = detector.DetectIntro(intros);
+        IntroMarker? outroMarker = detector.DetectOutro(outros);
 
         foreach (int episodeId in fingerprints.Keys)
         {
@@ -202,7 +202,7 @@ public class IntroDetectionSubscriber(
             if (introMarker is not null)
             {
                 segments.Add(
-                    item: new()
+                    new()
                     {
                         SegmentType = ContentSegmentType.Intro,
                         StartSeconds = introMarker.Start.TotalSeconds,
@@ -214,7 +214,7 @@ public class IntroDetectionSubscriber(
             if (outroMarker is not null)
             {
                 segments.Add(
-                    item: new()
+                    new()
                     {
                         SegmentType = ContentSegmentType.Outro,
                         StartSeconds = outroMarker.Start.TotalSeconds,
@@ -225,11 +225,11 @@ public class IntroDetectionSubscriber(
             }
 
             if (segments.Count > 0)
-                await ReplaceDetectorSegmentsAsync(context: context, episodeId: episodeId, newSegments: segments, ct: ct);
+                await ReplaceDetectorSegmentsAsync(context, episodeId, segments, ct);
         }
 
         logger.LogInformation(
-            message: "Intro detection completed for season {SeasonId}: intro={HasIntro} outro={HasOutro} across {Count} episodes", args: [seasonId, introMarker is not null, outroMarker is not null, fingerprints.Count]
+            "Intro detection completed for season {SeasonId}: intro={HasIntro} outro={HasOutro} across {Count} episodes", [seasonId, introMarker is not null, outroMarker is not null, fingerprints.Count]
         );
     }
 
@@ -246,10 +246,10 @@ public class IntroDetectionSubscriber(
     )
     {
         List<ContentSegment> old = await context
-            .ContentSegments.Where(predicate: s => s.EpisodeId == episodeId && s.Source == "detector")
-            .ToListAsync(cancellationToken: ct);
+            .ContentSegments.Where(s => s.EpisodeId == episodeId && s.Source == "detector")
+            .ToListAsync(ct);
 
-        context.ContentSegments.RemoveRange(entities: old);
+        context.ContentSegments.RemoveRange(old);
 
         foreach (ContentSegment seg in newSegments)
         {
@@ -258,10 +258,10 @@ public class IntroDetectionSubscriber(
             seg.Source = "detector";
             seg.CreatedAt = DateTime.UtcNow;
             seg.UpdatedAt = seg.CreatedAt;
-            context.ContentSegments.Add(entity: seg);
+            context.ContentSegments.Add(seg);
         }
 
-        await context.SaveChangesAsync(cancellationToken: ct);
+        await context.SaveChangesAsync(ct);
     }
 
     private string? ResolveEpisodeInputPath(Episode episode)
@@ -272,13 +272,13 @@ public class IntroDetectionSubscriber(
         foreach (VideoFile file in episode.VideoFiles)
         {
             if (
-                string.IsNullOrWhiteSpace(value: file.HostFolder)
-                || string.IsNullOrWhiteSpace(value: file.Filename)
+                string.IsNullOrWhiteSpace(file.HostFolder)
+                || string.IsNullOrWhiteSpace(file.Filename)
             )
                 continue;
 
-            string path = storage.CombinePath(parent: file.HostFolder, child: file.Filename);
-            if (storage.Exists(path: path))
+            string path = storage.CombinePath(file.HostFolder, file.Filename);
+            if (storage.Exists(path))
                 return path;
         }
 
@@ -287,11 +287,11 @@ public class IntroDetectionSubscriber(
 
     private static TimeSpan ParseDuration(VideoFile? file)
     {
-        if (file is null || string.IsNullOrWhiteSpace(value: file.Duration))
+        if (file is null || string.IsNullOrWhiteSpace(file.Duration))
             return TimeSpan.Zero;
 
         // VideoFile.Duration is stored as "HH:MM:SS" in the DB.
-        if (TimeSpan.TryParse(s: file.Duration, result: out TimeSpan parsed))
+        if (TimeSpan.TryParse(file.Duration, out TimeSpan parsed))
             return parsed;
 
         return TimeSpan.Zero;

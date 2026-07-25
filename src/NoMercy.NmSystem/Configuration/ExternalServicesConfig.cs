@@ -26,13 +26,13 @@ public class ExternalServicesConfig
     private const string DefaultApiBaseUrl = "https://api.nomercy.tv/";
 
     public string AuthBaseUrl { get; set; } =
-        Environment.GetEnvironmentVariable(variable: "NOMERCY_AUTH_URL") ?? DefaultAuthBaseUrl;
+        Environment.GetEnvironmentVariable("NOMERCY_AUTH_URL") ?? DefaultAuthBaseUrl;
 
     public string AppBaseUrl { get; set; } =
-        Environment.GetEnvironmentVariable(variable: "NOMERCY_APP_URL") ?? DefaultAppBaseUrl;
+        Environment.GetEnvironmentVariable("NOMERCY_APP_URL") ?? DefaultAppBaseUrl;
 
     public string ApiBaseUrl { get; set; } =
-        Environment.GetEnvironmentVariable(variable: "NOMERCY_API_URL") ?? DefaultApiBaseUrl;
+        Environment.GetEnvironmentVariable("NOMERCY_API_URL") ?? DefaultApiBaseUrl;
 
     public string ApiServerBaseUrl { get; set; }
 

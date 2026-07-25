@@ -23,68 +23,68 @@ public class HdrFeaturesTests
     [Fact]
     public void TonemapSelector_SelectsLibplacebo_WhenFilterAvailable()
     {
-        _ffmpegMock.Setup(expression: f => f.HasFilter("libplacebo")).Returns(value: true);
-        _ffmpegMock.Setup(expression: f => f.HasFilter("tonemap_opencl")).Returns(value: false);
+        _ffmpegMock.Setup(f => f.HasFilter("libplacebo")).Returns(true);
+        _ffmpegMock.Setup(f => f.HasFilter("tonemap_opencl")).Returns(false);
 
         TonemapSelector selector = new();
-        TonemapStrategy strategy = selector.SelectBest(hardware: _hardwareMock.Object, ffmpeg: _ffmpegMock.Object);
+        TonemapStrategy strategy = selector.SelectBest(_hardwareMock.Object, _ffmpegMock.Object);
 
-        strategy.Method.Should().Be(expected: TonemapMethod.Libplacebo);
+        strategy.Method.Should().Be(TonemapMethod.Libplacebo);
         strategy.IsGpuAccelerated.Should().BeTrue();
-        strategy.FfmpegFilterChain.Should().Contain(expected: "libplacebo");
+        strategy.FfmpegFilterChain.Should().Contain("libplacebo");
     }
 
     [Fact]
     public void TonemapSelector_SelectsTonemapOpencl_WhenLibplaceboNotAvailable()
     {
-        _ffmpegMock.Setup(expression: f => f.HasFilter("libplacebo")).Returns(value: false);
-        _ffmpegMock.Setup(expression: f => f.HasFilter("tonemap_opencl")).Returns(value: true);
+        _ffmpegMock.Setup(f => f.HasFilter("libplacebo")).Returns(false);
+        _ffmpegMock.Setup(f => f.HasFilter("tonemap_opencl")).Returns(true);
 
         TonemapSelector selector = new();
-        TonemapStrategy strategy = selector.SelectBest(hardware: _hardwareMock.Object, ffmpeg: _ffmpegMock.Object);
+        TonemapStrategy strategy = selector.SelectBest(_hardwareMock.Object, _ffmpegMock.Object);
 
-        strategy.Method.Should().Be(expected: TonemapMethod.TonemapOpencl);
+        strategy.Method.Should().Be(TonemapMethod.TonemapOpencl);
         strategy.IsGpuAccelerated.Should().BeTrue();
-        strategy.FfmpegFilterChain.Should().Contain(expected: "tonemap_opencl");
+        strategy.FfmpegFilterChain.Should().Contain("tonemap_opencl");
     }
 
     [Fact]
     public void TonemapSelector_FallsBackToZscale_WhenNoGpuFiltersAvailable()
     {
-        _ffmpegMock.Setup(expression: f => f.HasFilter("libplacebo")).Returns(value: false);
-        _ffmpegMock.Setup(expression: f => f.HasFilter("tonemap_opencl")).Returns(value: false);
+        _ffmpegMock.Setup(f => f.HasFilter("libplacebo")).Returns(false);
+        _ffmpegMock.Setup(f => f.HasFilter("tonemap_opencl")).Returns(false);
 
         TonemapSelector selector = new();
-        TonemapStrategy strategy = selector.SelectBest(hardware: _hardwareMock.Object, ffmpeg: _ffmpegMock.Object);
+        TonemapStrategy strategy = selector.SelectBest(_hardwareMock.Object, _ffmpegMock.Object);
 
-        strategy.Method.Should().Be(expected: TonemapMethod.ZscaleTonemap);
+        strategy.Method.Should().Be(TonemapMethod.ZscaleTonemap);
         strategy.IsGpuAccelerated.Should().BeFalse();
-        strategy.FfmpegFilterChain.Should().Contain(expected: "zscale");
+        strategy.FfmpegFilterChain.Should().Contain("zscale");
     }
 
     [Fact]
     public void TonemapSelector_LibplaceboTakesPriorityOverOpencl()
     {
-        _ffmpegMock.Setup(expression: f => f.HasFilter("libplacebo")).Returns(value: true);
-        _ffmpegMock.Setup(expression: f => f.HasFilter("tonemap_opencl")).Returns(value: true);
+        _ffmpegMock.Setup(f => f.HasFilter("libplacebo")).Returns(true);
+        _ffmpegMock.Setup(f => f.HasFilter("tonemap_opencl")).Returns(true);
 
         TonemapSelector selector = new();
-        TonemapStrategy strategy = selector.SelectBest(hardware: _hardwareMock.Object, ffmpeg: _ffmpegMock.Object);
+        TonemapStrategy strategy = selector.SelectBest(_hardwareMock.Object, _ffmpegMock.Object);
 
-        strategy.Method.Should().Be(expected: TonemapMethod.Libplacebo);
+        strategy.Method.Should().Be(TonemapMethod.Libplacebo);
     }
 
     [Fact]
     public void TonemapStrategy_ConstructsCorrectly()
     {
         TonemapStrategy strategy = new(
-            Method: TonemapMethod.CustomLut,
-            FfmpegFilterChain: "lut3d=file=custom.cube",
-            IsGpuAccelerated: false
+            TonemapMethod.CustomLut,
+            "lut3d=file=custom.cube",
+            false
         );
 
-        strategy.Method.Should().Be(expected: TonemapMethod.CustomLut);
-        strategy.FfmpegFilterChain.Should().Be(expected: "lut3d=file=custom.cube");
+        strategy.Method.Should().Be(TonemapMethod.CustomLut);
+        strategy.FfmpegFilterChain.Should().Be("lut3d=file=custom.cube");
         strategy.IsGpuAccelerated.Should().BeFalse();
     }
 
@@ -93,11 +93,11 @@ public class HdrFeaturesTests
     {
         TonemapMethod[] values = Enum.GetValues<TonemapMethod>();
 
-        values.Should().Contain(expected: TonemapMethod.Libplacebo);
-        values.Should().Contain(expected: TonemapMethod.TonemapOpencl);
-        values.Should().Contain(expected: TonemapMethod.ZscaleTonemap);
-        values.Should().Contain(expected: TonemapMethod.CustomLut);
-        values.Should().HaveCount(expected: 4);
+        values.Should().Contain(TonemapMethod.Libplacebo);
+        values.Should().Contain(TonemapMethod.TonemapOpencl);
+        values.Should().Contain(TonemapMethod.ZscaleTonemap);
+        values.Should().Contain(TonemapMethod.CustomLut);
+        values.Should().HaveCount(4);
     }
 
     [Fact]
@@ -105,11 +105,11 @@ public class HdrFeaturesTests
     {
         HdrOptions options = new();
 
-        options.Algorithm.Should().Be(expected: TonemapAlgorithm.Hable);
+        options.Algorithm.Should().Be(TonemapAlgorithm.Hable);
         options.CustomLutPath.Should().BeNull();
-        options.LutApply.Should().Be(expected: LutApplication.AfterTonemap);
-        options.Desat.Should().Be(expected: 0.0);
-        options.Peak.Should().Be(expected: 0.0);
+        options.LutApply.Should().Be(LutApplication.AfterTonemap);
+        options.Desat.Should().Be(0.0);
+        options.Peak.Should().Be(0.0);
         options.PreserveMetadata.Should().BeFalse();
     }
 
@@ -117,19 +117,19 @@ public class HdrFeaturesTests
     public void HdrOptions_ConstructsWithCustomValues()
     {
         HdrOptions options = new(
-            Algorithm: TonemapAlgorithm.Reinhard,
-            CustomLutPath: "/luts/custom.cube",
-            LutApply: LutApplication.BeforeTonemap,
-            Desat: 0.5,
-            Peak: 1000.0,
-            PreserveMetadata: true
+            TonemapAlgorithm.Reinhard,
+            "/luts/custom.cube",
+            LutApplication.BeforeTonemap,
+            0.5,
+            1000.0,
+            true
         );
 
-        options.Algorithm.Should().Be(expected: TonemapAlgorithm.Reinhard);
-        options.CustomLutPath.Should().Be(expected: "/luts/custom.cube");
-        options.LutApply.Should().Be(expected: LutApplication.BeforeTonemap);
-        options.Desat.Should().BeApproximately(expectedValue: 0.5, precision: 0.001);
-        options.Peak.Should().BeApproximately(expectedValue: 1000.0, precision: 0.001);
+        options.Algorithm.Should().Be(TonemapAlgorithm.Reinhard);
+        options.CustomLutPath.Should().Be("/luts/custom.cube");
+        options.LutApply.Should().Be(LutApplication.BeforeTonemap);
+        options.Desat.Should().BeApproximately(0.5, 0.001);
+        options.Peak.Should().BeApproximately(1000.0, 0.001);
         options.PreserveMetadata.Should().BeTrue();
     }
 
@@ -138,11 +138,11 @@ public class HdrFeaturesTests
     {
         TonemapAlgorithm[] values = Enum.GetValues<TonemapAlgorithm>();
 
-        values.Should().Contain(expected: TonemapAlgorithm.Hable);
-        values.Should().Contain(expected: TonemapAlgorithm.Reinhard);
-        values.Should().Contain(expected: TonemapAlgorithm.Mobius);
-        values.Should().Contain(expected: TonemapAlgorithm.Bt2390);
-        values.Should().HaveCount(expected: 4);
+        values.Should().Contain(TonemapAlgorithm.Hable);
+        values.Should().Contain(TonemapAlgorithm.Reinhard);
+        values.Should().Contain(TonemapAlgorithm.Mobius);
+        values.Should().Contain(TonemapAlgorithm.Bt2390);
+        values.Should().HaveCount(4);
     }
 
     [Fact]
@@ -150,22 +150,22 @@ public class HdrFeaturesTests
     {
         LutApplication[] values = Enum.GetValues<LutApplication>();
 
-        values.Should().Contain(expected: LutApplication.BeforeTonemap);
-        values.Should().Contain(expected: LutApplication.AfterTonemap);
-        values.Should().Contain(expected: LutApplication.InsteadOfTonemap);
-        values.Should().HaveCount(expected: 3);
+        values.Should().Contain(LutApplication.BeforeTonemap);
+        values.Should().Contain(LutApplication.AfterTonemap);
+        values.Should().Contain(LutApplication.InsteadOfTonemap);
+        values.Should().HaveCount(3);
     }
 
     [Fact]
     public void ZscaleFilterChain_ContainsTonemap()
     {
-        _ffmpegMock.Setup(expression: f => f.HasFilter("libplacebo")).Returns(value: false);
-        _ffmpegMock.Setup(expression: f => f.HasFilter("tonemap_opencl")).Returns(value: false);
+        _ffmpegMock.Setup(f => f.HasFilter("libplacebo")).Returns(false);
+        _ffmpegMock.Setup(f => f.HasFilter("tonemap_opencl")).Returns(false);
 
         TonemapSelector selector = new();
-        TonemapStrategy strategy = selector.SelectBest(hardware: _hardwareMock.Object, ffmpeg: _ffmpegMock.Object);
+        TonemapStrategy strategy = selector.SelectBest(_hardwareMock.Object, _ffmpegMock.Object);
 
-        strategy.FfmpegFilterChain.Should().Contain(expected: "tonemap=tonemap=hable");
-        strategy.FfmpegFilterChain.Should().Contain(expected: "yuv420p");
+        strategy.FfmpegFilterChain.Should().Contain("tonemap=tonemap=hable");
+        strategy.FfmpegFilterChain.Should().Contain("yuv420p");
     }
 }

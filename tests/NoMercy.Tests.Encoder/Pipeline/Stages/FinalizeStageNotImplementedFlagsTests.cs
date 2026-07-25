@@ -41,15 +41,15 @@ namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 public class FinalizeStageNotImplementedFlagsTests
 {
     private static ExecutionResult SuccessResult =>
-        new(Success: true, ExitCode: 0, StdErr: string.Empty, Duration: TimeSpan.Zero, Error: null);
+        new(true, 0, string.Empty, TimeSpan.Zero, null);
 
     private static OutputPlan HlsOutputPlan() =>
         new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [],
-            AudioOutputs: [],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [],
+            [],
+            [],
+            null
         );
 
     private static (
@@ -62,7 +62,7 @@ public class FinalizeStageNotImplementedFlagsTests
 
         Mock<IOutputStrategy> strategyMock = new();
         strategyMock
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.FinalizeAsync(
                     It.IsAny<string>(),
                     It.IsAny<OutputPlan>(),
@@ -70,24 +70,24 @@ public class FinalizeStageNotImplementedFlagsTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(value: Task.CompletedTask);
-        strategyMock.Setup(expression: s => s.Format).Returns(value: OutputFormat.Hls);
+            .Returns(Task.CompletedTask);
+        strategyMock.Setup(s => s.Format).Returns(OutputFormat.Hls);
 
         Mock<IOutputStrategyFactory> factoryMock = new();
-        factoryMock.Setup(expression: f => f.Resolve(It.IsAny<OutputFormat>())).Returns(value: strategyMock.Object);
+        factoryMock.Setup(f => f.Resolve(It.IsAny<OutputFormat>())).Returns(strategyMock.Object);
 
         Mock<IChapterWriter> chapterMock = new();
         Mock<IFontExtractor> fontMock = new();
         fontMock
-            .Setup(expression: f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 0);
+            .Setup(f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
 
         FinalizeStage stage = new(
-            chapterWriter: chapterMock.Object,
-            fontExtractor: fontMock.Object,
-            outputStrategyFactory: factoryMock.Object,
-            logger: NullLogger<FinalizeStage>.Instance,
-            storage: storage
+            chapterMock.Object,
+            fontMock.Object,
+            factoryMock.Object,
+            NullLogger<FinalizeStage>.Instance,
+            storage
         );
 
         return (stage, strategyMock, storage);
@@ -95,7 +95,7 @@ public class FinalizeStageNotImplementedFlagsTests
 
     private static FinalizeInput MakeInput(HlsDerivatives derivatives) =>
         new(
-            Results: [SuccessResult],
+            [SuccessResult],
             Plan: HlsOutputPlan(),
             OutputDirectory: "out",
             MediaTitle: "Test",
@@ -108,47 +108,47 @@ public class FinalizeStageNotImplementedFlagsTests
     public async Task GenerateIFramePlaylists_true_returns_StageFailure_with_diagnostic_message()
     {
         (FinalizeStage stage, _, _) = BuildStage();
-        FinalizeInput input = MakeInput(derivatives: new() { GenerateIFramePlaylists = true });
+        FinalizeInput input = MakeInput(new() { GenerateIFramePlaylists = true });
 
         StageResult result = await stage.ExecuteAsync(
-            input: input,
-            context: EncodingContext.Create(),
-            ct: CancellationToken.None
+            input,
+            EncodingContext.Create(),
+            CancellationToken.None
         );
 
         result.Should().BeOfType<StageFailure>();
         StageFailure failure = (StageFailure)result;
-        failure.Error.Message.Should().Contain(expected: "GenerateIFramePlaylists");
+        failure.Error.Message.Should().Contain("GenerateIFramePlaylists");
         // Source says "no IFramePlaylistGenerator is wired" — match either token.
         (
-            failure.Error.Message.Contains(value: "not wired")
-            || failure.Error.Message.Contains(value: "no IFramePlaylistGenerator")
+            failure.Error.Message.Contains("not wired")
+            || failure.Error.Message.Contains("no IFramePlaylistGenerator")
         )
             .Should()
-            .BeTrue(because: $"unexpected error message: {failure.Error.Message}");
+            .BeTrue($"unexpected error message: {failure.Error.Message}");
     }
 
     [Fact]
     public async Task ExtractClosedCaptions_true_returns_StageFailure_with_diagnostic_message()
     {
         (FinalizeStage stage, _, _) = BuildStage();
-        FinalizeInput input = MakeInput(derivatives: new() { ExtractClosedCaptions = true });
+        FinalizeInput input = MakeInput(new() { ExtractClosedCaptions = true });
 
         StageResult result = await stage.ExecuteAsync(
-            input: input,
-            context: EncodingContext.Create(),
-            ct: CancellationToken.None
+            input,
+            EncodingContext.Create(),
+            CancellationToken.None
         );
 
         result.Should().BeOfType<StageFailure>();
         StageFailure failure = (StageFailure)result;
-        failure.Error.Message.Should().Contain(expected: "ExtractClosedCaptions");
+        failure.Error.Message.Should().Contain("ExtractClosedCaptions");
         (
-            failure.Error.Message.Contains(value: "CcExtractor")
-            || failure.Error.Message.Contains(value: "not wired")
+            failure.Error.Message.Contains("CcExtractor")
+            || failure.Error.Message.Contains("not wired")
         )
             .Should()
-            .BeTrue(because: $"unexpected error message: {failure.Error.Message}");
+            .BeTrue($"unexpected error message: {failure.Error.Message}");
     }
 
     // ── GenerateMasterPlaylist gating ────────────────────────────────────────
@@ -158,7 +158,7 @@ public class FinalizeStageNotImplementedFlagsTests
     {
         (FinalizeStage stage, Mock<IOutputStrategy> strategyMock, _) = BuildStage();
         FinalizeInput input = MakeInput(
-            derivatives: new()
+            new()
             {
                 GenerateMasterPlaylist = false,
                 GenerateFontsJson = false,
@@ -167,21 +167,21 @@ public class FinalizeStageNotImplementedFlagsTests
         );
 
         StageResult result = await stage.ExecuteAsync(
-            input: input,
-            context: EncodingContext.Create(),
-            ct: CancellationToken.None
+            input,
+            EncodingContext.Create(),
+            CancellationToken.None
         );
 
         result.Should().BeOfType<StageSuccess<FinalizeOutput>>();
         strategyMock.Verify(
-            expression: s =>
+            s =>
                 s.FinalizeAsync(
                     It.IsAny<string>(),
                     It.IsAny<OutputPlan>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -190,7 +190,7 @@ public class FinalizeStageNotImplementedFlagsTests
     {
         (FinalizeStage stage, Mock<IOutputStrategy> strategyMock, _) = BuildStage();
         FinalizeInput input = MakeInput(
-            derivatives: new()
+            new()
             {
                 GenerateMasterPlaylist = true,
                 GenerateFontsJson = false,
@@ -198,17 +198,17 @@ public class FinalizeStageNotImplementedFlagsTests
             }
         );
 
-        await stage.ExecuteAsync(input: input, context: EncodingContext.Create(), ct: CancellationToken.None);
+        await stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
 
         strategyMock.Verify(
-            expression: s =>
+            s =>
                 s.FinalizeAsync(
                     It.IsAny<string>(),
                     It.IsAny<OutputPlan>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -222,24 +222,24 @@ public class FinalizeStageNotImplementedFlagsTests
         // FinalizeAsync MUST be called.
         (FinalizeStage stage, Mock<IOutputStrategy> strategyMock, _) = BuildStage();
         FinalizeInput input = new(
-            Results: [SuccessResult],
+            [SuccessResult],
             Plan: HlsOutputPlan(),
             OutputDirectory: "out",
             MediaTitle: "Test",
             HlsDerivatives: null
         );
 
-        await stage.ExecuteAsync(input: input, context: EncodingContext.Create(), ct: CancellationToken.None);
+        await stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
 
         strategyMock.Verify(
-            expression: s =>
+            s =>
                 s.FinalizeAsync(
                     It.IsAny<string>(),
                     It.IsAny<OutputPlan>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 }

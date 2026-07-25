@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Season;
 
 public class TmdbValueClass
 {
-    [JsonProperty(propertyName: "episode_id")]
+    [JsonProperty("episode_id")]
     public int EpisodeId { get; set; }
 
-    [JsonProperty(propertyName: "episode_number")]
+    [JsonProperty("episode_number")]
     public int EpisodeNumber { get; set; }
 }

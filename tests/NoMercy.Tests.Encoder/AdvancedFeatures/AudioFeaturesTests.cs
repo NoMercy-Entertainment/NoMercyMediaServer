@@ -21,49 +21,49 @@ public class AudioFeaturesTests
     {
         LoudnessMode[] values = Enum.GetValues<LoudnessMode>();
 
-        values.Should().Contain(expected: LoudnessMode.None);
-        values.Should().Contain(expected: LoudnessMode.EbuR128);
-        values.Should().Contain(expected: LoudnessMode.ReplayGain);
-        values.Should().Contain(expected: LoudnessMode.Custom);
-        values.Should().HaveCount(expected: 4);
+        values.Should().Contain(LoudnessMode.None);
+        values.Should().Contain(LoudnessMode.EbuR128);
+        values.Should().Contain(LoudnessMode.ReplayGain);
+        values.Should().Contain(LoudnessMode.Custom);
+        values.Should().HaveCount(4);
     }
 
     [Fact]
     public void LoudnessMode_DefaultIsNone()
     {
         LoudnessMode mode = default;
-        mode.Should().Be(expected: LoudnessMode.None);
+        mode.Should().Be(LoudnessMode.None);
     }
 
     [Fact]
     public void AudioMetadata_ConstructsWithRequiredFields()
     {
         AudioMetadata metadata = new(
-            Title: "Track One",
-            Artist: "Some Artist",
-            AlbumArtist: "Various Artists",
-            Album: "The Album",
-            TrackNumber: 1,
-            DiscNumber: 1,
-            Year: 2024,
-            Genre: "Rock",
-            MusicBrainzTrackId: "mbid-track-001",
-            MusicBrainzReleaseId: "mbid-release-001",
-            AcoustIdFingerprint: "aqstid-fp-001",
-            CoverArt: null
+            "Track One",
+            "Some Artist",
+            "Various Artists",
+            "The Album",
+            1,
+            1,
+            2024,
+            "Rock",
+            "mbid-track-001",
+            "mbid-release-001",
+            "aqstid-fp-001",
+            null
         );
 
-        metadata.Title.Should().Be(expected: "Track One");
-        metadata.Artist.Should().Be(expected: "Some Artist");
-        metadata.AlbumArtist.Should().Be(expected: "Various Artists");
-        metadata.Album.Should().Be(expected: "The Album");
-        metadata.TrackNumber.Should().Be(expected: 1);
-        metadata.DiscNumber.Should().Be(expected: 1);
-        metadata.Year.Should().Be(expected: 2024);
-        metadata.Genre.Should().Be(expected: "Rock");
-        metadata.MusicBrainzTrackId.Should().Be(expected: "mbid-track-001");
-        metadata.MusicBrainzReleaseId.Should().Be(expected: "mbid-release-001");
-        metadata.AcoustIdFingerprint.Should().Be(expected: "aqstid-fp-001");
+        metadata.Title.Should().Be("Track One");
+        metadata.Artist.Should().Be("Some Artist");
+        metadata.AlbumArtist.Should().Be("Various Artists");
+        metadata.Album.Should().Be("The Album");
+        metadata.TrackNumber.Should().Be(1);
+        metadata.DiscNumber.Should().Be(1);
+        metadata.Year.Should().Be(2024);
+        metadata.Genre.Should().Be("Rock");
+        metadata.MusicBrainzTrackId.Should().Be("mbid-track-001");
+        metadata.MusicBrainzReleaseId.Should().Be("mbid-release-001");
+        metadata.AcoustIdFingerprint.Should().Be("aqstid-fp-001");
         metadata.CoverArt.Should().BeNull();
     }
 
@@ -71,18 +71,18 @@ public class AudioFeaturesTests
     public void AudioMetadata_SupportsNullableOptionalFields()
     {
         AudioMetadata metadata = new(
-            Title: "Minimal Track",
-            Artist: "Artist",
-            AlbumArtist: "Artist",
-            Album: "Album",
-            TrackNumber: 1,
-            DiscNumber: 1,
-            Year: null,
-            Genre: null,
-            MusicBrainzTrackId: null,
-            MusicBrainzReleaseId: null,
-            AcoustIdFingerprint: null,
-            CoverArt: null
+            "Minimal Track",
+            "Artist",
+            "Artist",
+            "Album",
+            1,
+            1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
         );
 
         metadata.Year.Should().BeNull();
@@ -96,28 +96,28 @@ public class AudioFeaturesTests
     public void AlbumArtSource_ConstructsWithFilePath()
     {
         AlbumArtSource source = new(
-            FilePath: "/music/covers/album.jpg",
-            Url: null,
-            Type: AlbumArtType.Front
+            "/music/covers/album.jpg",
+            null,
+            AlbumArtType.Front
         );
 
-        source.FilePath.Should().Be(expected: "/music/covers/album.jpg");
+        source.FilePath.Should().Be("/music/covers/album.jpg");
         source.Url.Should().BeNull();
-        source.Type.Should().Be(expected: AlbumArtType.Front);
+        source.Type.Should().Be(AlbumArtType.Front);
     }
 
     [Fact]
     public void AlbumArtSource_ConstructsWithUrl()
     {
         AlbumArtSource source = new(
-            FilePath: null,
-            Url: "https://example.com/cover.jpg",
-            Type: AlbumArtType.Artist
+            null,
+            "https://example.com/cover.jpg",
+            AlbumArtType.Artist
         );
 
         source.FilePath.Should().BeNull();
-        source.Url.Should().Be(expected: "https://example.com/cover.jpg");
-        source.Type.Should().Be(expected: AlbumArtType.Artist);
+        source.Url.Should().Be("https://example.com/cover.jpg");
+        source.Type.Should().Be(AlbumArtType.Artist);
     }
 
     [Fact]
@@ -125,40 +125,40 @@ public class AudioFeaturesTests
     {
         AlbumArtType[] values = Enum.GetValues<AlbumArtType>();
 
-        values.Should().Contain(expected: AlbumArtType.Front);
-        values.Should().Contain(expected: AlbumArtType.Back);
-        values.Should().Contain(expected: AlbumArtType.Disc);
-        values.Should().Contain(expected: AlbumArtType.Artist);
-        values.Should().Contain(expected: AlbumArtType.Other);
-        values.Should().HaveCount(expected: 5);
+        values.Should().Contain(AlbumArtType.Front);
+        values.Should().Contain(AlbumArtType.Back);
+        values.Should().Contain(AlbumArtType.Disc);
+        values.Should().Contain(AlbumArtType.Artist);
+        values.Should().Contain(AlbumArtType.Other);
+        values.Should().HaveCount(5);
     }
 
     [Fact]
     public void AudioMetadata_WithCoverArt_CarriesCoverArt()
     {
         AlbumArtSource coverArt = new(
-            FilePath: "/tmp/cover.jpg",
-            Url: null,
-            Type: AlbumArtType.Front
+            "/tmp/cover.jpg",
+            null,
+            AlbumArtType.Front
         );
 
         AudioMetadata metadata = new(
-            Title: "Track",
-            Artist: "Artist",
-            AlbumArtist: "Artist",
-            Album: "Album",
-            TrackNumber: 1,
-            DiscNumber: 1,
-            Year: 2024,
-            Genre: "Jazz",
-            MusicBrainzTrackId: null,
-            MusicBrainzReleaseId: null,
-            AcoustIdFingerprint: null,
-            CoverArt: coverArt
+            "Track",
+            "Artist",
+            "Artist",
+            "Album",
+            1,
+            1,
+            2024,
+            "Jazz",
+            null,
+            null,
+            null,
+            coverArt
         );
 
         metadata.CoverArt.Should().NotBeNull();
-        metadata.CoverArt!.Type.Should().Be(expected: AlbumArtType.Front);
-        metadata.CoverArt.FilePath.Should().Be(expected: "/tmp/cover.jpg");
+        metadata.CoverArt!.Type.Should().Be(AlbumArtType.Front);
+        metadata.CoverArt.FilePath.Should().Be("/tmp/cover.jpg");
     }
 }

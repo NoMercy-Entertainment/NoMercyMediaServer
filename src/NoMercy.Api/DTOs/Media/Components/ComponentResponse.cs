@@ -18,10 +18,10 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record ComponentResponse
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public IEnumerable<ComponentEnvelope> Data { get; set; } = [];
 
     public ComponentResponse() { }
@@ -39,18 +39,18 @@ public record ComponentResponse
     /// <summary>
     /// Creates a response with a single component.
     /// </summary>
-    public static ComponentResponse From(ComponentEnvelope component) => new(components: component);
+    public static ComponentResponse From(ComponentEnvelope component) => new(component);
 
     /// <summary>
     /// Creates a response with multiple components.
     /// </summary>
-    public static ComponentResponse From(params ComponentEnvelope[] components) => new(components: components);
+    public static ComponentResponse From(params ComponentEnvelope[] components) => new(components);
 
     /// <summary>
     /// Creates a response from a collection of components.
     /// </summary>
     public static ComponentResponse From(IEnumerable<ComponentEnvelope> components) =>
-        new(components: components);
+        new(components);
 }
 
 /// <summary>

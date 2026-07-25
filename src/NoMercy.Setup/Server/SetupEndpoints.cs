@@ -63,8 +63,8 @@ public class SetupEndpoints
         _terminalUi = SetupTerminalUi.IsInteractiveTerminal ? new SetupTerminalUi() : null;
 
         _codeVerifier = AuthManager.GenerateCodeVerifier();
-        _codeChallenge = AuthManager.GenerateCodeChallenge(codeVerifier: _codeVerifier);
-        _pkceState = Guid.NewGuid().ToString(format: "N");
+        _codeChallenge = AuthManager.GenerateCodeChallenge(_codeVerifier);
+        _pkceState = Guid.NewGuid().ToString("N");
         _exchangeCompleted = false;
     }
 
@@ -72,60 +72,60 @@ public class SetupEndpoints
 
     public async Task HandleRequestAsync(HttpContext context)
     {
-        string path = (context.Request.Path.Value?.TrimEnd(trimChar: '/') ?? string.Empty).ToLowerInvariant();
+        string path = (context.Request.Path.Value?.TrimEnd('/') ?? string.Empty).ToLowerInvariant();
 
         switch (path)
         {
             case "/setup":
-                await HandleSetupPage(context: context);
+                await HandleSetupPage(context);
                 break;
 
             case "/setup/setup.css":
-                await HandleEmbeddedResource(context: context, filename: "setup.css", contentType: "text/css");
+                await HandleEmbeddedResource(context, "setup.css", "text/css");
                 break;
 
             case "/setup/setup.js":
-                await HandleEmbeddedResource(context: context, filename: "setup.js", contentType: "application/javascript");
+                await HandleEmbeddedResource(context, "setup.js", "application/javascript");
                 break;
 
             case "/favicon.ico":
-                await HandleEmbeddedBinary(context: context, filename: "favicon.ico", contentType: "image/x-icon");
+                await HandleEmbeddedBinary(context, "favicon.ico", "image/x-icon");
                 break;
 
             case "/setup/config":
-                await HandleSetupConfig(context: context);
+                await HandleSetupConfig(context);
                 break;
 
             case "/setup/status":
-                await HandleSetupStatus(context: context);
+                await HandleSetupStatus(context);
                 break;
 
             case "/setup/silent-sso":
-                await HandleSilentSso(context: context);
+                await HandleSilentSso(context);
                 break;
 
             case "/setup/exchange":
-                await HandleExchange(context: context);
+                await HandleExchange(context);
                 break;
 
             case "/setup/device-code":
-                await HandleDeviceCode(context: context);
+                await HandleDeviceCode(context);
                 break;
 
             case "/setup/retry":
-                await HandleRetry(context: context);
+                await HandleRetry(context);
                 break;
 
             case "/setup/qr":
-                await HandleQrCode(context: context);
+                await HandleQrCode(context);
                 break;
 
             case "/sso-callback":
-                await HandleSsoCallback(context: context);
+                await HandleSsoCallback(context);
                 break;
 
             default:
-                await HandleServiceUnavailable(context: context);
+                await HandleServiceUnavailable(context);
                 break;
         }
     }
@@ -140,11 +140,11 @@ public class SetupEndpoints
             return;
         }
 
-        string html = await LoadEmbeddedResource(filename: "setup.html");
+        string html = await LoadEmbeddedResource("setup.html");
 
         context.Response.ContentType = "text/html; charset=utf-8";
         context.Response.StatusCode = StatusCodes.Status200OK;
-        await context.Response.WriteAsync(text: html, encoding: Encoding.UTF8);
+        await context.Response.WriteAsync(html, Encoding.UTF8);
     }
 
     private static async Task HandleEmbeddedResource(
@@ -159,11 +159,11 @@ public class SetupEndpoints
             return;
         }
 
-        string content = await LoadEmbeddedResource(filename: filename);
+        string content = await LoadEmbeddedResource(filename);
 
         context.Response.ContentType = $"{contentType}; charset=utf-8";
         context.Response.StatusCode = StatusCodes.Status200OK;
-        await context.Response.WriteAsync(text: content, encoding: Encoding.UTF8);
+        await context.Response.WriteAsync(content, Encoding.UTF8);
     }
 
     // ── /setup/config ───────────────────────────────────────────────────────
@@ -200,7 +200,7 @@ public class SetupEndpoints
             is_first_boot = !Start.Certificate!.HasValidCertificate(),
         };
 
-        await WriteJsonResponse(response: context.Response, data: response);
+        await WriteJsonResponse(context.Response, response);
     }
 
     // ── /setup/status ───────────────────────────────────────────────────────
@@ -215,15 +215,15 @@ public class SetupEndpoints
 
         string accept = context.Request.Headers.Accept.ToString();
 
-        if (accept.Contains(value: "text/event-stream"))
+        if (accept.Contains("text/event-stream"))
         {
-            await HandleSetupStatusSse(context: context);
+            await HandleSetupStatusSse(context);
             return;
         }
 
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = StatusCodes.Status200OK;
-        await WriteJsonResponse(response: context.Response, data: BuildStatusSnapshot());
+        await WriteJsonResponse(context.Response, BuildStatusSnapshot());
     }
 
     private async Task HandleSetupStatusSse(HttpContext context)
@@ -235,22 +235,22 @@ public class SetupEndpoints
 
         CancellationToken cancellationToken = context.RequestAborted;
 
-        string json = JsonConvert.SerializeObject(value: BuildStatusSnapshot());
-        await WriteSseEvent(response: context.Response, data: json, cancellationToken: cancellationToken);
+        string json = JsonConvert.SerializeObject(BuildStatusSnapshot());
+        await WriteSseEvent(context.Response, json, cancellationToken);
 
         while (!cancellationToken.IsCancellationRequested && _state.IsSetupRequired)
         {
             try
             {
-                await _state.WaitForChangeAsync(cancellationToken: cancellationToken);
+                await _state.WaitForChangeAsync(cancellationToken);
             }
             catch (OperationCanceledException)
             {
                 break;
             }
 
-            json = JsonConvert.SerializeObject(value: BuildStatusSnapshot());
-            await WriteSseEvent(response: context.Response, data: json, cancellationToken: cancellationToken);
+            json = JsonConvert.SerializeObject(BuildStatusSnapshot());
+            await WriteSseEvent(context.Response, json, cancellationToken);
         }
     }
 
@@ -273,8 +273,8 @@ public class SetupEndpoints
         CancellationToken cancellationToken
     )
     {
-        await response.WriteAsync(text: $"data: {data}\n\n", encoding: Encoding.UTF8, cancellationToken: cancellationToken);
-        await response.Body.FlushAsync(cancellationToken: cancellationToken);
+        await response.WriteAsync($"data: {data}\n\n", Encoding.UTF8, cancellationToken);
+        await response.Body.FlushAsync(cancellationToken);
     }
 
     // ── /setup/silent-sso ───────────────────────────────────────────────────
@@ -290,8 +290,8 @@ public class SetupEndpoints
         context.Response.ContentType = "text/html; charset=utf-8";
         context.Response.StatusCode = StatusCodes.Status200OK;
         await context.Response.WriteAsync(
-            text: "<html><body><script>parent.postMessage(location.href, location.origin)</script></body></html>",
-            encoding: Encoding.UTF8
+            "<html><body><script>parent.postMessage(location.href, location.origin)</script></body></html>",
+            Encoding.UTF8
         );
     }
 
@@ -310,25 +310,25 @@ public class SetupEndpoints
         ExchangeRequest? body;
         try
         {
-            string rawBody = await new StreamReader(stream: context.Request.Body).ReadToEndAsync();
+            string rawBody = await new StreamReader(context.Request.Body).ReadToEndAsync();
             body = rawBody.FromJson<ExchangeRequest>();
         }
         catch
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await WriteJsonResponse(
-                response: context.Response,
-                data: new { status = "error", message = "Invalid request body" }
+                context.Response,
+                new { status = "error", message = "Invalid request body" }
             );
             return;
         }
 
-        if (body is null || string.IsNullOrEmpty(value: body.Code))
+        if (body is null || string.IsNullOrEmpty(body.Code))
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await WriteJsonResponse(
-                response: context.Response,
-                data: new { status = "error", message = "Missing code" }
+                context.Response,
+                new { status = "error", message = "Missing code" }
             );
             return;
         }
@@ -344,12 +344,12 @@ public class SetupEndpoints
             alreadyCompleted = _exchangeCompleted;
         }
 
-        if (!string.IsNullOrEmpty(value: body.State) && body.State != currentPkceState)
+        if (!string.IsNullOrEmpty(body.State) && body.State != currentPkceState)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await WriteJsonResponse(
-                response: context.Response,
-                data: new { status = "error", message = "Invalid state parameter" }
+                context.Response,
+                new { status = "error", message = "Invalid state parameter" }
             );
             return;
         }
@@ -358,8 +358,8 @@ public class SetupEndpoints
         {
             context.Response.StatusCode = StatusCodes.Status409Conflict;
             await WriteJsonResponse(
-                response: context.Response,
-                data: new { status = "error", message = "Exchange already completed" }
+                context.Response,
+                new { status = "error", message = "Exchange already completed" }
             );
             return;
         }
@@ -369,14 +369,14 @@ public class SetupEndpoints
 
         try
         {
-            if (string.IsNullOrEmpty(value: ExternalServicesConfig.Current.TokenClientId))
-                throw new InvalidOperationException(message: "Auth configuration not available");
+            if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
+                throw new InvalidOperationException("Auth configuration not available");
 
             List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildAuthorizationCodeBody(
-                clientId: ExternalServicesConfig.Current.TokenClientId,
-                code: body.Code,
-                redirectUri: redirectUri,
-                codeVerifier: currentCodeVerifier
+                ExternalServicesConfig.Current.TokenClientId,
+                body.Code,
+                redirectUri,
+                currentCodeVerifier
             );
 
             string tokenEndpoint =
@@ -386,24 +386,24 @@ public class SetupEndpoints
             httpClient.WithNoMercyUserAgent();
 
             using HttpResponseMessage tokenResponse = await httpClient.PostAsync(
-                requestUri: tokenEndpoint,
-                content: new FormUrlEncodedContent(nameValueCollection: tokenBody)
+                tokenEndpoint,
+                new FormUrlEncodedContent(tokenBody)
             );
 
             string responseContent = await tokenResponse.Content.ReadAsStringAsync();
 
             if (!tokenResponse.IsSuccessStatusCode)
                 throw new InvalidOperationException(
-                    message: $"Token exchange failed ({(int)tokenResponse.StatusCode}): {responseContent}"
+                    $"Token exchange failed ({(int)tokenResponse.StatusCode}): {responseContent}"
                 );
 
             AuthResponse tokens =
                 responseContent.FromJson<AuthResponse>()
-                ?? throw new InvalidOperationException(message: "Failed to deserialize token response");
+                ?? throw new InvalidOperationException("Failed to deserialize token response");
 
-            await _authManager.StoreTokensAsync(tokens: tokens);
-            _state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-            _state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+            await _authManager.StoreTokensAsync(tokens);
+            _state.TransitionTo(SetupPhase.Authenticating);
+            _state.TransitionTo(SetupPhase.Authenticated);
 
             lock (_pkceLock)
             {
@@ -413,20 +413,20 @@ public class SetupEndpoints
             RegeneratePkce();
 
             context.Response.StatusCode = StatusCodes.Status200OK;
-            await WriteJsonResponse(response: context.Response, data: new { status = "ok" });
+            await WriteJsonResponse(context.Response, new { status = "ok" });
         }
         catch (Exception ex)
         {
             Logger.Setup(
-                message: $"Silent SSO exchange failed: {ex.GetType().Name} — {ex.Message}",
-                level: LogEventLevel.Warning
+                $"Silent SSO exchange failed: {ex.GetType().Name} — {ex.Message}",
+                LogEventLevel.Warning
             );
             // Return a non-2xx so the client's fetch treats this as a failure — a 200
             // with an error body was silently swallowed and read as success.
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await WriteJsonResponse(
-                response: context.Response,
-                data: new { status = "error", message = ex.Message }
+                context.Response,
+                new { status = "error", message = ex.Message }
             );
         }
     }
@@ -441,44 +441,44 @@ public class SetupEndpoints
             return;
         }
 
-        string error = context.Request.Query[key: "error"].ToString();
-        if (!string.IsNullOrEmpty(value: error))
+        string error = context.Request.Query["error"].ToString();
+        if (!string.IsNullOrEmpty(error))
         {
-            string errorDescription = context.Request.Query[key: "error_description"].ToString();
+            string errorDescription = context.Request.Query["error_description"].ToString();
 
-            string displayMessage = !string.IsNullOrEmpty(value: errorDescription)
+            string displayMessage = !string.IsNullOrEmpty(errorDescription)
                 ? $"Authorization failed: {errorDescription}"
                 : $"Authorization failed: {error}";
 
             Logger.Setup(
-                message: $"SSO callback error: {error} — {errorDescription}",
-                level: LogEventLevel.Warning
+                $"SSO callback error: {error} — {errorDescription}",
+                LogEventLevel.Warning
             );
 
-            _state.SetError(message: displayMessage);
+            _state.SetError(displayMessage);
 
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsync(
-                text: BuildCallbackHtml(title: "Authorization Failed", message: displayMessage, isError: true),
-                encoding: Encoding.UTF8
+                BuildCallbackHtml("Authorization Failed", displayMessage, true),
+                Encoding.UTF8
             );
             return;
         }
 
-        string code = context.Request.Query[key: "code"].ToString();
-        if (string.IsNullOrEmpty(value: code))
+        string code = context.Request.Query["code"].ToString();
+        if (string.IsNullOrEmpty(code))
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "application/json";
             await WriteJsonResponse(
-                response: context.Response,
-                data: new { status = "error", message = "Missing authorization code" }
+                context.Response,
+                new { status = "error", message = "Missing authorization code" }
             );
             return;
         }
 
-        string stateParam = context.Request.Query[key: "state"].ToString();
+        string stateParam = context.Request.Query["state"].ToString();
         string currentPkceState;
         string currentCodeVerifier;
 
@@ -488,19 +488,19 @@ public class SetupEndpoints
             currentCodeVerifier = _codeVerifier;
         }
 
-        if (!string.IsNullOrEmpty(value: stateParam) && stateParam != currentPkceState)
+        if (!string.IsNullOrEmpty(stateParam) && stateParam != currentPkceState)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "application/json";
             await WriteJsonResponse(
-                response: context.Response,
-                data: new { status = "error", message = "Invalid state parameter" }
+                context.Response,
+                new { status = "error", message = "Invalid state parameter" }
             );
-            _state.SetError(message: "Invalid state parameter during PKCE callback.");
+            _state.SetError("Invalid state parameter during PKCE callback.");
             return;
         }
 
-        _state.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        _state.TransitionTo(SetupPhase.Authenticating);
 
         // Must byte-for-byte match the redirect_uri the browser sent to Keycloak.
         // A hardcoded localhost fails with invalid_grant when the user reaches setup
@@ -514,14 +514,14 @@ public class SetupEndpoints
 
         try
         {
-            if (string.IsNullOrEmpty(value: ExternalServicesConfig.Current.TokenClientId))
-                throw new InvalidOperationException(message: "Auth configuration not available");
+            if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
+                throw new InvalidOperationException("Auth configuration not available");
 
             List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildAuthorizationCodeBody(
-                clientId: ExternalServicesConfig.Current.TokenClientId,
-                code: code,
-                redirectUri: redirectUri,
-                codeVerifier: currentCodeVerifier
+                ExternalServicesConfig.Current.TokenClientId,
+                code,
+                redirectUri,
+                currentCodeVerifier
             );
 
             string tokenEndpoint =
@@ -531,27 +531,27 @@ public class SetupEndpoints
             httpClient.WithNoMercyUserAgent();
 
             using HttpResponseMessage tokenResponse = await httpClient.PostAsync(
-                requestUri: tokenEndpoint,
-                content: new FormUrlEncodedContent(nameValueCollection: tokenBody)
+                tokenEndpoint,
+                new FormUrlEncodedContent(tokenBody)
             );
 
             string responseContent = await tokenResponse.Content.ReadAsStringAsync();
 
             if (!tokenResponse.IsSuccessStatusCode)
                 throw new InvalidOperationException(
-                    message: $"Token exchange failed ({(int)tokenResponse.StatusCode}): {responseContent}"
+                    $"Token exchange failed ({(int)tokenResponse.StatusCode}): {responseContent}"
                 );
 
             AuthResponse tokens =
                 responseContent.FromJson<AuthResponse>()
-                ?? throw new InvalidOperationException(message: "Failed to deserialize token response");
+                ?? throw new InvalidOperationException("Failed to deserialize token response");
 
-            await _authManager.StoreTokensAsync(tokens: tokens);
-            _state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-            _state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+            await _authManager.StoreTokensAsync(tokens);
+            _state.TransitionTo(SetupPhase.Authenticating);
+            _state.TransitionTo(SetupPhase.Authenticated);
 
-            _terminalUi?.ShowProgress(phase: "Authenticated", detail: "Signed in via browser");
-            Logger.Setup(message: "OAuth token exchange completed successfully");
+            _terminalUi?.ShowProgress("Authenticated", "Signed in via browser");
+            Logger.Setup("OAuth token exchange completed successfully");
 
             responseTitle = "Authentication Successful";
             responseMessage = "Tokens saved. Completing server registration...";
@@ -560,13 +560,13 @@ public class SetupEndpoints
         catch (Exception ex)
         {
             Logger.Setup(
-                message: $"Token exchange failed: {ex.GetType().Name} — {ex.Message}",
-                level: LogEventLevel.Error
+                $"Token exchange failed: {ex.GetType().Name} — {ex.Message}",
+                LogEventLevel.Error
             );
             // Transition first: TransitionTo clears ErrorMessage, so setting the error
             // before it wiped the message the /setup/status poll surfaces to the user.
-            _state.TransitionTo(targetPhase: SetupPhase.Unauthenticated);
-            _state.SetError(message: $"Sign in failed: {ex.Message}");
+            _state.TransitionTo(SetupPhase.Unauthenticated);
+            _state.SetError($"Sign in failed: {ex.Message}");
 
             responseTitle = "Authentication Failed";
             responseMessage = $"Sign in failed: {ex.Message}";
@@ -583,12 +583,12 @@ public class SetupEndpoints
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsync(
-                text: BuildCallbackHtml(title: responseTitle, message: responseMessage, isError: responseIsError),
-                encoding: Encoding.UTF8
+                BuildCallbackHtml(responseTitle, responseMessage, responseIsError),
+                Encoding.UTF8
             );
             await context.Response.CompleteAsync();
 
-            _ = Task.Run(function: async () =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
@@ -597,10 +597,10 @@ public class SetupEndpoints
                 catch (Exception ex)
                 {
                     Logger.Setup(
-                        message: $"Post-auth registration failed: {ex.GetType().Name} — {ex.Message}",
-                        level: LogEventLevel.Error
+                        $"Post-auth registration failed: {ex.GetType().Name} — {ex.Message}",
+                        LogEventLevel.Error
                     );
-                    _state.SetError(message: "Could not connect your server. Please try again.");
+                    _state.SetError("Could not connect your server. Please try again.");
                 }
             });
         }
@@ -609,8 +609,8 @@ public class SetupEndpoints
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsync(
-                text: BuildCallbackHtml(title: responseTitle, message: responseMessage, isError: responseIsError),
-                encoding: Encoding.UTF8
+                BuildCallbackHtml(responseTitle, responseMessage, responseIsError),
+                Encoding.UTF8
             );
         }
     }
@@ -627,12 +627,12 @@ public class SetupEndpoints
 
         context.Response.ContentType = "application/json";
 
-        if (string.IsNullOrEmpty(value: ExternalServicesConfig.Current.TokenClientId))
+        if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
         {
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
             await WriteJsonResponse(
-                response: context.Response,
-                data: new { error = true, message = "Auth configuration not available" }
+                context.Response,
+                new { error = true, message = "Auth configuration not available" }
             );
             return;
         }
@@ -641,7 +641,7 @@ public class SetupEndpoints
         {
             List<KeyValuePair<string, string>> deviceCodeBody =
                 AuthManager.BuildDeviceCodeRequestBody(
-                    clientId: ExternalServicesConfig.Current.TokenClientId
+                    ExternalServicesConfig.Current.TokenClientId
                 );
 
             string deviceCodeEndpoint =
@@ -651,8 +651,8 @@ public class SetupEndpoints
             httpClient.WithNoMercyUserAgent();
 
             using HttpResponseMessage deviceResponse = await httpClient.PostAsync(
-                requestUri: deviceCodeEndpoint,
-                content: new FormUrlEncodedContent(nameValueCollection: deviceCodeBody)
+                deviceCodeEndpoint,
+                new FormUrlEncodedContent(deviceCodeBody)
             );
 
             string deviceCodeResponse = await deviceResponse.Content.ReadAsStringAsync();
@@ -662,17 +662,17 @@ public class SetupEndpoints
             // request isn't handed to the user as an empty-but-valid device code.
             if (!deviceResponse.IsSuccessStatusCode)
                 throw new InvalidOperationException(
-                    message: $"Device code request failed ({(int)deviceResponse.StatusCode}): {deviceCodeResponse}"
+                    $"Device code request failed ({(int)deviceResponse.StatusCode}): {deviceCodeResponse}"
                 );
 
             DeviceAuthResponse deviceData =
                 deviceCodeResponse.FromJson<DeviceAuthResponse>()
-                ?? throw new InvalidOperationException(message: "Failed to get device code");
+                ?? throw new InvalidOperationException("Failed to get device code");
 
             context.Response.StatusCode = StatusCodes.Status200OK;
             await WriteJsonResponse(
-                response: context.Response,
-                data: new
+                context.Response,
+                new
                 {
                     user_code = deviceData.UserCode,
                     verification_uri = deviceData.VerificationUri,
@@ -688,24 +688,24 @@ public class SetupEndpoints
                     $"http://localhost:{RuntimeServerSettings.Current.InternalServerPort}/setup";
                 SetupTerminalUi terminalUi = _terminalUi ?? new SetupTerminalUi();
                 terminalUi.Show(
-                    verificationUriComplete: deviceData.VerificationUriComplete,
-                    verificationUri: deviceData.VerificationUri,
-                    userCode: deviceData.UserCode,
-                    setupPageUrl: setupPageUrl
+                    deviceData.VerificationUriComplete,
+                    deviceData.VerificationUri,
+                    deviceData.UserCode,
+                    setupPageUrl
                 );
             }
 
-            _ = Task.Run(function: async () =>
+            _ = Task.Run(async () =>
             {
-                await PollDeviceGrant(deviceData: deviceData);
+                await PollDeviceGrant(deviceData);
             });
         }
         catch (Exception ex)
         {
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
             await WriteJsonResponse(
-                response: context.Response,
-                data: new { error = true, message = $"Failed to initiate device login: {ex.Message}" }
+                context.Response,
+                new { error = true, message = $"Failed to initiate device login: {ex.Message}" }
             );
         }
     }
@@ -729,23 +729,23 @@ public class SetupEndpoints
             _state.ClearError();
 
             context.Response.StatusCode = StatusCodes.Status200OK;
-            await WriteJsonResponse(response: context.Response, data: new { status = "retrying" });
+            await WriteJsonResponse(context.Response, new { status = "retrying" });
 
-            _ = Task.Run(function: async () =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
-                    _state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+                    _state.TransitionTo(SetupPhase.Authenticated);
                     await RunPostAuthRegistration();
                 }
                 catch (Exception ex)
                 {
                     Logger.Setup(
-                        message: $"Registration retry failed: {ex.GetType().Name} — {ex.Message}",
-                        level: LogEventLevel.Error
+                        $"Registration retry failed: {ex.GetType().Name} — {ex.Message}",
+                        LogEventLevel.Error
                     );
                     _state.SetError(
-                        message: "Could not connect your server. Check your internet connection and try again."
+                        "Could not connect your server. Check your internet connection and try again."
                     );
                 }
             });
@@ -754,7 +754,7 @@ public class SetupEndpoints
         }
 
         context.Response.StatusCode = StatusCodes.Status200OK;
-        await WriteJsonResponse(response: context.Response, data: new { status = "unauthenticated" });
+        await WriteJsonResponse(context.Response, new { status = "unauthenticated" });
     }
 
     // ── /setup/qr ───────────────────────────────────────────────────────────
@@ -767,23 +767,23 @@ public class SetupEndpoints
             return;
         }
 
-        string url = context.Request.Query[key: "data"].ToString();
+        string url = context.Request.Query["data"].ToString();
 
-        if (string.IsNullOrEmpty(value: url))
-            url = context.Request.Query[key: "url"].ToString();
+        if (string.IsNullOrEmpty(url))
+            url = context.Request.Query["url"].ToString();
 
-        if (string.IsNullOrEmpty(value: url))
+        if (string.IsNullOrEmpty(url))
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             return;
         }
 
-        byte[] pngBytes = GenerateQrPng(url: url);
+        byte[] pngBytes = GenerateQrPng(url);
 
         context.Response.ContentType = "image/png";
         context.Response.StatusCode = StatusCodes.Status200OK;
         context.Response.ContentLength = pngBytes.Length;
-        await context.Response.Body.WriteAsync(buffer: pngBytes);
+        await context.Response.Body.WriteAsync(pngBytes);
     }
 
     // ── 503 catch-all ───────────────────────────────────────────────────────
@@ -794,8 +794,8 @@ public class SetupEndpoints
         context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
 
         await WriteJsonResponse(
-            response: context.Response,
-            data: new
+            context.Response,
+            new
             {
                 status = "setup_required",
                 message = "Server is in setup mode",
@@ -813,62 +813,62 @@ public class SetupEndpoints
 
         try
         {
-            using CancellationTokenSource dbTimeoutCts = new(delay: TimeSpan.FromSeconds(seconds: 30));
-            bool dbReady = await CronWorker.GetDatabaseReadyTask().WaitAsync(cancellationToken: dbTimeoutCts.Token);
+            using CancellationTokenSource dbTimeoutCts = new(TimeSpan.FromSeconds(30));
+            bool dbReady = await CronWorker.GetDatabaseReadyTask().WaitAsync(dbTimeoutCts.Token);
             if (!dbReady)
                 Logger.Setup(
-                    message: "Database schema init reported failure — continuing registration anyway",
-                    level: LogEventLevel.Warning
+                    "Database schema init reported failure — continuing registration anyway",
+                    LogEventLevel.Warning
                 );
 
-            _state.TransitionTo(targetPhase: SetupPhase.Registering);
-            _terminalUi?.ShowProgress(phase: "Registering", detail: "Connecting your server to NoMercy...");
+            _state.TransitionTo(SetupPhase.Registering);
+            _terminalUi?.ShowProgress("Registering", "Connecting your server to NoMercy...");
 
             if (Start.NetworkDiscovery is not null)
                 await Start.NetworkDiscovery.DiscoverExternalIpAsync();
-            using CancellationTokenSource registrationTimeoutCts = new(delay: TimeSpan.FromMinutes(minutes: 2));
-            await _serverRegistrationService.Init().WaitAsync(cancellationToken: registrationTimeoutCts.Token);
+            using CancellationTokenSource registrationTimeoutCts = new(TimeSpan.FromMinutes(2));
+            await _serverRegistrationService.Init().WaitAsync(registrationTimeoutCts.Token);
 
-            _state.TransitionTo(targetPhase: SetupPhase.Registered);
-            _terminalUi?.ShowProgress(phase: "Registered", detail: "Setting up your server address...");
+            _state.TransitionTo(SetupPhase.Registered);
+            _terminalUi?.ShowProgress("Registered", "Setting up your server address...");
 
             _state.SetPhaseDetail(
-                detail: "Securing your connection... (this can take a couple of minutes)"
+                "Securing your connection... (this can take a couple of minutes)"
             );
-            _terminalUi?.SetStatus(message: "Securing your connection...");
+            _terminalUi?.SetStatus("Securing your connection...");
 
             if (Start.Certificate!.HasValidCertificate())
             {
                 string serverUrl =
                     $"https://{Info.DeviceId}.nomercy.tv:{RuntimeServerSettings.Current.ExternalServerPort}";
-                _state.SetServerUrl(url: serverUrl);
-                _state.TransitionTo(targetPhase: SetupPhase.CertificateAcquired);
-                _state.TransitionTo(targetPhase: SetupPhase.Complete);
-                _terminalUi?.ShowComplete(serverUrl: serverUrl);
-                Logger.Setup(message: "Setup complete — server will restart with HTTPS");
+                _state.SetServerUrl(serverUrl);
+                _state.TransitionTo(SetupPhase.CertificateAcquired);
+                _state.TransitionTo(SetupPhase.Complete);
+                _terminalUi?.ShowComplete(serverUrl);
+                Logger.Setup("Setup complete — server will restart with HTTPS");
             }
             else
             {
-                _state.SetError(message: "Registration completed but certificate was not acquired");
+                _state.SetError("Registration completed but certificate was not acquired");
             }
         }
         catch (OperationCanceledException)
         {
             Logger.Setup(
-                message: "Post-auth registration timed out (registration_timeout)",
-                level: LogEventLevel.Error
+                "Post-auth registration timed out (registration_timeout)",
+                LogEventLevel.Error
             );
-            _state.SetError(message: "Registration timed out. Please check your connection and try again.");
-            _state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+            _state.SetError("Registration timed out. Please check your connection and try again.");
+            _state.TransitionTo(SetupPhase.Authenticated);
         }
         catch (Exception ex)
         {
             Logger.Setup(
-                message: $"Post-auth registration failed: {ex.GetType().Name} — {ex.Message}",
-                level: LogEventLevel.Error
+                $"Post-auth registration failed: {ex.GetType().Name} — {ex.Message}",
+                LogEventLevel.Error
             );
-            _state.SetError(message: "Could not connect your server. Please try again.");
-            _state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+            _state.SetError("Could not connect your server. Please try again.");
+            _state.TransitionTo(SetupPhase.Authenticated);
         }
     }
 
@@ -876,7 +876,7 @@ public class SetupEndpoints
 
     private async Task PollDeviceGrant(DeviceAuthResponse deviceData)
     {
-        if (string.IsNullOrEmpty(value: ExternalServicesConfig.Current.TokenClientId))
+        if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
             return;
 
         // Don't transition to Authenticating here — that hides the login UI.
@@ -887,24 +887,24 @@ public class SetupEndpoints
             return;
 
         List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildDeviceTokenBody(
-            clientId: ExternalServicesConfig.Current.TokenClientId,
-            deviceCode: deviceData.DeviceCode
+            ExternalServicesConfig.Current.TokenClientId,
+            deviceData.DeviceCode
         );
 
         string tokenEndpoint =
             $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
-        DateTime expiresAt = DateTime.UtcNow.AddSeconds(value: deviceData.ExpiresIn);
+        DateTime expiresAt = DateTime.UtcNow.AddSeconds(deviceData.ExpiresIn);
 
         using SystemHttpClient httpClient = new();
         httpClient.WithNoMercyUserAgent();
 
         // Clamp the server-supplied interval so a hostile or buggy IDP can't
         // tight-loop us (interval=0) or stall the setup phase (huge value).
-        int intervalSec = Math.Clamp(value: deviceData.Interval, min: 1, max: 30);
+        int intervalSec = Math.Clamp(deviceData.Interval, 1, 30);
 
         while (DateTime.UtcNow < expiresAt)
         {
-            await Task.Delay(millisecondsDelay: intervalSec * 1000);
+            await Task.Delay(intervalSec * 1000);
 
             // Stop polling if auth completed via another path (browser login, silent SSO)
             if (_state.IsAuthenticated || _state.CurrentPhase == SetupPhase.Complete)
@@ -913,8 +913,8 @@ public class SetupEndpoints
             try
             {
                 using HttpResponseMessage response = await httpClient.PostAsync(
-                    requestUri: tokenEndpoint,
-                    content: new FormUrlEncodedContent(nameValueCollection: tokenBody)
+                    tokenEndpoint,
+                    new FormUrlEncodedContent(tokenBody)
                 );
 
                 if (response.IsSuccessStatusCode)
@@ -923,49 +923,49 @@ public class SetupEndpoints
                     AuthResponse data =
                         content.FromJson<AuthResponse>()
                         ?? throw new InvalidOperationException(
-                            message: "Failed to deserialize token response"
+                            "Failed to deserialize token response"
                         );
 
-                    await _authManager.StoreTokensAsync(tokens: data);
-                    _state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-                    _state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+                    await _authManager.StoreTokensAsync(data);
+                    _state.TransitionTo(SetupPhase.Authenticating);
+                    _state.TransitionTo(SetupPhase.Authenticated);
 
-                    _terminalUi?.ShowProgress(phase: "Authenticated", detail: "Signed in successfully!");
+                    _terminalUi?.ShowProgress("Authenticated", "Signed in successfully!");
 
                     await RunPostAuthRegistration();
                     return;
                 }
 
                 string errorContent = await response.Content.ReadAsStringAsync();
-                dynamic? error = JsonConvert.DeserializeObject<dynamic>(value: errorContent);
+                dynamic? error = JsonConvert.DeserializeObject<dynamic>(errorContent);
                 string? errorCode = error?.error?.ToString();
 
                 // RFC 8628 §3.5: slow_down means keep polling but back off — it is NOT
                 // fatal. Treating it as fatal aborted an otherwise-recoverable device login.
                 if (errorCode == "slow_down")
                 {
-                    intervalSec = Math.Clamp(value: intervalSec + 5, min: 1, max: 30);
+                    intervalSec = Math.Clamp(intervalSec + 5, 1, 30);
                     continue;
                 }
 
                 if (errorCode != "authorization_pending")
                 {
                     // Transition first: TransitionTo clears ErrorMessage.
-                    _state.TransitionTo(targetPhase: SetupPhase.Unauthenticated);
-                    _state.SetError(message: $"Device login failed: {error?.error_description}");
+                    _state.TransitionTo(SetupPhase.Unauthenticated);
+                    _state.SetError($"Device login failed: {error?.error_description}");
                     return;
                 }
             }
             catch (Exception ex)
             {
-                _state.TransitionTo(targetPhase: SetupPhase.Unauthenticated);
-                _state.SetError(message: $"Device login error: {ex.Message}");
+                _state.TransitionTo(SetupPhase.Unauthenticated);
+                _state.SetError($"Device login error: {ex.Message}");
                 return;
             }
         }
 
-        _state.TransitionTo(targetPhase: SetupPhase.Unauthenticated);
-        _state.SetError(message: "Device authorization timed out");
+        _state.TransitionTo(SetupPhase.Unauthenticated);
+        _state.SetError("Device authorization timed out");
     }
 
     // ── Private helpers ─────────────────────────────────────────────────────
@@ -975,8 +975,8 @@ public class SetupEndpoints
         lock (_pkceLock)
         {
             _codeVerifier = AuthManager.GenerateCodeVerifier();
-            _codeChallenge = AuthManager.GenerateCodeChallenge(codeVerifier: _codeVerifier);
-            _pkceState = Guid.NewGuid().ToString(format: "N");
+            _codeChallenge = AuthManager.GenerateCodeChallenge(_codeVerifier);
+            _pkceState = Guid.NewGuid().ToString("N");
             _exchangeCompleted = false;
         }
     }
@@ -985,10 +985,10 @@ public class SetupEndpoints
     {
         Assembly assembly = typeof(SetupEndpoints).Assembly;
         string resourceName = $"NoMercy.Setup.Resources.{filename}";
-        await using Stream? stream = assembly.GetManifestResourceStream(name: resourceName);
+        await using Stream? stream = assembly.GetManifestResourceStream(resourceName);
         if (stream is null)
-            throw new FileNotFoundException(message: $"Embedded resource not found: {resourceName}");
-        using StreamReader reader = new(stream: stream);
+            throw new FileNotFoundException($"Embedded resource not found: {resourceName}");
+        using StreamReader reader = new(stream);
         return await reader.ReadToEndAsync();
     }
 
@@ -1012,8 +1012,8 @@ public class SetupEndpoints
                 + "p{color:#999;font-size:14px;}"
                 + "</style></head><body>"
                 + "<div class=\"card\">"
-                + $"<h2>{WebUtility.HtmlEncode(value: title)}</h2>"
-                + $"<p>{WebUtility.HtmlEncode(value: message)}</p>"
+                + $"<h2>{WebUtility.HtmlEncode(title)}</h2>"
+                + $"<p>{WebUtility.HtmlEncode(message)}</p>"
                 + "<p style=\"margin-top:16px;color:#666;\">Redirecting to setup...</p>"
                 + "</div>"
                 + "<script>setTimeout(function(){window.location.href='/setup';}, 1500);</script>"
@@ -1035,8 +1035,8 @@ public class SetupEndpoints
             + "p{color:#999;font-size:14px;}"
             + "</style></head><body>"
             + "<div class=\"card\">"
-            + $"<h2>{WebUtility.HtmlEncode(value: title)}</h2>"
-            + $"<p>{WebUtility.HtmlEncode(value: message)}</p>"
+            + $"<h2>{WebUtility.HtmlEncode(title)}</h2>"
+            + $"<p>{WebUtility.HtmlEncode(message)}</p>"
             + "<p style=\"margin-top:16px;color:#666;\">Redirecting to setup...</p>"
             + "</div>"
             + "<script>setTimeout(function(){window.location.href='/setup';}, 1500);</script>"
@@ -1057,7 +1057,7 @@ public class SetupEndpoints
     {
         Assembly assembly = typeof(SetupEndpoints).Assembly;
         string resourceName = $"NoMercy.Setup.Resources.{filename}";
-        await using Stream? stream = assembly.GetManifestResourceStream(name: resourceName);
+        await using Stream? stream = assembly.GetManifestResourceStream(resourceName);
         if (stream is null)
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -1066,31 +1066,31 @@ public class SetupEndpoints
 
         context.Response.ContentType = contentType;
         context.Response.StatusCode = StatusCodes.Status200OK;
-        await stream.CopyToAsync(destination: context.Response.Body);
+        await stream.CopyToAsync(context.Response.Body);
     }
 
     private static byte[] GenerateQrPng(string url)
     {
         using QRCodeGenerator generator = new();
-        using QRCodeData qrData = generator.CreateQrCode(plainText: url, eccLevel: QRCodeGenerator.ECCLevel.L);
-        using PngByteQRCode qrCode = new(data: qrData);
-        return qrCode.GetGraphic(pixelsPerModule: 8);
+        using QRCodeData qrData = generator.CreateQrCode(url, QRCodeGenerator.ECCLevel.L);
+        using PngByteQRCode qrCode = new(qrData);
+        return qrCode.GetGraphic(8);
     }
 
     private static async Task WriteJsonResponse(HttpResponse response, object data)
     {
-        string json = JsonConvert.SerializeObject(value: data, formatting: Formatting.Indented);
-        await response.WriteAsync(text: json, encoding: Encoding.UTF8);
+        string json = JsonConvert.SerializeObject(data, Formatting.Indented);
+        await response.WriteAsync(json, Encoding.UTF8);
     }
 
     // ── Inner types ──────────────────────────────────────────────────────────
 
     private sealed class ExchangeRequest
     {
-        [JsonProperty(propertyName: "code")]
+        [JsonProperty("code")]
         public string? Code { get; set; }
 
-        [JsonProperty(propertyName: "state")]
+        [JsonProperty("state")]
         public string? State { get; set; }
     }
 }

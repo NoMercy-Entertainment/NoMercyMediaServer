@@ -31,7 +31,7 @@ public class NoOpTesseractModelDownloader : ITesseractModelDownloader
 {
     public Task<Stream> DownloadVerifiedAsync(string language, CancellationToken ct) =>
         throw new NotSupportedException(
-            message: "No ITesseractModelDownloader is configured for this host — the signed "
+            "No ITesseractModelDownloader is configured for this host — the signed "
                      + "nomercy-tesseract release downloader is registered by NoMercy.Service, "
                      + "not by NoMercy.Encoder alone."
         );

@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbSpokenLanguage
 {
-    [JsonProperty(propertyName: "iso_639_1")]
+    [JsonProperty("iso_639_1")]
     public string Iso6391 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 }

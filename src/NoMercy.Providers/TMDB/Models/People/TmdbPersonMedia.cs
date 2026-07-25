@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonMedia
 {
-    [JsonProperty(propertyName: "_id")]
+    [JsonProperty("_id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int MediaId { get; set; }
 
-    [JsonProperty(propertyName: "release_date")]
+    [JsonProperty("release_date")]
     public DateTime? ReleaseDate { get; set; }
 }

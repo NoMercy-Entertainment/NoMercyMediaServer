@@ -26,15 +26,15 @@ public class NetworkDiscoverySubscribeOnceTests
     {
         bool subscribed = false;
 
-        Assert.True(condition: NetworkDiscovery.ShouldSubscribeOnce(alreadySubscribed: ref subscribed));
-        Assert.False(condition: NetworkDiscovery.ShouldSubscribeOnce(alreadySubscribed: ref subscribed));
-        Assert.False(condition: NetworkDiscovery.ShouldSubscribeOnce(alreadySubscribed: ref subscribed));
+        Assert.True(NetworkDiscovery.ShouldSubscribeOnce(ref subscribed));
+        Assert.False(NetworkDiscovery.ShouldSubscribeOnce(ref subscribed));
+        Assert.False(NetworkDiscovery.ShouldSubscribeOnce(ref subscribed));
     }
 
     [Fact]
     public void ShouldSubscribeOnce_AlreadySubscribed_ReturnsFalse()
     {
         bool subscribed = true;
-        Assert.False(condition: NetworkDiscovery.ShouldSubscribeOnce(alreadySubscribed: ref subscribed));
+        Assert.False(NetworkDiscovery.ShouldSubscribeOnce(ref subscribed));
     }
 }

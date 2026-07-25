@@ -43,17 +43,17 @@ public class CastPanelWakeLauncher(
         Func<Task<LaunchCustomData?>> resolveLaunchData
     )
     {
-        if (!ShouldFireCastWake(targetIsLive: targetIsLive))
+        if (!ShouldFireCastWake(targetIsLive))
             return;
 
         try
         {
-            string? receiverName = await chromeCast.FindReceiverNameByIpAsync(ip: targetIp);
-            if (string.IsNullOrEmpty(value: receiverName))
+            string? receiverName = await chromeCast.FindReceiverNameByIpAsync(targetIp);
+            if (string.IsNullOrEmpty(receiverName))
             {
                 logger.LogWarning(
-                    message: "No Chromecast receiver discovered at {TargetIp} — panel won't wake via CEC",
-                    args: targetIp
+                    "No Chromecast receiver discovered at {TargetIp} — panel won't wake via CEC",
+                    targetIp
                 );
                 return;
             }
@@ -62,8 +62,8 @@ public class CastPanelWakeLauncher(
             if (launchData is null)
             {
                 logger.LogWarning(
-                    message: "Cast token mint failed for {TargetIp} — falling back to LAUNCH without customData",
-                    args: targetIp
+                    "Cast token mint failed for {TargetIp} — falling back to LAUNCH without customData",
+                    targetIp
                 );
             }
 
@@ -74,17 +74,17 @@ public class CastPanelWakeLauncher(
             // to Web Receiver — that fallback path drops customData and the
             // receiver hangs on its splash. Going straight to Web Receiver
             // preserves customData.
-            await chromeCast.SelectChromecast(name: receiverName);
+            await chromeCast.SelectChromecast(receiverName);
             await chromeCast.LaunchAndroidReceiver(
-                name: receiverName,
-                customData: launchData,
-                useAndroidReceiver: useAndroidReceiver
+                receiverName,
+                launchData,
+                useAndroidReceiver
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                message: "Server-side Cast launch failed for {TargetIp}: {Message}", args: [targetIp, ex.Message]
+                "Server-side Cast launch failed for {TargetIp}: {Message}", [targetIp, ex.Message]
             );
         }
     }

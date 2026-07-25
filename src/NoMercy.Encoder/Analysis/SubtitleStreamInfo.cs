@@ -26,5 +26,5 @@ public record SubtitleStreamInfo(
     // a single source of truth. Previously the TextCodecs set was duplicated
     // here and in SubtitleClassifier, which is exactly the kind of split-table
     // bug the consolidation guards against.
-    public bool IsTextBased => SubtitleClassifier.IsTextBased(codec: Codec);
+    public bool IsTextBased => SubtitleClassifier.IsTextBased(Codec);
 }

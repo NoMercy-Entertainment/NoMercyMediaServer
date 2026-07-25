@@ -36,13 +36,13 @@ namespace NoMercy.Tests.OpticalMedia.Drives.Backends;
 /// disc-type projection lines run for real; when none is present those lines
 /// are still itemized residue (no disc to project), never faked.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class PollingDriveBackendTests
 {
     [Fact]
     public void GetDrives_RealOsCall_ReturnsSelfConsistentDriveEntries()
     {
-        PollingDriveBackend backend = new(logger: NullLogger<PollingDriveBackend>.Instance);
+        PollingDriveBackend backend = new(NullLogger<PollingDriveBackend>.Instance);
 
         IReadOnlyList<DiscDrive> drives = backend.GetDrives();
 
@@ -55,13 +55,13 @@ public class PollingDriveBackendTests
                 drive
                     .DiscType.Should()
                     .NotBe(
-                        unexpected: OpticalDiscType.None,
-                        because: "a drive reporting a disc must resolve a concrete disc type"
+                        OpticalDiscType.None,
+                        "a drive reporting a disc must resolve a concrete disc type"
                     );
             }
             else
             {
-                drive.Label.Should().BeNull(because: "an empty drive has no volume label");
+                drive.Label.Should().BeNull("an empty drive has no volume label");
             }
         }
     }
@@ -69,13 +69,13 @@ public class PollingDriveBackendTests
     [Fact]
     public async Task ListenAsync_AlreadyCancelledToken_CompletesWithNoItems()
     {
-        PollingDriveBackend backend = new(logger: NullLogger<PollingDriveBackend>.Instance);
+        PollingDriveBackend backend = new(NullLogger<PollingDriveBackend>.Instance);
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         List<DriveEvent> observed = [];
-        await foreach (DriveEvent ev in backend.ListenAsync(ct: cts.Token))
-            observed.Add(item: ev);
+        await foreach (DriveEvent ev in backend.ListenAsync(cts.Token))
+            observed.Add(ev);
 
         observed.Should().BeEmpty();
 
@@ -90,37 +90,37 @@ public class PollingDriveBackendTests
         // PollLoopAsync) reports every currently-inserted disc as
         // DiscInserted. Real hardware state, read dynamically rather than
         // hardcoded, so this passes whether or not a disc is present.
-        PollingDriveBackend probe = new(logger: NullLogger<PollingDriveBackend>.Instance);
+        PollingDriveBackend probe = new(NullLogger<PollingDriveBackend>.Instance);
         IReadOnlyList<DiscDrive> currentState = probe.GetDrives();
         await probe.DisposeAsync();
 
-        PollingDriveBackend backend = new(logger: NullLogger<PollingDriveBackend>.Instance);
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 2));
+        PollingDriveBackend backend = new(NullLogger<PollingDriveBackend>.Instance);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(2));
 
         List<DriveEvent> observed = [];
         try
         {
-            await foreach (DriveEvent ev in backend.ListenAsync(ct: cts.Token))
-                observed.Add(item: ev);
+            await foreach (DriveEvent ev in backend.ListenAsync(cts.Token))
+                observed.Add(ev);
         }
         catch (OperationCanceledException)
         {
             // Expected once the 2s window closes.
         }
 
-        int expectedInsertedCount = currentState.Count(predicate: d => d.HasDisc);
+        int expectedInsertedCount = currentState.Count(d => d.HasDisc);
         observed
-            .Count(predicate: e => e.Type == DriveEventType.DiscInserted)
+            .Count(e => e.Type == DriveEventType.DiscInserted)
             .Should()
             .Be(
-                expected: expectedInsertedCount,
-                because: "every currently-present disc must surface exactly one insert event on the first poll"
+                expectedInsertedCount,
+                "every currently-present disc must surface exactly one insert event on the first poll"
             );
 
-        foreach (DriveEvent ev in observed.Where(predicate: e => e.Type == DriveEventType.DiscInserted))
+        foreach (DriveEvent ev in observed.Where(e => e.Type == DriveEventType.DiscInserted))
         {
             ev.Drive.HasDisc.Should().BeTrue();
-            ev.Drive.DiscType.Should().NotBe(unexpected: OpticalDiscType.None);
+            ev.Drive.DiscType.Should().NotBe(OpticalDiscType.None);
         }
 
         await backend.DisposeAsync();
@@ -132,12 +132,12 @@ public class PollingDriveBackendTests
         // Cancels well within the 5-second poll interval so the background
         // loop's Task.Delay observes cancellation immediately rather than
         // this test waiting out a real poll tick.
-        PollingDriveBackend backend = new(logger: NullLogger<PollingDriveBackend>.Instance);
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 100));
+        PollingDriveBackend backend = new(NullLogger<PollingDriveBackend>.Instance);
+        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(100));
 
         Func<Task> act = async () =>
         {
-            await foreach (DriveEvent _ in backend.ListenAsync(ct: cts.Token))
+            await foreach (DriveEvent _ in backend.ListenAsync(cts.Token))
             {
                 // drain — assertion is only that cancellation is observed cleanly
             }
@@ -145,7 +145,7 @@ public class PollingDriveBackendTests
 
         await act.Should()
             .NotThrowAsync(
-                because: "cancellation must be observed cleanly, not thrown out of the enumerator"
+                "cancellation must be observed cleanly, not thrown out of the enumerator"
             );
 
         await backend.DisposeAsync();
@@ -160,12 +160,12 @@ public class PollingDriveBackendTests
         // file cancels within the interval specifically to test the
         // cancellation path instead. This is the one test in the suite that
         // pays the real 5s cost for that fall-through branch.
-        PollingDriveBackend backend = new(logger: NullLogger<PollingDriveBackend>.Instance);
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(value: 5.5));
+        PollingDriveBackend backend = new(NullLogger<PollingDriveBackend>.Instance);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5.5));
 
         Func<Task> act = async () =>
         {
-            await foreach (DriveEvent _ in backend.ListenAsync(ct: cts.Token))
+            await foreach (DriveEvent _ in backend.ListenAsync(cts.Token))
             {
                 // drain
             }
@@ -179,7 +179,7 @@ public class PollingDriveBackendTests
     [Fact]
     public async Task DisposeAsync_CalledWithoutEverListening_DoesNotThrow()
     {
-        PollingDriveBackend backend = new(logger: NullLogger<PollingDriveBackend>.Instance);
+        PollingDriveBackend backend = new(NullLogger<PollingDriveBackend>.Instance);
 
         Func<Task> act = async () => await backend.DisposeAsync();
 
@@ -189,10 +189,10 @@ public class PollingDriveBackendTests
     [Fact]
     public async Task DisposeAsync_CalledTwice_IsIdempotent()
     {
-        PollingDriveBackend backend = new(logger: NullLogger<PollingDriveBackend>.Instance);
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 50));
+        PollingDriveBackend backend = new(NullLogger<PollingDriveBackend>.Instance);
+        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(50));
 
-        await foreach (DriveEvent _ in backend.ListenAsync(ct: cts.Token))
+        await foreach (DriveEvent _ in backend.ListenAsync(cts.Token))
         {
             // drain
         }

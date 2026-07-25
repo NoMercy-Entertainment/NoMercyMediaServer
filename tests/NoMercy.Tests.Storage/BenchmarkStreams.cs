@@ -33,7 +33,7 @@ internal sealed class GeneratedStream(int length) : Stream
 
     public override int Read(byte[] buffer, int offset, int count)
     {
-        int remaining = (int)Math.Min(val1: count, val2: length - _position);
+        int remaining = (int)Math.Min(count, length - _position);
         if (remaining <= 0)
             return 0;
         unchecked

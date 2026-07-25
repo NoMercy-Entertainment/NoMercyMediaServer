@@ -11,7 +11,6 @@
 
 using System.Net;
 using System.Text;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -24,7 +23,7 @@ namespace NoMercy.Tests.Api.Media.Subtitles;
 /// scheme — the Jellyfin CVE-2026-35032 SSRF shape. These lock the guard that
 /// rejects such URLs before any fetch.
 /// </summary>
-[Trait(name: "Category", value: "Subtitles")]
+[Trait("Category", "Subtitles")]
 public class SubtitleDownloadSsrfTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -35,21 +34,21 @@ public class SubtitleDownloadSsrfTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Theory]
-    [InlineData(data: "http://169.254.169.254/latest/meta-data/")] // cloud metadata
-    [InlineData(data: "http://127.0.0.1:7626/api/v1/dashboard/server")] // loopback
-    [InlineData(data: "https://10.0.0.1/subs.srt")] // private LAN
-    [InlineData(data: "https://192.168.1.10/subs.srt")] // private LAN
-    [InlineData(data: "file:///etc/passwd")] // non-http scheme
+    [InlineData("http://169.254.169.254/latest/meta-data/")] // cloud metadata
+    [InlineData("http://127.0.0.1:7626/api/v1/dashboard/server")] // loopback
+    [InlineData("https://10.0.0.1/subs.srt")] // private LAN
+    [InlineData("https://192.168.1.10/subs.srt")] // private LAN
+    [InlineData("file:///etc/passwd")] // non-http scheme
     public async Task Download_RejectsServerSideRequestToInternalOrNonHttpUrl(string downloadUrl)
     {
         string payload =
             "{\"type\":\"movie\",\"id\":1,\"download_url\":\""
             + downloadUrl
             + "\",\"language\":\"en\"}";
-        StringContent body = new(content: payload, encoding: Encoding.UTF8, mediaType: "application/json");
+        StringContent body = new(payload, Encoding.UTF8, "application/json");
 
-        HttpResponseMessage response = await _authed.PostAsync(requestUri: "/api/v1/subtitles/download", content: body);
+        HttpResponseMessage response = await _authed.PostAsync("/api/v1/subtitles/download", body);
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

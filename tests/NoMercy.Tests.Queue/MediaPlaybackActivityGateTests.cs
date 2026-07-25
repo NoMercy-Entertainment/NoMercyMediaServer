@@ -28,62 +28,62 @@ namespace NoMercy.Tests.Queue;
 public class MediaPlaybackActivityGateTests
 {
     [Theory]
-    [InlineData(data: "library")]
-    [InlineData(data: "file")]
+    [InlineData("library")]
+    [InlineData("file")]
     public void ShouldDefer_NasHeavyQueue_WhenActive_ReturnsTrue(string queueName)
     {
         MediaActivityMonitor monitor = new();
         monitor.Touch();
-        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor: monitor);
+        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor);
 
-        gate.ShouldDefer(queueName: queueName).Should().BeTrue();
+        gate.ShouldDefer(queueName).Should().BeTrue();
     }
 
     [Theory]
-    [InlineData(data: "library")]
-    [InlineData(data: "file")]
+    [InlineData("library")]
+    [InlineData("file")]
     public void ShouldDefer_NasHeavyQueue_WhenInactive_ReturnsFalse(string queueName)
     {
         MediaActivityMonitor monitor = new();
-        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor: monitor);
+        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor);
 
-        gate.ShouldDefer(queueName: queueName).Should().BeFalse();
+        gate.ShouldDefer(queueName).Should().BeFalse();
     }
 
     [Theory]
-    [InlineData(data: "import")]
-    [InlineData(data: "extras")]
-    [InlineData(data: "encoder")]
-    [InlineData(data: "music")]
+    [InlineData("import")]
+    [InlineData("extras")]
+    [InlineData("encoder")]
+    [InlineData("music")]
     public void ShouldDefer_ApiDbOnlyOrNonNasQueue_WhenActive_ReturnsFalse(string queueName)
     {
         MediaActivityMonitor monitor = new();
         monitor.Touch();
-        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor: monitor);
+        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor);
 
-        gate.ShouldDefer(queueName: queueName).Should().BeFalse();
+        gate.ShouldDefer(queueName).Should().BeFalse();
     }
 
     [Theory]
-    [InlineData(data: "import")]
-    [InlineData(data: "extras")]
-    [InlineData(data: "encoder")]
-    [InlineData(data: "music")]
+    [InlineData("import")]
+    [InlineData("extras")]
+    [InlineData("encoder")]
+    [InlineData("music")]
     public void ShouldDefer_ApiDbOnlyOrNonNasQueue_WhenInactive_ReturnsFalse(string queueName)
     {
         MediaActivityMonitor monitor = new();
-        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor: monitor);
+        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor);
 
-        gate.ShouldDefer(queueName: queueName).Should().BeFalse();
+        gate.ShouldDefer(queueName).Should().BeFalse();
     }
 
     [Fact]
     public void DeferInterval_IsTwoSeconds()
     {
         MediaActivityMonitor monitor = new();
-        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor: monitor);
+        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor);
 
-        gate.DeferInterval.Should().Be(expected: TimeSpan.FromSeconds(seconds: 2));
+        gate.DeferInterval.Should().Be(TimeSpan.FromSeconds(2));
     }
 
     [Fact]
@@ -91,22 +91,22 @@ public class MediaPlaybackActivityGateTests
     {
         MediaActivityMonitor monitor = new();
         monitor.Touch();
-        DateTime now = new(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0);
+        DateTime now = new(2026, 1, 1, 0, 0, 0);
         MediaPlaybackActivityGate gate = new(
-            monitor: monitor,
-            maxDeferInterval: TimeSpan.FromSeconds(seconds: 30),
-            utcNow: () => now
+            monitor,
+            TimeSpan.FromSeconds(30),
+            () => now
         );
 
         // Still within the trickle window — deferred.
-        gate.ShouldDefer(queueName: "library").Should().BeTrue();
+        gate.ShouldDefer("library").Should().BeTrue();
 
         // Trickle window elapsed — exactly one poll is let through...
-        now = now.AddSeconds(value: 31);
-        gate.ShouldDefer(queueName: "library").Should().BeFalse();
+        now = now.AddSeconds(31);
+        gate.ShouldDefer("library").Should().BeFalse();
 
         // ...and immediately re-armed, so the next poll defers again.
-        gate.ShouldDefer(queueName: "library").Should().BeTrue();
+        gate.ShouldDefer("library").Should().BeTrue();
     }
 
     [Fact]
@@ -114,21 +114,21 @@ public class MediaPlaybackActivityGateTests
     {
         MediaActivityMonitor monitor = new();
         monitor.Touch();
-        DateTime now = new(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0);
+        DateTime now = new(2026, 1, 1, 0, 0, 0);
         MediaPlaybackActivityGate gate = new(
-            monitor: monitor,
-            maxDeferInterval: TimeSpan.FromSeconds(seconds: 30),
-            utcNow: () => now
+            monitor,
+            TimeSpan.FromSeconds(30),
+            () => now
         );
 
         // Establish "library"'s baseline, then let its window elapse.
-        gate.ShouldDefer(queueName: "library").Should().BeTrue();
-        now = now.AddSeconds(value: 31);
-        gate.ShouldDefer(queueName: "library").Should().BeFalse();
+        gate.ShouldDefer("library").Should().BeTrue();
+        now = now.AddSeconds(31);
+        gate.ShouldDefer("library").Should().BeFalse();
 
         // "file" has never been checked before, so its own window hasn't
         // started yet — it defers independently of "library" having just
         // trickled through.
-        gate.ShouldDefer(queueName: "file").Should().BeTrue();
+        gate.ShouldDefer("file").Should().BeTrue();
     }
 }

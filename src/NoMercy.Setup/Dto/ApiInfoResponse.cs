@@ -15,114 +15,114 @@ namespace NoMercy.Setup.Dto;
 
 public class ApiInfoResponse
 {
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public Data Data { get; set; } = new();
 
-    [JsonProperty(propertyName: "_cached_at")]
+    [JsonProperty("_cached_at")]
     public string? CachedAt { get; set; }
 }
 
 public class Data
 {
-    [JsonProperty(propertyName: "state")]
+    [JsonProperty("state")]
     public string State { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "version")]
+    [JsonProperty("version")]
     public string Version { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "copyright")]
+    [JsonProperty("copyright")]
     public string Copyright { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "licence")]
+    [JsonProperty("licence")]
     public string Licence { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "contact")]
+    [JsonProperty("contact")]
     public Contact Contact { get; set; } = new();
 
-    [JsonProperty(propertyName: "git")]
+    [JsonProperty("git")]
     public Uri? Git { get; set; }
 
-    [JsonProperty(propertyName: "keys")]
+    [JsonProperty("keys")]
     public Keys Keys { get; set; } = new();
 
-    [JsonProperty(propertyName: "quote")]
+    [JsonProperty("quote")]
     public string Quote { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "colors")]
+    [JsonProperty("colors")]
     public string[] Colors { get; set; } = [];
 }
 
 public class Socials
 {
-    [JsonProperty(propertyName: "twitch")]
+    [JsonProperty("twitch")]
     public Uri? Twitch { get; set; }
 
-    [JsonProperty(propertyName: "youtube")]
+    [JsonProperty("youtube")]
     public Uri? Youtube { get; set; }
 
-    [JsonProperty(propertyName: "twitter")]
+    [JsonProperty("twitter")]
     public Uri? Twitter { get; set; }
 
-    [JsonProperty(propertyName: "discord")]
+    [JsonProperty("discord")]
     public string Discord { get; set; } = string.Empty;
 }
 
 public class Keys
 {
-    [JsonProperty(propertyName: "make_mkv_key")]
+    [JsonProperty("make_mkv_key")]
     public string MakeMkvKey { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "tmdb_key")]
+    [JsonProperty("tmdb_key")]
     public string TmdbKey { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "omdb_key")]
+    [JsonProperty("omdb_key")]
     public string OmdbKey { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "fanart_key")]
+    [JsonProperty("fanart_key")]
     public string FanArtKey { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "rotten_tomatoes")]
+    [JsonProperty("rotten_tomatoes")]
     public string RottenTomatoes { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "acoustic_id_key")]
+    [JsonProperty("acoustic_id_key")]
     public string AcousticIdKey { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "tadb_key")]
+    [JsonProperty("tadb_key")]
     public string TadbKey { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "tmdb_token")]
+    [JsonProperty("tmdb_token")]
     public string TmdbToken { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "tvdb_key")]
+    [JsonProperty("tvdb_key")]
     public string TvdbKey { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "musixmatch_key")]
+    [JsonProperty("musixmatch_key")]
     public string MusixmatchKey { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "jwplayer_key")]
+    [JsonProperty("jwplayer_key")]
     public string JwplayerKey { get; set; } = string.Empty;
 }
 
 public class Contact
 {
-    [JsonProperty(propertyName: "homepage")]
+    [JsonProperty("homepage")]
     public string Homepage { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "email")]
+    [JsonProperty("email")]
     public string Email { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "dmca")]
+    [JsonProperty("dmca")]
     public string Dmca { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "languages")]
+    [JsonProperty("languages")]
     public string Languages { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "socials")]
+    [JsonProperty("socials")]
     public Socials Socials { get; set; } = new();
 }

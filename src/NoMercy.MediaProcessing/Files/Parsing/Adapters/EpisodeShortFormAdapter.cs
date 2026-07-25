@@ -28,8 +28,8 @@ public sealed partial class EpisodeShortFormAdapter : IFilenameParseAdapter
     public int Order => 35;
 
     [GeneratedRegex(
-        pattern: @"(?<![A-Za-z0-9])(?:S(\d{1,2})[\.\s\-_]?)?E(?:p|pisode)?[\.\s]?(\d{1,3})(?![A-Za-z0-9])",
-        options: RegexOptions.IgnoreCase)]
+        @"(?<![A-Za-z0-9])(?:S(\d{1,2})[\.\s\-_]?)?E(?:p|pisode)?[\.\s]?(\d{1,3})(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase)]
     private static partial Regex ShortForm();
 
     public MovieFile? TryParse(ParseContext context)
@@ -40,25 +40,25 @@ public sealed partial class EpisodeShortFormAdapter : IFilenameParseAdapter
         )
             return null;
 
-        Match match = ShortForm().Match(input: context.CleanedFileName);
+        Match match = ShortForm().Match(context.CleanedFileName);
         if (!match.Success)
             return null;
 
-        int season = match.Groups[groupnum: 1].Success ? int.Parse(s: match.Groups[groupnum: 1].Value) : 1;
-        int episode = int.Parse(s: match.Groups[groupnum: 2].Value);
+        int season = match.Groups[1].Success ? int.Parse(match.Groups[1].Value) : 1;
+        int episode = int.Parse(match.Groups[2].Value);
 
         string showTitle = context
             .CleanedFileName[..match.Index]
-            .Replace(oldChar: '.', newChar: ' ')
-            .Replace(oldChar: '_', newChar: ' ')
-            .TrimEnd(trimChars: ['-', ' '])
+            .Replace('.', ' ')
+            .Replace('_', ' ')
+            .TrimEnd(['-', ' '])
             .Trim()
             .CleanSeriesTitle();
 
-        if (string.IsNullOrWhiteSpace(value: showTitle) || showTitle.Length <= 1)
+        if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;
 
-        return new(filePath: context.Title)
+        return new(context.Title)
         {
             Title = showTitle,
             Season = season,

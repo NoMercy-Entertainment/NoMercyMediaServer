@@ -31,16 +31,16 @@ public static partial class EpisodeRangeParser
     private const int MaxSpan = 50;
 
     [GeneratedRegex(
-        pattern: @"(?<![A-Za-z0-9])S(\d{1,2})E(\d{1,4})((?:[\s._]*E\d{1,4})*)(?:[\s._-]*-[\s._-]*E?(\d{1,4}))?",
-        options: RegexOptions.IgnoreCase)]
+        @"(?<![A-Za-z0-9])S(\d{1,2})E(\d{1,4})((?:[\s._]*E\d{1,4})*)(?:[\s._-]*-[\s._-]*E?(\d{1,4}))?",
+        RegexOptions.IgnoreCase)]
     private static partial Regex SeasonEpisodeRange();
 
     [GeneratedRegex(
-        pattern: @"(?<![A-Za-z0-9])(\d{1,2})x(\d{1,3})((?:x\d{1,3})*)(?:[\s._-]*-[\s._-]*(?:\d{1,2}x)?(\d{1,3}))?",
-        options: RegexOptions.IgnoreCase)]
+        @"(?<![A-Za-z0-9])(\d{1,2})x(\d{1,3})((?:x\d{1,3})*)(?:[\s._-]*-[\s._-]*(?:\d{1,2}x)?(\d{1,3}))?",
+        RegexOptions.IgnoreCase)]
     private static partial Regex CrossEpisodeRange();
 
-    [GeneratedRegex(pattern: @"\d{1,4}")]
+    [GeneratedRegex(@"\d{1,4}")]
     private static partial Regex Numbers();
 
     /// <summary>
@@ -51,20 +51,20 @@ public static partial class EpisodeRangeParser
     /// </summary>
     public static IReadOnlyList<int> Expand(string? name, int season, int firstEpisode)
     {
-        if (string.IsNullOrEmpty(value: name))
+        if (string.IsNullOrEmpty(name))
             return [firstEpisode];
 
-        Match m = SeasonEpisodeRange().Match(input: name);
+        Match m = SeasonEpisodeRange().Match(name);
         if (m.Success
-            && int.Parse(s: m.Groups[groupnum: 1].Value) == season
-            && int.Parse(s: m.Groups[groupnum: 2].Value) == firstEpisode)
-            return Build(first: firstEpisode, repeats: m.Groups[groupnum: 3].Value, rangeEnd: m.Groups[groupnum: 4]);
+            && int.Parse(m.Groups[1].Value) == season
+            && int.Parse(m.Groups[2].Value) == firstEpisode)
+            return Build(firstEpisode, m.Groups[3].Value, m.Groups[4]);
 
-        Match c = CrossEpisodeRange().Match(input: name);
+        Match c = CrossEpisodeRange().Match(name);
         if (c.Success
-            && int.Parse(s: c.Groups[groupnum: 1].Value) == season
-            && int.Parse(s: c.Groups[groupnum: 2].Value) == firstEpisode)
-            return Build(first: firstEpisode, repeats: c.Groups[groupnum: 3].Value, rangeEnd: c.Groups[groupnum: 4]);
+            && int.Parse(c.Groups[1].Value) == season
+            && int.Parse(c.Groups[2].Value) == firstEpisode)
+            return Build(firstEpisode, c.Groups[3].Value, c.Groups[4]);
 
         return [firstEpisode];
     }
@@ -73,15 +73,15 @@ public static partial class EpisodeRangeParser
     {
         if (rangeEnd.Success)
         {
-            int last = int.Parse(s: rangeEnd.Value);
+            int last = int.Parse(rangeEnd.Value);
             return last > first && last - first <= MaxSpan
-                ? [.. Enumerable.Range(start: first, count: last - first + 1)]
+                ? [.. Enumerable.Range(first, last - first + 1)]
                 : [first];
         }
 
         SortedSet<int> episodes = [first];
-        foreach (Match n in Numbers().Matches(input: repeats))
-            episodes.Add(item: int.Parse(s: n.Value));
+        foreach (Match n in Numbers().Matches(repeats))
+            episodes.Add(int.Parse(n.Value));
 
         return episodes.Max - episodes.Min > MaxSpan ? [first] : [.. episodes];
     }

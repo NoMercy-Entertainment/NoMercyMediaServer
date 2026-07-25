@@ -28,23 +28,23 @@ public class DriveMonitorEventsTests
     [Fact]
     public void DriveEvent_DiscInserted_HasExpectedShape()
     {
-        DiscDrive drive = new(Path: "D:\\", Label: "MY_DISC", HasDisc: true, DiscType: OpticalDiscType.BluRay);
-        DriveEvent evt = new(Type: DriveEventType.DiscInserted, Drive: drive);
+        DiscDrive drive = new("D:\\", "MY_DISC", true, OpticalDiscType.BluRay);
+        DriveEvent evt = new(DriveEventType.DiscInserted, drive);
 
-        evt.Type.Should().Be(expected: DriveEventType.DiscInserted);
-        evt.Drive.Path.Should().Be(expected: "D:\\");
-        evt.Drive.Label.Should().Be(expected: "MY_DISC");
+        evt.Type.Should().Be(DriveEventType.DiscInserted);
+        evt.Drive.Path.Should().Be("D:\\");
+        evt.Drive.Label.Should().Be("MY_DISC");
         evt.Drive.HasDisc.Should().BeTrue();
-        evt.Drive.DiscType.Should().Be(expected: OpticalDiscType.BluRay);
+        evt.Drive.DiscType.Should().Be(OpticalDiscType.BluRay);
     }
 
     [Fact]
     public void DriveEvent_DiscEjected_HasExpectedShape()
     {
-        DiscDrive drive = new(Path: "E:\\", Label: string.Empty, HasDisc: false, DiscType: OpticalDiscType.None);
-        DriveEvent evt = new(Type: DriveEventType.DiscEjected, Drive: drive);
+        DiscDrive drive = new("E:\\", string.Empty, false, OpticalDiscType.None);
+        DriveEvent evt = new(DriveEventType.DiscEjected, drive);
 
-        evt.Type.Should().Be(expected: DriveEventType.DiscEjected);
+        evt.Type.Should().Be(DriveEventType.DiscEjected);
         evt.Drive.HasDisc.Should().BeFalse();
         evt.Drive.Label.Should().BeEmpty();
     }
@@ -52,35 +52,35 @@ public class DriveMonitorEventsTests
     [Fact]
     public void DriveEvent_DriveAdded_HasExpectedShape()
     {
-        DiscDrive drive = new(Path: "F:\\", Label: string.Empty, HasDisc: false, DiscType: OpticalDiscType.None);
-        DriveEvent evt = new(Type: DriveEventType.DriveAdded, Drive: drive);
+        DiscDrive drive = new("F:\\", string.Empty, false, OpticalDiscType.None);
+        DriveEvent evt = new(DriveEventType.DriveAdded, drive);
 
-        evt.Type.Should().Be(expected: DriveEventType.DriveAdded);
-        evt.Drive.Path.Should().Be(expected: "F:\\");
+        evt.Type.Should().Be(DriveEventType.DriveAdded);
+        evt.Drive.Path.Should().Be("F:\\");
     }
 
     [Fact]
     public void DriveEvent_DriveRemoved_HasExpectedShape()
     {
-        DiscDrive drive = new(Path: "G:\\", Label: string.Empty, HasDisc: false, DiscType: OpticalDiscType.None);
-        DriveEvent evt = new(Type: DriveEventType.DriveRemoved, Drive: drive);
+        DiscDrive drive = new("G:\\", string.Empty, false, OpticalDiscType.None);
+        DriveEvent evt = new(DriveEventType.DriveRemoved, drive);
 
-        evt.Type.Should().Be(expected: DriveEventType.DriveRemoved);
+        evt.Type.Should().Be(DriveEventType.DriveRemoved);
     }
 
     // ── DriveEventType covers all four cases ────────────────────────────────
 
     [Theory]
-    [InlineData(data: DriveEventType.DriveAdded)]
-    [InlineData(data: DriveEventType.DriveRemoved)]
-    [InlineData(data: DriveEventType.DiscInserted)]
-    [InlineData(data: DriveEventType.DiscEjected)]
+    [InlineData(DriveEventType.DriveAdded)]
+    [InlineData(DriveEventType.DriveRemoved)]
+    [InlineData(DriveEventType.DiscInserted)]
+    [InlineData(DriveEventType.DiscEjected)]
     public void DriveEventType_AllVariantsRoundTripThroughRecord(DriveEventType kind)
     {
-        DiscDrive drive = new(Path: "H:\\", Label: string.Empty, HasDisc: false, DiscType: OpticalDiscType.None);
-        DriveEvent evt = new(Type: kind, Drive: drive);
+        DiscDrive drive = new("H:\\", string.Empty, false, OpticalDiscType.None);
+        DriveEvent evt = new(kind, drive);
 
-        evt.Type.Should().Be(expected: kind);
+        evt.Type.Should().Be(kind);
     }
 
     // ── DiscDrive record equality (value semantics) ──────────────────────────
@@ -88,19 +88,19 @@ public class DriveMonitorEventsTests
     [Fact]
     public void DiscDrive_SameValues_AreEqual()
     {
-        DiscDrive a = new(Path: "D:\\", Label: "LABEL", HasDisc: true, DiscType: OpticalDiscType.Dvd);
-        DiscDrive b = new(Path: "D:\\", Label: "LABEL", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DiscDrive a = new("D:\\", "LABEL", true, OpticalDiscType.Dvd);
+        DiscDrive b = new("D:\\", "LABEL", true, OpticalDiscType.Dvd);
 
-        a.Should().Be(expected: b);
+        a.Should().Be(b);
     }
 
     [Fact]
     public void DiscDrive_DifferentPath_AreNotEqual()
     {
-        DiscDrive a = new(Path: "D:\\", Label: "LABEL", HasDisc: true, DiscType: OpticalDiscType.Dvd);
-        DiscDrive b = new(Path: "E:\\", Label: "LABEL", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DiscDrive a = new("D:\\", "LABEL", true, OpticalDiscType.Dvd);
+        DiscDrive b = new("E:\\", "LABEL", true, OpticalDiscType.Dvd);
 
-        a.Should().NotBe(unexpected: b);
+        a.Should().NotBe(b);
     }
 
     // ── GetDrives returns consistent shape ───────────────────────────────────
@@ -109,7 +109,7 @@ public class DriveMonitorEventsTests
     public void GetDrives_AllReturnedDrivesHaveNonEmptyPath()
     {
         DriveMonitor monitor = new(
-            backend: new PollingDriveBackend(logger: NullLogger<PollingDriveBackend>.Instance)
+            new PollingDriveBackend(NullLogger<PollingDriveBackend>.Instance)
         );
 
         IReadOnlyList<DiscDrive> drives = monitor.GetDrives();
@@ -124,14 +124,14 @@ public class DriveMonitorEventsTests
     public void GetDrives_DiscTypeIsNoneWhenNoDisc()
     {
         DriveMonitor monitor = new(
-            backend: new PollingDriveBackend(logger: NullLogger<PollingDriveBackend>.Instance)
+            new PollingDriveBackend(NullLogger<PollingDriveBackend>.Instance)
         );
 
         IReadOnlyList<DiscDrive> drives = monitor.GetDrives();
 
-        foreach (DiscDrive drive in drives.Where(predicate: d => !d.HasDisc))
+        foreach (DiscDrive drive in drives.Where(d => !d.HasDisc))
         {
-            drive.DiscType.Should().Be(expected: OpticalDiscType.None);
+            drive.DiscType.Should().Be(OpticalDiscType.None);
         }
     }
 }

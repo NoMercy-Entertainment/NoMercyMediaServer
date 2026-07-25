@@ -17,33 +17,33 @@ namespace NoMercy.Providers.TVDB.Client;
 public class TvdbListClient : TvdbBaseClient
 {
     public TvdbListClient(int id = 0, string language = "eng")
-        : base(id: id, language: language) { }
+        : base(id, language) { }
 
     public Task<TvdbPaginatedResponse<TvdbList>?> All(int page = 0, bool? priority = false)
     {
-        Dictionary<string, string?> query = new() { [key: "page"] = page.ToString() };
-        return Get<TvdbPaginatedResponse<TvdbList>>(url: "lists", query: query, priority: priority);
+        Dictionary<string, string?> query = new() { ["page"] = page.ToString() };
+        return Get<TvdbPaginatedResponse<TvdbList>>("lists", query, priority);
     }
 
     public Task<TvdbListResponse?> Details(bool? priority = false)
     {
-        return Get<TvdbListResponse>(url: "lists/" + Id, priority: priority);
+        return Get<TvdbListResponse>("lists/" + Id, priority: priority);
     }
 
     public Task<TvdbListExtendedResponse?> Extended(bool? priority = false)
     {
-        return Get<TvdbListExtendedResponse>(url: "lists/" + Id + "/extended", priority: priority);
+        return Get<TvdbListExtendedResponse>("lists/" + Id + "/extended", priority: priority);
     }
 
     public Task<TvdbListResponse?> BySlug(string slug, bool? priority = false)
     {
-        return Get<TvdbListResponse>(url: "lists/slug/" + slug, priority: priority);
+        return Get<TvdbListResponse>("lists/slug/" + slug, priority: priority);
     }
 
     public Task<TvdbListTranslationResponse?> Translation(string language, bool? priority = false)
     {
         return Get<TvdbListTranslationResponse>(
-            url: $"lists/{Id}/translations/{language}",
+            $"lists/{Id}/translations/{language}",
             priority: priority
         );
     }

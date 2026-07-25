@@ -33,7 +33,7 @@ namespace NoMercy.Tests.Queue;
 /// dependencies (a per-run DbContext) would leak across every run instead of
 /// getting a fresh one.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ServiceCollectionExtensionsTests
 {
     private sealed class TestCronJobExecutor : ICronJobExecutor
@@ -52,7 +52,7 @@ public class ServiceCollectionExtensionsTests
     {
         ServiceCollection services = new();
         services.AddLogging();
-        services.AddSingleton<IQueueContext>(implementationInstance: new StubQueueContext());
+        services.AddSingleton<IQueueContext>(new StubQueueContext());
         services.AddCronWorker();
 
         using ServiceProvider provider = services.BuildServiceProvider();
@@ -61,7 +61,7 @@ public class ServiceCollectionExtensionsTests
         IEnumerable<IHostedService> hostedServices = provider.GetServices<IHostedService>();
         IHostedService hosted = hostedServices.OfType<CronWorker>().Single();
 
-        hosted.Should().BeSameAs(expected: direct);
+        hosted.Should().BeSameAs(direct);
     }
 
     [Fact]
@@ -69,15 +69,15 @@ public class ServiceCollectionExtensionsTests
     {
         ServiceCollection services = new();
         services.AddLogging();
-        services.AddCronJob<TestCronJobExecutor>(jobType: "extension-test-job", cronExpression: "0 4 * * *");
+        services.AddCronJob<TestCronJobExecutor>("extension-test-job", "0 4 * * *");
 
         using ServiceProvider provider = services.BuildServiceProvider();
 
         CronJobRegistration registration = provider.GetServices<CronJobRegistration>().Single();
 
-        registration.JobType.Should().Be(expected: "extension-test-job");
-        registration.CronExpression.Should().Be(expected: "0 4 * * *");
-        registration.ExecutorType.Should().Be(expected: typeof(TestCronJobExecutor));
+        registration.JobType.Should().Be("extension-test-job");
+        registration.CronExpression.Should().Be("0 4 * * *");
+        registration.ExecutorType.Should().Be(typeof(TestCronJobExecutor));
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class ServiceCollectionExtensionsTests
     {
         ServiceCollection services = new();
         services.AddLogging();
-        services.AddCronJob<TestCronJobExecutor>(jobType: "extension-test-job");
+        services.AddCronJob<TestCronJobExecutor>("extension-test-job");
 
         using ServiceProvider provider = services.BuildServiceProvider();
 
@@ -99,7 +99,7 @@ public class ServiceCollectionExtensionsTests
     {
         ServiceCollection services = new();
         services.AddLogging();
-        services.RegisterCronJob<TestCronJobExecutor>(jobType: "extension-test-job");
+        services.RegisterCronJob<TestCronJobExecutor>("extension-test-job");
 
         using ServiceProvider provider = services.BuildServiceProvider();
 
@@ -110,7 +110,7 @@ public class ServiceCollectionExtensionsTests
         TestCronJobExecutor instanceB =
             scopeB.ServiceProvider.GetRequiredService<TestCronJobExecutor>();
 
-        instanceA.Should().NotBeSameAs(unexpected: instanceB);
+        instanceA.Should().NotBeSameAs(instanceB);
     }
 
     [Fact]
@@ -119,36 +119,36 @@ public class ServiceCollectionExtensionsTests
         ServiceCollection services = new();
         services.AddLogging();
         services.AddSingleton<TestCronJobExecutor>();
-        services.AddSingleton<IQueueContext>(implementationInstance: new StubQueueContext());
+        services.AddSingleton<IQueueContext>(new StubQueueContext());
         using ServiceProvider provider = services.BuildServiceProvider();
 
         CronWorker cronWorker = new(
-            serviceProvider: provider,
-            logger: provider.GetRequiredService<ILogger<CronWorker>>(),
-            queueContext: provider.GetRequiredService<IQueueContext>()
+            provider,
+            provider.GetRequiredService<ILogger<CronWorker>>(),
+            provider.GetRequiredService<IQueueContext>()
         );
 
-        cronWorker.RegisterJobWithSchedule<TestCronJobExecutor>(jobType: "extension-test-job", serviceProvider: provider);
+        cronWorker.RegisterJobWithSchedule<TestCronJobExecutor>("extension-test-job", provider);
 
         Dictionary<string, Type> registeredJobs =
             (Dictionary<string, Type>)
                 typeof(CronWorker)
-                    .GetField(name: "_registeredJobs", bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance)!
-                    .GetValue(obj: cronWorker)!;
+                    .GetField("_registeredJobs", BindingFlags.NonPublic | BindingFlags.Instance)!
+                    .GetValue(cronWorker)!;
         List<CronJobModel> codeDefinedJobs =
             (List<CronJobModel>)
                 typeof(CronWorker)
-                    .GetField(name: "_codeDefinedJobs", bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance)!
-                    .GetValue(obj: cronWorker)!;
+                    .GetField("_codeDefinedJobs", BindingFlags.NonPublic | BindingFlags.Instance)!
+                    .GetValue(cronWorker)!;
 
-        registeredJobs.Should().ContainKey(expected: "extension-test-job");
-        registeredJobs[key: "extension-test-job"].Should().Be(expected: typeof(TestCronJobExecutor));
-        CronJobModel scheduled = codeDefinedJobs.Single(predicate: j => j.JobType == "extension-test-job");
-        scheduled.Name.Should().Be(expected: "extension-test-job");
-        scheduled.CronExpression.Should().Be(expected: "0 3 * * *");
+        registeredJobs.Should().ContainKey("extension-test-job");
+        registeredJobs["extension-test-job"].Should().Be(typeof(TestCronJobExecutor));
+        CronJobModel scheduled = codeDefinedJobs.Single(j => j.JobType == "extension-test-job");
+        scheduled.Name.Should().Be("extension-test-job");
+        scheduled.CronExpression.Should().Be("0 3 * * *");
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
-        await cronWorker.StopAsync(cancellationToken: cts.Token);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
     }
 
     /// <summary>
@@ -168,29 +168,29 @@ public class ServiceCollectionExtensionsTests
         ServiceCollection services = new();
         services.AddLogging();
         services.AddSingleton<TestCronJobExecutor>();
-        services.AddSingleton<IQueueContext>(implementationInstance: new StubQueueContext());
+        services.AddSingleton<IQueueContext>(new StubQueueContext());
         using ServiceProvider provider = services.BuildServiceProvider();
         CronWorker cronWorker = new(
-            serviceProvider: provider,
-            logger: provider.GetRequiredService<ILogger<CronWorker>>(),
-            queueContext: provider.GetRequiredService<IQueueContext>()
+            provider,
+            provider.GetRequiredService<ILogger<CronWorker>>(),
+            provider.GetRequiredService<IQueueContext>()
         );
 
         NoMercyQueue.Extensions.ServiceCollectionExtensions.RegisterJobWithSchedule<TestCronJobExecutor>(
-            cronWorker: cronWorker,
-            jobType: "extension-static-call",
-            serviceProvider: provider
+            cronWorker,
+            "extension-static-call",
+            provider
         );
 
         Dictionary<string, Type> registeredJobs =
             (Dictionary<string, Type>)
                 typeof(CronWorker)
-                    .GetField(name: "_registeredJobs", bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance)!
-                    .GetValue(obj: cronWorker)!;
-        registeredJobs.Should().ContainKey(expected: "extension-static-call");
+                    .GetField("_registeredJobs", BindingFlags.NonPublic | BindingFlags.Instance)!
+                    .GetValue(cronWorker)!;
+        registeredJobs.Should().ContainKey("extension-static-call");
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
-        await cronWorker.StopAsync(cancellationToken: cts.Token);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
     }
 
     private sealed class StubQueueContext : IQueueContext

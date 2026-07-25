@@ -22,14 +22,14 @@ namespace NoMercy.Database.Migrations.Queue
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<int>(
-                name: "ParentJobId",
+                "ParentJobId",
                 table: "QueueJobs",
                 type: "INTEGER",
                 nullable: true
             );
 
             migrationBuilder.AddColumn<string>(
-                name: "GroupTag",
+                "GroupTag",
                 table: "QueueJobs",
                 type: "TEXT",
                 maxLength: 64,
@@ -40,9 +40,9 @@ namespace NoMercy.Database.Migrations.Queue
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(name: "ParentJobId", table: "QueueJobs");
+            migrationBuilder.DropColumn("ParentJobId", "QueueJobs");
 
-            migrationBuilder.DropColumn(name: "GroupTag", table: "QueueJobs");
+            migrationBuilder.DropColumn("GroupTag", "QueueJobs");
         }
     }
 }

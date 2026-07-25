@@ -27,10 +27,10 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags(tags: "Media Search")]
-[ApiVersion(version: 1.0)]
+[Tags("Media Search")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "MediaAccess")]
-[Route(template: "api/v{version:apiVersion}/search")]
+[Route("api/v{version:apiVersion}/search")]
 public class SearchController : BaseController
 {
     private readonly IMusicRepository _musicRepository;
@@ -42,7 +42,7 @@ public class SearchController : BaseController
         _libraryRepository = libraryRepository;
     }
 
-    [HttpGet(template: "music")]
+    [HttpGet("music")]
     [ResponseCache(NoStore = true)]
     public async Task<IActionResult> SearchMusic(
         [FromQuery] SearchQueryRequest request,
@@ -53,41 +53,39 @@ public class SearchController : BaseController
         string normalizedQuery = request.Query.NormalizeSearch();
 
         (List<Artist> artists, List<Album> albums, List<Playlist> playlists, List<Track> songs) =
-            await FetchMusicSearchResultsAsync(normalizedQuery: normalizedQuery, ct: ct);
+            await FetchMusicSearchResultsAsync(normalizedQuery, ct);
 
         Track? topTrack = songs.FirstOrDefault();
         Artist? topArtist = artists.FirstOrDefault();
         Album? topAlbum = albums.FirstOrDefault();
 
         TopResultCardData? topResultData =
-            topTrack != null ? new(track: topTrack)
-            : topArtist != null ? new(artist: topArtist)
-            : topAlbum != null ? new TopResultCardData(album: topAlbum)
+            topTrack != null ? new(topTrack)
+            : topArtist != null ? new(topArtist)
+            : topAlbum != null ? new TopResultCardData(topAlbum)
             : null;
 
         List<TrackRowData> songResults = songs
-            .Take(count: 6)
-            .Select(selector: track => new TrackRowData(track: track, country: country))
+            .Take(6)
+            .Select(track => new TrackRowData(track, country))
             .ToList();
 
         return Ok(
-            value: ComponentResponse.From(components:
-                [
+            ComponentResponse.From([
                     Component
                         .Container()
-                        .WithId(id: "search-results")
-                        .WithItems(items:
-                            [
+                        .WithId("search-results")
+                        .WithItems([
                                 Component
-                                    .TopResultCard(data: topResultData!)
-                                    .WithId(id: "top-result")
-                                    .WithTitle(title: "Top Result".Localize())
+                                    .TopResultCard(topResultData!)
+                                    .WithId("top-result")
+                                    .WithTitle("Top Result".Localize())
                                     .Build(),
                                 Component
                                     .List()
-                                    .WithId(id: "tracks")
+                                    .WithId("tracks")
                                     .WithProperties(
-                                        properties: new()
+                                        new()
                                         {
                                             { "paddingTop", 0 },
                                             { "paddingBottom", 0 },
@@ -95,13 +93,13 @@ public class SearchController : BaseController
                                             { "paddingEnd", 0 },
                                         }
                                     )
-                                    .WithTitle(title: "Tracks".Localize())
+                                    .WithTitle("Tracks".Localize())
                                     .WithItems(
-                                        builders: songResults.Select(selector: track =>
+                                        songResults.Select(track =>
                                             Component
-                                                .TrackRow(data: track)
+                                                .TrackRow(track)
                                                 .WithProperties(
-                                                    properties: new()
+                                                    new()
                                                     {
                                                         { "paddingTop", 0 },
                                                         { "paddingBottom", 0 },
@@ -109,47 +107,47 @@ public class SearchController : BaseController
                                                         { "paddingEnd", 0 },
                                                     }
                                                 )
-                                                .WithDisplayList(displayList: songResults)
+                                                .WithDisplayList(songResults)
                                         )
                                     )
                             ]
                         ),
                     Component
                         .Carousel()
-                        .WithId(id: "artists")
-                        .WithTitle(title: "Artist".Localize())
+                        .WithId("artists")
+                        .WithTitle("Artist".Localize())
                         .WithItems(
-                            items: artists
-                                .GroupBy(keySelector: artist => artist.Id)
-                                .Select(selector: group => group.First())
-                                .Select(selector: item => Component.MusicCard(data: new ArtistsResponseItemDto(artist: item)))
+                            artists
+                                .GroupBy(artist => artist.Id)
+                                .Select(group => group.First())
+                                .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))
                         ),
                     Component
                         .Carousel()
-                        .WithId(id: "albums")
-                        .WithTitle(title: "Albums".Localize())
+                        .WithId("albums")
+                        .WithTitle("Albums".Localize())
                         .WithItems(
-                            items: albums
-                                .GroupBy(keySelector: album => album.Id)
-                                .Select(selector: group => group.First())
-                                .Select(selector: item => Component.MusicCard(data: new ArtistsResponseItemDto(album: item)))
+                            albums
+                                .GroupBy(album => album.Id)
+                                .Select(group => group.First())
+                                .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))
                         ),
                     Component
                         .Carousel()
-                        .WithId(id: "playlists")
-                        .WithTitle(title: "Playlists".Localize())
+                        .WithId("playlists")
+                        .WithTitle("Playlists".Localize())
                         .WithItems(
-                            items: playlists
-                                .GroupBy(keySelector: playlist => playlist.Id)
-                                .Select(selector: group => group.First())
-                                .Select(selector: item => Component.MusicCard(data: new PlaylistResponseItemDto(playlist: item)))
+                            playlists
+                                .GroupBy(playlist => playlist.Id)
+                                .Select(group => group.First())
+                                .Select(item => Component.MusicCard(new PlaylistResponseItemDto(item)))
                         )
                 ]
             )
         );
     }
 
-    [HttpGet(template: "music/tv")]
+    [HttpGet("music/tv")]
     public async Task<IActionResult> SearchTvMusic(
         [FromQuery] SearchQueryRequest request,
         CancellationToken ct = default
@@ -158,35 +156,35 @@ public class SearchController : BaseController
         string normalizedQuery = request.Query.NormalizeSearch();
 
         (List<Artist> artists, List<Album> albums, List<Playlist> _, List<Track> _) =
-            await FetchMusicSearchResultsAsync(normalizedQuery: normalizedQuery, ct: ct);
+            await FetchMusicSearchResultsAsync(normalizedQuery, ct);
 
         List<ComponentEnvelope> musicCards =
         [
             .. artists
-                .GroupBy(keySelector: artist => artist.Id)
-                .Select(selector: group => group.First())
-                .OrderBy(keySelector: artist => artist.Name)
-                .Select(selector: item => Component.MusicCard(data: new ArtistsResponseItemDto(artist: item))),
+                .GroupBy(artist => artist.Id)
+                .Select(group => group.First())
+                .OrderBy(artist => artist.Name)
+                .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item))),
             .. albums
-                .GroupBy(keySelector: album => album.Id)
-                .Select(selector: group => group.First())
-                .OrderBy(keySelector: album => album.Name)
-                .Select(selector: item => Component.MusicCard(data: new AlbumsResponseItemDto(album: item))),
+                .GroupBy(album => album.Id)
+                .Select(group => group.First())
+                .OrderBy(album => album.Name)
+                .Select(item => Component.MusicCard(new AlbumsResponseItemDto(item))),
         ];
 
         return Ok(
-            value: ComponentResponse.From(
-                component: Component
+            ComponentResponse.From(
+                Component
                     .Grid()
-                    .WithId(id: "tv-music-search")
-                    .WithProperties(properties: new() { { "columns", 4 }, { "spacing", 16 } })
-                    .WithItems(items: musicCards)
+                    .WithId("tv-music-search")
+                    .WithProperties(new() { { "columns", 4 }, { "spacing", 16 } })
+                    .WithItems(musicCards)
                     .Build()
             )
         );
     }
 
-    [HttpGet(template: "video")]
+    [HttpGet("video")]
     [ResponseCache(NoStore = true)]
     public async Task<IActionResult> SearchVideo(
         [FromQuery] SearchQueryRequest request,
@@ -197,11 +195,11 @@ public class SearchController : BaseController
         string normalizedQuery = request.Query.NormalizeSearch();
 
         return Ok(
-            value: ComponentResponse.From(component: await BuildVideoSearchGridAsync(normalizedQuery: normalizedQuery, country: country, ct: ct))
+            ComponentResponse.From(await BuildVideoSearchGridAsync(normalizedQuery, country, ct))
         );
     }
 
-    [HttpGet(template: "video/tv")]
+    [HttpGet("video/tv")]
     public async Task<IActionResult> SearchTvVideo(
         [FromQuery] SearchQueryRequest request,
         CancellationToken ct = default
@@ -211,7 +209,7 @@ public class SearchController : BaseController
         string normalizedQuery = request.Query.NormalizeSearch();
 
         return Ok(
-            value: ComponentResponse.From(component: await BuildVideoSearchGridAsync(normalizedQuery: normalizedQuery, country: country, ct: ct))
+            ComponentResponse.From(await BuildVideoSearchGridAsync(normalizedQuery, country, ct))
         );
     }
 
@@ -226,28 +224,28 @@ public class SearchController : BaseController
         // Cap each category: a broad query otherwise fans thousands of full entity graphs through
         // SearchMusicFullDataAsync. Only the top result, six tracks, and the carousels render.
         const int resultCap = UiLimits.SearchResultsPerCategory;
-        List<Guid> artistIds = (await _musicRepository.SearchArtistIdsAsync(normalizedQuery: normalizedQuery, ct: ct))
-            .Take(count: resultCap)
+        List<Guid> artistIds = (await _musicRepository.SearchArtistIdsAsync(normalizedQuery, ct))
+            .Take(resultCap)
             .ToList();
-        List<Guid> albumIds = (await _musicRepository.SearchAlbumIdsAsync(normalizedQuery: normalizedQuery, ct: ct))
-            .Take(count: resultCap)
+        List<Guid> albumIds = (await _musicRepository.SearchAlbumIdsAsync(normalizedQuery, ct))
+            .Take(resultCap)
             .ToList();
         List<Guid> playlistIds = (
-            await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery: normalizedQuery, ct: ct)
+            await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery, ct)
         )
-            .Take(count: resultCap)
+            .Take(resultCap)
             .ToList();
-        List<Guid> trackIds = (await _musicRepository.SearchTrackIdsAsync(normalizedQuery: normalizedQuery, ct: ct))
-            .Take(count: resultCap)
+        List<Guid> trackIds = (await _musicRepository.SearchTrackIdsAsync(normalizedQuery, ct))
+            .Take(resultCap)
             .ToList();
 
         // Step 2: Query full data using the IDs in parallel (repository owns the fan-out)
         MusicSearchFullData fullData = await _musicRepository.SearchMusicFullDataAsync(
-            artistIds: artistIds,
-            albumIds: albumIds,
-            playlistIds: playlistIds,
-            trackIds: trackIds,
-            ct: ct
+            artistIds,
+            albumIds,
+            playlistIds,
+            trackIds,
+            ct
         );
 
         List<Artist> artists = fullData.Artists;
@@ -260,36 +258,36 @@ public class SearchController : BaseController
                 if (album.AlbumTrack.Count > 0)
                     foreach (
                         IEnumerable<Artist> artist in album
-                            .AlbumTrack.Select(selector: albumTrack =>
-                                albumTrack.Track.ArtistTrack.Select(selector: artistTrack =>
+                            .AlbumTrack.Select(albumTrack =>
+                                albumTrack.Track.ArtistTrack.Select(artistTrack =>
                                     artistTrack.Artist
                                 )
                             )
                             .ToList()
                     )
-                        artists.AddRange(collection: artist);
+                        artists.AddRange(artist);
 
         if (playlists.Count > 0)
             foreach (Playlist playlist in playlists)
                 if (playlist.Tracks.Count > 0)
                     foreach (
                         IEnumerable<Artist> artist in playlist
-                            .Tracks.Select(selector: playlistTrack =>
-                                playlistTrack.Track.ArtistTrack.Select(selector: artistTrack =>
+                            .Tracks.Select(playlistTrack =>
+                                playlistTrack.Track.ArtistTrack.Select(artistTrack =>
                                     artistTrack.Artist
                                 )
                             )
                             .ToList()
                     )
-                        artists.AddRange(collection: artist);
+                        artists.AddRange(artist);
 
         if (songs.Count > 0)
             foreach (Track song in songs)
             {
                 if (song.ArtistTrack.Count > 0)
-                    artists.AddRange(collection: song.ArtistTrack.Select(selector: artistTrack => artistTrack.Artist));
+                    artists.AddRange(song.ArtistTrack.Select(artistTrack => artistTrack.Artist));
                 if (song.AlbumTrack.Count > 0)
-                    albums.AddRange(collection: song.AlbumTrack.Select(selector: albumTrack => albumTrack.Album));
+                    albums.AddRange(song.AlbumTrack.Select(albumTrack => albumTrack.Album));
             }
 
         return (artists, albums, playlists, songs);
@@ -302,29 +300,29 @@ public class SearchController : BaseController
     )
     {
         VideoSearchResults videoResults = await _libraryRepository.SearchVideoByTitleAsync(
-            normalizedQuery: normalizedQuery,
-            ct: ct
+            normalizedQuery,
+            ct
         );
 
         List<CardData> cardItems = videoResults
-            .Tvs.Concat<dynamic>(second: videoResults.Movies)
-            .OrderBy(keySelector: item => item is Tv tv ? tv.Title : ((Movie)item).Title)
-            .Select(selector: item => new CardData(item, country))
+            .Tvs.Concat<dynamic>(videoResults.Movies)
+            .OrderBy(item => item is Tv tv ? tv.Title : ((Movie)item).Title)
+            .Select(item => new CardData(item, country))
             .ToList();
 
         return Component
             .Grid()
-            .WithItems(items: cardItems.Select(selector: item => Component.Card().WithData(data: item).Build()))
+            .WithItems(cardItems.Select(item => Component.Card().WithData(item).Build()))
             .Build();
     }
 
     [NotMapped]
     public class SearchQueryRequest
     {
-        [JsonProperty(propertyName: "query")]
+        [JsonProperty("query")]
         public string Query { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "type")]
+        [JsonProperty("type")]
         public string? Type { get; set; }
     }
 }

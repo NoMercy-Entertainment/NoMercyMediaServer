@@ -21,10 +21,10 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
     public Task StoreEpisodes(IEnumerable<Episode> episodes)
     {
         return context
-            .Episodes.UpsertRange(entities: episodes.ToArray())
-            .On(match: e => new { e.Id })
+            .Episodes.UpsertRange(episodes.ToArray())
+            .On(e => new { e.Id })
             .WhenMatched(
-                updater: (es, ei) =>
+                (es, ei) =>
                     new()
                     {
                         Id = ei.Id,
@@ -45,25 +45,25 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
     public Task StoreEpisodeTranslations(List<Translation> translations)
     {
         int[] episodeIds = context
-            .Episodes.Select(selector: e => e.Id)
+            .Episodes.Select(e => e.Id)
             .ToArray()
-            .Where(predicate: e => translations.Any(predicate: t => e == t.EpisodeId))
+            .Where(e => translations.Any(t => e == t.EpisodeId))
             .ToArray();
 
         translations = translations
-            .Where(predicate: t => t.EpisodeId is not null && episodeIds.Contains(value: t.EpisodeId.Value))
+            .Where(t => t.EpisodeId is not null && episodeIds.Contains(t.EpisodeId.Value))
             .ToList();
 
         return context
-            .Translations.UpsertRange(entities: translations)
-            .On(match: t => new
+            .Translations.UpsertRange(translations)
+            .On(t => new
             {
                 t.Iso31661,
                 t.Iso6391,
                 t.EpisodeId,
             })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         Iso31661 = ti.Iso31661,
@@ -88,23 +88,23 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
     public Task StoreEpisodeImages(IEnumerable<Image> images)
     {
         int[] episodeIds = context
-            .Episodes.Select(selector: e => e.Id)
+            .Episodes.Select(e => e.Id)
             .ToArray()
-            .Where(predicate: e => images.Any(predicate: i => e == i.EpisodeId))
+            .Where(e => images.Any(i => e == i.EpisodeId))
             .ToArray();
 
         List<Image> filteredImages = images
-            .Where(predicate: i => i.EpisodeId is not null && episodeIds.Contains(value: i.EpisodeId.Value))
+            .Where(i => i.EpisodeId is not null && episodeIds.Contains(i.EpisodeId.Value))
             .ToList();
 
         if (filteredImages.Count == 0)
             return Task.CompletedTask;
 
         return context
-            .Images.UpsertRange(entities: filteredImages.ToArray())
-            .On(match: v => new { v.FilePath, v.EpisodeId })
+            .Images.UpsertRange(filteredImages.ToArray())
+            .On(v => new { v.FilePath, v.EpisodeId })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         AspectRatio = ti.AspectRatio,

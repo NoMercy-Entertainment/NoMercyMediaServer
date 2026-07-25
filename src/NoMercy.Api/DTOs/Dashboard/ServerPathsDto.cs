@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record ServerPathsDto
 {
-    [JsonProperty(propertyName: "key")]
+    [JsonProperty("key")]
     public string Key { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "value")]
+    [JsonProperty("value")]
     public string Value { get; set; } = string.Empty;
 }

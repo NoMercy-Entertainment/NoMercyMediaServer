@@ -38,25 +38,25 @@ public class WorkerAssigner : IWorkerAssigner
         // Seed each worker with an empty bucket so the output shape matches
         // the input — callers can iterate every worker uniformly.
         Dictionary<string, List<EncodeTask>> buckets = workers.ToDictionary(
-            keySelector: w => w.WorkerId,
-            elementSelector: _ => new List<EncodeTask>()
+            w => w.WorkerId,
+            _ => new List<EncodeTask>()
         );
 
         if (tasks.Length == 0)
-            return buckets.ToDictionary(keySelector: kvp => kvp.Key, elementSelector: kvp => kvp.Value.ToArray());
+            return buckets.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray());
 
         // Remaining weight tracks capacity consumption as we assign tasks.
         // Max(1, AvailableSlots) so a worker with zero slots still gets a
         // fallback weight — we'd rather overload one box than strand tasks.
         Dictionary<string, double> remainingWeight = workers.ToDictionary(
-            keySelector: w => w.WorkerId,
-            elementSelector: w => w.SpeedMultiplier * Math.Max(val1: 1, val2: w.AvailableSlots)
+            w => w.WorkerId,
+            w => w.SpeedMultiplier * Math.Max(1, w.AvailableSlots)
         );
 
         // Sort tasks so the heaviest (QualityVariant at the top — implies a
         // full encode) land on the fastest workers. TimeChunk tasks are
         // typically smaller and fill remaining capacity well.
-        IEnumerable<EncodeTask> ordered = tasks.OrderBy(keySelector: t =>
+        IEnumerable<EncodeTask> ordered = tasks.OrderBy(t =>
             t.Type == EncodeTaskType.QualityVariant ? 0 : 1
         );
 
@@ -66,25 +66,25 @@ public class WorkerAssigner : IWorkerAssigner
             // Falls back to the unconstrained pick if no GPU worker exists
             // — strict enforcement is the dispatcher's job, not ours.
             IReadOnlyList<WorkerCapacity> eligible = task.RequiresGpu
-                ? [.. workers.Where(predicate: w => w.HasGpu)]
+                ? [.. workers.Where(w => w.HasGpu)]
                 : workers;
             if (eligible.Count == 0)
                 eligible = workers;
 
-            string chosen = PickHeaviestRemainingWorker(workers: eligible, remainingWeight: remainingWeight);
-            buckets[key: chosen].Add(item: task);
+            string chosen = PickHeaviestRemainingWorker(eligible, remainingWeight);
+            buckets[chosen].Add(task);
 
             // Each assigned task consumes capacity weighted by its declared
             // cost units — heavy 4K HEVC two-pass tasks (cost ~8) drain a
             // worker faster than 1080p H.264 single-pass (cost 1). The
             // EncodeTaskType variant/chunk multiplier still applies.
-            remainingWeight[key: chosen] = Math.Max(
-                val1: 0,
-                val2: remainingWeight[key: chosen] - GetConsumedWeight(task: task)
+            remainingWeight[chosen] = Math.Max(
+                0,
+                remainingWeight[chosen] - GetConsumedWeight(task)
             );
         }
 
-        return buckets.ToDictionary(keySelector: kvp => kvp.Key, elementSelector: kvp => kvp.Value.ToArray());
+        return buckets.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray());
     }
 
     private static string PickHeaviestRemainingWorker(
@@ -97,7 +97,7 @@ public class WorkerAssigner : IWorkerAssigner
 
         foreach (WorkerCapacity worker in workers)
         {
-            double weight = remainingWeight[key: worker.WorkerId];
+            double weight = remainingWeight[worker.WorkerId];
             if (weight > bestWeight)
             {
                 bestWeight = weight;
@@ -116,7 +116,7 @@ public class WorkerAssigner : IWorkerAssigner
     private static double GetConsumedWeight(EncodeTask task)
     {
         double typeFactor = task.Type == EncodeTaskType.QualityVariant ? 1.0 : 0.5;
-        double costFactor = Math.Max(val1: 1, val2: task.EstimatedCostUnits);
+        double costFactor = Math.Max(1, task.EstimatedCostUnits);
         return typeFactor * costFactor;
     }
 }

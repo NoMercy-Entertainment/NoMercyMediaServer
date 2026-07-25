@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonTranslationData
 {
-    [JsonProperty(propertyName: "biography")]
+    [JsonProperty("biography")]
     public string? Overview { get; set; }
 }

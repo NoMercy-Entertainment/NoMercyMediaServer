@@ -26,7 +26,7 @@ namespace NoMercy.Encoder.Codecs;
 public sealed class AmfAv1QualityScaler : IQualityScaler
 {
     public bool Supports(string encoderHandle) =>
-        string.Equals(a: encoderHandle, b: "av1_amf", comparisonType: StringComparison.OrdinalIgnoreCase);
+        string.Equals(encoderHandle, "av1_amf", StringComparison.OrdinalIgnoreCase);
 
     public int Translate(int sourceCrf, int sourceMax, int targetMax, CodecHint hint)
     {
@@ -36,7 +36,7 @@ public sealed class AmfAv1QualityScaler : IQualityScaler
         if (sourceMax <= 0)
             return 0;
 
-        int scaled = (int)Math.Round(a: (double)sourceCrf / sourceMax * amfMax);
-        return Math.Clamp(value: scaled, min: 0, max: amfMax);
+        int scaled = (int)Math.Round((double)sourceCrf / sourceMax * amfMax);
+        return Math.Clamp(scaled, 0, amfMax);
     }
 }

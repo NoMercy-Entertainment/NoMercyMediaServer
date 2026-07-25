@@ -28,26 +28,26 @@ public static class ServiceRegistration
 {
     public static IServiceCollection AddMediaServerQueue(this IServiceCollection services)
     {
-        services.AddSingleton<IQueueContext>(implementationFactory: _ => new EfQueueContextAdapter());
+        services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter());
         services.AddSingleton<IConfigurationStore, MediaConfigurationStore>();
 
         // TryAdd so this shares the same instance as the encoder's own
         // default registration (see AddNoMercyEncoder) regardless of call order.
         services.TryAddSingleton<MediaActivityMonitor>();
         services.AddSingleton<IWorkerActivityGate, MediaPlaybackActivityGate>();
-        services.AddSingleton(implementationFactory: sp =>
+        services.AddSingleton(sp =>
         {
             EncoderResourceConfig resources = sp.GetRequiredService<
                 IOptions<EncoderResourceConfig>
             >().Value;
 
             return new ResourceBudgetOptions(
-                CpuHeadroomPercent: resources.EncoderCpuHeadroomPercent,
-                GpuHeadroomPercent: resources.EncoderGpuHeadroomPercent,
-                MinFreeMemoryMb: resources.EncoderMinFreeMemoryMb
+                resources.EncoderCpuHeadroomPercent,
+                resources.EncoderGpuHeadroomPercent,
+                resources.EncoderMinFreeMemoryMb
             );
         });
-        services.AddSingleton<QueueRunner>(implementationFactory: sp =>
+        services.AddSingleton<QueueRunner>(sp =>
         {
             IQueueContext queueContext = sp.GetRequiredService<IQueueContext>();
             IConfigurationStore configStore = sp.GetRequiredService<IConfigurationStore>();
@@ -62,17 +62,17 @@ public static class ServiceRegistration
             {
                 WorkerCounts = new()
                 {
-                    [key: rs.LibraryWorkers.Key] = rs.LibraryWorkers.Value,
-                    [key: rs.ImportWorkers.Key] = rs.ImportWorkers.Value,
-                    [key: rs.ExtrasWorkers.Key] = rs.ExtrasWorkers.Value,
-                    [key: rs.EncoderWorkers.Key] = rs.EncoderWorkers.Value,
-                    [key: rs.GpuEncoderWorkers.Key] = rs.GpuEncoderWorkers.Value,
-                    [key: rs.CpuEncoderWorkers.Key] = rs.CpuEncoderWorkers.Value,
-                    [key: rs.CronWorkers.Key] = rs.CronWorkers.Value,
-                    [key: rs.ImageWorkers.Key] = rs.ImageWorkers.Value,
-                    [key: rs.FileWorkers.Key] = rs.FileWorkers.Value,
-                    [key: rs.MusicWorkers.Key] = rs.MusicWorkers.Value,
-                    [key: rs.PaletteWorkers.Key] = rs.PaletteWorkers.Value,
+                    [rs.LibraryWorkers.Key] = rs.LibraryWorkers.Value,
+                    [rs.ImportWorkers.Key] = rs.ImportWorkers.Value,
+                    [rs.ExtrasWorkers.Key] = rs.ExtrasWorkers.Value,
+                    [rs.EncoderWorkers.Key] = rs.EncoderWorkers.Value,
+                    [rs.GpuEncoderWorkers.Key] = rs.GpuEncoderWorkers.Value,
+                    [rs.CpuEncoderWorkers.Key] = rs.CpuEncoderWorkers.Value,
+                    [rs.CronWorkers.Key] = rs.CronWorkers.Value,
+                    [rs.ImageWorkers.Key] = rs.ImageWorkers.Value,
+                    [rs.FileWorkers.Key] = rs.FileWorkers.Value,
+                    [rs.MusicWorkers.Key] = rs.MusicWorkers.Value,
+                    [rs.PaletteWorkers.Key] = rs.PaletteWorkers.Value,
                 },
             };
             IReadOnlySet<string> resourceAwareQueues = new HashSet<string>
@@ -90,25 +90,25 @@ public static class ServiceRegistration
             IReadOnlyDictionary<string, NmSystem.Lifecycle.BootStage> queueReadyStages =
                 new Dictionary<string, NmSystem.Lifecycle.BootStage>
                 {
-                    [key: rs.EncoderWorkers.Key] = encoderReady,
-                    [key: rs.GpuEncoderWorkers.Key] = encoderReady,
-                    [key: rs.CpuEncoderWorkers.Key] = encoderReady,
+                    [rs.EncoderWorkers.Key] = encoderReady,
+                    [rs.GpuEncoderWorkers.Key] = encoderReady,
+                    [rs.CpuEncoderWorkers.Key] = encoderReady,
                 };
 
             return new(
-                queueContext: queueContext,
-                configuration: configuration,
-                loggerFactory: loggerFactory,
-                configurationStore: configStore,
-                scopeFactory: scopeFactory,
-                phaseTracker: phaseTracker,
-                resourceBudget: resourceBudget,
-                resourceAwareQueues: resourceAwareQueues,
-                activityGate: activityGate,
-                queueReadyStages: queueReadyStages
+                queueContext,
+                configuration,
+                loggerFactory,
+                configStore,
+                scopeFactory,
+                phaseTracker,
+                resourceBudget,
+                resourceAwareQueues,
+                activityGate,
+                queueReadyStages
             );
         });
-        services.AddSingleton<JobDispatcher>(implementationFactory: sp => sp.GetRequiredService<QueueRunner>().Dispatcher);
+        services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);
 
         // Phase 4.14 — orphan job recovery on boot. This hosted service's
         // StartAsync only runs once ASP.NET Core starts the host (RunHost /

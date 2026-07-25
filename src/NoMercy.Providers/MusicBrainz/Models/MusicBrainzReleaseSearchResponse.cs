@@ -15,15 +15,15 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzReleaseSearchResponse
 {
-    [JsonProperty(propertyName: "created")]
+    [JsonProperty("created")]
     public DateTimeOffset Created { get; set; }
 
-    [JsonProperty(propertyName: "count")]
+    [JsonProperty("count")]
     public long Count { get; set; }
 
-    [JsonProperty(propertyName: "offset")]
+    [JsonProperty("offset")]
     public long Offset { get; set; }
 
-    [JsonProperty(propertyName: "releases")]
+    [JsonProperty("releases")]
     public MusicBrainzRelease[] Releases { get; set; } = [];
 }

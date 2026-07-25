@@ -31,21 +31,21 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 // private scanner methods through LocalStorage exactly like a live scan
 // would — no mock stands in for the unit under test.
 // ---------------------------------------------------------------------------
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class FileManagerAssetHashListTests : IDisposable
 {
     private readonly string _tempRoot;
 
     public FileManagerAssetHashListTests()
     {
-        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-assets-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempRoot);
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"nm-assets-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempRoot);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempRoot))
-            Directory.Delete(path: _tempRoot, recursive: true);
+        if (Directory.Exists(_tempRoot))
+            Directory.Delete(_tempRoot, true);
     }
 
     private static FileManager BuildFileManager()
@@ -55,40 +55,40 @@ public sealed class FileManagerAssetHashListTests : IDisposable
         Mock<IStorageDriver> driverMock = new();
         Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
         return new(
-            fileRepository: repoMock.Object,
-            storageFactory: factoryMock.Object,
-            storageDriver: driverMock.Object,
-            mediaAnalyzer: mediaAnalyzerMock.Object
+            repoMock.Object,
+            factoryMock.Object,
+            driverMock.Object,
+            mediaAnalyzerMock.Object
         );
     }
 
     private static IStorage BuildLocalStorage()
     {
         LocalStorageDriver driver = new();
-        return new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
+        return new LocalStorage(driver, new StoragePathGuard([], driver));
     }
 
     private static object InvokePrivate(FileManager manager, string methodName, object?[] args)
     {
         MethodInfo method =
             typeof(FileManager).GetMethod(
-                name: methodName,
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
-            ) ?? throw new InvalidOperationException(message: $"{methodName} not found");
-        return method.Invoke(obj: manager, parameters: args)!;
+                methodName,
+                BindingFlags.NonPublic | BindingFlags.Instance
+            ) ?? throw new InvalidOperationException($"{methodName} not found");
+        return method.Invoke(manager, args)!;
     }
 
     private static List<ISubtitle> InvokeGetSubtitleHashList(
         FileManager manager,
         IStorage storage,
         string hostFolder
-    ) => (List<ISubtitle>)InvokePrivate(manager: manager, methodName: "GetSubtitleHashList", args: [storage, hostFolder]);
+    ) => (List<ISubtitle>)InvokePrivate(manager, "GetSubtitleHashList", [storage, hostFolder]);
 
     private static List<IFont> InvokeGetFontHashList(
         FileManager manager,
         IStorage storage,
         string hostFolder
-    ) => (List<IFont>)InvokePrivate(manager: manager, methodName: "GetFontHashList", args: [storage, hostFolder]);
+    ) => (List<IFont>)InvokePrivate(manager, "GetFontHashList", [storage, hostFolder]);
 
     private static List<IPreview> InvokeGetPreviewHashList(
         FileManager manager,
@@ -97,25 +97,25 @@ public sealed class FileManagerAssetHashListTests : IDisposable
         List<VideoTrack> extraFiles
     ) =>
         (List<IPreview>)
-            InvokePrivate(manager: manager, methodName: "GetPreviewHashList", args: [storage, hostFolder, extraFiles]);
+            InvokePrivate(manager, "GetPreviewHashList", [storage, hostFolder, extraFiles]);
 
     private static List<VideoTrack> InvokeGetExtraFiles(IStorage storage, string hostFolder) =>
         (List<VideoTrack>)
             typeof(FileManager)
-                .GetMethod(name: "GetExtraFiles", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
-                .Invoke(obj: null, parameters: [storage, hostFolder])!;
+                .GetMethod("GetExtraFiles", BindingFlags.NonPublic | BindingFlags.Static)!
+                .Invoke(null, [storage, hostFolder])!;
 
     private static List<Subtitle> InvokeGetSubtitles(IStorage storage, string hostFolder) =>
         (List<Subtitle>)
             typeof(FileManager)
-                .GetMethod(name: "GetSubtitles", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
-                .Invoke(obj: null, parameters: [storage, hostFolder])!;
+                .GetMethod("GetSubtitles", BindingFlags.NonPublic | BindingFlags.Static)!
+                .Invoke(null, [storage, hostFolder])!;
 
     private static (int Width, int Height) InvokeGetImageDimensions(string filePath)
     {
         object result = typeof(FileManager)
-            .GetMethod(name: "GetImageDimensions", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
-            .Invoke(obj: null, parameters: [filePath])!;
+            .GetMethod("GetImageDimensions", BindingFlags.NonPublic | BindingFlags.Static)!
+            .Invoke(null, [filePath])!;
         return ((int, int))result;
     }
 
@@ -125,8 +125,8 @@ public sealed class FileManagerAssetHashListTests : IDisposable
     )
     {
         object result = typeof(FileManager)
-            .GetMethod(name: "GetImageDimensionsFromVtt", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
-            .Invoke(obj: null, parameters: [storage, filePath])!;
+            .GetMethod("GetImageDimensionsFromVtt", BindingFlags.NonPublic | BindingFlags.Static)!
+            .Invoke(null, [storage, filePath])!;
         return ((int, int))result;
     }
 
@@ -137,13 +137,13 @@ public sealed class FileManagerAssetHashListTests : IDisposable
     [Fact]
     public void GetSubtitleHashList_NoSubtitlesFolder_ReturnsEmpty()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.NoSubs");
-        Directory.CreateDirectory(path: hostDir);
+        string hostDir = Path.Combine(_tempRoot, "Movie.NoSubs");
+        Directory.CreateDirectory(hostDir);
 
         List<ISubtitle> result = InvokeGetSubtitleHashList(
-            manager: BuildFileManager(),
-            storage: BuildLocalStorage(),
-            hostFolder: hostDir
+            BuildFileManager(),
+            BuildLocalStorage(),
+            hostDir
         );
 
         result.Should().BeEmpty();
@@ -152,89 +152,89 @@ public sealed class FileManagerAssetHashListTests : IDisposable
     [Fact]
     public void GetSubtitleHashList_TextSubtitle_IsIncludedWithLanguageTypeAndCodec()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.WithSubs");
-        string subtitleDir = Path.Combine(path1: hostDir, path2: "subtitles");
-        Directory.CreateDirectory(path: subtitleDir);
-        File.WriteAllText(path: Path.Combine(path1: subtitleDir, path2: "Movie.eng.full.vtt"), contents: "WEBVTT\n");
+        string hostDir = Path.Combine(_tempRoot, "Movie.WithSubs");
+        string subtitleDir = Path.Combine(hostDir, "subtitles");
+        Directory.CreateDirectory(subtitleDir);
+        File.WriteAllText(Path.Combine(subtitleDir, "Movie.eng.full.vtt"), "WEBVTT\n");
 
         List<ISubtitle> result = InvokeGetSubtitleHashList(
-            manager: BuildFileManager(),
-            storage: BuildLocalStorage(),
-            hostFolder: hostDir
+            BuildFileManager(),
+            BuildLocalStorage(),
+            hostDir
         );
 
         result.Should().ContainSingle();
-        result[index: 0].Language.Should().Be(expected: "eng");
-        result[index: 0].Type.Should().Be(expected: "full");
-        result[index: 0].Codec.Should().Be(expected: "vtt");
-        result[index: 0].FileName.Should().Be(expected: "/subtitles/Movie.eng.full.vtt");
+        result[0].Language.Should().Be("eng");
+        result[0].Type.Should().Be("full");
+        result[0].Codec.Should().Be("vtt");
+        result[0].FileName.Should().Be("/subtitles/Movie.eng.full.vtt");
     }
 
     [Theory]
-    [InlineData(data: "sup")]
-    [InlineData(data: "idx")]
-    [InlineData(data: "vob")]
-    [InlineData(data: "mks")]
+    [InlineData("sup")]
+    [InlineData("idx")]
+    [InlineData("vob")]
+    [InlineData("mks")]
     public void GetSubtitleHashList_BitmapSidecarExtensions_AreExcluded(string bitmapExtension)
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: $"Movie.Bitmap.{bitmapExtension}");
-        string subtitleDir = Path.Combine(path1: hostDir, path2: "subtitles");
-        Directory.CreateDirectory(path: subtitleDir);
-        File.WriteAllBytes(path: Path.Combine(path1: subtitleDir, path2: $"Movie.eng.full.{bitmapExtension}"), bytes: [0x00]);
+        string hostDir = Path.Combine(_tempRoot, $"Movie.Bitmap.{bitmapExtension}");
+        string subtitleDir = Path.Combine(hostDir, "subtitles");
+        Directory.CreateDirectory(subtitleDir);
+        File.WriteAllBytes(Path.Combine(subtitleDir, $"Movie.eng.full.{bitmapExtension}"), [0x00]);
 
         List<ISubtitle> result = InvokeGetSubtitleHashList(
-            manager: BuildFileManager(),
-            storage: BuildLocalStorage(),
-            hostFolder: hostDir
+            BuildFileManager(),
+            BuildLocalStorage(),
+            hostDir
         );
 
-        result.Should().BeEmpty(because: "bitmap sidecars cannot be streamed as HLS text sidecars");
+        result.Should().BeEmpty("bitmap sidecars cannot be streamed as HLS text sidecars");
     }
 
     [Theory]
-    [InlineData(data: "alt")]
-    [InlineData(data: "sdh")]
-    [InlineData(data: "forced")]
-    [InlineData(data: "sign")]
-    [InlineData(data: "song")]
-    [InlineData(data: "commentary")]
-    [InlineData(data: "director")]
+    [InlineData("alt")]
+    [InlineData("sdh")]
+    [InlineData("forced")]
+    [InlineData("sign")]
+    [InlineData("song")]
+    [InlineData("commentary")]
+    [InlineData("director")]
     public void GetSubtitleHashList_AnyTypeToken_Matches(string type)
     {
         // Regression: the matcher used to only accept type in
         // (sign, song, full) — every "alt"/"sdh"/"forced" subtitle silently
         // vanished from the track list.
-        string hostDir = Path.Combine(path1: _tempRoot, path2: $"Movie.Type.{type}");
-        string subtitleDir = Path.Combine(path1: hostDir, path2: "subtitles");
-        Directory.CreateDirectory(path: subtitleDir);
-        File.WriteAllText(path: Path.Combine(path1: subtitleDir, path2: $"Movie.eng.{type}.srt"), contents: "1\n");
+        string hostDir = Path.Combine(_tempRoot, $"Movie.Type.{type}");
+        string subtitleDir = Path.Combine(hostDir, "subtitles");
+        Directory.CreateDirectory(subtitleDir);
+        File.WriteAllText(Path.Combine(subtitleDir, $"Movie.eng.{type}.srt"), "1\n");
 
         List<ISubtitle> result = InvokeGetSubtitleHashList(
-            manager: BuildFileManager(),
-            storage: BuildLocalStorage(),
-            hostFolder: hostDir
+            BuildFileManager(),
+            BuildLocalStorage(),
+            hostDir
         );
 
         result.Should().ContainSingle();
-        result[index: 0].Type.Should().Be(expected: type);
+        result[0].Type.Should().Be(type);
     }
 
     [Fact]
     public void GetSubtitleHashList_TwoCharLanguageCode_Matches()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.TwoCharLang");
-        string subtitleDir = Path.Combine(path1: hostDir, path2: "subtitles");
-        Directory.CreateDirectory(path: subtitleDir);
-        File.WriteAllText(path: Path.Combine(path1: subtitleDir, path2: "Movie.en.full.vtt"), contents: "WEBVTT\n");
+        string hostDir = Path.Combine(_tempRoot, "Movie.TwoCharLang");
+        string subtitleDir = Path.Combine(hostDir, "subtitles");
+        Directory.CreateDirectory(subtitleDir);
+        File.WriteAllText(Path.Combine(subtitleDir, "Movie.en.full.vtt"), "WEBVTT\n");
 
         List<ISubtitle> result = InvokeGetSubtitleHashList(
-            manager: BuildFileManager(),
-            storage: BuildLocalStorage(),
-            hostFolder: hostDir
+            BuildFileManager(),
+            BuildLocalStorage(),
+            hostDir
         );
 
         result.Should().ContainSingle();
-        result[index: 0].Language.Should().Be(expected: "en");
+        result[0].Language.Should().Be("en");
     }
 
     // -----------------------------------------------------------------------
@@ -244,13 +244,13 @@ public sealed class FileManagerAssetHashListTests : IDisposable
     [Fact]
     public void GetFontHashList_NoFontsFolder_ReturnsEmpty()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.NoFonts");
-        Directory.CreateDirectory(path: hostDir);
+        string hostDir = Path.Combine(_tempRoot, "Movie.NoFonts");
+        Directory.CreateDirectory(hostDir);
 
         List<IFont> result = InvokeGetFontHashList(
-            manager: BuildFileManager(),
-            storage: BuildLocalStorage(),
-            hostFolder: hostDir
+            BuildFileManager(),
+            BuildLocalStorage(),
+            hostDir
         );
 
         result.Should().BeEmpty();
@@ -259,22 +259,22 @@ public sealed class FileManagerAssetHashListTests : IDisposable
     [Fact]
     public void GetFontHashList_FontsPresent_ReturnsEachWithHashAndSize()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.WithFonts");
-        string fontsDir = Path.Combine(path1: hostDir, path2: "fonts");
-        Directory.CreateDirectory(path: fontsDir);
-        File.WriteAllBytes(path: Path.Combine(path1: fontsDir, path2: "Arial.ttf"), bytes: new byte[128]);
-        File.WriteAllBytes(path: Path.Combine(path1: fontsDir, path2: "Comic.otf"), bytes: new byte[64]);
+        string hostDir = Path.Combine(_tempRoot, "Movie.WithFonts");
+        string fontsDir = Path.Combine(hostDir, "fonts");
+        Directory.CreateDirectory(fontsDir);
+        File.WriteAllBytes(Path.Combine(fontsDir, "Arial.ttf"), new byte[128]);
+        File.WriteAllBytes(Path.Combine(fontsDir, "Comic.otf"), new byte[64]);
 
         List<IFont> result = InvokeGetFontHashList(
-            manager: BuildFileManager(),
-            storage: BuildLocalStorage(),
-            hostFolder: hostDir
+            BuildFileManager(),
+            BuildLocalStorage(),
+            hostDir
         );
 
-        result.Should().HaveCount(expected: 2);
-        result.Should().Contain(predicate: f => f.FileName == "/fonts/Arial.ttf" && f.FileSize == 128);
-        result.Should().Contain(predicate: f => f.FileName == "/fonts/Comic.otf" && f.FileSize == 64);
-        result.Should().OnlyContain(predicate: f => !string.IsNullOrEmpty(f.FileHash));
+        result.Should().HaveCount(2);
+        result.Should().Contain(f => f.FileName == "/fonts/Arial.ttf" && f.FileSize == 128);
+        result.Should().Contain(f => f.FileName == "/fonts/Comic.otf" && f.FileSize == 64);
+        result.Should().OnlyContain(f => !string.IsNullOrEmpty(f.FileHash));
     }
 
     // -----------------------------------------------------------------------
@@ -284,44 +284,44 @@ public sealed class FileManagerAssetHashListTests : IDisposable
     [Fact]
     public void GetImageDimensions_RealPngFile_ReturnsItsActualSize()
     {
-        string filePath = Path.Combine(path1: _tempRoot, path2: "sprite.png");
-        WritePng(path: filePath, width: 64, height: 32);
+        string filePath = Path.Combine(_tempRoot, "sprite.png");
+        WritePng(filePath, 64, 32);
 
-        (int width, int height) = InvokeGetImageDimensions(filePath: filePath);
+        (int width, int height) = InvokeGetImageDimensions(filePath);
 
-        width.Should().Be(expected: 64);
-        height.Should().Be(expected: 32);
+        width.Should().Be(64);
+        height.Should().Be(32);
     }
 
     [Fact]
     public void GetImageDimensionsFromVtt_ParsesXywhFromVttContents()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.Thumbs");
-        Directory.CreateDirectory(path: hostDir);
-        string vttPath = Path.Combine(path1: hostDir, path2: "thumbs.vtt");
+        string hostDir = Path.Combine(_tempRoot, "Movie.Thumbs");
+        Directory.CreateDirectory(hostDir);
+        string vttPath = Path.Combine(hostDir, "thumbs.vtt");
         File.WriteAllText(
-            path: vttPath,
-            contents: "WEBVTT\n\n" + "00:00:00.000 --> 00:00:05.000\n" + "sprite.jpg#xywh=0,0,320,180\n"
+            vttPath,
+            "WEBVTT\n\n" + "00:00:00.000 --> 00:00:05.000\n" + "sprite.jpg#xywh=0,0,320,180\n"
         );
 
-        (int width, int height) = InvokeGetImageDimensionsFromVtt(storage: BuildLocalStorage(), filePath: vttPath);
+        (int width, int height) = InvokeGetImageDimensionsFromVtt(BuildLocalStorage(), vttPath);
 
-        width.Should().Be(expected: 320);
-        height.Should().Be(expected: 180);
+        width.Should().Be(320);
+        height.Should().Be(180);
     }
 
     [Fact]
     public void GetImageDimensionsFromVtt_NoXywhToken_ReturnsZeroZero()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.NoXywh");
-        Directory.CreateDirectory(path: hostDir);
-        string vttPath = Path.Combine(path1: hostDir, path2: "thumbs.vtt");
-        File.WriteAllText(path: vttPath, contents: "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nsprite.jpg\n");
+        string hostDir = Path.Combine(_tempRoot, "Movie.NoXywh");
+        Directory.CreateDirectory(hostDir);
+        string vttPath = Path.Combine(hostDir, "thumbs.vtt");
+        File.WriteAllText(vttPath, "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nsprite.jpg\n");
 
-        (int width, int height) = InvokeGetImageDimensionsFromVtt(storage: BuildLocalStorage(), filePath: vttPath);
+        (int width, int height) = InvokeGetImageDimensionsFromVtt(BuildLocalStorage(), vttPath);
 
-        width.Should().Be(expected: 0);
-        height.Should().Be(expected: 0);
+        width.Should().Be(0);
+        height.Should().Be(0);
     }
 
     // -----------------------------------------------------------------------
@@ -333,12 +333,12 @@ public sealed class FileManagerAssetHashListTests : IDisposable
     [Fact]
     public void GetPreviewHashList_SpriteAndThumbnailPair_ProducesOnePreviewWithDimensions()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.Previews");
-        Directory.CreateDirectory(path: hostDir);
-        WritePng(path: Path.Combine(path1: hostDir, path2: "sprite_320x180.webp"), width: 320, height: 180);
+        string hostDir = Path.Combine(_tempRoot, "Movie.Previews");
+        Directory.CreateDirectory(hostDir);
+        WritePng(Path.Combine(hostDir, "sprite_320x180.webp"), 320, 180);
         File.WriteAllText(
-            path: Path.Combine(path1: hostDir, path2: "thumbs_320x180.vtt"),
-            contents: "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nsprite_320x180.webp#xywh=0,0,320,180\n"
+            Path.Combine(hostDir, "thumbs_320x180.vtt"),
+            "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nsprite_320x180.webp#xywh=0,0,320,180\n"
         );
 
         List<VideoTrack> extraFiles =
@@ -348,32 +348,32 @@ public sealed class FileManagerAssetHashListTests : IDisposable
         ];
 
         List<IPreview> result = InvokeGetPreviewHashList(
-            manager: BuildFileManager(),
-            storage: BuildLocalStorage(),
-            hostFolder: hostDir,
-            extraFiles: extraFiles
+            BuildFileManager(),
+            BuildLocalStorage(),
+            hostDir,
+            extraFiles
         );
 
         result.Should().ContainSingle();
-        result[index: 0].ImageFileName.Should().Be(expected: "/sprite_320x180.webp");
-        result[index: 0].TimeFileName.Should().Be(expected: "/thumbs_320x180.vtt");
-        result[index: 0].Width.Should().Be(expected: 320);
-        result[index: 0].Height.Should().Be(expected: 180);
-        result[index: 0].ImageFileSize.Should().BeGreaterThan(expected: 0);
-        result[index: 0].TimeFileSize.Should().BeGreaterThan(expected: 0);
+        result[0].ImageFileName.Should().Be("/sprite_320x180.webp");
+        result[0].TimeFileName.Should().Be("/thumbs_320x180.vtt");
+        result[0].Width.Should().Be(320);
+        result[0].Height.Should().Be(180);
+        result[0].ImageFileSize.Should().BeGreaterThan(0);
+        result[0].TimeFileSize.Should().BeGreaterThan(0);
     }
 
     [Fact]
     public void GetPreviewHashList_NoSpriteOrThumbnailEntries_ReturnsEmpty()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.NoPreviews");
-        Directory.CreateDirectory(path: hostDir);
+        string hostDir = Path.Combine(_tempRoot, "Movie.NoPreviews");
+        Directory.CreateDirectory(hostDir);
 
         List<IPreview> result = InvokeGetPreviewHashList(
-            manager: BuildFileManager(),
-            storage: BuildLocalStorage(),
-            hostFolder: hostDir,
-            extraFiles: []
+            BuildFileManager(),
+            BuildLocalStorage(),
+            hostDir,
+            []
         );
 
         result.Should().BeEmpty();
@@ -387,23 +387,23 @@ public sealed class FileManagerAssetHashListTests : IDisposable
     [Fact]
     public void GetExtraFiles_ClassifiesChapterSkipperSpriteThumbnailAndFonts()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.Extras");
-        Directory.CreateDirectory(path: hostDir);
-        File.WriteAllText(path: Path.Combine(path1: hostDir, path2: "chapters.vtt"), contents: "WEBVTT\n");
-        File.WriteAllText(path: Path.Combine(path1: hostDir, path2: "skipper.json"), contents: "{}");
-        File.WriteAllBytes(path: Path.Combine(path1: hostDir, path2: "sprite_320x180.webp"), bytes: new byte[16]);
+        string hostDir = Path.Combine(_tempRoot, "Movie.Extras");
+        Directory.CreateDirectory(hostDir);
+        File.WriteAllText(Path.Combine(hostDir, "chapters.vtt"), "WEBVTT\n");
+        File.WriteAllText(Path.Combine(hostDir, "skipper.json"), "{}");
+        File.WriteAllBytes(Path.Combine(hostDir, "sprite_320x180.webp"), new byte[16]);
         // Same stem as the webp ("sprite_320x180") — GetExtraFiles only
         // registers a thumbnails VTT when it has a matching sprite webp.
-        File.WriteAllText(path: Path.Combine(path1: hostDir, path2: "sprite_320x180.vtt"), contents: "WEBVTT\n");
-        File.WriteAllText(path: Path.Combine(path1: hostDir, path2: "fonts.tar"), contents: "x");
+        File.WriteAllText(Path.Combine(hostDir, "sprite_320x180.vtt"), "WEBVTT\n");
+        File.WriteAllText(Path.Combine(hostDir, "fonts.tar"), "x");
 
-        List<VideoTrack> tracks = InvokeGetExtraFiles(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<VideoTrack> tracks = InvokeGetExtraFiles(BuildLocalStorage(), hostDir);
 
-        tracks.Should().Contain(predicate: t => t.Kind == "chapters" && t.File == "/chapters.vtt");
-        tracks.Should().Contain(predicate: t => t.Kind == "skippers" && t.File == "/skipper.json");
-        tracks.Should().Contain(predicate: t => t.Kind == "sprite" && t.File == "/sprite_320x180.webp");
-        tracks.Should().Contain(predicate: t => t.Kind == "thumbnails" && t.File == "/sprite_320x180.vtt");
-        tracks.Should().Contain(predicate: t => t.Kind == "fonts" && t.File == "/fonts.tar");
+        tracks.Should().Contain(t => t.Kind == "chapters" && t.File == "/chapters.vtt");
+        tracks.Should().Contain(t => t.Kind == "skippers" && t.File == "/skipper.json");
+        tracks.Should().Contain(t => t.Kind == "sprite" && t.File == "/sprite_320x180.webp");
+        tracks.Should().Contain(t => t.Kind == "thumbnails" && t.File == "/sprite_320x180.vtt");
+        tracks.Should().Contain(t => t.Kind == "fonts" && t.File == "/fonts.tar");
     }
 
     [Fact]
@@ -413,15 +413,15 @@ public sealed class FileManagerAssetHashListTests : IDisposable
         // old VTT behind (thumbs_320x178.vtt) alongside the live sprite
         // (thumbs_320x180.webp). The stale VTT must not be registered — the
         // player would follow its cues to a 404.
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.StaleVtt");
-        Directory.CreateDirectory(path: hostDir);
-        File.WriteAllBytes(path: Path.Combine(path1: hostDir, path2: "thumbs_320x180.webp"), bytes: new byte[16]);
-        File.WriteAllText(path: Path.Combine(path1: hostDir, path2: "thumbs_320x178.vtt"), contents: "WEBVTT\n");
+        string hostDir = Path.Combine(_tempRoot, "Movie.StaleVtt");
+        Directory.CreateDirectory(hostDir);
+        File.WriteAllBytes(Path.Combine(hostDir, "thumbs_320x180.webp"), new byte[16]);
+        File.WriteAllText(Path.Combine(hostDir, "thumbs_320x178.vtt"), "WEBVTT\n");
 
-        List<VideoTrack> tracks = InvokeGetExtraFiles(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<VideoTrack> tracks = InvokeGetExtraFiles(BuildLocalStorage(), hostDir);
 
-        tracks.Should().Contain(predicate: t => t.Kind == "sprite");
-        tracks.Should().NotContain(predicate: t => t.Kind == "thumbnails");
+        tracks.Should().Contain(t => t.Kind == "sprite");
+        tracks.Should().NotContain(t => t.Kind == "thumbnails");
     }
 
     // -----------------------------------------------------------------------
@@ -432,10 +432,10 @@ public sealed class FileManagerAssetHashListTests : IDisposable
     [Fact]
     public void GetSubtitles_NoSubtitlesFolder_ReturnsEmpty()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.NoSubsDb");
-        Directory.CreateDirectory(path: hostDir);
+        string hostDir = Path.Combine(_tempRoot, "Movie.NoSubsDb");
+        Directory.CreateDirectory(hostDir);
 
-        List<Subtitle> result = InvokeGetSubtitles(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<Subtitle> result = InvokeGetSubtitles(BuildLocalStorage(), hostDir);
 
         result.Should().BeEmpty();
     }
@@ -443,65 +443,65 @@ public sealed class FileManagerAssetHashListTests : IDisposable
     [Fact]
     public void GetSubtitles_TextSubtitle_IsIncluded()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.SubsDb");
-        string subtitleDir = Path.Combine(path1: hostDir, path2: "subtitles");
-        Directory.CreateDirectory(path: subtitleDir);
-        File.WriteAllText(path: Path.Combine(path1: subtitleDir, path2: "Movie.eng.full.ass"), contents: "[Script Info]\n");
+        string hostDir = Path.Combine(_tempRoot, "Movie.SubsDb");
+        string subtitleDir = Path.Combine(hostDir, "subtitles");
+        Directory.CreateDirectory(subtitleDir);
+        File.WriteAllText(Path.Combine(subtitleDir, "Movie.eng.full.ass"), "[Script Info]\n");
 
-        List<Subtitle> result = InvokeGetSubtitles(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<Subtitle> result = InvokeGetSubtitles(BuildLocalStorage(), hostDir);
 
         result.Should().ContainSingle();
-        result[index: 0].Language.Should().Be(expected: "eng");
-        result[index: 0].Type.Should().Be(expected: "full");
-        result[index: 0].Ext.Should().Be(expected: "ass");
+        result[0].Language.Should().Be("eng");
+        result[0].Type.Should().Be("full");
+        result[0].Ext.Should().Be("ass");
     }
 
     [Fact]
     public void GetSubtitles_BitmapWithoutSiblingVtt_IsExcludedFromResult()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.OrphanBitmap");
-        string subtitleDir = Path.Combine(path1: hostDir, path2: "subtitles");
-        Directory.CreateDirectory(path: subtitleDir);
-        File.WriteAllBytes(path: Path.Combine(path1: subtitleDir, path2: "Movie.jpn.full.sup"), bytes: [0x00]);
+        string hostDir = Path.Combine(_tempRoot, "Movie.OrphanBitmap");
+        string subtitleDir = Path.Combine(hostDir, "subtitles");
+        Directory.CreateDirectory(subtitleDir);
+        File.WriteAllBytes(Path.Combine(subtitleDir, "Movie.jpn.full.sup"), [0x00]);
 
-        List<Subtitle> result = InvokeGetSubtitles(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<Subtitle> result = InvokeGetSubtitles(BuildLocalStorage(), hostDir);
 
-        result.Should().BeEmpty(because: "a bitmap sidecar is never itself a playable text track");
+        result.Should().BeEmpty("a bitmap sidecar is never itself a playable text track");
     }
 
     [Fact]
     public void GetSubtitles_BitmapWithSiblingVtt_SiblingIsIncludedBitmapIsNot()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.OcrPaired");
-        string subtitleDir = Path.Combine(path1: hostDir, path2: "subtitles");
-        Directory.CreateDirectory(path: subtitleDir);
-        File.WriteAllBytes(path: Path.Combine(path1: subtitleDir, path2: "Movie.jpn.full.sup"), bytes: [0x00]);
-        File.WriteAllText(path: Path.Combine(path1: subtitleDir, path2: "Movie.jpn.full.vtt"), contents: "WEBVTT\n");
+        string hostDir = Path.Combine(_tempRoot, "Movie.OcrPaired");
+        string subtitleDir = Path.Combine(hostDir, "subtitles");
+        Directory.CreateDirectory(subtitleDir);
+        File.WriteAllBytes(Path.Combine(subtitleDir, "Movie.jpn.full.sup"), [0x00]);
+        File.WriteAllText(Path.Combine(subtitleDir, "Movie.jpn.full.vtt"), "WEBVTT\n");
 
-        List<Subtitle> result = InvokeGetSubtitles(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<Subtitle> result = InvokeGetSubtitles(BuildLocalStorage(), hostDir);
 
         result.Should().ContainSingle();
-        result[index: 0].Ext.Should().Be(expected: "vtt");
+        result[0].Ext.Should().Be("vtt");
     }
 
     [Fact]
     public void GetSubtitles_UnrecognizedFileNameAlongsideRealSubtitle_IsSkippedNotThrown()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.SubsDbWithJunk");
-        string subtitleDir = Path.Combine(path1: hostDir, path2: "subtitles");
-        Directory.CreateDirectory(path: subtitleDir);
-        File.WriteAllText(path: Path.Combine(path1: subtitleDir, path2: "README.txt"), contents: "not a subtitle");
-        File.WriteAllText(path: Path.Combine(path1: subtitleDir, path2: "Movie.eng.full.ass"), contents: "[Script Info]\n");
+        string hostDir = Path.Combine(_tempRoot, "Movie.SubsDbWithJunk");
+        string subtitleDir = Path.Combine(hostDir, "subtitles");
+        Directory.CreateDirectory(subtitleDir);
+        File.WriteAllText(Path.Combine(subtitleDir, "README.txt"), "not a subtitle");
+        File.WriteAllText(Path.Combine(subtitleDir, "Movie.eng.full.ass"), "[Script Info]\n");
 
-        List<Subtitle> result = InvokeGetSubtitles(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<Subtitle> result = InvokeGetSubtitles(BuildLocalStorage(), hostDir);
 
         result.Should().ContainSingle();
-        result[index: 0].Language.Should().Be(expected: "eng");
+        result[0].Language.Should().Be("eng");
     }
 
     private static void WritePng(string path, int width, int height)
     {
-        using Image<Rgba32> image = new(width: width, height: height);
-        image.SaveAsPng(path: path);
+        using Image<Rgba32> image = new(width, height);
+        image.SaveAsPng(path);
     }
 }

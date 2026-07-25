@@ -47,8 +47,8 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         where TJob : AbstractMediaJob
     {
         await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-        TJob job = ActivatorUtilities.CreateInstance<TJob>(provider: scope.ServiceProvider);
-        configure(obj: job);
+        TJob job = ActivatorUtilities.CreateInstance<TJob>(scope.ServiceProvider);
+        configure(job);
         await job.Handle();
     }
 
@@ -65,20 +65,20 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         return libraryType switch
         {
             MediaTypes.AnimeMediaType or MediaTypes.TvMediaType => await ResolveShowEpisodeAsync(
-                ctx: context,
-                libraryType: libraryType,
-                parsed: parsed,
-                duration: duration,
-                overrideTmdbId: overrideTmdbId,
-                seasonExplicit: seasonExplicit,
-                airDate: airDate
+                context,
+                libraryType,
+                parsed,
+                duration,
+                overrideTmdbId,
+                seasonExplicit,
+                airDate
             ),
             MediaTypes.MovieMediaType => await ResolveMovieMatchAsync(
-                ctx: context,
-                libraryType: libraryType,
-                parsed: parsed,
-                duration: duration,
-                overrideTmdbId: overrideTmdbId
+                context,
+                libraryType,
+                parsed,
+                duration,
+                overrideTmdbId
             ),
             _ => null,
         };
@@ -102,15 +102,15 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         if (overrideTmdbId.HasValue)
         {
             // Resolve directly by TMDB ID — no text search, no ambiguity
-            TmdbTvClient overrideTvClient = new(id: overrideTmdbId.Value);
-            TmdbTvShowDetails? overrideDetails = await overrideTvClient.Details(priority: true);
+            TmdbTvClient overrideTvClient = new(overrideTmdbId.Value);
+            TmdbTvShowDetails? overrideDetails = await overrideTvClient.Details(true);
             if (overrideDetails == null)
                 return null;
             show = overrideDetails; // TmdbTvShowDetails : TmdbTvShow
         }
         else
         {
-            shows = await searchClient.TvShow(query: parsed.Title.OrEmpty(), year: parsed.Year.OrEmpty(), priority: true);
+            shows = await searchClient.TvShow(parsed.Title.OrEmpty(), parsed.Year.OrEmpty(), true);
             show = shows?.Results.FirstOrDefault();
         }
 
@@ -121,26 +121,26 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
             return null;
 
         Ulid libraryId = await ctx
-            .Libraries.Where(predicate: item => item.Type == libraryType)
-            .Select(selector: item => item.Id)
+            .Libraries.Where(item => item.Type == libraryType)
+            .Select(item => item.Id)
             .FirstOrDefaultAsync();
 
-        await EnsureShowInLibraryAsync(ctx: ctx, showId: show.Id, showName: show.Name, libraryId: libraryId);
+        await EnsureShowInLibraryAsync(ctx, show.Id, show.Name, libraryId);
 
         // Daily/dated episode (yyyy.mm.dd): map the air date to the episode that
         // aired that day, then fall through to the normal season/episode resolution.
         if (airDate.HasValue && (!parsed.Season.HasValue || !parsed.Episode.HasValue))
         {
             Episode? datedEpisode = await ctx
-                .Episodes.Where(predicate: item =>
+                .Episodes.Where(item =>
                     item.TvId == show.Id
                     && item.AirDate.HasValue
                     && item.AirDate.Value.Year == airDate.Value.Year
                     && item.AirDate.Value.Month == airDate.Value.Month
                     && item.AirDate.Value.Day == airDate.Value.Day
                 )
-                .OrderBy(keySelector: item => item.SeasonNumber)
-                .ThenBy(keySelector: item => item.EpisodeNumber)
+                .OrderBy(item => item.SeasonNumber)
+                .ThenBy(item => item.EpisodeNumber)
                 .FirstOrDefaultAsync();
 
             if (datedEpisode == null)
@@ -158,29 +158,29 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         int episodeNumber = parsed.Episode!.Value;
 
         Episode? episode = ctx
-            .Episodes.Where(predicate: item => item.TvId == show.Id)
-            .Where(predicate: item => item.SeasonNumber == parsed.Season)
-            .FirstOrDefault(predicate: item => item.EpisodeNumber == parsed.Episode);
+            .Episodes.Where(item => item.TvId == show.Id)
+            .Where(item => item.SeasonNumber == parsed.Season)
+            .FirstOrDefault(item => item.EpisodeNumber == parsed.Episode);
 
         // When the season was explicit in the filename (e.g. S02E19), try the TMDB API first,
         // then episode groups (e.g. Crunchyroll splits seasons differently from TMDB default).
         if (episode == null && seasonExplicit)
         {
-            TmdbEpisodeClient episodeClient = new(id: show.Id, seasonNumber: seasonNumber, episodeNumber: episodeNumber);
-            TmdbEpisodeDetails? details = await episodeClient.Details(priority: true);
+            TmdbEpisodeClient episodeClient = new(show.Id, seasonNumber, episodeNumber);
+            TmdbEpisodeDetails? details = await episodeClient.Details(true);
 
             // TMDB default doesn't have this season — try episode groups for alternate season splits
             if (details == null)
                 episode = await ResolveSeasonedEpisodeFromGroupsAsync(
-                    ctx: ctx,
-                    showId: show.Id,
-                    seasonNumber: seasonNumber,
-                    episodeNumber: episodeNumber
+                    ctx,
+                    show.Id,
+                    seasonNumber,
+                    episodeNumber
                 );
 
             if (details != null && episode == null)
             {
-                Season? season = await ctx.Seasons.FirstOrDefaultAsync(predicate: s =>
+                Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
                     s.TvId == show.Id && s.SeasonNumber == details.SeasonNumber
                 );
 
@@ -199,7 +199,7 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
                     SeasonId = season?.Id ?? 0,
                 };
 
-                ctx.Episodes.Add(entity: episode);
+                ctx.Episodes.Add(episode);
                 await ctx.SaveChangesAsync();
             }
         }
@@ -207,30 +207,30 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         if (episode == null)
         {
             List<Episode> episodes = ctx
-                .Episodes.Where(predicate: item => item.TvId == show.Id)
-                .Where(predicate: item => item.SeasonNumber > 0)
-                .OrderBy(keySelector: item => item.SeasonNumber)
-                .ThenBy(keySelector: item => item.EpisodeNumber)
+                .Episodes.Where(item => item.TvId == show.Id)
+                .Where(item => item.SeasonNumber > 0)
+                .OrderBy(item => item.SeasonNumber)
+                .ThenBy(item => item.EpisodeNumber)
                 .ToList();
 
-            episode = episodes.ElementAtOrDefault(index: episodeNumber - 1);
+            episode = episodes.ElementAtOrDefault(episodeNumber - 1);
         }
 
         if (episode == null)
-            episode = await ResolveAbsoluteEpisodeAsync(ctx: ctx, showId: show.Id, absoluteEpisodeNumber: episodeNumber);
+            episode = await ResolveAbsoluteEpisodeAsync(ctx, show.Id, episodeNumber);
 
         // Try alternate search results for absolute-order anime (e.g. TMDB ranks live-action above anime)
         if (episode == null && shows!.Results.Count > 1)
         {
-            foreach (TmdbTvShow altShow in shows.Results.Skip(count: 1).Take(count: 4))
+            foreach (TmdbTvShow altShow in shows.Results.Skip(1).Take(4))
             {
-                TmdbTvClient altTvClient = new(id: altShow.Id);
-                TmdbTvEpisodeGroups? altGroups = await altTvClient.EpisodeGroups(priority: true);
-                if (altGroups?.Results.Any(predicate: g => g.Type == 2) != true)
+                TmdbTvClient altTvClient = new(altShow.Id);
+                TmdbTvEpisodeGroups? altGroups = await altTvClient.EpisodeGroups(true);
+                if (altGroups?.Results.Any(g => g.Type == 2) != true)
                     continue;
 
-                await EnsureShowInLibraryAsync(ctx: ctx, showId: altShow.Id, showName: altShow.Name, libraryId: libraryId);
-                episode = await ResolveAbsoluteEpisodeAsync(ctx: ctx, showId: altShow.Id, absoluteEpisodeNumber: episodeNumber);
+                await EnsureShowInLibraryAsync(ctx, altShow.Id, altShow.Name, libraryId);
+                episode = await ResolveAbsoluteEpisodeAsync(ctx, altShow.Id, episodeNumber);
                 if (episode != null)
                     break;
             }
@@ -238,12 +238,12 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
 
         if (episode == null)
         {
-            TmdbEpisodeClient episodeClient = new(id: show.Id, seasonNumber: seasonNumber, episodeNumber: episodeNumber);
-            TmdbEpisodeDetails? details = await episodeClient.Details(priority: true);
+            TmdbEpisodeClient episodeClient = new(show.Id, seasonNumber, episodeNumber);
+            TmdbEpisodeDetails? details = await episodeClient.Details(true);
             if (details == null)
                 return null;
 
-            Season? season = await ctx.Seasons.FirstOrDefaultAsync(predicate: s =>
+            Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
                 s.TvId == show.Id && s.SeasonNumber == details.SeasonNumber
             );
 
@@ -262,7 +262,7 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
                 SeasonId = season?.Id ?? 0,
             };
 
-            ctx.Episodes.Add(entity: episode);
+            ctx.Episodes.Add(episode);
             await ctx.SaveChangesAsync();
         }
 
@@ -271,7 +271,7 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         // a freshly added show may have been written by EnsureShowInLibraryAsync
         // above.
         string? showName =
-            await ctx.Tvs.Where(predicate: t => t.Id == show.Id).Select(selector: t => t.Title).FirstOrDefaultAsync()
+            await ctx.Tvs.Where(t => t.Id == show.Id).Select(t => t.Title).FirstOrDefaultAsync()
             ?? show.Name;
 
         MovieOrEpisode match = new()
@@ -308,9 +308,9 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         {
             TmdbSearchClient searchClient = new();
             TmdbPaginatedResponse<TmdbMovie>? movies = await searchClient.Movie(
-                query: parsed.Title.OrEmpty(),
-                year: parsed.Year.OrEmpty(),
-                priority: true
+                parsed.Title.OrEmpty(),
+                parsed.Year.OrEmpty(),
+                true
             );
             movie = movies?.Results.FirstOrDefault();
         }
@@ -318,20 +318,20 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         if (movie == null)
             return null;
 
-        Movie? movieItem = ctx.Movies.FirstOrDefault(predicate: item => item.Id == movie.Id);
+        Movie? movieItem = ctx.Movies.FirstOrDefault(item => item.Id == movie.Id);
 
         if (movieItem == null)
         {
-            TmdbMovieClient movieClient = new(id: movie.Id);
-            TmdbMovieDetails? details = await movieClient.Details(priority: true);
+            TmdbMovieClient movieClient = new(movie.Id);
+            TmdbMovieDetails? details = await movieClient.Details(true);
             if (details == null)
                 return null;
 
-            bool hasMovie = ctx.Movies.Any(predicate: item => item.Id == movie.Id);
+            bool hasMovie = ctx.Movies.Any(item => item.Id == movie.Id);
 
             Ulid libraryId = await ctx
-                .Libraries.Where(predicate: item => item.Type == libraryType)
-                .Select(selector: item => item.Id)
+                .Libraries.Where(item => item.Type == libraryType)
+                .Select(item => item.Id)
                 .FirstOrDefaultAsync();
 
             if (!hasMovie)
@@ -339,7 +339,7 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
-                        @event: new UserNotifiedEvent
+                        new UserNotifiedEvent
                         {
                             Title = "Movie not found",
                             Message = $"Movie {movie.Title} not found in library, adding now",
@@ -348,7 +348,7 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
                     );
                 }
 
-                await RunJobSynchronouslyAsync<MovieImportJob>(configure: job =>
+                await RunJobSynchronouslyAsync<MovieImportJob>(job =>
                 {
                     job.LibraryId = libraryId;
                     job.Id = movie.Id;
@@ -383,14 +383,14 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         Ulid libraryId
     )
     {
-        bool hasShow = ctx.Tvs.Any(predicate: item => item.Id == showId);
+        bool hasShow = ctx.Tvs.Any(item => item.Id == showId);
         if (hasShow)
             return;
 
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                @event: new UserNotifiedEvent
+                new UserNotifiedEvent
                 {
                     Title = "Show not found",
                     Message = $"Show {showName} not found in library, adding now",
@@ -399,7 +399,7 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
             );
         }
 
-        await RunJobSynchronouslyAsync<ShowImportJob>(configure: job =>
+        await RunJobSynchronouslyAsync<ShowImportJob>(job =>
         {
             job.LibraryId = libraryId;
             job.Id = showId;
@@ -413,63 +413,63 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         int absoluteEpisodeNumber
     )
     {
-        TmdbTvClient tvClient = new(id: showId);
-        TmdbTvEpisodeGroups? episodeGroups = await tvClient.EpisodeGroups(priority: true);
+        TmdbTvClient tvClient = new(showId);
+        TmdbTvEpisodeGroups? episodeGroups = await tvClient.EpisodeGroups(true);
         if (episodeGroups == null)
         {
-            Logger.App(message: $"No episode groups found for show {showId}", level: LogEventLevel.Debug);
+            Logger.App($"No episode groups found for show {showId}", LogEventLevel.Debug);
             return null;
         }
 
         // Try all "Absolute" type groups (type 2) — some shows have multiple
         TmdbEpisodeGroupsResult[] absoluteGroups = episodeGroups
-            .Results.Where(predicate: g => g.Type == 2)
+            .Results.Where(g => g.Type == 2)
             .ToArray();
 
         if (absoluteGroups.Length == 0)
         {
             Logger.App(
-                message: $"No absolute episode group (type 2) for show {showId}, available types: {string.Join(separator: ", ", values: episodeGroups.Results.Select(selector: g => $"{g.Name}={g.Type}"))}",
-                level: LogEventLevel.Debug
+                $"No absolute episode group (type 2) for show {showId}, available types: {string.Join(", ", episodeGroups.Results.Select(g => $"{g.Name}={g.Type}"))}",
+                LogEventLevel.Debug
             );
             return null;
         }
 
         foreach (TmdbEpisodeGroupsResult absoluteGroup in absoluteGroups)
         {
-            TmdbEpisodeGroupClient groupClient = new(groupId: absoluteGroup.Id);
-            TmdbEpisodeGroupDetails? groupDetails = await groupClient.Details(priority: true);
+            TmdbEpisodeGroupClient groupClient = new(absoluteGroup.Id);
+            TmdbEpisodeGroupDetails? groupDetails = await groupClient.Details(true);
             if (groupDetails == null)
             {
                 Logger.App(
-                    message: $"Failed to fetch episode group details for {absoluteGroup.Id} ({absoluteGroup.Name})",
-                    level: LogEventLevel.Debug
+                    $"Failed to fetch episode group details for {absoluteGroup.Id} ({absoluteGroup.Name})",
+                    LogEventLevel.Debug
                 );
                 continue;
             }
 
             // Flatten all episodes across all groups, ordered by group order
             List<TmdbEpisodeGroupEpisode> allEpisodes = groupDetails
-                .Groups.OrderBy(keySelector: g => g.Order)
-                .SelectMany(selector: g => g.Episodes)
+                .Groups.OrderBy(g => g.Order)
+                .SelectMany(g => g.Episodes)
                 .ToList();
 
             if (absoluteEpisodeNumber < 1 || absoluteEpisodeNumber > allEpisodes.Count)
             {
                 Logger.App(
-                    message: $"Absolute episode {absoluteEpisodeNumber} out of range in '{absoluteGroup.Name}' (has {allEpisodes.Count} episodes)",
-                    level: LogEventLevel.Debug
+                    $"Absolute episode {absoluteEpisodeNumber} out of range in '{absoluteGroup.Name}' (has {allEpisodes.Count} episodes)",
+                    LogEventLevel.Debug
                 );
                 continue;
             }
 
-            TmdbEpisodeGroupEpisode target = allEpisodes[index: absoluteEpisodeNumber - 1];
+            TmdbEpisodeGroupEpisode target = allEpisodes[absoluteEpisodeNumber - 1];
             Logger.App(
-                message: $"Resolved absolute episode {absoluteEpisodeNumber} → S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via '{absoluteGroup.Name}'"
+                $"Resolved absolute episode {absoluteEpisodeNumber} → S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via '{absoluteGroup.Name}'"
             );
 
             // Look up the resolved episode in the DB
-            Episode? episode = await ctx.Episodes.FirstOrDefaultAsync(predicate: e =>
+            Episode? episode = await ctx.Episodes.FirstOrDefaultAsync(e =>
                 e.TvId == showId
                 && e.SeasonNumber == target.SeasonNumber
                 && e.EpisodeNumber == target.EpisodeNumber
@@ -480,15 +480,15 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
 
             // Fetch from TMDB and add to DB
             TmdbEpisodeClient episodeClient = new(
-                id: showId,
-                seasonNumber: target.SeasonNumber,
-                episodeNumber: target.EpisodeNumber
+                showId,
+                target.SeasonNumber,
+                target.EpisodeNumber
             );
-            TmdbEpisodeDetails? details = await episodeClient.Details(priority: true);
+            TmdbEpisodeDetails? details = await episodeClient.Details(true);
             if (details == null)
                 continue;
 
-            Season? season = await ctx.Seasons.FirstOrDefaultAsync(predicate: s =>
+            Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
                 s.TvId == showId && s.SeasonNumber == details.SeasonNumber
             );
 
@@ -507,7 +507,7 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
                 SeasonId = season?.Id ?? 0,
             };
 
-            ctx.Episodes.Add(entity: episode);
+            ctx.Episodes.Add(episode);
             await ctx.SaveChangesAsync();
 
             return episode;
@@ -529,21 +529,21 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         int episodeNumber
     )
     {
-        TmdbTvClient tvClient = new(id: showId);
-        TmdbTvEpisodeGroups? episodeGroups = await tvClient.EpisodeGroups(priority: true);
+        TmdbTvClient tvClient = new(showId);
+        TmdbTvEpisodeGroups? episodeGroups = await tvClient.EpisodeGroups(true);
         if (episodeGroups?.Results is not { Length: > 0 })
             return null;
 
         // Prefer episode groups with the fewest sub-groups that still cover the target season.
         // E.g. for Season 2, a 2-group set (S1+S2) is better than a 3-group set (Specials+S1+S2).
         IEnumerable<TmdbEpisodeGroupsResult> sortedResults = episodeGroups
-            .Results.Where(predicate: g => g.GroupCount >= seasonNumber)
-            .OrderBy(keySelector: g => g.GroupCount);
+            .Results.Where(g => g.GroupCount >= seasonNumber)
+            .OrderBy(g => g.GroupCount);
 
         foreach (TmdbEpisodeGroupsResult groupResult in sortedResults)
         {
-            TmdbEpisodeGroupClient groupClient = new(groupId: groupResult.Id);
-            TmdbEpisodeGroupDetails? groupDetails = await groupClient.Details(priority: true);
+            TmdbEpisodeGroupClient groupClient = new(groupResult.Id);
+            TmdbEpisodeGroupDetails? groupDetails = await groupClient.Details(true);
             if (groupDetails == null)
                 continue;
 
@@ -551,12 +551,12 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
             // (some 0-based, some 1-based), so sort by Order and use positional index.
             // Skip groups with no episodes (e.g. empty specials groups).
             List<TmdbEpisodeGroup> sortedGroups = groupDetails
-                .Groups.Where(predicate: g => g.Episodes.Length > 0)
-                .OrderBy(keySelector: g => g.Order)
+                .Groups.Where(g => g.Episodes.Length > 0)
+                .OrderBy(g => g.Order)
                 .ToList();
 
             TmdbEpisodeGroup? targetGroup =
-                sortedGroups.Count >= seasonNumber ? sortedGroups[index: seasonNumber - 1] : null;
+                sortedGroups.Count >= seasonNumber ? sortedGroups[seasonNumber - 1] : null;
 
             if (targetGroup == null)
                 continue;
@@ -564,18 +564,18 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
             // Find the episode by position within this group. Order values are show-global
             // (e.g. 24-47 for Season 2), so use sorted index instead.
             TmdbEpisodeGroupEpisode? target = targetGroup
-                .Episodes.OrderBy(keySelector: e => e.Order)
-                .ElementAtOrDefault(index: episodeNumber - 1);
+                .Episodes.OrderBy(e => e.Order)
+                .ElementAtOrDefault(episodeNumber - 1);
 
             if (target == null)
                 continue;
 
             Logger.App(
-                message: $"Resolved S{seasonNumber:D2}E{episodeNumber:D2} → TMDB S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via episode group '{groupResult.Name}'"
+                $"Resolved S{seasonNumber:D2}E{episodeNumber:D2} → TMDB S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via episode group '{groupResult.Name}'"
             );
 
             // Look up in DB first
-            Episode? episode = await ctx.Episodes.FirstOrDefaultAsync(predicate: e =>
+            Episode? episode = await ctx.Episodes.FirstOrDefaultAsync(e =>
                 e.TvId == showId
                 && e.SeasonNumber == target.SeasonNumber
                 && e.EpisodeNumber == target.EpisodeNumber
@@ -586,15 +586,15 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
 
             // Fetch from TMDB and create
             TmdbEpisodeClient episodeClient = new(
-                id: showId,
-                seasonNumber: target.SeasonNumber,
-                episodeNumber: target.EpisodeNumber
+                showId,
+                target.SeasonNumber,
+                target.EpisodeNumber
             );
-            TmdbEpisodeDetails? details = await episodeClient.Details(priority: true);
+            TmdbEpisodeDetails? details = await episodeClient.Details(true);
             if (details == null)
                 continue;
 
-            Season? season = await ctx.Seasons.FirstOrDefaultAsync(predicate: s =>
+            Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
                 s.TvId == showId && s.SeasonNumber == details.SeasonNumber
             );
 
@@ -613,7 +613,7 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
                 SeasonId = season?.Id ?? 0,
             };
 
-            ctx.Episodes.Add(entity: episode);
+            ctx.Episodes.Add(episode);
             await ctx.SaveChangesAsync();
 
             return episode;

@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbReleaseDatesResult
 {
-    [JsonProperty(propertyName: "iso_3166_1")]
+    [JsonProperty("iso_3166_1")]
     public string Iso31661 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "release_dates")]
+    [JsonProperty("release_dates")]
     public TmdbReleaseDate[] ReleaseDates { get; set; } = [];
 }

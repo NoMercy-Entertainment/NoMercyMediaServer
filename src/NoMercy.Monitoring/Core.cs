@@ -15,9 +15,9 @@ namespace NoMercy.Monitoring;
 
 public class Core
 {
-    [JsonProperty(propertyName: "index")]
+    [JsonProperty("index")]
     public int Index { get; set; }
 
-    [JsonProperty(propertyName: "utilization")]
+    [JsonProperty("utilization")]
     public double Utilization { get; set; }
 }

@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class TrackSubtitlesGetMessageBody
 {
-    [JsonProperty(propertyName: "subtitle_list")]
+    [JsonProperty("subtitle_list")]
     public SubtitleList[] SubtitleList { get; set; } = [];
 }

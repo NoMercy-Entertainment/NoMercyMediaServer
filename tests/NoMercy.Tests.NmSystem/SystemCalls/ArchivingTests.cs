@@ -14,7 +14,6 @@ using System.IO.Compression;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
-using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.NmSystem.SystemCalls;
 
@@ -31,90 +30,90 @@ public class ArchivingTests : IDisposable
 
     public ArchivingTests()
     {
-        _workDir = Path.Combine(path1: Path.GetTempPath(), path2: "nm-archiving-tests-" + Guid.NewGuid());
-        Directory.CreateDirectory(path: _workDir);
+        _workDir = Path.Combine(Path.GetTempPath(), "nm-archiving-tests-" + Guid.NewGuid());
+        Directory.CreateDirectory(_workDir);
 
         LocalStorageDriver driver = new();
-        _storage = new LocalStorage(driver: driver, guard: new(allowedRoots: [], driver: driver));
+        _storage = new LocalStorage(driver, new([], driver));
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _workDir))
-            Directory.Delete(path: _workDir, recursive: true);
+        if (Directory.Exists(_workDir))
+            Directory.Delete(_workDir, true);
     }
 
     private static void WriteZipWithEntry(string zipPath, string entryName, string content)
     {
-        using FileStream fileStream = File.Create(path: zipPath);
-        using ZipArchive archive = new(stream: fileStream, mode: ZipArchiveMode.Create);
-        ZipArchiveEntry entry = archive.CreateEntry(entryName: entryName);
-        using StreamWriter writer = new(stream: entry.Open());
-        writer.Write(value: content);
+        using FileStream fileStream = File.Create(zipPath);
+        using ZipArchive archive = new(fileStream, ZipArchiveMode.Create);
+        ZipArchiveEntry entry = archive.CreateEntry(entryName);
+        using StreamWriter writer = new(entry.Open());
+        writer.Write(content);
     }
 
     [Fact]
     public async Task ExtractArchive_ZipWithRelativeTraversalEntry_Throws()
     {
-        string zipPath = Path.Combine(path1: _workDir, path2: "malicious.zip");
-        string destination = Path.Combine(path1: _workDir, path2: "dest");
-        Directory.CreateDirectory(path: destination);
+        string zipPath = Path.Combine(_workDir, "malicious.zip");
+        string destination = Path.Combine(_workDir, "dest");
+        Directory.CreateDirectory(destination);
 
-        WriteZipWithEntry(zipPath: zipPath, entryName: "../evil.txt", content: "payload");
+        WriteZipWithEntry(zipPath, "../evil.txt", "payload");
 
-        await Assert.ThrowsAsync<Exception>(testCode: () =>
-            Archiving.ExtractArchive(storage: _storage, filePath: zipPath, destination: destination)
+        await Assert.ThrowsAsync<Exception>(() =>
+            Archiving.ExtractArchive(_storage, zipPath, destination)
         );
 
-        Assert.False(condition: File.Exists(path: Path.Combine(path1: _workDir, path2: "evil.txt")));
+        Assert.False(File.Exists(Path.Combine(_workDir, "evil.txt")));
     }
 
     [Fact]
     public async Task ExtractArchive_ZipWithDeepRelativeTraversalEntry_Throws()
     {
-        string zipPath = Path.Combine(path1: _workDir, path2: "malicious-deep.zip");
-        string destination = Path.Combine(path1: _workDir, path2: "dest2");
-        Directory.CreateDirectory(path: destination);
+        string zipPath = Path.Combine(_workDir, "malicious-deep.zip");
+        string destination = Path.Combine(_workDir, "dest2");
+        Directory.CreateDirectory(destination);
 
-        WriteZipWithEntry(zipPath: zipPath, entryName: "..\\evil.txt", content: "payload");
+        WriteZipWithEntry(zipPath, "..\\evil.txt", "payload");
 
-        await Assert.ThrowsAsync<Exception>(testCode: () =>
-            Archiving.ExtractArchive(storage: _storage, filePath: zipPath, destination: destination)
+        await Assert.ThrowsAsync<Exception>(() =>
+            Archiving.ExtractArchive(_storage, zipPath, destination)
         );
     }
 
     [Fact]
     public async Task ExtractArchive_ZipWithAbsolutePathEntry_Throws()
     {
-        string zipPath = Path.Combine(path1: _workDir, path2: "malicious-abs.zip");
-        string destination = Path.Combine(path1: _workDir, path2: "dest3");
-        Directory.CreateDirectory(path: destination);
+        string zipPath = Path.Combine(_workDir, "malicious-abs.zip");
+        string destination = Path.Combine(_workDir, "dest3");
+        Directory.CreateDirectory(destination);
 
-        string outsideAbsolute = Path.Combine(path1: _workDir, path2: "outside", path3: "evil.txt");
-        WriteZipWithEntry(zipPath: zipPath, entryName: outsideAbsolute, content: "payload");
+        string outsideAbsolute = Path.Combine(_workDir, "outside", "evil.txt");
+        WriteZipWithEntry(zipPath, outsideAbsolute, "payload");
 
-        await Assert.ThrowsAsync<Exception>(testCode: () =>
-            Archiving.ExtractArchive(storage: _storage, filePath: zipPath, destination: destination)
+        await Assert.ThrowsAsync<Exception>(() =>
+            Archiving.ExtractArchive(_storage, zipPath, destination)
         );
 
-        Assert.False(condition: File.Exists(path: outsideAbsolute));
+        Assert.False(File.Exists(outsideAbsolute));
     }
 
     [Fact]
     public async Task ExtractArchive_ZipWithNormalEntry_ExtractsIntoDestination()
     {
-        string zipPath = Path.Combine(path1: _workDir, path2: "normal.zip");
-        string destination = Path.Combine(path1: _workDir, path2: "dest4");
-        Directory.CreateDirectory(path: destination);
+        string zipPath = Path.Combine(_workDir, "normal.zip");
+        string destination = Path.Combine(_workDir, "dest4");
+        Directory.CreateDirectory(destination);
 
-        WriteZipWithEntry(zipPath: zipPath, entryName: "readme.txt", content: "hello world");
+        WriteZipWithEntry(zipPath, "readme.txt", "hello world");
 
-        List<string> extracted = await Archiving.ExtractArchive(storage: _storage, filePath: zipPath, destination: destination);
+        List<string> extracted = await Archiving.ExtractArchive(_storage, zipPath, destination);
 
-        Assert.Single(collection: extracted);
-        string extractedPath = Path.Combine(path1: destination, path2: "readme.txt");
-        Assert.True(condition: File.Exists(path: extractedPath));
-        Assert.Equal(expected: "hello world", actual: await File.ReadAllTextAsync(path: extractedPath));
+        Assert.Single(extracted);
+        string extractedPath = Path.Combine(destination, "readme.txt");
+        Assert.True(File.Exists(extractedPath));
+        Assert.Equal("hello world", await File.ReadAllTextAsync(extractedPath));
     }
 
     [Fact]
@@ -123,32 +122,32 @@ public class ArchivingTests : IDisposable
         // Regression guard for the missing-leading-dot suffix bug: ".tgz" must
         // route to the tar branch (not "unsupported format") and actually
         // extract via the real `tar` binary.
-        string sourceDir = Path.Combine(path1: _workDir, path2: "tgz-source");
-        Directory.CreateDirectory(path: sourceDir);
-        await File.WriteAllTextAsync(path: Path.Combine(path1: sourceDir, path2: "hello.txt"), contents: "hello tgz");
+        string sourceDir = Path.Combine(_workDir, "tgz-source");
+        Directory.CreateDirectory(sourceDir);
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "hello.txt"), "hello tgz");
 
-        string tgzPath = Path.Combine(path1: _workDir, path2: "bundle.tgz");
-        await using (FileStream fileStream = File.Create(path: tgzPath))
+        string tgzPath = Path.Combine(_workDir, "bundle.tgz");
+        await using (FileStream fileStream = File.Create(tgzPath))
         await using (
-            GZipStream gzipStream = new(stream: fileStream, mode: CompressionMode.Compress, leaveOpen: true)
+            GZipStream gzipStream = new(fileStream, CompressionMode.Compress, true)
         )
         {
             await TarFile.CreateFromDirectoryAsync(
-                sourceDirectoryName: sourceDir,
-                destination: gzipStream,
-                includeBaseDirectory: false
+                sourceDir,
+                gzipStream,
+                false
             );
         }
 
-        string destination = Path.Combine(path1: _workDir, path2: "dest-tgz");
-        Directory.CreateDirectory(path: destination);
+        string destination = Path.Combine(_workDir, "dest-tgz");
+        Directory.CreateDirectory(destination);
 
-        List<string> extracted = await Archiving.ExtractArchive(storage: _storage, filePath: tgzPath, destination: destination);
+        List<string> extracted = await Archiving.ExtractArchive(_storage, tgzPath, destination);
 
-        Assert.Contains(collection: extracted, filter: path => path.EndsWith(value: "hello.txt"));
+        Assert.Contains(extracted, path => path.EndsWith("hello.txt"));
         Assert.Equal(
-            expected: "hello tgz",
-            actual: await File.ReadAllTextAsync(path: Path.Combine(path1: destination, path2: "hello.txt"))
+            "hello tgz",
+            await File.ReadAllTextAsync(Path.Combine(destination, "hello.txt"))
         );
     }
 
@@ -159,49 +158,49 @@ public class ArchivingTests : IDisposable
         // itself. On a fresh install the ffmpeg output folder is absent, so this
         // must create it before shelling out — otherwise tar aborts with
         // "Cannot open: No such file or directory" and strands BootStage.Binaries.
-        string sourceDir = Path.Combine(path1: _workDir, path2: "tgz-nodest-source");
-        Directory.CreateDirectory(path: sourceDir);
-        await File.WriteAllTextAsync(path: Path.Combine(path1: sourceDir, path2: "hello.txt"), contents: "hello tgz");
+        string sourceDir = Path.Combine(_workDir, "tgz-nodest-source");
+        Directory.CreateDirectory(sourceDir);
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "hello.txt"), "hello tgz");
 
-        string tgzPath = Path.Combine(path1: _workDir, path2: "bundle-nodest.tgz");
-        await using (FileStream fileStream = File.Create(path: tgzPath))
+        string tgzPath = Path.Combine(_workDir, "bundle-nodest.tgz");
+        await using (FileStream fileStream = File.Create(tgzPath))
         await using (
-            GZipStream gzipStream = new(stream: fileStream, mode: CompressionMode.Compress, leaveOpen: true)
+            GZipStream gzipStream = new(fileStream, CompressionMode.Compress, true)
         )
         {
             await TarFile.CreateFromDirectoryAsync(
-                sourceDirectoryName: sourceDir,
-                destination: gzipStream,
-                includeBaseDirectory: false
+                sourceDir,
+                gzipStream,
+                false
             );
         }
 
         // Nested, non-existent destination — neither "dest-nodest" nor its
         // "leaf" child exist before extraction.
-        string destination = Path.Combine(path1: _workDir, path2: "dest-nodest", path3: "leaf");
-        Assert.False(condition: Directory.Exists(path: destination));
+        string destination = Path.Combine(_workDir, "dest-nodest", "leaf");
+        Assert.False(Directory.Exists(destination));
 
-        List<string> extracted = await Archiving.ExtractArchive(storage: _storage, filePath: tgzPath, destination: destination);
+        List<string> extracted = await Archiving.ExtractArchive(_storage, tgzPath, destination);
 
-        Assert.True(condition: Directory.Exists(path: destination));
-        Assert.Contains(collection: extracted, filter: path => path.EndsWith(value: "hello.txt"));
+        Assert.True(Directory.Exists(destination));
+        Assert.Contains(extracted, path => path.EndsWith("hello.txt"));
         Assert.Equal(
-            expected: "hello tgz",
-            actual: await File.ReadAllTextAsync(path: Path.Combine(path1: destination, path2: "hello.txt"))
+            "hello tgz",
+            await File.ReadAllTextAsync(Path.Combine(destination, "hello.txt"))
         );
     }
 
     [Fact]
     public async Task ExtractArchive_UnsupportedExtension_ReturnsEmptyList()
     {
-        string filePath = Path.Combine(path1: _workDir, path2: "not-an-archive.txt");
-        await File.WriteAllTextAsync(path: filePath, contents: "not an archive");
-        string destination = Path.Combine(path1: _workDir, path2: "dest5");
-        Directory.CreateDirectory(path: destination);
+        string filePath = Path.Combine(_workDir, "not-an-archive.txt");
+        await File.WriteAllTextAsync(filePath, "not an archive");
+        string destination = Path.Combine(_workDir, "dest5");
+        Directory.CreateDirectory(destination);
 
-        List<string> extracted = await Archiving.ExtractArchive(storage: _storage, filePath: filePath, destination: destination);
+        List<string> extracted = await Archiving.ExtractArchive(_storage, filePath, destination);
 
-        Assert.Empty(collection: extracted);
+        Assert.Empty(extracted);
     }
 
     // -------------------------------------------------------------------------
@@ -214,31 +213,31 @@ public class ArchivingTests : IDisposable
     [Fact]
     public async Task ExtractArchive_MissingTarFile_ThrowsFileNotFoundWithoutInvokingTar()
     {
-        string tarPath = Path.Combine(path1: _workDir, path2: "does-not-exist.tar.gz");
-        string destination = Path.Combine(path1: _workDir, path2: "dest-missing-tar");
-        Directory.CreateDirectory(path: destination);
+        string tarPath = Path.Combine(_workDir, "does-not-exist.tar.gz");
+        string destination = Path.Combine(_workDir, "dest-missing-tar");
+        Directory.CreateDirectory(destination);
 
-        FileNotFoundException ex = await Assert.ThrowsAsync<FileNotFoundException>(testCode: () =>
-            Archiving.ExtractArchive(storage: _storage, filePath: tarPath, destination: destination)
+        FileNotFoundException ex = await Assert.ThrowsAsync<FileNotFoundException>(() =>
+            Archiving.ExtractArchive(_storage, tarPath, destination)
         );
 
-        Assert.Contains(expectedSubstring: "missing or empty", actualString: ex.Message);
-        Assert.Empty(collection: Directory.EnumerateFileSystemEntries(path: destination));
+        Assert.Contains("missing or empty", ex.Message);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
     }
 
     [Fact]
     public async Task ExtractArchive_MissingZipFile_ThrowsFileNotFoundWithoutInvokingZipFile()
     {
-        string zipPath = Path.Combine(path1: _workDir, path2: "does-not-exist.zip");
-        string destination = Path.Combine(path1: _workDir, path2: "dest-missing-zip");
-        Directory.CreateDirectory(path: destination);
+        string zipPath = Path.Combine(_workDir, "does-not-exist.zip");
+        string destination = Path.Combine(_workDir, "dest-missing-zip");
+        Directory.CreateDirectory(destination);
 
-        FileNotFoundException ex = await Assert.ThrowsAsync<FileNotFoundException>(testCode: () =>
-            Archiving.ExtractArchive(storage: _storage, filePath: zipPath, destination: destination)
+        FileNotFoundException ex = await Assert.ThrowsAsync<FileNotFoundException>(() =>
+            Archiving.ExtractArchive(_storage, zipPath, destination)
         );
 
-        Assert.Contains(expectedSubstring: "missing or empty", actualString: ex.Message);
-        Assert.Empty(collection: Directory.EnumerateFileSystemEntries(path: destination));
+        Assert.Contains("missing or empty", ex.Message);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
     }
 
     [Fact]
@@ -247,16 +246,16 @@ public class ArchivingTests : IDisposable
         // A 0-byte file is what a killed/partial download or a verify step that
         // deleted-then-recreated an empty placeholder would leave behind — it
         // must never be handed to `tar`, which fails with an opaque exit code.
-        string tarPath = Path.Combine(path1: _workDir, path2: "empty.tar.gz");
-        await File.WriteAllBytesAsync(path: tarPath, bytes: []);
-        string destination = Path.Combine(path1: _workDir, path2: "dest-empty-tar");
-        Directory.CreateDirectory(path: destination);
+        string tarPath = Path.Combine(_workDir, "empty.tar.gz");
+        await File.WriteAllBytesAsync(tarPath, []);
+        string destination = Path.Combine(_workDir, "dest-empty-tar");
+        Directory.CreateDirectory(destination);
 
-        FileNotFoundException ex = await Assert.ThrowsAsync<FileNotFoundException>(testCode: () =>
-            Archiving.ExtractArchive(storage: _storage, filePath: tarPath, destination: destination)
+        FileNotFoundException ex = await Assert.ThrowsAsync<FileNotFoundException>(() =>
+            Archiving.ExtractArchive(_storage, tarPath, destination)
         );
 
-        Assert.Contains(expectedSubstring: "missing or empty", actualString: ex.Message);
-        Assert.Empty(collection: Directory.EnumerateFileSystemEntries(path: destination));
+        Assert.Contains("missing or empty", ex.Message);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
     }
 }

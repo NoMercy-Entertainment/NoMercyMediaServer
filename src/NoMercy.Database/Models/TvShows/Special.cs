@@ -16,38 +16,38 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.TvShows;
 
-[PrimaryKey(propertyName: nameof(Id))]
+[PrimaryKey(nameof(Id))]
 public class Special : ColorPaletteTimeStamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "logo")]
+    [JsonProperty("logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "titleSort")]
+    [JsonProperty("titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty(propertyName: "creator")]
+    [JsonProperty("creator")]
     public string? Creator { get; set; }
 
-    [MaxLength(length: 4096)]
-    [JsonProperty(propertyName: "overview")]
+    [MaxLength(4096)]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "items")]
+    [JsonProperty("items")]
     public ICollection<SpecialItem> Items { get; set; } = [];
 
-    [JsonProperty(propertyName: "special_user")]
+    [JsonProperty("special_user")]
     public ICollection<SpecialUser> SpecialUser { get; set; } = [];
 }

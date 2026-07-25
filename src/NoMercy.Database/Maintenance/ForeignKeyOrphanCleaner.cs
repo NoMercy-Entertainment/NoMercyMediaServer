@@ -43,40 +43,40 @@ public static class ForeignKeyOrphanCleaner
             connection.Open();
 
         Dictionary<string, int> deletedPerTable = new();
-        bool foreignKeysWereOn = ReadForeignKeysEnabled(connection: connection);
+        bool foreignKeysWereOn = ReadForeignKeysEnabled(connection);
 
         try
         {
             for (int pass = 0; pass < MaxPasses; pass++)
             {
-                List<KeyValuePair<string, long>> orphans = FindOrphans(connection: connection);
+                List<KeyValuePair<string, long>> orphans = FindOrphans(connection);
                 if (orphans.Count == 0)
                     break;
 
                 // Disable enforcement so deleting a parent-orphan doesn't trip its
                 // own cascade mid-clean; the next pass re-checks what that exposed.
-                SetForeignKeys(connection: connection, enabled: false);
+                SetForeignKeys(connection, false);
 
                 foreach (
-                    IGrouping<string, KeyValuePair<string, long>> table in orphans.GroupBy(keySelector: orphan =>
+                    IGrouping<string, KeyValuePair<string, long>> table in orphans.GroupBy(orphan =>
                         orphan.Key
                     )
                 )
-                foreach (KeyValuePair<string, long>[] batch in table.Chunk(size: DeleteBatchSize))
+                foreach (KeyValuePair<string, long>[] batch in table.Chunk(DeleteBatchSize))
                 {
-                    string rowIds = string.Join(separator: ",", values: batch.Select(selector: orphan => orphan.Value));
+                    string rowIds = string.Join(",", batch.Select(orphan => orphan.Value));
                     int removed = Execute(
-                        connection: connection,
-                        sql: $"DELETE FROM \"{table.Key}\" WHERE rowid IN ({rowIds});"
+                        connection,
+                        $"DELETE FROM \"{table.Key}\" WHERE rowid IN ({rowIds});"
                     );
-                    deletedPerTable[key: table.Key] =
-                        deletedPerTable.GetValueOrDefault(key: table.Key) + removed;
+                    deletedPerTable[table.Key] =
+                        deletedPerTable.GetValueOrDefault(table.Key) + removed;
                 }
             }
         }
         finally
         {
-            SetForeignKeys(connection: connection, enabled: foreignKeysWereOn);
+            SetForeignKeys(connection, foreignKeysWereOn);
         }
 
         return deletedPerTable;
@@ -97,10 +97,10 @@ public static class ForeignKeyOrphanCleaner
         using DbDataReader reader = command.ExecuteReader();
         while (reader.Read())
         {
-            string child = reader.GetString(ordinal: 0);
-            string parent = reader.IsDBNull(ordinal: 2) ? "?" : reader.GetString(ordinal: 2);
-            string rowId = reader.IsDBNull(ordinal: 1) ? "?" : reader.GetInt64(ordinal: 1).ToString();
-            descriptions.Add(item: $"{child} rowid={rowId} -> {parent}");
+            string child = reader.GetString(0);
+            string parent = reader.IsDBNull(2) ? "?" : reader.GetString(2);
+            string rowId = reader.IsDBNull(1) ? "?" : reader.GetInt64(1).ToString();
+            descriptions.Add($"{child} rowid={rowId} -> {parent}");
         }
         return descriptions;
     }
@@ -114,9 +114,9 @@ public static class ForeignKeyOrphanCleaner
         while (reader.Read())
         {
             // WITHOUT ROWID tables report a null rowid and can't be targeted here.
-            if (reader.IsDBNull(ordinal: 1))
+            if (reader.IsDBNull(1))
                 continue;
-            orphans.Add(item: new(key: reader.GetString(ordinal: 0), value: reader.GetInt64(ordinal: 1)));
+            orphans.Add(new(reader.GetString(0), reader.GetInt64(1)));
         }
         return orphans;
     }
@@ -125,11 +125,11 @@ public static class ForeignKeyOrphanCleaner
     {
         using DbCommand command = connection.CreateCommand();
         command.CommandText = "PRAGMA foreign_keys;";
-        return Convert.ToInt64(value: command.ExecuteScalar() ?? 0L) == 1;
+        return Convert.ToInt64(command.ExecuteScalar() ?? 0L) == 1;
     }
 
     private static void SetForeignKeys(DbConnection connection, bool enabled) =>
-        Execute(connection: connection, sql: $"PRAGMA foreign_keys = {(enabled ? "ON" : "OFF")};");
+        Execute(connection, $"PRAGMA foreign_keys = {(enabled ? "ON" : "OFF")};");
 
     private static int Execute(DbConnection connection, string sql)
     {

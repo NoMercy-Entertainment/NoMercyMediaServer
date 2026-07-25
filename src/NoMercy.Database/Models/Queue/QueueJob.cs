@@ -15,14 +15,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace NoMercy.Database.Models.Queue;
 
-[PrimaryKey(propertyName: nameof(Id))]
+[PrimaryKey(nameof(Id))]
 // Matches the task-list sort (Priority desc, CreatedAt asc) so SQLite serves it
 // from the index instead of sorting the whole growing queue table.
-[Index(propertyName: nameof(Priority), additionalPropertyNames: nameof(CreatedAt), IsDescending = new[] { true, false })]
+[Index(nameof(Priority), nameof(CreatedAt), IsDescending = new[] { true, false })]
 // Every Dispatch dedups via QueueJobs.Any(j => j.Payload == x). Without this index
 // that is a full scan of the (large, history-retaining) queue table — seconds per
 // enqueue, which surfaced as multi-second endpoints that dispatch a job inline.
-[Index(propertyName: nameof(Payload))]
+[Index(nameof(Payload))]
 // Every worker poll reserves via (Queue, ReservedAt IS NULL, Attempts, AvailableAt)
 // ordered by (Priority desc, CreatedAt, Id). The sort index above cannot serve that
 // — the predicate leads with Queue — so SQLite fell back to SCAN + a temp B-tree
@@ -31,18 +31,18 @@ namespace NoMercy.Database.Models.Queue;
 // Queue and ReservedAt turns it into a SEARCH and lets the trailing columns satisfy
 // the ORDER BY. Measured 2741ms -> 87ms on a copy of a real 2.5GB queue.db.
 [Index(
-    propertyName: nameof(Queue), additionalPropertyNames: [nameof(ReservedAt), nameof(Priority), nameof(CreatedAt), nameof(Id)],
+    nameof(Queue), [nameof(ReservedAt), nameof(Priority), nameof(CreatedAt), nameof(Id)],
     IsDescending = new[] { false, false, true, false, false }
 )]
 public class QueueJob
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
 
     public int Priority { get; set; }
     public string Queue { get; set; } = "default";
 
-    [MaxLength(length: 4096)]
+    [MaxLength(4096)]
     public required string Payload { get; set; }
     public byte Attempts { get; set; } = 0;
     public DateTime? ReservedAt { get; set; }
@@ -59,6 +59,6 @@ public class QueueJob
     /// Shared ULID tag for all tasks spawned by a single encode coordinator run.
     /// Null for non-decomposed jobs.
     /// </summary>
-    [MaxLength(length: 64)]
+    [MaxLength(64)]
     public string? GroupTag { get; set; }
 }

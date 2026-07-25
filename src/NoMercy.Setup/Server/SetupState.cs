@@ -34,10 +34,10 @@ public class SetupState
     private string _phaseDetail = "";
     private string? _serverUrl;
     private TaskCompletionSource _changeSignal = new(
-        creationOptions: TaskCreationOptions.RunContinuationsAsynchronously
+        TaskCreationOptions.RunContinuationsAsynchronously
     );
     private TaskCompletionSource _setupCompletedSignal = new(
-        creationOptions: TaskCreationOptions.RunContinuationsAsynchronously
+        TaskCreationOptions.RunContinuationsAsynchronously
     );
 
     public SetupPhase CurrentPhase
@@ -88,7 +88,7 @@ public class SetupState
             signal = _changeSignal;
         }
 
-        return signal.Task.WaitAsync(cancellationToken: cancellationToken);
+        return signal.Task.WaitAsync(cancellationToken);
     }
 
     public Task WaitForSetupCompleteAsync(CancellationToken cancellationToken = default)
@@ -101,7 +101,7 @@ public class SetupState
             signal = _setupCompletedSignal;
         }
 
-        return signal.Task.WaitAsync(cancellationToken: cancellationToken);
+        return signal.Task.WaitAsync(cancellationToken);
     }
 
     public async Task WaitForPhaseAsync(
@@ -117,7 +117,7 @@ public class SetupState
                     return;
             }
 
-            await WaitForChangeAsync(cancellationToken: cancellationToken);
+            await WaitForChangeAsync(cancellationToken);
         }
     }
 
@@ -125,11 +125,11 @@ public class SetupState
     {
         lock (_lock)
         {
-            if (!IsValidTransition(from: _currentPhase, to: targetPhase))
+            if (!IsValidTransition(_currentPhase, targetPhase))
             {
                 Logger.Setup(
-                    message: $"Invalid setup transition: {_currentPhase} → {targetPhase}",
-                    level: LogEventLevel.Warning
+                    $"Invalid setup transition: {_currentPhase} → {targetPhase}",
+                    LogEventLevel.Warning
                 );
                 return false;
             }
@@ -149,7 +149,7 @@ public class SetupState
                 _ => "",
             };
 
-            Logger.Setup(message: $"Setup phase: {previousPhase} → {targetPhase}");
+            Logger.Setup($"Setup phase: {previousPhase} → {targetPhase}");
             NotifyChange();
 
             if (targetPhase == SetupPhase.Complete)
@@ -164,7 +164,7 @@ public class SetupState
         lock (_lock)
         {
             _errorMessage = message;
-            Logger.Setup(message: $"Setup error in {_currentPhase}: {message}", level: LogEventLevel.Error);
+            Logger.Setup($"Setup error in {_currentPhase}: {message}", LogEventLevel.Error);
             NotifyChange();
         }
     }
@@ -209,7 +209,7 @@ public class SetupState
     private void NotifyChange()
     {
         TaskCompletionSource previous = _changeSignal;
-        _changeSignal = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+        _changeSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
         previous.TrySetResult();
     }
 

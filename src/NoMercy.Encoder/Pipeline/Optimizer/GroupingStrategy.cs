@@ -24,10 +24,10 @@ public class GroupingStrategy
         int groupId = 0;
 
         // Partition nodes by category
-        List<ExecutionNode> videoChain = nodes.Where(predicate: n => IsVideoOperation(op: n.Operation)).ToList();
+        List<ExecutionNode> videoChain = nodes.Where(n => IsVideoOperation(n.Operation)).ToList();
 
         List<ExecutionNode> audioNodes = nodes
-            .Where(predicate: n =>
+            .Where(n =>
                 n.Operation
                     is OperationType.AudioDecode
                         or OperationType.AudioEncode
@@ -36,17 +36,17 @@ public class GroupingStrategy
             .ToList();
 
         List<ExecutionNode> subtitleNodes = nodes
-            .Where(predicate: n =>
+            .Where(n =>
                 n.Operation is OperationType.SubtitleExtract or OperationType.SubtitleConvert
             )
             .ToList();
 
         List<ExecutionNode> chapterNodes = nodes
-            .Where(predicate: n => n.Operation is OperationType.ChapterExtract or OperationType.FontExtract)
+            .Where(n => n.Operation is OperationType.ChapterExtract or OperationType.FontExtract)
             .ToList();
 
         List<ExecutionNode> thumbnailNodes = nodes
-            .Where(predicate: n =>
+            .Where(n =>
                 n.Operation is OperationType.ThumbnailCapture or OperationType.SpriteAssemble
             )
             .ToList();
@@ -54,22 +54,22 @@ public class GroupingStrategy
         // Main group: video + audio (share FFmpeg invocation)
         if (videoChain.Count > 0 || audioNodes.Count > 0)
         {
-            int encodeCount = videoChain.Count(predicate: n => n.Operation == OperationType.Encode);
-            int maxSessions = hardware.HasGpu ? hardware.Gpus[index: 0].MaxEncoderSessions : int.MaxValue;
+            int encodeCount = videoChain.Count(n => n.Operation == OperationType.Encode);
+            int maxSessions = hardware.HasGpu ? hardware.Gpus[0].MaxEncoderSessions : int.MaxValue;
 
             if (encodeCount <= maxSessions)
             {
                 // All fit in one group
                 List<ExecutionNode> mainNodes = [.. videoChain, .. audioNodes];
                 groups.Add(
-                    item: new(
-                        GroupId: $"group_{groupId++}",
-                        Nodes: mainNodes.ToArray(),
-                        DeviceId: hardware.HasGpu ? hardware.Gpus[index: 0].Name : null,
-                        GpuSlotsRequired: hardware.HasGpu ? encodeCount : 0,
-                        CpuThreadsRequired: hardware.HasGpu ? 0 : 4,
-                        RequiresGpu: hardware.HasGpu,
-                        Priority: 1
+                    new(
+                        $"group_{groupId++}",
+                        mainNodes.ToArray(),
+                        hardware.HasGpu ? hardware.Gpus[0].Name : null,
+                        hardware.HasGpu ? encodeCount : 0,
+                        hardware.HasGpu ? 0 : 4,
+                        hardware.HasGpu,
+                        1
                     )
                 );
             }
@@ -77,28 +77,28 @@ public class GroupingStrategy
             {
                 // Split encode nodes into batches of maxSessions
                 List<ExecutionNode> sharedNodes = videoChain
-                    .Where(predicate: n => n.Operation is not OperationType.Encode)
+                    .Where(n => n.Operation is not OperationType.Encode)
                     .ToList();
 
                 List<ExecutionNode> encodeNodes = videoChain
-                    .Where(predicate: n => n.Operation == OperationType.Encode)
+                    .Where(n => n.Operation == OperationType.Encode)
                     .ToList();
 
                 for (int i = 0; i < encodeNodes.Count; i += maxSessions)
                 {
-                    List<ExecutionNode> batch = encodeNodes.Skip(count: i).Take(count: maxSessions).ToList();
+                    List<ExecutionNode> batch = encodeNodes.Skip(i).Take(maxSessions).ToList();
                     List<ExecutionNode> groupNodes =
                         i == 0 ? [.. sharedNodes, .. batch, .. audioNodes] : [.. batch];
 
                     groups.Add(
-                        item: new(
-                            GroupId: $"group_{groupId++}",
-                            Nodes: groupNodes.ToArray(),
-                            DeviceId: hardware.HasGpu ? hardware.Gpus[index: 0].Name : null,
-                            GpuSlotsRequired: batch.Count,
-                            CpuThreadsRequired: 0,
-                            RequiresGpu: hardware.HasGpu,
-                            Priority: 1
+                        new(
+                            $"group_{groupId++}",
+                            groupNodes.ToArray(),
+                            hardware.HasGpu ? hardware.Gpus[0].Name : null,
+                            batch.Count,
+                            0,
+                            hardware.HasGpu,
+                            1
                         )
                     );
                 }
@@ -109,14 +109,14 @@ public class GroupingStrategy
         if (subtitleNodes.Count > 0)
         {
             groups.Add(
-                item: new(
-                    GroupId: $"group_{groupId++}",
-                    Nodes: subtitleNodes.ToArray(),
-                    DeviceId: null,
-                    GpuSlotsRequired: 0,
-                    CpuThreadsRequired: 1,
-                    RequiresGpu: false,
-                    Priority: 0
+                new(
+                    $"group_{groupId++}",
+                    subtitleNodes.ToArray(),
+                    null,
+                    0,
+                    1,
+                    false,
+                    0
                 )
             );
         }
@@ -124,14 +124,14 @@ public class GroupingStrategy
         if (chapterNodes.Count > 0)
         {
             groups.Add(
-                item: new(
-                    GroupId: $"group_{groupId++}",
-                    Nodes: chapterNodes.ToArray(),
-                    DeviceId: null,
-                    GpuSlotsRequired: 0,
-                    CpuThreadsRequired: 1,
-                    RequiresGpu: false,
-                    Priority: 0
+                new(
+                    $"group_{groupId++}",
+                    chapterNodes.ToArray(),
+                    null,
+                    0,
+                    1,
+                    false,
+                    0
                 )
             );
         }
@@ -139,19 +139,19 @@ public class GroupingStrategy
         if (thumbnailNodes.Count > 0)
         {
             groups.Add(
-                item: new(
-                    GroupId: $"group_{groupId++}",
-                    Nodes: thumbnailNodes.ToArray(),
-                    DeviceId: null,
-                    GpuSlotsRequired: 0,
-                    CpuThreadsRequired: 1,
-                    RequiresGpu: false,
-                    Priority: 2
+                new(
+                    $"group_{groupId++}",
+                    thumbnailNodes.ToArray(),
+                    null,
+                    0,
+                    1,
+                    false,
+                    2
                 )
             );
         }
 
-        return groups.OrderBy(keySelector: g => g.Priority).ToList();
+        return groups.OrderBy(g => g.Priority).ToList();
     }
 
     private static bool IsVideoOperation(OperationType op) =>

@@ -15,9 +15,9 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class UserBlobGetMeta
 {
-    [JsonProperty(propertyName: "status_code")]
+    [JsonProperty("status_code")]
     public long StatusCode { get; set; }
 
-    [JsonProperty(propertyName: "last_updated")]
+    [JsonProperty("last_updated")]
     public DateTimeOffset LastUpdated { get; set; }
 }

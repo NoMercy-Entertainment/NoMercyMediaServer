@@ -33,7 +33,7 @@ namespace NoMercy.Tests.Api.Middleware;
 /// and the cache-miss-triggers-RefreshUsersAsync retry path. Uses
 /// NoMercyApiFactory for its seeded UserCache/MediaContext DI wiring.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -46,14 +46,14 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
 
     private static AccessLogMiddleware CreateMiddleware(out StrongBox<bool> nextCalled)
     {
-        StrongBox<bool> called = new(value: false);
+        StrongBox<bool> called = new(false);
         AccessLogMiddleware middleware = new(
-            next: _ =>
+            _ =>
             {
                 called.Value = true;
                 return Task.CompletedTask;
             },
-            logger: NullLogger<AccessLogMiddleware>.Instance
+            NullLogger<AccessLogMiddleware>.Instance
         );
         nextCalled = called;
         return middleware;
@@ -77,8 +77,8 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
 
     private static async Task<string> ReadBodyAsync(HttpContext context)
     {
-        context.Response.Body.Seek(offset: 0, origin: SeekOrigin.Begin);
-        using StreamReader reader = new(stream: context.Response.Body);
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        using StreamReader reader = new(context.Response.Body);
         return await reader.ReadToEndAsync();
     }
 
@@ -87,30 +87,30 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
     // =========================================================================
 
     [Theory]
-    [InlineData(data: "/images/poster.jpg")]
-    [InlineData(data: "/swagger/index.html")]
-    [InlineData(data: "/videoHub/negotiate")]
-    [InlineData(data: "/dashboardHub")]
+    [InlineData("/images/poster.jpg")]
+    [InlineData("/swagger/index.html")]
+    [InlineData("/videoHub/negotiate")]
+    [InlineData("/dashboardHub")]
     public async Task IgnoredStartsWithRoute_CallsNext_NoAuthRequired(string path)
     {
-        AccessLogMiddleware middleware = CreateMiddleware(nextCalled: out StrongBox<bool> nextCalled);
-        DefaultHttpContext context = MakeContext(path: path);
+        AccessLogMiddleware middleware = CreateMiddleware(out StrongBox<bool> nextCalled);
+        DefaultHttpContext context = MakeContext(path);
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Value.Should().BeTrue();
     }
 
     [Theory]
-    [InlineData(data: "/")]
-    [InlineData(data: "/api/v1/dashboard/logs")]
-    [InlineData(data: "/api/v1/setup/server-info")]
+    [InlineData("/")]
+    [InlineData("/api/v1/dashboard/logs")]
+    [InlineData("/api/v1/setup/server-info")]
     public async Task IgnoredExactRoute_CallsNext_NoAuthRequired(string path)
     {
-        AccessLogMiddleware middleware = CreateMiddleware(nextCalled: out StrongBox<bool> nextCalled);
-        DefaultHttpContext context = MakeContext(path: path);
+        AccessLogMiddleware middleware = CreateMiddleware(out StrongBox<bool> nextCalled);
+        DefaultHttpContext context = MakeContext(path);
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Value.Should().BeTrue();
     }
@@ -118,10 +118,10 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task FolderScopedPath_CallsNext_NoAuthRequired()
     {
-        AccessLogMiddleware middleware = CreateMiddleware(nextCalled: out StrongBox<bool> nextCalled);
-        DefaultHttpContext context = MakeContext(path: $"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8");
+        AccessLogMiddleware middleware = CreateMiddleware(out StrongBox<bool> nextCalled);
+        DefaultHttpContext context = MakeContext($"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Value.Should().BeTrue();
     }
@@ -133,31 +133,31 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task NoClaim_NonGuestRoute_Returns401NoToken()
     {
-        AccessLogMiddleware middleware = CreateMiddleware(nextCalled: out StrongBox<bool> nextCalled);
+        AccessLogMiddleware middleware = CreateMiddleware(out StrongBox<bool> nextCalled);
         DefaultHttpContext context = MakeContext(
-            path: "/api/v1/media/movies",
-            user: new ClaimsPrincipal(identity: new ClaimsIdentity())
+            "/api/v1/media/movies",
+            user: new ClaimsPrincipal(new ClaimsIdentity())
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Value.Should().BeFalse();
-        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.Unauthorized);
-        string body = await ReadBodyAsync(context: context);
-        using JsonDocument json = JsonDocument.Parse(json: body);
-        json.RootElement.GetProperty(propertyName: "authError").GetString().Should().Be(expected: "NO_TOKEN");
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
+        string body = await ReadBodyAsync(context);
+        using JsonDocument json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("authError").GetString().Should().Be("NO_TOKEN");
     }
 
     [Fact]
     public async Task NoClaim_StatusRoute_IsIgnoreIfGuest_CallsNext()
     {
-        AccessLogMiddleware middleware = CreateMiddleware(nextCalled: out StrongBox<bool> nextCalled);
+        AccessLogMiddleware middleware = CreateMiddleware(out StrongBox<bool> nextCalled);
         DefaultHttpContext context = MakeContext(
-            path: "/status",
-            user: new ClaimsPrincipal(identity: new ClaimsIdentity())
+            "/status",
+            user: new ClaimsPrincipal(new ClaimsIdentity())
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Value.Should().BeTrue();
     }
@@ -165,31 +165,31 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task MalformedGuidClaim_NonGuestRoute_Returns401InvalidToken()
     {
-        AccessLogMiddleware middleware = CreateMiddleware(nextCalled: out StrongBox<bool> nextCalled);
+        AccessLogMiddleware middleware = CreateMiddleware(out StrongBox<bool> nextCalled);
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: "not-a-guid")])
+            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, "not-a-guid")])
         );
-        DefaultHttpContext context = MakeContext(path: "/api/v1/media/movies", user: principal);
+        DefaultHttpContext context = MakeContext("/api/v1/media/movies", user: principal);
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Value.Should().BeFalse();
-        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.Unauthorized);
-        string body = await ReadBodyAsync(context: context);
-        using JsonDocument json = JsonDocument.Parse(json: body);
-        json.RootElement.GetProperty(propertyName: "authError").GetString().Should().Be(expected: "INVALID_TOKEN");
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
+        string body = await ReadBodyAsync(context);
+        using JsonDocument json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("authError").GetString().Should().Be("INVALID_TOKEN");
     }
 
     [Fact]
     public async Task MalformedGuidClaim_StatusRoute_IsIgnoreIfGuest_CallsNext()
     {
-        AccessLogMiddleware middleware = CreateMiddleware(nextCalled: out StrongBox<bool> nextCalled);
+        AccessLogMiddleware middleware = CreateMiddleware(out StrongBox<bool> nextCalled);
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: "not-a-guid")])
+            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, "not-a-guid")])
         );
-        DefaultHttpContext context = MakeContext(path: "/status", user: principal);
+        DefaultHttpContext context = MakeContext("/status", user: principal);
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Value.Should().BeTrue();
     }
@@ -197,16 +197,16 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task EmptyGuidClaim_NonGuestRoute_Returns401InvalidToken()
     {
-        AccessLogMiddleware middleware = CreateMiddleware(nextCalled: out StrongBox<bool> nextCalled);
+        AccessLogMiddleware middleware = CreateMiddleware(out StrongBox<bool> nextCalled);
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: Guid.Empty.ToString())])
+            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, Guid.Empty.ToString())])
         );
-        DefaultHttpContext context = MakeContext(path: "/api/v1/media/movies", user: principal);
+        DefaultHttpContext context = MakeContext("/api/v1/media/movies", user: principal);
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Value.Should().BeFalse();
-        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.Unauthorized);
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
     }
 
     // =========================================================================
@@ -216,20 +216,19 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task KnownSeededUser_CallsNext()
     {
-        AccessLogMiddleware middleware = CreateMiddleware(nextCalled: out StrongBox<bool> nextCalled);
+        AccessLogMiddleware middleware = CreateMiddleware(out StrongBox<bool> nextCalled);
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims:
-            [
-                new(type: ClaimTypes.NameIdentifier, value: TestAuthHandler.DefaultUserId.ToString()),
+            new ClaimsIdentity([
+                new(ClaimTypes.NameIdentifier, TestAuthHandler.DefaultUserId.ToString()),
             ])
         );
         DefaultHttpContext context = MakeContext(
-            path: "/api/v1/media/movies",
+            "/api/v1/media/movies",
             user: principal,
             withRequestServices: true
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Value.Should().BeTrue();
     }
@@ -255,22 +254,22 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
             Allowed = true,
             Manage = false,
         };
-        ctx.Users.Add(entity: user);
+        ctx.Users.Add(user);
         await ctx.SaveChangesAsync();
 
         try
         {
-            AccessLogMiddleware middleware = CreateMiddleware(nextCalled: out StrongBox<bool> nextCalled);
+            AccessLogMiddleware middleware = CreateMiddleware(out StrongBox<bool> nextCalled);
             ClaimsPrincipal principal = new(
-                identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: user.Id.ToString())])
+                new ClaimsIdentity([new(ClaimTypes.NameIdentifier, user.Id.ToString())])
             );
             DefaultHttpContext context = MakeContext(
-                path: "/api/v1/media/movies",
+                "/api/v1/media/movies",
                 user: principal,
                 withRequestServices: true
             );
 
-            await middleware.InvokeAsync(context: context);
+            await middleware.InvokeAsync(context);
 
             nextCalled.Value.Should().BeTrue();
         }
@@ -278,31 +277,31 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
         {
             // Leave the DB row (harmless, isolated by fresh Guid) but keep the
             // process-wide UserCache from accumulating test users indefinitely.
-            User? cached = UserCache.Current.GetUser(userId: user.Id);
+            User? cached = UserCache.Current.GetUser(user.Id);
             if (cached is not null)
-                UserCache.Current.RemoveUser(user: cached);
+                UserCache.Current.RemoveUser(cached);
         }
     }
 
     [Fact]
     public async Task UnknownUser_NotInCacheOrDatabase_Returns401UserNotFound()
     {
-        AccessLogMiddleware middleware = CreateMiddleware(nextCalled: out StrongBox<bool> nextCalled);
+        AccessLogMiddleware middleware = CreateMiddleware(out StrongBox<bool> nextCalled);
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: Guid.NewGuid().ToString())])
+            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())])
         );
         DefaultHttpContext context = MakeContext(
-            path: "/api/v1/media/movies",
+            "/api/v1/media/movies",
             user: principal,
             withRequestServices: true
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Value.Should().BeFalse();
-        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.Unauthorized);
-        string body = await ReadBodyAsync(context: context);
-        using JsonDocument json = JsonDocument.Parse(json: body);
-        json.RootElement.GetProperty(propertyName: "authError").GetString().Should().Be(expected: "USER_NOT_FOUND");
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
+        string body = await ReadBodyAsync(context);
+        using JsonDocument json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("authError").GetString().Should().Be("USER_NOT_FOUND");
     }
 }

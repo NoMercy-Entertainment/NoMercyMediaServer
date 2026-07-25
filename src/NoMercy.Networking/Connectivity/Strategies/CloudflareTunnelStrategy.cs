@@ -50,16 +50,16 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
         if (_checkTunnelAvailability is not null)
             await _checkTunnelAvailability();
 
-        if (string.IsNullOrEmpty(value: _connectivityStatus.CloudflareTunnelToken))
+        if (string.IsNullOrEmpty(_connectivityStatus.CloudflareTunnelToken))
         {
             _logger.LogInformation(
-                message: "You don't have access to our Cloudflare tunnel service, this is a paid feature."
+                "You don't have access to our Cloudflare tunnel service, this is a paid feature."
             );
             _logger.LogInformation(
-                message: "You need to manually forward port {InternalServerPort} to {ExternalServerPort} if you want to use the server outside your local network", args: [RuntimeServerSettings.Current.InternalServerPort, RuntimeServerSettings.Current.ExternalServerPort]
+                "You need to manually forward port {InternalServerPort} to {ExternalServerPort} if you want to use the server outside your local network", [RuntimeServerSettings.Current.InternalServerPort, RuntimeServerSettings.Current.ExternalServerPort]
             );
             _logger.LogInformation(
-                message: "For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide"
+                "For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide"
             );
             return false;
         }
@@ -75,7 +75,7 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                     // Pass the tunnel token via environment variable rather than the
                     // command line so it is not exposed in /proc/<pid>/cmdline or via
                     // WMI Win32_Process.CommandLine. cloudflared reads TUNNEL_TOKEN.
-                    Environment = { [key: "TUNNEL_TOKEN"] = _connectivityStatus.CloudflareTunnelToken },
+                    Environment = { ["TUNNEL_TOKEN"] = _connectivityStatus.CloudflareTunnelToken },
                     UseShellExecute = false,
                     WorkingDirectory = AppFiles.DependenciesPath,
                     RedirectStandardOutput = true,
@@ -85,22 +85,22 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                 EnableRaisingEvents = true,
             };
 
-            _tunnelProcess.OutputDataReceived += (_, args) => _logger.LogTrace(message: args.Data.OrEmpty());
-            _tunnelProcess.ErrorDataReceived += (_, args) => _logger.LogTrace(message: args.Data.OrEmpty());
+            _tunnelProcess.OutputDataReceived += (_, args) => _logger.LogTrace(args.Data.OrEmpty());
+            _tunnelProcess.ErrorDataReceived += (_, args) => _logger.LogTrace(args.Data.OrEmpty());
             _tunnelProcess.Exited += (_, args) =>
-                _logger.LogWarning(message: "Cloudflare tunnel process exited: {Args}", args: args);
+                _logger.LogWarning("Cloudflare tunnel process exited: {Args}", args);
 
             _tunnelProcess.Start();
             _tunnelProcess.BeginOutputReadLine();
             _tunnelProcess.BeginErrorReadLine();
 
             _connectivityStatus.NatStatus = NatStatus.Tunneled;
-            _logger.LogInformation(message: "Cloudflare tunnel started successfully");
+            _logger.LogInformation("Cloudflare tunnel started successfully");
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogInformation(message: "Failed to start Cloudflare tunnel: {Message}", args: ex.Message);
+            _logger.LogInformation("Failed to start Cloudflare tunnel: {Message}", ex.Message);
             return false;
         }
     }
@@ -117,18 +117,18 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
         {
             if (_tunnelProcess is { HasExited: false })
             {
-                if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
-                    Shell.ProcessHelper.SendCtrlC(process: _tunnelProcess);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    Shell.ProcessHelper.SendCtrlC(_tunnelProcess);
                 else
                     _tunnelProcess.CloseMainWindow();
 
-                if (!_tunnelProcess.WaitForExit(milliseconds: 3000))
-                    _tunnelProcess.Kill(entireProcessTree: true);
+                if (!_tunnelProcess.WaitForExit(3000))
+                    _tunnelProcess.Kill(true);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogInformation(message: "Error stopping Cloudflare tunnel: {Message}", args: ex.Message);
+            _logger.LogInformation("Error stopping Cloudflare tunnel: {Message}", ex.Message);
         }
     }
 
@@ -139,6 +139,6 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
         StopTunnel();
         _tunnelProcess?.Dispose();
         _disposed = true;
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 }

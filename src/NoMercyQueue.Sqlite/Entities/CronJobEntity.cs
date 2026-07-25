@@ -13,8 +13,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace NoMercyQueue.Sqlite.Entities;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(Name), IsUnique = true)]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(Name), IsUnique = true)]
 internal class CronJobEntity
 {
     public int Id { get; set; }

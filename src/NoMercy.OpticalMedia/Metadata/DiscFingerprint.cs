@@ -34,16 +34,16 @@ public static class DiscFingerprint
             return string.Empty;
 
         StringBuilder sb = new();
-        sb.Append(value: info.Titles.Length).Append(value: '|');
-        foreach (DiscTitle title in info.Titles.OrderBy(keySelector: t => t.Index))
+        sb.Append(info.Titles.Length).Append('|');
+        foreach (DiscTitle title in info.Titles.OrderBy(t => t.Index))
         {
-            sb.Append(value: title.Index)
-                .Append(value: ':')
-                .Append(value: ((long)title.Duration.TotalSeconds).ToString(provider: CultureInfo.InvariantCulture))
-                .Append(value: ';');
+            sb.Append(title.Index)
+                .Append(':')
+                .Append(((long)title.Duration.TotalSeconds).ToString(CultureInfo.InvariantCulture))
+                .Append(';');
         }
 
-        byte[] hash = SHA1.HashData(source: Encoding.UTF8.GetBytes(s: sb.ToString()));
-        return Convert.ToHexString(inArray: hash);
+        byte[] hash = SHA1.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
+        return Convert.ToHexString(hash);
     }
 }

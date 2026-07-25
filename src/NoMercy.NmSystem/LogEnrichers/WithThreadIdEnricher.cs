@@ -19,7 +19,7 @@ internal class WithThreadIdEnricher : ILogEventEnricher
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
         logEvent.AddPropertyIfAbsent(
-            property: propertyFactory.CreateProperty(name: "ThreadId", value: Environment.CurrentManagedThreadId)
+            propertyFactory.CreateProperty("ThreadId", Environment.CurrentManagedThreadId)
         );
     }
 }

@@ -19,30 +19,30 @@ namespace NoMercy.Tests.NmSystem;
 public class FolderSeasonTests
 {
     [Theory]
-    [InlineData(data: ["/media/Show Name/Season 2", 2])]
-    [InlineData(data: ["Show/Season 02", 2])]
-    [InlineData(data: ["/x/Season 0", 0])]
-    [InlineData(data: ["/x/Season 2/", 2])]
-    [InlineData(data: ["/x/S2", 2])]
-    [InlineData(data: ["S02", 2])]
-    [InlineData(data: ["/lib/Breaking Bad/Series 3", 3])]
-    [InlineData(data: ["/x/Staffel 4", 4])]
-    [InlineData(data: ["/x/Temporada 5", 5])]
-    [InlineData(data: ["/x/Saison 6", 6])]
-    [InlineData(data: ["/x/Stagione 7", 7])]
+    [InlineData(["/media/Show Name/Season 2", 2])]
+    [InlineData(["Show/Season 02", 2])]
+    [InlineData(["/x/Season 0", 0])]
+    [InlineData(["/x/Season 2/", 2])]
+    [InlineData(["/x/S2", 2])]
+    [InlineData(["S02", 2])]
+    [InlineData(["/lib/Breaking Bad/Series 3", 3])]
+    [InlineData(["/x/Staffel 4", 4])]
+    [InlineData(["/x/Temporada 5", 5])]
+    [InlineData(["/x/Saison 6", 6])]
+    [InlineData(["/x/Stagione 7", 7])]
     public void Resolves_season_folders(string dir, int expected) =>
-        dir.TryGetFolderSeason().Should().Be(expected: expected);
+        dir.TryGetFolderSeason().Should().Be(expected);
 
     [Theory]
-    [InlineData(data: "/media/Show Name")]
-    [InlineData(data: "/x/Specials")]
-    [InlineData(data: "/x/Season of the Witch")]
-    [InlineData(data: "/x/Season Finale")]
-    [InlineData(data: "/x/Smallville")]
-    [InlineData(data: "/x/Sherlock 2010")]
-    [InlineData(data: "/x/S.W.A.T")]
-    [InlineData(data: "")]
-    [InlineData(data: null)]
+    [InlineData("/media/Show Name")]
+    [InlineData("/x/Specials")]
+    [InlineData("/x/Season of the Witch")]
+    [InlineData("/x/Season Finale")]
+    [InlineData("/x/Smallville")]
+    [InlineData("/x/Sherlock 2010")]
+    [InlineData("/x/S.W.A.T")]
+    [InlineData("")]
+    [InlineData(null)]
     public void Rejects_non_season_folders(string? dir) =>
         dir.TryGetFolderSeason().Should().BeNull();
 }

@@ -23,44 +23,43 @@ namespace NoMercy.Tests.Cli.Commands;
 /// resolves without any timing dependency (unlike the wait-for-exit step),
 /// since a failed POST is immediate.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class UpdateCommandStopTests
 {
     [Fact]
     public async Task Stop_NotAcknowledged_PrintsError_AndReturnsServerError_WithoutWaiting()
     {
         FakeManagementPipeServer server = new();
-        Task<List<string>> requestsTask = server.RunSequenceAsync(responders:
-            [
+        Task<List<string>> requestsTask = server.RunSequenceAsync([
                 stream =>
                     FakeManagementPipeServer.WriteResponseAsync(
-                        stream: stream,
-                        statusCode: 200,
-                        reasonPhrase: "OK",
-                        body: """{"status":"ok","message":"Downloaded"}"""
+                        stream,
+                        200,
+                        "OK",
+                        """{"status":"ok","message":"Downloaded"}"""
                     ),
                 stream =>
                     FakeManagementPipeServer.WriteResponseAsync(
-                        stream: stream,
-                        statusCode: 500,
-                        reasonPhrase: "Internal Server Error",
-                        body: ""
+                        stream,
+                        500,
+                        "Internal Server Error",
+                        ""
                     )
             ]
         );
 
-        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
-        RootCommand root = new(description: "test");
-        root.Options.Add(item: pipeOption);
-        root.Subcommands.Add(item: UpdateCommand.Create(pipeOption: pipeOption, clientFactory: new CliClientFactory()));
+        Option<string?> pipeOption = new("--pipe", "-p");
+        RootCommand root = new("test");
+        root.Options.Add(pipeOption);
+        root.Subcommands.Add(UpdateCommand.Create(pipeOption, new CliClientFactory()));
 
         using ConsoleCapture console = new();
-        int exitCode = await root.Parse(args: ["--pipe", server.PipeName, "update"]).InvokeAsync();
+        int exitCode = await root.Parse(["--pipe", server.PipeName, "update"]).InvokeAsync();
 
         List<string> requests = await requestsTask;
-        requests.Should().HaveCount(expected: 2);
-        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
-        console.Error.Should().Contain(expected: "Failed to send stop command.");
-        console.Out.Should().NotContain(unexpected: "Waiting for server to exit");
+        requests.Should().HaveCount(2);
+        exitCode.Should().Be((int)ExitCode.ServerError);
+        console.Error.Should().Contain("Failed to send stop command.");
+        console.Out.Should().NotContain("Waiting for server to exit");
     }
 }

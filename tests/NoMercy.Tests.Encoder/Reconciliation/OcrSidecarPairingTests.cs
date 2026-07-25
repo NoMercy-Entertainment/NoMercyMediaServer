@@ -23,18 +23,18 @@ public class OcrSidecarPairingTests
 {
     private const string Stem = "Frieren.Beyond.Journey's.End.S01E01.The.Journey's.End.NoMercy";
 
-    private static ExistingOutputEntry File(string name) => new(RelativePath: $"subtitles/{name}", SizeBytes: 4096);
+    private static ExistingOutputEntry File(string name) => new($"subtitles/{name}", 4096);
 
     [Fact]
     public void PairedVttCountsAsOcred()
     {
         List<ExistingOutputEntry> files =
         [
-            File(name: $"{Stem}.eng.full.mks"),
-            File(name: $"{Stem}.eng.full.vtt"),
+            File($"{Stem}.eng.full.mks"),
+            File($"{Stem}.eng.full.vtt"),
         ];
 
-        EncodeReconciler.CountOcredBitmapSidecars(files: files).Should().Be(expected: 1);
+        EncodeReconciler.CountOcredBitmapSidecars(files).Should().Be(1);
     }
 
     [Fact]
@@ -42,9 +42,9 @@ public class OcrSidecarPairingTests
     {
         // eng.ocr0.vtt parses as type "ocr0", so it pairs with nothing and the
         // .mks stays orphaned — the file exists but no player ever lists it.
-        List<ExistingOutputEntry> files = [File(name: $"{Stem}.eng.full.mks"), File(name: "eng.ocr0.vtt")];
+        List<ExistingOutputEntry> files = [File($"{Stem}.eng.full.mks"), File("eng.ocr0.vtt")];
 
-        EncodeReconciler.CountOcredBitmapSidecars(files: files).Should().Be(expected: 0);
+        EncodeReconciler.CountOcredBitmapSidecars(files).Should().Be(0);
     }
 
     [Fact]
@@ -54,12 +54,12 @@ public class OcrSidecarPairingTests
         // the full track must still be reported as needing OCR.
         List<ExistingOutputEntry> files =
         [
-            File(name: $"{Stem}.eng.full.mks"),
-            File(name: $"{Stem}.eng.sign.mks"),
-            File(name: $"{Stem}.eng.sign.vtt"),
+            File($"{Stem}.eng.full.mks"),
+            File($"{Stem}.eng.sign.mks"),
+            File($"{Stem}.eng.sign.vtt"),
         ];
 
-        EncodeReconciler.CountOcredBitmapSidecars(files: files).Should().Be(expected: 1);
+        EncodeReconciler.CountOcredBitmapSidecars(files).Should().Be(1);
     }
 
     [Fact]
@@ -67,11 +67,11 @@ public class OcrSidecarPairingTests
     {
         List<ExistingOutputEntry> files =
         [
-            File(name: $"{Stem}.eng.full.mks"),
-            File(name: $"{Stem}.jpn.full.vtt"),
+            File($"{Stem}.eng.full.mks"),
+            File($"{Stem}.jpn.full.vtt"),
         ];
 
-        EncodeReconciler.CountOcredBitmapSidecars(files: files).Should().Be(expected: 0);
+        EncodeReconciler.CountOcredBitmapSidecars(files).Should().Be(0);
     }
 
     [Fact]
@@ -79,28 +79,28 @@ public class OcrSidecarPairingTests
     {
         List<ExistingOutputEntry> files =
         [
-            File(name: $"{Stem}.eng.full.mks"),
-            File(name: $"{Stem}.eng.sign.mks"),
-            File(name: $"{Stem}.eng.full.vtt"),
-            File(name: $"{Stem}.eng.sign.vtt"),
+            File($"{Stem}.eng.full.mks"),
+            File($"{Stem}.eng.sign.mks"),
+            File($"{Stem}.eng.full.vtt"),
+            File($"{Stem}.eng.sign.vtt"),
         ];
 
-        EncodeReconciler.CountOcredBitmapSidecars(files: files).Should().Be(expected: 2);
+        EncodeReconciler.CountOcredBitmapSidecars(files).Should().Be(2);
     }
 
     [Theory]
-    [InlineData(data: "sup")]
-    [InlineData(data: "idx")]
-    [InlineData(data: "vob")]
+    [InlineData("sup")]
+    [InlineData("idx")]
+    [InlineData("vob")]
     public void EveryBitmapContainerPairs(string extension)
     {
         List<ExistingOutputEntry> files =
         [
-            File(name: $"{Stem}.eng.full.{extension}"),
-            File(name: $"{Stem}.eng.full.vtt"),
+            File($"{Stem}.eng.full.{extension}"),
+            File($"{Stem}.eng.full.vtt"),
         ];
 
-        EncodeReconciler.CountOcredBitmapSidecars(files: files).Should().Be(expected: 1);
+        EncodeReconciler.CountOcredBitmapSidecars(files).Should().Be(1);
     }
 
     [Fact]
@@ -108,11 +108,11 @@ public class OcrSidecarPairingTests
     {
         List<ExistingOutputEntry> files =
         [
-            File(name: $"{Stem}.eng.full.mks"),
-            File(name: $"{Stem}.eng.full.srt"),
+            File($"{Stem}.eng.full.mks"),
+            File($"{Stem}.eng.full.srt"),
         ];
 
-        EncodeReconciler.CountOcredBitmapSidecars(files: files).Should().Be(expected: 1);
+        EncodeReconciler.CountOcredBitmapSidecars(files).Should().Be(1);
     }
 
     [Fact]
@@ -120,18 +120,18 @@ public class OcrSidecarPairingTests
     {
         List<ExistingOutputEntry> files =
         [
-            File(name: $"{Stem}.eng.full.mks"),
-            new(RelativePath: $"subtitles/{Stem}.eng.full.vtt", SizeBytes: 0),
+            File($"{Stem}.eng.full.mks"),
+            new($"subtitles/{Stem}.eng.full.vtt", 0),
         ];
 
-        EncodeReconciler.CountOcredBitmapSidecars(files: files).Should().Be(expected: 0);
+        EncodeReconciler.CountOcredBitmapSidecars(files).Should().Be(0);
     }
 
     [Fact]
     public void TextOnlyBundleHasNothingToPair()
     {
-        List<ExistingOutputEntry> files = [File(name: $"{Stem}.eng.full.vtt")];
+        List<ExistingOutputEntry> files = [File($"{Stem}.eng.full.vtt")];
 
-        EncodeReconciler.CountOcredBitmapSidecars(files: files).Should().Be(expected: 0);
+        EncodeReconciler.CountOcredBitmapSidecars(files).Should().Be(0);
     }
 }

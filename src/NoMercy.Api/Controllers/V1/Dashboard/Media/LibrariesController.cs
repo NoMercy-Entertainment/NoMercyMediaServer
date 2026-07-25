@@ -42,10 +42,10 @@ using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 [ApiController]
-[Tags(tags: "Dashboard Libraries")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Libraries")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/dashboard/libraries", Order = 10)]
+[Route("api/v{version:apiVersion}/dashboard/libraries", Order = 10)]
 public class LibrariesController(
     ILibraryRepository libraryRepository,
     IEncodingPresetRepository encodingPresetRepository,
@@ -66,15 +66,15 @@ public class LibrariesController(
     {
         Guid userId = User.UserId();
 
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view libraries");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view libraries");
 
-        IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId: userId);
+        IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
 
         return Ok(
-            value: new LibrariesDto
+            new LibrariesDto
             {
-                Data = libraries.Select(selector: library => new LibrariesResponseItemDto(library: library)),
+                Data = libraries.Select(library => new LibrariesResponseItemDto(library)),
             }
         );
     }
@@ -84,8 +84,8 @@ public class LibrariesController(
     {
         Guid userId = User.UserId();
 
-        if (!AuthPolicy.IsModerator(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to create a new library");
+        if (!AuthPolicy.IsModerator(User))
+            return UnauthorizedResponse("You do not have permission to create a new library");
 
         try
         {
@@ -108,17 +108,17 @@ public class LibrariesController(
                 Order = 99,
             };
 
-            await libraryRepository.AddLibraryAsync(library: library, userId: userId);
+            await libraryRepository.AddLibraryAsync(library, userId);
 
             try
             {
                 await activityLogger.LogConfigurationAsync(
-                    type: "config.library_added",
-                    userId: userId,
-                    deviceId: Ulid.Empty,
-                    configKey: $"library.{library.Id}",
-                    oldValue: null,
-                    newValue: new
+                    "config.library_added",
+                    userId,
+                    Ulid.Empty,
+                    $"library.{library.Id}",
+                    null,
+                    new
                     {
                         id = library.Id.ToString(),
                         name = library.Title,
@@ -128,11 +128,11 @@ public class LibrariesController(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(message: "Failed to log library created: {Message}", args: ex.Message);
+                logger.LogWarning("Failed to log library created: {Message}", ex.Message);
             }
 
             return Ok(
-                value: new StatusResponseDto<Library>
+                new StatusResponseDto<Library>
                 {
                     Status = "ok",
                     Data = library,
@@ -143,26 +143,26 @@ public class LibrariesController(
         }
         catch (Exception)
         {
-            return InternalServerErrorResponse(detail: "Something went wrong creating the library");
+            return InternalServerErrorResponse("Something went wrong creating the library");
         }
     }
 
     [HttpPatch]
-    [Route(template: "{id:ulid}")]
+    [Route("{id:ulid}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Update(Ulid id, [FromBody] LibraryUpdateRequest request)
     {
-        Library? library = await libraryRepository.GetLibraryByIdAsync(id: id);
+        Library? library = await libraryRepository.GetLibraryByIdAsync(id);
         if (library is null)
-            return NotFoundResponse(detail: "Library not found");
+            return NotFoundResponse("Library not found");
 
         if (request.EncodePresetId.HasValue)
         {
             EncodingPreset? encodingPreset = await encodingPresetRepository.GetByIdAsync(
-                id: request.EncodePresetId.Value
+                request.EncodePresetId.Value
             );
             if (encodingPreset is null)
-                return NotFoundResponse(detail: "Encoding preset not found");
+                return NotFoundResponse("Encoding preset not found");
         }
 
         Guid userId = User.UserId();
@@ -192,28 +192,28 @@ public class LibrariesController(
             if (request.Type != null)
                 library.Type = request.Type;
 
-            await libraryRepository.UpdateLibraryAsync(library: library);
+            await libraryRepository.UpdateLibraryAsync(library);
 
             // Only update subtitles if provided
             if (request.Subtitles != null)
             {
                 List<Language> languages = await languageRepository.GetLanguagesAsync();
                 List<int> languageIds = request
-                    .Subtitles.Select(selector: subtitle =>
-                        languages.FirstOrDefault(predicate: l => l.Iso6391 == subtitle)
+                    .Subtitles.Select(subtitle =>
+                        languages.FirstOrDefault(l => l.Iso6391 == subtitle)
                     )
                     .OfType<Language>()
-                    .Select(selector: language => language.Id)
+                    .Select(language => language.Id)
                     .ToList();
 
-                await libraryRepository.SetLibraryLanguagesAsync(libraryId: library.Id, languageIds: languageIds);
+                await libraryRepository.SetLibraryLanguagesAsync(library.Id, languageIds);
             }
         }
         catch (Exception e)
         {
-            logger.LogError(exception: e, message: e.Message);
+            logger.LogError(e, e.Message);
             return InternalServerErrorResponse(
-                detail: $"Something went wrong updating the library: {e.GetType().Name}: {e.Message}"
+                $"Something went wrong updating the library: {e.GetType().Name}: {e.Message}"
             );
         }
 
@@ -222,19 +222,19 @@ public class LibrariesController(
             try
             {
                 await activityLogger.LogConfigurationAsync(
-                    type: "config.library_scan_schedule_changed",
-                    userId: userId,
-                    deviceId: Ulid.Empty,
-                    configKey: $"library.{library.Id}.scan_schedule",
-                    oldValue: new { realtime = oldRealtime.Value },
-                    newValue: new { realtime = library.Realtime }
+                    "config.library_scan_schedule_changed",
+                    userId,
+                    Ulid.Empty,
+                    $"library.{library.Id}.scan_schedule",
+                    new { realtime = oldRealtime.Value },
+                    new { realtime = library.Realtime }
                 );
             }
             catch (Exception ex)
             {
                 logger.LogWarning(
-                    message: "Failed to log library scan schedule change: {Message}",
-                    args: ex.Message
+                    "Failed to log library scan schedule change: {Message}",
+                    ex.Message
                 );
             }
         }
@@ -245,23 +245,23 @@ public class LibrariesController(
             try
             {
                 List<Folder> folders = await folderRepository.GetFoldersByLibraryIdAsync(
-                    folderLibraries: request.FolderLibrary
+                    request.FolderLibrary
                 );
                 FolderLibrary[] folderLibraries = folders
-                    .Select(selector: folder => new FolderLibrary
+                    .Select(folder => new FolderLibrary
                     {
                         LibraryId = library.Id,
                         FolderId = folder.Id,
                     })
                     .ToArray();
 
-                await folderRepository.SyncFolderLibraryAsync(folderLibraries: folderLibraries, folders: folders);
+                await folderRepository.SyncFolderLibraryAsync(folderLibraries, folders);
             }
             catch (Exception e)
             {
-                logger.LogError(exception: e, message: e.Message);
+                logger.LogError(e, e.Message);
                 return InternalServerErrorResponse(
-                    detail: $"Something went wrong updating the library folders: {e.GetType().Name}: {e.Message}"
+                    $"Something went wrong updating the library folders: {e.GetType().Name}: {e.Message}"
                 );
             }
 
@@ -270,44 +270,44 @@ public class LibrariesController(
                 List<EncodingPresetFolder> encodingPresetFolders = [];
 
                 List<Folder> folders = await folderRepository.GetFoldersByLibraryIdAsync(
-                    folderLibraries: request.FolderLibrary
+                    request.FolderLibrary
                 );
 
                 foreach (FolderLibraryDto folder in request.FolderLibrary)
                 {
-                    Folder? folderDb = folders.FirstOrDefault(predicate: f => f.Id == folder.FolderId);
+                    Folder? folderDb = folders.FirstOrDefault(f => f.Id == folder.FolderId);
                     if (folderDb is null)
                         continue;
 
                     foreach (FolderPresetDto profile in folder.Folder.EncoderProfiles)
                     {
                         EncodingPreset? encodingPreset =
-                            await encodingPresetRepository.GetByIdAsync(id: profile.Id);
+                            await encodingPresetRepository.GetByIdAsync(profile.Id);
                         if (encodingPreset is null)
                             continue;
 
                         encodingPresetFolders.Add(
-                            item: new() { FolderId = folderDb.Id, PresetId = encodingPreset.Id }
+                            new() { FolderId = folderDb.Id, PresetId = encodingPreset.Id }
                         );
                     }
                 }
 
                 await libraryRepository.SyncEncodingPresetFolderAsync(
-                    encodingPresetFolders: encodingPresetFolders,
-                    folders: folders
+                    encodingPresetFolders,
+                    folders
                 );
             }
             catch (Exception e)
             {
-                logger.LogError(exception: e, message: e.Message);
+                logger.LogError(e, e.Message);
                 return InternalServerErrorResponse(
-                    detail: $"Something went wrong updating the library encoder profiles: {e.GetType().Name}: {e.Message}"
+                    $"Something went wrong updating the library encoder profiles: {e.GetType().Name}: {e.Message}"
                 );
             }
         }
 
         return Ok(
-            value: new StatusResponseDto<Library>
+            new StatusResponseDto<Library>
             {
                 Status = "ok",
                 Message = "Successfully updated {0} library.",
@@ -318,62 +318,62 @@ public class LibrariesController(
     }
 
     [HttpDelete]
-    [Route(template: "{id:ulid}")]
+    [Route("{id:ulid}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Delete(Ulid id)
     {
-        Library? library = await libraryRepository.GetLibraryByIdAsync(id: id);
+        Library? library = await libraryRepository.GetLibraryByIdAsync(id);
 
         if (library is null)
-            return NotFoundResponse(detail: "Library not found");
+            return NotFoundResponse("Library not found");
 
         Guid userId = User.UserId();
 
         try
         {
-            await libraryRepository.DeleteLibraryAsync(library: library);
+            await libraryRepository.DeleteLibraryAsync(library);
 
             // Remove all associated folders from the middleware immediately
             foreach (FolderLibrary fl in library.FolderLibraries)
-                DynamicStaticFilesMiddleware.RemoveFolder(folderId: fl.FolderId);
+                DynamicStaticFilesMiddleware.RemoveFolder(fl.FolderId);
 
             await using (
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await UserCacheService.RefreshFolderIdsAsync(context: refreshContext);
+                await UserCacheService.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)
             {
                 await EventBusProvider.Current.PublishAsync(
-                    @event: new LibraryDeletedEvent { LibraryId = library.Id, LibraryName = library.Title }
+                    new LibraryDeletedEvent { LibraryId = library.Id, LibraryName = library.Title }
                 );
 
                 foreach (FolderLibrary fl in library.FolderLibraries)
                     await EventBusProvider.Current.PublishAsync(
-                        @event: new FolderPathRemovedEvent { RequestPath = fl.FolderId }
+                        new FolderPathRemovedEvent { RequestPath = fl.FolderId }
                     );
             }
 
             try
             {
                 await activityLogger.LogConfigurationAsync(
-                    type: "config.library_removed",
-                    userId: userId,
-                    deviceId: Ulid.Empty,
-                    configKey: $"library.{library.Id}",
-                    oldValue: new { id = library.Id.ToString(), name = library.Title },
-                    newValue: null
+                    "config.library_removed",
+                    userId,
+                    Ulid.Empty,
+                    $"library.{library.Id}",
+                    new { id = library.Id.ToString(), name = library.Title },
+                    null
                 );
             }
             catch (Exception ex)
             {
-                logger.LogWarning(message: "Failed to log library removed: {Message}", args: ex.Message);
+                logger.LogWarning("Failed to log library removed: {Message}", ex.Message);
             }
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Successfully deleted {0} library.",
@@ -383,34 +383,34 @@ public class LibrariesController(
         }
         catch (Exception e)
         {
-            logger.LogError(exception: e, message: e.Message);
-            return InternalServerErrorResponse(detail: "Something went wrong deleting the library");
+            logger.LogError(e, e.Message);
+            return InternalServerErrorResponse("Something went wrong deleting the library");
         }
     }
 
     [HttpPatch]
-    [Route(template: "sort")]
+    [Route("sort")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Sort([FromBody] LibrarySortRequest request)
     {
         List<Library> libraries = await libraryRepository.GetAllLibrariesAsync();
 
         if (libraries.Count == 0)
-            return NotFoundResponse(detail: "No libraries exist");
+            return NotFoundResponse("No libraries exist");
 
         try
         {
             foreach (LibrarySortRequestItem item in request.Libraries)
             {
-                Library? lib = libraries.FirstOrDefault(predicate: l => l.Id == item.Id);
+                Library? lib = libraries.FirstOrDefault(l => l.Id == item.Id);
                 if (lib is null)
                     continue;
                 lib.Order = item.Order;
-                await libraryRepository.UpdateLibraryAsync(library: lib);
+                await libraryRepository.UpdateLibraryAsync(lib);
             }
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Successfully sorted libraries.",
@@ -420,35 +420,35 @@ public class LibrariesController(
         }
         catch (Exception)
         {
-            return InternalServerErrorResponse(detail: "Something went wrong sorting the libraries");
+            return InternalServerErrorResponse("Something went wrong sorting the libraries");
         }
     }
 
     [HttpPost]
-    [Route(template: "rescan")]
+    [Route("rescan")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan()
     {
         List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
 
         if (librariesList.Count == 0)
-            return NotFoundResponse(detail: "No libraries found to rescan");
+            return NotFoundResponse("No libraries found to rescan");
 
         foreach (Library library in librariesList)
         {
             foreach (LibraryMovie movie in library.LibraryMovies)
             {
-                jobDispatcher.DispatchJob<FileRescanJob>(id: movie.MovieId, libraryId: movie.LibraryId);
+                jobDispatcher.DispatchJob<FileRescanJob>(movie.MovieId, movie.LibraryId);
             }
 
             foreach (LibraryTv show in library.LibraryTvs)
             {
-                jobDispatcher.DispatchJob<FileRescanJob>(id: show.TvId, libraryId: show.LibraryId);
+                jobDispatcher.DispatchJob<FileRescanJob>(show.TvId, show.LibraryId);
             }
         }
 
         return Ok(
-            value: new StatusResponseDto<List<string?>>
+            new StatusResponseDto<List<string?>>
             {
                 Status = "ok",
                 Message = "Rescanning all libraries.",
@@ -457,27 +457,27 @@ public class LibrariesController(
     }
 
     [HttpPost]
-    [Route(template: "{id:ulid}/rescan")]
+    [Route("{id:ulid}/rescan")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(Ulid id)
     {
-        Library? library = await libraryRepository.GetLibraryByIdAsync(id: id);
+        Library? library = await libraryRepository.GetLibraryByIdAsync(id);
 
         if (library is null)
-            return NotFoundResponse(detail: "Library not found");
+            return NotFoundResponse("Library not found");
 
         foreach (LibraryMovie movie in library.LibraryMovies)
         {
-            jobDispatcher.DispatchJob<FileRescanJob>(id: movie.MovieId, libraryId: movie.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(movie.MovieId, movie.LibraryId);
         }
 
         foreach (LibraryTv show in library.LibraryTvs)
         {
-            jobDispatcher.DispatchJob<FileRescanJob>(id: show.TvId, libraryId: show.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(show.TvId, show.LibraryId);
         }
 
         return Ok(
-            value: new StatusResponseDto<List<dynamic>>
+            new StatusResponseDto<List<dynamic>>
             {
                 Status = "ok",
                 Message = "Rescanning {0} library.",
@@ -487,24 +487,24 @@ public class LibrariesController(
     }
 
     [HttpPost]
-    [Route(template: "refresh")]
+    [Route("refresh")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> RefreshAll()
     {
         List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
 
         if (librariesList.Count == 0)
-            return NotFoundResponse(detail: "No libraries found to refresh");
+            return NotFoundResponse("No libraries found to refresh");
 
         List<string?> titles = [];
 
         foreach (Library library in librariesList)
         {
-            jobDispatcher.DispatchJob<LibraryRescanJob>(libraryId: library.Id);
+            jobDispatcher.DispatchJob<LibraryRescanJob>(library.Id);
         }
 
         return Ok(
-            value: new StatusResponseDto<List<string?>>
+            new StatusResponseDto<List<string?>>
             {
                 Status = "ok",
                 Data = titles,
@@ -514,19 +514,19 @@ public class LibrariesController(
     }
 
     [HttpPost]
-    [Route(template: "{id:ulid}/refresh")]
+    [Route("{id:ulid}/refresh")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Refresh(Ulid id)
     {
-        Library? library = await libraryRepository.GetLibraryByIdAsync(id: id);
+        Library? library = await libraryRepository.GetLibraryByIdAsync(id);
 
         if (library is null)
-            return NotFoundResponse(detail: "Library not found");
+            return NotFoundResponse("Library not found");
 
-        jobDispatcher.DispatchJob<LibraryRescanJob>(libraryId: id);
+        jobDispatcher.DispatchJob<LibraryRescanJob>(id);
 
         return Ok(
-            value: new StatusResponseDto<List<dynamic>>
+            new StatusResponseDto<List<dynamic>>
             {
                 Status = "ok",
                 Message = "Rescanning {0} library.",
@@ -536,22 +536,22 @@ public class LibrariesController(
     }
 
     [HttpPost]
-    [Route(template: "scan-new")]
+    [Route("scan-new")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ScanNewAll()
     {
         List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
 
         if (librariesList.Count == 0)
-            return NotFoundResponse(detail: "No libraries found to scan");
+            return NotFoundResponse("No libraries found to scan");
 
         foreach (Library library in librariesList)
         {
-            jobDispatcher.DispatchJob<LibraryScanJob>(libraryId: library.Id);
+            jobDispatcher.DispatchJob<LibraryScanJob>(library.Id);
         }
 
         return Ok(
-            value: new StatusResponseDto<List<string?>>
+            new StatusResponseDto<List<string?>>
             {
                 Status = "ok",
                 Message = "Scanning all libraries for new items.",
@@ -560,19 +560,19 @@ public class LibrariesController(
     }
 
     [HttpPost]
-    [Route(template: "{id:ulid}/scan-new")]
+    [Route("{id:ulid}/scan-new")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ScanNew(Ulid id)
     {
-        Library? library = await libraryRepository.GetLibraryByIdAsync(id: id);
+        Library? library = await libraryRepository.GetLibraryByIdAsync(id);
 
         if (library is null)
-            return NotFoundResponse(detail: "Library not found");
+            return NotFoundResponse("Library not found");
 
-        jobDispatcher.DispatchJob<LibraryScanJob>(libraryId: id);
+        jobDispatcher.DispatchJob<LibraryScanJob>(id);
 
         return Ok(
-            value: new StatusResponseDto<List<dynamic>>
+            new StatusResponseDto<List<dynamic>>
             {
                 Status = "ok",
                 Message = "Scanning {0} library for new items.",
@@ -582,25 +582,25 @@ public class LibrariesController(
     }
 
     [HttpPost]
-    [Route(template: "{id:ulid}/folders")]
+    [Route("{id:ulid}/folders")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> AddFolder(Ulid id, [FromBody] FolderRequest request)
     {
-        Library? library = await libraryRepository.GetLibraryByIdAsync(id: id);
+        Library? library = await libraryRepository.GetLibraryByIdAsync(id);
 
         if (library is null)
-            return NotFoundResponse(detail: "Library not found");
+            return NotFoundResponse("Library not found");
 
         if (request.DriverId == default)
-            return BadRequestResponse(detail: "driver_id is required. Every folder must have a driver.");
+            return BadRequestResponse("driver_id is required. Every folder must have a driver.");
 
         // Captured before the upsert so we can tell a brand-new folder from
         // one that already existed (e.g. attaching the same NFS path to a
         // second library). Only a genuinely new folder gets the default
         // auto-encode preset link — never an existing/pre-slice folder.
         Folder? preExistingFolder = await folderRepository.GetFolderByDriverAndPathAsync(
-            driverId: request.DriverId,
-            requestPath: request.Path
+            request.DriverId,
+            request.Path
         );
         bool isNewFolder = preExistingFolder is null;
 
@@ -613,34 +613,34 @@ public class LibrariesController(
                 DriverId = request.DriverId,
             };
 
-            await folderRepository.AddFolderAsync(folder: folder);
+            await folderRepository.AddFolderAsync(folder);
         }
         catch (Exception ex)
         {
             logger.LogError(
-                message: "[AddFolder] failed for library={Id} driver={DriverId} path='{Path}': {Ex}", args: [id, request.DriverId, request.Path, ex]
+                "[AddFolder] failed for library={Id} driver={DriverId} path='{Path}': {Ex}", [id, request.DriverId, request.Path, ex]
             );
-            return InternalServerErrorResponse(detail: "Something went wrong adding the folder");
+            return InternalServerErrorResponse("Something went wrong adding the folder");
         }
 
         // Scope the lookup to the same driver so two folders with the same
         // sub-path on different drivers (e.g. NFS Anime/Anime + S3 Anime-S3
         // both mapped to library "Anime") don't cross-link.
         Folder? pathAsync = await folderRepository.GetFolderByDriverAndPathAsync(
-            driverId: request.DriverId,
-            requestPath: request.Path
+            request.DriverId,
+            request.Path
         );
 
         if (pathAsync is null)
-            return NotFoundResponse(detail: "Folder not found");
+            return NotFoundResponse("Folder not found");
 
         FolderLibrary folderLibrary = new() { LibraryId = library.Id, FolderId = pathAsync.Id };
 
-        await folderRepository.AddFolderLibraryAsync(folderLibrary: folderLibrary);
+        await folderRepository.AddFolderLibraryAsync(folderLibrary);
 
         if (isNewFolder)
         {
-            await defaultEncodingPresetLinker.AttachDefaultIfMissingAsync(folderId: pathAsync.Id);
+            await defaultEncodingPresetLinker.AttachDefaultIfMissingAsync(pathAsync.Id);
 
             // A brand-new folder can already contain media on disk (the
             // common "point me at my existing library" flow). Dispatch the
@@ -650,18 +650,18 @@ public class LibrariesController(
             // attached to another library — isNewFolder guards that — so
             // upgrades never trigger a scan for folders that were already
             // known before this slice shipped.
-            jobDispatcher.DispatchJob<LibraryScanJob>(libraryId: library.Id);
+            jobDispatcher.DispatchJob<LibraryScanJob>(library.Id);
         }
 
         // Register the folder with the middleware directly so it can serve files immediately
-        DynamicStaticFilesMiddleware.AddFolder(folderId: pathAsync.Id, driverId: pathAsync.DriverId, subPath: pathAsync.Path);
+        DynamicStaticFilesMiddleware.AddFolder(pathAsync.Id, pathAsync.DriverId, pathAsync.Path);
         await using MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync();
-        await UserCacheService.RefreshFolderIdsAsync(context: refreshContext);
+        await UserCacheService.RefreshFolderIdsAsync(refreshContext);
 
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                @event: new FolderPathAddedEvent
+                new FolderPathAddedEvent
                 {
                     RequestPath = pathAsync.Id,
                     DriverId = pathAsync.DriverId,
@@ -671,7 +671,7 @@ public class LibrariesController(
         }
 
         return Ok(
-            value: new StatusResponseDto<FolderLibrary>
+            new StatusResponseDto<FolderLibrary>
             {
                 Status = "ok",
                 Message = "Successfully added folder to {0} library.",
@@ -682,7 +682,7 @@ public class LibrariesController(
     }
 
     [HttpPatch]
-    [Route(template: "{id:ulid}/folders/{folderId:ulid}")]
+    [Route("{id:ulid}/folders/{folderId:ulid}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> UpdateFolder(
         Ulid id,
@@ -690,33 +690,33 @@ public class LibrariesController(
         [FromBody] FolderRequest request
     )
     {
-        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId: folderId);
+        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
 
         if (folder is null)
-            return NotFoundResponse(detail: "Folder not found");
+            return NotFoundResponse("Folder not found");
 
         try
         {
             folder.Path = request.Path;
-            await folderRepository.UpdateFolderAsync(folder: folder);
+            await folderRepository.UpdateFolderAsync(folder);
 
             // Update the middleware directly so it can serve files from the new path immediately
-            DynamicStaticFilesMiddleware.RemoveFolder(folderId: folder.Id);
-            DynamicStaticFilesMiddleware.AddFolder(folderId: folder.Id, driverId: folder.DriverId, subPath: folder.Path);
+            DynamicStaticFilesMiddleware.RemoveFolder(folder.Id);
+            DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
             await using (
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await UserCacheService.RefreshFolderIdsAsync(context: refreshContext);
+                await UserCacheService.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)
             {
                 await EventBusProvider.Current.PublishAsync(
-                    @event: new FolderPathRemovedEvent { RequestPath = folder.Id }
+                    new FolderPathRemovedEvent { RequestPath = folder.Id }
                 );
                 await EventBusProvider.Current.PublishAsync(
-                    @event: new FolderPathAddedEvent
+                    new FolderPathAddedEvent
                     {
                         RequestPath = folder.Id,
                         DriverId = folder.DriverId,
@@ -726,7 +726,7 @@ public class LibrariesController(
             }
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Successfully updated folder {0}.",
@@ -736,42 +736,42 @@ public class LibrariesController(
         }
         catch (Exception)
         {
-            return InternalServerErrorResponse(detail: "Something went wrong updating the library folder");
+            return InternalServerErrorResponse("Something went wrong updating the library folder");
         }
     }
 
     [HttpDelete]
-    [Route(template: "{id:ulid}/folders/{folderId:ulid}")]
+    [Route("{id:ulid}/folders/{folderId:ulid}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> DeleteFolder(Ulid id, Ulid folderId)
     {
-        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId: folderId);
+        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
 
         if (folder is null)
-            return NotFoundResponse(detail: "Folder not found");
+            return NotFoundResponse("Folder not found");
 
         try
         {
-            await folderRepository.DeleteFolderAsync(folder: folder);
+            await folderRepository.DeleteFolderAsync(folder);
 
             // Remove the folder from the middleware immediately
-            DynamicStaticFilesMiddleware.RemoveFolder(folderId: folder.Id);
+            DynamicStaticFilesMiddleware.RemoveFolder(folder.Id);
             await using (
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await UserCacheService.RefreshFolderIdsAsync(context: refreshContext);
+                await UserCacheService.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)
             {
                 await EventBusProvider.Current.PublishAsync(
-                    @event: new FolderPathRemovedEvent { RequestPath = folder.Id }
+                    new FolderPathRemovedEvent { RequestPath = folder.Id }
                 );
             }
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Successfully deleted folder {0}.",
@@ -785,14 +785,14 @@ public class LibrariesController(
             // event-bus crash) so future delete-folder regressions don't
             // require Stoney to grep for a generic 500 in production logs.
             logger.LogError(
-                message: "[DeleteFolder] folder={FolderId} library={Id} failed: {Ex}", args: [folderId, id, ex]
+                "[DeleteFolder] folder={FolderId} library={Id} failed: {Ex}", [folderId, id, ex]
             );
-            return InternalServerErrorResponse(detail: "Something went wrong deleting the library folder");
+            return InternalServerErrorResponse("Something went wrong deleting the library folder");
         }
     }
 
     [HttpPost]
-    [Route(template: "{id:ulid}/folders/{folderId:ulid}/encoder_profiles")]
+    [Route("{id:ulid}/folders/{folderId:ulid}/encoder_profiles")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> AddEncoderProfile(
         Ulid id,
@@ -800,25 +800,25 @@ public class LibrariesController(
         [FromBody] ProfilesRequest request
     )
     {
-        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId: folderId);
+        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
 
         if (folder is null)
-            return NotFoundResponse(detail: "Folder not found");
+            return NotFoundResponse("Folder not found");
 
         try
         {
             EncodingPresetFolder[] encodingPresetFolder = request
-                .Profiles.Select(selector: profile => new EncodingPresetFolder
+                .Profiles.Select(profile => new EncodingPresetFolder
                 {
                     FolderId = folder.Id,
-                    PresetId = Ulid.Parse(base32: profile),
+                    PresetId = Ulid.Parse(profile),
                 })
                 .ToArray();
 
-            await libraryRepository.AddEncodingPresetFolderAsync(encodingPresetFolders: encodingPresetFolder);
+            await libraryRepository.AddEncodingPresetFolderAsync(encodingPresetFolder);
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Successfully added encoder profile to {0} folder.",
@@ -828,12 +828,12 @@ public class LibrariesController(
         }
         catch (Exception)
         {
-            return InternalServerErrorResponse(detail: "Something went wrong adding the encoder profile");
+            return InternalServerErrorResponse("Something went wrong adding the encoder profile");
         }
     }
 
     [HttpDelete]
-    [Route(template: "{id:ulid}/folders/{folderId:ulid}/encoder_profiles/{encoderProfileId:ulid}")]
+    [Route("{id:ulid}/folders/{folderId:ulid}/encoder_profiles/{encoderProfileId:ulid}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> DeleteEncoderProfile(
         Ulid id,
@@ -842,23 +842,23 @@ public class LibrariesController(
     )
     {
         EncodingPreset? encodingPreset = await encodingPresetRepository.GetByIdAsync(
-            id: encoderProfileId
+            encoderProfileId
         );
 
         if (encodingPreset is null)
-            return NotFoundResponse(detail: "Encoder profile not found");
+            return NotFoundResponse("Encoder profile not found");
 
         try
         {
             await using MediaContext context = await mediaContextFactory.CreateDbContextAsync();
             await context
-                .EncodingPresetFolders.Where(predicate: link =>
+                .EncodingPresetFolders.Where(link =>
                     link.FolderId == folderId && link.PresetId == encoderProfileId
                 )
                 .ExecuteDeleteAsync();
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Successfully deleted encoder profile {0}.",
@@ -868,37 +868,37 @@ public class LibrariesController(
         }
         catch (Exception)
         {
-            return InternalServerErrorResponse(detail: "Something went wrong deleting the encoder profile");
+            return InternalServerErrorResponse("Something went wrong deleting the encoder profile");
         }
     }
 
     [HttpPost]
-    [Route(template: "move")]
+    [Route("move")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Move([FromBody] MoveRequest request)
     {
-        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId: request.FolderId);
+        Folder? folder = await folderRepository.GetFolderByIdAsync(request.FolderId);
 
         if (folder is null)
-            return NotFoundResponse(detail: "Folder not found");
+            return NotFoundResponse("Folder not found");
 
         try
         {
             await using MediaContext mediaContext =
                 await mediaContextFactory.CreateDbContextAsync();
 
-            FileRepository fileRepository = new(context: mediaContext, storageDriver: storageDriver);
+            FileRepository fileRepository = new(mediaContext, storageDriver);
             FileManager fileManager = new(
-                fileRepository: fileRepository,
-                storageFactory: storageFactory,
-                storageDriver: storageDriver,
-                mediaAnalyzer: mediaAnalyzer
+                fileRepository,
+                storageFactory,
+                storageDriver,
+                mediaAnalyzer
             );
 
-            await fileManager.MoveToLibraryFolder(id: request.Id, folder: folder);
+            await fileManager.MoveToLibraryFolder(request.Id, folder);
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Successfully moved item {0}.",
@@ -908,7 +908,7 @@ public class LibrariesController(
         }
         catch (Exception)
         {
-            return InternalServerErrorResponse(detail: "Something went wrong moving the item");
+            return InternalServerErrorResponse("Something went wrong moving the item");
         }
     }
 }

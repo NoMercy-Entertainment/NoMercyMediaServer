@@ -15,27 +15,27 @@ namespace NoMercy.Providers.TMDB.Models.Companies;
 
 public class TmdbCompanyDetails
 {
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "headquarters")]
+    [JsonProperty("headquarters")]
     public string? Headquarters { get; set; }
 
-    [JsonProperty(propertyName: "homepage")]
+    [JsonProperty("homepage")]
     public Uri? Homepage { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "logo_path")]
+    [JsonProperty("logo_path")]
     public string? LogoPath { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "origin_country")]
+    [JsonProperty("origin_country")]
     public string? OriginCountry { get; set; }
 
-    [JsonProperty(propertyName: "parent_company")]
+    [JsonProperty("parent_company")]
     public TmdbParentCompany? ParentCompany { get; set; }
 }

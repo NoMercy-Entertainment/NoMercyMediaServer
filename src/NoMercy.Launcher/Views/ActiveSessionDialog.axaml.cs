@@ -27,8 +27,8 @@ public partial class ActiveSessionDialog : Window
     public static async Task<bool> ShowAsync(Window owner, ActivityInfo activity)
     {
         ActiveSessionDialog dialog = new();
-        dialog.Configure(activity: activity);
-        await dialog.ShowDialog(owner: owner);
+        dialog.Configure(activity);
+        await dialog.ShowDialog(owner);
         return dialog._interrupted;
     }
 
@@ -38,15 +38,15 @@ public partial class ActiveSessionDialog : Window
 
         if (activity.ActiveStreams > 0)
             parts.Add(
-                item: $"{activity.ActiveStreams} active stream{(activity.ActiveStreams == 1 ? "" : "s")} — interrupting will stop playback for those users"
+                $"{activity.ActiveStreams} active stream{(activity.ActiveStreams == 1 ? "" : "s")} — interrupting will stop playback for those users"
             );
 
         if (activity.ActiveEncodes > 0)
             parts.Add(
-                item: $"{activity.ActiveEncodes} active encode{(activity.ActiveEncodes == 1 ? "" : "s")} — these will resume where they left off"
+                $"{activity.ActiveEncodes} active encode{(activity.ActiveEncodes == 1 ? "" : "s")} — these will resume where they left off"
             );
 
-        ActivitySummary.Text = string.Join(separator: "\n", values: parts);
+        ActivitySummary.Text = string.Join("\n", parts);
 
         ResumeNote.Text =
             activity.ActiveEncodes > 0

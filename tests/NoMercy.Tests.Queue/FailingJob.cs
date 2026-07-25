@@ -29,6 +29,6 @@ public class FailingJob : IShouldQueue
 
     public Task Handle()
     {
-        throw new Exception(message: $"This job always fails. the argument was {_param1}");
+        throw new Exception($"This job always fails. the argument was {_param1}");
     }
 }

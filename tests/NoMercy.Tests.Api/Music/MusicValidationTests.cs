@@ -12,7 +12,6 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -25,7 +24,7 @@ namespace NoMercy.Tests.Api.Music;
 /// AlbumId1 / PlaylistId1) with zero risk of mutating them, because the
 /// invalid payload always short-circuits before the update call.
 /// </summary>
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class MusicValidationTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _owner;
@@ -36,7 +35,7 @@ public class MusicValidationTests : IClassFixture<NoMercyApiFactory>
     }
 
     private static StringContent JsonBody(object obj) =>
-        new(content: JsonSerializer.Serialize(value: obj), encoding: Encoding.UTF8, mediaType: "application/json");
+        new(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
 
     // =========================================================================
     // TracksController.LyricsOffset — explicit range check runs BEFORE the
@@ -44,40 +43,40 @@ public class MusicValidationTests : IClassFixture<NoMercyApiFactory>
     // =========================================================================
 
     [Theory]
-    [InlineData(data: 30001)]
-    [InlineData(data: -30001)]
-    [InlineData(data: 999999)]
+    [InlineData(30001)]
+    [InlineData(-30001)]
+    [InlineData(999999)]
     public async Task LyricsOffset_OutOfRange_ReturnsBadRequest_BeforeTrackLookup(int offset)
     {
         HttpResponseMessage response = await _owner.PatchAsync(
-            requestUri: $"/api/v1/music/tracks/{Guid.NewGuid()}/lyrics-offset",
-            content: JsonBody(obj: new { offset })
+            $"/api/v1/music/tracks/{Guid.NewGuid()}/lyrics-offset",
+            JsonBody(new { offset })
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        using JsonDocument doc = JsonDocument.Parse(json: await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty(propertyName: "detail")
+        using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("detail")
             .GetString()
             .Should()
-            .Contain(expected: "-30000")
-            .And.Contain(expected: "30000");
+            .Contain("-30000")
+            .And.Contain("30000");
     }
 
     [Theory]
-    [InlineData(data: 30000)]
-    [InlineData(data: -30000)]
-    [InlineData(data: 0)]
+    [InlineData(30000)]
+    [InlineData(-30000)]
+    [InlineData(0)]
     public async Task LyricsOffset_WithinRange_PassesValidation_ReturnsNotFoundForFakeTrack(
         int offset
     )
     {
         HttpResponseMessage response = await _owner.PatchAsync(
-            requestUri: $"/api/v1/music/tracks/{Guid.NewGuid()}/lyrics-offset",
-            content: JsonBody(obj: new { offset })
+            $"/api/v1/music/tracks/{Guid.NewGuid()}/lyrics-offset",
+            JsonBody(new { offset })
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     // =========================================================================
@@ -89,28 +88,28 @@ public class MusicValidationTests : IClassFixture<NoMercyApiFactory>
     public async Task AlbumsEdit_InvalidCoverFormat_ReturnsBadRequest_NoWrite()
     {
         HttpResponseMessage response = await _owner.PatchAsync(
-            requestUri: $"/api/v1/music/albums/{NoMercyApiFactory.AlbumId1}",
-            content: JsonBody(obj: new { name = "Test Album", cover = "not-a-data-uri" })
+            $"/api/v1/music/albums/{NoMercyApiFactory.AlbumId1}",
+            JsonBody(new { name = "Test Album", cover = "not-a-data-uri" })
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        using JsonDocument doc = JsonDocument.Parse(json: await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty(propertyName: "detail").GetString().Should().Contain(expected: "data:image/");
+        using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("detail").GetString().Should().Contain("data:image/");
     }
 
     [Fact]
     public async Task AlbumsEdit_MalformedBase64Payload_ReturnsBadRequest_NoWrite()
     {
         HttpResponseMessage response = await _owner.PatchAsync(
-            requestUri: $"/api/v1/music/albums/{NoMercyApiFactory.AlbumId1}",
-            content: JsonBody(obj: new { name = "Test Album", cover = "data:image/jpeg,not-valid-base64!!!" })
+            $"/api/v1/music/albums/{NoMercyApiFactory.AlbumId1}",
+            JsonBody(new { name = "Test Album", cover = "data:image/jpeg,not-valid-base64!!!" })
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        using JsonDocument doc = JsonDocument.Parse(json: await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty(propertyName: "detail").GetString().Should().Contain(expected: "base64");
+        using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("detail").GetString().Should().Contain("base64");
     }
 
     // =========================================================================
@@ -122,28 +121,28 @@ public class MusicValidationTests : IClassFixture<NoMercyApiFactory>
     public async Task ArtistsEdit_InvalidCoverFormat_ReturnsBadRequest_NoWrite()
     {
         HttpResponseMessage response = await _owner.PatchAsync(
-            requestUri: $"/api/v1/music/artists/{NoMercyApiFactory.ArtistId1}",
-            content: JsonBody(obj: new { cover = "not-a-data-uri" })
+            $"/api/v1/music/artists/{NoMercyApiFactory.ArtistId1}",
+            JsonBody(new { cover = "not-a-data-uri" })
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        using JsonDocument doc = JsonDocument.Parse(json: await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty(propertyName: "detail").GetString().Should().Contain(expected: "data:image/");
+        using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("detail").GetString().Should().Contain("data:image/");
     }
 
     [Fact]
     public async Task ArtistsEdit_MalformedBase64Payload_ReturnsBadRequest_NoWrite()
     {
         HttpResponseMessage response = await _owner.PatchAsync(
-            requestUri: $"/api/v1/music/artists/{NoMercyApiFactory.ArtistId1}",
-            content: JsonBody(obj: new { cover = "data:image/jpeg,not-valid-base64!!!" })
+            $"/api/v1/music/artists/{NoMercyApiFactory.ArtistId1}",
+            JsonBody(new { cover = "data:image/jpeg,not-valid-base64!!!" })
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        using JsonDocument doc = JsonDocument.Parse(json: await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty(propertyName: "detail").GetString().Should().Contain(expected: "base64");
+        using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("detail").GetString().Should().Contain("base64");
     }
 
     // =========================================================================
@@ -155,13 +154,13 @@ public class MusicValidationTests : IClassFixture<NoMercyApiFactory>
     public async Task PlaylistsEdit_InvalidCoverFormat_ReturnsBadRequest_NoWrite()
     {
         HttpResponseMessage response = await _owner.PatchAsync(
-            requestUri: $"/api/v1/music/playlists/{NoMercyApiFactory.PlaylistId1}",
-            content: JsonBody(obj: new { name = "Test Playlist", cover = "not-a-data-uri" })
+            $"/api/v1/music/playlists/{NoMercyApiFactory.PlaylistId1}",
+            JsonBody(new { name = "Test Playlist", cover = "not-a-data-uri" })
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        using JsonDocument doc = JsonDocument.Parse(json: await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty(propertyName: "detail").GetString().Should().Contain(expected: "data:image/");
+        using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("detail").GetString().Should().Contain("data:image/");
     }
 }

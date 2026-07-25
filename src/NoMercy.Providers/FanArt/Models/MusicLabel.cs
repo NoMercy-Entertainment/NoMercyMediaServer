@@ -19,19 +19,19 @@ public class MusicLabel
     // ReSharper disable once InconsistentNaming
     private Uri __url = null!;
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri Url
     {
         get => __url.ToHttps();
         init => __url = value;
     }
 
-    [JsonProperty(propertyName: "colour")]
+    [JsonProperty("colour")]
     public string Color { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "likes")]
+    [JsonProperty("likes")]
     public string Likes { get; set; } = string.Empty;
 }

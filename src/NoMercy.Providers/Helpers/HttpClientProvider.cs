@@ -31,7 +31,7 @@ public static class HttpClientProvider
         {
             try
             {
-                return _factory.CreateClient(name: name);
+                return _factory.CreateClient(name);
             }
             catch (ObjectDisposedException)
             {

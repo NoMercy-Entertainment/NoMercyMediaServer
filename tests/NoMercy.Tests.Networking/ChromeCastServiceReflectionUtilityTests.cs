@@ -31,7 +31,7 @@ namespace NoMercy.Tests.Networking;
 /// logic against a real System.Timers.Timer and a real (unconnected)
 /// Sharpcaster ChromecastClient — no live Chromecast device involved.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class ChromeCastServiceReflectionUtilityTests
 {
     private sealed class NoOpNetworkDiscovery : INetworkDiscovery
@@ -52,63 +52,63 @@ public sealed class ChromeCastServiceReflectionUtilityTests
 
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
-        public Task<bool> IsPortOpenAsync() => Task.FromResult(result: false);
+        public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
     }
 
     private static ChromeCastService BuildService() =>
-        new(logger: NullLogger<ChromeCastService>.Instance, networkDiscovery: new NoOpNetworkDiscovery());
+        new(NullLogger<ChromeCastService>.Instance, new NoOpNetworkDiscovery());
 
     [Fact]
     public void NeutralizeTimer_StopsTheTimer_AndDisablesAutoReset()
     {
         ChromeCastService service = BuildService();
-        Timer timer = new(interval: 1000) { AutoReset = true };
+        Timer timer = new(1000) { AutoReset = true };
         timer.Start();
 
-        service.NeutralizeTimer(timer: timer);
+        service.NeutralizeTimer(timer);
 
-        Assert.False(condition: timer.Enabled);
-        Assert.False(condition: timer.AutoReset);
+        Assert.False(timer.Enabled);
+        Assert.False(timer.AutoReset);
     }
 
     [Fact]
     public void NeutralizeTimer_ReplacesElapsedHandler_SoOriginalNeverFires()
     {
         ChromeCastService service = BuildService();
-        Timer timer = new(interval: 1000);
+        Timer timer = new(1000);
         bool originalHandlerFired = false;
         timer.Elapsed += (_, _) => originalHandlerFired = true;
 
-        service.NeutralizeTimer(timer: timer);
+        service.NeutralizeTimer(timer);
 
         // Force-invoke whatever handler is now wired to the timer's private
         // _onIntervalElapsed field — after neutralizing, that must not be the
         // original handler we attached above.
         FieldInfo? field = typeof(Timer).GetField(
-            name: "_onIntervalElapsed",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "_onIntervalElapsed",
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
-        Assert.NotNull(@object: field);
-        object? handler = field!.GetValue(obj: timer);
-        Assert.NotNull(@object: handler);
+        Assert.NotNull(field);
+        object? handler = field!.GetValue(timer);
+        Assert.NotNull(handler);
 
-        ((ElapsedEventHandler)handler!).Invoke(sender: timer, e: null!);
+        ((ElapsedEventHandler)handler!).Invoke(timer, null!);
 
-        Assert.False(condition: originalHandlerFired);
+        Assert.False(originalHandlerFired);
     }
 
     [Fact]
     public void NeutralizeTimer_DoesNotDisposeTheTimer()
     {
         ChromeCastService service = BuildService();
-        Timer timer = new(interval: 1000);
+        Timer timer = new(1000);
 
-        service.NeutralizeTimer(timer: timer);
+        service.NeutralizeTimer(timer);
 
         // A disposed Timer throws ObjectDisposedException from set_Enabled —
         // this must not throw, proving the timer was left alive.
-        Exception? ex = Record.Exception(testCode: () => timer.Enabled = true);
-        Assert.Null(@object: ex);
+        Exception? ex = Record.Exception(() => timer.Enabled = true);
+        Assert.Null(ex);
         timer.Dispose();
     }
 
@@ -116,21 +116,21 @@ public sealed class ChromeCastServiceReflectionUtilityTests
     public void NeutralizeTimer_CalledTwice_DoesNotThrow()
     {
         ChromeCastService service = BuildService();
-        Timer timer = new(interval: 1000);
+        Timer timer = new(1000);
 
-        Exception? ex = Record.Exception(testCode: () =>
+        Exception? ex = Record.Exception(() =>
         {
-            service.NeutralizeTimer(timer: timer);
-            service.NeutralizeTimer(timer: timer);
+            service.NeutralizeTimer(timer);
+            service.NeutralizeTimer(timer);
         });
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
         timer.Dispose();
     }
 
     private sealed class OwnerWithPrivateTimer
     {
-        private readonly Timer _timer = new(interval: 1000);
+        private readonly Timer _timer = new(1000);
 
         public Timer Timer => _timer;
     }
@@ -142,9 +142,9 @@ public sealed class ChromeCastServiceReflectionUtilityTests
         OwnerWithPrivateTimer owner = new();
         owner.Timer.Start();
 
-        service.NeutralizeTimersIn(owner: owner);
+        service.NeutralizeTimersIn(owner);
 
-        Assert.False(condition: owner.Timer.Enabled);
+        Assert.False(owner.Timer.Enabled);
         owner.Timer.Dispose();
     }
 
@@ -160,11 +160,11 @@ public sealed class ChromeCastServiceReflectionUtilityTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = Record.Exception(testCode: () =>
-            service.NeutralizeTimersIn(owner: new OwnerWithNoTimerFields())
+        Exception? ex = Record.Exception(() =>
+            service.NeutralizeTimersIn(new OwnerWithNoTimerFields())
         );
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -173,10 +173,10 @@ public sealed class ChromeCastServiceReflectionUtilityTests
         ChromeCastService service = BuildService();
 
         ChromecastClient? client = null;
-        Exception? ex = Record.Exception(testCode: () => client = service.BuildClient(receiverName: "Living Room TV"));
+        Exception? ex = Record.Exception(() => client = service.BuildClient("Living Room TV"));
 
-        Assert.Null(@object: ex);
-        Assert.NotNull(@object: client);
+        Assert.Null(ex);
+        Assert.NotNull(client);
     }
 
     [Fact]
@@ -185,9 +185,9 @@ public sealed class ChromeCastServiceReflectionUtilityTests
         ChromeCastService service = BuildService();
         ChromecastClient client = new();
 
-        Exception? ex = Record.Exception(testCode: () => service.DisableSharpcasterHeartbeat(client: client));
+        Exception? ex = Record.Exception(() => service.DisableSharpcasterHeartbeat(client));
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -196,13 +196,13 @@ public sealed class ChromeCastServiceReflectionUtilityTests
         ChromeCastService service = BuildService();
         ChromecastClient client = new();
 
-        Exception? ex = Record.Exception(testCode: () =>
+        Exception? ex = Record.Exception(() =>
         {
-            service.DisableSharpcasterHeartbeat(client: client);
-            service.DisableSharpcasterHeartbeat(client: client);
+            service.DisableSharpcasterHeartbeat(client);
+            service.DisableSharpcasterHeartbeat(client);
         });
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     // -- BuildLaunchJson: all four LAUNCH-payload permutations.
@@ -212,13 +212,13 @@ public sealed class ChromeCastServiceReflectionUtilityTests
     {
         ChromeCastService service = BuildService();
 
-        string json = service.BuildLaunchJson(requestId: 1, customData: null, useAndroidReceiver: true);
+        string json = service.BuildLaunchJson(1, null, true);
 
-        Assert.Contains(expectedSubstring: "\"appId\":\"925B4C3C\"", actualString: json);
-        Assert.Contains(expectedSubstring: "\"requestId\":1", actualString: json);
-        Assert.Contains(expectedSubstring: "ANDROID_TV", actualString: json);
-        Assert.Contains(expectedSubstring: "androidReceiverCompatible", actualString: json);
-        Assert.DoesNotContain(expectedSubstring: "customData", actualString: json);
+        Assert.Contains("\"appId\":\"925B4C3C\"", json);
+        Assert.Contains("\"requestId\":1", json);
+        Assert.Contains("ANDROID_TV", json);
+        Assert.Contains("androidReceiverCompatible", json);
+        Assert.DoesNotContain("customData", json);
     }
 
     [Fact]
@@ -226,13 +226,13 @@ public sealed class ChromeCastServiceReflectionUtilityTests
     {
         ChromeCastService service = BuildService();
 
-        string json = service.BuildLaunchJson(requestId: 2, customData: null, useAndroidReceiver: false);
+        string json = service.BuildLaunchJson(2, null, false);
 
-        Assert.Contains(expectedSubstring: "\"appId\":\"925B4C3C\"", actualString: json);
-        Assert.Contains(expectedSubstring: "\"requestId\":2", actualString: json);
-        Assert.Contains(expectedSubstring: "\"WEB\"", actualString: json);
-        Assert.DoesNotContain(expectedSubstring: "androidReceiverCompatible", actualString: json);
-        Assert.DoesNotContain(expectedSubstring: "customData", actualString: json);
+        Assert.Contains("\"appId\":\"925B4C3C\"", json);
+        Assert.Contains("\"requestId\":2", json);
+        Assert.Contains("\"WEB\"", json);
+        Assert.DoesNotContain("androidReceiverCompatible", json);
+        Assert.DoesNotContain("customData", json);
     }
 
     [Fact]
@@ -241,14 +241,14 @@ public sealed class ChromeCastServiceReflectionUtilityTests
         ChromeCastService service = BuildService();
 
         string json = service.BuildLaunchJson(
-            requestId: 3,
-            customData: new { accessToken = "abc" },
-            useAndroidReceiver: true
+            3,
+            new { accessToken = "abc" },
+            true
         );
 
-        Assert.Contains(expectedSubstring: "androidReceiverCompatible", actualString: json);
-        Assert.Contains(expectedSubstring: "customData", actualString: json);
-        Assert.Contains(expectedSubstring: "abc", actualString: json);
+        Assert.Contains("androidReceiverCompatible", json);
+        Assert.Contains("customData", json);
+        Assert.Contains("abc", json);
     }
 
     [Fact]
@@ -257,15 +257,15 @@ public sealed class ChromeCastServiceReflectionUtilityTests
         ChromeCastService service = BuildService();
 
         string json = service.BuildLaunchJson(
-            requestId: 4,
-            customData: new { accessToken = "xyz" },
-            useAndroidReceiver: false
+            4,
+            new { accessToken = "xyz" },
+            false
         );
 
-        Assert.Contains(expectedSubstring: "\"WEB\"", actualString: json);
-        Assert.Contains(expectedSubstring: "customData", actualString: json);
-        Assert.Contains(expectedSubstring: "xyz", actualString: json);
-        Assert.DoesNotContain(expectedSubstring: "androidReceiverCompatible", actualString: json);
+        Assert.Contains("\"WEB\"", json);
+        Assert.Contains("customData", json);
+        Assert.Contains("xyz", json);
+        Assert.DoesNotContain("androidReceiverCompatible", json);
     }
 
     [Fact]
@@ -273,8 +273,8 @@ public sealed class ChromeCastServiceReflectionUtilityTests
     {
         ChromeCastService service = BuildService();
 
-        string json = service.BuildLaunchJson(requestId: 999, customData: null, useAndroidReceiver: true);
+        string json = service.BuildLaunchJson(999, null, true);
 
-        Assert.Contains(expectedSubstring: "\"requestId\":999", actualString: json);
+        Assert.Contains("\"requestId\":999", json);
     }
 }

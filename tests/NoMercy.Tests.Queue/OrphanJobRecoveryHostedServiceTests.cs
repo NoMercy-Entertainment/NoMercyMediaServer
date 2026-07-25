@@ -30,11 +30,11 @@ public class OrphanJobRecoveryHostedServiceTests
     {
         TestQueueContextAdapter context = new();
         ServiceCollection services = new();
-        services.AddSingleton<IQueueContext>(implementationInstance: context);
+        services.AddSingleton<IQueueContext>(context);
         ServiceProvider provider = services.BuildServiceProvider();
         OrphanJobRecoveryHostedService service = new(
-            scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(),
-            logger: NullLogger<OrphanJobRecoveryHostedService>.Instance
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<OrphanJobRecoveryHostedService>.Instance
         );
         return (service, context);
     }
@@ -49,23 +49,23 @@ public class OrphanJobRecoveryHostedServiceTests
             Payload = "{\"id\":\"job-1\"}",
             Priority = 5,
             Attempts = 2,
-            ReservedAt = DateTime.UtcNow.AddMinutes(value: -5),
-            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            ReservedAt = DateTime.UtcNow.AddMinutes(-5),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
-        context.AddJob(job: orphan);
+        context.AddJob(orphan);
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         if (service.ExecuteTask is not null)
             await service.ExecuteTask;
 
-        Assert.Empty(collection: context.Jobs);
-        Assert.Single(collection: context.FailedJobs);
-        FailedJobModel failed = context.FailedJobs[index: 0];
-        Assert.Equal(expected: EncoderQueue, actual: failed.Queue);
-        Assert.Equal(expected: orphan.Payload, actual: failed.Payload);
-        Assert.Equal(expected: "job.interrupted_no_checkpoint", actual: failed.Exception);
-        Assert.Equal(expected: "default", actual: failed.Connection);
-        Assert.NotEqual(expected: Guid.Empty, actual: failed.Uuid);
+        Assert.Empty(context.Jobs);
+        Assert.Single(context.FailedJobs);
+        FailedJobModel failed = context.FailedJobs[0];
+        Assert.Equal(EncoderQueue, failed.Queue);
+        Assert.Equal(orphan.Payload, failed.Payload);
+        Assert.Equal("job.interrupted_no_checkpoint", failed.Exception);
+        Assert.Equal("default", failed.Connection);
+        Assert.NotEqual(Guid.Empty, failed.Uuid);
     }
 
     [Fact]
@@ -78,20 +78,20 @@ public class OrphanJobRecoveryHostedServiceTests
             Payload = "{\"id\":\"job-2\"}",
             Priority = 5,
             Attempts = 1,
-            ReservedAt = DateTime.UtcNow.AddMinutes(value: -2),
-            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            ReservedAt = DateTime.UtcNow.AddMinutes(-2),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
-        context.AddJob(job: orphan);
+        context.AddJob(orphan);
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         if (service.ExecuteTask is not null)
             await service.ExecuteTask;
 
-        Assert.Single(collection: context.Jobs);
-        Assert.Empty(collection: context.FailedJobs);
-        QueueJobModel survivor = context.Jobs[index: 0];
-        Assert.Null(value: survivor.ReservedAt);
-        Assert.Equal(expected: 0, actual: survivor.Attempts);
+        Assert.Single(context.Jobs);
+        Assert.Empty(context.FailedJobs);
+        QueueJobModel survivor = context.Jobs[0];
+        Assert.Null(survivor.ReservedAt);
+        Assert.Equal(0, survivor.Attempts);
     }
 
     [Fact]
@@ -104,17 +104,17 @@ public class OrphanJobRecoveryHostedServiceTests
             Payload = "{\"id\":\"job-3\"}",
             Priority = 5,
             Attempts = 2,
-            ReservedAt = DateTime.UtcNow.AddSeconds(value: -5),
-            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            ReservedAt = DateTime.UtcNow.AddSeconds(-5),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
-        context.AddJob(job: reserved);
+        context.AddJob(reserved);
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         if (service.ExecuteTask is not null)
             await service.ExecuteTask;
 
-        Assert.Single(collection: context.Jobs);
-        Assert.Empty(collection: context.FailedJobs);
+        Assert.Single(context.Jobs);
+        Assert.Empty(context.FailedJobs);
     }
 
     [Fact]
@@ -128,15 +128,15 @@ public class OrphanJobRecoveryHostedServiceTests
             Priority = 5,
             Attempts = 0,
             ReservedAt = null,
-            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
-        context.AddJob(job: pending);
+        context.AddJob(pending);
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         if (service.ExecuteTask is not null)
             await service.ExecuteTask;
 
-        Assert.Single(collection: context.Jobs);
-        Assert.Empty(collection: context.FailedJobs);
+        Assert.Single(context.Jobs);
+        Assert.Empty(context.FailedJobs);
     }
 }

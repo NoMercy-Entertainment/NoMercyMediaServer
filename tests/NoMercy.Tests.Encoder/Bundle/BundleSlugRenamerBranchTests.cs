@@ -42,24 +42,24 @@ public class BundleSlugRenamerBranchTests
 
         const string path = "Show/Show S01E01/.nomercy.json";
         storage.Seed(
-            path: path,
-            bytes: Encoding.UTF8.GetBytes(
-                s: RenameTestHelpers.BuildBlueprintJson(presetSlugs: ["preset-a-old", "preset-b-old", "untouched"])
+            path,
+            Encoding.UTF8.GetBytes(
+                RenameTestHelpers.BuildBlueprintJson(["preset-a-old", "preset-b-old", "untouched"])
             )
         );
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
-            slugMap: new() { [key: "preset-a-old"] = "preset-a-new", [key: "preset-b-old"] = "preset-b-new" },
-            storage: storage,
-            context: context
+            new() { ["preset-a-old"] = "preset-a-new", ["preset-b-old"] = "preset-b-new" },
+            storage,
+            context
         );
 
         await renamer.RunAsync();
 
         IReadOnlyList<string> slugs = RenameTestHelpers.EncodeSlugs(
-            blueprint: RenameTestHelpers.ReadBlueprint(storage: storage, path: path)
+            RenameTestHelpers.ReadBlueprint(storage, path)
         );
-        slugs.Should().BeEquivalentTo(expectation: ["preset-a-new", "preset-b-new", "untouched"]);
+        slugs.Should().BeEquivalentTo(["preset-a-new", "preset-b-new", "untouched"]);
     }
 
     [Fact]
@@ -71,30 +71,30 @@ public class BundleSlugRenamerBranchTests
         const string corruptPath = "Corrupt Item/.nomercy.json";
         const string validPath = "Good Item/.nomercy.json";
 
-        storage.Seed(path: corruptPath, bytes: Encoding.UTF8.GetBytes(s: "not valid json"));
+        storage.Seed(corruptPath, Encoding.UTF8.GetBytes("not valid json"));
         storage.Seed(
-            path: validPath,
-            bytes: Encoding.UTF8.GetBytes(s: RenameTestHelpers.BuildBlueprintJson(presetSlugs: "old-slug"))
+            validPath,
+            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildBlueprintJson("old-slug"))
         );
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
-            slugMap: new() { [key: "old-slug"] = "new-slug" },
-            storage: storage,
-            context: context
+            new() { ["old-slug"] = "new-slug" },
+            storage,
+            context
         );
 
         Func<Task> act = () => renamer.RunAsync();
         await act.Should().NotThrowAsync();
 
         // Corrupt file is left untouched for forensic recovery.
-        storage.ReadString(path: corruptPath).Should().Be(expected: "not valid json");
+        storage.ReadString(corruptPath).Should().Be("not valid json");
 
         RenameTestHelpers
-            .EncodeSlugs(blueprint: RenameTestHelpers.ReadBlueprint(storage: storage, path: validPath))
+            .EncodeSlugs(RenameTestHelpers.ReadBlueprint(storage, validPath))
             .Should()
             .ContainSingle()
             .Which.Should()
-            .Be(expected: "new-slug");
+            .Be("new-slug");
     }
 
     [Fact]
@@ -105,24 +105,24 @@ public class BundleSlugRenamerBranchTests
 
         const string path = "Legacy Item/.nomercy.json";
         string legacyJson = JsonConvert.SerializeObject(
-            value: new JObject
+            new JObject
             {
-                [propertyName: "version"] = 1,
-                [propertyName: "identity"] = new JObject { [propertyName: "type"] = "movie" },
+                ["version"] = 1,
+                ["identity"] = new JObject { ["type"] = "movie" },
             }
         );
-        storage.Seed(path: path, bytes: Encoding.UTF8.GetBytes(s: legacyJson));
+        storage.Seed(path, Encoding.UTF8.GetBytes(legacyJson));
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
-            slugMap: new() { [key: "old-slug"] = "new-slug" },
-            storage: storage,
-            context: context
+            new() { ["old-slug"] = "new-slug" },
+            storage,
+            context
         );
 
         Func<Task> act = () => renamer.RunAsync();
         await act.Should().NotThrowAsync();
 
-        storage.ReadString(path: path).Should().Be(expected: legacyJson);
+        storage.ReadString(path).Should().Be(legacyJson);
     }
 
     [Fact]
@@ -134,51 +134,51 @@ public class BundleSlugRenamerBranchTests
         const string path = "Fight Club (1999)/.nomercy.json";
         JObject original = new()
         {
-            [propertyName: "version"] = 1,
-            [propertyName: "identity"] = new JObject
+            ["version"] = 1,
+            ["identity"] = new JObject
             {
-                [propertyName: "type"] = "movie",
-                [propertyName: "tmdb_id"] = 550,
-                [propertyName: "title"] = "Fight Club",
+                ["type"] = "movie",
+                ["tmdb_id"] = 550,
+                ["title"] = "Fight Club",
             },
-            [propertyName: "source"] = new JObject { [propertyName: "path"] = "Fight Club.mkv" },
-            [propertyName: "encodes"] = new JArray(
-                content: new JObject
+            ["source"] = new JObject { ["path"] = "Fight Club.mkv" },
+            ["encodes"] = new JArray(
+                new JObject
                 {
-                    [propertyName: "preset_slug"] = "old-slug",
-                    [propertyName: "preset_id"] = "01J3X8R7K2QM9Y0G1Q4ABCDEFG",
-                    [propertyName: "profile_fingerprint"] = "abc123",
-                    [propertyName: "custom_field"] = "preserved",
+                    ["preset_slug"] = "old-slug",
+                    ["preset_id"] = "01J3X8R7K2QM9Y0G1Q4ABCDEFG",
+                    ["profile_fingerprint"] = "abc123",
+                    ["custom_field"] = "preserved",
                 }
             ),
         };
-        storage.Seed(path: path, bytes: Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: original)));
+        storage.Seed(path, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(original)));
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
-            slugMap: new() { [key: "old-slug"] = "new-slug" },
-            storage: storage,
-            context: context
+            new() { ["old-slug"] = "new-slug" },
+            storage,
+            context
         );
 
         await renamer.RunAsync();
 
-        JObject patched = RenameTestHelpers.ReadBlueprint(storage: storage, path: path);
-        JObject encode = (JObject)patched[propertyName: "encodes"]![key: 0]!;
+        JObject patched = RenameTestHelpers.ReadBlueprint(storage, path);
+        JObject encode = (JObject)patched["encodes"]![0]!;
 
-        encode[propertyName: "preset_slug"]!.Value<string>().Should().Be(expected: "new-slug");
-        encode[propertyName: "preset_id"]!.Value<string>().Should().Be(expected: "01J3X8R7K2QM9Y0G1Q4ABCDEFG");
-        encode[propertyName: "profile_fingerprint"]!.Value<string>().Should().Be(expected: "abc123");
-        encode[propertyName: "custom_field"]!.Value<string>().Should().Be(expected: "preserved");
-        patched[propertyName: "version"]!.Value<int>().Should().Be(expected: 1);
-        patched[propertyName: "identity"]![key: "title"]!.Value<string>().Should().Be(expected: "Fight Club");
-        patched[propertyName: "source"]![key: "path"]!.Value<string>().Should().Be(expected: "Fight Club.mkv");
+        encode["preset_slug"]!.Value<string>().Should().Be("new-slug");
+        encode["preset_id"]!.Value<string>().Should().Be("01J3X8R7K2QM9Y0G1Q4ABCDEFG");
+        encode["profile_fingerprint"]!.Value<string>().Should().Be("abc123");
+        encode["custom_field"]!.Value<string>().Should().Be("preserved");
+        patched["version"]!.Value<int>().Should().Be(1);
+        patched["identity"]!["title"]!.Value<string>().Should().Be("Fight Club");
+        patched["source"]!["path"]!.Value<string>().Should().Be("Fight Club.mkv");
     }
 
     [Theory]
-    [InlineData(data: ["", "valid-new"])]
-    [InlineData(data: ["valid-old", ""])]
-    [InlineData(data: ["   ", "valid-new"])]
-    [InlineData(data: ["valid-old", "   "])]
+    [InlineData(["", "valid-new"])]
+    [InlineData(["valid-old", ""])]
+    [InlineData(["   ", "valid-new"])]
+    [InlineData(["valid-old", "   "])]
     public async Task Empty_or_whitespace_slug_in_pair_skipped_to_prevent_mass_rewrite(
         string oldSlug,
         string newSlug
@@ -192,25 +192,25 @@ public class BundleSlugRenamerBranchTests
 
         const string path = "Real Item/.nomercy.json";
         storage.Seed(
-            path: path,
-            bytes: Encoding.UTF8.GetBytes(s: RenameTestHelpers.BuildBlueprintJson(presetSlugs: "real-slug"))
+            path,
+            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildBlueprintJson("real-slug"))
         );
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
-            slugMap: new() { [key: oldSlug] = newSlug },
-            storage: storage,
-            context: context
+            new() { [oldSlug] = newSlug },
+            storage,
+            context
         );
 
         Func<Task> act = () => renamer.RunAsync();
         await act.Should().NotThrowAsync();
 
         RenameTestHelpers
-            .EncodeSlugs(blueprint: RenameTestHelpers.ReadBlueprint(storage: storage, path: path))
+            .EncodeSlugs(RenameTestHelpers.ReadBlueprint(storage, path))
             .Should()
             .ContainSingle()
             .Which.Should()
-            .Be(expected: "real-slug");
+            .Be("real-slug");
     }
 
     [Fact]
@@ -222,10 +222,10 @@ public class BundleSlugRenamerBranchTests
         // via two folder records that share the test storage, each holding
         // its own blueprint file.
         TestStorage storage = new();
-        MediaContext context = RenameTestHelpers.BuildInMemoryContext(folderPath: "/lib1");
+        MediaContext context = RenameTestHelpers.BuildInMemoryContext("/lib1");
 
         context.Folders.Add(
-            entity: new()
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Path = "/lib2",
@@ -237,33 +237,33 @@ public class BundleSlugRenamerBranchTests
         const string path1 = "lib1/Item One/.nomercy.json";
         const string path2 = "lib2/Item Two/.nomercy.json";
         storage.Seed(
-            path: path1,
-            bytes: Encoding.UTF8.GetBytes(s: RenameTestHelpers.BuildBlueprintJson(presetSlugs: "old-slug"))
+            path1,
+            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildBlueprintJson("old-slug"))
         );
         storage.Seed(
-            path: path2,
-            bytes: Encoding.UTF8.GetBytes(s: RenameTestHelpers.BuildBlueprintJson(presetSlugs: "old-slug"))
+            path2,
+            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildBlueprintJson("old-slug"))
         );
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
-            slugMap: new() { [key: "old-slug"] = "new-slug" },
-            storage: storage,
-            context: context
+            new() { ["old-slug"] = "new-slug" },
+            storage,
+            context
         );
 
         await renamer.RunAsync();
 
         RenameTestHelpers
-            .EncodeSlugs(blueprint: RenameTestHelpers.ReadBlueprint(storage: storage, path: path1))
+            .EncodeSlugs(RenameTestHelpers.ReadBlueprint(storage, path1))
             .Should()
             .ContainSingle()
             .Which.Should()
-            .Be(expected: "new-slug");
+            .Be("new-slug");
         RenameTestHelpers
-            .EncodeSlugs(blueprint: RenameTestHelpers.ReadBlueprint(storage: storage, path: path2))
+            .EncodeSlugs(RenameTestHelpers.ReadBlueprint(storage, path2))
             .Should()
             .ContainSingle()
             .Which.Should()
-            .Be(expected: "new-slug");
+            .Be("new-slug");
     }
 }

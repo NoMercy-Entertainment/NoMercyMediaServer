@@ -18,31 +18,31 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record ImageDto
 {
-    [JsonProperty(propertyName: "height")]
+    [JsonProperty("height")]
     public long Height { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "src")]
+    [JsonProperty("src")]
     public string? Src { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "width")]
+    [JsonProperty("width")]
     public long Width { get; set; }
 
-    [JsonProperty(propertyName: "iso_639_1")]
+    [JsonProperty("iso_639_1")]
     public string? Iso6391 { get; set; }
 
-    [JsonProperty(propertyName: "voteAverage")]
+    [JsonProperty("voteAverage")]
     public double VoteAverage { get; set; }
 
-    [JsonProperty(propertyName: "voteCount")]
+    [JsonProperty("voteCount")]
     public long VoteCount { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
     public ImageDto() { }
@@ -52,8 +52,8 @@ public record ImageDto
         Id = media.Id;
         Src =
             media.Site == "https://image.tmdb.org/t/p/"
-                ? new Uri(uriString: media.FilePath, uriKind: UriKind.Relative).ToString()
-                : new Uri(uriString: $"/images/music{media.FilePath}", uriKind: UriKind.Relative).ToString();
+                ? new Uri(media.FilePath, UriKind.Relative).ToString()
+                : new Uri($"/images/music{media.FilePath}", UriKind.Relative).ToString();
         Width = media.Width ?? 0;
         Type = media.Type;
         Height = media.Height ?? 0;
@@ -65,7 +65,7 @@ public record ImageDto
 
     public ImageDto(TmdbImage media)
     {
-        Id = HashToId(filePath: media.FilePath);
+        Id = HashToId(media.FilePath);
         Src = media.FilePath;
         Width = media.Width;
         Height = media.Height;
@@ -78,7 +78,7 @@ public record ImageDto
 
     public ImageDto(TmdbProfile image)
     {
-        Id = HashToId(filePath: image.FilePath);
+        Id = HashToId(image.FilePath);
         Src = image.FilePath;
         Width = image.Width;
         Height = image.Height;
@@ -98,7 +98,7 @@ public record ImageDto
     /// </summary>
     private static long HashToId(string? filePath)
     {
-        int hash = Fnv1AHash(value: filePath ?? string.Empty);
+        int hash = Fnv1AHash(filePath ?? string.Empty);
         return hash < 0 ? -(long)hash + 1_000_000_000L : hash;
     }
 

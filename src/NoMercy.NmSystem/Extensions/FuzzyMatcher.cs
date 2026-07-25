@@ -15,11 +15,11 @@ public static class FuzzyMatcher
 {
     public static double MatchPercentage(string strA, string strB)
     {
-        if (string.IsNullOrEmpty(value: strA) || string.IsNullOrEmpty(value: strB))
+        if (string.IsNullOrEmpty(strA) || string.IsNullOrEmpty(strB))
             return 0;
 
-        int distance = LevenshteinDistance(s1: strA.ToLower(), s2: strB.ToLower());
-        int maxLength = Math.Max(val1: strA.Length, val2: strB.Length);
+        int distance = LevenshteinDistance(strA.ToLower(), strB.ToLower());
+        int maxLength = Math.Max(strA.Length, strB.Length);
 
         return (1.0 - (double)distance / maxLength) * 100;
     }
@@ -38,13 +38,13 @@ public static class FuzzyMatcher
             curr[0] = i;
             for (int j = 1; j <= s2.Length; j++)
             {
-                int cost = s1[index: i - 1] == s2[index: j - 1] ? 0 : 1;
+                int cost = s1[i - 1] == s2[j - 1] ? 0 : 1;
                 curr[j] = Math.Min(
-                    val1: Math.Min(
-                        val1: prev[j] + 1, // Deletion
-                        val2: curr[j - 1] + 1
+                    Math.Min(
+                        prev[j] + 1, // Deletion
+                        curr[j - 1] + 1
                     ), // Insertion
-                    val2: prev[j - 1] + cost
+                    prev[j - 1] + cost
                 ); // Substitution
             }
 
@@ -61,7 +61,7 @@ public static class FuzzyMatcher
     )
         where T : class
     {
-        return array.OrderBy(keySelector: item => MatchPercentage(strA: match, strB: keySelector(arg: item))).ToList();
+        return array.OrderBy(item => MatchPercentage(match, keySelector(item))).ToList();
     }
 
     public static List<T> ToSortByMatchPercentage<T>(
@@ -71,6 +71,6 @@ public static class FuzzyMatcher
     )
         where T : class
     {
-        return array.OrderBy(keySelector: item => MatchPercentage(strA: match, strB: keySelector(arg: item))).ToList();
+        return array.OrderBy(item => MatchPercentage(match, keySelector(item))).ToList();
     }
 }

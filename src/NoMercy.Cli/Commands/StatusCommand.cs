@@ -18,35 +18,35 @@ internal static class StatusCommand
 {
     public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
-        Command command = new(name: "status") { Description = "Show server status" };
+        Command command = new("status") { Description = "Show server status" };
 
         command.SetAction(
-            action: async (parseResult, ct) =>
+            async (parseResult, ct) =>
             {
-                string? pipe = parseResult.GetValue(option: pipeOption);
-                using ICliClient client = clientFactory.Create(pipeNameOrSocketPath: pipe);
+                string? pipe = parseResult.GetValue(pipeOption);
+                using ICliClient client = clientFactory.Create(pipe);
                 StatusResponse? status = await client.GetAsync<StatusResponse>(
-                    path: ApiRoutes.Status,
-                    cancellationToken: ct
+                    ApiRoutes.Status,
+                    ct
                 );
 
                 if (status is null)
                 {
-                    await Console.Error.WriteLineAsync(value: "Could not connect to server.");
+                    await Console.Error.WriteLineAsync("Could not connect to server.");
                     return (int)ExitCode.ServerError;
                 }
 
-                TimeSpan uptime = TimeSpan.FromSeconds(seconds: status.UptimeSeconds);
+                TimeSpan uptime = TimeSpan.FromSeconds(status.UptimeSeconds);
 
-                Console.WriteLine(value: $"Status:       {status.Status}");
-                Console.WriteLine(value: $"Server:       {status.ServerName}");
-                Console.WriteLine(value: $"Version:      {status.Version}");
-                Console.WriteLine(value: $"Platform:     {status.Platform} ({status.Architecture})");
-                Console.WriteLine(value: $"OS:           {status.Os}");
-                Console.WriteLine(value: $"Uptime:       {FormatUptime(uptime: uptime)}");
-                Console.WriteLine(value: $"Started:      {status.StartTime:yyyy-MM-dd HH:mm:ss} UTC");
+                Console.WriteLine($"Status:       {status.Status}");
+                Console.WriteLine($"Server:       {status.ServerName}");
+                Console.WriteLine($"Version:      {status.Version}");
+                Console.WriteLine($"Platform:     {status.Platform} ({status.Architecture})");
+                Console.WriteLine($"OS:           {status.Os}");
+                Console.WriteLine($"Uptime:       {FormatUptime(uptime)}");
+                Console.WriteLine($"Started:      {status.StartTime:yyyy-MM-dd HH:mm:ss} UTC");
                 if (status.IsDev)
-                    Console.WriteLine(value: "Mode:         Development");
+                    Console.WriteLine("Mode:         Development");
 
                 return (int)ExitCode.Success;
             }

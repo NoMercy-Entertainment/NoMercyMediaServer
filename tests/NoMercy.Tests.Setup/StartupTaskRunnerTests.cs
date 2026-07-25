@@ -23,44 +23,44 @@ public class StartupTaskRunnerTests
         List<StartupTask> tasks =
         [
             new(
-                Name: "Phase2Task",
-                Action: () =>
+                "Phase2Task",
+                () =>
                 {
-                    executionOrder.Add(item: "Phase2Task");
+                    executionOrder.Add("Phase2Task");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 2
+                false,
+                2
             ),
             new(
-                Name: "Phase1Task",
-                Action: () =>
+                "Phase1Task",
+                () =>
                 {
-                    executionOrder.Add(item: "Phase1Task");
+                    executionOrder.Add("Phase1Task");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 1
+                false,
+                1
             ),
             new(
-                Name: "Phase3Task",
-                Action: () =>
+                "Phase3Task",
+                () =>
                 {
-                    executionOrder.Add(item: "Phase3Task");
+                    executionOrder.Add("Phase3Task");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 3
+                false,
+                3
             ),
         ];
 
-        StartupTaskRunner runner = new(tasks: tasks);
+        StartupTaskRunner runner = new(tasks);
         await runner.RunAll();
 
-        Assert.Equal(expected: 3, actual: executionOrder.Count);
-        Assert.Equal(expected: "Phase1Task", actual: executionOrder[index: 0]);
-        Assert.Equal(expected: "Phase2Task", actual: executionOrder[index: 1]);
-        Assert.Equal(expected: "Phase3Task", actual: executionOrder[index: 2]);
+        Assert.Equal(3, executionOrder.Count);
+        Assert.Equal("Phase1Task", executionOrder[0]);
+        Assert.Equal("Phase2Task", executionOrder[1]);
+        Assert.Equal("Phase3Task", executionOrder[2]);
     }
 
     [Fact]
@@ -71,40 +71,40 @@ public class StartupTaskRunnerTests
         List<StartupTask> tasks =
         [
             new(
-                Name: "Required",
-                Action: () =>
+                "Required",
+                () =>
                 {
-                    executionOrder.Add(item: "Required");
+                    executionOrder.Add("Required");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 1
+                false,
+                1
             ),
             new(
-                Name: "Deferrable",
-                Action: () => throw new InvalidOperationException(message: "Network error"),
-                CanDefer: true,
-                Phase: 2
+                "Deferrable",
+                () => throw new InvalidOperationException("Network error"),
+                true,
+                2
             ),
             new(
-                Name: "AfterDeferred",
-                Action: () =>
+                "AfterDeferred",
+                () =>
                 {
-                    executionOrder.Add(item: "AfterDeferred");
+                    executionOrder.Add("AfterDeferred");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 3
+                false,
+                3
             ),
         ];
 
-        StartupTaskRunner runner = new(tasks: tasks);
+        StartupTaskRunner runner = new(tasks);
         await runner.RunAll();
 
-        Assert.Contains(expected: "Required", collection: executionOrder);
-        Assert.Contains(expected: "AfterDeferred", collection: executionOrder);
-        Assert.Single(collection: runner.DeferredTasks);
-        Assert.Equal(expected: "Deferrable", actual: runner.DeferredTasks[index: 0].Name);
+        Assert.Contains("Required", executionOrder);
+        Assert.Contains("AfterDeferred", executionOrder);
+        Assert.Single(runner.DeferredTasks);
+        Assert.Equal("Deferrable", runner.DeferredTasks[0].Name);
     }
 
     [Fact]
@@ -113,16 +113,16 @@ public class StartupTaskRunnerTests
         List<StartupTask> tasks =
         [
             new(
-                Name: "Required",
-                Action: () => throw new InvalidOperationException(message: "Fatal error"),
-                CanDefer: false,
-                Phase: 1
+                "Required",
+                () => throw new InvalidOperationException("Fatal error"),
+                false,
+                1
             ),
         ];
 
-        StartupTaskRunner runner = new(tasks: tasks);
+        StartupTaskRunner runner = new(tasks);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () => runner.RunAll());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAll());
     }
 
     [Fact]
@@ -131,26 +131,26 @@ public class StartupTaskRunnerTests
         List<StartupTask> tasks =
         [
             new(
-                Name: "Auth",
-                Action: () => throw new InvalidOperationException(message: "No network"),
-                CanDefer: true,
-                Phase: 1
+                "Auth",
+                () => throw new InvalidOperationException("No network"),
+                true,
+                1
             ),
             new(
-                Name: "Register",
-                Action: () => Task.CompletedTask,
-                CanDefer: true,
-                Phase: 2,
-                DependsOn: ["Auth"]
+                "Register",
+                () => Task.CompletedTask,
+                true,
+                2,
+                ["Auth"]
             ),
         ];
 
-        StartupTaskRunner runner = new(tasks: tasks);
+        StartupTaskRunner runner = new(tasks);
         await runner.RunAll();
 
-        Assert.Equal(expected: 2, actual: runner.DeferredTasks.Count);
-        Assert.Contains(collection: runner.DeferredTasks, filter: t => t.Name == "Auth");
-        Assert.Contains(collection: runner.DeferredTasks, filter: t => t.Name == "Register");
+        Assert.Equal(2, runner.DeferredTasks.Count);
+        Assert.Contains(runner.DeferredTasks, t => t.Name == "Auth");
+        Assert.Contains(runner.DeferredTasks, t => t.Name == "Register");
     }
 
     [Fact]
@@ -161,45 +161,45 @@ public class StartupTaskRunnerTests
         List<StartupTask> tasks =
         [
             new(
-                Name: "First",
-                Action: () =>
+                "First",
+                () =>
                 {
-                    executionOrder.Add(item: "First");
+                    executionOrder.Add("First");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 1
+                false,
+                1
             ),
             new(
-                Name: "Second",
-                Action: () =>
+                "Second",
+                () =>
                 {
-                    executionOrder.Add(item: "Second");
+                    executionOrder.Add("Second");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 1,
-                DependsOn: ["First"]
+                false,
+                1,
+                ["First"]
             ),
             new(
-                Name: "Third",
-                Action: () =>
+                "Third",
+                () =>
                 {
-                    executionOrder.Add(item: "Third");
+                    executionOrder.Add("Third");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 1,
-                DependsOn: ["Second"]
+                false,
+                1,
+                ["Second"]
             ),
         ];
 
-        StartupTaskRunner runner = new(tasks: tasks);
+        StartupTaskRunner runner = new(tasks);
         await runner.RunAll();
 
-        Assert.Equal(expected: 3, actual: executionOrder.Count);
-        Assert.True(condition: executionOrder.IndexOf(item: "First") < executionOrder.IndexOf(item: "Second"));
-        Assert.True(condition: executionOrder.IndexOf(item: "Second") < executionOrder.IndexOf(item: "Third"));
+        Assert.Equal(3, executionOrder.Count);
+        Assert.True(executionOrder.IndexOf("First") < executionOrder.IndexOf("Second"));
+        Assert.True(executionOrder.IndexOf("Second") < executionOrder.IndexOf("Third"));
     }
 
     [Fact]
@@ -208,15 +208,15 @@ public class StartupTaskRunnerTests
         List<StartupTask> tasks =
         [
             new(
-                Name: "Task1",
-                Action: () => Task.CompletedTask,
-                CanDefer: false,
-                Phase: 1,
-                DependsOn: ["NonExistent"]
+                "Task1",
+                () => Task.CompletedTask,
+                false,
+                1,
+                ["NonExistent"]
             ),
         ];
 
-        Assert.Throws<InvalidOperationException>(testCode: () => new StartupTaskRunner(tasks: tasks));
+        Assert.Throws<InvalidOperationException>(() => new StartupTaskRunner(tasks));
     }
 
     [Fact]
@@ -224,11 +224,11 @@ public class StartupTaskRunnerTests
     {
         List<StartupTask> tasks =
         [
-            new(Name: "A", Action: () => Task.CompletedTask, CanDefer: false, Phase: 1, DependsOn: ["B"]),
-            new(Name: "B", Action: () => Task.CompletedTask, CanDefer: false, Phase: 1, DependsOn: ["A"]),
+            new("A", () => Task.CompletedTask, false, 1, ["B"]),
+            new("B", () => Task.CompletedTask, false, 1, ["A"]),
         ];
 
-        Assert.Throws<InvalidOperationException>(testCode: () => new StartupTaskRunner(tasks: tasks));
+        Assert.Throws<InvalidOperationException>(() => new StartupTaskRunner(tasks));
     }
 
     [Fact]
@@ -236,16 +236,16 @@ public class StartupTaskRunnerTests
     {
         List<StartupTask> tasks =
         [
-            new(Name: "Task1", Action: () => Task.CompletedTask, CanDefer: false, Phase: 1),
-            new(Name: "Task2", Action: () => Task.CompletedTask, CanDefer: false, Phase: 2),
+            new("Task1", () => Task.CompletedTask, false, 1),
+            new("Task2", () => Task.CompletedTask, false, 2),
         ];
 
-        StartupTaskRunner runner = new(tasks: tasks);
+        StartupTaskRunner runner = new(tasks);
         await runner.RunAll();
 
-        Assert.Contains(expected: "Task1", set: runner.CompletedTasks);
-        Assert.Contains(expected: "Task2", set: runner.CompletedTasks);
-        Assert.Equal(expected: 2, actual: runner.CompletedTasks.Count);
+        Assert.Contains("Task1", runner.CompletedTasks);
+        Assert.Contains("Task2", runner.CompletedTasks);
+        Assert.Equal(2, runner.CompletedTasks.Count);
     }
 
     [Fact]
@@ -254,35 +254,35 @@ public class StartupTaskRunnerTests
         List<StartupTask> tasks =
         [
             new(
-                Name: "Auth",
-                Action: () => throw new InvalidOperationException(message: "Fail"),
-                CanDefer: true,
-                Phase: 1
+                "Auth",
+                () => throw new InvalidOperationException("Fail"),
+                true,
+                1
             ),
             new(
-                Name: "Critical",
-                Action: () => Task.CompletedTask,
-                CanDefer: false,
-                Phase: 2,
-                DependsOn: ["Auth"]
+                "Critical",
+                () => Task.CompletedTask,
+                false,
+                2,
+                ["Auth"]
             ),
         ];
 
-        StartupTaskRunner runner = new(tasks: tasks);
+        StartupTaskRunner runner = new(tasks);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () => runner.RunAll());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAll());
     }
 
     [Fact]
     public async Task RunAll_EmptyTaskList_Succeeds()
     {
         List<StartupTask> tasks = [];
-        StartupTaskRunner runner = new(tasks: tasks);
+        StartupTaskRunner runner = new(tasks);
 
         await runner.RunAll();
 
-        Assert.Empty(collection: runner.CompletedTasks);
-        Assert.Empty(collection: runner.DeferredTasks);
+        Assert.Empty(runner.CompletedTasks);
+        Assert.Empty(runner.DeferredTasks);
     }
 
     [Fact]
@@ -293,81 +293,81 @@ public class StartupTaskRunnerTests
         List<StartupTask> tasks =
         [
             new(
-                Name: "AppFolders",
-                Action: () =>
+                "AppFolders",
+                () =>
                 {
-                    executionOrder.Add(item: "AppFolders");
+                    executionOrder.Add("AppFolders");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 1
+                false,
+                1
             ),
             new(
-                Name: "ApiInfo",
-                Action: () =>
+                "ApiInfo",
+                () =>
                 {
-                    executionOrder.Add(item: "ApiInfo");
+                    executionOrder.Add("ApiInfo");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 1,
-                DependsOn: ["AppFolders"]
+                false,
+                1,
+                ["AppFolders"]
             ),
             new(
-                Name: "NetworkProbe",
-                Action: () =>
+                "NetworkProbe",
+                () =>
                 {
-                    executionOrder.Add(item: "NetworkProbe");
+                    executionOrder.Add("NetworkProbe");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 2,
-                DependsOn: ["ApiInfo"]
+                false,
+                2,
+                ["ApiInfo"]
             ),
             new(
-                Name: "Auth",
-                Action: () =>
+                "Auth",
+                () =>
                 {
-                    executionOrder.Add(item: "Auth");
+                    executionOrder.Add("Auth");
                     return Task.CompletedTask;
                 },
-                CanDefer: true,
-                Phase: 2,
-                DependsOn: ["NetworkProbe"]
+                true,
+                2,
+                ["NetworkProbe"]
             ),
             new(
-                Name: "Networking",
-                Action: () =>
+                "Networking",
+                () =>
                 {
-                    executionOrder.Add(item: "Networking");
+                    executionOrder.Add("Networking");
                     return Task.CompletedTask;
                 },
-                CanDefer: true,
-                Phase: 3,
-                DependsOn: ["NetworkProbe"]
+                true,
+                3,
+                ["NetworkProbe"]
             ),
             new(
-                Name: "Register",
-                Action: () =>
+                "Register",
+                () =>
                 {
-                    executionOrder.Add(item: "Register");
+                    executionOrder.Add("Register");
                     return Task.CompletedTask;
                 },
-                CanDefer: true,
-                Phase: 4,
-                DependsOn: ["Auth", "Networking"]
+                true,
+                4,
+                ["Auth", "Networking"]
             ),
         ];
 
-        StartupTaskRunner runner = new(tasks: tasks);
+        StartupTaskRunner runner = new(tasks);
         await runner.RunAll();
 
-        Assert.Equal(expected: 6, actual: executionOrder.Count);
-        Assert.True(condition: executionOrder.IndexOf(item: "AppFolders") < executionOrder.IndexOf(item: "ApiInfo"));
-        Assert.True(condition: executionOrder.IndexOf(item: "ApiInfo") < executionOrder.IndexOf(item: "NetworkProbe"));
-        Assert.True(condition: executionOrder.IndexOf(item: "NetworkProbe") < executionOrder.IndexOf(item: "Auth"));
-        Assert.True(condition: executionOrder.IndexOf(item: "Auth") < executionOrder.IndexOf(item: "Register"));
-        Assert.True(condition: executionOrder.IndexOf(item: "Networking") < executionOrder.IndexOf(item: "Register"));
+        Assert.Equal(6, executionOrder.Count);
+        Assert.True(executionOrder.IndexOf("AppFolders") < executionOrder.IndexOf("ApiInfo"));
+        Assert.True(executionOrder.IndexOf("ApiInfo") < executionOrder.IndexOf("NetworkProbe"));
+        Assert.True(executionOrder.IndexOf("NetworkProbe") < executionOrder.IndexOf("Auth"));
+        Assert.True(executionOrder.IndexOf("Auth") < executionOrder.IndexOf("Register"));
+        Assert.True(executionOrder.IndexOf("Networking") < executionOrder.IndexOf("Register"));
     }
 
     [Fact]
@@ -378,92 +378,92 @@ public class StartupTaskRunnerTests
         List<StartupTask> tasks =
         [
             new(
-                Name: "AppFolders",
-                Action: () =>
+                "AppFolders",
+                () =>
                 {
-                    executionOrder.Add(item: "AppFolders");
+                    executionOrder.Add("AppFolders");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 1
+                false,
+                1
             ),
             new(
-                Name: "ApiInfo",
-                Action: () =>
+                "ApiInfo",
+                () =>
                 {
-                    executionOrder.Add(item: "ApiInfo");
+                    executionOrder.Add("ApiInfo");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 1,
-                DependsOn: ["AppFolders"]
+                false,
+                1,
+                ["AppFolders"]
             ),
             new(
-                Name: "NetworkProbe",
-                Action: () =>
+                "NetworkProbe",
+                () =>
                 {
-                    executionOrder.Add(item: "NetworkProbe");
+                    executionOrder.Add("NetworkProbe");
                     return Task.CompletedTask;
                 },
-                CanDefer: false,
-                Phase: 2,
-                DependsOn: ["ApiInfo"]
+                false,
+                2,
+                ["ApiInfo"]
             ),
             new(
-                Name: "Auth",
-                Action: () => throw new InvalidOperationException(message: "No network"),
-                CanDefer: true,
-                Phase: 2,
-                DependsOn: ["NetworkProbe"]
+                "Auth",
+                () => throw new InvalidOperationException("No network"),
+                true,
+                2,
+                ["NetworkProbe"]
             ),
             new(
-                Name: "Seeds",
-                Action: () =>
+                "Seeds",
+                () =>
                 {
-                    executionOrder.Add(item: "Seeds");
+                    executionOrder.Add("Seeds");
                     return Task.CompletedTask;
                 },
-                CanDefer: true,
-                Phase: 3,
-                DependsOn: ["Auth"]
+                true,
+                3,
+                ["Auth"]
             ),
             new(
-                Name: "Register",
-                Action: () =>
+                "Register",
+                () =>
                 {
-                    executionOrder.Add(item: "Register");
+                    executionOrder.Add("Register");
                     return Task.CompletedTask;
                 },
-                CanDefer: true,
-                Phase: 4,
-                DependsOn: ["Auth", "Networking"]
+                true,
+                4,
+                ["Auth", "Networking"]
             ),
             new(
-                Name: "Networking",
-                Action: () =>
+                "Networking",
+                () =>
                 {
-                    executionOrder.Add(item: "Networking");
+                    executionOrder.Add("Networking");
                     return Task.CompletedTask;
                 },
-                CanDefer: true,
-                Phase: 3,
-                DependsOn: ["NetworkProbe"]
+                true,
+                3,
+                ["NetworkProbe"]
             ),
         ];
 
-        StartupTaskRunner runner = new(tasks: tasks);
+        StartupTaskRunner runner = new(tasks);
         await runner.RunAll();
 
         // Required tasks completed
-        Assert.Contains(expected: "AppFolders", set: runner.CompletedTasks);
-        Assert.Contains(expected: "ApiInfo", set: runner.CompletedTasks);
-        Assert.Contains(expected: "NetworkProbe", set: runner.CompletedTasks);
-        Assert.Contains(expected: "Networking", set: runner.CompletedTasks);
+        Assert.Contains("AppFolders", runner.CompletedTasks);
+        Assert.Contains("ApiInfo", runner.CompletedTasks);
+        Assert.Contains("NetworkProbe", runner.CompletedTasks);
+        Assert.Contains("Networking", runner.CompletedTasks);
 
         // Auth failed → deferred, along with downstream
-        Assert.Contains(collection: runner.DeferredTasks, filter: t => t.Name == "Auth");
-        Assert.Contains(collection: runner.DeferredTasks, filter: t => t.Name == "Seeds");
-        Assert.Contains(collection: runner.DeferredTasks, filter: t => t.Name == "Register");
+        Assert.Contains(runner.DeferredTasks, t => t.Name == "Auth");
+        Assert.Contains(runner.DeferredTasks, t => t.Name == "Seeds");
+        Assert.Contains(runner.DeferredTasks, t => t.Name == "Register");
     }
 
     [Fact]
@@ -471,11 +471,11 @@ public class StartupTaskRunnerTests
     {
         List<StartupTask> tasks =
         [
-            new(Name: "NoDeps", Action: () => Task.CompletedTask, CanDefer: false, Phase: 1),
+            new("NoDeps", () => Task.CompletedTask, false, 1),
         ];
 
-        StartupTaskRunner runner = new(tasks: tasks);
-        Assert.True(condition: runner.AreDependenciesMet(task: tasks[index: 0]));
+        StartupTaskRunner runner = new(tasks);
+        Assert.True(runner.AreDependenciesMet(tasks[0]));
     }
 
     [Fact]
@@ -483,18 +483,18 @@ public class StartupTaskRunnerTests
     {
         List<StartupTask> tasks =
         [
-            new(Name: "Dep", Action: () => Task.CompletedTask, CanDefer: false, Phase: 1),
+            new("Dep", () => Task.CompletedTask, false, 1),
             new(
-                Name: "Dependent",
-                Action: () => Task.CompletedTask,
-                CanDefer: false,
-                Phase: 1,
-                DependsOn: ["Dep"]
+                "Dependent",
+                () => Task.CompletedTask,
+                false,
+                1,
+                ["Dep"]
             ),
         ];
 
-        StartupTaskRunner runner = new(tasks: tasks);
-        Assert.False(condition: runner.AreDependenciesMet(task: tasks[index: 1]));
+        StartupTaskRunner runner = new(tasks);
+        Assert.False(runner.AreDependenciesMet(tasks[1]));
     }
 }
 
@@ -503,9 +503,9 @@ public class StartupTaskRecordTests
     [Fact]
     public void StartupTask_DefaultDependsOnIsNull()
     {
-        StartupTask task = new(Name: "Test", Action: () => Task.CompletedTask, CanDefer: false, Phase: 1);
+        StartupTask task = new("Test", () => Task.CompletedTask, false, 1);
 
-        Assert.Null(@object: task.DependsOn);
+        Assert.Null(task.DependsOn);
     }
 
     [Fact]
@@ -514,13 +514,13 @@ public class StartupTaskRecordTests
         Func<Task> action = () => Task.CompletedTask;
         string[] deps = ["Dep1", "Dep2"];
 
-        StartupTask task = new(Name: "MyTask", Action: action, CanDefer: true, Phase: 3, DependsOn: deps);
+        StartupTask task = new("MyTask", action, true, 3, deps);
 
-        Assert.Equal(expected: "MyTask", actual: task.Name);
-        Assert.Same(expected: action, actual: task.Action);
-        Assert.True(condition: task.CanDefer);
-        Assert.Equal(expected: 3, actual: task.Phase);
-        Assert.Equal(expected: deps, actual: task.DependsOn);
+        Assert.Equal("MyTask", task.Name);
+        Assert.Same(action, task.Action);
+        Assert.True(task.CanDefer);
+        Assert.Equal(3, task.Phase);
+        Assert.Equal(deps, task.DependsOn);
     }
 }
 
@@ -546,16 +546,16 @@ public class BuildStartupTasksTests
 
         foreach (string name in expectedNames)
         {
-            Assert.Contains(collection: tasks, filter: t => t.Name == name);
+            Assert.Contains(tasks, t => t.Name == name);
         }
 
         // Auth and ApiInfo moved to BootOrchestrator — neither should be a startup task.
-        Assert.DoesNotContain(collection: tasks, filter: t => t.Name == "Auth");
-        Assert.DoesNotContain(collection: tasks, filter: t => t.Name == "ApiInfo");
+        Assert.DoesNotContain(tasks, t => t.Name == "Auth");
+        Assert.DoesNotContain(tasks, t => t.Name == "ApiInfo");
 
         // UpdateChecker moved to PeriodicUpdateCheckService (IHostedService) so it can
         // inject IUpdateStatus — it is no longer a static startup task.
-        Assert.DoesNotContain(collection: tasks, filter: t => t.Name == "UpdateChecker");
+        Assert.DoesNotContain(tasks, t => t.Name == "UpdateChecker");
     }
 
     [Fact]
@@ -563,11 +563,11 @@ public class BuildStartupTasksTests
     {
         List<StartupTask> tasks = Start.BuildStartupTasks();
 
-        List<StartupTask> phase1 = tasks.Where(predicate: t => t.Phase == 1).ToList();
+        List<StartupTask> phase1 = tasks.Where(t => t.Phase == 1).ToList();
 
         Assert.All(
-            collection: phase1,
-            action: t => Assert.False(condition: t.CanDefer, userMessage: $"Phase 1 task '{t.Name}' should not be deferrable")
+            phase1,
+            t => Assert.False(t.CanDefer, $"Phase 1 task '{t.Name}' should not be deferrable")
         );
     }
 
@@ -576,15 +576,15 @@ public class BuildStartupTasksTests
     {
         List<StartupTask> tasks = Start.BuildStartupTasks();
 
-        List<string> names = tasks.Select(selector: t => t.Name).ToList();
-        Assert.Equal(expected: names.Count, actual: names.Distinct().Count());
+        List<string> names = tasks.Select(t => t.Name).ToList();
+        Assert.Equal(names.Count, names.Distinct().Count());
     }
 
     [Fact]
     public void BuildStartupTasks_AllDependenciesExist()
     {
         List<StartupTask> tasks = Start.BuildStartupTasks();
-        HashSet<string> taskNames = tasks.Select(selector: t => t.Name).ToHashSet();
+        HashSet<string> taskNames = tasks.Select(t => t.Name).ToHashSet();
 
         foreach (StartupTask task in tasks)
         {
@@ -592,7 +592,7 @@ public class BuildStartupTasksTests
                 continue;
             foreach (string dep in task.DependsOn)
             {
-                Assert.Contains(expected: dep, set: taskNames);
+                Assert.Contains(dep, taskNames);
             }
         }
     }
@@ -603,11 +603,11 @@ public class BuildStartupTasksTests
         List<StartupTask> tasks = Start.BuildStartupTasks();
 
         // Phase 1 tasks should exist
-        Assert.Contains(collection: tasks, filter: t => t.Phase == 1);
+        Assert.Contains(tasks, t => t.Phase == 1);
         // Phase 2 tasks should exist
-        Assert.Contains(collection: tasks, filter: t => t.Phase == 2);
+        Assert.Contains(tasks, t => t.Phase == 2);
         // Phase 3 tasks should exist
-        Assert.Contains(collection: tasks, filter: t => t.Phase == 3);
+        Assert.Contains(tasks, t => t.Phase == 3);
     }
 
     [Fact]
@@ -616,8 +616,8 @@ public class BuildStartupTasksTests
         List<StartupTask> tasks = Start.BuildStartupTasks();
 
         // Should not throw — validates dependencies and circular references
-        StartupTaskRunner runner = new(tasks: tasks);
+        StartupTaskRunner runner = new(tasks);
 
-        Assert.NotNull(@object: runner);
+        Assert.NotNull(runner);
     }
 }

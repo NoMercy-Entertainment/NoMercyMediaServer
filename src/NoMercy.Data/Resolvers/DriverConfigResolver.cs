@@ -27,7 +27,7 @@ public class DriverConfigResolver(IDbContextFactory<MediaContext> contextFactory
     public (string Type, string? ConfigJson)? Resolve(Ulid driverId)
     {
         using MediaContext context = contextFactory.CreateDbContext();
-        Driver? driver = context.Drivers.AsNoTracking().FirstOrDefault(predicate: d => d.Id == driverId);
+        Driver? driver = context.Drivers.AsNoTracking().FirstOrDefault(d => d.Id == driverId);
 
         if (driver is null)
             return null;

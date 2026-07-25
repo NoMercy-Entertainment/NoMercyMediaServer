@@ -34,10 +34,10 @@ namespace NoMercy.Api.Controllers.V1.Worker;
 /// are meant to be explicit opt-in, not ambient.
 /// </summary>
 [ApiController]
-[Tags(tags: "Worker Execution")]
-[ApiVersion(version: 1.0)]
+[Tags("Worker Execution")]
+[ApiVersion(1.0)]
 [AllowAnonymous]
-[Route(template: "api/v{version:apiVersion}/worker")]
+[Route("api/v{version:apiVersion}/worker")]
 public class WorkerExecutionController(
     LocalWorkerDispatcher localDispatcher,
     ITaskSerializer serializer,
@@ -45,70 +45,70 @@ public class WorkerExecutionController(
     EncoderOptions encoderOptions
 ) : BaseController
 {
-    [HttpPost(template: "tasks")]
-    [HttpPost(template: "execute-task")]
+    [HttpPost("tasks")]
+    [HttpPost("execute-task")]
     public async Task<IActionResult> ExecuteTask(CancellationToken ct)
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
             return ServiceUnavailableResponse(
-                detail: "Distributed encoding is not enabled on this worker. "
+                "Distributed encoding is not enabled on this worker. "
                         + "Set DistributedEncodingSigningKey in EncoderOptions and restart."
             );
 
         // Read the raw body — the payload is a signed JSON envelope.
         string payload;
-        using (StreamReader reader = new(stream: Request.Body))
-            payload = await reader.ReadToEndAsync(cancellationToken: ct);
+        using (StreamReader reader = new(Request.Body))
+            payload = await reader.ReadToEndAsync(ct);
 
-        if (string.IsNullOrWhiteSpace(value: payload))
-            return BadRequestResponse(detail: "Empty request body");
+        if (string.IsNullOrWhiteSpace(payload))
+            return BadRequestResponse("Empty request body");
 
         byte[] signingKey = encoderOptions.GetDistributedEncodingSigningKey();
         WorkerInputResolution resolution = await inputResolver.ResolveAsync(
-            payload: payload,
-            signingKey: signingKey,
-            ct: ct
+            payload,
+            signingKey,
+            ct
         );
 
         if (resolution.Task is null)
-            return UnauthenticatedResponse(detail: "Task payload failed HMAC verification or expired");
+            return UnauthenticatedResponse("Task payload failed HMAC verification or expired");
 
         EncodeTask task = resolution.Task;
 
         if (resolution.SourceFetchFailed)
         {
             DispatchResult failedFetch = new(
-                TaskId: task.TaskId,
-                Success: false,
-                OutputPath: task.OutputPath,
-                Duration: TimeSpan.Zero,
-                Error: $"Source fetch failed: {resolution.SourceFetchError}"
+                task.TaskId,
+                false,
+                task.OutputPath,
+                TimeSpan.Zero,
+                $"Source fetch failed: {resolution.SourceFetchError}"
             );
-            return Content(content: serializer.SerializeResult(result: failedFetch, signingKey: signingKey), contentType: "application/json");
+            return Content(serializer.SerializeResult(failedFetch, signingKey), "application/json");
         }
 
         EncodeTask effectiveTask = resolution.EffectiveTask ?? task;
         try
         {
-            DispatchResult[] results = await localDispatcher.DispatchAsync(tasks: [effectiveTask], ct: ct);
+            DispatchResult[] results = await localDispatcher.DispatchAsync([effectiveTask], ct);
             DispatchResult result =
                 results.Length > 0
                     ? results[0]
                     : new(
-                        TaskId: task.TaskId,
-                        Success: false,
-                        OutputPath: task.OutputPath,
-                        Duration: TimeSpan.Zero,
-                        Error: "Local dispatcher returned no result"
+                        task.TaskId,
+                        false,
+                        task.OutputPath,
+                        TimeSpan.Zero,
+                        "Local dispatcher returned no result"
                     );
-            string signedResponse = serializer.SerializeResult(result: result, signingKey: signingKey);
-            return Content(content: signedResponse, contentType: "application/json");
+            string signedResponse = serializer.SerializeResult(result, signingKey);
+            return Content(signedResponse, "application/json");
         }
         finally
         {
             // Always release the cached source — the encode is either done
             // or failed. Next retry will re-fetch if needed.
-            await inputResolver.ReleaseAsync(task: task);
+            await inputResolver.ReleaseAsync(task);
         }
     }
 }

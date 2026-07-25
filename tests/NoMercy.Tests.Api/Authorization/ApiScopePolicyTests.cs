@@ -24,26 +24,26 @@ public class ApiScopePolicyTests
 {
     [Theory]
     // Real Keycloak shape: a single space-delimited claim.
-    [InlineData(data: [true, "openid profile client-roles-nomercy-ui email"])]
-    [InlineData(data: [true, "openid"])]
-    [InlineData(data: [true, "profile email"])]
+    [InlineData([true, "openid profile client-roles-nomercy-ui email"])]
+    [InlineData([true, "openid"])]
+    [InlineData([true, "profile email"])]
     // No openid/profile present.
-    [InlineData(data: [false, "email address"])]
-    [InlineData(data: [false, ""])]
+    [InlineData([false, "email address"])]
+    [InlineData([false, ""])]
     public void HasRequiredScope_SingleClaim(bool expected, string scopeValue)
     {
-        Assert.Equal(expected: expected, actual: ApiScopePolicy.HasRequiredScope(scopeClaimValues: [scopeValue]));
+        Assert.Equal(expected, ApiScopePolicy.HasRequiredScope([scopeValue]));
     }
 
     [Fact]
     public void HasRequiredScope_MultipleClaims_AlsoAccepted()
     {
-        Assert.True(condition: ApiScopePolicy.HasRequiredScope(scopeClaimValues: ["openid", "profile"]));
+        Assert.True(ApiScopePolicy.HasRequiredScope(["openid", "profile"]));
     }
 
     [Fact]
     public void HasRequiredScope_NoScopeClaims_IsFalse()
     {
-        Assert.False(condition: ApiScopePolicy.HasRequiredScope(scopeClaimValues: []));
+        Assert.False(ApiScopePolicy.HasRequiredScope([]));
     }
 }

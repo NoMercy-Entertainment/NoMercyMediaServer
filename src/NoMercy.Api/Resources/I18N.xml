@@ -789,4 +789,16 @@
     <Key>Invalid id for the requested type</Key>
     <Value lang="nl">Ongeldige id voor het gevraagde type</Value>
   </Entry>
+  <Entry>
+    <Key>Image not found</Key>
+    <Value lang="nl">Image not found</Value>
+  </Entry>
+  <Entry>
+    <Key>Seeding specials in the background</Key>
+    <Value lang="nl">Seeding specials in the background</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums: E</Key>
+    <Value lang="nl">Albums: E</Value>
+  </Entry>
 </I18N>

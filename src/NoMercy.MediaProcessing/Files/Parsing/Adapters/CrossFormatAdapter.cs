@@ -25,7 +25,7 @@ public sealed class CrossFormatAdapter : IFilenameParseAdapter
 
     public MovieFile? TryParse(ParseContext context)
     {
-        Match match = StringExtensions.MatchCrossFormatEpisode().Match(input: context.CleanedFileName);
+        Match match = StringExtensions.MatchCrossFormatEpisode().Match(context.CleanedFileName);
         if (!match.Success)
             return null;
 
@@ -36,21 +36,21 @@ public sealed class CrossFormatAdapter : IFilenameParseAdapter
 
         string showTitle = context
             .CleanedFileName[..match.Index]
-            .Replace(oldChar: '.', newChar: ' ')
-            .Replace(oldChar: '_', newChar: ' ')
-            .TrimEnd(trimChars: ['-', ' '])
+            .Replace('.', ' ')
+            .Replace('_', ' ')
+            .TrimEnd(['-', ' '])
             .Trim();
 
         showTitle = showTitle.CleanSeriesTitle();
 
-        if (string.IsNullOrWhiteSpace(value: showTitle) || showTitle.Length <= 1)
+        if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;
 
-        return new(filePath: context.Title)
+        return new(context.Title)
         {
             Title = showTitle,
-            Season = int.Parse(s: match.Groups[groupnum: 1].Value),
-            Episode = int.Parse(s: match.Groups[groupnum: 2].Value),
+            Season = int.Parse(match.Groups[1].Value),
+            Episode = int.Parse(match.Groups[2].Value),
             IsSeries = true,
             IsSuccess = true,
         };

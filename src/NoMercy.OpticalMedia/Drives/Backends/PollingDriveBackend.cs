@@ -23,10 +23,10 @@ namespace NoMercy.OpticalMedia.Drives.Backends;
 /// </summary>
 public sealed class PollingDriveBackend(ILogger<PollingDriveBackend> logger) : IDriveBackend
 {
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(seconds: 5);
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
 
     private readonly Channel<DriveEvent> _events = Channel.CreateUnbounded<DriveEvent>(
-        options: new() { SingleReader = true, SingleWriter = false }
+        new() { SingleReader = true, SingleWriter = false }
     );
     private readonly HashSet<string> _knownDrives = [];
     private readonly Lock _lock = new();
@@ -35,13 +35,13 @@ public sealed class PollingDriveBackend(ILogger<PollingDriveBackend> logger) : I
     public IReadOnlyList<DiscDrive> GetDrives() =>
         Optical
             .GetOpticalDrives()
-            .Select(selector: kvp =>
+            .Select(kvp =>
             {
-                bool hasDisc = !string.IsNullOrEmpty(value: kvp.Value);
+                bool hasDisc = !string.IsNullOrEmpty(kvp.Value);
                 OpticalDiscType type = hasDisc
-                    ? Optical.GetDiscType(drivePath: kvp.Key)
+                    ? Optical.GetDiscType(kvp.Key)
                     : OpticalDiscType.None;
-                return new DiscDrive(Path: kvp.Key, Label: kvp.Value, HasDisc: hasDisc, DiscType: type);
+                return new DiscDrive(kvp.Key, kvp.Value, hasDisc, type);
             })
             .ToList();
 
@@ -49,15 +49,15 @@ public sealed class PollingDriveBackend(ILogger<PollingDriveBackend> logger) : I
         [EnumeratorCancellation] CancellationToken ct
     )
     {
-        _loopCts = CancellationTokenSource.CreateLinkedTokenSource(token: ct);
-        _ = Task.Run(function: () => PollLoopAsync(ct: _loopCts.Token), cancellationToken: _loopCts.Token);
+        _loopCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _ = Task.Run(() => PollLoopAsync(_loopCts.Token), _loopCts.Token);
 
         while (!ct.IsCancellationRequested)
         {
             DriveEvent ev;
             try
             {
-                ev = await _events.Reader.ReadAsync(cancellationToken: ct);
+                ev = await _events.Reader.ReadAsync(ct);
             }
             catch (OperationCanceledException)
             {
@@ -75,43 +75,43 @@ public sealed class PollingDriveBackend(ILogger<PollingDriveBackend> logger) : I
             {
                 Dictionary<string, string?> detected = Optical
                     .GetOpticalDrives()
-                    .Where(predicate: d => d.Value != null)
-                    .ToDictionary(keySelector: d => d.Key, elementSelector: d => d.Value);
+                    .Where(d => d.Value != null)
+                    .ToDictionary(d => d.Key, d => d.Value);
 
                 lock (_lock)
                 {
                     foreach ((string drive, string? label) in detected)
-                        if (_knownDrives.Add(item: drive))
+                        if (_knownDrives.Add(drive))
                         {
-                            OpticalDiscType type = Optical.GetDiscType(drivePath: drive);
+                            OpticalDiscType type = Optical.GetDiscType(drive);
                             _events.Writer.TryWrite(
-                                item: new(
-                                    Type: DriveEventType.DiscInserted,
-                                    Drive: new(Path: drive, Label: label, HasDisc: true, DiscType: type)
+                                new(
+                                    DriveEventType.DiscInserted,
+                                    new(drive, label, true, type)
                                 )
                             );
                         }
 
-                    foreach (string ejected in _knownDrives.Except(second: detected.Keys).ToList())
+                    foreach (string ejected in _knownDrives.Except(detected.Keys).ToList())
                     {
                         _events.Writer.TryWrite(
-                            item: new(
-                                Type: DriveEventType.DiscEjected,
-                                Drive: new(Path: ejected, Label: null, HasDisc: false, DiscType: OpticalDiscType.None)
+                            new(
+                                DriveEventType.DiscEjected,
+                                new(ejected, null, false, OpticalDiscType.None)
                             )
                         );
-                        _knownDrives.Remove(item: ejected);
+                        _knownDrives.Remove(ejected);
                     }
                 }
             }
             catch (Exception ex)
             {
-                logger.LogInformation(message: "[PollingDriveBackend] {Error}", args: ex.Message);
+                logger.LogInformation("[PollingDriveBackend] {Error}", ex.Message);
             }
 
             try
             {
-                await Task.Delay(delay: PollInterval, cancellationToken: ct);
+                await Task.Delay(PollInterval, ct);
             }
             catch (OperationCanceledException)
             {

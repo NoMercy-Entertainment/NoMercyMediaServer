@@ -21,7 +21,7 @@ namespace NoMercy.OpticalMedia.Drives;
 /// </summary>
 public sealed class DiscDriveBusyException(string driveKey)
     : InvalidOperationException(
-        message: $"Drive '{driveKey}' is already being ripped. "
+        $"Drive '{driveKey}' is already being ripped. "
                  + "Wait for the in-progress rip to finish or eject and re-insert the disc into a different drive."
     )
 {

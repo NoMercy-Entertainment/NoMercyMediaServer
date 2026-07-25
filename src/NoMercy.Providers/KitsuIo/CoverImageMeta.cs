@@ -15,6 +15,6 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class CoverImageMeta
 {
-    [JsonProperty(propertyName: "dimensions")]
+    [JsonProperty("dimensions")]
     public Dimensions? Dimensions { get; set; }
 }

@@ -15,18 +15,18 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class CoverArtArchive
 {
-    [JsonProperty(propertyName: "artwork")]
+    [JsonProperty("artwork")]
     public bool Artwork { get; set; }
 
-    [JsonProperty(propertyName: "back")]
+    [JsonProperty("back")]
     public bool Back { get; set; }
 
-    [JsonProperty(propertyName: "count")]
+    [JsonProperty("count")]
     public int Count { get; set; }
 
-    [JsonProperty(propertyName: "darkened")]
+    [JsonProperty("darkened")]
     public bool Darkened { get; set; }
 
-    [JsonProperty(propertyName: "front")]
+    [JsonProperty("front")]
     public bool Front { get; set; }
 }

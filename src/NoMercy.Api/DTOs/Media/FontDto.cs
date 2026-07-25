@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record FontDto
 {
-    [JsonProperty(propertyName: "file")]
+    [JsonProperty("file")]
     public string File { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 }

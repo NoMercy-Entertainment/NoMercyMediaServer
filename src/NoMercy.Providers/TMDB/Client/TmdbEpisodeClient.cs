@@ -28,7 +28,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
         string[]? appendices = null,
         string? language = "en-US"
     )
-        : base(id: id, language: language!)
+        : base(id, language!)
     {
         _seasonNumber = seasonNumber;
         _episodeNumber = episodeNumber;
@@ -37,7 +37,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<TmdbEpisodeDetails?> Details(bool? priority = false)
     {
         return Get<TmdbEpisodeDetails>(
-            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber,
+            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber,
             priority: priority
         );
     }
@@ -46,21 +46,21 @@ public class TmdbEpisodeClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "append_to_response"] = string.Join(separator: ",", value: appendices),
+            ["append_to_response"] = string.Join(",", appendices),
         };
 
         return Get<TmdbEpisodeAppends>(
-            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber,
-            query: queryParams,
-            priority: priority
+            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber,
+            queryParams,
+            priority
         );
     }
 
     public Task<TmdbEpisodeAppends?> WithAllAppends(bool? priority = false)
     {
         return WithAppends(
-            appendices: ["changes", "credits", "external_ids", "images", "translations", "videos"],
-            priority: priority
+            ["changes", "credits", "external_ids", "images", "translations", "videos"],
+            priority
         );
     }
 
@@ -72,21 +72,21 @@ public class TmdbEpisodeClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "start_date"] = startDate,
-            [key: "end_date"] = endDate,
+            ["start_date"] = startDate,
+            ["end_date"] = endDate,
         };
 
         return Get<TmdbEpisodeChanges>(
-            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/changes",
-            query: queryParams,
-            priority: priority
+            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/changes",
+            queryParams,
+            priority
         );
     }
 
     public Task<TmdbEpisodeCredits?> Credits(bool? priority = false)
     {
         return Get<TmdbEpisodeCredits>(
-            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/credits",
+            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/credits",
             priority: priority
         );
     }
@@ -94,7 +94,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<TmdbEpisodeExternalIds?> ExternalIds(bool? priority = false)
     {
         return Get<TmdbEpisodeExternalIds>(
-            url: "tv/"
+            "tv/"
                  + Id
                  + "/season/"
                  + _seasonNumber
@@ -108,7 +108,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<TmdbEpisodeImages?> Images(bool? priority = false)
     {
         return Get<TmdbEpisodeImages>(
-            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/images",
+            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/images",
             priority: priority
         );
     }
@@ -116,7 +116,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<TmdbSharedTranslations?> Translations(bool? priority = false)
     {
         return Get<TmdbSharedTranslations>(
-            url: "tv/"
+            "tv/"
                  + Id
                  + "/season/"
                  + _seasonNumber
@@ -130,7 +130,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<Videos?> Videos(bool? priority = false)
     {
         return Get<Videos>(
-            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/videos",
+            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/videos",
             priority: priority
         );
     }

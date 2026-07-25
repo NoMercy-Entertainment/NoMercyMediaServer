@@ -21,16 +21,16 @@ public class FolderRepository(MediaContext context) : IFolderRepository
     public async Task<Folder?> GetFolderByIdAsync(Ulid folderId)
     {
         return await context
-            .Folders.Where(predicate: folder => folder.Id == folderId)
-            .Include(navigationPropertyPath: folder => folder.Driver)
-            .Include(navigationPropertyPath: folder => folder.FolderLibraries)
-                .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Library)
+            .Folders.Where(folder => folder.Id == folderId)
+            .Include(folder => folder.Driver)
+            .Include(folder => folder.FolderLibraries)
+                .ThenInclude(folderLibrary => folderLibrary.Library)
             .FirstOrDefaultAsync();
     }
 
     public Task<Folder?> GetFolderByPathAsync(string requestPath)
     {
-        return context.Folders.FirstOrDefaultAsync(predicate: folder => folder.Path == requestPath);
+        return context.Folders.FirstOrDefaultAsync(folder => folder.Path == requestPath);
     }
 
     /// <summary>
@@ -41,7 +41,7 @@ public class FolderRepository(MediaContext context) : IFolderRepository
     /// </summary>
     public Task<Folder?> GetFolderByDriverAndPathAsync(Ulid driverId, string requestPath)
     {
-        return context.Folders.FirstOrDefaultAsync(predicate: f =>
+        return context.Folders.FirstOrDefaultAsync(f =>
             f.DriverId == driverId && f.Path == requestPath
         );
     }
@@ -49,26 +49,26 @@ public class FolderRepository(MediaContext context) : IFolderRepository
     public Task<List<Folder>> GetFoldersByLibraryIdAsync(FolderLibraryDto[] folderLibraries)
     {
         return context
-            .Folders.Where(predicate: folder => folderLibraries.Select(f => f.FolderId).Contains(folder.Id))
+            .Folders.Where(folder => folderLibraries.Select(f => f.FolderId).Contains(folder.Id))
             .ToListAsync();
     }
 
     public Task<List<Folder>> GetFoldersByLibraryIdAsync(Ulid libraryId)
     {
         return context
-            .FolderLibrary.Where(predicate: fl => fl.LibraryId == libraryId)
-            .Select(selector: fl => fl.Folder)
+            .FolderLibrary.Where(fl => fl.LibraryId == libraryId)
+            .Select(fl => fl.Folder)
             .ToListAsync();
     }
 
     public Task<Folder?> GetFolderById(Ulid folderId)
     {
-        return context.Folders.Where(predicate: folder => folder.Id == folderId).FirstOrDefaultAsync();
+        return context.Folders.Where(folder => folder.Id == folderId).FirstOrDefaultAsync();
     }
 
     public Task<Folder?> GetFolderByPath(string path)
     {
-        return context.Folders.FirstOrDefaultAsync(predicate: folder => folder.Path == path);
+        return context.Folders.FirstOrDefaultAsync(folder => folder.Path == path);
     }
 
     public Task<int> AddFolderAsync(Folder folder)
@@ -79,33 +79,33 @@ public class FolderRepository(MediaContext context) : IFolderRepository
         // UNIQUE on (DriverId, Path), surfacing as a 500 to operators trying
         // to attach an already-known folder to a different library.
         return context
-            .Folders.Upsert(entity: folder)
-            .On(match: f => new { f.DriverId, f.Path })
-            .WhenMatched(updater: (existing, incoming) => new() { Path = incoming.Path })
+            .Folders.Upsert(folder)
+            .On(f => new { f.DriverId, f.Path })
+            .WhenMatched((existing, incoming) => new() { Path = incoming.Path })
             .RunAsync();
     }
 
     public Task<int> AddFolderLibraryAsync(FolderLibrary folderLibrary)
     {
         return context
-            .FolderLibrary.Upsert(entity: folderLibrary)
-            .On(match: fl => new { fl.LibraryId, fl.FolderId })
-            .WhenMatched(updater: (fls, fli) => new() { LibraryId = fli.LibraryId, FolderId = fli.FolderId })
+            .FolderLibrary.Upsert(folderLibrary)
+            .On(fl => new { fl.LibraryId, fl.FolderId })
+            .WhenMatched((fls, fli) => new() { LibraryId = fli.LibraryId, FolderId = fli.FolderId })
             .RunAsync();
     }
 
     public Task<int> AddFolderLibraryAsync(FolderLibrary[] folderLibraries)
     {
         return context
-            .FolderLibrary.UpsertRange(entities: folderLibraries)
-            .On(match: fl => new { fl.LibraryId, fl.FolderId })
-            .WhenMatched(updater: (fls, fli) => new() { LibraryId = fli.LibraryId, FolderId = fli.FolderId })
+            .FolderLibrary.UpsertRange(folderLibraries)
+            .On(fl => new { fl.LibraryId, fl.FolderId })
+            .WhenMatched((fls, fli) => new() { LibraryId = fli.LibraryId, FolderId = fli.FolderId })
             .RunAsync();
     }
 
     public Task<int> UpdateFolderAsync(Folder folder)
     {
-        context.Folders.Update(entity: folder);
+        context.Folders.Update(folder);
         return context.SaveChangesAsync();
     }
 
@@ -120,21 +120,21 @@ public class FolderRepository(MediaContext context) : IFolderRepository
         // toggle can't prevent a tracker-time error. ExecuteDelete bypasses the
         // tracker entirely and emits plain DELETEs in FK-safe order.
         await context
-            .FolderLibrary.Where(predicate: folderLibrary => folderLibrary.FolderId == folder.Id)
+            .FolderLibrary.Where(folderLibrary => folderLibrary.FolderId == folder.Id)
             .ExecuteDeleteAsync();
 
         await context
-            .EncodingPresetFolders.Where(predicate: encodingPresetFolder =>
+            .EncodingPresetFolders.Where(encodingPresetFolder =>
                 encodingPresetFolder.FolderId == folder.Id
             )
             .ExecuteDeleteAsync();
 
-        return await context.Folders.Where(predicate: f => f.Id == folder.Id).ExecuteDeleteAsync();
+        return await context.Folders.Where(f => f.Id == folder.Id).ExecuteDeleteAsync();
     }
 
     public Task<List<Folder>> GetAllFoldersAsync(CancellationToken ct = default)
     {
-        return context.Folders.AsNoTracking().ToListAsync(cancellationToken: ct);
+        return context.Folders.AsNoTracking().ToListAsync(ct);
     }
 
     public async Task<int> SyncFolderLibraryAsync(
@@ -143,9 +143,9 @@ public class FolderRepository(MediaContext context) : IFolderRepository
     )
     {
         await context
-            .FolderLibrary.Where(predicate: epf => folders.Select(f => f.Id).Contains(epf.FolderId))
+            .FolderLibrary.Where(epf => folders.Select(f => f.Id).Contains(epf.FolderId))
             .ExecuteDeleteAsync();
 
-        return await AddFolderLibraryAsync(folderLibraries: folderLibraries);
+        return await AddFolderLibraryAsync(folderLibraries);
     }
 }

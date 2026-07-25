@@ -20,40 +20,40 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record SeasonCardData
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "episode_number")]
+    [JsonProperty("episode_number")]
     public long EpisodeNumber { get; set; }
 
-    [JsonProperty(propertyName: "season_number")]
+    [JsonProperty("season_number")]
     public long SeasonNumber { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "airDate")]
+    [JsonProperty("airDate")]
     public DateTime? AirDate { get; set; }
 
-    [JsonProperty(propertyName: "still")]
+    [JsonProperty("still")]
     public string? Still { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "progress")]
+    [JsonProperty("progress")]
     public object? Progress { get; set; }
 
-    [JsonProperty(propertyName: "available")]
+    [JsonProperty("available")]
     public bool Available { get; set; }
 
-    [JsonProperty(propertyName: "tv_id")]
+    [JsonProperty("tv_id")]
     public int TvId { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; } = null!;
 
     public SeasonCardData() { }
@@ -65,8 +65,8 @@ public record SeasonCardData
 
         TvId = episode.TvId;
         Id = episode.Id;
-        Title = !string.IsNullOrEmpty(value: title) ? title : episode.Title;
-        Overview = !string.IsNullOrEmpty(value: overview) ? overview : episode.Overview;
+        Title = !string.IsNullOrEmpty(title) ? title : episode.Title;
+        Overview = !string.IsNullOrEmpty(overview) ? overview : episode.Overview;
         EpisodeNumber = episode.EpisodeNumber;
         SeasonNumber = episode.SeasonNumber;
         AirDate = episode.AirDate;
@@ -74,8 +74,8 @@ public record SeasonCardData
         ColorPalette = episode.ColorPalette;
         Available = episode.VideoFiles.Count != 0;
         Link = new(
-            uriString: $"/tv/{TvId}/watch?season={SeasonNumber}&episode={EpisodeNumber}",
-            uriKind: UriKind.Relative
+            $"/tv/{TvId}/watch?season={SeasonNumber}&episode={EpisodeNumber}",
+            UriKind.Relative
         );
     }
 
@@ -117,13 +117,13 @@ public record SeasonCardData
 /// </summary>
 public record SeasonTitleData
 {
-    [JsonProperty(propertyName: "seasonNumber")]
+    [JsonProperty("seasonNumber")]
     public int SeasonNumber { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "episodeCount")]
+    [JsonProperty("episodeCount")]
     public int EpisodeCount { get; set; }
 
     public SeasonTitleData() { }

@@ -22,31 +22,31 @@ public class EpisodeRangeParserTests
 {
     [Theory]
     // SxxExx repeats and ranges
-    [InlineData(data: ["Show.S01E01.1080p.WEB-DL.x265.mkv", 1, 1, new[] { 1 }])]
-    [InlineData(data: ["Show.S01E01E02.1080p.mkv", 1, 1, new[] { 1, 2 }])]
-    [InlineData(data: ["Show.S01E01E02E03.mkv", 1, 1, new[] { 1, 2, 3 }])]
-    [InlineData(data: ["Show.S01E01-E03.mkv", 1, 1, new[] { 1, 2, 3 }])]
-    [InlineData(data: ["Show.S01E01-03.mkv", 1, 1, new[] { 1, 2, 3 }])]
-    [InlineData(data: ["Show.S01E01-E02.mkv", 1, 1, new[] { 1, 2 }])]
-    [InlineData(data: ["Show.S01E01 - E04.mkv", 1, 1, new[] { 1, 2, 3, 4 }])]
-    [InlineData(data: ["S01E01E02.mkv", 1, 1, new[] { 1, 2 }])]
-    [InlineData(data: ["One.Piece.S01E1109.mkv", 1, 1109, new[] { 1109 }])]
+    [InlineData(["Show.S01E01.1080p.WEB-DL.x265.mkv", 1, 1, new[] { 1 }])]
+    [InlineData(["Show.S01E01E02.1080p.mkv", 1, 1, new[] { 1, 2 }])]
+    [InlineData(["Show.S01E01E02E03.mkv", 1, 1, new[] { 1, 2, 3 }])]
+    [InlineData(["Show.S01E01-E03.mkv", 1, 1, new[] { 1, 2, 3 }])]
+    [InlineData(["Show.S01E01-03.mkv", 1, 1, new[] { 1, 2, 3 }])]
+    [InlineData(["Show.S01E01-E02.mkv", 1, 1, new[] { 1, 2 }])]
+    [InlineData(["Show.S01E01 - E04.mkv", 1, 1, new[] { 1, 2, 3, 4 }])]
+    [InlineData(["S01E01E02.mkv", 1, 1, new[] { 1, 2 }])]
+    [InlineData(["One.Piece.S01E1109.mkv", 1, 1109, new[] { 1109 }])]
     // cross-format
-    [InlineData(data: ["Show.1x01.mkv", 1, 1, new[] { 1 }])]
-    [InlineData(data: ["Show.1x01-1x03.mkv", 1, 1, new[] { 1, 2, 3 }])]
-    [InlineData(data: ["Show.1x01-03.mkv", 1, 1, new[] { 1, 2, 3 }])]
-    [InlineData(data: ["Show.1x01x02.mkv", 1, 1, new[] { 1, 2 }])]
+    [InlineData(["Show.1x01.mkv", 1, 1, new[] { 1 }])]
+    [InlineData(["Show.1x01-1x03.mkv", 1, 1, new[] { 1, 2, 3 }])]
+    [InlineData(["Show.1x01-03.mkv", 1, 1, new[] { 1, 2, 3 }])]
+    [InlineData(["Show.1x01x02.mkv", 1, 1, new[] { 1, 2 }])]
     // guards: resolution/codec digits and runaway ranges never expand
-    [InlineData(data: ["Show.S01E05.1080p.x265.mkv", 1, 5, new[] { 5 }])]
-    [InlineData(data: ["Show.S01E01-1080.mkv", 1, 1, new[] { 1 }])]
-    [InlineData(data: ["Show.S01E01.720p.mkv", 1, 1, new[] { 1 }])]
+    [InlineData(["Show.S01E05.1080p.x265.mkv", 1, 5, new[] { 5 }])]
+    [InlineData(["Show.S01E01-1080.mkv", 1, 1, new[] { 1 }])]
+    [InlineData(["Show.S01E01.720p.mkv", 1, 1, new[] { 1 }])]
     public void Expands(string name, int season, int first, int[] expected) =>
-        EpisodeRangeParser.Expand(name: name, season: season, firstEpisode: first).Should().Equal(elements: expected);
+        EpisodeRangeParser.Expand(name, season, first).Should().Equal(expected);
 
     [Fact]
     public void Mismatched_anchor_returns_single()
     {
         // file is S02E05 but caller asks about S01E01 -> no expansion
-        EpisodeRangeParser.Expand(name: "Show.S02E05.mkv", season: 1, firstEpisode: 1).Should().Equal(elements: 1);
+        EpisodeRangeParser.Expand("Show.S02E05.mkv", 1, 1).Should().Equal(1);
     }
 }

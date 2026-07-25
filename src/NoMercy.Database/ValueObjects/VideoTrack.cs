@@ -15,15 +15,15 @@ namespace NoMercy.Database;
 
 public class VideoTrack
 {
-    [JsonProperty(propertyName: "file")]
+    [JsonProperty("file")]
     public string File { get; set; } = null!;
 
-    [JsonProperty(propertyName: "kind")]
+    [JsonProperty("kind")]
     public string Kind { get; set; } = null!;
 
-    [JsonProperty(propertyName: "label", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
     public string? Label { get; set; }
 
-    [JsonProperty(propertyName: "language", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("language", NullValueHandling = NullValueHandling.Ignore)]
     public string? Language { get; set; }
 }

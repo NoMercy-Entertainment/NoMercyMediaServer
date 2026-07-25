@@ -30,7 +30,7 @@ namespace NoMercy.Tests.Networking;
 /// scanner. These operate on real Makaretu.Dns message objects — no
 /// multicast socket is involved.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class MdnsDeviceScannerParsingTests
 {
     private static TXTRecord Txt(params string[] strings) => new() { Strings = [.. strings] };
@@ -39,22 +39,22 @@ public sealed class MdnsDeviceScannerParsingTests
     public void ExtractFingerprint_FindsFpPrefixedString()
     {
         Message msg = new();
-        msg.AdditionalRecords.Add(item: Txt(strings: ["v=1", "fp=abc123", "other=value"]));
+        msg.AdditionalRecords.Add(Txt(["v=1", "fp=abc123", "other=value"]));
 
-        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg: msg);
+        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg);
 
-        Assert.Equal(expected: "abc123", actual: fingerprint);
+        Assert.Equal("abc123", fingerprint);
     }
 
     [Fact]
     public void ExtractFingerprint_PrefixMatchIsCaseInsensitive()
     {
         Message msg = new();
-        msg.AdditionalRecords.Add(item: Txt(strings: "FP=xyz789"));
+        msg.AdditionalRecords.Add(Txt("FP=xyz789"));
 
-        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg: msg);
+        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg);
 
-        Assert.Equal(expected: "xyz789", actual: fingerprint);
+        Assert.Equal("xyz789", fingerprint);
     }
 
     [Fact]
@@ -62,80 +62,80 @@ public sealed class MdnsDeviceScannerParsingTests
     {
         Message msg = new();
 
-        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg: msg);
+        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg);
 
-        Assert.Null(@object: fingerprint);
+        Assert.Null(fingerprint);
     }
 
     [Fact]
     public void ExtractFingerprint_TxtRecordWithoutFpPrefix_ReturnsNull()
     {
         Message msg = new();
-        msg.AdditionalRecords.Add(item: Txt(strings: ["v=1", "name=Living Room TV"]));
+        msg.AdditionalRecords.Add(Txt(["v=1", "name=Living Room TV"]));
 
-        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg: msg);
+        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg);
 
-        Assert.Null(@object: fingerprint);
+        Assert.Null(fingerprint);
     }
 
     [Fact]
     public void ExtractFingerprint_MultipleTxtRecords_FindsFirstMatch()
     {
         Message msg = new();
-        msg.AdditionalRecords.Add(item: Txt(strings: "v=1"));
-        msg.AdditionalRecords.Add(item: Txt(strings: "fp=second-record"));
+        msg.AdditionalRecords.Add(Txt("v=1"));
+        msg.AdditionalRecords.Add(Txt("fp=second-record"));
 
-        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg: msg);
+        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg);
 
-        Assert.Equal(expected: "second-record", actual: fingerprint);
+        Assert.Equal("second-record", fingerprint);
     }
 
     [Fact]
     public void ExtractFingerprint_EmptyFpValue_ReturnsEmptyString()
     {
         Message msg = new();
-        msg.AdditionalRecords.Add(item: Txt(strings: "fp="));
+        msg.AdditionalRecords.Add(Txt("fp="));
 
-        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg: msg);
+        string? fingerprint = MdnsDeviceScanner.ExtractFingerprint(msg);
 
-        Assert.Equal(expected: string.Empty, actual: fingerprint);
+        Assert.Equal(string.Empty, fingerprint);
     }
 
     [Fact]
     public void ExtractEndpoint_WithSrvAndA_ReturnsIpAndPort()
     {
         Message msg = new();
-        msg.AdditionalRecords.Add(item: new SRVRecord { Port = 8009, Target = new(name: "device.local") });
-        msg.AdditionalRecords.Add(item: new ARecord { Address = IPAddress.Parse(ipString: "192.168.1.42") });
+        msg.AdditionalRecords.Add(new SRVRecord { Port = 8009, Target = new("device.local") });
+        msg.AdditionalRecords.Add(new ARecord { Address = IPAddress.Parse("192.168.1.42") });
 
-        (string? ip, int? port) = MdnsDeviceScanner.ExtractEndpoint(msg: msg);
+        (string? ip, int? port) = MdnsDeviceScanner.ExtractEndpoint(msg);
 
-        Assert.Equal(expected: "192.168.1.42", actual: ip);
-        Assert.Equal(expected: 8009, actual: port);
+        Assert.Equal("192.168.1.42", ip);
+        Assert.Equal(8009, port);
     }
 
     [Fact]
     public void ExtractEndpoint_NoSrvRecord_ReturnsNullTuple()
     {
         Message msg = new();
-        msg.AdditionalRecords.Add(item: new ARecord { Address = IPAddress.Parse(ipString: "192.168.1.42") });
+        msg.AdditionalRecords.Add(new ARecord { Address = IPAddress.Parse("192.168.1.42") });
 
-        (string? ip, int? port) = MdnsDeviceScanner.ExtractEndpoint(msg: msg);
+        (string? ip, int? port) = MdnsDeviceScanner.ExtractEndpoint(msg);
 
-        Assert.Null(@object: ip);
-        Assert.Null(value: port);
+        Assert.Null(ip);
+        Assert.Null(port);
     }
 
     [Fact]
     public void ExtractEndpoint_SrvWithoutARecord_ReturnsNullIpButRealPort()
     {
         Message msg = new();
-        msg.AdditionalRecords.Add(item: new SRVRecord { Port = 8009, Target = new(name: "device.local") });
+        msg.AdditionalRecords.Add(new SRVRecord { Port = 8009, Target = new("device.local") });
 
-        (string? ip, int? port) = MdnsDeviceScanner.ExtractEndpoint(msg: msg);
+        (string? ip, int? port) = MdnsDeviceScanner.ExtractEndpoint(msg);
 
-        Assert.Null(@object: ip);
-        Assert.Equal(expected: 8009, actual: port);
+        Assert.Null(ip);
+        Assert.Equal(8009, port);
     }
 
     [Fact]
@@ -143,10 +143,10 @@ public sealed class MdnsDeviceScannerParsingTests
     {
         Message msg = new();
 
-        (string? ip, int? port) = MdnsDeviceScanner.ExtractEndpoint(msg: msg);
+        (string? ip, int? port) = MdnsDeviceScanner.ExtractEndpoint(msg);
 
-        Assert.Null(@object: ip);
-        Assert.Null(value: port);
+        Assert.Null(ip);
+        Assert.Null(port);
     }
 
     // -- Lifecycle: Start()/Dispose() idempotency and disposal safety. The
@@ -159,30 +159,30 @@ public sealed class MdnsDeviceScannerParsingTests
     public void Dispose_WithoutStart_DoesNotThrow()
     {
         MdnsDeviceScanner scanner = new(
-            contextFactory: new ThrowingDbContextFactory(),
-            logger: NullLogger<MdnsDeviceScanner>.Instance
+            new ThrowingDbContextFactory(),
+            NullLogger<MdnsDeviceScanner>.Instance
         );
 
-        Exception? ex = Record.Exception(testCode: scanner.Dispose);
+        Exception? ex = Record.Exception(scanner.Dispose);
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
     public void Dispose_CalledTwice_DoesNotThrow()
     {
         MdnsDeviceScanner scanner = new(
-            contextFactory: new ThrowingDbContextFactory(),
-            logger: NullLogger<MdnsDeviceScanner>.Instance
+            new ThrowingDbContextFactory(),
+            NullLogger<MdnsDeviceScanner>.Instance
         );
 
-        Exception? ex = Record.Exception(testCode: () =>
+        Exception? ex = Record.Exception(() =>
         {
             scanner.Dispose();
             scanner.Dispose();
         });
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     private sealed class ThrowingDbContextFactory : IDbContextFactory<MediaContext>

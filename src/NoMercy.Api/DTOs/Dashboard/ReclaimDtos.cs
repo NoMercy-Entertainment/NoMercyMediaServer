@@ -16,28 +16,28 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public sealed class ReclaimableItemDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; }
 
-    [JsonProperty(propertyName: "mediaType")]
+    [JsonProperty("mediaType")]
     public string MediaType { get; set; }
 
-    [JsonProperty(propertyName: "folder")]
+    [JsonProperty("folder")]
     public string Folder { get; set; }
 
-    [JsonProperty(propertyName: "servedCopy")]
+    [JsonProperty("servedCopy")]
     public string ServedCopy { get; set; }
 
-    [JsonProperty(propertyName: "kind")]
+    [JsonProperty("kind")]
     public string Kind { get; set; }
 
-    [JsonProperty(propertyName: "targetCount")]
+    [JsonProperty("targetCount")]
     public int TargetCount { get; set; }
 
-    [JsonProperty(propertyName: "reclaimableBytes")]
+    [JsonProperty("reclaimableBytes")]
     public long ReclaimableBytes { get; set; }
 
     public ReclaimableItemDto(ReclaimableItem item)

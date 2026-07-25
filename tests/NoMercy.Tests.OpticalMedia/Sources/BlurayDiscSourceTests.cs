@@ -21,7 +21,7 @@ using NoMercy.Storage;
 
 namespace NoMercy.Tests.OpticalMedia.Sources;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class BlurayDiscSourceTests
 {
     [Fact]
@@ -29,7 +29,7 @@ public class BlurayDiscSourceTests
     {
         string stderr = "";
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().BeEmpty();
     }
@@ -39,7 +39,7 @@ public class BlurayDiscSourceTests
     {
         string stderr = "";
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().BeEmpty();
     }
@@ -49,13 +49,13 @@ public class BlurayDiscSourceTests
     {
         string stderr = "playlist 00100.mpls (02:05:30)";
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
-        result.Should().HaveCount(expected: 1);
-        result[index: 0].Index.Should().Be(expected: 100);
-        result[index: 0]
+        result.Should().HaveCount(1);
+        result[0].Index.Should().Be(100);
+        result[0]
             .Duration.Should()
-            .Be(expected: TimeSpan.FromHours(hours: 2).Add(ts: TimeSpan.FromMinutes(minutes: 5)).Add(ts: TimeSpan.FromSeconds(seconds: 30)));
+            .Be(TimeSpan.FromHours(2).Add(TimeSpan.FromMinutes(5)).Add(TimeSpan.FromSeconds(30)));
     }
 
     [Fact]
@@ -70,12 +70,12 @@ public class BlurayDiscSourceTests
             playlist 00110.mpls (00:45:15)
             """;
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
-        result.Should().HaveCount(expected: 3);
-        result[index: 0].Index.Should().Be(expected: 90);
-        result[index: 1].Index.Should().Be(expected: 100);
-        result[index: 2].Index.Should().Be(expected: 110);
+        result.Should().HaveCount(3);
+        result[0].Index.Should().Be(90);
+        result[1].Index.Should().Be(100);
+        result[2].Index.Should().Be(110);
     }
 
     [Fact]
@@ -86,10 +86,10 @@ public class BlurayDiscSourceTests
             playlist 00100.mpls (02:00:00)
             """;
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
-        result.Should().HaveCount(expected: 1);
-        result[index: 0].Index.Should().Be(expected: 100);
+        result.Should().HaveCount(1);
+        result[0].Index.Should().Be(100);
     }
 
     [Fact]
@@ -100,10 +100,10 @@ public class BlurayDiscSourceTests
             playlist 00100.mpls (01:00:00)
             """;
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
-        result.Should().HaveCount(expected: 1);
-        result[index: 0].Index.Should().Be(expected: 100);
+        result.Should().HaveCount(1);
+        result[0].Index.Should().Be(100);
     }
 
     [Fact]
@@ -114,10 +114,10 @@ public class BlurayDiscSourceTests
             playlist 00110.mpls (01:00:00)
             """;
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
-        result.Should().HaveCount(expected: 1);
-        result[index: 0].Index.Should().Be(expected: 110);
+        result.Should().HaveCount(1);
+        result[0].Index.Should().Be(110);
     }
 
     [Fact]
@@ -132,10 +132,10 @@ public class BlurayDiscSourceTests
             playlist 00100.mpls (01:00:00)
             """;
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
-        result.Should().HaveCount(expected: 1);
-        result[index: 0].Index.Should().Be(expected: 100);
+        result.Should().HaveCount(1);
+        result[0].Index.Should().Be(100);
     }
 
     [Fact]
@@ -149,10 +149,10 @@ public class BlurayDiscSourceTests
             playlist 00110.mpls (01:00:00)
             """;
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
-        result.Should().HaveCount(expected: 1);
-        result[index: 0].Index.Should().Be(expected: 110);
+        result.Should().HaveCount(1);
+        result[0].Index.Should().Be(110);
     }
 
     [Fact]
@@ -163,14 +163,14 @@ public class BlurayDiscSourceTests
         // has no reachable caller through the public surface — exercised
         // directly via reflection.
         System.Reflection.MethodInfo method = typeof(BlurayDiscSource).GetMethod(
-            name: "TryParseHmsDuration",
-            bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
+            "TryParseHmsDuration",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
         )!;
 
         object?[] parameters = ["12:34", null];
-        object? success = method.Invoke(obj: null, parameters: parameters);
+        object? success = method.Invoke(null, parameters);
 
-        success.Should().Be(expected: false);
+        success.Should().Be(false);
     }
 
     [Fact]
@@ -181,9 +181,9 @@ public class BlurayDiscSourceTests
             Playlist 00110.mpls (01:30:00)
             """;
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
-        result.Should().HaveCount(expected: 2);
+        result.Should().HaveCount(2);
     }
 
     [Fact]
@@ -191,10 +191,10 @@ public class BlurayDiscSourceTests
     {
         string stderr = "playlist  00100.mpls  (01:00:00)";
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
-        result.Should().HaveCount(expected: 1);
-        result[index: 0].Index.Should().Be(expected: 100);
+        result.Should().HaveCount(1);
+        result[0].Index.Should().Be(100);
     }
 
     [Fact]
@@ -202,10 +202,10 @@ public class BlurayDiscSourceTests
     {
         string stderr = "playlist 99999.mpls (01:00:00)";
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
-        result.Should().HaveCount(expected: 1);
-        result[index: 0].Index.Should().Be(expected: 99999);
+        result.Should().HaveCount(1);
+        result[0].Index.Should().Be(99999);
     }
 
     [Fact]
@@ -213,10 +213,10 @@ public class BlurayDiscSourceTests
     {
         string stderr = "playlist 00100.mpls (1:2:3)";
 
-        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr: stderr);
+        List<(int Index, TimeSpan Duration)> result = BlurayDiscSource.ParsePlaylists(stderr);
 
-        result.Should().HaveCount(expected: 1);
-        result[index: 0].Duration.Should().Be(expected: new(hours: 1, minutes: 2, seconds: 3));
+        result.Should().HaveCount(1);
+        result[0].Duration.Should().Be(new(1, 2, 3));
     }
 
     [Fact]
@@ -224,7 +224,7 @@ public class BlurayDiscSourceTests
     {
         string stderr = "";
 
-        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr);
 
         result.Should().BeNull();
     }
@@ -234,11 +234,11 @@ public class BlurayDiscSourceTests
     {
         string stderr = "Drive does not support reading drive certificate";
 
-        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "AACS");
-        result.Message.Should().Contain(expected: "bus key");
+        result!.Kind.Should().Be("AACS");
+        result.Message.Should().Contain("bus key");
     }
 
     [Fact]
@@ -246,10 +246,10 @@ public class BlurayDiscSourceTests
     {
         string stderr = "Unable to read drive certificate";
 
-        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "AACS");
+        result!.Kind.Should().Be("AACS");
     }
 
     [Fact]
@@ -257,11 +257,11 @@ public class BlurayDiscSourceTests
     {
         string stderr = "Unable to decrypt unit (AACS)";
 
-        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "AACS");
-        result.Message.Should().Contain(expected: "KEYDB");
+        result!.Kind.Should().Be("AACS");
+        result.Message.Should().Contain("KEYDB");
     }
 
     [Fact]
@@ -269,10 +269,10 @@ public class BlurayDiscSourceTests
     {
         string stderr = "aacs: no matching certificate found";
 
-        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "AACS");
+        result!.Kind.Should().Be("AACS");
     }
 
     [Fact]
@@ -280,11 +280,11 @@ public class BlurayDiscSourceTests
     {
         string stderr = "bdplus: no matching converter";
 
-        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "BD+");
-        result.Message.Should().Contain(expected: "converter");
+        result!.Kind.Should().Be("BD+");
+        result.Message.Should().Contain("converter");
     }
 
     [Fact]
@@ -292,10 +292,10 @@ public class BlurayDiscSourceTests
     {
         string stderr = "DRIVE DOES NOT SUPPORT READING DRIVE CERTIFICATE";
 
-        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "AACS");
+        result!.Kind.Should().Be("AACS");
     }
 
     [Fact]
@@ -307,10 +307,10 @@ public class BlurayDiscSourceTests
             Another warning
             """;
 
-        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "AACS");
+        result!.Kind.Should().Be("AACS");
     }
 
     [Fact]
@@ -318,10 +318,10 @@ public class BlurayDiscSourceTests
     {
         string stderr = "bdplus: no matching converter for this disc";
 
-        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "BD+");
+        result!.Kind.Should().Be("BD+");
     }
 
     [Fact]
@@ -333,7 +333,7 @@ public class BlurayDiscSourceTests
             No protection markers here
             """;
 
-        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = BlurayDiscSource.ClassifyProtection(stderr);
 
         result.Should().BeNull();
     }
@@ -346,7 +346,7 @@ public class BlurayDiscSourceTests
 /// libbluray/ffmpeg subprocess or physical drive, per the DiscRipper /
 /// CdDiscSource convention already established in this test project.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class BlurayDiscSourceEndToEndTests
 {
     private static BlurayDiscSource MakeSut(
@@ -356,10 +356,10 @@ public class BlurayDiscSourceEndToEndTests
     {
         EncoderOptions options = new() { FfprobePathOverride = "ffprobe" };
         return new(
-            options: options,
-            processRunner: processRunner ?? Mock.Of<IProcessRunner>(),
-            storageDriver: storageDriver ?? Mock.Of<IStorageDriver>(),
-            logger: NullLogger<BlurayDiscSource>.Instance
+            options,
+            processRunner ?? Mock.Of<IProcessRunner>(),
+            storageDriver ?? Mock.Of<IStorageDriver>(),
+            NullLogger<BlurayDiscSource>.Instance
         );
     }
 
@@ -371,7 +371,7 @@ public class BlurayDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -379,14 +379,14 @@ public class BlurayDiscSourceEndToEndTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: exitCode, StdOut: stdOut, StdErr: stdErr, Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(exitCode, stdOut, stdErr, TimeSpan.Zero));
         return runner;
     }
 
     [Fact]
     public void Type_IsBluRay()
     {
-        MakeSut().Type.Should().Be(expected: OpticalDiscType.BluRay);
+        MakeSut().Type.Should().Be(OpticalDiscType.BluRay);
     }
 
     [Fact]
@@ -394,16 +394,16 @@ public class BlurayDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = MakeRunner(stdErr: "no playlists here");
         Mock<IStorageDriver> driver = new();
-        driver.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: false);
+        driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(false);
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object, storageDriver: driver.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE_LABEL", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object, driver.Object);
+        DiscDrive drive = new("D:\\", "MOVIE_LABEL", true, OpticalDiscType.BluRay);
 
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
         info.Titles.Should().BeEmpty();
-        info.DiscLabel.Should().Be(expected: "MOVIE_LABEL");
-        info.TotalDuration.Should().Be(expected: TimeSpan.Zero);
+        info.DiscLabel.Should().Be("MOVIE_LABEL");
+        info.TotalDuration.Should().Be(TimeSpan.Zero);
     }
 
     [Fact]
@@ -413,20 +413,20 @@ public class BlurayDiscSourceEndToEndTests
             playlist 00090.mpls (00:30:00)
             playlist 00100.mpls (02:15:00)
             """;
-        Mock<IProcessRunner> runner = MakeRunner(stdErr: stderr);
+        Mock<IProcessRunner> runner = MakeRunner(stderr);
         Mock<IStorageDriver> driver = new();
-        driver.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: false);
+        driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(false);
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object, storageDriver: driver.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object, driver.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.BluRay);
 
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
-        info.Titles.Should().HaveCount(expected: 2);
-        info.Titles[0].Index.Should().Be(expected: 100, because: "titles are ordered by duration descending");
+        info.Titles.Should().HaveCount(2);
+        info.Titles[0].Index.Should().Be(100, "titles are ordered by duration descending");
         info.Titles[0].IsMainFeature.Should().BeTrue();
         info.Titles[1].IsMainFeature.Should().BeFalse();
-        info.TotalDuration.Should().Be(expected: TimeSpan.FromHours(hours: 2).Add(ts: TimeSpan.FromMinutes(minutes: 45)));
+        info.TotalDuration.Should().Be(TimeSpan.FromHours(2).Add(TimeSpan.FromMinutes(45)));
     }
 
     [Fact]
@@ -434,23 +434,23 @@ public class BlurayDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = MakeRunner(stdErr: "playlist 00100.mpls (01:30:00)");
         Mock<IStorageDriver> driver = new();
-        driver.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: true);
+        driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(true);
         driver
-            .Setup(expression: d => d.FileExists(It.Is<string>(p => p.Contains("bdmt_eng.xml"))))
-            .Returns(value: true);
+            .Setup(d => d.FileExists(It.Is<string>(p => p.Contains("bdmt_eng.xml"))))
+            .Returns(true);
 
         string xml =
             """<?xml version="1.0"?><disclib xmlns:di="urn:BDA:bdmv;discinfo"><di:discinfo><di:title><di:name>My Movie Title</di:name></di:title></di:discinfo></disclib>""";
         driver
-            .Setup(expression: d => d.OpenRead(It.Is<string>(p => p.Contains("bdmt_eng.xml"))))
-            .Returns(valueFunction: () => new MemoryStream(buffer: System.Text.Encoding.UTF8.GetBytes(s: xml)));
+            .Setup(d => d.OpenRead(It.Is<string>(p => p.Contains("bdmt_eng.xml"))))
+            .Returns(() => new MemoryStream(System.Text.Encoding.UTF8.GetBytes(xml)));
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object, storageDriver: driver.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "VOLLABEL", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object, driver.Object);
+        DiscDrive drive = new("D:\\", "VOLLABEL", true, OpticalDiscType.BluRay);
 
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
-        info.DiscTitle.Should().Be(expected: "My Movie Title");
+        info.DiscTitle.Should().Be("My Movie Title");
     }
 
     [Fact]
@@ -458,12 +458,12 @@ public class BlurayDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = MakeRunner(stdErr: "playlist 00100.mpls (01:30:00)");
         Mock<IStorageDriver> driver = new();
-        driver.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: false);
+        driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(false);
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object, storageDriver: driver.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "VOLLABEL", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object, driver.Object);
+        DiscDrive drive = new("D:\\", "VOLLABEL", true, OpticalDiscType.BluRay);
 
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
         info.DiscTitle.Should().BeNull();
     }
@@ -476,22 +476,22 @@ public class BlurayDiscSourceEndToEndTests
         // from the "enumeration throws" test below.
         Mock<IProcessRunner> runner = MakeRunner(stdErr: "playlist 00100.mpls (01:30:00)");
         Mock<IStorageDriver> driver = new();
-        driver.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: true);
-        driver.Setup(expression: d => d.FileExists(It.IsAny<string>())).Returns(value: false);
+        driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(true);
+        driver.Setup(d => d.FileExists(It.IsAny<string>())).Returns(false);
         driver
-            .Setup(expression: d =>
+            .Setup(d =>
                 d.EnumerateFileSystemEntries(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<SearchOption>()
                 )
             )
-            .Returns(value: []);
+            .Returns([]);
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object, storageDriver: driver.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "VOLLABEL", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object, driver.Object);
+        DiscDrive drive = new("D:\\", "VOLLABEL", true, OpticalDiscType.BluRay);
 
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
         info.DiscTitle.Should().BeNull();
     }
@@ -502,7 +502,7 @@ public class BlurayDiscSourceEndToEndTests
         Mock<IProcessRunner> runner = MakeRunner(stdErr: "playlist 00100.mpls (01:30:00)");
         string? capturedInputUrl = null;
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -511,23 +511,23 @@ public class BlurayDiscSourceEndToEndTests
                 )
             )
             .Callback<string, string[], string?, CancellationToken>(
-                action: (_, args, _, _) => capturedInputUrl = args[^1]
+                (_, args, _, _) => capturedInputUrl = args[^1]
             )
             .ReturnsAsync(
-                value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "playlist 00100.mpls (01:30:00)", Duration: TimeSpan.Zero)
+                new ProcessResult(0, "", "playlist 00100.mpls (01:30:00)", TimeSpan.Zero)
             );
 
         Mock<IStorageDriver> driver = new();
-        driver.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: false);
+        driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(false);
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object, storageDriver: driver.Object);
-        DiscDrive drive = new(Path: "bluray:/dev/sr0/", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object, driver.Object);
+        DiscDrive drive = new("bluray:/dev/sr0/", "MOVIE", true, OpticalDiscType.BluRay);
 
-        await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        await sut.ProbeAsync(drive, CancellationToken.None);
 
         capturedInputUrl
             .Should()
-            .Be(expected: "bluray:/dev/sr0/", because: "an already-prefixed path must be used verbatim");
+            .Be("bluray:/dev/sr0/", "an already-prefixed path must be used verbatim");
     }
 
     [Fact]
@@ -535,12 +535,12 @@ public class BlurayDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = MakeRunner(stdErr: "", exitCode: 1);
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.BluRay);
 
-        DiscTitle title = await sut.ProbeTitleAsync(drive: drive, titleIndex: 1, ct: CancellationToken.None);
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 1, CancellationToken.None);
 
-        title.Duration.Should().Be(expected: TimeSpan.Zero);
+        title.Duration.Should().Be(TimeSpan.Zero);
     }
 
     [Fact]
@@ -548,25 +548,25 @@ public class BlurayDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = MakeRunner(stdErr: "playlist 00100.mpls (01:30:00)");
         Mock<IStorageDriver> driver = new();
-        driver.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: true);
-        driver.Setup(expression: d => d.FileExists(It.IsAny<string>())).Returns(value: false);
+        driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(true);
+        driver.Setup(d => d.FileExists(It.IsAny<string>())).Returns(false);
         driver
-            .Setup(expression: d =>
+            .Setup(d =>
                 d.EnumerateFileSystemEntries(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<SearchOption>()
                 )
             )
-            .Throws(exception: new IOException(message: "disc read error"));
+            .Throws(new IOException("disc read error"));
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object, storageDriver: driver.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "VOLLABEL", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object, driver.Object);
+        DiscDrive drive = new("D:\\", "VOLLABEL", true, OpticalDiscType.BluRay);
 
-        Func<Task> act = () => sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        Func<Task> act = () => sut.ProbeAsync(drive, CancellationToken.None);
 
         await act.Should().NotThrowAsync();
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
         info.DiscTitle.Should().BeNull();
     }
 
@@ -577,15 +577,15 @@ public class BlurayDiscSourceEndToEndTests
             stdErr: "Drive does not support reading drive certificate"
         );
         Mock<IStorageDriver> driver = new();
-        driver.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: false);
+        driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(false);
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object, storageDriver: driver.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object, driver.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.BluRay);
 
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
         info.Protection.Should().NotBeNull();
-        info.Protection!.Kind.Should().Be(expected: "AACS");
+        info.Protection!.Kind.Should().Be("AACS");
     }
 
     [Fact]
@@ -599,13 +599,13 @@ public class BlurayDiscSourceEndToEndTests
             """;
         Mock<IProcessRunner> runner = MakeRunner(exitCode: 0, stdOut: json, stdErr: "");
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.BluRay);
 
-        DiscTitle title = await sut.ProbeTitleAsync(drive: drive, titleIndex: 100, ct: CancellationToken.None);
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 100, CancellationToken.None);
 
-        title.Index.Should().Be(expected: 100);
-        title.VideoStreams.Should().HaveCount(expected: 1);
+        title.Index.Should().Be(100);
+        title.VideoStreams.Should().HaveCount(1);
     }
 
     [Fact]
@@ -613,13 +613,13 @@ public class BlurayDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = MakeRunner(stdErr: "read error", exitCode: 1);
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.BluRay);
 
-        DiscTitle title = await sut.ProbeTitleAsync(drive: drive, titleIndex: 42, ct: CancellationToken.None);
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 42, CancellationToken.None);
 
-        title.Index.Should().Be(expected: 42);
-        title.Duration.Should().Be(expected: TimeSpan.Zero);
+        title.Index.Should().Be(42);
+        title.Duration.Should().Be(TimeSpan.Zero);
         title.IsMainFeature.Should().BeFalse();
     }
 
@@ -642,13 +642,13 @@ public class BlurayDiscSourceEndToEndTests
             stdErr: ""
         );
 
-        BlurayDiscSource sut = MakeSut(processRunner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        BlurayDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.BluRay);
 
-        DiscTitle title = await sut.ProbeTitleAsync(drive: drive, titleIndex: 55, ct: CancellationToken.None);
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 55, CancellationToken.None);
 
-        title.Index.Should().Be(expected: 55);
-        title.Duration.Should().Be(expected: TimeSpan.Zero);
+        title.Index.Should().Be(55);
+        title.Duration.Should().Be(TimeSpan.Zero);
         title.IsMainFeature.Should().BeFalse();
     }
 }

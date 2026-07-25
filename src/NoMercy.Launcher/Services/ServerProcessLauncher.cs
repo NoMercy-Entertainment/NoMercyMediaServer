@@ -30,7 +30,7 @@ public class ServerProcessLauncher
     public Task<bool> StartServerAsync(string? extraArguments = null)
     {
         if (IsServerProcessRunning)
-            return Task.FromResult(result: false);
+            return Task.FromResult(false);
 
         // Wipe stale log files so the new run's logs aren't buried under
         // the previous execution's. Best-effort: any file held by another
@@ -47,20 +47,20 @@ public class ServerProcessLauncher
             ?? CreateDotnetRunStartInfo();
 
         if (startInfo is null)
-            return Task.FromResult(result: false);
+            return Task.FromResult(false);
 
         // Append user-configured startup arguments
-        if (!string.IsNullOrWhiteSpace(value: extraArguments))
+        if (!string.IsNullOrWhiteSpace(extraArguments))
         {
-            foreach (string arg in ParseArguments(input: extraArguments))
-                startInfo.ArgumentList.Add(item: arg);
+            foreach (string arg in ParseArguments(extraArguments))
+                startInfo.ArgumentList.Add(arg);
         }
 
         // Tell the server it's running from an installed deployment so it
         // skips binary downloads (the installer handles updates)
         string? installDir = GetInstallDirectory();
         if (installDir is not null)
-            startInfo.Environment[key: "NOMERCY_INSTALL_DIR"] = installDir;
+            startInfo.Environment["NOMERCY_INSTALL_DIR"] = installDir;
 
         _serverProcess = new() { StartInfo = startInfo, EnableRaisingEvents = true };
 
@@ -70,13 +70,13 @@ public class ServerProcessLauncher
         };
 
         bool started = _serverProcess.Start();
-        return Task.FromResult(result: started);
+        return Task.FromResult(started);
     }
 
     public Task<bool> LaunchAppAsync(string? route = null)
     {
         if (IsAppProcessRunning)
-            return Task.FromResult(result: false);
+            return Task.FromResult(false);
 
         ProcessStartInfo? startInfo =
             CreateAppInstalledStartInfo()
@@ -85,12 +85,12 @@ public class ServerProcessLauncher
             ?? CreateAppDotnetRunStartInfo();
 
         if (startInfo is null)
-            return Task.FromResult(result: false);
+            return Task.FromResult(false);
 
-        if (!string.IsNullOrEmpty(value: route))
+        if (!string.IsNullOrEmpty(route))
         {
-            startInfo.ArgumentList.Add(item: "--route");
-            startInfo.ArgumentList.Add(item: route);
+            startInfo.ArgumentList.Add("--route");
+            startInfo.ArgumentList.Add(route);
         }
 
         _appProcess = new() { StartInfo = startInfo, EnableRaisingEvents = true };
@@ -105,21 +105,21 @@ public class ServerProcessLauncher
         if (!started)
         {
             _appProcess = null;
-            return Task.FromResult(result: false);
+            return Task.FromResult(false);
         }
 
-        return Task.FromResult(result: true);
+        return Task.FromResult(true);
     }
 
     public async Task<bool> WaitForServerExitAsync(TimeSpan timeout)
     {
-        using CancellationTokenSource cts = new(delay: timeout);
+        using CancellationTokenSource cts = new(timeout);
 
         if (_serverProcess is not null)
         {
             try
             {
-                await _serverProcess.WaitForExitAsync(cancellationToken: cts.Token);
+                await _serverProcess.WaitForExitAsync(cts.Token);
                 return true;
             }
             catch (OperationCanceledException)
@@ -136,7 +136,7 @@ public class ServerProcessLauncher
 
             try
             {
-                await Task.Delay(millisecondsDelay: 500, cancellationToken: cts.Token);
+                await Task.Delay(500, cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -153,13 +153,13 @@ public class ServerProcessLauncher
         {
             if (_serverProcess is { HasExited: false })
             {
-                _serverProcess.Kill(entireProcessTree: true);
+                _serverProcess.Kill(true);
                 _serverProcess = null;
             }
         }
         catch (Exception ex)
         {
-            LauncherLog.Error(message: "Force kill failed", ex: ex);
+            LauncherLog.Error("Force kill failed", ex);
         }
 
         return Task.CompletedTask;
@@ -171,42 +171,42 @@ public class ServerProcessLauncher
         string currentPath = AppFiles.ServerExePath;
         string backupPath = currentPath + ".bak";
 
-        LauncherLog.Info(message: $"ApplyUpdate: temp={tempPath}, current={currentPath}");
+        LauncherLog.Info($"ApplyUpdate: temp={tempPath}, current={currentPath}");
 
-        if (!File.Exists(path: tempPath))
+        if (!File.Exists(tempPath))
         {
-            LauncherLog.Error(message: $"Staged update not found at {tempPath}");
-            throw new FileNotFoundException(message: "No staged update found.", fileName: tempPath);
+            LauncherLog.Error($"Staged update not found at {tempPath}");
+            throw new FileNotFoundException("No staged update found.", tempPath);
         }
 
         // Backup current binary before replacing
-        if (File.Exists(path: currentPath))
+        if (File.Exists(currentPath))
         {
-            LauncherLog.Info(message: $"Backing up current binary to {backupPath}");
-            if (File.Exists(path: backupPath))
-                File.Delete(path: backupPath);
-            File.Move(sourceFileName: currentPath, destFileName: backupPath);
+            LauncherLog.Info($"Backing up current binary to {backupPath}");
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
+            File.Move(currentPath, backupPath);
         }
 
         try
         {
-            File.Move(sourceFileName: tempPath, destFileName: currentPath);
-            await FilePermissions.SetExecutionPermissions(path: currentPath);
-            LauncherLog.Info(message: "Binary replacement successful");
+            File.Move(tempPath, currentPath);
+            await FilePermissions.SetExecutionPermissions(currentPath);
+            LauncherLog.Info("Binary replacement successful");
 
             // Clean up backup on success
-            if (File.Exists(path: backupPath))
-                File.Delete(path: backupPath);
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
         }
         catch (Exception ex)
         {
-            LauncherLog.Error(message: "Binary replacement failed, attempting rollback", ex: ex);
+            LauncherLog.Error("Binary replacement failed, attempting rollback", ex);
 
             // Rollback: restore backup if move failed
-            if (File.Exists(path: backupPath) && !File.Exists(path: currentPath))
+            if (File.Exists(backupPath) && !File.Exists(currentPath))
             {
-                File.Move(sourceFileName: backupPath, destFileName: currentPath);
-                LauncherLog.Info(message: "Rollback successful");
+                File.Move(backupPath, currentPath);
+                LauncherLog.Info("Rollback successful");
             }
 
             throw;
@@ -218,10 +218,10 @@ public class ServerProcessLauncher
         string tempPath = AppFiles.ServerTempExePath;
 
         LauncherLog.Info(
-            message: $"Checking for staged update at {tempPath}: exists={File.Exists(path: tempPath)}"
+            $"Checking for staged update at {tempPath}: exists={File.Exists(tempPath)}"
         );
 
-        if (File.Exists(path: tempPath))
+        if (File.Exists(tempPath))
             await ApplyUpdateAsync();
     }
 
@@ -235,14 +235,14 @@ public class ServerProcessLauncher
         try
         {
             string logDir = AppFiles.LogPath;
-            if (!Directory.Exists(path: logDir))
+            if (!Directory.Exists(logDir))
                 return;
 
-            foreach (string file in Directory.EnumerateFiles(path: logDir, searchPattern: "log*.txt"))
+            foreach (string file in Directory.EnumerateFiles(logDir, "log*.txt"))
             {
                 try
                 {
-                    File.Delete(path: file);
+                    File.Delete(file);
                 }
                 catch (IOException)
                 {
@@ -256,7 +256,7 @@ public class ServerProcessLauncher
         }
         catch (Exception ex)
         {
-            LauncherLog.Error(message: "Failed to clear log directory before server start", ex: ex);
+            LauncherLog.Error("Failed to clear log directory before server start", ex);
         }
     }
 
@@ -268,7 +268,7 @@ public class ServerProcessLauncher
     private static string? GetInstallDirectory()
     {
         string? ownDir = Path.GetDirectoryName(
-            path: Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
         );
 
         if (ownDir is null)
@@ -277,9 +277,9 @@ public class ServerProcessLauncher
         // If the Launcher is in the binaries path, this is a standalone deployment
         if (
             string.Equals(
-                a: Path.GetFullPath(path: ownDir),
-                b: Path.GetFullPath(path: AppFiles.BinariesPath),
-                comparisonType: StringComparison.OrdinalIgnoreCase
+                Path.GetFullPath(ownDir),
+                Path.GetFullPath(AppFiles.BinariesPath),
+                StringComparison.OrdinalIgnoreCase
             )
         )
             return null;
@@ -291,27 +291,27 @@ public class ServerProcessLauncher
     {
         string exePath = AppFiles.ServerExePath;
 
-        if (!File.Exists(path: exePath))
+        if (!File.Exists(exePath))
             return null;
 
-        return new(fileName: exePath) { UseShellExecute = false, CreateNoWindow = true };
+        return new(exePath) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateInstalledStartInfo()
     {
         string? ownDir = Path.GetDirectoryName(
-            path: Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
         );
 
         if (ownDir is null)
             return null;
 
-        string candidate = Path.Combine(path1: ownDir, path2: "NoMercyMediaServer" + Info.ExecSuffix);
+        string candidate = Path.Combine(ownDir, "NoMercyMediaServer" + Info.ExecSuffix);
 
-        if (!File.Exists(path: candidate))
+        if (!File.Exists(candidate))
             return null;
 
-        return new(fileName: candidate) { UseShellExecute = false, CreateNoWindow = true };
+        return new(candidate) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateDevBinaryStartInfo()
@@ -321,13 +321,13 @@ public class ServerProcessLauncher
         if (serverBinary is null)
             return null;
 
-        ProcessStartInfo startInfo = new(fileName: serverBinary)
+        ProcessStartInfo startInfo = new(serverBinary)
         {
             UseShellExecute = false,
             CreateNoWindow = true,
         };
 
-        startInfo.ArgumentList.Add(item: "--dev");
+        startInfo.ArgumentList.Add("--dev");
 
         return startInfo;
     }
@@ -339,17 +339,17 @@ public class ServerProcessLauncher
         if (serverProjectDir is null)
             return null;
 
-        ProcessStartInfo startInfo = new(fileName: "dotnet")
+        ProcessStartInfo startInfo = new("dotnet")
         {
             UseShellExecute = false,
             CreateNoWindow = true,
         };
 
-        startInfo.ArgumentList.Add(item: "run");
-        startInfo.ArgumentList.Add(item: "--project");
-        startInfo.ArgumentList.Add(item: serverProjectDir);
-        startInfo.ArgumentList.Add(item: "--");
-        startInfo.ArgumentList.Add(item: "--dev");
+        startInfo.ArgumentList.Add("run");
+        startInfo.ArgumentList.Add("--project");
+        startInfo.ArgumentList.Add(serverProjectDir);
+        startInfo.ArgumentList.Add("--");
+        startInfo.ArgumentList.Add("--dev");
 
         return startInfo;
     }
@@ -365,15 +365,15 @@ public class ServerProcessLauncher
 
         string[] searchPaths =
         [
-            Path.Combine(paths: [serverProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine([serverProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
             ),
-            Path.Combine(paths: [serverProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine([serverProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
             ),
         ];
 
         foreach (string path in searchPaths)
         {
-            if (File.Exists(path: path))
+            if (File.Exists(path))
                 return path;
         }
 
@@ -384,32 +384,32 @@ public class ServerProcessLauncher
     {
         string exePath = AppFiles.AppExePath;
 
-        if (!File.Exists(path: exePath))
+        if (!File.Exists(exePath))
             return null;
 
-        return new(fileName: exePath) { UseShellExecute = false, CreateNoWindow = true };
+        return new(exePath) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateAppInstalledStartInfo()
     {
         string? ownDir = Path.GetDirectoryName(
-            path: Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
         );
 
         if (ownDir is null)
             return null;
 
-        string candidate = Path.Combine(path1: ownDir, path2: "NoMercyApp" + Info.ExecSuffix);
+        string candidate = Path.Combine(ownDir, "NoMercyApp" + Info.ExecSuffix);
 
-        if (!File.Exists(path: candidate))
+        if (!File.Exists(candidate))
             return null;
 
-        return new(fileName: candidate) { UseShellExecute = false, CreateNoWindow = true };
+        return new(candidate) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateAppDevBinaryStartInfo()
     {
-        string? appProjectDir = FindProjectDirectory(projectName: "NoMercy.App");
+        string? appProjectDir = FindProjectDirectory("NoMercy.App");
 
         if (appProjectDir is null)
             return null;
@@ -418,16 +418,16 @@ public class ServerProcessLauncher
 
         string[] searchPaths =
         [
-            Path.Combine(paths: [appProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine([appProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
             ),
-            Path.Combine(paths: [appProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine([appProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
             ),
         ];
 
         foreach (string path in searchPaths)
         {
-            if (File.Exists(path: path))
-                return new(fileName: path) { UseShellExecute = false, CreateNoWindow = true };
+            if (File.Exists(path))
+                return new(path) { UseShellExecute = false, CreateNoWindow = true };
         }
 
         return null;
@@ -435,43 +435,43 @@ public class ServerProcessLauncher
 
     private static ProcessStartInfo? CreateAppDotnetRunStartInfo()
     {
-        string? appProjectDir = FindProjectDirectory(projectName: "NoMercy.App");
+        string? appProjectDir = FindProjectDirectory("NoMercy.App");
 
         if (appProjectDir is null)
             return null;
 
-        ProcessStartInfo startInfo = new(fileName: "dotnet")
+        ProcessStartInfo startInfo = new("dotnet")
         {
             UseShellExecute = false,
             CreateNoWindow = true,
         };
 
-        startInfo.ArgumentList.Add(item: "run");
-        startInfo.ArgumentList.Add(item: "--project");
-        startInfo.ArgumentList.Add(item: appProjectDir);
+        startInfo.ArgumentList.Add("run");
+        startInfo.ArgumentList.Add("--project");
+        startInfo.ArgumentList.Add(appProjectDir);
 
         return startInfo;
     }
 
     private static string? FindServerProjectDirectory()
     {
-        return FindProjectDirectory(projectName: "NoMercy.Service");
+        return FindProjectDirectory("NoMercy.Service");
     }
 
     private static string? FindProjectDirectory(string projectName)
     {
-        string? assemblyLocation = Path.GetDirectoryName(path: Assembly.GetExecutingAssembly().Location);
+        string? assemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
         string? directory = assemblyLocation;
 
         while (directory is not null)
         {
-            string candidate = Path.Combine(path1: directory, path2: "src", path3: projectName);
+            string candidate = Path.Combine(directory, "src", projectName);
 
-            if (Directory.Exists(path: candidate))
+            if (Directory.Exists(candidate))
                 return candidate;
 
-            directory = Path.GetDirectoryName(path: directory);
+            directory = Path.GetDirectoryName(directory);
         }
 
         return null;
@@ -489,21 +489,21 @@ public class ServerProcessLauncher
         while (i < input.Length)
         {
             // Skip whitespace
-            while (i < input.Length && char.IsWhiteSpace(c: input[index: i]))
+            while (i < input.Length && char.IsWhiteSpace(input[i]))
                 i++;
 
             if (i >= input.Length)
                 break;
 
-            if (input[index: i] == '"')
+            if (input[i] == '"')
             {
                 // Quoted argument
                 i++;
                 int start = i;
-                while (i < input.Length && input[index: i] != '"')
+                while (i < input.Length && input[i] != '"')
                     i++;
 
-                args.Add(item: input[start..i]);
+                args.Add(input[start..i]);
 
                 if (i < input.Length)
                     i++; // skip closing quote
@@ -512,10 +512,10 @@ public class ServerProcessLauncher
             {
                 // Unquoted argument
                 int start = i;
-                while (i < input.Length && !char.IsWhiteSpace(c: input[index: i]))
+                while (i < input.Length && !char.IsWhiteSpace(input[i]))
                     i++;
 
-                args.Add(item: input[start..i]);
+                args.Add(input[start..i]);
             }
         }
 

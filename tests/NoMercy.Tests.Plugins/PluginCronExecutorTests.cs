@@ -23,8 +23,8 @@ public class PluginCronExecutorTests
 
         public string Name => "t";
         public string Description => "d";
-        public Guid Id { get; } = Guid.Parse(input: "11111111-1111-1111-1111-111111111111");
-        public Version Version { get; } = new(major: 1, minor: 0);
+        public Guid Id { get; } = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        public Version Version { get; } = new(1, 0);
         public string CronExpression => "*/5 * * * *";
 
         public void Initialize(IPluginContext context) { }
@@ -42,26 +42,26 @@ public class PluginCronExecutorTests
     public async Task Adapter_ExposesPluginScheduleAndExecutes()
     {
         FakeTask task = new();
-        PluginCronExecutor executor = new(plugin: task);
+        PluginCronExecutor executor = new(task);
 
-        Assert.Equal(expected: "plugin:11111111-1111-1111-1111-111111111111", actual: executor.JobName);
-        Assert.Equal(expected: "*/5 * * * *", actual: executor.CronExpression);
+        Assert.Equal("plugin:11111111-1111-1111-1111-111111111111", executor.JobName);
+        Assert.Equal("*/5 * * * *", executor.CronExpression);
 
-        await executor.ExecuteAsync(parameters: string.Empty, cancellationToken: CancellationToken.None);
+        await executor.ExecuteAsync(string.Empty, CancellationToken.None);
 
-        Assert.True(condition: task.Ran);
+        Assert.True(task.Ran);
     }
 
     [Fact]
     public async Task Adapter_ForwardsCancellationToken_IgnoringParametersString()
     {
         FakeCancellationObservingTask task = new();
-        PluginCronExecutor executor = new(plugin: task);
+        PluginCronExecutor executor = new(task);
         using CancellationTokenSource cts = new();
 
-        await executor.ExecuteAsync(parameters: "ignored-parameters", cancellationToken: cts.Token);
+        await executor.ExecuteAsync("ignored-parameters", cts.Token);
 
-        Assert.Equal(expected: cts.Token, actual: task.ReceivedToken);
+        Assert.Equal(cts.Token, task.ReceivedToken);
     }
 
     private sealed class FakeCancellationObservingTask : IScheduledTaskPlugin
@@ -71,7 +71,7 @@ public class PluginCronExecutorTests
         public string Name => "observer";
         public string Description => "d";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(major: 1, minor: 0);
+        public Version Version { get; } = new(1, 0);
         public string CronExpression => "0 * * * *";
 
         public void Initialize(IPluginContext context) { }

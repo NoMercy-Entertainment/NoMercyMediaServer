@@ -30,62 +30,62 @@ public static class CodecLevelFpsCaps
 
     public static readonly IReadOnlyList<LevelCap> H264 =
     [
-        new(Level: "1.0", MaxLumaSamplesPerSec: 380_160),
-        new(Level: "1.1", MaxLumaSamplesPerSec: 768_000),
-        new(Level: "1.2", MaxLumaSamplesPerSec: 1_536_000),
-        new(Level: "1.3", MaxLumaSamplesPerSec: 3_041_280),
-        new(Level: "2.0", MaxLumaSamplesPerSec: 3_041_280),
-        new(Level: "2.1", MaxLumaSamplesPerSec: 5_068_800),
-        new(Level: "2.2", MaxLumaSamplesPerSec: 5_184_000),
-        new(Level: "3.0", MaxLumaSamplesPerSec: 10_368_000),
-        new(Level: "3.1", MaxLumaSamplesPerSec: 27_648_000),
-        new(Level: "3.2", MaxLumaSamplesPerSec: 55_296_000),
-        new(Level: "4.0", MaxLumaSamplesPerSec: 62_914_560),
-        new(Level: "4.1", MaxLumaSamplesPerSec: 62_914_560),
-        new(Level: "4.2", MaxLumaSamplesPerSec: 133_693_440),
-        new(Level: "5.0", MaxLumaSamplesPerSec: 150_994_944),
-        new(Level: "5.1", MaxLumaSamplesPerSec: 251_658_240),
-        new(Level: "5.2", MaxLumaSamplesPerSec: 530_841_600),
-        new(Level: "6.0", MaxLumaSamplesPerSec: 1_069_547_520),
-        new(Level: "6.1", MaxLumaSamplesPerSec: 2_139_095_040),
-        new(Level: "6.2", MaxLumaSamplesPerSec: 4_278_190_080),
+        new("1.0", 380_160),
+        new("1.1", 768_000),
+        new("1.2", 1_536_000),
+        new("1.3", 3_041_280),
+        new("2.0", 3_041_280),
+        new("2.1", 5_068_800),
+        new("2.2", 5_184_000),
+        new("3.0", 10_368_000),
+        new("3.1", 27_648_000),
+        new("3.2", 55_296_000),
+        new("4.0", 62_914_560),
+        new("4.1", 62_914_560),
+        new("4.2", 133_693_440),
+        new("5.0", 150_994_944),
+        new("5.1", 251_658_240),
+        new("5.2", 530_841_600),
+        new("6.0", 1_069_547_520),
+        new("6.1", 2_139_095_040),
+        new("6.2", 4_278_190_080),
     ];
 
     public static readonly IReadOnlyList<LevelCap> Hevc =
     [
-        new(Level: "1.0", MaxLumaSamplesPerSec: 552_960),
-        new(Level: "2.0", MaxLumaSamplesPerSec: 3_686_400),
-        new(Level: "2.1", MaxLumaSamplesPerSec: 7_372_800),
-        new(Level: "3.0", MaxLumaSamplesPerSec: 16_588_800),
-        new(Level: "3.1", MaxLumaSamplesPerSec: 33_177_600),
-        new(Level: "4.0", MaxLumaSamplesPerSec: 66_846_720),
-        new(Level: "4.1", MaxLumaSamplesPerSec: 133_693_440),
-        new(Level: "5.0", MaxLumaSamplesPerSec: 267_386_880),
-        new(Level: "5.1", MaxLumaSamplesPerSec: 534_773_760),
-        new(Level: "5.2", MaxLumaSamplesPerSec: 1_069_547_520),
-        new(Level: "6.0", MaxLumaSamplesPerSec: 1_069_547_520),
-        new(Level: "6.1", MaxLumaSamplesPerSec: 2_139_095_040),
-        new(Level: "6.2", MaxLumaSamplesPerSec: 4_278_190_080),
+        new("1.0", 552_960),
+        new("2.0", 3_686_400),
+        new("2.1", 7_372_800),
+        new("3.0", 16_588_800),
+        new("3.1", 33_177_600),
+        new("4.0", 66_846_720),
+        new("4.1", 133_693_440),
+        new("5.0", 267_386_880),
+        new("5.1", 534_773_760),
+        new("5.2", 1_069_547_520),
+        new("6.0", 1_069_547_520),
+        new("6.1", 2_139_095_040),
+        new("6.2", 4_278_190_080),
     ];
 
     // VP9 profile levels follow the WebM container spec level definitions.
     // Each level caps at the listed max picture size × frame rate product.
     public static readonly IReadOnlyList<LevelCap> Vp9 =
     [
-        new(Level: "1", MaxLumaSamplesPerSec: 829_440),
-        new(Level: "1.1", MaxLumaSamplesPerSec: 2_764_800),
-        new(Level: "2", MaxLumaSamplesPerSec: 4_608_000),
-        new(Level: "2.1", MaxLumaSamplesPerSec: 9_216_000),
-        new(Level: "3", MaxLumaSamplesPerSec: 20_736_000),
-        new(Level: "3.1", MaxLumaSamplesPerSec: 36_864_000),
-        new(Level: "4", MaxLumaSamplesPerSec: 83_558_400),
-        new(Level: "4.1", MaxLumaSamplesPerSec: 160_432_128),
-        new(Level: "5", MaxLumaSamplesPerSec: 311_951_360),
-        new(Level: "5.1", MaxLumaSamplesPerSec: 588_251_136),
-        new(Level: "5.2", MaxLumaSamplesPerSec: 1_176_502_272),
-        new(Level: "6", MaxLumaSamplesPerSec: 1_176_502_272),
-        new(Level: "6.1", MaxLumaSamplesPerSec: 4_706_009_088),
-        new(Level: "6.2", MaxLumaSamplesPerSec: 9_412_018_176),
+        new("1", 829_440),
+        new("1.1", 2_764_800),
+        new("2", 4_608_000),
+        new("2.1", 9_216_000),
+        new("3", 20_736_000),
+        new("3.1", 36_864_000),
+        new("4", 83_558_400),
+        new("4.1", 160_432_128),
+        new("5", 311_951_360),
+        new("5.1", 588_251_136),
+        new("5.2", 1_176_502_272),
+        new("6", 1_176_502_272),
+        new("6.1", 4_706_009_088),
+        new("6.2", 9_412_018_176),
     ];
 
     /// <summary>
@@ -102,8 +102,8 @@ public static class CodecLevelFpsCaps
             _ => [],
         };
 
-        return table.FirstOrDefault(predicate: c =>
-            string.Equals(a: c.Level, b: level, comparisonType: StringComparison.OrdinalIgnoreCase)
+        return table.FirstOrDefault(c =>
+            string.Equals(c.Level, level, StringComparison.OrdinalIgnoreCase)
         );
     }
 
@@ -130,6 +130,6 @@ public static class CodecLevelFpsCaps
             _ => [],
         };
 
-        return table.FirstOrDefault(predicate: c => c.MaxLumaSamplesPerSec >= requiredSamplesPerSec);
+        return table.FirstOrDefault(c => c.MaxLumaSamplesPerSec >= requiredSamplesPerSec);
     }
 }

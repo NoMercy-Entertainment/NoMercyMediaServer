@@ -18,7 +18,7 @@ namespace NoMercy.Tests.Database;
 /// Verifies that EnableSensitiveDataLogging is only active
 /// when Config.IsDev is true (HIGH-03).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class SensitiveDataLoggingTests
 {
     /// <summary>
@@ -28,7 +28,7 @@ public class SensitiveDataLoggingTests
     private static bool BuildOptionsAndCheckSensitiveLogging(bool isDev)
     {
         DbContextOptionsBuilder options = new();
-        options.UseSqlite(connectionString: "Data Source=:memory:");
+        options.UseSqlite("Data Source=:memory:");
 
         if (isDev)
             options.EnableSensitiveDataLogging();
@@ -41,20 +41,20 @@ public class SensitiveDataLoggingTests
     [Fact]
     public void ProductionMode_DoesNotEnableSensitiveDataLogging()
     {
-        bool isSensitiveLogging = BuildOptionsAndCheckSensitiveLogging(isDev: false);
+        bool isSensitiveLogging = BuildOptionsAndCheckSensitiveLogging(false);
 
         Assert.False(
-            condition: isSensitiveLogging,
-            userMessage: "EnableSensitiveDataLogging must not be active in production mode"
+            isSensitiveLogging,
+            "EnableSensitiveDataLogging must not be active in production mode"
         );
     }
 
     [Fact]
     public void DevMode_EnablesSensitiveDataLogging()
     {
-        bool isSensitiveLogging = BuildOptionsAndCheckSensitiveLogging(isDev: true);
+        bool isSensitiveLogging = BuildOptionsAndCheckSensitiveLogging(true);
 
-        Assert.True(condition: isSensitiveLogging, userMessage: "EnableSensitiveDataLogging must be active in dev mode");
+        Assert.True(isSensitiveLogging, "EnableSensitiveDataLogging must be active in dev mode");
     }
 
     [Fact]
@@ -63,13 +63,13 @@ public class SensitiveDataLoggingTests
         // Verify the source code contains the Config.IsDev guard around EnableSensitiveDataLogging.
         // This catches regressions where someone removes the conditional.
         string sourceFile = FindRepoFile(
-            relativePath: Path.Combine(path1: "src", path2: "NoMercy.Database", path3: "Contexts", path4: "MediaContext.cs")
+            Path.Combine("src", "NoMercy.Database", "Contexts", "MediaContext.cs")
         );
 
-        string source = File.ReadAllText(path: sourceFile);
+        string source = File.ReadAllText(sourceFile);
 
-        Assert.Contains(expectedSubstring: "if (Config.IsDev)", actualString: source);
-        Assert.Contains(expectedSubstring: "EnableSensitiveDataLogging", actualString: source);
+        Assert.Contains("if (Config.IsDev)", source);
+        Assert.Contains("EnableSensitiveDataLogging", source);
     }
 
     // Walk up from the test assembly instead of a fixed ".." chain — the output
@@ -79,15 +79,15 @@ public class SensitiveDataLoggingTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(path1: dir, path2: relativePath);
-            if (File.Exists(path: candidate))
+            string candidate = Path.Combine(dir, relativePath);
+            if (File.Exists(candidate))
                 return candidate;
 
-            dir = Path.GetDirectoryName(path: dir)!;
+            dir = Path.GetDirectoryName(dir)!;
         }
 
         throw new FileNotFoundException(
-            message: $"Could not locate {relativePath} above {AppContext.BaseDirectory}"
+            $"Could not locate {relativePath} above {AppContext.BaseDirectory}"
         );
     }
 }

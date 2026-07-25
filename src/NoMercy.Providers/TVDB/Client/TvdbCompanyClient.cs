@@ -17,21 +17,21 @@ namespace NoMercy.Providers.TVDB.Client;
 public class TvdbCompanyClient : TvdbBaseClient
 {
     public TvdbCompanyClient(int id = 0, string language = "eng")
-        : base(id: id, language: language) { }
+        : base(id, language) { }
 
     public Task<TvdbPaginatedResponse<TvdbCompany>?> All(int page = 0, bool? priority = false)
     {
-        Dictionary<string, string?> query = new() { [key: "page"] = page.ToString() };
-        return Get<TvdbPaginatedResponse<TvdbCompany>>(url: "companies", query: query, priority: priority);
+        Dictionary<string, string?> query = new() { ["page"] = page.ToString() };
+        return Get<TvdbPaginatedResponse<TvdbCompany>>("companies", query, priority);
     }
 
     public Task<TvdbCompanyResponse?> Details(bool? priority = false)
     {
-        return Get<TvdbCompanyResponse>(url: "companies/" + Id, priority: priority);
+        return Get<TvdbCompanyResponse>("companies/" + Id, priority: priority);
     }
 
     public Task<TvdbCompanyTypesResponse?> Types(bool? priority = false)
     {
-        return Get<TvdbCompanyTypesResponse>(url: "companies/types", priority: priority);
+        return Get<TvdbCompanyTypesResponse>("companies/types", priority: priority);
     }
 }

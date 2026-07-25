@@ -20,8 +20,8 @@ namespace NoMercy.Api.Controllers.V1.Media.Subtitles.Dtos;
 /// waiting for the next watch response.
 /// </summary>
 public record SubtitleDownloadResultDto(
-    [property: JsonProperty(propertyName: "file")] string File,
-    [property: JsonProperty(propertyName: "kind")] string Kind,
-    [property: JsonProperty(propertyName: "label")] string Label,
-    [property: JsonProperty(propertyName: "language")] string Language
+    [property: JsonProperty("file")] string File,
+    [property: JsonProperty("kind")] string Kind,
+    [property: JsonProperty("label")] string Label,
+    [property: JsonProperty("language")] string Language
 );

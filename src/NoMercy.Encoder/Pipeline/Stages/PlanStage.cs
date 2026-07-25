@@ -72,21 +72,21 @@ public class PlanStage(
         CancellationToken ct
     )
     {
-        logger.LogInformation(message: "[{CorrelationId}] Planning execution", args: context.CorrelationId);
+        logger.LogInformation("[{CorrelationId}] Planning execution", context.CorrelationId);
 
         try
         {
             EncodingProfile profile = AutoLadderExpander.Expand(
-                abrLadderGenerator: abrLadderGenerator,
-                logger: logger,
-                profile: input.Profile,
-                media: input.Media
+                abrLadderGenerator,
+                logger,
+                input.Profile,
+                input.Media
             );
             string? cropFilter = await ResolveCropFilterAsync(
-                profile: profile,
-                media: input.Media,
-                correlationId: context.CorrelationId,
-                ct: ct
+                profile,
+                input.Media,
+                context.CorrelationId,
+                ct
             );
 
             // Resolve codecs honouring profile.HardwarePreference.
@@ -94,10 +94,10 @@ public class PlanStage(
             // truth for encoder selection and emits a decision log entry per output.
             // The GPU session cap (maxHwSessions) is still enforced: outputs that would
             // exceed it are demoted to ForceSoftware regardless of the profile setting.
-            int maxHwSessions = hardware.HasGpu ? hardware.Gpus.Min(selector: g => g.MaxEncoderSessions) : 0;
+            int maxHwSessions = hardware.HasGpu ? hardware.Gpus.Min(g => g.MaxEncoderSessions) : 0;
             int hwSessionsUsed = 0;
 
-            VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile: profile);
+            VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
 
             // EmitHdrAndSdr (HDR source): split coverage along the bit-depth /
             // codec role. 10-bit rungs (HEVC Main10) preserve HDR via
@@ -122,11 +122,11 @@ public class PlanStage(
             if (
                 profile.HdrPolicies == HdrPolicies.EmitHdrAndSdr
                 && input.Media.VideoStreams.Count > 0
-                && input.Media.VideoStreams[index: 0].IsHdr
+                && input.Media.VideoStreams[0].IsHdr
             )
             {
                 videoOutputs = videoOutputs
-                    .Select(selector: v =>
+                    .Select(v =>
                         v.BitDepth >= 10
                             ? v with
                             {
@@ -146,22 +146,22 @@ public class PlanStage(
             // are suppressed here (NullDecisionLogSink) so the copy-vs-transcode
             // choice is logged exactly once, from BuildOutputPlanAsync.
             videoOutputs = ApplySmartCopyDowngrade(
-                videoOutputs: videoOutputs,
-                media: input.Media,
-                profile: profile,
-                cropFilter: cropFilter,
-                decisions: NullDecisionLogSink.Instance
+                videoOutputs,
+                input.Media,
+                profile,
+                cropFilter,
+                NullDecisionLogSink.Instance
             );
 
             ResolvedCodec[] resolvedCodecs;
 
             if (hardwarePreferenceResolver is not null)
             {
-                SpeedIndex effectiveSpeedIndex = speedIndex ?? new SpeedIndex(Measurements: new());
+                SpeedIndex effectiveSpeedIndex = speedIndex ?? new SpeedIndex(new());
 
                 List<string> availableEncoderNames = ffmpegCapabilities
-                    .AvailableEncoders.Where(predicate: encoderName =>
-                        IsHardwareEncoderSelectable(ffmpegEncoderName: encoderName, hardware: hardware)
+                    .AvailableEncoders.Where(encoderName =>
+                        IsHardwareEncoderSelectable(encoderName, hardware)
                     )
                     .ToList();
 
@@ -176,22 +176,22 @@ public class PlanStage(
                             : profile.HardwarePreference;
 
                     HardwareResolutionResult resolution = hardwarePreferenceResolver.Resolve(
-                        codec: v.Codec,
-                        preference: effectivePreference,
-                        availableEncoders: availableEncoderNames,
-                        speedIndex: effectiveSpeedIndex,
-                        decisions: context.DecisionsOrNoOp
+                        v.Codec,
+                        effectivePreference,
+                        availableEncoderNames,
+                        effectiveSpeedIndex,
+                        context.DecisionsOrNoOp
                     );
 
                     if (resolution.Failure is not null)
                     {
                         return new StageFailure(
-                            Error: new(
-                                Kind: EncodingErrorKind.HardwareUnavailable,
-                                Message: resolution.Failure.Shape.Message,
-                                FfmpegStderr: null,
-                                StageName: Name,
-                                Recoverable: false
+                            new(
+                                EncodingErrorKind.HardwareUnavailable,
+                                resolution.Failure.Shape.Message,
+                                null,
+                                Name,
+                                false
                             )
                         );
                     }
@@ -204,15 +204,15 @@ public class PlanStage(
                     // software when GPU detection is stale even though SpeedIndex has
                     // hevc_nvenc benchmarks for it.
                     ResolvedCodec resolved = codecResolver.ResolveByEncoderName(
-                        codec: v.Codec,
-                        ffmpegEncoderName: resolution.EncoderHandle!,
-                        hardware: hardware
+                        v.Codec,
+                        resolution.EncoderHandle!,
+                        hardware
                     );
 
                     if (resolved.Device is not null)
                         hwSessionsUsed++;
 
-                    codecList.Add(item: resolved);
+                    codecList.Add(resolved);
                 }
 
                 resolvedCodecs = codecList.ToArray();
@@ -221,7 +221,7 @@ public class PlanStage(
             {
                 // Legacy path — no resolver injected (e.g. older test suites).
                 resolvedCodecs = videoOutputs
-                    .Select(selector: v =>
+                    .Select(v =>
                     {
                         EncoderPreference preference =
                             hwSessionsUsed < maxHwSessions
@@ -229,9 +229,9 @@ public class PlanStage(
                                 : EncoderPreference.ForceSoftware;
 
                         ResolvedCodec resolved = codecResolver.Resolve(
-                            codec: v.Codec,
-                            hardware: hardware,
-                            preference: preference
+                            v.Codec,
+                            hardware,
+                            preference
                         );
 
                         if (resolved.Device is not null)
@@ -243,55 +243,58 @@ public class PlanStage(
             }
 
             List<ExecutionNode> nodes = graphBuilder.BuildGraph(
-                media: input.Media,
-                profile: profile,
-                resolvedVideoCodecs: resolvedCodecs
+                input.Media,
+                profile,
+                resolvedCodecs
             );
 
-            List<ExecutionGroup> groups = groupingStrategy.GroupNodes(nodes: nodes, hardware: hardware);
+            List<ExecutionGroup> groups = groupingStrategy.GroupNodes(nodes, hardware);
 
-            TimeSpan totalEstimate = costEstimator.EstimateTotal(groups: groups, inputDuration: input.Media.Duration);
+            TimeSpan totalEstimate = costEstimator.EstimateTotal(groups, input.Media.Duration);
 
             OutputPlan outputPlan = await BuildOutputPlanAsync(
-                    profile: profile,
-                    media: input.Media,
-                    resolvedCodecs: resolvedCodecs,
-                    cropFilter: cropFilter,
-                    context: context,
-                    ct: ct
+                    profile,
+                    input.Media,
+                    resolvedCodecs,
+                    cropFilter,
+                    context,
+                    ct
                 )
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .ConfigureAwait(false);
 
             logger.LogInformation(
-                message: "[{CorrelationId}] Plan: {Groups} groups, estimated {Duration}", args: [context.CorrelationId, groups.Count, totalEstimate]
+                "[{CorrelationId}] Plan: {Groups} groups, estimated {Duration}",
+                context.CorrelationId,
+                groups.Count,
+                totalEstimate
             );
 
             IReadOnlyList<AcquiredSubtitle> acquiredSubtitles = await AcquireSubtitlesAsync(
-                    profile: profile,
-                    media: input.Media,
-                    ct: ct
+                    profile,
+                    input.Media,
+                    ct
                 )
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .ConfigureAwait(false);
 
             outputPlan = outputPlan with { AcquiredSubtitles = acquiredSubtitles };
 
-            GpuAccelPlan? gpuAccel = ResolveGpuAccel(outputPlan: outputPlan);
+            GpuAccelPlan? gpuAccel = ResolveGpuAccel(outputPlan);
             if (gpuAccel is not null)
                 outputPlan = outputPlan with { GpuAccel = gpuAccel };
 
-            ExecutionPlan plan = new(Groups: groups.ToArray(), EstimatedTotalDuration: totalEstimate, OutputPlan: outputPlan);
-            return new StageSuccess<ExecutionPlan>(Value: plan);
+            ExecutionPlan plan = new(groups.ToArray(), totalEstimate, outputPlan);
+            return new StageSuccess<ExecutionPlan>(plan);
         }
         catch (EncoderRuntimeException rte)
         {
             return new StageFailure(
-                Error: new(Kind: EncodingErrorKind.HardwareUnavailable, Message: rte.Shape.Message, FfmpegStderr: null, StageName: Name, Recoverable: false)
+                new(EncodingErrorKind.HardwareUnavailable, rte.Shape.Message, null, Name, false)
             );
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new StageFailure(
-                Error: new(Kind: EncodingErrorKind.Unknown, Message: $"Planning failed: {ex.Message}", FfmpegStderr: null, StageName: Name, Recoverable: false)
+                new(EncodingErrorKind.Unknown, $"Planning failed: {ex.Message}", null, Name, false)
             );
         }
     }
@@ -324,11 +327,11 @@ public class PlanStage(
         IHardwareCapabilities hardware
     )
     {
-        GpuVendor? requiredVendor = GpuEncoderTokens.VendorForEncoderName(ffmpegEncoderName: ffmpegEncoderName);
+        GpuVendor? requiredVendor = GpuEncoderTokens.VendorForEncoderName(ffmpegEncoderName);
         if (requiredVendor is null)
             return true; // software encoder, or a name outside the known vendor lists
 
-        return hardware.UsableHardwareEncoders.Contains(item: ffmpegEncoderName);
+        return hardware.UsableHardwareEncoders.Contains(ffmpegEncoderName);
     }
 
     /// <summary>
@@ -386,10 +389,10 @@ public class PlanStage(
         if (profile.HdrPolicies == HdrPolicies.AlwaysTonemap)
             return videoOutputs;
 
-        VideoStreamInfo source = media.VideoStreams[index: 0];
+        VideoStreamInfo source = media.VideoStreams[0];
 
         return videoOutputs
-            .Select(selector: v => TryDowngradeToSmartCopy(v: v, source: source, profile: profile, decisions: decisions))
+            .Select(v => TryDowngradeToSmartCopy(v, source, profile, decisions))
             .ToArray();
     }
 
@@ -406,19 +409,19 @@ public class PlanStage(
         if (v.ConvertHdrToSdr && source.IsHdr)
             return v;
 
-        if (_streamActionResolver.ResolveVideo(source: source, profile: v) != StreamAction.Copy)
+        if (_streamActionResolver.ResolveVideo(source, v) != StreamAction.Copy)
             return v;
 
-        if (!ContainerCompatibility.SupportsVideo(container: profile.Container, codec: v.Codec))
+        if (!ContainerCompatibility.SupportsVideo(profile.Container, v.Codec))
             return v;
 
         decisions.Add(
-            entry: new(
-                Stage: "plan",
-                Key: "plan.video_smart_copy",
-                Message: $"Source {source.Codec} {source.Width}x{source.Height} ({source.BitDepth}-bit) "
-                         + "already matches the profile target — stream-copying instead of re-encoding.",
-                Data: new
+            new(
+                "plan",
+                "plan.video_smart_copy",
+                $"Source {source.Codec} {source.Width}x{source.Height} ({source.BitDepth}-bit) "
+                    + "already matches the profile target — stream-copying instead of re-encoding.",
+                new
                 {
                     codec = source.Codec,
                     width = source.Width,
@@ -463,16 +466,16 @@ public class PlanStage(
         if (media.AudioStreams.Count == 0)
             return audioOutputs;
 
-        OutputFormat outputFormat = PlanStageHelpers.ContainerToOutputFormat(container: profile.Container);
+        OutputFormat outputFormat = PlanStageHelpers.ContainerToOutputFormat(profile.Container);
 
         return audioOutputs
-            .Select(selector: a =>
+            .Select(a =>
                 TryDowngradeAudioToSmartCopy(
-                    audioOutput: a,
-                    sourceStreams: media.AudioStreams,
-                    profile: profile,
-                    outputFormat: outputFormat,
-                    decisions: decisions
+                    a,
+                    media.AudioStreams,
+                    profile,
+                    outputFormat,
+                    decisions
                 )
             )
             .ToArray();
@@ -492,35 +495,35 @@ public class PlanStage(
         HashSet<string> allowed =
             audioOutput.AllowedLanguages.Length > 0
                 ? new HashSet<string>(
-                    collection: audioOutput.AllowedLanguages,
-                    comparer: StringComparer.OrdinalIgnoreCase
+                    audioOutput.AllowedLanguages,
+                    StringComparer.OrdinalIgnoreCase
                 )
                 : [];
 
         List<AudioStreamInfo> matched = sourceStreams
-            .Where(predicate: s => allowed.Count == 0 || allowed.Contains(item: s.Language ?? "und"))
+            .Where(s => allowed.Count == 0 || allowed.Contains(s.Language ?? "und"))
             .ToList();
 
         if (matched.Count == 0)
             return audioOutput;
 
-        bool allCopy = matched.All(predicate: s =>
-            _streamActionResolver.ResolveAudio(source: s, profile: audioOutput, format: outputFormat) == StreamAction.Copy
+        bool allCopy = matched.All(s =>
+            _streamActionResolver.ResolveAudio(s, audioOutput, outputFormat) == StreamAction.Copy
         );
 
         if (!allCopy)
             return audioOutput;
 
-        if (!ContainerCompatibility.SupportsAudio(container: profile.Container, codec: audioOutput.Codec))
+        if (!ContainerCompatibility.SupportsAudio(profile.Container, audioOutput.Codec))
             return audioOutput;
 
         decisions.Add(
-            entry: new(
-                Stage: "plan",
-                Key: "plan.audio_smart_copy",
-                Message: $"Source audio ({matched.Count} stream(s)) already matches the profile "
-                         + $"target {audioOutput.Codec} — stream-copying instead of re-encoding.",
-                Data: new { codec = audioOutput.Codec, streams = matched.Count }
+            new(
+                "plan",
+                "plan.audio_smart_copy",
+                $"Source audio ({matched.Count} stream(s)) already matches the profile "
+                    + $"target {audioOutput.Codec} — stream-copying instead of re-encoding.",
+                new { codec = audioOutput.Codec, streams = matched.Count }
             )
         );
 
@@ -542,11 +545,11 @@ public class PlanStage(
     {
         bool hasGpu = hardware is { HasGpu: true, Gpus.Count: > 0 };
         return GpuResidentActivation.Resolve(
-            enabled: options?.EnableGpuResident == true,
-            hasGpu: hasGpu,
-            vendor: hasGpu ? hardware.Gpus[index: 0].Vendor : null,
-            plan: outputPlan,
-            hasFilter: ffmpegCapabilities.HasFilter
+            options?.EnableGpuResident == true,
+            hasGpu,
+            hasGpu ? hardware.Gpus[0].Vendor : null,
+            outputPlan,
+            ffmpegCapabilities.HasFilter
         );
     }
 
@@ -569,16 +572,16 @@ public class PlanStage(
 
         try
         {
-            VideoStreamInfo sourceStream = media.VideoStreams[index: 0];
+            VideoStreamInfo sourceStream = media.VideoStreams[0];
 
             CropResult crop = await cropDetector
                 .DetectAsync(
-                    inputPath: media.FilePath,
+                    media.FilePath,
                     sourceVideoFileId: null,
                     sourceIsHdr: sourceStream.IsHdr,
-                    ct: ct
+                    ct
                 )
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .ConfigureAwait(false);
 
             if (!crop.ShouldCrop)
                 return null;
@@ -595,16 +598,32 @@ public class PlanStage(
             if (barsHorizontal <= CropBarThresholdPx && barsVertical <= CropBarThresholdPx)
             {
                 logger.LogInformation(
-                    message: "[{CorrelationId}] Crop detected ({W}x{H}+{X}+{Y}) but bars "
-                             + "({BarsH}px h / {BarsV}px v) are within the {Threshold}px tolerance "
-                             + "— leaving frame uncropped so copyable rungs stay copyable.", args: [correlationId, crop.Width, crop.Height, crop.X, crop.Y, barsHorizontal, barsVertical, CropBarThresholdPx]
+                    "[{CorrelationId}] Crop detected ({W}x{H}+{X}+{Y}) but bars "
+                        + "({BarsH}px h / {BarsV}px v) are within the {Threshold}px tolerance "
+                        + "— leaving frame uncropped so copyable rungs stay copyable.",
+                    correlationId,
+                    crop.Width,
+                    crop.Height,
+                    crop.X,
+                    crop.Y,
+                    barsHorizontal,
+                    barsVertical,
+                    CropBarThresholdPx
                 );
                 return null;
             }
 
             logger.LogInformation(
-                message: "[{CorrelationId}] Crop forced: bars {BarsH}px h / {BarsV}px v exceed "
-                         + "{Threshold}px → {W}x{H}+{X}+{Y}. Re-encode required (stream-copy cannot crop).", args: [correlationId, barsHorizontal, barsVertical, CropBarThresholdPx, crop.Width, crop.Height, crop.X, crop.Y]
+                "[{CorrelationId}] Crop forced: bars {BarsH}px h / {BarsV}px v exceed "
+                    + "{Threshold}px → {W}x{H}+{X}+{Y}. Re-encode required (stream-copy cannot crop).",
+                correlationId,
+                barsHorizontal,
+                barsVertical,
+                CropBarThresholdPx,
+                crop.Width,
+                crop.Height,
+                crop.X,
+                crop.Y
             );
 
             return $"{crop.Width}:{crop.Height}:{crop.X}:{crop.Y}";
@@ -615,9 +634,9 @@ public class PlanStage(
             // The log surfaces the issue so users can disable AutoDetectCrop if
             // the source consistently trips the detector.
             logger.LogWarning(
-                exception: ex,
-                message: "[{CorrelationId}] Crop detection failed — continuing without crop",
-                args: correlationId
+                ex,
+                "[{CorrelationId}] Crop detection failed — continuing without crop",
+                correlationId
             );
             return null;
         }
@@ -636,31 +655,31 @@ public class PlanStage(
         try
         {
             string[] alreadyPresent = media
-                .SubtitleStreams.Select(selector: s => s.Language ?? "und")
+                .SubtitleStreams.Select(s => s.Language ?? "und")
                 .ToArray();
 
             AcquisitionRequest request = new(
                 SourcePath: media.FilePath,
                 SourceFileSize: media.FileSizeBytes,
-                SourceFilename: Path.GetFileName(path: media.FilePath),
-                MediaTitle: Path.GetFileNameWithoutExtension(path: media.FilePath),
+                SourceFilename: Path.GetFileName(media.FilePath),
+                MediaTitle: Path.GetFileNameWithoutExtension(media.FilePath),
                 Season: null,
                 Episode: null,
                 Year: null,
-                SourceFps: media.VideoStreams.Count > 0 ? media.VideoStreams[index: 0].FrameRate : null,
+                SourceFps: media.VideoStreams.Count > 0 ? media.VideoStreams[0].FrameRate : null,
                 SourceDuration: media.Duration,
                 LanguagesAlreadyInSource: alreadyPresent,
                 Config: acq
             );
 
-            return await subtitleAcquisitionService.AcquireAsync(request: request, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+            return await subtitleAcquisitionService.AcquireAsync(request, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "[{CorrelationId}] Subtitle acquisition failed — continuing without acquired subs",
-                args: "unknown"
+                ex,
+                "[{CorrelationId}] Subtitle acquisition failed — continuing without acquired subs",
+                "unknown"
             );
             return [];
         }
@@ -675,26 +694,26 @@ public class PlanStage(
         CancellationToken ct
     )
     {
-        OutputFormat outputFormat = PlanStageHelpers.ContainerToOutputFormat(container: profile.Container);
+        OutputFormat outputFormat = PlanStageHelpers.ContainerToOutputFormat(profile.Container);
         bool hlsUsesFmp4Segments = profile.Container is Container.HlsFmp4 or Container.AudioHlsFmp4;
 
         // Resolve tonemap strategy once — shared across all video outputs that need HDR→SDR.
         // When HdrPolicy is AlwaysPreserve, skip tonemapping entirely regardless of source.
-        bool sourceIsHdr = media.VideoStreams.Count > 0 && media.VideoStreams[index: 0].IsHdr;
+        bool sourceIsHdr = media.VideoStreams.Count > 0 && media.VideoStreams[0].IsHdr;
         bool tonemapSuppressed = profile.HdrPolicies == HdrPolicies.AlwaysPreserve;
 
         TonemapStrategy? tonemap =
             sourceIsHdr && !tonemapSuppressed
-                ? tonemapSelector.SelectBest(hardware: hardware, ffmpeg: ffmpegCapabilities)
+                ? tonemapSelector.SelectBest(hardware, ffmpegCapabilities)
                 : null;
 
         // Per-profile plan: resolves algorithm + nits + optional LUT from HdrOptions.
         // V2 profile has no TonemapAlgorithm shorthand — pass null; HdrOptions takes over.
         TonemapPlan tonemapPlan = await tonemapSelector
-            .BuildAsync(options: profile.HdrOptions, profileTonemapAlgorithm: null, decisions: context.DecisionsOrNoOp, cancellationToken: ct)
-            .ConfigureAwait(continueOnCapturedContext: false);
+            .BuildAsync(profile.HdrOptions, null, context.DecisionsOrNoOp, cancellationToken: ct)
+            .ConfigureAwait(false);
 
-        VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile: profile);
+        VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
 
         // EmitHdrAndSdr: same role split as in the resolver block above. Must
         // stay in lockstep so VideoOutputPlan count matches resolvedCodecs
@@ -702,11 +721,11 @@ public class PlanStage(
         if (
             profile.HdrPolicies == HdrPolicies.EmitHdrAndSdr
             && media.VideoStreams.Count > 0
-            && media.VideoStreams[index: 0].IsHdr
+            && media.VideoStreams[0].IsHdr
         )
         {
             videoOutputs = videoOutputs
-                .Select(selector: v =>
+                .Select(v =>
                     v.BitDepth >= 10
                         ? v with
                         {
@@ -732,11 +751,11 @@ public class PlanStage(
         // stay aligned by index. This call site is the one that actually logs
         // the decision.
         videoOutputs = ApplySmartCopyDowngrade(
-            videoOutputs: videoOutputs,
-            media: media,
-            profile: profile,
-            cropFilter: cropFilter,
-            decisions: context.DecisionsOrNoOp
+            videoOutputs,
+            media,
+            profile,
+            cropFilter,
+            context.DecisionsOrNoOp
         );
 
         // Audio-only: skip video planning entirely when source has no video streams
@@ -744,50 +763,50 @@ public class PlanStage(
             media.VideoStreams.Count > 0 && videoOutputs.Length > 0
                 ? videoOutputs
                     .Select(
-                        selector: (v, i) =>
+                        (v, i) =>
                         {
                             ResolvedCodec resolved = resolvedCodecs[i];
                             EncoderInfo encoder = resolved.EncoderInfo;
 
                             (int outputWidth, int outputHeight) =
                                 EncoderArgumentResolver.ResolveDimensions(
-                                    profile: v,
-                                    sourceWidth: media.VideoStreams[index: 0].Width,
-                                    sourceHeight: media.VideoStreams[index: 0].Height
+                                    v,
+                                    media.VideoStreams[0].Width,
+                                    media.VideoStreams[0].Height
                                 );
 
                             Dictionary<string, string> extraFlags = new(
-                                dictionary: encoder.VendorSpecificFlags
+                                encoder.VendorSpecificFlags
                             );
 
                             // Translate the profile CRF to the encoder-native quality value.
                             string encoderHandle = resolved.FfmpegEncoderName;
                             IQualityScaler scaler =
-                                qualityScalerResolver?.For(encoderHandle: encoderHandle)
+                                qualityScalerResolver?.For(encoderHandle)
                                 ?? new LinearQualityScaler();
 
                             QualityRange nativeRange = encoder.QualityRange;
                             int referenceMax = encoderHandle.Contains(
-                                value: "av1",
-                                comparisonType: StringComparison.OrdinalIgnoreCase
+                                "av1",
+                                StringComparison.OrdinalIgnoreCase
                             )
                                 ? 63
                                 : 51;
 
-                            CodecHint hint = new(EncoderHandle: encoderHandle, Codec: v.Codec);
+                            CodecHint hint = new(encoderHandle, v.Codec);
                             int translatedCrf = scaler.Translate(
-                                sourceCrf: v.Crf,
-                                sourceMax: referenceMax,
-                                targetMax: nativeRange.Max,
-                                hint: hint
+                                v.Crf,
+                                referenceMax,
+                                nativeRange.Max,
+                                hint
                             );
 
                             context.DecisionsOrNoOp.Add(
-                                entry: new(
-                                    Stage: "plan",
-                                    Key: "plan.crf_translated",
-                                    Message: $"CRF {v.Crf} → {encoderHandle} quality {translatedCrf}",
-                                    Data: new
+                                new(
+                                    "plan",
+                                    "plan.crf_translated",
+                                    $"CRF {v.Crf} → {encoderHandle} quality {translatedCrf}",
+                                    new
                                     {
                                         handle = encoderHandle,
                                         source = v.Crf,
@@ -797,9 +816,9 @@ public class PlanStage(
                             );
 
                             int crf = EncoderArgumentResolver.ResolveQuality(
-                                profileCrf: translatedCrf,
-                                resolved: resolved,
-                                extraFlags: extraFlags
+                                translatedCrf,
+                                resolved,
+                                extraFlags
                             );
 
                             // Capped-CRF: when both a CRF target and a bitrate ceiling are set,
@@ -813,8 +832,8 @@ public class PlanStage(
                             if (v is { Crf: > 0, BitrateKbps: > 0 })
                             {
                                 int bufKbps = v.BitrateKbps * 2;
-                                extraFlags[key: "-maxrate"] = $"{v.BitrateKbps}k";
-                                extraFlags[key: "-bufsize"] = $"{bufKbps}k";
+                                extraFlags["-maxrate"] = $"{v.BitrateKbps}k";
+                                extraFlags["-bufsize"] = $"{bufKbps}k";
                                 outputBitrateKbps = 0;
                             }
 
@@ -824,11 +843,11 @@ public class PlanStage(
                                 sourceIsHdr && v is { BitDepth: >= 10, ConvertHdrToSdr: false };
                             if (preservesHdr)
                             {
-                                VideoStreamInfo src = media.VideoStreams[index: 0];
-                                extraFlags[key: "-color_primaries"] = src.ColorPrimaries ?? "bt2020";
-                                extraFlags[key: "-color_trc"] = src.ColorTransfer ?? "smpte2084";
-                                extraFlags[key: "-colorspace"] = src.ColorSpace ?? "bt2020nc";
-                                extraFlags[key: "-color_range"] = "tv";
+                                VideoStreamInfo src = media.VideoStreams[0];
+                                extraFlags["-color_primaries"] = src.ColorPrimaries ?? "bt2020";
+                                extraFlags["-color_trc"] = src.ColorTransfer ?? "smpte2084";
+                                extraFlags["-colorspace"] = src.ColorSpace ?? "bt2020nc";
+                                extraFlags["-color_range"] = "tv";
                             }
 
                             // 10-bit / bit-depth policy resolution.
@@ -840,16 +859,16 @@ public class PlanStage(
                             if (bitDepthPolicyResolver is not null)
                             {
                                 BitDepthResolutionResult bdResult = bitDepthPolicyResolver.Resolve(
-                                    requestedBitDepth: requestedDepth,
-                                    policy: profile.BitDepthPolicy,
-                                    codec: v.Codec,
-                                    resolvedCodec: resolved,
-                                    decisions: context.DecisionsOrNoOp,
-                                    softwareReResolver: codecType =>
+                                    requestedDepth,
+                                    profile.BitDepthPolicy,
+                                    v.Codec,
+                                    resolved,
+                                    context.DecisionsOrNoOp,
+                                    codecType =>
                                         codecResolver.Resolve(
-                                            codec: codecType,
-                                            hardware: hardware,
-                                            preference: EncoderPreference.ForceSoftware
+                                            codecType,
+                                            hardware,
+                                            EncoderPreference.ForceSoftware
                                         )
                                 );
 
@@ -865,9 +884,9 @@ public class PlanStage(
                                     // PreferSoftware swapped the encoder — adopt the SW codec.
                                     outputEncoderName = bdResult.SwitchedToEncoder;
                                     resolved = codecResolver.Resolve(
-                                        codec: v.Codec,
-                                        hardware: hardware,
-                                        preference: EncoderPreference.ForceSoftware
+                                        v.Codec,
+                                        hardware,
+                                        EncoderPreference.ForceSoftware
                                     );
                                     encoder = resolved.EncoderInfo;
                                 }
@@ -875,7 +894,9 @@ public class PlanStage(
                                 foreach (EncoderRule bdWarning in bdResult.Warnings)
                                 {
                                     logger.LogWarning(
-                                        message: "Bit-depth policy [{Id}]: {Message}", args: [bdWarning.Id, bdWarning.Message]
+                                        "Bit-depth policy [{Id}]: {Message}",
+                                        bdWarning.Id,
+                                        bdWarning.Message
                                     );
                                 }
 
@@ -889,7 +910,9 @@ public class PlanStage(
                                 if (requestedDepth >= 10 && !encoder.Supports10Bit)
                                 {
                                     logger.LogWarning(
-                                        message: "Profile requests 10-bit video_{Index} but encoder {Encoder} does not support 10-bit. Downgrading to 8-bit output.", args: [i, encoder.FfmpegName]
+                                        "Profile requests 10-bit video_{Index} but encoder {Encoder} does not support 10-bit. Downgrading to 8-bit output.",
+                                        i,
+                                        encoder.FfmpegName
                                     );
                                 }
 
@@ -914,12 +937,12 @@ public class PlanStage(
                             {
                                 foreach ((string argKey, string argValue) in v.CustomArguments)
                                 {
-                                    string normalizedKey = argKey.StartsWith(value: '-')
+                                    string normalizedKey = argKey.StartsWith('-')
                                         ? argKey
                                         : $"-{argKey}";
-                                    if (ProfileRuleValidator.ReservedFlags.Contains(item: normalizedKey))
+                                    if (ProfileRuleValidator.ReservedFlags.Contains(normalizedKey))
                                         continue;
-                                    extraFlags[key: argKey] = argValue;
+                                    extraFlags[argKey] = argValue;
                                 }
                             }
 
@@ -929,11 +952,11 @@ public class PlanStage(
                                 EncoderName: outputEncoderName,
                                 Crf: crf,
                                 BitrateKbps: outputBitrateKbps,
-                                Preset: EncoderArgumentResolver.ResolvePreset(profilePreset: v.Preset, encoder: encoder),
+                                Preset: EncoderArgumentResolver.ResolvePreset(v.Preset, encoder),
                                 Profile: EncoderArgumentResolver.ResolveProfile(
-                                    profileValue: codecProfileString,
-                                    encoder: encoder,
-                                    finalBitDepth: outputTenBit ? 10 : 8
+                                    codecProfileString,
+                                    encoder,
+                                    outputTenBit ? 10 : 8
                                 ),
                                 Level: v.Level,
                                 TenBit: outputTenBit,
@@ -945,7 +968,7 @@ public class PlanStage(
                                 // references (0:v:0) bypass filter_complex entirely.
                                 MapLabel: v.Policy == StreamPolicy.Copy ? "0:v:0" : $"[v{i}]",
                                 ExtraFlags: extraFlags,
-                                FrameRate: media.VideoStreams[index: 0].FrameRate,
+                                FrameRate: media.VideoStreams[0].FrameRate,
                                 SegmentNameTemplate: v.SegmentNameTemplate,
                                 PlaylistNameTemplate: v.PlaylistNameTemplate,
                                 ConvertHdrToSdr: v.ConvertHdrToSdr && sourceIsHdr,
@@ -959,7 +982,7 @@ public class PlanStage(
                                 // Every rung here is built from media.VideoStreams[0] —
                                 // the source stream this output was planned against. See
                                 // VideoOutputPlan.SourceStreamIndex.
-                                SourceStreamIndex: media.VideoStreams[index: 0].Index
+                                SourceStreamIndex: media.VideoStreams[0].Index
                             );
                         }
                     )
@@ -972,7 +995,7 @@ public class PlanStage(
         // fallback) that both label as "video_1920x1080_SDR" via TemplateResolver.
         // Append a codec-family token to colliding entries so they land in
         // distinct directories (video_1920x1080_SDR_avc/ vs _hevc/).
-        videoPlan = PlanStageDisambiguation.DisambiguateVideo(plans: videoPlan);
+        videoPlan = PlanStageDisambiguation.DisambiguateVideo(videoPlan);
 
         // Smart-copy downgrade — audio equivalent of ApplySmartCopyDowngrade
         // above. Unlike video, there is no separate resolvedCodecs array to
@@ -980,30 +1003,30 @@ public class PlanStage(
         // resolution), so this runs exactly once, right before the plan is
         // built from it.
         AudioOutput[] audioOutputs = ApplySmartCopyDowngradeAudio(
-            audioOutputs: profile.Audio,
-            media: media,
-            profile: profile,
-            decisions: context.DecisionsOrNoOp
+            profile.Audio,
+            media,
+            profile,
+            context.DecisionsOrNoOp
         );
 
         // Build one AudioOutputPlan per matching source stream.
         // AllowedLanguages is a FILTER — the actual language comes from the source stream.
         AudioOutputPlan[] audioPlan = AudioPlanBuilder.Build(
-            profile: profile with
+            profile with
             {
                 Audio = audioOutputs,
             },
-            media: media
+            media
         );
 
-        SubtitleOutputPlan[] subtitlePlan = SubtitlePlanBuilder.Build(profile: profile, media: media);
+        SubtitleOutputPlan[] subtitlePlan = SubtitlePlanBuilder.Build(profile, media);
 
-        ThumbnailOutputPlan? thumbPlan = ThumbnailPlanBuilder.Build(profile: profile, media: media);
+        ThumbnailOutputPlan? thumbPlan = ThumbnailPlanBuilder.Build(profile, media);
 
         // Clamp segment duration to input length for very short files.
         int segmentDuration = profile.SegmentDurationSeconds;
         if (media.Duration.TotalSeconds > 0 && media.Duration.TotalSeconds < segmentDuration)
-            segmentDuration = Math.Max(val1: 1, val2: (int)Math.Ceiling(a: media.Duration.TotalSeconds));
+            segmentDuration = Math.Max(1, (int)Math.Ceiling(media.Duration.TotalSeconds));
 
         // Dolby Vision passthrough gate.
         // Per-output bit-depth: evaluate using the first video output because
@@ -1023,27 +1046,30 @@ public class PlanStage(
             || videoOutputs.Length == 0;
 
         DolbyVisionDecision dvDecision = DolbyVisionGate.Resolve(
-            source: media.DolbyVision,
-            outputCodec: primaryCodec,
-            outputBitDepth: primaryBitDepth,
-            container: outputFormat,
-            policies: profile.HdrPolicies,
-            videoIsStreamCopy: videoIsCopy,
-            decisions: context.DecisionsOrNoOp,
-            hlsUsesFmp4Segments: hlsUsesFmp4Segments
+            media.DolbyVision,
+            primaryCodec,
+            primaryBitDepth,
+            outputFormat,
+            profile.HdrPolicies,
+            videoIsCopy,
+            context.DecisionsOrNoOp,
+            hlsUsesFmp4Segments
         );
 
         // Merge DV container flags into the first video output's ExtraFlags.
         if (dvDecision is { Preserved: true, ExtraFlags.Count: > 0 } && videoPlan.Length > 0)
         {
             foreach ((string key, string value) in dvDecision.ExtraFlags)
-                videoPlan[0].ExtraFlags[key: key] = value;
+                videoPlan[0].ExtraFlags[key] = value;
         }
 
         if (media.DolbyVision is not null && !dvDecision.Preserved)
         {
             logger.LogWarning(
-                message: "Source has Dolby Vision (profile {Profile}.{Level}) but DV will be stripped — {Reason}", args: [media.DolbyVision.Profile, media.DolbyVision.Level, dvDecision.Reason]
+                "Source has Dolby Vision (profile {Profile}.{Level}) but DV will be stripped — {Reason}",
+                media.DolbyVision.Profile,
+                media.DolbyVision.Level,
+                dvDecision.Reason
             );
         }
 
@@ -1062,7 +1088,7 @@ public class PlanStage(
             // key must be just the flag, not "flag key" glued together.
             // MP4: stream-copy keeps the st3d box automatically when -c:v copy is
             //      used; the extra tag does not hurt non-MKV containers.
-            videoPlan[0].ExtraFlags[key: "-metadata:s:v"] = $"stereo_mode={media.StereoMode}";
+            videoPlan[0].ExtraFlags["-metadata:s:v"] = $"stereo_mode={media.StereoMode}";
         }
 
         // VR spherical projection preservation: pass-through the sv3d/proj box
@@ -1072,11 +1098,13 @@ public class PlanStage(
         {
             if (outputFormat is OutputFormat.Mp4 or OutputFormat.Hls or OutputFormat.Dash)
             {
-                videoPlan[0].ExtraFlags[key: "-movflags"] = "+write_colr";
+                videoPlan[0].ExtraFlags["-movflags"] = "+write_colr";
             }
 
             logger.LogInformation(
-                message: "[{CorrelationId}] VR source (projection={Projection}): stream-copy preserves spherical metadata", args: [context.CorrelationId, media.SphericalProjection]
+                "[{CorrelationId}] VR source (projection={Projection}): stream-copy preserves spherical metadata",
+                context.CorrelationId,
+                media.SphericalProjection
             );
         }
 
@@ -1097,7 +1125,7 @@ public class PlanStage(
 
         BundleLayout? layout =
             outputNamingResolver is not null && context.MediaItem is not null
-                ? outputNamingResolver.Resolve(media: context.MediaItem, profile: profile)
+                ? outputNamingResolver.Resolve(context.MediaItem, profile)
                 : null;
 
         HlsDerivatives effectiveDerivatives = profile.HlsDerivatives ?? new HlsDerivatives();
@@ -1105,21 +1133,21 @@ public class PlanStage(
         bool emitSubtitleChunks = effectiveDerivatives.SubtitleWebVtt;
 
         return new(
-            Format: outputFormat,
-            VideoOutputs: videoPlan,
-            AudioOutputs: audioPlan,
-            SubtitleOutputs: subtitlePlan,
-            Thumbnails: thumbPlan,
-            SegmentDurationSeconds: segmentDuration,
+            outputFormat,
+            videoPlan,
+            audioPlan,
+            subtitlePlan,
+            thumbPlan,
+            segmentDuration,
             PreserveDolbyVision: dvDecision.Preserved,
-            Drm: DrmConfigConverter.Convert(v2Drm: profile.Drm),
+            Drm: DrmConfigConverter.Convert(profile.Drm),
             HlsOptions: hlsOptions,
             Layout: layout,
             GenerateChapterThumbs: generateChapterThumbs,
             EmitSubtitleWebVttChunks: emitSubtitleChunks,
-            GlobalExtraFlags: BuildGlobalExtraFlags(customArguments: profile.CustomArguments),
+            GlobalExtraFlags: BuildGlobalExtraFlags(profile.CustomArguments),
             NormalizeToConstantFrameRate: media.VideoStreams.Count > 0
-                && media.VideoStreams[index: 0].IsVariableFrameRate
+                && media.VideoStreams[0].IsVariableFrameRate
         );
     }
 
@@ -1131,14 +1159,14 @@ public class PlanStage(
         Dictionary<string, string>? customArguments
     )
     {
-        int reserved = Math.Max(val1: 1, val2: Environment.ProcessorCount / 4);
-        int encodeThreads = Math.Max(val1: 1, val2: Environment.ProcessorCount - reserved);
+        int reserved = Math.Max(1, Environment.ProcessorCount / 4);
+        int encodeThreads = Math.Max(1, Environment.ProcessorCount - reserved);
 
-        Dictionary<string, string> flags = new() { [key: "-threads"] = encodeThreads.ToString() };
+        Dictionary<string, string> flags = new() { ["-threads"] = encodeThreads.ToString() };
 
         if (customArguments is { Count: > 0 })
             foreach ((string key, string value) in customArguments)
-                flags[key: key] = value;
+                flags[key] = value;
 
         return flags;
     }

@@ -23,9 +23,7 @@ using NoMercy.Encoder.Profiles;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
-using LadderConfig = NoMercy.Encoder.Profiles.LadderConfig;
 using LadderMode = NoMercy.Encoder.Profiles.LadderMode;
-using LadderRung = NoMercy.Encoder.Profiles.LadderRung;
 using RateControlMode = NoMercy.Encoder.Codecs.RateControlMode;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
 using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
@@ -48,18 +46,18 @@ public class PlanStageEmitHdrAndSdrTests
 
     public PlanStageEmitHdrAndSdrTests()
     {
-        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
-        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
-        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
-        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
+        _hardware.Setup(h => h.HasGpu).Returns(false);
+        _hardware.Setup(h => h.CpuCores).Returns(8);
+        _hardware.Setup(h => h.Gpus).Returns([]);
+        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
         _hardware
-            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns(value: (GpuDevice?)null);
+            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns((GpuDevice?)null);
 
         // Codec-aware: HEVC resolves to a 10-bit-capable software encoder, H.264
         // to an 8-bit one — so the bit-depth role-split has real encoders behind it.
         _codecResolver
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -67,71 +65,71 @@ public class PlanStageEmitHdrAndSdrTests
                 )
             )
             .Returns(
-                valueFunction: (VideoCodecType codec, IHardwareCapabilities _, EncoderPreference _) =>
+                (VideoCodecType codec, IHardwareCapabilities _, EncoderPreference _) =>
                     codec == VideoCodecType.H265
-                        ? BuildResolved(ffmpegName: "libx265", supports10Bit: true)
-                        : BuildResolved(ffmpegName: "libx264", supports10Bit: false)
+                        ? BuildResolved("libx265", true)
+                        : BuildResolved("libx264", false)
             );
 
         _stage = new(
-            graphBuilder: new(),
-            groupingStrategy: new(),
-            costEstimator: new(),
-            codecResolver: _codecResolver.Object,
-            hardware: _hardware.Object,
-            tonemapSelector: new TonemapSelector(),
-            ffmpegCapabilities: _ffmpegCapabilities.Object,
-            abrLadderGenerator: new AbrLadderGenerator(),
-            cropDetector: new NoOpCropDetector(),
-            logger: NullLogger<PlanStage>.Instance
+            new(),
+            new(),
+            new(),
+            _codecResolver.Object,
+            _hardware.Object,
+            new TonemapSelector(),
+            _ffmpegCapabilities.Object,
+            new AbrLadderGenerator(),
+            new NoOpCropDetector(),
+            NullLogger<PlanStage>.Instance
         );
     }
 
     [Fact]
     public async Task HdrSource_SplitsIntoHdrPassthroughAndTonemappedSdr()
     {
-        OutputPlan plan = await RunPlan(profile: EmitHdrAndSdrProfile(), media: BuildHdrMedia());
+        OutputPlan plan = await RunPlan(EmitHdrAndSdrProfile(), BuildHdrMedia());
 
-        plan.VideoOutputs.Should().HaveCount(expected: 2);
+        plan.VideoOutputs.Should().HaveCount(2);
 
-        VideoOutputPlan hdr = plan.VideoOutputs.Single(predicate: v => v.EncoderName == "libx265");
-        hdr.IsHdrOutput.Should().BeTrue(because: "the 10-bit HEVC rung preserves HDR");
-        hdr.TonemapFilterChain.Should().BeNull(because: "HDR passthrough must not tonemap");
-        hdr.ExtraFlags.Should().ContainKey(expected: "-color_trc").WhoseValue.Should().Be(expected: "smpte2084");
+        VideoOutputPlan hdr = plan.VideoOutputs.Single(v => v.EncoderName == "libx265");
+        hdr.IsHdrOutput.Should().BeTrue("the 10-bit HEVC rung preserves HDR");
+        hdr.TonemapFilterChain.Should().BeNull("HDR passthrough must not tonemap");
+        hdr.ExtraFlags.Should().ContainKey("-color_trc").WhoseValue.Should().Be("smpte2084");
 
-        VideoOutputPlan sdr = plan.VideoOutputs.Single(predicate: v => v.EncoderName == "libx264");
-        sdr.IsHdrOutput.Should().BeFalse(because: "the 8-bit H.264 rung is the SDR copy");
-        sdr.TonemapFilterChain.Should().NotBeNullOrEmpty(because: "the SDR copy must be tonemapped");
+        VideoOutputPlan sdr = plan.VideoOutputs.Single(v => v.EncoderName == "libx264");
+        sdr.IsHdrOutput.Should().BeFalse("the 8-bit H.264 rung is the SDR copy");
+        sdr.TonemapFilterChain.Should().NotBeNullOrEmpty("the SDR copy must be tonemapped");
         sdr.ConvertHdrToSdr.Should().BeTrue();
     }
 
     [Fact]
     public async Task SdrSource_BypassesSplit_NoHdrOutputs()
     {
-        OutputPlan plan = await RunPlan(profile: EmitHdrAndSdrProfile(), media: BuildSdrMedia());
+        OutputPlan plan = await RunPlan(EmitHdrAndSdrProfile(), BuildSdrMedia());
 
-        plan.VideoOutputs.Should().HaveCount(expected: 2);
-        plan.VideoOutputs.Should().OnlyContain(predicate: v => !v.IsHdrOutput);
-        plan.VideoOutputs.Should().OnlyContain(predicate: v => v.TonemapFilterChain == null);
+        plan.VideoOutputs.Should().HaveCount(2);
+        plan.VideoOutputs.Should().OnlyContain(v => !v.IsHdrOutput);
+        plan.VideoOutputs.Should().OnlyContain(v => v.TonemapFilterChain == null);
     }
 
     private async Task<OutputPlan> RunPlan(EncodingProfile profile, MediaInfo media)
     {
-        ValidateInput input = new(Media: media, Profile: profile);
+        ValidateInput input = new(media, profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
         return success.Value.OutputPlan;
     }
 
     private static EncodingProfile EmitHdrAndSdrProfile() =>
         new(
-            Id: Ulid.NewUlid(),
-            Name: "EmitHdrAndSdr Test",
-            Container: Container.HlsTs,
-            Video: ReferenceVideo(),
-            Audio: [],
-            Subtitles: []
+            Ulid.NewUlid(),
+            "EmitHdrAndSdr Test",
+            Container.HlsTs,
+            ReferenceVideo(),
+            [],
+            []
         )
         {
             HdrPolicies = HdrPolicies.EmitHdrAndSdr,
@@ -141,7 +139,7 @@ public class PlanStageEmitHdrAndSdrTests
                 Rungs =
                 [
                     new(
-                        Width: 1920,
+                        1920,
                         Height: 1080,
                         Codec: VideoCodecType.H265,
                         BitrateKbps: 8000,
@@ -151,7 +149,7 @@ public class PlanStageEmitHdrAndSdrTests
                         BitDepth: 10
                     ),
                     new(
-                        Width: 1280,
+                        1280,
                         Height: 720,
                         Codec: VideoCodecType.H264,
                         BitrateKbps: 3000,
@@ -166,25 +164,25 @@ public class PlanStageEmitHdrAndSdrTests
 
     private static NoMercy.Encoder.Profiles.VideoOutput ReferenceVideo() =>
         new(
-            Policy: StreamPolicy.Transcode,
-            Codec: VideoCodecType.H265,
-            Width: 1920,
-            Height: 1080,
-            RateControl: V2RateControlMode.Crf,
-            Crf: 23,
-            BitrateKbps: 8000,
-            MaxBitrateKbps: null,
-            BufferSizeKbps: null,
-            Preset: "medium",
-            CodecProfile: CodecProfile.Main10,
-            Level: null,
-            Tune: null,
-            BitDepth: 10,
-            PixelFormat: null,
-            KeyframeIntervalSeconds: 2,
-            ConvertHdrToSdr: false,
-            SegmentNameTemplate: "video_:framesize:/:framesize:",
-            PlaylistNameTemplate: "video_:framesize:/playlist"
+            StreamPolicy.Transcode,
+            VideoCodecType.H265,
+            1920,
+            1080,
+            V2RateControlMode.Crf,
+            23,
+            8000,
+            null,
+            null,
+            "medium",
+            CodecProfile.Main10,
+            null,
+            null,
+            10,
+            null,
+            2,
+            false,
+            "video_:framesize:/:framesize:",
+            "video_:framesize:/playlist"
         );
 
     private static MediaInfo BuildHdrMedia() =>
@@ -193,18 +191,18 @@ public class PlanStageEmitHdrAndSdrTests
             VideoStreams =
             [
                 new(
-                    Index: 0,
-                    Codec: "hevc",
-                    Width: 3840,
-                    Height: 2160,
-                    FrameRate: 24.0,
-                    BitDepth: 10,
-                    PixelFormat: "yuv420p10le",
-                    ColorPrimaries: "bt2020",
-                    ColorTransfer: "smpte2084",
-                    ColorSpace: "bt2020nc",
-                    IsDefault: true,
-                    BitRateKbps: 40000
+                    0,
+                    "hevc",
+                    3840,
+                    2160,
+                    24.0,
+                    10,
+                    "yuv420p10le",
+                    "bt2020",
+                    "smpte2084",
+                    "bt2020nc",
+                    true,
+                    40000
                 ),
             ],
         };
@@ -215,53 +213,53 @@ public class PlanStageEmitHdrAndSdrTests
             VideoStreams =
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: "bt709",
-                    ColorTransfer: "bt709",
-                    ColorSpace: "bt709",
-                    IsDefault: true,
-                    BitRateKbps: 6000
+                    0,
+                    "h264",
+                    1920,
+                    1080,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    "bt709",
+                    "bt709",
+                    "bt709",
+                    true,
+                    6000
                 ),
             ],
         };
 
     private static MediaInfo BaseMedia() =>
         new(
-            FilePath: "/media/source.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 90),
-            OverallBitRateKbps: 40000,
-            FileSizeBytes: 20_000_000_000,
-            VideoStreams: [],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            "/media/source.mkv",
+            "matroska",
+            TimeSpan.FromMinutes(90),
+            40000,
+            20_000_000_000,
+            [],
+            [],
+            [],
+            []
         );
 
     private static ResolvedCodec BuildResolved(string ffmpegName, bool supports10Bit) =>
         new(
-            FfmpegEncoderName: ffmpegName,
-            EncoderInfo: new(
-                FfmpegName: ffmpegName,
-                RequiredVendor: null,
-                Presets: ["medium"],
-                Profiles: ["high", "main10"],
-                Levels: ["4.1", "5.1"],
-                QualityRange: new(Min: 0, Max: 51, Default: 23),
-                SupportedRateControl: [RateControlMode.Crf],
-                Supports10Bit: supports10Bit,
-                SupportsHdr: supports10Bit,
-                MaxConcurrentSessions: int.MaxValue,
-                PixelFormat10Bit: "yuv420p10le",
-                VendorSpecificFlags: new()
+            ffmpegName,
+            new(
+                ffmpegName,
+                null,
+                ["medium"],
+                ["high", "main10"],
+                ["4.1", "5.1"],
+                new(0, 51, 23),
+                [RateControlMode.Crf],
+                supports10Bit,
+                supports10Bit,
+                int.MaxValue,
+                "yuv420p10le",
+                new()
             ),
-            Device: null,
-            DefaultRateControl: RateControlMode.Crf
+            null,
+            RateControlMode.Crf
         );
 }

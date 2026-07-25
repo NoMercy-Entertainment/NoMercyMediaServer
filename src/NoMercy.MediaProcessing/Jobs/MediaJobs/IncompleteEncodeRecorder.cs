@@ -28,18 +28,18 @@ public sealed class IncompleteEncodeRecorder
         CancellationToken ct
     )
     {
-        string renditions = string.Join(separator: '\n', values: missingKeys);
+        string renditions = string.Join('\n', missingKeys);
 
         IncompleteEncode? existing = await context.IncompleteEncodes.FirstOrDefaultAsync(
-            predicate: r => r.MediaId == mediaId && r.FolderId == folderId,
-            cancellationToken: ct
+            r => r.MediaId == mediaId && r.FolderId == folderId,
+            ct
         );
 
         if (existing is null)
         {
             DateTime now = DateTime.UtcNow;
             context.IncompleteEncodes.Add(
-                entity: new()
+                new()
                 {
                     MediaId = mediaId,
                     FolderId = folderId,
@@ -60,7 +60,7 @@ public sealed class IncompleteEncodeRecorder
             existing.LastSeenAt = DateTime.UtcNow;
         }
 
-        await context.SaveChangesAsync(cancellationToken: ct);
+        await context.SaveChangesAsync(ct);
     }
 
     public async Task ClearAsync(
@@ -71,7 +71,7 @@ public sealed class IncompleteEncodeRecorder
     )
     {
         await context
-            .IncompleteEncodes.Where(predicate: r => r.MediaId == mediaId && r.FolderId == folderId)
-            .ExecuteDeleteAsync(cancellationToken: ct);
+            .IncompleteEncodes.Where(r => r.MediaId == mediaId && r.FolderId == folderId)
+            .ExecuteDeleteAsync(ct);
     }
 }

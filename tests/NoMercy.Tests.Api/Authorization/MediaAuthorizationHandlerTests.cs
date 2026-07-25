@@ -19,29 +19,29 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Authorization;
 
-[Trait(name: "Category", value: "Authorization")]
+[Trait("Category", "Authorization")]
 public sealed class MediaAuthorizationHandlerTests
 {
-    private static readonly Guid OwnerId = Guid.Parse(input: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
-    private static readonly Guid ModeratorId = Guid.Parse(input: "ffffffff-ffff-ffff-ffff-ffffffffffff");
-    private static readonly Guid AllowedId = Guid.Parse(input: "cccccccc-cccc-cccc-cccc-cccccccccccc");
-    private static readonly Guid StrangerId = Guid.Parse(input: "dddddddd-dddd-dddd-dddd-dddddddddddd");
+    private static readonly Guid OwnerId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+    private static readonly Guid ModeratorId = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
+    private static readonly Guid AllowedId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+    private static readonly Guid StrangerId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
 
     private static (MediaAuthorizationHandler handler, UserCache cache) BuildHandler()
     {
         UserCache cache = new();
-        MediaAuthorizationPolicy policy = new(userCache: cache);
+        MediaAuthorizationPolicy policy = new(cache);
         MediaAuthorizationHandler handler = new(
-            policy: policy,
-            logger: NullLogger<MediaAuthorizationHandler>.Instance
+            policy,
+            NullLogger<MediaAuthorizationHandler>.Instance
         );
         return (handler, cache);
     }
 
     private static ClaimsPrincipal PrincipalFor(Guid userId)
     {
-        List<Claim> claims = [new(type: ClaimTypes.NameIdentifier, value: userId.ToString())];
-        return new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
+        List<Claim> claims = [new(ClaimTypes.NameIdentifier, userId.ToString())];
+        return new(new ClaimsIdentity(claims, "TestScheme"));
     }
 
     private static AuthorizationHandlerContext MakeContext(
@@ -49,7 +49,7 @@ public sealed class MediaAuthorizationHandlerTests
         IAuthorizationRequirement requirement
     )
     {
-        return new(requirements: [requirement], user: user, resource: null);
+        return new([requirement], user, null);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class MediaAuthorizationHandlerTests
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
         cache.AddUser(
-            user: new()
+            new()
             {
                 Id = OwnerId,
                 Owner = true,
@@ -66,11 +66,11 @@ public sealed class MediaAuthorizationHandlerTests
             }
         );
         AuthorizationHandlerContext context = MakeContext(
-            user: PrincipalFor(userId: OwnerId),
-            requirement: new OwnerRequirement()
+            PrincipalFor(OwnerId),
+            new OwnerRequirement()
         );
 
-        await handler.HandleAsync(context: context);
+        await handler.HandleAsync(context);
 
         context.HasSucceeded.Should().BeTrue();
     }
@@ -80,7 +80,7 @@ public sealed class MediaAuthorizationHandlerTests
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
         cache.AddUser(
-            user: new()
+            new()
             {
                 Id = OwnerId,
                 Owner = true,
@@ -89,11 +89,11 @@ public sealed class MediaAuthorizationHandlerTests
             }
         );
         AuthorizationHandlerContext context = MakeContext(
-            user: PrincipalFor(userId: StrangerId),
-            requirement: new OwnerRequirement()
+            PrincipalFor(StrangerId),
+            new OwnerRequirement()
         );
 
-        await handler.HandleAsync(context: context);
+        await handler.HandleAsync(context);
 
         context.HasSucceeded.Should().BeFalse();
     }
@@ -103,7 +103,7 @@ public sealed class MediaAuthorizationHandlerTests
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
         cache.AddUser(
-            user: new()
+            new()
             {
                 Id = ModeratorId,
                 Manage = true,
@@ -112,11 +112,11 @@ public sealed class MediaAuthorizationHandlerTests
             }
         );
         AuthorizationHandlerContext context = MakeContext(
-            user: PrincipalFor(userId: ModeratorId),
-            requirement: new ModeratorRequirement()
+            PrincipalFor(ModeratorId),
+            new ModeratorRequirement()
         );
 
-        await handler.HandleAsync(context: context);
+        await handler.HandleAsync(context);
 
         context.HasSucceeded.Should().BeTrue();
     }
@@ -126,7 +126,7 @@ public sealed class MediaAuthorizationHandlerTests
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
         cache.AddUser(
-            user: new()
+            new()
             {
                 Id = AllowedId,
                 Allowed = true,
@@ -137,11 +137,11 @@ public sealed class MediaAuthorizationHandlerTests
             }
         );
         AuthorizationHandlerContext context = MakeContext(
-            user: PrincipalFor(userId: AllowedId),
-            requirement: new ModeratorRequirement()
+            PrincipalFor(AllowedId),
+            new ModeratorRequirement()
         );
 
-        await handler.HandleAsync(context: context);
+        await handler.HandleAsync(context);
 
         context.HasSucceeded.Should().BeFalse();
     }
@@ -151,7 +151,7 @@ public sealed class MediaAuthorizationHandlerTests
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
         cache.AddUser(
-            user: new()
+            new()
             {
                 Id = AllowedId,
                 Allowed = true,
@@ -161,11 +161,11 @@ public sealed class MediaAuthorizationHandlerTests
             }
         );
         AuthorizationHandlerContext context = MakeContext(
-            user: PrincipalFor(userId: AllowedId),
-            requirement: new MediaAccessRequirement()
+            PrincipalFor(AllowedId),
+            new MediaAccessRequirement()
         );
 
-        await handler.HandleAsync(context: context);
+        await handler.HandleAsync(context);
 
         context.HasSucceeded.Should().BeTrue();
     }
@@ -175,11 +175,11 @@ public sealed class MediaAuthorizationHandlerTests
     {
         (MediaAuthorizationHandler handler, UserCache _) = BuildHandler();
         AuthorizationHandlerContext context = MakeContext(
-            user: PrincipalFor(userId: StrangerId),
-            requirement: new MediaAccessRequirement()
+            PrincipalFor(StrangerId),
+            new MediaAccessRequirement()
         );
 
-        await handler.HandleAsync(context: context);
+        await handler.HandleAsync(context);
 
         context.HasSucceeded.Should().BeFalse();
     }
@@ -190,12 +190,12 @@ public sealed class MediaAuthorizationHandlerTests
         UserCache cache = new();
         ThrowingPolicy throwingPolicy = new();
         MediaAuthorizationHandler handler = new(
-            policy: throwingPolicy,
-            logger: NullLogger<MediaAuthorizationHandler>.Instance
+            throwingPolicy,
+            NullLogger<MediaAuthorizationHandler>.Instance
         );
 
         cache.AddUser(
-            user: new()
+            new()
             {
                 Id = OwnerId,
                 Owner = true,
@@ -205,11 +205,11 @@ public sealed class MediaAuthorizationHandlerTests
         );
 
         AuthorizationHandlerContext context = MakeContext(
-            user: PrincipalFor(userId: OwnerId),
-            requirement: new OwnerRequirement()
+            PrincipalFor(OwnerId),
+            new OwnerRequirement()
         );
 
-        await handler.HandleAsync(context: context);
+        await handler.HandleAsync(context);
 
         context.HasSucceeded.Should().BeFalse();
     }
@@ -217,12 +217,12 @@ public sealed class MediaAuthorizationHandlerTests
     private sealed class ThrowingPolicy : IMediaAuthorizationPolicy
     {
         public bool IsOwner(ClaimsPrincipal? principal) =>
-            throw new InvalidOperationException(message: "policy check exploded");
+            throw new InvalidOperationException("policy check exploded");
 
         public bool IsModerator(ClaimsPrincipal? principal) =>
-            throw new InvalidOperationException(message: "policy check exploded");
+            throw new InvalidOperationException("policy check exploded");
 
         public bool IsAllowed(ClaimsPrincipal? principal) =>
-            throw new InvalidOperationException(message: "policy check exploded");
+            throw new InvalidOperationException("policy check exploded");
     }
 }

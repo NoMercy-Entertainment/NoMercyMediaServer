@@ -86,7 +86,7 @@ public class NetworkDiscovery : INetworkDiscovery
         get
         {
             string ip = InternalIp;
-            return string.IsNullOrEmpty(value: ip) || ip == "127.0.0.1" ? "0.0.0.0" : ip;
+            return string.IsNullOrEmpty(ip) || ip == "127.0.0.1" ? "0.0.0.0" : ip;
         }
     }
 
@@ -133,9 +133,9 @@ public class NetworkDiscovery : INetworkDiscovery
     public bool Ipv6Enabled => CheckIpv6();
 
     private bool _discoveryCompleted;
-    private readonly SemaphoreSlim _discoverySemaphore = new(initialCount: 1, maxCount: 1);
+    private readonly SemaphoreSlim _discoverySemaphore = new(1, 1);
     private DateTime _lastRediscovery = DateTime.MinValue;
-    private static readonly TimeSpan MinRediscoveryInterval = TimeSpan.FromMinutes(minutes: 5);
+    private static readonly TimeSpan MinRediscoveryInterval = TimeSpan.FromMinutes(5);
 
     /// <summary>
     /// Forces a fresh external-IP / NAT discovery, bypassing the one-shot completion
@@ -170,9 +170,9 @@ public class NetworkDiscovery : INetworkDiscovery
             if (_discoveryCompleted)
                 return;
 
-            _logger.LogInformation(message: "Discovering Networking");
+            _logger.LogInformation("Discovering Networking");
 
-            if (ShouldSubscribeOnce(alreadySubscribed: ref _natHandlersSubscribed))
+            if (ShouldSubscribeOnce(ref _natHandlersSubscribed))
             {
                 // Static Mono.Nat events. Without a subscribe-once guard each
                 // rediscovery re-adds these handlers (the UnknownDeviceFound
@@ -183,21 +183,21 @@ public class NetworkDiscovery : INetworkDiscovery
                 NatUtility.UnknownDeviceFound += (_, _) => { };
             }
 
-            _logger.LogInformation(message: "Discovering UPNP devices");
+            _logger.LogInformation("Discovering UPNP devices");
 
-            _ = Task.Run(action: () => NatUtility.StartDiscovery());
+            _ = Task.Run(() => NatUtility.StartDiscovery());
 
             if (!_hasFoundDevice)
-                await Task.Delay(delay: TimeSpan.FromSeconds(seconds: 5));
+                await Task.Delay(TimeSpan.FromSeconds(5));
             if (!_hasFoundDevice)
-                await Task.Delay(delay: TimeSpan.FromSeconds(seconds: 10));
+                await Task.Delay(TimeSpan.FromSeconds(10));
 
             if (!_hasFoundDevice)
             {
-                _logger.LogInformation(message: "No UPNP device found");
+                _logger.LogInformation("No UPNP device found");
             }
 
-            if (string.IsNullOrEmpty(value: _externalIp))
+            if (string.IsNullOrEmpty(_externalIp))
             {
                 try
                 {
@@ -206,8 +206,8 @@ public class NetworkDiscovery : INetworkDiscovery
                 catch (Exception e)
                 {
                     _logger.LogInformation(
-                        message: "Failed to get external IP from API: {Message}",
-                        args: e.Message
+                        "Failed to get external IP from API: {Message}",
+                        e.Message
                     );
                 }
             }
@@ -219,11 +219,11 @@ public class NetworkDiscovery : INetworkDiscovery
                 {
                     ExternalIpV6 = await GetExternalIpV6Async();
                     if (ExternalIpV6 is null)
-                        _logger.LogDebug(message: "No external IPv6 address available");
+                        _logger.LogDebug("No external IPv6 address available");
                 }
                 catch (Exception e)
                 {
-                    _logger.LogDebug(message: "Failed to get external IPv6: {Message}", args: e.Message);
+                    _logger.LogDebug("Failed to get external IPv6: {Message}", e.Message);
                 }
             }
 
@@ -240,7 +240,7 @@ public class NetworkDiscovery : INetworkDiscovery
         if (_hasFoundDevice)
             return;
 
-        _logger.LogInformation(message: "UPNP router Found: {DeviceEndpoint}", args: args.Device.DeviceEndpoint);
+        _logger.LogInformation("UPNP router Found: {DeviceEndpoint}", args.Device.DeviceEndpoint);
 
         _device = args.Device;
         _hasFoundDevice = true;
@@ -258,42 +258,42 @@ public class NetworkDiscovery : INetworkDiscovery
 
         try
         {
-            _logger.LogInformation(message: "Trying to add UPNP records");
+            _logger.LogInformation("Trying to add UPNP records");
 
             _device.CreatePortMap(
-                mapping: new(
-                    protocol: Protocol.Tcp,
-                    privatePort: RuntimeServerSettings.Current.InternalServerPort,
-                    publicPort: RuntimeServerSettings.Current.ExternalServerPort,
-                    lifetime: 0,
-                    description: "NoMercy MediaServer (TCP)"
+                new(
+                    Protocol.Tcp,
+                    RuntimeServerSettings.Current.InternalServerPort,
+                    RuntimeServerSettings.Current.ExternalServerPort,
+                    0,
+                    "NoMercy MediaServer (TCP)"
                 )
             );
 
             _device.CreatePortMap(
-                mapping: new(
-                    protocol: Protocol.Udp,
-                    privatePort: RuntimeServerSettings.Current.InternalServerPort,
-                    publicPort: RuntimeServerSettings.Current.ExternalServerPort,
-                    lifetime: 0,
-                    description: "NoMercy MediaServer (UDP)"
+                new(
+                    Protocol.Udp,
+                    RuntimeServerSettings.Current.InternalServerPort,
+                    RuntimeServerSettings.Current.ExternalServerPort,
+                    0,
+                    "NoMercy MediaServer (UDP)"
                 )
             );
 
             string ip = _device.GetExternalIP().ToString();
 
-            _logger.LogInformation(message: "IP address obtained from UPNP: {Ip}", args: ip);
-            if (!string.IsNullOrEmpty(value: _externalIp))
-                _logger.LogInformation(message: "IP address obtained from API: {_externalIp}", args: _externalIp);
+            _logger.LogInformation("IP address obtained from UPNP: {Ip}", ip);
+            if (!string.IsNullOrEmpty(_externalIp))
+                _logger.LogInformation("IP address obtained from API: {_externalIp}", _externalIp);
 
-            if (string.IsNullOrEmpty(value: _externalIp))
+            if (string.IsNullOrEmpty(_externalIp))
             {
                 ExternalIp = ip;
             }
         }
         catch (Exception e)
         {
-            _logger.LogInformation(message: "Failed to create UPNP records: {Message}", args: e.Message);
+            _logger.LogInformation("Failed to create UPNP records: {Message}", e.Message);
             _hasFoundDevice = false;
             _connectivityStatus.NatStatus = NatStatus.Closed;
             return;
@@ -307,35 +307,35 @@ public class NetworkDiscovery : INetworkDiscovery
         int timeoutMilliseconds = 1500;
 
         using TcpClient client = new();
-        using CancellationTokenSource cts = new(millisecondsDelay: timeoutMilliseconds);
+        using CancellationTokenSource cts = new(timeoutMilliseconds);
 
         try
         {
             await client.ConnectAsync(
-                host: ExternalIp,
-                port: RuntimeServerSettings.Current.ExternalServerPort,
-                cancellationToken: cts.Token
+                ExternalIp,
+                RuntimeServerSettings.Current.ExternalServerPort,
+                cts.Token
             );
             return true;
         }
         catch (OperationCanceledException)
         {
             _logger.LogTrace(
-                message: "Timeout checking {ExternalIp}:{ExternalServerPort} after {TimeoutMilliseconds}ms.", args: [ExternalIp, RuntimeServerSettings.Current.ExternalServerPort, timeoutMilliseconds]
+                "Timeout checking {ExternalIp}:{ExternalServerPort} after {TimeoutMilliseconds}ms.", [ExternalIp, RuntimeServerSettings.Current.ExternalServerPort, timeoutMilliseconds]
             );
             return false;
         }
         catch (SocketException ex)
         {
             _logger.LogDebug(
-                message: "SocketException checking {ExternalIp}:{ExternalServerPort}: {SocketErrorCode} ({Message})", args: [ExternalIp, RuntimeServerSettings.Current.ExternalServerPort, ex.SocketErrorCode, ex.Message]
+                "SocketException checking {ExternalIp}:{ExternalServerPort}: {SocketErrorCode} ({Message})", [ExternalIp, RuntimeServerSettings.Current.ExternalServerPort, ex.SocketErrorCode, ex.Message]
             );
             return false;
         }
         catch (Exception ex)
         {
             _logger.LogDebug(
-                message: "Exception checking {ExternalIp}:{ExternalServerPort}: {Message}", args: [ExternalIp, RuntimeServerSettings.Current.ExternalServerPort, ex.Message]
+                "Exception checking {ExternalIp}:{ExternalServerPort}: {Message}", [ExternalIp, RuntimeServerSettings.Current.ExternalServerPort, ex.Message]
             );
             return false;
         }
@@ -354,17 +354,17 @@ public class NetworkDiscovery : INetworkDiscovery
         if (
             !_containerIpWarned
             && Screen.IsDocker
-            && IsDockerOrWslAddress(address: IPAddress.Parse(ipString: resolved))
+            && IsDockerOrWslAddress(IPAddress.Parse(resolved))
         )
         {
             _containerIpWarned = true;
             _logger.LogError(
-                message: "Internal IP resolved to {Resolved}, a container-internal address that LAN clients "
+                "Internal IP resolved to {Resolved}, a container-internal address that LAN clients "
                          + "cannot route to, so the server will advertise an unreachable address. Set "
                          + "NOMERCY_INTERNAL_IP (or --internal-ip) to this host's LAN IP; with the "
                          + "supplied compose files, export HOST_IP=$(hostname -I | awk '{{print $1}}') "
                          + "before 'docker compose up'.",
-                args: resolved
+                resolved
             );
         }
 
@@ -377,16 +377,16 @@ public class NetworkDiscovery : INetworkDiscovery
         // route to the internet, which is always the real LAN adapter, never Docker/WSL.
         try
         {
-            using Socket socket = new(addressFamily: AddressFamily.InterNetwork, socketType: SocketType.Dgram, protocolType: 0);
+            using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
             socket.Connect(
-                host: _networkProbeConfig.LocalIpDiscoveryIpv4,
-                port: _networkProbeConfig.LocalIpDiscoveryPort
+                _networkProbeConfig.LocalIpDiscoveryIpv4,
+                _networkProbeConfig.LocalIpDiscoveryPort
             );
             IPAddress? address = (socket.LocalEndPoint as IPEndPoint)?.Address;
             if (
                 address is not null
-                && !IPAddress.IsLoopback(address: address)
-                && !address.Equals(comparand: IPAddress.Any)
+                && !IPAddress.IsLoopback(address)
+                && !address.Equals(IPAddress.Any)
                 && address.AddressFamily == AddressFamily.InterNetwork
             )
             {
@@ -412,16 +412,16 @@ public class NetworkDiscovery : INetworkDiscovery
                         or NetworkInterfaceType.Tunnel
                 )
                     continue;
-                if (IsVirtualNetworkInterface(nic: nic))
+                if (IsVirtualNetworkInterface(nic))
                     continue;
 
                 foreach (UnicastIPAddressInformation addr in nic.GetIPProperties().UnicastAddresses)
                 {
                     if (addr.Address.AddressFamily != AddressFamily.InterNetwork)
                         continue;
-                    if (IPAddress.IsLoopback(address: addr.Address))
+                    if (IPAddress.IsLoopback(addr.Address))
                         continue;
-                    if (IsDockerOrWslAddress(address: addr.Address))
+                    if (IsDockerOrWslAddress(addr.Address))
                         continue;
 
                     return addr.Address.ToString();
@@ -437,7 +437,7 @@ public class NetworkDiscovery : INetworkDiscovery
     }
 
     private static bool IsVirtualNetworkInterface(NetworkInterface nic) =>
-        IsVirtualNetworkInterface(description: nic.Description, name: nic.Name);
+        IsVirtualNetworkInterface(nic.Description, nic.Name);
 
     /// <summary>
     /// Pure keyword match extracted from <see cref="IsVirtualNetworkInterface(NetworkInterface)"/>
@@ -465,7 +465,7 @@ public class NetworkDiscovery : INetworkDiscovery
 
         foreach (string keyword in virtualKeywords)
         {
-            if (lowerDescription.Contains(value: keyword) || lowerName.Contains(value: keyword))
+            if (lowerDescription.Contains(keyword) || lowerName.Contains(keyword))
                 return true;
         }
 
@@ -524,10 +524,10 @@ public class NetworkDiscovery : INetworkDiscovery
 
         try
         {
-            using Socket socket = new(addressFamily: AddressFamily.InterNetworkV6, socketType: SocketType.Dgram, protocolType: 0);
+            using Socket socket = new(AddressFamily.InterNetworkV6, SocketType.Dgram, 0);
             socket.Connect(
-                host: _networkProbeConfig.LocalIpDiscoveryIpv6,
-                port: _networkProbeConfig.LocalIpDiscoveryPort
+                _networkProbeConfig.LocalIpDiscoveryIpv6,
+                _networkProbeConfig.LocalIpDiscoveryPort
             );
             IPEndPoint? endpoint = socket.LocalEndPoint as IPEndPoint;
             if (endpoint?.Address is not null && !endpoint.Address.IsIPv6LinkLocal)
@@ -542,7 +542,7 @@ public class NetworkDiscovery : INetworkDiscovery
     }
 
     private static string ExternalIpCacheFile =>
-        Path.Combine(path1: AppFiles.ConfigPath, path2: "external_ip.cache");
+        Path.Combine(AppFiles.ConfigPath, "external_ip.cache");
 
     /// <summary>
     /// API → UPnP → file-cache → empty fallback chain. Internal (rather than
@@ -553,37 +553,37 @@ public class NetworkDiscovery : INetworkDiscovery
     /// </summary>
     internal async Task<string> GetExternalIpAsync()
     {
-        _logger.LogInformation(message: "Getting external IP address");
+        _logger.LogInformation("Getting external IP address");
 
         // 1. Try API
         string? apiToken = _authTokenStore.AccessToken;
-        if (string.IsNullOrEmpty(value: apiToken))
+        if (string.IsNullOrEmpty(apiToken))
         {
-            _logger.LogTrace(message: "Skipping API external IP lookup — no auth token");
+            _logger.LogTrace("Skipping API external IP lookup — no auth token");
         }
         else
         {
             try
             {
-                GenericHttpClient apiClient = new(baseUrl: ExternalServicesConfig.Current.ApiBaseUrl);
-                apiClient.SetDefaultHeaders(userAgent: ExternalServicesConfig.Current.UserAgent, bearerToken: apiToken);
+                GenericHttpClient apiClient = new(ExternalServicesConfig.Current.ApiBaseUrl);
+                apiClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, apiToken);
                 using HttpResponseMessage response = await apiClient.SendAsync(
-                    method: HttpMethod.Get,
-                    endpoint: "v1/ip"
+                    HttpMethod.Get,
+                    "v1/ip"
                 );
                 if (response.IsSuccessStatusCode)
                 {
-                    string ip = (await response.Content.ReadAsStringAsync()).Replace(oldValue: "\"", newValue: "");
-                    if (!string.IsNullOrEmpty(value: ip))
+                    string ip = (await response.Content.ReadAsStringAsync()).Replace("\"", "");
+                    if (!string.IsNullOrEmpty(ip))
                     {
-                        CacheExternalIp(ip: ip);
+                        CacheExternalIp(ip);
                         return ip;
                     }
                 }
             }
             catch (Exception e)
             {
-                _logger.LogWarning(message: "External IP API unavailable: {Message}", args: e.Message);
+                _logger.LogWarning("External IP API unavailable: {Message}", e.Message);
             }
         }
 
@@ -593,15 +593,15 @@ public class NetworkDiscovery : INetworkDiscovery
             try
             {
                 string upnpIp = _device.GetExternalIP().ToString();
-                if (!string.IsNullOrEmpty(value: upnpIp))
+                if (!string.IsNullOrEmpty(upnpIp))
                 {
-                    CacheExternalIp(ip: upnpIp);
+                    CacheExternalIp(upnpIp);
                     return upnpIp;
                 }
             }
             catch (Exception e)
             {
-                _logger.LogWarning(message: "UPnP external IP unavailable: {Message}", args: e.Message);
+                _logger.LogWarning("UPnP external IP unavailable: {Message}", e.Message);
             }
         }
 
@@ -609,12 +609,12 @@ public class NetworkDiscovery : INetworkDiscovery
         string? cached = LoadCachedExternalIp();
         if (cached is not null)
         {
-            _logger.LogInformation(message: "Using cached external IP: {Cached}", args: cached);
+            _logger.LogInformation("Using cached external IP: {Cached}", cached);
             return cached;
         }
 
         // 4. No external IP available
-        _logger.LogWarning(message: "External IP unavailable — remote access disabled");
+        _logger.LogWarning("External IP unavailable — remote access disabled");
         return "";
     }
 
@@ -624,20 +624,20 @@ public class NetworkDiscovery : INetworkDiscovery
         try
         {
             using HttpClient httpClient = new(
-                handler: new SocketsHttpHandler
+                new SocketsHttpHandler
                 {
                     ConnectCallback = async (context, ct) =>
                     {
                         Socket socket = new(
-                            addressFamily: AddressFamily.InterNetworkV6,
-                            socketType: SocketType.Stream,
-                            protocolType: ProtocolType.Tcp
+                            AddressFamily.InterNetworkV6,
+                            SocketType.Stream,
+                            ProtocolType.Tcp
                         );
                         socket.NoDelay = true;
                         try
                         {
-                            await socket.ConnectAsync(remoteEP: context.DnsEndPoint, cancellationToken: ct);
-                            return new NetworkStream(socket: socket, ownsSocket: true);
+                            await socket.ConnectAsync(context.DnsEndPoint, ct);
+                            return new NetworkStream(socket, true);
                         }
                         catch
                         {
@@ -647,21 +647,21 @@ public class NetworkDiscovery : INetworkDiscovery
                     },
                 }
             );
-            httpClient.Timeout = TimeSpan.FromSeconds(seconds: 5);
+            httpClient.Timeout = TimeSpan.FromSeconds(5);
             httpClient.DefaultRequestHeaders.Add(
-                name: "User-Agent",
-                value: ExternalServicesConfig.Current.UserAgent
+                "User-Agent",
+                ExternalServicesConfig.Current.UserAgent
             );
             string ip = await httpClient.GetStringAsync(
-                requestUri: $"{ExternalServicesConfig.Current.ApiBaseUrl}v1/ip"
+                $"{ExternalServicesConfig.Current.ApiBaseUrl}v1/ip"
             );
-            ip = ip.Replace(oldValue: "\"", newValue: "").Trim();
-            if (!string.IsNullOrEmpty(value: ip) && ip.Contains(value: ':'))
+            ip = ip.Replace("\"", "").Trim();
+            if (!string.IsNullOrEmpty(ip) && ip.Contains(':'))
                 return ip;
         }
         catch (Exception e)
         {
-            _logger.LogDebug(message: "External IPv6 API unavailable: {Message}", args: e.Message);
+            _logger.LogDebug("External IPv6 API unavailable: {Message}", e.Message);
         }
 
         // 2. Try well-known IPv6 services
@@ -677,20 +677,20 @@ public class NetworkDiscovery : INetworkDiscovery
             try
             {
                 using HttpClient httpClient = new(
-                    handler: new SocketsHttpHandler
+                    new SocketsHttpHandler
                     {
                         ConnectCallback = async (context, ct) =>
                         {
                             Socket socket = new(
-                                addressFamily: AddressFamily.InterNetworkV6,
-                                socketType: SocketType.Stream,
-                                protocolType: ProtocolType.Tcp
+                                AddressFamily.InterNetworkV6,
+                                SocketType.Stream,
+                                ProtocolType.Tcp
                             );
                             socket.NoDelay = true;
                             try
                             {
-                                await socket.ConnectAsync(remoteEP: context.DnsEndPoint, cancellationToken: ct);
-                                return new NetworkStream(socket: socket, ownsSocket: true);
+                                await socket.ConnectAsync(context.DnsEndPoint, ct);
+                                return new NetworkStream(socket, true);
                             }
                             catch
                             {
@@ -700,9 +700,9 @@ public class NetworkDiscovery : INetworkDiscovery
                         },
                     }
                 );
-                httpClient.Timeout = TimeSpan.FromSeconds(seconds: 5);
-                string ip = (await httpClient.GetStringAsync(requestUri: service)).Trim();
-                if (!string.IsNullOrEmpty(value: ip) && ip.Contains(value: ':'))
+                httpClient.Timeout = TimeSpan.FromSeconds(5);
+                string ip = (await httpClient.GetStringAsync(service)).Trim();
+                if (!string.IsNullOrEmpty(ip) && ip.Contains(':'))
                     return ip;
             }
             catch
@@ -722,13 +722,13 @@ public class NetworkDiscovery : INetworkDiscovery
     {
         try
         {
-            using Stream stream = _driver.OpenWrite(path: ExternalIpCacheFile, overwrite: true);
-            using StreamWriter writer = new(stream: stream, encoding: Encoding.UTF8, leaveOpen: true);
-            writer.Write(value: ip);
+            using Stream stream = _driver.OpenWrite(ExternalIpCacheFile, true);
+            using StreamWriter writer = new(stream, encoding: Encoding.UTF8, leaveOpen: true);
+            writer.Write(ip);
         }
         catch (Exception e)
         {
-            _logger.LogWarning(message: "Failed to cache external IP: {Message}", args: e.Message);
+            _logger.LogWarning("Failed to cache external IP: {Message}", e.Message);
         }
     }
 
@@ -736,11 +736,11 @@ public class NetworkDiscovery : INetworkDiscovery
     {
         try
         {
-            if (!_driver.FileExists(path: ExternalIpCacheFile))
+            if (!_driver.FileExists(ExternalIpCacheFile))
                 return null;
-            using StreamReader reader = new(stream: _driver.OpenRead(path: ExternalIpCacheFile), encoding: Encoding.UTF8);
+            using StreamReader reader = new(_driver.OpenRead(ExternalIpCacheFile), Encoding.UTF8);
             string cached = reader.ReadToEnd().Trim();
-            return string.IsNullOrEmpty(value: cached) ? null : cached;
+            return string.IsNullOrEmpty(cached) ? null : cached;
         }
         catch
         {

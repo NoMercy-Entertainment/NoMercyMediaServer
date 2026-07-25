@@ -21,7 +21,7 @@ public class TmdbCollectionMetadataProvider : ICollectionMetadataProvider
         CancellationToken ct = default
     )
     {
-        using TmdbCollectionClient tmdbCollectionClient = new(id: id, language: language);
-        return await tmdbCollectionClient.WithAllAppends(priority: true);
+        using TmdbCollectionClient tmdbCollectionClient = new(id, language: language);
+        return await tmdbCollectionClient.WithAllAppends(true);
     }
 }

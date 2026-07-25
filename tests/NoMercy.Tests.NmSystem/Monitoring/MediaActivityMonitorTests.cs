@@ -20,7 +20,7 @@ namespace NoMercy.Tests.NmSystem.Monitoring;
 /// on, and that <see cref="MediaActivityMonitor.WaitForIdleAsync"/> returns immediately
 /// when nothing has ever touched it.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MediaActivityMonitorTests
 {
     [Fact]
@@ -47,10 +47,10 @@ public class MediaActivityMonitorTests
         MediaActivityMonitor monitor = new();
 
         Stopwatch stopwatch = Stopwatch.StartNew();
-        await monitor.WaitForIdleAsync(maxWait: TimeSpan.FromMinutes(minutes: 5), ct: CancellationToken.None);
+        await monitor.WaitForIdleAsync(TimeSpan.FromMinutes(5), CancellationToken.None);
         stopwatch.Stop();
 
-        stopwatch.Elapsed.Should().BeLessThan(expected: TimeSpan.FromSeconds(seconds: 1));
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(1));
     }
 
     [Fact]
@@ -59,9 +59,9 @@ public class MediaActivityMonitorTests
         MediaActivityMonitor monitor = new();
         monitor.Touch();
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 100));
+        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(100));
 
-        Func<Task> act = () => monitor.WaitForIdleAsync(maxWait: TimeSpan.FromMinutes(minutes: 5), ct: cts.Token);
+        Func<Task> act = () => monitor.WaitForIdleAsync(TimeSpan.FromMinutes(5), cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }

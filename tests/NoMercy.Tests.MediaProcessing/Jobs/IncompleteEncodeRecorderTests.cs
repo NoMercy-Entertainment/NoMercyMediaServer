@@ -17,7 +17,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 namespace NoMercy.Tests.MediaProcessing.Jobs;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class IncompleteEncodeRecorderTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -27,16 +27,16 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
     public IncompleteEncodeRecorderTests()
     {
         string dbName = Guid.NewGuid().ToString();
-        _connection = new(connectionString: $"DataSource={dbName};Mode=Memory;Cache=Shared");
+        _connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         _connection.Open();
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: _connection)
+            .UseSqlite(_connection)
             .Options;
 
-        _context = new(options: options);
+        _context = new(options);
         _context.Database.EnsureCreated();
-        _context.Database.ExecuteSqlRaw(sql: "PRAGMA foreign_keys = OFF;");
+        _context.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
 
         _recorder = new();
     }
@@ -53,50 +53,50 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
         string[] keys = ["video-1080p", "video-720p", "audio-aac"];
 
         await _recorder.RecordAsync(
-            context: _context,
-            mediaId: 42L,
-            folderId: "folder-abc",
-            title: "Test Movie",
-            missingKeys: keys,
-            lastError: null,
-            attemptsMade: 1,
-            ct: CancellationToken.None
+            _context,
+            42L,
+            "folder-abc",
+            "Test Movie",
+            keys,
+            null,
+            1,
+            CancellationToken.None
         );
 
         IncompleteEncode? row = await _context
             .IncompleteEncodes.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: r => r.MediaId == 42L && r.FolderId == "folder-abc");
+            .FirstOrDefaultAsync(r => r.MediaId == 42L && r.FolderId == "folder-abc");
 
         row.Should().NotBeNull();
-        string[] split = row!.MissingRenditions.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries);
-        split.Should().HaveCount(expected: 3);
-        split.Should().BeEquivalentTo(expectation: keys);
+        string[] split = row!.MissingRenditions.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        split.Should().HaveCount(3);
+        split.Should().BeEquivalentTo(keys);
     }
 
     [Fact]
     public async Task RecordAsync_ThenClearAsync_LeavesNoRow()
     {
         await _recorder.RecordAsync(
-            context: _context,
-            mediaId: 7L,
-            folderId: "folder-xyz",
-            title: "Some Show S01E01",
-            missingKeys: ["video-480p"],
-            lastError: "timeout",
-            attemptsMade: 2,
-            ct: CancellationToken.None
+            _context,
+            7L,
+            "folder-xyz",
+            "Some Show S01E01",
+            ["video-480p"],
+            "timeout",
+            2,
+            CancellationToken.None
         );
 
         await _recorder.ClearAsync(
-            context: _context,
-            mediaId: 7L,
-            folderId: "folder-xyz",
-            ct: CancellationToken.None
+            _context,
+            7L,
+            "folder-xyz",
+            CancellationToken.None
         );
 
         IncompleteEncode? row = await _context
             .IncompleteEncodes.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: r => r.MediaId == 7L && r.FolderId == "folder-xyz");
+            .FirstOrDefaultAsync(r => r.MediaId == 7L && r.FolderId == "folder-xyz");
 
         row.Should().BeNull();
     }
@@ -108,42 +108,42 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
         string[] secondKeys = ["video-480p"];
 
         await _recorder.RecordAsync(
-            context: _context,
-            mediaId: 99L,
-            folderId: "folder-dup",
-            title: "Dup Movie",
-            missingKeys: firstKeys,
-            lastError: "error-1",
-            attemptsMade: 1,
-            ct: CancellationToken.None
+            _context,
+            99L,
+            "folder-dup",
+            "Dup Movie",
+            firstKeys,
+            "error-1",
+            1,
+            CancellationToken.None
         );
 
         await _recorder.RecordAsync(
-            context: _context,
-            mediaId: 99L,
-            folderId: "folder-dup",
-            title: "Dup Movie",
-            missingKeys: secondKeys,
-            lastError: "error-2",
-            attemptsMade: 2,
-            ct: CancellationToken.None
+            _context,
+            99L,
+            "folder-dup",
+            "Dup Movie",
+            secondKeys,
+            "error-2",
+            2,
+            CancellationToken.None
         );
 
-        int count = await _context.IncompleteEncodes.CountAsync(predicate: r =>
+        int count = await _context.IncompleteEncodes.CountAsync(r =>
             r.MediaId == 99L && r.FolderId == "folder-dup"
         );
 
         count
             .Should()
-            .Be(expected: 1, because: "second RecordAsync must update the existing row, not insert a duplicate");
+            .Be(1, "second RecordAsync must update the existing row, not insert a duplicate");
 
         IncompleteEncode? row = await _context
             .IncompleteEncodes.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: r => r.MediaId == 99L && r.FolderId == "folder-dup");
+            .FirstOrDefaultAsync(r => r.MediaId == 99L && r.FolderId == "folder-dup");
 
-        row!.AttemptsMade.Should().Be(expected: 2);
-        row.LastError.Should().Be(expected: "error-2");
-        string[] split = row.MissingRenditions.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries);
-        split.Should().BeEquivalentTo(expectation: secondKeys);
+        row!.AttemptsMade.Should().Be(2);
+        row.LastError.Should().Be("error-2");
+        string[] split = row.MissingRenditions.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        split.Should().BeEquivalentTo(secondKeys);
     }
 }

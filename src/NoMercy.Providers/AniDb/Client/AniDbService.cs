@@ -27,13 +27,13 @@ public class AniDbService : IAniDbService
     private string _password = "";
     private SecureString? _apiKey;
 
-    private readonly Barrier _disconnectBarrier = new(participantCount: 2);
+    private readonly Barrier _disconnectBarrier = new(2);
     private readonly AniDBClient _client;
 
     public AniDbService()
     {
         _client = new(
-            options: new()
+            new()
             {
                 ClientName = "nomercy",
                 ClientVersion = 1,
@@ -41,7 +41,7 @@ public class AniDbService : IAniDbService
             }
         );
 
-        UserPass? userPass = CredentialManager.Credential(target: "AniDb");
+        UserPass? userPass = CredentialManager.Credential("AniDb");
         if (userPass == null)
             return;
 
@@ -51,7 +51,7 @@ public class AniDbService : IAniDbService
         if (userPass.ApiKey == null)
             return;
 
-        _apiKey = CredentialManager.ConvertToSecureString(password: userPass.ApiKey);
+        _apiKey = CredentialManager.ConvertToSecureString(userPass.ApiKey);
     }
 
     public void SetCredentials(string username, string password, string? apiKey)
@@ -62,22 +62,22 @@ public class AniDbService : IAniDbService
         if (apiKey == null)
             return;
 
-        _apiKey = CredentialManager.ConvertToSecureString(password: apiKey);
+        _apiKey = CredentialManager.ConvertToSecureString(apiKey);
     }
 
     public Task Init()
     {
         // Run on the thread pool so the connect/login finishes off-thread.
-        return Task.Run(action: () =>
+        return Task.Run(() =>
         {
             try
             {
                 _client.Connect();
-                _client.Login(callback: LoginCallback, username: _username, password: _password, api_key: _apiKey);
+                _client.Login(LoginCallback, _username, _password, _apiKey);
             }
             catch (Exception e)
             {
-                Logger.AniDb(message: e.Message, level: LogEventLevel.Fatal);
+                Logger.AniDb(e.Message, LogEventLevel.Fatal);
                 throw;
             }
         });
@@ -88,34 +88,34 @@ public class AniDbService : IAniDbService
         TaskCompletionSource<AniDBAnimeItem> tcs = new();
 
         _client.FetchRandomAnime(
-            callback: response =>
+            response =>
             {
-                Logger.AniDb(message: response.StatusCode.ToString());
-                Logger.AniDb(message: response.StatusMessage);
+                Logger.AniDb(response.StatusCode.ToString());
+                Logger.AniDb(response.StatusMessage);
 
                 response.GetMessageItem(
-                    index: 0,
-                    callback: new AniDbCallbackObject<AniDBAnimeItem>(callback: messageItem =>
+                    0,
+                    new AniDbCallbackObject<AniDBAnimeItem>(messageItem =>
                     {
                         messageItem.parseContentsDefault();
-                        tcs.SetResult(result: messageItem);
+                        tcs.SetResult(messageItem);
                     })
                 );
             },
-            source: RandomAnimeSource.ANY,
-            priority: 2
+            RandomAnimeSource.ANY,
+            2
         );
 
         // Guard against the AniDB UDP callback never firing: time out after 10s
         // (linked to the caller's token) instead of awaiting the task forever.
-        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(token: ct);
-        cts.CancelAfter(delay: TimeSpan.FromSeconds(seconds: 10));
-        return await tcs.Task.WaitAsync(cancellationToken: cts.Token);
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        return await tcs.Task.WaitAsync(cts.Token);
     }
 
     private static void LoginCallback(AniDBMessageResponse message)
     {
-        Logger.AniDb(message: message, level: LogEventLevel.Debug);
+        Logger.AniDb(message, LogEventLevel.Debug);
     }
 
     private void LogoutCallback(AniDBMessageResponse message)
@@ -129,7 +129,7 @@ public class AniDbService : IAniDbService
         if (_client.IsConnected)
             try
             {
-                _client.Logout(callback: LogoutCallback);
+                _client.Logout(LogoutCallback);
                 _disconnectBarrier.SignalAndWait();
             }
             catch (Exception)
@@ -137,6 +137,6 @@ public class AniDbService : IAniDbService
                 _client.Disconnect();
             }
 
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 }

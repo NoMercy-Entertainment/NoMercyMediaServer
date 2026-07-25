@@ -22,57 +22,57 @@ public class JsonCheckpointStoreTests : IDisposable
 
     public JsonCheckpointStoreTests()
     {
-        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"CheckpointStore_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempDir);
+        _tempDir = Path.Combine(Path.GetTempPath(), $"CheckpointStore_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
 
-        _store = new(storage: TestStorageFactory.CreateLocal(), logger: NullLogger<JsonCheckpointStore>.Instance);
+        _store = new(TestStorageFactory.CreateLocal(), NullLogger<JsonCheckpointStore>.Instance);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempDir))
-            Directory.Delete(path: _tempDir, recursive: true);
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
 
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
     public async Task Save_WritesCheckpointFileInOutputDirectory()
     {
-        JobCheckpoint checkpoint = Build(outputDirectory: _tempDir);
+        JobCheckpoint checkpoint = Build(_tempDir);
 
-        await _store.SaveAsync(checkpoint: checkpoint);
+        await _store.SaveAsync(checkpoint);
 
-        string expectedPath = Path.Combine(path1: _tempDir, path2: ".checkpoint.json");
-        File.Exists(path: expectedPath).Should().BeTrue();
+        string expectedPath = Path.Combine(_tempDir, ".checkpoint.json");
+        File.Exists(expectedPath).Should().BeTrue();
     }
 
     [Fact]
     public async Task Load_RoundTripsAllFields()
     {
         JobCheckpoint original = Build(
-            outputDirectory: _tempDir,
-            statsFilePath: "/tmp/x264-pass.log",
-            pass1Completed: true,
-            lastCompletedSegment: 42,
-            encodeMode: "TwoPass"
+            _tempDir,
+            "/tmp/x264-pass.log",
+            true,
+            42,
+            "TwoPass"
         );
 
-        await _store.SaveAsync(checkpoint: original);
-        JobCheckpoint? loaded = await _store.LoadAsync(outputDirectory: _tempDir);
+        await _store.SaveAsync(original);
+        JobCheckpoint? loaded = await _store.LoadAsync(_tempDir);
 
         loaded.Should().NotBeNull();
-        loaded!.JobId.Should().Be(expected: original.JobId);
-        loaded.StatsFilePath.Should().Be(expected: "/tmp/x264-pass.log");
+        loaded!.JobId.Should().Be(original.JobId);
+        loaded.StatsFilePath.Should().Be("/tmp/x264-pass.log");
         loaded.Pass1Completed.Should().BeTrue();
-        loaded.LastCompletedSegment.Should().Be(expected: 42);
-        loaded.EncodeMode.Should().Be(expected: "TwoPass");
+        loaded.LastCompletedSegment.Should().Be(42);
+        loaded.EncodeMode.Should().Be("TwoPass");
     }
 
     [Fact]
     public async Task Load_WhenFileMissing_ReturnsNull()
     {
-        JobCheckpoint? loaded = await _store.LoadAsync(outputDirectory: _tempDir);
+        JobCheckpoint? loaded = await _store.LoadAsync(_tempDir);
 
         loaded.Should().BeNull();
     }
@@ -80,10 +80,10 @@ public class JsonCheckpointStoreTests : IDisposable
     [Fact]
     public async Task Load_WhenFileCorrupt_ReturnsNull()
     {
-        string path = Path.Combine(path1: _tempDir, path2: ".checkpoint.json");
-        await File.WriteAllTextAsync(path: path, contents: "{ this is not valid json");
+        string path = Path.Combine(_tempDir, ".checkpoint.json");
+        await File.WriteAllTextAsync(path, "{ this is not valid json");
 
-        JobCheckpoint? loaded = await _store.LoadAsync(outputDirectory: _tempDir);
+        JobCheckpoint? loaded = await _store.LoadAsync(_tempDir);
 
         loaded.Should().BeNull();
     }
@@ -92,33 +92,33 @@ public class JsonCheckpointStoreTests : IDisposable
     public async Task Save_UpdatesLastUpdatedTimestamp()
     {
         DateTime before = DateTime.UtcNow;
-        JobCheckpoint checkpoint = Build(outputDirectory: _tempDir) with
+        JobCheckpoint checkpoint = Build(_tempDir) with
         {
-            LastUpdated = new(year: 2020, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc),
+            LastUpdated = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
         };
 
-        await _store.SaveAsync(checkpoint: checkpoint);
-        JobCheckpoint? loaded = await _store.LoadAsync(outputDirectory: _tempDir);
+        await _store.SaveAsync(checkpoint);
+        JobCheckpoint? loaded = await _store.LoadAsync(_tempDir);
 
-        loaded!.LastUpdated.Should().BeOnOrAfter(expected: before);
+        loaded!.LastUpdated.Should().BeOnOrAfter(before);
     }
 
     [Fact]
     public async Task Delete_RemovesCheckpointFile()
     {
-        JobCheckpoint checkpoint = Build(outputDirectory: _tempDir);
-        await _store.SaveAsync(checkpoint: checkpoint);
+        JobCheckpoint checkpoint = Build(_tempDir);
+        await _store.SaveAsync(checkpoint);
 
-        await _store.DeleteAsync(outputDirectory: _tempDir);
+        await _store.DeleteAsync(_tempDir);
 
-        string path = Path.Combine(path1: _tempDir, path2: ".checkpoint.json");
-        File.Exists(path: path).Should().BeFalse();
+        string path = Path.Combine(_tempDir, ".checkpoint.json");
+        File.Exists(path).Should().BeFalse();
     }
 
     [Fact]
     public async Task Delete_WhenFileMissing_DoesNotThrow()
     {
-        await _store.DeleteAsync(outputDirectory: _tempDir);
+        await _store.DeleteAsync(_tempDir);
 
         // No assertion needed — reaching this line without exception is the test.
         true.Should().BeTrue();
@@ -127,13 +127,13 @@ public class JsonCheckpointStoreTests : IDisposable
     [Fact]
     public async Task Save_CreatesOutputDirectoryIfMissing()
     {
-        string missingDir = Path.Combine(path1: _tempDir, path2: "nested", path3: "output");
-        JobCheckpoint checkpoint = Build(outputDirectory: missingDir);
+        string missingDir = Path.Combine(_tempDir, "nested", "output");
+        JobCheckpoint checkpoint = Build(missingDir);
 
-        await _store.SaveAsync(checkpoint: checkpoint);
+        await _store.SaveAsync(checkpoint);
 
-        Directory.Exists(path: missingDir).Should().BeTrue();
-        File.Exists(path: Path.Combine(path1: missingDir, path2: ".checkpoint.json")).Should().BeTrue();
+        Directory.Exists(missingDir).Should().BeTrue();
+        File.Exists(Path.Combine(missingDir, ".checkpoint.json")).Should().BeTrue();
     }
 
     private static JobCheckpoint Build(
@@ -144,14 +144,14 @@ public class JsonCheckpointStoreTests : IDisposable
         string? encodeMode = null
     ) =>
         new(
-            JobId: "job-" + Guid.NewGuid().ToString(format: "N")[..8],
-            InputPath: "/media/source.mkv",
-            OutputDirectory: outputDirectory,
-            CompletedGroupIndices: [0, 1],
-            LastUpdated: DateTime.UtcNow,
-            StatsFilePath: statsFilePath,
-            Pass1Completed: pass1Completed,
-            LastCompletedSegment: lastCompletedSegment,
-            EncodeMode: encodeMode
+            "job-" + Guid.NewGuid().ToString("N")[..8],
+            "/media/source.mkv",
+            outputDirectory,
+            [0, 1],
+            DateTime.UtcNow,
+            statsFilePath,
+            pass1Completed,
+            lastCompletedSegment,
+            encodeMode
         );
 }

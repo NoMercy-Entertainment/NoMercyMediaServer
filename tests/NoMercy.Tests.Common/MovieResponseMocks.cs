@@ -30,7 +30,7 @@ public class MovieResponseMocks
     /// <summary>The raw recorded JSON (for HTTP-level response mocking).</summary>
     public static string MovieAppendsResponseJson()
     {
-        return LoadResource(fileName: "MovieAppendsResponse.json");
+        return LoadResource("MovieAppendsResponse.json");
     }
 
     private static string LoadResource(string fileName)
@@ -38,10 +38,10 @@ public class MovieResponseMocks
         Assembly assembly = typeof(MovieResponseMocks).Assembly;
         string resourceName = assembly
             .GetManifestResourceNames()
-            .Single(predicate: name => name.EndsWith(value: fileName, comparisonType: StringComparison.Ordinal));
+            .Single(name => name.EndsWith(fileName, StringComparison.Ordinal));
 
-        using Stream stream = assembly.GetManifestResourceStream(name: resourceName)!;
-        using StreamReader reader = new(stream: stream);
+        using Stream stream = assembly.GetManifestResourceStream(resourceName)!;
+        using StreamReader reader = new(stream);
         return reader.ReadToEnd();
     }
 }

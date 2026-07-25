@@ -34,7 +34,7 @@ public class ProcessResourceMonitorBranchTests
     [Fact]
     public async Task SampleGpu_returns_empty_list_without_vendor_sampler()
     {
-        ProcessResourceMonitor sut = new(logger: NullLogger<ProcessResourceMonitor>.Instance);
+        ProcessResourceMonitor sut = new(NullLogger<ProcessResourceMonitor>.Instance);
 
         IReadOnlyList<GpuProcessSample> samples = await sut.SampleGpuAsync();
 
@@ -45,7 +45,7 @@ public class ProcessResourceMonitorBranchTests
     public async Task SampleGpu_logs_unsupported_warning_exactly_once()
     {
         Mock<ILogger<ProcessResourceMonitor>> logger = new();
-        ProcessResourceMonitor sut = new(logger: logger.Object);
+        ProcessResourceMonitor sut = new(logger.Object);
 
         await sut.SampleGpuAsync();
         await sut.SampleGpuAsync();
@@ -53,7 +53,7 @@ public class ProcessResourceMonitorBranchTests
 
         // The warning is gated by _gpuWarningLogged — three calls, ONE log.
         logger.Verify(
-            expression: l =>
+            l =>
                 l.Log(
                     LogLevel.Warning,
                     It.IsAny<EventId>(),
@@ -61,7 +61,7 @@ public class ProcessResourceMonitorBranchTests
                     It.IsAny<Exception?>(),
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -90,12 +90,12 @@ public class ProcessResourceMonitorBranchTests
     {
         // The internal _snapshotLock guards the snapshot/cpuTime fields against
         // torn reads under concurrent calls. Hammer it from multiple threads.
-        ProcessResourceMonitor sut = new(logger: NullLogger<ProcessResourceMonitor>.Instance);
+        ProcessResourceMonitor sut = new(NullLogger<ProcessResourceMonitor>.Instance);
 
         Task[] tasks = Enumerable
-            .Range(start: 0, count: 16)
-            .Select(selector: _ =>
-                Task.Run(action: () =>
+            .Range(0, 16)
+            .Select(_ =>
+                Task.Run(() =>
                 {
                     for (int i = 0; i < 100; i++)
                         sut.GetCpuUsagePercent();
@@ -103,7 +103,7 @@ public class ProcessResourceMonitorBranchTests
             )
             .ToArray();
 
-        Func<Task> act = () => Task.WhenAll(tasks: tasks);
+        Func<Task> act = () => Task.WhenAll(tasks);
         await act.Should().NotThrowAsync();
     }
 
@@ -114,14 +114,14 @@ public class ProcessResourceMonitorBranchTests
     {
         // Two back-to-back calls with sub-ms elapsed should NOT yield NaN /
         // negative — the elapsedMs < 1 guard returns 0.
-        ProcessResourceMonitor sut = new(logger: NullLogger<ProcessResourceMonitor>.Instance);
+        ProcessResourceMonitor sut = new(NullLogger<ProcessResourceMonitor>.Instance);
 
         sut.GetCpuUsagePercent();
         double second = sut.GetCpuUsagePercent();
 
-        second.Should().BeGreaterThanOrEqualTo(expected: 0);
-        second.Should().BeLessThanOrEqualTo(expected: 100);
-        double.IsNaN(d: second).Should().BeFalse();
+        second.Should().BeGreaterThanOrEqualTo(0);
+        second.Should().BeLessThanOrEqualTo(100);
+        double.IsNaN(second).Should().BeFalse();
     }
 
     // ── Baseline isolation between GetCpuUsagePercent and SampleProcessFamilyCpu ──
@@ -135,42 +135,42 @@ public class ProcessResourceMonitorBranchTests
     [Fact]
     public void SampleProcessFamilyCpu_DoesNotClobber_GetCpuUsagePercentBaseline()
     {
-        ProcessResourceMonitor sut = new(logger: NullLogger<ProcessResourceMonitor>.Instance);
+        ProcessResourceMonitor sut = new(NullLogger<ProcessResourceMonitor>.Instance);
 
         sut.GetCpuUsagePercent();
-        TimeSpan baselineAfterOwnCall = GetPrivateField<TimeSpan>(instance: sut, fieldName: "_lastCpuTime");
+        TimeSpan baselineAfterOwnCall = GetPrivateField<TimeSpan>(sut, "_lastCpuTime");
 
         // Burn a little CPU so SampleProcessFamilyCpu's own reading has moved,
         // then call it — pre-fix this call wrote into _lastCpuTime too.
         for (int i = 0; i < 10_000; i++)
-            _ = Math.Sqrt(d: i);
+            _ = Math.Sqrt(i);
         sut.SampleProcessFamilyCpu();
         sut.SampleProcessFamilyCpu();
 
-        TimeSpan baselineAfterFamilySample = GetPrivateField<TimeSpan>(instance: sut, fieldName: "_lastCpuTime");
+        TimeSpan baselineAfterFamilySample = GetPrivateField<TimeSpan>(sut, "_lastCpuTime");
 
-        baselineAfterFamilySample.Should().Be(expected: baselineAfterOwnCall);
+        baselineAfterFamilySample.Should().Be(baselineAfterOwnCall);
     }
 
     [Fact]
     public void GetCpuUsagePercent_DoesNotClobber_SampleProcessFamilyCpuBaseline()
     {
-        ProcessResourceMonitor sut = new(logger: NullLogger<ProcessResourceMonitor>.Instance);
+        ProcessResourceMonitor sut = new(NullLogger<ProcessResourceMonitor>.Instance);
 
         sut.SampleProcessFamilyCpu();
-        TimeSpan baselineAfterOwnCall = GetPrivateField<TimeSpan>(instance: sut, fieldName: "_lastProcessFamilyCpuTime");
+        TimeSpan baselineAfterOwnCall = GetPrivateField<TimeSpan>(sut, "_lastProcessFamilyCpuTime");
 
         for (int i = 0; i < 10_000; i++)
-            _ = Math.Sqrt(d: i);
+            _ = Math.Sqrt(i);
         sut.GetCpuUsagePercent();
         sut.GetCpuUsagePercent();
 
         TimeSpan baselineAfterCpuUsageCalls = GetPrivateField<TimeSpan>(
-            instance: sut,
-            fieldName: "_lastProcessFamilyCpuTime"
+            sut,
+            "_lastProcessFamilyCpuTime"
         );
 
-        baselineAfterCpuUsageCalls.Should().Be(expected: baselineAfterOwnCall);
+        baselineAfterCpuUsageCalls.Should().Be(baselineAfterOwnCall);
     }
 
     [Fact]
@@ -178,20 +178,20 @@ public class ProcessResourceMonitorBranchTests
     {
         // Hammer both samplers from multiple threads — neither baseline field
         // should ever throw, and each converges on its own last-seen CPU time.
-        ProcessResourceMonitor sut = new(logger: NullLogger<ProcessResourceMonitor>.Instance);
+        ProcessResourceMonitor sut = new(NullLogger<ProcessResourceMonitor>.Instance);
 
-        Task cpuUsageLoop = Task.Run(action: () =>
+        Task cpuUsageLoop = Task.Run(() =>
         {
             for (int i = 0; i < 200; i++)
                 sut.GetCpuUsagePercent();
         });
-        Task familyLoop = Task.Run(action: () =>
+        Task familyLoop = Task.Run(() =>
         {
             for (int i = 0; i < 200; i++)
                 sut.SampleProcessFamilyCpu();
         });
 
-        Func<Task> act = () => Task.WhenAll(tasks: [cpuUsageLoop, familyLoop]);
+        Func<Task> act = () => Task.WhenAll([cpuUsageLoop, familyLoop]);
 
         await act.Should().NotThrowAsync();
     }
@@ -200,8 +200,8 @@ public class ProcessResourceMonitorBranchTests
     {
         FieldInfo? field = instance
             .GetType()
-            .GetField(name: fieldName, bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance);
-        field.Should().NotBeNull(because: $"field {fieldName} should exist on {instance.GetType().Name}");
-        return (T)field!.GetValue(obj: instance)!;
+            .GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
+        field.Should().NotBeNull($"field {fieldName} should exist on {instance.GetType().Name}");
+        return (T)field!.GetValue(instance)!;
     }
 }

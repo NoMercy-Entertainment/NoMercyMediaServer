@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Logging;
 using NoMercy.Authorization;
 
 namespace NoMercy.Service.Authorization;
@@ -35,23 +34,23 @@ public class MediaAuthorizationHandler(
             {
                 switch (requirement)
                 {
-                    case OwnerRequirement when policy.IsOwner(principal: context.User):
-                        context.Succeed(requirement: requirement);
+                    case OwnerRequirement when policy.IsOwner(context.User):
+                        context.Succeed(requirement);
                         break;
-                    case ModeratorRequirement when policy.IsModerator(principal: context.User):
-                        context.Succeed(requirement: requirement);
+                    case ModeratorRequirement when policy.IsModerator(context.User):
+                        context.Succeed(requirement);
                         break;
-                    case MediaAccessRequirement when policy.IsAllowed(principal: context.User):
-                        context.Succeed(requirement: requirement);
+                    case MediaAccessRequirement when policy.IsAllowed(context.User):
+                        context.Succeed(requirement);
                         break;
                 }
             }
             catch (Exception ex)
             {
                 logger.LogError(
-                    exception: ex,
-                    message: "Authorization check {Requirement} threw — denying",
-                    args: requirement.GetType().Name
+                    ex,
+                    "Authorization check {Requirement} threw — denying",
+                    requirement.GetType().Name
                 );
             }
         }

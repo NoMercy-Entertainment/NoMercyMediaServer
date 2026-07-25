@@ -54,60 +54,60 @@ public sealed record SmbDriverConfig(string Host, string Share, int Port, int Ti
         SmbDriverConfigRaw? raw;
         try
         {
-            raw = JsonSerializer.Deserialize<SmbDriverConfigRaw>(json: json, options: ParseOptions);
+            raw = JsonSerializer.Deserialize<SmbDriverConfigRaw>(json, ParseOptions);
         }
         catch (JsonException ex)
         {
             throw new ArgumentException(
-                message: $"Failed to parse driver_config for SMB folder {folderId}: {ex.Message}",
-                paramName: nameof(json),
-                innerException: ex
+                $"Failed to parse driver_config for SMB folder {folderId}: {ex.Message}",
+                nameof(json),
+                ex
             );
         }
 
         if (raw is null)
             throw new ArgumentException(
-                message: $"driver_config deserialized to null for SMB folder {folderId}.",
-                paramName: nameof(json)
+                $"driver_config deserialized to null for SMB folder {folderId}.",
+                nameof(json)
             );
 
-        if (string.IsNullOrWhiteSpace(value: raw.Host))
+        if (string.IsNullOrWhiteSpace(raw.Host))
             throw new ArgumentException(
-                message: $"driver_config.host is required for SMB folder {folderId}.",
-                paramName: nameof(json)
+                $"driver_config.host is required for SMB folder {folderId}.",
+                nameof(json)
             );
 
-        if (string.IsNullOrWhiteSpace(value: raw.Share))
+        if (string.IsNullOrWhiteSpace(raw.Share))
             throw new ArgumentException(
-                message: $"driver_config.share is required for SMB folder {folderId}.",
-                paramName: nameof(json)
+                $"driver_config.share is required for SMB folder {folderId}.",
+                nameof(json)
             );
 
         int port = raw.Port ?? 445;
         if (port is <= 0 or > 65535)
             throw new ArgumentException(
-                message: $"driver_config.port must be in 1..65535 for SMB folder {folderId} (got {port}).",
-                paramName: nameof(json)
+                $"driver_config.port must be in 1..65535 for SMB folder {folderId} (got {port}).",
+                nameof(json)
             );
 
         int timeout = raw.TimeoutSeconds ?? 30;
         if (timeout <= 0)
             throw new ArgumentException(
-                message: $"driver_config.timeoutSeconds must be positive for SMB folder {folderId} (got {timeout}).",
-                paramName: nameof(json)
+                $"driver_config.timeoutSeconds must be positive for SMB folder {folderId} (got {timeout}).",
+                nameof(json)
             );
 
-        return new(Host: raw.Host.Trim(), Share: NormalizeShare(share: raw.Share), Port: port, TimeoutSeconds: timeout)
+        return new(raw.Host.Trim(), NormalizeShare(raw.Share), port, timeout)
         {
             Domain = raw.Domain?.Trim() ?? string.Empty,
-            BasePath = NormalizePath(path: raw.Path),
+            BasePath = NormalizePath(raw.Path),
         };
     }
 
-    private static string NormalizeShare(string share) => share.Trim().Trim(trimChars: ['/', '\\']);
+    private static string NormalizeShare(string share) => share.Trim().Trim(['/', '\\']);
 
     private static string NormalizePath(string? path) =>
-        string.IsNullOrWhiteSpace(value: path) ? string.Empty : path.Replace(oldChar: '\\', newChar: '/').Trim(trimChar: '/');
+        string.IsNullOrWhiteSpace(path) ? string.Empty : path.Replace('\\', '/').Trim('/');
 
     // -----------------------------------------------------------------------
     // Overload for unit tests that supply individual fields without JSON
@@ -122,20 +122,20 @@ public sealed record SmbDriverConfig(string Host, string Share, int Port, int Ti
         int port = 445,
         int timeoutSeconds = 30
     ) =>
-        new(Host: host, Share: NormalizeShare(share: share), Port: port, TimeoutSeconds: timeoutSeconds)
+        new(host, NormalizeShare(share), port, timeoutSeconds)
         {
             Username = username,
             Password = password,
             Domain = domain,
-            BasePath = NormalizePath(path: basePath),
+            BasePath = NormalizePath(basePath),
         };
 
     private sealed record SmbDriverConfigRaw(
-        [property: JsonPropertyName(name: "host")] string? Host,
-        [property: JsonPropertyName(name: "share")] string? Share,
-        [property: JsonPropertyName(name: "path")] string? Path,
-        [property: JsonPropertyName(name: "domain")] string? Domain,
-        [property: JsonPropertyName(name: "port")] int? Port,
-        [property: JsonPropertyName(name: "timeoutSeconds")] int? TimeoutSeconds
+        [property: JsonPropertyName("host")] string? Host,
+        [property: JsonPropertyName("share")] string? Share,
+        [property: JsonPropertyName("path")] string? Path,
+        [property: JsonPropertyName("domain")] string? Domain,
+        [property: JsonPropertyName("port")] int? Port,
+        [property: JsonPropertyName("timeoutSeconds")] int? TimeoutSeconds
     );
 }

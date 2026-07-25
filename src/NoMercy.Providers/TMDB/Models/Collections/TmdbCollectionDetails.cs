@@ -16,9 +16,9 @@ namespace NoMercy.Providers.TMDB.Models.Collections;
 
 public class TmdbCollectionDetails : TmdbCollection
 {
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string Overview { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "parts")]
+    [JsonProperty("parts")]
     public TmdbMovie[] Parts { get; set; } = [];
 }

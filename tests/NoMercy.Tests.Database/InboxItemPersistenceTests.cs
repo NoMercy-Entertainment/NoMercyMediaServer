@@ -22,9 +22,9 @@ public class InboxItemPersistenceTests : IDisposable
     public InboxItemPersistenceTests()
     {
         DbContextOptionsBuilder<MediaContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
+        optionsBuilder.UseSqlite("Data Source=:memory:");
 
-        _context = new(options: optionsBuilder.Options);
+        _context = new(optionsBuilder.Options);
         _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
     }
@@ -60,13 +60,13 @@ public class InboxItemPersistenceTests : IDisposable
             ],
         };
 
-        _context.InboxItems.Add(entity: item);
+        _context.InboxItems.Add(item);
         await _context.SaveChangesAsync();
 
-        InboxItem loaded = await _context.InboxItems.SingleAsync(predicate: i => i.Id == id);
+        InboxItem loaded = await _context.InboxItems.SingleAsync(i => i.Id == id);
 
-        Assert.Single(collection: loaded.Candidates);
-        Assert.Equal(expected: "The Matrix", actual: loaded.Candidates[0].Title);
-        Assert.Equal(expected: 1999, actual: loaded.Candidates[0].Year);
+        Assert.Single(loaded.Candidates);
+        Assert.Equal("The Matrix", loaded.Candidates[0].Title);
+        Assert.Equal(1999, loaded.Candidates[0].Year);
     }
 }

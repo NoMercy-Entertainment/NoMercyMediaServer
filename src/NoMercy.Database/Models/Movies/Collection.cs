@@ -16,52 +16,52 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Movies;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(Title))]
-[Index(propertyName: nameof(TitleSort))]
-[Index(propertyName: nameof(LibraryId))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(Title))]
+[Index(nameof(TitleSort))]
+[Index(nameof(LibraryId))]
 public class Collection : ColorPaletteTimeStamps, IHasLibrary
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "title_sort")]
+    [JsonProperty("title_sort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [MaxLength(length: 4096)]
-    [JsonProperty(propertyName: "overview")]
+    [MaxLength(4096)]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "parts")]
+    [JsonProperty("parts")]
     public int Parts { get; set; }
 
-    [JsonProperty(propertyName: "library_id")]
+    [JsonProperty("library_id")]
     public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;
 
-    [JsonProperty(propertyName: "collection_movies")]
+    [JsonProperty("collection_movies")]
     public ICollection<CollectionMovie> CollectionMovies { get; set; } = [];
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public ICollection<Translation> Translations { get; set; } = [];
 
-    [JsonProperty(propertyName: "images")]
+    [JsonProperty("images")]
     public ICollection<Image> Images { get; set; } = [];
 
-    [JsonProperty(propertyName: "collection_user")]
+    [JsonProperty("collection_user")]
     public ICollection<CollectionUser> CollectionUser { get; set; } = [];
 
-    [JsonProperty(propertyName: "user_data")]
+    [JsonProperty("user_data")]
     public ICollection<UserData> UserData { get; set; } = [];
 
     // public Collection(TmdbCollectionAppends tmdbCollection, Ulid libraryId)

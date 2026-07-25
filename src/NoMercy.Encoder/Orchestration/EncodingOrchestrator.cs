@@ -53,39 +53,39 @@ public class EncodingOrchestrator(
         {
             string gpuName = request.Profile.Name;
 
-            nvencCap.EnforceForGpuEncode(gpuName: gpuName, requiresGpu: true);
+            nvencCap.EnforceForGpuEncode(gpuName, true);
         }
 
         OutputFormat profileFormat = PlanStageHelpers.ContainerToOutputFormat(
-            container: request.Profile.Container
+            request.Profile.Container
         );
 
-        IEncodingStrategy? strategy = resolver.Resolve(format: profileFormat, mode: request.Profile.EncodeMode);
+        IEncodingStrategy? strategy = resolver.Resolve(profileFormat, request.Profile.EncodeMode);
 
         if (strategy is null)
         {
             EncodingError error = new(
-                Kind: EncodingErrorKind.Unknown,
-                Message: $"No strategy registered for {profileFormat} / "
+                EncodingErrorKind.Unknown,
+                $"No strategy registered for {profileFormat} / "
                     + $"{request.Profile.EncodeMode}. Register an IEncodingStrategy implementation "
                     + "for this combination.",
-                FfmpegStderr: null,
-                StageName: "Orchestrator",
-                Recoverable: false
+                null,
+                "Orchestrator",
+                false
             );
-            progress?.OnError(error: error);
+            progress?.OnError(error);
             EncoderErrorShape errorShape = new(
-                Id: EncoderRuleId.EncoderInitFailed,
-                Message: error.Message,
-                Suggestion: "Register an IEncodingStrategy for this format + mode combination.",
-                Details: null
+                EncoderRuleId.EncoderInitFailed,
+                error.Message,
+                "Register an IEncodingStrategy for this format + mode combination.",
+                null
             );
             return new(
-                Success: false,
-                OutputPath: string.Empty,
-                Duration: TimeSpan.Zero,
-                Error: error,
-                Metrics: new(OutputSizeBytes: 0, AverageSpeed: 0, AverageFps: 0, EncoderUsed: string.Empty, GpuUsed: null)
+                false,
+                string.Empty,
+                TimeSpan.Zero,
+                error,
+                new(0, 0, 0, string.Empty, null)
             )
             {
                 Status = "failed",
@@ -94,7 +94,7 @@ public class EncodingOrchestrator(
         }
 
         logger.LogInformation(
-            message: "Dispatching to {Strategy} ({Format}/{Mode}) for {Input}", args: [strategy.GetType().Name, strategy.Format, strategy.EncodeMode, request.InputPath]
+            "Dispatching to {Strategy} ({Format}/{Mode}) for {Input}", [strategy.GetType().Name, strategy.Format, strategy.EncodeMode, request.InputPath]
         );
 
         // Resolve per-request storages. Jobs supply per-folder IStorage instances
@@ -117,15 +117,15 @@ public class EncodingOrchestrator(
             // overlapping the two (streaming ffmpeg's input) is worth the work.
             Stopwatch stagingWatch = Stopwatch.StartNew();
             await using LocalPathLease lease = await sourceStorage.AcquireLocalPathAsync(
-                path: request.InputPath,
-                ct: ct
+                request.InputPath,
+                ct
             );
             stagingWatch.Stop();
-            LogStaging(inputPath: request.InputPath, sourceStorage: sourceStorage, leasePath: lease.Path, elapsed: stagingWatch.Elapsed);
+            LogStaging(request.InputPath, sourceStorage, lease.Path, stagingWatch.Elapsed);
 
             EncodingResult result;
 
-            Directory.CreateDirectory(path: StoragePaths.TranscodeRoot);
+            Directory.CreateDirectory(StoragePaths.TranscodeRoot);
             // Mirror the final OutputDirectory structure under the transcoding root
             // so working files land at e.g.,
             //   cache/encoder/<Show>.(<Year>)/<Show>.SixEx/
@@ -143,18 +143,18 @@ public class EncodingOrchestrator(
             // the root for. Checking here, cross-platform, up front, closes
             // that gap on every platform instead of relying on the host OS
             // to recognize its own rootedness notation.
-            if (StoragePathGuard.IsRootedAnyStyle(path: rawOutputDirectory))
+            if (StoragePathGuard.IsRootedAnyStyle(rawOutputDirectory))
                 throw new InvalidOperationException(
-                    message: $"Encoder OutputDirectory '{rawOutputDirectory}' is a rooted path. "
+                    $"Encoder OutputDirectory '{rawOutputDirectory}' is a rooted path. "
                              + "OutputDirectory must resolve to a path under the transcode root — "
                              + "check for a rooted path or '..' traversal."
                 );
-            string relativeOutputPath = rawOutputDirectory.Replace(oldChar: '\\', newChar: '/').Trim(trimChar: '/');
-            string tempDir = string.IsNullOrEmpty(value: relativeOutputPath)
-                ? Path.Combine(path1: StoragePaths.TranscodeRoot, path2: $"nomercy-enc-{Ulid.NewUlid()}")
+            string relativeOutputPath = rawOutputDirectory.Replace('\\', '/').Trim('/');
+            string tempDir = string.IsNullOrEmpty(relativeOutputPath)
+                ? Path.Combine(StoragePaths.TranscodeRoot, $"nomercy-enc-{Ulid.NewUlid()}")
                 : Path.Combine(
-                    path1: StoragePaths.TranscodeRoot,
-                    path2: relativeOutputPath.Replace(oldChar: '/', newChar: Path.DirectorySeparatorChar)
+                    StoragePaths.TranscodeRoot,
+                    relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
                 );
             // request.OutputDirectory is documented as relative, but nothing
             // structurally enforces that beyond the rootedness check above: a
@@ -162,7 +162,7 @@ public class EncodingOrchestrator(
             // rooted path does. Reject anything that resolves outside
             // TranscodeRoot before it's ever created or (on the cleanup path
             // below) recursively deleted.
-            tempDir = EnsureWithinTranscodeRoot(candidateTempDir: tempDir);
+            tempDir = EnsureWithinTranscodeRoot(tempDir);
             // CreateDirectory is idempotent — returns the existing DirectoryInfo
             // when the path already exists. FFmpeg's -y overwrites any stale
             // segments from a prior run, so wiping isn't necessary, and a
@@ -171,21 +171,21 @@ public class EncodingOrchestrator(
             // ffmpeg.exe boots a moment later).
             try
             {
-                Directory.CreateDirectory(path: tempDir);
+                Directory.CreateDirectory(tempDir);
             }
             catch (Exception ex)
             {
-                logger.LogError(exception: ex, message: "Failed to create encoder temp dir {TempDir}", args: tempDir);
+                logger.LogError(ex, "Failed to create encoder temp dir {TempDir}", tempDir);
                 throw;
             }
 
-            if (!Directory.Exists(path: tempDir))
+            if (!Directory.Exists(tempDir))
             {
                 logger.LogWarning(
-                    message: "Encoder temp dir {TempDir} not present after CreateDirectory — recreating",
-                    args: tempDir
+                    "Encoder temp dir {TempDir} not present after CreateDirectory — recreating",
+                    tempDir
                 );
-                Directory.CreateDirectory(path: tempDir);
+                Directory.CreateDirectory(tempDir);
             }
 
             try
@@ -209,7 +209,7 @@ public class EncodingOrchestrator(
                     OriginalOutputDirectory = request.OutputDirectory,
                 };
 
-                result = await strategy.EncodeAsync(request: stagedRequest, progress: progress, ct: ct);
+                result = await strategy.EncodeAsync(stagedRequest, progress, ct);
                 wall.Stop();
 
                 // Sits next to the staging line so the log shows the split
@@ -217,11 +217,11 @@ public class EncodingOrchestrator(
                 // wall spans staging+encode (it feeds total-duration stats below),
                 // so subtract staging to report encode-only here.
                 double encodeOnlySeconds = Math.Max(
-                    val1: 0,
-                    val2: wall.Elapsed.TotalSeconds - stagingWatch.Elapsed.TotalSeconds
+                    0,
+                    wall.Elapsed.TotalSeconds - stagingWatch.Elapsed.TotalSeconds
                 );
                 logger.LogInformation(
-                    message: "Encode finished in {Seconds:F1}s (excludes {Staging:F1}s staging) [{Input}]", args: [encodeOnlySeconds, stagingWatch.Elapsed.TotalSeconds, request.InputPath]
+                    "Encode finished in {Seconds:F1}s (excludes {Staging:F1}s staging) [{Input}]", [encodeOnlySeconds, stagingWatch.Elapsed.TotalSeconds, request.InputPath]
                 );
 
                 // Per-task encodes (TaskFilter set on EncodingOptions) write
@@ -247,11 +247,11 @@ public class EncodingOrchestrator(
                 if (result.Success && !isPerTaskRun)
                 {
                     await PublishTempDirAsync(
-                        tempDir: tempDir,
-                        outputDirectory: request.OutputDirectory ?? string.Empty,
-                        destinationStorage: destinationStorage,
-                        progress: progress,
-                        ct: ct
+                        tempDir,
+                        request.OutputDirectory ?? string.Empty,
+                        destinationStorage,
+                        progress,
+                        ct
                     );
                 }
             }
@@ -270,14 +270,14 @@ public class EncodingOrchestrator(
                         // tempDir is already containment-checked above, but a
                         // rooted-path or traversal escape here would otherwise
                         // recursively delete whatever directory it resolved to.
-                        Directory.Delete(path: EnsureWithinTranscodeRoot(candidateTempDir: tempDir), recursive: true);
+                        Directory.Delete(EnsureWithinTranscodeRoot(tempDir), true);
                     }
                     catch (Exception cleanEx)
                     {
                         logger.LogWarning(
-                            exception: cleanEx,
-                            message: "Could not clean up temp encode dir {TempDir}",
-                            args: tempDir
+                            cleanEx,
+                            "Could not clean up temp encode dir {TempDir}",
+                            tempDir
                         );
                     }
                 }
@@ -291,38 +291,38 @@ public class EncodingOrchestrator(
                     EnrichedError =
                         result.EnrichedError
                         ?? new EncoderErrorShape(
-                            Id: EncoderRuleId.EncoderInitFailed,
-                            Message: result.Error?.Message ?? "Encode failed with no details.",
-                            Suggestion: null,
-                            Details: null
+                            EncoderRuleId.EncoderInitFailed,
+                            result.Error?.Message ?? "Encode failed with no details.",
+                            null,
+                            null
                         ),
                 };
             }
 
             IReadOnlyList<OutputArtifact> artifacts = await BuildArtifactsAsync(
-                outputDirectory: request.OutputDirectory ?? string.Empty,
-                stor: destinationStorage,
-                ct: ct
+                request.OutputDirectory ?? string.Empty,
+                destinationStorage,
+                ct
             );
 
             // OutputBytes counts everything on disk (segments + sidecars +
             // thumbnails); artifacts are stream-level only. Walk separately.
             long outputBytes = await SumOutputBytesAsync(
-                outputDirectory: request.OutputDirectory ?? string.Empty,
-                stor: destinationStorage,
-                ct: ct
+                request.OutputDirectory ?? string.Empty,
+                destinationStorage,
+                ct
             );
-            long sourceBytes = await GetSourceBytesAsync(inputPath: request.InputPath, stor: sourceStorage, ct: ct);
+            long sourceBytes = await GetSourceBytesAsync(request.InputPath, sourceStorage, ct);
             double durationSec = wall.Elapsed.TotalSeconds;
             double avgFps = result.Metrics?.AverageFps ?? 0;
             int bitrateKbps = durationSec > 0 ? (int)(outputBytes * 8L / (durationSec * 1000)) : 0;
 
             EncodeStats stats = new(
-                DurationSeconds: durationSec,
-                AvgFps: avgFps,
-                OutputBitrateKbps: bitrateKbps,
-                SourceBytes: sourceBytes,
-                OutputBytes: outputBytes
+                durationSec,
+                avgFps,
+                bitrateKbps,
+                sourceBytes,
+                outputBytes
             );
 
             return result with
@@ -336,14 +336,14 @@ public class EncodingOrchestrator(
         {
             wall.Stop();
             logger.LogWarning(
-                message: "Encode cancelled for {Input} after {Elapsed:F1}s", args: [request.InputPath, wall.Elapsed.TotalSeconds]
+                "Encode cancelled for {Input} after {Elapsed:F1}s", [request.InputPath, wall.Elapsed.TotalSeconds]
             );
             return new(
-                Success: false,
-                OutputPath: string.Empty,
-                Duration: wall.Elapsed,
-                Error: null,
-                Metrics: null
+                false,
+                string.Empty,
+                wall.Elapsed,
+                null,
+                null
             )
             {
                 Status = "cancelled",
@@ -353,23 +353,23 @@ public class EncodingOrchestrator(
         {
             wall.Stop();
             logger.LogError(
-                exception: rex,
-                message: "Encoder runtime failure for {Input}: [{Id}] {Message}", args: [request.InputPath, rex.Shape.Id, rex.Shape.Message]
+                rex,
+                "Encoder runtime failure for {Input}: [{Id}] {Message}", [request.InputPath, rex.Shape.Id, rex.Shape.Message]
             );
             EncodingError error = new(
-                Kind: EncodingErrorKind.Unknown,
-                Message: rex.Shape.Message,
-                FfmpegStderr: null,
-                StageName: "Orchestrator",
-                Recoverable: false
+                EncodingErrorKind.Unknown,
+                rex.Shape.Message,
+                null,
+                "Orchestrator",
+                false
             );
-            progress?.OnError(error: error);
+            progress?.OnError(error);
             return new(
-                Success: false,
-                OutputPath: string.Empty,
-                Duration: wall.Elapsed,
-                Error: error,
-                Metrics: null
+                false,
+                string.Empty,
+                wall.Elapsed,
+                error,
+                null
             )
             {
                 Status = "failed",
@@ -379,27 +379,27 @@ public class EncodingOrchestrator(
         catch (Exception ex)
         {
             wall.Stop();
-            logger.LogError(exception: ex, message: "Unexpected error encoding {Input}", args: request.InputPath);
+            logger.LogError(ex, "Unexpected error encoding {Input}", request.InputPath);
             EncodingError error = new(
-                Kind: EncodingErrorKind.Unknown,
-                Message: ex.Message,
-                FfmpegStderr: null,
-                StageName: "Orchestrator",
-                Recoverable: false
+                EncodingErrorKind.Unknown,
+                ex.Message,
+                null,
+                "Orchestrator",
+                false
             );
-            progress?.OnError(error: error);
+            progress?.OnError(error);
             EncoderErrorShape errorShape = new(
-                Id: EncoderRuleId.EncoderInitFailed,
-                Message: ex.Message,
-                Suggestion: null,
-                Details: null
+                EncoderRuleId.EncoderInitFailed,
+                ex.Message,
+                null,
+                null
             );
             return new(
-                Success: false,
-                OutputPath: string.Empty,
-                Duration: wall.Elapsed,
-                Error: error,
-                Metrics: null
+                false,
+                string.Empty,
+                wall.Elapsed,
+                error,
+                null
             )
             {
                 Status = "failed",
@@ -422,9 +422,9 @@ public class EncodingOrchestrator(
     )
     {
         bool staged = !string.Equals(
-            a: Path.GetFullPath(path: leasePath),
-            b: SafeFullPath(path: inputPath),
-            comparisonType: StringComparison.OrdinalIgnoreCase
+            Path.GetFullPath(leasePath),
+            SafeFullPath(inputPath),
+            StringComparison.OrdinalIgnoreCase
         );
         if (!staged)
             return;
@@ -432,7 +432,7 @@ public class EncodingOrchestrator(
         long bytes = 0;
         try
         {
-            bytes = new FileInfo(fileName: leasePath).Length;
+            bytes = new FileInfo(leasePath).Length;
         }
         catch
         {
@@ -443,8 +443,8 @@ public class EncodingOrchestrator(
         double megaBytes = seconds > 0 ? bytes / 1_000_000.0 / seconds : 0;
         double megabits = megaBytes * 8; // megabits per second
         logger.LogInformation(
-            message: "Staged source for encoding: {Backend} {MB:F0} MB in {Seconds:F1}s "
-                     + "({megaBytes:F0} MB/s, {megabits:F0} Mbps) before ffmpeg start [{Input}]", args: [sourceStorage.Driver.BackendLabel, bytes / 1_000_000.0, seconds, megaBytes, megabits, inputPath]
+            "Staged source for encoding: {Backend} {MB:F0} MB in {Seconds:F1}s "
+                     + "({megaBytes:F0} MB/s, {megabits:F0} Mbps) before ffmpeg start [{Input}]", [sourceStorage.Driver.BackendLabel, bytes / 1_000_000.0, seconds, megaBytes, megabits, inputPath]
         );
     }
 
@@ -460,27 +460,27 @@ public class EncodingOrchestrator(
     /// </summary>
     private static string EnsureWithinTranscodeRoot(string candidateTempDir)
     {
-        string normalizedRoot = Path.GetFullPath(path: StoragePaths.TranscodeRoot);
-        string normalizedTempDir = Path.GetFullPath(path: candidateTempDir);
+        string normalizedRoot = Path.GetFullPath(StoragePaths.TranscodeRoot);
+        string normalizedTempDir = Path.GetFullPath(candidateTempDir);
 
-        string rootWithSeparator = normalizedRoot.EndsWith(value: Path.DirectorySeparatorChar)
+        string rootWithSeparator = normalizedRoot.EndsWith(Path.DirectorySeparatorChar)
             ? normalizedRoot
             : normalizedRoot + Path.DirectorySeparatorChar;
 
         bool isRootItself = string.Equals(
-            a: normalizedTempDir,
-            b: normalizedRoot,
-            comparisonType: StringComparison.OrdinalIgnoreCase
+            normalizedTempDir,
+            normalizedRoot,
+            StringComparison.OrdinalIgnoreCase
         );
         bool isUnderRoot = normalizedTempDir.StartsWith(
-            value: rootWithSeparator,
-            comparisonType: StringComparison.OrdinalIgnoreCase
+            rootWithSeparator,
+            StringComparison.OrdinalIgnoreCase
         );
 
         if (!isRootItself && !isUnderRoot)
         {
             throw new InvalidOperationException(
-                message: $"Encoder temp dir '{normalizedTempDir}' escapes the transcode root "
+                $"Encoder temp dir '{normalizedTempDir}' escapes the transcode root "
                          + $"'{normalizedRoot}'. OutputDirectory must resolve to a path under "
                          + "the transcode root — check for a rooted path or '..' traversal."
             );
@@ -493,7 +493,7 @@ public class EncodingOrchestrator(
     {
         try
         {
-            return Path.GetFullPath(path: path);
+            return Path.GetFullPath(path);
         }
         catch
         {
@@ -519,7 +519,7 @@ public class EncodingOrchestrator(
         {
             TaskFilter = task,
         };
-        return EncodeAsync(request: request with { Options = filteredOptions }, progress: progress, ct: ct);
+        return EncodeAsync(request with { Options = filteredOptions }, progress, ct);
     }
 
     public async Task<DecomposedTask[]> DecomposeAsync(
@@ -528,8 +528,8 @@ public class EncodingOrchestrator(
         CancellationToken ct = default
     )
     {
-        (_, DecomposedTask[] tasks) = await DecomposeCoreAsync(request: request, groupTag: groupTag, ct: ct)
-            .ConfigureAwait(continueOnCapturedContext: false);
+        (_, DecomposedTask[] tasks) = await DecomposeCoreAsync(request, groupTag, ct)
+            .ConfigureAwait(false);
         return tasks;
     }
 
@@ -537,7 +537,7 @@ public class EncodingOrchestrator(
         EncodingRequest request,
         string groupTag,
         CancellationToken ct = default
-    ) => await DecomposeCoreAsync(request: request, groupTag: groupTag, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+    ) => await DecomposeCoreAsync(request, groupTag, ct).ConfigureAwait(false);
 
     /// <summary>
     /// Shared implementation behind <see cref="DecomposeAsync"/> and
@@ -557,19 +557,19 @@ public class EncodingOrchestrator(
     )
     {
         OutputFormat profileFormat = PlanStageHelpers.ContainerToOutputFormat(
-            container: request.Profile.Container
+            request.Profile.Container
         );
 
-        IEncodingStrategy? strategy = resolver.Resolve(format: profileFormat, mode: request.Profile.EncodeMode);
+        IEncodingStrategy? strategy = resolver.Resolve(profileFormat, request.Profile.EncodeMode);
 
         if (strategy is null)
-            return (null, [IEncodingStrategy.WholeTask(groupTag: groupTag)]);
+            return (null, [IEncodingStrategy.WholeTask(groupTag)]);
 
         // Stage the input file locally so PlanAsync can probe it via ffprobe
         // regardless of the source storage backend.
         await using LocalPathLease lease = await (
             request.SourceStorage ?? storage
-        ).AcquireLocalPathAsync(path: request.InputPath, ct: ct);
+        ).AcquireLocalPathAsync(request.InputPath, ct);
 
         EncodingRequest stagedRequest = request with
         {
@@ -579,12 +579,12 @@ public class EncodingOrchestrator(
             OriginalInputPath = request.InputPath,
         };
 
-        OutputPlan? plan = await encoder.PlanAsync(request: stagedRequest, ct: ct);
+        OutputPlan? plan = await encoder.PlanAsync(stagedRequest, ct);
 
         if (plan is null)
-            return (null, [IEncodingStrategy.WholeTask(groupTag: groupTag)]);
+            return (null, [IEncodingStrategy.WholeTask(groupTag)]);
 
-        return (plan, strategy.Decompose(plan: plan, groupTag: groupTag));
+        return (plan, strategy.Decompose(plan, groupTag));
     }
 
     public async Task<OutputPlan?> PlanMergedAsync(
@@ -595,13 +595,13 @@ public class EncodingOrchestrator(
         if (requests.Count == 0)
             return null;
 
-        List<OutputPlan> plans = new(capacity: requests.Count);
+        List<OutputPlan> plans = new(requests.Count);
 
         foreach (EncodingRequest request in requests)
         {
             await using LocalPathLease lease = await (
                 request.SourceStorage ?? storage
-            ).AcquireLocalPathAsync(path: request.InputPath, ct: ct);
+            ).AcquireLocalPathAsync(request.InputPath, ct);
 
             EncodingRequest stagedRequest = request with
             {
@@ -611,29 +611,29 @@ public class EncodingOrchestrator(
                 OriginalInputPath = request.InputPath,
             };
 
-            OutputPlan? plan = await encoder.PlanAsync(request: stagedRequest, ct: ct);
+            OutputPlan? plan = await encoder.PlanAsync(stagedRequest, ct);
             if (plan is null)
             {
                 logger.LogWarning(
-                    message: "[EncodingOrchestrator] PlanMergedAsync: preset '{Name}' failed to plan — cannot merge.",
-                    args: request.Profile.Name
+                    "[EncodingOrchestrator] PlanMergedAsync: preset '{Name}' failed to plan — cannot merge.",
+                    request.Profile.Name
                 );
                 return null;
             }
 
-            if (plans.Count > 0 && plan.Format != plans[index: 0].Format)
+            if (plans.Count > 0 && plan.Format != plans[0].Format)
             {
                 logger.LogWarning(
-                    message: "[EncodingOrchestrator] PlanMergedAsync: preset '{Name}' resolves to {Format}, "
-                             + "incompatible with the primary preset's {PrimaryFormat} — cannot merge.", args: [request.Profile.Name, plan.Format, plans[index: 0].Format]
+                    "[EncodingOrchestrator] PlanMergedAsync: preset '{Name}' resolves to {Format}, "
+                             + "incompatible with the primary preset's {PrimaryFormat} — cannot merge.", [request.Profile.Name, plan.Format, plans[0].Format]
                 );
                 return null;
             }
 
-            plans.Add(item: plan);
+            plans.Add(plan);
         }
 
-        return OutputPlanMerger.Merge(plans: plans);
+        return OutputPlanMerger.Merge(plans);
     }
 
     public async Task<DecomposedTask[]> DecomposeMergedAsync(
@@ -642,8 +642,8 @@ public class EncodingOrchestrator(
         CancellationToken ct = default
     )
     {
-        (_, DecomposedTask[] tasks) = await DecomposeMergedWithPlanAsync(requests: requests, groupTag: groupTag, ct: ct)
-            .ConfigureAwait(continueOnCapturedContext: false);
+        (_, DecomposedTask[] tasks) = await DecomposeMergedWithPlanAsync(requests, groupTag, ct)
+            .ConfigureAwait(false);
         return tasks;
     }
 
@@ -662,44 +662,44 @@ public class EncodingOrchestrator(
     {
         if (requests.Count == 0)
             throw new MergedEncodingIncompatibleException(
-                message: "DecomposeMergedAsync requires at least one request."
+                "DecomposeMergedAsync requires at least one request."
             );
 
         // Merge of one is exactly today's single-preset path — no strategy
         // resolution differences, no plan-merge machinery involved.
         if (requests.Count == 1)
-            return await DecomposeCoreAsync(request: requests[index: 0], groupTag: groupTag, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+            return await DecomposeCoreAsync(requests[0], groupTag, ct).ConfigureAwait(false);
 
-        EncodingRequest primaryRequest = requests[index: 0];
+        EncodingRequest primaryRequest = requests[0];
 
         if (
-            requests.Any(predicate: request => request.Profile.EncodeMode != primaryRequest.Profile.EncodeMode)
+            requests.Any(request => request.Profile.EncodeMode != primaryRequest.Profile.EncodeMode)
         )
             throw new MergedEncodingIncompatibleException(
-                message: "Cannot merge presets with different encode modes (single-pass vs two-pass)."
+                "Cannot merge presets with different encode modes (single-pass vs two-pass)."
             );
 
-        OutputPlan? mergedPlan = await PlanMergedAsync(requests: requests, ct: ct);
+        OutputPlan? mergedPlan = await PlanMergedAsync(requests, ct);
         if (mergedPlan is null)
             throw new MergedEncodingIncompatibleException(
-                message: "One or more presets failed to plan, or their plans resolve to incompatible "
+                "One or more presets failed to plan, or their plans resolve to incompatible "
                          + "output formats — see the preceding warning for which preset."
             );
 
         OutputFormat profileFormat = PlanStageHelpers.ContainerToOutputFormat(
-            container: primaryRequest.Profile.Container
+            primaryRequest.Profile.Container
         );
         IEncodingStrategy? strategy = resolver.Resolve(
-            format: profileFormat,
-            mode: primaryRequest.Profile.EncodeMode
+            profileFormat,
+            primaryRequest.Profile.EncodeMode
         );
 
         if (strategy is null)
             throw new MergedEncodingIncompatibleException(
-                message: $"No strategy registered for {profileFormat} / {primaryRequest.Profile.EncodeMode}."
+                $"No strategy registered for {profileFormat} / {primaryRequest.Profile.EncodeMode}."
             );
 
-        return (mergedPlan, strategy.Decompose(plan: mergedPlan, groupTag: groupTag));
+        return (mergedPlan, strategy.Decompose(mergedPlan, groupTag));
     }
 
     /// <summary>
@@ -724,43 +724,43 @@ public class EncodingOrchestrator(
         if (isLocalDest)
         {
             string? firstFile = Directory
-                .EnumerateFiles(path: tempDir, searchPattern: "*", searchOption: SearchOption.AllDirectories)
+                .EnumerateFiles(tempDir, "*", SearchOption.AllDirectories)
                 .FirstOrDefault();
             if (firstFile is not null)
             {
-                string probeRel = Path.GetRelativePath(relativeTo: tempDir, path: firstFile).Replace(oldChar: '\\', newChar: '/');
+                string probeRel = Path.GetRelativePath(tempDir, firstFile).Replace('\\', '/');
                 string probeDest = string.Join(
-                    separator: '/', value: [outputDirectory.TrimEnd(trimChar: '/'), probeRel.TrimStart(trimChar: '/')]
+                    '/', [outputDirectory.TrimEnd('/'), probeRel.TrimStart('/')]
                 );
                 try
                 {
-                    string destAbs = destinationStorage.GetFullPath(path: probeDest);
+                    string destAbs = destinationStorage.GetFullPath(probeDest);
                     sameVolume = string.Equals(
-                        a: Path.GetPathRoot(path: firstFile),
-                        b: Path.GetPathRoot(path: destAbs),
-                        comparisonType: StringComparison.OrdinalIgnoreCase
+                        Path.GetPathRoot(firstFile),
+                        Path.GetPathRoot(destAbs),
+                        StringComparison.OrdinalIgnoreCase
                     );
                 }
                 catch (NotSupportedException) { }
             }
         }
 
-        string stageName = ResolvePublishStageName(dest: destinationStorage, sameVolume: sameVolume);
-        progress?.OnStageStarted(stageName: stageName);
+        string stageName = ResolvePublishStageName(destinationStorage, sameVolume);
+        progress?.OnStageStarted(stageName);
         Stopwatch stageWatch = Stopwatch.StartNew();
         try
         {
             foreach (
                 string localFile in Directory.EnumerateFiles(
-                    path: tempDir,
-                    searchPattern: "*",
-                    searchOption: SearchOption.AllDirectories
+                    tempDir,
+                    "*",
+                    SearchOption.AllDirectories
                 )
             )
             {
-                string rel = Path.GetRelativePath(relativeTo: tempDir, path: localFile).Replace(oldChar: '\\', newChar: '/');
+                string rel = Path.GetRelativePath(tempDir, localFile).Replace('\\', '/');
                 string remoteDest = string.Join(
-                    separator: '/', value: [outputDirectory.TrimEnd(trimChar: '/'), rel.TrimStart(trimChar: '/')]
+                    '/', [outputDirectory.TrimEnd('/'), rel.TrimStart('/')]
                 );
 
                 if (sameVolume)
@@ -768,9 +768,9 @@ public class EncodingOrchestrator(
                     bool moved = false;
                     try
                     {
-                        string destAbs = destinationStorage.GetFullPath(path: remoteDest);
-                        Directory.CreateDirectory(path: Path.GetDirectoryName(path: destAbs)!);
-                        File.Move(sourceFileName: localFile, destFileName: destAbs, overwrite: true);
+                        string destAbs = destinationStorage.GetFullPath(remoteDest);
+                        Directory.CreateDirectory(Path.GetDirectoryName(destAbs)!);
+                        File.Move(localFile, destAbs, true);
                         moved = true;
                     }
                     catch (IOException)
@@ -783,9 +783,9 @@ public class EncodingOrchestrator(
                         continue;
                 }
 
-                string? remoteParent = destinationStorage.GetParent(path: remoteDest);
-                if (!string.IsNullOrEmpty(value: remoteParent))
-                    destinationStorage.CreateDirectory(path: remoteParent);
+                string? remoteParent = destinationStorage.GetParent(remoteDest);
+                if (!string.IsNullOrEmpty(remoteParent))
+                    destinationStorage.CreateDirectory(remoteParent);
 
                 // Publish through a sibling temp file, then swap into place. A
                 // process kill mid-copy would otherwise leave a truncated file
@@ -801,24 +801,24 @@ public class EncodingOrchestrator(
                     // Read through the local IStorage so the guard layer still
                     // applies — File.OpenRead would bypass the path allowlist
                     // that every other read path honors.
-                    await using (Stream src = await storage.OpenReadAsync(path: localFile, ct: ct))
+                    await using (Stream src = await storage.OpenReadAsync(localFile, ct))
                     await using (
                         Stream dst = await destinationStorage.OpenWriteAsync(
-                            path: publishTemp,
-                            overwrite: true,
-                            ct: ct
+                            publishTemp,
+                            true,
+                            ct
                         )
                     )
                     {
-                        await src.CopyToAsync(destination: dst, cancellationToken: ct);
+                        await src.CopyToAsync(dst, ct);
                     }
 
                     // MoveFile does not overwrite on local/SMB backends, so clear
                     // any prior artifact before the swap.
-                    if (await destinationStorage.ExistsAsync(path: remoteDest, ct: ct))
-                        await destinationStorage.DeleteAsync(path: remoteDest, ct: ct);
+                    if (await destinationStorage.ExistsAsync(remoteDest, ct))
+                        await destinationStorage.DeleteAsync(remoteDest, ct);
 
-                    await destinationStorage.MoveAsync(from: publishTemp, to: remoteDest, ct: ct);
+                    await destinationStorage.MoveAsync(publishTemp, remoteDest, ct);
                 }
                 catch
                 {
@@ -828,13 +828,13 @@ public class EncodingOrchestrator(
                     {
                         if (
                             await destinationStorage.ExistsAsync(
-                                path: publishTemp,
-                                ct: CancellationToken.None
+                                publishTemp,
+                                CancellationToken.None
                             )
                         )
                             await destinationStorage.DeleteAsync(
-                                path: publishTemp,
-                                ct: CancellationToken.None
+                                publishTemp,
+                                CancellationToken.None
                             );
                     }
                     catch
@@ -846,7 +846,7 @@ public class EncodingOrchestrator(
                 }
             }
             stageWatch.Stop();
-            progress?.OnStageCompleted(stageName: stageName, duration: stageWatch.Elapsed);
+            progress?.OnStageCompleted(stageName, stageWatch.Elapsed);
         }
         catch (Exception)
         {
@@ -872,14 +872,14 @@ public class EncodingOrchestrator(
         IAsyncEnumerable<StorageEntry>? entries;
         try
         {
-            entries = stor.ListAsync(path: outputDirectory, pattern: null, recursive: true, ct: ct);
+            entries = stor.ListAsync(outputDirectory, null, true, ct);
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "Could not list output directory {Dir} — no artifacts catalogued",
-                args: outputDirectory
+                ex,
+                "Could not list output directory {Dir} — no artifacts catalogued",
+                outputDirectory
             );
             return artifacts;
         }
@@ -896,20 +896,20 @@ public class EncodingOrchestrator(
                 continue;
             }
 
-            if (!IsStreamLevelArtifact(path: entry.Path))
+            if (!IsStreamLevelArtifact(entry.Path))
             {
                 continue;
             }
 
             try
             {
-                string hash = await stor.HashAsync(path: entry.Path, algorithm: "sha256", ct: ct);
-                string mime = OutputArtifact.MimeFromPath(path: entry.Path);
-                artifacts.Add(item: new(Path: entry.Path, SizeBytes: entry.SizeBytes, Sha256: hash, MediaType: mime));
+                string hash = await stor.HashAsync(entry.Path, "sha256", ct);
+                string mime = OutputArtifact.MimeFromPath(entry.Path);
+                artifacts.Add(new(entry.Path, entry.SizeBytes, hash, mime));
             }
             catch (Exception ex)
             {
-                logger.LogWarning(exception: ex, message: "Could not catalogue artifact {Path} — skipping", args: entry.Path);
+                logger.LogWarning(ex, "Could not catalogue artifact {Path} — skipping", entry.Path);
             }
         }
 
@@ -918,8 +918,8 @@ public class EncodingOrchestrator(
 
     private static bool IsStreamLevelArtifact(string path)
     {
-        string ext = Path.GetExtension(path: path).ToLowerInvariant();
-        string name = Path.GetFileName(path: path).ToLowerInvariant();
+        string ext = Path.GetExtension(path).ToLowerInvariant();
+        string name = Path.GetFileName(path).ToLowerInvariant();
 
         // HLS playlists — master + per-variant. Segment files (.ts / .m4s)
         // and segment-wrapping subtitle playlists (subs_<lang>_<variant>.m3u8
@@ -950,7 +950,7 @@ public class EncodingOrchestrator(
     {
         try
         {
-            return await stor.SizeAsync(path: inputPath, ct: ct);
+            return await stor.SizeAsync(inputPath, ct);
         }
         catch (Exception)
         {
@@ -970,10 +970,10 @@ public class EncodingOrchestrator(
         {
             await foreach (
                 StorageEntry entry in stor.ListAsync(
-                    path: outputDirectory,
-                    pattern: null,
-                    recursive: true,
-                    ct: ct
+                    outputDirectory,
+                    null,
+                    true,
+                    ct
                 )
             )
             {
@@ -984,9 +984,9 @@ public class EncodingOrchestrator(
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "Could not sum output sizes for {Dir} — OutputBytes will be 0",
-                args: outputDirectory
+                ex,
+                "Could not sum output sizes for {Dir} — OutputBytes will be 0",
+                outputDirectory
             );
         }
         return total;

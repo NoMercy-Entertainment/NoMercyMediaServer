@@ -151,9 +151,9 @@ public record AudioOutputPlan(
     /// otherwise both resolve to "audio_eng_copy" and collide on disk.
     /// </summary>
     public string CodecToken =>
-        Action == StreamAction.Copy && !string.IsNullOrEmpty(value: SourceCodecName)
+        Action == StreamAction.Copy && !string.IsNullOrEmpty(SourceCodecName)
             ? SourceCodecName
-            : EncoderName.Replace(oldValue: "libfdk_", newValue: "").Replace(oldValue: "lib", newValue: "");
+            : EncoderName.Replace("libfdk_", "").Replace("lib", "");
 }
 
 public record SubtitleOutputPlan(

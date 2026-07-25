@@ -24,48 +24,48 @@ public static partial class StringExtensions
     [Pure]
     public static string RemoveAccents(this string s)
     {
-        Encoding destEncoding = Encoding.GetEncoding(name: "ISO-8859-1");
+        Encoding destEncoding = Encoding.GetEncoding("ISO-8859-1");
 
         return destEncoding.GetString(
-            bytes: Encoding.Convert(srcEncoding: Encoding.UTF8, dstEncoding: destEncoding, bytes: Encoding.UTF8.GetBytes(s: s))
+            Encoding.Convert(Encoding.UTF8, destEncoding, Encoding.UTF8.GetBytes(s))
         );
     }
 
     [Pure]
     public static string RemoveDiacritics(this string text)
     {
-        string formD = text.Normalize(normalizationForm: NormalizationForm.FormD);
+        string formD = text.Normalize(NormalizationForm.FormD);
         StringBuilder sb = new();
 
         foreach (char ch in formD)
         {
-            UnicodeCategory uc = CharUnicodeInfo.GetUnicodeCategory(ch: ch);
+            UnicodeCategory uc = CharUnicodeInfo.GetUnicodeCategory(ch);
             if (uc != UnicodeCategory.NonSpacingMark)
-                sb.Append(value: ch);
+                sb.Append(ch);
         }
 
-        return sb.ToString().Normalize(normalizationForm: NormalizationForm.FormC);
+        return sb.ToString().Normalize(NormalizationForm.FormC);
     }
 
     public static string RemoveNonAlphaNumericCharacters(this string text)
     {
-        return Regex.Replace(input: text, pattern: @"[^a-zA-Z0-9\s.-]", replacement: "");
+        return Regex.Replace(text, @"[^a-zA-Z0-9\s.-]", "");
     }
 
-    [GeneratedRegex(pattern: @"(1(8|9)|20)\d{2}(?!p|i|(1(8|9)|20)\d{2}|\W(1(8|9)|20)\d{2})")]
+    [GeneratedRegex(@"(1(8|9)|20)\d{2}(?!p|i|(1(8|9)|20)\d{2}|\W(1(8|9)|20)\d{2})")]
     public static partial Regex MatchYearRegex();
 
     public static string? TryGetYear(this string str)
     {
-        Match match = MatchYearRegex().Match(input: str);
+        Match match = MatchYearRegex().Match(str);
         return match.Success ? match.Value : null;
     }
 
-    [GeneratedRegex(pattern: @"\[.*?\]")]
+    [GeneratedRegex(@"\[.*?\]")]
     public static partial Regex RemoveBracketedString();
 
     /// <summary>Matches a [tmdb-1234] hint embedded in a filename.</summary>
-    [GeneratedRegex(pattern: @"\[tmdb-(\d+)\]", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\[tmdb-(\d+)\]", RegexOptions.IgnoreCase)]
     public static partial Regex MatchTmdbHint();
 
     /// <summary>
@@ -74,29 +74,29 @@ public static partial class StringExtensions
     /// </summary>
     public static int? TryGetTmdbHint(this string str)
     {
-        Match m = MatchTmdbHint().Match(input: str);
-        return m.Success ? int.Parse(s: m.Groups[groupnum: 1].Value) : null;
+        Match m = MatchTmdbHint().Match(str);
+        return m.Success ? int.Parse(m.Groups[1].Value) : null;
     }
 
-    [GeneratedRegex(pattern: @"\d+")]
+    [GeneratedRegex(@"\d+")]
     public static partial Regex MatchNumbers();
 
-    [GeneratedRegex(pattern: @"[\.\s\-_]S\d{1,2}(?:E\d+)?(?:[\.\s\-_]|$)", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"[\.\s\-_]S\d{1,2}(?:E\d+)?(?:[\.\s\-_]|$)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchSeasonTag();
 
-    [GeneratedRegex(pattern: @"^S(\d{1,2})E(\d+)", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^S(\d{1,2})E(\d+)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchEpisodePrefix();
 
-    [GeneratedRegex(pattern: @"[\.\s\-_]S(\d{1,2})E(\d+)", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"[\.\s\-_]S(\d{1,2})E(\d+)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchSeasonEpisode();
 
-    [GeneratedRegex(pattern: @"\(.*?\)")]
+    [GeneratedRegex(@"\(.*?\)")]
     public static partial Regex RemoveParenthesizedString();
 
-    [GeneratedRegex(pattern: @"[\-\.\s]+Episode\s*(\d+)", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"[\-\.\s]+Episode\s*(\d+)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchEpisodeWord();
 
-    [GeneratedRegex(pattern: @"(?<![A-Za-z0-9])(\d{1,2})[xX×](\d{1,3})(?![0-9])")]
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(\d{1,2})[xX×](\d{1,3})(?![0-9])")]
     public static partial Regex MatchCrossFormatEpisode();
 
     /// <summary>
@@ -110,27 +110,27 @@ public static partial class StringExtensions
     /// </summary>
 
     /// <summary>Resolution tags: 480p/720p/1080p/2160p (interlaced too), 4k/8k, uhd.</summary>
-    [GeneratedRegex(pattern: @"(?<![A-Za-z0-9])(?:\d{3,4}[pi]|[48]k|uhd)(?![A-Za-z0-9])", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:\d{3,4}[pi]|[48]k|uhd)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
     public static partial Regex MatchResolutionTag();
 
     /// <summary>Source / medium tags (web-dl, web-rip, bluray, hdtv, dvd*, remux, streaming services, ...).</summary>
-    [GeneratedRegex(pattern: @"(?<![A-Za-z0-9])(?:web[\s.\-]?dl|web[\s.\-]?rip|web[\s.\-]?hd|blu[\s.\-]?ray|bd[\s.\-]?rip|b[rd][\s.\-]?rip|hd[\s.\-]?tv|pd[\s.\-]?tv|dvd[\s.\-]?rip|hd[\s.\-]?rip|hd[\s.\-]?cam|uhd[\s.\-]?bd|remux|hd[\s.\-]?dvd|hd[\s.\-]?tc|ed[\s.\-]?tv|dvd[\s.\-]?scr|dvdscr|dsr|amzn|dsnp|atvp|hmax|hulu|nflx|hd[\s.\-]?light|sdtv|dvb|vod[\s.\-]?rip|tv[\s.\-]?rip|sat[\s.\-]?rip|dth[\s.\-]?rip|web[\s.\-]?cap|hd[\s.\-]?ts|telesync|telecine|workprint|ld[\s.\-]?rip|dvdr|ppv|screener)(?![A-Za-z0-9])", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:web[\s.\-]?dl|web[\s.\-]?rip|web[\s.\-]?hd|blu[\s.\-]?ray|bd[\s.\-]?rip|b[rd][\s.\-]?rip|hd[\s.\-]?tv|pd[\s.\-]?tv|dvd[\s.\-]?rip|hd[\s.\-]?rip|hd[\s.\-]?cam|uhd[\s.\-]?bd|remux|hd[\s.\-]?dvd|hd[\s.\-]?tc|ed[\s.\-]?tv|dvd[\s.\-]?scr|dvdscr|dsr|amzn|dsnp|atvp|hmax|hulu|nflx|hd[\s.\-]?light|sdtv|dvb|vod[\s.\-]?rip|tv[\s.\-]?rip|sat[\s.\-]?rip|dth[\s.\-]?rip|web[\s.\-]?cap|hd[\s.\-]?ts|telesync|telecine|workprint|ld[\s.\-]?rip|dvdr|ppv|screener)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
     public static partial Regex MatchSourceTag();
 
     /// <summary>Video codec tags (x264/5, h264/5, hevc, xvid, divx, avc, vc-1, wmv, mpeg(2), vp8/9).</summary>
-    [GeneratedRegex(pattern: @"(?<![A-Za-z0-9])(?:x[\s.\-]?26[45]|h[\s.\-]?26[45]|hevc|xvid|divx|avc|vc[\s.\-]?1|wmv|mpeg2?|vp[89]|av1|vvc|h[\s.\-]?266|mpeg4)(?![A-Za-z0-9])", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:x[\s.\-]?26[45]|h[\s.\-]?26[45]|hevc|xvid|divx|avc|vc[\s.\-]?1|wmv|mpeg2?|vp[89]|av1|vvc|h[\s.\-]?266|mpeg4)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
     public static partial Regex MatchCodecTag();
 
     /// <summary>Audio tags (ddp5.1, eac3, dts(-hd/ma/es/x), truehd, atmos, aac, flac, ac3d, mp3).</summary>
-    [GeneratedRegex(pattern: @"(?<![A-Za-z0-9])(?:ddp?[\s.\-]?\d(?:[\s.\-]?\d)?|e?ac[\s.\-]?3|dts(?:[\s.\-]?hd)?(?:[\s.\-]?ma)?|dts[\s.\-]?(?:es|x)|true[\s.\-]?hd|atmos|aac(?:[\s.\-]?\d(?:[\s.\-]?\d)?)?|flac|ac3d|eac3d|mp3|lpcm|dd\+|ddp\+)(?![A-Za-z0-9])", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:ddp?[\s.\-]?\d(?:[\s.\-]?\d)?|e?ac[\s.\-]?3|dts(?:[\s.\-]?hd)?(?:[\s.\-]?ma)?|dts[\s.\-]?(?:es|x)|true[\s.\-]?hd|atmos|aac(?:[\s.\-]?\d(?:[\s.\-]?\d)?)?|flac|ac3d|eac3d|mp3|lpcm|dd\+|ddp\+)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
     public static partial Regex MatchAudioTag();
 
     /// <summary>HDR / bit-depth tags (10bit, hdr10+, hdr, dovi, dolby vision, hlg).</summary>
-    [GeneratedRegex(pattern: @"(?<![A-Za-z0-9])(?:\d{1,2}[\s.\-]?bit|hdr10\+?|hdr|do[\s.\-]?vi|dolby[\s.\-]?vision|hlg|sdr)(?![A-Za-z0-9])", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:\d{1,2}[\s.\-]?bit|hdr10\+?|hdr|do[\s.\-]?vi|dolby[\s.\-]?vision|hlg|sdr)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
     public static partial Regex MatchHdrTag();
 
     /// <summary>Release flags / editions (repack, multi, imax).</summary>
-    [GeneratedRegex(pattern: @"(?<![A-Za-z0-9])(?:repack|multi|imax|dir[\s.\-]?fix|nfo[\s.\-]?fix|read[\s.\-]?nfo|proof[\s.\-]?fix|re[\s.\-]?rip)(?![A-Za-z0-9])", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:repack|multi|imax|dir[\s.\-]?fix|nfo[\s.\-]?fix|read[\s.\-]?nfo|proof[\s.\-]?fix|re[\s.\-]?rip)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
     public static partial Regex MatchFlagTag();
 
     /// <summary>The scene tag categories recognised by the per-category release regexes.</summary>
@@ -164,12 +164,12 @@ public static partial class StringExtensions
             }
         }
 
-        Take(m: MatchResolutionTag().Match(input: text), cat: ReleaseTagCategory.Resolution);
-        Take(m: MatchSourceTag().Match(input: text), cat: ReleaseTagCategory.Source);
-        Take(m: MatchCodecTag().Match(input: text), cat: ReleaseTagCategory.Codec);
-        Take(m: MatchAudioTag().Match(input: text), cat: ReleaseTagCategory.Audio);
-        Take(m: MatchHdrTag().Match(input: text), cat: ReleaseTagCategory.Hdr);
-        Take(m: MatchFlagTag().Match(input: text), cat: ReleaseTagCategory.Flag);
+        Take(MatchResolutionTag().Match(text), ReleaseTagCategory.Resolution);
+        Take(MatchSourceTag().Match(text), ReleaseTagCategory.Source);
+        Take(MatchCodecTag().Match(text), ReleaseTagCategory.Codec);
+        Take(MatchAudioTag().Match(text), ReleaseTagCategory.Audio);
+        Take(MatchHdrTag().Match(text), ReleaseTagCategory.Hdr);
+        Take(MatchFlagTag().Match(text), ReleaseTagCategory.Flag);
 
         category = bestCat;
         value = bestVal;
@@ -185,11 +185,11 @@ public static partial class StringExtensions
     {
         category = default;
         value = string.Empty;
-        if (string.IsNullOrWhiteSpace(value: raw))
+        if (string.IsNullOrWhiteSpace(raw))
             return false;
 
-        string normalized = Regex.Replace(input: raw.Replace(oldChar: '.', newChar: ' ').Replace(oldChar: '_', newChar: ' '), pattern: @"\s+", replacement: " ").Trim();
-        return EarliestReleaseTag(text: normalized, category: out category, value: out value) >= 0;
+        string normalized = Regex.Replace(raw.Replace('.', ' ').Replace('_', ' '), @"\s+", " ").Trim();
+        return EarliestReleaseTag(normalized, out category, out value) >= 0;
     }
 
     /// <summary>
@@ -201,17 +201,17 @@ public static partial class StringExtensions
     [Pure]
     public static string CleanReleaseTitle(this string raw)
     {
-        if (string.IsNullOrWhiteSpace(value: raw))
+        if (string.IsNullOrWhiteSpace(raw))
             return string.Empty;
 
-        string normalized = raw.Replace(oldChar: '.', newChar: ' ').Replace(oldChar: '_', newChar: ' ');
-        normalized = Regex.Replace(input: normalized, pattern: @"\s+", replacement: " ").Trim();
+        string normalized = raw.Replace('.', ' ').Replace('_', ' ');
+        normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
 
-        int cut = EarliestReleaseTag(text: normalized, category: out _, value: out _);
+        int cut = EarliestReleaseTag(normalized, out _, out _);
         string title = cut >= 0 ? normalized[..cut] : normalized;
 
-        title = title.TrimEnd(trimChars: [' ', '-', '_', '.']);
-        return Regex.Replace(input: title, pattern: @"\s+", replacement: " ").Trim();
+        title = title.TrimEnd([' ', '-', '_', '.']);
+        return Regex.Replace(title, @"\s+", " ").Trim();
     }
 
     /// <summary>
@@ -225,21 +225,21 @@ public static partial class StringExtensions
     {
         string title = raw.CleanReleaseTitle();
 
-        Match year = MatchYearRegex().Match(input: title);
+        Match year = MatchYearRegex().Match(title);
         if (year is { Success: true, Index: > 0 })
             title = title[..year.Index];
 
-        return title.TrimEnd(trimChars: ['-', '.', '_', ' ']).Trim();
+        return title.TrimEnd(['-', '.', '_', ' ']).Trim();
     }
 
     /// <summary>Matches a "Season N" / "Series N" (and common localized) folder name.</summary>
     [GeneratedRegex(
-        pattern: @"(?<![A-Za-z])(?:season|series|saison|staffel|temporada|stagione)[\s\.\-_]*0*(\d{1,3})(?![0-9])",
-        options: RegexOptions.IgnoreCase)]
+        @"(?<![A-Za-z])(?:season|series|saison|staffel|temporada|stagione)[\s\.\-_]*0*(\d{1,3})(?![0-9])",
+        RegexOptions.IgnoreCase)]
     public static partial Regex MatchFolderSeasonWord();
 
     /// <summary>Matches a bare "S2" / "S02" folder name (whole string).</summary>
-    [GeneratedRegex(pattern: @"^[Ss]0*(\d{1,3})$")]
+    [GeneratedRegex(@"^[Ss]0*(\d{1,3})$")]
     public static partial Regex MatchSeasonFolderShort();
 
     /// <summary>
@@ -250,79 +250,79 @@ public static partial class StringExtensions
     /// </summary>
     public static int? TryGetFolderSeason(this string? directory)
     {
-        if (string.IsNullOrWhiteSpace(value: directory))
+        if (string.IsNullOrWhiteSpace(directory))
             return null;
 
-        string folder = Path.GetFileName(path: directory.TrimEnd(trimChars: ['/', '\\']));
-        if (string.IsNullOrEmpty(value: folder))
+        string folder = Path.GetFileName(directory.TrimEnd(['/', '\\']));
+        if (string.IsNullOrEmpty(folder))
             folder = directory;
 
-        Match word = MatchFolderSeasonWord().Match(input: folder);
+        Match word = MatchFolderSeasonWord().Match(folder);
         if (word.Success)
-            return int.Parse(s: word.Groups[groupnum: 1].Value);
+            return int.Parse(word.Groups[1].Value);
 
-        Match shortForm = MatchSeasonFolderShort().Match(input: folder);
+        Match shortForm = MatchSeasonFolderShort().Match(folder);
         if (shortForm.Success)
-            return int.Parse(s: shortForm.Groups[groupnum: 1].Value);
+            return int.Parse(shortForm.Groups[1].Value);
 
         return null;
     }
 
 
-    [GeneratedRegex(pattern: "/[^a-zA-Z0-9]/")]
+    [GeneratedRegex("/[^a-zA-Z0-9]/")]
     public static partial Regex IsAlphaNumeric();
 
     public static bool IsAlphaNumeric(this string str)
     {
-        return IsAlphaNumeric().IsMatch(input: str);
+        return IsAlphaNumeric().IsMatch(str);
     }
 
-    [GeneratedRegex(pattern: "/[0-9]/")]
+    [GeneratedRegex("/[0-9]/")]
     public static partial Regex IsNumeric();
 
     public static bool IsNumeric(this string str)
     {
-        return IsNumeric().IsMatch(input: str);
+        return IsNumeric().IsMatch(str);
     }
 
     public static string PathName(this string path)
     {
-        return Regex.Replace(input: path, pattern: @"[\/\\]", replacement: DirectorySeparator);
+        return Regex.Replace(path, @"[\/\\]", DirectorySeparator);
     }
 
     public static int ToInt(this string value)
     {
-        if (string.IsNullOrEmpty(value: value))
+        if (string.IsNullOrEmpty(value))
             return 0;
         return double.TryParse(
-            s: value,
-            style: NumberStyles.Float,
-            provider: CultureInfo.InvariantCulture,
-            result: out double d
+            value,
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out double d
         )
-            ? (int)Math.Round(a: d)
+            ? (int)Math.Round(d)
             : 0;
     }
 
     public static int ToInt(this double value)
     {
-        return Convert.ToInt32(value: value);
+        return Convert.ToInt32(value);
     }
 
     public static int ToInt(this uint value)
     {
-        return Convert.ToInt32(value: value);
+        return Convert.ToInt32(value);
     }
 
     public static double ToDouble(this string value)
     {
-        if (string.IsNullOrEmpty(value: value))
+        if (string.IsNullOrEmpty(value))
             return 0;
         return double.TryParse(
-            s: value,
-            style: NumberStyles.Float,
-            provider: CultureInfo.InvariantCulture,
-            result: out double d
+            value,
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out double d
         )
             ? d
             : 0;
@@ -330,36 +330,36 @@ public static partial class StringExtensions
 
     public static double ToDouble(this int value)
     {
-        return Convert.ToDouble(value: value);
+        return Convert.ToDouble(value);
     }
 
     public static long ToLong(this string value)
     {
-        if (string.IsNullOrEmpty(value: value))
+        if (string.IsNullOrEmpty(value))
             return 0;
-        return long.TryParse(s: value, style: NumberStyles.Integer, provider: CultureInfo.InvariantCulture, result: out long l)
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long l)
             ? l
             : 0;
     }
 
     public static bool ToBoolean(this string value)
     {
-        if (string.IsNullOrEmpty(value: value))
+        if (string.IsNullOrEmpty(value))
             return false;
-        return bool.TryParse(value: value, result: out bool b) && b;
+        return bool.TryParse(value, out bool b) && b;
     }
 
     public static string Spacer(string text, int padding, bool begin = false)
     {
-        return begin ? SpacerBegin(text: text, padding: padding) : SpacerEnd(text: text, padding: padding);
+        return begin ? SpacerBegin(text, padding) : SpacerEnd(text, padding);
     }
 
     private static string SpacerEnd(string text, int padding)
     {
         StringBuilder spacing = new();
-        spacing.Append(value: text);
+        spacing.Append(text);
         for (int i = 0; i < padding - text.Length; i++)
-            spacing.Append(value: ' ');
+            spacing.Append(' ');
 
         return spacing.ToString();
     }
@@ -368,8 +368,8 @@ public static partial class StringExtensions
     {
         StringBuilder spacing = new();
         for (int i = 0; i < padding - text.Length; i++)
-            spacing.Append(value: ' ');
-        spacing.Append(value: text);
+            spacing.Append(' ');
+        spacing.Append(text);
 
         return spacing.ToString();
     }
@@ -383,18 +383,18 @@ public static partial class StringExtensions
     /// </summary>
     public static Guid ToGuid(this string? id)
     {
-        return Guid.TryParse(input: id, result: out Guid parsed) ? parsed : Guid.Empty;
+        return Guid.TryParse(id, out Guid parsed) ? parsed : Guid.Empty;
     }
 
     public static string ToUtf8(this string value)
     {
-        return Encoding.UTF8.GetString(bytes: Encoding.Default.GetBytes(s: value));
+        return Encoding.UTF8.GetString(Encoding.Default.GetBytes(value));
     }
 
     public static string SplitPascalCase(this string str)
     {
-        str = Regex.Replace(input: str, pattern: @"(\P{Ll})(\P{Ll}\p{Ll})", replacement: "$1 $2");
-        return Regex.Replace(input: str, pattern: @"(\p{Ll})(\P{Ll})", replacement: "$1 $2");
+        str = Regex.Replace(str, @"(\P{Ll})(\P{Ll}\p{Ll})", "$1 $2");
+        return Regex.Replace(str, @"(\p{Ll})(\P{Ll})", "$1 $2");
     }
 
     /** This method sanitizes a string by removing diacritics, non-alphanumeric characters and accents. */
@@ -419,27 +419,27 @@ public static partial class StringExtensions
         {
             string lowerStr = str.ToLower();
             string lowerValue = value.ToLower();
-            return lowerStr.Contains(value: lowerValue) || lowerValue.Contains(value: lowerStr);
+            return lowerStr.Contains(lowerValue) || lowerValue.Contains(lowerStr);
         }
 
-        return sanitizedStr.Contains(value: sanitizedValue) || sanitizedValue.Contains(value: sanitizedStr);
+        return sanitizedStr.Contains(sanitizedValue) || sanitizedValue.Contains(sanitizedStr);
     }
 
     public static bool EqualsSanitized(this string str, string value)
     {
         str = str.Sanitize().ToLower();
         value = value.Sanitize().ToLower();
-        return str.Equals(value: value) || value.Equals(value: str);
+        return str.Equals(value) || value.Equals(str);
     }
 
     public static string UrlDecode(this string str)
     {
-        return WebUtility.UrlDecode(encodedValue: str);
+        return WebUtility.UrlDecode(str);
     }
 
     public static string UrlEncode(this string str)
     {
-        return WebUtility.UrlEncode(value: str);
+        return WebUtility.UrlEncode(str);
     }
 
     public static string ToQueryUri(this string str, Dictionary<string, string>? parameters)
@@ -447,73 +447,73 @@ public static partial class StringExtensions
         return str
             + (
                 parameters is not null && parameters.Count > 0
-                    ? "?" + string.Join(separator: "&", values: parameters.Select(selector: pair => $"{pair.Key}={pair.Value}"))
+                    ? "?" + string.Join("&", parameters.Select(pair => $"{pair.Key}={pair.Value}"))
                     : string.Empty
             );
     }
 
     public static string EscapeQuotes(this string str)
     {
-        return Regex.Replace(input: str, pattern: "\"", replacement: "'");
+        return Regex.Replace(str, "\"", "'");
     }
 
     public static string Capitalize(this string str)
     {
-        if (string.IsNullOrEmpty(value: str))
+        if (string.IsNullOrEmpty(str))
             return str;
 
-        return char.ToUpper(c: str[index: 0]) + str.Substring(startIndex: 1);
+        return char.ToUpper(str[0]) + str.Substring(1);
     }
 
     public static string ToTitleCase(this string str, string culture = "en-US")
     {
-        if (string.IsNullOrEmpty(value: str))
+        if (string.IsNullOrEmpty(str))
             return str;
 
-        TextInfo textInfo = new CultureInfo(name: culture, useUserOverride: false).TextInfo;
-        return textInfo.ToTitleCase(str: str.ToLower());
+        TextInfo textInfo = new CultureInfo(culture, false).TextInfo;
+        return textInfo.ToTitleCase(str.ToLower());
     }
 
     public static string ToPascalCase(this string str)
     {
-        if (string.IsNullOrEmpty(value: str))
+        if (string.IsNullOrEmpty(str))
             return str;
 
-        string[] words = str.Split(separator: [' ', '_'], options: StringSplitOptions.RemoveEmptyEntries);
-        return string.Join(separator: "_", values: words.Select(selector: word => word[..1].ToUpper() + word[1..].ToLower()));
+        string[] words = str.Split([' ', '_'], StringSplitOptions.RemoveEmptyEntries);
+        return string.Join("_", words.Select(word => word[..1].ToUpper() + word[1..].ToLower()));
     }
 
     public static string ToSnakeCase(this string str)
     {
-        if (string.IsNullOrEmpty(value: str))
+        if (string.IsNullOrEmpty(str))
             return str;
 
         StringBuilder sb = new();
         for (int i = 0; i < str.Length; i++)
         {
-            if (char.IsUpper(c: str[index: i]) && i > 0)
-                sb.Append(value: '_');
-            sb.Append(value: char.ToLower(c: str[index: i]));
+            if (char.IsUpper(str[i]) && i > 0)
+                sb.Append('_');
+            sb.Append(char.ToLower(str[i]));
         }
         return sb.ToString();
     }
 
     public static string ToUcFirst(this string str)
     {
-        if (string.IsNullOrEmpty(value: str))
+        if (string.IsNullOrEmpty(str))
             return str;
 
-        return char.ToUpper(c: str[index: 0]) + str[1..].ToLower();
+        return char.ToUpper(str[0]) + str[1..].ToLower();
     }
 
     public static int ToSeconds(this string? hms)
     {
-        if (string.IsNullOrEmpty(value: hms))
+        if (string.IsNullOrEmpty(hms))
             return 0;
 
-        string[] rawParts = hms.Split(separator: '.')[0].Split(separator: ':');
+        string[] rawParts = hms.Split('.')[0].Split(':');
         int[] parts = rawParts
-            .Select(selector: part => int.TryParse(s: part, result: out int value) ? value : 0)
+            .Select(part => int.TryParse(part, out int value) ? value : 0)
             .ToArray();
 
         return parts.Length switch
@@ -527,7 +527,7 @@ public static partial class StringExtensions
 
     public static int ToSeconds(this double hms)
     {
-        return (int)Math.Round(a: hms);
+        return (int)Math.Round(hms);
     }
 
     public static int ToMilliSeconds(this string? hms)
@@ -538,22 +538,22 @@ public static partial class StringExtensions
     public static string ToName(this string str)
     {
         ;
-        return NumberConverter.ConvertNumbersInString(input: str);
+        return NumberConverter.ConvertNumbersInString(str);
     }
 
     public static string NormalizeSearch(this string input)
     {
-        if (string.IsNullOrEmpty(value: input))
+        if (string.IsNullOrEmpty(input))
             return string.Empty;
 
         // Normalize to FormD to separate characters and diacritics
-        string normalized = input.Normalize(normalizationForm: NormalizationForm.FormD);
+        string normalized = input.Normalize(NormalizationForm.FormD);
 
         // Remove diacritics and normalize dashes in a single pass
-        StringBuilder stringBuilder = new(capacity: normalized.Length);
+        StringBuilder stringBuilder = new(normalized.Length);
         foreach (char c in normalized)
         {
-            if (CharUnicodeInfo.GetUnicodeCategory(ch: c) == UnicodeCategory.NonSpacingMark)
+            if (CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark)
                 continue;
 
             char appended = c switch
@@ -564,13 +564,13 @@ public static partial class StringExtensions
                 '\u2212' => '-', // Minus sign
                 _ => c,
             };
-            stringBuilder.Append(value: char.ToLowerInvariant(c: appended));
+            stringBuilder.Append(char.ToLowerInvariant(appended));
         }
 
         string result = stringBuilder.ToString();
 
         // Remove non-alphanumeric characters (optional)
-        result = Regex.Replace(input: result, pattern: @"[^a-zA-Z0-9\s-]", replacement: "");
+        result = Regex.Replace(result, @"[^a-zA-Z0-9\s-]", "");
 
         return result;
     }
@@ -612,23 +612,23 @@ public static partial class StringExtensions
         value = value.ToLowerInvariant();
 
         //Remove all accents
-        byte[] bytes = Encoding.GetEncoding(name: "ISO-8859-1").GetBytes(s: value);
-        value = Encoding.ASCII.GetString(bytes: bytes);
+        byte[] bytes = Encoding.GetEncoding("ISO-8859-1").GetBytes(value);
+        value = Encoding.ASCII.GetString(bytes);
 
         //Replace spaces
-        value = Regex.Replace(input: value, pattern: @"\s", replacement: "-", options: RegexOptions.Compiled);
+        value = Regex.Replace(value, @"\s", "-", RegexOptions.Compiled);
 
         //Remove invalid chars
-        value = Regex.Replace(input: value, pattern: @"[^a-z0-9\s-_]", replacement: "", options: RegexOptions.Compiled);
+        value = Regex.Replace(value, @"[^a-z0-9\s-_]", "", RegexOptions.Compiled);
 
         //Trim dashes from end
-        value = value.Trim(trimChars: ['-', '_']);
+        value = value.Trim(['-', '_']);
 
         //Replace double occurences of - or _
-        value = Regex.Replace(input: value, pattern: @"([-_]){2,}", replacement: "$1", options: RegexOptions.Compiled);
+        value = Regex.Replace(value, @"([-_]){2,}", "$1", RegexOptions.Compiled);
 
         // random id
-        value += "-" + Guid.NewGuid().ToString(format: "n").Substring(startIndex: 0, length: 8);
+        value += "-" + Guid.NewGuid().ToString("n").Substring(0, 8);
 
         return value;
     }

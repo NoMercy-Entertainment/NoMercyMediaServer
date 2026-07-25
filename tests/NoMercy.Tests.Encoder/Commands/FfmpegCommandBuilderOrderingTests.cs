@@ -42,8 +42,8 @@ public class FfmpegCommandBuilderOrderingTests
     {
         // Proves the builder doesn't hard-code -y / -hide_banner / -progress.
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .Build("ffmpeg");
 
         cmd.Arguments.Should().BeEmpty();
     }
@@ -52,30 +52,30 @@ public class FfmpegCommandBuilderOrderingTests
     public void Overwrite_false_drops_dash_y()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(Overwrite: false))
+            .Build("ffmpeg");
 
-        cmd.Arguments.Should().NotContain(unexpected: "-y");
+        cmd.Arguments.Should().NotContain("-y");
     }
 
     [Fact]
     public void HideBanner_false_drops_hide_banner()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(HideBanner: false))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(HideBanner: false))
+            .Build("ffmpeg");
 
-        cmd.Arguments.Should().NotContain(unexpected: "-hide_banner");
+        cmd.Arguments.Should().NotContain("-hide_banner");
     }
 
     [Fact]
     public void ProgressPipe_false_drops_progress_arg_and_value()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(ProgressPipe: false))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(ProgressPipe: false))
+            .Build("ffmpeg");
 
-        cmd.Arguments.Should().NotContain(unexpected: "-progress").And.NotContain(unexpected: "pipe:1");
+        cmd.Arguments.Should().NotContain("-progress").And.NotContain("pipe:1");
     }
 
     // ── AnalyzeDurationUs (uncovered by existing tests) ──────────────────────
@@ -85,24 +85,24 @@ public class FfmpegCommandBuilderOrderingTests
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
             .WithGlobalOptions(
-                options: new(
+                new(
                     Overwrite: false,
                     HideBanner: false,
                     ProgressPipe: false,
                     AnalyzeDurationUs: 5_000_000
                 )
             )
-            .Build(ffmpegPath: "ffmpeg");
+            .Build("ffmpeg");
 
-        cmd.Arguments.Should().Equal(expected: ["-analyzeduration", "5000000"]);
+        cmd.Arguments.Should().Equal("-analyzeduration", "5000000");
     }
 
     // ── Culture-invariant decimal formatting ─────────────────────────────────
 
     [Theory]
-    [InlineData(data: "de-DE")]
-    [InlineData(data: "nl-NL")]
-    [InlineData(data: "fr-FR")]
+    [InlineData("de-DE")]
+    [InlineData("nl-NL")]
+    [InlineData("fr-FR")]
     public void SeekTo_uses_invariant_culture_on_comma_decimal_locales(string culture)
     {
         // Without CultureInfo.InvariantCulture, TimeSpan.TotalSeconds.ToString("F3")
@@ -113,13 +113,13 @@ public class FfmpegCommandBuilderOrderingTests
             .CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(name: culture);
+            Thread.CurrentThread.CurrentCulture = new(culture);
             FfmpegCommand cmd = new FfmpegCommandBuilder()
-                .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-                .AddInput(input: new(FilePath: "/in.mkv", SeekTo: TimeSpan.FromMilliseconds(milliseconds: 12_345)))
-                .Build(ffmpegPath: "ffmpeg");
+                .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+                .AddInput(new("/in.mkv", SeekTo: TimeSpan.FromMilliseconds(12_345)))
+                .Build("ffmpeg");
 
-            cmd.Arguments.Should().Contain(expected: "12.345").And.NotContain(unexpected: "12,345");
+            cmd.Arguments.Should().Contain("12.345").And.NotContain("12,345");
         }
         finally
         {
@@ -128,8 +128,8 @@ public class FfmpegCommandBuilderOrderingTests
     }
 
     [Theory]
-    [InlineData(data: "de-DE")]
-    [InlineData(data: "nl-NL")]
+    [InlineData("de-DE")]
+    [InlineData("nl-NL")]
     public void Duration_uses_invariant_culture_on_comma_decimal_locales(string culture)
     {
         System.Globalization.CultureInfo previous = Thread
@@ -137,13 +137,13 @@ public class FfmpegCommandBuilderOrderingTests
             .CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(name: culture);
+            Thread.CurrentThread.CurrentCulture = new(culture);
             FfmpegCommand cmd = new FfmpegCommandBuilder()
-                .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-                .AddInput(input: new(FilePath: "/in.mkv", Duration: TimeSpan.FromMilliseconds(milliseconds: 7_500)))
-                .Build(ffmpegPath: "ffmpeg");
+                .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+                .AddInput(new("/in.mkv", Duration: TimeSpan.FromMilliseconds(7_500)))
+                .Build("ffmpeg");
 
-            cmd.Arguments.Should().Contain(expected: "7.500").And.NotContain(unexpected: "7,500");
+            cmd.Arguments.Should().Contain("7.500").And.NotContain("7,500");
         }
         finally
         {
@@ -159,16 +159,16 @@ public class FfmpegCommandBuilderOrderingTests
         // FFmpeg pairs -hwaccel with the NEXT declared input. Emitting it after
         // -i silently drops the acceleration.
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(input: new(FilePath: "/in.mkv", HwAccelDevice: "cuda", HwAccelOutputFormat: "cuda"))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(new("/in.mkv", HwAccelDevice: "cuda", HwAccelOutputFormat: "cuda"))
+            .Build("ffmpeg");
 
-        int hwIndex = Array.IndexOf(array: cmd.Arguments, value: "-hwaccel");
-        int hwOutIndex = Array.IndexOf(array: cmd.Arguments, value: "-hwaccel_output_format");
-        int iIndex = Array.IndexOf(array: cmd.Arguments, value: "-i");
+        int hwIndex = Array.IndexOf(cmd.Arguments, "-hwaccel");
+        int hwOutIndex = Array.IndexOf(cmd.Arguments, "-hwaccel_output_format");
+        int iIndex = Array.IndexOf(cmd.Arguments, "-i");
 
-        hwIndex.Should().BeLessThan(expected: iIndex);
-        hwOutIndex.Should().BeLessThan(expected: iIndex);
+        hwIndex.Should().BeLessThan(iIndex);
+        hwOutIndex.Should().BeLessThan(iIndex);
     }
 
     [Fact]
@@ -176,36 +176,36 @@ public class FfmpegCommandBuilderOrderingTests
     {
         // -ss / -t are pre-input options — must appear before -i to affect THAT input.
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(
-                input: new(FilePath: "/in.mkv", SeekTo: TimeSpan.FromSeconds(seconds: 5), Duration: TimeSpan.FromSeconds(seconds: 10))
+                new("/in.mkv", SeekTo: TimeSpan.FromSeconds(5), Duration: TimeSpan.FromSeconds(10))
             )
-            .Build(ffmpegPath: "ffmpeg");
+            .Build("ffmpeg");
 
-        int ssIndex = Array.IndexOf(array: cmd.Arguments, value: "-ss");
-        int tIndex = Array.IndexOf(array: cmd.Arguments, value: "-t");
-        int iIndex = Array.IndexOf(array: cmd.Arguments, value: "-i");
+        int ssIndex = Array.IndexOf(cmd.Arguments, "-ss");
+        int tIndex = Array.IndexOf(cmd.Arguments, "-t");
+        int iIndex = Array.IndexOf(cmd.Arguments, "-i");
 
-        ssIndex.Should().BeLessThan(expected: iIndex);
-        tIndex.Should().BeLessThan(expected: iIndex);
+        ssIndex.Should().BeLessThan(iIndex);
+        tIndex.Should().BeLessThan(iIndex);
     }
 
     [Fact]
     public void Multiple_inputs_preserve_declared_order()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(input: new(FilePath: "/a.mkv"))
-            .AddInput(input: new(FilePath: "/b.mkv"))
-            .AddInput(input: new(FilePath: "/c.mkv"))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(new("/a.mkv"))
+            .AddInput(new("/b.mkv"))
+            .AddInput(new("/c.mkv"))
+            .Build("ffmpeg");
 
-        int a = Array.IndexOf(array: cmd.Arguments, value: "/a.mkv");
-        int b = Array.IndexOf(array: cmd.Arguments, value: "/b.mkv");
-        int c = Array.IndexOf(array: cmd.Arguments, value: "/c.mkv");
+        int a = Array.IndexOf(cmd.Arguments, "/a.mkv");
+        int b = Array.IndexOf(cmd.Arguments, "/b.mkv");
+        int c = Array.IndexOf(cmd.Arguments, "/c.mkv");
 
-        a.Should().BeLessThan(expected: b);
-        b.Should().BeLessThan(expected: c);
+        a.Should().BeLessThan(b);
+        b.Should().BeLessThan(c);
     }
 
     // ── Filter complex sits between inputs and outputs ───────────────────────
@@ -214,20 +214,20 @@ public class FfmpegCommandBuilderOrderingTests
     public void Filter_complex_sits_between_last_input_and_first_output_codec()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(input: new(FilePath: "/in.mkv"))
-            .WithFilterComplex(filterGraph: "[0:v]scale=1280:720[v]")
-            .AddOutput(output: new(FilePath: "/out.mp4", VideoCodec: "libx264"))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(new("/in.mkv"))
+            .WithFilterComplex("[0:v]scale=1280:720[v]")
+            .AddOutput(new("/out.mp4", VideoCodec: "libx264"))
+            .Build("ffmpeg");
 
-        int iIndex = Array.IndexOf(array: cmd.Arguments, value: "-i");
-        int filterIndex = Array.IndexOf(array: cmd.Arguments, value: "-filter_complex");
-        int codecIndex = Array.IndexOf(array: cmd.Arguments, value: "-c:v");
-        int outIndex = Array.IndexOf(array: cmd.Arguments, value: "/out.mp4");
+        int iIndex = Array.IndexOf(cmd.Arguments, "-i");
+        int filterIndex = Array.IndexOf(cmd.Arguments, "-filter_complex");
+        int codecIndex = Array.IndexOf(cmd.Arguments, "-c:v");
+        int outIndex = Array.IndexOf(cmd.Arguments, "/out.mp4");
 
-        iIndex.Should().BeLessThan(expected: filterIndex);
-        filterIndex.Should().BeLessThan(expected: codecIndex);
-        codecIndex.Should().BeLessThan(expected: outIndex);
+        iIndex.Should().BeLessThan(filterIndex);
+        filterIndex.Should().BeLessThan(codecIndex);
+        codecIndex.Should().BeLessThan(outIndex);
     }
 
     // ── Per-output ordering: map → codec → quality → output path ─────────────
@@ -236,70 +236,70 @@ public class FfmpegCommandBuilderOrderingTests
     public void Map_streams_appear_before_codec_args()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddOutput(
-                output: new(
+                new(
                     FilePath: "/out.mp4",
                     VideoCodec: "libx264",
                     AudioCodec: "aac",
                     MapStreams: ["0:v:0", "0:a:0"]
                 )
             )
-            .Build(ffmpegPath: "ffmpeg");
+            .Build("ffmpeg");
 
-        int firstMapIndex = Array.IndexOf(array: cmd.Arguments, value: "-map");
-        int videoCodecIndex = Array.IndexOf(array: cmd.Arguments, value: "-c:v");
+        int firstMapIndex = Array.IndexOf(cmd.Arguments, "-map");
+        int videoCodecIndex = Array.IndexOf(cmd.Arguments, "-c:v");
 
-        firstMapIndex.Should().BeLessThan(expected: videoCodecIndex);
+        firstMapIndex.Should().BeLessThan(videoCodecIndex);
     }
 
     [Fact]
     public void Multiple_map_streams_emit_dash_map_for_each_in_order()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddOutput(output: new(FilePath: "/out.mp4", MapStreams: ["0:v:0", "0:a:0", "0:s:0"]))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddOutput(new(FilePath: "/out.mp4", MapStreams: ["0:v:0", "0:a:0", "0:s:0"]))
+            .Build("ffmpeg");
 
-        int mapCount = cmd.Arguments.Count(predicate: a => a == "-map");
-        mapCount.Should().Be(expected: 3);
-        cmd.Arguments.Should().ContainInOrder(expected: ["-map", "0:v:0", "-map", "0:a:0", "-map", "0:s:0"]);
+        int mapCount = cmd.Arguments.Count(a => a == "-map");
+        mapCount.Should().Be(3);
+        cmd.Arguments.Should().ContainInOrder("-map", "0:v:0", "-map", "0:a:0", "-map", "0:s:0");
     }
 
     [Fact]
     public void Video_bitrate_and_audio_bitrate_carry_k_suffix()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddOutput(output: new(FilePath: "/out.mp4", VideoBitrateKbps: 5000, AudioBitrateKbps: 192))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddOutput(new(FilePath: "/out.mp4", VideoBitrateKbps: 5000, AudioBitrateKbps: 192))
+            .Build("ffmpeg");
 
-        cmd.Arguments.Should().Contain(expected: "5000k").And.Contain(expected: "192k");
+        cmd.Arguments.Should().Contain("5000k").And.Contain("192k");
         // k suffix is mandatory — a bare "5000" would mean bits/sec, not kbps.
-        cmd.Arguments.Should().NotContain(unexpected: "5000");
-        cmd.Arguments.Should().NotContain(unexpected: "192");
+        cmd.Arguments.Should().NotContain("5000");
+        cmd.Arguments.Should().NotContain("192");
     }
 
     [Fact]
     public void Audio_channels_and_sample_rate_emit_dash_ac_and_dash_ar()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddOutput(output: new(FilePath: "/out.mp4", AudioChannels: "2", AudioSampleRate: 48000))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddOutput(new(FilePath: "/out.mp4", AudioChannels: "2", AudioSampleRate: 48000))
+            .Build("ffmpeg");
 
-        cmd.Arguments.Should().ContainInOrder(expected: ["-ac", "2", "-ar", "48000"]);
+        cmd.Arguments.Should().ContainInOrder("-ac", "2", "-ar", "48000");
     }
 
     [Fact]
     public void Keyframe_interval_emits_dash_g()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddOutput(output: new(FilePath: "/out.mp4", KeyframeInterval: 120))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddOutput(new(FilePath: "/out.mp4", KeyframeInterval: 120))
+            .Build("ffmpeg");
 
-        cmd.Arguments.Should().ContainInOrder(expected: ["-g", "120"]);
+        cmd.Arguments.Should().ContainInOrder("-g", "120");
     }
 
     [Fact]
@@ -308,9 +308,9 @@ public class FfmpegCommandBuilderOrderingTests
         // Per output: FilePath emitted after ALL per-output args. Nothing should
         // sit between any codec/quality flag and the path.
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddOutput(
-                output: new(
+                new(
                     FilePath: "/out.mp4",
                     VideoCodec: "libx264",
                     AudioCodec: "aac",
@@ -325,25 +325,25 @@ public class FfmpegCommandBuilderOrderingTests
                     AudioChannels: "2",
                     AudioSampleRate: 48000,
                     MapStreams: ["0:v:0"],
-                    ExtraFlags: new() { [key: "-tune"] = "film" }
+                    ExtraFlags: new() { ["-tune"] = "film" }
                 )
             )
-            .Build(ffmpegPath: "ffmpeg");
+            .Build("ffmpeg");
 
-        cmd.Arguments[^1].Should().Be(expected: "/out.mp4");
+        cmd.Arguments[^1].Should().Be("/out.mp4");
     }
 
     [Fact]
     public void Multiple_outputs_each_have_path_after_their_per_output_args()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddOutput(output: new(FilePath: "/a.mp4", VideoCodec: "libx264"))
-            .AddOutput(output: new(FilePath: "/b.mp4", VideoCodec: "libx265"))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddOutput(new(FilePath: "/a.mp4", VideoCodec: "libx264"))
+            .AddOutput(new(FilePath: "/b.mp4", VideoCodec: "libx265"))
+            .Build("ffmpeg");
 
         // The block must be: -c:v libx264 /a.mp4 -c:v libx265 /b.mp4
-        cmd.Arguments.Should().Equal(expected: ["-c:v", "libx264", "/a.mp4", "-c:v", "libx265", "/b.mp4"]);
+        cmd.Arguments.Should().Equal("-c:v", "libx264", "/a.mp4", "-c:v", "libx265", "/b.mp4");
     }
 
     // ── End-to-end golden order ──────────────────────────────────────────────
@@ -352,25 +352,25 @@ public class FfmpegCommandBuilderOrderingTests
     public void End_to_end_global_then_input_then_filter_then_output_then_path()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(Threads: 4))
-            .AddInput(input: new(FilePath: "/in.mkv", SeekTo: TimeSpan.FromSeconds(seconds: 5)))
-            .WithFilterComplex(filterGraph: "[0:v]scale=1280:720[v]")
-            .AddOutput(output: new(FilePath: "/out.mp4", VideoCodec: "libx264", Crf: 23))
-            .Build(ffmpegPath: "ffmpeg");
+            .WithGlobalOptions(new(Threads: 4))
+            .AddInput(new("/in.mkv", SeekTo: TimeSpan.FromSeconds(5)))
+            .WithFilterComplex("[0:v]scale=1280:720[v]")
+            .AddOutput(new(FilePath: "/out.mp4", VideoCodec: "libx264", Crf: 23))
+            .Build("ffmpeg");
 
-        int yIndex = Array.IndexOf(array: cmd.Arguments, value: "-y");
-        int threadsIndex = Array.IndexOf(array: cmd.Arguments, value: "-threads");
-        int ssIndex = Array.IndexOf(array: cmd.Arguments, value: "-ss");
-        int iIndex = Array.IndexOf(array: cmd.Arguments, value: "-i");
-        int filterIndex = Array.IndexOf(array: cmd.Arguments, value: "-filter_complex");
-        int codecIndex = Array.IndexOf(array: cmd.Arguments, value: "-c:v");
+        int yIndex = Array.IndexOf(cmd.Arguments, "-y");
+        int threadsIndex = Array.IndexOf(cmd.Arguments, "-threads");
+        int ssIndex = Array.IndexOf(cmd.Arguments, "-ss");
+        int iIndex = Array.IndexOf(cmd.Arguments, "-i");
+        int filterIndex = Array.IndexOf(cmd.Arguments, "-filter_complex");
+        int codecIndex = Array.IndexOf(cmd.Arguments, "-c:v");
 
-        yIndex.Should().BeLessThan(expected: threadsIndex);
-        threadsIndex.Should().BeLessThan(expected: ssIndex);
-        ssIndex.Should().BeLessThan(expected: iIndex);
-        iIndex.Should().BeLessThan(expected: filterIndex);
-        filterIndex.Should().BeLessThan(expected: codecIndex);
-        cmd.Arguments[^1].Should().Be(expected: "/out.mp4");
+        yIndex.Should().BeLessThan(threadsIndex);
+        threadsIndex.Should().BeLessThan(ssIndex);
+        ssIndex.Should().BeLessThan(iIndex);
+        iIndex.Should().BeLessThan(filterIndex);
+        filterIndex.Should().BeLessThan(codecIndex);
+        cmd.Arguments[^1].Should().Be("/out.mp4");
     }
 
     // ── Builder fluency ──────────────────────────────────────────────────────
@@ -380,9 +380,9 @@ public class FfmpegCommandBuilderOrderingTests
     {
         FfmpegCommandBuilder builder = new();
 
-        builder.WithGlobalOptions(options: new()).Should().BeSameAs(expected: builder);
-        builder.AddInput(input: new(FilePath: "/in.mkv")).Should().BeSameAs(expected: builder);
-        builder.WithFilterComplex(filterGraph: "noop").Should().BeSameAs(expected: builder);
-        builder.AddOutput(output: new(FilePath: "/out.mp4")).Should().BeSameAs(expected: builder);
+        builder.WithGlobalOptions(new()).Should().BeSameAs(builder);
+        builder.AddInput(new("/in.mkv")).Should().BeSameAs(builder);
+        builder.WithFilterComplex("noop").Should().BeSameAs(builder);
+        builder.AddOutput(new("/out.mp4")).Should().BeSameAs(builder);
     }
 }

@@ -29,7 +29,7 @@ public class ExecutionGraphBuilder
         // from the SDR intermediate instead of sampling raw HDR (crushed colours).
         string? tonemapNodeId = null;
 
-        VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile: profile);
+        VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
 
         // If we have video outputs
         if (media.HasVideo && videoOutputs.Length > 0)
@@ -37,11 +37,11 @@ public class ExecutionGraphBuilder
             // 1. Decode
             string decodeId = $"node_{nodeId++}";
             nodes.Add(
-                item: new(
-                    Id: decodeId,
-                    Operation: OperationType.Decode,
-                    DependsOn: [],
-                    Parameters: new() { [key: "stream_index"] = "0", [key: "codec"] = media.VideoStreams[index: 0].Codec }
+                new(
+                    decodeId,
+                    OperationType.Decode,
+                    [],
+                    new() { ["stream_index"] = "0", ["codec"] = media.VideoStreams[0].Codec }
                 )
             );
 
@@ -49,17 +49,17 @@ public class ExecutionGraphBuilder
 
             // 2. Tonemap if any output wants HDR→SDR and source is HDR
             bool needsTonemap =
-                media.VideoStreams[index: 0].IsHdr && videoOutputs.Any(predicate: v => v.ConvertHdrToSdr);
+                media.VideoStreams[0].IsHdr && videoOutputs.Any(v => v.ConvertHdrToSdr);
 
             if (needsTonemap)
             {
                 string tonemapId = $"node_{nodeId++}";
                 nodes.Add(
-                    item: new(
-                        Id: tonemapId,
-                        Operation: OperationType.Tonemap,
-                        DependsOn: [lastVideoNode],
-                        Parameters: new() { [key: "algorithm"] = "hable" }
+                    new(
+                        tonemapId,
+                        OperationType.Tonemap,
+                        [lastVideoNode],
+                        new() { ["algorithm"] = "hable" }
                     )
                 );
                 lastVideoNode = tonemapId;
@@ -71,11 +71,11 @@ public class ExecutionGraphBuilder
             {
                 string splitId = $"node_{nodeId++}";
                 nodes.Add(
-                    item: new(
-                        Id: splitId,
-                        Operation: OperationType.Split,
-                        DependsOn: [lastVideoNode],
-                        Parameters: new() { [key: "count"] = videoOutputs.Length.ToString() }
+                    new(
+                        splitId,
+                        OperationType.Split,
+                        [lastVideoNode],
+                        new() { ["count"] = videoOutputs.Length.ToString() }
                     )
                 );
 
@@ -84,39 +84,39 @@ public class ExecutionGraphBuilder
                 {
                     VideoOutput output = videoOutputs[i];
                     // A null (or legacy 0) width means "keep source width".
-                    int width = output.Width is int ow and > 0 ? ow : media.VideoStreams[index: 0].Width;
+                    int width = output.Width is int ow and > 0 ? ow : media.VideoStreams[0].Width;
                     int height =
                         output.Height
-                        ?? (width * media.VideoStreams[index: 0].Height / media.VideoStreams[index: 0].Width);
+                        ?? (width * media.VideoStreams[0].Height / media.VideoStreams[0].Width);
 
                     string scaleId = $"node_{nodeId++}";
                     nodes.Add(
-                        item: new(
-                            Id: scaleId,
-                            Operation: OperationType.Scale,
-                            DependsOn: [splitId],
-                            Parameters: new()
+                        new(
+                            scaleId,
+                            OperationType.Scale,
+                            [splitId],
+                            new()
                             {
-                                [key: "width"] = width.ToString(),
-                                [key: "height"] = height.ToString(),
-                                [key: "split_index"] = i.ToString(),
+                                ["width"] = width.ToString(),
+                                ["height"] = height.ToString(),
+                                ["split_index"] = i.ToString(),
                             }
                         )
                     );
 
                     string encodeId = $"node_{nodeId++}";
                     nodes.Add(
-                        item: new(
-                            Id: encodeId,
-                            Operation: OperationType.Encode,
-                            DependsOn: [scaleId],
-                            Parameters: new()
+                        new(
+                            encodeId,
+                            OperationType.Encode,
+                            [scaleId],
+                            new()
                             {
-                                [key: "encoder"] = resolvedVideoCodecs[i].FfmpegEncoderName,
-                                [key: "crf"] = output.Crf.ToString(),
-                                [key: "preset"] = output.Preset ?? "",
-                                [key: "width"] = width.ToString(),
-                                [key: "height"] = height.ToString(),
+                                ["encoder"] = resolvedVideoCodecs[i].FfmpegEncoderName,
+                                ["crf"] = output.Crf.ToString(),
+                                ["preset"] = output.Preset ?? "",
+                                ["width"] = width.ToString(),
+                                ["height"] = height.ToString(),
                             }
                         )
                     );
@@ -127,23 +127,23 @@ public class ExecutionGraphBuilder
                 // Single output: scale + encode
                 VideoOutput output = videoOutputs[0];
                 // A null (or legacy 0) width means "keep source width".
-                int width = output.Width is int ow and > 0 ? ow : media.VideoStreams[index: 0].Width;
+                int width = output.Width is int ow and > 0 ? ow : media.VideoStreams[0].Width;
                 int height =
                     output.Height
-                    ?? (width * media.VideoStreams[index: 0].Height / media.VideoStreams[index: 0].Width);
+                    ?? (width * media.VideoStreams[0].Height / media.VideoStreams[0].Width);
 
                 bool needsScale =
-                    width != media.VideoStreams[index: 0].Width || height != media.VideoStreams[index: 0].Height;
+                    width != media.VideoStreams[0].Width || height != media.VideoStreams[0].Height;
 
                 if (needsScale)
                 {
                     string scaleId = $"node_{nodeId++}";
                     nodes.Add(
-                        item: new(
-                            Id: scaleId,
-                            Operation: OperationType.Scale,
-                            DependsOn: [lastVideoNode],
-                            Parameters: new() { [key: "width"] = width.ToString(), [key: "height"] = height.ToString() }
+                        new(
+                            scaleId,
+                            OperationType.Scale,
+                            [lastVideoNode],
+                            new() { ["width"] = width.ToString(), ["height"] = height.ToString() }
                         )
                     );
                     lastVideoNode = scaleId;
@@ -151,17 +151,17 @@ public class ExecutionGraphBuilder
 
                 string encodeId = $"node_{nodeId++}";
                 nodes.Add(
-                    item: new(
-                        Id: encodeId,
-                        Operation: OperationType.Encode,
-                        DependsOn: [lastVideoNode],
-                        Parameters: new()
+                    new(
+                        encodeId,
+                        OperationType.Encode,
+                        [lastVideoNode],
+                        new()
                         {
-                            [key: "encoder"] = resolvedVideoCodecs[0].FfmpegEncoderName,
-                            [key: "crf"] = output.Crf.ToString(),
-                            [key: "preset"] = output.Preset ?? "",
-                            [key: "width"] = width.ToString(),
-                            [key: "height"] = height.ToString(),
+                            ["encoder"] = resolvedVideoCodecs[0].FfmpegEncoderName,
+                            ["crf"] = output.Crf.ToString(),
+                            ["preset"] = output.Preset ?? "",
+                            ["width"] = width.ToString(),
+                            ["height"] = height.ToString(),
                         }
                     )
                 );
@@ -173,26 +173,26 @@ public class ExecutionGraphBuilder
         {
             string audioDecodeId = $"node_{nodeId++}";
             nodes.Add(
-                item: new(
-                    Id: audioDecodeId,
-                    Operation: OperationType.AudioDecode,
-                    DependsOn: [],
-                    Parameters: new() { [key: "stream_index"] = media.AudioStreams[index: i].Index.ToString() }
+                new(
+                    audioDecodeId,
+                    OperationType.AudioDecode,
+                    [],
+                    new() { ["stream_index"] = media.AudioStreams[i].Index.ToString() }
                 )
             );
 
             string audioEncodeId = $"node_{nodeId++}";
             nodes.Add(
-                item: new(
-                    Id: audioEncodeId,
-                    Operation: OperationType.AudioEncode,
-                    DependsOn: [audioDecodeId],
-                    Parameters: new()
+                new(
+                    audioEncodeId,
+                    OperationType.AudioEncode,
+                    [audioDecodeId],
+                    new()
                     {
-                        [key: "codec"] = profile.Audio[i].Codec.ToString(),
-                        [key: "bitrate"] = profile.Audio[i].BitrateKbps.ToString(),
-                        [key: "channels"] = profile.Audio[i].Channels.ToString(),
-                        [key: "sample_rate"] = profile.Audio[i].SampleRateHz.ToString(),
+                        ["codec"] = profile.Audio[i].Codec.ToString(),
+                        ["bitrate"] = profile.Audio[i].BitrateKbps.ToString(),
+                        ["channels"] = profile.Audio[i].Channels.ToString(),
+                        ["sample_rate"] = profile.Audio[i].SampleRateHz.ToString(),
                     }
                 )
             );
@@ -203,14 +203,14 @@ public class ExecutionGraphBuilder
         {
             string subExtractId = $"node_{nodeId++}";
             nodes.Add(
-                item: new(
-                    Id: subExtractId,
-                    Operation: OperationType.SubtitleExtract,
-                    DependsOn: [],
-                    Parameters: new()
+                new(
+                    subExtractId,
+                    OperationType.SubtitleExtract,
+                    [],
+                    new()
                     {
-                        [key: "stream_index"] = media.SubtitleStreams[index: i].Index.ToString(),
-                        [key: "language"] = media.SubtitleStreams[index: i].Language ?? "und",
+                        ["stream_index"] = media.SubtitleStreams[i].Index.ToString(),
+                        ["language"] = media.SubtitleStreams[i].Language ?? "und",
                     }
                 )
             );
@@ -220,7 +220,7 @@ public class ExecutionGraphBuilder
         if (media.Chapters.Count > 0)
         {
             string chapterId = $"node_{nodeId++}";
-            nodes.Add(item: new(Id: chapterId, Operation: OperationType.ChapterExtract, DependsOn: [], Parameters: new()));
+            nodes.Add(new(chapterId, OperationType.ChapterExtract, [], new()));
         }
 
         // Thumbnail generation (independent)
@@ -229,14 +229,14 @@ public class ExecutionGraphBuilder
             string thumbId = $"node_{nodeId++}";
             string[] thumbDeps = tonemapNodeId is not null ? [tonemapNodeId] : [];
             nodes.Add(
-                item: new(
-                    Id: thumbId,
-                    Operation: OperationType.ThumbnailCapture,
-                    DependsOn: thumbDeps,
-                    Parameters: new()
+                new(
+                    thumbId,
+                    OperationType.ThumbnailCapture,
+                    thumbDeps,
+                    new()
                     {
-                        [key: "width"] = profile.Thumbnails.Width.ToString(),
-                        [key: "interval"] = profile.Thumbnails.IntervalSeconds.ToString(),
+                        ["width"] = profile.Thumbnails.Width.ToString(),
+                        ["interval"] = profile.Thumbnails.IntervalSeconds.ToString(),
                     }
                 )
             );

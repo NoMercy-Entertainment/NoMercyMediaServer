@@ -15,24 +15,24 @@ namespace NoMercy.Providers.TMDB.Models.Credits;
 
 public class TmdbCreditDetails
 {
-    [JsonProperty(propertyName: "credit_type")]
+    [JsonProperty("credit_type")]
     public string CreditType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "department")]
+    [JsonProperty("department")]
     public string Department { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "job")]
+    [JsonProperty("job")]
     public string Job { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "media")]
+    [JsonProperty("media")]
     public TmdbMedia? Media { get; set; }
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string? MediaType { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "person")]
+    [JsonProperty("person")]
     public TmdbPerson TmdbPerson { get; set; } = new();
 }

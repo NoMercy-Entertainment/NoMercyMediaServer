@@ -34,7 +34,7 @@ public class ParentJobFailedSkipTests : IDisposable
     public ParentJobFailedSkipTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(context: _adapter);
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
@@ -50,7 +50,7 @@ public class ParentJobFailedSkipTests : IDisposable
         // parent job id in ParentJobId so descendant jobs can detect it.
         const int parentJobId = 1;
         _context.FailedJobs.Add(
-            entity: new()
+            new()
             {
                 Queue = "encoder",
                 Payload = $"{{\"Id\":{parentJobId},\"Type\":\"VideoEncodeJob\"}}",
@@ -70,27 +70,27 @@ public class ParentJobFailedSkipTests : IDisposable
             ParentJobId = parentJobId,
             GroupTag = "group-abc",
         };
-        _jobQueue.Enqueue(queueJob: childJob);
-        _context.QueueJobs.Count().Should().Be(expected: 1);
+        _jobQueue.Enqueue(childJob);
+        _context.QueueJobs.Count().Should().Be(1);
 
         // Act: ReserveJob should detect the failed parent and skip the child.
-        QueueJobModel? reserved = _jobQueue.ReserveJob(name: "encoder-task", currentJobId: null);
+        QueueJobModel? reserved = _jobQueue.ReserveJob("encoder-task", null);
 
         // Assert: ReserveJob returns null (skipped).
-        reserved.Should().BeNull(because: "child should be skipped when its parent is in FailedJobs");
+        reserved.Should().BeNull("child should be skipped when its parent is in FailedJobs");
 
         // The child should have been removed from QueueJobs...
         _context
             .QueueJobs.Count()
             .Should()
-            .Be(expected: 0, because: "child job should be removed from the queue after skip");
+            .Be(0, "child job should be removed from the queue after skip");
 
         // ...and a synthetic FailedJob entry should have been added.
-        FailedJob? skippedEntry = _context.FailedJobs.FirstOrDefault(predicate: failedJob =>
+        FailedJob? skippedEntry = _context.FailedJobs.FirstOrDefault(failedJob =>
             failedJob.Exception.Contains("Skipped: parent job")
         );
-        skippedEntry.Should().NotBeNull(because: "a failed-by-parent entry should appear in FailedJobs");
-        skippedEntry!.Queue.Should().Be(expected: "encoder-task");
+        skippedEntry.Should().NotBeNull("a failed-by-parent entry should appear in FailedJobs");
+        skippedEntry!.Queue.Should().Be("encoder-task");
     }
 
     [Fact]
@@ -107,16 +107,16 @@ public class ParentJobFailedSkipTests : IDisposable
             ParentJobId = parentJobId,
             GroupTag = "group-xyz",
         };
-        _jobQueue.Enqueue(queueJob: childJob);
+        _jobQueue.Enqueue(childJob);
 
         // Act
-        QueueJobModel? reserved = _jobQueue.ReserveJob(name: "encoder-task", currentJobId: null);
+        QueueJobModel? reserved = _jobQueue.ReserveJob("encoder-task", null);
 
         // Assert: normal reservation — child runs.
         reserved
             .Should()
-            .NotBeNull(because: "child should be reserved when its parent is NOT in FailedJobs");
-        reserved!.ParentJobId.Should().Be(expected: parentJobId);
+            .NotBeNull("child should be reserved when its parent is NOT in FailedJobs");
+        reserved!.ParentJobId.Should().Be(parentJobId);
     }
 
     [Fact]
@@ -129,10 +129,10 @@ public class ParentJobFailedSkipTests : IDisposable
             Payload = "{\"Id\":5,\"Type\":\"VideoEncodeJob\"}",
             AvailableAt = DateTime.UtcNow,
         };
-        _jobQueue.Enqueue(queueJob: topLevelJob);
+        _jobQueue.Enqueue(topLevelJob);
 
         // Act
-        QueueJobModel? reserved = _jobQueue.ReserveJob(name: "encoder", currentJobId: null);
+        QueueJobModel? reserved = _jobQueue.ReserveJob("encoder", null);
 
         // Assert: top-level job is reserved normally.
         reserved.Should().NotBeNull();

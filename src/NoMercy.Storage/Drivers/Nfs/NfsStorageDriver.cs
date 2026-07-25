@@ -33,7 +33,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     // (CB_PATH_DOWN / NFS4ERR_EXPIRED). Keep-alive at 30s leaves headroom for
     // packet loss and clock skew. NFS3 has no lease state so the ping is a
     // harmless GETATTR there.
-    private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(seconds: 30);
+    private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(30);
 
     // libnfs's mount RPC can transiently time out ("command timed out") when the
     // NFS server is momentarily busy — e.g. mid-encode — even though it is
@@ -48,7 +48,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     private readonly NfsDriverConfig _config;
     private IntPtr _nfs;
-    private readonly SemaphoreSlim _lock = new(initialCount: 1, maxCount: 1);
+    private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly ILogger _log;
     private readonly Timer? _keepAlive;
     private readonly ILibNfs _libNfs;
@@ -75,17 +75,17 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     private static void EnsureWinsockInitialized()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
-        if (Interlocked.Exchange(location1: ref _winsockReady, value: 1) == 1)
+        if (Interlocked.Exchange(ref _winsockReady, 1) == 1)
             return;
 
         try
         {
             using System.Net.Sockets.Socket socket = new(
-                addressFamily: System.Net.Sockets.AddressFamily.InterNetwork,
-                socketType: System.Net.Sockets.SocketType.Stream,
-                protocolType: System.Net.Sockets.ProtocolType.Tcp
+                System.Net.Sockets.AddressFamily.InterNetwork,
+                System.Net.Sockets.SocketType.Stream,
+                System.Net.Sockets.ProtocolType.Tcp
             );
         }
         catch
@@ -95,7 +95,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     }
 
     public NfsStorageDriver(NfsDriverConfig config, ILogger? log = null)
-        : this(config: config, libNfs: LibNfsPInvoke.Instance, log: log) { }
+        : this(config, LibNfsPInvoke.Instance, log) { }
 
     /// <summary>
     /// Test-friendly constructor. Production code uses the parameterless overload
@@ -104,8 +104,8 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     /// </summary>
     internal NfsStorageDriver(NfsDriverConfig config, ILibNfs libNfs, ILogger? log = null)
     {
-        _config = config ?? throw new ArgumentNullException(paramName: nameof(config));
-        _libNfs = libNfs ?? throw new ArgumentNullException(paramName: nameof(libNfs));
+        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _libNfs = libNfs ?? throw new ArgumentNullException(nameof(libNfs));
         _log = log ?? NullLogger.Instance;
 
         // Guarantee Winsock is up before libnfs resolves the server (Windows).
@@ -118,23 +118,23 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         // returns NFS4ERR_EXPIRED. Stat the export root every 30s so the
         // server treats us as alive even when no streaming reads are in
         // flight (typical between user sessions).
-        _keepAlive = new(callback: KeepAliveTick, state: null, dueTime: KeepAliveInterval, period: KeepAliveInterval);
+        _keepAlive = new(KeepAliveTick, null, KeepAliveInterval, KeepAliveInterval);
     }
 
     private void KeepAliveTick(object? _)
     {
         if (_disposed)
             return;
-        if (!_lock.Wait(timeout: TimeSpan.Zero))
+        if (!_lock.Wait(TimeSpan.Zero))
             return; // real work in progress — no need to renew separately
         try
         {
-            int rc = _libNfs.Stat64(nfs: _nfs, path: "/", stat: out LibNfs.NfsStat64 stat);
+            int rc = _libNfs.Stat64(_nfs, "/", out LibNfs.NfsStat64 stat);
             _ = stat;
             if (rc != 0)
             {
-                string err = _libNfs.GetError(nfs: _nfs);
-                if (IsExpiredStateError(rc: rc, err: err))
+                string err = _libNfs.GetError(_nfs);
+                if (IsExpiredStateError(rc, err))
                 {
                     // Self-heal proactively so the next user-facing op finds a
                     // live session instead of having to remount mid-stream.
@@ -145,15 +145,15 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     catch (Exception ex)
                     {
                         _log.LogDebug(
-                            exception: ex,
-                            message: "NFS keep-alive remount failed on {Server}:{Export}", args: [_config.Server, _config.Export]
+                            ex,
+                            "NFS keep-alive remount failed on {Server}:{Export}", [_config.Server, _config.Export]
                         );
                     }
                 }
                 else
                 {
                     _log.LogDebug(
-                        message: "NFS keep-alive stat / failed on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", args: [_config.Server, _config.Export, _config.Version, rc, err]
+                        "NFS keep-alive stat / failed on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", [_config.Server, _config.Export, _config.Version, rc, err]
                     );
                 }
             }
@@ -179,7 +179,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     // Give this libnfs context a unique NFSv4 client name + verifier before
     // mount so concurrent/sequential drivers in one process don't share seqid
     // state. NFSv4 only — libnfs ignores these for v3.
-    private void ApplyClientIdentity() => ApplyClientIdentity(ctx: _nfs, clientId: _clientId);
+    private void ApplyClientIdentity() => ApplyClientIdentity(_nfs, _clientId);
 
     // Stamp a libnfs context with a unique NFSv4 client name + verifier. Each
     // distinct clientId becomes an independent clientid/open-owner on the
@@ -189,19 +189,19 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     {
         if (_config.Version != 4)
             return;
-        _libNfs.SetClientName(nfs: ctx, id: clientId);
-        _libNfs.SetVerifier(nfs: ctx, verifier: clientId);
+        _libNfs.SetClientName(ctx, clientId);
+        _libNfs.SetVerifier(ctx, clientId);
     }
 
     private static bool IsExpiredStateError(int rc, string err)
     {
         if (rc == -11)
             return true;
-        return err.Contains(value: "NFS4ERR_EXPIRED", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || err.Contains(value: "NFS4ERR_BAD_SESSION", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || err.Contains(value: "NFS4ERR_BAD_STATEID", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || err.Contains(value: "NFS4ERR_STALE_CLIENTID", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || err.Contains(value: "NFS4ERR_BAD_SEQID", comparisonType: StringComparison.OrdinalIgnoreCase);
+        return err.Contains("NFS4ERR_EXPIRED", StringComparison.OrdinalIgnoreCase)
+            || err.Contains("NFS4ERR_BAD_SESSION", StringComparison.OrdinalIgnoreCase)
+            || err.Contains("NFS4ERR_BAD_STATEID", StringComparison.OrdinalIgnoreCase)
+            || err.Contains("NFS4ERR_STALE_CLIENTID", StringComparison.OrdinalIgnoreCase)
+            || err.Contains("NFS4ERR_BAD_SEQID", StringComparison.OrdinalIgnoreCase);
     }
 
     // Init a fresh libnfs context and apply protocol version, credentials, and
@@ -213,25 +213,25 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _nfs = _libNfs.InitContext();
         if (_nfs == IntPtr.Zero)
             throw new InvalidOperationException(
-                message: "nfs_init_context returned null — libnfs not available."
+                "nfs_init_context returned null — libnfs not available."
             );
 
         // Set NFS protocol version BEFORE mount. libnfs defaults to NFSv3
         // when not set; we call this even for v3 so the value is explicit
         // and surfaces a clear error if the server doesn't speak that version.
-        int versionRc = _libNfs.SetVersion(nfs: _nfs, version: _config.Version);
+        int versionRc = _libNfs.SetVersion(_nfs, _config.Version);
         if (versionRc != 0)
         {
-            string err = _libNfs.GetError(nfs: _nfs);
-            _libNfs.DestroyContext(nfs: _nfs);
+            string err = _libNfs.GetError(_nfs);
+            _libNfs.DestroyContext(_nfs);
             _nfs = IntPtr.Zero;
-            throw new IOException(message: $"nfs_set_version({_config.Version}) failed — {err}");
+            throw new IOException($"nfs_set_version({_config.Version}) failed — {err}");
         }
 
         if (_config.Uid.HasValue)
-            _libNfs.SetUid(nfs: _nfs, uid: _config.Uid.Value);
+            _libNfs.SetUid(_nfs, _config.Uid.Value);
         if (_config.Gid.HasValue)
-            _libNfs.SetGid(nfs: _nfs, gid: _config.Gid.Value);
+            _libNfs.SetGid(_nfs, _config.Gid.Value);
 
         ApplyClientIdentity();
     }
@@ -244,24 +244,24 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     {
         for (int attempt = 1; ; attempt++)
         {
-            int rc = _libNfs.Mount(nfs: _nfs, server: _config.Server, exportPath: _config.Export);
+            int rc = _libNfs.Mount(_nfs, _config.Server, _config.Export);
             if (rc == 0)
                 return;
 
-            string err = _libNfs.GetError(nfs: _nfs);
-            _libNfs.DestroyContext(nfs: _nfs);
+            string err = _libNfs.GetError(_nfs);
+            _libNfs.DestroyContext(_nfs);
             _nfs = IntPtr.Zero;
 
             if (attempt >= MountAttempts)
                 throw new IOException(
-                    message: $"NFS{_config.Version} mount failed for {_config.Server}:{_config.Export} after {attempt} attempts — {err}"
+                    $"NFS{_config.Version} mount failed for {_config.Server}:{_config.Export} after {attempt} attempts — {err}"
                 );
 
             _log.LogWarning(
-                message: "NFS{Version} mount attempt {Attempt}/{Max} failed for {Server}:{Export} — {Error}; retrying", args: [_config.Version, attempt, MountAttempts, _config.Server, _config.Export, err]
+                "NFS{Version} mount attempt {Attempt}/{Max} failed for {Server}:{Export} — {Error}; retrying", [_config.Version, attempt, MountAttempts, _config.Server, _config.Export, err]
             );
 
-            Thread.Sleep(timeout: TimeSpan.FromMilliseconds(milliseconds: 250 * attempt));
+            Thread.Sleep(TimeSpan.FromMilliseconds(250 * attempt));
             InitAndConfigureContext();
         }
     }
@@ -274,50 +274,50 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     {
         if (_nfs != IntPtr.Zero)
         {
-            _libNfs.DestroyContext(nfs: _nfs);
+            _libNfs.DestroyContext(_nfs);
             _nfs = IntPtr.Zero;
         }
 
         IntPtr ctx = _libNfs.InitContext();
         if (ctx == IntPtr.Zero)
-            throw new IOException(message: "NFS remount: nfs_init_context returned null");
+            throw new IOException("NFS remount: nfs_init_context returned null");
 
-        int versionRc = _libNfs.SetVersion(nfs: ctx, version: _config.Version);
+        int versionRc = _libNfs.SetVersion(ctx, _config.Version);
         if (versionRc != 0)
         {
-            string err = _libNfs.GetError(nfs: ctx);
-            _libNfs.DestroyContext(nfs: ctx);
+            string err = _libNfs.GetError(ctx);
+            _libNfs.DestroyContext(ctx);
             throw new IOException(
-                message: $"NFS remount: nfs_set_version({_config.Version}) failed — {err}"
+                $"NFS remount: nfs_set_version({_config.Version}) failed — {err}"
             );
         }
 
         if (_config.Uid.HasValue)
-            _libNfs.SetUid(nfs: ctx, uid: _config.Uid.Value);
+            _libNfs.SetUid(ctx, _config.Uid.Value);
         if (_config.Gid.HasValue)
-            _libNfs.SetGid(nfs: ctx, gid: _config.Gid.Value);
+            _libNfs.SetGid(ctx, _config.Gid.Value);
 
         if (_config.Version == 4)
         {
             // Reuse this driver's stable client id so the server sees the same
             // client across the remount (recovers the lease cleanly).
-            _libNfs.SetClientName(nfs: ctx, id: _clientId);
-            _libNfs.SetVerifier(nfs: ctx, verifier: _clientId);
+            _libNfs.SetClientName(ctx, _clientId);
+            _libNfs.SetVerifier(ctx, _clientId);
         }
 
-        int rc = _libNfs.Mount(nfs: ctx, server: _config.Server, exportPath: _config.Export);
+        int rc = _libNfs.Mount(ctx, _config.Server, _config.Export);
         if (rc != 0)
         {
-            string err = _libNfs.GetError(nfs: ctx);
-            _libNfs.DestroyContext(nfs: ctx);
+            string err = _libNfs.GetError(ctx);
+            _libNfs.DestroyContext(ctx);
             throw new IOException(
-                message: $"NFS remount failed for {_config.Server}:{_config.Export} — {err}"
+                $"NFS remount failed for {_config.Server}:{_config.Export} — {err}"
             );
         }
 
         _nfs = ctx;
         _log.LogWarning(
-            message: "NFS session expired; reconnected to {Server}:{Export} (v{Version})", args: [_config.Server, _config.Export, _config.Version]
+            "NFS session expired; reconnected to {Server}:{Export} (v{Version})", [_config.Server, _config.Export, _config.Version]
         );
     }
 
@@ -331,8 +331,8 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     private int Stat64WithRetry(string nfsPath, out LibNfs.NfsStat64 stat)
     {
-        int rc = _libNfs.Stat64(nfs: _nfs, path: nfsPath, stat: out stat);
-        if (rc != 0 && IsExpiredStateError(rc: rc, err: _libNfs.GetError(nfs: _nfs)))
+        int rc = _libNfs.Stat64(_nfs, nfsPath, out stat);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
         {
             try
             {
@@ -342,15 +342,15 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             {
                 return rc;
             }
-            rc = _libNfs.Stat64(nfs: _nfs, path: nfsPath, stat: out stat);
+            rc = _libNfs.Stat64(_nfs, nfsPath, out stat);
         }
         return rc;
     }
 
     private int OpenDirWithRetry(string nfsPath, out IntPtr dir)
     {
-        int rc = _libNfs.OpenDir(nfs: _nfs, path: nfsPath, dir: out dir);
-        if (rc != 0 && IsExpiredStateError(rc: rc, err: _libNfs.GetError(nfs: _nfs)))
+        int rc = _libNfs.OpenDir(_nfs, nfsPath, out dir);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
         {
             try
             {
@@ -360,15 +360,15 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             {
                 return rc;
             }
-            rc = _libNfs.OpenDir(nfs: _nfs, path: nfsPath, dir: out dir);
+            rc = _libNfs.OpenDir(_nfs, nfsPath, out dir);
         }
         return rc;
     }
 
     private int UnlinkWithRetry(string nfsPath)
     {
-        int rc = _libNfs.Unlink(nfs: _nfs, path: nfsPath);
-        if (rc != 0 && IsExpiredStateError(rc: rc, err: _libNfs.GetError(nfs: _nfs)))
+        int rc = _libNfs.Unlink(_nfs, nfsPath);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
         {
             try
             {
@@ -378,15 +378,15 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             {
                 return rc;
             }
-            rc = _libNfs.Unlink(nfs: _nfs, path: nfsPath);
+            rc = _libNfs.Unlink(_nfs, nfsPath);
         }
         return rc;
     }
 
     private int RenameWithRetry(string oldPath, string newPath)
     {
-        int rc = _libNfs.Rename(nfs: _nfs, oldPath: oldPath, newPath: newPath);
-        if (rc != 0 && IsExpiredStateError(rc: rc, err: _libNfs.GetError(nfs: _nfs)))
+        int rc = _libNfs.Rename(_nfs, oldPath, newPath);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
         {
             try
             {
@@ -396,15 +396,15 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             {
                 return rc;
             }
-            rc = _libNfs.Rename(nfs: _nfs, oldPath: oldPath, newPath: newPath);
+            rc = _libNfs.Rename(_nfs, oldPath, newPath);
         }
         return rc;
     }
 
     private int RmDirWithRetry(string nfsPath)
     {
-        int rc = _libNfs.RmDir(nfs: _nfs, path: nfsPath);
-        if (rc != 0 && IsExpiredStateError(rc: rc, err: _libNfs.GetError(nfs: _nfs)))
+        int rc = _libNfs.RmDir(_nfs, nfsPath);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
         {
             try
             {
@@ -414,15 +414,15 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             {
                 return rc;
             }
-            rc = _libNfs.RmDir(nfs: _nfs, path: nfsPath);
+            rc = _libNfs.RmDir(_nfs, nfsPath);
         }
         return rc;
     }
 
     private int MkDirWithRetry(string nfsPath)
     {
-        int rc = _libNfs.MkDir(nfs: _nfs, path: nfsPath);
-        if (rc != 0 && IsExpiredStateError(rc: rc, err: _libNfs.GetError(nfs: _nfs)))
+        int rc = _libNfs.MkDir(_nfs, nfsPath);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
         {
             try
             {
@@ -432,7 +432,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             {
                 return rc;
             }
-            rc = _libNfs.MkDir(nfs: _nfs, path: nfsPath);
+            rc = _libNfs.MkDir(_nfs, nfsPath);
         }
         return rc;
     }
@@ -443,11 +443,11 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public bool FileExists(string path)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         _lock.Wait();
         try
         {
-            int rc = Stat64WithRetry(nfsPath: nfsPath, stat: out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
             {
                 // NFS4ERR_NOENT (-2) is the expected "no, that path doesn't
@@ -456,7 +456,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 if (rc != -2)
                 {
                     _log.LogDebug(
-                        message: "NFS stat (file) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", args: [nfsPath, _config.Server, _config.Export, _config.Version, rc, _libNfs.GetError(nfs: _nfs)]
+                        "NFS stat (file) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", [nfsPath, _config.Server, _config.Export, _config.Version, rc, _libNfs.GetError(_nfs)]
                     );
                 }
                 return false;
@@ -471,11 +471,11 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public bool DirectoryExists(string path)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         _lock.Wait();
         try
         {
-            int rc = Stat64WithRetry(nfsPath: nfsPath, stat: out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
             {
                 // NFS4ERR_NOENT (-2) is the expected "no, that path doesn't
@@ -484,7 +484,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 if (rc != -2)
                 {
                     _log.LogDebug(
-                        message: "NFS stat (dir) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", args: [nfsPath, _config.Server, _config.Export, _config.Version, rc, _libNfs.GetError(nfs: _nfs)]
+                        "NFS stat (dir) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", [nfsPath, _config.Server, _config.Export, _config.Version, rc, _libNfs.GetError(_nfs)]
                     );
                 }
                 return false;
@@ -499,12 +499,12 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public void CreateDirectory(string path)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         // Walk from root and create each segment that doesn't exist
         _lock.Wait();
         try
         {
-            EnsureDirectoryRecursive(nfsPath: nfsPath);
+            EnsureDirectoryRecursive(nfsPath);
         }
         finally
         {
@@ -514,18 +514,18 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public void DeleteFile(string path)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         _lock.Wait();
         try
         {
-            int rc = UnlinkWithRetry(nfsPath: nfsPath);
+            int rc = UnlinkWithRetry(nfsPath);
             // Idempotent — ignore ENOENT (-2)
             if (
                 rc != 0
                 && rc != -2
-                && !_libNfs.GetError(nfs: _nfs).Contains(value: "ENOENT", comparisonType: StringComparison.OrdinalIgnoreCase)
+                && !_libNfs.GetError(_nfs).Contains("ENOENT", StringComparison.OrdinalIgnoreCase)
             )
-                throw new IOException(message: $"NFS unlink failed for '{path}': {_libNfs.GetError(nfs: _nfs)}");
+                throw new IOException($"NFS unlink failed for '{path}': {_libNfs.GetError(_nfs)}");
         }
         finally
         {
@@ -535,24 +535,24 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public void DeleteDirectory(string path, bool recursive)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         _lock.Wait();
         try
         {
             if (recursive)
-                DeleteDirectoryRecursive(nfsPath: nfsPath);
+                DeleteDirectoryRecursive(nfsPath);
             else
             {
-                int rc = RmDirWithRetry(nfsPath: nfsPath);
+                int rc = RmDirWithRetry(nfsPath);
                 if (
                     rc != 0
                     && rc != -2
                     && !_libNfs
-                        .GetError(nfs: _nfs)
-                        .Contains(value: "ENOENT", comparisonType: StringComparison.OrdinalIgnoreCase)
+                        .GetError(_nfs)
+                        .Contains("ENOENT", StringComparison.OrdinalIgnoreCase)
                 )
                     throw new IOException(
-                        message: $"NFS rmdir failed for '{path}': {_libNfs.GetError(nfs: _nfs)}"
+                        $"NFS rmdir failed for '{path}': {_libNfs.GetError(_nfs)}"
                     );
             }
         }
@@ -564,14 +564,14 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public long GetFileSize(string path)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         _lock.Wait();
         try
         {
-            int rc = Stat64WithRetry(nfsPath: nfsPath, stat: out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
                 throw new FileNotFoundException(
-                    message: $"NFS stat failed for '{path}': {_libNfs.GetError(nfs: _nfs)}"
+                    $"NFS stat failed for '{path}': {_libNfs.GetError(_nfs)}"
                 );
             return (long)stat.Size;
         }
@@ -583,18 +583,18 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public DateTime GetLastWriteTimeUtc(string path)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         _lock.Wait();
         try
         {
-            int rc = Stat64WithRetry(nfsPath: nfsPath, stat: out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
                 throw new FileNotFoundException(
-                    message: $"NFS stat failed for '{path}': {_libNfs.GetError(nfs: _nfs)}"
+                    $"NFS stat failed for '{path}': {_libNfs.GetError(_nfs)}"
                 );
             return DateTimeOffset
-                .FromUnixTimeSeconds(seconds: (long)stat.MtimeSec)
-                .AddTicks(ticks: (long)(stat.MtimeNsec / 100))
+                .FromUnixTimeSeconds((long)stat.MtimeSec)
+                .AddTicks((long)(stat.MtimeNsec / 100))
                 .UtcDateTime;
         }
         finally
@@ -605,18 +605,18 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public DateTime GetCreationTimeUtc(string path)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         _lock.Wait();
         try
         {
-            int rc = Stat64WithRetry(nfsPath: nfsPath, stat: out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
                 throw new FileNotFoundException(
-                    message: $"NFS stat failed for '{path}': {_libNfs.GetError(nfs: _nfs)}"
+                    $"NFS stat failed for '{path}': {_libNfs.GetError(_nfs)}"
                 );
             return DateTimeOffset
-                .FromUnixTimeSeconds(seconds: (long)stat.CtimeSec)
-                .AddTicks(ticks: (long)(stat.CtimeNsec / 100))
+                .FromUnixTimeSeconds((long)stat.CtimeSec)
+                .AddTicks((long)(stat.CtimeNsec / 100))
                 .UtcDateTime;
         }
         finally
@@ -627,18 +627,18 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public DateTime GetLastAccessTimeUtc(string path)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         _lock.Wait();
         try
         {
-            int rc = Stat64WithRetry(nfsPath: nfsPath, stat: out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
                 throw new FileNotFoundException(
-                    message: $"NFS stat failed for '{path}': {_libNfs.GetError(nfs: _nfs)}"
+                    $"NFS stat failed for '{path}': {_libNfs.GetError(_nfs)}"
                 );
             return DateTimeOffset
-                .FromUnixTimeSeconds(seconds: (long)stat.AtimeSec)
-                .AddTicks(ticks: (long)(stat.AtimeNsec / 100))
+                .FromUnixTimeSeconds((long)stat.AtimeSec)
+                .AddTicks((long)(stat.AtimeNsec / 100))
                 .UtcDateTime;
         }
         finally
@@ -649,58 +649,58 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public Stream OpenRead(string path)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         _lock.Wait();
         try
         {
             for (int attempt = 0; attempt < 2; attempt++)
             {
-                int rc = _libNfs.Stat64(nfs: _nfs, path: nfsPath, stat: out LibNfs.NfsStat64 stat);
+                int rc = _libNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
                 if (rc != 0)
                 {
-                    string err = _libNfs.GetError(nfs: _nfs);
-                    if (attempt == 0 && IsExpiredStateError(rc: rc, err: err))
+                    string err = _libNfs.GetError(_nfs);
+                    if (attempt == 0 && IsExpiredStateError(rc, err))
                     {
                         Remount();
                         continue;
                     }
-                    throw new FileNotFoundException(message: $"NFS file not found: '{path}' ({err})");
+                    throw new FileNotFoundException($"NFS file not found: '{path}' ({err})");
                 }
 
-                int openRc = _libNfs.Open(nfs: _nfs, path: nfsPath, flags: LibNfs.O_RDONLY, fh: out IntPtr fh);
+                int openRc = _libNfs.Open(_nfs, nfsPath, LibNfs.O_RDONLY, out IntPtr fh);
                 if (openRc != 0)
                 {
-                    string err = _libNfs.GetError(nfs: _nfs);
-                    if (attempt == 0 && IsExpiredStateError(rc: openRc, err: err))
+                    string err = _libNfs.GetError(_nfs);
+                    if (attempt == 0 && IsExpiredStateError(openRc, err))
                     {
                         Remount();
                         continue;
                     }
-                    throw new IOException(message: $"NFS open (read) failed for '{path}': {err}");
+                    throw new IOException($"NFS open (read) failed for '{path}': {err}");
                 }
 
                 try
                 {
                     return new NfsReadStream(
-                        nfs: _nfs,
-                        fh: fh,
-                        length: (long)stat.Size,
-                        driverLock: _lock,
-                        libNfs: _libNfs,
-                        chunkSize: StreamChunkSize
+                        _nfs,
+                        fh,
+                        (long)stat.Size,
+                        _lock,
+                        _libNfs,
+                        StreamChunkSize
                     );
                 }
                 catch
                 {
                     // Stream constructor failure (OOM etc.) — close the libnfs
                     // file handle so we don't leak it inside the shared context.
-                    _libNfs.Close(nfs: _nfs, fh: fh);
+                    _libNfs.Close(_nfs, fh);
                     throw;
                 }
             }
 
             throw new IOException(
-                message: $"NFS open (read) failed for '{path}': retry after remount also failed"
+                $"NFS open (read) failed for '{path}': retry after remount also failed"
             );
         }
         finally
@@ -714,7 +714,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     // NFSv4 session/clientid bookkeeping) does not survive concurrent
     // mount+open sequences from the same process — they trip BAD_SEQID(-22)
     // and EXPIRED(-11) at random under parallel scan workers.
-    private static readonly SemaphoreSlim _isolatedOpenGate = new(initialCount: 1, maxCount: 1);
+    private static readonly SemaphoreSlim _isolatedOpenGate = new(1, 1);
 
     /// <inheritdoc/>
     /// Opens a dedicated libnfs context for this call so concurrent
@@ -722,7 +722,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     /// open-seqid sequence (NFS4ERR_BAD_SEQID).
     public Stream OpenReadIsolated(string path)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
 
         _isolatedOpenGate.Wait();
         IntPtr ctx;
@@ -733,41 +733,41 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             ctx = _libNfs.InitContext();
             if (ctx == IntPtr.Zero)
                 throw new InvalidOperationException(
-                    message: "nfs_init_context returned null for isolated read context."
+                    "nfs_init_context returned null for isolated read context."
                 );
 
             try
             {
-                int versionRc = _libNfs.SetVersion(nfs: ctx, version: _config.Version);
+                int versionRc = _libNfs.SetVersion(ctx, _config.Version);
                 if (versionRc != 0)
                     throw new IOException(
-                        message: $"Isolated NFS nfs_set_version({_config.Version}) failed — {_libNfs.GetError(nfs: ctx)}"
+                        $"Isolated NFS nfs_set_version({_config.Version}) failed — {_libNfs.GetError(ctx)}"
                     );
 
                 if (_config.Uid.HasValue)
-                    _libNfs.SetUid(nfs: ctx, uid: _config.Uid.Value);
+                    _libNfs.SetUid(ctx, _config.Uid.Value);
                 if (_config.Gid.HasValue)
-                    _libNfs.SetGid(nfs: ctx, gid: _config.Gid.Value);
+                    _libNfs.SetGid(ctx, _config.Gid.Value);
 
                 // A FRESH unique client identity per isolated context — not the
                 // driver's _clientId. Several isolated contexts are open at once
                 // during a parallel scan; if they shared one clientid the server
                 // would fold them into a single open-owner and their independent
                 // local open-seqid counters would collide (NFS4ERR_BAD_SEQID).
-                ApplyClientIdentity(ctx: ctx, clientId: $"nomercy-{Environment.ProcessId}-{Guid.NewGuid():N}");
+                ApplyClientIdentity(ctx, $"nomercy-{Environment.ProcessId}-{Guid.NewGuid():N}");
 
-                int mountRc = _libNfs.Mount(nfs: ctx, server: _config.Server, exportPath: _config.Export);
+                int mountRc = _libNfs.Mount(ctx, _config.Server, _config.Export);
                 if (mountRc != 0)
                     throw new IOException(
-                        message: $"Isolated NFS mount failed for {_config.Server}:{_config.Export} — {_libNfs.GetError(nfs: ctx)}"
+                        $"Isolated NFS mount failed for {_config.Server}:{_config.Export} — {_libNfs.GetError(ctx)}"
                     );
 
                 _lock.Wait();
                 try
                 {
-                    int statRc = Stat64WithRetry(nfsPath: nfsPath, stat: out LibNfs.NfsStat64 stat);
+                    int statRc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
                     if (statRc != 0)
-                        throw new FileNotFoundException(message: $"NFS file not found: '{path}'");
+                        throw new FileNotFoundException($"NFS file not found: '{path}'");
                     fileSize = (long)stat.Size;
                 }
                 finally
@@ -775,16 +775,16 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     _lock.Release();
                 }
 
-                int openRc = _libNfs.Open(nfs: ctx, path: nfsPath, flags: LibNfs.O_RDONLY, fh: out fh);
+                int openRc = _libNfs.Open(ctx, nfsPath, LibNfs.O_RDONLY, out fh);
                 if (openRc != 0)
                     throw new IOException(
-                        message: $"NFS open (read) failed for '{path}': {_libNfs.GetError(nfs: ctx)}"
+                        $"NFS open (read) failed for '{path}': {_libNfs.GetError(ctx)}"
                     );
             }
             catch
             {
-                _libNfs.Umount(nfs: ctx);
-                _libNfs.DestroyContext(nfs: ctx);
+                _libNfs.Umount(ctx);
+                _libNfs.DestroyContext(ctx);
                 throw;
             }
         }
@@ -795,26 +795,26 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
         try
         {
-            return new IsolatedNfsReadStream(libNfs: _libNfs, ownedCtx: ctx, fh: fh, length: fileSize);
+            return new IsolatedNfsReadStream(_libNfs, ctx, fh, fileSize);
         }
         catch
         {
-            _libNfs.Close(nfs: ctx, fh: fh);
-            _libNfs.Umount(nfs: ctx);
-            _libNfs.DestroyContext(nfs: ctx);
+            _libNfs.Close(ctx, fh);
+            _libNfs.Umount(ctx);
+            _libNfs.DestroyContext(ctx);
             throw;
         }
     }
 
     public Stream OpenWrite(string path, bool overwrite)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         _lock.Wait();
         try
         {
-            if (!overwrite && FileExistsNoLock(nfsPath: nfsPath))
+            if (!overwrite && FileExistsNoLock(nfsPath))
                 throw new IOException(
-                    message: $"Cannot write to '{path}': file already exists and overwrite is false."
+                    $"Cannot write to '{path}': file already exists and overwrite is false."
                 );
 
             // UNCHECKED (overwrite) or GUARDED (fail if exists) — creat truncates in both cases
@@ -826,39 +826,39 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             IntPtr fh = IntPtr.Zero;
             for (int attempt = 0; attempt < 2; attempt++)
             {
-                int rc = _libNfs.Open(nfs: _nfs, path: nfsPath, flags: flags, fh: out fh);
+                int rc = _libNfs.Open(_nfs, nfsPath, flags, out fh);
                 if (rc == 0)
                     break;
 
-                string err = _libNfs.GetError(nfs: _nfs);
-                if (attempt == 0 && IsExpiredStateError(rc: rc, err: err))
+                string err = _libNfs.GetError(_nfs);
+                if (attempt == 0 && IsExpiredStateError(rc, err))
                 {
                     Remount();
                     continue;
                 }
 
                 // Fall back to creat() which always truncates
-                rc = _libNfs.Creat(nfs: _nfs, path: nfsPath, mode: LibNfs.DefaultFileMode, fh: out fh);
+                rc = _libNfs.Creat(_nfs, nfsPath, LibNfs.DefaultFileMode, out fh);
                 if (rc == 0)
                     break;
 
-                err = _libNfs.GetError(nfs: _nfs);
-                if (attempt == 0 && IsExpiredStateError(rc: rc, err: err))
+                err = _libNfs.GetError(_nfs);
+                if (attempt == 0 && IsExpiredStateError(rc, err))
                 {
                     Remount();
                     continue;
                 }
 
-                throw new IOException(message: $"NFS creat failed for '{path}': {err}");
+                throw new IOException($"NFS creat failed for '{path}': {err}");
             }
 
             try
             {
-                return new NfsWriteStream(nfs: _nfs, fh: fh, driverLock: _lock, libNfs: _libNfs, chunkSize: StreamChunkSize);
+                return new NfsWriteStream(_nfs, fh, _lock, _libNfs, StreamChunkSize);
             }
             catch
             {
-                _libNfs.Close(nfs: _nfs, fh: fh);
+                _libNfs.Close(_nfs, fh);
                 throw;
             }
         }
@@ -870,15 +870,15 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public void MoveFile(string source, string destination)
     {
-        string srcPath = ToNfsPath(path: source);
-        string dstPath = ToNfsPath(path: destination);
+        string srcPath = ToNfsPath(source);
+        string dstPath = ToNfsPath(destination);
         _lock.Wait();
         try
         {
-            int rc = RenameWithRetry(oldPath: srcPath, newPath: dstPath);
+            int rc = RenameWithRetry(srcPath, dstPath);
             if (rc != 0)
                 throw new IOException(
-                    message: $"NFS rename '{source}' -> '{destination}' failed: {_libNfs.GetError(nfs: _nfs)}"
+                    $"NFS rename '{source}' -> '{destination}' failed: {_libNfs.GetError(_nfs)}"
                 );
         }
         finally
@@ -890,14 +890,14 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     public void CopyFile(string source, string destination, bool overwrite)
     {
         // NFS has no native copy RPC; read source, write destination
-        if (!overwrite && FileExists(path: destination))
+        if (!overwrite && FileExists(destination))
             throw new IOException(
-                message: $"Cannot copy to '{destination}': file already exists and overwrite is false."
+                $"Cannot copy to '{destination}': file already exists and overwrite is false."
             );
 
-        using Stream src = OpenRead(path: source);
-        using Stream dst = OpenWrite(path: destination, overwrite: true);
-        src.CopyTo(destination: dst);
+        using Stream src = OpenRead(source);
+        using Stream dst = OpenWrite(destination, true);
+        src.CopyTo(dst);
     }
 
     public IEnumerable<string> EnumerateFileSystemEntries(
@@ -906,12 +906,12 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         SearchOption option
     )
     {
-        string nfsPath = ToNfsPath(path: directory);
+        string nfsPath = ToNfsPath(directory);
         List<string> results = [];
         _lock.Wait();
         try
         {
-            CollectEntries(nfsDir: nfsPath, virtualDir: directory, searchPattern: searchPattern, option: option, results: results);
+            CollectEntries(nfsPath, directory, searchPattern, option, results);
         }
         finally
         {
@@ -922,12 +922,12 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public string GetFullPath(string path)
     {
-        string normalized = path.Replace(oldChar: '\\', newChar: '/');
-        if (!normalized.StartsWith(value: '/'))
-            normalized = _config.Export.TrimEnd(trimChar: '/') + "/" + normalized.TrimStart(trimChar: '/');
+        string normalized = path.Replace('\\', '/');
+        if (!normalized.StartsWith('/'))
+            normalized = _config.Export.TrimEnd('/') + "/" + normalized.TrimStart('/');
 
         // Resolve ".." and "." segments
-        string[] segments = normalized.Split(separator: '/', options: StringSplitOptions.RemoveEmptyEntries);
+        string[] segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         Stack<string> stack = new();
         foreach (string segment in segments)
         {
@@ -938,33 +938,33 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             }
             else if (segment != ".")
             {
-                stack.Push(item: segment);
+                stack.Push(segment);
             }
         }
-        return "/" + string.Join(separator: "/", values: stack.Reverse());
+        return "/" + string.Join("/", stack.Reverse());
     }
 
     public string? ResolveLinkTarget(string path)
     {
-        string nfsPath = ToNfsPath(path: path);
+        string nfsPath = ToNfsPath(path);
         _lock.Wait();
         try
         {
-            int rc = _libNfs.Lstat64(nfs: _nfs, path: nfsPath, stat: out LibNfs.NfsStat64 stat);
+            int rc = _libNfs.Lstat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0 || stat.FileType != LibNfs.S_IFLNK)
                 return null;
 
-            IntPtr buf = Marshal.AllocHGlobal(cb: 4096);
+            IntPtr buf = Marshal.AllocHGlobal(4096);
             try
             {
-                int linkRc = _libNfs.Readlink(nfs: _nfs, path: nfsPath, buf: buf, bufSize: 4096);
+                int linkRc = _libNfs.Readlink(_nfs, nfsPath, buf, 4096);
                 if (linkRc < 0)
                     return null;
-                return Marshal.PtrToStringUTF8(ptr: buf);
+                return Marshal.PtrToStringUTF8(buf);
             }
             finally
             {
-                Marshal.FreeHGlobal(hglobal: buf);
+                Marshal.FreeHGlobal(buf);
             }
         }
         finally
@@ -975,22 +975,22 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public bool IsHidden(string path)
     {
-        string name = Path.GetFileName(path: path.Replace(oldChar: '\\', newChar: '/'));
-        return name.StartsWith(value: '.') && name.Length > 1;
+        string name = Path.GetFileName(path.Replace('\\', '/'));
+        return name.StartsWith('.') && name.Length > 1;
     }
 
     public void MoveDirectory(string source, string destination)
     {
         // NFS RENAME works for directories too
-        string srcPath = ToNfsPath(path: source);
-        string dstPath = ToNfsPath(path: destination);
+        string srcPath = ToNfsPath(source);
+        string dstPath = ToNfsPath(destination);
         _lock.Wait();
         try
         {
-            int rc = RenameWithRetry(oldPath: srcPath, newPath: dstPath);
+            int rc = RenameWithRetry(srcPath, dstPath);
             if (rc != 0)
                 throw new IOException(
-                    message: $"NFS rename directory '{source}' -> '{destination}' failed: {_libNfs.GetError(nfs: _nfs)}"
+                    $"NFS rename directory '{source}' -> '{destination}' failed: {_libNfs.GetError(_nfs)}"
                 );
         }
         finally
@@ -1016,16 +1016,16 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     )
     {
         ILogger log = logger ?? NullLogger.Instance;
-        using CancellationTokenSource cts = new(millisecondsDelay: timeoutMs);
+        using CancellationTokenSource cts = new(timeoutMs);
 
         try
         {
-            return await Task.Run(function: () => GetExportsBlocking(server: server, log: log), cancellationToken: cts.Token);
+            return await Task.Run(() => GetExportsBlocking(server, log), cts.Token);
         }
         catch (OperationCanceledException)
         {
             log.LogWarning(
-                message: "NFS export discovery timed out after {Timeout}ms for {Server}", args: [timeoutMs, server]
+                "NFS export discovery timed out after {Timeout}ms for {Server}", [timeoutMs, server]
             );
             return null;
         }
@@ -1033,7 +1033,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         {
             // Best-effort discovery: any failure resolves to "unknown" (null),
             // never a thrown exception the callers aren't expecting.
-            log.LogWarning(exception: ex, message: "NFS export discovery failed for {Server}", args: server);
+            log.LogWarning(ex, "NFS export discovery failed for {Server}", server);
             return null;
         }
     }
@@ -1044,24 +1044,24 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         // This is the "official" way but requires the server to register
         // mountd with rpcbind. TrueNAS / vanilla NFSv4-only servers often
         // skip this, returning an empty list.
-        List<string>? v3 = TryV3MountGetExports(server: server, log: log);
+        List<string>? v3 = TryV3MountGetExports(server, log);
         if (v3 is { Count: > 0 })
         {
             log.LogInformation(
-                message: "NFS export discovery: v3 mount-protocol returned {Count} exports for {Server}", args: [v3.Count, server]
+                "NFS export discovery: v3 mount-protocol returned {Count} exports for {Server}", [v3.Count, server]
             );
             return v3;
         }
         log.LogInformation(
-            message: "NFS export discovery: v3 mount-protocol returned no exports for {Server}, falling back to v4 root walk",
-            args: server
+            "NFS export discovery: v3 mount-protocol returned no exports for {Server}, falling back to v4 root walk",
+            server
         );
 
         // Path 2 — NFSv4 pseudo-fs walk. Mount the server's root as v4 and
         // list immediate sub-directories. On TrueNAS/Linux with NFSv4 only,
         // this surfaces real exports (e.g. /mnt/Vault/Media) via the
         // pseudo-filesystem the v4 server exposes from /.
-        return TryV4RootListing(server: server, log: log);
+        return TryV4RootListing(server, log);
     }
 
     private static List<string>? TryV3MountGetExports(string server, ILogger log)
@@ -1069,14 +1069,14 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         IntPtr head;
         try
         {
-            head = LibNfs.MountGetExports(server: server);
+            head = LibNfs.MountGetExports(server);
         }
         catch (Exception ex)
         {
             log.LogWarning(
-                exception: ex,
-                message: "NFS v3 mount-protocol export query threw for {Server} — falling back to v4 root walk",
-                args: server
+                ex,
+                "NFS v3 mount-protocol export query threw for {Server} — falling back to v4 root walk",
+                server
             );
             return null;
         }
@@ -1090,12 +1090,12 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             IntPtr current = head;
             while (current != IntPtr.Zero)
             {
-                LibNfs.ExportEntry entry = Marshal.PtrToStructure<LibNfs.ExportEntry>(ptr: current);
+                LibNfs.ExportEntry entry = Marshal.PtrToStructure<LibNfs.ExportEntry>(current);
                 if (entry.ExDir != IntPtr.Zero)
                 {
-                    string? path = Marshal.PtrToStringUTF8(ptr: entry.ExDir);
-                    if (!string.IsNullOrWhiteSpace(value: path))
-                        exports.Add(item: path);
+                    string? path = Marshal.PtrToStringUTF8(entry.ExDir);
+                    if (!string.IsNullOrWhiteSpace(path))
+                        exports.Add(path);
                 }
                 current = entry.ExNext;
             }
@@ -1106,15 +1106,15 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             // to the v4 root walk, never crash the whole discovery (or a
             // dashboard NFS browse that reaches this path).
             log.LogWarning(
-                exception: ex,
-                message: "NFS v3 export list parse failed for {Server} — falling back to v4 root walk",
-                args: server
+                ex,
+                "NFS v3 export list parse failed for {Server} — falling back to v4 root walk",
+                server
             );
             return null;
         }
         finally
         {
-            LibNfs.MountFreeExportList(exports: head);
+            LibNfs.MountFreeExportList(head);
         }
 
         return exports.Count > 0 ? exports : null;
@@ -1143,28 +1143,28 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         if (ctx == IntPtr.Zero)
         {
             log.LogWarning(
-                message: "NFSv4 export discovery: nfs_init_context returned null for {Server}",
-                args: server
+                "NFSv4 export discovery: nfs_init_context returned null for {Server}",
+                server
             );
             return null;
         }
 
         try
         {
-            if (LibNfs.SetVersion(nfs: ctx, version: 4) != 0)
+            if (LibNfs.SetVersion(ctx, 4) != 0)
             {
                 log.LogWarning(
-                    message: "NFSv4 export discovery: nfs_set_version(4) failed for {Server} — {Error}", args: [server, LibNfs.GetError(nfs: ctx)]
+                    "NFSv4 export discovery: nfs_set_version(4) failed for {Server} — {Error}", [server, LibNfs.GetError(ctx)]
                 );
                 return null;
             }
 
             // Mount the v4 pseudo-root. libnfs accepts "/" as the export
             // path for v4 to land at the server's NFSv4 PUTROOTFH.
-            if (LibNfs.Mount(nfs: ctx, server: server, exportPath: "/") != 0)
+            if (LibNfs.Mount(ctx, server, "/") != 0)
             {
                 log.LogWarning(
-                    message: "NFSv4 export discovery: nfs_mount({Server}, '/') failed — {Error}", args: [server, LibNfs.GetError(nfs: ctx)]
+                    "NFSv4 export discovery: nfs_mount({Server}, '/') failed — {Error}", [server, LibNfs.GetError(ctx)]
                 );
                 return null;
             }
@@ -1177,29 +1177,29 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             foreach (string probeRoot in CommonV4Roots)
             {
                 List<string> roots = [];
-                CollectV4Children(ctx: ctx, path: probeRoot, maxDepth: 3, sink: roots);
+                CollectV4Children(ctx, probeRoot, 3, roots);
                 if (roots.Count > 0)
                 {
                     log.LogInformation(
-                        message: "NFSv4 export discovery: walked {Probe} on {Server}, found {Count} dirs", args: [probeRoot, server, roots.Count]
+                        "NFSv4 export discovery: walked {Probe} on {Server}, found {Count} dirs", [probeRoot, server, roots.Count]
                     );
                     return roots;
                 }
             }
 
             log.LogWarning(
-                message: "NFSv4 export discovery: walked v4 root + {Count} fallback paths on {Server}, all empty — server may only expose explicit export paths (try entering manually)", args: [CommonV4Roots.Length - 1, server]
+                "NFSv4 export discovery: walked v4 root + {Count} fallback paths on {Server}, all empty — server may only expose explicit export paths (try entering manually)", [CommonV4Roots.Length - 1, server]
             );
             return null;
         }
         catch (Exception ex)
         {
-            log.LogWarning(exception: ex, message: "NFSv4 export discovery threw for {Server}", args: server);
+            log.LogWarning(ex, "NFSv4 export discovery threw for {Server}", server);
             return null;
         }
         finally
         {
-            LibNfs.DestroyContext(nfs: ctx);
+            LibNfs.DestroyContext(ctx);
         }
     }
 
@@ -1207,37 +1207,37 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     {
         if (maxDepth <= 0)
             return;
-        if (LibNfs.OpenDir(nfs: ctx, path: path, dir: out IntPtr dir) != 0)
+        if (LibNfs.OpenDir(ctx, path, out IntPtr dir) != 0)
             return;
 
         try
         {
             while (true)
             {
-                IntPtr entryPtr = LibNfs.ReadDir(nfs: ctx, dir: dir);
+                IntPtr entryPtr = LibNfs.ReadDir(ctx, dir);
                 if (entryPtr == IntPtr.Zero)
                     break;
 
-                LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(ptr: entryPtr);
-                string? name = LibNfs.ReadDirentName(entry: entry);
-                if (string.IsNullOrEmpty(value: name) || name == "." || name == "..")
+                LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(entryPtr);
+                string? name = LibNfs.ReadDirentName(entry);
+                if (string.IsNullOrEmpty(name) || name == "." || name == "..")
                     continue;
-                if (name.StartsWith(value: '.'))
+                if (name.StartsWith('.'))
                     continue;
                 if (entry.Type != LibNfs.NF3DIR)
                     continue;
 
                 string child = path == "/" ? "/" + name : path + "/" + name;
-                sink.Add(item: child);
+                sink.Add(child);
 
                 // Descend one more level so /mnt/Vault/Media-style mount
                 // points are captured even when only /mnt is listed at root.
-                CollectV4Children(ctx: ctx, path: child, maxDepth: maxDepth - 1, sink: sink);
+                CollectV4Children(ctx, child, maxDepth - 1, sink);
             }
         }
         finally
         {
-            LibNfs.CloseDir(nfs: ctx, dir: dir);
+            LibNfs.CloseDir(ctx, dir);
         }
     }
 
@@ -1251,13 +1251,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     /// </summary>
     public List<(string Name, bool IsDirectory)> ListDirectories(string relativePath)
     {
-        string nfsPath = string.IsNullOrWhiteSpace(value: relativePath) ? "/" : ToNfsPath(path: relativePath);
+        string nfsPath = string.IsNullOrWhiteSpace(relativePath) ? "/" : ToNfsPath(relativePath);
 
         List<(string, bool)> results = [];
         _lock.Wait();
         try
         {
-            int openRc = OpenDirWithRetry(nfsPath: nfsPath, dir: out IntPtr dir);
+            int openRc = OpenDirWithRetry(nfsPath, out IntPtr dir);
             if (openRc != 0)
                 return results;
 
@@ -1265,27 +1265,27 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             {
                 while (true)
                 {
-                    IntPtr entryPtr = _libNfs.ReadDir(nfs: _nfs, dir: dir);
+                    IntPtr entryPtr = _libNfs.ReadDir(_nfs, dir);
                     if (entryPtr == IntPtr.Zero)
                         break;
 
-                    LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(ptr: entryPtr);
-                    string? name = LibNfs.ReadDirentName(entry: entry);
+                    LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(entryPtr);
+                    string? name = LibNfs.ReadDirentName(entry);
                     if (
-                        string.IsNullOrEmpty(value: name)
+                        string.IsNullOrEmpty(name)
                         || name == "."
                         || name == ".."
-                        || name.StartsWith(value: '.')
+                        || name.StartsWith('.')
                     )
                         continue;
 
                     if (entry.Type == LibNfs.NF3DIR)
-                        results.Add(item: (name, true));
+                        results.Add((name, true));
                 }
             }
             finally
             {
-                _libNfs.CloseDir(nfs: _nfs, dir: dir);
+                _libNfs.CloseDir(_nfs, dir);
             }
         }
         finally
@@ -1318,8 +1318,8 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         try
         {
             _disposed = true;
-            _libNfs.Umount(nfs: _nfs);
-            _libNfs.DestroyContext(nfs: _nfs);
+            _libNfs.Umount(_nfs);
+            _libNfs.DestroyContext(_nfs);
         }
         finally
         {
@@ -1335,26 +1335,26 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     private string ToNfsPath(string path)
     {
-        string normalized = path.Replace(oldChar: '\\', newChar: '/');
+        string normalized = path.Replace('\\', '/');
 
         // Path Contract Rule 2: collapse consecutive separators. Without
         // this, "foo//bar" reaches libnfs verbatim and fails to match the
         // canonical "foo/bar" entries in the directory listing.
-        while (normalized.Contains(value: "//"))
-            normalized = normalized.Replace(oldValue: "//", newValue: "/");
+        while (normalized.Contains("//"))
+            normalized = normalized.Replace("//", "/");
 
-        if (!normalized.StartsWith(value: '/'))
+        if (!normalized.StartsWith('/'))
             normalized = "/" + normalized;
 
         // libnfs paths are relative to the mounted Export. Strip a matching
         // Export prefix so callers can pass absolute server paths.
-        string export = _config.Export.TrimEnd(trimChar: '/');
-        if (export.Length > 0 && normalized.StartsWith(value: export, comparisonType: StringComparison.OrdinalIgnoreCase))
+        string export = _config.Export.TrimEnd('/');
+        if (export.Length > 0 && normalized.StartsWith(export, StringComparison.OrdinalIgnoreCase))
         {
             normalized = normalized[export.Length..];
             if (normalized.Length == 0)
                 normalized = "/";
-            else if (!normalized.StartsWith(value: '/'))
+            else if (!normalized.StartsWith('/'))
                 normalized = "/" + normalized;
         }
 
@@ -1362,13 +1362,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         // under the correct directory within the mounted export. The mount
         // is always at the export root; SubPath scopes this driver instance
         // to a specific subdirectory of that export.
-        string subPath = _config.SubPath.Trim(trimChar: '/');
-        if (!string.IsNullOrEmpty(value: subPath))
+        string subPath = _config.SubPath.Trim('/');
+        if (!string.IsNullOrEmpty(subPath))
         {
             string subPathPrefix = "/" + subPath;
             if (
-                !normalized.StartsWith(value: subPathPrefix + "/", comparisonType: StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(a: normalized, b: subPathPrefix, comparisonType: StringComparison.OrdinalIgnoreCase)
+                !normalized.StartsWith(subPathPrefix + "/", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(normalized, subPathPrefix, StringComparison.OrdinalIgnoreCase)
             )
             {
                 normalized = subPathPrefix + normalized;
@@ -1376,15 +1376,15 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         }
 
         // Collapse any double-slashes introduced by the prepend step.
-        while (normalized.Contains(value: "//"))
-            normalized = normalized.Replace(oldValue: "//", newValue: "/");
+        while (normalized.Contains("//"))
+            normalized = normalized.Replace("//", "/");
 
         return normalized;
     }
 
     private bool FileExistsNoLock(string nfsPath)
     {
-        int rc = Stat64WithRetry(nfsPath: nfsPath, stat: out LibNfs.NfsStat64 stat);
+        int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
         return rc == 0 && stat.FileType == LibNfs.S_IFREG;
     }
 
@@ -1393,75 +1393,75 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         if (nfsPath == "/" || nfsPath == string.Empty)
             return;
 
-        int checkRc = Stat64WithRetry(nfsPath: nfsPath, stat: out LibNfs.NfsStat64 existing);
+        int checkRc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 existing);
         if (checkRc == 0 && existing.FileType == LibNfs.S_IFDIR)
             return;
 
-        string parent = Path.GetDirectoryName(path: nfsPath)?.Replace(oldChar: '\\', newChar: '/') ?? "/";
+        string parent = Path.GetDirectoryName(nfsPath)?.Replace('\\', '/') ?? "/";
         if (parent != nfsPath)
-            EnsureDirectoryRecursive(nfsPath: parent);
+            EnsureDirectoryRecursive(parent);
 
-        int mkRc = MkDirWithRetry(nfsPath: nfsPath);
+        int mkRc = MkDirWithRetry(nfsPath);
         if (mkRc != 0)
         {
-            string mkErr = _libNfs.GetError(nfs: _nfs);
+            string mkErr = _libNfs.GetError(_nfs);
             // NFSv3 reports EEXIST; NFSv4 reports NFS4ERR_EXIST — treat both as success.
             bool alreadyExists =
-                mkErr.Contains(value: "EEXIST", comparisonType: StringComparison.OrdinalIgnoreCase)
-                || mkErr.Contains(value: "EXIST", comparisonType: StringComparison.OrdinalIgnoreCase);
+                mkErr.Contains("EEXIST", StringComparison.OrdinalIgnoreCase)
+                || mkErr.Contains("EXIST", StringComparison.OrdinalIgnoreCase);
             if (!alreadyExists)
-                throw new IOException(message: $"NFS mkdir failed for '{nfsPath}': {mkErr}");
+                throw new IOException($"NFS mkdir failed for '{nfsPath}': {mkErr}");
         }
     }
 
     private void DeleteDirectoryRecursive(string nfsPath)
     {
-        int openRc = OpenDirWithRetry(nfsPath: nfsPath, dir: out IntPtr dir);
+        int openRc = OpenDirWithRetry(nfsPath, out IntPtr dir);
         if (openRc != 0)
         {
-            if (_libNfs.GetError(nfs: _nfs).Contains(value: "ENOENT", comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (_libNfs.GetError(_nfs).Contains("ENOENT", StringComparison.OrdinalIgnoreCase))
                 return;
-            throw new IOException(message: $"NFS opendir failed for '{nfsPath}': {_libNfs.GetError(nfs: _nfs)}");
+            throw new IOException($"NFS opendir failed for '{nfsPath}': {_libNfs.GetError(_nfs)}");
         }
 
         try
         {
             while (true)
             {
-                IntPtr entryPtr = _libNfs.ReadDir(nfs: _nfs, dir: dir);
+                IntPtr entryPtr = _libNfs.ReadDir(_nfs, dir);
                 if (entryPtr == IntPtr.Zero)
                     break;
 
-                LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(ptr: entryPtr);
-                string? name = LibNfs.ReadDirentName(entry: entry);
-                if (string.IsNullOrEmpty(value: name) || name == "." || name == "..")
+                LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(entryPtr);
+                string? name = LibNfs.ReadDirentName(entry);
+                if (string.IsNullOrEmpty(name) || name == "." || name == "..")
                     continue;
 
-                string childPath = nfsPath.TrimEnd(trimChar: '/') + "/" + name;
+                string childPath = nfsPath.TrimEnd('/') + "/" + name;
 
                 if (entry.Type == LibNfs.NF3DIR)
-                    DeleteDirectoryRecursive(nfsPath: childPath);
+                    DeleteDirectoryRecursive(childPath);
                 else
                 {
-                    int unlinkRc = UnlinkWithRetry(nfsPath: childPath);
+                    int unlinkRc = UnlinkWithRetry(childPath);
                     if (unlinkRc != 0)
                         throw new IOException(
-                            message: $"NFS unlink failed for '{childPath}': {_libNfs.GetError(nfs: _nfs)}"
+                            $"NFS unlink failed for '{childPath}': {_libNfs.GetError(_nfs)}"
                         );
                 }
             }
         }
         finally
         {
-            _libNfs.CloseDir(nfs: _nfs, dir: dir);
+            _libNfs.CloseDir(_nfs, dir);
         }
 
-        int rmdirRc = RmDirWithRetry(nfsPath: nfsPath);
+        int rmdirRc = RmDirWithRetry(nfsPath);
         if (
             rmdirRc != 0
-            && !_libNfs.GetError(nfs: _nfs).Contains(value: "ENOENT", comparisonType: StringComparison.OrdinalIgnoreCase)
+            && !_libNfs.GetError(_nfs).Contains("ENOENT", StringComparison.OrdinalIgnoreCase)
         )
-            throw new IOException(message: $"NFS rmdir failed for '{nfsPath}': {_libNfs.GetError(nfs: _nfs)}");
+            throw new IOException($"NFS rmdir failed for '{nfsPath}': {_libNfs.GetError(_nfs)}");
     }
 
     private void CollectEntries(
@@ -1472,7 +1472,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         List<string> results
     )
     {
-        int openRc = OpenDirWithRetry(nfsPath: nfsDir, dir: out IntPtr dir);
+        int openRc = OpenDirWithRetry(nfsDir, out IntPtr dir);
         if (openRc != 0)
         {
             // -20 (NFS4ERR_NOTDIR / ENOTDIR) just means the caller (or the
@@ -1480,7 +1480,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             // not a real failure, and noisy at Warning level.
             if (openRc != -20)
                 _log.LogWarning(
-                    message: "NFS opendir failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", args: [nfsDir, _config.Server, _config.Export, _config.Version, openRc, _libNfs.GetError(nfs: _nfs)]
+                    "NFS opendir failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", [nfsDir, _config.Server, _config.Export, _config.Version, openRc, _libNfs.GetError(_nfs)]
                 );
             return;
         }
@@ -1489,36 +1489,36 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         {
             while (true)
             {
-                IntPtr entryPtr = _libNfs.ReadDir(nfs: _nfs, dir: dir);
+                IntPtr entryPtr = _libNfs.ReadDir(_nfs, dir);
                 if (entryPtr == IntPtr.Zero)
                     break;
 
-                LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(ptr: entryPtr);
-                string? name = LibNfs.ReadDirentName(entry: entry);
-                if (string.IsNullOrEmpty(value: name) || name == "." || name == "..")
+                LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(entryPtr);
+                string? name = LibNfs.ReadDirentName(entry);
+                if (string.IsNullOrEmpty(name) || name == "." || name == "..")
                     continue;
 
                 // Contract: virtualPath is driver-relative (same shape FileExists/DirectoryExists accept).
-                string virtualPath = virtualDir.TrimEnd(trimChar: '/') + "/" + name;
-                string childNfsPath = nfsDir.TrimEnd(trimChar: '/') + "/" + name;
+                string virtualPath = virtualDir.TrimEnd('/') + "/" + name;
+                string childNfsPath = nfsDir.TrimEnd('/') + "/" + name;
 
-                if (StoragePatternMatcher.Matches(name: name, pattern: searchPattern))
-                    results.Add(item: virtualPath);
+                if (StoragePatternMatcher.Matches(name, searchPattern))
+                    results.Add(virtualPath);
 
                 if (option == SearchOption.AllDirectories)
                 {
                     // entry.Type from libnfs's nfsdirent has been unreliable
                     // for NFSv4 in practice — verify with Stat64 before
                     // recursing so we never opendir a regular file.
-                    int statRc = Stat64WithRetry(nfsPath: childNfsPath, stat: out LibNfs.NfsStat64 childStat);
+                    int statRc = Stat64WithRetry(childNfsPath, out LibNfs.NfsStat64 childStat);
                     if (statRc == 0 && childStat.FileType == LibNfs.S_IFDIR)
-                        CollectEntries(nfsDir: childNfsPath, virtualDir: virtualPath, searchPattern: searchPattern, option: option, results: results);
+                        CollectEntries(childNfsPath, virtualPath, searchPattern, option, results);
                 }
             }
         }
         finally
         {
-            _libNfs.CloseDir(nfs: _nfs, dir: dir);
+            _libNfs.CloseDir(_nfs, dir);
         }
     }
 }

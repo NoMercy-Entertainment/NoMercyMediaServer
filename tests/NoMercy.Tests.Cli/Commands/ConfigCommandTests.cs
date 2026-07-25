@@ -27,25 +27,25 @@ namespace NoMercy.Tests.Cli.Commands;
 /// getting either translation wrong silently corrupts the value the server
 /// receives.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class ConfigCommandTests
 {
     private static async Task<int> RunGetAsync(ICliClientFactory factory)
     {
-        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
-        RootCommand root = new(description: "test");
-        root.Options.Add(item: pipeOption);
-        root.Subcommands.Add(item: ConfigCommand.Create(pipeOption: pipeOption, clientFactory: factory));
-        return await root.Parse(args: ["config", "get"]).InvokeAsync();
+        Option<string?> pipeOption = new("--pipe", "-p");
+        RootCommand root = new("test");
+        root.Options.Add(pipeOption);
+        root.Subcommands.Add(ConfigCommand.Create(pipeOption, factory));
+        return await root.Parse(["config", "get"]).InvokeAsync();
     }
 
     private static async Task<int> RunSetAsync(ICliClientFactory factory, string key, string value)
     {
-        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
-        RootCommand root = new(description: "test");
-        root.Options.Add(item: pipeOption);
-        root.Subcommands.Add(item: ConfigCommand.Create(pipeOption: pipeOption, clientFactory: factory));
-        return await root.Parse(args: ["config", "set", key, value]).InvokeAsync();
+        Option<string?> pipeOption = new("--pipe", "-p");
+        RootCommand root = new("test");
+        root.Options.Add(pipeOption);
+        root.Subcommands.Add(ConfigCommand.Create(pipeOption, factory));
+        return await root.Parse(["config", "set", key, value]).InvokeAsync();
     }
 
     [Fact]
@@ -53,17 +53,17 @@ public sealed class ConfigCommandTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c => c.GetAsync<ConfigResponse>(ApiRoutes.Config, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (ConfigResponse?)null);
+            .Setup(c => c.GetAsync<ConfigResponse>(ApiRoutes.Config, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigResponse?)null);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
+        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunGetAsync(factory: factory.Object);
+        int exitCode = await RunGetAsync(factory.Object);
 
-        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
-        console.Error.Should().Contain(expected: "Could not connect to server.");
+        exitCode.Should().Be((int)ExitCode.ServerError);
+        console.Error.Should().Contain("Could not connect to server.");
     }
 
     [Fact]
@@ -86,59 +86,59 @@ public sealed class ConfigCommandTests
 
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c => c.GetAsync<ConfigResponse>(ApiRoutes.Config, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: config);
+            .Setup(c => c.GetAsync<ConfigResponse>(ApiRoutes.Config, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
+        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunGetAsync(factory: factory.Object);
+        int exitCode = await RunGetAsync(factory.Object);
 
-        exitCode.Should().Be(expected: (int)ExitCode.Success);
-        console.Out.Should().Contain(expected: "Server Name:      nomercy-test");
-        console.Out.Should().Contain(expected: "Internal Port:    7626");
-        console.Out.Should().Contain(expected: "External Port:    7627");
-        console.Out.Should().Contain(expected: "Queue Workers:    2");
-        console.Out.Should().Contain(expected: "Encoder Workers:  1");
-        console.Out.Should().Contain(expected: "Cron Workers:     1");
-        console.Out.Should().Contain(expected: "Data Workers:     3");
-        console.Out.Should().Contain(expected: "Image Workers:    10");
-        console.Out.Should().Contain(expected: "File Workers:     4");
-        console.Out.Should().Contain(expected: "Request Workers:  5");
-        console.Out.Should().Contain(expected: "Swagger:          True");
+        exitCode.Should().Be((int)ExitCode.Success);
+        console.Out.Should().Contain("Server Name:      nomercy-test");
+        console.Out.Should().Contain("Internal Port:    7626");
+        console.Out.Should().Contain("External Port:    7627");
+        console.Out.Should().Contain("Queue Workers:    2");
+        console.Out.Should().Contain("Encoder Workers:  1");
+        console.Out.Should().Contain("Cron Workers:     1");
+        console.Out.Should().Contain("Data Workers:     3");
+        console.Out.Should().Contain("Image Workers:    10");
+        console.Out.Should().Contain("File Workers:     4");
+        console.Out.Should().Contain("Request Workers:  5");
+        console.Out.Should().Contain("Swagger:          True");
     }
 
     [Theory]
-    [InlineData(data: ["serverName", "server_name"])]
-    [InlineData(data: ["queueWorkers", "queue_workers"])]
+    [InlineData(["serverName", "server_name"])]
+    [InlineData(["queueWorkers", "queue_workers"])]
     public async Task Set_TranslatesKeyToSnakeCase_InPayload(string key, string expectedKey)
     {
         string? capturedJson = null;
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.PutAsync(ApiRoutes.Config, It.IsAny<HttpContent>(), It.IsAny<CancellationToken>())
             )
             .Callback<string, HttpContent?, CancellationToken>(
-                action: (_, content, _) => capturedJson = content!.ReadAsStringAsync().Result
+                (_, content, _) => capturedJson = content!.ReadAsStringAsync().Result
             )
-            .ReturnsAsync(value: true);
+            .ReturnsAsync(true);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
+        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunSetAsync(factory: factory.Object, key: key, value: "value");
+        int exitCode = await RunSetAsync(factory.Object, key, "value");
 
-        exitCode.Should().Be(expected: (int)ExitCode.Success);
-        capturedJson.Should().Contain(expected: $"\"{expectedKey}\"");
-        console.Out.Should().Contain(expected: $"Configuration updated: {key} = value");
+        exitCode.Should().Be((int)ExitCode.Success);
+        capturedJson.Should().Contain($"\"{expectedKey}\"");
+        console.Out.Should().Contain($"Configuration updated: {key} = value");
     }
 
     [Theory]
-    [InlineData(data: ["42", "42"])]
-    [InlineData(data: ["-7", "-7"])]
+    [InlineData(["42", "42"])]
+    [InlineData(["-7", "-7"])]
     public async Task Set_IntegerValue_SerializesAsJsonNumber(
         string value,
         string expectedJsonValue
@@ -147,46 +147,46 @@ public sealed class ConfigCommandTests
         string? capturedJson = null;
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.PutAsync(ApiRoutes.Config, It.IsAny<HttpContent>(), It.IsAny<CancellationToken>())
             )
             .Callback<string, HttpContent?, CancellationToken>(
-                action: (_, content, _) => capturedJson = content!.ReadAsStringAsync().Result
+                (_, content, _) => capturedJson = content!.ReadAsStringAsync().Result
             )
-            .ReturnsAsync(value: true);
+            .ReturnsAsync(true);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
+        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
 
         using ConsoleCapture _ = new();
-        await RunSetAsync(factory: factory.Object, key: "internal_port", value: value);
+        await RunSetAsync(factory.Object, "internal_port", value);
 
-        capturedJson.Should().Be(expected: $"{{\"internal_port\":{expectedJsonValue}}}");
+        capturedJson.Should().Be($"{{\"internal_port\":{expectedJsonValue}}}");
     }
 
     [Theory]
-    [InlineData(data: "true")]
-    [InlineData(data: "false")]
+    [InlineData("true")]
+    [InlineData("false")]
     public async Task Set_BooleanValue_SerializesAsJsonBoolean(string value)
     {
         string? capturedJson = null;
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.PutAsync(ApiRoutes.Config, It.IsAny<HttpContent>(), It.IsAny<CancellationToken>())
             )
             .Callback<string, HttpContent?, CancellationToken>(
-                action: (_, content, _) => capturedJson = content!.ReadAsStringAsync().Result
+                (_, content, _) => capturedJson = content!.ReadAsStringAsync().Result
             )
-            .ReturnsAsync(value: true);
+            .ReturnsAsync(true);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
+        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
 
         using ConsoleCapture _ = new();
-        await RunSetAsync(factory: factory.Object, key: "swagger", value: value);
+        await RunSetAsync(factory.Object, "swagger", value);
 
-        capturedJson.Should().Be(expected: $"{{\"swagger\":{value}}}");
+        capturedJson.Should().Be($"{{\"swagger\":{value}}}");
     }
 
     [Fact]
@@ -195,21 +195,21 @@ public sealed class ConfigCommandTests
         string? capturedJson = null;
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.PutAsync(ApiRoutes.Config, It.IsAny<HttpContent>(), It.IsAny<CancellationToken>())
             )
             .Callback<string, HttpContent?, CancellationToken>(
-                action: (_, content, _) => capturedJson = content!.ReadAsStringAsync().Result
+                (_, content, _) => capturedJson = content!.ReadAsStringAsync().Result
             )
-            .ReturnsAsync(value: true);
+            .ReturnsAsync(true);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
+        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
 
         using ConsoleCapture _ = new();
-        await RunSetAsync(factory: factory.Object, key: "server_name", value: "MyServer");
+        await RunSetAsync(factory.Object, "server_name", "MyServer");
 
-        capturedJson.Should().Be(expected: """{"server_name":"MyServer"}""");
+        capturedJson.Should().Be("""{"server_name":"MyServer"}""");
     }
 
     [Fact]
@@ -217,18 +217,18 @@ public sealed class ConfigCommandTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.PutAsync(ApiRoutes.Config, It.IsAny<HttpContent>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: false);
+            .ReturnsAsync(false);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
+        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunSetAsync(factory: factory.Object, key: "server_name", value: "MyServer");
+        int exitCode = await RunSetAsync(factory.Object, "server_name", "MyServer");
 
-        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
-        console.Out.Should().NotContain(unexpected: "updated");
+        exitCode.Should().Be((int)ExitCode.ServerError);
+        console.Out.Should().NotContain("updated");
     }
 }

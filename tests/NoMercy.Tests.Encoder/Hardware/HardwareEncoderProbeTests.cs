@@ -26,10 +26,10 @@ namespace NoMercy.Tests.Encoder.Hardware;
 public class HardwareEncoderProbeTests
 {
     private static HardwareEncoderProbe BuildProbe(Mock<IProcessRunner> processRunner) =>
-        new(processRunner: processRunner.Object, logger: NullLogger<HardwareEncoderProbe>.Instance);
+        new(processRunner.Object, NullLogger<HardwareEncoderProbe>.Instance);
 
     private static Mock<IProcessRunner> BuildRunnerReturning(int exitCode) =>
-        BuildRunnerReturning(exitCode: exitCode, capturedArgs: null);
+        BuildRunnerReturning(exitCode, null);
 
     private static Mock<IProcessRunner> BuildRunnerReturning(
         int exitCode,
@@ -38,7 +38,7 @@ public class HardwareEncoderProbeTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -47,10 +47,10 @@ public class HardwareEncoderProbeTests
                 )
             )
             .Callback<string, string[], string?, CancellationToken>(
-                action: (_, args, _, _) => capturedArgs?.Add(item: args)
+                (_, args, _, _) => capturedArgs?.Add(args)
             )
             .ReturnsAsync(
-                value: new ProcessResult(ExitCode: exitCode, StdOut: "", StdErr: exitCode == 0 ? "" : "init failed", Duration: TimeSpan.Zero)
+                new ProcessResult(exitCode, "", exitCode == 0 ? "" : "init failed", TimeSpan.Zero)
             );
         return runner;
     }
@@ -62,25 +62,25 @@ public class HardwareEncoderProbeTests
     [Fact]
     public async Task ProbeAsync_MarksEncoderUsable_WhenInitExitsZero()
     {
-        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0);
-        HardwareEncoderProbe probe = BuildProbe(processRunner: runner);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(0);
+        HardwareEncoderProbe probe = BuildProbe(runner);
 
-        IReadOnlySet<string> usable = await probe.ProbeAsync(candidateHardwareEncoders: ["h264_nvenc"]);
+        IReadOnlySet<string> usable = await probe.ProbeAsync(["h264_nvenc"]);
 
-        usable.Should().Contain(expected: "h264_nvenc");
+        usable.Should().Contain("h264_nvenc");
     }
 
     [Fact]
     public async Task ProbeAsync_MarksEncoderUnusable_WhenInitExitsNonzero()
     {
-        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 1);
-        HardwareEncoderProbe probe = BuildProbe(processRunner: runner);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(1);
+        HardwareEncoderProbe probe = BuildProbe(runner);
 
         // This is exactly Fillz's field shape: h264_amf is in ffmpeg's
         // compiled encoder list, but the real init fails on this host.
-        IReadOnlySet<string> usable = await probe.ProbeAsync(candidateHardwareEncoders: ["h264_amf"]);
+        IReadOnlySet<string> usable = await probe.ProbeAsync(["h264_amf"]);
 
-        usable.Should().NotContain(unexpected: "h264_amf");
+        usable.Should().NotContain("h264_amf");
         usable.Should().BeEmpty();
     }
 
@@ -89,7 +89,7 @@ public class HardwareEncoderProbeTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.Is<string[]>(a => a.Contains("h264_nvenc")),
@@ -97,9 +97,9 @@ public class HardwareEncoderProbeTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero));
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.Is<string[]>(a => a.Contains("h264_amf")),
@@ -107,14 +107,14 @@ public class HardwareEncoderProbeTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "no AMD device", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", "no AMD device", TimeSpan.Zero));
 
-        HardwareEncoderProbe probe = BuildProbe(processRunner: runner);
+        HardwareEncoderProbe probe = BuildProbe(runner);
 
-        IReadOnlySet<string> usable = await probe.ProbeAsync(candidateHardwareEncoders: ["h264_nvenc", "h264_amf"]);
+        IReadOnlySet<string> usable = await probe.ProbeAsync(["h264_nvenc", "h264_amf"]);
 
-        usable.Should().Contain(expected: "h264_nvenc");
-        usable.Should().NotContain(unexpected: "h264_amf");
+        usable.Should().Contain("h264_nvenc");
+        usable.Should().NotContain("h264_amf");
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class HardwareEncoderProbeTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -130,11 +130,11 @@ public class HardwareEncoderProbeTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(exception: new InvalidOperationException(message: "ffmpeg binary missing"));
+            .ThrowsAsync(new InvalidOperationException("ffmpeg binary missing"));
 
-        HardwareEncoderProbe probe = BuildProbe(processRunner: runner);
+        HardwareEncoderProbe probe = BuildProbe(runner);
 
-        IReadOnlySet<string> usable = await probe.ProbeAsync(candidateHardwareEncoders: ["h264_qsv"]);
+        IReadOnlySet<string> usable = await probe.ProbeAsync(["h264_qsv"]);
 
         usable.Should().BeEmpty();
     }
@@ -142,23 +142,23 @@ public class HardwareEncoderProbeTests
     [Fact]
     public async Task ProbeAsync_UnknownEncoderFamily_TreatsAsUnusableRatherThanGuessing()
     {
-        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0);
-        HardwareEncoderProbe probe = BuildProbe(processRunner: runner);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(0);
+        HardwareEncoderProbe probe = BuildProbe(runner);
 
         // A name outside every known hardware family (NVENC/AMF/QSV/VAAPI/
         // VideoToolbox) has no known-working invocation — never guess one.
-        IReadOnlySet<string> usable = await probe.ProbeAsync(candidateHardwareEncoders: ["some_future_hw_encoder"]);
+        IReadOnlySet<string> usable = await probe.ProbeAsync(["some_future_hw_encoder"]);
 
         usable.Should().BeEmpty();
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -167,7 +167,7 @@ public class HardwareEncoderProbeTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -175,25 +175,25 @@ public class HardwareEncoderProbeTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(exception: new OperationCanceledException());
+            .ThrowsAsync(new OperationCanceledException());
 
-        HardwareEncoderProbe probe = BuildProbe(processRunner: runner);
+        HardwareEncoderProbe probe = BuildProbe(runner);
 
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            probe.ProbeAsync(candidateHardwareEncoders: ["h264_nvenc"], ct: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            probe.ProbeAsync(["h264_nvenc"], cts.Token)
         );
     }
 
     [Fact]
     public async Task ProbeAsync_EmptyCandidates_ReturnsEmptySet()
     {
-        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0);
-        HardwareEncoderProbe probe = BuildProbe(processRunner: runner);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(0);
+        HardwareEncoderProbe probe = BuildProbe(runner);
 
-        IReadOnlySet<string> usable = await probe.ProbeAsync(candidateHardwareEncoders: []);
+        IReadOnlySet<string> usable = await probe.ProbeAsync([]);
 
         usable.Should().BeEmpty();
     }
@@ -201,10 +201,10 @@ public class HardwareEncoderProbeTests
     [Fact]
     public async Task ProbeAsync_DeduplicatesCaseInsensitiveCandidates()
     {
-        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0);
-        HardwareEncoderProbe probe = BuildProbe(processRunner: runner);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(0);
+        HardwareEncoderProbe probe = BuildProbe(runner);
 
-        IReadOnlySet<string> usable = await probe.ProbeAsync(candidateHardwareEncoders: ["h264_nvenc", "H264_NVENC"]);
+        IReadOnlySet<string> usable = await probe.ProbeAsync(["h264_nvenc", "H264_NVENC"]);
 
         usable.Should().ContainSingle();
     }
@@ -216,66 +216,66 @@ public class HardwareEncoderProbeTests
     // -------------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: "h264_nvenc")]
-    [InlineData(data: "hevc_nvenc")]
-    [InlineData(data: "av1_nvenc")]
-    [InlineData(data: "h264_amf")]
-    [InlineData(data: "hevc_amf")]
-    [InlineData(data: "av1_amf")]
-    [InlineData(data: "h264_videotoolbox")]
-    [InlineData(data: "hevc_videotoolbox")]
+    [InlineData("h264_nvenc")]
+    [InlineData("hevc_nvenc")]
+    [InlineData("av1_nvenc")]
+    [InlineData("h264_amf")]
+    [InlineData("hevc_amf")]
+    [InlineData("av1_amf")]
+    [InlineData("h264_videotoolbox")]
+    [InlineData("hevc_videotoolbox")]
     public async Task ProbeAsync_NvencAmfVideotoolbox_UsesDirectSoftwareFrameInvocation(
         string encoderName
     )
     {
         List<string[]> captured = [];
-        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0, capturedArgs: captured);
-        HardwareEncoderProbe probe = BuildProbe(processRunner: runner);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(0, captured);
+        HardwareEncoderProbe probe = BuildProbe(runner);
 
-        await probe.ProbeAsync(candidateHardwareEncoders: [encoderName]);
+        await probe.ProbeAsync([encoderName]);
 
-        string[] args = Assert.Single(collection: captured);
-        args.Should().Contain(expected: ["-f", "lavfi", "-i", "nullsrc=s=256x256", "-c:v", encoderName]);
+        string[] args = Assert.Single(captured);
+        args.Should().Contain(["-f", "lavfi", "-i", "nullsrc=s=256x256", "-c:v", encoderName]);
         // No hardware device / upload filter chain — NVENC, AMF and
         // VideoToolbox perform the upload internally.
-        args.Should().NotContain(unexpected: "-init_hw_device");
-        args.Should().NotContain(unexpected: "-vaapi_device");
-        args.Should().NotContain(unexpected: "-vf");
+        args.Should().NotContain("-init_hw_device");
+        args.Should().NotContain("-vaapi_device");
+        args.Should().NotContain("-vf");
     }
 
     [Theory]
-    [InlineData(data: "h264_qsv")]
-    [InlineData(data: "hevc_qsv")]
-    [InlineData(data: "av1_qsv")]
+    [InlineData("h264_qsv")]
+    [InlineData("hevc_qsv")]
+    [InlineData("av1_qsv")]
     public async Task ProbeAsync_Qsv_UsesHwDeviceAndUploadFilterChain(string encoderName)
     {
         List<string[]> captured = [];
-        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0, capturedArgs: captured);
-        HardwareEncoderProbe probe = BuildProbe(processRunner: runner);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(0, captured);
+        HardwareEncoderProbe probe = BuildProbe(runner);
 
-        await probe.ProbeAsync(candidateHardwareEncoders: [encoderName]);
+        await probe.ProbeAsync([encoderName]);
 
-        string[] args = Assert.Single(collection: captured);
-        args.Should().Contain(expected: ["-init_hw_device", "qsv=hw"]);
-        args.Should().Contain(predicate: a => a.Contains("hwupload"));
-        args.Should().Contain(expected: ["-c:v", encoderName]);
+        string[] args = Assert.Single(captured);
+        args.Should().Contain(["-init_hw_device", "qsv=hw"]);
+        args.Should().Contain(a => a.Contains("hwupload"));
+        args.Should().Contain(["-c:v", encoderName]);
     }
 
     [Theory]
-    [InlineData(data: "h264_vaapi")]
-    [InlineData(data: "hevc_vaapi")]
-    [InlineData(data: "av1_vaapi")]
+    [InlineData("h264_vaapi")]
+    [InlineData("hevc_vaapi")]
+    [InlineData("av1_vaapi")]
     public async Task ProbeAsync_Vaapi_UsesRenderDeviceAndUploadFilterChain(string encoderName)
     {
         List<string[]> captured = [];
-        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0, capturedArgs: captured);
-        HardwareEncoderProbe probe = BuildProbe(processRunner: runner);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(0, captured);
+        HardwareEncoderProbe probe = BuildProbe(runner);
 
-        await probe.ProbeAsync(candidateHardwareEncoders: [encoderName]);
+        await probe.ProbeAsync([encoderName]);
 
-        string[] args = Assert.Single(collection: captured);
-        args.Should().Contain(expected: ["-vaapi_device", "/dev/dri/renderD128"]);
-        args.Should().Contain(predicate: a => a.Contains("hwupload"));
-        args.Should().Contain(expected: ["-c:v", encoderName]);
+        string[] args = Assert.Single(captured);
+        args.Should().Contain(["-vaapi_device", "/dev/dri/renderD128"]);
+        args.Should().Contain(a => a.Contains("hwupload"));
+        args.Should().Contain(["-c:v", encoderName]);
     }
 }

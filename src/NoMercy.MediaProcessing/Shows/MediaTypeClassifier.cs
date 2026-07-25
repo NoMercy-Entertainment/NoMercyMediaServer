@@ -18,15 +18,15 @@ public class MediaTypeClassifier : IMediaTypeClassifier
 {
     public async Task<string> ClassifyAsync(TmdbTvShowAppends show)
     {
-        bool isAnime = await KitsuIoClient.IsAnime(title: show.Name, year: show.FirstAirDate.ParseYear());
+        bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
         // Kitsu alone isn't enough — require Japanese origin country from TMDB to
         // avoid false positives on western shows that have Kitsu entries
         // (e.g. co-productions).
         if (isAnime)
         {
-            bool hasJapaneseOrigin = show.OriginCountry.Any(predicate: c =>
-                string.Equals(a: c, b: "JP", comparisonType: StringComparison.OrdinalIgnoreCase)
+            bool hasJapaneseOrigin = show.OriginCountry.Any(c =>
+                string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)
             );
             if (!hasJapaneseOrigin)
                 isAnime = false;

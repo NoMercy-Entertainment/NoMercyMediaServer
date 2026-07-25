@@ -19,31 +19,31 @@ public class TmdbConfigClient : TmdbBaseClient
 {
     public Task<TmdbConfiguration?> Configuration()
     {
-        return Get<TmdbConfiguration>(url: "configuration");
+        return Get<TmdbConfiguration>("configuration");
     }
 
     public Task<List<TmdbLanguage>?> Languages()
     {
-        return Get<List<TmdbLanguage>>(url: "configuration/languages");
+        return Get<List<TmdbLanguage>>("configuration/languages");
     }
 
     public Task<List<TmdbCountry>?> Countries()
     {
-        return Get<List<TmdbCountry>>(url: "configuration/countries");
+        return Get<List<TmdbCountry>>("configuration/countries");
     }
 
     public Task<List<TmdbJob>?> Jobs()
     {
-        return Get<List<TmdbJob>>(url: "configuration/jobs");
+        return Get<List<TmdbJob>>("configuration/jobs");
     }
 
     public Task<List<string>?> PrimaryTranslations()
     {
-        return Get<List<string>>(url: "configuration/primary_translations");
+        return Get<List<string>>("configuration/primary_translations");
     }
 
     public Task<List<TmdbTimezone>?> Timezones()
     {
-        return Get<List<TmdbTimezone>>(url: "configuration/timezones");
+        return Get<List<TmdbTimezone>>("configuration/timezones");
     }
 }

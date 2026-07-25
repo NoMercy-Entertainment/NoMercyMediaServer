@@ -22,8 +22,8 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 ///     Integration tests for TmdbTvClient - simplified version
 ///     Tests real API interactions with TMDB TV endpoints
 /// </summary>
-[Trait(name: "Category", value: "Integration")]
-[Collection(name: "TmdbApi")]
+[Trait("Category", "Integration")]
+[Collection("TmdbApi")]
 public class TmdbTvClientIntegrationTests : TmdbTestBase
 {
     [Fact]
@@ -31,23 +31,23 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvShowDetails? result = await client.Details();
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidTvShowId);
+        result!.Id.Should().Be(ValidTvShowId);
         result.Name.Should().NotBeNullOrEmpty();
         result.Overview.Should().NotBeNullOrEmpty();
         result.FirstAirDate.Should().NotBeNull();
-        result.NumberOfSeasons.Should().BeGreaterThan(expected: 0);
-        result.NumberOfEpisodes.Should().BeGreaterThan(expected: 0);
+        result.NumberOfSeasons.Should().BeGreaterThan(0);
+        result.NumberOfEpisodes.Should().BeGreaterThan(0);
         result.Genres.Should().NotBeEmpty();
-        result.VoteAverage.Should().BeGreaterThan(expected: 0);
-        result.VoteCount.Should().BeGreaterThan(expected: 0);
-        result.Popularity.Should().BeGreaterThan(expected: 0);
+        result.VoteAverage.Should().BeGreaterThan(0);
+        result.VoteCount.Should().BeGreaterThan(0);
+        result.Popularity.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -55,14 +55,14 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvShowAppends? result = await client.WithAllAppends();
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidTvShowId);
+        result!.Id.Should().Be(ValidTvShowId);
         result.Name.Should().NotBeNullOrEmpty();
         result.Overview.Should().NotBeNullOrEmpty();
 
@@ -83,7 +83,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvAggregatedCredits? result = await client.AggregatedCredits();
@@ -97,9 +97,9 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         // Verify cast and crew have basic properties
         result
             .Cast.Should()
-            .AllSatisfy(expected: castMember =>
+            .AllSatisfy(castMember =>
             {
-                castMember.Id.Should().BeGreaterThan(expected: 0);
+                castMember.Id.Should().BeGreaterThan(0);
                 castMember.Name.Should().NotBeNullOrEmpty();
                 castMember.Roles.Should().NotBeEmpty();
             });
@@ -110,7 +110,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvCredits? result = await client.Credits();
@@ -124,9 +124,9 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         // Verify cast data
         result
             .Cast.Should()
-            .AllSatisfy(expected: castMember =>
+            .AllSatisfy(castMember =>
             {
-                castMember.Id.Should().BeGreaterThan(expected: 0);
+                castMember.Id.Should().BeGreaterThan(0);
                 castMember.Name.Should().NotBeNullOrEmpty();
                 castMember.Character.Should().NotBeNullOrEmpty();
             });
@@ -137,7 +137,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbImages? result = await client.Images();
@@ -150,11 +150,11 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         // Verify backdrop data
         result
             .Backdrops.Should()
-            .AllSatisfy(expected: backdrop =>
+            .AllSatisfy(backdrop =>
             {
                 backdrop.FilePath.Should().NotBeNullOrEmpty();
-                backdrop.Width.Should().BeGreaterThan(expected: 0);
-                backdrop.Height.Should().BeGreaterThan(expected: 0);
+                backdrop.Width.Should().BeGreaterThan(0);
+                backdrop.Height.Should().BeGreaterThan(0);
             });
     }
 
@@ -163,7 +163,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvVideos? result = await client.Videos();
@@ -175,7 +175,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         if (result.Results.Length != 0)
             result
                 .Results.Should()
-                .AllSatisfy(expected: video =>
+                .AllSatisfy(video =>
                 {
                     video.Id.Should().NotBeNullOrEmpty();
                     video.Key.Should().NotBeNullOrEmpty();
@@ -190,7 +190,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvExternalIds? result = await client.ExternalIds();
@@ -205,22 +205,22 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvRecommendations? result = await client.Recommendations();
 
         // Assert
         result.Should().NotBeNull();
-        result.Page.Should().BeGreaterThan(expected: 0);
+        result.Page.Should().BeGreaterThan(0);
         result.Results.Should().NotBeNull();
 
         if (result.Results.Any())
             result
                 .Results.Should()
-                .AllSatisfy(expected: show =>
+                .AllSatisfy(show =>
                 {
-                    show.Id.Should().BeGreaterThan(expected: 0);
+                    show.Id.Should().BeGreaterThan(0);
                     show.Name.Should().NotBeNullOrEmpty();
                 });
     }
@@ -230,22 +230,22 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvSimilar? result = await client.Similar();
 
         // Assert
         result.Should().NotBeNull();
-        result.Page.Should().BeGreaterThan(expected: 0);
+        result.Page.Should().BeGreaterThan(0);
         result.Results.Should().NotBeNull();
 
         if (result.Results.Any())
             result
                 .Results.Should()
-                .AllSatisfy(expected: show =>
+                .AllSatisfy(show =>
                 {
-                    show.Id.Should().BeGreaterThan(expected: 0);
+                    show.Id.Should().BeGreaterThan(0);
                     show.Name.Should().NotBeNullOrEmpty();
                 });
     }
@@ -255,7 +255,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbSharedTranslations? result = await client.Translations();
@@ -266,7 +266,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
 
         result
             .Translations.Should()
-            .AllSatisfy(expected: translation =>
+            .AllSatisfy(translation =>
             {
                 translation.Iso31661.Should().NotBeNullOrEmpty();
                 translation.Iso6391.Should().NotBeNullOrEmpty();
@@ -276,7 +276,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
             });
 
         // Should have English translation
-        result.Translations.Should().Contain(predicate: t => t.Iso6391 == "en");
+        result.Translations.Should().Contain(t => t.Iso6391 == "en");
     }
 
     [Fact]
@@ -284,7 +284,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvKeywords? result = await client.Keywords();
@@ -296,9 +296,9 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         if (result.Results.Length != 0)
             result
                 .Results.Should()
-                .AllSatisfy(expected: keyword =>
+                .AllSatisfy(keyword =>
                 {
-                    keyword.Id.Should().BeGreaterThan(expected: 0);
+                    keyword.Id.Should().BeGreaterThan(0);
                     keyword.Name.Should().NotBeNullOrEmpty();
                 });
     }
@@ -308,14 +308,14 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbWatchProviders? result = await client.WatchProviders();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.TmdbWatchProviderResults.Should().NotBeNull();
     }
 
@@ -324,7 +324,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvContentRatings? result = await client.ContentRatings();
@@ -336,7 +336,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         if (result.Results.Length != 0)
             result
                 .Results.Should()
-                .AllSatisfy(expected: rating =>
+                .AllSatisfy(rating =>
                 {
                     rating.Iso31661.Should().NotBeNullOrEmpty();
                     rating.Rating.Should().NotBeNullOrEmpty();
@@ -348,7 +348,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvAlternativeTitles? result = await client.AlternativeTitles();
@@ -360,7 +360,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         if (result.Results.Length != 0)
             result
                 .Results.Should()
-                .AllSatisfy(expected: title =>
+                .AllSatisfy(title =>
                 {
                     title.Iso31661.Should().NotBeNullOrEmpty();
                     title.Title.Should().NotBeNullOrEmpty();
@@ -372,7 +372,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvEpisodeGroups? result = await client.EpisodeGroups();
@@ -384,12 +384,12 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         if (result.Results.Length != 0)
             result
                 .Results.Should()
-                .AllSatisfy(expected: group =>
+                .AllSatisfy(group =>
                 {
                     group.Id.Should().NotBeNullOrEmpty();
                     group.Name.Should().NotBeNullOrEmpty();
-                    group.EpisodeCount.Should().BeGreaterThan(expected: 0);
-                    group.GroupCount.Should().BeGreaterThan(expected: 0);
+                    group.EpisodeCount.Should().BeGreaterThan(0);
+                    group.GroupCount.Should().BeGreaterThan(0);
                 });
     }
 
@@ -398,7 +398,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvReviews? result = await client.Reviews();
@@ -410,7 +410,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         if (result.Results.Any())
             result
                 .Results.Should()
-                .AllSatisfy(expected: review =>
+                .AllSatisfy(review =>
                 {
                     review.Id.Should().NotBeNullOrEmpty();
                     review.Author.Should().NotBeNullOrEmpty();
@@ -424,7 +424,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvScreenedTheatrically? result = await client.ScreenedTheatrically();
@@ -436,11 +436,11 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         if (result.Results.Length != 0)
             result
                 .Results.Should()
-                .AllSatisfy(expected: screening =>
+                .AllSatisfy(screening =>
                 {
-                    screening.Id.Should().BeGreaterThan(expected: 0);
-                    screening.EpisodeNumber.Should().BeGreaterThan(expected: 0);
-                    screening.SeasonNumber.Should().BeGreaterThan(expected: 0);
+                    screening.Id.Should().BeGreaterThan(0);
+                    screening.EpisodeNumber.Should().BeGreaterThan(0);
+                    screening.SeasonNumber.Should().BeGreaterThan(0);
                 });
     }
 
@@ -457,15 +457,15 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         // Assert
         result.Should().NotBeNull();
         result.Should().NotBeEmpty();
-        result.Should().HaveCountLessThanOrEqualTo(expected: 10);
+        result.Should().HaveCountLessThanOrEqualTo(10);
 
         result
             .Should()
-            .AllSatisfy(expected: show =>
+            .AllSatisfy(show =>
             {
-                show.Id.Should().BeGreaterThan(expected: 0);
+                show.Id.Should().BeGreaterThan(0);
                 show.Name.Should().NotBeNullOrEmpty();
-                show.Popularity.Should().BeGreaterThan(expected: 0);
+                show.Popularity.Should().BeGreaterThan(0);
             });
     }
 
@@ -481,16 +481,16 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Page.Should().BeGreaterThan(expected: 0);
+        result.Page.Should().BeGreaterThan(0);
         result.Results.Should().NotBeEmpty();
 
         result
             .Results.Should()
-            .AllSatisfy(expected: show =>
+            .AllSatisfy(show =>
             {
-                show.Id.Should().BeGreaterThan(expected: 0);
+                show.Id.Should().BeGreaterThan(0);
                 show.Name.Should().NotBeNullOrEmpty();
-                show.VoteAverage.Should().BeGreaterThan(expected: 7.0); // Top rated should have high ratings
+                show.VoteAverage.Should().BeGreaterThan(7.0); // Top rated should have high ratings
             });
     }
 
@@ -506,15 +506,15 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Page.Should().BeGreaterThan(expected: 0);
+        result.Page.Should().BeGreaterThan(0);
         result.Results.Should().NotBeNull();
 
         if (result.Results.Any())
             result
                 .Results.Should()
-                .AllSatisfy(expected: show =>
+                .AllSatisfy(show =>
                 {
-                    show.Id.Should().BeGreaterThan(expected: 0);
+                    show.Id.Should().BeGreaterThan(0);
                     show.Name.Should().NotBeNullOrEmpty();
                 });
     }
@@ -531,15 +531,15 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Page.Should().BeGreaterThan(expected: 0);
+        result.Page.Should().BeGreaterThan(0);
         result.Results.Should().NotBeNull();
 
         if (result.Results.Any())
             result
                 .Results.Should()
-                .AllSatisfy(expected: show =>
+                .AllSatisfy(show =>
                 {
-                    show.Id.Should().BeGreaterThan(expected: 0);
+                    show.Id.Should().BeGreaterThan(0);
                     show.Name.Should().NotBeNullOrEmpty();
                 });
     }
@@ -556,7 +556,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().BeGreaterThan(expected: 0);
+        result.Id.Should().BeGreaterThan(0);
         result.Name.Should().NotBeNullOrEmpty();
         result.Type.Should().NotBeNull();
     }
@@ -577,16 +577,16 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
 
         result
             .Genres.Should()
-            .AllSatisfy(expected: genre =>
+            .AllSatisfy(genre =>
             {
-                genre.Id.Should().BeGreaterThan(expected: 0);
+                genre.Id.Should().BeGreaterThan(0);
                 genre.Name.Should().NotBeNullOrEmpty();
             });
 
         // Verify known TV genres exist
-        result.Genres.Should().Contain(predicate: g => g.Name == "Drama");
-        result.Genres.Should().Contain(predicate: g => g.Name == "Comedy");
-        result.Genres.Should().Contain(predicate: g => g.Name == "Crime");
+        result.Genres.Should().Contain(g => g.Name == "Drama");
+        result.Genres.Should().Contain(g => g.Name == "Comedy");
+        result.Genres.Should().Contain(g => g.Name == "Crime");
     }
 
     [Fact]
@@ -604,17 +604,17 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Certifications.Should().NotBeNull();
 
         // Should have US certifications
-        result.Certifications.Should().ContainKey(expected: "US");
-        TmdbTvShowCertification[] usCertifications = result.Certifications[key: "US"];
+        result.Certifications.Should().ContainKey("US");
+        TmdbTvShowCertification[] usCertifications = result.Certifications["US"];
         usCertifications.Should().NotBeEmpty();
 
         usCertifications
             .Should()
-            .AllSatisfy(expected: cert =>
+            .AllSatisfy(cert =>
             {
                 cert.Rating.Should().NotBeNullOrEmpty();
                 cert.Meaning.Should().NotBeNullOrEmpty();
-                cert.Order.Should().BeGreaterThanOrEqualTo(expected: 0);
+                cert.Order.Should().BeGreaterThanOrEqualTo(0);
             });
     }
 
@@ -623,10 +623,10 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
-        TmdbSeasonClient seasonClient = client.Season(seasonNumber: ValidSeasonNumber);
+        TmdbSeasonClient seasonClient = client.Season(ValidSeasonNumber);
 
         // Assert
         seasonClient.Should().NotBeNull();
@@ -638,7 +638,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: 999999999);
+        using TmdbTvClient client = new(999999999);
 
         // Act
         TmdbTvShowDetails? result = await client.Details();
@@ -652,10 +652,10 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         SetupTmdbAuthentication();
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
-        TmdbTvChanges? result = await client.Changes(startDate: "invalid-date", endDate: "also-invalid");
+        TmdbTvChanges? result = await client.Changes("invalid-date", "also-invalid");
 
         // Assert
         // Changes endpoint may return null for invalid date formats

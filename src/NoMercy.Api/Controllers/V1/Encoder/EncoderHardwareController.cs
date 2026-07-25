@@ -35,10 +35,10 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 /// is extended.
 /// </summary>
 [ApiController]
-[Tags(tags: "Encoder Hardware")]
-[ApiVersion(version: 1.0)]
+[Tags("Encoder Hardware")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "Moderator")]
-[Route(template: "api/v{version:apiVersion}/encoder/hardware")]
+[Route("api/v{version:apiVersion}/encoder/hardware")]
 public class EncoderHardwareController(
     IBenchmarkJobTracker tracker,
     IResourceMonitor monitor,
@@ -52,7 +52,7 @@ public class EncoderHardwareController(
     /// Returns 202 Accepted immediately with a job_id for polling.
     /// Invalid codec names produce 422.
     /// </summary>
-    [HttpPost(template: "benchmark")]
+    [HttpPost("benchmark")]
     public IActionResult StartBenchmark([FromBody] StartBenchmarkRequest? request)
     {
         List<VideoCodecType> codecs = [];
@@ -61,27 +61,27 @@ public class EncoderHardwareController(
         {
             foreach (string name in rawCodecs)
             {
-                if (!Enum.TryParse(value: name, ignoreCase: true, result: out VideoCodecType parsed))
+                if (!Enum.TryParse(name, true, out VideoCodecType parsed))
                 {
                     return UnprocessableEntity(
-                        error: new
+                        new
                         {
                             error = "benchmark.invalid_codec",
                             message = $"Unknown codec name '{name}'.",
-                            suggestion = $"Valid values are: {string.Join(separator: ", ", value: Enum.GetNames<VideoCodecType>())}.",
+                            suggestion = $"Valid values are: {string.Join(", ", Enum.GetNames<VideoCodecType>())}.",
                         }
                     );
                 }
 
-                codecs.Add(item: parsed);
+                codecs.Add(parsed);
             }
         }
 
         List<int> resolutions = request?.Resolutions?.ToList() ?? [];
 
-        BenchmarkJobStatus job = tracker.Start(codecs: codecs, resolutions: resolutions);
+        BenchmarkJobStatus job = tracker.Start(codecs, resolutions);
 
-        return Accepted(value: new { job_id = job.JobId, status = job.Status });
+        return Accepted(new { job_id = job.JobId, status = job.Status });
     }
 
     /// <summary>
@@ -89,14 +89,14 @@ public class EncoderHardwareController(
     /// Poll this endpoint until <c>status</c> is "completed", "failed", or
     /// "cancelled".
     /// </summary>
-    [HttpGet(template: "benchmark/{jobId}")]
+    [HttpGet("benchmark/{jobId}")]
     public IActionResult GetBenchmark(string jobId)
     {
-        BenchmarkJobStatus? job = tracker.Get(jobId: jobId);
+        BenchmarkJobStatus? job = tracker.Get(jobId);
         if (job is null)
-            return NotFoundResponse(detail: $"No benchmark job with id '{jobId}' found");
+            return NotFoundResponse($"No benchmark job with id '{jobId}' found");
 
-        return Ok(value: job);
+        return Ok(job);
     }
 
     /// <summary>
@@ -104,10 +104,10 @@ public class EncoderHardwareController(
     /// History is lost on server restart; the durable SpeedIndex is
     /// available at GET /api/v1/dashboard/hardware/benchmark.
     /// </summary>
-    [HttpGet(template: "benchmark")]
+    [HttpGet("benchmark")]
     public IActionResult ListBenchmarks()
     {
-        return Ok(value: new { data = tracker.List() });
+        return Ok(new { data = tracker.List() });
     }
 
     /// <summary>
@@ -116,18 +116,18 @@ public class EncoderHardwareController(
     /// plugin is installed), and the count of concurrent NVENC sessions currently
     /// tracked by the process registry.
     /// </summary>
-    [HttpGet(template: "utilization")]
+    [HttpGet("utilization")]
     public async Task<IActionResult> GetUtilization()
     {
         UtilizationSnapshot snap = new(
-            CpuUsagePercent: monitor.GetCpuUsagePercent(),
-            AvailableMemoryMb: monitor.GetAvailableMemoryMb(),
-            GpuSamples: await monitor.SampleGpuAsync(),
-            ConcurrentNvencSessions: registry.CountConcurrentNvencSessions(),
-            Gpus: hardware.Gpus
+            monitor.GetCpuUsagePercent(),
+            monitor.GetAvailableMemoryMb(),
+            await monitor.SampleGpuAsync(),
+            registry.CountConcurrentNvencSessions(),
+            hardware.Gpus
         );
 
-        return Ok(value: snap);
+        return Ok(snap);
     }
 
     /// <summary>
@@ -136,25 +136,25 @@ public class EncoderHardwareController(
     /// presence (fpcalc, Whisper model, Tesseract eng.traineddata).
     /// Returns <c>probe_pending</c> if the background probe has not yet completed.
     /// </summary>
-    [HttpGet(template: "/api/v{version:apiVersion}/encoder/capabilities")]
+    [HttpGet("/api/v{version:apiVersion}/encoder/capabilities")]
     public IActionResult GetCapabilities()
     {
         CapabilityReport? report = probe.GetCachedReport();
         return report is null
             ? Ok(
-                value: new
+                new
                 {
                     status = "probe_pending",
                     message = "Capability probe has not completed yet.",
                 }
             )
-            : Ok(value: report);
+            : Ok(report);
     }
 }
 
 public record StartBenchmarkRequest(
-    [property: JsonProperty(propertyName: "codecs")] string[]? Codecs,
-    [property: JsonProperty(propertyName: "resolutions")] int[]? Resolutions
+    [property: JsonProperty("codecs")] string[]? Codecs,
+    [property: JsonProperty("resolutions")] int[]? Resolutions
 );
 
 /// <summary>
@@ -162,9 +162,9 @@ public record StartBenchmarkRequest(
 /// <c>GET /api/v1/encoder/hardware/utilization</c>.
 /// </summary>
 public record UtilizationSnapshot(
-    [property: JsonProperty(propertyName: "cpu_usage_percent")] double CpuUsagePercent,
-    [property: JsonProperty(propertyName: "available_memory_mb")] long AvailableMemoryMb,
-    [property: JsonProperty(propertyName: "gpu_samples")] IReadOnlyList<GpuProcessSample> GpuSamples,
-    [property: JsonProperty(propertyName: "concurrent_nvenc_sessions")] int ConcurrentNvencSessions,
-    [property: JsonProperty(propertyName: "gpus")] IReadOnlyList<GpuDevice> Gpus
+    [property: JsonProperty("cpu_usage_percent")] double CpuUsagePercent,
+    [property: JsonProperty("available_memory_mb")] long AvailableMemoryMb,
+    [property: JsonProperty("gpu_samples")] IReadOnlyList<GpuProcessSample> GpuSamples,
+    [property: JsonProperty("concurrent_nvenc_sessions")] int ConcurrentNvencSessions,
+    [property: JsonProperty("gpus")] IReadOnlyList<GpuDevice> Gpus
 );

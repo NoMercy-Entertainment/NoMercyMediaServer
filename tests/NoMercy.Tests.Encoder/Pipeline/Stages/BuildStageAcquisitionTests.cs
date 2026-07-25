@@ -36,13 +36,13 @@ public class BuildStageAcquisitionTests
             FfprobePathOverride = "ffprobe",
         };
         _stage = new(
-            options: options,
-            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
-            subtitleExtractor: new SubtitleExtractor(),
-            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
-            drmProcessors: [],
-            logger: NullLogger<BuildStage>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            options,
+            new FontExtractor(TestStorageFactory.CreateLocal()),
+            new SubtitleExtractor(),
+            OutputStrategyFactoryTestHelper.Create(),
+            [],
+            NullLogger<BuildStage>.Instance,
+            TestStorageFactory.CreateLocal()
         );
     }
 
@@ -50,18 +50,18 @@ public class BuildStageAcquisitionTests
     [Fact]
     public async Task NoAcquiredSubtitles_CommandContainsOnlySourceInput()
     {
-        ExecutionPlan plan = BuildPlan(acquiredSubtitles: []);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test");
+        ExecutionPlan plan = BuildPlan([]);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: CancellationToken.None);
+        StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
         string[] args = commands[0].Arguments;
 
         // Count -i occurrences — should be exactly 1 (source only)
-        int inputCount = CountArg(args: args, arg: "-i");
-        inputCount.Should().Be(expected: 1);
-        args.Should().Contain(expected: "/movies/test.mkv");
+        int inputCount = CountArg(args, "-i");
+        inputCount.Should().Be(1);
+        args.Should().Contain("/movies/test.mkv");
     }
 
     // Test 2: One ExactMatch subtitle → command adds that file as a second -i input
@@ -69,26 +69,26 @@ public class BuildStageAcquisitionTests
     public async Task OneExactMatchSub_AddsInputToCommand()
     {
         AcquiredSubtitle sub = new(
-            Language: "en",
-            LocalPath: "/tmp/subs/en.srt",
-            Provider: "OpenSubtitles",
-            IsExactMatch: true,
-            Rating: 8.0,
-            Downloads: 1000,
-            Format: "srt"
+            "en",
+            "/tmp/subs/en.srt",
+            "OpenSubtitles",
+            true,
+            8.0,
+            1000,
+            "srt"
         );
 
-        ExecutionPlan plan = BuildPlan(acquiredSubtitles: [sub]);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test");
+        ExecutionPlan plan = BuildPlan([sub]);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: CancellationToken.None);
+        StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
         string[] args = commands[0].Arguments;
 
-        args.Should().Contain(expected: "/tmp/subs/en.srt");
-        int inputCount = CountArg(args: args, arg: "-i");
-        inputCount.Should().Be(expected: 2);
+        args.Should().Contain("/tmp/subs/en.srt");
+        int inputCount = CountArg(args, "-i");
+        inputCount.Should().Be(2);
     }
 
     // Test 3: Non-exact-match subtitle → NOT added as input
@@ -96,26 +96,26 @@ public class BuildStageAcquisitionTests
     public async Task NonExactMatchSub_NotAddedAsInput()
     {
         AcquiredSubtitle sub = new(
-            Language: "en",
-            LocalPath: "/tmp/subs/en.srt",
-            Provider: "OpenSubtitles",
-            IsExactMatch: false,
-            Rating: 6.0,
-            Downloads: 100,
-            Format: "srt"
+            "en",
+            "/tmp/subs/en.srt",
+            "OpenSubtitles",
+            false,
+            6.0,
+            100,
+            "srt"
         );
 
-        ExecutionPlan plan = BuildPlan(acquiredSubtitles: [sub]);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test");
+        ExecutionPlan plan = BuildPlan([sub]);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: CancellationToken.None);
+        StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
         string[] args = commands[0].Arguments;
 
-        args.Should().NotContain(unexpected: "/tmp/subs/en.srt");
-        int inputCount = CountArg(args: args, arg: "-i");
-        inputCount.Should().Be(expected: 1);
+        args.Should().NotContain("/tmp/subs/en.srt");
+        int inputCount = CountArg(args, "-i");
+        inputCount.Should().Be(1);
     }
 
     // Test 4: Two exact-match subs → both added as inputs
@@ -123,36 +123,36 @@ public class BuildStageAcquisitionTests
     public async Task TwoExactMatchSubs_BothAddedAsInputs()
     {
         AcquiredSubtitle enSub = new(
-            Language: "en",
-            LocalPath: "/tmp/subs/en.srt",
-            Provider: "OpenSubtitles",
-            IsExactMatch: true,
-            Rating: 8.0,
-            Downloads: 1000,
-            Format: "srt"
+            "en",
+            "/tmp/subs/en.srt",
+            "OpenSubtitles",
+            true,
+            8.0,
+            1000,
+            "srt"
         );
         AcquiredSubtitle nlSub = new(
-            Language: "nl",
-            LocalPath: "/tmp/subs/nl.srt",
-            Provider: "OpenSubtitles",
-            IsExactMatch: true,
-            Rating: 7.0,
-            Downloads: 500,
-            Format: "srt"
+            "nl",
+            "/tmp/subs/nl.srt",
+            "OpenSubtitles",
+            true,
+            7.0,
+            500,
+            "srt"
         );
 
-        ExecutionPlan plan = BuildPlan(acquiredSubtitles: [enSub, nlSub]);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test");
+        ExecutionPlan plan = BuildPlan([enSub, nlSub]);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: CancellationToken.None);
+        StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
         string[] args = commands[0].Arguments;
 
-        args.Should().Contain(expected: "/tmp/subs/en.srt");
-        args.Should().Contain(expected: "/tmp/subs/nl.srt");
-        int inputCount = CountArg(args: args, arg: "-i");
-        inputCount.Should().Be(expected: 3);
+        args.Should().Contain("/tmp/subs/en.srt");
+        args.Should().Contain("/tmp/subs/nl.srt");
+        int inputCount = CountArg(args, "-i");
+        inputCount.Should().Be(3);
     }
 
     // Test 5: Mixed exact/non-exact → only exact one added
@@ -160,71 +160,71 @@ public class BuildStageAcquisitionTests
     public async Task MixedExactAndNonExact_OnlyExactAdded()
     {
         AcquiredSubtitle exact = new(
-            Language: "en",
-            LocalPath: "/tmp/subs/en.srt",
-            Provider: "OpenSubtitles",
-            IsExactMatch: true,
-            Rating: 8.0,
-            Downloads: 1000,
-            Format: "srt"
+            "en",
+            "/tmp/subs/en.srt",
+            "OpenSubtitles",
+            true,
+            8.0,
+            1000,
+            "srt"
         );
         AcquiredSubtitle notExact = new(
-            Language: "nl",
-            LocalPath: "/tmp/subs/nl.srt",
-            Provider: "OpenSubtitles",
-            IsExactMatch: false,
-            Rating: 6.0,
-            Downloads: 100,
-            Format: "srt"
+            "nl",
+            "/tmp/subs/nl.srt",
+            "OpenSubtitles",
+            false,
+            6.0,
+            100,
+            "srt"
         );
 
-        ExecutionPlan plan = BuildPlan(acquiredSubtitles: [exact, notExact]);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test");
+        ExecutionPlan plan = BuildPlan([exact, notExact]);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: CancellationToken.None);
+        StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
         string[] args = commands[0].Arguments;
 
-        args.Should().Contain(expected: "/tmp/subs/en.srt");
-        args.Should().NotContain(unexpected: "/tmp/subs/nl.srt");
-        int inputCount = CountArg(args: args, arg: "-i");
-        inputCount.Should().Be(expected: 2);
+        args.Should().Contain("/tmp/subs/en.srt");
+        args.Should().NotContain("/tmp/subs/nl.srt");
+        int inputCount = CountArg(args, "-i");
+        inputCount.Should().Be(2);
     }
 
-    private static int CountArg(string[] args, string arg) => args.Count(predicate: a => a == arg);
+    private static int CountArg(string[] args, string arg) => args.Count(a => a == arg);
 
     private static ExecutionPlan BuildPlan(IReadOnlyList<AcquiredSubtitle>? acquiredSubtitles)
     {
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
+            OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    Width: 1920,
-                    Height: 1080,
-                    EncoderName: "libx264",
-                    Crf: 23,
-                    BitrateKbps: 4000,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.1",
-                    TenBit: false,
-                    PixelFormat: "yuv420p",
-                    MapLabel: "[v0]",
-                    ExtraFlags: new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    4000,
+                    "medium",
+                    "high",
+                    "4.1",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
             AudioOutputs:
             [
                 new(
-                    EncoderName: "aac",
-                    BitrateKbps: 192,
-                    Channels: 2,
-                    SampleRate: 48000,
-                    Action: StreamAction.Transcode,
-                    Language: "en",
-                    MapLabel: "0:a:0"
+                    "aac",
+                    192,
+                    2,
+                    48000,
+                    StreamAction.Transcode,
+                    "en",
+                    "0:a:0"
                 ),
             ],
             SubtitleOutputs: [],
@@ -233,24 +233,22 @@ public class BuildStageAcquisitionTests
         );
 
         return new(
-            Groups:
             [
                 new(
-                    GroupId: "group_0",
-                    Nodes:
+                    "group_0",
                     [
-                        new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new()),
-                        new(Id: "encode_0", Operation: OperationType.Encode, DependsOn: ["decode_0"], Parameters: new()),
+                        new("decode_0", OperationType.Decode, [], new()),
+                        new("encode_0", OperationType.Encode, ["decode_0"], new()),
                     ],
-                    DeviceId: null,
-                    GpuSlotsRequired: 0,
-                    CpuThreadsRequired: 4,
-                    RequiresGpu: false,
-                    Priority: 1
+                    null,
+                    0,
+                    4,
+                    false,
+                    1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
-            OutputPlan: outputPlan
+            TimeSpan.FromMinutes(90),
+            outputPlan
         );
     }
 }

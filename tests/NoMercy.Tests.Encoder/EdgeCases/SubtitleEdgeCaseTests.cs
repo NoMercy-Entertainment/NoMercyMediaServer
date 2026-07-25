@@ -25,32 +25,31 @@ public class SubtitleEdgeCaseTests
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
         _stage = new(
-            options: options,
-            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
-            subtitleExtractor: new SubtitleExtractor(),
-            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
-            drmProcessors: [],
-            logger: NullLogger<BuildStage>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            options,
+            new FontExtractor(TestStorageFactory.CreateLocal()),
+            new SubtitleExtractor(),
+            OutputStrategyFactoryTestHelper.Create(),
+            [],
+            NullLogger<BuildStage>.Instance,
+            TestStorageFactory.CreateLocal()
         );
     }
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
         new(
-            Groups:
             [
                 new(
-                    GroupId: "group_0",
-                    Nodes: [new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new())],
-                    DeviceId: null,
-                    GpuSlotsRequired: 0,
-                    CpuThreadsRequired: 4,
-                    RequiresGpu: false,
-                    Priority: 1
+                    "group_0",
+                    [new("decode_0", OperationType.Decode, [], new())],
+                    null,
+                    0,
+                    4,
+                    false,
+                    1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
-            OutputPlan: outputPlan
+            TimeSpan.FromMinutes(90),
+            outputPlan
         );
 
     private static VideoOutputPlan BuildVideoOutput(
@@ -60,151 +59,150 @@ public class SubtitleEdgeCaseTests
         string encoder = "libx264"
     ) =>
         new(
-            Width: width,
-            Height: height,
-            EncoderName: encoder,
-            Crf: 23,
-            BitrateKbps: 4000,
-            Preset: "medium",
-            Profile: "high",
-            Level: "4.1",
-            TenBit: false,
-            PixelFormat: "yuv420p",
-            MapLabel: mapLabel,
-            ExtraFlags: new()
+            width,
+            height,
+            encoder,
+            23,
+            4000,
+            "medium",
+            "high",
+            "4.1",
+            false,
+            "yuv420p",
+            mapLabel,
+            new()
         );
 
     private static AudioOutputPlan BuildAudioOutput() =>
         new(
-            EncoderName: "aac",
-            BitrateKbps: 192,
-            Channels: 2,
-            SampleRate: 48000,
-            Action: StreamAction.Transcode,
-            Language: "en",
-            MapLabel: "0:a:0"
+            "aac",
+            192,
+            2,
+            48000,
+            StreamAction.Transcode,
+            "en",
+            "0:a:0"
         );
 
     private static MediaInfo BuildMediaInfoWithSubtitles(params SubtitleStreamInfo[] subtitles) =>
         new(
-            FilePath: "/movies/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 2),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 7_200_000_000,
-            VideoStreams:
+            "/movies/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(2),
+            8000,
+            7_200_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: null,
-                    ColorTransfer: null,
-                    ColorSpace: null,
-                    IsDefault: true,
-                    BitRateKbps: 6000
+                    0,
+                    "h264",
+                    1920,
+                    1080,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    null,
+                    null,
+                    null,
+                    true,
+                    6000
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: subtitles,
-            Chapters: []
+            [],
+            subtitles,
+            []
         );
 
     [Fact]
     public async Task FilterGraphAssembler_GenericTextSubtitleBurnIn_GeneratesSubtitlesFilter()
     {
         SubtitleOutputPlan burnInSub = new(
-            OutputCodec: SubtitleCodecType.Srt,
+            SubtitleCodecType.Srt,
             Action: StreamAction.Extract,
             Language: "en",
             SourceIndex: 0,
             MapLabel: null,
             Policy: SubtitlePolicy.BurnIn
         );
-        VideoOutputPlan videoOutput = BuildVideoOutput(width: 1920, height: 1080, mapLabel: "[v0]");
+        VideoOutputPlan videoOutput = BuildVideoOutput(1920, 1080, "[v0]");
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [videoOutput],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [burnInSub],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [videoOutput],
+            [BuildAudioOutput()],
+            [burnInSub],
+            null
         );
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        ExecutionPlan plan = BuildPlan(outputPlan);
         SubtitleStreamInfo srtStream = new(
-            Index: 0,
-            Codec: "srt",
-            Language: "en",
-            IsDefault: true,
-            IsForced: false
+            0,
+            "srt",
+            "en",
+            true,
+            false
         );
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: BuildMediaInfoWithSubtitles(subtitles: srtStream)
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfoWithSubtitles(srtStream)
         );
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
-        int filterComplexIdx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
         filterComplexIdx
             .Should()
-            .BeGreaterThan(expected: -1, because: "filter_complex must be present for subtitle burn-in");
+            .BeGreaterThan(-1, "filter_complex must be present for subtitle burn-in");
         string filterValue = commands[0].Arguments[filterComplexIdx + 1];
         filterValue
             .Should()
-            .Contain(expected: "subtitles=", because: "SRT subtitle burn-in must use subtitles= filter");
+            .Contain("subtitles=", "SRT subtitle burn-in must use subtitles= filter");
         filterValue
             .Should()
-            .Contain(expected: ":si=0", because: "subtitles filter must include stream index parameter");
+            .Contain(":si=0", "subtitles filter must include stream index parameter");
     }
 
     [Fact]
     public async Task FilterGraphAssembler_BitmapSubtitleBurnIn_DoesNotUseBurnInFilter()
     {
         SubtitleOutputPlan burnInSub = new(
-            OutputCodec: SubtitleCodecType.Pgs,
+            SubtitleCodecType.Pgs,
             Action: StreamAction.Extract,
             Language: "en",
             SourceIndex: 0,
             MapLabel: null,
             Policy: SubtitlePolicy.BurnIn
         );
-        VideoOutputPlan videoOutput = BuildVideoOutput(width: 1920, height: 1080, mapLabel: "[v0]");
+        VideoOutputPlan videoOutput = BuildVideoOutput(1920, 1080, "[v0]");
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [videoOutput],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [burnInSub],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [videoOutput],
+            [BuildAudioOutput()],
+            [burnInSub],
+            null
         );
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        ExecutionPlan plan = BuildPlan(outputPlan);
         SubtitleStreamInfo pgsStream = new(
-            Index: 0,
-            Codec: "hdmv_pgs_subtitle",
-            Language: "en",
-            IsDefault: true,
-            IsForced: false
+            0,
+            "hdmv_pgs_subtitle",
+            "en",
+            true,
+            false
         );
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: BuildMediaInfoWithSubtitles(subtitles: pgsStream)
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfoWithSubtitles(pgsStream)
         );
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
-        int filterComplexIdx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
         if (filterComplexIdx > -1)
         {
             string filterValue = commands[0].Arguments[filterComplexIdx + 1];
-            filterValue.Should().NotContain(unexpected: "ass=", because: "PGS bitmap subtitle must NOT use ass= filter");
+            filterValue.Should().NotContain("ass=", "PGS bitmap subtitle must NOT use ass= filter");
             filterValue
                 .Should()
-                .NotContain(unexpected: "subtitles=", because: "PGS bitmap subtitle must NOT use subtitles= filter");
+                .NotContain("subtitles=", "PGS bitmap subtitle must NOT use subtitles= filter");
         }
     }
 
@@ -212,82 +210,82 @@ public class SubtitleEdgeCaseTests
     public async Task FilterGraphAssembler_SubtitleBurnIn_ForcesVideoReencode()
     {
         SubtitleOutputPlan burnInSub = new(
-            OutputCodec: SubtitleCodecType.Ass,
+            SubtitleCodecType.Ass,
             Action: StreamAction.Extract,
             Language: "en",
             SourceIndex: 0,
             MapLabel: null,
             Policy: SubtitlePolicy.BurnIn
         );
-        VideoOutputPlan videoOutput = BuildVideoOutput(width: 1920, height: 1080, mapLabel: "[v0]") with
+        VideoOutputPlan videoOutput = BuildVideoOutput(1920, 1080, "[v0]") with
         {
             EncoderName = "libx264",
         };
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [videoOutput],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [burnInSub],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [videoOutput],
+            [BuildAudioOutput()],
+            [burnInSub],
+            null
         );
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        ExecutionPlan plan = BuildPlan(outputPlan);
         SubtitleStreamInfo assStream = new(
-            Index: 0,
-            Codec: "ass",
-            Language: "en",
-            IsDefault: true,
-            IsForced: false
+            0,
+            "ass",
+            "en",
+            true,
+            false
         );
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: BuildMediaInfoWithSubtitles(subtitles: assStream)
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfoWithSubtitles(assStream)
         );
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
         string[] args = commands[0].Arguments;
-        int codecIdx = Array.IndexOf(array: args, value: "-c:v");
-        codecIdx.Should().BeGreaterThan(expected: -1, because: "video codec specifier must be present");
+        int codecIdx = Array.IndexOf(args, "-c:v");
+        codecIdx.Should().BeGreaterThan(-1, "video codec specifier must be present");
         string videoCodec = args[codecIdx + 1];
-        videoCodec.Should().Be(expected: "libx264", because: "burn-in subtitle must NOT be copy; encoder must be set");
+        videoCodec.Should().Be("libx264", "burn-in subtitle must NOT be copy; encoder must be set");
     }
 
     [Fact]
     public async Task FilterGraphAssembler_NoBurnInSubtitle_NoSubtitleFilterAppears()
     {
-        VideoOutputPlan videoOutput = BuildVideoOutput(width: 1920, height: 1080, mapLabel: "[v0]");
+        VideoOutputPlan videoOutput = BuildVideoOutput(1920, 1080, "[v0]");
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [videoOutput],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [videoOutput],
+            [BuildAudioOutput()],
+            [],
+            null
         );
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        ExecutionPlan plan = BuildPlan(outputPlan);
         SubtitleStreamInfo srtStream = new(
-            Index: 0,
-            Codec: "srt",
-            Language: "en",
-            IsDefault: true,
-            IsForced: false
+            0,
+            "srt",
+            "en",
+            true,
+            false
         );
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: BuildMediaInfoWithSubtitles(subtitles: srtStream)
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfoWithSubtitles(srtStream)
         );
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
-        int filterComplexIdx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
         if (filterComplexIdx > -1)
         {
             string filterValue = commands[0].Arguments[filterComplexIdx + 1];
             filterValue
                 .Should()
-                .NotContain(unexpected: "subtitles=", because: "no subtitle filter without burn-in policy");
-            filterValue.Should().NotContain(unexpected: "ass=", because: "no ASS filter without burn-in policy");
+                .NotContain("subtitles=", "no subtitle filter without burn-in policy");
+            filterValue.Should().NotContain("ass=", "no ASS filter without burn-in policy");
         }
     }
 }

@@ -41,7 +41,7 @@ public class ComprehensiveQueueTests
     //    Existing tests only exercise it indirectly; these tests verify it directly.
     // =========================================================================
 
-    [Trait(name: "Category", value: "Unit")]
+    [Trait("Category", "Unit")]
     public class EfQueueContextAdapterTests : IDisposable
     {
         private readonly QueueContext _context;
@@ -69,9 +69,9 @@ public class ComprehensiveQueueTests
                 AvailableAt = DateTime.UtcNow,
             };
 
-            _adapter.AddJob(job: job);
+            _adapter.AddJob(job);
 
-            Assert.True(condition: job.Id > 0);
+            Assert.True(job.Id > 0);
         }
 
         [Fact]
@@ -85,13 +85,13 @@ public class ComprehensiveQueueTests
                 AvailableAt = DateTime.UtcNow,
             };
 
-            _adapter.AddJob(job: job);
+            _adapter.AddJob(job);
 
-            QueueJob? entity = _context.QueueJobs.FirstOrDefault(predicate: j => j.Id == job.Id);
-            Assert.NotNull(@object: entity);
-            Assert.Equal(expected: "{\"type\":\"persist-test\"}", actual: entity.Payload);
-            Assert.Equal(expected: "test", actual: entity.Queue);
-            Assert.Equal(expected: 5, actual: entity.Priority);
+            QueueJob? entity = _context.QueueJobs.FirstOrDefault(j => j.Id == job.Id);
+            Assert.NotNull(entity);
+            Assert.Equal("{\"type\":\"persist-test\"}", entity.Payload);
+            Assert.Equal("test", entity.Queue);
+            Assert.Equal(5, entity.Priority);
         }
 
         [Fact]
@@ -104,22 +104,22 @@ public class ComprehensiveQueueTests
                 Priority = 3,
                 AvailableAt = DateTime.UtcNow,
             };
-            _adapter.AddJob(job: job);
+            _adapter.AddJob(job);
 
-            QueueJobModel? found = _adapter.FindJob(id: job.Id);
+            QueueJobModel? found = _adapter.FindJob(job.Id);
 
-            Assert.NotNull(@object: found);
-            Assert.Equal(expected: job.Id, actual: found.Id);
-            Assert.Equal(expected: "q1", actual: found.Queue);
-            Assert.Equal(expected: 3, actual: found.Priority);
-            Assert.Equal(expected: "{\"type\":\"find-adapter\"}", actual: found.Payload);
+            Assert.NotNull(found);
+            Assert.Equal(job.Id, found.Id);
+            Assert.Equal("q1", found.Queue);
+            Assert.Equal(3, found.Priority);
+            Assert.Equal("{\"type\":\"find-adapter\"}", found.Payload);
         }
 
         [Fact]
         public void FindJob_ReturnsNullForMissingId()
         {
-            QueueJobModel? found = _adapter.FindJob(id: 999);
-            Assert.Null(@object: found);
+            QueueJobModel? found = _adapter.FindJob(999);
+            Assert.Null(found);
         }
 
         [Fact]
@@ -131,13 +131,13 @@ public class ComprehensiveQueueTests
                 Queue = "test",
                 AvailableAt = DateTime.UtcNow,
             };
-            _adapter.AddJob(job: job);
+            _adapter.AddJob(job);
             int id = job.Id;
 
-            _adapter.RemoveJob(job: job);
+            _adapter.RemoveJob(job);
 
-            Assert.Null(@object: _adapter.FindJob(id: id));
-            Assert.Null(@object: _context.QueueJobs.Find(keyValues: id));
+            Assert.Null(_adapter.FindJob(id));
+            Assert.Null(_context.QueueJobs.Find(id));
         }
 
         [Fact]
@@ -150,7 +150,7 @@ public class ComprehensiveQueueTests
                 Queue = "test",
                 AvailableAt = DateTime.UtcNow,
             };
-            _context.QueueJobs.Add(entity: entity);
+            _context.QueueJobs.Add(entity);
             _context.SaveChanges();
             _context.ChangeTracker.Clear();
 
@@ -161,16 +161,16 @@ public class ComprehensiveQueueTests
                 Payload = "{\"type\":\"detached\"}",
                 Queue = "test",
             };
-            _adapter.RemoveJob(job: model);
+            _adapter.RemoveJob(model);
 
-            Assert.Null(@object: _context.QueueJobs.Find(keyValues: entity.Id));
+            Assert.Null(_context.QueueJobs.Find(entity.Id));
         }
 
         [Fact]
         public void JobExists_ReturnsTrueForExistingPayload()
         {
             _adapter.AddJob(
-                job: new()
+                new()
                 {
                     Payload = "{\"exists\":true}",
                     Queue = "test",
@@ -178,13 +178,13 @@ public class ComprehensiveQueueTests
                 }
             );
 
-            Assert.True(condition: _adapter.JobExists(payload: "{\"exists\":true}"));
+            Assert.True(_adapter.JobExists("{\"exists\":true}"));
         }
 
         [Fact]
         public void JobExists_ReturnsFalseForMissingPayload()
         {
-            Assert.False(condition: _adapter.JobExists(payload: "{\"nonexistent\":true}"));
+            Assert.False(_adapter.JobExists("{\"nonexistent\":true}"));
         }
 
         [Fact]
@@ -197,18 +197,18 @@ public class ComprehensiveQueueTests
                 Priority = 1,
                 AvailableAt = DateTime.UtcNow,
             };
-            _adapter.AddJob(job: job);
+            _adapter.AddJob(job);
 
             job.Priority = 99;
             job.Attempts = 5;
             job.ReservedAt = DateTime.UtcNow;
-            _adapter.UpdateJob(job: job);
+            _adapter.UpdateJob(job);
 
-            QueueJobModel? updated = _adapter.FindJob(id: job.Id);
-            Assert.NotNull(@object: updated);
-            Assert.Equal(expected: 99, actual: updated.Priority);
-            Assert.Equal(expected: 5, actual: updated.Attempts);
-            Assert.NotNull(value: updated.ReservedAt);
+            QueueJobModel? updated = _adapter.FindJob(job.Id);
+            Assert.NotNull(updated);
+            Assert.Equal(99, updated.Priority);
+            Assert.Equal(5, updated.Attempts);
+            Assert.NotNull(updated.ReservedAt);
         }
 
         [Fact]
@@ -221,15 +221,15 @@ public class ComprehensiveQueueTests
                 Queue = "test",
             };
 
-            Exception? ex = Record.Exception(testCode: () => _adapter.UpdateJob(job: job));
-            Assert.Null(@object: ex);
+            Exception? ex = Record.Exception(() => _adapter.UpdateJob(job));
+            Assert.Null(ex);
         }
 
         [Fact]
         public void GetNextJob_ReturnsHighestPriorityUnreservedJob()
         {
             _adapter.AddJob(
-                job: new()
+                new()
                 {
                     Payload = "{\"p\":1}",
                     Queue = "w",
@@ -238,7 +238,7 @@ public class ComprehensiveQueueTests
                 }
             );
             _adapter.AddJob(
-                job: new()
+                new()
                 {
                     Payload = "{\"p\":10}",
                     Queue = "w",
@@ -247,10 +247,10 @@ public class ComprehensiveQueueTests
                 }
             );
 
-            QueueJobModel? next = _adapter.GetNextJob(queueName: "w", maxAttempts: 3, currentJobId: null, now: DateTime.UtcNow);
+            QueueJobModel? next = _adapter.GetNextJob("w", 3, null, DateTime.UtcNow);
 
-            Assert.NotNull(@object: next);
-            Assert.Equal(expected: "{\"p\":10}", actual: next.Payload);
+            Assert.NotNull(next);
+            Assert.Equal("{\"p\":10}", next.Payload);
         }
 
         [Fact]
@@ -264,7 +264,7 @@ public class ComprehensiveQueueTests
                 ReservedAt = DateTime.UtcNow,
                 AvailableAt = DateTime.UtcNow,
             };
-            _adapter.AddJob(job: reserved);
+            _adapter.AddJob(reserved);
 
             QueueJobModel unreserved = new()
             {
@@ -273,19 +273,19 @@ public class ComprehensiveQueueTests
                 Priority = 1,
                 AvailableAt = DateTime.UtcNow,
             };
-            _adapter.AddJob(job: unreserved);
+            _adapter.AddJob(unreserved);
 
-            QueueJobModel? next = _adapter.GetNextJob(queueName: "w", maxAttempts: 3, currentJobId: null, now: DateTime.UtcNow);
+            QueueJobModel? next = _adapter.GetNextJob("w", 3, null, DateTime.UtcNow);
 
-            Assert.NotNull(@object: next);
-            Assert.Equal(expected: "{\"unreserved\":true}", actual: next.Payload);
+            Assert.NotNull(next);
+            Assert.Equal("{\"unreserved\":true}", next.Payload);
         }
 
         [Fact]
         public void GetNextJob_EmptyQueueName_ReturnsAnyJob()
         {
             _adapter.AddJob(
-                job: new()
+                new()
                 {
                     Payload = "{\"any\":true}",
                     Queue = "specific-queue",
@@ -293,22 +293,22 @@ public class ComprehensiveQueueTests
                 }
             );
 
-            QueueJobModel? next = _adapter.GetNextJob(queueName: "", maxAttempts: 3, currentJobId: null, now: DateTime.UtcNow);
-            Assert.NotNull(@object: next);
+            QueueJobModel? next = _adapter.GetNextJob("", 3, null, DateTime.UtcNow);
+            Assert.NotNull(next);
         }
 
         [Fact]
         public void GetNextJob_ReturnsNullWhenEmpty()
         {
-            QueueJobModel? next = _adapter.GetNextJob(queueName: "empty", maxAttempts: 3, currentJobId: null, now: DateTime.UtcNow);
-            Assert.Null(@object: next);
+            QueueJobModel? next = _adapter.GetNextJob("empty", 3, null, DateTime.UtcNow);
+            Assert.Null(next);
         }
 
         [Fact]
         public void GetNextJob_WithCurrentJobId_ReturnsNull()
         {
             _adapter.AddJob(
-                job: new()
+                new()
                 {
                     Payload = "{\"guard\":true}",
                     Queue = "w",
@@ -317,8 +317,8 @@ public class ComprehensiveQueueTests
                 }
             );
 
-            QueueJobModel? next = _adapter.GetNextJob(queueName: "w", maxAttempts: 3, currentJobId: 42L, now: DateTime.UtcNow);
-            Assert.Null(@object: next);
+            QueueJobModel? next = _adapter.GetNextJob("w", 3, 42L, DateTime.UtcNow);
+            Assert.Null(next);
         }
 
         [Fact]
@@ -331,13 +331,13 @@ public class ComprehensiveQueueTests
                 ReservedAt = DateTime.UtcNow,
                 AvailableAt = DateTime.UtcNow,
             };
-            _adapter.AddJob(job: job);
+            _adapter.AddJob(job);
 
             _adapter.ResetAllReservedJobs();
 
-            QueueJobModel? found = _adapter.FindJob(id: job.Id);
-            Assert.NotNull(@object: found);
-            Assert.Null(value: found.ReservedAt);
+            QueueJobModel? found = _adapter.FindJob(job.Id);
+            Assert.NotNull(found);
+            Assert.Null(found.ReservedAt);
         }
 
         // --- Failed job operations ---
@@ -354,12 +354,12 @@ public class ComprehensiveQueueTests
                 FailedAt = DateTime.UtcNow,
             };
 
-            _adapter.AddFailedJob(failedJob: failedJob);
+            _adapter.AddFailedJob(failedJob);
             _adapter.SaveChanges();
 
             IReadOnlyList<FailedJobModel> all = _adapter.GetFailedJobs();
-            Assert.Single(collection: all);
-            Assert.Equal(expected: "boom", actual: all[index: 0].Exception);
+            Assert.Single(all);
+            Assert.Equal("boom", all[0].Exception);
         }
 
         [Fact]
@@ -372,21 +372,21 @@ public class ComprehensiveQueueTests
                 Payload = "{\"find-failed\":true}",
                 Exception = "err",
             };
-            _adapter.AddFailedJob(failedJob: failedJob);
+            _adapter.AddFailedJob(failedJob);
             _adapter.SaveChanges();
 
             IReadOnlyList<FailedJobModel> all = _adapter.GetFailedJobs();
-            FailedJobModel? found = _adapter.FindFailedJob(id: (int)all[index: 0].Id);
+            FailedJobModel? found = _adapter.FindFailedJob((int)all[0].Id);
 
-            Assert.NotNull(@object: found);
-            Assert.Equal(expected: "{\"find-failed\":true}", actual: found.Payload);
+            Assert.NotNull(found);
+            Assert.Equal("{\"find-failed\":true}", found.Payload);
         }
 
         [Fact]
         public void FindFailedJob_ReturnsNullForMissingId()
         {
-            FailedJobModel? found = _adapter.FindFailedJob(id: 999);
-            Assert.Null(@object: found);
+            FailedJobModel? found = _adapter.FindFailedJob(999);
+            Assert.Null(found);
         }
 
         [Fact]
@@ -399,14 +399,14 @@ public class ComprehensiveQueueTests
                 Payload = "{\"remove-failed\":true}",
                 Exception = "err",
             };
-            _adapter.AddFailedJob(failedJob: failedJob);
+            _adapter.AddFailedJob(failedJob);
             _adapter.SaveChanges();
 
             IReadOnlyList<FailedJobModel> all = _adapter.GetFailedJobs();
-            _adapter.RemoveFailedJob(failedJob: all[index: 0]);
+            _adapter.RemoveFailedJob(all[0]);
             _adapter.SaveChanges();
 
-            Assert.Empty(collection: _adapter.GetFailedJobs());
+            Assert.Empty(_adapter.GetFailedJobs());
         }
 
         [Fact]
@@ -420,19 +420,19 @@ public class ComprehensiveQueueTests
                 Exception = "err",
             };
 
-            Exception? ex = Record.Exception(testCode: () =>
+            Exception? ex = Record.Exception(() =>
             {
-                _adapter.RemoveFailedJob(failedJob: model);
+                _adapter.RemoveFailedJob(model);
                 _adapter.SaveChanges();
             });
-            Assert.Null(@object: ex);
+            Assert.Null(ex);
         }
 
         [Fact]
         public void GetFailedJobs_FilterById()
         {
             _adapter.AddFailedJob(
-                failedJob: new()
+                new()
                 {
                     Uuid = Guid.NewGuid(),
                     Queue = "q1",
@@ -441,7 +441,7 @@ public class ComprehensiveQueueTests
                 }
             );
             _adapter.AddFailedJob(
-                failedJob: new()
+                new()
                 {
                     Uuid = Guid.NewGuid(),
                     Queue = "q2",
@@ -452,11 +452,11 @@ public class ComprehensiveQueueTests
             _adapter.SaveChanges();
 
             IReadOnlyList<FailedJobModel> all = _adapter.GetFailedJobs();
-            Assert.Equal(expected: 2, actual: all.Count);
+            Assert.Equal(2, all.Count);
 
-            IReadOnlyList<FailedJobModel> filtered = _adapter.GetFailedJobs(failedJobId: all[index: 0].Id);
-            Assert.Single(collection: filtered);
-            Assert.Equal(expected: all[index: 0].Id, actual: filtered[index: 0].Id);
+            IReadOnlyList<FailedJobModel> filtered = _adapter.GetFailedJobs(all[0].Id);
+            Assert.Single(filtered);
+            Assert.Equal(all[0].Id, filtered[0].Id);
         }
 
         // --- Cron job operations ---
@@ -472,25 +472,25 @@ public class ComprehensiveQueueTests
                 IsEnabled = true,
             };
 
-            _adapter.AddCronJob(cronJob: cronJob);
+            _adapter.AddCronJob(cronJob);
 
-            CronJobModel? found = _adapter.FindCronJobByName(name: "adapter-cron");
-            Assert.NotNull(@object: found);
-            Assert.Equal(expected: "0 * * * *", actual: found.CronExpression);
+            CronJobModel? found = _adapter.FindCronJobByName("adapter-cron");
+            Assert.NotNull(found);
+            Assert.Equal("0 * * * *", found.CronExpression);
         }
 
         [Fact]
         public void FindCronJobByName_ReturnsNullForMissing()
         {
-            CronJobModel? found = _adapter.FindCronJobByName(name: "nonexistent");
-            Assert.Null(@object: found);
+            CronJobModel? found = _adapter.FindCronJobByName("nonexistent");
+            Assert.Null(found);
         }
 
         [Fact]
         public void GetEnabledCronJobs_FiltersDisabled()
         {
             _adapter.AddCronJob(
-                cronJob: new()
+                new()
                 {
                     Name = "enabled-adapter",
                     CronExpression = "0 * * * *",
@@ -499,7 +499,7 @@ public class ComprehensiveQueueTests
                 }
             );
             _adapter.AddCronJob(
-                cronJob: new()
+                new()
                 {
                     Name = "disabled-adapter",
                     CronExpression = "0 * * * *",
@@ -509,15 +509,15 @@ public class ComprehensiveQueueTests
             );
 
             IReadOnlyList<CronJobModel> enabled = _adapter.GetEnabledCronJobs();
-            Assert.Single(collection: enabled);
-            Assert.Equal(expected: "enabled-adapter", actual: enabled[index: 0].Name);
+            Assert.Single(enabled);
+            Assert.Equal("enabled-adapter", enabled[0].Name);
         }
 
         [Fact]
         public void UpdateCronJob_ModifiesProperties()
         {
             _adapter.AddCronJob(
-                cronJob: new()
+                new()
                 {
                     Name = "update-adapter-cron",
                     CronExpression = "0 * * * *",
@@ -526,26 +526,26 @@ public class ComprehensiveQueueTests
                 }
             );
 
-            CronJobModel? found = _adapter.FindCronJobByName(name: "update-adapter-cron");
-            Assert.NotNull(@object: found);
+            CronJobModel? found = _adapter.FindCronJobByName("update-adapter-cron");
+            Assert.NotNull(found);
 
             found.CronExpression = "*/5 * * * *";
             found.IsEnabled = false;
             found.LastRun = DateTime.UtcNow;
-            _adapter.UpdateCronJob(cronJob: found);
+            _adapter.UpdateCronJob(found);
 
-            CronJobModel? updated = _adapter.FindCronJobByName(name: "update-adapter-cron");
-            Assert.NotNull(@object: updated);
-            Assert.Equal(expected: "*/5 * * * *", actual: updated.CronExpression);
-            Assert.False(condition: updated.IsEnabled);
-            Assert.NotNull(value: updated.LastRun);
+            CronJobModel? updated = _adapter.FindCronJobByName("update-adapter-cron");
+            Assert.NotNull(updated);
+            Assert.Equal("*/5 * * * *", updated.CronExpression);
+            Assert.False(updated.IsEnabled);
+            Assert.NotNull(updated.LastRun);
         }
 
         [Fact]
         public void RemoveCronJob_DeletesFromContext()
         {
             _adapter.AddCronJob(
-                cronJob: new()
+                new()
                 {
                     Name = "remove-adapter-cron",
                     CronExpression = "0 * * * *",
@@ -553,12 +553,12 @@ public class ComprehensiveQueueTests
                 }
             );
 
-            CronJobModel? found = _adapter.FindCronJobByName(name: "remove-adapter-cron");
-            Assert.NotNull(@object: found);
+            CronJobModel? found = _adapter.FindCronJobByName("remove-adapter-cron");
+            Assert.NotNull(found);
 
-            _adapter.RemoveCronJob(cronJob: found);
+            _adapter.RemoveCronJob(found);
 
-            Assert.Null(@object: _adapter.FindCronJobByName(name: "remove-adapter-cron"));
+            Assert.Null(_adapter.FindCronJobByName("remove-adapter-cron"));
         }
 
         [Fact]
@@ -572,15 +572,15 @@ public class ComprehensiveQueueTests
                 JobType = "X",
             };
 
-            Exception? ex = Record.Exception(testCode: () => _adapter.RemoveCronJob(cronJob: model));
-            Assert.Null(@object: ex);
+            Exception? ex = Record.Exception(() => _adapter.RemoveCronJob(model));
+            Assert.Null(ex);
         }
 
         [Fact]
         public void SaveChanges_ClearsChangeTracker()
         {
             _adapter.AddJob(
-                job: new()
+                new()
                 {
                     Payload = "{\"tracker\":true}",
                     Queue = "test",
@@ -589,7 +589,7 @@ public class ComprehensiveQueueTests
             );
 
             // After SaveAndClear, change tracker should be empty
-            Assert.False(condition: _context.ChangeTracker.HasChanges());
+            Assert.False(_context.ChangeTracker.HasChanges());
         }
     }
 
@@ -599,7 +599,7 @@ public class ComprehensiveQueueTests
     //    for the same sequence of operations.
     // =========================================================================
 
-    [Trait(name: "Category", value: "Integration")]
+    [Trait("Category", "Integration")]
     public class CrossProviderParityTests : IDisposable
     {
         private readonly string _sqliteDbPath;
@@ -609,8 +609,8 @@ public class ComprehensiveQueueTests
 
         public CrossProviderParityTests()
         {
-            _sqliteDbPath = Path.Combine(path1: Path.GetTempPath(), path2: $"parity_test_{Guid.NewGuid()}.db");
-            _sqliteContext = SqliteQueueContextFactory.Create(databasePath: _sqliteDbPath);
+            _sqliteDbPath = Path.Combine(Path.GetTempPath(), $"parity_test_{Guid.NewGuid()}.db");
+            _sqliteContext = SqliteQueueContextFactory.Create(_sqliteDbPath);
             (_efDbContext, _efAdapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
         }
 
@@ -620,8 +620,8 @@ public class ComprehensiveQueueTests
             _efAdapter.Dispose();
             _efDbContext.Dispose();
             SqliteConnection.ClearAllPools();
-            if (File.Exists(path: _sqliteDbPath))
-                File.Delete(path: _sqliteDbPath);
+            if (File.Exists(_sqliteDbPath))
+                File.Delete(_sqliteDbPath);
         }
 
         [Fact]
@@ -642,17 +642,17 @@ public class ComprehensiveQueueTests
                 AvailableAt = DateTime.UtcNow,
             };
 
-            _sqliteContext.AddJob(job: sqliteJob);
-            _efAdapter.AddJob(job: efJob);
+            _sqliteContext.AddJob(sqliteJob);
+            _efAdapter.AddJob(efJob);
 
-            QueueJobModel? sqliteFound = _sqliteContext.FindJob(id: sqliteJob.Id);
-            QueueJobModel? efFound = _efAdapter.FindJob(id: efJob.Id);
+            QueueJobModel? sqliteFound = _sqliteContext.FindJob(sqliteJob.Id);
+            QueueJobModel? efFound = _efAdapter.FindJob(efJob.Id);
 
-            Assert.NotNull(@object: sqliteFound);
-            Assert.NotNull(@object: efFound);
-            Assert.Equal(expected: sqliteFound.Queue, actual: efFound.Queue);
-            Assert.Equal(expected: sqliteFound.Priority, actual: efFound.Priority);
-            Assert.Equal(expected: sqliteFound.Payload, actual: efFound.Payload);
+            Assert.NotNull(sqliteFound);
+            Assert.NotNull(efFound);
+            Assert.Equal(sqliteFound.Queue, efFound.Queue);
+            Assert.Equal(sqliteFound.Priority, efFound.Priority);
+            Assert.Equal(sqliteFound.Payload, efFound.Payload);
         }
 
         [Fact]
@@ -661,7 +661,7 @@ public class ComprehensiveQueueTests
             string payload = "{\"parity\":\"exists\"}";
 
             _sqliteContext.AddJob(
-                job: new()
+                new()
                 {
                     Payload = payload,
                     Queue = "t",
@@ -669,7 +669,7 @@ public class ComprehensiveQueueTests
                 }
             );
             _efAdapter.AddJob(
-                job: new()
+                new()
                 {
                     Payload = payload,
                     Queue = "t",
@@ -677,10 +677,10 @@ public class ComprehensiveQueueTests
                 }
             );
 
-            Assert.Equal(expected: _sqliteContext.JobExists(payload: payload), actual: _efAdapter.JobExists(payload: payload));
+            Assert.Equal(_sqliteContext.JobExists(payload), _efAdapter.JobExists(payload));
             Assert.Equal(
-                expected: _sqliteContext.JobExists(payload: "{\"nope\":true}"),
-                actual: _efAdapter.JobExists(payload: "{\"nope\":true}")
+                _sqliteContext.JobExists("{\"nope\":true}"),
+                _efAdapter.JobExists("{\"nope\":true}")
             );
         }
 
@@ -691,7 +691,7 @@ public class ComprehensiveQueueTests
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
                 ctx.AddJob(
-                    job: new()
+                    new()
                     {
                         Payload = "{\"p\":1}",
                         Queue = "parity",
@@ -700,7 +700,7 @@ public class ComprehensiveQueueTests
                     }
                 );
                 ctx.AddJob(
-                    job: new()
+                    new()
                     {
                         Payload = "{\"p\":10}",
                         Queue = "parity",
@@ -711,17 +711,17 @@ public class ComprehensiveQueueTests
             }
 
             QueueJobModel? sqliteNext = _sqliteContext.GetNextJob(
-                queueName: "parity",
-                maxAttempts: 3,
-                currentJobId: null,
-                now: DateTime.UtcNow
+                "parity",
+                3,
+                null,
+                DateTime.UtcNow
             );
-            QueueJobModel? efNext = _efAdapter.GetNextJob(queueName: "parity", maxAttempts: 3, currentJobId: null, now: DateTime.UtcNow);
+            QueueJobModel? efNext = _efAdapter.GetNextJob("parity", 3, null, DateTime.UtcNow);
 
-            Assert.NotNull(@object: sqliteNext);
-            Assert.NotNull(@object: efNext);
-            Assert.Equal(expected: sqliteNext.Priority, actual: efNext.Priority);
-            Assert.Equal(expected: sqliteNext.Payload, actual: efNext.Payload);
+            Assert.NotNull(sqliteNext);
+            Assert.NotNull(efNext);
+            Assert.Equal(sqliteNext.Priority, efNext.Priority);
+            Assert.Equal(sqliteNext.Payload, efNext.Payload);
         }
 
         [Fact]
@@ -730,7 +730,7 @@ public class ComprehensiveQueueTests
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
                 ctx.AddJob(
-                    job: new()
+                    new()
                     {
                         Payload = "{\"guard\":true}",
                         Queue = "parity",
@@ -741,15 +741,15 @@ public class ComprehensiveQueueTests
             }
 
             QueueJobModel? sqliteNext = _sqliteContext.GetNextJob(
-                queueName: "parity",
-                maxAttempts: 3,
-                currentJobId: 42L,
-                now: DateTime.UtcNow
+                "parity",
+                3,
+                42L,
+                DateTime.UtcNow
             );
-            QueueJobModel? efNext = _efAdapter.GetNextJob(queueName: "parity", maxAttempts: 3, currentJobId: 42L, now: DateTime.UtcNow);
+            QueueJobModel? efNext = _efAdapter.GetNextJob("parity", 3, 42L, DateTime.UtcNow);
 
-            Assert.Null(@object: sqliteNext);
-            Assert.Null(@object: efNext);
+            Assert.Null(sqliteNext);
+            Assert.Null(efNext);
         }
 
         [Fact]
@@ -758,25 +758,25 @@ public class ComprehensiveQueueTests
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
                 ctx.AddJob(
-                    job: new()
+                    new()
                     {
                         Payload = "{\"delayed\":true}",
                         Queue = "parity-delay",
-                        AvailableAt = DateTime.UtcNow.AddMinutes(value: 10),
+                        AvailableAt = DateTime.UtcNow.AddMinutes(10),
                     }
                 );
             }
 
             QueueJobModel? sqliteNext = _sqliteContext.GetNextJob(
-                queueName: "parity-delay",
-                maxAttempts: 3,
-                currentJobId: null,
-                now: DateTime.UtcNow
+                "parity-delay",
+                3,
+                null,
+                DateTime.UtcNow
             );
-            QueueJobModel? efNext = _efAdapter.GetNextJob(queueName: "parity-delay", maxAttempts: 3, currentJobId: null, now: DateTime.UtcNow);
+            QueueJobModel? efNext = _efAdapter.GetNextJob("parity-delay", 3, null, DateTime.UtcNow);
 
-            Assert.Null(@object: sqliteNext);
-            Assert.Null(@object: efNext);
+            Assert.Null(sqliteNext);
+            Assert.Null(efNext);
         }
 
         [Fact]
@@ -785,7 +785,7 @@ public class ComprehensiveQueueTests
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
                 ctx.AddJob(
-                    job: new()
+                    new()
                     {
                         Payload = "{\"at-limit\":true}",
                         Queue = "parity-limit",
@@ -796,15 +796,15 @@ public class ComprehensiveQueueTests
             }
 
             QueueJobModel? sqliteNext = _sqliteContext.GetNextJob(
-                queueName: "parity-limit",
-                maxAttempts: 3,
-                currentJobId: null,
-                now: DateTime.UtcNow
+                "parity-limit",
+                3,
+                null,
+                DateTime.UtcNow
             );
-            QueueJobModel? efNext = _efAdapter.GetNextJob(queueName: "parity-limit", maxAttempts: 3, currentJobId: null, now: DateTime.UtcNow);
+            QueueJobModel? efNext = _efAdapter.GetNextJob("parity-limit", 3, null, DateTime.UtcNow);
 
-            Assert.Null(@object: sqliteNext);
-            Assert.Null(@object: efNext);
+            Assert.Null(sqliteNext);
+            Assert.Null(efNext);
         }
 
         [Fact]
@@ -813,7 +813,7 @@ public class ComprehensiveQueueTests
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
                 ctx.AddJob(
-                    job: new()
+                    new()
                     {
                         Payload = "{\"reserved\":true}",
                         Queue = "parity",
@@ -826,17 +826,17 @@ public class ComprehensiveQueueTests
 
             // After reset, both should return the job (no longer reserved)
             QueueJobModel? sqliteNext = _sqliteContext.GetNextJob(
-                queueName: "parity",
-                maxAttempts: 3,
-                currentJobId: null,
-                now: DateTime.UtcNow
+                "parity",
+                3,
+                null,
+                DateTime.UtcNow
             );
-            QueueJobModel? efNext = _efAdapter.GetNextJob(queueName: "parity", maxAttempts: 3, currentJobId: null, now: DateTime.UtcNow);
+            QueueJobModel? efNext = _efAdapter.GetNextJob("parity", 3, null, DateTime.UtcNow);
 
-            Assert.NotNull(@object: sqliteNext);
-            Assert.NotNull(@object: efNext);
-            Assert.Null(value: sqliteNext.ReservedAt);
-            Assert.Null(value: efNext.ReservedAt);
+            Assert.NotNull(sqliteNext);
+            Assert.NotNull(efNext);
+            Assert.Null(sqliteNext.ReservedAt);
+            Assert.Null(efNext.ReservedAt);
         }
 
         [Fact]
@@ -853,7 +853,7 @@ public class ComprehensiveQueueTests
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
                 ctx.AddCronJob(
-                    cronJob: new()
+                    new()
                     {
                         Name = cronTemplate.Name,
                         CronExpression = cronTemplate.CronExpression,
@@ -863,14 +863,14 @@ public class ComprehensiveQueueTests
                 );
             }
 
-            CronJobModel? sqliteFound = _sqliteContext.FindCronJobByName(name: "parity-cron");
-            CronJobModel? efFound = _efAdapter.FindCronJobByName(name: "parity-cron");
+            CronJobModel? sqliteFound = _sqliteContext.FindCronJobByName("parity-cron");
+            CronJobModel? efFound = _efAdapter.FindCronJobByName("parity-cron");
 
-            Assert.NotNull(@object: sqliteFound);
-            Assert.NotNull(@object: efFound);
-            Assert.Equal(expected: sqliteFound.CronExpression, actual: efFound.CronExpression);
-            Assert.Equal(expected: sqliteFound.JobType, actual: efFound.JobType);
-            Assert.Equal(expected: sqliteFound.IsEnabled, actual: efFound.IsEnabled);
+            Assert.NotNull(sqliteFound);
+            Assert.NotNull(efFound);
+            Assert.Equal(sqliteFound.CronExpression, efFound.CronExpression);
+            Assert.Equal(sqliteFound.JobType, efFound.JobType);
+            Assert.Equal(sqliteFound.IsEnabled, efFound.IsEnabled);
         }
 
         [Fact]
@@ -881,7 +881,7 @@ public class ComprehensiveQueueTests
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
                 ctx.AddFailedJob(
-                    failedJob: new()
+                    new()
                     {
                         Uuid = uuid,
                         Queue = "parity-fail",
@@ -895,11 +895,11 @@ public class ComprehensiveQueueTests
             IReadOnlyList<FailedJobModel> sqliteFailed = _sqliteContext.GetFailedJobs();
             IReadOnlyList<FailedJobModel> efFailed = _efAdapter.GetFailedJobs();
 
-            Assert.Single(collection: sqliteFailed);
-            Assert.Single(collection: efFailed);
-            Assert.Equal(expected: sqliteFailed[index: 0].Queue, actual: efFailed[index: 0].Queue);
-            Assert.Equal(expected: sqliteFailed[index: 0].Payload, actual: efFailed[index: 0].Payload);
-            Assert.Equal(expected: sqliteFailed[index: 0].Exception, actual: efFailed[index: 0].Exception);
+            Assert.Single(sqliteFailed);
+            Assert.Single(efFailed);
+            Assert.Equal(sqliteFailed[0].Queue, efFailed[0].Queue);
+            Assert.Equal(sqliteFailed[0].Payload, efFailed[0].Payload);
+            Assert.Equal(sqliteFailed[0].Exception, efFailed[0].Exception);
         }
     }
 
@@ -908,7 +908,7 @@ public class ComprehensiveQueueTests
     //    Tests the full pipeline using real queue infrastructure.
     // =========================================================================
 
-    [Trait(name: "Category", value: "Integration")]
+    [Trait("Category", "Integration")]
     public class EndToEndDispatchTests : IDisposable
     {
         private readonly QueueContext _context;
@@ -919,8 +919,8 @@ public class ComprehensiveQueueTests
         public EndToEndDispatchTests()
         {
             (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-            _jobQueue = new(context: _adapter);
-            _dispatcher = new(queue: _jobQueue, logger: NullLogger<JobDispatcher>.Instance);
+            _jobQueue = new(_adapter);
+            _dispatcher = new(_jobQueue, NullLogger<JobDispatcher>.Instance);
         }
 
         public void Dispose()
@@ -934,62 +934,62 @@ public class ComprehensiveQueueTests
         {
             // Dispatch
             TestJob testJob = new() { Message = "e2e dispatch test" };
-            _dispatcher.Dispatch(job: testJob);
+            _dispatcher.Dispatch(testJob);
 
-            Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
+            Assert.Equal(1, _context.QueueJobs.Count());
 
             // Reserve
-            QueueJobModel? reserved = _jobQueue.ReserveJob(name: "default", currentJobId: null);
-            Assert.NotNull(@object: reserved);
-            Assert.Equal(expected: 1, actual: reserved.Attempts);
-            Assert.NotNull(value: reserved.ReservedAt);
+            QueueJobModel? reserved = _jobQueue.ReserveJob("default", null);
+            Assert.NotNull(reserved);
+            Assert.Equal(1, reserved.Attempts);
+            Assert.NotNull(reserved.ReservedAt);
 
             // Deserialize and execute
-            object deserialized = SerializationHelper.Deserialize<object>(data: reserved.Payload);
-            Assert.IsType<TestJob>(@object: deserialized);
+            object deserialized = SerializationHelper.Deserialize<object>(reserved.Payload);
+            Assert.IsType<TestJob>(deserialized);
 
             TestJob executedJob = (TestJob)deserialized;
-            Assert.Equal(expected: "e2e dispatch test", actual: executedJob.Message);
+            Assert.Equal("e2e dispatch test", executedJob.Message);
             await executedJob.Handle();
-            Assert.True(condition: executedJob.HasExecuted);
+            Assert.True(executedJob.HasExecuted);
 
             // Delete
-            _jobQueue.DeleteJob(queueJob: reserved);
-            Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+            _jobQueue.DeleteJob(reserved);
+            Assert.Equal(0, _context.QueueJobs.Count());
         }
 
         [Fact]
         public void Dispatch_UsesJobQueueNameAndPriority()
         {
             HighPriorityJob job = new() { Data = "urgent" };
-            _dispatcher.Dispatch(job: job);
+            _dispatcher.Dispatch(job);
 
             QueueJob? stored = _context.QueueJobs.FirstOrDefault();
-            Assert.NotNull(@object: stored);
-            Assert.Equal(expected: "critical", actual: stored.Queue);
-            Assert.Equal(expected: 100, actual: stored.Priority);
+            Assert.NotNull(stored);
+            Assert.Equal("critical", stored.Queue);
+            Assert.Equal(100, stored.Priority);
         }
 
         [Fact]
         public void Dispatch_WithExplicitOverride_OverridesJobDefaults()
         {
             HighPriorityJob job = new() { Data = "overridden" };
-            _dispatcher.Dispatch(job: job, onQueue: "low-queue", priority: 1);
+            _dispatcher.Dispatch(job, "low-queue", 1);
 
             QueueJob? stored = _context.QueueJobs.FirstOrDefault();
-            Assert.NotNull(@object: stored);
-            Assert.Equal(expected: "low-queue", actual: stored.Queue);
-            Assert.Equal(expected: 1, actual: stored.Priority);
+            Assert.NotNull(stored);
+            Assert.Equal("low-queue", stored.Queue);
+            Assert.Equal(1, stored.Priority);
         }
 
         [Fact]
         public void Dispatch_DuplicatePayload_OnlyOneEnqueued()
         {
             TestJob job = new() { Message = "duplicate-e2e" };
-            _dispatcher.Dispatch(job: job);
-            _dispatcher.Dispatch(job: job);
+            _dispatcher.Dispatch(job);
+            _dispatcher.Dispatch(job);
 
-            Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
+            Assert.Equal(1, _context.QueueJobs.Count());
         }
 
         [Fact]
@@ -997,30 +997,30 @@ public class ComprehensiveQueueTests
         {
             // Dispatch a failing job
             TestJob failingJob = new() { Message = "will fail", ShouldFail = true };
-            _dispatcher.Dispatch(job: failingJob);
+            _dispatcher.Dispatch(failingJob);
 
             // Process through maxAttempts (default = 3)
             for (int i = 0; i < 3; i++)
             {
-                QueueJobModel? reserved = _jobQueue.ReserveJob(name: "default", currentJobId: null);
-                Assert.NotNull(@object: reserved);
+                QueueJobModel? reserved = _jobQueue.ReserveJob("default", null);
+                Assert.NotNull(reserved);
 
                 try
                 {
                     IShouldQueue exec = (IShouldQueue)
-                        SerializationHelper.Deserialize<object>(data: reserved.Payload);
+                        SerializationHelper.Deserialize<object>(reserved.Payload);
                     await exec.Handle();
-                    _jobQueue.DeleteJob(queueJob: reserved);
+                    _jobQueue.DeleteJob(reserved);
                 }
                 catch (Exception ex)
                 {
-                    _jobQueue.FailJob(queueJob: reserved, exception: ex);
+                    _jobQueue.FailJob(reserved, ex);
                 }
             }
 
             // Should be in failed jobs now
-            Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
-            Assert.Equal(expected: 1, actual: _context.FailedJobs.Count());
+            Assert.Equal(0, _context.QueueJobs.Count());
+            Assert.Equal(1, _context.FailedJobs.Count());
         }
 
         [Fact]
@@ -1029,35 +1029,35 @@ public class ComprehensiveQueueTests
             TestJob testJob = new() { Message = "default-queue-job" };
             HighPriorityJob criticalJob = new() { Data = "critical-job" };
 
-            _dispatcher.Dispatch(job: testJob);
-            _dispatcher.Dispatch(job: criticalJob);
+            _dispatcher.Dispatch(testJob);
+            _dispatcher.Dispatch(criticalJob);
 
-            Assert.Equal(expected: 2, actual: _context.QueueJobs.Count());
+            Assert.Equal(2, _context.QueueJobs.Count());
 
             // Reserve from "critical" queue should get HighPriorityJob
-            QueueJobModel? criticalReserved = _jobQueue.ReserveJob(name: "critical", currentJobId: null);
-            Assert.NotNull(@object: criticalReserved);
+            QueueJobModel? criticalReserved = _jobQueue.ReserveJob("critical", null);
+            Assert.NotNull(criticalReserved);
             object criticalDeserialized = SerializationHelper.Deserialize<object>(
-                data: criticalReserved.Payload
+                criticalReserved.Payload
             );
-            Assert.IsType<HighPriorityJob>(@object: criticalDeserialized);
+            Assert.IsType<HighPriorityJob>(criticalDeserialized);
 
             // Reserve from "default" queue should get TestJob
-            QueueJobModel? defaultReserved = _jobQueue.ReserveJob(name: "default", currentJobId: null);
-            Assert.NotNull(@object: defaultReserved);
+            QueueJobModel? defaultReserved = _jobQueue.ReserveJob("default", null);
+            Assert.NotNull(defaultReserved);
             object defaultDeserialized = SerializationHelper.Deserialize<object>(
-                data: defaultReserved.Payload
+                defaultReserved.Payload
             );
-            Assert.IsType<TestJob>(@object: defaultDeserialized);
+            Assert.IsType<TestJob>(defaultDeserialized);
 
             // Execute both
             await ((IShouldQueue)criticalDeserialized).Handle();
             await ((IShouldQueue)defaultDeserialized).Handle();
 
-            _jobQueue.DeleteJob(queueJob: criticalReserved);
-            _jobQueue.DeleteJob(queueJob: defaultReserved);
+            _jobQueue.DeleteJob(criticalReserved);
+            _jobQueue.DeleteJob(defaultReserved);
 
-            Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+            Assert.Equal(0, _context.QueueJobs.Count());
         }
     }
 
@@ -1066,7 +1066,7 @@ public class ComprehensiveQueueTests
     //    Test Initialize, SetWorkerCount, Start/Stop operations.
     // =========================================================================
 
-    [Trait(name: "Category", value: "Unit")]
+    [Trait("Category", "Unit")]
     public class QueueRunnerLifecycleTests
     {
         [Fact]
@@ -1075,12 +1075,12 @@ public class ComprehensiveQueueTests
             TestQueueContextAdapter adapter = new();
             QueueConfiguration config = new()
             {
-                WorkerCounts = new() { [key: "queue"] = 1, [key: "data"] = 1 },
+                WorkerCounts = new() { ["queue"] = 1, ["data"] = 1 },
             };
 
-            QueueRunner runner = new(queueContext: adapter, configuration: config, loggerFactory: NullLoggerFactory.Instance);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
 
-            Assert.NotNull(@object: runner.Dispatcher);
+            Assert.NotNull(runner.Dispatcher);
         }
 
         [Fact]
@@ -1089,11 +1089,11 @@ public class ComprehensiveQueueTests
             TestQueueContextAdapter adapter = new();
             QueueConfiguration config = new();
 
-            QueueRunner runner = new(queueContext: adapter, configuration: config, loggerFactory: NullLoggerFactory.Instance);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
 
             // Current may be overwritten by parallel tests constructing other QueueRunners,
             // so just verify the constructor sets it to a non-null value
-            Assert.NotNull(@object: QueueRunner.Current);
+            Assert.NotNull(QueueRunner.Current);
         }
 
         [Fact]
@@ -1102,24 +1102,24 @@ public class ComprehensiveQueueTests
             TestQueueContextAdapter adapter = new();
             QueueConfiguration config = new()
             {
-                WorkerCounts = new() { [key: "queue"] = 3, [key: "data"] = 5 },
+                WorkerCounts = new() { ["queue"] = 3, ["data"] = 5 },
             };
 
-            QueueRunner runner = new(queueContext: adapter, configuration: config, loggerFactory: NullLoggerFactory.Instance);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
 
-            Assert.Empty(collection: runner.GetActiveWorkerThreads());
+            Assert.Empty(runner.GetActiveWorkerThreads());
         }
 
         [Fact]
         public async Task SetWorkerCount_KnownQueue_ReturnsTrue()
         {
             TestQueueContextAdapter adapter = new();
-            QueueConfiguration config = new() { WorkerCounts = new() { [key: "queue"] = 1 } };
+            QueueConfiguration config = new() { WorkerCounts = new() { ["queue"] = 1 } };
 
-            QueueRunner runner = new(queueContext: adapter, configuration: config, loggerFactory: NullLoggerFactory.Instance);
-            bool result = await runner.SetWorkerCount(name: "queue", max: 5, userId: Guid.NewGuid());
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
+            bool result = await runner.SetWorkerCount("queue", 5, Guid.NewGuid());
 
-            Assert.True(condition: result);
+            Assert.True(result);
         }
 
         [Fact]
@@ -1128,10 +1128,10 @@ public class ComprehensiveQueueTests
             TestQueueContextAdapter adapter = new();
             QueueConfiguration config = new();
 
-            QueueRunner runner = new(queueContext: adapter, configuration: config, loggerFactory: NullLoggerFactory.Instance);
-            bool result = await runner.SetWorkerCount(name: "nonexistent", max: 5, userId: Guid.NewGuid());
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
+            bool result = await runner.SetWorkerCount("nonexistent", 5, Guid.NewGuid());
 
-            Assert.False(condition: result);
+            Assert.False(result);
         }
 
         [Fact]
@@ -1139,30 +1139,30 @@ public class ComprehensiveQueueTests
         {
             TestQueueContextAdapter adapter = new();
             TestConfigStore store = new();
-            QueueConfiguration config = new() { WorkerCounts = new() { [key: "encoder"] = 1 } };
+            QueueConfiguration config = new() { WorkerCounts = new() { ["encoder"] = 1 } };
 
-            QueueRunner runner = new(queueContext: adapter, configuration: config, loggerFactory: NullLoggerFactory.Instance, configurationStore: store);
-            await runner.SetWorkerCount(name: "encoder", max: 8, userId: Guid.NewGuid());
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance, store);
+            await runner.SetWorkerCount("encoder", 8, Guid.NewGuid());
 
-            Assert.True(condition: store.HasKey(key: "encoderRunners"));
-            Assert.Equal(expected: "8", actual: store.GetValue(key: "encoderRunners"));
+            Assert.True(store.HasKey("encoderRunners"));
+            Assert.Equal("8", store.GetValue("encoderRunners"));
         }
 
         [Fact]
         public async Task SetWorkerCount_WithoutConfigStore_StillReturnsTrue()
         {
             TestQueueContextAdapter adapter = new();
-            QueueConfiguration config = new() { WorkerCounts = new() { [key: "queue"] = 1 } };
+            QueueConfiguration config = new() { WorkerCounts = new() { ["queue"] = 1 } };
 
             QueueRunner runner = new(
-                queueContext: adapter,
-                configuration: config,
-                loggerFactory: NullLoggerFactory.Instance,
+                adapter,
+                config,
+                NullLoggerFactory.Instance,
                 configurationStore: null
             );
-            bool result = await runner.SetWorkerCount(name: "queue", max: 4, userId: null);
+            bool result = await runner.SetWorkerCount("queue", 4, null);
 
-            Assert.True(condition: result);
+            Assert.True(result);
         }
 
         [Fact]
@@ -1170,13 +1170,13 @@ public class ComprehensiveQueueTests
         {
             TestQueueContextAdapter adapter = new();
             QueueConfiguration config = new();
-            QueueRunner runner = new(queueContext: adapter, configuration: config, loggerFactory: NullLoggerFactory.Instance);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
 
             TestJob job = new() { Message = "via runner dispatcher" };
-            runner.Dispatcher.Dispatch(job: job);
+            runner.Dispatcher.Dispatch(job);
 
-            Assert.Single(collection: adapter.Jobs);
-            Assert.Contains(expectedSubstring: "via runner dispatcher", actualString: adapter.Jobs[index: 0].Payload);
+            Assert.Single(adapter.Jobs);
+            Assert.Contains("via runner dispatcher", adapter.Jobs[0].Payload);
         }
     }
 
@@ -1185,7 +1185,7 @@ public class ComprehensiveQueueTests
     //    Verify the SQLite provider works through the full JobQueue API.
     // =========================================================================
 
-    [Trait(name: "Category", value: "Integration")]
+    [Trait("Category", "Integration")]
     public class SqliteProviderEndToEndTests : IDisposable
     {
         private readonly string _dbPath;
@@ -1194,17 +1194,17 @@ public class ComprehensiveQueueTests
 
         public SqliteProviderEndToEndTests()
         {
-            _dbPath = Path.Combine(path1: Path.GetTempPath(), path2: $"sqlite_e2e_{Guid.NewGuid()}.db");
-            _context = SqliteQueueContextFactory.Create(databasePath: _dbPath);
-            _jobQueue = new(context: _context);
+            _dbPath = Path.Combine(Path.GetTempPath(), $"sqlite_e2e_{Guid.NewGuid()}.db");
+            _context = SqliteQueueContextFactory.Create(_dbPath);
+            _jobQueue = new(_context);
         }
 
         public void Dispose()
         {
             _context.Dispose();
             SqliteConnection.ClearAllPools();
-            if (File.Exists(path: _dbPath))
-                File.Delete(path: _dbPath);
+            if (File.Exists(_dbPath))
+                File.Delete(_dbPath);
         }
 
         [Fact]
@@ -1213,30 +1213,30 @@ public class ComprehensiveQueueTests
             TestJob testJob = new() { Message = "sqlite e2e" };
             QueueJobModel job = new()
             {
-                Payload = SerializationHelper.Serialize(obj: testJob),
+                Payload = SerializationHelper.Serialize(testJob),
                 Queue = "sqlite-test",
                 Priority = 5,
                 AvailableAt = DateTime.UtcNow,
             };
 
-            _jobQueue.Enqueue(queueJob: job);
+            _jobQueue.Enqueue(job);
 
-            QueueJobModel? reserved = _jobQueue.ReserveJob(name: "sqlite-test", currentJobId: null);
-            Assert.NotNull(@object: reserved);
-            Assert.Equal(expected: 1, actual: reserved.Attempts);
-            Assert.NotNull(value: reserved.ReservedAt);
+            QueueJobModel? reserved = _jobQueue.ReserveJob("sqlite-test", null);
+            Assert.NotNull(reserved);
+            Assert.Equal(1, reserved.Attempts);
+            Assert.NotNull(reserved.ReservedAt);
 
-            TestJob deserialized = SerializationHelper.Deserialize<TestJob>(data: reserved.Payload);
-            Assert.Equal(expected: "sqlite e2e", actual: deserialized.Message);
+            TestJob deserialized = SerializationHelper.Deserialize<TestJob>(reserved.Payload);
+            Assert.Equal("sqlite e2e", deserialized.Message);
         }
 
         [Fact]
         public void DuplicateEnqueue_PreventedBySqliteProvider()
         {
-            string payload = SerializationHelper.Serialize(obj: new TestJob { Message = "dup sqlite" });
+            string payload = SerializationHelper.Serialize(new TestJob { Message = "dup sqlite" });
 
             _jobQueue.Enqueue(
-                queueJob: new()
+                new()
                 {
                     Payload = payload,
                     Queue = "dup-test",
@@ -1244,7 +1244,7 @@ public class ComprehensiveQueueTests
                 }
             );
             _jobQueue.Enqueue(
-                queueJob: new()
+                new()
                 {
                     Payload = payload,
                     Queue = "dup-test",
@@ -1253,11 +1253,11 @@ public class ComprehensiveQueueTests
             );
 
             // Only one should exist
-            Assert.True(condition: _context.JobExists(payload: payload));
+            Assert.True(_context.JobExists(payload));
             QueueJobModel? first = _jobQueue.Dequeue();
-            Assert.NotNull(@object: first);
+            Assert.NotNull(first);
             QueueJobModel? second = _jobQueue.Dequeue();
-            Assert.Null(@object: second);
+            Assert.Null(second);
         }
 
         [Fact]
@@ -1269,43 +1269,43 @@ public class ComprehensiveQueueTests
                 Queue = "retry-sqlite",
                 AvailableAt = DateTime.UtcNow,
             };
-            _jobQueue.Enqueue(queueJob: job);
+            _jobQueue.Enqueue(job);
 
-            QueueJobModel? reserved = _jobQueue.ReserveJob(name: "retry-sqlite", currentJobId: null);
-            Assert.NotNull(@object: reserved);
+            QueueJobModel? reserved = _jobQueue.ReserveJob("retry-sqlite", null);
+            Assert.NotNull(reserved);
 
-            _jobQueue.FailJob(queueJob: reserved, exception: new(message: "attempt 1"));
+            _jobQueue.FailJob(reserved, new("attempt 1"));
 
             // Should still be reservable
-            QueueJobModel? secondReserve = _jobQueue.ReserveJob(name: "retry-sqlite", currentJobId: null);
-            Assert.NotNull(@object: secondReserve);
+            QueueJobModel? secondReserve = _jobQueue.ReserveJob("retry-sqlite", null);
+            Assert.NotNull(secondReserve);
         }
 
         [Fact]
         public void FailJob_AtMaxAttempts_MovesToFailed()
         {
-            JobQueue jq = new(context: _context, maxAttempts: 1);
+            JobQueue jq = new(_context, maxAttempts: 1);
             QueueJobModel job = new()
             {
                 Payload = "{\"permanent-fail\":true}",
                 Queue = "fail-sqlite",
                 AvailableAt = DateTime.UtcNow,
             };
-            jq.Enqueue(queueJob: job);
+            jq.Enqueue(job);
 
-            QueueJobModel? reserved = jq.ReserveJob(name: "fail-sqlite", currentJobId: null);
-            Assert.NotNull(@object: reserved);
-            Assert.Equal(expected: 1, actual: reserved.Attempts);
+            QueueJobModel? reserved = jq.ReserveJob("fail-sqlite", null);
+            Assert.NotNull(reserved);
+            Assert.Equal(1, reserved.Attempts);
 
-            jq.FailJob(queueJob: reserved, exception: new(message: "permanent"));
+            jq.FailJob(reserved, new("permanent"));
 
             // Should be in failed jobs, not in queue
             IReadOnlyList<FailedJobModel> failed = _context.GetFailedJobs();
-            Assert.Single(collection: failed);
-            Assert.Contains(expectedSubstring: "permanent", actualString: failed[index: 0].Exception);
+            Assert.Single(failed);
+            Assert.Contains("permanent", failed[0].Exception);
 
-            QueueJobModel? noMore = jq.ReserveJob(name: "fail-sqlite", currentJobId: null);
-            Assert.Null(@object: noMore);
+            QueueJobModel? noMore = jq.ReserveJob("fail-sqlite", null);
+            Assert.Null(noMore);
         }
 
         [Fact]
@@ -1313,7 +1313,7 @@ public class ComprehensiveQueueTests
         {
             // Manually add a failed job
             _context.AddFailedJob(
-                failedJob: new()
+                new()
                 {
                     Uuid = Guid.NewGuid(),
                     Queue = "retry-q",
@@ -1326,17 +1326,17 @@ public class ComprehensiveQueueTests
             _jobQueue.RetryFailedJobs();
 
             // Failed job should be gone, new job in queue
-            Assert.Empty(collection: _context.GetFailedJobs());
-            QueueJobModel? requeued = _jobQueue.ReserveJob(name: "retry-q", currentJobId: null);
-            Assert.NotNull(@object: requeued);
-            Assert.Equal(expected: "{\"retried\":true}", actual: requeued.Payload);
+            Assert.Empty(_context.GetFailedJobs());
+            QueueJobModel? requeued = _jobQueue.ReserveJob("retry-q", null);
+            Assert.NotNull(requeued);
+            Assert.Equal("{\"retried\":true}", requeued.Payload);
         }
 
         [Fact]
         public void PriorityOrdering_SqliteProvider()
         {
             _jobQueue.Enqueue(
-                queueJob: new()
+                new()
                 {
                     Payload = "{\"p\":1}",
                     Queue = "pri",
@@ -1345,7 +1345,7 @@ public class ComprehensiveQueueTests
                 }
             );
             _jobQueue.Enqueue(
-                queueJob: new()
+                new()
                 {
                     Payload = "{\"p\":10}",
                     Queue = "pri",
@@ -1354,7 +1354,7 @@ public class ComprehensiveQueueTests
                 }
             );
             _jobQueue.Enqueue(
-                queueJob: new()
+                new()
                 {
                     Payload = "{\"p\":5}",
                     Queue = "pri",
@@ -1366,13 +1366,13 @@ public class ComprehensiveQueueTests
             List<int> priorities = [];
             for (int i = 0; i < 3; i++)
             {
-                QueueJobModel? reserved = _jobQueue.ReserveJob(name: "pri", currentJobId: null);
-                Assert.NotNull(@object: reserved);
-                priorities.Add(item: reserved.Priority);
-                _jobQueue.DeleteJob(queueJob: reserved);
+                QueueJobModel? reserved = _jobQueue.ReserveJob("pri", null);
+                Assert.NotNull(reserved);
+                priorities.Add(reserved.Priority);
+                _jobQueue.DeleteJob(reserved);
             }
 
-            Assert.Equal(expected: [10, 5, 1], actual: priorities);
+            Assert.Equal([10, 5, 1], priorities);
         }
     }
 
@@ -1381,65 +1381,65 @@ public class ComprehensiveQueueTests
     //    Tests for payload serialization/deserialization with type preservation.
     // =========================================================================
 
-    [Trait(name: "Category", value: "Unit")]
+    [Trait("Category", "Unit")]
     public class SerializationEdgeCaseTests
     {
         [Fact]
         public void Serialize_PreservesTypeInformation()
         {
             TestJob job = new() { Message = "typed" };
-            string serialized = SerializationHelper.Serialize(obj: job);
+            string serialized = SerializationHelper.Serialize(job);
 
-            Assert.Contains(expectedSubstring: "NoMercy.Tests.Queue.TestHelpers.TestJob", actualString: serialized);
+            Assert.Contains("NoMercy.Tests.Queue.TestHelpers.TestJob", serialized);
         }
 
         [Fact]
         public void Deserialize_AsObject_ReturnsCorrectType()
         {
             TestJob original = new() { Message = "polymorphic" };
-            string serialized = SerializationHelper.Serialize(obj: original);
+            string serialized = SerializationHelper.Serialize(original);
 
-            object deserialized = SerializationHelper.Deserialize<object>(data: serialized);
+            object deserialized = SerializationHelper.Deserialize<object>(serialized);
 
-            Assert.IsType<TestJob>(@object: deserialized);
+            Assert.IsType<TestJob>(deserialized);
             TestJob typed = (TestJob)deserialized;
-            Assert.Equal(expected: "polymorphic", actual: typed.Message);
+            Assert.Equal("polymorphic", typed.Message);
         }
 
         [Fact]
         public void Deserialize_AsIShouldQueue_WorksForDispatch()
         {
             HighPriorityJob original = new() { Data = "high-pri-serde" };
-            string serialized = SerializationHelper.Serialize(obj: original);
+            string serialized = SerializationHelper.Serialize(original);
 
-            object deserialized = SerializationHelper.Deserialize<object>(data: serialized);
-            Assert.IsAssignableFrom<IShouldQueue>(@object: deserialized);
+            object deserialized = SerializationHelper.Deserialize<object>(serialized);
+            Assert.IsAssignableFrom<IShouldQueue>(deserialized);
 
             IShouldQueue queueable = (IShouldQueue)deserialized;
-            Assert.Equal(expected: "critical", actual: queueable.QueueName);
-            Assert.Equal(expected: 100, actual: queueable.Priority);
+            Assert.Equal("critical", queueable.QueueName);
+            Assert.Equal(100, queueable.Priority);
         }
 
         [Fact]
         public void Serialize_NullProperties_Ignored()
         {
             TestJob job = new(); // Message defaults to string.Empty, not null
-            string serialized = SerializationHelper.Serialize(obj: job);
+            string serialized = SerializationHelper.Serialize(job);
 
             // NullValueHandling.Ignore means null values are not included
-            TestJob deserialized = SerializationHelper.Deserialize<TestJob>(data: serialized);
-            Assert.NotNull(@object: deserialized);
+            TestJob deserialized = SerializationHelper.Deserialize<TestJob>(serialized);
+            Assert.NotNull(deserialized);
         }
 
         [Fact]
         public void Serialize_CamelCaseNaming_Applied()
         {
             TestJob job = new() { Message = "camel" };
-            string serialized = SerializationHelper.Serialize(obj: job);
+            string serialized = SerializationHelper.Serialize(job);
 
             // Properties should be camelCase
-            Assert.Contains(expectedSubstring: "\"message\"", actualString: serialized);
-            Assert.Contains(expectedSubstring: "\"hasExecuted\"", actualString: serialized);
+            Assert.Contains("\"message\"", serialized);
+            Assert.Contains("\"hasExecuted\"", serialized);
         }
     }
 
@@ -1447,7 +1447,7 @@ public class ComprehensiveQueueTests
     // 7. JobQueue Dequeue Tests (additional coverage)
     // =========================================================================
 
-    [Trait(name: "Category", value: "Unit")]
+    [Trait("Category", "Unit")]
     public class JobQueueDequeueTests : IDisposable
     {
         private readonly QueueContext _context;
@@ -1457,7 +1457,7 @@ public class ComprehensiveQueueTests
         public JobQueueDequeueTests()
         {
             (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-            _jobQueue = new(context: _adapter);
+            _jobQueue = new(_adapter);
         }
 
         public void Dispose()
@@ -1470,14 +1470,14 @@ public class ComprehensiveQueueTests
         public void Dequeue_EmptyQueue_ReturnsNull()
         {
             QueueJobModel? result = _jobQueue.Dequeue();
-            Assert.Null(@object: result);
+            Assert.Null(result);
         }
 
         [Fact]
         public void Dequeue_RemovesJobFromQueue()
         {
             _jobQueue.Enqueue(
-                queueJob: new()
+                new()
                 {
                     Payload = "{\"dequeue\":true}",
                     Queue = "test",
@@ -1486,15 +1486,15 @@ public class ComprehensiveQueueTests
             );
 
             QueueJobModel? dequeued = _jobQueue.Dequeue();
-            Assert.NotNull(@object: dequeued);
-            Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+            Assert.NotNull(dequeued);
+            Assert.Equal(0, _context.QueueJobs.Count());
         }
 
         [Fact]
         public void Dequeue_MultipleJobs_ReturnsFirst()
         {
             _jobQueue.Enqueue(
-                queueJob: new()
+                new()
                 {
                     Payload = "{\"first\":true}",
                     Queue = "test",
@@ -1502,7 +1502,7 @@ public class ComprehensiveQueueTests
                 }
             );
             _jobQueue.Enqueue(
-                queueJob: new()
+                new()
                 {
                     Payload = "{\"second\":true}",
                     Queue = "test",
@@ -1511,12 +1511,12 @@ public class ComprehensiveQueueTests
             );
 
             QueueJobModel? first = _jobQueue.Dequeue();
-            Assert.NotNull(@object: first);
-            Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
+            Assert.NotNull(first);
+            Assert.Equal(1, _context.QueueJobs.Count());
 
             QueueJobModel? second = _jobQueue.Dequeue();
-            Assert.NotNull(@object: second);
-            Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+            Assert.NotNull(second);
+            Assert.Equal(0, _context.QueueJobs.Count());
         }
 
         [Fact]
@@ -1530,15 +1530,15 @@ public class ComprehensiveQueueTests
                 AvailableAt = DateTime.UtcNow,
             };
 
-            _jobQueue.Enqueue(queueJob: job);
-            Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
+            _jobQueue.Enqueue(job);
+            Assert.Equal(1, _context.QueueJobs.Count());
 
-            QueueJobModel? reserved = _jobQueue.ReserveJob(name: "test-q", currentJobId: null);
-            Assert.NotNull(@object: reserved);
-            Assert.Equal(expected: 1, actual: reserved.Attempts);
+            QueueJobModel? reserved = _jobQueue.ReserveJob("test-q", null);
+            Assert.NotNull(reserved);
+            Assert.Equal(1, reserved.Attempts);
 
-            _jobQueue.DeleteJob(queueJob: reserved);
-            Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+            _jobQueue.DeleteJob(reserved);
+            Assert.Equal(0, _context.QueueJobs.Count());
         }
 
         [Fact]
@@ -1546,7 +1546,7 @@ public class ComprehensiveQueueTests
         {
             // Create a failed job
             _context.FailedJobs.Add(
-                entity: new()
+                new()
                 {
                     Uuid = Guid.NewGuid(),
                     Connection = "default",
@@ -1559,23 +1559,23 @@ public class ComprehensiveQueueTests
             _context.SaveChanges();
 
             FailedJob failedJob = _context.FailedJobs.First();
-            _jobQueue.RequeueFailedJob(failedJobId: (int)failedJob.Id);
+            _jobQueue.RequeueFailedJob((int)failedJob.Id);
 
-            Assert.Equal(expected: 0, actual: _context.FailedJobs.Count());
-            Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
+            Assert.Equal(0, _context.FailedJobs.Count());
+            Assert.Equal(1, _context.QueueJobs.Count());
 
             QueueJob? requeued = _context.QueueJobs.FirstOrDefault();
-            Assert.NotNull(@object: requeued);
-            Assert.Equal(expected: "requeue-test", actual: requeued.Queue);
-            Assert.Equal(expected: "{\"requeue\":true}", actual: requeued.Payload);
-            Assert.Equal(expected: 0, actual: requeued.Attempts);
+            Assert.NotNull(requeued);
+            Assert.Equal("requeue-test", requeued.Queue);
+            Assert.Equal("{\"requeue\":true}", requeued.Payload);
+            Assert.Equal(0, requeued.Attempts);
         }
 
         [Fact]
         public void RequeueFailedJob_NonexistentId_DoesNotThrow()
         {
-            Exception? ex = Record.Exception(testCode: () => _jobQueue.RequeueFailedJob(failedJobId: 999));
-            Assert.Null(@object: ex);
+            Exception? ex = Record.Exception(() => _jobQueue.RequeueFailedJob(999));
+            Assert.Null(ex);
         }
     }
 
@@ -1583,51 +1583,51 @@ public class ComprehensiveQueueTests
     // 8. IJobDispatcher Interface Compliance
     // =========================================================================
 
-    [Trait(name: "Category", value: "Unit")]
+    [Trait("Category", "Unit")]
     public class IJobDispatcherInterfaceTests
     {
         [Fact]
         public void JobDispatcher_ImplementsIJobDispatcher()
         {
             TestQueueContextAdapter adapter = new();
-            JobQueue queue = new(context: adapter);
-            JobDispatcher dispatcher = new(queue: queue, logger: NullLogger<JobDispatcher>.Instance);
+            JobQueue queue = new(adapter);
+            JobDispatcher dispatcher = new(queue, NullLogger<JobDispatcher>.Instance);
 
-            Assert.IsAssignableFrom<IJobDispatcher>(@object: dispatcher);
+            Assert.IsAssignableFrom<IJobDispatcher>(dispatcher);
         }
 
         [Fact]
         public void IJobDispatcher_SingleArgDispatch_Works()
         {
             TestQueueContextAdapter adapter = new();
-            JobQueue queue = new(context: adapter);
+            JobQueue queue = new(adapter);
             IJobDispatcher dispatcher = new JobDispatcher(
-                queue: queue,
-                logger: NullLogger<JobDispatcher>.Instance
+                queue,
+                NullLogger<JobDispatcher>.Instance
             );
 
             TestJob job = new() { Message = "interface dispatch" };
-            dispatcher.Dispatch(job: job);
+            dispatcher.Dispatch(job);
 
-            Assert.Single(collection: adapter.Jobs);
+            Assert.Single(adapter.Jobs);
         }
 
         [Fact]
         public void IJobDispatcher_ThreeArgDispatch_Works()
         {
             TestQueueContextAdapter adapter = new();
-            JobQueue queue = new(context: adapter);
+            JobQueue queue = new(adapter);
             IJobDispatcher dispatcher = new JobDispatcher(
-                queue: queue,
-                logger: NullLogger<JobDispatcher>.Instance
+                queue,
+                NullLogger<JobDispatcher>.Instance
             );
 
             TestJob job = new() { Message = "explicit dispatch" };
-            dispatcher.Dispatch(job: job, onQueue: "custom", priority: 50);
+            dispatcher.Dispatch(job, "custom", 50);
 
-            Assert.Single(collection: adapter.Jobs);
-            Assert.Equal(expected: "custom", actual: adapter.Jobs[index: 0].Queue);
-            Assert.Equal(expected: 50, actual: adapter.Jobs[index: 0].Priority);
+            Assert.Single(adapter.Jobs);
+            Assert.Equal("custom", adapter.Jobs[0].Queue);
+            Assert.Equal(50, adapter.Jobs[0].Priority);
         }
     }
 
@@ -1635,7 +1635,7 @@ public class ComprehensiveQueueTests
     // 9. QueueConfiguration Model Tests
     // =========================================================================
 
-    [Trait(name: "Category", value: "Unit")]
+    [Trait("Category", "Unit")]
     public class QueueConfigurationTests
     {
         [Fact]
@@ -1643,21 +1643,21 @@ public class ComprehensiveQueueTests
         {
             QueueConfiguration config = new();
 
-            Assert.Empty(collection: config.WorkerCounts);
+            Assert.Empty(config.WorkerCounts);
         }
 
         [Fact]
         public void DefaultConfiguration_MaxAttempts_Is3()
         {
             QueueConfiguration config = new();
-            Assert.Equal(expected: 3, actual: config.MaxAttempts);
+            Assert.Equal(3, config.MaxAttempts);
         }
 
         [Fact]
         public void DefaultConfiguration_PollingInterval_Is1000()
         {
             QueueConfiguration config = new();
-            Assert.Equal(expected: 1000, actual: config.PollingIntervalMs);
+            Assert.Equal(1000, config.PollingIntervalMs);
         }
 
         [Fact]
@@ -1667,14 +1667,14 @@ public class ComprehensiveQueueTests
             {
                 MaxAttempts = 10,
                 PollingIntervalMs = 250,
-                WorkerCounts = new() { [key: "fast"] = 8, [key: "slow"] = 2 },
+                WorkerCounts = new() { ["fast"] = 8, ["slow"] = 2 },
             };
 
-            Assert.Equal(expected: 10, actual: config.MaxAttempts);
-            Assert.Equal(expected: 250, actual: config.PollingIntervalMs);
-            Assert.Equal(expected: 8, actual: config.WorkerCounts[key: "fast"]);
-            Assert.Equal(expected: 2, actual: config.WorkerCounts[key: "slow"]);
-            Assert.DoesNotContain(expected: "queue", collection: config.WorkerCounts.Keys);
+            Assert.Equal(10, config.MaxAttempts);
+            Assert.Equal(250, config.PollingIntervalMs);
+            Assert.Equal(8, config.WorkerCounts["fast"]);
+            Assert.Equal(2, config.WorkerCounts["slow"]);
+            Assert.DoesNotContain("queue", config.WorkerCounts.Keys);
         }
     }
 
@@ -1700,16 +1700,16 @@ public class ComprehensiveQueueTests
     {
         private readonly Dictionary<string, string> _store = new();
 
-        public string? GetValue(string key) => _store.GetValueOrDefault(key: key);
+        public string? GetValue(string key) => _store.GetValueOrDefault(key);
 
-        public void SetValue(string key, string value) => _store[key: key] = value;
+        public void SetValue(string key, string value) => _store[key] = value;
 
         public Task SetValueAsync(string key, string value, Guid? modifiedBy = null)
         {
-            _store[key: key] = value;
+            _store[key] = value;
             return Task.CompletedTask;
         }
 
-        public bool HasKey(string key) => _store.ContainsKey(key: key);
+        public bool HasKey(string key) => _store.ContainsKey(key);
     }
 }

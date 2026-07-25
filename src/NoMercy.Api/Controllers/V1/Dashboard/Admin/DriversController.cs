@@ -26,10 +26,10 @@ using NoMercy.Storage;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
-[Tags(tags: "Dashboard Drivers")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Drivers")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/dashboard/drivers", Order = 11)]
+[Route("api/v{version:apiVersion}/dashboard/drivers", Order = 11)]
 public class DriversController(
     IDriverRepository driverRepository,
     IStorageFactory storageFactory,
@@ -46,9 +46,9 @@ public class DriversController(
     public async Task<IActionResult> Index()
     {
         List<Driver> drivers = await driverRepository.GetAllDriversAsync();
-        List<DriverDto> result = drivers.Select(selector: MapToDto).ToList();
+        List<DriverDto> result = drivers.Select(MapToDto).ToList();
 
-        return Ok(value: result);
+        return Ok(result);
     }
 
     // -----------------------------------------------------------------------
@@ -57,11 +57,11 @@ public class DriversController(
     // -----------------------------------------------------------------------
 
     [HttpGet]
-    [Route(template: "types")]
+    [Route("types")]
     [Authorize(Policy = "Moderator")]
     public IActionResult GetTypes()
     {
-        return Ok(value: DriverTypeMetadata.All);
+        return Ok(DriverTypeMetadata.All);
     }
 
     // -----------------------------------------------------------------------
@@ -69,15 +69,15 @@ public class DriversController(
     // -----------------------------------------------------------------------
 
     [HttpGet]
-    [Route(template: "{id:ulid}")]
+    [Route("{id:ulid}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Show(Ulid id)
     {
-        Driver? driver = await driverRepository.GetDriverByIdAsync(id: id);
+        Driver? driver = await driverRepository.GetDriverByIdAsync(id);
         if (driver is null)
-            return NotFoundResponse(detail: "Driver not found");
+            return NotFoundResponse("Driver not found");
 
-        return Ok(value: MapToDto(driver: driver));
+        return Ok(MapToDto(driver));
     }
 
     // -----------------------------------------------------------------------
@@ -86,11 +86,11 @@ public class DriversController(
     // -----------------------------------------------------------------------
 
     [HttpGet]
-    [Route(template: "system-local")]
+    [Route("system-local")]
     [Authorize(Policy = "Moderator")]
     public IActionResult GetSystemLocalId()
     {
-        return Ok(value: new { id = Driver.SystemLocalDriverId.ToString() });
+        return Ok(new { id = Driver.SystemLocalDriverId.ToString() });
     }
 
     // -----------------------------------------------------------------------
@@ -104,47 +104,47 @@ public class DriversController(
     {
         string normalizedType = (request.Type ?? string.Empty).Trim().ToLowerInvariant();
 
-        if (!DriverTypeMetadata.AllUserCreatable.Contains(value: normalizedType))
+        if (!DriverTypeMetadata.AllUserCreatable.Contains(normalizedType))
             return BadRequestResponse(
-                detail: $"Invalid type '{request.Type}'. Allowed values: {string.Join(separator: ", ", value: DriverTypeMetadata.AllUserCreatable)}."
+                $"Invalid type '{request.Type}'. Allowed values: {string.Join(", ", DriverTypeMetadata.AllUserCreatable)}."
             );
 
-        string? validationError = DriverTypeMetadata.ValidateConfig(driverType: normalizedType, config: request.Config);
+        string? validationError = DriverTypeMetadata.ValidateConfig(normalizedType, request.Config);
         if (validationError is not null)
-            return BadRequestResponse(detail: validationError);
+            return BadRequestResponse(validationError);
 
-        if (string.IsNullOrWhiteSpace(value: request.Name))
-            return BadRequestResponse(detail: "name is required.");
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return BadRequestResponse("name is required.");
 
-        bool nameExists = await driverRepository.NameExistsAsync(name: request.Name);
+        bool nameExists = await driverRepository.NameExistsAsync(request.Name);
         if (nameExists)
-            return ConflictResponse(detail: $"A driver named '{request.Name}' already exists.");
+            return ConflictResponse($"A driver named '{request.Name}' already exists.");
 
         Ulid newId = Ulid.NewUlid();
 
         JObject? configToStore = request.Config;
 
-        if (request.Credentials is not null && HasMeaningfulCredentials(credentials: request.Credentials))
+        if (request.Credentials is not null && HasMeaningfulCredentials(request.Credentials))
         {
             string credRef = $"driver:{newId}";
             CredentialManager.SetCredentials(
-                target: credRef,
-                username: request.Credentials.AccessKey,
-                password: request.Credentials.SecretKey,
-                apiKey: string.Empty
+                credRef,
+                request.Credentials.AccessKey,
+                request.Credentials.SecretKey,
+                string.Empty
             );
             logger.LogInformation(
-                message: "[DriversController] Stored credentials for new {NormalizedType} driver (id={NewId}, accessKey len={Length}, secret len={Length2})", args: [normalizedType, newId, request.Credentials.AccessKey.Length, request.Credentials.SecretKey.Length]
+                "[DriversController] Stored credentials for new {NormalizedType} driver (id={NewId}, accessKey len={Length}, secret len={Length2})", [normalizedType, newId, request.Credentials.AccessKey.Length, request.Credentials.SecretKey.Length]
             );
 
             // Inject credentialsRef into Config so the StorageFactory can resolve it.
             configToStore ??= new();
-            configToStore[propertyName: "credentialsRef"] = credRef;
+            configToStore["credentialsRef"] = credRef;
         }
         else if (request.Credentials is not null)
         {
             logger.LogWarning(
-                message: "[DriversController] Ignoring blank credentials block on create for {NormalizedType} (id={NewId}); driver will be created without stored credentials.", args: [normalizedType, newId]
+                "[DriversController] Ignoring blank credentials block on create for {NormalizedType} (id={NewId}); driver will be created without stored credentials.", [normalizedType, newId]
             );
         }
 
@@ -153,14 +153,14 @@ public class DriversController(
             Id = newId,
             Name = request.Name.Trim(),
             Type = normalizedType,
-            Config = configToStore is not null ? JsonConvert.SerializeObject(value: configToStore) : null,
+            Config = configToStore is not null ? JsonConvert.SerializeObject(configToStore) : null,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
 
-        await driverRepository.CreateDriverAsync(driver: driver);
+        await driverRepository.CreateDriverAsync(driver);
 
-        return StatusCode(statusCode: StatusCodes.Status201Created, value: MapToDto(driver: driver));
+        return StatusCode(StatusCodes.Status201Created, MapToDto(driver));
     }
 
     // -----------------------------------------------------------------------
@@ -169,13 +169,13 @@ public class DriversController(
     // -----------------------------------------------------------------------
 
     [HttpPut]
-    [Route(template: "{id:ulid}")]
+    [Route("{id:ulid}")]
     [Authorize(Policy = "Owner")]
     public async Task<IActionResult> Update(Ulid id, [FromBody] UpdateDriverRequestDto request)
     {
-        Driver? driver = await driverRepository.GetDriverByIdAsync(id: id);
+        Driver? driver = await driverRepository.GetDriverByIdAsync(id);
         if (driver is null)
-            return NotFoundResponse(detail: "Driver not found");
+            return NotFoundResponse("Driver not found");
 
         // The built-in system-local driver anchors the entire passthrough
         // mode (empty rootPath) and must remain immutable. Users can create
@@ -183,17 +183,17 @@ public class DriversController(
         // limits — even a rename would surprise other code paths that look
         // it up by id.
         if (id == Driver.SystemLocalDriverId)
-            return ConflictResponse(detail: "Cannot edit the built-in system local driver.");
+            return ConflictResponse("Cannot edit the built-in system local driver.");
 
         if (request.Name is not null)
         {
             string trimmedName = request.Name.Trim();
-            if (string.IsNullOrEmpty(value: trimmedName))
-                return BadRequestResponse(detail: "name cannot be empty.");
+            if (string.IsNullOrEmpty(trimmedName))
+                return BadRequestResponse("name cannot be empty.");
 
-            bool nameExists = await driverRepository.NameExistsAsync(name: trimmedName, excludeId: id);
+            bool nameExists = await driverRepository.NameExistsAsync(trimmedName, id);
             if (nameExists)
-                return ConflictResponse(detail: $"A driver named '{trimmedName}' already exists.");
+                return ConflictResponse($"A driver named '{trimmedName}' already exists.");
 
             driver.Name = trimmedName;
         }
@@ -204,9 +204,9 @@ public class DriversController(
         if (request.Type is not null)
         {
             string normalizedType = request.Type.Trim().ToLowerInvariant();
-            if (!DriverTypeMetadata.AllUserCreatable.Contains(value: normalizedType))
+            if (!DriverTypeMetadata.AllUserCreatable.Contains(normalizedType))
                 return BadRequestResponse(
-                    detail: $"Invalid type '{request.Type}'. Allowed values: {string.Join(separator: ", ", value: DriverTypeMetadata.AllUserCreatable)}."
+                    $"Invalid type '{request.Type}'. Allowed values: {string.Join(", ", DriverTypeMetadata.AllUserCreatable)}."
                 );
             driver.Type = normalizedType;
         }
@@ -218,8 +218,7 @@ public class DriversController(
         // secret_key:""}} vs flat top-level fields all looked identical from
         // the operator's seat.
         logger.LogInformation(
-            message: "[DriversController] Update {Id} ({Type}) — credentials block: {Length}", args:
-            [id, driver.Type, (
+            "[DriversController] Update {Id} ({Type}) — credentials block: {Length}", [id, driver.Type, (
                     request.Credentials is null
                         ? "absent"
                         : $"present (access_key len={request.Credentials.AccessKey.Length}, "
@@ -228,23 +227,23 @@ public class DriversController(
             ]
         );
 
-        if (request.Credentials is not null && HasMeaningfulCredentials(credentials: request.Credentials))
+        if (request.Credentials is not null && HasMeaningfulCredentials(request.Credentials))
         {
             string credRef = $"driver:{id}";
             CredentialManager.SetCredentials(
-                target: credRef,
-                username: request.Credentials.AccessKey,
-                password: request.Credentials.SecretKey,
-                apiKey: string.Empty
+                credRef,
+                request.Credentials.AccessKey,
+                request.Credentials.SecretKey,
+                string.Empty
             );
             logger.LogInformation(
-                message: "[DriversController] Updated credentials for driver {Id} ({Type}) (accessKey len={Length}, secret len={Length2})", args: [id, driver.Type, request.Credentials.AccessKey.Length, request.Credentials.SecretKey.Length]
+                "[DriversController] Updated credentials for driver {Id} ({Type}) (accessKey len={Length}, secret len={Length2})", [id, driver.Type, request.Credentials.AccessKey.Length, request.Credentials.SecretKey.Length]
             );
 
             // Ensure credentialsRef is present in Config.
-            configToStore ??= request.Config ?? ParseConfigJson(json: driver.Config);
+            configToStore ??= request.Config ?? ParseConfigJson(driver.Config);
             configToStore ??= new();
-            configToStore[propertyName: "credentialsRef"] = credRef;
+            configToStore["credentialsRef"] = credRef;
         }
         else if (request.Credentials is not null)
         {
@@ -254,29 +253,29 @@ public class DriversController(
             // wiped out the previously-stored access key + secret. Preserve
             // existing credentials when the incoming block is blank.
             logger.LogInformation(
-                message: "[DriversController] Ignoring blank credentials block on update for driver {Id} ({Type}); preserving previously-stored credentials.", args: [id, driver.Type]
+                "[DriversController] Ignoring blank credentials block on update for driver {Id} ({Type}); preserving previously-stored credentials.", [id, driver.Type]
             );
         }
 
         if (configToStore is not null)
         {
-            string? validationError = DriverTypeMetadata.ValidateConfig(driverType: driver.Type, config: configToStore);
+            string? validationError = DriverTypeMetadata.ValidateConfig(driver.Type, configToStore);
             if (validationError is not null)
-                return BadRequestResponse(detail: validationError);
+                return BadRequestResponse(validationError);
 
-            driver.Config = JsonConvert.SerializeObject(value: configToStore);
+            driver.Config = JsonConvert.SerializeObject(configToStore);
         }
 
         driver.UpdatedAt = DateTimeOffset.UtcNow;
 
-        await driverRepository.UpdateDriverAsync(driver: driver);
+        await driverRepository.UpdateDriverAsync(driver);
 
         // Invalidate StorageFactory cache for all folders using this driver.
-        List<Ulid> folderIds = driver.Folders.Select(selector: f => f.Id).ToList();
+        List<Ulid> folderIds = driver.Folders.Select(f => f.Id).ToList();
         foreach (Ulid folderId in folderIds)
-            storageFactory.Invalidate(folderId: folderId);
+            storageFactory.Invalidate(folderId);
 
-        return Ok(value: MapToDto(driver: driver));
+        return Ok(MapToDto(driver));
     }
 
     // -----------------------------------------------------------------------
@@ -287,47 +286,47 @@ public class DriversController(
     // -----------------------------------------------------------------------
 
     [HttpPut]
-    [Route(template: "{id:ulid}/credentials")]
+    [Route("{id:ulid}/credentials")]
     [Authorize(Policy = "Owner")]
     public async Task<IActionResult> UpdateCredentials(
         Ulid id,
         [FromBody] DriverCredentialsDto request
     )
     {
-        Driver? driver = await driverRepository.GetDriverByIdAsync(id: id);
+        Driver? driver = await driverRepository.GetDriverByIdAsync(id);
         if (driver is null)
-            return NotFoundResponse(detail: "Driver not found");
+            return NotFoundResponse("Driver not found");
 
-        if (!HasMeaningfulCredentials(credentials: request))
+        if (!HasMeaningfulCredentials(request))
             return BadRequestResponse(
-                detail: "access_key and secret_key are both required and must be non-empty."
+                "access_key and secret_key are both required and must be non-empty."
             );
 
         string credRef = $"driver:{id}";
         CredentialManager.SetCredentials(
-            target: credRef,
-            username: request.AccessKey,
-            password: request.SecretKey,
-            apiKey: string.Empty
+            credRef,
+            request.AccessKey,
+            request.SecretKey,
+            string.Empty
         );
 
         // Ensure credentialsRef is present in Config so the StorageFactory resolves it.
-        JObject? configObj = ParseConfigJson(json: driver.Config) ?? new();
-        configObj[propertyName: "credentialsRef"] = credRef;
-        driver.Config = JsonConvert.SerializeObject(value: configObj);
+        JObject? configObj = ParseConfigJson(driver.Config) ?? new();
+        configObj["credentialsRef"] = credRef;
+        driver.Config = JsonConvert.SerializeObject(configObj);
         driver.UpdatedAt = DateTimeOffset.UtcNow;
-        await driverRepository.UpdateDriverAsync(driver: driver);
+        await driverRepository.UpdateDriverAsync(driver);
 
         // Invalidate any cached IStorage instances built without credentials.
-        List<Ulid> folderIds = driver.Folders.Select(selector: f => f.Id).ToList();
+        List<Ulid> folderIds = driver.Folders.Select(f => f.Id).ToList();
         foreach (Ulid folderId in folderIds)
-            storageFactory.Invalidate(folderId: folderId);
+            storageFactory.Invalidate(folderId);
 
         logger.LogInformation(
-            message: "[DriversController] Direct credential write for driver {Id} ({Type}) (accessKey len={Length}, secret len={Length2}); invalidated {Count} cached folder(s).", args: [id, driver.Type, request.AccessKey.Length, request.SecretKey.Length, folderIds.Count]
+            "[DriversController] Direct credential write for driver {Id} ({Type}) (accessKey len={Length}, secret len={Length2}); invalidated {Count} cached folder(s).", [id, driver.Type, request.AccessKey.Length, request.SecretKey.Length, folderIds.Count]
         );
 
-        return Ok(value: MapToDto(driver: driver));
+        return Ok(MapToDto(driver));
     }
 
     // -----------------------------------------------------------------------
@@ -336,27 +335,27 @@ public class DriversController(
     // -----------------------------------------------------------------------
 
     [HttpDelete]
-    [Route(template: "{id:ulid}")]
+    [Route("{id:ulid}")]
     [Authorize(Policy = "Owner")]
     public async Task<IActionResult> Delete(Ulid id)
     {
         if (id == Driver.SystemLocalDriverId)
-            return ConflictResponse(detail: "Cannot delete system driver");
+            return ConflictResponse("Cannot delete system driver");
 
-        Driver? driver = await driverRepository.GetDriverByIdAsync(id: id);
+        Driver? driver = await driverRepository.GetDriverByIdAsync(id);
         if (driver is null)
-            return NotFoundResponse(detail: "Driver not found");
+            return NotFoundResponse("Driver not found");
 
-        int libraryFolderCount = await driverRepository.LibraryFolderCountAsync(driverId: id);
+        int libraryFolderCount = await driverRepository.LibraryFolderCountAsync(id);
         if (libraryFolderCount > 0)
             return ConflictResponse(
-                detail: $"Cannot delete driver '{driver.Name}': {libraryFolderCount} folder(s) are still in use by a library. Remove them from their libraries first."
+                $"Cannot delete driver '{driver.Name}': {libraryFolderCount} folder(s) are still in use by a library. Remove them from their libraries first."
             );
 
         // Remove stored credentials if present.
-        CredentialManager.RemoveCredentials(target: $"driver:{id}");
+        CredentialManager.RemoveCredentials($"driver:{id}");
 
-        await driverRepository.DeleteDriverAsync(driver: driver);
+        await driverRepository.DeleteDriverAsync(driver);
 
         return NoContent();
     }
@@ -373,30 +372,30 @@ public class DriversController(
         // and previously surfaced as "credentials_configured: true" in the
         // dashboard while the AWS SDK refused with "access key has length 0."
         bool hasCredentialsConfigured = false;
-        if (!string.IsNullOrWhiteSpace(value: driver.Config))
+        if (!string.IsNullOrWhiteSpace(driver.Config))
         {
             try
             {
-                JObject? parsed = JObject.Parse(json: driver.Config);
-                string? credRef = parsed[propertyName: "credentialsRef"]?.Value<string>();
-                if (!string.IsNullOrWhiteSpace(value: credRef))
+                JObject? parsed = JObject.Parse(driver.Config);
+                string? credRef = parsed["credentialsRef"]?.Value<string>();
+                if (!string.IsNullOrWhiteSpace(credRef))
                 {
-                    UserPass? stored = CredentialManager.Credential(target: credRef);
+                    UserPass? stored = CredentialManager.Credential(credRef);
                     hasCredentialsConfigured =
                         stored is not null
-                        && !string.IsNullOrEmpty(value: stored.Username)
-                        && !string.IsNullOrEmpty(value: stored.Password);
+                        && !string.IsNullOrEmpty(stored.Username)
+                        && !string.IsNullOrEmpty(stored.Password);
                 }
             }
             catch (JsonException) { }
         }
 
-        JObject? configObj = ParseConfigJson(json: driver.Config);
+        JObject? configObj = ParseConfigJson(driver.Config);
 
         // Strip credentials ref from the public response — never expose the ref key.
         if (configObj is not null)
         {
-            configObj.Remove(propertyName: "credentialsRef");
+            configObj.Remove("credentialsRef");
             if (!configObj.HasValues)
                 configObj = null;
         }
@@ -417,12 +416,12 @@ public class DriversController(
 
     private static JObject? ParseConfigJson(string? json)
     {
-        if (string.IsNullOrWhiteSpace(value: json))
+        if (string.IsNullOrWhiteSpace(json))
             return null;
 
         try
         {
-            return JObject.Parse(json: json);
+            return JObject.Parse(json);
         }
         catch (JsonException)
         {
@@ -439,6 +438,6 @@ public class DriversController(
     /// when the driver is used.
     /// </summary>
     private static bool HasMeaningfulCredentials(DriverCredentialsDto credentials) =>
-        !string.IsNullOrWhiteSpace(value: credentials.AccessKey)
-        && !string.IsNullOrWhiteSpace(value: credentials.SecretKey);
+        !string.IsNullOrWhiteSpace(credentials.AccessKey)
+        && !string.IsNullOrWhiteSpace(credentials.SecretKey);
 }

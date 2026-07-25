@@ -34,7 +34,7 @@ public class SubtitleAcquisitionService(
         if (!request.Config.Enabled)
             return [];
 
-        string[] languages = ResolveLanguages(request: request);
+        string[] languages = ResolveLanguages(request);
         if (languages.Length == 0)
             return [];
 
@@ -43,45 +43,45 @@ public class SubtitleAcquisitionService(
         try
         {
             (IReadOnlyList<SubtitleCandidate> candidates, bool wasHashStrategy) =
-                await RunStrategyChainAsync(request: request, languages: languages, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+                await RunStrategyChainAsync(request, languages, ct).ConfigureAwait(false);
 
             IReadOnlyList<SubtitleCandidate> filtered = ApplyFilters(
-                candidates: candidates,
-                config: request.Config,
-                sourceFps: request.SourceFps
+                candidates,
+                request.Config,
+                request.SourceFps
             );
             IReadOnlyList<SubtitleCandidate> selected = SelectTopPerLanguage(
-                candidates: filtered,
-                maxPerLanguage: request.Config.MaxPerLanguage
+                filtered,
+                request.Config.MaxPerLanguage
             );
 
             foreach (SubtitleCandidate candidate in selected)
             {
                 AcquiredSubtitle? result = await DownloadCandidateAsync(
-                        candidate: candidate,
-                        request: request,
-                        wasHashStrategy: wasHashStrategy,
-                        ct: ct
+                        candidate,
+                        request,
+                        wasHashStrategy,
+                        ct
                     )
-                    .ConfigureAwait(continueOnCapturedContext: false);
+                    .ConfigureAwait(false);
 
                 if (result is not null)
-                    acquired.Add(item: result);
+                    acquired.Add(result);
             }
         }
         catch (OpenSubtitlesRateLimitException ex)
         {
-            logger.LogWarning(exception: ex, message: "OpenSubtitles rate-limited — subtitle acquisition skipped");
+            logger.LogWarning(ex, "OpenSubtitles rate-limited — subtitle acquisition skipped");
             return [];
         }
         catch (OperationCanceledException)
         {
-            logger.LogInformation(message: "Subtitle acquisition cancelled");
+            logger.LogInformation("Subtitle acquisition cancelled");
             return [];
         }
         catch (Exception ex)
         {
-            logger.LogWarning(exception: ex, message: "Subtitle acquisition failed — encoding continues without subs");
+            logger.LogWarning(ex, "Subtitle acquisition failed — encoding continues without subs");
             return [];
         }
 
@@ -96,8 +96,8 @@ public class SubtitleAcquisitionService(
             return languages;
 
         return languages
-            .Where(predicate: lang =>
-                !request.LanguagesAlreadyInSource.Contains(value: lang, comparer: StringComparer.OrdinalIgnoreCase)
+            .Where(lang =>
+                !request.LanguagesAlreadyInSource.Contains(lang, StringComparer.OrdinalIgnoreCase)
             )
             .ToArray();
     }
@@ -118,29 +118,29 @@ public class SubtitleAcquisitionService(
                 or SubtitleMatchStrategy.HashThenFilenameThenTitle
         )
         {
-            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(token: ct);
-            cts.CancelAfter(delay: timeout);
+            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(timeout);
 
-            string? hash = ComputeHash(sourcePath: request.SourcePath, fileSize: request.SourceFileSize);
+            string? hash = ComputeHash(request.SourcePath, request.SourceFileSize);
             if (hash is null)
                 logger.LogWarning(
-                    message: "Could not read {SourcePath} to compute a moviehash — skipping the hash "
+                    "Could not read {SourcePath} to compute a moviehash — skipping the hash "
                              + "strategy for this source",
-                    args: request.SourcePath
+                    request.SourcePath
                 );
 
             if (hash is not null)
             {
                 IReadOnlyList<SubtitleCandidate> hashResults = await adapter
                     .SearchByHashAsync(
-                        movieHash: hash,
-                        fileSize: request.SourceFileSize,
-                        languages: languages,
-                        timeout: timeout,
-                        ct: cts.Token,
-                        trustedOnly: trustedOnly
+                        hash,
+                        request.SourceFileSize,
+                        languages,
+                        timeout,
+                        cts.Token,
+                        trustedOnly
                     )
-                    .ConfigureAwait(continueOnCapturedContext: false);
+                    .ConfigureAwait(false);
 
                 if (hashResults.Count > 0)
                     return (hashResults, WasHashStrategy: true);
@@ -153,18 +153,18 @@ public class SubtitleAcquisitionService(
                 or SubtitleMatchStrategy.HashThenFilenameThenTitle
         )
         {
-            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(token: ct);
-            cts.CancelAfter(delay: timeout);
+            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(timeout);
 
             IReadOnlyList<SubtitleCandidate> filenameResults = await adapter
                 .SearchByFilenameAsync(
-                    filename: request.SourceFilename,
-                    languages: languages,
-                    timeout: timeout,
-                    ct: cts.Token,
-                    trustedOnly: trustedOnly
+                    request.SourceFilename,
+                    languages,
+                    timeout,
+                    cts.Token,
+                    trustedOnly
                 )
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .ConfigureAwait(false);
 
             if (filenameResults.Count > 0)
                 return (filenameResults, WasHashStrategy: false);
@@ -176,21 +176,21 @@ public class SubtitleAcquisitionService(
                 or SubtitleMatchStrategy.TitleOnly
         )
         {
-            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(token: ct);
-            cts.CancelAfter(delay: timeout);
+            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(timeout);
 
             IReadOnlyList<SubtitleCandidate> titleResults = await adapter
                 .SearchByTitleAsync(
-                    title: request.MediaTitle,
-                    season: request.Season,
-                    episode: request.Episode,
-                    year: request.Year,
-                    languages: languages,
-                    timeout: timeout,
-                    ct: cts.Token,
-                    trustedOnly: trustedOnly
+                    request.MediaTitle,
+                    request.Season,
+                    request.Episode,
+                    request.Year,
+                    languages,
+                    timeout,
+                    cts.Token,
+                    trustedOnly
                 )
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .ConfigureAwait(false);
 
             return (titleResults, WasHashStrategy: false);
         }
@@ -205,14 +205,14 @@ public class SubtitleAcquisitionService(
     )
     {
         return candidates
-            .Where(predicate: c => c.Rating >= config.MinRating)
-            .Where(predicate: c => c.Downloads >= config.MinDownloads)
-            .Where(predicate: c => !config.TrustedUploadersOnly || c.IsTrustedUploader)
-            .Where(predicate: c =>
+            .Where(c => c.Rating >= config.MinRating)
+            .Where(c => c.Downloads >= config.MinDownloads)
+            .Where(c => !config.TrustedUploadersOnly || c.IsTrustedUploader)
+            .Where(c =>
                 !config.RequireMatchingFps
                 || sourceFps is null
                 || c.Fps is null
-                || Math.Abs(value: c.Fps.Value - sourceFps.Value) <= FpsTolerance
+                || Math.Abs(c.Fps.Value - sourceFps.Value) <= FpsTolerance
             )
             .ToList();
     }
@@ -223,10 +223,10 @@ public class SubtitleAcquisitionService(
     )
     {
         return candidates
-            .GroupBy(keySelector: c => c.Language, comparer: StringComparer.OrdinalIgnoreCase)
-            .SelectMany(selector: g =>
-                g.OrderByDescending(keySelector: c => c.Rating * Math.Log10(d: c.Downloads + 1))
-                    .Take(count: maxPerLanguage)
+            .GroupBy(c => c.Language, StringComparer.OrdinalIgnoreCase)
+            .SelectMany(g =>
+                g.OrderByDescending(c => c.Rating * Math.Log10(c.Downloads + 1))
+                    .Take(maxPerLanguage)
             )
             .ToList();
     }
@@ -240,34 +240,34 @@ public class SubtitleAcquisitionService(
     {
         try
         {
-            byte[] bytes = await adapter.DownloadAsync(candidate: candidate, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+            byte[] bytes = await adapter.DownloadAsync(candidate, ct).ConfigureAwait(false);
 
             string tempDir = "subtitles/temp";
             string fileName = $"{Guid.NewGuid():N}_{candidate.Language}.{candidate.Format}";
-            string relativePath = storage.CombinePath(parent: tempDir, child: fileName);
+            string relativePath = storage.CombinePath(tempDir, fileName);
 
-            storage.CreateDirectory(path: tempDir);
-            await storage.WriteAsync(path: relativePath, bytes: bytes, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+            storage.CreateDirectory(tempDir);
+            await storage.WriteAsync(relativePath, bytes, ct).ConfigureAwait(false);
 
-            string localPath = storage.GetFullPath(path: relativePath);
-            bool isExactMatch = ComputeExactMatch(candidate: candidate, request: request, wasHashStrategy: wasHashStrategy);
+            string localPath = storage.GetFullPath(relativePath);
+            bool isExactMatch = ComputeExactMatch(candidate, request, wasHashStrategy);
 
             return new(
-                Language: candidate.Language,
-                LocalPath: localPath,
-                Provider: candidate.Provider,
-                IsExactMatch: isExactMatch,
-                Rating: candidate.Rating,
-                Downloads: candidate.Downloads,
-                Format: candidate.Format
+                candidate.Language,
+                localPath,
+                candidate.Provider,
+                isExactMatch,
+                candidate.Rating,
+                candidate.Downloads,
+                candidate.Format
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "Failed to download subtitle for language {Language} — skipping",
-                args: candidate.Language
+                ex,
+                "Failed to download subtitle for language {Language} — skipping",
+                candidate.Language
             );
             return null;
         }
@@ -284,7 +284,7 @@ public class SubtitleAcquisitionService(
 
         if (request.SourceFps is not null && candidate.Fps is not null)
         {
-            if (Math.Abs(value: candidate.Fps.Value - request.SourceFps.Value) > FpsTolerance)
+            if (Math.Abs(candidate.Fps.Value - request.SourceFps.Value) > FpsTolerance)
                 return false;
         }
 
@@ -301,9 +301,9 @@ public class SubtitleAcquisitionService(
     {
         try
         {
-            using FileStream fs = File.OpenRead(path: sourcePath);
-            ulong hash = MovieHashHelper.ComputeMovieHash(stream: fs, fileSize: fileSize);
-            return MovieHashHelper.FormatHash(hash: hash);
+            using FileStream fs = File.OpenRead(sourcePath);
+            ulong hash = MovieHashHelper.ComputeMovieHash(fs, fileSize);
+            return MovieHashHelper.FormatHash(hash);
         }
         catch (Exception)
         {

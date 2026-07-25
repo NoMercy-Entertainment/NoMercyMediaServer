@@ -66,7 +66,7 @@ public class BuildingBlockReplacementTests
     // ------------------------------------------------------------------ //
 
     private static FfmpegCommand StubCommand() =>
-        new(Executable: "ffmpeg", Arguments: [], WorkingDirectory: null);
+        new("ffmpeg", [], null);
 
     private sealed class ProductionFontExtractor : IFontExtractor
     {
@@ -78,7 +78,7 @@ public class BuildingBlockReplacementTests
         ) => StubCommand();
 
         public Task<int> WriteFontManifestAsync(string outputDirectory, CancellationToken ct) =>
-            Task.FromResult(result: 0);
+            Task.FromResult(0);
 
         public int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments) => 0;
 
@@ -97,7 +97,7 @@ public class BuildingBlockReplacementTests
         ) => StubCommand();
 
         public Task<int> WriteFontManifestAsync(string outputDirectory, CancellationToken ct) =>
-            Task.FromResult(result: 0);
+            Task.FromResult(0);
 
         public int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments) => 0;
 

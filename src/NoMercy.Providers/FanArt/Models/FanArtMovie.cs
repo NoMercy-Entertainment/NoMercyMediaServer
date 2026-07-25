@@ -15,30 +15,30 @@ namespace NoMercy.Providers.FanArt.Models;
 
 public class FanArtMovie
 {
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "tmdb_id")]
+    [JsonProperty("tmdb_id")]
     public int TmdbId { get; set; }
 
-    [JsonProperty(propertyName: "imdb_id")]
+    [JsonProperty("imdb_id")]
     public string ImdbId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "hdmovielogo")]
+    [JsonProperty("hdmovielogo")]
     public VideoImage? HdLogo { get; set; }
 
-    [JsonProperty(propertyName: "movieposter")]
+    [JsonProperty("movieposter")]
     public VideoImage? Poster { get; set; }
 
-    [JsonProperty(propertyName: "moviedisc")]
+    [JsonProperty("moviedisc")]
     public VideoImage? Disc { get; set; }
 
-    [JsonProperty(propertyName: "movielogo")]
+    [JsonProperty("movielogo")]
     public VideoImage? Logo { get; set; }
 
-    [JsonProperty(propertyName: "moviethumb")]
+    [JsonProperty("moviethumb")]
     public VideoImage? Thumb { get; set; }
 
-    [JsonProperty(propertyName: "moviebanner")]
+    [JsonProperty("moviebanner")]
     public VideoImage? Banner { get; set; }
 }

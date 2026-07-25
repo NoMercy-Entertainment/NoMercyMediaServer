@@ -34,22 +34,22 @@ internal static class ColorQuantizer
 
     public static PaletteColors ExtractPalette(Image<Rgba32> image)
     {
-        Image<Rgba32> workingImage = DownsampleImage(image: image);
-        List<QuantizedColor> pixels = ExtractAndFilterPixels(image: workingImage);
+        Image<Rgba32> workingImage = DownsampleImage(image);
+        List<QuantizedColor> pixels = ExtractAndFilterPixels(workingImage);
 
         if (pixels.Count == 0)
         {
             return EmptyPalette();
         }
 
-        List<ColorSwatch> swatches = MedianCutQuantize(pixels: pixels);
+        List<ColorSwatch> swatches = MedianCutQuantize(pixels);
 
         if (swatches.Count == 0)
         {
             return EmptyPalette();
         }
 
-        return ScoreSwatches(swatches: swatches);
+        return ScoreSwatches(swatches);
     }
 
     private static Image<Rgba32> DownsampleImage(Image<Rgba32> image)
@@ -60,13 +60,13 @@ internal static class ColorQuantizer
         }
 
         double scale = Math.Min(
-            val1: (double)MaxDimension / image.Width,
-            val2: (double)MaxDimension / image.Height
+            (double)MaxDimension / image.Width,
+            (double)MaxDimension / image.Height
         );
-        int newWidth = Math.Max(val1: 1, val2: (int)(image.Width * scale));
-        int newHeight = Math.Max(val1: 1, val2: (int)(image.Height * scale));
+        int newWidth = Math.Max(1, (int)(image.Width * scale));
+        int newHeight = Math.Max(1, (int)(image.Height * scale));
 
-        Image<Rgba32> resized = image.Clone(operation: ctx => ctx.Resize(width: newWidth, height: newHeight));
+        Image<Rgba32> resized = image.Clone(ctx => ctx.Resize(newWidth, newHeight));
         return resized;
     }
 
@@ -78,14 +78,14 @@ internal static class ColorQuantizer
         {
             for (int x = 0; x < image.Width; x++)
             {
-                Rgba32 pixel = image[x: x, y: y];
+                Rgba32 pixel = image[x, y];
 
                 if (pixel.A < MinAlpha)
                 {
                     continue;
                 }
 
-                double luminance = GetLuminance(r: pixel.R, g: pixel.G, b: pixel.B);
+                double luminance = GetLuminance(pixel.R, pixel.G, pixel.B);
 
                 if (luminance < MinLuminance || luminance > MaxLuminance)
                 {
@@ -96,7 +96,7 @@ internal static class ColorQuantizer
                 byte qg = (byte)(pixel.G & QuantizationMask);
                 byte qb = (byte)(pixel.B & QuantizationMask);
 
-                pixels.Add(item: new(qr: qr, qg: qg, qb: qb, origR: pixel.R, origG: pixel.G, origB: pixel.B));
+                pixels.Add(new(qr, qg, qb, pixel.R, pixel.G, pixel.B));
             }
         }
 
@@ -106,7 +106,7 @@ internal static class ColorQuantizer
 
     private static List<ColorSwatch> MedianCutQuantize(List<QuantizedColor> pixels)
     {
-        List<ColorBox> boxes = [new(pixels: pixels)];
+        List<ColorBox> boxes = [new(pixels)];
 
         while (boxes.Count < MaxSwatches)
         {
@@ -116,10 +116,10 @@ internal static class ColorQuantizer
             for (int i = 0; i < boxes.Count; i++)
             {
                 if (
-                    boxes[index: i].CanSplit && (largestBox is null || boxes[index: i].Volume > largestBox.Volume)
+                    boxes[i].CanSplit && (largestBox is null || boxes[i].Volume > largestBox.Volume)
                 )
                 {
-                    largestBox = boxes[index: i];
+                    largestBox = boxes[i];
                     largestIndex = i;
                 }
             }
@@ -130,8 +130,8 @@ internal static class ColorQuantizer
             }
 
             (ColorBox left, ColorBox right) = largestBox.Split();
-            boxes[index: largestIndex] = left;
-            boxes.Add(item: right);
+            boxes[largestIndex] = left;
+            boxes.Add(right);
         }
 
         List<ColorSwatch> swatches = [];
@@ -140,7 +140,7 @@ internal static class ColorQuantizer
         {
             if (box.Population > 0)
             {
-                swatches.Add(item: box.ToSwatch());
+                swatches.Add(box.ToSwatch());
             }
         }
 
@@ -150,7 +150,7 @@ internal static class ColorQuantizer
     private static PaletteColors ScoreSwatches(List<ColorSwatch> swatches)
     {
         int maxPopulation = 0;
-        ColorSwatch dominantSwatch = swatches[index: 0];
+        ColorSwatch dominantSwatch = swatches[0];
 
         foreach (ColorSwatch swatch in swatches)
         {
@@ -163,12 +163,12 @@ internal static class ColorQuantizer
 
         SwatchTarget[] targets =
         [
-            new(name: "LightVibrant", targetSaturation: 1.0, targetLuminance: 0.74),
-            new(name: "Vibrant", targetSaturation: 1.0, targetLuminance: 0.50),
-            new(name: "DarkVibrant", targetSaturation: 1.0, targetLuminance: 0.26),
-            new(name: "LightMuted", targetSaturation: 0.3, targetLuminance: 0.74),
-            new(name: "Muted", targetSaturation: 0.3, targetLuminance: 0.50),
-            new(name: "DarkMuted", targetSaturation: 0.3, targetLuminance: 0.26),
+            new("LightVibrant", 1.0, 0.74),
+            new("Vibrant", 1.0, 0.50),
+            new("DarkVibrant", 1.0, 0.26),
+            new("LightMuted", 0.3, 0.74),
+            new("Muted", 0.3, 0.50),
+            new("DarkMuted", 0.3, 0.26),
         ];
 
         Dictionary<string, ColorSwatch?> assigned = new();
@@ -181,14 +181,14 @@ internal static class ColorQuantizer
 
             for (int i = 0; i < swatches.Count; i++)
             {
-                if (usedSwatchIndices.Contains(item: i))
+                if (usedSwatchIndices.Contains(i))
                 {
                     continue;
                 }
 
-                ColorSwatch swatch = swatches[index: i];
-                double satDistance = Math.Abs(value: swatch.Saturation - target.TargetSaturation);
-                double lumDistance = Math.Abs(value: swatch.Luminance - target.TargetLuminance);
+                ColorSwatch swatch = swatches[i];
+                double satDistance = Math.Abs(swatch.Saturation - target.TargetSaturation);
+                double lumDistance = Math.Abs(swatch.Luminance - target.TargetLuminance);
                 double popNormalized =
                     maxPopulation > 0 ? (double)swatch.Population / maxPopulation : 0;
 
@@ -207,35 +207,35 @@ internal static class ColorQuantizer
 
             if (bestIndex >= 0)
             {
-                assigned[key: target.Name] = swatches[index: bestIndex];
-                usedSwatchIndices.Add(item: bestIndex);
+                assigned[target.Name] = swatches[bestIndex];
+                usedSwatchIndices.Add(bestIndex);
             }
             else
             {
-                assigned[key: target.Name] = null;
+                assigned[target.Name] = null;
             }
         }
 
-        ColorSwatch? vibrant = assigned.GetValueOrDefault(key: "Vibrant");
-        ColorSwatch? muted = assigned.GetValueOrDefault(key: "Muted");
+        ColorSwatch? vibrant = assigned.GetValueOrDefault("Vibrant");
+        ColorSwatch? muted = assigned.GetValueOrDefault("Muted");
         ColorSwatch primarySwatch = vibrant ?? muted ?? dominantSwatch;
 
         return new()
         {
-            Dominant = SwatchToHex(swatch: dominantSwatch),
-            Primary = SwatchToHex(swatch: primarySwatch),
+            Dominant = SwatchToHex(dominantSwatch),
+            Primary = SwatchToHex(primarySwatch),
             LightVibrant = SwatchToHex(
-                swatch: assigned.GetValueOrDefault(key: "LightVibrant") ?? dominantSwatch
+                assigned.GetValueOrDefault("LightVibrant") ?? dominantSwatch
             ),
-            DarkVibrant = SwatchToHex(swatch: assigned.GetValueOrDefault(key: "DarkVibrant") ?? dominantSwatch),
-            LightMuted = SwatchToHex(swatch: assigned.GetValueOrDefault(key: "LightMuted") ?? dominantSwatch),
-            DarkMuted = SwatchToHex(swatch: assigned.GetValueOrDefault(key: "DarkMuted") ?? dominantSwatch),
+            DarkVibrant = SwatchToHex(assigned.GetValueOrDefault("DarkVibrant") ?? dominantSwatch),
+            LightMuted = SwatchToHex(assigned.GetValueOrDefault("LightMuted") ?? dominantSwatch),
+            DarkMuted = SwatchToHex(assigned.GetValueOrDefault("DarkMuted") ?? dominantSwatch),
         };
     }
 
     private static string SwatchToHex(ColorSwatch swatch)
     {
-        Rgba32 color = new(r: swatch.R, g: swatch.G, b: swatch.B);
+        Rgba32 color = new(swatch.R, swatch.G, swatch.B);
         return "#" + color.ToHex();
     }
 
@@ -258,9 +258,9 @@ internal static class ColorQuantizer
         double gNorm = g / 255.0;
         double bNorm = b / 255.0;
 
-        double rLinear = rNorm <= 0.04045 ? rNorm / 12.92 : Math.Pow(x: (rNorm + 0.055) / 1.055, y: 2.4);
-        double gLinear = gNorm <= 0.04045 ? gNorm / 12.92 : Math.Pow(x: (gNorm + 0.055) / 1.055, y: 2.4);
-        double bLinear = bNorm <= 0.04045 ? bNorm / 12.92 : Math.Pow(x: (bNorm + 0.055) / 1.055, y: 2.4);
+        double rLinear = rNorm <= 0.04045 ? rNorm / 12.92 : Math.Pow((rNorm + 0.055) / 1.055, 2.4);
+        double gLinear = gNorm <= 0.04045 ? gNorm / 12.92 : Math.Pow((gNorm + 0.055) / 1.055, 2.4);
+        double bLinear = bNorm <= 0.04045 ? bNorm / 12.92 : Math.Pow((bNorm + 0.055) / 1.055, 2.4);
 
         return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
     }
@@ -271,8 +271,8 @@ internal static class ColorQuantizer
         double gNorm = g / 255.0;
         double bNorm = b / 255.0;
 
-        double max = Math.Max(val1: rNorm, val2: Math.Max(val1: gNorm, val2: bNorm));
-        double min = Math.Min(val1: rNorm, val2: Math.Min(val1: gNorm, val2: bNorm));
+        double max = Math.Max(rNorm, Math.Max(gNorm, bNorm));
+        double min = Math.Min(rNorm, Math.Min(gNorm, bNorm));
         double delta = max - min;
 
         double luminance = (max + min) / 2.0;
@@ -418,22 +418,22 @@ internal static class ColorQuantizer
             }
 
             _pixels.Sort(
-                comparison: (a, b) =>
+                (a, b) =>
                     longestChannel switch
                     {
-                        Channel.R => a.Qr.CompareTo(value: b.Qr),
-                        Channel.G => a.Qg.CompareTo(value: b.Qg),
-                        Channel.B => a.Qb.CompareTo(value: b.Qb),
+                        Channel.R => a.Qr.CompareTo(b.Qr),
+                        Channel.G => a.Qg.CompareTo(b.Qg),
+                        Channel.B => a.Qb.CompareTo(b.Qb),
                         _ => 0,
                     }
             );
 
             int median = _pixels.Count / 2;
 
-            List<QuantizedColor> leftPixels = _pixels.GetRange(index: 0, count: median);
-            List<QuantizedColor> rightPixels = _pixels.GetRange(index: median, count: _pixels.Count - median);
+            List<QuantizedColor> leftPixels = _pixels.GetRange(0, median);
+            List<QuantizedColor> rightPixels = _pixels.GetRange(median, _pixels.Count - median);
 
-            return (new(pixels: leftPixels), new(pixels: rightPixels));
+            return (new(leftPixels), new(rightPixels));
         }
 
         public ColorSwatch ToSwatch()
@@ -453,9 +453,9 @@ internal static class ColorQuantizer
             byte avgG = (byte)(totalG / _pixels.Count);
             byte avgB = (byte)(totalB / _pixels.Count);
 
-            (double saturation, double luminance) = GetHsl(r: avgR, g: avgG, b: avgB);
+            (double saturation, double luminance) = GetHsl(avgR, avgG, avgB);
 
-            return new(r: avgR, g: avgG, b: avgB, population: _pixels.Count, saturation: saturation, luminance: luminance);
+            return new(avgR, avgG, avgB, _pixels.Count, saturation, luminance);
         }
 
         private enum Channel

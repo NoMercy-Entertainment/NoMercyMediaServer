@@ -20,7 +20,7 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 /// source and destination storages are on different backend types, and the atomic
 /// <c>MoveDirectory</c> fast-path when they share the same backend type.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MoveFolderCrossBackendTests
 {
     private sealed class DriverA : IStorageDriver
@@ -117,21 +117,21 @@ public class MoveFolderCrossBackendTests
         int moveDirectoryCalls = 0;
 
         Mock<IStorage> source = new();
-        source.Setup(expression: s => s.Driver).Returns(value: driver);
-        source.Setup(expression: s => s.Exists("source/folder")).Returns(value: true);
+        source.Setup(s => s.Driver).Returns(driver);
+        source.Setup(s => s.Exists("source/folder")).Returns(true);
         source
-            .Setup(expression: s => s.MoveDirectory("source/folder", "dest/folder"))
-            .Callback(action: () => moveDirectoryCalls++);
+            .Setup(s => s.MoveDirectory("source/folder", "dest/folder"))
+            .Callback(() => moveDirectoryCalls++);
 
         Mock<IStorage> dest = new();
-        dest.Setup(expression: s => s.Driver).Returns(value: driver);
+        dest.Setup(s => s.Driver).Returns(driver);
 
-        MoveFolderAccessor accessor = new(sourceStorage: source.Object, destStorage: dest.Object);
-        await accessor.InvokeMoveFolderAsync(sourceFolder: "source/folder", destFolder: "dest/folder");
+        MoveFolderAccessor accessor = new(source.Object, dest.Object);
+        await accessor.InvokeMoveFolderAsync("source/folder", "dest/folder");
 
-        moveDirectoryCalls.Should().Be(expected: 1, because: "same-backend uses atomic MoveDirectory");
-        source.Verify(expression: s => s.OpenRead(It.IsAny<string>()), times: Times.Never);
-        dest.Verify(expression: s => s.OpenWrite(It.IsAny<string>(), It.IsAny<bool>()), times: Times.Never);
+        moveDirectoryCalls.Should().Be(1, "same-backend uses atomic MoveDirectory");
+        source.Verify(s => s.OpenRead(It.IsAny<string>()), Times.Never);
+        dest.Verify(s => s.OpenWrite(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
     }
 
     [Fact]
@@ -143,42 +143,42 @@ public class MoveFolderCrossBackendTests
         byte[] fileContent = [1, 2, 3, 4, 5];
 
         StorageEntry fileEntry = new(
-            Path: "source/folder/track.flac",
-            IsDirectory: false,
-            SizeBytes: fileContent.Length,
-            LastModified: DateTimeOffset.UtcNow
+            "source/folder/track.flac",
+            false,
+            fileContent.Length,
+            DateTimeOffset.UtcNow
         );
 
         Mock<IStorage> source = new();
-        source.Setup(expression: s => s.Driver).Returns(value: localDriver);
-        source.Setup(expression: s => s.Exists("source/folder")).Returns(value: true);
-        source.Setup(expression: s => s.List("source/folder", null, true)).Returns(value: [fileEntry]);
+        source.Setup(s => s.Driver).Returns(localDriver);
+        source.Setup(s => s.Exists("source/folder")).Returns(true);
+        source.Setup(s => s.List("source/folder", null, true)).Returns([fileEntry]);
         source
-            .Setup(expression: s => s.OpenRead("source/folder/track.flac"))
-            .Returns(value: new MemoryStream(buffer: fileContent));
+            .Setup(s => s.OpenRead("source/folder/track.flac"))
+            .Returns(new MemoryStream(fileContent));
         bool deleteDirectoryCalled = false;
         source
-            .Setup(expression: s => s.DeleteDirectory("source/folder", true))
-            .Callback(action: () => deleteDirectoryCalled = true);
+            .Setup(s => s.DeleteDirectory("source/folder", true))
+            .Callback(() => deleteDirectoryCalled = true);
 
         MemoryStream capturedWrite = new();
         Mock<IStorage> dest = new();
-        dest.Setup(expression: s => s.Driver).Returns(value: remoteDriver);
-        dest.Setup(expression: s => s.GetParent(It.IsAny<string>())).Returns(value: "dest/folder");
-        dest.Setup(expression: s => s.CreateDirectory(It.IsAny<string>()));
-        dest.Setup(expression: s => s.OpenWrite(It.IsAny<string>(), true)).Returns(value: capturedWrite);
+        dest.Setup(s => s.Driver).Returns(remoteDriver);
+        dest.Setup(s => s.GetParent(It.IsAny<string>())).Returns("dest/folder");
+        dest.Setup(s => s.CreateDirectory(It.IsAny<string>()));
+        dest.Setup(s => s.OpenWrite(It.IsAny<string>(), true)).Returns(capturedWrite);
 
-        MoveFolderAccessor accessor = new(sourceStorage: source.Object, destStorage: dest.Object);
-        await accessor.InvokeMoveFolderAsync(sourceFolder: "source/folder", destFolder: "dest/folder");
+        MoveFolderAccessor accessor = new(source.Object, dest.Object);
+        await accessor.InvokeMoveFolderAsync("source/folder", "dest/folder");
 
         capturedWrite
             .ToArray()
             .Should()
-            .BeEquivalentTo(expectation: fileContent, because: "file bytes must be streamed across backends");
+            .BeEquivalentTo(fileContent, "file bytes must be streamed across backends");
         deleteDirectoryCalled
             .Should()
-            .BeTrue(because: "source directory is removed after cross-backend copy completes");
-        source.Verify(expression: s => s.MoveDirectory(It.IsAny<string>(), It.IsAny<string>()), times: Times.Never);
+            .BeTrue("source directory is removed after cross-backend copy completes");
+        source.Verify(s => s.MoveDirectory(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -187,14 +187,14 @@ public class MoveFolderCrossBackendTests
         DriverA driver = new();
 
         Mock<IStorage> source = new();
-        source.Setup(expression: s => s.Driver).Returns(value: driver);
-        source.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
+        source.Setup(s => s.Driver).Returns(driver);
+        source.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
 
         Mock<IStorage> dest = new();
-        dest.Setup(expression: s => s.Driver).Returns(value: driver);
+        dest.Setup(s => s.Driver).Returns(driver);
 
-        MoveFolderAccessor accessor = new(sourceStorage: source.Object, destStorage: dest.Object);
-        Func<Task> act = () => accessor.InvokeMoveFolderAsync(sourceFolder: "missing/folder", destFolder: "dest/folder");
+        MoveFolderAccessor accessor = new(source.Object, dest.Object);
+        Func<Task> act = () => accessor.InvokeMoveFolderAsync("missing/folder", "dest/folder");
 
         await act.Should().ThrowAsync<DirectoryNotFoundException>();
     }
@@ -206,25 +206,25 @@ public class MoveFolderCrossBackendTests
         DriverB remoteDriver = new();
 
         StorageEntry dirEntry = new(
-            Path: "source/folder/sub",
-            IsDirectory: true,
-            SizeBytes: 0,
-            LastModified: DateTimeOffset.UtcNow
+            "source/folder/sub",
+            true,
+            0,
+            DateTimeOffset.UtcNow
         );
 
         Mock<IStorage> source = new();
-        source.Setup(expression: s => s.Driver).Returns(value: localDriver);
-        source.Setup(expression: s => s.Exists("source/folder")).Returns(value: true);
-        source.Setup(expression: s => s.List("source/folder", null, true)).Returns(value: [dirEntry]);
-        source.Setup(expression: s => s.DeleteDirectory("source/folder", true));
+        source.Setup(s => s.Driver).Returns(localDriver);
+        source.Setup(s => s.Exists("source/folder")).Returns(true);
+        source.Setup(s => s.List("source/folder", null, true)).Returns([dirEntry]);
+        source.Setup(s => s.DeleteDirectory("source/folder", true));
 
         Mock<IStorage> dest = new();
-        dest.Setup(expression: s => s.Driver).Returns(value: remoteDriver);
+        dest.Setup(s => s.Driver).Returns(remoteDriver);
 
-        MoveFolderAccessor accessor = new(sourceStorage: source.Object, destStorage: dest.Object);
-        await accessor.InvokeMoveFolderAsync(sourceFolder: "source/folder", destFolder: "dest/folder");
+        MoveFolderAccessor accessor = new(source.Object, dest.Object);
+        await accessor.InvokeMoveFolderAsync("source/folder", "dest/folder");
 
-        dest.Verify(expression: s => s.OpenWrite(It.IsAny<string>(), It.IsAny<bool>()), times: Times.Never);
+        dest.Verify(s => s.OpenWrite(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
     }
 
     [Fact]
@@ -235,34 +235,34 @@ public class MoveFolderCrossBackendTests
 
         StorageEntry[] entries =
         [
-            new(Path: "source/folder/track01.flac", IsDirectory: false, SizeBytes: 100, LastModified: DateTimeOffset.UtcNow),
-            new(Path: "source/folder/track02.flac", IsDirectory: false, SizeBytes: 200, LastModified: DateTimeOffset.UtcNow),
-            new(Path: "source/folder/cover.jpg", IsDirectory: false, SizeBytes: 50, LastModified: DateTimeOffset.UtcNow),
+            new("source/folder/track01.flac", false, 100, DateTimeOffset.UtcNow),
+            new("source/folder/track02.flac", false, 200, DateTimeOffset.UtcNow),
+            new("source/folder/cover.jpg", false, 50, DateTimeOffset.UtcNow),
         ];
 
         Mock<IStorage> source = new();
-        source.Setup(expression: s => s.Driver).Returns(value: localDriver);
-        source.Setup(expression: s => s.Exists("source/folder")).Returns(value: true);
-        source.Setup(expression: s => s.List("source/folder", null, true)).Returns(value: entries);
-        source.Setup(expression: s => s.OpenRead(It.IsAny<string>())).Returns(valueFunction: () => new MemoryStream(buffer: [0]));
-        source.Setup(expression: s => s.DeleteDirectory("source/folder", true));
+        source.Setup(s => s.Driver).Returns(localDriver);
+        source.Setup(s => s.Exists("source/folder")).Returns(true);
+        source.Setup(s => s.List("source/folder", null, true)).Returns(entries);
+        source.Setup(s => s.OpenRead(It.IsAny<string>())).Returns(() => new MemoryStream([0]));
+        source.Setup(s => s.DeleteDirectory("source/folder", true));
 
         int writeCount = 0;
         Mock<IStorage> dest = new();
-        dest.Setup(expression: s => s.Driver).Returns(value: remoteDriver);
-        dest.Setup(expression: s => s.GetParent(It.IsAny<string>())).Returns(value: "dest/folder");
-        dest.Setup(expression: s => s.CreateDirectory(It.IsAny<string>()));
-        dest.Setup(expression: s => s.OpenWrite(It.IsAny<string>(), true))
-            .Returns(valueFunction: () =>
+        dest.Setup(s => s.Driver).Returns(remoteDriver);
+        dest.Setup(s => s.GetParent(It.IsAny<string>())).Returns("dest/folder");
+        dest.Setup(s => s.CreateDirectory(It.IsAny<string>()));
+        dest.Setup(s => s.OpenWrite(It.IsAny<string>(), true))
+            .Returns(() =>
             {
                 writeCount++;
                 return new MemoryStream();
             });
 
-        MoveFolderAccessor accessor = new(sourceStorage: source.Object, destStorage: dest.Object);
-        await accessor.InvokeMoveFolderAsync(sourceFolder: "source/folder", destFolder: "dest/folder");
+        MoveFolderAccessor accessor = new(source.Object, dest.Object);
+        await accessor.InvokeMoveFolderAsync("source/folder", "dest/folder");
 
-        writeCount.Should().Be(expected: 3, because: "each of the three files is written to the destination");
+        writeCount.Should().Be(3, "each of the three files is written to the destination");
     }
 
     // -------------------------------------------------------------------
@@ -279,18 +279,18 @@ public class MoveFolderCrossBackendTests
         int moveDirectoryCalls = 0;
 
         Mock<IStorage> storage = new();
-        storage.Setup(expression: s => s.Driver).Returns(value: driver);
-        storage.Setup(expression: s => s.Exists("source/folder")).Returns(value: true);
+        storage.Setup(s => s.Driver).Returns(driver);
+        storage.Setup(s => s.Exists("source/folder")).Returns(true);
         storage
-            .Setup(expression: s => s.MoveDirectory("source/folder", "dest/folder"))
-            .Callback(action: () => moveDirectoryCalls++);
+            .Setup(s => s.MoveDirectory("source/folder", "dest/folder"))
+            .Callback(() => moveDirectoryCalls++);
 
-        MoveFolderAccessor accessor = new(sourceStorage: storage.Object, destStorage: storage.Object);
-        await accessor.InvokeMoveFolderAsync(sourceFolder: "source/folder", destFolder: "dest/folder");
+        MoveFolderAccessor accessor = new(storage.Object, storage.Object);
+        await accessor.InvokeMoveFolderAsync("source/folder", "dest/folder");
 
         moveDirectoryCalls
             .Should()
-            .Be(expected: 1, because: "ReferenceEquals(source, destination) alone must short-circuit to same-backend");
+            .Be(1, "ReferenceEquals(source, destination) alone must short-circuit to same-backend");
     }
 
     // -------------------------------------------------------------------
@@ -309,39 +309,39 @@ public class MoveFolderCrossBackendTests
         // Deliberately NOT prefixed with "source/folder" — exercises the
         // ternary's else branch (relativePath = entry.Path, unmodified).
         StorageEntry fileEntry = new(
-            Path: "unrelated/track.flac",
-            IsDirectory: false,
-            SizeBytes: fileContent.Length,
-            LastModified: DateTimeOffset.UtcNow
+            "unrelated/track.flac",
+            false,
+            fileContent.Length,
+            DateTimeOffset.UtcNow
         );
 
         Mock<IStorage> source = new();
-        source.Setup(expression: s => s.Driver).Returns(value: localDriver);
-        source.Setup(expression: s => s.Exists("source/folder")).Returns(value: true);
-        source.Setup(expression: s => s.List("source/folder", null, true)).Returns(value: [fileEntry]);
+        source.Setup(s => s.Driver).Returns(localDriver);
+        source.Setup(s => s.Exists("source/folder")).Returns(true);
+        source.Setup(s => s.List("source/folder", null, true)).Returns([fileEntry]);
         source
-            .Setup(expression: s => s.OpenRead("unrelated/track.flac"))
-            .Returns(value: new MemoryStream(buffer: fileContent));
-        source.Setup(expression: s => s.DeleteDirectory("source/folder", true));
+            .Setup(s => s.OpenRead("unrelated/track.flac"))
+            .Returns(new MemoryStream(fileContent));
+        source.Setup(s => s.DeleteDirectory("source/folder", true));
 
         string? capturedDestPath = null;
         MemoryStream capturedWrite = new();
         Mock<IStorage> dest = new();
-        dest.Setup(expression: s => s.Driver).Returns(value: remoteDriver);
-        dest.Setup(expression: s => s.GetParent(It.IsAny<string>())).Returns(value: "dest/folder");
-        dest.Setup(expression: s => s.CreateDirectory(It.IsAny<string>()));
-        dest.Setup(expression: s => s.OpenWrite(It.IsAny<string>(), true))
-            .Callback<string, bool>(action: (path, _) => capturedDestPath = path)
-            .Returns(value: capturedWrite);
+        dest.Setup(s => s.Driver).Returns(remoteDriver);
+        dest.Setup(s => s.GetParent(It.IsAny<string>())).Returns("dest/folder");
+        dest.Setup(s => s.CreateDirectory(It.IsAny<string>()));
+        dest.Setup(s => s.OpenWrite(It.IsAny<string>(), true))
+            .Callback<string, bool>((path, _) => capturedDestPath = path)
+            .Returns(capturedWrite);
 
-        MoveFolderAccessor accessor = new(sourceStorage: source.Object, destStorage: dest.Object);
-        await accessor.InvokeMoveFolderAsync(sourceFolder: "source/folder", destFolder: "dest/folder");
+        MoveFolderAccessor accessor = new(source.Object, dest.Object);
+        await accessor.InvokeMoveFolderAsync("source/folder", "dest/folder");
 
         capturedDestPath
             .Should()
             .Be(
-                expected: "dest/folder/unrelated/track.flac",
-                because: "the raw entry.Path is joined onto the destination unchanged when it isn't prefixed by sourceFolder"
+                "dest/folder/unrelated/track.flac",
+                "the raw entry.Path is joined onto the destination unchanged when it isn't prefixed by sourceFolder"
             );
     }
 
@@ -350,16 +350,16 @@ public class MoveFolderCrossBackendTests
         public Task InvokeMoveFolderAsync(string sourceFolder, string destFolder)
         {
             System.Reflection.MethodInfo? method = typeof(FileManager).GetMethod(
-                name: "MoveFolderAsync",
-                bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
+                "MoveFolderAsync",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
             );
 
             if (method is null)
-                throw new MissingMethodException(className: nameof(FileManager), methodName: "MoveFolderAsync");
+                throw new MissingMethodException(nameof(FileManager), "MoveFolderAsync");
 
             object? result = method.Invoke(
-                obj: null,
-                parameters: [sourceFolder, destFolder, sourceStorage, destStorage]
+                null,
+                [sourceFolder, destFolder, sourceStorage, destStorage]
             );
 
             return (Task)result!;

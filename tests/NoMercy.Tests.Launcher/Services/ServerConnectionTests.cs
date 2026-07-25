@@ -34,8 +34,8 @@ public sealed class ServerConnectionTests
         string body
     )
     {
-        return server.RunOnceAsync(respond: stream =>
-            FakeManagementPipeServer.WriteResponseAsync(stream: stream, statusCode: status, reasonPhrase: reason, body: body)
+        return server.RunOnceAsync(stream =>
+            FakeManagementPipeServer.WriteResponseAsync(stream, status, reason, body)
         );
     }
 
@@ -43,13 +43,13 @@ public sealed class ServerConnectionTests
     public async Task ConnectAsync_SuccessResponse_SetsIsConnectedTrue()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
+        Task<string> requestTask = RespondWith(server, 200, "OK", """{"status":"running"}""");
 
-        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        using ServerConnection connection = new(server.PipeName);
         bool result = await connection.ConnectAsync();
 
         string request = await requestTask;
-        request.Should().StartWith(expected: "GET /manage/status");
+        request.Should().StartWith("GET /manage/status");
         result.Should().BeTrue();
         connection.IsConnected.Should().BeTrue();
     }
@@ -58,9 +58,9 @@ public sealed class ServerConnectionTests
     public async Task ConnectAsync_ErrorStatusCode_SetsIsConnectedFalse()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server: server, status: 500, reason: "Internal Server Error", body: "");
+        Task<string> requestTask = RespondWith(server, 500, "Internal Server Error", "");
 
-        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        using ServerConnection connection = new(server.PipeName);
         bool result = await connection.ConnectAsync();
 
         await requestTask;
@@ -73,7 +73,7 @@ public sealed class ServerConnectionTests
     {
         // A unique pipe name nothing is listening on — the connect attempt
         // must fail gracefully (timeout/refused), never throw out of ConnectAsync.
-        using ServerConnection connection = new(pipeNameOrSocketPath: $"nomercy-test-nobody-home-{Guid.NewGuid():N}");
+        using ServerConnection connection = new($"nomercy-test-nobody-home-{Guid.NewGuid():N}");
 
         bool result = await connection.ConnectAsync();
 
@@ -85,40 +85,40 @@ public sealed class ServerConnectionTests
     public async Task GetAsync_SuccessResponse_DeserializesBody()
     {
         FakeManagementPipeServer server = new();
-        Task<string> connectRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
-        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        Task<string> connectRequest = RespondWith(server, 200, "OK", """{"status":"running"}""");
+        using ServerConnection connection = new(server.PipeName);
         await connection.ConnectAsync();
         await connectRequest;
 
         Task<string> requestTask = RespondWith(
-            server: server,
-            status: 200,
-            reason: "OK",
-            body: """{"internal_port":7626,"server_name":"nomercy-test"}"""
+            server,
+            200,
+            "OK",
+            """{"internal_port":7626,"server_name":"nomercy-test"}"""
         );
         ServerConfigResponse? result = await connection.GetAsync<ServerConfigResponse>(
-            path: "/manage/config"
+            "/manage/config"
         );
 
         string request = await requestTask;
-        request.Should().StartWith(expected: "GET /manage/config");
+        request.Should().StartWith("GET /manage/config");
         result.Should().NotBeNull();
-        result!.InternalPort.Should().Be(expected: 7626);
-        result.ServerName.Should().Be(expected: "nomercy-test");
+        result!.InternalPort.Should().Be(7626);
+        result.ServerName.Should().Be("nomercy-test");
     }
 
     [Fact]
     public async Task GetAsync_ErrorStatusCode_ReturnsNullAndMarksDisconnected()
     {
         FakeManagementPipeServer server = new();
-        Task<string> connectRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
-        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        Task<string> connectRequest = RespondWith(server, 200, "OK", """{"status":"running"}""");
+        using ServerConnection connection = new(server.PipeName);
         await connection.ConnectAsync();
         await connectRequest;
 
-        Task<string> requestTask = RespondWith(server: server, status: 404, reason: "Not Found", body: "");
+        Task<string> requestTask = RespondWith(server, 404, "Not Found", "");
         ServerConfigResponse? result = await connection.GetAsync<ServerConfigResponse>(
-            path: "/manage/config"
+            "/manage/config"
         );
 
         await requestTask;
@@ -128,10 +128,10 @@ public sealed class ServerConnectionTests
     [Fact]
     public async Task GetAsync_NoPriorConnect_ReturnsNullWithoutTouchingTransport()
     {
-        using ServerConnection connection = new(pipeNameOrSocketPath: $"nomercy-test-{Guid.NewGuid():N}");
+        using ServerConnection connection = new($"nomercy-test-{Guid.NewGuid():N}");
 
         ServerConfigResponse? result = await connection.GetAsync<ServerConfigResponse>(
-            path: "/manage/config"
+            "/manage/config"
         );
 
         result.Should().BeNull();
@@ -141,16 +141,16 @@ public sealed class ServerConnectionTests
     public async Task PostAsync_SuccessResponse_ReturnsTrue()
     {
         FakeManagementPipeServer server = new();
-        Task<string> connectRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
-        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        Task<string> connectRequest = RespondWith(server, 200, "OK", """{"status":"running"}""");
+        using ServerConnection connection = new(server.PipeName);
         await connection.ConnectAsync();
         await connectRequest;
 
-        Task<string> requestTask = RespondWith(server: server, status: 200, reason: "OK", body: "");
-        bool result = await connection.PostAsync(path: "/manage/stop");
+        Task<string> requestTask = RespondWith(server, 200, "OK", "");
+        bool result = await connection.PostAsync("/manage/stop");
 
         string request = await requestTask;
-        request.Should().StartWith(expected: "POST /manage/stop");
+        request.Should().StartWith("POST /manage/stop");
         result.Should().BeTrue();
     }
 
@@ -158,13 +158,13 @@ public sealed class ServerConnectionTests
     public async Task PostAsync_ErrorResponse_ReturnsFalse()
     {
         FakeManagementPipeServer server = new();
-        Task<string> connectRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
-        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        Task<string> connectRequest = RespondWith(server, 200, "OK", """{"status":"running"}""");
+        using ServerConnection connection = new(server.PipeName);
         await connection.ConnectAsync();
         await connectRequest;
 
-        Task<string> requestTask = RespondWith(server: server, status: 503, reason: "Service Unavailable", body: "");
-        bool result = await connection.PostAsync(path: "/manage/stop");
+        Task<string> requestTask = RespondWith(server, 503, "Service Unavailable", "");
+        bool result = await connection.PostAsync("/manage/stop");
 
         await requestTask;
         result.Should().BeFalse();
@@ -174,38 +174,38 @@ public sealed class ServerConnectionTests
     public async Task PostWithBodyAsync_SuccessResponse_ReturnsSuccessAndBody()
     {
         FakeManagementPipeServer server = new();
-        Task<string> connectRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
-        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        Task<string> connectRequest = RespondWith(server, 200, "OK", """{"status":"running"}""");
+        using ServerConnection connection = new(server.PipeName);
         await connection.ConnectAsync();
         await connectRequest;
 
         Task<string> requestTask = RespondWith(
-            server: server,
-            status: 200,
-            reason: "OK",
-            body: """{"status":"available","use_installer":true}"""
+            server,
+            200,
+            "OK",
+            """{"status":"available","use_installer":true}"""
         );
-        (bool success, string? body) = await connection.PostWithBodyAsync(path: "/manage/update");
+        (bool success, string? body) = await connection.PostWithBodyAsync("/manage/update");
 
         await requestTask;
         success.Should().BeTrue();
-        body.Should().Contain(expected: "use_installer");
+        body.Should().Contain("use_installer");
     }
 
     [Fact]
     public async Task PostAsyncGeneric_SerializesBodyAsJson()
     {
         FakeManagementPipeServer server = new();
-        Task<string> connectRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
-        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        Task<string> connectRequest = RespondWith(server, 200, "OK", """{"status":"running"}""");
+        using ServerConnection connection = new(server.PipeName);
         await connection.ConnectAsync();
         await connectRequest;
 
-        Task<string> requestTask = RespondWith(server: server, status: 200, reason: "OK", body: "");
-        bool result = await connection.PostAsync(path: "/manage/autostart", body: new { enabled = true });
+        Task<string> requestTask = RespondWith(server, 200, "OK", "");
+        bool result = await connection.PostAsync("/manage/autostart", new { enabled = true });
 
         string request = await requestTask;
-        request.Should().Contain(expected: "\"enabled\":true");
+        request.Should().Contain("\"enabled\":true");
         result.Should().BeTrue();
     }
 
@@ -213,16 +213,16 @@ public sealed class ServerConnectionTests
     public async Task PutAsyncGeneric_SuccessResponse_ReturnsTrue()
     {
         FakeManagementPipeServer server = new();
-        Task<string> connectRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
-        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        Task<string> connectRequest = RespondWith(server, 200, "OK", """{"status":"running"}""");
+        using ServerConnection connection = new(server.PipeName);
         await connection.ConnectAsync();
         await connectRequest;
 
-        Task<string> requestTask = RespondWith(server: server, status: 200, reason: "OK", body: "");
-        bool result = await connection.PutAsync(path: "/manage/config", body: new { server_name = "renamed" });
+        Task<string> requestTask = RespondWith(server, 200, "OK", "");
+        bool result = await connection.PutAsync("/manage/config", new { server_name = "renamed" });
 
         string request = await requestTask;
-        request.Should().StartWith(expected: "PUT /manage/config");
+        request.Should().StartWith("PUT /manage/config");
         result.Should().BeTrue();
     }
 
@@ -230,8 +230,8 @@ public sealed class ServerConnectionTests
     public async Task Dispose_ThenIsConnected_ReportsFalse()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
-        ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        Task<string> requestTask = RespondWith(server, 200, "OK", """{"status":"running"}""");
+        ServerConnection connection = new(server.PipeName);
         await connection.ConnectAsync();
         await requestTask;
 
@@ -243,7 +243,7 @@ public sealed class ServerConnectionTests
     [Fact]
     public void Dispose_CalledTwice_DoesNotThrow()
     {
-        ServerConnection connection = new(pipeNameOrSocketPath: $"nomercy-test-{Guid.NewGuid():N}");
+        ServerConnection connection = new($"nomercy-test-{Guid.NewGuid():N}");
 
         Action act = () =>
         {

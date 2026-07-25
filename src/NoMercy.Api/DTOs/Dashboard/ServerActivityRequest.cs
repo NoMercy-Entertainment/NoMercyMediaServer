@@ -16,30 +16,30 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record ServerActivityRequest
 {
-    [JsonProperty(propertyName: "take")]
+    [JsonProperty("take")]
     public int? Take { get; set; } = 50;
 
-    [JsonProperty(propertyName: "skip")]
+    [JsonProperty("skip")]
     public int? Skip { get; set; } = 0;
 
-    [JsonProperty(propertyName: "category")]
+    [JsonProperty("category")]
     public ActivityCategory? Category { get; set; }
 
-    [JsonProperty(propertyName: "user_id")]
+    [JsonProperty("user_id")]
     public Guid? UserId { get; set; }
 
-    [JsonProperty(propertyName: "device_id")]
+    [JsonProperty("device_id")]
     public Ulid? DeviceId { get; set; }
 
-    [JsonProperty(propertyName: "media_id")]
+    [JsonProperty("media_id")]
     public Ulid? MediaId { get; set; }
 
-    [JsonProperty(propertyName: "from")]
+    [JsonProperty("from")]
     public DateTime? From { get; set; }
 
-    [JsonProperty(propertyName: "to")]
+    [JsonProperty("to")]
     public DateTime? To { get; set; }
 
-    [JsonProperty(propertyName: "success")]
+    [JsonProperty("success")]
     public bool? Success { get; set; }
 }

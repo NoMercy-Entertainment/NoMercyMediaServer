@@ -15,96 +15,96 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class Attributes
 {
-    [JsonProperty(propertyName: "createdAt")]
+    [JsonProperty("createdAt")]
     public DateTime CreatedAt { get; set; }
 
-    [JsonProperty(propertyName: "updatedAt")]
+    [JsonProperty("updatedAt")]
     public DateTime UpdatedAt { get; set; }
 
-    [JsonProperty(propertyName: "slug")]
+    [JsonProperty("slug")]
     public string Slug { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "synopsis")]
+    [JsonProperty("synopsis")]
     public string Synopsis { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string Description { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "coverImageTopOffset")]
+    [JsonProperty("coverImageTopOffset")]
     public int CoverImageTopOffset { get; set; }
 
-    [JsonProperty(propertyName: "titles")]
+    [JsonProperty("titles")]
     public Titles Titles { get; set; } = new();
 
-    [JsonProperty(propertyName: "canonicalTitle")]
+    [JsonProperty("canonicalTitle")]
     public string CanonicalTitle { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "abbreviatedTitles")]
+    [JsonProperty("abbreviatedTitles")]
     public string[] AbbreviatedTitles { get; set; } = [];
 
-    [JsonProperty(propertyName: "averageRating")]
+    [JsonProperty("averageRating")]
     public string? AverageRating { get; set; }
 
-    [JsonProperty(propertyName: "ratingFrequencies")]
+    [JsonProperty("ratingFrequencies")]
     public Dictionary<string, int> RatingFrequencies { get; set; } = new();
 
-    [JsonProperty(propertyName: "userCount")]
+    [JsonProperty("userCount")]
     public int UserCount { get; set; }
 
-    [JsonProperty(propertyName: "favoritesCount")]
+    [JsonProperty("favoritesCount")]
     public int? FavoritesCount { get; set; }
 
-    [JsonProperty(propertyName: "startDate")]
+    [JsonProperty("startDate")]
     public DateTime? StartDate { get; set; }
 
-    [JsonProperty(propertyName: "endDate")]
+    [JsonProperty("endDate")]
     public DateTime? EndDate { get; set; }
 
-    [JsonProperty(propertyName: "nextRelease")]
+    [JsonProperty("nextRelease")]
     public object? NextRelease { get; set; }
 
-    [JsonProperty(propertyName: "popularityRank")]
+    [JsonProperty("popularityRank")]
     public int? PopularityRank { get; set; }
 
-    [JsonProperty(propertyName: "ratingRank")]
+    [JsonProperty("ratingRank")]
     public int? RatingRank { get; set; }
 
-    [JsonProperty(propertyName: "ageRating")]
+    [JsonProperty("ageRating")]
     public string? AgeRating { get; set; }
 
-    [JsonProperty(propertyName: "ageRatingGuide")]
+    [JsonProperty("ageRatingGuide")]
     public string AgeRatingGuide { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "subtype")]
+    [JsonProperty("subtype")]
     public string Subtype { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "tba")]
+    [JsonProperty("tba")]
     public string? Tba { get; set; }
 
-    [JsonProperty(propertyName: "posterImage")]
+    [JsonProperty("posterImage")]
     public PosterImage? PosterImage { get; set; }
 
-    [JsonProperty(propertyName: "coverImage")]
+    [JsonProperty("coverImage")]
     public CoverImage? CoverImage { get; set; }
 
-    [JsonProperty(propertyName: "episodeCount")]
+    [JsonProperty("episodeCount")]
     public int? EpisodeCount { get; set; }
 
-    [JsonProperty(propertyName: "episodeLength")]
+    [JsonProperty("episodeLength")]
     public int? EpisodeLength { get; set; }
 
-    [JsonProperty(propertyName: "totalLength")]
+    [JsonProperty("totalLength")]
     public int? TotalLength { get; set; }
 
-    [JsonProperty(propertyName: "youtubeVideoId")]
+    [JsonProperty("youtubeVideoId")]
     public string? YoutubeVideoId { get; set; }
 
-    [JsonProperty(propertyName: "showType")]
+    [JsonProperty("showType")]
     public string? ShowType { get; set; }
 
-    [JsonProperty(propertyName: "nsfw")]
+    [JsonProperty("nsfw")]
     public bool Nsfw { get; set; }
 }

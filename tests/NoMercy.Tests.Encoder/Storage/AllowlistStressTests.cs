@@ -45,12 +45,12 @@ public class AllowlistStressTests
     {
         // Path.GetExtension never touches the disk. This assertion documents
         // that the one file flagged by the grep (OutputArtifact.cs) is safe.
-        string mime = OutputArtifact.MimeFromPath(path: "/some/path/video.mp4");
-        mime.Should().Be(expected: "video/mp4");
+        string mime = OutputArtifact.MimeFromPath("/some/path/video.mp4");
+        mime.Should().Be("video/mp4");
 
         // Confirm it works on a path that doesn't exist on disk
-        string phantom = OutputArtifact.MimeFromPath(path: "/nonexistent/path/that/does/not/exist.m3u8");
-        phantom.Should().Be(expected: "application/vnd.apple.mpegurl");
+        string phantom = OutputArtifact.MimeFromPath("/nonexistent/path/that/does/not/exist.m3u8");
+        phantom.Should().Be("application/vnd.apple.mpegurl");
     }
 
     // ── Sub-task 2: allowlist config coverage ───────────────────────────────
@@ -60,16 +60,16 @@ public class AllowlistStressTests
     {
         // Every category of root the encoder uses must be registerable.
         string tempBase = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nm-allowlist-config-" + Path.GetRandomFileName()
+            Path.GetTempPath(),
+            "nm-allowlist-config-" + Path.GetRandomFileName()
         );
-        string libraryRoot = Path.Combine(path1: tempBase, path2: "library");
-        string outputRoot = Path.Combine(path1: tempBase, path2: "output");
-        string liveTranscodeCache = Path.Combine(path1: tempBase, path2: "live-transcode");
-        string remoteSourceCache = Path.Combine(path1: tempBase, path2: "remote-cache");
-        string tesseractDataDir = Path.Combine(path1: tempBase, path2: "tesseract");
-        string ripOutput = Path.Combine(path1: tempBase, path2: "rip-output");
-        string checkpointDir = Path.Combine(path1: tempBase, path2: "checkpoints");
+        string libraryRoot = Path.Combine(tempBase, "library");
+        string outputRoot = Path.Combine(tempBase, "output");
+        string liveTranscodeCache = Path.Combine(tempBase, "live-transcode");
+        string remoteSourceCache = Path.Combine(tempBase, "remote-cache");
+        string tesseractDataDir = Path.Combine(tempBase, "tesseract");
+        string ripOutput = Path.Combine(tempBase, "rip-output");
+        string checkpointDir = Path.Combine(tempBase, "checkpoints");
 
         StorageOptions opts = new()
         {
@@ -86,17 +86,17 @@ public class AllowlistStressTests
         };
 
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new(allowedRoots: opts.AllowedRoots, driver: driver);
+        StoragePathGuard guard = new(opts.AllowedRoots, driver);
 
         guard.Enforced.Should().BeTrue();
-        guard.AllowedRoots.Should().HaveCount(expected: 7);
+        guard.AllowedRoots.Should().HaveCount(7);
 
         // Paths under each registered root must be accepted
         foreach (string root in opts.AllowedRoots)
         {
-            string inner = Path.Combine(path1: root, path2: "sub", path3: "file.bin");
-            string validated = guard.Validate(requestedPath: inner);
-            validated.Should().Be(expected: Path.GetFullPath(path: inner), because: $"path under {root} should be accepted");
+            string inner = Path.Combine(root, "sub", "file.bin");
+            string validated = guard.Validate(inner);
+            validated.Should().Be(Path.GetFullPath(inner), $"path under {root} should be accepted");
         }
     }
 
@@ -105,33 +105,33 @@ public class AllowlistStressTests
     [Fact]
     public void OutputPathNotAllowed_rule_id_is_stable_constant()
     {
-        EncoderRuleId.OutputPathNotAllowed.Should().Be(expected: "output.path_not_allowed");
+        EncoderRuleId.OutputPathNotAllowed.Should().Be("output.path_not_allowed");
     }
 
     [Fact]
     public void RuntimeErrors_OutputPathNotAllowed_produces_correct_error_shape()
     {
         EncoderRuntimeException ex = RuntimeErrors.OutputPathNotAllowed(
-            path: "/tmp/escaped/../../../etc/passwd",
-            reason: "path is not under any allowed root"
+            "/tmp/escaped/../../../etc/passwd",
+            "path is not under any allowed root"
         );
 
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.OutputPathNotAllowed);
-        ex.HttpStatusCode.Should().Be(expected: 403);
-        ex.Shape.Message.Should().Contain(expected: "path is not under any allowed root");
+        ex.Shape.Id.Should().Be(EncoderRuleId.OutputPathNotAllowed);
+        ex.HttpStatusCode.Should().Be(403);
+        ex.Shape.Message.Should().Contain("path is not under any allowed root");
         ex.Shape.Suggestion.Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
     public void StoragePathNotAllowedException_message_contains_rule_id_prefix()
     {
-        StoragePathNotAllowedException ex = new(attemptedPath: "/bad/path", reason: "path is not under any allowed root");
+        StoragePathNotAllowedException ex = new("/bad/path", "path is not under any allowed root");
 
         // The exception message must embed the rule ID so log scrapers and
         // the controller error middleware can reliably identify it.
-        ex.Message.Should().StartWith(expected: "output.path_not_allowed:");
-        ex.Reason.Should().Be(expected: "path is not under any allowed root");
-        ex.AttemptedPath.Should().Be(expected: "/bad/path");
+        ex.Message.Should().StartWith("output.path_not_allowed:");
+        ex.Reason.Should().Be("path is not under any allowed root");
+        ex.AttemptedPath.Should().Be("/bad/path");
     }
 
     // ── Sub-task 4: traversal + hostile path stress ─────────────────────────
@@ -139,22 +139,22 @@ public class AllowlistStressTests
     private static StoragePathGuard EnforcedGuard(string root)
     {
         LocalStorageDriver driver = new();
-        return new(allowedRoots: [root], driver: driver);
+        return new([root], driver);
     }
 
     [Fact]
     public void Traversal_single_dot_dot_is_rejected()
     {
-        string root = Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-trav1"));
-        StoragePathGuard guard = EnforcedGuard(root: root);
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-trav1"));
+        StoragePathGuard guard = EnforcedGuard(root);
 
-        string escape = Path.Combine(path1: root, path2: "..", path3: "outside.txt");
+        string escape = Path.Combine(root, "..", "outside.txt");
 
-        Action act = () => guard.Validate(requestedPath: escape);
+        Action act = () => guard.Validate(escape);
 
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(exceptionExpression: e =>
+            .Where(e =>
                 e.Reason.StartsWith(".. traversal is not allowed")
                 || e.Reason.StartsWith("path is not under any allowed root")
             );
@@ -163,16 +163,16 @@ public class AllowlistStressTests
     [Fact]
     public void Traversal_deep_triple_dot_dot_is_rejected()
     {
-        string root = Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-trav3"));
-        StoragePathGuard guard = EnforcedGuard(root: root);
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-trav3"));
+        StoragePathGuard guard = EnforcedGuard(root);
 
-        string escape = Path.Combine(paths: [root, "a", "b", "c", "..", "..", "..", "..", "outside.txt"]);
+        string escape = Path.Combine([root, "a", "b", "c", "..", "..", "..", "..", "outside.txt"]);
 
-        Action act = () => guard.Validate(requestedPath: escape);
+        Action act = () => guard.Validate(escape);
 
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(exceptionExpression: e =>
+            .Where(e =>
                 e.Reason.StartsWith(".. traversal is not allowed")
                 || e.Reason.StartsWith("path is not under any allowed root")
             );
@@ -181,14 +181,14 @@ public class AllowlistStressTests
     [Fact]
     public void Null_byte_injection_is_rejected_before_canonicalization()
     {
-        string root = Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-null"));
-        StoragePathGuard guard = EnforcedGuard(root: root);
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-null"));
+        StoragePathGuard guard = EnforcedGuard(root);
 
-        Action act = () => guard.Validate(requestedPath: root + "/sub\0/evil.txt");
+        Action act = () => guard.Validate(root + "/sub\0/evil.txt");
 
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(exceptionExpression: e => e.Reason == "null byte in path");
+            .Where(e => e.Reason == "null byte in path");
     }
 
     [Fact]
@@ -197,14 +197,14 @@ public class AllowlistStressTests
         if (!OperatingSystem.IsWindows())
             return;
 
-        string root = Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-dev"));
-        StoragePathGuard guard = EnforcedGuard(root: root);
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-dev"));
+        StoragePathGuard guard = EnforcedGuard(root);
 
-        Action act = () => guard.Validate(requestedPath: @"\\?\C:\Windows\System32\cmd.exe");
+        Action act = () => guard.Validate(@"\\?\C:\Windows\System32\cmd.exe");
 
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(exceptionExpression: e => e.Reason == "device paths are not allowed");
+            .Where(e => e.Reason == "device paths are not allowed");
     }
 
     [Fact]
@@ -213,14 +213,14 @@ public class AllowlistStressTests
         if (!OperatingSystem.IsWindows())
             return;
 
-        string root = Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-dev2"));
-        StoragePathGuard guard = EnforcedGuard(root: root);
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-dev2"));
+        StoragePathGuard guard = EnforcedGuard(root);
 
-        Action act = () => guard.Validate(requestedPath: @"\\.\PhysicalDrive0");
+        Action act = () => guard.Validate(@"\\.\PhysicalDrive0");
 
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(exceptionExpression: e => e.Reason == "device paths are not allowed");
+            .Where(e => e.Reason == "device paths are not allowed");
     }
 
     [Fact]
@@ -229,14 +229,14 @@ public class AllowlistStressTests
         if (!OperatingSystem.IsWindows())
             return;
 
-        string root = Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-unc"));
-        StoragePathGuard guard = EnforcedGuard(root: root);
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-unc"));
+        StoragePathGuard guard = EnforcedGuard(root);
 
-        Action act = () => guard.Validate(requestedPath: @"\\attacker\share\stolen.mp4");
+        Action act = () => guard.Validate(@"\\attacker\share\stolen.mp4");
 
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(exceptionExpression: e =>
+            .Where(e =>
                 e.Reason.StartsWith("path is not under any allowed root")
                 || e.Reason == "device paths are not allowed"
             );
@@ -245,25 +245,25 @@ public class AllowlistStressTests
     [Fact]
     public void Symlink_escape_is_rejected_via_mock_backend()
     {
-        string root = Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-symlink"));
-        string linkInside = Path.Combine(path1: root, path2: "link");
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-symlink"));
+        string linkInside = Path.Combine(root, "link");
         string realOutside = Path.GetFullPath(
-            path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-symlink-target", path3: "secret.txt")
+            Path.Combine(Path.GetTempPath(), "nm-stress-symlink-target", "secret.txt")
         );
 
-        Mock<IStorageDriver> driver = new(behavior: MockBehavior.Strict);
+        Mock<IStorageDriver> driver = new(MockBehavior.Strict);
         driver
-            .Setup(expression: b => b.GetFullPath(It.IsAny<string>()))
-            .Returns<string>(valueFunction: p => Path.GetFullPath(path: p));
-        driver.Setup(expression: b => b.ResolveLinkTarget(Path.GetFullPath(linkInside))).Returns(value: realOutside);
+            .Setup(b => b.GetFullPath(It.IsAny<string>()))
+            .Returns<string>(p => Path.GetFullPath(p));
+        driver.Setup(b => b.ResolveLinkTarget(Path.GetFullPath(linkInside))).Returns(realOutside);
 
-        StoragePathGuard guard = new(allowedRoots: [root], driver: driver.Object);
+        StoragePathGuard guard = new([root], driver.Object);
 
-        Action act = () => guard.Validate(requestedPath: linkInside);
+        Action act = () => guard.Validate(linkInside);
 
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(exceptionExpression: e => e.Reason.StartsWith("path is not under any allowed root"));
+            .Where(e => e.Reason.StartsWith("path is not under any allowed root"));
     }
 
     [Fact]
@@ -271,41 +271,41 @@ public class AllowlistStressTests
     {
         // U+202E cannot cause the guard to accept an outside path — the OS
         // canonicalizes using the real bytes, not the visual rendering.
-        string root = Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-rtl"));
-        StoragePathGuard guard = EnforcedGuard(root: root);
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-rtl"));
+        StoragePathGuard guard = EnforcedGuard(root);
 
-        string insidePath = Path.Combine(path1: root, path2: "sub", path3: "cod‮exe.txt");
-        string result = guard.Validate(requestedPath: insidePath);
+        string insidePath = Path.Combine(root, "sub", "cod‮exe.txt");
+        string result = guard.Validate(insidePath);
 
-        result.Should().Be(expected: Path.GetFullPath(path: insidePath));
+        result.Should().Be(Path.GetFullPath(insidePath));
     }
 
     [Fact]
     public void Empty_string_is_rejected_unconditionally()
     {
         StoragePathGuard guard = EnforcedGuard(
-            root: Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-empty"))
+            Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-empty"))
         );
 
-        Action act = () => guard.Validate(requestedPath: "");
+        Action act = () => guard.Validate("");
 
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(exceptionExpression: e => e.Reason == "path is empty");
+            .Where(e => e.Reason == "path is empty");
     }
 
     [Fact]
     public void Whitespace_only_is_rejected_unconditionally()
     {
         StoragePathGuard guard = EnforcedGuard(
-            root: Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-ws"))
+            Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-ws"))
         );
 
-        Action act = () => guard.Validate(requestedPath: "   \t  ");
+        Action act = () => guard.Validate("   \t  ");
 
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(exceptionExpression: e => e.Reason == "path is empty");
+            .Where(e => e.Reason == "path is empty");
     }
 
     // ── Sub-task 5: AcquireLocalPath guard integration ──────────────────────
@@ -314,29 +314,29 @@ public class AllowlistStressTests
     public async Task AcquireLocalPath_fires_guard_and_returns_canonical_path()
     {
         string root = Path.GetFullPath(
-            path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-lease-" + Path.GetRandomFileName())
+            Path.Combine(Path.GetTempPath(), "nm-stress-lease-" + Path.GetRandomFileName())
         );
-        Directory.CreateDirectory(path: root);
+        Directory.CreateDirectory(root);
 
-        string filePath = Path.Combine(path1: root, path2: "segment.ts");
-        File.WriteAllBytes(path: filePath, bytes: [0xAB, 0xCD]);
+        string filePath = Path.Combine(root, "segment.ts");
+        File.WriteAllBytes(filePath, [0xAB, 0xCD]);
 
         try
         {
             LocalStorageDriver driver = new();
-            StoragePathGuard guard = new(allowedRoots: [root], driver: driver);
-            LocalStorage storage = new(driver: driver, guard: guard);
+            StoragePathGuard guard = new([root], driver);
+            LocalStorage storage = new(driver, guard);
 
-            await using LocalPathLease lease = storage.AcquireLocalPath(path: filePath);
+            await using LocalPathLease lease = storage.AcquireLocalPath(filePath);
 
-            lease.Path.Should().Be(expected: Path.GetFullPath(path: filePath));
+            lease.Path.Should().Be(Path.GetFullPath(filePath));
         }
         finally
         {
             try
             {
-                if (Directory.Exists(path: root))
-                    Directory.Delete(path: root, recursive: true);
+                if (Directory.Exists(root))
+                    Directory.Delete(root, true);
             }
             catch
             {
@@ -348,16 +348,16 @@ public class AllowlistStressTests
     [Fact]
     public void AcquireLocalPath_rejects_path_outside_allowed_root()
     {
-        string root = Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-lease-deny"));
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-lease-deny"));
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new(allowedRoots: [root], driver: driver);
-        LocalStorage storage = new(driver: driver, guard: guard);
+        StoragePathGuard guard = new([root], driver);
+        LocalStorage storage = new(driver, guard);
 
         string outside = Path.GetFullPath(
-            path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-lease-escape", path3: "stolen.ts")
+            Path.Combine(Path.GetTempPath(), "nm-stress-lease-escape", "stolen.ts")
         );
 
-        Action act = () => storage.AcquireLocalPath(path: outside);
+        Action act = () => storage.AcquireLocalPath(outside);
 
         act.Should().Throw<StoragePathNotAllowedException>();
     }
@@ -366,15 +366,15 @@ public class AllowlistStressTests
     public async Task AcquireLocalPathAsync_rejects_traversal_escape()
     {
         string root = Path.GetFullPath(
-            path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-lease-async-" + Path.GetRandomFileName())
+            Path.Combine(Path.GetTempPath(), "nm-stress-lease-async-" + Path.GetRandomFileName())
         );
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new(allowedRoots: [root], driver: driver);
-        LocalStorage storage = new(driver: driver, guard: guard);
+        StoragePathGuard guard = new([root], driver);
+        LocalStorage storage = new(driver, guard);
 
-        string escape = Path.Combine(path1: root, path2: "..", path3: "outside-async.ts");
+        string escape = Path.Combine(root, "..", "outside-async.ts");
 
-        Func<Task> act = () => storage.AcquireLocalPathAsync(path: escape, ct: CancellationToken.None);
+        Func<Task> act = () => storage.AcquireLocalPathAsync(escape, CancellationToken.None);
 
         await act.Should().ThrowAsync<StoragePathNotAllowedException>();
     }
@@ -386,30 +386,30 @@ public class AllowlistStressTests
         // tests) correctly intercepts AcquireLocalPath so any un-leased path
         // access is visible in the call log.
         string root = Path.GetFullPath(
-            path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-logging-" + Path.GetRandomFileName())
+            Path.Combine(Path.GetTempPath(), "nm-stress-logging-" + Path.GetRandomFileName())
         );
-        Directory.CreateDirectory(path: root);
-        string filePath = Path.Combine(path1: root, path2: "video.ts");
-        File.WriteAllBytes(path: filePath, bytes: [0x00]);
+        Directory.CreateDirectory(root);
+        string filePath = Path.Combine(root, "video.ts");
+        File.WriteAllBytes(filePath, [0x00]);
 
         try
         {
             LocalStorageDriver driver = new();
-            StoragePathGuard guard = new(allowedRoots: [root], driver: driver);
-            LocalStorage inner = new(driver: driver, guard: guard);
-            LoggingStorage logger = new(inner: inner);
+            StoragePathGuard guard = new([root], driver);
+            LocalStorage inner = new(driver, guard);
+            LoggingStorage logger = new(inner);
 
-            await using LocalPathLease lease = logger.AcquireLocalPath(path: filePath);
+            await using LocalPathLease lease = logger.AcquireLocalPath(filePath);
 
-            logger.Calls.Should().Contain(predicate: c => c.StartsWith("AcquireLocalPath:"));
-            lease.Path.Should().Be(expected: Path.GetFullPath(path: filePath));
+            logger.Calls.Should().Contain(c => c.StartsWith("AcquireLocalPath:"));
+            lease.Path.Should().Be(Path.GetFullPath(filePath));
         }
         finally
         {
             try
             {
-                if (Directory.Exists(path: root))
-                    Directory.Delete(path: root, recursive: true);
+                if (Directory.Exists(root))
+                    Directory.Delete(root, true);
             }
             catch
             {
@@ -422,33 +422,33 @@ public class AllowlistStressTests
     public async Task LoggingStorage_records_AcquireLocalPathAsync_call()
     {
         string root = Path.GetFullPath(
-            path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-stress-logging-async-" + Path.GetRandomFileName())
+            Path.Combine(Path.GetTempPath(), "nm-stress-logging-async-" + Path.GetRandomFileName())
         );
-        Directory.CreateDirectory(path: root);
-        string filePath = Path.Combine(path1: root, path2: "segment.ts");
-        File.WriteAllBytes(path: filePath, bytes: [0x00]);
+        Directory.CreateDirectory(root);
+        string filePath = Path.Combine(root, "segment.ts");
+        File.WriteAllBytes(filePath, [0x00]);
 
         try
         {
             LocalStorageDriver driver = new();
-            StoragePathGuard guard = new(allowedRoots: [root], driver: driver);
-            LocalStorage inner = new(driver: driver, guard: guard);
-            LoggingStorage logger = new(inner: inner);
+            StoragePathGuard guard = new([root], driver);
+            LocalStorage inner = new(driver, guard);
+            LoggingStorage logger = new(inner);
 
             await using LocalPathLease lease = await logger.AcquireLocalPathAsync(
-                path: filePath,
-                ct: CancellationToken.None
+                filePath,
+                CancellationToken.None
             );
 
-            logger.Calls.Should().Contain(predicate: c => c.StartsWith("AcquireLocalPathAsync:"));
-            lease.Path.Should().Be(expected: Path.GetFullPath(path: filePath));
+            logger.Calls.Should().Contain(c => c.StartsWith("AcquireLocalPathAsync:"));
+            lease.Path.Should().Be(Path.GetFullPath(filePath));
         }
         finally
         {
             try
             {
-                if (Directory.Exists(path: root))
-                    Directory.Delete(path: root, recursive: true);
+                if (Directory.Exists(root))
+                    Directory.Delete(root, true);
             }
             catch
             {

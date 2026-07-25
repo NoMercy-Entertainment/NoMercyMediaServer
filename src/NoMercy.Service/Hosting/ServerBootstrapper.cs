@@ -40,14 +40,14 @@ public sealed class ServerBootstrapper
                 // Windows services start in system32; systemd services start in /.
                 // Set it to the executable's directory so config and data paths resolve correctly.
                 string exeDir = AppContext.BaseDirectory;
-                Directory.SetCurrentDirectory(path: exeDir);
+                Directory.SetCurrentDirectory(exeDir);
 
                 string platform =
                     Software.IsWindows ? "Windows service"
                     : Software.IsLinux ? "systemd service"
                     : Software.IsMac ? "launchd service"
                     : "service";
-                Logger.App(message: $"Running as {platform}, content root: {exeDir}");
+                Logger.App($"Running as {platform}, content root: {exeDir}");
                 break;
             }
             case false when !Console.IsOutputRedirected:
@@ -61,10 +61,10 @@ public sealed class ServerBootstrapper
 
         options.ApplySettings();
 
-        Version version = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(major: 0, minor: 0, build: 0);
+        Version version = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0);
         Software.Version = version;
         Logger.App(
-            message: $"NoMercy MediaServer version: v{version.Major}.{version.Minor}.{version.Build}"
+            $"NoMercy MediaServer version: v{version.Major}.{version.Minor}.{version.Build}"
         );
 
         Stopwatch stopWatch = new();
@@ -87,11 +87,11 @@ public sealed class ServerBootstrapper
 
         // Create a database schema before anything else can query it.
         // This does NOT require auth — only migrations + EnsureCreated.
-        await DatabaseSeeder.InitSchema(storage: preBootStorage);
+        await DatabaseSeeder.InitSchema(preBootStorage);
 
         // Seed offline data (config, languages, encoder profiles, etc.)
         // immediately so the UI has data before auth completes.
-        await DatabaseSeeder.SeedOfflineData(storage: preBootStorage, storageDriver: preBootBackend);
+        await DatabaseSeeder.SeedOfflineData(preBootStorage, preBootBackend);
 
         // Use certificate presence for the initial forceHttp decision — this is a
         // filesystem check that doesn't require DI. BootOrchestrator (resolved below)
@@ -109,7 +109,7 @@ public sealed class ServerBootstrapper
                 .HasValidCertificate();
         }
 
-        WebApplication app = WebHostFactory.Create(options: options, forceHttp: !hasCert);
+        WebApplication app = WebHostFactory.Create(options, !hasCert);
 
         // Resolve the cert service once so its boot handle (Start.Certificate) is set
         // before any runtime consumer (ServerRunner, SetupEndpoints) needs it.
@@ -120,21 +120,21 @@ public sealed class ServerBootstrapper
         IPortManager portManager = app.Services.GetRequiredService<IPortManager>();
 
         IApiKeyLoader apiKeyLoader = app.Services.GetRequiredService<IApiKeyLoader>();
-        await apiKeyLoader.LoadKeys(ct: shutdownCoordinator.Token);
+        await apiKeyLoader.LoadKeys(shutdownCoordinator.Token);
 
         // Proactively resolve port conflicts before proceeding.
         // This avoids the costly build→fail→kill→rebuild cycle and prevents
         // CronWorker "Failed to start database job workers" errors.
-        await portManager.EnsurePortAvailable(port: RuntimeServerSettings.Current.InternalServerPort);
+        await portManager.EnsurePortAvailable(RuntimeServerSettings.Current.InternalServerPort);
 
         // Hand the phase tracker to the static accessor so boot helpers in
         // NoMercy.Setup (Start.cs, Binaries.cs) can advance stages without DI
         // plumbing. Phase 1 (essentials) already completed pre-DI — mark it now.
         NmSystem.Lifecycle.ServerPhaseTracker.RegisterCurrent(
-            tracker: app.Services.GetRequiredService<NmSystem.Lifecycle.IServerPhaseTracker>()
+            app.Services.GetRequiredService<NmSystem.Lifecycle.IServerPhaseTracker>()
         );
         NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
-            stage: NmSystem.Lifecycle.BootStage.Essential
+            NmSystem.Lifecycle.BootStage.Essential
         );
 
         // From this point on, use the DI-registered storage singletons.
@@ -147,18 +147,18 @@ public sealed class ServerBootstrapper
         // to the real IHttpClientFactory (otherwise seed HTTP calls fall back
         // to a bare HttpClient with no registered headers, and MusicBrainz
         // returns 403 for anonymous UAs).
-        await DatabaseSeeder.Run(storage: diStorage, storageDriver: dIStorageDriver);
+        await DatabaseSeeder.Run(diStorage, dIStorageDriver);
 
         // Rename on-disk bundle directories when a built-in preset slug changed.
         await DatabaseSeeder.RunBundleSlugRenamePassAsync(
-            storageFactory: app.Services.GetRequiredService<IStorageFactory>(),
-            logger: app.Services.GetRequiredService<ILogger<Encoder.Bundle.BundleSlugRenamer>>()
+            app.Services.GetRequiredService<IStorageFactory>(),
+            app.Services.GetRequiredService<ILogger<Encoder.Bundle.BundleSlugRenamer>>()
         );
 
         // BootOrchestrator owns Phase 2 (auth) and Phase 3 (registration).
         // It returns true when interactive auth is required (setup mode).
         BootOrchestrator orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
-        bool needsSetupMode = await orchestrator.RunAsync(services: app.Services, ct: shutdownCoordinator.Token);
+        bool needsSetupMode = await orchestrator.RunAsync(app.Services, shutdownCoordinator.Token);
 
         // The initial forceHttp decision used cert presence as a proxy for "auth done".
         // It's wrong when a cert exists but tokens are missing/unreadable (DataProtection
@@ -168,10 +168,10 @@ public sealed class ServerBootstrapper
         if (needsSetupMode && hasCert)
         {
             Logger.App(
-                message: "Setup required but host is HTTPS-bound — rebuilding as HTTP-only for setup flow"
+                "Setup required but host is HTTPS-bound — rebuilding as HTTP-only for setup flow"
             );
             await app.DisposeAsync();
-            app = WebHostFactory.Create(options: options, forceHttp: true);
+            app = WebHostFactory.Create(options, true);
             diStorage = app.Services.GetRequiredService<IStorage>();
             orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
 
@@ -198,9 +198,9 @@ public sealed class ServerBootstrapper
         // (HTTPS-only) can otherwise never reach this origin at all.
         if (!needsSetupMode && !hasCert && Start.Certificate!.EnsureHttpsCertificate())
         {
-            Logger.App(message: "Certificate ready — rebinding host to HTTPS");
+            Logger.App("Certificate ready — rebinding host to HTTPS");
             await app.DisposeAsync();
-            app = WebHostFactory.Create(options: options);
+            app = WebHostFactory.Create(options);
             diStorage = app.Services.GetRequiredService<IStorage>();
             shutdownCoordinator = app.Services.GetRequiredService<IShutdownCoordinator>();
 
@@ -221,14 +221,14 @@ public sealed class ServerBootstrapper
             // new container's SetupState to Complete to match the reality the
             // orchestrator already established.
             app.Services.GetRequiredService<SetupState>()
-                .DetermineInitialPhase(hasValidToken: true, isRegistered: true);
+                .DetermineInitialPhase(true, true);
         }
 
         // Auth completed — seed auth-dependent data (users, library assignment, claims)
         if (!needsSetupMode)
             await DatabaseSeeder.SeedAuthData(
-                storage: diStorage,
-                accessToken: app.Services.GetRequiredService<IAuthTokenStore>().AccessToken
+                diStorage,
+                app.Services.GetRequiredService<IAuthTokenStore>().AccessToken
             );
 
         // Force QueueRunner singleton creation and initialize workers immediately —
@@ -240,35 +240,35 @@ public sealed class ServerBootstrapper
         // returns empty list and logs INFO. One plugin's failure never blocks others.
         IPluginLoader pluginLoader = app.Services.GetRequiredService<IPluginLoader>();
         IReadOnlyList<PluginLoadResult> loadedPlugins = await pluginLoader.LoadPlugins(
-            ct: shutdownCoordinator.Token
+            shutdownCoordinator.Token
         );
 
-        HostLifecycleHooks.Register(app: app, stopWatch: stopWatch);
+        HostLifecycleHooks.Register(app, stopWatch);
 
         // Log addresses and run dev tasks after the host is live.
         // InitRemaining is now owned by BootOrchestrator — only host-level
         // post-startup concerns belong here.
-        _ = Task.Run(function: async () =>
+        _ = Task.Run(async () =>
         {
             // Eagerly resolve the cast service so its boot handle (Start.ChromeCast) is populated.
             _ = app.Services.GetService<IChromeCastService>();
             INetworkDiscovery? networkDiscovery = app.Services.GetService<INetworkDiscovery>();
             if (networkDiscovery is not null)
             {
-                Logger.App(message: $"Internal Address: {networkDiscovery.InternalAddress}");
+                Logger.App($"Internal Address: {networkDiscovery.InternalAddress}");
                 if (
-                    !string.IsNullOrEmpty(value: networkDiscovery.ExternalIp)
+                    !string.IsNullOrEmpty(networkDiscovery.ExternalIp)
                     && networkDiscovery.ExternalIp != "0.0.0.0"
                 )
-                    Logger.App(message: $"External Address: {networkDiscovery.ExternalAddress}");
+                    Logger.App($"External Address: {networkDiscovery.ExternalAddress}");
                 if (networkDiscovery.ExternalAddressV6 is not null)
-                    Logger.App(message: $"External IPv6 Address: {networkDiscovery.ExternalAddressV6}");
+                    Logger.App($"External IPv6 Address: {networkDiscovery.ExternalAddressV6}");
             }
 
             if (!options.RunAsService && !Console.IsOutputRedirected)
                 await ConsoleMessages.ServerRunning();
 
-            Logger.App(message: $"Server started in {stopWatch.ElapsedMilliseconds}ms");
+            Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
 
             await Dev.Run();
         });
@@ -278,12 +278,12 @@ public sealed class ServerBootstrapper
         bool shouldRetry;
         if (needsSetupMode)
         {
-            Logger.App(message: "Starting in HTTP mode — waiting for setup completion...");
-            shouldRetry = await serverRunner.RunWithHttpsRestart(httpHost: app, options: options, orchestrator: orchestrator);
+            Logger.App("Starting in HTTP mode — waiting for setup completion...");
+            shouldRetry = await serverRunner.RunWithHttpsRestart(app, options, orchestrator);
         }
         else
         {
-            shouldRetry = await serverRunner.RunHost(host: app);
+            shouldRetry = await serverRunner.RunHost(app);
         }
 
         if (shouldRetry)
@@ -293,13 +293,13 @@ public sealed class ServerBootstrapper
             // retry, so we must NOT touch shutdownCoordinator here — the retry host
             // below builds its own. Calling RequestShutdown() on the disposed
             // coordinator threw ObjectDisposedException on the port-conflict path.
-            Logger.App(message: "Rebuilding server after port conflict resolution...");
+            Logger.App("Rebuilding server after port conflict resolution...");
 
             Stopwatch retryStopWatch = new();
             retryStopWatch.Start();
 
-            WebApplication retryHost = WebHostFactory.Create(options: options, forceHttp: needsSetupMode);
-            HostLifecycleHooks.Register(app: retryHost, stopWatch: retryStopWatch);
+            WebApplication retryHost = WebHostFactory.Create(options, needsSetupMode);
+            HostLifecycleHooks.Register(retryHost, retryStopWatch);
 
             IServerRunner retryServerRunner =
                 retryHost.Services.GetRequiredService<IServerRunner>();
@@ -308,18 +308,18 @@ public sealed class ServerBootstrapper
             QueueRunner retryQueueRunner = retryHost.Services.GetRequiredService<QueueRunner>();
 
             // Initialize queue workers so they can process jobs on the retry host.
-            _ = Task.Run(function: async () =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
-                    await Task.Delay(delay: TimeSpan.FromSeconds(seconds: 3));
-                    Logger.App(message: "Initializing QueueRunner for retry host...");
+                    await Task.Delay(TimeSpan.FromSeconds(3));
+                    Logger.App("Initializing QueueRunner for retry host...");
                     await retryQueueRunner.Initialize();
-                    Logger.App(message: "QueueRunner initialized for retry host");
+                    Logger.App("QueueRunner initialized for retry host");
                 }
                 catch (Exception ex)
                 {
-                    Logger.App(message: $"Failed to initialize QueueRunner for retry host: {ex}");
+                    Logger.App($"Failed to initialize QueueRunner for retry host: {ex}");
                 }
             });
 
@@ -330,11 +330,11 @@ public sealed class ServerBootstrapper
                 // Resolve a fresh orchestrator from the retry host's DI container.
                 BootOrchestrator retryOrchestrator =
                     retryHost.Services.GetRequiredService<BootOrchestrator>();
-                await retryServerRunner.RunWithHttpsRestart(httpHost: retryHost, options: options, orchestrator: retryOrchestrator);
+                await retryServerRunner.RunWithHttpsRestart(retryHost, options, retryOrchestrator);
             }
             else
             {
-                await retryServerRunner.RunHost(host: retryHost);
+                await retryServerRunner.RunHost(retryHost);
             }
         }
     }

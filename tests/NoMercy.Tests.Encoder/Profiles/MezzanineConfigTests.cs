@@ -20,30 +20,30 @@ public class MezzanineConfigTests
     {
         MezzanineConfig mezzanine = new();
 
-        mezzanine.Codec.Should().Be(expected: "hevc");
-        mezzanine.Crf.Should().Be(expected: 12, because: "visually lossless by default");
+        mezzanine.Codec.Should().Be("hevc");
+        mezzanine.Crf.Should().Be(12, "visually lossless by default");
     }
 
     [Fact]
     public void EncodingProfile_Mezzanine_DefaultsNull_AndIsSettable()
     {
         EncodingProfile noMezzanine = new(
-            Id: Ulid.NewUlid(),
-            Name: "p",
-            Container: Container.HlsTs,
-            Video: null,
-            Audio: [],
-            Subtitles: []
+            Ulid.NewUlid(),
+            "p",
+            Container.HlsTs,
+            null,
+            [],
+            []
         );
 
-        noMezzanine.Mezzanine.Should().BeNull(because: "default = no mezzanine, unchanged behaviour");
+        noMezzanine.Mezzanine.Should().BeNull("default = no mezzanine, unchanged behaviour");
 
         EncodingProfile withMezzanine = noMezzanine with
         {
-            Mezzanine = new(Codec: "ffv1", Crf: 0),
+            Mezzanine = new("ffv1", 0),
         };
 
         withMezzanine.Mezzanine.Should().NotBeNull();
-        withMezzanine.Mezzanine!.Codec.Should().Be(expected: "ffv1");
+        withMezzanine.Mezzanine!.Codec.Should().Be("ffv1");
     }
 }

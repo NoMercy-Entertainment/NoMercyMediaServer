@@ -35,7 +35,7 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator
     // track that just failed transiently returns null immediately for a
     // while, then gets a real attempt again once it expires.
     private readonly ConcurrentDictionary<Guid, DateTime> _transientBackoffUntil = new();
-    private static readonly TimeSpan DefaultTransientBackoff = TimeSpan.FromMinutes(minutes: 2);
+    private static readonly TimeSpan DefaultTransientBackoff = TimeSpan.FromMinutes(2);
     private readonly TimeSpan _transientBackoff = DefaultTransientBackoff;
 
     // Test-only seam (NoMercy.Tests.Api has InternalsVisibleTo) so a backoff
@@ -45,7 +45,7 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator
         ILyricsAggregator lyricsAggregator,
         TimeSpan transientBackoff
     )
-        : this(scopeFactory: scopeFactory, lyricsAggregator: lyricsAggregator)
+        : this(scopeFactory, lyricsAggregator)
     {
         _transientBackoff = transientBackoff;
     }
@@ -58,15 +58,15 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator
     /// </summary>
     public Task<Lyric[]?> ResolveAsync(Guid trackId)
     {
-        if (_transientBackoffUntil.TryGetValue(key: trackId, value: out DateTime until))
+        if (_transientBackoffUntil.TryGetValue(trackId, out DateTime until))
         {
             if (DateTime.UtcNow < until)
-                return Task.FromResult<Lyric[]?>(result: null);
-            _transientBackoffUntil.TryRemove(key: trackId, value: out _);
+                return Task.FromResult<Lyric[]?>(null);
+            _transientBackoffUntil.TryRemove(trackId, out _);
         }
 
         // Lazy guarantees the factory runs once even under GetOrAdd contention.
-        return _inFlight.GetOrAdd(key: trackId, valueFactory: _ => new(valueFactory: () => FetchAndPersistAsync(trackId: trackId))).Value;
+        return _inFlight.GetOrAdd(trackId, _ => new(() => FetchAndPersistAsync(trackId))).Value;
     }
 
     private async Task<Lyric[]?> FetchAndPersistAsync(Guid trackId)
@@ -80,7 +80,7 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator
             IMusicRepository repository =
                 scope.ServiceProvider.GetRequiredService<IMusicRepository>();
 
-            Track? track = await repository.GetTrackWithIncludesAsync(id: trackId);
+            Track? track = await repository.GetTrackWithIncludesAsync(trackId);
             if (track is null)
                 return null;
 
@@ -94,15 +94,15 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator
             if (track.Lyrics is not null)
                 return null;
 
-            LyricsFetchResult result = await lyricsAggregator.SearchLyrics(track: track);
+            LyricsFetchResult result = await lyricsAggregator.SearchLyrics(track);
 
             if (result.IsTransientError)
             {
-                _transientBackoffUntil[key: trackId] = DateTime.UtcNow.Add(value: _transientBackoff);
+                _transientBackoffUntil[trackId] = DateTime.UtcNow.Add(_transientBackoff);
                 return null;
             }
 
-            _transientBackoffUntil.TryRemove(key: trackId, value: out _);
+            _transientBackoffUntil.TryRemove(trackId, out _);
 
             if (result.Lines is null)
             {
@@ -110,18 +110,18 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator
                 // play of this track doesn't re-hit Lrclib/Musixmatch and trip
                 // their rate limits. A library rescan still overwrites this if
                 // lyrics appear for the track later.
-                await repository.UpdateTrackLyricsAsync(track: track, lyricsJson: "[]");
+                await repository.UpdateTrackLyricsAsync(track, "[]");
                 return null;
             }
 
             return await repository.UpdateTrackLyricsAsync(
-                track: track,
-                lyricsJson: JsonConvert.SerializeObject(value: result.Lines)
+                track,
+                JsonConvert.SerializeObject(result.Lines)
             );
         }
         finally
         {
-            _inFlight.TryRemove(key: trackId, value: out _);
+            _inFlight.TryRemove(trackId, out _);
         }
     }
 }

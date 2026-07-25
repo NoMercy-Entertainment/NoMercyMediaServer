@@ -24,65 +24,65 @@ namespace NoMercy.Tests.Api;
 /// exposed and the legacy aliases stay in place so older self-hosted workers
 /// keep functioning.
 /// </summary>
-[Trait(name: "Category", value: "Routes")]
+[Trait("Category", "Routes")]
 public class WorkersController_Routes_Test
 {
     private static IEnumerable<string> ControllerRoutes(Type controller) =>
-        controller.GetCustomAttributes<RouteAttribute>().Select(selector: a => a.Template);
+        controller.GetCustomAttributes<RouteAttribute>().Select(a => a.Template);
 
     private static IEnumerable<string> ActionRoutes(Type controller, Type httpVerb) =>
         controller
-            .GetMethods(bindingAttr: BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .SelectMany(selector: m => m.GetCustomAttributes(attributeType: httpVerb, inherit: false))
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .SelectMany(m => m.GetCustomAttributes(httpVerb, false))
             .Cast<HttpMethodAttribute>()
-            .Select(selector: a => a.Template ?? string.Empty);
+            .Select(a => a.Template ?? string.Empty);
 
     [Fact]
     public void WorkersController_Exposes_Distribution_PrimaryRoute()
     {
-        IEnumerable<string> routes = ControllerRoutes(controller: typeof(WorkersController));
-        Assert.Contains(expected: "api/v{version:apiVersion}/distribution/workers", collection: routes);
+        IEnumerable<string> routes = ControllerRoutes(typeof(WorkersController));
+        Assert.Contains("api/v{version:apiVersion}/distribution/workers", routes);
     }
 
     [Fact]
     public void WorkersController_Keeps_Dashboard_Alias_For_Compat()
     {
-        IEnumerable<string> routes = ControllerRoutes(controller: typeof(WorkersController));
-        Assert.Contains(expected: "api/v{version:apiVersion}/dashboard/workers", collection: routes);
+        IEnumerable<string> routes = ControllerRoutes(typeof(WorkersController));
+        Assert.Contains("api/v{version:apiVersion}/dashboard/workers", routes);
     }
 
     [Fact]
     public void WorkerExecution_Exposes_Tasks_PrimaryRoute()
     {
         IEnumerable<string> routes = ActionRoutes(
-            controller: typeof(WorkerExecutionController),
-            httpVerb: typeof(HttpPostAttribute)
+            typeof(WorkerExecutionController),
+            typeof(HttpPostAttribute)
         );
-        Assert.Contains(expected: "tasks", collection: routes);
+        Assert.Contains("tasks", routes);
     }
 
     [Fact]
     public void WorkerExecution_Keeps_ExecuteTask_Alias_For_Compat()
     {
         IEnumerable<string> routes = ActionRoutes(
-            controller: typeof(WorkerExecutionController),
-            httpVerb: typeof(HttpPostAttribute)
+            typeof(WorkerExecutionController),
+            typeof(HttpPostAttribute)
         );
-        Assert.Contains(expected: "execute-task", collection: routes);
+        Assert.Contains("execute-task", routes);
     }
 
     [Fact]
     public void WorkerSource_Exposes_PrimaryRoute()
     {
-        IEnumerable<string> routes = ControllerRoutes(controller: typeof(WorkerSourceController));
-        Assert.Contains(expected: "api/v{version:apiVersion}/worker/source", collection: routes);
+        IEnumerable<string> routes = ControllerRoutes(typeof(WorkerSourceController));
+        Assert.Contains("api/v{version:apiVersion}/worker/source", routes);
     }
 
     [Fact]
     public void WorkerSource_Keeps_LegacyAlias_For_Compat()
     {
-        IEnumerable<string> routes = ControllerRoutes(controller: typeof(WorkerSourceController));
-        Assert.Contains(expected: "api/v{version:apiVersion}/worker-source", collection: routes);
+        IEnumerable<string> routes = ControllerRoutes(typeof(WorkerSourceController));
+        Assert.Contains("api/v{version:apiVersion}/worker-source", routes);
     }
 }
 #pragma warning restore CS0618

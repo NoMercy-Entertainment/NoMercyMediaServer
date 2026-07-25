@@ -15,9 +15,9 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchSubtitleGetMessage
 {
-    [JsonProperty(propertyName: "header")]
+    [JsonProperty("header")]
     public MusixMatchSubtitleGetMessageHeader Header { get; set; } = new();
 
-    [JsonProperty(propertyName: "body")]
+    [JsonProperty("body")]
     public MusixMatchSubtitleGetMessageBody? Body { get; set; }
 }

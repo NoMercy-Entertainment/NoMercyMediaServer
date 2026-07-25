@@ -31,7 +31,7 @@ namespace NoMercy.Tests.Api.Middleware;
 /// is constructed fresh per test so IsSetupRequired can be flipped without
 /// mutating the shared factory singleton other tests rely on.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -50,7 +50,7 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         SetupEndpoints setupEndpoints = _factory.Services.GetRequiredService<SetupEndpoints>();
         SetupState setupState = new();
-        setupState.DetermineInitialPhase(hasValidToken: !setupRequired);
+        setupState.DetermineInitialPhase(!setupRequired);
 
         bool called = false;
         RequestDelegate finalNext =
@@ -63,7 +63,7 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
                 }
             );
 
-        SetupModeMiddleware middleware = new(next: finalNext, setupState: setupState, setupEndpoints: setupEndpoints);
+        SetupModeMiddleware middleware = new(finalNext, setupState, setupEndpoints);
         nextCalled = called;
         return middleware;
     }
@@ -84,51 +84,51 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task SetupRoute_AlwaysServed_WhenSetupNotRequired()
     {
-        SetupModeMiddleware middleware = CreateMiddleware(setupRequired: false, nextCalled: out _);
-        DefaultHttpContext context = MakeContext(path: "/setup");
+        SetupModeMiddleware middleware = CreateMiddleware(false, out _);
+        DefaultHttpContext context = MakeContext("/setup");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be(expected: StatusCodes.Status200OK);
-        context.Response.ContentType.Should().Contain(expected: "text/html");
+        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+        context.Response.ContentType.Should().Contain("text/html");
     }
 
     [Fact]
     public async Task SetupRoute_AlwaysServed_WhenSetupRequired()
     {
-        SetupModeMiddleware middleware = CreateMiddleware(setupRequired: true, nextCalled: out _);
-        DefaultHttpContext context = MakeContext(path: "/setup");
+        SetupModeMiddleware middleware = CreateMiddleware(true, out _);
+        DefaultHttpContext context = MakeContext("/setup");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be(expected: StatusCodes.Status200OK);
+        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
     }
 
     [Fact]
     public async Task SetupRoute_TrailingSlashVariant_StillMatches()
     {
-        SetupModeMiddleware middleware = CreateMiddleware(setupRequired: false, nextCalled: out _);
-        DefaultHttpContext context = MakeContext(path: "/setup/config");
+        SetupModeMiddleware middleware = CreateMiddleware(false, out _);
+        DefaultHttpContext context = MakeContext("/setup/config");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         // /setup/config is handled by SetupEndpoints (not a 404 passthrough) —
         // any response other than the untouched default (200 with empty body)
         // proves the request reached SetupEndpoints rather than the terminal
         // next() delegate.
-        context.Response.StatusCode.Should().NotBe(unexpected: StatusCodes.Status503ServiceUnavailable);
+        context.Response.StatusCode.Should().NotBe(StatusCodes.Status503ServiceUnavailable);
     }
 
     [Fact]
     public async Task FaviconRoute_AlwaysServed()
     {
-        SetupModeMiddleware middleware = CreateMiddleware(setupRequired: true, nextCalled: out _);
-        DefaultHttpContext context = MakeContext(path: "/favicon.ico");
+        SetupModeMiddleware middleware = CreateMiddleware(true, out _);
+        DefaultHttpContext context = MakeContext("/favicon.ico");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be(expected: StatusCodes.Status200OK);
-        context.Response.ContentType.Should().Be(expected: "image/x-icon");
+        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+        context.Response.ContentType.Should().Be("image/x-icon");
     }
 
     // =========================================================================
@@ -140,17 +140,17 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            setupRequired: false,
-            nextCalled: out _,
-            next: _ =>
+            false,
+            out _,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = MakeContext(path: "/api/v1/media/movies");
+        DefaultHttpContext context = MakeContext("/api/v1/media/movies");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeTrue();
     }
@@ -160,24 +160,24 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     // =========================================================================
 
     [Theory]
-    [InlineData(data: "/health")]
-    [InlineData(data: "/manage")]
-    [InlineData(data: "/manage/anything")]
+    [InlineData("/health")]
+    [InlineData("/manage")]
+    [InlineData("/manage/anything")]
     public async Task SetupRequired_PassthroughRoute_CallsNext(string path)
     {
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            setupRequired: true,
-            nextCalled: out _,
-            next: _ =>
+            true,
+            out _,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = MakeContext(path: path);
+        DefaultHttpContext context = MakeContext(path);
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeTrue();
     }
@@ -191,27 +191,27 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            setupRequired: true,
-            nextCalled: out _,
-            next: _ =>
+            true,
+            out _,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = MakeContext(path: "/api/v1/media/movies");
+        DefaultHttpContext context = MakeContext("/api/v1/media/movies");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeFalse();
-        context.Response.StatusCode.Should().Be(expected: StatusCodes.Status503ServiceUnavailable);
-        context.Response.ContentType.Should().Be(expected: "application/json");
+        context.Response.StatusCode.Should().Be(StatusCodes.Status503ServiceUnavailable);
+        context.Response.ContentType.Should().Be("application/json");
 
-        context.Response.Body.Seek(offset: 0, origin: SeekOrigin.Begin);
-        using StreamReader reader = new(stream: context.Response.Body, encoding: Encoding.UTF8);
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        using StreamReader reader = new(context.Response.Body, Encoding.UTF8);
         string body = await reader.ReadToEndAsync();
-        using JsonDocument json = JsonDocument.Parse(json: body);
-        json.RootElement.GetProperty(propertyName: "status").GetString().Should().Be(expected: "setup_required");
-        json.RootElement.GetProperty(propertyName: "setup_url").GetString().Should().Be(expected: "/setup");
+        using JsonDocument json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("status").GetString().Should().Be("setup_required");
+        json.RootElement.GetProperty("setup_url").GetString().Should().Be("/setup");
     }
 }

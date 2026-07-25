@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Service.Seeds;
 /// only. It must never touch the database or the dynamic-static-files
 /// middleware registration in that case.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class FolderRootsSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -34,16 +34,16 @@ public sealed class FolderRootsSeedTests : IDisposable
 
     public FolderRootsSeedTests()
     {
-        _connection = new(connectionString: "DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection: _connection,
-                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
+                _connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(options: _options);
+        using MediaContext ctx = new(_options);
         ctx.Database.EnsureCreated();
     }
 
@@ -52,18 +52,18 @@ public sealed class FolderRootsSeedTests : IDisposable
     [Fact]
     public async Task Init_SeedFileMissing_ReturnsWithoutTouchingDatabase()
     {
-        Mock<IStorage> storage = new(behavior: MockBehavior.Strict);
-        storage.Setup(expression: s => s.Exists(AppFiles.FolderRootsSeedFile)).Returns(value: false);
+        Mock<IStorage> storage = new(MockBehavior.Strict);
+        storage.Setup(s => s.Exists(AppFiles.FolderRootsSeedFile)).Returns(false);
         Mock<IStorageDriver> driver = new();
 
-        await using MediaContext context = new(options: _options);
+        await using MediaContext context = new(_options);
 
-        await FolderRootsSeed.Init(dbContext: context, storage: storage.Object, storageDriver: driver.Object);
+        await FolderRootsSeed.Init(context, storage.Object, driver.Object);
 
         int folderCount = await context.Folders.CountAsync();
-        Assert.Equal(expected: 0, actual: folderCount);
+        Assert.Equal(0, folderCount);
         // Strict mock: any call beyond Exists() (ReadAllTextAsync, etc.) would
         // have thrown above.
-        storage.Verify(expression: s => s.Exists(AppFiles.FolderRootsSeedFile), times: Times.Once);
+        storage.Verify(s => s.Exists(AppFiles.FolderRootsSeedFile), Times.Once);
     }
 }

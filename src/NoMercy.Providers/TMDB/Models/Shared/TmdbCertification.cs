@@ -15,7 +15,7 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbCertification
 {
-    [JsonProperty(propertyName: "certifications")]
+    [JsonProperty("certifications")]
     public TmdbCertificationList TmdbCertifications { get; set; } = new();
 
     public List<TmdbCertificationItem> ToArray()
@@ -27,7 +27,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Au[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -43,7 +43,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Bg[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -59,7 +59,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Br[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -75,7 +75,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Caqc[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -91,7 +91,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Ca[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -107,7 +107,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.De[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -123,7 +123,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Dk[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -139,7 +139,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Es[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -155,7 +155,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Fi[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -171,7 +171,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Fr[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -187,7 +187,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Gb[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -203,7 +203,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Hu[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -219,7 +219,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.In[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -235,7 +235,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.It[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -251,7 +251,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Kr[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -267,7 +267,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Lt[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -283,7 +283,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.My[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -299,7 +299,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Nl[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -315,7 +315,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.No[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -331,7 +331,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Nz[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -347,7 +347,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Ph[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -363,7 +363,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Pt[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -379,7 +379,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Ru[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -395,7 +395,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Se[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -411,7 +411,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Sk[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -427,7 +427,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Th[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,
@@ -443,7 +443,7 @@ public class TmdbCertification
         {
             TmdbCertificationItem y = TmdbCertifications.Us[index];
             certifications.Add(
-                item: new()
+                new()
                 {
                     Certification = y.Certification,
                     Meaning = y.Meaning,

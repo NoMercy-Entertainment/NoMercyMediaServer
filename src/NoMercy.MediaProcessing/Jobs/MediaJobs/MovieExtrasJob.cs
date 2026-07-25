@@ -37,7 +37,7 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
         IStorageDriver storageDriver,
         ILoggerFactory loggerFactory
     )
-        : base(storageFactory: storageFactory, storageDriver: storageDriver, loggerFactory: loggerFactory) { }
+        : base(storageFactory, storageDriver, loggerFactory) { }
 
     public override string QueueName => "extras";
     public override int Priority => 1;
@@ -47,38 +47,38 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        MovieRepository movieRepository = new(context: context);
+        MovieRepository movieRepository = new(context);
         MovieManager movieManager = new(
-            movieRepository: movieRepository,
-            jobDispatcher: jobDispatcher,
-            storageFactory: StorageFactory,
-            logger: LoggerFactory.CreateLogger<MovieManager>()
+            movieRepository,
+            jobDispatcher,
+            StorageFactory,
+            LoggerFactory.CreateLogger<MovieManager>()
         );
 
         PersonRepository personRepository = new(
-            context: context,
-            logger: LoggerFactory.CreateLogger<PersonRepository>()
+            context,
+            LoggerFactory.CreateLogger<PersonRepository>()
         );
         PersonManager personManager = new(
-            personRepository: personRepository,
-            jobDispatcher: jobDispatcher,
-            logger: LoggerFactory.CreateLogger<PersonManager>()
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
         );
 
-        await personManager.Store(movie: Storage);
+        await personManager.Store(Storage);
 
-        await movieManager.StoreImages(movie: Storage);
-        await movieManager.StoreSimilar(movie: Storage);
-        await movieManager.StoreRecommendations(movie: Storage);
-        await movieManager.StoreAlternativeTitles(movie: Storage);
-        await movieManager.StoreWatchProviders(movie: Storage);
-        await movieManager.StoreVideos(movie: Storage);
-        await movieManager.StoreCompanies(movie: Storage);
-        await movieManager.StoreKeywords(movie: Storage);
+        await movieManager.StoreImages(Storage);
+        await movieManager.StoreSimilar(Storage);
+        await movieManager.StoreRecommendations(Storage);
+        await movieManager.StoreAlternativeTitles(Storage);
+        await movieManager.StoreWatchProviders(Storage);
+        await movieManager.StoreVideos(Storage);
+        await movieManager.StoreCompanies(Storage);
+        await movieManager.StoreKeywords(Storage);
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                @event: new LibraryRefreshedEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
             );
     }
 }

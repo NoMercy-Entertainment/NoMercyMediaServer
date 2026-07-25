@@ -28,17 +28,17 @@ public class CertificateRenewalCronJobTests
         // Arrange
         Mock<ILogger<CertificateRenewalCronJob>> logger = new();
         CertificateRenewalCronJob job = new(
-            logger: logger.Object,
-            authTokenStore: new AuthTokenStore(),
-            certificateService: new CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: null!)
+            logger.Object,
+            new AuthTokenStore(),
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
 
         // Act
         string cronExpression = job.CronExpression;
 
         // Assert
-        Assert.NotNull(@object: cronExpression);
-        Assert.NotEmpty(collection: cronExpression);
+        Assert.NotNull(cronExpression);
+        Assert.NotEmpty(cronExpression);
         // The CronExpressionBuilder.Daily(2) should return a valid cron expression for 2 AM daily
     }
 
@@ -48,16 +48,16 @@ public class CertificateRenewalCronJobTests
         // Arrange
         Mock<ILogger<CertificateRenewalCronJob>> logger = new();
         CertificateRenewalCronJob job = new(
-            logger: logger.Object,
-            authTokenStore: new AuthTokenStore(),
-            certificateService: new CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: null!)
+            logger.Object,
+            new AuthTokenStore(),
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
 
         // Act
         string jobName = job.JobName;
 
         // Assert
-        Assert.Equal(expected: "Daily Certificate Renewal", actual: jobName);
+        Assert.Equal("Daily Certificate Renewal", jobName);
     }
 
     [Fact]
@@ -66,9 +66,9 @@ public class CertificateRenewalCronJobTests
         // Arrange
         Mock<ILogger<CertificateRenewalCronJob>> loggerMock = new();
         CertificateRenewalCronJob job = new(
-            logger: loggerMock.Object,
-            authTokenStore: new AuthTokenStore(),
-            certificateService: new CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: null!)
+            loggerMock.Object,
+            new AuthTokenStore(),
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
 
         // Act & Assert
@@ -78,7 +78,7 @@ public class CertificateRenewalCronJobTests
 
         try
         {
-            await job.ExecuteAsync(parameters: "test-parameters");
+            await job.ExecuteAsync("test-parameters");
         }
         catch (Exception)
         {
@@ -87,7 +87,7 @@ public class CertificateRenewalCronJobTests
 
         // Verify that logging was attempted (at least the start message)
         loggerMock.Verify(
-            expression: x =>
+            x =>
                 x.Log(
                     LogLevel.Information,
                     It.IsAny<EventId>(),
@@ -97,7 +97,7 @@ public class CertificateRenewalCronJobTests
                     It.IsAny<Exception>(),
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -109,13 +109,13 @@ public class CertificateRenewalCronJobTests
 
         // Act
         CertificateRenewalCronJob job = new(
-            logger: logger.Object,
-            authTokenStore: new AuthTokenStore(),
-            certificateService: new CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: null!)
+            logger.Object,
+            new AuthTokenStore(),
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
 
         // Assert
-        Assert.IsAssignableFrom<ICronJobExecutor>(@object: job);
+        Assert.IsAssignableFrom<ICronJobExecutor>(job);
     }
 
     [Fact]
@@ -124,15 +124,15 @@ public class CertificateRenewalCronJobTests
         // Arrange
         Mock<ILogger<CertificateRenewalCronJob>> logger = new();
         CertificateRenewalCronJob job = new(
-            logger: logger.Object,
-            authTokenStore: new AuthTokenStore(),
-            certificateService: new CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: null!)
+            logger.Object,
+            new AuthTokenStore(),
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
 
         // Act & Assert
-        Assert.NotNull(@object: job.CronExpression);
-        Assert.NotNull(@object: job.JobName);
-        Assert.NotEmpty(collection: job.CronExpression);
-        Assert.NotEmpty(collection: job.JobName);
+        Assert.NotNull(job.CronExpression);
+        Assert.NotNull(job.JobName);
+        Assert.NotEmpty(job.CronExpression);
+        Assert.NotEmpty(job.JobName);
     }
 }

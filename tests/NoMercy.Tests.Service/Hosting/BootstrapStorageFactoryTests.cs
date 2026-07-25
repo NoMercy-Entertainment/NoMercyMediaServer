@@ -9,11 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FluentAssertions;
 using NoMercy.Service.Hosting;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
-using Xunit;
 
 namespace NoMercy.Tests.Service.Hosting;
 
@@ -23,7 +21,7 @@ namespace NoMercy.Tests.Service.Hosting;
 /// back a usable <see cref="LocalStorageDriver"/>-backed pair — a null or
 /// mismatched pair here would NRE the very first seed call on every boot.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class BootstrapStorageFactoryTests
 {
     [Fact]
@@ -50,7 +48,7 @@ public class BootstrapStorageFactoryTests
         (IStorage storage1, IStorageDriver driver1) = BootstrapStorageFactory.Create();
         (IStorage storage2, IStorageDriver driver2) = BootstrapStorageFactory.Create();
 
-        storage1.Should().NotBeSameAs(unexpected: storage2);
-        driver1.Should().NotBeSameAs(unexpected: driver2);
+        storage1.Should().NotBeSameAs(storage2);
+        driver1.Should().NotBeSameAs(driver2);
     }
 }

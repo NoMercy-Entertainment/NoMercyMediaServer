@@ -17,11 +17,11 @@ using NoMercy.Tests.Providers.Infrastructure;
 
 namespace NoMercy.Tests.Providers.MusicBrainz.Client;
 
-[Collection(name: "HttpClientProvider")]
+[Collection("HttpClientProvider")]
 public sealed class MusicBrainzReleaseClientTests : ProviderHttpHarness
 {
     public MusicBrainzReleaseClientTests()
-        : base(httpClientNames: HttpClientNames.MusicBrainz) { }
+        : base(HttpClientNames.MusicBrainz) { }
 
     [Fact]
     public async Task WithAllAppends_ById_RequestsReleasePathWithFullIncList()
@@ -30,21 +30,21 @@ public sealed class MusicBrainzReleaseClientTests : ProviderHttpHarness
         // id's path even when the client itself was constructed without one.
         Guid releaseId = Guid.NewGuid();
         MusicBrainzReleaseAppends body = new() { Id = releaseId, Title = "In Rainbows" };
-        Handler.WhenGet(pathContains: $"release/{releaseId}", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
+        Handler.WhenGet($"release/{releaseId}", MockResponse.Json(HttpStatusCode.OK, body));
 
         using MusicBrainzReleaseClient client = new();
-        MusicBrainzReleaseAppends? result = await client.WithAllAppends(id: releaseId);
+        MusicBrainzReleaseAppends? result = await client.WithAllAppends(releaseId);
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: releaseId);
-        result.Title.Should().Be(expected: "In Rainbows");
+        result!.Id.Should().Be(releaseId);
+        result.Title.Should().Be("In Rainbows");
 
         CapturedRequest request = Handler
             .Requests.Should()
-            .ContainSingle(predicate: r => r.Path.Contains($"release/{releaseId}"))
+            .ContainSingle(r => r.Path.Contains($"release/{releaseId}"))
             .Which;
-        request.Query.Should().ContainKey(expected: "fmt").WhoseValue.Should().Be(expected: "json");
-        request.Query[key: "inc"].Should().Contain(expected: "artist-credits").And.Contain(expected: "recordings");
+        request.Query.Should().ContainKey("fmt").WhoseValue.Should().Be("json");
+        request.Query["inc"].Should().Contain("artist-credits").And.Contain("recordings");
     }
 
     [Fact]
@@ -57,29 +57,29 @@ public sealed class MusicBrainzReleaseClientTests : ProviderHttpHarness
         {
             Releases = [new() { Id = Guid.NewGuid(), Barcode = "test" }],
         };
-        Handler.WhenGet(pathContains: "release", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
+        Handler.WhenGet("release", MockResponse.Json(HttpStatusCode.OK, body));
 
         using MusicBrainzReleaseClient client = new();
-        MusicBrainzReleaseSearchResponse? result = await client.SearchReleases(query: query);
+        MusicBrainzReleaseSearchResponse? result = await client.SearchReleases(query);
 
         result.Should().NotBeNull();
-        result!.Releases.Should().HaveCount(expected: 1);
+        result!.Releases.Should().HaveCount(1);
 
         CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
-        request.Path.Should().Be(expected: "/ws/2/release");
-        request.Query.Should().ContainKey(expected: "query").WhoseValue.Should().Be(expected: query);
-        request.Query.Should().ContainKey(expected: "inc").WhoseValue.Should().Be(expected: "recordings");
-        request.Query.Should().ContainKey(expected: "fmt").WhoseValue.Should().Be(expected: "json");
+        request.Path.Should().Be("/ws/2/release");
+        request.Query.Should().ContainKey("query").WhoseValue.Should().Be(query);
+        request.Query.Should().ContainKey("inc").WhoseValue.Should().Be("recordings");
+        request.Query.Should().ContainKey("fmt").WhoseValue.Should().Be("json");
     }
 
     [Fact]
     public async Task WithAppends_UnknownMbid_ReturnsNull()
     {
         Guid unknownId = Guid.NewGuid();
-        Handler.WhenGet(pathContains: $"release/{unknownId}", responses: MockResponse.Status(status: HttpStatusCode.NotFound));
+        Handler.WhenGet($"release/{unknownId}", MockResponse.Status(HttpStatusCode.NotFound));
 
-        using MusicBrainzReleaseClient client = new(id: unknownId);
-        MusicBrainzReleaseAppends? result = await client.WithAppends(appendices: ["artists"]);
+        using MusicBrainzReleaseClient client = new(unknownId);
+        MusicBrainzReleaseAppends? result = await client.WithAppends(["artists"]);
 
         result.Should().BeNull();
     }

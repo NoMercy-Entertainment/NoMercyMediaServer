@@ -28,7 +28,7 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 /// <c>NoMercy.Tests.Encoder.Pipeline.EncoderTests</c>, which exercises the
 /// identical request shape through the real <c>Encoder</c>.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class InlineEncodeMediaItemWiringTests
 {
     private static string? _cachedSource;
@@ -42,26 +42,26 @@ public class InlineEncodeMediaItemWiringTests
 
         while (dir is not null)
         {
-            string srcCandidate = Path.Combine(path1: dir, path2: "src");
-            if (Directory.Exists(path: srcCandidate))
+            string srcCandidate = Path.Combine(dir, "src");
+            if (Directory.Exists(srcCandidate))
             {
                 string[] files = Directory.GetFiles(
-                    path: srcCandidate,
-                    searchPattern: "VideoEncodeJob.cs",
-                    searchOption: SearchOption.AllDirectories
+                    srcCandidate,
+                    "VideoEncodeJob.cs",
+                    SearchOption.AllDirectories
                 );
 
                 if (files.Length > 0)
                 {
-                    _cachedSource = File.ReadAllText(path: files[0]);
+                    _cachedSource = File.ReadAllText(files[0]);
                     return _cachedSource;
                 }
             }
 
-            dir = Directory.GetParent(path: dir)?.FullName;
+            dir = Directory.GetParent(dir)?.FullName;
         }
 
-        throw new FileNotFoundException(message: "VideoEncodeJob.cs not found under any src/ ancestor");
+        throw new FileNotFoundException("VideoEncodeJob.cs not found under any src/ ancestor");
     }
 
     private static string ExtractMethodWindow(string source, int methodStart, int maxChars = 2000)
@@ -72,7 +72,7 @@ public class InlineEncodeMediaItemWiringTests
 
         for (int charIndex = methodStart; charIndex < source.Length; charIndex++)
         {
-            char current = source[index: charIndex];
+            char current = source[charIndex];
 
             if (current == '{')
             {
@@ -90,8 +90,8 @@ public class InlineEncodeMediaItemWiringTests
             }
         }
 
-        int length = Math.Min(val1: methodEnd - methodStart + 1, val2: maxChars);
-        return source.Substring(startIndex: methodStart, length: length);
+        int length = Math.Min(methodEnd - methodStart + 1, maxChars);
+        return source.Substring(methodStart, length);
     }
 
     [Fact]
@@ -112,33 +112,33 @@ public class InlineEncodeMediaItemWiringTests
         string source = LoadVideoEncodeJobSource();
 
         int methodStart = source.IndexOf(
-            value: "private async Task RunSinglePresetEncodeAsync",
-            comparisonType: StringComparison.Ordinal
+            "private async Task RunSinglePresetEncodeAsync",
+            StringComparison.Ordinal
         );
-        methodStart.Should().BeGreaterThan(expected: 0, because: "RunSinglePresetEncodeAsync must exist");
+        methodStart.Should().BeGreaterThan(0, "RunSinglePresetEncodeAsync must exist");
 
-        string window = ExtractMethodWindow(source: source, methodStart: methodStart, maxChars: 8000);
+        string window = ExtractMethodWindow(source, methodStart, 8000);
 
         int requestStart = window.IndexOf(
-            value: "EncodingRequest request = new(",
-            comparisonType: StringComparison.Ordinal
+            "EncodingRequest request = new(",
+            StringComparison.Ordinal
         );
         requestStart
             .Should()
-            .BeGreaterThan(expected: 0, because: "RunSinglePresetEncodeAsync must build an EncodingRequest");
+            .BeGreaterThan(0, "RunSinglePresetEncodeAsync must build an EncodingRequest");
 
         // Isolate just the request-construction call so a MediaItem: mention
         // anywhere later in the (long) method can't produce a false pass.
-        int requestEnd = window.IndexOf(value: ");", startIndex: requestStart, comparisonType: StringComparison.Ordinal);
-        requestEnd.Should().BeGreaterThan(expected: requestStart);
+        int requestEnd = window.IndexOf(");", requestStart, StringComparison.Ordinal);
+        requestEnd.Should().BeGreaterThan(requestStart);
 
-        string requestConstruction = window.Substring(startIndex: requestStart, length: requestEnd - requestStart);
+        string requestConstruction = window.Substring(requestStart, requestEnd - requestStart);
 
         requestConstruction
             .Should()
             .Contain(
-                expected: "MediaItem:",
-                because: "the request that reaches RunInlineAsync (and DecomposeAsync) must carry "
+                "MediaItem:",
+                "the request that reaches RunInlineAsync (and DecomposeAsync) must carry "
                          + "MediaItem so the inline Whole-task path resolves a BundleLayout and "
                          + "writes manifest.json/reconstruction.json"
             );
@@ -146,8 +146,8 @@ public class InlineEncodeMediaItemWiringTests
         requestConstruction
             .Should()
             .NotContain(
-                unexpected: "Options:",
-                because: "this request must NOT set EncodingOptions.EnableMetadataInjection — "
+                "Options:",
+                "this request must NOT set EncodingOptions.EnableMetadataInjection — "
                          + "attaching MediaItem here must never change the emitted ffmpeg command"
             );
     }
@@ -163,28 +163,28 @@ public class InlineEncodeMediaItemWiringTests
         string source = LoadVideoEncodeJobSource();
 
         int methodStart = source.IndexOf(
-            value: "private async Task RunMergedEncodeAsync",
-            comparisonType: StringComparison.Ordinal
+            "private async Task RunMergedEncodeAsync",
+            StringComparison.Ordinal
         );
-        methodStart.Should().BeGreaterThan(expected: 0, because: "RunMergedEncodeAsync must exist");
+        methodStart.Should().BeGreaterThan(0, "RunMergedEncodeAsync must exist");
 
-        string window = ExtractMethodWindow(source: source, methodStart: methodStart, maxChars: 4000);
+        string window = ExtractMethodWindow(source, methodStart, 4000);
 
-        int requestStart = window.IndexOf(value: "new EncodingRequest(", comparisonType: StringComparison.Ordinal);
+        int requestStart = window.IndexOf("new EncodingRequest(", StringComparison.Ordinal);
         requestStart
             .Should()
-            .BeGreaterThan(expected: 0, because: "RunMergedEncodeAsync must build an EncodingRequest per preset");
+            .BeGreaterThan(0, "RunMergedEncodeAsync must build an EncodingRequest per preset");
 
-        int requestEnd = window.IndexOf(value: "))", startIndex: requestStart, comparisonType: StringComparison.Ordinal);
-        requestEnd.Should().BeGreaterThan(expected: requestStart);
+        int requestEnd = window.IndexOf("))", requestStart, StringComparison.Ordinal);
+        requestEnd.Should().BeGreaterThan(requestStart);
 
-        string requestConstruction = window.Substring(startIndex: requestStart, length: requestEnd - requestStart);
+        string requestConstruction = window.Substring(requestStart, requestEnd - requestStart);
 
         requestConstruction
             .Should()
             .Contain(
-                expected: "MediaItem:",
-                because: "every request in a merged run must carry MediaItem so DecomposeMergedAsync's "
+                "MediaItem:",
+                "every request in a merged run must carry MediaItem so DecomposeMergedAsync's "
                          + "plans resolve a BundleLayout the same way a single-preset run does"
             );
     }
@@ -198,25 +198,25 @@ public class InlineEncodeMediaItemWiringTests
         string source = LoadVideoEncodeJobSource();
 
         int methodStart = source.IndexOf(
-            value: "private async Task HandleFinalizeAsync",
-            comparisonType: StringComparison.Ordinal
+            "private async Task HandleFinalizeAsync",
+            StringComparison.Ordinal
         );
-        methodStart.Should().BeGreaterThan(expected: 0, because: "HandleFinalizeAsync must exist");
+        methodStart.Should().BeGreaterThan(0, "HandleFinalizeAsync must exist");
 
-        string window = ExtractMethodWindow(source: source, methodStart: methodStart, maxChars: 8000);
+        string window = ExtractMethodWindow(source, methodStart, 8000);
 
         window
             .Should()
             .Contain(
-                expected: "MediaItem: fileMetadata.MediaItem",
-                because: "the coordinator finalize request must keep carrying MediaItem"
+                "MediaItem: fileMetadata.MediaItem",
+                "the coordinator finalize request must keep carrying MediaItem"
             );
 
         window
             .Should()
             .Contain(
-                expected: "FinalizeOnly: true",
-                because: "the coordinator finalize request must keep skipping Build+Execute"
+                "FinalizeOnly: true",
+                "the coordinator finalize request must keep skipping Build+Execute"
             );
     }
 }

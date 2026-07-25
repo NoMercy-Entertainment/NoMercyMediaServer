@@ -17,8 +17,8 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Unit tests for TmdbEpisodeClient
 /// Tests episode details, credits, images, and related metadata
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
-[Collection(name: "TmdbApi")]
+[Trait("Category", "Unit")]
+[Collection("TmdbApi")]
 public class TmdbEpisodeClientTests : TmdbTestBase
 {
     #region Constructor Tests
@@ -32,11 +32,11 @@ public class TmdbEpisodeClientTests : TmdbTestBase
         const int episodeNumber = 1;
 
         // Act
-        using TmdbEpisodeClient client = new(id: tvId, seasonNumber: seasonNumber, episodeNumber: episodeNumber);
+        using TmdbEpisodeClient client = new(tvId, seasonNumber, episodeNumber);
 
         // Assert
         client.Should().NotBeNull();
-        client.Id.Should().Be(expected: tvId);
+        client.Id.Should().Be(tvId);
     }
 
     #endregion

@@ -14,7 +14,7 @@ using NoMercy.Providers.Helpers;
 
 namespace NoMercy.Tests.Providers.Helpers;
 
-[Collection(name: "HttpClientProvider")]
+[Collection("HttpClientProvider")]
 public class HttpClientProviderTests : IDisposable
 {
     private readonly ServiceProvider _serviceProvider;
@@ -23,31 +23,31 @@ public class HttpClientProviderTests : IDisposable
     {
         ServiceCollection services = new();
         services.AddHttpClient(
-            name: HttpClientNames.Tmdb,
-            configureClient: client =>
+            HttpClientNames.Tmdb,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://api.themoviedb.org/3/");
+                client.BaseAddress = new("https://api.themoviedb.org/3/");
             }
         );
         services.AddHttpClient(
-            name: HttpClientNames.MusicBrainz,
-            configureClient: client =>
+            HttpClientNames.MusicBrainz,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://musicbrainz.org/ws/2/");
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: "Anonymous");
+                client.BaseAddress = new("https://musicbrainz.org/ws/2/");
+                client.DefaultRequestHeaders.Add("User-Agent", "Anonymous");
             }
         );
         services.AddHttpClient(
-            name: HttpClientNames.FanArt,
-            configureClient: client =>
+            HttpClientNames.FanArt,
+            client =>
             {
-                client.BaseAddress = new(uriString: "http://webservice.fanart.tv/v3/");
+                client.BaseAddress = new("http://webservice.fanart.tv/v3/");
             }
         );
-        services.AddHttpClient(name: HttpClientNames.General);
+        services.AddHttpClient(HttpClientNames.General);
 
         _serviceProvider = services.BuildServiceProvider();
-        HttpClientProvider.Initialize(factory: _serviceProvider.GetRequiredService<IHttpClientFactory>());
+        HttpClientProvider.Initialize(_serviceProvider.GetRequiredService<IHttpClientFactory>());
     }
 
     public void Dispose()
@@ -59,20 +59,20 @@ public class HttpClientProviderTests : IDisposable
     [Fact]
     public void CreateClient_WithNamedClient_ReturnsConfiguredHttpClient()
     {
-        HttpClient client = HttpClientProvider.CreateClient(name: HttpClientNames.Tmdb);
+        HttpClient client = HttpClientProvider.CreateClient(HttpClientNames.Tmdb);
 
         client.Should().NotBeNull();
-        client.BaseAddress.Should().Be(expected: new Uri(uriString: "https://api.themoviedb.org/3/"));
+        client.BaseAddress.Should().Be(new Uri("https://api.themoviedb.org/3/"));
     }
 
     [Fact]
     public void CreateClient_DifferentNames_ReturnDifferentConfigurations()
     {
-        HttpClient tmdbClient = HttpClientProvider.CreateClient(name: HttpClientNames.Tmdb);
-        HttpClient musicBrainzClient = HttpClientProvider.CreateClient(name: HttpClientNames.MusicBrainz);
+        HttpClient tmdbClient = HttpClientProvider.CreateClient(HttpClientNames.Tmdb);
+        HttpClient musicBrainzClient = HttpClientProvider.CreateClient(HttpClientNames.MusicBrainz);
 
-        tmdbClient.BaseAddress.Should().Be(expected: new Uri(uriString: "https://api.themoviedb.org/3/"));
-        musicBrainzClient.BaseAddress.Should().Be(expected: new Uri(uriString: "https://musicbrainz.org/ws/2/"));
+        tmdbClient.BaseAddress.Should().Be(new Uri("https://api.themoviedb.org/3/"));
+        musicBrainzClient.BaseAddress.Should().Be(new Uri("https://musicbrainz.org/ws/2/"));
     }
 
     [Fact]
@@ -83,18 +83,18 @@ public class HttpClientProviderTests : IDisposable
         {
             for (int i = 0; i < 100; i++)
             {
-                clients.Add(item: HttpClientProvider.CreateClient(name: HttpClientNames.Tmdb));
+                clients.Add(HttpClientProvider.CreateClient(HttpClientNames.Tmdb));
             }
         };
 
         action.Should().NotThrow();
-        clients.Should().HaveCount(expected: 100);
+        clients.Should().HaveCount(100);
     }
 
     [Fact]
     public void CreateClient_WithGeneralName_ReturnsClient()
     {
-        HttpClient client = HttpClientProvider.CreateClient(name: HttpClientNames.General);
+        HttpClient client = HttpClientProvider.CreateClient(HttpClientNames.General);
 
         client.Should().NotBeNull();
     }
@@ -102,7 +102,7 @@ public class HttpClientProviderTests : IDisposable
     [Fact]
     public void CreateClient_WithUnknownName_ReturnsFallbackClient()
     {
-        HttpClient client = HttpClientProvider.CreateClient(name: "UnknownProvider");
+        HttpClient client = HttpClientProvider.CreateClient("UnknownProvider");
 
         client.Should().NotBeNull();
     }
@@ -171,7 +171,7 @@ public class HttpClientProviderTests : IDisposable
         {
             for (int i = 0; i < 200; i++)
             {
-                HttpClient client = HttpClientProvider.CreateClient(name: HttpClientNames.Tmdb);
+                HttpClient client = HttpClientProvider.CreateClient(HttpClientNames.Tmdb);
                 client.Should().NotBeNull();
             }
         };
@@ -187,16 +187,16 @@ public class HttpClientProviderTests : IDisposable
         for (int i = 0; i < 50; i++)
         {
             tasks.Add(
-                item: Task.Run(action: () =>
+                Task.Run(() =>
                 {
-                    HttpClient client = HttpClientProvider.CreateClient(name: HttpClientNames.FanArt);
+                    HttpClient client = HttpClientProvider.CreateClient(HttpClientNames.FanArt);
                     client.Should().NotBeNull();
-                    client.BaseAddress.Should().Be(expected: new Uri(uriString: "http://webservice.fanart.tv/v3/"));
+                    client.BaseAddress.Should().Be(new Uri("http://webservice.fanart.tv/v3/"));
                 })
             );
         }
 
-        Action action = () => Task.WaitAll(tasks: tasks.ToArray());
+        Action action = () => Task.WaitAll(tasks.ToArray());
         action.Should().NotThrow();
     }
 }

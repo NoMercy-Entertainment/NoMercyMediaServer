@@ -35,7 +35,7 @@ public class PageRequestDto
     public int Take
     {
         get => _take;
-        set => _take = value < 1 ? DefaultTake : Math.Min(val1: value, val2: MaxTake);
+        set => _take = value < 1 ? DefaultTake : Math.Min(value, MaxTake);
     }
 
     [FromQuery(Name = "version")]

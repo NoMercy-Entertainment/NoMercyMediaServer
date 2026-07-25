@@ -30,7 +30,7 @@ namespace NoMercy.Tests.Encoder.Profiles.RuleCompleteness;
 /// When someone adds a new rule to the catalogue without updating one of
 /// those two sets, this test fails — that is the point.
 /// </summary>
-[Collection(name: "encoder-rule-completeness")]
+[Collection("encoder-rule-completeness")]
 public class ProfileRuleCompletenessTests
 {
     /// <summary>
@@ -87,108 +87,108 @@ public class ProfileRuleCompletenessTests
         // ---- Pending guard fix -------------------------------------------
         // pending guard fix — see guard-completeness-strategy:
         // BitDepthVp9ProfileMismatch has no guard in ProfileRuleValidator yet.
-        [key: EncoderRuleId.BitDepthVp9ProfileMismatch] =
+        [EncoderRuleId.BitDepthVp9ProfileMismatch] =
             "pending guard fix — see guard-completeness-strategy: no guard in ProfileRuleValidator yet",
 
         // pending guard fix — see guard-completeness-strategy:
         // ParentIdCycle throws a raw exception instead of emitting the rule ID.
-        [key: EncoderRuleId.ParentIdCycle] =
+        [EncoderRuleId.ParentIdCycle] =
             "pending guard fix — see guard-completeness-strategy: throws raw exception, not the rule ID",
 
         // pending guard fix — see guard-completeness-strategy:
         // BitDepthNoHardwareSupport is resolved silently in BitDepthPolicyResolver,
         // not emitted by ProfileRuleValidator during static profile validation.
-        [key: EncoderRuleId.BitDepthNoHardwareSupport] =
+        [EncoderRuleId.BitDepthNoHardwareSupport] =
             "pending guard fix — see guard-completeness-strategy: resolved silently in BitDepthPolicyResolver, not emitted by ProfileRuleValidator",
 
         // ---- Runtime-only (emitted during encode execution) ---------------
         // Emitted by BitDepthPolicyResolver at encode time, not at profile save.
-        [key: EncoderRuleId.BitDepthAutoDowngrade] =
+        [EncoderRuleId.BitDepthAutoDowngrade] =
             "runtime-only: emitted by BitDepthPolicyResolver during encode, not by ProfileRuleValidator",
-        [key: EncoderRuleId.BitDepthStrictViolation] =
+        [EncoderRuleId.BitDepthStrictViolation] =
             "runtime-only: emitted by BitDepthPolicyResolver during encode, not by ProfileRuleValidator",
 
         // Hardware and GPU availability are resolved at encode time against
         // the actual host system; they cannot be validated from profile data alone.
-        [key: EncoderRuleId.HardwareForcedButUnavailable] =
+        [EncoderRuleId.HardwareForcedButUnavailable] =
             "runtime-only: hardware availability is known only at encode time",
-        [key: EncoderRuleId.HardwareGpuTelemetryUnsupported] =
+        [EncoderRuleId.HardwareGpuTelemetryUnsupported] =
             "runtime-only: GPU telemetry support is known only at encode time",
-        [key: EncoderRuleId.GpuCapacityExhausted] =
+        [EncoderRuleId.GpuCapacityExhausted] =
             "runtime-only: GPU slot exhaustion happens during encode dispatch, not at profile validation",
 
         // Encoder binary and capability checks happen at runtime.
-        [key: EncoderRuleId.EncoderInitFailed] =
+        [EncoderRuleId.EncoderInitFailed] =
             "runtime-only: encoder init failure detected during encode, not at profile validation",
-        [key: EncoderRuleId.CapabilityFpcalcMissing] =
+        [EncoderRuleId.CapabilityFpcalcMissing] =
             "runtime-only: fpcalc binary availability checked at runtime",
-        [key: EncoderRuleId.CapabilityWhisperMissing] =
+        [EncoderRuleId.CapabilityWhisperMissing] =
             "runtime-only: whisper binary availability checked at runtime",
-        [key: EncoderRuleId.CapabilityTesseractModelMissing] =
+        [EncoderRuleId.CapabilityTesseractModelMissing] =
             "runtime-only: tesseract model availability checked at runtime",
 
         // Source and output path errors are I/O concerns resolved at encode time.
-        [key: EncoderRuleId.SourceNotAccessible] =
+        [EncoderRuleId.SourceNotAccessible] =
             "runtime-only: source file access checked at encode time",
-        [key: EncoderRuleId.SourceReadError] =
+        [EncoderRuleId.SourceReadError] =
             "runtime-only: source read errors occur during encode, not profile validation",
-        [key: EncoderRuleId.OutputPathNotAllowed] =
+        [EncoderRuleId.OutputPathNotAllowed] =
             "runtime-only: output path ACL is checked at encode time",
-        [key: EncoderRuleId.OutputWriteError] = "runtime-only: output write errors occur during encode",
+        [EncoderRuleId.OutputWriteError] = "runtime-only: output write errors occur during encode",
 
         // Job and checkpoint errors are queue-lifecycle concerns.
-        [key: EncoderRuleId.JobInterruptedNoCheckpoint] =
+        [EncoderRuleId.JobInterruptedNoCheckpoint] =
             "runtime-only: job interruption detected by the queue engine, not by the profile validator",
 
         // Disc ripping errors are peripheral / OS-level at rip time.
-        [key: EncoderRuleId.DiscDriveBusy] = "runtime-only: disc drive state checked at rip time",
-        [key: EncoderRuleId.DiscAacsCertMissing] =
+        [EncoderRuleId.DiscDriveBusy] = "runtime-only: disc drive state checked at rip time",
+        [EncoderRuleId.DiscAacsCertMissing] =
             "runtime-only: AACS certificate presence checked at rip time",
-        [key: EncoderRuleId.DiscBdplusConverterMissing] =
+        [EncoderRuleId.DiscBdplusConverterMissing] =
             "runtime-only: BD+ converter binary checked at rip time",
-        [key: EncoderRuleId.DiscReadError] = "runtime-only: disc read errors occur during rip",
+        [EncoderRuleId.DiscReadError] = "runtime-only: disc read errors occur during rip",
 
         // License errors are network / server-state concerns at encode time.
-        [key: EncoderRuleId.LicenseRevoked] =
+        [EncoderRuleId.LicenseRevoked] =
             "runtime-only: license validity checked against the license server at encode time",
-        [key: EncoderRuleId.LicenseUnreachable] =
+        [EncoderRuleId.LicenseUnreachable] =
             "runtime-only: license server reachability is a runtime network concern",
 
         // Distribution errors arise during cluster encode dispatch.
-        [key: EncoderRuleId.DistributionHmacInvalid] =
+        [EncoderRuleId.DistributionHmacInvalid] =
             "runtime-only: HMAC signature validated during distribution task dispatch",
-        [key: EncoderRuleId.DistributionTimestampReplay] =
+        [EncoderRuleId.DistributionTimestampReplay] =
             "runtime-only: replay detection occurs during distribution task dispatch",
-        [key: EncoderRuleId.DistributionWorkerNotRegistered] =
+        [EncoderRuleId.DistributionWorkerNotRegistered] =
             "runtime-only: worker registry state is known only at dispatch time",
 
         // ---- Controller / API layer (not profile validator) ---------------
         // Emitted by EncodingPresetsController when a PUT targets a builtin preset.
-        [key: EncoderRuleId.ProfileBuiltinReadonly] =
+        [EncoderRuleId.ProfileBuiltinReadonly] =
             "controller-only: emitted by EncodingPresetsController, not by ProfileRuleValidator",
 
         // Import trust-chain rules are validated by the profile import pipeline,
         // not by the static profile structure validator.
-        [key: EncoderRuleId.ImportHttpNotHttps] =
+        [EncoderRuleId.ImportHttpNotHttps] =
             "import-pipeline-only: trust-chain URL scheme check in the import pipeline",
-        [key: EncoderRuleId.ImportFetchFailed] =
+        [EncoderRuleId.ImportFetchFailed] =
             "import-pipeline-only: URL fetch failure surfaced by EncoderProfileService.ImportAsync",
-        [key: EncoderRuleId.ImportSourceMissing] =
+        [EncoderRuleId.ImportSourceMissing] =
             "import-pipeline-only: neither inline body nor URL supplied — checked by EncoderProfileService.ImportAsync",
-        [key: EncoderRuleId.ImportJsonMalformed] =
+        [EncoderRuleId.ImportJsonMalformed] =
             "import-pipeline-only: profile body JSON parse failure surfaced by EncoderProfileService.ImportAsync",
-        [key: EncoderRuleId.ImportSignatureInvalid] =
+        [EncoderRuleId.ImportSignatureInvalid] =
             "import-pipeline-only: cryptographic signature verified by ProfileSignatureVerifier",
-        [key: EncoderRuleId.ImportPublisherUntrusted] =
+        [EncoderRuleId.ImportPublisherUntrusted] =
             "import-pipeline-only: publisher trust verified against TrustedPublisherRegistry",
-        [key: EncoderRuleId.ImportUnsignedRequiresFlag] =
+        [EncoderRuleId.ImportUnsignedRequiresFlag] =
             "import-pipeline-only: unsigned profile gate enforced by the import pipeline",
 
         // Trusted-publisher management rules are emitted by the publisher-registry
         // endpoints, not the profile structure validator.
-        [key: EncoderRuleId.TrustedPublisherPublicKeyInvalid] =
+        [EncoderRuleId.TrustedPublisherPublicKeyInvalid] =
             "publisher-registry-only: public key format validated by TrustedPublisherRegistry",
-        [key: EncoderRuleId.TrustedPublisherAlreadyTrusted] =
+        [EncoderRuleId.TrustedPublisherAlreadyTrusted] =
             "publisher-registry-only: duplicate-trust check performed by TrustedPublisherRegistry",
     };
 
@@ -196,29 +196,29 @@ public class ProfileRuleCompletenessTests
     public void Every_EncoderRuleId_constant_is_either_covered_or_documented_as_excluded()
     {
         IEnumerable<string> allRuleIds = typeof(EncoderRuleId)
-            .GetFields(bindingAttr: BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Where(predicate: f => f is { IsLiteral: true, IsInitOnly: false })
-            .Select(selector: f => (string)f.GetValue(obj: null)!);
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(f => f is { IsLiteral: true, IsInitOnly: false })
+            .Select(f => (string)f.GetValue(null)!);
 
         List<string> uncategorised = [];
 
         foreach (string id in allRuleIds)
         {
-            bool isCovered = ProfileValidatorCoveredRuleIds.Contains(item: id);
-            bool isExcluded = ExcludedRuleIds.ContainsKey(key: id);
+            bool isCovered = ProfileValidatorCoveredRuleIds.Contains(id);
+            bool isExcluded = ExcludedRuleIds.ContainsKey(id);
 
             if (!isCovered && !isExcluded)
-                uncategorised.Add(item: id);
+                uncategorised.Add(id);
         }
 
         uncategorised
             .Should()
             .BeEmpty(
-                because: "every EncoderRuleId constant must be either (a) covered by a "
-                         + "fires-on-bad test in ProfileRuleValidatorTests or (b) listed in "
-                         + "ProfileRuleCompletenessTests.ExcludedRuleIds with a documented reason. "
-                         + "Uncategorised rule IDs: "
-                         + string.Join(separator: ", ", values: uncategorised)
+                "every EncoderRuleId constant must be either (a) covered by a "
+                    + "fires-on-bad test in ProfileRuleValidatorTests or (b) listed in "
+                    + "ProfileRuleCompletenessTests.ExcludedRuleIds with a documented reason. "
+                    + "Uncategorised rule IDs: "
+                    + string.Join(", ", uncategorised)
             );
     }
 
@@ -226,21 +226,21 @@ public class ProfileRuleCompletenessTests
     public void ProfileValidatorCoveredRuleIds_contains_no_phantom_entries()
     {
         IReadOnlySet<string> allRuleIds = typeof(EncoderRuleId)
-            .GetFields(bindingAttr: BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Where(predicate: f => f is { IsLiteral: true, IsInitOnly: false })
-            .Select(selector: f => (string)f.GetValue(obj: null)!)
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(f => f is { IsLiteral: true, IsInitOnly: false })
+            .Select(f => (string)f.GetValue(null)!)
             .ToHashSet();
 
         List<string> phantoms = ProfileValidatorCoveredRuleIds
-            .Where(predicate: id => !allRuleIds.Contains(item: id))
+            .Where(id => !allRuleIds.Contains(id))
             .ToList();
 
         phantoms
             .Should()
             .BeEmpty(
-                because: "ProfileValidatorCoveredRuleIds must not reference IDs that no longer "
-                         + "exist in EncoderRuleId. Stale entries: "
-                         + string.Join(separator: ", ", values: phantoms)
+                "ProfileValidatorCoveredRuleIds must not reference IDs that no longer "
+                    + "exist in EncoderRuleId. Stale entries: "
+                    + string.Join(", ", phantoms)
             );
     }
 
@@ -248,19 +248,19 @@ public class ProfileRuleCompletenessTests
     public void ExcludedRuleIds_contains_no_phantom_entries()
     {
         IReadOnlySet<string> allRuleIds = typeof(EncoderRuleId)
-            .GetFields(bindingAttr: BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Where(predicate: f => f is { IsLiteral: true, IsInitOnly: false })
-            .Select(selector: f => (string)f.GetValue(obj: null)!)
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(f => f is { IsLiteral: true, IsInitOnly: false })
+            .Select(f => (string)f.GetValue(null)!)
             .ToHashSet();
 
-        List<string> phantoms = ExcludedRuleIds.Keys.Where(predicate: id => !allRuleIds.Contains(item: id)).ToList();
+        List<string> phantoms = ExcludedRuleIds.Keys.Where(id => !allRuleIds.Contains(id)).ToList();
 
         phantoms
             .Should()
             .BeEmpty(
-                because: "ExcludedRuleIds must not reference IDs that no longer exist in "
-                         + "EncoderRuleId. Stale entries: "
-                         + string.Join(separator: ", ", values: phantoms)
+                "ExcludedRuleIds must not reference IDs that no longer exist in "
+                    + "EncoderRuleId. Stale entries: "
+                    + string.Join(", ", phantoms)
             );
     }
 
@@ -268,15 +268,15 @@ public class ProfileRuleCompletenessTests
     public void No_rule_id_appears_in_both_covered_and_excluded_sets()
     {
         List<string> overlap = ProfileValidatorCoveredRuleIds
-            .Intersect(second: ExcludedRuleIds.Keys)
+            .Intersect(ExcludedRuleIds.Keys)
             .ToList();
 
         overlap
             .Should()
             .BeEmpty(
-                because: "a rule ID cannot be both covered by profile-validator tests and "
-                         + "excluded from coverage — pick one. Overlapping IDs: "
-                         + string.Join(separator: ", ", values: overlap)
+                "a rule ID cannot be both covered by profile-validator tests and "
+                    + "excluded from coverage — pick one. Overlapping IDs: "
+                    + string.Join(", ", overlap)
             );
     }
 
@@ -370,139 +370,139 @@ public class ProfileRuleCompletenessTests
 
         Dictionary<string, EncodingProfile> triggerProfiles = new()
         {
-            [key: EncoderRuleId.ProfileNameMissing] = MakeProfile(video: VideoTranscode()) with { Name = "" },
-            [key: EncoderRuleId.ProfileNoOutputs] = MakeProfile(),
-            [key: EncoderRuleId.VideoWidthInvalid] = MakeProfile(video: VideoTranscode(width: 0)),
-            [key: EncoderRuleId.VideoHeightInvalid] = MakeProfile(video: VideoTranscode(height: 0)),
-            [key: EncoderRuleId.VideoRateControlMissing] = MakeProfile(
-                video: VideoTranscode(rc: RateControlMode.Crf, crf: 0)
+            [EncoderRuleId.ProfileNameMissing] = MakeProfile(VideoTranscode()) with { Name = "" },
+            [EncoderRuleId.ProfileNoOutputs] = MakeProfile(),
+            [EncoderRuleId.VideoWidthInvalid] = MakeProfile(VideoTranscode(width: 0)),
+            [EncoderRuleId.VideoHeightInvalid] = MakeProfile(VideoTranscode(height: 0)),
+            [EncoderRuleId.VideoRateControlMissing] = MakeProfile(
+                VideoTranscode(rc: RateControlMode.Crf, crf: 0)
             ),
-            [key: EncoderRuleId.VideoRateControlConflict] = MakeProfile(
-                video: VideoTranscode(rc: RateControlMode.Vbr, bitrate: 0, crf: 23)
+            [EncoderRuleId.VideoRateControlConflict] = MakeProfile(
+                VideoTranscode(rc: RateControlMode.Vbr, bitrate: 0, crf: 23)
             ),
-            [key: EncoderRuleId.CodecContainerMismatch] = MakeProfile(
-                video: VideoTranscode(codec: VideoCodecType.Vp9),
+            [EncoderRuleId.CodecContainerMismatch] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.Vp9),
                 container: Container.Mp4
             ),
-            [key: EncoderRuleId.AudioCodecContainerMismatch] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.AudioCodecContainerMismatch] = MakeProfile(
+                VideoTranscode(),
                 container: Container.Mp4,
-                audio: [AudioTrack(codec: AudioCodecType.Flac, bitrate: 0)]
+                audio: [AudioTrack(AudioCodecType.Flac, 0)]
             ),
-            [key: EncoderRuleId.AudioBitrateMissing] = MakeProfile(
-                video: VideoTranscode(),
-                audio: [AudioTrack(codec: AudioCodecType.Aac, bitrate: 0)]
+            [EncoderRuleId.AudioBitrateMissing] = MakeProfile(
+                VideoTranscode(),
+                audio: [AudioTrack(AudioCodecType.Aac, 0)]
             ),
-            [key: EncoderRuleId.HlsFmp4CodecMismatch] = MakeProfile(
-                video: VideoTranscode(codec: VideoCodecType.H265),
+            [EncoderRuleId.HlsFmp4CodecMismatch] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H265),
                 container: Container.HlsTs
             ),
-            [key: EncoderRuleId.LadderDuplicateVariant] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.LadderDuplicateVariant] = MakeProfile(
+                VideoTranscode(),
                 ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 2500, MaxBitrateKbps: 3000, BufferSizeKbps: 5000, Framerate: 24),
-                        new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 2500, MaxBitrateKbps: 3000, BufferSizeKbps: 5000, Framerate: 24),
+                        new(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24),
+                        new(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24),
                     ],
                 }
             ),
-            [key: EncoderRuleId.LadderManualEmpty] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.LadderManualEmpty] = MakeProfile(
+                VideoTranscode(),
                 ladder: new() { Mode = LadderMode.Manual, Rungs = [] }
             ),
-            [key: EncoderRuleId.LadderManualUnsorted] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.LadderManualUnsorted] = MakeProfile(
+                VideoTranscode(),
                 ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 8000, MaxBitrateKbps: 9600, BufferSizeKbps: 16000, Framerate: 24),
-                        new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 4000, MaxBitrateKbps: 4800, BufferSizeKbps: 8000, Framerate: 24),
+                        new(1920, 1080, VideoCodecType.H264, 8000, 9600, 16000, 24),
+                        new(1280, 720, VideoCodecType.H264, 4000, 4800, 8000, 24),
                     ],
                 }
             ),
-            [key: EncoderRuleId.LevelResolutionMismatch] = MakeProfile(
-                video: VideoTranscode(codec: VideoCodecType.H264, width: 3840, height: 2160, level: "4.0")
+            [EncoderRuleId.LevelResolutionMismatch] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264, width: 3840, height: 2160, level: "4.0")
             ),
-            [key: EncoderRuleId.LevelInvalid] = MakeProfile(
-                video: VideoTranscode(codec: VideoCodecType.H264, level: "6.3")
+            [EncoderRuleId.LevelInvalid] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264, level: "6.3")
             ),
-            [key: EncoderRuleId.BitrateTooLowForResolution] = MakeProfile(
-                video: VideoTranscode(rc: RateControlMode.Vbr, bitrate: 500, width: 3840, height: 2160)
+            [EncoderRuleId.BitrateTooLowForResolution] = MakeProfile(
+                VideoTranscode(rc: RateControlMode.Vbr, bitrate: 500, width: 3840, height: 2160)
             ),
-            [key: EncoderRuleId.CrfOutOfTypicalRange] = MakeProfile(
-                video: VideoTranscode(rc: RateControlMode.Crf, crf: 5)
+            [EncoderRuleId.CrfOutOfTypicalRange] = MakeProfile(
+                VideoTranscode(rc: RateControlMode.Crf, crf: 5)
             ),
-            [key: EncoderRuleId.HlsKeyframeSegmentMisalignment] = MakeProfile(
-                video: VideoTranscode(keyframeSeconds: 4),
+            [EncoderRuleId.HlsKeyframeSegmentMisalignment] = MakeProfile(
+                VideoTranscode(keyframeSeconds: 4),
                 container: Container.HlsFmp4,
                 segmentDuration: 6
             ),
-            [key: EncoderRuleId.LadderInverted] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.LadderInverted] = MakeProfile(
+                VideoTranscode(),
                 ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new(Width: 854, Height: 480, Codec: VideoCodecType.H264, BitrateKbps: 4000, MaxBitrateKbps: 4800, BufferSizeKbps: 8000, Framerate: 24),
-                        new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 2000, MaxBitrateKbps: 2400, BufferSizeKbps: 4000, Framerate: 24),
+                        new(854, 480, VideoCodecType.H264, 4000, 4800, 8000, 24),
+                        new(1920, 1080, VideoCodecType.H264, 2000, 2400, 4000, 24),
                     ],
                 }
             ),
-            [key: EncoderRuleId.AudioAc3OffLadderBitrate] = MakeProfile(
-                video: VideoTranscode(),
-                audio: [AudioTrack(codec: AudioCodecType.Ac3, bitrate: 333)]
+            [EncoderRuleId.AudioAc3OffLadderBitrate] = MakeProfile(
+                VideoTranscode(),
+                audio: [AudioTrack(AudioCodecType.Ac3, 333)]
             ),
-            [key: EncoderRuleId.AudioEac3OffLadderBitrate] = MakeProfile(
-                video: VideoTranscode(),
-                audio: [AudioTrack(codec: AudioCodecType.Eac3, bitrate: 137)]
+            [EncoderRuleId.AudioEac3OffLadderBitrate] = MakeProfile(
+                VideoTranscode(),
+                audio: [AudioTrack(AudioCodecType.Eac3, 137)]
             ),
-            [key: EncoderRuleId.SubtitlesContainerIncompatible] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.SubtitlesContainerIncompatible] = MakeProfile(
+                VideoTranscode(),
                 container: Container.Mp4,
-                subtitles: [SubtitleTrack(codec: SubtitleCodecType.Ass, policy: SubtitlePolicy.Extract)]
+                subtitles: [SubtitleTrack(SubtitleCodecType.Ass, SubtitlePolicy.Extract)]
             ),
-            [key: EncoderRuleId.SubtitlesBurnInPermanent] = MakeProfile(
-                video: VideoTranscode(),
-                subtitles: [SubtitleTrack(codec: SubtitleCodecType.Ass, policy: SubtitlePolicy.BurnIn)]
+            [EncoderRuleId.SubtitlesBurnInPermanent] = MakeProfile(
+                VideoTranscode(),
+                subtitles: [SubtitleTrack(SubtitleCodecType.Ass, SubtitlePolicy.BurnIn)]
             ),
-            [key: EncoderRuleId.SubtitlesAssNeedsCapableClient] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.SubtitlesAssNeedsCapableClient] = MakeProfile(
+                VideoTranscode(),
                 container: Container.HlsFmp4,
-                subtitles: [SubtitleTrack(codec: SubtitleCodecType.Ass, policy: SubtitlePolicy.Extract)]
+                subtitles: [SubtitleTrack(SubtitleCodecType.Ass, SubtitlePolicy.Extract)]
             ),
-            [key: EncoderRuleId.HdrInverseTonemapUnsupported] = MakeProfile(
-                video: VideoTranscode(bitDepth: 8),
+            [EncoderRuleId.HdrInverseTonemapUnsupported] = MakeProfile(
+                VideoTranscode(bitDepth: 8),
                 hdrPolicies: HdrPolicies.AlwaysPreserve
             ),
             // H.264 + explicit 8-bit-only "High" profile + 10-bit depth: the
             // pipeline promotes High -> High10, the validator warns about it.
-            [key: EncoderRuleId.BitDepthH26xProfilePromoted] = MakeProfile(
-                video: VideoTranscode(codec: VideoCodecType.H264, bitDepth: 10) with
+            [EncoderRuleId.BitDepthH26xProfilePromoted] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264, bitDepth: 10) with
                 {
                     CodecProfile = CodecProfile.High,
                 },
                 container: Container.Mp4
             ),
-            [key: EncoderRuleId.CustomArgsReservedFlag] = MakeProfile(
-                video: VideoTranscode(),
-                customArgs: new() { [key: "-c:v"] = "libx264" }
+            [EncoderRuleId.CustomArgsReservedFlag] = MakeProfile(
+                VideoTranscode(),
+                customArgs: new() { ["-c:v"] = "libx264" }
             ),
-            [key: EncoderRuleId.DrmHttpNotHttps] = MakeProfile(video: VideoTranscode()) with
+            [EncoderRuleId.DrmHttpNotHttps] = MakeProfile(VideoTranscode()) with
             {
                 Drm = new(
-                    Scheme: "aes-128",
-                    Parameters: new() { [key: "key_uri"] = "http://server/key.bin" }
+                    "aes-128",
+                    new() { ["key_uri"] = "http://server/key.bin" }
                 ),
             },
-            [key: EncoderRuleId.DrmKeyMissing] = MakeProfile(video: VideoTranscode()) with
+            [EncoderRuleId.DrmKeyMissing] = MakeProfile(VideoTranscode()) with
             {
-                Drm = new(Scheme: "aes-128", Parameters: new()),
+                Drm = new("aes-128", new()),
             },
         };
 
@@ -510,21 +510,21 @@ public class ProfileRuleCompletenessTests
 
         foreach ((string ruleId, EncodingProfile profile) in triggerProfiles)
         {
-            ValidationEnvelope envelope = ProfileRuleValidator.Validate(profile: profile);
+            ValidationEnvelope envelope = ProfileRuleValidator.Validate(profile);
             bool fired =
-                envelope.Errors.Any(predicate: r => r.Id == ruleId)
-                || envelope.Warnings.Any(predicate: r => r.Id == ruleId);
+                envelope.Errors.Any(r => r.Id == ruleId)
+                || envelope.Warnings.Any(r => r.Id == ruleId);
 
             if (!fired)
-                notFiring.Add(item: ruleId);
+                notFiring.Add(ruleId);
         }
 
         notFiring
             .Should()
             .BeEmpty(
-                because: "every trigger profile must cause ProfileRuleValidator to emit its rule ID. "
-                         + "Rules that did NOT fire: "
-                         + string.Join(separator: ", ", values: notFiring)
+                "every trigger profile must cause ProfileRuleValidator to emit its rule ID. "
+                    + "Rules that did NOT fire: "
+                    + string.Join(", ", notFiring)
             );
     }
 
@@ -618,152 +618,152 @@ public class ProfileRuleCompletenessTests
 
         Dictionary<string, EncodingProfile> validNeighbors = new()
         {
-            [key: EncoderRuleId.ProfileNameMissing] = MakeProfile(video: VideoTranscode()) with
+            [EncoderRuleId.ProfileNameMissing] = MakeProfile(VideoTranscode()) with
             {
                 Name = "Valid Profile",
             },
-            [key: EncoderRuleId.ProfileNoOutputs] = MakeProfile(
-                audio: [AudioTrack(codec: AudioCodecType.Aac, bitrate: 192)]
+            [EncoderRuleId.ProfileNoOutputs] = MakeProfile(
+                audio: [AudioTrack(AudioCodecType.Aac, 192)]
             ) with
             {
                 Container = Container.Aac,
             },
-            [key: EncoderRuleId.VideoWidthInvalid] = MakeProfile(video: VideoTranscode(width: 1920)),
-            [key: EncoderRuleId.VideoHeightInvalid] = MakeProfile(video: VideoTranscode(height: 1080)),
-            [key: EncoderRuleId.VideoRateControlMissing] = MakeProfile(
-                video: VideoTranscode(rc: RateControlMode.Crf, crf: 23)
+            [EncoderRuleId.VideoWidthInvalid] = MakeProfile(VideoTranscode(width: 1920)),
+            [EncoderRuleId.VideoHeightInvalid] = MakeProfile(VideoTranscode(height: 1080)),
+            [EncoderRuleId.VideoRateControlMissing] = MakeProfile(
+                VideoTranscode(rc: RateControlMode.Crf, crf: 23)
             ),
-            [key: EncoderRuleId.VideoRateControlConflict] = MakeProfile(
-                video: VideoTranscode(rc: RateControlMode.Vbr, bitrate: 4000, crf: 0)
+            [EncoderRuleId.VideoRateControlConflict] = MakeProfile(
+                VideoTranscode(rc: RateControlMode.Vbr, bitrate: 4000, crf: 0)
             ),
-            [key: EncoderRuleId.CodecContainerMismatch] = MakeProfile(
-                video: VideoTranscode(codec: VideoCodecType.H264),
+            [EncoderRuleId.CodecContainerMismatch] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264),
                 container: Container.Mp4
             ),
-            [key: EncoderRuleId.AudioCodecContainerMismatch] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.AudioCodecContainerMismatch] = MakeProfile(
+                VideoTranscode(),
                 container: Container.Mp4,
-                audio: [AudioTrack(codec: AudioCodecType.Aac, bitrate: 192)]
+                audio: [AudioTrack(AudioCodecType.Aac, 192)]
             ),
-            [key: EncoderRuleId.AudioBitrateMissing] = MakeProfile(
-                video: VideoTranscode(),
-                audio: [AudioTrack(codec: AudioCodecType.Aac, bitrate: 192)]
+            [EncoderRuleId.AudioBitrateMissing] = MakeProfile(
+                VideoTranscode(),
+                audio: [AudioTrack(AudioCodecType.Aac, 192)]
             ),
-            [key: EncoderRuleId.HlsFmp4CodecMismatch] = MakeProfile(
-                video: VideoTranscode(codec: VideoCodecType.H264),
+            [EncoderRuleId.HlsFmp4CodecMismatch] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264),
                 container: Container.HlsTs
             ),
-            [key: EncoderRuleId.LadderDuplicateVariant] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.LadderDuplicateVariant] = MakeProfile(
+                VideoTranscode(),
                 ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 2500, MaxBitrateKbps: 3000, BufferSizeKbps: 5000, Framerate: 24),
-                        new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 4500, MaxBitrateKbps: 5400, BufferSizeKbps: 9000, Framerate: 24),
+                        new(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24),
+                        new(1920, 1080, VideoCodecType.H264, 4500, 5400, 9000, 24),
                     ],
                 }
             ),
-            [key: EncoderRuleId.LadderManualEmpty] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.LadderManualEmpty] = MakeProfile(
+                VideoTranscode(),
                 ladder: new()
                 {
                     Mode = LadderMode.Manual,
-                    Rungs = [new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 4000, MaxBitrateKbps: 4800, BufferSizeKbps: 8000, Framerate: 24)],
+                    Rungs = [new(1920, 1080, VideoCodecType.H264, 4000, 4800, 8000, 24)],
                 }
             ),
-            [key: EncoderRuleId.LadderManualUnsorted] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.LadderManualUnsorted] = MakeProfile(
+                VideoTranscode(),
                 ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 4000, MaxBitrateKbps: 4800, BufferSizeKbps: 8000, Framerate: 24),
-                        new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 8000, MaxBitrateKbps: 9600, BufferSizeKbps: 16000, Framerate: 24),
+                        new(1280, 720, VideoCodecType.H264, 4000, 4800, 8000, 24),
+                        new(1920, 1080, VideoCodecType.H264, 8000, 9600, 16000, 24),
                     ],
                 }
             ),
-            [key: EncoderRuleId.LevelResolutionMismatch] = MakeProfile(
-                video: VideoTranscode(codec: VideoCodecType.H264, width: 1920, height: 1080, level: "4.1")
+            [EncoderRuleId.LevelResolutionMismatch] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264, width: 1920, height: 1080, level: "4.1")
             ),
-            [key: EncoderRuleId.LevelInvalid] = MakeProfile(
-                video: VideoTranscode(codec: VideoCodecType.H264, level: "4.1")
+            [EncoderRuleId.LevelInvalid] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264, level: "4.1")
             ),
-            [key: EncoderRuleId.BitrateTooLowForResolution] = MakeProfile(
-                video: VideoTranscode(rc: RateControlMode.Vbr, bitrate: 3000, width: 1920, height: 1080)
+            [EncoderRuleId.BitrateTooLowForResolution] = MakeProfile(
+                VideoTranscode(rc: RateControlMode.Vbr, bitrate: 3000, width: 1920, height: 1080)
             ),
-            [key: EncoderRuleId.CrfOutOfTypicalRange] = MakeProfile(
-                video: VideoTranscode(rc: RateControlMode.Crf, crf: 23)
+            [EncoderRuleId.CrfOutOfTypicalRange] = MakeProfile(
+                VideoTranscode(rc: RateControlMode.Crf, crf: 23)
             ),
-            [key: EncoderRuleId.HlsKeyframeSegmentMisalignment] = MakeProfile(
-                video: VideoTranscode(keyframeSeconds: 2),
+            [EncoderRuleId.HlsKeyframeSegmentMisalignment] = MakeProfile(
+                VideoTranscode(keyframeSeconds: 2),
                 container: Container.HlsFmp4,
                 segmentDuration: 6
             ),
-            [key: EncoderRuleId.LadderInverted] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.LadderInverted] = MakeProfile(
+                VideoTranscode(),
                 ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new(Width: 854, Height: 480, Codec: VideoCodecType.H264, BitrateKbps: 1000, MaxBitrateKbps: 1200, BufferSizeKbps: 2000, Framerate: 24),
-                        new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 4500, MaxBitrateKbps: 5400, BufferSizeKbps: 9000, Framerate: 24),
+                        new(854, 480, VideoCodecType.H264, 1000, 1200, 2000, 24),
+                        new(1920, 1080, VideoCodecType.H264, 4500, 5400, 9000, 24),
                     ],
                 }
             ),
-            [key: EncoderRuleId.AudioAc3OffLadderBitrate] = MakeProfile(
-                video: VideoTranscode(),
-                audio: [AudioTrack(codec: AudioCodecType.Ac3, bitrate: 320)]
+            [EncoderRuleId.AudioAc3OffLadderBitrate] = MakeProfile(
+                VideoTranscode(),
+                audio: [AudioTrack(AudioCodecType.Ac3, 320)]
             ),
-            [key: EncoderRuleId.AudioEac3OffLadderBitrate] = MakeProfile(
-                video: VideoTranscode(),
-                audio: [AudioTrack(codec: AudioCodecType.Eac3, bitrate: 128)]
+            [EncoderRuleId.AudioEac3OffLadderBitrate] = MakeProfile(
+                VideoTranscode(),
+                audio: [AudioTrack(AudioCodecType.Eac3, 128)]
             ),
-            [key: EncoderRuleId.SubtitlesContainerIncompatible] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.SubtitlesContainerIncompatible] = MakeProfile(
+                VideoTranscode(),
                 container: Container.HlsFmp4,
-                subtitles: [SubtitleTrack(codec: SubtitleCodecType.WebVtt, policy: SubtitlePolicy.Extract)]
+                subtitles: [SubtitleTrack(SubtitleCodecType.WebVtt, SubtitlePolicy.Extract)]
             ),
-            [key: EncoderRuleId.SubtitlesBurnInPermanent] = MakeProfile(
-                video: VideoTranscode(),
-                subtitles: [SubtitleTrack(codec: SubtitleCodecType.WebVtt, policy: SubtitlePolicy.Extract)]
+            [EncoderRuleId.SubtitlesBurnInPermanent] = MakeProfile(
+                VideoTranscode(),
+                subtitles: [SubtitleTrack(SubtitleCodecType.WebVtt, SubtitlePolicy.Extract)]
             ),
-            [key: EncoderRuleId.SubtitlesAssNeedsCapableClient] = MakeProfile(
-                video: VideoTranscode(),
+            [EncoderRuleId.SubtitlesAssNeedsCapableClient] = MakeProfile(
+                VideoTranscode(),
                 container: Container.Mkv,
-                subtitles: [SubtitleTrack(codec: SubtitleCodecType.Ass, policy: SubtitlePolicy.Extract)]
+                subtitles: [SubtitleTrack(SubtitleCodecType.Ass, SubtitlePolicy.Extract)]
             ),
-            [key: EncoderRuleId.HdrInverseTonemapUnsupported] = MakeProfile(
-                video: VideoTranscode(bitDepth: 10),
+            [EncoderRuleId.HdrInverseTonemapUnsupported] = MakeProfile(
+                VideoTranscode(bitDepth: 10),
                 hdrPolicies: HdrPolicies.AlwaysPreserve
             ),
             // H.264 + High10 + 10-bit already agree — nothing to promote, no warning.
-            [key: EncoderRuleId.BitDepthH26xProfilePromoted] = MakeProfile(
-                video: VideoTranscode(codec: VideoCodecType.H264, bitDepth: 10) with
+            [EncoderRuleId.BitDepthH26xProfilePromoted] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264, bitDepth: 10) with
                 {
                     CodecProfile = CodecProfile.High10,
                 },
                 container: Container.Mp4
             ),
-            [key: EncoderRuleId.CustomArgsReservedFlag] = MakeProfile(
-                video: VideoTranscode(),
-                customArgs: new() { [key: "-loglevel"] = "info" }
+            [EncoderRuleId.CustomArgsReservedFlag] = MakeProfile(
+                VideoTranscode(),
+                customArgs: new() { ["-loglevel"] = "info" }
             ),
-            [key: EncoderRuleId.DrmHttpNotHttps] = MakeProfile(video: VideoTranscode()) with
+            [EncoderRuleId.DrmHttpNotHttps] = MakeProfile(VideoTranscode()) with
             {
                 Drm = new(
-                    Scheme: "aes-128",
-                    Parameters: new() { [key: "key_uri"] = "https://server/key.bin" }
+                    "aes-128",
+                    new() { ["key_uri"] = "https://server/key.bin" }
                 ),
             },
-            [key: EncoderRuleId.DrmKeyMissing] = MakeProfile(video: VideoTranscode()) with
+            [EncoderRuleId.DrmKeyMissing] = MakeProfile(VideoTranscode()) with
             {
                 Drm = new(
-                    Scheme: "aes-128",
-                    Parameters: new() { [key: "key_uri"] = "https://server/key.bin" }
+                    "aes-128",
+                    new() { ["key_uri"] = "https://server/key.bin" }
                 ),
             },
         };
@@ -772,22 +772,22 @@ public class ProfileRuleCompletenessTests
 
         foreach ((string ruleId, EncodingProfile profile) in validNeighbors)
         {
-            ValidationEnvelope envelope = ProfileRuleValidator.Validate(profile: profile);
+            ValidationEnvelope envelope = ProfileRuleValidator.Validate(profile);
             bool fired =
-                envelope.Errors.Any(predicate: r => r.Id == ruleId)
-                || envelope.Warnings.Any(predicate: r => r.Id == ruleId);
+                envelope.Errors.Any(r => r.Id == ruleId)
+                || envelope.Warnings.Any(r => r.Id == ruleId);
 
             if (fired)
-                falsePositives.Add(item: ruleId);
+                falsePositives.Add(ruleId);
         }
 
         falsePositives
             .Should()
             .BeEmpty(
-                because: "valid-neighbor profiles must NOT cause ProfileRuleValidator to emit their "
-                         + "rule ID (precision check — the guard is too broad if any of these fire). "
-                         + "False-positive rule IDs: "
-                         + string.Join(separator: ", ", values: falsePositives)
+                "valid-neighbor profiles must NOT cause ProfileRuleValidator to emit their "
+                    + "rule ID (precision check — the guard is too broad if any of these fire). "
+                    + "False-positive rule IDs: "
+                    + string.Join(", ", falsePositives)
             );
     }
 
@@ -795,15 +795,15 @@ public class ProfileRuleCompletenessTests
     public void Catalogue_count_matches_known_total()
     {
         int count = typeof(EncoderRuleId)
-            .GetFields(bindingAttr: BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Count(predicate: f => f is { IsLiteral: true, IsInitOnly: false });
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Count(f => f is { IsLiteral: true, IsInitOnly: false });
 
         count
             .Should()
             .Be(
-                expected: 71,
-                because: "EncoderRuleId currently catalogues 71 rules; "
-                         + "if this count changed, update the completeness sets above and this guard"
+                71,
+                "EncoderRuleId currently catalogues 71 rules; "
+                    + "if this count changed, update the completeness sets above and this guard"
             );
     }
 }

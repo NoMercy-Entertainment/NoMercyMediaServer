@@ -31,34 +31,32 @@ public class SubtitleOcrBackfillSelectionTests
     {
         // The real on-disk KanColle S01E02 case: eng.full has both an .ass and a
         // .sup (covered), eng.sign has only a .sup (orphaned).
-        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles(subtitleFileNames:
-        [
+        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles([
             $"{Stem}.eng.full.ass",
             $"{Stem}.eng.full.sup",
             $"{Stem}.eng.sign.sup",
         ]);
 
-        orphans.Should().ContainSingle(because: "only the textless bitmap track needs OCR");
-        OrphanedBitmapSubtitle orphan = orphans[index: 0];
-        orphan.Language.Should().Be(expected: "eng");
-        orphan.Variant.Should().Be(expected: "sign");
-        orphan.SupName.Should().Be(expected: $"{Stem}.eng.sign.sup");
+        orphans.Should().ContainSingle("only the textless bitmap track needs OCR");
+        OrphanedBitmapSubtitle orphan = orphans[0];
+        orphan.Language.Should().Be("eng");
+        orphan.Variant.Should().Be("sign");
+        orphan.SupName.Should().Be($"{Stem}.eng.sign.sup");
         orphan
             .MediaTitle.Should()
-            .Be(expected: Stem, because: "the OCR sidecar stem must match the .sup so the scan pairs them");
+            .Be(Stem, "the OCR sidecar stem must match the .sup so the scan pairs them");
     }
 
     [Fact]
     public void Bitmap_with_no_text_sibling_is_selected()
     {
-        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles(subtitleFileNames:
-        [
+        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles([
             $"{Stem}.dut.full.sup",
         ]);
 
         orphans.Should().ContainSingle();
-        orphans[index: 0].Language.Should().Be(expected: "dut");
-        orphans[index: 0].Variant.Should().Be(expected: "full");
+        orphans[0].Language.Should().Be("dut");
+        orphans[0].Variant.Should().Be("full");
     }
 
     [Fact]
@@ -66,8 +64,7 @@ public class SubtitleOcrBackfillSelectionTests
     {
         // Idempotency at the selection layer: once OCR has produced the .vtt, a
         // later scan must not queue the same track again.
-        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles(subtitleFileNames:
-        [
+        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles([
             $"{Stem}.eng.sign.sup",
             $"{Stem}.eng.sign.vtt",
         ]);
@@ -78,8 +75,7 @@ public class SubtitleOcrBackfillSelectionTests
     [Fact]
     public void Non_subtitle_and_text_only_files_yield_nothing()
     {
-        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles(subtitleFileNames:
-        [
+        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles([
             $"{Stem}.eng.full.ass",
             $"{Stem}.eng.full.vtt",
             "chapters.vtt",

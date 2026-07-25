@@ -16,15 +16,15 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbTaggedImage : TmdbProfile
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "image_type")]
+    [JsonProperty("image_type")]
     public string ImageType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "media")]
+    [JsonProperty("media")]
     public TmdbPersonMedia TmdbPersonMedia { get; set; } = new();
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string MediaType { get; set; } = string.Empty;
 }

@@ -25,98 +25,97 @@ public class PlaylistGeneratorSubtitleTests
         // Seed non-zero metrics so the variant rows render — GenerateMasterPlaylist
         // skips any variant whose measured bandwidth is zero (dead-variant guard).
         Dictionary<string, VariantMetrics> videoMetrics = plan
-            .VideoOutputs.Where(predicate: v => !string.IsNullOrEmpty(value: v.MapLabel))
+            .VideoOutputs.Where(v => !string.IsNullOrEmpty(v.MapLabel))
             .ToDictionary(
-                keySelector: PlaylistGenerator.VideoVariantKey,
-                elementSelector: _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
+                PlaylistGenerator.VideoVariantKey,
+                _ => new VariantMetrics(5_000_000, 4_500_000)
             );
         Dictionary<string, VariantMetrics> audioMetrics = plan
-            .AudioOutputs.Where(predicate: a => !string.IsNullOrEmpty(value: a.MapLabel))
+            .AudioOutputs.Where(a => !string.IsNullOrEmpty(a.MapLabel))
             .ToDictionary(
-                keySelector: PlaylistGenerator.AudioVariantKey,
-                elementSelector: _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
+                PlaylistGenerator.AudioVariantKey,
+                _ => new VariantMetrics(192_000, 180_000)
             );
 
         PlaylistGenerator generator = new();
-        return generator.GenerateMasterPlaylist(plan: plan, mediaTitle: MediaTitle, videoMetrics: videoMetrics, audioMetrics: audioMetrics);
+        return generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
     }
 
     [Fact]
     public void MasterPlaylist_WithoutSubtitles_NoSubtitleTags()
     {
-        string playlist = Generate(plan: CreatePlanWithoutSubtitles());
+        string playlist = Generate(CreatePlanWithoutSubtitles());
 
-        playlist.Should().NotContain(unexpected: "TYPE=SUBTITLES");
+        playlist.Should().NotContain("TYPE=SUBTITLES");
     }
 
     [Fact]
     public void MasterPlaylist_SubtitleWithDropAction_IsExcluded()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [BuildVideo()],
-            AudioOutputs: [BuildAudio()],
-            SubtitleOutputs:
+            OutputFormat.Hls,
+            [BuildVideo()],
+            [BuildAudio()],
             [
                 new(
-                    OutputCodec: SubtitleCodecType.WebVtt,
-                    Action: StreamAction.Drop,
-                    Language: "eng",
-                    SourceIndex: 0,
-                    MapLabel: "0:s:0"
+                    SubtitleCodecType.WebVtt,
+                    StreamAction.Drop,
+                    "eng",
+                    0,
+                    "0:s:0"
                 ),
             ],
-            Thumbnails: null
+            null
         );
 
-        string playlist = Generate(plan: plan);
+        string playlist = Generate(plan);
 
-        playlist.Should().NotContain(unexpected: "TYPE=SUBTITLES");
+        playlist.Should().NotContain("TYPE=SUBTITLES");
     }
 
     [Fact]
     public void MasterPlaylist_AudioLanguage_Correct()
     {
-        string playlist = Generate(plan: CreatePlanWithoutSubtitles());
+        string playlist = Generate(CreatePlanWithoutSubtitles());
 
-        playlist.Should().Contain(expected: "LANGUAGE=\"eng\"");
+        playlist.Should().Contain("LANGUAGE=\"eng\"");
     }
 
     private static OutputPlan CreatePlanWithoutSubtitles()
     {
         return new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [BuildVideo()],
-            AudioOutputs: [BuildAudio()],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [BuildVideo()],
+            [BuildAudio()],
+            [],
+            null
         );
     }
 
     private static VideoOutputPlan BuildVideo() =>
         new(
-            Width: 1920,
-            Height: 1080,
-            EncoderName: "libx264",
-            Crf: 23,
-            BitrateKbps: 4000,
-            Preset: "medium",
-            Profile: "high",
-            Level: "4.1",
-            TenBit: false,
-            PixelFormat: "yuv420p",
-            MapLabel: "[v0]",
-            ExtraFlags: new()
+            1920,
+            1080,
+            "libx264",
+            23,
+            4000,
+            "medium",
+            "high",
+            "4.1",
+            false,
+            "yuv420p",
+            "[v0]",
+            new()
         );
 
     private static AudioOutputPlan BuildAudio() =>
         new(
-            EncoderName: "aac",
-            BitrateKbps: 192,
-            Channels: 2,
-            SampleRate: 48000,
-            Action: StreamAction.Transcode,
-            Language: "eng",
-            MapLabel: "0:a:0"
+            "aac",
+            192,
+            2,
+            48000,
+            StreamAction.Transcode,
+            "eng",
+            "0:a:0"
         );
 }

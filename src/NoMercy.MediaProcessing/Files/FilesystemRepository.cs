@@ -26,69 +26,69 @@ public class FilesystemRepository(IStorageDriver driver)
 {
     public (string? parent, List<DirectoryTree> entries) List(string folder, bool withEmpty)
     {
-        if (string.IsNullOrEmpty(value: folder))
+        if (string.IsNullOrEmpty(folder))
             return (null, []);
 
-        if (!driver.DirectoryExists(path: folder))
+        if (!driver.DirectoryExists(folder))
             return (null, []);
 
         List<DirectoryTree> entries;
         try
         {
-            entries = EnumerateChildDirectories(folder: folder)
-                .Select(selector: child => Build(parent: folder, path: child, withEmpty: withEmpty))
-                .OrderBy(keySelector: e => e.Path, comparer: StringComparer.OrdinalIgnoreCase)
+            entries = EnumerateChildDirectories(folder)
+                .Select(child => Build(folder, child, withEmpty))
+                .OrderBy(e => e.Path, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
         catch (IOException)
         {
-            return (ParentOf(folder: folder), []);
+            return (ParentOf(folder), []);
         }
         catch (UnauthorizedAccessException)
         {
-            return (ParentOf(folder: folder), []);
+            return (ParentOf(folder), []);
         }
 
-        return (ParentOf(folder: folder), entries);
+        return (ParentOf(folder), entries);
     }
 
     public (string path, string? parent, List<DirectoryTree> entries) Home(bool withEmpty)
     {
         string home = Environment.GetFolderPath(
-            folder: Environment.SpecialFolder.UserProfile,
-            option: Environment.SpecialFolderOption.DoNotVerify
+            Environment.SpecialFolder.UserProfile,
+            Environment.SpecialFolderOption.DoNotVerify
         );
 
-        if (string.IsNullOrEmpty(value: home) || !driver.DirectoryExists(path: home))
+        if (string.IsNullOrEmpty(home) || !driver.DirectoryExists(home))
             home = "/";
 
-        (string? parent, List<DirectoryTree> entries) = List(folder: home, withEmpty: withEmpty);
+        (string? parent, List<DirectoryTree> entries) = List(home, withEmpty);
         return (home, parent, entries);
     }
 
     public List<DirectoryTree> Roots(bool withEmpty)
     {
-        if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // Skip drive types whose metadata reads can block on OS-level
             // retry timeouts (a dead Z:\ network share or empty CD-ROM
             // adds ~30s each). Users type those paths into /ls directly.
             DriveInfo[] drives = DriveInfo.GetDrives();
             return drives
-                .Where(predicate: d =>
+                .Where(d =>
                     d.DriveType != DriveType.Network
                     && d.DriveType != DriveType.Unknown
                     && d.DriveType != DriveType.NoRootDirectory
                 )
                 .AsParallel()
-                .Select(selector: BuildRoot)
-                .Where(predicate: entry => entry is not null)
-                .Select(selector: entry => entry!)
-                .OrderBy(keySelector: e => e.FullPath, comparer: StringComparer.OrdinalIgnoreCase)
+                .Select(BuildRoot)
+                .Where(entry => entry is not null)
+                .Select(entry => entry!)
+                .OrderBy(e => e.FullPath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
 
-        (_, List<DirectoryTree> entries) = List(folder: "/", withEmpty: withEmpty);
+        (_, List<DirectoryTree> entries) = List("/", withEmpty);
         return entries;
     }
 
@@ -99,11 +99,11 @@ public class FilesystemRepository(IStorageDriver driver)
             if (!drive.IsReady)
                 return null;
 
-            DirectoryTree entry = Build(parent: drive.RootDirectory.ToString(), path: "", withEmpty: false);
+            DirectoryTree entry = Build(drive.RootDirectory.ToString(), "", false);
 
             try
             {
-                if (!string.IsNullOrEmpty(value: drive.VolumeLabel))
+                if (!string.IsNullOrEmpty(drive.VolumeLabel))
                     entry.Subtitle = drive.VolumeLabel;
             }
             catch
@@ -122,22 +122,22 @@ public class FilesystemRepository(IStorageDriver driver)
 
     public string Mkdir(string parent, string name)
     {
-        if (string.IsNullOrWhiteSpace(value: parent))
-            throw new ArgumentException(message: "parent is required", paramName: nameof(parent));
-        if (string.IsNullOrWhiteSpace(value: name))
-            throw new ArgumentException(message: "name is required", paramName: nameof(name));
+        if (string.IsNullOrWhiteSpace(parent))
+            throw new ArgumentException("parent is required", nameof(parent));
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("name is required", nameof(name));
 
-        if (name.IndexOfAny(anyOf: Path.GetInvalidFileNameChars()) >= 0)
-            throw new ArgumentException(message: "name contains invalid characters", paramName: nameof(name));
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new ArgumentException("name contains invalid characters", nameof(name));
 
-        if (!driver.DirectoryExists(path: parent))
-            throw new DirectoryNotFoundException(message: $"parent does not exist: {parent}");
+        if (!driver.DirectoryExists(parent))
+            throw new DirectoryNotFoundException($"parent does not exist: {parent}");
 
-        string fullPath = Path.Combine(path1: parent, path2: name);
-        if (driver.DirectoryExists(path: fullPath))
+        string fullPath = Path.Combine(parent, name);
+        if (driver.DirectoryExists(fullPath))
             return fullPath;
 
-        driver.CreateDirectory(path: fullPath);
+        driver.CreateDirectory(fullPath);
         return fullPath;
     }
 
@@ -148,51 +148,51 @@ public class FilesystemRepository(IStorageDriver driver)
         // folder, which kills picker latency on big trees. Clients can
         // still send the flag for wire compat but the field stays null.
         _ = withEmpty;
-        return new(parent: parent, path: path);
+        return new(parent, path);
     }
 
     private IEnumerable<string> EnumerateChildDirectories(string folder)
     {
         foreach (
             string entry in driver.EnumerateFileSystemEntries(
-                directory: folder,
-                searchPattern: "*",
-                option: SearchOption.TopDirectoryOnly
+                folder,
+                "*",
+                SearchOption.TopDirectoryOnly
             )
         )
         {
-            if (!driver.DirectoryExists(path: entry))
+            if (!driver.DirectoryExists(entry))
                 continue;
-            if (IsBrowsable(path: entry))
+            if (IsBrowsable(entry))
                 yield return entry;
         }
     }
 
     private bool IsBrowsable(string path)
     {
-        string name = Path.GetFileName(path: path);
-        if (string.IsNullOrEmpty(value: name))
+        string name = Path.GetFileName(path);
+        if (string.IsNullOrEmpty(name))
             return true;
 
         // Cross-platform name conventions: Unix dotfiles + Windows
         // sentinel folders (`$RECYCLE.BIN`, `$EXTEND`, ...).
-        if (name.StartsWith(value: '.') || name.StartsWith(value: '$'))
+        if (name.StartsWith('.') || name.StartsWith('$'))
             return false;
 
         // Windows Hidden / System attributes for everything else
         // (`System Volume Information`, `Recovery`, `Config.Msi`, ...).
-        return !driver.IsHidden(path: path);
+        return !driver.IsHidden(path);
     }
 
     private static string? ParentOf(string folder)
     {
-        if (string.IsNullOrEmpty(value: folder) || folder == "/")
+        if (string.IsNullOrEmpty(folder) || folder == "/")
             return null;
 
         try
         {
             return Path.GetDirectoryName(
-                path: folder.TrimEnd(trimChars: [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar])
+                folder.TrimEnd([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar])
             );
         }
         catch

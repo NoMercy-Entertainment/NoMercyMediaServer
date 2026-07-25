@@ -11,7 +11,6 @@
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Startup;
 
@@ -27,38 +26,38 @@ public class HardwareBenchmarkRecalibrationServiceTests
     public async Task RecalAge30DaysTriggersRecal_WhenIdle()
     {
         Mock<ISpeedIndexStore> store = new();
-        store.Setup(expression: s => s.LastCalibratedAt).Returns(value: DateTime.UtcNow.AddDays(value: -31));
+        store.Setup(s => s.LastCalibratedAt).Returns(DateTime.UtcNow.AddDays(-31));
 
         Mock<IDriverChangeDetector> driverDetector = new();
         driverDetector
-            .Setup(expression: d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
+            .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
-                value: new DriverChangeResult(
-                    CurrentHash: "abc",
-                    PreviousHash: "abc",
-                    Changed: false,
-                    IsFirstBoot: false
+                new DriverChangeResult(
+                    "abc",
+                    "abc",
+                    false,
+                    false
                 )
             );
 
         Mock<IEncoderActivityProbe> activityProbe = new();
-        activityProbe.Setup(expression: p => p.IsBusy).Returns(value: false);
+        activityProbe.Setup(p => p.IsBusy).Returns(false);
 
         Mock<IHardwareBenchmark> benchmark = new();
         benchmark
-            .Setup(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: new SpeedIndex(Measurements: new()));
+            .Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SpeedIndex(new()));
 
         HardwareBenchmarkRecalibrationService sut = BuildService(
-            benchmark: benchmark.Object,
-            driverDetector: driverDetector.Object,
-            store: store.Object,
-            activityProbe: activityProbe.Object
+            benchmark.Object,
+            driverDetector.Object,
+            store.Object,
+            activityProbe.Object
         );
 
-        await sut.EvaluateAndRecalibrateAsync(ct: CancellationToken.None);
+        await sut.EvaluateAndRecalibrateAsync(CancellationToken.None);
 
-        benchmark.Verify(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()), times: Times.Once);
+        benchmark.Verify(b => b.CalibrateAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -69,37 +68,37 @@ public class HardwareBenchmarkRecalibrationServiceTests
     public async Task RecalSkippedWhenBusy()
     {
         Mock<ISpeedIndexStore> store = new();
-        store.Setup(expression: s => s.LastCalibratedAt).Returns(value: DateTime.UtcNow.AddDays(value: -31));
+        store.Setup(s => s.LastCalibratedAt).Returns(DateTime.UtcNow.AddDays(-31));
 
         Mock<IDriverChangeDetector> driverDetector = new();
         driverDetector
-            .Setup(expression: d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
+            .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
-                value: new DriverChangeResult(
-                    CurrentHash: "abc",
-                    PreviousHash: "abc",
-                    Changed: false,
-                    IsFirstBoot: false
+                new DriverChangeResult(
+                    "abc",
+                    "abc",
+                    false,
+                    false
                 )
             );
 
         Mock<IEncoderActivityProbe> activityProbe = new();
-        activityProbe.Setup(expression: p => p.IsBusy).Returns(value: true);
+        activityProbe.Setup(p => p.IsBusy).Returns(true);
 
         Mock<IHardwareBenchmark> benchmark = new();
 
         // Use a zero max-deferral window so the test doesn't wait 7 days.
         HardwareBenchmarkRecalibrationService sut = BuildService(
-            benchmark: benchmark.Object,
-            driverDetector: driverDetector.Object,
-            store: store.Object,
-            activityProbe: activityProbe.Object,
-            maxDeferralWindow: TimeSpan.Zero
+            benchmark.Object,
+            driverDetector.Object,
+            store.Object,
+            activityProbe.Object,
+            TimeSpan.Zero
         );
 
-        await sut.EvaluateAndRecalibrateAsync(ct: CancellationToken.None);
+        await sut.EvaluateAndRecalibrateAsync(CancellationToken.None);
 
-        benchmark.Verify(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()), times: Times.Never);
+        benchmark.Verify(b => b.CalibrateAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -110,35 +109,35 @@ public class HardwareBenchmarkRecalibrationServiceTests
     public async Task RecalSkippedWhenFresh()
     {
         Mock<ISpeedIndexStore> store = new();
-        store.Setup(expression: s => s.LastCalibratedAt).Returns(value: DateTime.UtcNow.AddDays(value: -5));
+        store.Setup(s => s.LastCalibratedAt).Returns(DateTime.UtcNow.AddDays(-5));
 
         Mock<IDriverChangeDetector> driverDetector = new();
         driverDetector
-            .Setup(expression: d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
+            .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
-                value: new DriverChangeResult(
-                    CurrentHash: "same",
-                    PreviousHash: "same",
-                    Changed: false,
-                    IsFirstBoot: false
+                new DriverChangeResult(
+                    "same",
+                    "same",
+                    false,
+                    false
                 )
             );
 
         Mock<IEncoderActivityProbe> activityProbe = new();
-        activityProbe.Setup(expression: p => p.IsBusy).Returns(value: false);
+        activityProbe.Setup(p => p.IsBusy).Returns(false);
 
         Mock<IHardwareBenchmark> benchmark = new();
 
         HardwareBenchmarkRecalibrationService sut = BuildService(
-            benchmark: benchmark.Object,
-            driverDetector: driverDetector.Object,
-            store: store.Object,
-            activityProbe: activityProbe.Object
+            benchmark.Object,
+            driverDetector.Object,
+            store.Object,
+            activityProbe.Object
         );
 
-        await sut.EvaluateAndRecalibrateAsync(ct: CancellationToken.None);
+        await sut.EvaluateAndRecalibrateAsync(CancellationToken.None);
 
-        benchmark.Verify(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()), times: Times.Never);
+        benchmark.Verify(b => b.CalibrateAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -150,38 +149,38 @@ public class HardwareBenchmarkRecalibrationServiceTests
     {
         Mock<ISpeedIndexStore> store = new();
         // Fresh timestamp — age alone would NOT trigger recal.
-        store.Setup(expression: s => s.LastCalibratedAt).Returns(value: DateTime.UtcNow.AddDays(value: -1));
+        store.Setup(s => s.LastCalibratedAt).Returns(DateTime.UtcNow.AddDays(-1));
 
         Mock<IDriverChangeDetector> driverDetector = new();
         driverDetector
-            .Setup(expression: d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
+            .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
-                value: new DriverChangeResult(
-                    CurrentHash: "new-hash",
-                    PreviousHash: "old-hash",
-                    Changed: true,
-                    IsFirstBoot: false
+                new DriverChangeResult(
+                    "new-hash",
+                    "old-hash",
+                    true,
+                    false
                 )
             );
 
         Mock<IEncoderActivityProbe> activityProbe = new();
-        activityProbe.Setup(expression: p => p.IsBusy).Returns(value: false);
+        activityProbe.Setup(p => p.IsBusy).Returns(false);
 
         Mock<IHardwareBenchmark> benchmark = new();
         benchmark
-            .Setup(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: new SpeedIndex(Measurements: new()));
+            .Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SpeedIndex(new()));
 
         HardwareBenchmarkRecalibrationService sut = BuildService(
-            benchmark: benchmark.Object,
-            driverDetector: driverDetector.Object,
-            store: store.Object,
-            activityProbe: activityProbe.Object
+            benchmark.Object,
+            driverDetector.Object,
+            store.Object,
+            activityProbe.Object
         );
 
-        await sut.EvaluateAndRecalibrateAsync(ct: CancellationToken.None);
+        await sut.EvaluateAndRecalibrateAsync(CancellationToken.None);
 
-        benchmark.Verify(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()), times: Times.Once);
+        benchmark.Verify(b => b.CalibrateAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -196,15 +195,15 @@ public class HardwareBenchmarkRecalibrationServiceTests
         TimeSpan? maxDeferralWindow = null
     ) =>
         new(
-            benchmark: benchmark,
-            driverChangeDetector: driverDetector,
-            store: store,
-            activityProbe: activityProbe,
-            options: new() { AutoCalibrate = true },
-            logger: NullLogger<HardwareBenchmarkRecalibrationService>.Instance,
-            checkInterval: TimeSpan.FromMilliseconds(milliseconds: 1),
-            busyRetryInterval: TimeSpan.FromMilliseconds(milliseconds: 1),
-            maxDeferralWindow: maxDeferralWindow
+            benchmark,
+            driverDetector,
+            store,
+            activityProbe,
+            new() { AutoCalibrate = true },
+            NullLogger<HardwareBenchmarkRecalibrationService>.Instance,
+            TimeSpan.FromMilliseconds(1),
+            TimeSpan.FromMilliseconds(1),
+            maxDeferralWindow
                 ?? HardwareBenchmarkRecalibrationService.DefaultMaxDeferralWindow
         );
 }

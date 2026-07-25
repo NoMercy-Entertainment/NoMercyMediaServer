@@ -37,7 +37,7 @@ public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
     public ILoggerFactory LoggerFactory { get; set; } = null!;
 
     [JsonIgnore]
-    private ILogger Log => field ??= LoggerFactory.CreateLogger(type: GetType());
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
 
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
@@ -77,44 +77,44 @@ public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
             return;
 
         Log.LogDebug(
-            message: "Finding media files for {Id} in library {ToString}", args: [Id, Library.Id.ToString()]
+            "Finding media files for {Id} in library {ToString}", [Id, Library.Id.ToString()]
         );
 
         await using MediaContext context = new();
         Library? library = await context
             .Libraries.AsTracking()
-            .Where(predicate: f => f.Id == Library.Id)
-            .Include(navigationPropertyPath: l => l.FolderLibraries)
-                .ThenInclude(navigationPropertyPath: fl => fl.Folder)
-            .Include(navigationPropertyPath: l => l.LibraryMovies.Where(lm => lm.Movie.Id == Id))
-                .ThenInclude(navigationPropertyPath: lm => lm.Movie)
-            .Include(navigationPropertyPath: l => l.LibraryTvs.Where(lt => lt.Tv.Id == Id))
-                .ThenInclude(navigationPropertyPath: lt => lt.Tv)
+            .Where(f => f.Id == Library.Id)
+            .Include(l => l.FolderLibraries)
+                .ThenInclude(fl => fl.Folder)
+            .Include(l => l.LibraryMovies.Where(lm => lm.Movie.Id == Id))
+                .ThenInclude(lm => lm.Movie)
+            .Include(l => l.LibraryTvs.Where(lt => lt.Tv.Id == Id))
+                .ThenInclude(lt => lt.Tv)
             .FirstOrDefaultAsync();
 
         if (library == null)
             return;
 
         IStorageDriver storageDriver = new LocalStorageDriver();
-        InlineDriverConfigResolver driverConfigResolver = new(context: context);
+        InlineDriverConfigResolver driverConfigResolver = new(context);
         IStorageFactory storageFactory = new StorageFactory(
-            driver: storageDriver,
-            logger: NullLogger<StorageFactory>.Instance,
-            driverConfigResolver: driverConfigResolver
+            storageDriver,
+            NullLogger<StorageFactory>.Instance,
+            driverConfigResolver
         );
         await using FileLogic file = new(
-            id: Id,
-            library: library,
-            mediaContext: context,
-            storageFactory: storageFactory,
-            logger: LoggerFactory.CreateLogger<FileLogic>()
+            Id,
+            library,
+            context,
+            storageFactory,
+            LoggerFactory.CreateLogger<FileLogic>()
         );
         await file.Process();
 
         if (file.Files.Count > 0)
         {
             Log.LogInformation(
-                message: "Found {Count} files in {Path}", args: [file.Files.Count, file.Files.FirstOrDefault()?.Path]
+                "Found {Count} files in {Path}", [file.Files.Count, file.Files.FirstOrDefault()?.Path]
             );
 
             if (library.LibraryMovies.Count > 0)
@@ -140,13 +140,13 @@ public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
 
             if (EventBusProvider.IsConfigured)
                 await EventBusProvider.Current.PublishAsync(
-                    @event: new LibraryRefreshedEvent { QueryKey = ["libraries", library.Id.ToString()] }
+                    new LibraryRefreshedEvent { QueryKey = ["libraries", library.Id.ToString()] }
                 );
         }
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                @event: new LibraryRefreshedEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey =
                     [
@@ -169,7 +169,7 @@ public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
         {
             NoMercy.Database.Models.Storage.Driver? driver = context
                 .Drivers.AsNoTracking()
-                .FirstOrDefault(predicate: d => d.Id == driverId);
+                .FirstOrDefault(d => d.Id == driverId);
 
             return driver is null ? null : (driver.Type, driver.Config);
         }

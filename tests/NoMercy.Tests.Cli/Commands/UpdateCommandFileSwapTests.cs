@@ -32,7 +32,7 @@ namespace NoMercy.Tests.Cli.Commands;
 /// wait-for-exit network steps ahead of it go through a
 /// <see cref="FakeManagementPipeServer"/>.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class UpdateCommandFileSwapTests : IDisposable
 {
     private readonly string _tempExePath = AppFiles.ServerTempExePath;
@@ -40,21 +40,21 @@ public sealed class UpdateCommandFileSwapTests : IDisposable
 
     public UpdateCommandFileSwapTests()
     {
-        Directory.CreateDirectory(path: AppFiles.BinariesPath);
-        DeleteIfExists(path: _tempExePath);
-        DeleteIfExists(path: _currentExePath);
+        Directory.CreateDirectory(AppFiles.BinariesPath);
+        DeleteIfExists(_tempExePath);
+        DeleteIfExists(_currentExePath);
     }
 
     public void Dispose()
     {
-        DeleteIfExists(path: _tempExePath);
-        DeleteIfExists(path: _currentExePath);
+        DeleteIfExists(_tempExePath);
+        DeleteIfExists(_currentExePath);
     }
 
     private static void DeleteIfExists(string path)
     {
-        if (File.Exists(path: path))
-            File.Delete(path: path);
+        if (File.Exists(path))
+            File.Delete(path);
     }
 
     /// <summary>
@@ -67,25 +67,24 @@ public sealed class UpdateCommandFileSwapTests : IDisposable
     private static async Task<int> RunPastWaitForExitAsync()
     {
         FakeManagementPipeServer server = new();
-        Task<List<string>> requestsTask = server.RunSequenceAsync(responders:
-            [
+        Task<List<string>> requestsTask = server.RunSequenceAsync([
                 stream =>
                     FakeManagementPipeServer.WriteResponseAsync(
-                        stream: stream,
-                        statusCode: 200,
-                        reasonPhrase: "OK",
-                        body: """{"status":"ok","message":"Downloaded"}"""
+                        stream,
+                        200,
+                        "OK",
+                        """{"status":"ok","message":"Downloaded"}"""
                     ),
-                stream => FakeManagementPipeServer.WriteResponseAsync(stream: stream, statusCode: 200, reasonPhrase: "OK", body: "true"), _ => Task.CompletedTask
+                stream => FakeManagementPipeServer.WriteResponseAsync(stream, 200, "OK", "true"), _ => Task.CompletedTask
             ]
         );
 
-        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
-        RootCommand root = new(description: "test");
-        root.Options.Add(item: pipeOption);
-        root.Subcommands.Add(item: UpdateCommand.Create(pipeOption: pipeOption, clientFactory: new CliClientFactory()));
+        Option<string?> pipeOption = new("--pipe", "-p");
+        RootCommand root = new("test");
+        root.Options.Add(pipeOption);
+        root.Subcommands.Add(UpdateCommand.Create(pipeOption, new CliClientFactory()));
 
-        int exitCode = await root.Parse(args: ["--pipe", server.PipeName, "update"]).InvokeAsync();
+        int exitCode = await root.Parse(["--pipe", server.PipeName, "update"]).InvokeAsync();
         await requestsTask;
         return exitCode;
     }
@@ -96,36 +95,36 @@ public sealed class UpdateCommandFileSwapTests : IDisposable
         using ConsoleCapture console = new();
         int exitCode = await RunPastWaitForExitAsync();
 
-        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
-        console.Error.Should().Contain(expected: "No staged update file found.");
+        exitCode.Should().Be((int)ExitCode.ServerError);
+        console.Error.Should().Contain("No staged update file found.");
     }
 
     [Fact]
     public async Task StagedFileExists_ExistingCurrentExecutable_IsReplaced()
     {
-        File.WriteAllText(path: _currentExePath, contents: "OLD");
-        File.WriteAllText(path: _tempExePath, contents: "NEW");
+        File.WriteAllText(_currentExePath, "OLD");
+        File.WriteAllText(_tempExePath, "NEW");
 
         using ConsoleCapture console = new();
         int exitCode = await RunPastWaitForExitAsync();
 
-        exitCode.Should().Be(expected: (int)ExitCode.Success);
-        console.Out.Should().Contain(expected: "Update applied.");
-        File.Exists(path: _tempExePath).Should().BeFalse();
-        File.Exists(path: _currentExePath).Should().BeTrue();
-        File.ReadAllText(path: _currentExePath).Should().Be(expected: "NEW");
+        exitCode.Should().Be((int)ExitCode.Success);
+        console.Out.Should().Contain("Update applied.");
+        File.Exists(_tempExePath).Should().BeFalse();
+        File.Exists(_currentExePath).Should().BeTrue();
+        File.ReadAllText(_currentExePath).Should().Be("NEW");
     }
 
     [Fact]
     public async Task StagedFileExists_NoExistingCurrentExecutable_IsMovedIntoPlace()
     {
-        File.WriteAllText(path: _tempExePath, contents: "NEW");
+        File.WriteAllText(_tempExePath, "NEW");
 
         using ConsoleCapture console = new();
         int exitCode = await RunPastWaitForExitAsync();
 
-        exitCode.Should().Be(expected: (int)ExitCode.Success);
-        File.Exists(path: _tempExePath).Should().BeFalse();
-        File.ReadAllText(path: _currentExePath).Should().Be(expected: "NEW");
+        exitCode.Should().Be((int)ExitCode.Success);
+        File.Exists(_tempExePath).Should().BeFalse();
+        File.ReadAllText(_currentExePath).Should().Be("NEW");
     }
 }

@@ -11,25 +11,25 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Service.Seeds.Dto;
+namespace NoMercy.MediaProcessing.Jobs.Dto;
 
-public class SpecialItem
+public class SpecialSeedItem
 {
-    [JsonProperty(propertyName: "index")]
+    [JsonProperty("index")]
     public int Index { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int Year { get; set; }
 
-    [JsonProperty(propertyName: "seasons")]
+    [JsonProperty("seasons")]
     public int[] Seasons { get; set; } = [];
 
-    [JsonProperty(propertyName: "episodes")]
+    [JsonProperty("episodes")]
     public int[] Episodes { get; set; } = [];
 }

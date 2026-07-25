@@ -26,42 +26,42 @@ namespace NoMercy.Tests.Cli.Commands;
 /// "GPU 0:" line, and the per-drive "used" figure must be computed as
 /// total-minus-available, not echoed from the server.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class ResourcesCommandTests
 {
     private static async Task<int> RunAsync(ICliClientFactory factory)
     {
-        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
-        RootCommand root = new(description: "test");
-        root.Options.Add(item: pipeOption);
-        root.Subcommands.Add(item: ResourcesCommand.Create(pipeOption: pipeOption, clientFactory: factory));
-        return await root.Parse(args: ["resources"]).InvokeAsync();
+        Option<string?> pipeOption = new("--pipe", "-p");
+        RootCommand root = new("test");
+        root.Options.Add(pipeOption);
+        root.Subcommands.Add(ResourcesCommand.Create(pipeOption, factory));
+        return await root.Parse(["resources"]).InvokeAsync();
     }
 
     private static Mock<ICliClientFactory> FactoryReturning(ResourcesResponse? resources)
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.GetAsync<ResourcesResponse>(ApiRoutes.Resources, It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: resources);
+            .ReturnsAsync(resources);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
+        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
         return factory;
     }
 
     [Fact]
     public async Task Resources_ServerUnreachable_PrintsError_AndReturnsServerError()
     {
-        Mock<ICliClientFactory> factory = FactoryReturning(resources: null);
+        Mock<ICliClientFactory> factory = FactoryReturning(null);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory: factory.Object);
+        int exitCode = await RunAsync(factory.Object);
 
-        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
-        console.Error.Should().Contain(expected: "Could not retrieve resource information.");
+        exitCode.Should().Be((int)ExitCode.ServerError);
+        console.Error.Should().Contain("Could not retrieve resource information.");
     }
 
     [Fact]
@@ -80,16 +80,16 @@ public sealed class ResourcesCommandTests
             Storage = [],
         };
 
-        Mock<ICliClientFactory> factory = FactoryReturning(resources: resources);
+        Mock<ICliClientFactory> factory = FactoryReturning(resources);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory: factory.Object);
+        int exitCode = await RunAsync(factory.Object);
 
-        exitCode.Should().Be(expected: (int)ExitCode.Success);
-        console.Out.Should().Contain(expected: "CPU:          12.5% (max 100.0%)");
-        console.Out.Should().Contain(expected: "Memory:       4.2 / 16.0 GB (26.2%)");
-        console.Out.Should().NotContain(unexpected: "GPU");
-        console.Out.Should().NotContain(unexpected: "Storage:");
+        exitCode.Should().Be((int)ExitCode.Success);
+        console.Out.Should().Contain("CPU:          12.5% (max 100.0%)");
+        console.Out.Should().Contain("Memory:       4.2 / 16.0 GB (26.2%)");
+        console.Out.Should().NotContain("GPU");
+        console.Out.Should().NotContain("Storage:");
     }
 
     [Fact]
@@ -127,16 +127,16 @@ public sealed class ResourcesCommandTests
             ],
         };
 
-        Mock<ICliClientFactory> factory = FactoryReturning(resources: resources);
+        Mock<ICliClientFactory> factory = FactoryReturning(resources);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory: factory.Object);
+        int exitCode = await RunAsync(factory.Object);
 
-        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        exitCode.Should().Be((int)ExitCode.Success);
         console
             .Out.Should()
-            .Contain(expected: "GPU 0:        10.0% core, 20.0% memory, 30.0% encode, 40.0% decode");
-        console.Out.Should().Contain(expected: "Storage:");
-        console.Out.Should().Contain(expected: "300.0 / 500.0 GB (40.0% free)");
+            .Contain("GPU 0:        10.0% core, 20.0% memory, 30.0% encode, 40.0% decode");
+        console.Out.Should().Contain("Storage:");
+        console.Out.Should().Contain("300.0 / 500.0 GB (40.0% free)");
     }
 }

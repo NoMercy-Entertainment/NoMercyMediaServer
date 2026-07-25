@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonCredits
 {
-    [JsonProperty(propertyName: "cast")]
+    [JsonProperty("cast")]
     public TmdbPersonCredit[] Cast { get; set; } = [];
 
-    [JsonProperty(propertyName: "crew")]
+    [JsonProperty("crew")]
     public TmdbPersonCredit[] Crew { get; set; } = [];
 }

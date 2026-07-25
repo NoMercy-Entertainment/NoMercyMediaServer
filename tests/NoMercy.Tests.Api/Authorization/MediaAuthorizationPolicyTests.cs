@@ -16,26 +16,26 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Authorization;
 
-[Trait(name: "Category", value: "Authorization")]
+[Trait("Category", "Authorization")]
 public sealed class MediaAuthorizationPolicyTests
 {
-    private static readonly Guid OwnerId = Guid.Parse(input: "10000000-0000-0000-0000-000000000001");
-    private static readonly Guid ModeratorId = Guid.Parse(input: "20000000-0000-0000-0000-000000000002");
-    private static readonly Guid AllowedUserId = Guid.Parse(input: "30000000-0000-0000-0000-000000000003");
-    private static readonly Guid RandomUserId = Guid.Parse(input: "40000000-0000-0000-0000-000000000004");
+    private static readonly Guid OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001");
+    private static readonly Guid ModeratorId = Guid.Parse("20000000-0000-0000-0000-000000000002");
+    private static readonly Guid AllowedUserId = Guid.Parse("30000000-0000-0000-0000-000000000003");
+    private static readonly Guid RandomUserId = Guid.Parse("40000000-0000-0000-0000-000000000004");
 
     private static IMediaAuthorizationPolicy BuildPolicy(IEnumerable<User> users)
     {
         UserCache cache = new();
         foreach (User user in users)
-            cache.AddUser(user: user);
-        return new MediaAuthorizationPolicy(userCache: cache);
+            cache.AddUser(user);
+        return new MediaAuthorizationPolicy(cache);
     }
 
     private static ClaimsPrincipal PrincipalFor(Guid userId)
     {
-        List<Claim> claims = [new(type: ClaimTypes.NameIdentifier, value: userId.ToString())];
-        return new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
+        List<Claim> claims = [new(ClaimTypes.NameIdentifier, userId.ToString())];
+        return new(new ClaimsIdentity(claims, "TestScheme"));
     }
 
     [Fact]
@@ -48,9 +48,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Owner",
             Email = "o@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [owner]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner]);
 
-        bool result = policy.IsOwner(principal: PrincipalFor(userId: OwnerId));
+        bool result = policy.IsOwner(PrincipalFor(OwnerId));
 
         result.Should().BeTrue();
     }
@@ -65,9 +65,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Owner",
             Email = "o@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [owner]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner]);
 
-        bool result = policy.IsOwner(principal: PrincipalFor(userId: RandomUserId));
+        bool result = policy.IsOwner(PrincipalFor(RandomUserId));
 
         result.Should().BeFalse();
     }
@@ -83,9 +83,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Mod",
             Email = "m@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [nonOwner]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([nonOwner]);
 
-        bool result = policy.IsOwner(principal: PrincipalFor(userId: OwnerId));
+        bool result = policy.IsOwner(PrincipalFor(OwnerId));
 
         result.Should().BeFalse();
     }
@@ -93,9 +93,9 @@ public sealed class MediaAuthorizationPolicyTests
     [Fact]
     public void IsOwner_Denies_WhenCacheIsEmpty()
     {
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: []);
+        IMediaAuthorizationPolicy policy = BuildPolicy([]);
 
-        bool result = policy.IsOwner(principal: PrincipalFor(userId: OwnerId));
+        bool result = policy.IsOwner(PrincipalFor(OwnerId));
 
         result.Should().BeFalse();
     }
@@ -111,9 +111,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Mod",
             Email = "m@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [moderator]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([moderator]);
 
-        bool result = policy.IsModerator(principal: PrincipalFor(userId: ModeratorId));
+        bool result = policy.IsModerator(PrincipalFor(ModeratorId));
 
         result.Should().BeTrue();
     }
@@ -129,9 +129,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Owner",
             Email = "o@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [owner]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner]);
 
-        bool result = policy.IsModerator(principal: PrincipalFor(userId: OwnerId));
+        bool result = policy.IsModerator(PrincipalFor(OwnerId));
 
         result.Should().BeTrue();
     }
@@ -148,9 +148,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Plain",
             Email = "p@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [plain]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([plain]);
 
-        bool result = policy.IsModerator(principal: PrincipalFor(userId: AllowedUserId));
+        bool result = policy.IsModerator(PrincipalFor(AllowedUserId));
 
         result.Should().BeFalse();
     }
@@ -166,9 +166,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Allowed",
             Email = "a@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [allowed]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([allowed]);
 
-        bool result = policy.IsAllowed(principal: PrincipalFor(userId: AllowedUserId));
+        bool result = policy.IsAllowed(PrincipalFor(AllowedUserId));
 
         result.Should().BeTrue();
     }
@@ -184,9 +184,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Owner",
             Email = "o@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [owner]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner]);
 
-        bool result = policy.IsAllowed(principal: PrincipalFor(userId: OwnerId));
+        bool result = policy.IsAllowed(PrincipalFor(OwnerId));
 
         result.Should().BeTrue();
     }
@@ -202,9 +202,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Blocked",
             Email = "b@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [blocked]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([blocked]);
 
-        bool result = policy.IsAllowed(principal: PrincipalFor(userId: RandomUserId));
+        bool result = policy.IsAllowed(PrincipalFor(RandomUserId));
 
         result.Should().BeFalse();
     }
@@ -219,9 +219,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Owner",
             Email = "o@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [owner]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner]);
 
-        bool result = policy.IsAllowed(principal: PrincipalFor(userId: RandomUserId));
+        bool result = policy.IsAllowed(PrincipalFor(RandomUserId));
 
         result.Should().BeFalse();
     }
@@ -236,9 +236,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Owner",
             Email = "o@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [owner]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner]);
 
-        bool result = policy.IsOwner(principal: null);
+        bool result = policy.IsOwner(null);
 
         result.Should().BeFalse();
     }
@@ -254,9 +254,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Mod",
             Email = "m@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [moderator]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([moderator]);
 
-        bool result = policy.IsModerator(principal: null);
+        bool result = policy.IsModerator(null);
 
         result.Should().BeFalse();
     }
@@ -272,9 +272,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Allowed",
             Email = "a@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [allowed]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([allowed]);
 
-        bool result = policy.IsAllowed(principal: null);
+        bool result = policy.IsAllowed(null);
 
         result.Should().BeFalse();
     }
@@ -282,9 +282,9 @@ public sealed class MediaAuthorizationPolicyTests
     [Fact]
     public void IsModerator_Denies_WhenCacheIsEmpty()
     {
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: []);
+        IMediaAuthorizationPolicy policy = BuildPolicy([]);
 
-        bool result = policy.IsModerator(principal: PrincipalFor(userId: ModeratorId));
+        bool result = policy.IsModerator(PrincipalFor(ModeratorId));
 
         result.Should().BeFalse();
     }
@@ -292,9 +292,9 @@ public sealed class MediaAuthorizationPolicyTests
     [Fact]
     public void IsAllowed_Denies_WhenCacheIsEmpty()
     {
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: []);
+        IMediaAuthorizationPolicy policy = BuildPolicy([]);
 
-        bool result = policy.IsAllowed(principal: PrincipalFor(userId: AllowedUserId));
+        bool result = policy.IsAllowed(PrincipalFor(AllowedUserId));
 
         result.Should().BeFalse();
     }
@@ -325,9 +325,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Allowed",
             Email = "a@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [owner, moderator, allowed]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner, moderator, allowed]);
 
-        bool result = policy.IsOwner(principal: PrincipalFor(userId: OwnerId));
+        bool result = policy.IsOwner(PrincipalFor(OwnerId));
 
         result.Should().BeTrue();
     }
@@ -358,9 +358,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Allowed",
             Email = "a@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [owner, moderator, allowed]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner, moderator, allowed]);
 
-        bool result = policy.IsModerator(principal: PrincipalFor(userId: ModeratorId));
+        bool result = policy.IsModerator(PrincipalFor(ModeratorId));
 
         result.Should().BeTrue();
     }
@@ -391,9 +391,9 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Allowed",
             Email = "a@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [owner, moderator, allowed]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner, moderator, allowed]);
 
-        bool result = policy.IsAllowed(principal: PrincipalFor(userId: AllowedUserId));
+        bool result = policy.IsAllowed(PrincipalFor(AllowedUserId));
 
         result.Should().BeTrue();
     }
@@ -410,10 +410,10 @@ public sealed class MediaAuthorizationPolicyTests
             Name = "Mod",
             Email = "m@nm.tv",
         };
-        IMediaAuthorizationPolicy policy = BuildPolicy(users: [moderator]);
+        IMediaAuthorizationPolicy policy = BuildPolicy([moderator]);
 
-        bool isAllowed = policy.IsAllowed(principal: PrincipalFor(userId: ModeratorId));
-        bool isModerator = policy.IsModerator(principal: PrincipalFor(userId: ModeratorId));
+        bool isAllowed = policy.IsAllowed(PrincipalFor(ModeratorId));
+        bool isModerator = policy.IsModerator(PrincipalFor(ModeratorId));
 
         isAllowed.Should().BeTrue();
         isModerator.Should().BeTrue();

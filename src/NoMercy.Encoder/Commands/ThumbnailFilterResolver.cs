@@ -36,7 +36,7 @@ public static class ThumbnailFilterResolver
         if (!sourceIsHdr)
             return baseFilter;
 
-        string chain = string.IsNullOrEmpty(value: tonemapChain) ? DefaultTonemapChain : tonemapChain;
+        string chain = string.IsNullOrEmpty(tonemapChain) ? DefaultTonemapChain : tonemapChain;
         return $"{chain},{baseFilter}";
     }
 }

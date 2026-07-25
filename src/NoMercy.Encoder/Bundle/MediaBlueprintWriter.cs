@@ -47,31 +47,31 @@ public class MediaBlueprintWriter(IMediaBlueprintBuilder builder) : IMediaBluepr
     )
     {
         BlueprintEncode encode = builder.BuildEncode(
-            source: source,
-            plan: plan,
-            layout: layout,
-            outputFiles: outputFiles,
-            outputLocation: outputLocation,
-            encoderVersion: encoderVersion,
-            profileFingerprint: profileFingerprint,
-            createdAt: createdAt,
-            completedAt: completedAt
+            source,
+            plan,
+            layout,
+            outputFiles,
+            outputLocation,
+            encoderVersion,
+            profileFingerprint,
+            createdAt,
+            completedAt
         );
 
-        MediaBlueprint? existing = await ReadAsync(storage: storage, mediaRootPath: mediaRootPath, ct: ct);
+        MediaBlueprint? existing = await ReadAsync(storage, mediaRootPath, ct);
         MediaBlueprint blueprint = existing is null
-            ? builder.BuildFromSource(source: source, identity: identity, originalSourcePath: originalSourcePath) with
+            ? builder.BuildFromSource(source, identity, originalSourcePath) with
             {
                 Encodes = [encode],
             }
             : existing with
             {
-                Encodes = MergeEncode(existing: existing.Encodes, encode: encode),
+                Encodes = MergeEncode(existing.Encodes, encode),
             };
 
-        string path = storage.CombinePath(parent: mediaRootPath, child: FileName);
-        string json = JsonConvert.SerializeObject(value: blueprint, settings: SerializerSettings);
-        await storage.WriteAsync(path: path, bytes: Encoding.UTF8.GetBytes(s: json), ct: ct);
+        string path = storage.CombinePath(mediaRootPath, FileName);
+        string json = JsonConvert.SerializeObject(blueprint, SerializerSettings);
+        await storage.WriteAsync(path, Encoding.UTF8.GetBytes(json), ct);
     }
 
     public async Task<MediaBlueprint?> ReadAsync(
@@ -80,13 +80,13 @@ public class MediaBlueprintWriter(IMediaBlueprintBuilder builder) : IMediaBluepr
         CancellationToken ct
     )
     {
-        string path = storage.CombinePath(parent: mediaRootPath, child: FileName);
-        if (!storage.Exists(path: path))
+        string path = storage.CombinePath(mediaRootPath, FileName);
+        if (!storage.Exists(path))
             return null;
 
-        byte[] bytes = await storage.ReadAsync(path: path, ct: ct);
-        string json = Encoding.UTF8.GetString(bytes: bytes);
-        return JsonConvert.DeserializeObject<MediaBlueprint>(value: json, settings: SerializerSettings);
+        byte[] bytes = await storage.ReadAsync(path, ct);
+        string json = Encoding.UTF8.GetString(bytes);
+        return JsonConvert.DeserializeObject<MediaBlueprint>(json, SerializerSettings);
     }
 
     /// <summary>
@@ -100,11 +100,11 @@ public class MediaBlueprintWriter(IMediaBlueprintBuilder builder) : IMediaBluepr
     )
     {
         List<BlueprintEncode> merged = existing
-            .Where(predicate: e =>
-                !string.Equals(a: e.PresetSlug, b: encode.PresetSlug, comparisonType: StringComparison.OrdinalIgnoreCase)
+            .Where(e =>
+                !string.Equals(e.PresetSlug, encode.PresetSlug, StringComparison.OrdinalIgnoreCase)
             )
             .ToList();
-        merged.Add(item: encode);
+        merged.Add(encode);
         return merged;
     }
 }

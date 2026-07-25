@@ -20,7 +20,7 @@ namespace NoMercy.Tests.MediaProcessing.Palettes;
 /// entity. ColorPaletteJob no-ops on those, so queueing them only burns queue
 /// throughput. These pin the gate that keeps them out of the queue.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class JobDispatcherPaletteGateTests
 {
     /// <summary>
@@ -34,46 +34,46 @@ public class JobDispatcherPaletteGateTests
 
         protected override bool NeedsPalette(string entityType, string entityId)
         {
-            GateAsked.Add(item: (entityType, entityId));
+            GateAsked.Add((entityType, entityId));
             return needsPalette;
         }
 
         public override void Dispatch(IShouldQueue job, string onQueue, int priority)
         {
-            Dispatched.Add(item: ("dispatched", onQueue));
+            Dispatched.Add(("dispatched", onQueue));
         }
     }
 
     [Fact]
     public void DispatchColorPaletteJob_WhenEntityAlreadyHasAPalette_QueuesNothing()
     {
-        RecordingDispatcher dispatcher = new(needsPalette: false);
+        RecordingDispatcher dispatcher = new(false);
 
-        dispatcher.DispatchColorPaletteJob(entityType: "person", entityId: "1445824");
+        dispatcher.DispatchColorPaletteJob("person", "1445824");
 
-        Assert.Empty(collection: dispatcher.Dispatched);
+        Assert.Empty(dispatcher.Dispatched);
     }
 
     [Fact]
     public void DispatchColorPaletteJob_WhenEntityHasNoPalette_QueuesTheJob()
     {
-        RecordingDispatcher dispatcher = new(needsPalette: true);
+        RecordingDispatcher dispatcher = new(true);
 
-        dispatcher.DispatchColorPaletteJob(entityType: "person", entityId: "1445824");
+        dispatcher.DispatchColorPaletteJob("person", "1445824");
 
-        Assert.Single(collection: dispatcher.Dispatched);
-        Assert.Equal(expected: "palette", actual: dispatcher.Dispatched[index: 0].EntityId);
+        Assert.Single(dispatcher.Dispatched);
+        Assert.Equal("palette", dispatcher.Dispatched[0].EntityId);
     }
 
     [Fact]
     public void DispatchColorPaletteJob_ConsultsTheGateForTheRequestedEntity()
     {
-        RecordingDispatcher dispatcher = new(needsPalette: true);
+        RecordingDispatcher dispatcher = new(true);
 
-        dispatcher.DispatchColorPaletteJob(entityType: "episode", entityId: "550");
+        dispatcher.DispatchColorPaletteJob("episode", "550");
 
-        Assert.Single(collection: dispatcher.GateAsked);
-        Assert.Equal(expected: ("episode", "550"), actual: dispatcher.GateAsked[index: 0]);
+        Assert.Single(dispatcher.GateAsked);
+        Assert.Equal(("episode", "550"), dispatcher.GateAsked[0]);
     }
 
     [Fact]
@@ -81,12 +81,12 @@ public class JobDispatcherPaletteGateTests
     {
         // The shape that produced ~3.6k inserts/min on a real library: the same
         // cast dispatched again for every title they appear in.
-        RecordingDispatcher painted = new(needsPalette: false);
+        RecordingDispatcher painted = new(false);
         foreach (string id in new[] { "1", "2", "3", "4", "5" })
-            painted.DispatchColorPaletteJob(entityType: "person", entityId: id);
+            painted.DispatchColorPaletteJob("person", id);
 
-        Assert.Empty(collection: painted.Dispatched);
-        Assert.Equal(expected: 5, actual: painted.GateAsked.Count);
+        Assert.Empty(painted.Dispatched);
+        Assert.Equal(5, painted.GateAsked.Count);
     }
 
     [Fact]
@@ -96,9 +96,9 @@ public class JobDispatcherPaletteGateTests
         // never be the thing that silently drops work — it defers to the job.
         JobDispatcher dispatcher = new();
 
-        bool needs = InvokeNeedsPalette(dispatcher: dispatcher, entityType: "not-a-real-entity-type", entityId: "1");
+        bool needs = InvokeNeedsPalette(dispatcher, "not-a-real-entity-type", "1");
 
-        Assert.True(condition: needs);
+        Assert.True(needs);
     }
 
     private static bool InvokeNeedsPalette(
@@ -108,10 +108,10 @@ public class JobDispatcherPaletteGateTests
     )
     {
         System.Reflection.MethodInfo method = typeof(JobDispatcher).GetMethod(
-            name: "NeedsPalette",
-            bindingAttr: System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
+            "NeedsPalette",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
         )!;
 
-        return (bool)method.Invoke(obj: dispatcher, parameters: [entityType, entityId])!;
+        return (bool)method.Invoke(dispatcher, [entityType, entityId])!;
     }
 }

@@ -39,30 +39,30 @@ public class SeasonManager(
         ConcurrentBag<TmdbSeasonAppends> seasonAppends = [];
 
         await Parallel.ForEachAsync(
-            source: show.Seasons,
-            parallelOptions: SystemParallelism.Options,
-            body: async (season, _) =>
+            show.Seasons,
+            SystemParallelism.Options,
+            async (season, _) =>
             {
                 try
                 {
-                    using TmdbSeasonClient tmdbSeasonClient = new(tvId: show.Id, seasonNumber: season.SeasonNumber);
+                    using TmdbSeasonClient tmdbSeasonClient = new(show.Id, season.SeasonNumber);
                     TmdbSeasonAppends? seasonTask = await tmdbSeasonClient.WithAppends(
-                        appendices: ["changes", "credits", "external_ids", "images", "translations"],
-                        priority: priority
+                        ["changes", "credits", "external_ids", "images", "translations"],
+                        priority
                     );
                     if (seasonTask is null)
                         return;
 
-                    seasonAppends.Add(item: seasonTask);
+                    seasonAppends.Add(seasonTask);
                 }
                 catch (Exception e)
                 {
-                    logger.LogError(message: e.Message);
+                    logger.LogError(e.Message);
                 }
             }
         );
 
-        IEnumerable<Season> seasons = seasonAppends.Select(selector: s => new Season
+        IEnumerable<Season> seasons = seasonAppends.Select(s => new Season
         {
             Id = s.Id,
             Title = s.Name,
@@ -74,13 +74,13 @@ public class SeasonManager(
             TvId = show.Id,
         });
 
-        await seasonRepository.StoreAsync(seasons: seasons);
-        logger.LogDebug(message: "Show {Name}: Seasons stored", args: show.Name);
+        await seasonRepository.StoreAsync(seasons);
+        logger.LogDebug("Show {Name}: Seasons stored", show.Name);
 
         foreach (Season season in seasons)
-            jobDispatcher.DispatchColorPaletteJob(entityType: "season", entityId: season.Id.ToString());
+            jobDispatcher.DispatchColorPaletteJob("season", season.Id.ToString());
 
-        jobDispatcher.DispatchJob<SeasonExtrasJob, TmdbSeasonAppends>(data: seasonAppends, name: show.Name);
+        jobDispatcher.DispatchJob<SeasonExtrasJob, TmdbSeasonAppends>(seasonAppends, show.Name);
 
         return seasonAppends;
     }
@@ -90,7 +90,7 @@ public class SeasonManager(
         // Refresh the existing season's metadata in place; the show link (TvId)
         // is left untouched because a season update never re-parents a season.
         return seasonRepository.UpdateAsync(
-            season: new()
+            new()
             {
                 Id = season.Id,
                 Title = season.Name,
@@ -105,19 +105,19 @@ public class SeasonManager(
 
     public async Task RemoveSeasonAsync(string showName, TmdbSeasonAppends season)
     {
-        await seasonRepository.RemoveSeasonAsync(seasonId: season.Id);
+        await seasonRepository.RemoveSeasonAsync(season.Id);
         logger.LogDebug(
-            message: "Show {ShowName}: Season {SeasonNumber}: Removed", args: [showName, season.SeasonNumber]
+            "Show {ShowName}: Season {SeasonNumber}: Removed", [showName, season.SeasonNumber]
         );
     }
 
     internal async Task StoreTranslations(string showName, TmdbSeasonAppends season)
     {
         IEnumerable<Translation> translations = season
-            .Translations.Translations.Where(predicate: translation =>
+            .Translations.Translations.Where(translation =>
                 translation.Data.Title != null || translation.Data.Overview != ""
             )
-            .Select(selector: translation => new Translation
+            .Select(translation => new Translation
             {
                 Iso31661 = translation.Iso31661,
                 Iso6391 = translation.Iso6391,
@@ -129,16 +129,16 @@ public class SeasonManager(
                 SeasonId = season.Id,
             });
 
-        await seasonRepository.StoreTranslationsAsync(translations: translations);
+        await seasonRepository.StoreTranslationsAsync(translations);
         logger.LogDebug(
-            message: "Show {ShowName}: Season {SeasonNumber}: Translations stored", args: [showName, season.SeasonNumber]
+            "Show {ShowName}: Season {SeasonNumber}: Translations stored", [showName, season.SeasonNumber]
         );
     }
 
     internal async Task StoreImages(string showName, TmdbSeasonAppends season)
     {
         IEnumerable<Image> posters = season
-            .TmdbSeasonImages.Posters.Select(selector: image => new Image
+            .TmdbSeasonImages.Posters.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 Height = image.Height,
@@ -153,21 +153,21 @@ public class SeasonManager(
             })
             .ToList();
 
-        await seasonRepository.StoreImagesAsync(images: posters);
+        await seasonRepository.StoreImagesAsync(posters);
         logger.LogDebug(
-            message: "Show {ShowName}: Season {SeasonNumber}: Images stored", args: [showName, season.SeasonNumber]
+            "Show {ShowName}: Season {SeasonNumber}: Images stored", [showName, season.SeasonNumber]
         );
 
         await using MediaContext db = new();
         List<int> imageIds = await db
             .Images.AsNoTracking()
-            .Where(predicate: i =>
+            .Where(i =>
                 i.SeasonId == season.Id && (i._colorPalette == null || i._colorPalette == "")
             )
-            .Select(selector: i => i.Id)
+            .Select(i => i.Id)
             .ToListAsync();
 
         foreach (int id in imageIds)
-            jobDispatcher.DispatchColorPaletteJob(entityType: "image", entityId: id.ToString());
+            jobDispatcher.DispatchColorPaletteJob("image", id.ToString());
     }
 }

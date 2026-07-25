@@ -15,30 +15,30 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchRichSync
 {
-    [JsonProperty(propertyName: "richsync_id")]
+    [JsonProperty("richsync_id")]
     public int RichsyncId;
 
-    [JsonProperty(propertyName: "restricted")]
+    [JsonProperty("restricted")]
     public int Restricted;
 
-    [JsonProperty(propertyName: "richsync_body")]
+    [JsonProperty("richsync_body")]
     public string RichsyncBody = string.Empty;
 
-    [JsonProperty(propertyName: "lyrics_copyright")]
+    [JsonProperty("lyrics_copyright")]
     public string LyricsCopyright = string.Empty;
 
-    [JsonProperty(propertyName: "richsync_length")]
+    [JsonProperty("richsync_length")]
     public int RichsyncLength;
 
-    [JsonProperty(propertyName: "richsync_language")]
+    [JsonProperty("richsync_language")]
     public string RichsyncLanguage = string.Empty;
 
-    [JsonProperty(propertyName: "richsync_language_description")]
+    [JsonProperty("richsync_language_description")]
     public string RichsyncLanguageDescription = string.Empty;
 
-    [JsonProperty(propertyName: "script_tracking_url")]
+    [JsonProperty("script_tracking_url")]
     public string ScriptTrackingUrl = string.Empty;
 
-    [JsonProperty(propertyName: "updated_time")]
+    [JsonProperty("updated_time")]
     public DateTime UpdatedTime;
 }

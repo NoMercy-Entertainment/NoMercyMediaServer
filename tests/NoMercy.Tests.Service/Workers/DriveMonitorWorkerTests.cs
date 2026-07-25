@@ -15,7 +15,6 @@ using NoMercy.Events.DriveMonitor;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.Service.Workers;
-using Xunit;
 
 namespace NoMercy.Tests.Service.Workers;
 
@@ -30,21 +29,21 @@ namespace NoMercy.Tests.Service.Workers;
 /// <see cref="EventBusProvider.IsConfigured"/> is false the worker must skip
 /// publishing rather than throw the "not configured" exception mid-loop.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class DriveMonitorWorkerTests
 {
     private static readonly DiscDrive Drive = new(
-        Path: "/dev/sr0",
-        Label: "MOVIE_DISC",
-        HasDisc: true,
-        DiscType: OpticalDiscType.Dvd
+        "/dev/sr0",
+        "MOVIE_DISC",
+        true,
+        OpticalDiscType.Dvd
     );
 
     private static async IAsyncEnumerable<DriveEvent> Events(params DriveEventType[] types)
     {
         foreach (DriveEventType type in types)
         {
-            yield return new(Type: type, Drive: Drive);
+            yield return new(type, Drive);
             await Task.Yield();
         }
     }
@@ -57,7 +56,7 @@ public sealed class DriveMonitorWorkerTests
             where TEvent : IEvent
         {
             if (@event is DriveStateChangedEvent driveEvent)
-                Published.Add(item: driveEvent);
+                Published.Add(driveEvent);
             return Task.CompletedTask;
         }
 
@@ -81,79 +80,79 @@ public sealed class DriveMonitorWorkerTests
     private static IEventBus? SwapEventBus(IEventBus? next)
     {
         System.Reflection.FieldInfo field = typeof(EventBusProvider).GetField(
-            name: "_instance",
-            bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
+            "_instance",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
         )!;
-        IEventBus? previous = (IEventBus?)field.GetValue(obj: null);
-        field.SetValue(obj: null, value: next);
+        IEventBus? previous = (IEventBus?)field.GetValue(null);
+        field.SetValue(null, next);
         return previous;
     }
 
     [Theory]
-    [InlineData(data: [DriveEventType.DriveAdded, "drive_added"])]
-    [InlineData(data: [DriveEventType.DriveRemoved, "drive_removed"])]
-    [InlineData(data: [DriveEventType.DiscInserted, "disc_inserted"])]
-    [InlineData(data: [DriveEventType.DiscEjected, "disc_ejected"])]
+    [InlineData([DriveEventType.DriveAdded, "drive_added"])]
+    [InlineData([DriveEventType.DriveRemoved, "drive_removed"])]
+    [InlineData([DriveEventType.DiscInserted, "disc_inserted"])]
+    [InlineData([DriveEventType.DiscEjected, "disc_ejected"])]
     public async Task ExecuteAsync_PublishesWithTheExpectedWireMethodName(
         DriveEventType eventType,
         string expectedMethod
     )
     {
         RecordingEventBus eventBus = new();
-        IEventBus? original = SwapEventBus(next: eventBus);
+        IEventBus? original = SwapEventBus(eventBus);
         try
         {
             Mock<IDriveMonitor> driveMonitor = new();
             driveMonitor
-                .Setup(expression: m => m.MonitorAsync(It.IsAny<CancellationToken>()))
-                .Returns(value: Events(types: eventType));
+                .Setup(m => m.MonitorAsync(It.IsAny<CancellationToken>()))
+                .Returns(Events(eventType));
             DriveMonitorWorker worker = new(
-                driveMonitor: driveMonitor.Object,
-                logger: NullLogger<DriveMonitorWorker>.Instance
+                driveMonitor.Object,
+                NullLogger<DriveMonitorWorker>.Instance
             );
 
-            await worker.StartAsync(cancellationToken: CancellationToken.None);
-            await Task.Delay(millisecondsDelay: 50);
+            await worker.StartAsync(CancellationToken.None);
+            await Task.Delay(50);
 
-            Assert.Single(collection: eventBus.Published);
-            Assert.Equal(expected: expectedMethod, actual: eventBus.Published[index: 0].DriveStateData.Method);
-            Assert.Equal(expected: Drive.Path, actual: eventBus.Published[index: 0].DriveStateData.Drive);
-            Assert.Equal(expected: Drive.Label, actual: eventBus.Published[index: 0].DriveStateData.VolumeLabel);
-            Assert.True(condition: eventBus.Published[index: 0].DriveStateData.HasDisc);
-            Assert.Equal(expected: "dvd", actual: eventBus.Published[index: 0].DriveStateData.DiscType);
+            Assert.Single(eventBus.Published);
+            Assert.Equal(expectedMethod, eventBus.Published[0].DriveStateData.Method);
+            Assert.Equal(Drive.Path, eventBus.Published[0].DriveStateData.Drive);
+            Assert.Equal(Drive.Label, eventBus.Published[0].DriveStateData.VolumeLabel);
+            Assert.True(eventBus.Published[0].DriveStateData.HasDisc);
+            Assert.Equal("dvd", eventBus.Published[0].DriveStateData.DiscType);
         }
         finally
         {
-            SwapEventBus(next: original);
+            SwapEventBus(original);
         }
     }
 
     [Fact]
     public async Task ExecuteAsync_EventBusNotConfigured_SkipsPublishingWithoutThrowing()
     {
-        IEventBus? original = SwapEventBus(next: null);
+        IEventBus? original = SwapEventBus(null);
         try
         {
             Mock<IDriveMonitor> driveMonitor = new();
             driveMonitor
-                .Setup(expression: m => m.MonitorAsync(It.IsAny<CancellationToken>()))
-                .Returns(value: Events(types: DriveEventType.DriveAdded));
+                .Setup(m => m.MonitorAsync(It.IsAny<CancellationToken>()))
+                .Returns(Events(DriveEventType.DriveAdded));
             DriveMonitorWorker worker = new(
-                driveMonitor: driveMonitor.Object,
-                logger: NullLogger<DriveMonitorWorker>.Instance
+                driveMonitor.Object,
+                NullLogger<DriveMonitorWorker>.Instance
             );
 
-            Exception? thrown = await Record.ExceptionAsync(testCode: async () =>
+            Exception? thrown = await Record.ExceptionAsync(async () =>
             {
-                await worker.StartAsync(cancellationToken: CancellationToken.None);
-                await Task.Delay(millisecondsDelay: 50);
+                await worker.StartAsync(CancellationToken.None);
+                await Task.Delay(50);
             });
 
-            Assert.Null(@object: thrown);
+            Assert.Null(thrown);
         }
         finally
         {
-            SwapEventBus(next: original);
+            SwapEventBus(original);
         }
     }
 
@@ -161,7 +160,7 @@ public sealed class DriveMonitorWorkerTests
     public async Task ExecuteAsync_UnmappedEventType_FallsBackToDriveChangedMethod()
     {
         RecordingEventBus eventBus = new();
-        IEventBus? original = SwapEventBus(next: eventBus);
+        IEventBus? original = SwapEventBus(eventBus);
         try
         {
             // Cast a value outside the declared DriveEventType range — the
@@ -170,22 +169,22 @@ public sealed class DriveMonitorWorkerTests
             // case being added here.
             Mock<IDriveMonitor> driveMonitor = new();
             driveMonitor
-                .Setup(expression: m => m.MonitorAsync(It.IsAny<CancellationToken>()))
-                .Returns(value: Events(types: (DriveEventType)99));
+                .Setup(m => m.MonitorAsync(It.IsAny<CancellationToken>()))
+                .Returns(Events((DriveEventType)99));
             DriveMonitorWorker worker = new(
-                driveMonitor: driveMonitor.Object,
-                logger: NullLogger<DriveMonitorWorker>.Instance
+                driveMonitor.Object,
+                NullLogger<DriveMonitorWorker>.Instance
             );
 
-            await worker.StartAsync(cancellationToken: CancellationToken.None);
-            await Task.Delay(millisecondsDelay: 50);
+            await worker.StartAsync(CancellationToken.None);
+            await Task.Delay(50);
 
-            Assert.Single(collection: eventBus.Published);
-            Assert.Equal(expected: "drive_changed", actual: eventBus.Published[index: 0].DriveStateData.Method);
+            Assert.Single(eventBus.Published);
+            Assert.Equal("drive_changed", eventBus.Published[0].DriveStateData.Method);
         }
         finally
         {
-            SwapEventBus(next: original);
+            SwapEventBus(original);
         }
     }
 
@@ -194,25 +193,25 @@ public sealed class DriveMonitorWorkerTests
     {
         Mock<IDriveMonitor> driveMonitor = new();
         driveMonitor
-            .Setup(expression: m => m.MonitorAsync(It.IsAny<CancellationToken>()))
+            .Setup(m => m.MonitorAsync(It.IsAny<CancellationToken>()))
             .Throws<InvalidOperationException>();
         DriveMonitorWorker worker = new(
-            driveMonitor: driveMonitor.Object,
-            logger: NullLogger<DriveMonitorWorker>.Instance
+            driveMonitor.Object,
+            NullLogger<DriveMonitorWorker>.Instance
         );
         using CancellationTokenSource cts = new();
-        cts.CancelAfter(delay: TimeSpan.FromMilliseconds(milliseconds: 50));
+        cts.CancelAfter(TimeSpan.FromMilliseconds(50));
 
-        Exception? thrown = await Record.ExceptionAsync(testCode: async () =>
+        Exception? thrown = await Record.ExceptionAsync(async () =>
         {
-            await worker.StartAsync(cancellationToken: cts.Token);
-            await Task.Delay(millisecondsDelay: 300);
+            await worker.StartAsync(cts.Token);
+            await Task.Delay(300);
         });
 
         // The 5s retry backoff itself is cut short by the token cancelling at
         // 50ms — reaching here without a real 5s wait proves the retry loop's
         // own OperationCanceledException catch (not the outer one) is what
         // exits the worker.
-        Assert.Null(@object: thrown);
+        Assert.Null(thrown);
     }
 }

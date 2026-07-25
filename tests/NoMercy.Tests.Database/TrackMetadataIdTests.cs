@@ -16,58 +16,58 @@ using NoMercy.Database.Models.Music;
 
 namespace NoMercy.Tests.Database;
 
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class TrackMetadataIdTests
 {
     [Fact]
     public void MetadataId_PropertyType_IsNullableUlid()
     {
-        PropertyInfo? prop = typeof(Track).GetProperty(name: "MetadataId");
-        Assert.NotNull(@object: prop);
-        Assert.Equal(expected: typeof(Ulid?), actual: prop.PropertyType);
+        PropertyInfo? prop = typeof(Track).GetProperty("MetadataId");
+        Assert.NotNull(prop);
+        Assert.Equal(typeof(Ulid?), prop.PropertyType);
     }
 
     [Fact]
     public void MetadataId_MatchesMetadataIdType()
     {
-        Type trackMetadataIdType = typeof(Track).GetProperty(name: "MetadataId")!.PropertyType;
-        Type metadataIdType = typeof(Metadata).GetProperty(name: "Id")!.PropertyType;
+        Type trackMetadataIdType = typeof(Track).GetProperty("MetadataId")!.PropertyType;
+        Type metadataIdType = typeof(Metadata).GetProperty("Id")!.PropertyType;
 
         Type trackFkUnderlyingType =
-            Nullable.GetUnderlyingType(nullableType: trackMetadataIdType) ?? trackMetadataIdType;
-        Assert.Equal(expected: metadataIdType, actual: trackFkUnderlyingType);
+            Nullable.GetUnderlyingType(trackMetadataIdType) ?? trackMetadataIdType;
+        Assert.Equal(metadataIdType, trackFkUnderlyingType);
     }
 
     [Fact]
     public void MetadataId_ConsistentWithVideoFileMetadataId()
     {
-        Type trackType = typeof(Track).GetProperty(name: "MetadataId")!.PropertyType;
-        Type videoFileType = typeof(VideoFile).GetProperty(name: "MetadataId")!.PropertyType;
-        Assert.Equal(expected: videoFileType, actual: trackType);
+        Type trackType = typeof(Track).GetProperty("MetadataId")!.PropertyType;
+        Type videoFileType = typeof(VideoFile).GetProperty("MetadataId")!.PropertyType;
+        Assert.Equal(videoFileType, trackType);
     }
 
     [Fact]
     public void MetadataId_ConsistentWithAlbumMetadataId()
     {
-        Type trackType = typeof(Track).GetProperty(name: "MetadataId")!.PropertyType;
-        Type albumType = typeof(Album).GetProperty(name: "MetadataId")!.PropertyType;
-        Assert.Equal(expected: albumType, actual: trackType);
+        Type trackType = typeof(Track).GetProperty("MetadataId")!.PropertyType;
+        Type albumType = typeof(Album).GetProperty("MetadataId")!.PropertyType;
+        Assert.Equal(albumType, trackType);
     }
 
     [Fact]
     public void MetadataId_HasCorrectJsonProperty()
     {
-        PropertyInfo? prop = typeof(Track).GetProperty(name: "MetadataId");
+        PropertyInfo? prop = typeof(Track).GetProperty("MetadataId");
         JsonPropertyAttribute? attr = prop?.GetCustomAttribute<JsonPropertyAttribute>();
-        Assert.NotNull(@object: attr);
-        Assert.Equal(expected: "metadata_id", actual: attr.PropertyName);
+        Assert.NotNull(attr);
+        Assert.Equal("metadata_id", attr.PropertyName);
     }
 
     [Fact]
     public void MetadataId_DefaultValue_IsNull()
     {
         Track track = new();
-        Assert.Null(value: track.MetadataId);
+        Assert.Null(track.MetadataId);
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class TrackMetadataIdTests
     {
         Ulid testId = Ulid.NewUlid();
         Track track = new() { MetadataId = testId };
-        Assert.Equal(expected: testId, actual: track.MetadataId);
+        Assert.Equal(testId, track.MetadataId);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class TrackMetadataIdTests
     {
         Track track = new() { MetadataId = Ulid.NewUlid() };
         track.MetadataId = null;
-        Assert.Null(value: track.MetadataId);
+        Assert.Null(track.MetadataId);
     }
 
     [Fact]
@@ -91,25 +91,25 @@ public class TrackMetadataIdTests
     {
         Ulid testId = Ulid.NewUlid();
         Track track = new() { MetadataId = testId };
-        string json = JsonConvert.SerializeObject(value: track);
-        Assert.Contains(expectedSubstring: "\"metadata_id\"", actualString: json);
-        Assert.Contains(expectedSubstring: testId.ToString(), actualString: json);
+        string json = JsonConvert.SerializeObject(track);
+        Assert.Contains("\"metadata_id\"", json);
+        Assert.Contains(testId.ToString(), json);
     }
 
     [Fact]
     public void MetadataId_IsNotInt()
     {
-        PropertyInfo? prop = typeof(Track).GetProperty(name: "MetadataId");
-        Assert.NotNull(@object: prop);
-        Assert.NotEqual(expected: typeof(int?), actual: prop.PropertyType);
-        Assert.NotEqual(expected: typeof(int), actual: prop.PropertyType);
+        PropertyInfo? prop = typeof(Track).GetProperty("MetadataId");
+        Assert.NotNull(prop);
+        Assert.NotEqual(typeof(int?), prop.PropertyType);
+        Assert.NotEqual(typeof(int), prop.PropertyType);
     }
 
     [Fact]
     public void Metadata_NavigationProperty_Exists()
     {
-        PropertyInfo? prop = typeof(Track).GetProperty(name: "Metadata");
-        Assert.NotNull(@object: prop);
-        Assert.Equal(expected: typeof(Metadata), actual: prop.PropertyType);
+        PropertyInfo? prop = typeof(Track).GetProperty("Metadata");
+        Assert.NotNull(prop);
+        Assert.Equal(typeof(Metadata), prop.PropertyType);
     }
 }

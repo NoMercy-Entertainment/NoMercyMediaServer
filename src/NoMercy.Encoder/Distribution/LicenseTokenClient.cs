@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
@@ -97,7 +96,7 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
 {
     private const string TokenEndpoint = "cluster/token";
     private const string IntrospectEndpoint = "cluster/token/introspect";
-    private static readonly TimeSpan IntrospectCacheTtl = TimeSpan.FromSeconds(seconds: 30);
+    private static readonly TimeSpan IntrospectCacheTtl = TimeSpan.FromSeconds(30);
 
     private readonly HttpClient _http;
     private readonly Func<string?> _accessTokenProvider;
@@ -108,7 +107,7 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
     private readonly Dictionary<
         string,
         (IntrospectResult Result, DateTime CachedAt)
-    > _introspectCache = new(comparer: StringComparer.Ordinal);
+    > _introspectCache = new(StringComparer.Ordinal);
 
     private readonly object _cacheLock = new();
 
@@ -138,30 +137,30 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
     {
         try
         {
-            HttpRequestMessage request = BuildRequest(method: HttpMethod.Post, endpoint: TokenEndpoint);
-            request.Content = JsonContent.Create(inputValue: new TokenRequestBody(CertPem: _certPem));
+            HttpRequestMessage request = BuildRequest(HttpMethod.Post, TokenEndpoint);
+            request.Content = JsonContent.Create(new TokenRequestBody(_certPem));
 
             using HttpResponseMessage response = await _http
-                .SendAsync(request: request, cancellationToken: ct)
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .SendAsync(request, ct)
+                .ConfigureAwait(false);
 
             return response.StatusCode switch
             {
-                HttpStatusCode.OK => await ParseSuccessAsync(response: response, ct: ct).ConfigureAwait(continueOnCapturedContext: false),
+                HttpStatusCode.OK => await ParseSuccessAsync(response, ct).ConfigureAwait(false),
                 HttpStatusCode.Unauthorized => new(
-                    Token: null,
-                    Failure: LicenseFailureKind.Unauthenticated,
-                    Message: "401 from coordinator"
+                    null,
+                    LicenseFailureKind.Unauthenticated,
+                    "401 from coordinator"
                 ),
                 HttpStatusCode.Forbidden => new(
-                    Token: null,
-                    Failure: LicenseFailureKind.EntitlementRevoked,
-                    Message: "403 from coordinator"
+                    null,
+                    LicenseFailureKind.EntitlementRevoked,
+                    "403 from coordinator"
                 ),
                 _ => new(
-                    Token: null,
-                    Failure: LicenseFailureKind.NetworkError,
-                    Message: $"Unexpected {(int)response.StatusCode} from coordinator"
+                    null,
+                    LicenseFailureKind.NetworkError,
+                    $"Unexpected {(int)response.StatusCode} from coordinator"
                 ),
             };
         }
@@ -171,7 +170,7 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
         }
         catch (Exception ex)
         {
-            return new(Token: null, Failure: LicenseFailureKind.NetworkError, Message: ex.Message);
+            return new(null, LicenseFailureKind.NetworkError, ex.Message);
         }
     }
 
@@ -182,8 +181,8 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
         {
             if (
                 _introspectCache.TryGetValue(
-                    key: token,
-                    value: out (IntrospectResult Result, DateTime CachedAt) entry
+                    token,
+                    out (IntrospectResult Result, DateTime CachedAt) entry
                 )
                 && DateTime.UtcNow - entry.CachedAt < IntrospectCacheTtl
             )
@@ -194,31 +193,31 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
 
         try
         {
-            HttpRequestMessage request = BuildRequest(method: HttpMethod.Post, endpoint: IntrospectEndpoint);
-            request.Content = JsonContent.Create(inputValue: new IntrospectRequestBody(Token: token));
+            HttpRequestMessage request = BuildRequest(HttpMethod.Post, IntrospectEndpoint);
+            request.Content = JsonContent.Create(new IntrospectRequestBody(token));
 
             using HttpResponseMessage response = await _http
-                .SendAsync(request: request, cancellationToken: ct)
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .SendAsync(request, ct)
+                .ConfigureAwait(false);
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 TokenIntrospectResponse? body =
                     await response.Content.ReadFromJsonAsync<TokenIntrospectResponse>(
-                        cancellationToken: ct
+                        ct
                     );
                 result = new(
-                    Active: body?.Active ?? false,
-                    Scopes: body?.Scopes ?? [],
-                    Message: null
+                    body?.Active ?? false,
+                    body?.Scopes ?? [],
+                    null
                 );
             }
             else
             {
                 result = new(
-                    Active: false,
-                    Scopes: [],
-                    Message: $"Introspect returned {(int)response.StatusCode}"
+                    false,
+                    [],
+                    $"Introspect returned {(int)response.StatusCode}"
                 );
             }
         }
@@ -228,7 +227,7 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
         }
         catch (Exception ex)
         {
-            result = new(Active: false, Scopes: [], Message: ex.Message);
+            result = new(false, [], ex.Message);
         }
 
         lock (_cacheLock)
@@ -238,14 +237,14 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
             DateTime now = DateTime.UtcNow;
             foreach (
                 string expiredKey in ExpiredIntrospectKeys(
-                    entries: _introspectCache,
-                    now: now,
-                    ttl: IntrospectCacheTtl
+                    _introspectCache,
+                    now,
+                    IntrospectCacheTtl
                 )
             )
-                _introspectCache.Remove(key: expiredKey);
+                _introspectCache.Remove(expiredKey);
 
-            _introspectCache[key: token] = (result, now);
+            _introspectCache[token] = (result, now);
         }
 
         return result;
@@ -262,18 +261,18 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
         TimeSpan ttl
     ) =>
         entries
-            .Where(predicate: entry => now - entry.Value.CachedAt >= ttl)
-            .Select(selector: entry => entry.Key)
+            .Where(entry => now - entry.Value.CachedAt >= ttl)
+            .Select(entry => entry.Key)
             .ToList();
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private HttpRequestMessage BuildRequest(HttpMethod method, string endpoint)
     {
-        HttpRequestMessage request = new(method: method, requestUri: endpoint);
+        HttpRequestMessage request = new(method, endpoint);
         string? accessToken = _accessTokenProvider();
-        if (!string.IsNullOrWhiteSpace(value: accessToken))
-            request.Headers.Authorization = new(scheme: "Bearer", parameter: accessToken);
+        if (!string.IsNullOrWhiteSpace(accessToken))
+            request.Headers.Authorization = new("Bearer", accessToken);
         return request;
     }
 
@@ -283,22 +282,22 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
     )
     {
         TokenResponse? body = await response
-            .Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: ct)
-            .ConfigureAwait(continueOnCapturedContext: false);
+            .Content.ReadFromJsonAsync<TokenResponse>(ct)
+            .ConfigureAwait(false);
 
-        if (body is null || string.IsNullOrWhiteSpace(value: body.Secret))
+        if (body is null || string.IsNullOrWhiteSpace(body.Secret))
             return new(
-                Token: null,
-                Failure: LicenseFailureKind.NetworkError,
-                Message: "Coordinator returned empty token body"
+                null,
+                LicenseFailureKind.NetworkError,
+                "Coordinator returned empty token body"
             );
 
         ClusterToken token = new(
-            Secret: body.Secret,
-            ExpiresAt: body.ExpiresAt,
-            Scopes: body.Scopes ?? []
+            body.Secret,
+            body.ExpiresAt,
+            body.Scopes ?? []
         );
-        return new(Token: token, Failure: null, Message: null);
+        return new(token, null, null);
     }
 
     // ── Wire-format DTOs (private — not part of the public API) ─────────────
@@ -312,29 +311,29 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
     // a caller picks up — the encoder ships both (BundleManifest etc. use Newtonsoft;
     // PostAsJsonAsync uses System.Text.Json) and the audit flagged the asymmetry.
     private sealed record TokenRequestBody(
-        [property: JsonPropertyName(name: "cert_pem")]
-        [property: JsonProperty(propertyName: "cert_pem")]
+        [property: JsonPropertyName("cert_pem")]
+        [property: JsonProperty("cert_pem")]
             string? CertPem
     );
 
     private sealed record IntrospectRequestBody(
-        [property: JsonPropertyName(name: "token")] [property: JsonProperty(propertyName: "token")] string Token
+        [property: JsonPropertyName("token")] [property: JsonProperty("token")] string Token
     );
 
     private sealed record TokenResponse(
-        [property: JsonPropertyName(name: "secret")] [property: JsonProperty(propertyName: "secret")] string? Secret,
-        [property: JsonPropertyName(name: "expires_at")]
-        [property: JsonProperty(propertyName: "expires_at")]
+        [property: JsonPropertyName("secret")] [property: JsonProperty("secret")] string? Secret,
+        [property: JsonPropertyName("expires_at")]
+        [property: JsonProperty("expires_at")]
             DateTime ExpiresAt,
-        [property: JsonPropertyName(name: "scopes")]
-        [property: JsonProperty(propertyName: "scopes")]
+        [property: JsonPropertyName("scopes")]
+        [property: JsonProperty("scopes")]
             List<string>? Scopes
     );
 
     private sealed record TokenIntrospectResponse(
-        [property: JsonPropertyName(name: "active")] [property: JsonProperty(propertyName: "active")] bool Active,
-        [property: JsonPropertyName(name: "scopes")]
-        [property: JsonProperty(propertyName: "scopes")]
+        [property: JsonPropertyName("active")] [property: JsonProperty("active")] bool Active,
+        [property: JsonPropertyName("scopes")]
+        [property: JsonProperty("scopes")]
             List<string>? Scopes
     );
 }

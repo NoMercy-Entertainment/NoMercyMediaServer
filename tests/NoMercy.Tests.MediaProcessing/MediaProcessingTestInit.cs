@@ -48,17 +48,17 @@ internal static class MediaProcessingTestInit
 
         // Route all TMDB HTTP calls through a mock handler so MovieManager's
         // real lookups are served from fixtures (no network, no token needed).
-        HttpClientProvider.Initialize(factory: new TmdbMockHttpClientFactory());
+        HttpClientProvider.Initialize(new TmdbMockHttpClientFactory());
 
         // Create a full media-database schema for this assembly's process so
         // MovieManager store tests (Images/Similar/Recommendations) do not hit
         // "no such table" when MediaProcessing runs before the Api test assembly.
-        Directory.CreateDirectory(path: AppFiles.DataPath);
+        Directory.CreateDirectory(AppFiles.DataPath);
         foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })
         {
             string file = AppFiles.MediaDatabase + suffix;
-            if (File.Exists(path: file))
-                File.Delete(path: file);
+            if (File.Exists(file))
+                File.Delete(file);
         }
 
         using MediaContext db = new();

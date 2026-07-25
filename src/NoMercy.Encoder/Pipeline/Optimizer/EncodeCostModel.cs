@@ -29,8 +29,8 @@ public class EncodeCostModel(SpeedIndex speedIndex) : IEncodeCostModel
     public double RungCost(int width, int height, VideoCodecType codec, string encoder, int passes)
     {
         double pixels = (double)width * height;
-        double effort = EffortFor(codec: codec);
-        double speed = speedIndex.GetSpeedMultiplier(codec: codec, encoder: encoder, width: width, deviceName: null);
+        double effort = EffortFor(codec);
+        double speed = speedIndex.GetSpeedMultiplier(codec, encoder, width, null);
         // Unknown speed (0) → treat as 1.0 realtime baseline.
         double divisor = speed > 0 ? speed : 1.0;
         return pixels * effort * passes / divisor / 1_000_000.0;
@@ -44,7 +44,7 @@ public class EncodeCostModel(SpeedIndex speedIndex) : IEncodeCostModel
             total += sourcePixels * TonemapWeight;
 
         foreach (CostRung rung in rungs)
-            total += RungCost(width: rung.Width, height: rung.Height, codec: rung.Codec, encoder: rung.Encoder, passes: rung.Passes);
+            total += RungCost(rung.Width, rung.Height, rung.Codec, rung.Encoder, rung.Passes);
 
         return total;
     }

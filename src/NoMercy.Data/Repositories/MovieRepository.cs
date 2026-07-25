@@ -36,21 +36,21 @@ public class MovieRepository(
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context
             .Movies.AsNoTracking()
-            .Where(predicate: movie => movie.Id == id)
-            .ForUser(userId: userId)
-            .Include(navigationPropertyPath: movie => movie.MovieUser.Where(mu => mu.UserId == userId))
-            .Include(navigationPropertyPath: movie => movie.Translations.Where(t => t.Iso6391 == language))
-            .Include(navigationPropertyPath: movie =>
+            .Where(movie => movie.Id == id)
+            .ForUser(userId)
+            .Include(movie => movie.MovieUser.Where(mu => mu.UserId == userId))
+            .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
+            .Include(movie =>
                 movie
                     .Images.Where(i => i.Type == "logo")
                     .OrderByDescending(i => i.VoteAverage)
                     .ThenBy(i => i.Id)
                     .Take(1)
             )
-            .Include(navigationPropertyPath: movie =>
+            .Include(movie =>
                 movie
                     .CertificationMovies.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
@@ -58,10 +58,10 @@ public class MovieRepository(
                     .OrderBy(c => c.CertificationId)
                     .Take(1)
             )
-                .ThenInclude(navigationPropertyPath: c => c.Certification)
-            .Include(navigationPropertyPath: movie => movie.VideoFiles.Where(v => v.Folder != null))
-                .ThenInclude(navigationPropertyPath: v => v.UserData.Where(ud => ud.UserId == userId))
-            .FirstOrDefaultAsync(cancellationToken: ct);
+                .ThenInclude(c => c.Certification)
+            .Include(movie => movie.VideoFiles.Where(v => v.Folder != null))
+                .ThenInclude(v => v.UserData.Where(ud => ud.UserId == userId))
+            .FirstOrDefaultAsync(ct);
     }
 
     private static readonly Func<
@@ -72,7 +72,7 @@ public class MovieRepository(
         string,
         Task<Movie?>
     > GetMovieDetailAsyncQuery = EF.CompileAsyncQuery(
-        queryExpression: (MediaContext mediaContext, Guid userId, int id, string language, string country) =>
+        (MediaContext mediaContext, Guid userId, int id, string language, string country) =>
             mediaContext
                 .Movies.AsNoTracking()
                 .Where(movie => movie.Id == id)
@@ -141,8 +141,8 @@ public class MovieRepository(
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
-        return await GetMovieDetailAsyncQuery(arg1: context, arg2: userId, arg3: id, arg4: language, arg5: country);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await GetMovieDetailAsyncQuery(context, userId, id, language, country);
     }
 
     public async Task<bool> GetMovieAvailableAsync(
@@ -151,12 +151,12 @@ public class MovieRepository(
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context
             .Movies.AsNoTracking()
-            .ForUser(userId: userId)
-            .Where(predicate: movie => movie.Id == id)
-            .AnyAsync(predicate: movie => movie.VideoFiles.Any(v => v.Folder != null), cancellationToken: ct);
+            .ForUser(userId)
+            .Where(movie => movie.Id == id)
+            .AnyAsync(movie => movie.VideoFiles.Any(v => v.Folder != null), ct);
     }
 
     public async Task<List<Movie>> GetMoviePlaylistAsync(
@@ -167,38 +167,38 @@ public class MovieRepository(
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context
             .Movies.AsNoTracking()
-            .Where(predicate: movie => movie.Id == id)
-            .ForUser(userId: userId)
-            .Include(navigationPropertyPath: movie =>
+            .Where(movie => movie.Id == id)
+            .ForUser(userId)
+            .Include(movie =>
                 movie.Media.Where(media => media.Type == "video" && media.Iso6391 == language)
             )
-            .Include(navigationPropertyPath: movie =>
+            .Include(movie =>
                 movie.Images.Where(image =>
                     image.Type == "logo" && image.Iso6391 == "en" && image.Width > image.Height
                 )
             )
-            .Include(navigationPropertyPath: movie =>
+            .Include(movie =>
                 movie.Translations.Where(translation => translation.Iso6391 == language)
             )
-            .Include(navigationPropertyPath: movie => movie.VideoFiles)
-                .ThenInclude(navigationPropertyPath: videoFile => videoFile.Metadata)
-            .Include(navigationPropertyPath: movie => movie.VideoFiles)
-                .ThenInclude(navigationPropertyPath: file =>
+            .Include(movie => movie.VideoFiles)
+                .ThenInclude(videoFile => videoFile.Metadata)
+            .Include(movie => movie.VideoFiles)
+                .ThenInclude(file =>
                     file.UserData.Where(userData =>
                         userData.UserId.Equals(userId) && userData.Type == MediaTypes.MovieMediaType
                     )
                 )
-            .Include(navigationPropertyPath: movie =>
+            .Include(movie =>
                 movie.CertificationMovies.Where(certification =>
                     certification.Certification.Iso31661 == country
                     || certification.Certification.Iso31661 == "US"
                 )
             )
-                .ThenInclude(navigationPropertyPath: certificationMovie => certificationMovie.Certification)
-            .ToListAsync(cancellationToken: ct);
+                .ThenInclude(certificationMovie => certificationMovie.Certification)
+            .ToListAsync(ct);
     }
 
     public async Task<bool> LikeMovieAsync(
@@ -210,52 +210,52 @@ public class MovieRepository(
     {
         try
         {
-            await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+            await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
             MovieUser? movieUser = await context.MovieUser.FirstOrDefaultAsync(
-                predicate: mu => mu.MovieId == id && mu.UserId == userId,
-                cancellationToken: ct
+                mu => mu.MovieId == id && mu.UserId == userId,
+                ct
             );
 
             if (like)
             {
                 await context
-                    .MovieUser.Upsert(entity: new(movieId: id, userId: userId))
-                    .On(match: m => new { m.MovieId, m.UserId })
-                    .WhenMatched(updater: m => new() { MovieId = m.MovieId, UserId = m.UserId })
+                    .MovieUser.Upsert(new(id, userId))
+                    .On(m => new { m.MovieId, m.UserId })
+                    .WhenMatched(m => new() { MovieId = m.MovieId, UserId = m.UserId })
                     .RunAsync();
             }
             else if (movieUser != null)
             {
-                context.MovieUser.Remove(entity: movieUser);
-                await context.SaveChangesAsync(cancellationToken: ct);
+                context.MovieUser.Remove(movieUser);
+                await context.SaveChangesAsync(ct);
             }
 
             return true;
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
+            logger.LogError(e.Message);
             return false;
         }
     }
 
     public async Task AddMovieAsync(int id, CancellationToken ct = default)
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         Library? movieLibrary = await context
-            .Libraries.Where(predicate: f => f.Type == MediaTypes.MovieMediaType)
-            .FirstOrDefaultAsync(cancellationToken: ct);
+            .Libraries.Where(f => f.Type == MediaTypes.MovieMediaType)
+            .FirstOrDefaultAsync(ct);
 
         if (movieLibrary == null)
             return;
 
         JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<MovieImportJob>(id: id, libraryId: movieLibrary.Id);
+        jobDispatcher.DispatchJob<MovieImportJob>(id, movieLibrary.Id);
     }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         // SQLite schema uses DeleteBehavior.Restrict globally.
         // Temporarily disable FK enforcement so the movie and all its dependents
         // (video files, user data, genre links, library links) are removed atomically.
@@ -267,18 +267,18 @@ public class MovieRepository(
             context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
 
         if (ownsConnection)
-            await context.Database.OpenConnectionAsync(cancellationToken: ct);
+            await context.Database.OpenConnectionAsync(ct);
 
         try
         {
-            await context.Database.ExecuteSqlRawAsync(sql: "PRAGMA foreign_keys = OFF", cancellationToken: ct);
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF", ct);
             try
             {
-                await context.Movies.Where(predicate: movie => movie.Id == id).ExecuteDeleteAsync(cancellationToken: ct);
+                await context.Movies.Where(movie => movie.Id == id).ExecuteDeleteAsync(ct);
             }
             finally
             {
-                await context.Database.ExecuteSqlRawAsync(sql: "PRAGMA foreign_keys = ON", cancellationToken: ct);
+                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON", ct);
             }
         }
         finally
@@ -295,10 +295,10 @@ public class MovieRepository(
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         Movie? movie = await context
             .Movies.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: m => m.Id == movieId, cancellationToken: ct);
+            .FirstOrDefaultAsync(m => m.Id == movieId, ct);
 
         if (movie is null)
             return false;
@@ -307,27 +307,27 @@ public class MovieRepository(
         {
             // Find the movie's video file
             VideoFile? videoFile = await context
-                .VideoFiles.Where(predicate: vf => vf.MovieId == movieId && vf.Folder != null)
-                .FirstOrDefaultAsync(cancellationToken: ct);
+                .VideoFiles.Where(vf => vf.MovieId == movieId && vf.Folder != null)
+                .FirstOrDefaultAsync(ct);
 
             if (videoFile is not null)
             {
                 // Check if userdata already exists for this video file
                 UserData? existingUserData = await context.UserData.FirstOrDefaultAsync(
-                    predicate: ud => ud.UserId == userId && ud.VideoFileId == videoFile.Id,
-                    cancellationToken: ct
+                    ud => ud.UserId == userId && ud.VideoFileId == videoFile.Id,
+                    ct
                 );
 
                 if (existingUserData is null)
                 {
                     context.UserData.Add(
-                        entity: new()
+                        new()
                         {
                             UserId = userId,
                             VideoFileId = videoFile.Id,
                             MovieId = movieId,
                             Time = 0,
-                            LastPlayedDate = DateTime.UtcNow.ToString(format: "o"),
+                            LastPlayedDate = DateTime.UtcNow.ToString("o"),
                             Type = MediaTypes.MovieMediaType,
                         }
                     );
@@ -338,33 +338,33 @@ public class MovieRepository(
         {
             // Remove all userdata for this movie
             List<UserData> userDataToRemove = await context
-                .UserData.Where(predicate: ud => ud.UserId == userId && ud.MovieId == movieId)
-                .ToListAsync(cancellationToken: ct);
+                .UserData.Where(ud => ud.UserId == userId && ud.MovieId == movieId)
+                .ToListAsync(ct);
 
-            context.UserData.RemoveRange(entities: userDataToRemove);
+            context.UserData.RemoveRange(userDataToRemove);
         }
 
-        await context.SaveChangesAsync(cancellationToken: ct);
+        await context.SaveChangesAsync(ct);
         return true;
     }
 
     public async Task<Movie?> GetMovieForRescanAsync(int id, CancellationToken ct = default)
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context
             .Movies.AsNoTracking()
-            .Include(navigationPropertyPath: movie => movie.Library)
-                .ThenInclude(navigationPropertyPath: library => library.FolderLibraries)
-                    .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Folder)
-            .FirstOrDefaultAsync(predicate: movie => movie.Id == id, cancellationToken: ct);
+            .Include(movie => movie.Library)
+                .ThenInclude(library => library.FolderLibraries)
+                    .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .FirstOrDefaultAsync(movie => movie.Id == id, ct);
     }
 
     public async Task<Movie?> GetMovieForRefreshAsync(int id, CancellationToken ct = default)
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context
             .Movies.AsNoTracking()
-            .Include(navigationPropertyPath: movie => movie.Library)
-            .FirstOrDefaultAsync(predicate: movie => movie.Id == id, cancellationToken: ct);
+            .Include(movie => movie.Library)
+            .FirstOrDefaultAsync(movie => movie.Id == id, ct);
     }
 }

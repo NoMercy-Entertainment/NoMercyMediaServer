@@ -16,7 +16,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
-using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Services;
@@ -42,16 +41,16 @@ public class SetupService
     {
         return _mediaContext
             .Libraries.AsNoTracking()
-            .Where(predicate: library => library.LibraryUsers.Any(u => u.UserId == userId))
-            .Include(navigationPropertyPath: library => library.FolderLibraries)
-                .ThenInclude(navigationPropertyPath: fl => fl.Folder)
-                    .ThenInclude(navigationPropertyPath: f => f.EncodingPresetFolders)
-                        .ThenInclude(navigationPropertyPath: link => link.Preset)
-            .Include(navigationPropertyPath: library => library.LanguageLibraries)
-                .ThenInclude(navigationPropertyPath: ll => ll.Language)
-            .Include(navigationPropertyPath: library => library.LibraryMovies)
-            .Include(navigationPropertyPath: library => library.LibraryTvs)
-            .OrderBy(keySelector: library => library.Order)
+            .Where(library => library.LibraryUsers.Any(u => u.UserId == userId))
+            .Include(library => library.FolderLibraries)
+                .ThenInclude(fl => fl.Folder)
+                    .ThenInclude(f => f.EncodingPresetFolders)
+                        .ThenInclude(link => link.Preset)
+            .Include(library => library.LanguageLibraries)
+                .ThenInclude(ll => ll.Language)
+            .Include(library => library.LibraryMovies)
+            .Include(library => library.LibraryTvs)
+            .OrderBy(library => library.Order)
             .ToListAsync();
     }
 
@@ -59,51 +58,51 @@ public class SetupService
     {
         return _mediaContext
             .Playlists.AsNoTracking()
-            .Where(predicate: playlist => playlist.UserId == userId)
+            .Where(playlist => playlist.UserId == userId)
             .ToListAsync();
     }
 
     public async Task<ScreensaverDto> GetSetupScreensaverContent(Guid userId)
     {
-        HashSet<Image> data = await _homeRepository.GetScreensaverImagesAsync(userId: userId);
+        HashSet<Image> data = await _homeRepository.GetScreensaverImagesAsync(userId);
 
         // Logo lookups built once. The old per-backdrop FirstOrDefault over a lazy
         // logo filter re-scanned every image for each backdrop (O(backdrops x images)),
         // seconds of CPU on a large library. Index the logos by title id instead.
-        Dictionary<int, Image> logoByTv = data.Where(predicate: image =>
+        Dictionary<int, Image> logoByTv = data.Where(image =>
                 image is { Type: "logo", TvId: not null }
             )
-            .GroupBy(keySelector: image => image.TvId!.Value)
-            .ToDictionary(keySelector: group => group.Key, elementSelector: group => group.First());
-        Dictionary<int, Image> logoByMovie = data.Where(predicate: image =>
+            .GroupBy(image => image.TvId!.Value)
+            .ToDictionary(group => group.Key, group => group.First());
+        Dictionary<int, Image> logoByMovie = data.Where(image =>
                 image is { Type: "logo", MovieId: not null }
             )
-            .GroupBy(keySelector: image => image.MovieId!.Value)
-            .ToDictionary(keySelector: group => group.Key, elementSelector: group => group.First());
+            .GroupBy(image => image.MovieId!.Value)
+            .ToDictionary(group => group.Key, group => group.First());
 
-        IEnumerable<ScreensaverDataDto> tvCollection = data.Where(predicate: image =>
+        IEnumerable<ScreensaverDataDto> tvCollection = data.Where(image =>
                 image is { TvId: not null, Type: "backdrop" }
             )
-            .DistinctBy(keySelector: image => image.TvId)
-            .Select(selector: image => new ScreensaverDataDto(
-                image: image,
-                logo: logoByTv.GetValueOrDefault(key: image.TvId!.Value)
+            .DistinctBy(image => image.TvId)
+            .Select(image => new ScreensaverDataDto(
+                image,
+                logoByTv.GetValueOrDefault(image.TvId!.Value)
             ));
 
-        IEnumerable<ScreensaverDataDto> movieCollection = data.Where(predicate: image =>
+        IEnumerable<ScreensaverDataDto> movieCollection = data.Where(image =>
                 image is { MovieId: not null, Type: "backdrop" }
             )
-            .DistinctBy(keySelector: image => image.MovieId)
-            .Select(selector: image => new ScreensaverDataDto(
-                image: image,
-                logo: logoByMovie.GetValueOrDefault(key: image.MovieId!.Value)
+            .DistinctBy(image => image.MovieId)
+            .Select(image => new ScreensaverDataDto(
+                image,
+                logoByMovie.GetValueOrDefault(image.MovieId!.Value)
             ));
 
         return new()
         {
             Data = tvCollection
-                .Concat(second: movieCollection)
-                .Where(predicate: image => image.Meta?.Logo != null)
+                .Concat(movieCollection)
+                .Where(image => image.Meta?.Logo != null)
                 .Randomize(),
         };
     }

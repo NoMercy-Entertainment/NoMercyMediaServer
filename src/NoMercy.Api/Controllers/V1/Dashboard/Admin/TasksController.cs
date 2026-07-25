@@ -43,10 +43,10 @@ using MediaJobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
-[Tags(tags: "Dashboard Tasks")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Tasks")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "Moderator")]
-[Route(template: "api/v{version:apiVersion}/dashboard/tasks", Order = 10)]
+[Route("api/v{version:apiVersion}/dashboard/tasks", Order = 10)]
 public class TasksController(
     MediaContext mediaContext,
     IDbContextFactory<QueueContext> queueContextFactory,
@@ -63,25 +63,23 @@ public class TasksController(
         // Cap the load: the queue table retains history and grows unbounded, so
         // materializing every row here was seconds of work for a monitor view that
         // only shows the highest-priority pending tasks.
-        List<QueueJob> jobs = await queueContext
-            .QueueJobs.OrderByDescending(keySelector: j => j.Priority)
-            .ThenBy(keySelector: j => j.CreatedAt)
-            .ThenBy(keySelector: j => j.Id)
-            .Take(count: UiLimits.MaximumTasksInList)
+        List<QueueJob> jobs = await queueContext.QueueJobs
+            .OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.Id)
+            .Take(UiLimits.MaximumTasksInList)
             .ToListAsync();
 
-        List<TaskDto> list = jobs.Select(selector: job => new TaskDto
-            {
-                Id = job.Id.ToString(),
-                Title = ResolveJobTitle(job: job),
-                Value = 0,
-                Type = job.Queue,
-                CreatedAt = job.CreatedAt,
-                UpdatedAt = job.ReservedAt ?? job.CreatedAt,
-            })
-            .ToList();
+        IEnumerable<TaskDto> list = jobs.Select(job => new TaskDto
+        {
+            Id = job.Id.ToString(),
+            Title = ResolveJobTitle(job),
+            Value = 0,
+            Type = job.Queue,
+            CreatedAt = job.CreatedAt,
+            UpdatedAt = job.ReservedAt ?? job.CreatedAt,
+        });
 
-        return Ok(value: list);
+        return Ok(list);
     }
 
     /// <summary>
@@ -93,7 +91,7 @@ public class TasksController(
     {
         try
         {
-            return SerializationHelper.Deserialize<object>(data: job.Payload).GetType().Name;
+            return SerializationHelper.Deserialize<object>(job.Payload).GetType().Name;
         }
         catch (Exception)
         {
@@ -104,110 +102,110 @@ public class TasksController(
     [HttpPost]
     public IActionResult Store()
     {
-        return Ok(value: new PlaceholderResponse { Data = [] });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpPatch]
     public IActionResult Update()
     {
-        return Ok(value: new PlaceholderResponse { Data = [] });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpDelete]
     public IActionResult Destroy()
     {
-        return Ok(value: new PlaceholderResponse { Data = [] });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpPost]
-    [Route(template: "pause/{id:int}")]
+    [Route("pause/{id:int}")]
     public IActionResult PauseTask(int id)
     {
-        IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(jobId: id);
+        IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(id);
         if (pids.Count == 0)
-            return Ok(value: false);
+            return Ok(false);
 
         foreach (int pid in pids)
-            processThrottle.Suspend(processId: pid);
+            processThrottle.Suspend(pid);
 
-        return Ok(value: true);
+        return Ok(true);
     }
 
     [HttpPost]
-    [Route(template: "resume/{id:int}")]
+    [Route("resume/{id:int}")]
     public IActionResult ResumeTask(int id)
     {
-        IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(jobId: id);
+        IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(id);
         if (pids.Count == 0)
-            return Ok(value: false);
+            return Ok(false);
 
         foreach (int pid in pids)
-            processThrottle.Resume(processId: pid);
+            processThrottle.Resume(pid);
 
-        return Ok(value: true);
+        return Ok(true);
     }
 
     [HttpGet]
-    [Route(template: "runners")]
+    [Route("runners")]
     public IActionResult RunningTaskWorkers()
     {
-        return Ok(value: new PlaceholderResponse { Data = [] });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpGet]
-    [Route(template: "queue")]
+    [Route("queue")]
     public async Task<IActionResult> EncoderQueue()
     {
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
         ImmutableList<QueueJob> jobs = queueContext
-            .QueueJobs.Where(predicate: j => j.Queue == "encoder")
-            .OrderByDescending(keySelector: j => j.Priority)
-            .ThenBy(keySelector: j => j.CreatedAt)
-            .ThenBy(keySelector: j => j.Id)
+            .QueueJobs.Where(j => j.Queue == "encoder")
+            .OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.CreatedAt)
+            .ThenBy(j => j.Id)
             .ToImmutableList();
 
         // Each parsed payload stays paired with the row it came from: a payload
         // that fails to deserialize is dropped here, so indexing the unfiltered
         // row list by the parsed list's position would hand every later job the
         // preceding row's id, priority and reservation.
-        List<QueueJobEntry> encoderJobs = jobs.Select(selector: row => new QueueJobEntry(
-                Row: row,
-                Job: row.Payload.FromJson<VideoEncodeJob>()
+        List<QueueJobEntry> encoderJobs = jobs.Select(row => new QueueJobEntry(
+                row,
+                row.Payload.FromJson<VideoEncodeJob>()
             ))
-            .Where(predicate: entry => entry.Job is not null)
+            .Where(entry => entry.Job is not null)
             .ToList();
 
         // Parse each job id once — Id is either an int (movie/episode) or a Guid (track).
         List<int> movieOrEpisodeIds = [];
         List<Guid> trackIds = [];
 
-        foreach (VideoEncodeJob encoderJob in encoderJobs.Select(selector: entry => entry.Job!))
+        foreach (VideoEncodeJob encoderJob in encoderJobs.Select(entry => entry.Job!))
         {
             int intId = encoderJob.Id.ToInt();
             if (intId != 0)
             {
-                movieOrEpisodeIds.Add(item: intId);
+                movieOrEpisodeIds.Add(intId);
             }
             else
             {
                 Guid guidId = encoderJob.Id.ToGuid();
                 if (guidId != Guid.Empty)
-                    trackIds.Add(item: guidId);
+                    trackIds.Add(guidId);
             }
         }
 
-        List<Ulid> folderIds = encoderJobs.Select(selector: entry => entry.Job!.FolderId).Distinct().ToList();
+        List<Ulid> folderIds = encoderJobs.Select(entry => entry.Job!.FolderId).Distinct().ToList();
 
         // Folders — only the profile include needed for the Profile field; no library graph.
         List<Folder> folders = await mediaContext
             .Folders.AsNoTracking()
-            .Where(predicate: f => folderIds.Contains(f.Id))
-            .Include(navigationPropertyPath: f => f.EncodingPresetFolders)
-                .ThenInclude(navigationPropertyPath: link => link.Preset)
+            .Where(f => folderIds.Contains(f.Id))
+            .Include(f => f.EncodingPresetFolders)
+                .ThenInclude(link => link.Preset)
             .ToListAsync();
 
-        Dictionary<Ulid, Folder> folderById = folders.ToDictionary(keySelector: f => f.Id);
+        Dictionary<Ulid, Folder> folderById = folders.ToDictionary(f => f.Id);
 
         // Load only the entities actually referenced by queued jobs.
         Dictionary<int, Movie> movieById = [];
@@ -218,21 +216,21 @@ public class TasksController(
         {
             List<Movie> movies = await mediaContext
                 .Movies.AsNoTracking()
-                .Where(predicate: m => movieOrEpisodeIds.Contains(m.Id))
+                .Where(m => movieOrEpisodeIds.Contains(m.Id))
                 .ToListAsync();
 
             foreach (Movie movie in movies)
-                movieById[key: movie.Id] = movie;
+                movieById[movie.Id] = movie;
 
             // Episodes need Tv for CreateTitle (Tv.Title, SeasonNumber, EpisodeNumber).
             List<Episode> episodes = await mediaContext
                 .Episodes.AsNoTracking()
-                .Where(predicate: e => movieOrEpisodeIds.Contains(e.Id))
-                .Include(navigationPropertyPath: e => e.Tv)
+                .Where(e => movieOrEpisodeIds.Contains(e.Id))
+                .Include(e => e.Tv)
                 .ToListAsync();
 
             foreach (Episode episode in episodes)
-                episodeById[key: episode.Id] = episode;
+                episodeById[episode.Id] = episode;
         }
 
         if (trackIds.Count > 0)
@@ -240,17 +238,17 @@ public class TasksController(
             // Tracks need AlbumTrack → Album for CreateName.
             List<Track> tracks = await mediaContext
                 .Tracks.AsNoTracking()
-                .Where(predicate: t => trackIds.Contains(t.Id))
-                .Include(navigationPropertyPath: t => t.AlbumTrack)
-                    .ThenInclude(navigationPropertyPath: at => at.Album)
+                .Where(t => trackIds.Contains(t.Id))
+                .Include(t => t.AlbumTrack)
+                    .ThenInclude(at => at.Album)
                 .ToListAsync();
 
             foreach (Track track in tracks)
-                trackById[key: track.Id] = track;
+                trackById[track.Id] = track;
         }
 
         QueueJobDto[] queueJobs = encoderJobs
-            .Select(selector: entry =>
+            .Select(entry =>
             {
                 VideoEncodeJob j = entry.Job!;
                 return new QueueJobDto
@@ -258,7 +256,7 @@ public class TasksController(
                     Id = entry.Row.Id,
                     Priority = entry.Row.Priority,
                     PayloadId = j.Id,
-                    Title = ResolveTitle(j: j, movieById: movieById, episodeById: episodeById, trackById: trackById),
+                    Title = ResolveTitle(j, movieById, episodeById, trackById),
                     Type = j.GetType().Name,
                     // Liveness comes from the row, never from the payload: the
                     // payload is the snapshot serialized at enqueue time and is
@@ -269,8 +267,8 @@ public class TasksController(
                     Status = entry.Row.ReservedAt is not null ? "running" : "pending",
                     InputFile = j.InputFile,
                     Profile = folderById
-                        .GetValueOrDefault(key: j.FolderId)
-                        ?.EncodingPresetFolders.OrderByDescending(keySelector: link => link.IsDefault)
+                        .GetValueOrDefault(j.FolderId)
+                        ?.EncodingPresetFolders.OrderByDescending(link => link.IsDefault)
                         .FirstOrDefault()
                         ?.Preset?.Name,
                 };
@@ -280,10 +278,10 @@ public class TasksController(
         // Broadcast current progress for running jobs — reuse already-resolved titles.
         if (EventBusProvider.IsConfigured)
         {
-            foreach (QueueJobDto dto in queueJobs.Where(predicate: dto => dto.Status == "running"))
+            foreach (QueueJobDto dto in queueJobs.Where(dto => dto.Status == "running"))
             {
                 _ = EventBusProvider.Current.PublishAsync(
-                    @event: new EncodingProgressBroadcastedEvent
+                    new EncodingProgressBroadcastedEvent
                     {
                         ProgressData = new
                         {
@@ -297,7 +295,7 @@ public class TasksController(
             }
         }
 
-        return Ok(value: new DataResponseDto<QueueJobDto[]> { Data = queueJobs });
+        return Ok(new DataResponseDto<QueueJobDto[]> { Data = queueJobs });
     }
 
     private static string ResolveTitle(
@@ -310,77 +308,77 @@ public class TasksController(
         int intId = j.Id.ToInt();
         if (intId != 0)
         {
-            if (movieById.TryGetValue(key: intId, value: out Movie? movie))
+            if (movieById.TryGetValue(intId, out Movie? movie))
                 return movie.CreateTitle();
 
-            if (episodeById.TryGetValue(key: intId, value: out Episode? episode))
+            if (episodeById.TryGetValue(intId, out Episode? episode))
                 return episode.CreateTitle();
         }
 
         Guid guidId = j.Id.ToGuid();
-        if (guidId != Guid.Empty && trackById.TryGetValue(key: guidId, value: out Track? track))
+        if (guidId != Guid.Empty && trackById.TryGetValue(guidId, out Track? track))
             return track.CreateName();
 
         return string.Empty;
     }
 
     [HttpDelete]
-    [Route(template: "queue/{id:int}")]
+    [Route("queue/{id:int}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
-        QueueJob? job = queueContext.QueueJobs.FirstOrDefault(predicate: job => job.Id == id);
+        QueueJob? job = queueContext.QueueJobs.FirstOrDefault(job => job.Id == id);
 
         if (job is null)
-            return NotFoundResponse(detail: "Job not found");
+            return NotFoundResponse("Job not found");
 
         // If the job is currently running, terminate the FFmpeg process(es) tracked
         // for it. Without this the ffmpeg process keeps going after the queue entry
         // is removed — V1 dashboard behavior expects the kill.
         VideoEncodeJob? payload = job.Payload.FromJson<VideoEncodeJob>();
-        if (payload is not null && int.TryParse(s: payload.Id, result: out int mediaId))
+        if (payload is not null && int.TryParse(payload.Id, out int mediaId))
         {
-            IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(jobId: mediaId);
+            IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(mediaId);
             foreach (int pid in pids)
             {
                 try
                 {
-                    using Process ffmpegProcess = Process.GetProcessById(processId: pid);
-                    ffmpegProcess.Kill(entireProcessTree: true);
+                    using Process ffmpegProcess = Process.GetProcessById(pid);
+                    ffmpegProcess.Kill(true);
                 }
                 catch (Exception)
                 {
                     // Process may have already exited or the PID may be stale —
                     // clean up the registry entry regardless.
                 }
-                processRegistry.Unregister(jobId: mediaId, processId: pid);
+                processRegistry.Unregister(mediaId, pid);
             }
         }
 
-        queueContext.QueueJobs.Remove(entity: job);
+        queueContext.QueueJobs.Remove(job);
 
         await queueContext.SaveChangesAsync();
 
-        return Ok(value: new StatusResponseDto<string> { Message = "Job removed", Status = "success" });
+        return Ok(new StatusResponseDto<string> { Message = "Job removed", Status = "success" });
     }
 
     [HttpPatch]
-    [Route(template: "queue/{id:int}")]
+    [Route("queue/{id:int}")]
     public async Task<IActionResult> UpdateTask(int id, [FromBody] PatchQueueItemDto request)
     {
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
-        QueueJob? job = queueContext.QueueJobs.FirstOrDefault(predicate: job => job.Id == id);
+        QueueJob? job = queueContext.QueueJobs.FirstOrDefault(job => job.Id == id);
 
         if (job is null)
-            return NotFoundResponse(detail: "Job not found");
+            return NotFoundResponse("Job not found");
 
         job.Priority = request.Priority;
 
         await queueContext.SaveChangesAsync();
 
         return Ok(
-            value: new StatusResponseDto<string> { Message = "Priority updated", Status = "success" }
+            new StatusResponseDto<string> { Message = "Priority updated", Status = "success" }
         );
     }
 
@@ -389,41 +387,41 @@ public class TasksController(
     /// use the per-task pause endpoint to suspend those separately.
     /// </summary>
     [HttpPost]
-    [Route(template: "pause-queue")]
+    [Route("pause-queue")]
     public async Task<IActionResult> PauseEncoderQueue()
     {
         if (QueueRunner.Current is null)
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Message = "Queue runner not available",
                     Status = "unavailable",
                 }
             );
 
-        await QueueRunner.Current.Pause(name: "encoder");
+        await QueueRunner.Current.Pause("encoder");
         return Ok(
-            value: new StatusResponseDto<string> { Message = "Encoder queue paused", Status = "success" }
+            new StatusResponseDto<string> { Message = "Encoder queue paused", Status = "success" }
         );
     }
 
     /// <summary>Resume dispatching jobs from the encoder queue.</summary>
     [HttpPost]
-    [Route(template: "resume-queue")]
+    [Route("resume-queue")]
     public async Task<IActionResult> ResumeEncoderQueue()
     {
         if (QueueRunner.Current is null)
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Message = "Queue runner not available",
                     Status = "unavailable",
                 }
             );
 
-        await QueueRunner.Current.Resume(name: "encoder");
+        await QueueRunner.Current.Resume("encoder");
         return Ok(
-            value: new StatusResponseDto<string> { Message = "Encoder queue resumed", Status = "success" }
+            new StatusResponseDto<string> { Message = "Encoder queue resumed", Status = "success" }
         );
     }
 
@@ -433,11 +431,11 @@ public class TasksController(
     /// previously the UI tracked it in a client-side ref that defaulted to
     /// "running" no matter what the server thought.</summary>
     [HttpGet]
-    [Route(template: "queue/status")]
+    [Route("queue/status")]
     public IActionResult EncoderQueueStatus()
     {
-        bool paused = QueueRunner.Current?.IsPaused(name: "encoder") ?? false;
-        return Ok(value: new { paused });
+        bool paused = QueueRunner.Current?.IsPaused("encoder") ?? false;
+        return Ok(new { paused });
     }
 
     /// <summary>
@@ -447,21 +445,21 @@ public class TasksController(
     /// empty (no basis to extrapolate).
     /// </summary>
     [HttpGet]
-    [Route(template: "queue/eta")]
+    [Route("queue/eta")]
     public async Task<IActionResult> EncoderQueueEta()
     {
         List<EncodingHistory> recent = await historyRepository.GetRecentAsync(
-            pageSize: 50,
-            pageIndex: 0
+            50,
+            0
         );
 
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
-        int queueDepth = await queueContext.QueueJobs.CountAsync(predicate: j => j.Queue == "encoder");
+        int queueDepth = await queueContext.QueueJobs.CountAsync(j => j.Queue == "encoder");
 
         if (recent.Count == 0 || queueDepth == 0)
         {
             return Ok(
-                value: new
+                new
                 {
                     queueDepth,
                     averageEncodeSeconds = 0.0,
@@ -471,11 +469,11 @@ public class TasksController(
             );
         }
 
-        double avgSeconds = recent.Average(selector: h => h.DurationSeconds);
+        double avgSeconds = recent.Average(h => h.DurationSeconds);
         double etaSeconds = avgSeconds * queueDepth;
 
         return Ok(
-            value: new
+            new
             {
                 queueDepth,
                 averageEncodeSeconds = avgSeconds,
@@ -492,27 +490,27 @@ public class TasksController(
     /// reordered block, preserving their relative order.
     /// </summary>
     [HttpPost]
-    [Route(template: "reorder")]
+    [Route("reorder")]
     public async Task<IActionResult> ReorderQueue([FromBody] ReorderQueueDto request)
     {
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
-        bool queueExists = await queueContext.QueueJobs.AnyAsync(predicate: j => j.Queue == request.QueueName);
+        bool queueExists = await queueContext.QueueJobs.AnyAsync(j => j.Queue == request.QueueName);
 
         if (!queueExists)
-            return BadRequestResponse(detail: $"Queue '{request.QueueName}' does not exist");
+            return BadRequestResponse($"Queue '{request.QueueName}' does not exist");
 
         // Load ALL jobs for this queue so we can compute priorities without a second trip.
         List<QueueJob> allJobs = await queueContext
-            .QueueJobs.Where(predicate: j => j.Queue == request.QueueName)
-            .OrderByDescending(keySelector: j => j.Priority)
-            .ThenBy(keySelector: j => j.CreatedAt)
-            .ThenBy(keySelector: j => j.Id)
+            .QueueJobs.Where(j => j.Queue == request.QueueName)
+            .OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.CreatedAt)
+            .ThenBy(j => j.Id)
             .ToListAsync();
 
         // Split into running (reserved) and pending.
-        List<QueueJob> runningJobs = allJobs.Where(predicate: j => j.ReservedAt != null).ToList();
-        List<QueueJob> pendingJobs = allJobs.Where(predicate: j => j.ReservedAt == null).ToList();
+        List<QueueJob> runningJobs = allJobs.Where(j => j.ReservedAt != null).ToList();
+        List<QueueJob> pendingJobs = allJobs.Where(j => j.ReservedAt == null).ToList();
 
         // Build ordered list: requested IDs first (in request order), then the rest.
         HashSet<int> requestedSet = request.OrderedJobIds.ToHashSet();
@@ -520,17 +518,17 @@ public class TasksController(
         List<QueueJob> reordered =
         [
             .. request
-                .OrderedJobIds.Select(selector: id => pendingJobs.FirstOrDefault(predicate: j => j.Id == id))
-                .Where(predicate: j => j is not null)
+                .OrderedJobIds.Select(id => pendingJobs.FirstOrDefault(j => j.Id == id))
+                .Where(j => j is not null)
                 .Cast<QueueJob>(),
-            .. pendingJobs.Where(predicate: j => !requestedSet.Contains(item: j.Id)),
+            .. pendingJobs.Where(j => !requestedSet.Contains(j.Id)),
         ];
 
         // Assign descending priority values so the first item is dispatched first.
         // Start high enough to not collide with running jobs.
         int basePriority = reordered.Count;
         for (int i = 0; i < reordered.Count; i++)
-            reordered[index: i].Priority = basePriority - i;
+            reordered[i].Priority = basePriority - i;
 
         await queueContext.SaveChangesAsync();
 
@@ -538,7 +536,7 @@ public class TasksController(
         List<QueueJob> resultJobs = [.. runningJobs, .. reordered];
 
         QueueJobDto[] result = resultJobs
-            .Select(selector: j => new QueueJobDto
+            .Select(j => new QueueJobDto
             {
                 Id = j.Id,
                 Priority = j.Priority,
@@ -547,55 +545,55 @@ public class TasksController(
             })
             .ToArray();
 
-        return Ok(value: new DataResponseDto<QueueJobDto[]> { Data = result });
+        return Ok(new DataResponseDto<QueueJobDto[]> { Data = result });
     }
 
     [HttpPost]
-    [Route(template: "failed/retry")]
-    [Route(template: "failed/retry/{id:long?}")]
+    [Route("failed/retry")]
+    [Route("failed/retry/{id:long?}")]
     public async Task<IActionResult> RetryFailedJobs(long? id = null)
     {
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
-        using EfQueueContextAdapter adapter = new(context: queueContext);
-        JobQueue jobQueue = new(context: adapter);
+        using EfQueueContextAdapter adapter = new(queueContext);
+        JobQueue jobQueue = new(adapter);
 
         if (id.HasValue)
         {
-            FailedJob? failedJob = await queueContext.FailedJobs.FindAsync(keyValues: id.Value);
+            FailedJob? failedJob = await queueContext.FailedJobs.FindAsync(id.Value);
             if (failedJob == null)
-                return NotFoundResponse(detail: "Failed job not found");
+                return NotFoundResponse("Failed job not found");
         }
 
-        jobQueue.RetryFailedJobs(failedJobId: id);
+        jobQueue.RetryFailedJobs(id);
 
         string message = id.HasValue
             ? "Failed job has been queued for retry"
             : "All failed jobs have been queued for retry";
 
-        return Ok(value: new StatusResponseDto<string> { Message = message, Status = "success" });
+        return Ok(new StatusResponseDto<string> { Message = message, Status = "success" });
     }
 
     [HttpGet]
-    [Route(template: "failed")]
+    [Route("failed")]
     public async Task<IActionResult> GetFailedJobs()
     {
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
         List<FailedJob> failedJobs = await queueContext
-            .FailedJobs.OrderByDescending(keySelector: j => j.FailedAt)
+            .FailedJobs.OrderByDescending(j => j.FailedAt)
             .ToListAsync();
 
-        return Ok(value: new DataResponseDto<List<FailedJob>> { Data = failedJobs });
+        return Ok(new DataResponseDto<List<FailedJob>> { Data = failedJobs });
     }
 
     [HttpGet]
-    [Route(template: "queue/incomplete")]
+    [Route("queue/incomplete")]
     public async Task<IActionResult> IncompleteEncodes()
     {
         List<IncompleteEncodeDto> rows = await mediaContext
             .IncompleteEncodes.AsNoTracking()
-            .OrderByDescending(keySelector: r => r.LastSeenAt)
-            .Select(selector: r => new IncompleteEncodeDto
+            .OrderByDescending(r => r.LastSeenAt)
+            .Select(r => new IncompleteEncodeDto
             {
                 Id = r.Id,
                 MediaId = r.MediaId,
@@ -610,23 +608,23 @@ public class TasksController(
             })
             .ToListAsync();
 
-        return Ok(value: new DataResponseDto<List<IncompleteEncodeDto>> { Data = rows });
+        return Ok(new DataResponseDto<List<IncompleteEncodeDto>> { Data = rows });
     }
 
     [HttpPost]
-    [Route(template: "queue/incomplete/{id:int}/retry")]
+    [Route("queue/incomplete/{id:int}/retry")]
     public async Task<IActionResult> RetryIncompleteEncode(int id)
     {
-        IncompleteEncode? row = await mediaContext.IncompleteEncodes.FindAsync(keyValues: id);
+        IncompleteEncode? row = await mediaContext.IncompleteEncodes.FindAsync(id);
         if (row is null)
-            return NotFoundResponse(detail: "Incomplete encode record not found");
+            return NotFoundResponse("Incomplete encode record not found");
 
-        if (Ulid.TryParse(base32: row.FolderId, ulid: out Ulid folderUlid))
+        if (Ulid.TryParse(row.FolderId, out Ulid folderUlid))
         {
             // Resolve the library that owns this folder.
             FolderLibrary? folderLibrary = await mediaContext
                 .FolderLibrary.AsNoTracking()
-                .FirstOrDefaultAsync(predicate: fl => fl.FolderId == folderUlid);
+                .FirstOrDefaultAsync(fl => fl.FolderId == folderUlid);
 
             if (folderLibrary is not null)
             {
@@ -637,25 +635,25 @@ public class TasksController(
                     // Pick the best available video file for this media item (movie or episode).
                     VideoFile? videoFile = await mediaContext
                         .VideoFiles.AsNoTracking()
-                        .FirstOrDefaultAsync(predicate: vf =>
+                        .FirstOrDefaultAsync(vf =>
                             vf.MovieId == mediaId || vf.EpisodeId == mediaId
                         );
 
                     if (videoFile is not null)
                     {
                         string inputFile =
-                            videoFile.HostFolder.TrimEnd(trimChar: '/')
+                            videoFile.HostFolder.TrimEnd('/')
                             + "/"
-                            + videoFile.Filename.TrimStart(trimChar: '/');
+                            + videoFile.Filename.TrimStart('/');
 
                         try
                         {
                             MediaJobDispatcher dispatcher = new();
                             dispatcher.DispatchJob<VideoEncodeJob>(
-                                libraryId: folderLibrary.LibraryId,
-                                folderId: folderLibrary.FolderId,
-                                id: row.MediaId.ToString(),
-                                inputFile: inputFile
+                                folderLibrary.LibraryId,
+                                folderLibrary.FolderId,
+                                row.MediaId.ToString(),
+                                inputFile
                             );
                         }
                         catch (InvalidOperationException)
@@ -674,25 +672,25 @@ public class TasksController(
             }
         }
 
-        mediaContext.IncompleteEncodes.Remove(entity: row);
+        mediaContext.IncompleteEncodes.Remove(row);
         await mediaContext.SaveChangesAsync();
 
-        return Ok(value: new StatusResponseDto<string> { Message = "Re-queued", Status = "success" });
+        return Ok(new StatusResponseDto<string> { Message = "Re-queued", Status = "success" });
     }
 
     [HttpDelete]
-    [Route(template: "queue/incomplete/{id:int}")]
+    [Route("queue/incomplete/{id:int}")]
     public async Task<IActionResult> DeleteIncompleteEncode(int id)
     {
-        IncompleteEncode? row = await mediaContext.IncompleteEncodes.FindAsync(keyValues: id);
+        IncompleteEncode? row = await mediaContext.IncompleteEncodes.FindAsync(id);
         if (row is null)
-            return NotFoundResponse(detail: "Incomplete encode record not found");
+            return NotFoundResponse("Incomplete encode record not found");
 
-        mediaContext.IncompleteEncodes.Remove(entity: row);
+        mediaContext.IncompleteEncodes.Remove(row);
         await mediaContext.SaveChangesAsync();
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Message = "Incomplete encode record removed",
                 Status = "success",
@@ -701,13 +699,13 @@ public class TasksController(
     }
 
     [HttpDelete]
-    [Route(template: "queue/incomplete")]
+    [Route("queue/incomplete")]
     public async Task<IActionResult> DeleteAllIncompleteEncodes()
     {
         int removedCount = await mediaContext.IncompleteEncodes.ExecuteDeleteAsync();
 
         return Ok(
-            value: new StatusResponseDto<int>
+            new StatusResponseDto<int>
             {
                 Data = removedCount,
                 Message = "Incomplete encode records removed",
@@ -726,66 +724,66 @@ internal sealed record QueueJobEntry(QueueJob Row, VideoEncodeJob? Job);
 
 public class QueueJobDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "payload_id")]
+    [JsonProperty("payload_id")]
     public string PayloadId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "input_file")]
+    [JsonProperty("input_file")]
     public string InputFile { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "profile")]
+    [JsonProperty("profile")]
     public string? Profile { get; set; }
 
-    [JsonProperty(propertyName: "priority")]
+    [JsonProperty("priority")]
     public int Priority { get; set; }
 }
 
 public class PatchQueueItemDto
 {
-    [JsonProperty(propertyName: "priority")]
+    [JsonProperty("priority")]
     public int Priority { get; set; }
 }
 
 public class ReorderQueueDto
 {
-    [JsonProperty(propertyName: "queue_name")]
+    [JsonProperty("queue_name")]
     public string QueueName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "ordered_job_ids")]
+    [JsonProperty("ordered_job_ids")]
     public List<int> OrderedJobIds { get; set; } = [];
 }
 
 public class IncompleteEncodeDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "media_id")]
+    [JsonProperty("media_id")]
     public long MediaId { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "missing_renditions")]
+    [JsonProperty("missing_renditions")]
     public string[] MissingRenditions { get; set; } = [];
 
-    [JsonProperty(propertyName: "last_error")]
+    [JsonProperty("last_error")]
     public string? LastError { get; set; }
 
-    [JsonProperty(propertyName: "attempts_made")]
+    [JsonProperty("attempts_made")]
     public int AttemptsMade { get; set; }
 
-    [JsonProperty(propertyName: "last_seen_at")]
+    [JsonProperty("last_seen_at")]
     public DateTime LastSeenAt { get; set; }
 }

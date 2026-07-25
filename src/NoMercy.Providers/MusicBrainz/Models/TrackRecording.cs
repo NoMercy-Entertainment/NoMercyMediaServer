@@ -16,51 +16,51 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class TrackRecording
 {
-    [JsonProperty(propertyName: "aliases")]
+    [JsonProperty("aliases")]
     public Alias[] Aliases { get; set; } = [];
 
-    [JsonProperty(propertyName: "artist-credit")]
+    [JsonProperty("artist-credit")]
     public RecordingArtistCredit[] ArtistCredit { get; set; } = [];
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string Disambiguation { get; set; } = string.Empty;
 
     // ReSharper disable once InconsistentNaming
-    [JsonProperty(propertyName: "first-release-date")]
+    [JsonProperty("first-release-date")]
     private string? _firstReleaseDate { get; set; }
 
     public DateTime? FirstReleaseDate
     {
         get =>
-            !string.IsNullOrWhiteSpace(value: _firstReleaseDate)
-            && !string.IsNullOrEmpty(value: _firstReleaseDate)
-            && _firstReleaseDate.TryParseToDateTime(dateTime: out DateTime dt)
+            !string.IsNullOrWhiteSpace(_firstReleaseDate)
+            && !string.IsNullOrEmpty(_firstReleaseDate)
+            && _firstReleaseDate.TryParseToDateTime(out DateTime dt)
                 ? dt
                 : null;
         set => _firstReleaseDate = value.ToString().OrEmpty();
     }
 
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public MusicBrainzGenreDetails[] Genres { get; set; } = [];
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "isrcs")]
+    [JsonProperty("isrcs")]
     public string[] Isrcs { get; set; } = [];
 
-    [JsonProperty(propertyName: "length")]
+    [JsonProperty("length")]
     public int? Length { get; set; }
 
-    [JsonProperty(propertyName: "relations")]
+    [JsonProperty("relations")]
     public RecordingRelation[] Relations { get; set; } = [];
 
-    [JsonProperty(propertyName: "tags")]
+    [JsonProperty("tags")]
     public MusicBrainzTag[] Tags { get; set; } = [];
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "video")]
+    [JsonProperty("video")]
     public bool Video { get; set; }
 }

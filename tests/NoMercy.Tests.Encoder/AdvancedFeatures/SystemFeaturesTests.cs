@@ -19,13 +19,13 @@ public class SystemFeaturesTests
     public void PatchResult_Success_ConstructsCorrectly()
     {
         PatchResult result = new(
-            Success: true,
-            Message: "Patch applied successfully.",
-            RequiresRestart: true
+            true,
+            "Patch applied successfully.",
+            true
         );
 
         result.Success.Should().BeTrue();
-        result.Message.Should().Be(expected: "Patch applied successfully.");
+        result.Message.Should().Be("Patch applied successfully.");
         result.RequiresRestart.Should().BeTrue();
     }
 
@@ -33,9 +33,9 @@ public class SystemFeaturesTests
     public void PatchResult_Failure_ConstructsCorrectly()
     {
         PatchResult result = new(
-            Success: false,
-            Message: "Patch failed: insufficient permissions.",
-            RequiresRestart: false
+            false,
+            "Patch failed: insufficient permissions.",
+            false
         );
 
         result.Success.Should().BeFalse();
@@ -47,9 +47,9 @@ public class SystemFeaturesTests
     public void PatchResult_SuccessWithoutRestart_IsValid()
     {
         PatchResult result = new(
-            Success: true,
-            Message: "Already patched.",
-            RequiresRestart: false
+            true,
+            "Already patched.",
+            false
         );
 
         result.Success.Should().BeTrue();
@@ -60,17 +60,17 @@ public class SystemFeaturesTests
     public void QualityCheckResult_PassesThreshold_WhenVmafIsHigh()
     {
         QualityCheckResult result = new(
-            SourcePath: "/media/source.mkv",
-            EncodedPath: "/output/encoded.mkv",
-            VmafScore: 95.0,
-            Ssim: 0.998,
-            Psnr: 48.5,
-            PassesThreshold: true
+            "/media/source.mkv",
+            "/output/encoded.mkv",
+            95.0,
+            0.998,
+            48.5,
+            true
         );
 
-        result.VmafScore.Should().BeApproximately(expectedValue: 95.0, precision: 0.01);
-        result.Ssim.Should().BeApproximately(expectedValue: 0.998, precision: 0.0001);
-        result.Psnr.Should().BeApproximately(expectedValue: 48.5, precision: 0.01);
+        result.VmafScore.Should().BeApproximately(95.0, 0.01);
+        result.Ssim.Should().BeApproximately(0.998, 0.0001);
+        result.Psnr.Should().BeApproximately(48.5, 0.01);
         result.PassesThreshold.Should().BeTrue();
     }
 
@@ -78,15 +78,15 @@ public class SystemFeaturesTests
     public void QualityCheckResult_FailsThreshold_WhenVmafIsLow()
     {
         QualityCheckResult result = new(
-            SourcePath: "/media/source.mkv",
-            EncodedPath: "/output/encoded.mkv",
-            VmafScore: 55.0,
-            Ssim: 0.92,
-            Psnr: 28.0,
-            PassesThreshold: false
+            "/media/source.mkv",
+            "/output/encoded.mkv",
+            55.0,
+            0.92,
+            28.0,
+            false
         );
 
-        result.VmafScore.Should().BeLessThan(expected: 70.0);
+        result.VmafScore.Should().BeLessThan(70.0);
         result.PassesThreshold.Should().BeFalse();
     }
 
@@ -94,17 +94,17 @@ public class SystemFeaturesTests
     public void QualityCheckResult_ZeroScores_IsValid()
     {
         QualityCheckResult result = new(
-            SourcePath: "/media/source.mkv",
-            EncodedPath: "/output/encoded.mkv",
-            VmafScore: 0.0,
-            Ssim: 0.0,
-            Psnr: 0.0,
-            PassesThreshold: false
+            "/media/source.mkv",
+            "/output/encoded.mkv",
+            0.0,
+            0.0,
+            0.0,
+            false
         );
 
-        result.VmafScore.Should().Be(expected: 0.0);
-        result.Ssim.Should().Be(expected: 0.0);
-        result.Psnr.Should().Be(expected: 0.0);
+        result.VmafScore.Should().Be(0.0);
+        result.Ssim.Should().Be(0.0);
+        result.Psnr.Should().Be(0.0);
         result.PassesThreshold.Should().BeFalse();
     }
 
@@ -113,10 +113,10 @@ public class SystemFeaturesTests
     {
         PipelineStagePosition[] values = Enum.GetValues<PipelineStagePosition>();
 
-        values.Should().Contain(expected: PipelineStagePosition.Before);
-        values.Should().Contain(expected: PipelineStagePosition.After);
-        values.Should().Contain(expected: PipelineStagePosition.Replace);
-        values.Should().HaveCount(expected: 3);
+        values.Should().Contain(PipelineStagePosition.Before);
+        values.Should().Contain(PipelineStagePosition.After);
+        values.Should().Contain(PipelineStagePosition.Replace);
+        values.Should().HaveCount(3);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class SystemFeaturesTests
         // It wraps a PipelineStagePosition, a target stage name, and a stage instance.
         // Verify the record type exists and its properties are correct.
         PipelineStagePosition[] positions = Enum.GetValues<PipelineStagePosition>();
-        positions.Should().Contain(expected: PipelineStagePosition.Before);
-        positions.Should().Contain(expected: PipelineStagePosition.After);
+        positions.Should().Contain(PipelineStagePosition.Before);
+        positions.Should().Contain(PipelineStagePosition.After);
     }
 }

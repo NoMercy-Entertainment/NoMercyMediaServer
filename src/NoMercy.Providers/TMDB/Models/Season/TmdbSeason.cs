@@ -15,21 +15,21 @@ namespace NoMercy.Providers.TMDB.Models.Season;
 
 public class TmdbSeason
 {
-    [JsonProperty(propertyName: "air_date")]
+    [JsonProperty("air_date")]
     public DateTime? AirDate { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "poster_path")]
+    [JsonProperty("poster_path")]
     public string? PosterPath { get; set; }
 
-    [JsonProperty(propertyName: "season_number")]
+    [JsonProperty("season_number")]
     public int SeasonNumber { get; set; }
 }

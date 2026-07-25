@@ -13,7 +13,7 @@ using NoMercy.OpticalMedia.Metadata;
 
 namespace NoMercy.Tests.OpticalMedia.Metadata;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class DiscIdAlgorithmTests
 {
     // ── MusicBrainzDiscId.Compute — algorithm correctness ─────────────────
@@ -30,67 +30,67 @@ public class DiscIdAlgorithmTests
     public void Compute_CanonicalSpecFixture_ReturnsExpectedDiscId()
     {
         DiscToc toc = new(
-            FirstTrack: 1,
-            LastTrack: 6,
-            LeadOutOffsetSectors: 95462,
-            TrackOffsetsSectors: [150, 15363, 32314, 46592, 63414, 80489]
+            1,
+            6,
+            95462,
+            [150, 15363, 32314, 46592, 63414, 80489]
         );
 
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        string discId = MusicBrainzDiscId.Compute(toc);
 
-        discId.Should().Be(expected: "49HHV7Eb8UKF3aQiNmu1GR8vKTY-");
+        discId.Should().Be("49HHV7Eb8UKF3aQiNmu1GR8vKTY-");
     }
 
     [Fact]
     public void Compute_AlwaysProduces28CharSubstitutedId()
     {
         DiscToc toc = new(
-            FirstTrack: 1,
-            LastTrack: 6,
-            LeadOutOffsetSectors: 95462,
-            TrackOffsetsSectors: [150, 15363, 32314, 46592, 63414, 80489]
+            1,
+            6,
+            95462,
+            [150, 15363, 32314, 46592, 63414, 80489]
         );
 
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        string discId = MusicBrainzDiscId.Compute(toc);
 
-        discId.Should().HaveLength(expected: 28, because: "MusicBrainz disc IDs are always 28 chars");
-        discId.Should().MatchRegex(regularExpression: @"^[A-Za-z0-9._-]+$", because: "base64url-like alphabet only");
-        discId.Should().NotContainAny(values: ["+", "/", "="]);
+        discId.Should().HaveLength(28, "MusicBrainz disc IDs are always 28 chars");
+        discId.Should().MatchRegex(@"^[A-Za-z0-9._-]+$", "base64url-like alphabet only");
+        discId.Should().NotContainAny(["+", "/", "="]);
     }
 
     [Fact]
     public void Compute_SameToc_IsDeterministic()
     {
         DiscToc toc = new(
-            FirstTrack: 1,
-            LastTrack: 3,
-            LeadOutOffsetSectors: 60150,
-            TrackOffsetsSectors: [150, 15150, 30150]
+            1,
+            3,
+            60150,
+            [150, 15150, 30150]
         );
 
-        MusicBrainzDiscId.Compute(toc: toc).Should().Be(expected: MusicBrainzDiscId.Compute(toc: toc));
+        MusicBrainzDiscId.Compute(toc).Should().Be(MusicBrainzDiscId.Compute(toc));
     }
 
     [Fact]
     public void Compute_DifferentLeadOut_ProducesDifferentId()
     {
-        DiscToc tocA = new(FirstTrack: 1, LastTrack: 1, LeadOutOffsetSectors: 18150, TrackOffsetsSectors: [150]);
-        DiscToc tocB = new(FirstTrack: 1, LastTrack: 1, LeadOutOffsetSectors: 19150, TrackOffsetsSectors: [150]);
+        DiscToc tocA = new(1, 1, 18150, [150]);
+        DiscToc tocB = new(1, 1, 19150, [150]);
 
-        MusicBrainzDiscId.Compute(toc: tocA).Should().NotBe(unexpected: MusicBrainzDiscId.Compute(toc: tocB));
+        MusicBrainzDiscId.Compute(tocA).Should().NotBe(MusicBrainzDiscId.Compute(tocB));
     }
 
     [Fact]
     public void Compute_MismatchedTrackCount_Throws()
     {
         DiscToc toc = new(
-            FirstTrack: 1,
-            LastTrack: 3,
-            LeadOutOffsetSectors: 60150,
-            TrackOffsetsSectors: [150, 15150]
+            1,
+            3,
+            60150,
+            [150, 15150]
         );
 
-        Action act = () => MusicBrainzDiscId.Compute(toc: toc);
+        Action act = () => MusicBrainzDiscId.Compute(toc);
         act.Should().Throw<ArgumentException>();
     }
 
@@ -100,7 +100,7 @@ public class DiscIdAlgorithmTests
     public async Task NullTocReader_AlwaysReturnsNull()
     {
         NullTocReader reader = new();
-        DiscToc? result = await reader.ReadTocAsync(drivePath: "/dev/sr0", ct: CancellationToken.None);
+        DiscToc? result = await reader.ReadTocAsync("/dev/sr0", CancellationToken.None);
         result.Should().BeNull();
     }
 }

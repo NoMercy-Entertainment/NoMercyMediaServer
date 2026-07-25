@@ -15,34 +15,34 @@ using NoMercy.OpticalMedia.Sources;
 
 namespace NoMercy.Tests.OpticalMedia.Sources;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class DiscSourceFactoryTests
 {
     [Fact]
     public void CreateFor_MatchesRegisteredType_ReturnsSource()
     {
         Mock<IDiscSource> bluraySource = new();
-        bluraySource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.BluRay);
+        bluraySource.Setup(s => s.Type).Returns(OpticalDiscType.BluRay);
 
         Mock<IDiscSource> dvdSource = new();
-        dvdSource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.Dvd);
+        dvdSource.Setup(s => s.Type).Returns(OpticalDiscType.Dvd);
 
-        DiscSourceFactory sut = new(sources: [bluraySource.Object, dvdSource.Object]);
+        DiscSourceFactory sut = new([bluraySource.Object, dvdSource.Object]);
 
-        IDiscSource? result = sut.CreateFor(type: OpticalDiscType.Dvd);
+        IDiscSource? result = sut.CreateFor(OpticalDiscType.Dvd);
 
-        result.Should().Be(expected: dvdSource.Object);
+        result.Should().Be(dvdSource.Object);
     }
 
     [Fact]
     public void CreateFor_UnregisteredType_ReturnsNull()
     {
         Mock<IDiscSource> bluraySource = new();
-        bluraySource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.BluRay);
+        bluraySource.Setup(s => s.Type).Returns(OpticalDiscType.BluRay);
 
-        DiscSourceFactory sut = new(sources: [bluraySource.Object]);
+        DiscSourceFactory sut = new([bluraySource.Object]);
 
-        IDiscSource? result = sut.CreateFor(type: OpticalDiscType.Dvd);
+        IDiscSource? result = sut.CreateFor(OpticalDiscType.Dvd);
 
         result.Should().BeNull();
     }
@@ -51,11 +51,11 @@ public class DiscSourceFactoryTests
     public void CreateFor_NoneType_ReturnsNull()
     {
         Mock<IDiscSource> bluraySource = new();
-        bluraySource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.BluRay);
+        bluraySource.Setup(s => s.Type).Returns(OpticalDiscType.BluRay);
 
-        DiscSourceFactory sut = new(sources: [bluraySource.Object]);
+        DiscSourceFactory sut = new([bluraySource.Object]);
 
-        IDiscSource? result = sut.CreateFor(type: OpticalDiscType.None);
+        IDiscSource? result = sut.CreateFor(OpticalDiscType.None);
 
         result.Should().BeNull();
     }
@@ -64,40 +64,40 @@ public class DiscSourceFactoryTests
     public void CreateFor_MultipleSourcesRegistered_ReturnsCorrectOne()
     {
         Mock<IDiscSource> cdSource = new();
-        cdSource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.Cd);
+        cdSource.Setup(s => s.Type).Returns(OpticalDiscType.Cd);
 
         Mock<IDiscSource> dvdSource = new();
-        dvdSource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.Dvd);
+        dvdSource.Setup(s => s.Type).Returns(OpticalDiscType.Dvd);
 
         Mock<IDiscSource> bluraySource = new();
-        bluraySource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.BluRay);
+        bluraySource.Setup(s => s.Type).Returns(OpticalDiscType.BluRay);
 
-        DiscSourceFactory sut = new(sources: [cdSource.Object, dvdSource.Object, bluraySource.Object]);
+        DiscSourceFactory sut = new([cdSource.Object, dvdSource.Object, bluraySource.Object]);
 
-        IDiscSource? result = sut.CreateFor(type: OpticalDiscType.BluRay);
+        IDiscSource? result = sut.CreateFor(OpticalDiscType.BluRay);
 
-        result.Should().Be(expected: bluraySource.Object);
+        result.Should().Be(bluraySource.Object);
     }
 
     [Fact]
     public void CreateFor_CdType_ReturnsCorrectSource()
     {
         Mock<IDiscSource> cdSource = new();
-        cdSource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.Cd);
+        cdSource.Setup(s => s.Type).Returns(OpticalDiscType.Cd);
 
-        DiscSourceFactory sut = new(sources: [cdSource.Object]);
+        DiscSourceFactory sut = new([cdSource.Object]);
 
-        IDiscSource? result = sut.CreateFor(type: OpticalDiscType.Cd);
+        IDiscSource? result = sut.CreateFor(OpticalDiscType.Cd);
 
-        result.Should().Be(expected: cdSource.Object);
+        result.Should().Be(cdSource.Object);
     }
 
     [Fact]
     public void CreateFor_NoSourcesRegistered_ReturnsNull()
     {
-        DiscSourceFactory sut = new(sources: []);
+        DiscSourceFactory sut = new([]);
 
-        IDiscSource? result = sut.CreateFor(type: OpticalDiscType.BluRay);
+        IDiscSource? result = sut.CreateFor(OpticalDiscType.BluRay);
 
         result.Should().BeNull();
     }

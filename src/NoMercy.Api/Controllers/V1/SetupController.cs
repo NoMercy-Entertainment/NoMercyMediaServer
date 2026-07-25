@@ -27,10 +27,10 @@ using NoMercy.NmSystem.Information;
 namespace NoMercy.Api.Controllers.V1;
 
 [ApiController]
-[Tags(tags: "App Setup")]
-[ApiVersion(version: 1.0)]
+[Tags("App Setup")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/setup")]
+[Route("api/v{version:apiVersion}/setup")]
 public class SetupController(
     MediaContext context,
     AppDbContext appContext,
@@ -38,22 +38,22 @@ public class SetupController(
     HomeService homeService
 ) : BaseController
 {
-    [HttpGet(template: "libraries")]
+    [HttpGet("libraries")]
     public async Task<IActionResult> Libraries()
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view libraries");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view libraries");
 
-        List<LibrariesResponseItemDto> response = (await setupService.GetSetupLibraries(userId: userId))
-            .Select(selector: library => new LibrariesResponseItemDto(library: library))
+        List<LibrariesResponseItemDto> response = (await setupService.GetSetupLibraries(userId))
+            .Select(library => new LibrariesResponseItemDto(library))
             .ToList();
 
-        return Ok(value: new LibrariesDto { Data = response.OrderBy(keySelector: library => library.Order) });
+        return Ok(new LibrariesDto { Data = response.OrderBy(library => library.Order) });
     }
 
     [HttpGet]
-    [Route(template: "server-info")]
+    [Route("server-info")]
     [ResponseCache(NoStore = true, Duration = 0)]
     [Authorize(Policy = "MediaAccess")]
     public IActionResult ServerInfo()
@@ -61,13 +61,13 @@ public class SetupController(
         bool setupComplete =
             context.Libraries.Any() && context.Folders.Any() && context.EncodingPresets.Any();
 
-        Configuration? device = appContext.Configuration.FirstOrDefault(predicate: device =>
+        Configuration? device = appContext.Configuration.FirstOrDefault(device =>
             device.Key == "serverName"
         );
         string serverName = device?.Value ?? Environment.MachineName;
 
         return Ok(
-            value: new StatusResponseDto<ServerInfoDto>
+            new StatusResponseDto<ServerInfoDto>
             {
                 Status = "ok",
                 Data = new()
@@ -86,56 +86,56 @@ public class SetupController(
     }
 
     [HttpGet]
-    [Route(template: "permissions")]
+    [Route("permissions")]
     [Authorize(Policy = "MediaAccess")]
     public IActionResult Permissions()
     {
         return Ok(
-            value: new
+            new
             {
-                owner = AuthPolicy.IsOwner(principal: User),
-                manager = AuthPolicy.IsModerator(principal: User),
-                allowed = AuthPolicy.IsAllowed(principal: User),
+                owner = AuthPolicy.IsOwner(User),
+                manager = AuthPolicy.IsModerator(User),
+                allowed = AuthPolicy.IsAllowed(User),
             }
         );
     }
 
-    [HttpGet(template: "music-playlists")]
+    [HttpGet("music-playlists")]
     public async Task<IActionResult> Index()
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view playlists");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view playlists");
 
-        List<Playlist> playlistItems = await setupService.GetSetupPlaylistsAsync(userId: userId);
+        List<Playlist> playlistItems = await setupService.GetSetupPlaylistsAsync(userId);
 
         return Ok(
-            value: new StatusResponseDto<List<PlaylistDto>>
+            new StatusResponseDto<List<PlaylistDto>>
             {
                 Status = "ok",
-                Data = playlistItems.Select(selector: p => new PlaylistDto(playlist: p)).ToList(),
+                Data = playlistItems.Select(p => new PlaylistDto(p)).ToList(),
             }
         );
     }
 
     [HttpGet]
-    [Route(template: "screensaver")]
+    [Route("screensaver")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Screensaver()
     {
-        ScreensaverDto result = await homeService.GetSetupScreensaverContent(userId: User.UserId());
+        ScreensaverDto result = await homeService.GetSetupScreensaverContent(User.UserId());
 
-        return Ok(value: result);
+        return Ok(result);
     }
 
     [HttpGet]
     [AllowAnonymous]
-    [Route(template: "/status")]
+    [Route("/status")]
     [ResponseCache(Duration = 30)]
     public IActionResult Status()
     {
         return Ok(
-            value: new
+            new
             {
                 Status = "ok",
                 Version = "1.0",
@@ -144,4 +144,6 @@ public class SetupController(
             }
         );
     }
+    
+    
 }

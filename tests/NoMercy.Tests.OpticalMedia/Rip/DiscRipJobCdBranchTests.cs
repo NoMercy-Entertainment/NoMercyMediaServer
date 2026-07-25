@@ -28,8 +28,8 @@ namespace NoMercy.Tests.OpticalMedia.Rip;
 /// Unit tests for the CD music branch in <see cref="DiscRipJob"/>.
 /// Uses RipMode.RipToRaw to skip the DB move-and-import path.
 /// </summary>
-[Collection(name: "EventBusProvider")]
-[Trait(name: "Category", value: "Unit")]
+[Collection("EventBusProvider")]
+[Trait("Category", "Unit")]
 public class DiscRipJobCdBranchTests
 {
     private static RipRequest CdRequest(string drivePath = "/dev/sr0", string? metadataId = null) =>
@@ -49,11 +49,11 @@ public class DiscRipJobCdBranchTests
 
     private static DiscRipResult[] SuccessResults(int[] trackIndices) =>
         trackIndices
-            .Select(selector: i => new DiscRipResult(
+            .Select(i => new DiscRipResult(
                 TitleIndex: i,
-                OutputPath: Path.Combine(path1: Path.GetTempPath(), path2: $"{i:D2} - Track {i:D2}.flac"),
+                OutputPath: Path.Combine(Path.GetTempPath(), $"{i:D2} - Track {i:D2}.flac"),
                 Success: true,
-                Duration: TimeSpan.FromMinutes(minutes: 3),
+                Duration: TimeSpan.FromMinutes(3),
                 OutputSizeBytes: 50_000_000,
                 Error: null
             ))
@@ -76,8 +76,8 @@ public class DiscRipJobCdBranchTests
 
         job.DiscRipper = ripper;
         job.IdentificationService = new(
-            identifiers: [],
-            logger: NullLogger<DiscIdentificationService>.Instance
+            [],
+            NullLogger<DiscIdentificationService>.Instance
         );
         job.StorageFactory = Mock.Of<IStorageFactory>();
         job.StorageDriver = Mock.Of<IStorageDriver>();
@@ -94,35 +94,35 @@ public class DiscRipJobCdBranchTests
     [Fact]
     public async Task Handle_CdRipToRaw_PublishesStartedAndComplete()
     {
-        DiscRipResult[] ripResults = SuccessResults(trackIndices: [1, 2, 3]);
+        DiscRipResult[] ripResults = SuccessResults([1, 2, 3]);
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: ripResults);
+            .ReturnsAsync(ripResults);
 
         List<DriveStateChangedEvent> published = [];
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(expression: b =>
+            .Setup(b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<DriveStateChangedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
-            .Returns(value: Task.CompletedTask);
+            .Callback<DriveStateChangedEvent, CancellationToken>((evt, _) => published.Add(evt))
+            .Returns(Task.CompletedTask);
 
-        EventBusProvider.Configure(eventBus: busMock.Object);
+        EventBusProvider.Configure(busMock.Object);
 
-        DiscRipJob job = MakeJob(request: CdRequest(metadataId: null), ripper: ripperMock.Object);
+        DiscRipJob job = MakeJob(CdRequest(metadataId: null), ripperMock.Object);
         await job.Handle();
 
-        published.Select(selector: e => e.DriveStateData.Method).Should().Contain(expected: "rip_started");
-        published.Select(selector: e => e.DriveStateData.Method).Should().Contain(expected: "rip_complete");
-        published.Select(selector: e => e.DriveStateData.Method).Should().NotContain(unexpected: "rip_error");
+        published.Select(e => e.DriveStateData.Method).Should().Contain("rip_started");
+        published.Select(e => e.DriveStateData.Method).Should().Contain("rip_complete");
+        published.Select(e => e.DriveStateData.Method).Should().NotContain("rip_error");
     }
 
     // ── No metadataId → tag writer is NOT called ──────────────────────────
@@ -130,44 +130,44 @@ public class DiscRipJobCdBranchTests
     [Fact]
     public async Task Handle_CdRipToRaw_NoMetadataId_TagWriterNotCalled()
     {
-        DiscRipResult[] ripResults = SuccessResults(trackIndices: [1]);
+        DiscRipResult[] ripResults = SuccessResults([1]);
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: ripResults);
+            .ReturnsAsync(ripResults);
 
         Mock<IAudioMetadataWriter> tagWriterMock = new();
 
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(expression: b =>
+            .Setup(b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Returns(value: Task.CompletedTask);
-        EventBusProvider.Configure(eventBus: busMock.Object);
+            .Returns(Task.CompletedTask);
+        EventBusProvider.Configure(busMock.Object);
 
         DiscRipJob job = MakeJob(
-            request: CdRequest(metadataId: null),
-            ripper: ripperMock.Object,
+            CdRequest(metadataId: null),
+            ripperMock.Object,
             tagWriter: tagWriterMock.Object
         );
         await job.Handle();
 
         tagWriterMock.Verify(
-            expression: tw =>
+            tw =>
                 tw.WriteTagsAsync(
                     It.IsAny<string>(),
                     It.IsAny<AudioMetadata>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never,
-            failMessage: "tag writer must not be called when no MetadataId is supplied"
+            Times.Never,
+            "tag writer must not be called when no MetadataId is supplied"
         );
     }
 
@@ -178,43 +178,43 @@ public class DiscRipJobCdBranchTests
     {
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(exception: new InvalidOperationException(message: "drive gone"));
+            .ThrowsAsync(new InvalidOperationException("drive gone"));
 
         Mock<IAudioMetadataWriter> tagWriterMock = new();
 
         List<DriveStateChangedEvent> published = [];
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(expression: b =>
+            .Setup(b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<DriveStateChangedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
-            .Returns(value: Task.CompletedTask);
-        EventBusProvider.Configure(eventBus: busMock.Object);
+            .Callback<DriveStateChangedEvent, CancellationToken>((evt, _) => published.Add(evt))
+            .Returns(Task.CompletedTask);
+        EventBusProvider.Configure(busMock.Object);
 
         DiscRipJob job = MakeJob(
-            request: CdRequest(metadataId: "some-mbid"),
-            ripper: ripperMock.Object,
+            CdRequest(metadataId: "some-mbid"),
+            ripperMock.Object,
             tagWriter: tagWriterMock.Object
         );
         await job.Handle();
 
-        published.Should().Contain(predicate: e => e.DriveStateData.Method == "rip_error");
+        published.Should().Contain(e => e.DriveStateData.Method == "rip_error");
         tagWriterMock.Verify(
-            expression: tw =>
+            tw =>
                 tw.WriteTagsAsync(
                     It.IsAny<string>(),
                     It.IsAny<AudioMetadata>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -223,29 +223,29 @@ public class DiscRipJobCdBranchTests
     [Fact]
     public async Task Handle_CdRip_TagWriterThrows_DoesNotCrashJob()
     {
-        DiscRipResult[] ripResults = SuccessResults(trackIndices: [1]);
+        DiscRipResult[] ripResults = SuccessResults([1]);
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: ripResults);
+            .ReturnsAsync(ripResults);
 
         // Tag writer throws; this should be caught and logged, not propagated.
         Mock<IAudioMetadataWriter> tagWriterMock = new();
         tagWriterMock
-            .Setup(expression: tw =>
+            .Setup(tw =>
                 tw.WriteTagsAsync(
                     It.IsAny<string>(),
                     It.IsAny<AudioMetadata>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(exception: new InvalidOperationException(message: "TagLib write error"));
+            .ThrowsAsync(new InvalidOperationException("TagLib write error"));
 
         // MusicBrainz client is not called in RipToRaw mode (no metadataId path),
         // so this tests that a tag-write failure inside TagCdTracksAsync does not bubble.
@@ -253,20 +253,20 @@ public class DiscRipJobCdBranchTests
         // return null (no real HTTP), and the code gracefully handles that.
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(expression: b =>
+            .Setup(b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Returns(value: Task.CompletedTask);
-        EventBusProvider.Configure(eventBus: busMock.Object);
+            .Returns(Task.CompletedTask);
+        EventBusProvider.Configure(busMock.Object);
 
         DiscRipJob job = MakeJob(
-            request: CdRequest(metadataId: null),
-            ripper: ripperMock.Object,
+            CdRequest(metadataId: null),
+            ripperMock.Object,
             tagWriter: tagWriterMock.Object
         );
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => job.Handle());
-        ex.Should().BeNull(because: "a tag-write failure must not crash the job");
+        Exception? ex = await Record.ExceptionAsync(() => job.Handle());
+        ex.Should().BeNull("a tag-write failure must not crash the job");
     }
 
     // ── Non-CD disc type does not use CD path ────────────────────────────
@@ -297,9 +297,9 @@ public class DiscRipJobCdBranchTests
         [
             new(
                 TitleIndex: 1,
-                OutputPath: Path.Combine(path1: Path.GetTempPath(), path2: "title_01.mkv"),
+                OutputPath: Path.Combine(Path.GetTempPath(), "title_01.mkv"),
                 Success: true,
-                Duration: TimeSpan.FromMinutes(minutes: 120),
+                Duration: TimeSpan.FromMinutes(120),
                 OutputSizeBytes: 40_000_000_000,
                 Error: null
             ),
@@ -307,37 +307,37 @@ public class DiscRipJobCdBranchTests
 
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: ripResults);
+            .ReturnsAsync(ripResults);
 
         Mock<IAudioMetadataWriter> tagWriterMock = new();
 
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(expression: b =>
+            .Setup(b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Returns(value: Task.CompletedTask);
-        EventBusProvider.Configure(eventBus: busMock.Object);
+            .Returns(Task.CompletedTask);
+        EventBusProvider.Configure(busMock.Object);
 
-        DiscRipJob job = MakeJob(request: bluRayRequest, ripper: ripperMock.Object, tagWriter: tagWriterMock.Object);
+        DiscRipJob job = MakeJob(bluRayRequest, ripperMock.Object, tagWriter: tagWriterMock.Object);
         await job.Handle();
 
         tagWriterMock.Verify(
-            expression: tw =>
+            tw =>
                 tw.WriteTagsAsync(
                     It.IsAny<string>(),
                     It.IsAny<AudioMetadata>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never,
-            failMessage: "tag writer must not be called for Blu-ray discs"
+            Times.Never,
+            "tag writer must not be called for Blu-ray discs"
         );
     }
 }

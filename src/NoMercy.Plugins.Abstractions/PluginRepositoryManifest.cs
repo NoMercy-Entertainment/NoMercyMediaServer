@@ -15,12 +15,12 @@ namespace NoMercy.Plugins.Abstractions;
 
 public class PluginRepositoryManifest
 {
-    [JsonPropertyName(name: "name")]
+    [JsonPropertyName("name")]
     public required string Name { get; init; }
 
-    [JsonPropertyName(name: "url")]
+    [JsonPropertyName("url")]
     public string? Url { get; init; }
 
-    [JsonPropertyName(name: "plugins")]
+    [JsonPropertyName("plugins")]
     public required List<PluginRepositoryEntry> Plugins { get; init; }
 }

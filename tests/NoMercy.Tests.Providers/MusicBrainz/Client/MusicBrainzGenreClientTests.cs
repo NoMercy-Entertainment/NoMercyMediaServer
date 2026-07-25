@@ -17,11 +17,11 @@ using NoMercy.Tests.Providers.Infrastructure;
 
 namespace NoMercy.Tests.Providers.MusicBrainz.Client;
 
-[Collection(name: "HttpClientProvider")]
+[Collection("HttpClientProvider")]
 public sealed class MusicBrainzGenreClientTests : ProviderHttpHarness
 {
     public MusicBrainzGenreClientTests()
-        : base(httpClientNames: HttpClientNames.MusicBrainz) { }
+        : base(HttpClientNames.MusicBrainz) { }
 
     [Fact]
     public async Task FirstPage_RequestsGenreAllWithLimit100Offset0()
@@ -31,18 +31,18 @@ public sealed class MusicBrainzGenreClientTests : ProviderHttpHarness
             Genres = [new() { Id = Guid.NewGuid(), Name = "ambient" }],
             GenreCount = 1,
         };
-        Handler.WhenGet(pathContains: "genre/all", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
+        Handler.WhenGet("genre/all", MockResponse.Json(HttpStatusCode.OK, body));
 
         using MusicBrainzGenreClient client = new();
         MusicBrainzAllGenres? result = await client.FirstPage();
 
         result.Should().NotBeNull();
-        result!.Genres.Should().ContainSingle(predicate: g => g.Name == "ambient");
+        result!.Genres.Should().ContainSingle(g => g.Name == "ambient");
 
         CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
-        request.Path.Should().Be(expected: "/ws/2/genre/all");
-        request.Query.Should().ContainKey(expected: "limit").WhoseValue.Should().Be(expected: "100");
-        request.Query.Should().ContainKey(expected: "offset").WhoseValue.Should().Be(expected: "0");
+        request.Path.Should().Be("/ws/2/genre/all");
+        request.Query.Should().ContainKey("limit").WhoseValue.Should().Be("100");
+        request.Query.Should().ContainKey("offset").WhoseValue.Should().Be("0");
     }
 
     [Fact]
@@ -62,16 +62,16 @@ public sealed class MusicBrainzGenreClientTests : ProviderHttpHarness
             Genres = [new() { Id = Guid.NewGuid(), Name = "downtempo" }],
             GenreCount = 3,
         };
-        Handler.WhenGet(pathContains: "genre/all", responses: MockResponse.Json(status: HttpStatusCode.OK, body: secondPage));
+        Handler.WhenGet("genre/all", MockResponse.Json(HttpStatusCode.OK, secondPage));
 
         using MusicBrainzGenreClient client = new();
-        List<MusicBrainzGenre> remaining = await client.RemainingPages(firstPage: firstPage);
+        List<MusicBrainzGenre> remaining = await client.RemainingPages(firstPage);
 
-        remaining.Should().ContainSingle(predicate: g => g.Name == "downtempo");
+        remaining.Should().ContainSingle(g => g.Name == "downtempo");
 
         CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
-        request.Query.Should().ContainKey(expected: "offset").WhoseValue.Should().Be(expected: "2");
-        request.Query.Should().ContainKey(expected: "limit").WhoseValue.Should().Be(expected: "2");
+        request.Query.Should().ContainKey("offset").WhoseValue.Should().Be("2");
+        request.Query.Should().ContainKey("limit").WhoseValue.Should().Be("2");
     }
 
     [Fact]
@@ -82,16 +82,16 @@ public sealed class MusicBrainzGenreClientTests : ProviderHttpHarness
         {
             Genres = [new() { Id = Guid.NewGuid(), Name = "ambient" }],
         };
-        Handler.WhenGet(pathContains: "genre", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
+        Handler.WhenGet("genre", MockResponse.Json(HttpStatusCode.OK, body));
 
         using MusicBrainzGenreClient client = new();
-        MusicBrainzGenre? result = await client.SearchGenre(query: query);
+        MusicBrainzGenre? result = await client.SearchGenre(query);
 
         result.Should().NotBeNull();
-        result!.Name.Should().Be(expected: "ambient");
+        result!.Name.Should().Be("ambient");
 
         CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
-        request.Path.Should().Be(expected: "/ws/2/genre");
-        request.Query.Should().ContainKey(expected: "query").WhoseValue.Should().Be(expected: query);
+        request.Path.Should().Be("/ws/2/genre");
+        request.Query.Should().ContainKey("query").WhoseValue.Should().Be(query);
     }
 }

@@ -32,14 +32,14 @@ public partial class VideoHub
     {
         Guid userId = Context.User.UserId();
 
-        User? user = UserCacheService.Users.FirstOrDefault(predicate: x => x.Id.Equals(g: userId));
+        User? user = UserCacheService.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user is null)
             return;
 
         await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
 
-        bool videoFileExists = await mediaContext.VideoFiles.AnyAsync(predicate: v => v.Id == request.VideoId);
+        bool videoFileExists = await mediaContext.VideoFiles.AnyAsync(v => v.Id == request.VideoId);
         if (!videoFileExists)
             return;
 
@@ -62,16 +62,16 @@ public partial class VideoHub
             specialId = parsed;
         }
 
-        if (movieId is not null && !await mediaContext.Movies.AnyAsync(predicate: m => m.Id == movieId))
+        if (movieId is not null && !await mediaContext.Movies.AnyAsync(m => m.Id == movieId))
             return;
-        if (tvId is not null && !await mediaContext.Tvs.AnyAsync(predicate: t => t.Id == tvId))
+        if (tvId is not null && !await mediaContext.Tvs.AnyAsync(t => t.Id == tvId))
             return;
         if (
             collectionId is not null
-            && !await mediaContext.Collections.AnyAsync(predicate: c => c.Id == collectionId)
+            && !await mediaContext.Collections.AnyAsync(c => c.Id == collectionId)
         )
             return;
-        if (specialId is not null && !await mediaContext.Specials.AnyAsync(predicate: s => s.Id == specialId))
+        if (specialId is not null && !await mediaContext.Specials.AnyAsync(s => s.Id == specialId))
             return;
 
         UserData userdata = new()
@@ -89,40 +89,40 @@ public partial class VideoHub
             SpecialId = specialId,
         };
 
-        UpsertCommandBuilder<UserData> query = mediaContext.UserData.Upsert(entity: userdata);
+        UpsertCommandBuilder<UserData> query = mediaContext.UserData.Upsert(userdata);
 
         query = request.PlaylistType switch
         {
-            MediaTypes.MovieMediaType => query.On(match: x => new
+            MediaTypes.MovieMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.MovieId,
             }),
-            MediaTypes.TvMediaType => query.On(match: x => new
+            MediaTypes.TvMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.TvId,
             }),
-            MediaTypes.CollectionMediaType => query.On(match: x => new
+            MediaTypes.CollectionMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.CollectionId,
             }),
-            MediaTypes.SpecialMediaType => query.On(match: x => new
+            MediaTypes.SpecialMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.SpecialId,
             }),
-            _ => throw new ArgumentException(message: "Invalid playlist type", paramName: request.PlaylistType),
+            _ => throw new ArgumentException("Invalid playlist type", request.PlaylistType),
         };
 
         await query
             .WhenMatched(
-                updater: (uds, udi) =>
+                (uds, udi) =>
                     new()
                     {
                         Id = uds.Id,
@@ -144,11 +144,11 @@ public partial class VideoHub
 
     public async Task RemoveWatched(VideoProgressRequest request)
     {
-        string? guid = Context.User?.FindFirstValue(claimType: ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(input: guid, result: out Guid userId))
+        string? guid = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(guid, out Guid userId))
             return;
 
-        User? user = UserCacheService.Users.FirstOrDefault(predicate: x => x.Id.Equals(g: userId));
+        User? user = UserCacheService.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user is null)
             return;
@@ -167,19 +167,19 @@ public partial class VideoHub
         Ulid? ulidId =
             request.PlaylistType == MediaTypes.SpecialMediaType ? request.SpecialId : null;
 
-        await _userDataRepository.RemoveForItemAsync(userId: user.Id, type: request.PlaylistType, intId: intId, ulidId: ulidId);
+        await _userDataRepository.RemoveForItemAsync(user.Id, request.PlaylistType, intId, ulidId);
     }
 
     public async Task StartPlaybackCommand(string? type, dynamic? listId, int? itemId)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
-        if (string.IsNullOrEmpty(value: type) || listId is null)
+        if (string.IsNullOrEmpty(type) || listId is null)
         {
             _logger.LogWarning(
-                message: "{Name}: [VideoHub.StartPlaybackCommand] ignored — null arg (type='{Null}', listId={Set})", args: [user.Name, type ?? "<null>", (listId is null ? "<null>" : "set")]
+                "{Name}: [VideoHub.StartPlaybackCommand] ignored — null arg (type='{Null}', listId={Set})", [user.Name, type ?? "<null>", (listId is null ? "<null>" : "set")]
             );
             return;
         }
@@ -190,75 +190,75 @@ public partial class VideoHub
         try
         {
             dynamic? playlistResult = await _videoPlaylistManager.GetPlaylist(
-                userId: user.Id,
-                type: type,
-                listId: listId,
-                itemId: itemId,
-                language: language,
-                country: country
+                user.Id,
+                type,
+                listId,
+                itemId,
+                language,
+                country
             );
 
             await HandlePlaybackState(
-                user: user,
-                type: type,
-                listId: listId,
-                item: playlistResult.Item1,
-                playlist: playlistResult.Item2
+                user,
+                type,
+                listId,
+                playlistResult.Item1,
+                playlistResult.Item2
             );
         }
         catch (ArgumentException ex)
         {
-            _logger.LogInformation(message: "Invalid playlist type: {Message}", args: ex.Message);
+            _logger.LogInformation("Invalid playlist type: {Message}", ex.Message);
 
-            User? user2 = UserCacheService.GetUser(userId: Context.User.UserId());
+            User? user2 = UserCacheService.GetUser(Context.User.UserId());
             if (user2 is not null)
             {
-                ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? client2);
+                ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
                 Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
                 try
                 {
                     await ActivityLogger.LogFailureAsync(
-                        type: "failure.playback_start",
-                        userId: user2.Id,
-                        deviceId: deviceId2,
-                        errorCode: ex.GetType().Name,
-                        message: ex.Message
+                        "failure.playback_start",
+                        user2.Id,
+                        deviceId2,
+                        ex.GetType().Name,
+                        ex.Message
                     );
                 }
                 catch (Exception logEx)
                 {
                     _logger.LogWarning(
-                        message: "Failed to log failure.playback_start: {Message}",
-                        args: logEx.Message
+                        "Failed to log failure.playback_start: {Message}",
+                        logEx.Message
                     );
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogInformation(message: "Error in StartPlaybackCommand");
-            _logger.LogError(exception: ex, message: ex.Message);
+            _logger.LogInformation("Error in StartPlaybackCommand");
+            _logger.LogError(ex, ex.Message);
 
-            User? user2 = UserCacheService.GetUser(userId: Context.User.UserId());
+            User? user2 = UserCacheService.GetUser(Context.User.UserId());
             if (user2 is not null)
             {
-                ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? client2);
+                ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
                 Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
                 try
                 {
                     await ActivityLogger.LogFailureAsync(
-                        type: "failure.playback_start",
-                        userId: user2.Id,
-                        deviceId: deviceId2,
-                        errorCode: ex.GetType().Name,
-                        message: ex.Message
+                        "failure.playback_start",
+                        user2.Id,
+                        deviceId2,
+                        ex.GetType().Name,
+                        ex.Message
                     );
                 }
                 catch (Exception logEx)
                 {
                     _logger.LogWarning(
-                        message: "Failed to log failure.playback_start: {Message}",
-                        args: logEx.Message
+                        "Failed to log failure.playback_start: {Message}",
+                        logEx.Message
                     );
                 }
             }
@@ -273,18 +273,18 @@ public partial class VideoHub
         List<VideoPlaylistResponseDto> playlist
     )
     {
-        VideoPlayerState? playerState = _videoPlayerStateManager.GetState(userId: user.Id);
+        VideoPlayerState? playerState = _videoPlayerStateManager.GetState(user.Id);
 
         if (
             playerState is null
             || playerState.CurrentItem is null
             || playerState.Playlist.Count == 0
         )
-            await HandleNewPlayerState(user: user, type: type, listId: listId, item: item, playlist: playlist);
-        else if (IsCurrentPlaylist(state: playerState, type: type, listId: listId, itemId: item.Id))
-            await HandleExistingPlaylistState(user: user, state: playerState);
+            await HandleNewPlayerState(user, type, listId, item, playlist);
+        else if (IsCurrentPlaylist(playerState, type, listId, item.Id))
+            await HandleExistingPlaylistState(user, playerState);
         else
-            await HandlePlaylistChange(user: user, state: playerState, type: type, listId: listId, item: item, playlist: playlist);
+            await HandlePlaylistChange(user, playerState, type, listId, item, playlist);
     }
 
     private async Task HandleNewPlayerState(
@@ -295,45 +295,45 @@ public partial class VideoHub
         List<VideoPlaylistResponseDto> playlist
     )
     {
-        Device device = GetCurrentDevice(user: user);
+        Device device = GetCurrentDevice(user);
         VideoPlayerState videoPlayerState = await VideoPlayerStateFactory.Create(
-            contextFactory: _contextFactory,
-            user: user,
-            device: device,
-            item: item,
-            playlist: playlist,
-            type: type,
-            listId: listId
+            _contextFactory,
+            user,
+            device,
+            item,
+            playlist,
+            type,
+            listId
         );
 
-        _videoPlayerStateManager.UpdateState(userId: user.Id, state: videoPlayerState);
-        _videoPlaybackService.StartPlaybackTimer(user: user);
-        await _videoPlaybackService.UpdatePlaybackState(user: user, state: videoPlayerState);
-        await _videoPlaybackService.PublishStartedEventAsync(userId: user.Id, state: videoPlayerState);
+        _videoPlayerStateManager.UpdateState(user.Id, videoPlayerState);
+        _videoPlaybackService.StartPlaybackTimer(user);
+        await _videoPlaybackService.UpdatePlaybackState(user, videoPlayerState);
+        await _videoPlaybackService.PublishStartedEventAsync(user.Id, videoPlayerState);
 
         try
         {
             await ActivityLogger.LogPlaybackAsync(
-                type: "playback.started",
-                userId: user.Id,
-                deviceId: device.Id,
-                mediaId: item.VideoId,
-                metadata: new { media_type = "video", title = item.Title }
+                "playback.started",
+                user.Id,
+                device.Id,
+                item.VideoId,
+                new { media_type = "video", title = item.Title }
             );
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(message: "Failed to log playback.started: {Message}", args: ex.Message);
+            _logger.LogWarning("Failed to log playback.started: {Message}", ex.Message);
         }
     }
 
     private Device GetCurrentDevice(User user)
     {
-        if (CurrentDevice.TryGetValue(key: user.Id, value: out Device? device))
+        if (CurrentDevice.TryGetValue(user.Id, out Device? device))
             return device;
 
-        device = ConnectedClients.Clients.FirstOrDefault(predicate: d => d.Key == Context.ConnectionId).Value;
-        CurrentDevice[key: user.Id] = device;
+        device = ConnectedClients.Clients.FirstOrDefault(d => d.Key == Context.ConnectionId).Value;
+        CurrentDevice[user.Id] = device;
 
         return device;
     }
@@ -346,7 +346,7 @@ public partial class VideoHub
     )
     {
         return state.CurrentItem is not null
-            && state.CurrentList.ToString().Contains(value: $"{type}/{listId}")
+            && state.CurrentList.ToString().Contains($"{type}/{listId}")
             && state.CurrentItem?.Id == itemId;
     }
 
@@ -362,15 +362,15 @@ public partial class VideoHub
         state.Actions.Disallows.Seeking = false;
         state.Actions.Disallows.Muting = false;
         state.Actions.Disallows.Previous =
-            state.CurrentItem is null || state.Playlist.IndexOf(item: state.CurrentItem) == 0;
+            state.CurrentItem is null || state.Playlist.IndexOf(state.CurrentItem) == 0;
         state.Actions.Disallows.Next =
             state.CurrentItem is null
-            || state.Playlist.IndexOf(item: state.CurrentItem) == state.Playlist.Count - 1;
+            || state.Playlist.IndexOf(state.CurrentItem) == state.Playlist.Count - 1;
 
-        _videoPlaybackService.StartPlaybackTimer(user: user);
-        UpdateDeviceInfo(state: state);
-        await _videoPlaybackService.UpdatePlaybackState(user: user, state: state);
-        await _videoPlaybackService.PublishStartedEventAsync(userId: user.Id, state: state);
+        _videoPlaybackService.StartPlaybackTimer(user);
+        UpdateDeviceInfo(state);
+        await _videoPlaybackService.UpdatePlaybackState(user, state);
+        await _videoPlaybackService.PublishStartedEventAsync(user.Id, state);
     }
 
     private async Task HandlePlaylistChange(
@@ -382,33 +382,33 @@ public partial class VideoHub
         List<VideoPlaylistResponseDto> playlist
     )
     {
-        UpdateDeviceInfo(state: state);
-        UpdatePlaylistInfo(state: state, type: type, listId: listId, item: item, playlist: playlist);
+        UpdateDeviceInfo(state);
+        UpdatePlaylistInfo(state, type, listId, item, playlist);
 
-        _videoPlaybackService.StartPlaybackTimer(user: user);
-        await _videoPlaybackService.UpdatePlaybackState(user: user, state: state);
-        await _videoPlaybackService.PublishStartedEventAsync(userId: user.Id, state: state);
+        _videoPlaybackService.StartPlaybackTimer(user);
+        await _videoPlaybackService.UpdatePlaybackState(user, state);
+        await _videoPlaybackService.PublishStartedEventAsync(user.Id, state);
 
-        Device device = GetCurrentDevice(user: user);
+        Device device = GetCurrentDevice(user);
         try
         {
             await ActivityLogger.LogPlaybackAsync(
-                type: "playback.started",
-                userId: user.Id,
-                deviceId: device.Id,
-                mediaId: item.VideoId,
-                metadata: new { media_type = "video", title = item.Title }
+                "playback.started",
+                user.Id,
+                device.Id,
+                item.VideoId,
+                new { media_type = "video", title = item.Title }
             );
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(message: "Failed to log playback.started: {Message}", args: ex.Message);
+            _logger.LogWarning("Failed to log playback.started: {Message}", ex.Message);
         }
     }
 
     private void UpdateDeviceInfo(VideoPlayerState state)
     {
-        if (!ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? device))
+        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
             return;
         state.DeviceId = device.DeviceId;
         state.VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent;
@@ -425,7 +425,7 @@ public partial class VideoHub
         state.CurrentItem = item;
         state.PlayState = true;
         state.Playlist = playlist;
-        state.CurrentList = new(uriString: $"/{type}/{listId}/watch", uriKind: UriKind.Relative);
+        state.CurrentList = new($"/{type}/{listId}/watch", UriKind.Relative);
         state.Time = item.Progress?.Time * 1000 ?? 0;
         state.Duration = item.Duration.ToMilliSeconds();
         state.Actions = new()
@@ -437,19 +437,19 @@ public partial class VideoHub
                 Muting = false,
                 Pausing = !state.PlayState,
                 Resuming = state.PlayState,
-                Previous = playlist.IndexOf(item: item) == 0,
-                Next = playlist.IndexOf(item: item) == playlist.Count - 1,
+                Previous = playlist.IndexOf(item) == 0,
+                Next = playlist.IndexOf(item) == playlist.Count - 1,
             },
         };
     }
 
     public VideoPlayerState? GetStateCommand()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return null;
 
-        _videoPlayerStateManager.TryGetValue(userId: user.Id, state: out VideoPlayerState? playerState);
+        _videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? playerState);
         if (playerState is null)
             return null;
 
@@ -458,28 +458,28 @@ public partial class VideoHub
 
     public async Task PlaybackCommand(string? command, object? data = null)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
-        if (string.IsNullOrEmpty(value: command))
+        if (string.IsNullOrEmpty(command))
         {
             _logger.LogWarning(
-                message: "{Name}: [VideoHub.PlaybackCommand] ignored — command was null/empty",
-                args: user.Name
+                "{Name}: [VideoHub.PlaybackCommand] ignored — command was null/empty",
+                user.Name
             );
             return;
         }
 
-        if (!_videoPlayerStateManager.TryGetValue(userId: user.Id, state: out VideoPlayerState? state))
+        if (!_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? state))
         {
-            await _videoPlaybackService.UpdatePlaybackState(user: user, state: null);
+            await _videoPlaybackService.UpdatePlaybackState(user, null);
             return;
         }
 
-        ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? device);
+        ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device);
 
-        await _commandHandler.HandleCommand(user: user, command: command, data: data, state: state, device: device);
+        await _commandHandler.HandleCommand(user, command, data, state, device);
 
         if (state.DeviceId == null)
             if (device is not null)
@@ -488,20 +488,20 @@ public partial class VideoHub
                 state.VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent;
             }
 
-        await _videoPlaybackService.UpdatePlaybackState(user: user, state: state);
+        await _videoPlaybackService.UpdatePlaybackState(user, state);
     }
 
     public async Task ChangeDeviceCommand(string? deviceId)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
-        if (string.IsNullOrEmpty(value: deviceId))
+        if (string.IsNullOrEmpty(deviceId))
         {
             _logger.LogWarning(
-                message: "{Name}: [VideoHub.ChangeDeviceCommand] ignored — deviceId was null/empty",
-                args: user.Name
+                "{Name}: [VideoHub.ChangeDeviceCommand] ignored — deviceId was null/empty",
+                user.Name
             );
             return;
         }
@@ -514,32 +514,32 @@ public partial class VideoHub
         await using (MediaContext ctx = await _contextFactory.CreateDbContextAsync())
         {
             List<Device> registeredTvs = await ctx
-                .Devices.Where(predicate: d => d.OwnerUserId == user.Id && d.Type == "tv")
+                .Devices.Where(d => d.OwnerUserId == user.Id && d.Type == "tv")
                 .ToListAsync();
 
             HashSet<string> seenDeviceIds = new(
-                collection: connectedDevices.Select(selector: d => d.DeviceId),
-                comparer: StringComparer.OrdinalIgnoreCase
+                connectedDevices.Select(d => d.DeviceId),
+                StringComparer.OrdinalIgnoreCase
             );
 
             foreach (Device tv in registeredTvs)
-                if (seenDeviceIds.Add(item: tv.DeviceId))
-                    connectedDevices.Add(item: tv);
+                if (seenDeviceIds.Add(tv.DeviceId))
+                    connectedDevices.Add(tv);
         }
 
         await _clientMessenger.SendTo(
-            name: "ConnectedDevicesState",
-            endpoint: "videoHub",
-            userId: user.Id,
-            data: connectedDevices
+            "ConnectedDevicesState",
+            "videoHub",
+            user.Id,
+            connectedDevices
         );
 
         // TV-target branch: when handing off video to a TV, mint a cast session
         // bundle and LAUNCH the receiver. Mirrors MusicHub.ChangeDeviceCommand.
         // Cast Connect routes APK-installed TVs to the native APK and Web-only
         // TVs to cast.nomercy.tv — both consume customData.
-        Device? targetTv = connectedDevices.FirstOrDefault(predicate: d =>
-            d.DeviceId.Equals(value: deviceId, comparisonType: StringComparison.OrdinalIgnoreCase) && d.Type == "tv"
+        Device? targetTv = connectedDevices.FirstOrDefault(d =>
+            d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase) && d.Type == "tv"
         );
 
         if (targetTv is not null)
@@ -549,63 +549,63 @@ public partial class VideoHub
             string serverIdString = Info.DeviceId.ToString();
             string serverUrl = ResolveServerUrl();
             string locale = ResolveSenderLocale();
-            CastIntent intent = ResolveVideoIntent(userId: user.Id);
+            CastIntent intent = ResolveVideoIntent(user.Id);
 
-            _ = Task.Run(function: async () =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
-                    string? receiverName = await _chromeCast.FindReceiverNameByIpAsync(ip: targetIp);
-                    if (string.IsNullOrEmpty(value: receiverName))
+                    string? receiverName = await _chromeCast.FindReceiverNameByIpAsync(targetIp);
+                    if (string.IsNullOrEmpty(receiverName))
                     {
                         _logger.LogWarning(
-                            message: "No Chromecast receiver discovered at {TargetIp} — video handoff will not wake panel via CEC",
-                            args: targetIp
+                            "No Chromecast receiver discovered at {TargetIp} — video handoff will not wake panel via CEC",
+                            targetIp
                         );
                         return;
                     }
 
                     LaunchCustomData? launchData = await _castTokenService.MintAsync(
-                        userId: user.Id,
-                        serverId: serverIdString,
-                        serverUrl: serverUrl,
-                        deviceId: targetUlid,
-                        intent: intent,
-                        clientLocale: locale
+                        user.Id,
+                        serverIdString,
+                        serverUrl,
+                        targetUlid,
+                        intent,
+                        locale
                     );
 
                     if (launchData is null)
                     {
                         _logger.LogWarning(
-                            message: "Cast token mint failed for video handoff to {TargetIp} — falling back to LAUNCH without customData",
-                            args: targetIp
+                            "Cast token mint failed for video handoff to {TargetIp} — falling back to LAUNCH without customData",
+                            targetIp
                         );
                     }
 
-                    bool apkOnline = _busRegistry.IsOnline(deviceId: targetUlid);
-                    await _chromeCast.SelectChromecast(name: receiverName);
+                    bool apkOnline = _busRegistry.IsOnline(targetUlid);
+                    await _chromeCast.SelectChromecast(receiverName);
                     await _chromeCast.LaunchAndroidReceiver(
-                        name: receiverName,
-                        customData: launchData,
-                        useAndroidReceiver: apkOnline
+                        receiverName,
+                        launchData,
+                        apkOnline
                     );
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(
-                        message: "Server-side video Cast launch failed for {TargetIp}: {Message}", args: [targetIp, ex.Message]
+                        "Server-side video Cast launch failed for {TargetIp}: {Message}", [targetIp, ex.Message]
                     );
                 }
             });
         }
 
-        if (_videoPlayerStateManager.TryGetValue(userId: user.Id, state: out VideoPlayerState? playerState))
+        if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? playerState))
         {
             playerState.DeviceId = deviceId;
         }
         else
         {
-            await _videoPlaybackService.UpdatePlaybackState(user: user, state: playerState);
+            await _videoPlaybackService.UpdatePlaybackState(user, playerState);
             return;
         }
 
@@ -625,6 +625,6 @@ public partial class VideoHub
             ],
         };
 
-        await _clientMessenger.SendTo(name: "ChangeDevice", endpoint: "videoHub", userId: user.Id, data: payload);
+        await _clientMessenger.SendTo("ChangeDevice", "videoHub", user.Id, payload);
     }
 }

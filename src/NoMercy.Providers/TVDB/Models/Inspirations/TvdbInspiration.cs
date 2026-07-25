@@ -18,33 +18,33 @@ public class TvdbInspirationTypesResponse : TvdbResponse<TvdbInspirationType[]> 
 
 public class TvdbInspirationType
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string Description { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "reference_name")]
+    [JsonProperty("reference_name")]
     public string ReferenceName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri? Url { get; set; }
 }
 
 public class TvdbInspiration
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public int Type { get; set; }
 
-    [JsonProperty(propertyName: "type_name")]
+    [JsonProperty("type_name")]
     public string TypeName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public string? Url { get; set; }
 }

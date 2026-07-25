@@ -32,7 +32,7 @@ namespace NoMercy.Tests.Networking;
 /// take a single-flight lock so a NIC flap that fires both events back to
 /// back can never run two overlapping re-evaluations.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class NetworkChangeMonitorTests
 {
     private sealed class RecordingNetworkDiscovery : INetworkDiscovery
@@ -58,7 +58,7 @@ public sealed class NetworkChangeMonitorTests
             return Task.CompletedTask;
         }
 
-        public Task<bool> IsPortOpenAsync() => Task.FromResult(result: false);
+        public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
     }
 
     private sealed class RecordingConnectivityManager : IConnectivityManager
@@ -71,7 +71,7 @@ public sealed class NetworkChangeMonitorTests
         public Task EvaluateAsync(CancellationToken ct)
         {
             EvaluateCallCount++;
-            StateChanged?.Invoke(obj: ConnectivityState.LocalOnly);
+            StateChanged?.Invoke(ConnectivityState.LocalOnly);
             return Task.CompletedTask;
         }
     }
@@ -83,11 +83,11 @@ public sealed class NetworkChangeMonitorTests
     )
     {
         return new(
-            logger: NullLogger<NetworkChangeMonitor>.Instance,
-            authTokenStore: tokenStore ?? new AuthTokenStore(),
-            networkDiscovery: discovery,
-            connectivityManager: manager,
-            connectivityStatus: new ConnectivityStatus()
+            NullLogger<NetworkChangeMonitor>.Instance,
+            tokenStore ?? new AuthTokenStore(),
+            discovery,
+            manager,
+            new ConnectivityStatus()
         );
     }
 
@@ -96,7 +96,7 @@ public sealed class NetworkChangeMonitorTests
         int waited = 0;
         while (!condition() && waited < timeoutMs)
         {
-            await Task.Delay(millisecondsDelay: 20);
+            await Task.Delay(20);
             waited += 20;
         }
     }
@@ -112,15 +112,15 @@ public sealed class NetworkChangeMonitorTests
             InternalIp = "224.0.0.1",
         };
         RecordingConnectivityManager manager = new();
-        NetworkChangeMonitor monitor = BuildMonitor(discovery: discovery, manager: manager);
+        NetworkChangeMonitor monitor = BuildMonitor(discovery, manager);
 
-        monitor.OnNetworkAddressChanged(sender: null, e: EventArgs.Empty);
+        monitor.OnNetworkAddressChanged(null, EventArgs.Empty);
 
-        await WaitUntil(condition: () => manager.EvaluateCallCount > 0);
+        await WaitUntil(() => manager.EvaluateCallCount > 0);
 
-        Assert.True(condition: manager.EvaluateCallCount > 0);
-        Assert.True(condition: discovery.ForceRediscoveryCallCount > 0);
-        Assert.NotEqual(expected: "224.0.0.1", actual: discovery.InternalIp);
+        Assert.True(manager.EvaluateCallCount > 0);
+        Assert.True(discovery.ForceRediscoveryCallCount > 0);
+        Assert.NotEqual("224.0.0.1", discovery.InternalIp);
     }
 
     [Fact]
@@ -131,13 +131,13 @@ public sealed class NetworkChangeMonitorTests
         string resolvedIp = NetworkChangeMonitor.GetCurrentInternalIp();
         RecordingNetworkDiscovery discovery = new() { InternalIp = resolvedIp };
         RecordingConnectivityManager manager = new();
-        NetworkChangeMonitor monitor = BuildMonitor(discovery: discovery, manager: manager);
+        NetworkChangeMonitor monitor = BuildMonitor(discovery, manager);
 
-        monitor.OnNetworkAddressChanged(sender: null, e: EventArgs.Empty);
-        await Task.Delay(millisecondsDelay: 200); // let the async-void handler run to completion
+        monitor.OnNetworkAddressChanged(null, EventArgs.Empty);
+        await Task.Delay(200); // let the async-void handler run to completion
 
-        Assert.Equal(expected: 0, actual: manager.EvaluateCallCount);
-        Assert.Equal(expected: 0, actual: discovery.ForceRediscoveryCallCount);
+        Assert.Equal(0, manager.EvaluateCallCount);
+        Assert.Equal(0, discovery.ForceRediscoveryCallCount);
     }
 
     [Fact]
@@ -145,31 +145,31 @@ public sealed class NetworkChangeMonitorTests
     {
         RecordingNetworkDiscovery discovery = new() { InternalIp = "224.0.0.1" };
         RecordingConnectivityManager manager = new();
-        NetworkChangeMonitor monitor = BuildMonitor(discovery: discovery, manager: manager);
+        NetworkChangeMonitor monitor = BuildMonitor(discovery, manager);
 
         // Fire twice back-to-back like a real NIC flap would raise both
         // NetworkAddressChanged and NetworkAvailabilityChanged.
-        monitor.OnNetworkAddressChanged(sender: null, e: EventArgs.Empty);
-        monitor.OnNetworkAddressChanged(sender: null, e: EventArgs.Empty);
+        monitor.OnNetworkAddressChanged(null, EventArgs.Empty);
+        monitor.OnNetworkAddressChanged(null, EventArgs.Empty);
 
-        await WaitUntil(condition: () => manager.EvaluateCallCount > 0);
-        await Task.Delay(millisecondsDelay: 100);
+        await WaitUntil(() => manager.EvaluateCallCount > 0);
+        await Task.Delay(100);
 
         // The single-flight lock means at most one of the two overlapping
         // calls actually ran the re-evaluation body to completion; the other
         // bailed out at the WaitAsync(0) gate.
-        Assert.True(condition: manager.EvaluateCallCount <= 2);
+        Assert.True(manager.EvaluateCallCount <= 2);
     }
 
     private static NetworkAvailabilityEventArgs BuildAvailabilityArgs(bool isAvailable)
     {
         return (NetworkAvailabilityEventArgs)
             Activator.CreateInstance(
-                type: typeof(NetworkAvailabilityEventArgs),
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
-                binder: null,
-                args: [isAvailable],
-                culture: null
+                typeof(NetworkAvailabilityEventArgs),
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                [isAvailable],
+                null
             )!;
     }
 
@@ -178,14 +178,14 @@ public sealed class NetworkChangeMonitorTests
     {
         RecordingNetworkDiscovery discovery = new();
         RecordingConnectivityManager manager = new();
-        NetworkChangeMonitor monitor = BuildMonitor(discovery: discovery, manager: manager);
+        NetworkChangeMonitor monitor = BuildMonitor(discovery, manager);
 
-        monitor.OnNetworkAvailabilityChanged(sender: null, e: BuildAvailabilityArgs(isAvailable: true));
+        monitor.OnNetworkAvailabilityChanged(null, BuildAvailabilityArgs(true));
 
-        await WaitUntil(condition: () => manager.EvaluateCallCount > 0);
+        await WaitUntil(() => manager.EvaluateCallCount > 0);
 
-        Assert.True(condition: manager.EvaluateCallCount > 0);
-        Assert.True(condition: discovery.ForceRediscoveryCallCount > 0);
+        Assert.True(manager.EvaluateCallCount > 0);
+        Assert.True(discovery.ForceRediscoveryCallCount > 0);
     }
 
     [Fact]
@@ -193,13 +193,13 @@ public sealed class NetworkChangeMonitorTests
     {
         RecordingNetworkDiscovery discovery = new();
         RecordingConnectivityManager manager = new();
-        NetworkChangeMonitor monitor = BuildMonitor(discovery: discovery, manager: manager);
+        NetworkChangeMonitor monitor = BuildMonitor(discovery, manager);
 
-        monitor.OnNetworkAvailabilityChanged(sender: null, e: BuildAvailabilityArgs(isAvailable: false));
-        await Task.Delay(millisecondsDelay: 200);
+        monitor.OnNetworkAvailabilityChanged(null, BuildAvailabilityArgs(false));
+        await Task.Delay(200);
 
-        Assert.Equal(expected: 0, actual: manager.EvaluateCallCount);
-        Assert.Equal(expected: 0, actual: discovery.ForceRediscoveryCallCount);
+        Assert.Equal(0, manager.EvaluateCallCount);
+        Assert.Equal(0, discovery.ForceRediscoveryCallCount);
     }
 
     [Fact]
@@ -208,11 +208,11 @@ public sealed class NetworkChangeMonitorTests
         RecordingNetworkDiscovery discovery = new();
         RecordingConnectivityManager manager = new();
         AuthTokenStore tokenStore = new(); // AccessToken stays null
-        NetworkChangeMonitor monitor = BuildMonitor(discovery: discovery, manager: manager, tokenStore: tokenStore);
+        NetworkChangeMonitor monitor = BuildMonitor(discovery, manager, tokenStore);
 
-        Exception? ex = await Record.ExceptionAsync(testCode: monitor.SendUpdate);
+        Exception? ex = await Record.ExceptionAsync(monitor.SendUpdate);
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -220,8 +220,8 @@ public sealed class NetworkChangeMonitorTests
     {
         string ip = NetworkChangeMonitor.GetCurrentInternalIp();
 
-        Assert.True(condition: IPAddress.TryParse(ipString: ip, address: out IPAddress? parsed));
-        Assert.Equal(expected: System.Net.Sockets.AddressFamily.InterNetwork, actual: parsed!.AddressFamily);
+        Assert.True(IPAddress.TryParse(ip, out IPAddress? parsed));
+        Assert.Equal(System.Net.Sockets.AddressFamily.InterNetwork, parsed!.AddressFamily);
     }
 
     [Fact]
@@ -229,14 +229,14 @@ public sealed class NetworkChangeMonitorTests
     {
         RecordingNetworkDiscovery discovery = new();
         RecordingConnectivityManager manager = new();
-        NetworkChangeMonitor monitor = BuildMonitor(discovery: discovery, manager: manager);
+        NetworkChangeMonitor monitor = BuildMonitor(discovery, manager);
 
-        await monitor.StartAsync(cancellationToken: CancellationToken.None);
-        Exception? ex = await Record.ExceptionAsync(testCode: () =>
-            monitor.StopAsync(cancellationToken: CancellationToken.None)
+        await monitor.StartAsync(CancellationToken.None);
+        Exception? ex = await Record.ExceptionAsync(() =>
+            monitor.StopAsync(CancellationToken.None)
         );
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -244,11 +244,11 @@ public sealed class NetworkChangeMonitorTests
     {
         RecordingNetworkDiscovery discovery = new();
         RecordingConnectivityManager manager = new();
-        NetworkChangeMonitor monitor = BuildMonitor(discovery: discovery, manager: manager);
+        NetworkChangeMonitor monitor = BuildMonitor(discovery, manager);
 
-        Exception? ex = Record.Exception(testCode: monitor.Dispose);
+        Exception? ex = Record.Exception(monitor.Dispose);
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -256,11 +256,11 @@ public sealed class NetworkChangeMonitorTests
     {
         RecordingNetworkDiscovery discovery = new();
         RecordingConnectivityManager manager = new();
-        NetworkChangeMonitor monitor = BuildMonitor(discovery: discovery, manager: manager);
-        await monitor.StartAsync(cancellationToken: CancellationToken.None);
+        NetworkChangeMonitor monitor = BuildMonitor(discovery, manager);
+        await monitor.StartAsync(CancellationToken.None);
 
-        Exception? ex = Record.Exception(testCode: monitor.Dispose);
+        Exception? ex = Record.Exception(monitor.Dispose);
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 }

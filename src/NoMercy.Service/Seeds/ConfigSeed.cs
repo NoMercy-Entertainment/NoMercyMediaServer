@@ -22,7 +22,7 @@ public static class ConfigSeed
 {
     public static async Task Init(this AppDbContext dbContext)
     {
-        Logger.Setup(message: "Adding Configurations", level: LogEventLevel.Verbose);
+        Logger.Setup("Adding Configurations", LogEventLevel.Verbose);
         ConfigurationModel[] configs =
         [
             new()
@@ -40,14 +40,14 @@ public static class ConfigSeed
         try
         {
             await dbContext
-                .Configuration.UpsertRange(entities: configs)
-                .On(match: v => new { v.Key })
-                .WhenMatched(updater: (_, vi) => new() { Key = vi.Key, Value = vi.Value })
+                .Configuration.UpsertRange(configs)
+                .On(v => new { v.Key })
+                .WhenMatched((_, vi) => new() { Key = vi.Key, Value = vi.Value })
                 .RunAsync();
         }
         catch (Exception e)
         {
-            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
+            Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
     }
 }

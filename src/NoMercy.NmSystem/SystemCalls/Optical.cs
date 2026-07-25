@@ -28,7 +28,7 @@ public static class Optical
         if (Software.IsMac)
             return GetMacOpticalDrives();
 
-        throw new PlatformNotSupportedException(message: "Unsupported OS.");
+        throw new PlatformNotSupportedException("Unsupported OS.");
     }
 
     private static Dictionary<string, string?> GetWindowsOpticalDrives()
@@ -36,9 +36,9 @@ public static class Optical
         Dictionary<string, string?> drives = new();
         foreach (DriveInfo drive in DriveInfo.GetDrives())
             if (drive is { DriveType: DriveType.CDRom, IsReady: true })
-                drives[key: drive.Name] = drive.VolumeLabel.Length > 0 ? drive.VolumeLabel : null;
+                drives[drive.Name] = drive.VolumeLabel.Length > 0 ? drive.VolumeLabel : null;
             else if (drive.DriveType == DriveType.CDRom)
-                drives[key: drive.Name] = null;
+                drives[drive.Name] = null;
 
         return drives;
     }
@@ -46,16 +46,16 @@ public static class Optical
     private static Dictionary<string, string?> GetLinuxOpticalDrives()
     {
         Dictionary<string, string?> drives = new();
-        List<string> output = RunShellCommand(command: "lsblk -o NAME,MOUNTPOINT,LABEL -n | grep sr");
+        List<string> output = RunShellCommand("lsblk -o NAME,MOUNTPOINT,LABEL -n | grep sr");
 
         foreach (string line in output)
         {
-            string[] parts = line.Split(separator: [' '], options: StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = line.Split([' '], StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 2)
                 continue;
 
             string path = $"/dev/{parts[0]}";
-            drives[key: path] = parts.Length > 2 ? parts[2] : null;
+            drives[path] = parts.Length > 2 ? parts[2] : null;
         }
 
         return drives;
@@ -64,18 +64,18 @@ public static class Optical
     private static Dictionary<string, string?> GetMacOpticalDrives()
     {
         Dictionary<string, string?> drives = new();
-        List<string> output = RunShellCommand(command: "diskutil list | grep -i 'CD/DVD'");
+        List<string> output = RunShellCommand("diskutil list | grep -i 'CD/DVD'");
 
         foreach (string line in output)
         {
-            string[] parts = line.Split(separator: [' '], options: StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = line.Split([' '], StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length <= 0)
                 continue;
 
             string path = parts[^1]; // Last item is typically the disk identifier (e.g., /dev/disk2)
-            drives[key: path] = RunShellCommand(command: $"diskutil info {path} | grep 'Volume Name'")
+            drives[path] = RunShellCommand($"diskutil info {path} | grep 'Volume Name'")
                 .FirstOrDefault()
-                ?.Split(separator: ": ")[1];
+                ?.Split(": ")[1];
         }
 
         return drives;
@@ -87,14 +87,14 @@ public static class Optical
 
         try
         {
-            string result = Shell.ExecCommand(command: command);
+            string result = Shell.ExecCommand(command);
             outputLines.AddRange(
-                collection: result.Split(separator: [Environment.NewLine], options: StringSplitOptions.RemoveEmptyEntries)
+                result.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries)
             );
         }
         catch (Exception ex)
         {
-            Logger.Error(message: $"[ERROR] Failed to run command '{command}': {ex.Message}");
+            Logger.Error($"[ERROR] Failed to run command '{command}': {ex.Message}");
         }
 
         return outputLines;
@@ -103,30 +103,30 @@ public static class Optical
     public static bool OpenDrive(string drivePath)
     {
         if (Software.IsWindows)
-            return OpenWindowsOpticalDrives(drivePath: drivePath);
+            return OpenWindowsOpticalDrives(drivePath);
         if (Software.IsLinux)
-            return OpenLinuxOpticalDrives(drivePath: drivePath);
+            return OpenLinuxOpticalDrives(drivePath);
         if (Software.IsMac)
-            return OpenMacOpticalDrives(drivePath: drivePath);
+            return OpenMacOpticalDrives(drivePath);
 
-        throw new PlatformNotSupportedException(message: "Unsupported OS.");
+        throw new PlatformNotSupportedException("Unsupported OS.");
     }
 
     public static bool CloseDrive(string drivePath)
     {
         if (Software.IsWindows)
-            return CloseWindowsOpticalDrives(drivePath: drivePath);
+            return CloseWindowsOpticalDrives(drivePath);
         if (Software.IsLinux)
-            return CloseLinuxOpticalDrives(drivePath: drivePath);
+            return CloseLinuxOpticalDrives(drivePath);
         if (Software.IsMac)
-            return CloseMacOpticalDrives(drivePath: drivePath);
+            return CloseMacOpticalDrives(drivePath);
 
-        throw new PlatformNotSupportedException(message: "Unsupported OS.");
+        throw new PlatformNotSupportedException("Unsupported OS.");
     }
 
     #region Windows Optical Drive Control
 
-    [DllImport(dllName: "winmm.dll", EntryPoint = "mciSendString")]
+    [DllImport("winmm.dll", EntryPoint = "mciSendString")]
     public static extern int mciSendString(
         string lpstrCommand,
         string lpstrReturnString,
@@ -136,29 +136,29 @@ public static class Optical
 
     private static bool OpenWindowsOpticalDrives(string drivePath)
     {
-        if (!IsOpticalDrive(drivePath: drivePath))
+        if (!IsOpticalDrive(drivePath))
             return false; // Early check
 
         try
         {
             int locked = mciSendString(
-                lpstrCommand: $"open {drivePath[index: 0]}: type CDAudio alias drive{drivePath[index: 0]}",
-                lpstrReturnString: string.Empty,
-                uReturnLength: 0,
-                hwndCallback: 0
+                $"open {drivePath[0]}: type CDAudio alias drive{drivePath[0]}",
+                string.Empty,
+                0,
+                0
             );
             if (locked != 0)
                 return false; // Check if open was successful
 
-            int result = mciSendString(lpstrCommand: $"set drive{drivePath[index: 0]} door open", lpstrReturnString: string.Empty, uReturnLength: 0, hwndCallback: 0);
-            int released = mciSendString(lpstrCommand: $"close drive{drivePath[index: 0]}", lpstrReturnString: string.Empty, uReturnLength: 0, hwndCallback: 0);
+            int result = mciSendString($"set drive{drivePath[0]} door open", string.Empty, 0, 0);
+            int released = mciSendString($"close drive{drivePath[0]}", string.Empty, 0, 0);
 
             return result == 0;
         }
         catch (Exception ex)
         {
             Logger.Error(
-                message: $"[ERROR] Failed to open Windows optical drive '{drivePath}': {ex.Message}"
+                $"[ERROR] Failed to open Windows optical drive '{drivePath}': {ex.Message}"
             );
             return false;
         }
@@ -166,29 +166,29 @@ public static class Optical
 
     private static bool CloseWindowsOpticalDrives(string drivePath)
     {
-        if (!IsOpticalDrive(drivePath: drivePath))
+        if (!IsOpticalDrive(drivePath))
             return false; //Early check
 
         try
         {
             int locked = mciSendString(
-                lpstrCommand: $"open {drivePath[index: 0]}: type CDAudio alias drive{drivePath[index: 0]}",
-                lpstrReturnString: string.Empty,
-                uReturnLength: 0,
-                hwndCallback: 0
+                $"open {drivePath[0]}: type CDAudio alias drive{drivePath[0]}",
+                string.Empty,
+                0,
+                0
             );
             if (locked != 0)
                 return false; // check if open was successful
 
-            int result = mciSendString(lpstrCommand: $"set drive{drivePath[index: 0]} door closed", lpstrReturnString: string.Empty, uReturnLength: 0, hwndCallback: 0);
-            int released = mciSendString(lpstrCommand: $"close drive{drivePath[index: 0]}", lpstrReturnString: string.Empty, uReturnLength: 0, hwndCallback: 0);
+            int result = mciSendString($"set drive{drivePath[0]} door closed", string.Empty, 0, 0);
+            int released = mciSendString($"close drive{drivePath[0]}", string.Empty, 0, 0);
 
             return result == 0;
         }
         catch (Exception ex)
         {
             Logger.Error(
-                message: $"[ERROR] Failed to close Windows optical drive '{drivePath}': {ex.Message}"
+                $"[ERROR] Failed to close Windows optical drive '{drivePath}': {ex.Message}"
             );
             return false;
         }
@@ -196,7 +196,7 @@ public static class Optical
 
     private static bool IsOpticalDrive(string drivePath)
     {
-        DriveInfo driveInfo = new(driveName: drivePath);
+        DriveInfo driveInfo = new(drivePath);
         return driveInfo.DriveType == DriveType.CDRom;
     }
 
@@ -208,13 +208,13 @@ public static class Optical
     {
         try
         {
-            Shell.ExecSync(executable: "eject", arguments: [drivePath]);
+            Shell.ExecSync("eject", [drivePath]);
             return true;
         }
         catch (Exception ex)
         {
             Logger.Error(
-                message: $"[ERROR] Failed to open Linux optical drive '{drivePath}': {ex.Message}"
+                $"[ERROR] Failed to open Linux optical drive '{drivePath}': {ex.Message}"
             );
             return false;
         }
@@ -224,13 +224,13 @@ public static class Optical
     {
         try
         {
-            Shell.ExecSync(executable: "eject", arguments: ["-t", drivePath]);
+            Shell.ExecSync("eject", ["-t", drivePath]);
             return true;
         }
         catch (Exception ex)
         {
             Logger.Error(
-                message: $"[ERROR] Failed to close Linux optical drive '{drivePath}': {ex.Message}"
+                $"[ERROR] Failed to close Linux optical drive '{drivePath}': {ex.Message}"
             );
             return false;
         }
@@ -244,13 +244,13 @@ public static class Optical
     {
         try
         {
-            Shell.ExecSync(executable: "drutil", arguments: ["eject", drivePath]);
+            Shell.ExecSync("drutil", ["eject", drivePath]);
             return true;
         }
         catch (Exception ex)
         {
             Logger.Error(
-                message: $"[ERROR] Failed to open macOS optical drive '{drivePath}': {ex.Message}"
+                $"[ERROR] Failed to open macOS optical drive '{drivePath}': {ex.Message}"
             );
             return false;
         }
@@ -260,13 +260,13 @@ public static class Optical
     {
         try
         {
-            Shell.ExecSync(executable: "drutil", arguments: ["tray", "close", drivePath]);
+            Shell.ExecSync("drutil", ["tray", "close", drivePath]);
             return true;
         }
         catch (Exception ex)
         {
             Logger.Error(
-                message: $"[ERROR] Failed to close macOS optical drive '{drivePath}': {ex.Message}"
+                $"[ERROR] Failed to close macOS optical drive '{drivePath}': {ex.Message}"
             );
             return false;
         }
@@ -279,21 +279,21 @@ public static class Optical
         // LOCAL-ONLY: Optical is a static class in NmSystem; no reference to NoMercy.Providers.
         IStorageDriver driver = new LocalStorageDriver();
 
-        if (!driver.DirectoryExists(path: drivePath))
+        if (!driver.DirectoryExists(drivePath))
             return OpticalDiscType.None;
 
         // Check for Blu-ray
-        if (driver.DirectoryExists(path: Path.Combine(path1: drivePath, path2: "BDMV")))
+        if (driver.DirectoryExists(Path.Combine(drivePath, "BDMV")))
             return OpticalDiscType.BluRay;
 
         // Check for DVD
-        if (driver.DirectoryExists(path: Path.Combine(path1: drivePath, path2: "VIDEO_TS")))
+        if (driver.DirectoryExists(Path.Combine(drivePath, "VIDEO_TS")))
             return OpticalDiscType.Dvd;
 
         // Check for CD (Audio CD or Data CD)
         try
         {
-            DriveInfo drive = new(driveName: drivePath);
+            DriveInfo drive = new(drivePath);
             if (drive is { DriveType: DriveType.CDRom, IsReady: true })
                 // If we get here and it's not BD or DVD, it's some form of CD
                 return OpticalDiscType.Cd;

@@ -14,14 +14,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.Subscribers;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Storage;
-using Xunit;
 
 namespace NoMercy.Tests.Encoder.Subscribers;
 
@@ -30,12 +28,12 @@ public class IntroDetectSubscriberTests
     private static IDbContextFactory<MediaContext> InMemoryFactory(string tag)
     {
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseInMemoryDatabase(databaseName: $"intro-detect-{tag}-{Ulid.NewUlid()}")
+            .UseInMemoryDatabase($"intro-detect-{tag}-{Ulid.NewUlid()}")
             .Options;
         Mock<IDbContextFactory<MediaContext>> mock = new();
-        mock.Setup(expression: f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(valueFunction: () => new(options: options));
-        mock.Setup(expression: f => f.CreateDbContext()).Returns(valueFunction: () => new(options: options));
+        mock.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new(options));
+        mock.Setup(f => f.CreateDbContext()).Returns(() => new(options));
         return mock.Object;
     }
 
@@ -49,15 +47,15 @@ public class IntroDetectSubscriberTests
     {
         EncoderOptions options = new() { EnableIntroDetectSubscriber = enabled };
         Mock<IStorage> storage = new();
-        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: true);
+        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
         return new(
-            eventBus: bus,
-            fingerprinter: fingerprinter,
-            introDetector: detector,
-            options: options,
-            logger: NullLogger<IntroDetectSubscriber>.Instance,
-            storage: storage.Object,
-            contextFactory: factory
+            bus,
+            fingerprinter,
+            detector,
+            options,
+            NullLogger<IntroDetectSubscriber>.Instance,
+            storage.Object,
+            factory
         );
     }
 
@@ -73,7 +71,7 @@ public class IntroDetectSubscriberTests
         await using MediaContext ctx = await factory.CreateDbContextAsync();
 
         ctx.Libraries.Add(
-            entity: new()
+            new()
             {
                 Id = libraryId,
                 Title = "TV Library",
@@ -82,7 +80,7 @@ public class IntroDetectSubscriberTests
         );
 
         ctx.Tvs.Add(
-            entity: new()
+            new()
             {
                 Id = tvId,
                 Title = "Test Show",
@@ -92,7 +90,7 @@ public class IntroDetectSubscriberTests
         );
 
         ctx.Seasons.Add(
-            entity: new()
+            new()
             {
                 Id = seasonId,
                 TvId = tvId,
@@ -101,13 +99,13 @@ public class IntroDetectSubscriberTests
             }
         );
 
-        ctx.LibraryTv.Add(entity: new(libraryId: libraryId, tvId: tvId));
+        ctx.LibraryTv.Add(new(libraryId, tvId));
 
         for (int index = 0; index < episodeIds.Length; index++)
         {
             int episodeId = episodeIds[index];
             ctx.Episodes.Add(
-                entity: new()
+                new()
                 {
                     Id = episodeId,
                     TvId = tvId,
@@ -117,7 +115,7 @@ public class IntroDetectSubscriberTests
                 }
             );
             ctx.VideoFiles.Add(
-                entity: new()
+                new()
                 {
                     Filename = $"s01e0{index + 1}.mkv",
                     HostFolder = hostFolder,
@@ -132,75 +130,75 @@ public class IntroDetectSubscriberTests
 
     private static AudioFingerprint FakeFingerprint(int frameCount = 100) =>
         new(
-            Hashes: Enumerable.Range(start: 0, count: frameCount).Select(selector: i => (uint)(i * 17)).ToArray(),
-            FrameDuration: TimeSpan.FromMilliseconds(milliseconds: 125),
-            StartTime: TimeSpan.Zero
+            Enumerable.Range(0, frameCount).Select(i => (uint)(i * 17)).ToArray(),
+            TimeSpan.FromMilliseconds(125),
+            TimeSpan.Zero
         );
 
     [Fact]
     public async Task OnLibraryScanCompleted_DisabledViaOptions_WritesNoContentSegments()
     {
-        IDbContextFactory<MediaContext> factory = InMemoryFactory(tag: "disabled");
+        IDbContextFactory<MediaContext> factory = InMemoryFactory("disabled");
         Mock<IAudioFingerprinter> fingerprinter = new();
         Mock<IIntroDetector> detector = new();
         InMemoryEventBus bus = new();
 
         using IntroDetectSubscriber subject = BuildSubscriber(
-            bus: bus,
-            factory: factory,
-            fingerprinter: fingerprinter.Object,
-            detector: detector.Object,
-            enabled: false
+            bus,
+            factory,
+            fingerprinter.Object,
+            detector.Object,
+            false
         );
 
         Ulid libraryId = Ulid.NewUlid();
         int tvId = 1;
         int seasonId = 10;
-        await SeedTvSeasonAsync(factory: factory, libraryId: libraryId, tvId: tvId, seasonId: seasonId, episodeIds: [100, 101, 102]);
+        await SeedTvSeasonAsync(factory, libraryId, tvId, seasonId, [100, 101, 102]);
 
         await bus.PublishAsync(
-            @event: new LibraryScanCompletedEvent
+            new LibraryScanCompletedEvent
             {
                 LibraryId = libraryId,
                 LibraryName = "TV",
                 ItemsFound = 3,
-                Duration = TimeSpan.FromSeconds(seconds: 1),
+                Duration = TimeSpan.FromSeconds(1),
             }
         );
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
-        ctx.ContentSegments.Should().BeEmpty(because: "opt-out disables the subscriber");
+        ctx.ContentSegments.Should().BeEmpty("opt-out disables the subscriber");
 
         fingerprinter.Verify(
-            expression: f =>
+            f =>
                 f.FingerprintAsync(
                     It.IsAny<string>(),
                     It.IsAny<FingerprintWindow?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
     [Fact]
     public async Task OnLibraryScanCompleted_NoMatchingSeasons_WritesNoSegments()
     {
-        IDbContextFactory<MediaContext> factory = InMemoryFactory(tag: "noseasons");
+        IDbContextFactory<MediaContext> factory = InMemoryFactory("noseasons");
         Mock<IAudioFingerprinter> fingerprinter = new();
         Mock<IIntroDetector> detector = new();
         InMemoryEventBus bus = new();
 
         using IntroDetectSubscriber subject = BuildSubscriber(
-            bus: bus,
-            factory: factory,
-            fingerprinter: fingerprinter.Object,
-            detector: detector.Object
+            bus,
+            factory,
+            fingerprinter.Object,
+            detector.Object
         );
 
         Ulid unrelatedLibrary = Ulid.NewUlid();
 
         await bus.PublishAsync(
-            @event: new LibraryScanCompletedEvent
+            new LibraryScanCompletedEvent
             {
                 LibraryId = unrelatedLibrary,
                 LibraryName = "Empty",
@@ -212,36 +210,36 @@ public class IntroDetectSubscriberTests
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ctx.ContentSegments.Should().BeEmpty();
         fingerprinter.Verify(
-            expression: f =>
+            f =>
                 f.FingerprintAsync(
                     It.IsAny<string>(),
                     It.IsAny<FingerprintWindow?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
     [Fact]
     public async Task OnLibraryScanCompleted_MusicLibrary_DoesNoWork_DoesNotFingerprint()
     {
-        IDbContextFactory<MediaContext> factory = InMemoryFactory(tag: "music");
+        IDbContextFactory<MediaContext> factory = InMemoryFactory("music");
         Mock<IAudioFingerprinter> fingerprinter = new();
         Mock<IIntroDetector> detector = new();
         InMemoryEventBus bus = new();
 
         using IntroDetectSubscriber subject = BuildSubscriber(
-            bus: bus,
-            factory: factory,
-            fingerprinter: fingerprinter.Object,
-            detector: detector.Object
+            bus,
+            factory,
+            fingerprinter.Object,
+            detector.Object
         );
 
         Ulid musicLibraryId = Ulid.NewUlid();
         await using (MediaContext seedCtx = await factory.CreateDbContextAsync())
         {
             seedCtx.Libraries.Add(
-                entity: new()
+                new()
                 {
                     Id = musicLibraryId,
                     Title = "Music",
@@ -252,7 +250,7 @@ public class IntroDetectSubscriberTests
         }
 
         await bus.PublishAsync(
-            @event: new LibraryScanCompletedEvent
+            new LibraryScanCompletedEvent
             {
                 LibraryId = musicLibraryId,
                 LibraryName = "Music",
@@ -263,38 +261,38 @@ public class IntroDetectSubscriberTests
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ctx.ContentSegments.Should()
-            .BeEmpty(because: "intro detection is a TV feature and must not run on a music library");
+            .BeEmpty("intro detection is a TV feature and must not run on a music library");
         fingerprinter.Verify(
-            expression: f =>
+            f =>
                 f.FingerprintAsync(
                     It.IsAny<string>(),
                     It.IsAny<FingerprintWindow?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
     [Fact]
     public async Task OnLibraryScanCompleted_SeasonHasOnlyOneEpisode_SkipsDetection_WritesNoSegments()
     {
-        IDbContextFactory<MediaContext> factory = InMemoryFactory(tag: "singleepisode");
+        IDbContextFactory<MediaContext> factory = InMemoryFactory("singleepisode");
         Mock<IAudioFingerprinter> fingerprinter = new();
         Mock<IIntroDetector> detector = new();
         InMemoryEventBus bus = new();
 
         using IntroDetectSubscriber subject = BuildSubscriber(
-            bus: bus,
-            factory: factory,
-            fingerprinter: fingerprinter.Object,
-            detector: detector.Object
+            bus,
+            factory,
+            fingerprinter.Object,
+            detector.Object
         );
 
         Ulid libraryId = Ulid.NewUlid();
-        await SeedTvSeasonAsync(factory: factory, libraryId: libraryId, tvId: 2, seasonId: 20, episodeIds: [200]);
+        await SeedTvSeasonAsync(factory, libraryId, 2, 20, [200]);
 
         await bus.PublishAsync(
-            @event: new LibraryScanCompletedEvent
+            new LibraryScanCompletedEvent
             {
                 LibraryId = libraryId,
                 LibraryName = "TV",
@@ -305,79 +303,79 @@ public class IntroDetectSubscriberTests
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ctx.ContentSegments.Should()
-            .BeEmpty(because: "fewer than 2 episodes → cannot detect shared segments");
+            .BeEmpty("fewer than 2 episodes → cannot detect shared segments");
     }
 
     [Fact]
     public async Task OnLibraryScanCompleted_TwoEpisodes_WithDetectedIntro_WritesIntroSegmentRows()
     {
-        IDbContextFactory<MediaContext> factory = InMemoryFactory(tag: "introseeds");
+        IDbContextFactory<MediaContext> factory = InMemoryFactory("introseeds");
         Mock<IAudioFingerprinter> fingerprinter = new();
         Mock<IIntroDetector> detector = new();
         Mock<IStorage> storage = new();
-        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: true);
+        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
         InMemoryEventBus bus = new();
 
         AudioFingerprint fp = FakeFingerprint();
         fingerprinter
-            .Setup(expression: f =>
+            .Setup(f =>
                 f.FingerprintAsync(
                     It.IsAny<string>(),
                     It.IsAny<FingerprintWindow?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: fp);
+            .ReturnsAsync(fp);
 
         IntroMarker introMarker = new(
-            Start: TimeSpan.FromSeconds(seconds: 10),
-            End: TimeSpan.FromSeconds(seconds: 95),
-            Confidence: 0.91
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromSeconds(95),
+            0.91
         );
         detector
-            .Setup(expression: d => d.DetectIntro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
-            .Returns(value: introMarker);
+            .Setup(d => d.DetectIntro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
+            .Returns(introMarker);
         detector
-            .Setup(expression: d => d.DetectOutro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
-            .Returns(value: (IntroMarker?)null);
+            .Setup(d => d.DetectOutro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
+            .Returns((IntroMarker?)null);
 
         EncoderOptions options = new() { EnableIntroDetectSubscriber = true };
         using IntroDetectSubscriber subject = new(
-            eventBus: bus,
-            fingerprinter: fingerprinter.Object,
-            introDetector: detector.Object,
-            options: options,
-            logger: NullLogger<IntroDetectSubscriber>.Instance,
-            storage: storage.Object,
-            contextFactory: factory
+            bus,
+            fingerprinter.Object,
+            detector.Object,
+            options,
+            NullLogger<IntroDetectSubscriber>.Instance,
+            storage.Object,
+            factory
         );
 
         Ulid libraryId = Ulid.NewUlid();
-        await SeedTvSeasonAsync(factory: factory, libraryId: libraryId, tvId: 3, seasonId: 30, episodeIds: [300, 301]);
+        await SeedTvSeasonAsync(factory, libraryId, 3, 30, [300, 301]);
 
         await bus.PublishAsync(
-            @event: new LibraryScanCompletedEvent
+            new LibraryScanCompletedEvent
             {
                 LibraryId = libraryId,
                 LibraryName = "TV",
                 ItemsFound = 2,
-                Duration = TimeSpan.FromSeconds(seconds: 2),
+                Duration = TimeSpan.FromSeconds(2),
             }
         );
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         List<ContentSegment> segments = ctx.ContentSegments.ToList();
 
-        segments.Should().HaveCount(expected: 2, because: "one intro segment per episode");
+        segments.Should().HaveCount(2, "one intro segment per episode");
         segments
             .Should()
-            .AllSatisfy(expected: s =>
+            .AllSatisfy(s =>
             {
-                s.SegmentType.Should().Be(expected: ContentSegmentType.Intro);
-                s.StartSeconds.Should().BeApproximately(expectedValue: 10.0, precision: 0.001);
-                s.EndSeconds.Should().BeApproximately(expectedValue: 95.0, precision: 0.001);
-                s.Confidence.Should().BeApproximately(expectedValue: 0.91, precision: 0.001);
-                s.Source.Should().Be(expected: "detector");
+                s.SegmentType.Should().Be(ContentSegmentType.Intro);
+                s.StartSeconds.Should().BeApproximately(10.0, 0.001);
+                s.EndSeconds.Should().BeApproximately(95.0, 0.001);
+                s.Confidence.Should().BeApproximately(0.91, 0.001);
+                s.Source.Should().Be("detector");
                 s.EpisodeId.Should().NotBeNull();
             });
     }
@@ -385,135 +383,135 @@ public class IntroDetectSubscriberTests
     [Fact]
     public async Task OnLibraryScanCompleted_TwoEpisodes_WithDetectedOutro_WritesOutroSegmentRows()
     {
-        IDbContextFactory<MediaContext> factory = InMemoryFactory(tag: "outroseeds");
+        IDbContextFactory<MediaContext> factory = InMemoryFactory("outroseeds");
         Mock<IAudioFingerprinter> fingerprinter = new();
         Mock<IIntroDetector> detector = new();
         Mock<IStorage> storage = new();
-        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: true);
+        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
         InMemoryEventBus bus = new();
 
         AudioFingerprint fp = FakeFingerprint();
         fingerprinter
-            .Setup(expression: f =>
+            .Setup(f =>
                 f.FingerprintAsync(
                     It.IsAny<string>(),
                     It.IsAny<FingerprintWindow?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: fp);
+            .ReturnsAsync(fp);
 
         detector
-            .Setup(expression: d => d.DetectIntro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
-            .Returns(value: (IntroMarker?)null);
+            .Setup(d => d.DetectIntro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
+            .Returns((IntroMarker?)null);
 
         IntroMarker outroMarker = new(
-            Start: TimeSpan.FromSeconds(seconds: 1200),
-            End: TimeSpan.FromSeconds(seconds: 1380),
-            Confidence: 0.85
+            TimeSpan.FromSeconds(1200),
+            TimeSpan.FromSeconds(1380),
+            0.85
         );
         detector
-            .Setup(expression: d => d.DetectOutro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
-            .Returns(value: outroMarker);
+            .Setup(d => d.DetectOutro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
+            .Returns(outroMarker);
 
         EncoderOptions options = new() { EnableIntroDetectSubscriber = true };
         using IntroDetectSubscriber subject = new(
-            eventBus: bus,
-            fingerprinter: fingerprinter.Object,
-            introDetector: detector.Object,
-            options: options,
-            logger: NullLogger<IntroDetectSubscriber>.Instance,
-            storage: storage.Object,
-            contextFactory: factory
+            bus,
+            fingerprinter.Object,
+            detector.Object,
+            options,
+            NullLogger<IntroDetectSubscriber>.Instance,
+            storage.Object,
+            factory
         );
 
         Ulid libraryId = Ulid.NewUlid();
-        await SeedTvSeasonAsync(factory: factory, libraryId: libraryId, tvId: 4, seasonId: 40, episodeIds: [400, 401]);
+        await SeedTvSeasonAsync(factory, libraryId, 4, 40, [400, 401]);
 
         await bus.PublishAsync(
-            @event: new LibraryScanCompletedEvent
+            new LibraryScanCompletedEvent
             {
                 LibraryId = libraryId,
                 LibraryName = "TV",
                 ItemsFound = 2,
-                Duration = TimeSpan.FromSeconds(seconds: 2),
+                Duration = TimeSpan.FromSeconds(2),
             }
         );
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         List<ContentSegment> segments = ctx.ContentSegments.ToList();
 
-        segments.Should().HaveCount(expected: 2, because: "one outro segment per episode");
+        segments.Should().HaveCount(2, "one outro segment per episode");
         segments
             .Should()
-            .AllSatisfy(expected: s =>
+            .AllSatisfy(s =>
             {
-                s.SegmentType.Should().Be(expected: ContentSegmentType.Outro);
-                s.StartSeconds.Should().BeApproximately(expectedValue: 1200.0, precision: 0.001);
-                s.EndSeconds.Should().BeApproximately(expectedValue: 1380.0, precision: 0.001);
-                s.Source.Should().Be(expected: "detector");
+                s.SegmentType.Should().Be(ContentSegmentType.Outro);
+                s.StartSeconds.Should().BeApproximately(1200.0, 0.001);
+                s.EndSeconds.Should().BeApproximately(1380.0, 0.001);
+                s.Source.Should().Be("detector");
             });
     }
 
     [Fact]
     public async Task OnLibraryScanCompleted_EpisodeWithManualIntro_IsSkipped_OtherEpisodeGetsDetectorSegment()
     {
-        IDbContextFactory<MediaContext> factory = InMemoryFactory(tag: "manualskip");
+        IDbContextFactory<MediaContext> factory = InMemoryFactory("manualskip");
         Mock<IAudioFingerprinter> fingerprinter = new();
         Mock<IIntroDetector> detector = new();
         Mock<IStorage> storage = new();
-        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: true);
+        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
         InMemoryEventBus bus = new();
 
         AudioFingerprint fp = FakeFingerprint();
         fingerprinter
-            .Setup(expression: f =>
+            .Setup(f =>
                 f.FingerprintAsync(
                     It.IsAny<string>(),
                     It.IsAny<FingerprintWindow?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: fp);
+            .ReturnsAsync(fp);
 
         IntroMarker introMarker = new(
-            Start: TimeSpan.FromSeconds(seconds: 5),
-            End: TimeSpan.FromSeconds(seconds: 90),
-            Confidence: 0.95
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(90),
+            0.95
         );
         detector
-            .Setup(expression: d => d.DetectIntro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
-            .Returns(value: introMarker);
+            .Setup(d => d.DetectIntro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
+            .Returns(introMarker);
         detector
-            .Setup(expression: d => d.DetectOutro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
-            .Returns(value: (IntroMarker?)null);
+            .Setup(d => d.DetectOutro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
+            .Returns((IntroMarker?)null);
 
         EncoderOptions options = new() { EnableIntroDetectSubscriber = true };
         using IntroDetectSubscriber subject = new(
-            eventBus: bus,
-            fingerprinter: fingerprinter.Object,
-            introDetector: detector.Object,
-            options: options,
-            logger: NullLogger<IntroDetectSubscriber>.Instance,
-            storage: storage.Object,
-            contextFactory: factory
+            bus,
+            fingerprinter.Object,
+            detector.Object,
+            options,
+            NullLogger<IntroDetectSubscriber>.Instance,
+            storage.Object,
+            factory
         );
 
         Ulid libraryId = Ulid.NewUlid();
         int episodeWithManual = 500;
         int episodeWithoutManual = 501;
         await SeedTvSeasonAsync(
-            factory: factory,
-            libraryId: libraryId,
-            tvId: 5,
-            seasonId: 50,
-            episodeIds: [episodeWithManual, episodeWithoutManual]
+            factory,
+            libraryId,
+            5,
+            50,
+            [episodeWithManual, episodeWithoutManual]
         );
 
         await using (MediaContext seedCtx = await factory.CreateDbContextAsync())
         {
             seedCtx.ContentSegments.Add(
-                entity: new()
+                new()
                 {
                     EpisodeId = episodeWithManual,
                     SegmentType = ContentSegmentType.Intro,
@@ -527,12 +525,12 @@ public class IntroDetectSubscriberTests
         }
 
         await bus.PublishAsync(
-            @event: new LibraryScanCompletedEvent
+            new LibraryScanCompletedEvent
             {
                 LibraryId = libraryId,
                 LibraryName = "TV",
                 ItemsFound = 2,
-                Duration = TimeSpan.FromSeconds(seconds: 1),
+                Duration = TimeSpan.FromSeconds(1),
             }
         );
 
@@ -540,57 +538,57 @@ public class IntroDetectSubscriberTests
         List<ContentSegment> segments = ctx.ContentSegments.ToList();
 
         ContentSegment detectorSegment = segments
-            .Where(predicate: s => s.Source == "detector")
+            .Where(s => s.Source == "detector")
             .Should()
-            .ContainSingle(because: "only the episode without manual coverage gets a detector segment")
+            .ContainSingle("only the episode without manual coverage gets a detector segment")
             .Which;
 
-        detectorSegment.EpisodeId.Should().Be(expected: episodeWithoutManual);
-        detectorSegment.SegmentType.Should().Be(expected: ContentSegmentType.Intro);
+        detectorSegment.EpisodeId.Should().Be(episodeWithoutManual);
+        detectorSegment.SegmentType.Should().Be(ContentSegmentType.Intro);
 
         segments
-            .Where(predicate: s => s.Source == "manual" && s.EpisodeId == episodeWithManual)
+            .Where(s => s.Source == "manual" && s.EpisodeId == episodeWithManual)
             .Should()
-            .ContainSingle(because: "manual segment is untouched");
+            .ContainSingle("manual segment is untouched");
     }
 
     [Fact]
     public async Task OnLibraryScanCompleted_FingerprintThrows_DoesNotPropagate_WritesNoSegments()
     {
-        IDbContextFactory<MediaContext> factory = InMemoryFactory(tag: "fpthrows");
+        IDbContextFactory<MediaContext> factory = InMemoryFactory("fpthrows");
         Mock<IAudioFingerprinter> fingerprinter = new();
         Mock<IIntroDetector> detector = new();
         Mock<IStorage> storage = new();
-        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: true);
+        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
         InMemoryEventBus bus = new();
 
         fingerprinter
-            .Setup(expression: f =>
+            .Setup(f =>
                 f.FingerprintAsync(
                     It.IsAny<string>(),
                     It.IsAny<FingerprintWindow?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(exception: new InvalidOperationException(message: "chromaprint unavailable"));
+            .ThrowsAsync(new InvalidOperationException("chromaprint unavailable"));
 
         EncoderOptions options = new() { EnableIntroDetectSubscriber = true };
         using IntroDetectSubscriber subject = new(
-            eventBus: bus,
-            fingerprinter: fingerprinter.Object,
-            introDetector: detector.Object,
-            options: options,
-            logger: NullLogger<IntroDetectSubscriber>.Instance,
-            storage: storage.Object,
-            contextFactory: factory
+            bus,
+            fingerprinter.Object,
+            detector.Object,
+            options,
+            NullLogger<IntroDetectSubscriber>.Instance,
+            storage.Object,
+            factory
         );
 
         Ulid libraryId = Ulid.NewUlid();
-        await SeedTvSeasonAsync(factory: factory, libraryId: libraryId, tvId: 6, seasonId: 60, episodeIds: [600, 601]);
+        await SeedTvSeasonAsync(factory, libraryId, 6, 60, [600, 601]);
 
         Func<Task> act = () =>
             bus.PublishAsync(
-                @event: new LibraryScanCompletedEvent
+                new LibraryScanCompletedEvent
                 {
                     LibraryId = libraryId,
                     LibraryName = "TV",
@@ -599,11 +597,11 @@ public class IntroDetectSubscriberTests
                 }
             );
 
-        await act.Should().NotThrowAsync(because: "fingerprint failures are caught-and-logged per episode");
+        await act.Should().NotThrowAsync("fingerprint failures are caught-and-logged per episode");
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ctx.ContentSegments.Should()
-            .BeEmpty(because: "fingerprinting failed for all episodes so no segments can be written");
+            .BeEmpty("fingerprinting failed for all episodes so no segments can be written");
     }
 
     [Fact]
@@ -611,31 +609,31 @@ public class IntroDetectSubscriberTests
     {
         Mock<IEventBus> bus = new();
         Mock<IDisposable> stubSub = new();
-        bus.Setup(expression: b =>
+        bus.Setup(b =>
                 b.Subscribe<LibraryScanCompletedEvent>(
                     It.IsAny<Func<LibraryScanCompletedEvent, CancellationToken, Task>>()
                 )
             )
-            .Returns(value: stubSub.Object);
+            .Returns(stubSub.Object);
         Mock<IStorage> storage = new();
         EncoderOptions options = new() { EnableIntroDetectSubscriber = true };
 
         using IntroDetectSubscriber _ = new(
-            eventBus: bus.Object,
-            fingerprinter: Mock.Of<IAudioFingerprinter>(),
-            introDetector: Mock.Of<IIntroDetector>(),
-            options: options,
-            logger: NullLogger<IntroDetectSubscriber>.Instance,
-            storage: storage.Object,
-            contextFactory: InMemoryFactory(tag: "ctor")
+            bus.Object,
+            Mock.Of<IAudioFingerprinter>(),
+            Mock.Of<IIntroDetector>(),
+            options,
+            NullLogger<IntroDetectSubscriber>.Instance,
+            storage.Object,
+            InMemoryFactory("ctor")
         );
 
         bus.Verify(
-            expression: b =>
+            b =>
                 b.Subscribe<LibraryScanCompletedEvent>(
                     It.IsAny<Func<LibraryScanCompletedEvent, CancellationToken, Task>>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -644,25 +642,25 @@ public class IntroDetectSubscriberTests
     {
         Mock<IDisposable> subscription = new();
         Mock<IEventBus> bus = new();
-        bus.Setup(expression: b =>
+        bus.Setup(b =>
                 b.Subscribe<LibraryScanCompletedEvent>(
                     It.IsAny<Func<LibraryScanCompletedEvent, CancellationToken, Task>>()
                 )
             )
-            .Returns(value: subscription.Object);
+            .Returns(subscription.Object);
 
         IntroDetectSubscriber subject = new(
-            eventBus: bus.Object,
-            fingerprinter: Mock.Of<IAudioFingerprinter>(),
-            introDetector: Mock.Of<IIntroDetector>(),
-            options: new(),
-            logger: NullLogger<IntroDetectSubscriber>.Instance,
-            storage: Mock.Of<IStorage>(),
-            contextFactory: InMemoryFactory(tag: "dispose")
+            bus.Object,
+            Mock.Of<IAudioFingerprinter>(),
+            Mock.Of<IIntroDetector>(),
+            new(),
+            NullLogger<IntroDetectSubscriber>.Instance,
+            Mock.Of<IStorage>(),
+            InMemoryFactory("dispose")
         );
 
         subject.Dispose();
 
-        subscription.Verify(expression: s => s.Dispose(), times: Times.Once);
+        subscription.Verify(s => s.Dispose(), Times.Once);
     }
 }

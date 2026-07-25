@@ -15,18 +15,18 @@ namespace NoMercy.Providers.TMDB.Models.Season;
 
 public class TmdbSeasonExternalIds
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "freebase_mid")]
+    [JsonProperty("freebase_mid")]
     public string? FreebaseMid { get; set; }
 
-    [JsonProperty(propertyName: "freebase_id")]
+    [JsonProperty("freebase_id")]
     public object? FreebaseId { get; set; }
 
-    [JsonProperty(propertyName: "tvdb_id")]
+    [JsonProperty("tvdb_id")]
     public int? TvdbId { get; set; }
 
-    [JsonProperty(propertyName: "tvrage_id")]
+    [JsonProperty("tvrage_id")]
     public string? TvrageId { get; set; }
 }

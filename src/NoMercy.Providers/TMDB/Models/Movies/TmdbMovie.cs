@@ -16,24 +16,24 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbMovie : TmdbBase
 {
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public int[]? GenresIds { get; set; } = [];
 
-    [JsonProperty(propertyName: "original_title")]
+    [JsonProperty("original_title")]
     public string OriginalTitle { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "tagline")]
+    [JsonProperty("tagline")]
     public string? Tagline { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "release_date")]
+    [JsonProperty("release_date")]
     public DateTime? ReleaseDate { get; set; }
 
-    [JsonProperty(propertyName: "video")]
+    [JsonProperty("video")]
     public bool? Video { get; set; }
 }

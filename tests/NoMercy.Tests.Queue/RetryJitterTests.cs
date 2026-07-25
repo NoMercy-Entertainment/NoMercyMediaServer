@@ -20,46 +20,46 @@ namespace NoMercy.Tests.Queue;
 /// HIGH-18: Tests verifying that JobQueue retry logic uses reduced max attempts (5 instead of 10)
 /// and adds jitter to prevent thundering herd on concurrent retries.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class RetryJitterTests
 {
     [Fact]
     public void MaxDbRetryAttempts_IsFive()
     {
         FieldInfo? field = typeof(JobQueue).GetField(
-            name: "MaxDbRetryAttempts",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
+            "MaxDbRetryAttempts",
+            BindingFlags.NonPublic | BindingFlags.Static
         );
 
-        Assert.NotNull(@object: field);
-        int value = (int)field.GetValue(obj: null)!;
-        Assert.Equal(expected: 5, actual: value);
+        Assert.NotNull(field);
+        int value = (int)field.GetValue(null)!;
+        Assert.Equal(5, value);
     }
 
     [Fact]
     public void BaseRetryDelayMs_Is2000()
     {
         FieldInfo? field = typeof(JobQueue).GetField(
-            name: "BaseRetryDelayMs",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
+            "BaseRetryDelayMs",
+            BindingFlags.NonPublic | BindingFlags.Static
         );
 
-        Assert.NotNull(@object: field);
-        int value = (int)field.GetValue(obj: null)!;
-        Assert.Equal(expected: 2000, actual: value);
+        Assert.NotNull(field);
+        int value = (int)field.GetValue(null)!;
+        Assert.Equal(2000, value);
     }
 
     [Fact]
     public void MaxJitterMs_Is500()
     {
         FieldInfo? field = typeof(JobQueue).GetField(
-            name: "MaxJitterMs",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
+            "MaxJitterMs",
+            BindingFlags.NonPublic | BindingFlags.Static
         );
 
-        Assert.NotNull(@object: field);
-        int value = (int)field.GetValue(obj: null)!;
-        Assert.Equal(expected: 500, actual: value);
+        Assert.NotNull(field);
+        int value = (int)field.GetValue(null)!;
+        Assert.Equal(500, value);
     }
 
     [Fact]
@@ -73,20 +73,20 @@ public class RetryJitterTests
 
         for (int i = 0; i < 50; i++)
         {
-            int delay = baseDelay + Random.Shared.Next(maxValue: maxJitter);
-            observedDelays.Add(item: delay);
+            int delay = baseDelay + Random.Shared.Next(maxJitter);
+            observedDelays.Add(delay);
         }
 
         // With 50 samples and 500 possible jitter values, we expect multiple distinct values.
         Assert.True(
-            condition: observedDelays.Count > 1,
-            userMessage: "Jitter should produce varied delay values to prevent thundering herd"
+            observedDelays.Count > 1,
+            "Jitter should produce varied delay values to prevent thundering herd"
         );
 
         // All delays must be within [2000, 2499] range
         foreach (int delay in observedDelays)
         {
-            Assert.InRange(actual: delay, low: baseDelay, high: baseDelay + maxJitter - 1);
+            Assert.InRange(delay, baseDelay, baseDelay + maxJitter - 1);
         }
     }
 
@@ -99,40 +99,40 @@ public class RetryJitterTests
 
         // Get the constant field tokens
         FieldInfo? maxRetryField = typeof(JobQueue).GetField(
-            name: "MaxDbRetryAttempts",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
+            "MaxDbRetryAttempts",
+            BindingFlags.NonPublic | BindingFlags.Static
         );
-        Assert.NotNull(@object: maxRetryField);
+        Assert.NotNull(maxRetryField);
 
         // Verify the methods exist with expected signatures
         MethodInfo? reserveJob = typeof(JobQueue).GetMethod(
-            name: "ReserveJob",
-            bindingAttr: BindingFlags.Public | BindingFlags.Instance,
-            types: [typeof(string), typeof(long?), typeof(int)]
+            "ReserveJob",
+            BindingFlags.Public | BindingFlags.Instance,
+            [typeof(string), typeof(long?), typeof(int)]
         );
-        Assert.NotNull(@object: reserveJob);
+        Assert.NotNull(reserveJob);
 
         MethodInfo? failJob = typeof(JobQueue).GetMethod(
-            name: "FailJob",
-            bindingAttr: BindingFlags.Public | BindingFlags.Instance,
-            types: [typeof(QueueJobModel), typeof(Exception), typeof(int)]
+            "FailJob",
+            BindingFlags.Public | BindingFlags.Instance,
+            [typeof(QueueJobModel), typeof(Exception), typeof(int)]
         );
-        Assert.NotNull(@object: failJob);
+        Assert.NotNull(failJob);
 
         MethodInfo? requeueFailedJob = typeof(JobQueue).GetMethod(
-            name: "RequeueFailedJob",
-            bindingAttr: BindingFlags.Public | BindingFlags.Instance,
-            types: [typeof(int), typeof(int)]
+            "RequeueFailedJob",
+            BindingFlags.Public | BindingFlags.Instance,
+            [typeof(int), typeof(int)]
         );
-        Assert.NotNull(@object: requeueFailedJob);
+        Assert.NotNull(requeueFailedJob);
 
         // Verify all three methods have IL referencing the MaxDbRetryAttempts
         // constant (metadata token). Since constants are inlined by the compiler,
         // we verify the value 5 appears in the IL (ldc.i4.5 = opcode 0x1B,
         // or ldc.i4.s 5 = opcode 0x1F 0x05).
-        AssertMethodContainsConstant(method: reserveJob, value: 5, methodName: "ReserveJob");
-        AssertMethodContainsConstant(method: failJob, value: 5, methodName: "FailJob");
-        AssertMethodContainsConstant(method: requeueFailedJob, value: 5, methodName: "RequeueFailedJob");
+        AssertMethodContainsConstant(reserveJob, 5, "ReserveJob");
+        AssertMethodContainsConstant(failJob, 5, "FailJob");
+        AssertMethodContainsConstant(requeueFailedJob, 5, "RequeueFailedJob");
     }
 
     private static void AssertMethodContainsConstant(
@@ -142,10 +142,10 @@ public class RetryJitterTests
     )
     {
         MethodBody? body = method.GetMethodBody();
-        Assert.NotNull(@object: body);
+        Assert.NotNull(body);
 
         byte[] il = body.GetILAsByteArray()!;
-        Assert.NotNull(@object: il);
+        Assert.NotNull(il);
 
         // Look for ldc.i4.5 (0x1B) or ldc.i4.s 5 (0x1F 0x05) or ldc.i4 5 (0x20 + 4 bytes)
         bool found = false;
@@ -166,7 +166,7 @@ public class RetryJitterTests
             // ldc.i4 <int32> = push int constant
             if (il[i] == 0x20 && i + 4 < il.Length)
             {
-                int val = BitConverter.ToInt32(value: il, startIndex: i + 1);
+                int val = BitConverter.ToInt32(il, i + 1);
                 if (val == value)
                 {
                     found = true;
@@ -176,8 +176,8 @@ public class RetryJitterTests
         }
 
         Assert.True(
-            condition: found,
-            userMessage: $"{methodName} should reference MaxDbRetryAttempts constant value ({value}) in its IL. "
+            found,
+            $"{methodName} should reference MaxDbRetryAttempts constant value ({value}) in its IL. "
                          + "This ensures the retry limit of 5 (not the old value of 10) is used."
         );
     }
@@ -191,14 +191,14 @@ public class RetryJitterTests
         // Note: 10 might appear for other purposes, so this is a best-effort check.
 
         MethodInfo? reserveJob = typeof(JobQueue).GetMethod(
-            name: "ReserveJob",
-            bindingAttr: BindingFlags.Public | BindingFlags.Instance,
-            types: [typeof(string), typeof(long?), typeof(int)]
+            "ReserveJob",
+            BindingFlags.Public | BindingFlags.Instance,
+            [typeof(string), typeof(long?), typeof(int)]
         );
-        Assert.NotNull(@object: reserveJob);
+        Assert.NotNull(reserveJob);
 
         MethodBody? body = reserveJob.GetMethodBody();
-        Assert.NotNull(@object: body);
+        Assert.NotNull(body);
 
         byte[] il = body.GetILAsByteArray()!;
 
@@ -220,8 +220,8 @@ public class RetryJitterTests
         }
 
         Assert.False(
-            condition: foundTenAsLimit,
-            userMessage: "HIGH-18 regression: ReserveJob still uses hardcoded retry limit of 10. "
+            foundTenAsLimit,
+            "HIGH-18 regression: ReserveJob still uses hardcoded retry limit of 10. "
                          + "Should use MaxDbRetryAttempts constant (5)."
         );
     }

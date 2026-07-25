@@ -18,17 +18,17 @@ using Xunit;
 
 namespace NoMercy.Tests.Networking;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class NetworkDiscoveryPropertyTests
 {
     private static NetworkDiscovery BuildDiscovery()
     {
         return new(
-            logger: NullLogger<NetworkDiscovery>.Instance,
-            driver: new LocalStorageDriver(),
-            authTokenStore: new AuthTokenStore(),
-            connectivityStatus: new ConnectivityStatus(),
-            networkProbeConfig: new()
+            NullLogger<NetworkDiscovery>.Instance,
+            new LocalStorageDriver(),
+            new AuthTokenStore(),
+            new ConnectivityStatus(),
+            new()
         );
     }
 
@@ -39,7 +39,7 @@ public sealed class NetworkDiscoveryPropertyTests
 
         string ip = discovery.ExternalIp;
 
-        Assert.Equal(expected: "0.0.0.0", actual: ip);
+        Assert.Equal("0.0.0.0", ip);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class NetworkDiscoveryPropertyTests
 
         string ip = discovery.ExternalIp;
 
-        Assert.Equal(expected: "203.0.113.42", actual: ip);
+        Assert.Equal("203.0.113.42", ip);
     }
 
     [Fact]
@@ -59,10 +59,10 @@ public sealed class NetworkDiscoveryPropertyTests
         NetworkDiscovery discovery = BuildDiscovery();
         discovery.ExternalIp = "1.2.3.4";
 
-        Exception? ex = Record.Exception(testCode: () => discovery.ExternalIp = "1.2.3.4");
+        Exception? ex = Record.Exception(() => discovery.ExternalIp = "1.2.3.4");
 
-        Assert.Null(@object: ex);
-        Assert.Equal(expected: "1.2.3.4", actual: discovery.ExternalIp);
+        Assert.Null(ex);
+        Assert.Equal("1.2.3.4", discovery.ExternalIp);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class NetworkDiscoveryPropertyTests
         discovery.ExternalIp = "1.2.3.4";
         discovery.ExternalIp = "5.6.7.8";
 
-        Assert.Equal(expected: "5.6.7.8", actual: discovery.ExternalIp);
+        Assert.Equal("5.6.7.8", discovery.ExternalIp);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class NetworkDiscoveryPropertyTests
 
         string regIp = discovery.RegistrationInternalIp;
 
-        Assert.Equal(expected: "0.0.0.0", actual: regIp);
+        Assert.Equal("0.0.0.0", regIp);
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public sealed class NetworkDiscoveryPropertyTests
 
         string regIp = discovery.RegistrationInternalIp;
 
-        Assert.Equal(expected: "0.0.0.0", actual: regIp);
+        Assert.Equal("0.0.0.0", regIp);
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public sealed class NetworkDiscoveryPropertyTests
 
         string regIp = discovery.RegistrationInternalIp;
 
-        Assert.Equal(expected: "192.168.1.50", actual: regIp);
+        Assert.Equal("192.168.1.50", regIp);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public sealed class NetworkDiscoveryPropertyTests
 
         bool enabled = discovery.Ipv6Enabled;
 
-        Assert.False(condition: enabled);
+        Assert.False(enabled);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public sealed class NetworkDiscoveryPropertyTests
 
         string? addr = discovery.ExternalAddressV6;
 
-        Assert.Null(@object: addr);
+        Assert.Null(addr);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class NetworkDiscoveryPropertyTests
 
         string? addr = discovery.ExternalAddressV6;
 
-        Assert.NotNull(@object: addr);
-        Assert.Contains(expectedSubstring: "[2001:db8::1]", actualString: addr);
+        Assert.NotNull(addr);
+        Assert.Contains("[2001:db8::1]", addr);
     }
 }

@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzAttributeValues
 {
-    [JsonProperty(propertyName: "task")]
+    [JsonProperty("task")]
     public string Task { get; set; } = string.Empty;
 }

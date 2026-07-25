@@ -38,22 +38,22 @@ public class ServerUserApiClient : IServerUserApiClient
     {
         Dictionary<string, string> queryParams = new()
         {
-            [key: "id"] = Info.DeviceId.ToString(),
-            [key: "with_self"] = "true",
+            ["id"] = Info.DeviceId.ToString(),
+            ["with_self"] = "true",
         };
 
-        GenericHttpClient authClient = new(baseUrl: ExternalServicesConfig.Current.ApiServerBaseUrl, timeoutSeconds: 10, retryCount: 0);
-        authClient.SetDefaultHeaders(userAgent: ExternalServicesConfig.Current.UserAgent, bearerToken: accessToken);
+        GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl, 10, 0);
+        authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, accessToken);
 
         string response = await authClient.SendAndReadAsync(
-            method: HttpMethod.Get,
-            endpoint: "server-users",
-            content: null,
-            queryParams: queryParams,
-            cancellationToken: cancellationToken
+            HttpMethod.Get,
+            "server-users",
+            null,
+            queryParams,
+            cancellationToken
         );
 
-        return ParseResponse(response: response);
+        return ParseResponse(response);
     }
 
     /// <summary>
@@ -69,12 +69,12 @@ public class ServerUserApiClient : IServerUserApiClient
     /// </summary>
     internal static ServerUserDtoData[] ParseResponse(string response)
     {
-        if (string.IsNullOrWhiteSpace(value: response))
-            throw new InvalidOperationException(message: "server-users response was empty or unparseable");
+        if (string.IsNullOrWhiteSpace(response))
+            throw new InvalidOperationException("server-users response was empty or unparseable");
 
         ServerUserDto? parsed = response.FromJson<ServerUserDto>();
         if (parsed is null)
-            throw new InvalidOperationException(message: "server-users response was empty or unparseable");
+            throw new InvalidOperationException("server-users response was empty or unparseable");
 
         return parsed.Data;
     }

@@ -37,7 +37,7 @@ public class ShowExtrasJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
         IStorageDriver storageDriver,
         ILoggerFactory loggerFactory
     )
-        : base(storageFactory: storageFactory, storageDriver: storageDriver, loggerFactory: loggerFactory) { }
+        : base(storageFactory, storageDriver, loggerFactory) { }
 
     public override string QueueName => "extras";
     public override int Priority => 1;
@@ -47,23 +47,23 @@ public class ShowExtrasJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        ShowRepository showRepository = new(context: context);
+        ShowRepository showRepository = new(context);
         ShowManager showManager = new(
-            showRepository: showRepository,
-            jobDispatcher: jobDispatcher,
-            storageFactory: StorageFactory,
-            mediaTypeClassifier: new MediaTypeClassifier(),
-            logger: LoggerFactory.CreateLogger<ShowManager>()
+            showRepository,
+            jobDispatcher,
+            StorageFactory,
+            new MediaTypeClassifier(),
+            LoggerFactory.CreateLogger<ShowManager>()
         );
 
         PersonRepository personRepository = new(
-            context: context,
-            logger: LoggerFactory.CreateLogger<PersonRepository>()
+            context,
+            LoggerFactory.CreateLogger<PersonRepository>()
         );
         PersonManager personManager = new(
-            personRepository: personRepository,
-            jobDispatcher: jobDispatcher,
-            logger: LoggerFactory.CreateLogger<PersonManager>()
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
         );
 
         // Each Store* call fetches from TMDB and/or writes to storage (NFS in
@@ -71,27 +71,27 @@ public class ShowExtrasJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
         // and holding an `extras` worker slot forever. See
         // JobOperationTimeoutExtensions for why per-call rather than
         // per-token cancellation.
-        await personManager.Store(show: Storage).WithTimeout(operationName: nameof(PersonManager.Store));
+        await personManager.Store(Storage).WithTimeout(nameof(PersonManager.Store));
 
-        await showManager.StoreImages(show: Storage).WithTimeout(operationName: nameof(ShowManager.StoreImages));
-        await showManager.StoreSimilar(show: Storage).WithTimeout(operationName: nameof(ShowManager.StoreSimilar));
+        await showManager.StoreImages(Storage).WithTimeout(nameof(ShowManager.StoreImages));
+        await showManager.StoreSimilar(Storage).WithTimeout(nameof(ShowManager.StoreSimilar));
         await showManager
-            .StoreRecommendations(show: Storage)
-            .WithTimeout(operationName: nameof(ShowManager.StoreRecommendations));
+            .StoreRecommendations(Storage)
+            .WithTimeout(nameof(ShowManager.StoreRecommendations));
         await showManager
-            .StoreAlternativeTitles(show: Storage)
-            .WithTimeout(operationName: nameof(ShowManager.StoreAlternativeTitles));
+            .StoreAlternativeTitles(Storage)
+            .WithTimeout(nameof(ShowManager.StoreAlternativeTitles));
         await showManager
-            .StoreWatchProviders(show: Storage)
-            .WithTimeout(operationName: nameof(ShowManager.StoreWatchProviders));
-        await showManager.StoreVideos(show: Storage).WithTimeout(operationName: nameof(ShowManager.StoreVideos));
-        await showManager.StoreNetworks(show: Storage).WithTimeout(operationName: nameof(ShowManager.StoreNetworks));
-        await showManager.StoreCompanies(show: Storage).WithTimeout(operationName: nameof(ShowManager.StoreCompanies));
-        await showManager.StoreKeywords(show: Storage).WithTimeout(operationName: nameof(ShowManager.StoreKeywords));
+            .StoreWatchProviders(Storage)
+            .WithTimeout(nameof(ShowManager.StoreWatchProviders));
+        await showManager.StoreVideos(Storage).WithTimeout(nameof(ShowManager.StoreVideos));
+        await showManager.StoreNetworks(Storage).WithTimeout(nameof(ShowManager.StoreNetworks));
+        await showManager.StoreCompanies(Storage).WithTimeout(nameof(ShowManager.StoreCompanies));
+        await showManager.StoreKeywords(Storage).WithTimeout(nameof(ShowManager.StoreKeywords));
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                @event: new LibraryRefreshedEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
             );
     }
 }

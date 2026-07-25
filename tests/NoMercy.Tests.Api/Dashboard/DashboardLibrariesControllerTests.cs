@@ -9,22 +9,18 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
-[Trait(name: "Category", value: "DashboardLibraries")]
+[Trait("Category", "DashboardLibraries")]
 public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -37,130 +33,130 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
     }
 
     private static StringContent JsonBody(object obj) =>
-        new(content: JsonSerializer.Serialize(value: obj), encoding: Encoding.UTF8, mediaType: "application/json");
+        new(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
 
     private Task<HttpResponseMessage> PatchAsync(HttpClient client, string url, object body) =>
-        client.PatchAsync(requestUri: url, content: JsonBody(obj: body));
+        client.PatchAsync(url, JsonBody(body));
 
     private Task<HttpResponseMessage> PostJsonAsync(HttpClient client, string url, object body) =>
-        client.PostAsync(requestUri: url, content: JsonBody(obj: body));
+        client.PostAsync(url, JsonBody(body));
 
     [Fact]
     public async Task GetLibraries_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: "/api/v1/dashboard/libraries");
+        HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/libraries");
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetLibraries_ReturnsOk_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/libraries");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/libraries");
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task GetLibraries_ReturnsEnvelopeWithDataArray()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/libraries");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/libraries");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        doc.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data)
+        doc.RootElement.TryGetProperty("data", out JsonElement data)
             .Should()
-            .BeTrue(because: "dashboard libraries response must have a 'data' property");
-        data.ValueKind.Should().Be(expected: JsonValueKind.Array);
+            .BeTrue("dashboard libraries response must have a 'data' property");
+        data.ValueKind.Should().Be(JsonValueKind.Array);
     }
 
     [Fact]
     public async Task GetLibraries_DataItems_ContainRequiredFields()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/libraries");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/libraries");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
-        data.GetArrayLength().Should().BeGreaterThan(expected: 0, because: "seed data has at least 3 libraries");
+        JsonElement data = doc.RootElement.GetProperty("data");
+        data.GetArrayLength().Should().BeGreaterThan(0, "seed data has at least 3 libraries");
 
         JsonElement item = data.EnumerateArray().First();
 
-        item.TryGetProperty(propertyName: "id", value: out _).Should().BeTrue(because: "dashboard library item must have 'id'");
-        item.TryGetProperty(propertyName: "title", value: out _)
+        item.TryGetProperty("id", out _).Should().BeTrue("dashboard library item must have 'id'");
+        item.TryGetProperty("title", out _)
             .Should()
-            .BeTrue(because: "dashboard library item must have 'title'");
-        item.TryGetProperty(propertyName: "type", value: out _)
+            .BeTrue("dashboard library item must have 'title'");
+        item.TryGetProperty("type", out _)
             .Should()
-            .BeTrue(because: "dashboard library item must have 'type'");
-        item.TryGetProperty(propertyName: "folder_library", value: out JsonElement folderLibrary)
+            .BeTrue("dashboard library item must have 'type'");
+        item.TryGetProperty("folder_library", out JsonElement folderLibrary)
             .Should()
-            .BeTrue(because: "dashboard library item must have 'folder_library'");
-        folderLibrary.ValueKind.Should().Be(expected: JsonValueKind.Array);
+            .BeTrue("dashboard library item must have 'folder_library'");
+        folderLibrary.ValueKind.Should().Be(JsonValueKind.Array);
     }
 
     [Fact]
     public async Task GetLibraries_DataItems_HavePaginationAndLinkFields()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/libraries");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/libraries");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        JsonElement data = doc.RootElement.GetProperty("data");
         JsonElement item = data.EnumerateArray().First();
 
-        item.TryGetProperty(propertyName: "pagination", value: out _)
+        item.TryGetProperty("pagination", out _)
             .Should()
-            .BeTrue(because: "dashboard library item must expose 'pagination' for client routing decisions");
-        item.TryGetProperty(propertyName: "link", value: out _)
+            .BeTrue("dashboard library item must expose 'pagination' for client routing decisions");
+        item.TryGetProperty("link", out _)
             .Should()
-            .BeTrue(because: "dashboard library item must expose 'link' for client navigation");
+            .BeTrue("dashboard library item must expose 'link' for client navigation");
     }
 
     [Fact]
     public async Task PostLibrary_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsync(
-            requestUri: "/api/v1/dashboard/libraries",
-            content: null
+            "/api/v1/dashboard/libraries",
+            null
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task PostLibrary_ReturnsOkWithStatusAndData_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.PostAsync(requestUri: "/api/v1/dashboard/libraries", content: null);
+        HttpResponseMessage response = await _authed.PostAsync("/api/v1/dashboard/libraries", null);
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        doc.RootElement.TryGetProperty(propertyName: "status", value: out JsonElement status)
+        doc.RootElement.TryGetProperty("status", out JsonElement status)
             .Should()
-            .BeTrue(because: "create-library response must have a 'status' field");
-        status.GetString().Should().Be(expected: "ok");
+            .BeTrue("create-library response must have a 'status' field");
+        status.GetString().Should().Be("ok");
 
-        doc.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data)
+        doc.RootElement.TryGetProperty("data", out JsonElement data)
             .Should()
-            .BeTrue(because: "create-library response must return the created library in 'data'");
-        data.ValueKind.Should().Be(expected: JsonValueKind.Object);
+            .BeTrue("create-library response must return the created library in 'data'");
+        data.ValueKind.Should().Be(JsonValueKind.Object);
     }
 
     [Fact]
     public async Task PatchLibrary_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PatchAsync(
-            requestUri: $"/api/v1/dashboard/libraries/{NoMercyApiFactory.MovieLibraryId}",
-            content: null
+            $"/api/v1/dashboard/libraries/{NoMercyApiFactory.MovieLibraryId}",
+            null
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -168,12 +164,12 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
     {
         Ulid nonExistentId = Ulid.NewUlid();
         HttpResponseMessage response = await PatchAsync(
-            client: _authed,
-            url: $"/api/v1/dashboard/libraries/{nonExistentId}",
-            body: new { title = "Test" }
+            _authed,
+            $"/api/v1/dashboard/libraries/{nonExistentId}",
+            new { title = "Test" }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -183,16 +179,16 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
         Ulid presetId = await SeedEncodingPresetAsync();
 
         HttpResponseMessage response = await PatchAsync(
-            client: _authed,
-            url: $"/api/v1/dashboard/libraries/{libraryId}",
-            body: new { autoEncodeOnScan = true, encodePresetId = presetId.ToString() }
+            _authed,
+            $"/api/v1/dashboard/libraries/{libraryId}",
+            new { autoEncodeOnScan = true, encodePresetId = presetId.ToString() }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        Library reloaded = await LoadLibraryAsync(libraryId: libraryId);
+        Library reloaded = await LoadLibraryAsync(libraryId);
         reloaded.AutoEncodeOnScan.Should().BeTrue();
-        reloaded.EncodePresetId.Should().Be(expected: presetId);
+        reloaded.EncodePresetId.Should().Be(presetId);
     }
 
     [Fact]
@@ -200,22 +196,22 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
     {
         Ulid presetId = await SeedEncodingPresetAsync();
         Ulid libraryId = await SeedIsolatedLibraryAsync(
-            autoEncodeOnScan: true,
-            encodePresetId: presetId
+            true,
+            presetId
         );
 
         HttpResponseMessage response = await PatchAsync(
-            client: _authed,
-            url: $"/api/v1/dashboard/libraries/{libraryId}",
-            body: new { title = "Renamed only" }
+            _authed,
+            $"/api/v1/dashboard/libraries/{libraryId}",
+            new { title = "Renamed only" }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        Library reloaded = await LoadLibraryAsync(libraryId: libraryId);
-        reloaded.Title.Should().Be(expected: "Renamed only");
+        Library reloaded = await LoadLibraryAsync(libraryId);
+        reloaded.Title.Should().Be("Renamed only");
         reloaded.AutoEncodeOnScan.Should().BeTrue();
-        reloaded.EncodePresetId.Should().Be(expected: presetId);
+        reloaded.EncodePresetId.Should().Be(presetId);
     }
 
     [Fact]
@@ -225,14 +221,14 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
         Ulid unknownPresetId = Ulid.NewUlid();
 
         HttpResponseMessage response = await PatchAsync(
-            client: _authed,
-            url: $"/api/v1/dashboard/libraries/{libraryId}",
-            body: new { autoEncodeOnScan = true, encodePresetId = unknownPresetId.ToString() }
+            _authed,
+            $"/api/v1/dashboard/libraries/{libraryId}",
+            new { autoEncodeOnScan = true, encodePresetId = unknownPresetId.ToString() }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        Library reloaded = await LoadLibraryAsync(libraryId: libraryId);
+        Library reloaded = await LoadLibraryAsync(libraryId);
         reloaded.AutoEncodeOnScan.Should().BeFalse();
         reloaded.EncodePresetId.Should().BeNull();
     }
@@ -241,10 +237,10 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
     public async Task DeleteLibrary_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.DeleteAsync(
-            requestUri: $"/api/v1/dashboard/libraries/{NoMercyApiFactory.MovieLibraryId}"
+            $"/api/v1/dashboard/libraries/{NoMercyApiFactory.MovieLibraryId}"
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -252,70 +248,70 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
     {
         Ulid nonExistentId = Ulid.NewUlid();
         HttpResponseMessage response = await _authed.DeleteAsync(
-            requestUri: $"/api/v1/dashboard/libraries/{nonExistentId}"
+            $"/api/v1/dashboard/libraries/{nonExistentId}"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task RescanAll_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsync(
-            requestUri: "/api/v1/dashboard/libraries/rescan",
-            content: null
+            "/api/v1/dashboard/libraries/rescan",
+            null
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task RescanAll_ReturnsOkWithStatusField_WhenAuthenticated()
     {
         HttpResponseMessage response = await _authed.PostAsync(
-            requestUri: "/api/v1/dashboard/libraries/rescan",
-            content: null
+            "/api/v1/dashboard/libraries/rescan",
+            null
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        doc.RootElement.TryGetProperty(propertyName: "status", value: out JsonElement status)
+        doc.RootElement.TryGetProperty("status", out JsonElement status)
             .Should()
-            .BeTrue(because: "rescan response must include 'status'");
-        status.GetString().Should().Be(expected: "ok");
+            .BeTrue("rescan response must include 'status'");
+        status.GetString().Should().Be("ok");
     }
 
     [Fact]
     public async Task RefreshAll_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsync(
-            requestUri: "/api/v1/dashboard/libraries/refresh",
-            content: null
+            "/api/v1/dashboard/libraries/refresh",
+            null
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task RefreshAll_ReturnsOkWithStatusField_WhenAuthenticated()
     {
         HttpResponseMessage response = await _authed.PostAsync(
-            requestUri: "/api/v1/dashboard/libraries/refresh",
-            content: null
+            "/api/v1/dashboard/libraries/refresh",
+            null
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        doc.RootElement.TryGetProperty(propertyName: "status", value: out JsonElement status)
+        doc.RootElement.TryGetProperty("status", out JsonElement status)
             .Should()
-            .BeTrue(because: "refresh response must include 'status'");
-        status.GetString().Should().Be(expected: "ok");
+            .BeTrue("refresh response must include 'status'");
+        status.GetString().Should().Be("ok");
     }
 
     [Fact]
@@ -323,23 +319,23 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
     {
         Ulid nonExistentId = Ulid.NewUlid();
         HttpResponseMessage response = await _authed.PostAsync(
-            requestUri: $"/api/v1/dashboard/libraries/{nonExistentId}/rescan",
-            content: null
+            $"/api/v1/dashboard/libraries/{nonExistentId}/rescan",
+            null
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task AddFolder_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await PostJsonAsync(
-            client: _unauthed,
-            url: $"/api/v1/dashboard/libraries/{NoMercyApiFactory.MovieLibraryId}/folders",
-            body: new { path = "/test", driverId = Ulid.NewUlid().ToString() }
+            _unauthed,
+            $"/api/v1/dashboard/libraries/{NoMercyApiFactory.MovieLibraryId}/folders",
+            new { path = "/test", driverId = Ulid.NewUlid().ToString() }
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     // Adding a brand-new folder full of pre-existing media must import that
@@ -355,16 +351,16 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
         string path = $"/media/new-folder-scan-{Ulid.NewUlid()}";
 
         HttpResponseMessage response = await PostJsonAsync(
-            client: _authed,
-            url: $"/api/v1/dashboard/libraries/{libraryId}/folders",
-            body: new { path, driver_id = Driver.SystemLocalDriverId.ToString() }
+            _authed,
+            $"/api/v1/dashboard/libraries/{libraryId}/folders",
+            new { path, driver_id = Driver.SystemLocalDriverId.ToString() }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        CountDispatchedLibraryScanJobs(libraryId: libraryId)
+        CountDispatchedLibraryScanJobs(libraryId)
             .Should()
-            .Be(expected: 1, because: "a genuinely new folder must trigger exactly one scan of its library");
+            .Be(1, "a genuinely new folder must trigger exactly one scan of its library");
     }
 
     [Fact]
@@ -379,27 +375,27 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
         // is the baseline proving the queue/DB plumbing works, not what this
         // test is asserting on.
         HttpResponseMessage firstResponse = await PostJsonAsync(
-            client: _authed,
-            url: $"/api/v1/dashboard/libraries/{firstLibraryId}/folders",
-            body: new { path = sharedPath, driver_id = Driver.SystemLocalDriverId.ToString() }
+            _authed,
+            $"/api/v1/dashboard/libraries/{firstLibraryId}/folders",
+            new { path = sharedPath, driver_id = Driver.SystemLocalDriverId.ToString() }
         );
-        firstResponse.StatusCode.Should().Be(expected: HttpStatusCode.OK);
-        CountDispatchedLibraryScanJobs(libraryId: firstLibraryId).Should().Be(expected: 1);
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        CountDispatchedLibraryScanJobs(firstLibraryId).Should().Be(1);
 
         // Act: attach the SAME driver+path (an already-known folder) to a
         // second, never-touched library. The compat requirement is that
         // re-attaching an existing folder must never trigger a scan.
         HttpResponseMessage secondResponse = await PostJsonAsync(
-            client: _authed,
-            url: $"/api/v1/dashboard/libraries/{secondLibraryId}/folders",
-            body: new { path = sharedPath, driver_id = Driver.SystemLocalDriverId.ToString() }
+            _authed,
+            $"/api/v1/dashboard/libraries/{secondLibraryId}/folders",
+            new { path = sharedPath, driver_id = Driver.SystemLocalDriverId.ToString() }
         );
 
-        secondResponse.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        CountDispatchedLibraryScanJobs(libraryId: secondLibraryId)
+        CountDispatchedLibraryScanJobs(secondLibraryId)
             .Should()
-            .Be(expected: 0, because: "attaching an already-known folder must never dispatch a new scan");
+            .Be(0, "attaching an already-known folder must never dispatch a new scan");
     }
 
     private static async Task<Ulid> SeedIsolatedLibraryAsync(
@@ -411,7 +407,7 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
 
         await using MediaContext mediaContext = new();
         mediaContext.Libraries.Add(
-            entity: new()
+            new()
             {
                 Id = libraryId,
                 Title = $"Isolated Library {libraryId}",
@@ -432,7 +428,7 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
 
         await using MediaContext mediaContext = new();
         mediaContext.EncodingPresets.Add(
-            entity: new()
+            new()
             {
                 Id = presetId,
                 Name = $"Preset {presetId}",
@@ -448,8 +444,8 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
     private static async Task<Library> LoadLibraryAsync(Ulid libraryId)
     {
         await using MediaContext mediaContext = new();
-        Library? library = await mediaContext.Libraries.FindAsync(keyValues: libraryId);
-        library.Should().NotBeNull(because: "the library seeded for this test must still exist");
+        Library? library = await mediaContext.Libraries.FindAsync(libraryId);
+        library.Should().NotBeNull("the library seeded for this test must still exist");
         return library!;
     }
 
@@ -458,8 +454,8 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
         using QueueContext queueContext = new();
         return queueContext
             .QueueJobs.AsEnumerable()
-            .Count(predicate: job =>
-                job.Payload.Contains(value: "LibraryScanJob") && job.Payload.Contains(value: libraryId.ToString())
+            .Count(job =>
+                job.Payload.Contains("LibraryScanJob") && job.Payload.Contains(libraryId.ToString())
             );
     }
 }

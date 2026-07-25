@@ -29,7 +29,7 @@ public class QueueIntegrationTests : IDisposable
     public QueueIntegrationTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(context: _adapter);
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
@@ -45,7 +45,7 @@ public class QueueIntegrationTests : IDisposable
         TestJob originalJob = new() { Message = "Integration test job", HasExecuted = false };
 
         // Act 1 - Serialize and enqueue the job
-        string serializedJob = SerializationHelper.Serialize(obj: originalJob);
+        string serializedJob = SerializationHelper.Serialize(originalJob);
         QueueJobModel queueJob = new()
         {
             Queue = "integration-test",
@@ -54,35 +54,35 @@ public class QueueIntegrationTests : IDisposable
             Priority = 1,
         };
 
-        _jobQueue.Enqueue(queueJob: queueJob);
+        _jobQueue.Enqueue(queueJob);
 
         // Verify job is stored
         QueueJob? storedJob = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(@object: storedJob);
-        Assert.Equal(expected: "integration-test", actual: storedJob.Queue);
+        Assert.NotNull(storedJob);
+        Assert.Equal("integration-test", storedJob.Queue);
 
         // Act 2 - Reserve and deserialize the job
-        QueueJobModel? reservedJob = _jobQueue.ReserveJob(name: "integration-test", currentJobId: null);
-        Assert.NotNull(@object: reservedJob);
+        QueueJobModel? reservedJob = _jobQueue.ReserveJob("integration-test", null);
+        Assert.NotNull(reservedJob);
 
-        object deserializedJobObject = SerializationHelper.Deserialize<object>(data: reservedJob.Payload);
-        Assert.NotNull(@object: deserializedJobObject);
-        Assert.IsType<TestJob>(@object: deserializedJobObject);
+        object deserializedJobObject = SerializationHelper.Deserialize<object>(reservedJob.Payload);
+        Assert.NotNull(deserializedJobObject);
+        Assert.IsType<TestJob>(deserializedJobObject);
 
         TestJob deserializedJob = (TestJob)deserializedJobObject;
-        Assert.Equal(expected: originalJob.Message, actual: deserializedJob.Message);
-        Assert.False(condition: deserializedJob.HasExecuted);
+        Assert.Equal(originalJob.Message, deserializedJob.Message);
+        Assert.False(deserializedJob.HasExecuted);
 
         // Act 3 - Execute the job
         await deserializedJob.Handle();
 
         // Act 4 - Delete the completed job
-        _jobQueue.DeleteJob(queueJob: reservedJob);
+        _jobQueue.DeleteJob(reservedJob);
 
         // Assert - Verify complete workflow
-        Assert.True(condition: deserializedJob.HasExecuted);
+        Assert.True(deserializedJob.HasExecuted);
         int remainingJobs = _context.QueueJobs.Count();
-        Assert.Equal(expected: 0, actual: remainingJobs);
+        Assert.Equal(0, remainingJobs);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class QueueIntegrationTests : IDisposable
         QueueJobModel queueJob1 = new()
         {
             Queue = "multi-test",
-            Payload = SerializationHelper.Serialize(obj: testJob1),
+            Payload = SerializationHelper.Serialize(testJob1),
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
         };
@@ -105,49 +105,49 @@ public class QueueIntegrationTests : IDisposable
         QueueJobModel queueJob2 = new()
         {
             Queue = "multi-test",
-            Payload = SerializationHelper.Serialize(obj: testJob2),
+            Payload = SerializationHelper.Serialize(testJob2),
             AvailableAt = DateTime.UtcNow,
             Priority = 2, // Higher priority
         };
 
-        _jobQueue.Enqueue(queueJob: queueJob1);
-        _jobQueue.Enqueue(queueJob: queueJob2);
+        _jobQueue.Enqueue(queueJob1);
+        _jobQueue.Enqueue(queueJob2);
 
         // Process first job (should be higher priority)
-        QueueJobModel? firstReservedJob = _jobQueue.ReserveJob(name: "multi-test", currentJobId: null);
-        Assert.NotNull(@object: firstReservedJob);
+        QueueJobModel? firstReservedJob = _jobQueue.ReserveJob("multi-test", null);
+        Assert.NotNull(firstReservedJob);
 
         object firstDeserializedJob = SerializationHelper.Deserialize<object>(
-            data: firstReservedJob.Payload
+            firstReservedJob.Payload
         );
-        Assert.IsType<AnotherTestJob>(@object: firstDeserializedJob); // Should be the higher priority job
+        Assert.IsType<AnotherTestJob>(firstDeserializedJob); // Should be the higher priority job
 
         await ((IShouldQueue)firstDeserializedJob).Handle();
-        _jobQueue.DeleteJob(queueJob: firstReservedJob);
+        _jobQueue.DeleteJob(firstReservedJob);
 
         // Process second job
-        QueueJobModel? secondReservedJob = _jobQueue.ReserveJob(name: "multi-test", currentJobId: null);
-        Assert.NotNull(@object: secondReservedJob);
+        QueueJobModel? secondReservedJob = _jobQueue.ReserveJob("multi-test", null);
+        Assert.NotNull(secondReservedJob);
 
         object secondDeserializedJob = SerializationHelper.Deserialize<object>(
-            data: secondReservedJob.Payload
+            secondReservedJob.Payload
         );
-        Assert.IsType<TestJob>(@object: secondDeserializedJob);
+        Assert.IsType<TestJob>(secondDeserializedJob);
 
         await ((IShouldQueue)secondDeserializedJob).Handle();
-        _jobQueue.DeleteJob(queueJob: secondReservedJob);
+        _jobQueue.DeleteJob(secondReservedJob);
 
         // Assert
         AnotherTestJob anotherJob = (AnotherTestJob)firstDeserializedJob;
         TestJob testJob = (TestJob)secondDeserializedJob;
 
-        Assert.True(condition: anotherJob.HasExecuted);
-        Assert.Equal(expected: 10, actual: anotherJob.Value); // Should be doubled
-        Assert.True(condition: testJob.HasExecuted);
-        Assert.Equal(expected: "First job", actual: testJob.Message);
+        Assert.True(anotherJob.HasExecuted);
+        Assert.Equal(10, anotherJob.Value); // Should be doubled
+        Assert.True(testJob.HasExecuted);
+        Assert.Equal("First job", testJob.Message);
 
         int remainingJobs = _context.QueueJobs.Count();
-        Assert.Equal(expected: 0, actual: remainingJobs);
+        Assert.Equal(0, remainingJobs);
     }
 
     [Fact]
@@ -167,18 +167,18 @@ public class QueueIntegrationTests : IDisposable
         QueueJobModel queueJob = new()
         {
             Queue = "failure-test",
-            Payload = SerializationHelper.Serialize(obj: failingJob),
+            Payload = SerializationHelper.Serialize(failingJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 2, // Set to max attempts - 1
         };
 
-        _jobQueue.Enqueue(queueJob: queueJob);
+        _jobQueue.Enqueue(queueJob);
 
         // Act 1 - Try to process the job (it will fail)
-        QueueJobModel? reservedJob = _jobQueue.ReserveJob(name: "failure-test", currentJobId: null);
-        Assert.NotNull(@object: reservedJob);
+        QueueJobModel? reservedJob = _jobQueue.ReserveJob("failure-test", null);
+        Assert.NotNull(reservedJob);
 
-        object deserializedJob = SerializationHelper.Deserialize<object>(data: reservedJob.Payload);
+        object deserializedJob = SerializationHelper.Deserialize<object>(reservedJob.Payload);
         IShouldQueue executableJob = (IShouldQueue)deserializedJob;
 
         Exception? caughtException = null;
@@ -189,24 +189,24 @@ public class QueueIntegrationTests : IDisposable
         catch (Exception ex)
         {
             caughtException = ex;
-            _jobQueue.FailJob(queueJob: reservedJob, exception: ex);
+            _jobQueue.FailJob(reservedJob, ex);
         }
 
         // Assert - Job should be moved to failed jobs
-        Assert.NotNull(@object: caughtException);
-        Assert.IsType<InvalidOperationException>(@object: caughtException);
+        Assert.NotNull(caughtException);
+        Assert.IsType<InvalidOperationException>(caughtException);
 
         int queueJobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 0, actual: queueJobCount); // Should be removed from queue
+        Assert.Equal(0, queueJobCount); // Should be removed from queue
 
         FailedJob? failedJob = _context.FailedJobs.FirstOrDefault();
-        Assert.NotNull(@object: failedJob);
-        Assert.Equal(expected: "failure-test", actual: failedJob.Queue);
+        Assert.NotNull(failedJob);
+        Assert.Equal("failure-test", failedJob.Queue);
 
         // Act 2 - Manual requeue (workaround for the type mismatch bug)
-        _context.FailedJobs.Remove(entity: failedJob);
+        _context.FailedJobs.Remove(failedJob);
         _context.QueueJobs.Add(
-            entity: new()
+            new()
             {
                 Queue = failedJob.Queue,
                 Payload = failedJob.Payload,
@@ -217,25 +217,25 @@ public class QueueIntegrationTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act 3 - Fix the job and process it successfully
-        QueueJobModel? retriedJob = _jobQueue.ReserveJob(name: "failure-test", currentJobId: null);
-        Assert.NotNull(@object: retriedJob);
+        QueueJobModel? retriedJob = _jobQueue.ReserveJob("failure-test", null);
+        Assert.NotNull(retriedJob);
 
         TestJob retriedDeserializedJob = SerializationHelper.Deserialize<TestJob>(
-            data: retriedJob.Payload
+            retriedJob.Payload
         );
         retriedDeserializedJob.ShouldFail = false; // Fix the job
 
         await retriedDeserializedJob.Handle();
-        _jobQueue.DeleteJob(queueJob: retriedJob);
+        _jobQueue.DeleteJob(retriedJob);
 
         // Assert - Job should complete successfully
-        Assert.True(condition: retriedDeserializedJob.HasExecuted);
+        Assert.True(retriedDeserializedJob.HasExecuted);
 
         int finalQueueJobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 0, actual: finalQueueJobCount);
+        Assert.Equal(0, finalQueueJobCount);
 
         int finalFailedJobCount = _context.FailedJobs.Count();
-        Assert.Equal(expected: 0, actual: finalFailedJobCount);
+        Assert.Equal(0, finalFailedJobCount);
     }
 
     [Fact]
@@ -244,7 +244,7 @@ public class QueueIntegrationTests : IDisposable
         // Arrange - Create identical jobs
         TestJob job = new() { Message = "Duplicate test", HasExecuted = false };
 
-        string serializedPayload = SerializationHelper.Serialize(obj: job);
+        string serializedPayload = SerializationHelper.Serialize(job);
 
         QueueJobModel queueJob1 = new()
         {
@@ -261,12 +261,12 @@ public class QueueIntegrationTests : IDisposable
         };
 
         // Act
-        _jobQueue.Enqueue(queueJob: queueJob1);
-        _jobQueue.Enqueue(queueJob: queueJob2); // Should be prevented
+        _jobQueue.Enqueue(queueJob1);
+        _jobQueue.Enqueue(queueJob2); // Should be prevented
 
         // Assert
         int jobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 1, actual: jobCount); // Only one job should exist
+        Assert.Equal(1, jobCount); // Only one job should exist
     }
 
     [Fact]
@@ -282,21 +282,21 @@ public class QueueIntegrationTests : IDisposable
             new()
             {
                 Queue = "priority-test",
-                Payload = SerializationHelper.Serialize(obj: lowPriorityJob),
+                Payload = SerializationHelper.Serialize(lowPriorityJob),
                 AvailableAt = DateTime.UtcNow,
                 Priority = 1,
             },
             new()
             {
                 Queue = "priority-test",
-                Payload = SerializationHelper.Serialize(obj: highPriorityJob),
+                Payload = SerializationHelper.Serialize(highPriorityJob),
                 AvailableAt = DateTime.UtcNow,
                 Priority = 10,
             },
             new()
             {
                 Queue = "priority-test",
-                Payload = SerializationHelper.Serialize(obj: mediumPriorityJob),
+                Payload = SerializationHelper.Serialize(mediumPriorityJob),
                 AvailableAt = DateTime.UtcNow,
                 Priority = 5,
             },
@@ -305,7 +305,7 @@ public class QueueIntegrationTests : IDisposable
         // Act - Enqueue in random order
         foreach (QueueJobModel job in jobs)
         {
-            _jobQueue.Enqueue(queueJob: job);
+            _jobQueue.Enqueue(job);
         }
 
         // Process jobs and verify order
@@ -313,19 +313,19 @@ public class QueueIntegrationTests : IDisposable
 
         for (int i = 0; i < 3; i++)
         {
-            QueueJobModel? reservedJob = _jobQueue.ReserveJob(name: "priority-test", currentJobId: null);
-            Assert.NotNull(@object: reservedJob);
+            QueueJobModel? reservedJob = _jobQueue.ReserveJob("priority-test", null);
+            Assert.NotNull(reservedJob);
 
-            TestJob deserializedJob = SerializationHelper.Deserialize<TestJob>(data: reservedJob.Payload);
-            processedMessages.Add(item: deserializedJob.Message);
+            TestJob deserializedJob = SerializationHelper.Deserialize<TestJob>(reservedJob.Payload);
+            processedMessages.Add(deserializedJob.Message);
 
             await deserializedJob.Handle();
-            _jobQueue.DeleteJob(queueJob: reservedJob);
+            _jobQueue.DeleteJob(reservedJob);
         }
 
         // Assert - Jobs should be processed in priority order (highest first)
-        Assert.Equal(expected: "High priority", actual: processedMessages[index: 0]);
-        Assert.Equal(expected: "Medium priority", actual: processedMessages[index: 1]);
-        Assert.Equal(expected: "Low priority", actual: processedMessages[index: 2]);
+        Assert.Equal("High priority", processedMessages[0]);
+        Assert.Equal("Medium priority", processedMessages[1]);
+        Assert.Equal("Low priority", processedMessages[2]);
     }
 }

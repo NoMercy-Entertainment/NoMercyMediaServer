@@ -15,15 +15,15 @@ namespace NoMercy.Setup.Dto;
 
 public class ServerTunnelAvailabilityResponse
 {
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; } = null!;
 
-    [JsonProperty(propertyName: "message")]
+    [JsonProperty("message")]
     public string? Message { get; set; }
 
-    [JsonProperty(propertyName: "allowed")]
+    [JsonProperty("allowed")]
     public bool Allowed { get; set; }
 
-    [JsonProperty(propertyName: "token")]
+    [JsonProperty("token")]
     public string? Token { get; set; }
 }

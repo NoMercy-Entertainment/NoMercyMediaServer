@@ -19,48 +19,48 @@ public class HlsMasterPlaylistVersionTests
     public void ComputeMasterVersion_returns_3_for_basic_mpegts()
     {
         int version = PlaylistGenerator.ComputeMasterVersion(
-            hasSubsGroup: false,
-            hasFmp4: false,
-            hasChapterDateRanges: false
+            false,
+            false,
+            false
         );
 
-        Assert.Equal(expected: 3, actual: version);
+        Assert.Equal(3, version);
     }
 
     [Fact]
     public void ComputeMasterVersion_returns_6_when_subs_group_present()
     {
         int version = PlaylistGenerator.ComputeMasterVersion(
-            hasSubsGroup: true,
-            hasFmp4: false,
-            hasChapterDateRanges: false
+            true,
+            false,
+            false
         );
 
-        Assert.Equal(expected: 6, actual: version);
+        Assert.Equal(6, version);
     }
 
     [Fact]
     public void ComputeMasterVersion_returns_7_when_fmp4()
     {
         int version = PlaylistGenerator.ComputeMasterVersion(
-            hasSubsGroup: false,
-            hasFmp4: true,
-            hasChapterDateRanges: false
+            false,
+            true,
+            false
         );
 
-        Assert.Equal(expected: 7, actual: version);
+        Assert.Equal(7, version);
     }
 
     [Fact]
     public void ComputeMasterVersion_returns_8_when_chapter_dateranges()
     {
         int version = PlaylistGenerator.ComputeMasterVersion(
-            hasSubsGroup: false,
-            hasFmp4: false,
-            hasChapterDateRanges: true
+            false,
+            false,
+            true
         );
 
-        Assert.Equal(expected: 8, actual: version);
+        Assert.Equal(8, version);
     }
 
     [Fact]
@@ -68,20 +68,20 @@ public class HlsMasterPlaylistVersionTests
     {
         // subs + fmp4 → 7
         int versionSubsFmp4 = PlaylistGenerator.ComputeMasterVersion(
-            hasSubsGroup: true,
-            hasFmp4: true,
-            hasChapterDateRanges: false
+            true,
+            true,
+            false
         );
 
-        Assert.Equal(expected: 7, actual: versionSubsFmp4);
+        Assert.Equal(7, versionSubsFmp4);
 
         // subs + fmp4 + chapters → 8
         int versionAll = PlaylistGenerator.ComputeMasterVersion(
-            hasSubsGroup: true,
-            hasFmp4: true,
-            hasChapterDateRanges: true
+            true,
+            true,
+            true
         );
 
-        Assert.Equal(expected: 8, actual: versionAll);
+        Assert.Equal(8, versionAll);
     }
 }

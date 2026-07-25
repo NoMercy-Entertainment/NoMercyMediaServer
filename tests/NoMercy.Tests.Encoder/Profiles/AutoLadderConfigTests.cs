@@ -21,42 +21,42 @@ public class AutoLadderConfigTests
     public void Default_Tiers_are_AppleHlsRecommended()
     {
         AutoLadderConfig config = new();
-        config.Tiers.Should().BeSameAs(expected: LadderTiers.AppleHlsRecommended);
+        config.Tiers.Should().BeSameAs(LadderTiers.AppleHlsRecommended);
     }
 
     [Fact]
     public void Default_BitrateStrategy_is_AppleHlsRecommended()
     {
         AutoLadderConfig config = new();
-        config.BitrateStrategy.Should().Be(expected: BitrateStrategy.AppleHlsRecommended);
+        config.BitrateStrategy.Should().Be(BitrateStrategy.AppleHlsRecommended);
     }
 
     [Fact]
     public void Default_Crf_is_22()
     {
         AutoLadderConfig config = new();
-        config.Crf.Should().Be(expected: 22);
+        config.Crf.Should().Be(22);
     }
 
     [Fact]
     public void Default_SourcePercentage_is_50()
     {
         AutoLadderConfig config = new();
-        config.SourcePercentage.Should().Be(expected: 50.0);
+        config.SourcePercentage.Should().Be(50.0);
     }
 
     [Fact]
     public void Default_MaxRungs_is_10()
     {
         AutoLadderConfig config = new();
-        config.MaxRungs.Should().Be(expected: 10);
+        config.MaxRungs.Should().Be(10);
     }
 
     [Fact]
     public void Default_MinRungs_is_1()
     {
         AutoLadderConfig config = new();
-        config.MinRungs.Should().Be(expected: 1);
+        config.MinRungs.Should().Be(1);
     }
 
     [Fact]
@@ -77,14 +77,14 @@ public class AutoLadderConfigTests
     public void Default_MinTierGapPercent_is_50()
     {
         AutoLadderConfig config = new();
-        config.MinTierGapPercent.Should().Be(expected: 50.0);
+        config.MinTierGapPercent.Should().Be(50.0);
     }
 
     [Fact]
     public void Default_CodecPolicy_is_Uniform()
     {
         AutoLadderConfig config = new();
-        config.CodecPolicy.Should().Be(expected: LadderCodecPolicy.Uniform);
+        config.CodecPolicy.Should().Be(LadderCodecPolicy.Uniform);
     }
 
     [Fact]
@@ -105,21 +105,21 @@ public class AutoLadderConfigTests
     public void Default_MixedPolicySplitHeight_is_720()
     {
         AutoLadderConfig config = new();
-        config.MixedPolicySplitHeight.Should().Be(expected: 720);
+        config.MixedPolicySplitHeight.Should().Be(720);
     }
 
     [Fact]
     public void Default_VbrCeilingMultiplier_is_1point5()
     {
         AutoLadderConfig config = new();
-        config.VbrCeilingMultiplier.Should().Be(expected: 1.5);
+        config.VbrCeilingMultiplier.Should().Be(1.5);
     }
 
     [Fact]
     public void Default_BufferSizeMultiplier_is_2()
     {
         AutoLadderConfig config = new();
-        config.BufferSizeMultiplier.Should().Be(expected: 2.0);
+        config.BufferSizeMultiplier.Should().Be(2.0);
     }
 
     [Fact]
@@ -133,14 +133,14 @@ public class AutoLadderConfigTests
     public void Default_LowTierFramerateMultiplier_is_0point5()
     {
         AutoLadderConfig config = new();
-        config.LowTierFramerateMultiplier.Should().Be(expected: 0.5);
+        config.LowTierFramerateMultiplier.Should().Be(0.5);
     }
 
     [Fact]
     public void Default_LowTierFramerateThresholdHeight_is_480()
     {
         AutoLadderConfig config = new();
-        config.LowTierFramerateThresholdHeight.Should().Be(expected: 480);
+        config.LowTierFramerateThresholdHeight.Should().Be(480);
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public class AutoLadderConfigTests
     {
         AutoLadderConfig a = new() { Crf = 18, MaxRungs = 3 };
         AutoLadderConfig b = new() { Crf = 18, MaxRungs = 3 };
-        a.Should().Be(expected: b);
+        a.Should().Be(b);
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class AutoLadderConfigTests
     {
         AutoLadderConfig a = new() { Crf = 18 };
         AutoLadderConfig b = new() { Crf = 22 };
-        a.Should().NotBe(unexpected: b);
+        a.Should().NotBe(b);
     }
 
     [Fact]
@@ -183,26 +183,26 @@ public class AutoLadderConfigTests
             LowTierFramerateThresholdHeight = 480,
         };
 
-        string json = JsonConvert.SerializeObject(value: original);
-        AutoLadderConfig? restored = JsonConvert.DeserializeObject<AutoLadderConfig>(value: json);
+        string json = JsonConvert.SerializeObject(original);
+        AutoLadderConfig? restored = JsonConvert.DeserializeObject<AutoLadderConfig>(json);
 
         restored.Should().NotBeNull();
-        restored!.BitrateStrategy.Should().Be(expected: BitrateStrategy.PercentOfSource);
-        restored.Crf.Should().Be(expected: 18);
-        restored.SourcePercentage.Should().Be(expected: 75.0);
-        restored.MaxRungs.Should().Be(expected: 4);
-        restored.MinRungs.Should().Be(expected: 2);
+        restored!.BitrateStrategy.Should().Be(BitrateStrategy.PercentOfSource);
+        restored.Crf.Should().Be(18);
+        restored.SourcePercentage.Should().Be(75.0);
+        restored.MaxRungs.Should().Be(4);
+        restored.MinRungs.Should().Be(2);
         restored.NeverUpscale.Should().BeFalse();
         restored.NeverUpsource.Should().BeFalse();
-        restored.MinTierGapPercent.Should().Be(expected: 30.0);
-        restored.CodecPolicy.Should().Be(expected: LadderCodecPolicy.Mixed);
-        restored.LowTierCodec.Should().Be(expected: VideoCodecType.H264);
-        restored.HighTierCodec.Should().Be(expected: VideoCodecType.H265);
-        restored.MixedPolicySplitHeight.Should().Be(expected: 720);
-        restored.VbrCeilingMultiplier.Should().Be(expected: 1.2);
-        restored.BufferSizeMultiplier.Should().Be(expected: 1.8);
+        restored.MinTierGapPercent.Should().Be(30.0);
+        restored.CodecPolicy.Should().Be(LadderCodecPolicy.Mixed);
+        restored.LowTierCodec.Should().Be(VideoCodecType.H264);
+        restored.HighTierCodec.Should().Be(VideoCodecType.H265);
+        restored.MixedPolicySplitHeight.Should().Be(720);
+        restored.VbrCeilingMultiplier.Should().Be(1.2);
+        restored.BufferSizeMultiplier.Should().Be(1.8);
         restored.ReduceFramerateForLowTiers.Should().BeTrue();
-        restored.LowTierFramerateMultiplier.Should().Be(expected: 0.5);
-        restored.LowTierFramerateThresholdHeight.Should().Be(expected: 480);
+        restored.LowTierFramerateMultiplier.Should().Be(0.5);
+        restored.LowTierFramerateThresholdHeight.Should().Be(480);
     }
 }

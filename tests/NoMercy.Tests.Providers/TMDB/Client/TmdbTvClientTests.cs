@@ -22,8 +22,8 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 ///     Unit tests for TmdbTvClient
 ///     Tests TV show data retrieval and metadata functionality
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
-[Collection(name: "TmdbApi")]
+[Trait("Category", "Unit")]
+[Collection("TmdbApi")]
 public class TmdbTvClientTests : TmdbTestBase
 {
     #region Alternative Titles Tests
@@ -32,14 +32,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task AlternativeTitles_WithValidId_ReturnsTitles()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvAlternativeTitles? result = await client.AlternativeTitles();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Results.Should().NotBeNull();
     }
 
@@ -48,15 +48,15 @@ public class TmdbTvClientTests : TmdbTestBase
     #region Changes Tests
 
     [Theory]
-    [InlineData(data: ["2023-01-01", "2023-12-31"])]
-    [InlineData(data: ["2024-01-01", "2024-06-30"])]
+    [InlineData(["2023-01-01", "2023-12-31"])]
+    [InlineData(["2024-01-01", "2024-06-30"])]
     public async Task Changes_WithValidDateRange_ReturnsChanges(string startDate, string endDate)
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
-        TmdbTvChanges? result = await client.Changes(startDate: startDate, endDate: endDate);
+        TmdbTvChanges? result = await client.Changes(startDate, endDate);
 
         // Assert
         // Changes endpoint may return null even for valid requests due to TMDB API limitations
@@ -72,7 +72,7 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task ContentRatings_WithValidId_ReturnsRatings()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvContentRatings? result = await client.ContentRatings();
@@ -90,14 +90,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task EpisodeGroups_WithValidId_ReturnsGroups()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvEpisodeGroups? result = await client.EpisodeGroups();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Results.Should().NotBeNull();
     }
 
@@ -109,7 +109,7 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task ExternalIds_WithValidId_ReturnsExternalIds()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvExternalIds? result = await client.ExternalIds();
@@ -127,7 +127,7 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Images_WithValidId_ReturnsImages()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbImages? result = await client.Images();
@@ -146,14 +146,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Keywords_WithValidId_ReturnsKeywords()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvKeywords? result = await client.Keywords();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Results.Should().NotBeNull();
     }
 
@@ -165,14 +165,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Recommendations_WithValidId_ReturnsRecommendations()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvRecommendations? result = await client.Recommendations();
 
         // Assert
         result.Should().NotBeNull();
-        result.Page.Should().BeGreaterThan(expected: 0);
+        result.Page.Should().BeGreaterThan(0);
         result.Results.Should().NotBeNull();
     }
 
@@ -184,14 +184,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Reviews_WithValidId_ReturnsReviews()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvReviews? result = await client.Reviews();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Results.Should().NotBeNull();
     }
 
@@ -203,14 +203,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task ScreenedTheatrically_WithValidId_ReturnsScreenings()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvScreenedTheatrically? result = await client.ScreenedTheatrically();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Results.Should().NotBeNull();
     }
 
@@ -222,14 +222,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Similar_WithValidId_ReturnsSimilarShows()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvSimilar? result = await client.Similar();
 
         // Assert
         result.Should().NotBeNull();
-        result.Page.Should().BeGreaterThan(expected: 0);
+        result.Page.Should().BeGreaterThan(0);
         result.Results.Should().NotBeNull();
     }
 
@@ -241,14 +241,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Translations_WithValidId_ReturnsTranslations()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbSharedTranslations? result = await client.Translations();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Translations.Should().NotBeEmpty();
     }
 
@@ -260,14 +260,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Videos_WithValidId_ReturnsVideos()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvVideos? result = await client.Videos();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Results.Should().NotBeNull();
     }
 
@@ -279,14 +279,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task WatchProviders_WithValidId_ReturnsProviders()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbWatchProviders? result = await client.WatchProviders();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.TmdbWatchProviderResults.Should().NotBeNull();
     }
 
@@ -305,7 +305,7 @@ public class TmdbTvClientTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().BeGreaterThan(expected: 0);
+        result.Id.Should().BeGreaterThan(0);
     }
 
     #endregion
@@ -323,7 +323,7 @@ public class TmdbTvClientTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Page.Should().BeGreaterThan(expected: 0);
+        result.Page.Should().BeGreaterThan(0);
         result.Results.Should().NotBeEmpty();
     }
 
@@ -342,7 +342,7 @@ public class TmdbTvClientTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Page.Should().BeGreaterThan(expected: 0);
+        result.Page.Should().BeGreaterThan(0);
         result.Results.Should().NotBeNull();
     }
 
@@ -361,7 +361,7 @@ public class TmdbTvClientTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Page.Should().BeGreaterThan(expected: 0);
+        result.Page.Should().BeGreaterThan(0);
         result.Results.Should().NotBeNull();
     }
 
@@ -391,7 +391,7 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task MultipleRequests_Concurrently_HandleCorrectly()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         Task<TmdbTvShowDetails?> detailsTask = client.Details();
@@ -399,7 +399,7 @@ public class TmdbTvClientTests : TmdbTestBase
         Task<TmdbImages?> imagesTask = client.Images();
         Task<TmdbTvVideos?> videosTask = client.Videos();
 
-        await Task.WhenAll(tasks: [detailsTask, creditsTask, imagesTask, videosTask]);
+        await Task.WhenAll([detailsTask, creditsTask, imagesTask, videosTask]);
 
         // Assert
         (await detailsTask)
@@ -418,11 +418,11 @@ public class TmdbTvClientTests : TmdbTestBase
     public void Constructor_WithValidId_CreatesInstance()
     {
         // Act
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Assert
         client.Should().NotBeNull();
-        client.Id.Should().Be(expected: ValidTvShowId);
+        client.Id.Should().Be(ValidTvShowId);
     }
 
     [Fact]
@@ -443,14 +443,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Details_WithValidId_ReturnsShowDetails()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvShowDetails? result = await client.Details();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Name.Should().NotBeNullOrEmpty();
         result.Overview.Should().NotBeNullOrEmpty();
     }
@@ -459,14 +459,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Details_WithPriorityTrue_ReturnsShowDetails()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
-        TmdbTvShowDetails? result = await client.Details(priority: true);
+        TmdbTvShowDetails? result = await client.Details(true);
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Name.Should().NotBeNullOrEmpty();
     }
 
@@ -478,15 +478,15 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task WithAppends_WithSpecificAppends_ReturnsShowWithAppends()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
         string[] appendices = ["credits", "images", "videos"];
 
         // Act
-        TmdbTvShowAppends? result = await client.WithAppends(appendices: appendices);
+        TmdbTvShowAppends? result = await client.WithAppends(appendices);
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Credits.Should().NotBeNull();
         result.Images.Should().NotBeNull();
         result.Videos.Should().NotBeNull();
@@ -496,14 +496,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Show_WithAllAppends_ShouldReturnCompleteShowData()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvShowAppends? result = await client.WithAllAppends();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Credits.Should().NotBeNull();
         result.Images.Should().NotBeNull();
         result.Videos.Should().NotBeNull();
@@ -519,14 +519,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task WithAllAppends_WithPriorityTrue_ReturnsCompleteShowData()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
-        TmdbTvShowAppends? result = await client.WithAllAppends(priority: true);
+        TmdbTvShowAppends? result = await client.WithAllAppends(true);
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Credits.Should().NotBeNull();
     }
 
@@ -538,14 +538,14 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task AggregatedCredits_WithValidId_ReturnsCredits()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvAggregatedCredits? result = await client.AggregatedCredits();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         result.Cast.Should().NotBeEmpty();
     }
 
@@ -553,25 +553,25 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Credits_WithValidId_ReturnsCredits()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
         TmdbTvCredits? result = await client.Credits();
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(expected: ValidTvShowId);
+        result.Id.Should().Be(ValidTvShowId);
         // result.Cast.Should().NotBeEmpty();
         // Crew data might be empty for some shows like GTST, so we validate structure if present
         result.Crew.Should().NotBeNull();
         if (result.Crew.Length != 0)
             result
                 .Crew.Should()
-                .AllSatisfy(expected: crew =>
+                .AllSatisfy(crew =>
                 {
                     crew.Name.Should().NotBeNullOrEmpty();
                     crew.Job.Should().NotBeNullOrEmpty();
-                    crew.Id.Should().BeGreaterThan(expected: 0);
+                    crew.Id.Should().BeGreaterThan(0);
                 });
     }
 
@@ -591,7 +591,7 @@ public class TmdbTvClientTests : TmdbTestBase
         // Assert
         result.Should().NotBeNull();
         result.Should().NotBeEmpty();
-        result.Should().HaveCountLessThanOrEqualTo(expected: 10);
+        result.Should().HaveCountLessThanOrEqualTo(10);
     }
 
     [Fact]
@@ -601,12 +601,12 @@ public class TmdbTvClientTests : TmdbTestBase
         using TmdbTvClient client = new();
 
         // Act
-        List<TmdbTvShow>? result = await client.Popular(limit: 5);
+        List<TmdbTvShow>? result = await client.Popular(5);
 
         // Assert
         result.Should().NotBeNull();
         result.Should().NotBeEmpty();
-        result.Should().HaveCountLessThanOrEqualTo(expected: 5);
+        result.Should().HaveCountLessThanOrEqualTo(5);
     }
 
     #endregion
@@ -627,24 +627,24 @@ public class TmdbTvClientTests : TmdbTestBase
         result.Genres.Should().NotBeEmpty();
         result
             .Genres.Should()
-            .AllSatisfy(expected: genre =>
+            .AllSatisfy(genre =>
             {
-                genre.Id.Should().BeGreaterThan(expected: 0);
+                genre.Id.Should().BeGreaterThan(0);
                 genre.Name.Should().NotBeNullOrEmpty();
             });
     }
 
     [Theory]
-    [InlineData(data: "en")]
-    [InlineData(data: "es")]
-    [InlineData(data: "fr")]
+    [InlineData("en")]
+    [InlineData("es")]
+    [InlineData("fr")]
     public async Task Genres_WithLanguage_ReturnsLocalizedGenres(string language)
     {
         // Arrange
         using TmdbTvClient client = new();
 
         // Act
-        TmdbGenreTv? result = await client.Genres(language: language);
+        TmdbGenreTv? result = await client.Genres(language);
 
         // Assert
         result.Should().NotBeNull();
@@ -659,10 +659,10 @@ public class TmdbTvClientTests : TmdbTestBase
     public void Season_WithValidSeasonNumber_ReturnsSeasonClient()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
-        TmdbSeasonClient seasonClient = client.Season(seasonNumber: ValidSeasonNumber);
+        TmdbSeasonClient seasonClient = client.Season(ValidSeasonNumber);
 
         // Assert
         seasonClient.Should().NotBeNull();
@@ -672,11 +672,11 @@ public class TmdbTvClientTests : TmdbTestBase
     public void Season_WithAppendices_ReturnsSeasonClient()
     {
         // Arrange
-        using TmdbTvClient client = new(id: ValidTvShowId);
+        using TmdbTvClient client = new(ValidTvShowId);
         string[] items = ["credits", "images"];
 
         // Act
-        TmdbSeasonClient seasonClient = client.Season(seasonNumber: ValidSeasonNumber, items: items);
+        TmdbSeasonClient seasonClient = client.Season(ValidSeasonNumber, items);
 
         // Assert
         seasonClient.Should().NotBeNull();
@@ -690,23 +690,23 @@ public class TmdbTvClientTests : TmdbTestBase
     public async Task Details_WithInvalidId_HandlesGracefully()
     {
         // Arrange
-        TmdbTvClient client = new(id: 999999);
+        TmdbTvClient client = new(999999);
 
         // Act & Assert
         Func<Task<TmdbTvShowDetails?>> act = async () => await client.Details();
-        await act.Should().NotThrowAsync(because: "because invalid IDs should be handled gracefully");
+        await act.Should().NotThrowAsync("because invalid IDs should be handled gracefully");
     }
 
     [Fact]
     public async Task Changes_WithInvalidDateRange_HandlesGracefully()
     {
         // Arrange
-        TmdbTvClient client = new(id: ValidTvShowId);
+        TmdbTvClient client = new(ValidTvShowId);
 
         // Act & Assert
         Func<Task<TmdbTvChanges?>> act = async () =>
-            await client.Changes(startDate: "invalid-date", endDate: "invalid-date");
-        await act.Should().NotThrowAsync(because: "because invalid dates should be handled gracefully");
+            await client.Changes("invalid-date", "invalid-date");
+        await act.Should().NotThrowAsync("because invalid dates should be handled gracefully");
     }
 
     #endregion

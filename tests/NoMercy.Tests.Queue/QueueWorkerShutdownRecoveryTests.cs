@@ -37,7 +37,7 @@ namespace NoMercy.Tests.Queue;
 /// flip the worker's shutdown state, THEN release the gate — no race on
 /// wall-clock timing.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class QueueWorkerShutdownRecoveryTests
 {
     private static async Task<QueueJobModel> WaitUntilReservedAsync(
@@ -45,29 +45,29 @@ public class QueueWorkerShutdownRecoveryTests
         string payload
     )
     {
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
         while (!cts.IsCancellationRequested)
         {
-            QueueJobModel? job = context.Jobs.FirstOrDefault(predicate: j =>
+            QueueJobModel? job = context.Jobs.FirstOrDefault(j =>
                 j.Payload == payload && j.ReservedAt != null
             );
             if (job is not null)
                 return job;
-            await Task.Delay(millisecondsDelay: 10);
+            await Task.Delay(10);
         }
-        throw new TimeoutException(message: "Job was never reserved within the wait window.");
+        throw new TimeoutException("Job was never reserved within the wait window.");
     }
 
     private static async Task WaitUntilAsync(Func<bool> predicate, string failureMessage)
     {
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
         while (!cts.IsCancellationRequested)
         {
             if (predicate())
                 return;
-            await Task.Delay(millisecondsDelay: 10);
+            await Task.Delay(10);
         }
-        throw new TimeoutException(message: failureMessage);
+        throw new TimeoutException(failureMessage);
     }
 
     private static (
@@ -78,21 +78,21 @@ public class QueueWorkerShutdownRecoveryTests
     ) Build(string queueName, string exceptionMode, out string gateKey)
     {
         TestQueueContextAdapter context = new();
-        JobQueue jobQueue = new(context: context);
+        JobQueue jobQueue = new(context);
         gateKey = Guid.NewGuid().ToString();
-        GatedThrowingJob.Gates[key: gateKey] = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+        GatedThrowingJob.Gates[gateKey] = new(TaskCreationOptions.RunContinuationsAsynchronously);
         string payload = SerializationHelper.Serialize(
-            obj: new GatedThrowingJob { GateKey = gateKey, ExceptionMode = exceptionMode }
+            new GatedThrowingJob { GateKey = gateKey, ExceptionMode = exceptionMode }
         );
         context.AddJob(
-            job: new QueueJobModel
+            new QueueJobModel
             {
                 Queue = queueName,
                 Payload = payload,
                 AvailableAt = DateTime.UtcNow,
             }
         );
-        QueueWorker worker = new(queue: jobQueue, name: queueName);
+        QueueWorker worker = new(jobQueue, queueName);
         return (worker, context, jobQueue, payload);
     }
 
@@ -100,25 +100,25 @@ public class QueueWorkerShutdownRecoveryTests
     public async Task OperationCanceled_WhileStopTokenCancelled_ReleasesReservation_NeverFails()
     {
         (QueueWorker worker, TestQueueContextAdapter context, _, string payload) = Build(
-            queueName: "gated-cancel-shutdown",
-            exceptionMode: "cancelled",
-            gateKey: out string gateKey
+            "gated-cancel-shutdown",
+            "cancelled",
+            out string gateKey
         );
         worker.Start();
 
-        await WaitUntilReservedAsync(context: context, payload: payload);
+        await WaitUntilReservedAsync(context, payload);
         worker.Stop();
-        GatedThrowingJob.Gates[key: gateKey].SetResult();
+        GatedThrowingJob.Gates[gateKey].SetResult();
 
         await WaitUntilAsync(
-            predicate: () => context.Jobs.Any(predicate: j => j.Payload == payload && j.ReservedAt == null),
-            failureMessage: "Job was never released for retry after a shutdown-time OperationCanceledException."
+            () => context.Jobs.Any(j => j.Payload == payload && j.ReservedAt == null),
+            "Job was never released for retry after a shutdown-time OperationCanceledException."
         );
 
-        QueueJobModel survivor = context.Jobs.Single(predicate: j => j.Payload == payload);
+        QueueJobModel survivor = context.Jobs.Single(j => j.Payload == payload);
         survivor
             .Attempts.Should()
-            .Be(expected: 0, because: "the attempt budget must not be burned by a shutdown interruption");
+            .Be(0, "the attempt budget must not be burned by a shutdown interruption");
         context.FailedJobs.Should().BeEmpty();
     }
 
@@ -126,25 +126,25 @@ public class QueueWorkerShutdownRecoveryTests
     public async Task ObjectDisposed_WhileStopTokenCancelled_ReleasesReservation_NeverFails()
     {
         (QueueWorker worker, TestQueueContextAdapter context, _, string payload) = Build(
-            queueName: "gated-disposed-shutdown",
-            exceptionMode: "disposed",
-            gateKey: out string gateKey
+            "gated-disposed-shutdown",
+            "disposed",
+            out string gateKey
         );
         worker.Start();
 
-        await WaitUntilReservedAsync(context: context, payload: payload);
+        await WaitUntilReservedAsync(context, payload);
         worker.Stop();
-        GatedThrowingJob.Gates[key: gateKey].SetResult();
+        GatedThrowingJob.Gates[gateKey].SetResult();
 
         await WaitUntilAsync(
-            predicate: () => context.Jobs.Any(predicate: j => j.Payload == payload && j.ReservedAt == null),
-            failureMessage: "Job was never released for retry after a shutdown-time ObjectDisposedException."
+            () => context.Jobs.Any(j => j.Payload == payload && j.ReservedAt == null),
+            "Job was never released for retry after a shutdown-time ObjectDisposedException."
         );
 
-        QueueJobModel survivor = context.Jobs.Single(predicate: j => j.Payload == payload);
+        QueueJobModel survivor = context.Jobs.Single(j => j.Payload == payload);
         survivor
             .Attempts.Should()
-            .Be(expected: 0, because: "the attempt budget must not be burned by a shutdown interruption");
+            .Be(0, "the attempt budget must not be burned by a shutdown interruption");
         context.FailedJobs.Should().BeEmpty();
     }
 
@@ -152,24 +152,24 @@ public class QueueWorkerShutdownRecoveryTests
     public async Task OperationCanceled_WithoutShutdown_IsTreatedAsAGenuineFault_EventuallyDeadLetters()
     {
         (QueueWorker worker, TestQueueContextAdapter context, _, string payload) = Build(
-            queueName: "gated-cancel-fault",
-            exceptionMode: "cancelled",
-            gateKey: out string gateKey
+            "gated-cancel-fault",
+            "cancelled",
+            out string gateKey
         );
         worker.Start();
 
-        await WaitUntilReservedAsync(context: context, payload: payload);
+        await WaitUntilReservedAsync(context, payload);
         // No Stop() here — the worker's stop token stays live, so the same
         // exception type must NOT match the shutdown-recovery `when` guard.
-        GatedThrowingJob.Gates[key: gateKey].SetResult();
+        GatedThrowingJob.Gates[gateKey].SetResult();
 
         await WaitUntilAsync(
-            predicate: () => context.FailedJobs.Any(predicate: f => f.Payload == payload),
-            failureMessage: "An OperationCanceledException thrown with no shutdown in progress must still "
+            () => context.FailedJobs.Any(f => f.Payload == payload),
+            "An OperationCanceledException thrown with no shutdown in progress must still "
                             + "count toward the attempt budget and eventually dead-letter."
         );
 
-        context.Jobs.Should().NotContain(predicate: j => j.Payload == payload);
+        context.Jobs.Should().NotContain(j => j.Payload == payload);
         worker.Stop();
     }
 
@@ -177,22 +177,22 @@ public class QueueWorkerShutdownRecoveryTests
     public async Task ObjectDisposed_WithoutShutdown_IsTreatedAsAGenuineFault_EventuallyDeadLetters()
     {
         (QueueWorker worker, TestQueueContextAdapter context, _, string payload) = Build(
-            queueName: "gated-disposed-fault",
-            exceptionMode: "disposed",
-            gateKey: out string gateKey
+            "gated-disposed-fault",
+            "disposed",
+            out string gateKey
         );
         worker.Start();
 
-        await WaitUntilReservedAsync(context: context, payload: payload);
-        GatedThrowingJob.Gates[key: gateKey].SetResult();
+        await WaitUntilReservedAsync(context, payload);
+        GatedThrowingJob.Gates[gateKey].SetResult();
 
         await WaitUntilAsync(
-            predicate: () => context.FailedJobs.Any(predicate: f => f.Payload == payload),
-            failureMessage: "An ObjectDisposedException thrown with no shutdown in progress must still "
+            () => context.FailedJobs.Any(f => f.Payload == payload),
+            "An ObjectDisposedException thrown with no shutdown in progress must still "
                             + "count toward the attempt budget and eventually dead-letter."
         );
 
-        context.Jobs.Should().NotContain(predicate: j => j.Payload == payload);
+        context.Jobs.Should().NotContain(j => j.Payload == payload);
         worker.Stop();
     }
 }

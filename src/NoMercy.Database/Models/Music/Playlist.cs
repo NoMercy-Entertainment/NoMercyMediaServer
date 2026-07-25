@@ -16,36 +16,36 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Music;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(UserId))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(UserId))]
 public class Playlist : ColorPaletteTimeStamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [MaxLength(length: 4096)]
-    [JsonProperty(propertyName: "description")]
+    [MaxLength(4096)]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "filename")]
+    [JsonProperty("filename")]
     public string? Filename { get; set; }
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public string? Duration { get; set; }
 
-    [JsonProperty(propertyName: "user_id")]
+    [JsonProperty("user_id")]
     public Guid UserId { get; set; }
 
-    [JsonProperty(propertyName: "user")]
+    [JsonProperty("user")]
     public User User { get; set; } = null!;
 
-    [JsonProperty(propertyName: "playlist_track")]
+    [JsonProperty("playlist_track")]
     public ICollection<PlaylistTrack> Tracks { get; set; } = [];
 }

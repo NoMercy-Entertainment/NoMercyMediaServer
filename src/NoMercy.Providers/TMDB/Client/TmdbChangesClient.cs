@@ -30,7 +30,7 @@ public class TmdbChangesClient : TmdbBaseClient
         int limit = 500
     )
     {
-        return ChangeList(resource: "movie/changes", startDate: startDate, endDate: endDate, limit: limit);
+        return ChangeList("movie/changes", startDate, endDate, limit);
     }
 
     public Task<List<TmdbChangeListItem>?> TvChanges(
@@ -39,7 +39,7 @@ public class TmdbChangesClient : TmdbBaseClient
         int limit = 500
     )
     {
-        return ChangeList(resource: "tv/changes", startDate: startDate, endDate: endDate, limit: limit);
+        return ChangeList("tv/changes", startDate, endDate, limit);
     }
 
     public Task<List<TmdbChangeListItem>?> PersonChanges(
@@ -48,7 +48,7 @@ public class TmdbChangesClient : TmdbBaseClient
         int limit = 500
     )
     {
-        return ChangeList(resource: "person/changes", startDate: startDate, endDate: endDate, limit: limit);
+        return ChangeList("person/changes", startDate, endDate, limit);
     }
 
     private Task<List<TmdbChangeListItem>?> ChangeList(
@@ -61,13 +61,13 @@ public class TmdbChangesClient : TmdbBaseClient
         Dictionary<string, string?> queryParams = new();
 
         if (startDate is not null)
-            queryParams[key: "start_date"] = startDate;
+            queryParams["start_date"] = startDate;
         if (endDate is not null)
-            queryParams[key: "end_date"] = endDate;
+            queryParams["end_date"] = endDate;
 
         string url =
-            queryParams.Count > 0 ? QueryHelpers.AddQueryString(uri: resource, queryString: queryParams) : resource;
+            queryParams.Count > 0 ? QueryHelpers.AddQueryString(resource, queryParams) : resource;
 
-        return Paginated<TmdbChangeListItem>(url: url, limit: limit);
+        return Paginated<TmdbChangeListItem>(url, limit);
     }
 }

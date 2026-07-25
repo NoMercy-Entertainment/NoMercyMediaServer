@@ -26,13 +26,13 @@ public class UlidNewtonsoftConverter : JsonConverter<Ulid>
         if (reader.TokenType == JsonToken.Null)
             return default;
         if (reader.TokenType != JsonToken.String)
-            throw new JsonSerializationException(message: $"Expected string Ulid, got {reader.TokenType}");
+            throw new JsonSerializationException($"Expected string Ulid, got {reader.TokenType}");
         string? s = (string?)reader.Value;
-        return string.IsNullOrEmpty(value: s) ? default : Ulid.Parse(base32: s);
+        return string.IsNullOrEmpty(s) ? default : Ulid.Parse(s);
     }
 
     public override void WriteJson(JsonWriter writer, Ulid value, JsonSerializer serializer)
     {
-        writer.WriteValue(value: value.ToString());
+        writer.WriteValue(value.ToString());
     }
 }

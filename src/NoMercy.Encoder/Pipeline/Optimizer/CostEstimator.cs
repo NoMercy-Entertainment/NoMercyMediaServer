@@ -22,16 +22,16 @@ public class CostEstimator
 {
     public CostEstimate EstimateGroup(ExecutionGroup group, TimeSpan inputDuration)
     {
-        bool hasVideoEncode = group.Nodes.Any(predicate: n => n.Operation == OperationType.Encode);
+        bool hasVideoEncode = group.Nodes.Any(n => n.Operation == OperationType.Encode);
 
         if (!hasVideoEncode)
         {
             // Subtitle/chapter/thumbnail extraction is nearly instant
             return new(
-                EstimatedDuration: TimeSpan.FromSeconds(seconds: 10),
-                GpuUtilization: 0,
-                CpuUtilization: 0.1,
-                EstimatedOutputBytes: 0
+                TimeSpan.FromSeconds(10),
+                0,
+                0.1,
+                0
             );
         }
 
@@ -40,16 +40,16 @@ public class CostEstimator
         // CPU groups: assume 0.8x realtime  (slower-than-realtime)
         double speedFactor = group.RequiresGpu ? 2.5 : 0.8;
 
-        TimeSpan estimated = TimeSpan.FromSeconds(value: inputDuration.TotalSeconds / speedFactor);
+        TimeSpan estimated = TimeSpan.FromSeconds(inputDuration.TotalSeconds / speedFactor);
 
         // GPU utilization as fraction of max encoder sessions (assume 12 slots as reference)
         double gpuUtil = group.RequiresGpu ? (double)group.GpuSlotsRequired / 12 : 0;
 
         return new(
-            EstimatedDuration: estimated,
-            GpuUtilization: gpuUtil,
-            CpuUtilization: group.RequiresGpu ? 0.2 : 0.8,
-            EstimatedOutputBytes: 0
+            estimated,
+            gpuUtil,
+            group.RequiresGpu ? 0.2 : 0.8,
+            0
         );
     }
 
@@ -58,7 +58,7 @@ public class CostEstimator
         TimeSpan total = TimeSpan.Zero;
         foreach (ExecutionGroup group in groups)
         {
-            CostEstimate estimate = EstimateGroup(group: group, inputDuration: inputDuration);
+            CostEstimate estimate = EstimateGroup(group, inputDuration);
             total += estimate.EstimatedDuration;
         }
 

@@ -19,15 +19,15 @@ public class DiskOverlayLoaderTests : IDisposable
 
     public DiskOverlayLoaderTests()
     {
-        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"nomercy-overlay-{Ulid.NewUlid()}");
-        Directory.CreateDirectory(path: _tempDir);
+        _tempDir = Path.Combine(Path.GetTempPath(), $"nomercy-overlay-{Ulid.NewUlid()}");
+        Directory.CreateDirectory(_tempDir);
     }
 
     public void Dispose()
     {
         try
         {
-            Directory.Delete(path: _tempDir, recursive: true);
+            Directory.Delete(_tempDir, true);
         }
         catch { }
     }
@@ -36,8 +36,8 @@ public class DiskOverlayLoaderTests : IDisposable
     public void Loads_wrapper_form()
     {
         File.WriteAllText(
-            path: Path.Combine(path1: _tempDir, path2: "wrap.json"),
-            contents: """
+            Path.Combine(_tempDir, "wrap.json"),
+            """
                       {
                           "name": "Wrapped",
                           "profile": { "id": "01HQ6298ZS00000000000000AA", "name": "Wrapped", "container": 3, "audio": [], "subtitles": [] }
@@ -45,9 +45,9 @@ public class DiskOverlayLoaderTests : IDisposable
                       """
         );
 
-        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(directory: _tempDir);
-        result.Loaded.Should().HaveCount(expected: 1);
-        result.Loaded[index: 0].Profile.Name.Should().Be(expected: "Wrapped");
+        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
+        result.Loaded.Should().HaveCount(1);
+        result.Loaded[0].Profile.Name.Should().Be("Wrapped");
         result.Errors.Should().BeEmpty();
     }
 
@@ -55,41 +55,41 @@ public class DiskOverlayLoaderTests : IDisposable
     public void Loads_raw_form()
     {
         File.WriteAllText(
-            path: Path.Combine(path1: _tempDir, path2: "raw.json"),
-            contents: """
+            Path.Combine(_tempDir, "raw.json"),
+            """
                       { "id": "01HQ6298ZS00000000000000BB", "name": "Raw", "container": 3, "audio": [], "subtitles": [] }
                       """
         );
 
-        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(directory: _tempDir);
-        result.Loaded.Should().HaveCount(expected: 1);
-        result.Loaded[index: 0].Profile.Name.Should().Be(expected: "Raw");
+        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
+        result.Loaded.Should().HaveCount(1);
+        result.Loaded[0].Profile.Name.Should().Be("Raw");
     }
 
     [Fact]
     public void Bad_json_logs_error_skips_file_continues()
     {
         File.WriteAllText(
-            path: Path.Combine(path1: _tempDir, path2: "good.json"),
-            contents: """
+            Path.Combine(_tempDir, "good.json"),
+            """
                       { "name": "Good", "profile": { "id": "01HQ6298ZS00000000000000CC", "name": "Good", "container": 3, "audio": [], "subtitles": [] } }
                       """
         );
-        File.WriteAllText(path: Path.Combine(path1: _tempDir, path2: "bad.json"), contents: "{not json");
+        File.WriteAllText(Path.Combine(_tempDir, "bad.json"), "{not json");
 
-        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(directory: _tempDir);
-        result.Loaded.Should().HaveCount(expected: 1);
-        result.Loaded[index: 0].Profile.Name.Should().Be(expected: "Good");
-        result.Errors.Should().HaveCount(expected: 1);
-        result.Errors[index: 0].Should().Contain(expected: "bad.json");
+        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
+        result.Loaded.Should().HaveCount(1);
+        result.Loaded[0].Profile.Name.Should().Be("Good");
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Should().Contain("bad.json");
     }
 
     [Fact]
     public void Forward_compat_extra_keys_tolerated()
     {
         File.WriteAllText(
-            path: Path.Combine(path1: _tempDir, path2: "extra.json"),
-            contents: """
+            Path.Combine(_tempDir, "extra.json"),
+            """
                       {
                           "name": "Extra",
                           "futureField": "ignored",
@@ -104,66 +104,66 @@ public class DiskOverlayLoaderTests : IDisposable
                       }
                       """
         );
-        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(directory: _tempDir);
-        result.Loaded.Should().HaveCount(expected: 1);
+        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
+        result.Loaded.Should().HaveCount(1);
         result.Errors.Should().BeEmpty();
     }
 
     [Fact]
     public void Empty_file_logs_error_continues()
     {
-        File.WriteAllText(path: Path.Combine(path1: _tempDir, path2: "empty.json"), contents: "");
+        File.WriteAllText(Path.Combine(_tempDir, "empty.json"), "");
         File.WriteAllText(
-            path: Path.Combine(path1: _tempDir, path2: "ok.json"),
-            contents: """
+            Path.Combine(_tempDir, "ok.json"),
+            """
                       { "id": "01HQ6298ZS00000000000000EE", "name": "Ok", "container": 3, "audio": [], "subtitles": [] }
                       """
         );
-        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(directory: _tempDir);
-        result.Loaded.Should().HaveCount(expected: 1);
-        result.Errors.Should().HaveCount(expected: 1);
+        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
+        result.Loaded.Should().HaveCount(1);
+        result.Errors.Should().HaveCount(1);
     }
 
     [Fact]
     public void Mixed_wrapper_and_raw_both_load()
     {
         File.WriteAllText(
-            path: Path.Combine(path1: _tempDir, path2: "w.json"),
-            contents: """
+            Path.Combine(_tempDir, "w.json"),
+            """
                       { "name": "W", "profile": { "id": "01HQ6298ZS00000000000000FF", "name": "W", "container": 3, "audio": [], "subtitles": [] } }
                       """
         );
         File.WriteAllText(
-            path: Path.Combine(path1: _tempDir, path2: "r.json"),
-            contents: """
+            Path.Combine(_tempDir, "r.json"),
+            """
                       { "id": "01HQ6298ZS0000000000000100", "name": "R", "container": 3, "audio": [], "subtitles": [] }
                       """
         );
-        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(directory: _tempDir);
-        result.Loaded.Should().HaveCount(expected: 2);
+        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
+        result.Loaded.Should().HaveCount(2);
         result.Errors.Should().BeEmpty();
     }
 
     [Fact]
     public void Subdirectories_not_scanned_recursively()
     {
-        string sub = Path.Combine(path1: _tempDir, path2: "sub");
-        Directory.CreateDirectory(path: sub);
+        string sub = Path.Combine(_tempDir, "sub");
+        Directory.CreateDirectory(sub);
         File.WriteAllText(
-            path: Path.Combine(path1: sub, path2: "deep.json"),
-            contents: """
+            Path.Combine(sub, "deep.json"),
+            """
                       { "id": "01HQ6298ZS0000000000000111", "name": "Deep", "container": 3, "audio": [], "subtitles": [] }
                       """
         );
-        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(directory: _tempDir);
+        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
         result.Loaded.Should().BeEmpty();
     }
 
     [Fact]
     public void Missing_directory_returns_empty()
     {
-        string missing = Path.Combine(path1: _tempDir, path2: "nope");
-        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(directory: missing);
+        string missing = Path.Combine(_tempDir, "nope");
+        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(missing);
         result.Loaded.Should().BeEmpty();
         result.Errors.Should().BeEmpty();
     }
@@ -172,20 +172,20 @@ public class DiskOverlayLoaderTests : IDisposable
     public void Duplicate_ulid_across_files_warns_but_loads_both()
     {
         File.WriteAllText(
-            path: Path.Combine(path1: _tempDir, path2: "first.json"),
-            contents: """
+            Path.Combine(_tempDir, "first.json"),
+            """
                       { "id": "01HQ6298ZS0000000000000222", "name": "First", "container": 3, "audio": [], "subtitles": [] }
                       """
         );
         File.WriteAllText(
-            path: Path.Combine(path1: _tempDir, path2: "second.json"),
-            contents: """
+            Path.Combine(_tempDir, "second.json"),
+            """
                       { "id": "01HQ6298ZS0000000000000222", "name": "Second", "container": 3, "audio": [], "subtitles": [] }
                       """
         );
-        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(directory: _tempDir);
-        result.Loaded.Should().HaveCount(expected: 2);
-        result.Errors.Should().HaveCount(expected: 1);
-        result.Errors[index: 0].Should().Contain(expected: "duplicate");
+        DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
+        result.Loaded.Should().HaveCount(2);
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Should().Contain("duplicate");
     }
 }

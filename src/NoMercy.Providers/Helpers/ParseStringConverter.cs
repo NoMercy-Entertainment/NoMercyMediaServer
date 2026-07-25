@@ -32,12 +32,12 @@ public class ParseStringConverter : JsonConverter
         if (reader.TokenType == JsonToken.Null)
             return null;
 
-        string? value = serializer.Deserialize<string>(reader: reader);
+        string? value = serializer.Deserialize<string>(reader);
 
-        if (CanConvert(t: t) && long.TryParse(s: value, result: out long l))
+        if (CanConvert(t) && long.TryParse(value, out long l))
             return l;
 
-        throw new(message: "Cannot unmarshal type long");
+        throw new("Cannot unmarshal type long");
     }
 
     public override void WriteJson(
@@ -48,11 +48,11 @@ public class ParseStringConverter : JsonConverter
     {
         if (untypedValue == null)
         {
-            serializer.Serialize(jsonWriter: writer, value: null);
+            serializer.Serialize(writer, null);
             return;
         }
 
         long value = (long)untypedValue;
-        serializer.Serialize(jsonWriter: writer, value: value.ToString());
+        serializer.Serialize(writer, value.ToString());
     }
 }

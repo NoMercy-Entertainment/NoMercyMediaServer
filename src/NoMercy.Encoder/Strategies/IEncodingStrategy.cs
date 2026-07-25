@@ -94,7 +94,7 @@ public interface IEncodingStrategy : IStageOverrides
     /// that groups all tasks from one coordinator run so child jobs can be
     /// queried as a set.</para>
     /// </summary>
-    DecomposedTask[] Decompose(OutputPlan plan, string groupTag) => [WholeTask(groupTag: groupTag)];
+    DecomposedTask[] Decompose(OutputPlan plan, string groupTag) => [WholeTask(groupTag)];
 
     /// <summary>
     /// Helper used by the default <see cref="Decompose"/> implementation and
@@ -102,7 +102,7 @@ public interface IEncodingStrategy : IStageOverrides
     /// </summary>
     static DecomposedTask WholeTask(string groupTag) =>
         new(
-            TaskId: $"{groupTag}-whole",
+            $"{groupTag}-whole",
             ParentJobId: 0,
             GroupTag: groupTag,
             Kind: EncodeTaskKind.Whole,

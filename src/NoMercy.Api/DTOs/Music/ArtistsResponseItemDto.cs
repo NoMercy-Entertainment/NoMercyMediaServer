@@ -18,83 +18,83 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record ArtistsResponseItemDto
 {
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    [JsonProperty(propertyName: "track_id")]
+    [JsonProperty("track_id")]
     public string? TrackId { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public int Tracks { get; set; }
 
     public ArtistsResponseItemDto(Artist artist)
     {
         ColorPalette = artist.ColorPalette;
         Cover = artist.Cover ?? artist.Images.FirstOrDefault()?.FilePath;
-        Cover = !string.IsNullOrEmpty(value: Cover)
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+        Cover = !string.IsNullOrEmpty(Cover)
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = artist.Disambiguation;
         Description = artist.Description;
         Id = artist.Id;
         Name = artist.Name;
         Type = "artist";
-        Link = new(uriString: $"/music/artists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
-        Tracks = artist.ArtistTrack.Select(selector: artistTrack => artistTrack.Track).Count();
+        Tracks = artist.ArtistTrack.Select(artistTrack => artistTrack.Track).Count();
     }
 
     public ArtistsResponseItemDto(Album album)
     {
         ColorPalette = album.ColorPalette;
         Cover = album.Cover ?? album.Images.FirstOrDefault()?.FilePath;
-        Cover = !string.IsNullOrEmpty(value: Cover)
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+        Cover = !string.IsNullOrEmpty(Cover)
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = album.Disambiguation;
         Description = album.Description;
         Id = album.Id;
         Name = album.Name;
         Type = "artist";
-        Link = new(uriString: $"/music/artists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
-        Tracks = album.AlbumTrack.Select(selector: albumTrack => albumTrack.Track).Count();
+        Tracks = album.AlbumTrack.Select(albumTrack => albumTrack.Track).Count();
     }
 
     public ArtistsResponseItemDto(ArtistCardDto artist)
     {
-        ColorPalette = ColorPalette.FromJsonOrNull(json: artist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(artist.ColorPalette);
         Cover = artist.Cover ?? artist.ThumbImagePath;
-        Cover = !string.IsNullOrEmpty(value: Cover)
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+        Cover = !string.IsNullOrEmpty(Cover)
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = artist.Disambiguation;
         Description = artist.Description;
         Id = artist.Id;
         Name = artist.Name;
         Type = "artist";
-        Link = new(uriString: $"/music/artists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Tracks = artist.TrackCount;
     }
 }

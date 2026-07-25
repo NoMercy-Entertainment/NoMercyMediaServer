@@ -20,7 +20,7 @@ namespace NoMercy.Tests.Cli;
 /// command-invocation time, so nothing may cache or share a single instance
 /// across commands.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class CliClientFactoryTests
 {
     [Fact]
@@ -28,7 +28,7 @@ public sealed class CliClientFactoryTests
     {
         CliClientFactory factory = new();
 
-        using ICliClient client = factory.Create(pipeNameOrSocketPath: null);
+        using ICliClient client = factory.Create(null);
 
         client.Should().NotBeNull();
     }
@@ -38,10 +38,10 @@ public sealed class CliClientFactoryTests
     {
         CliClientFactory factory = new();
 
-        using ICliClient first = factory.Create(pipeNameOrSocketPath: "nomercy-test-pipe-a");
-        using ICliClient second = factory.Create(pipeNameOrSocketPath: "nomercy-test-pipe-b");
+        using ICliClient first = factory.Create("nomercy-test-pipe-a");
+        using ICliClient second = factory.Create("nomercy-test-pipe-b");
 
-        first.Should().NotBeSameAs(unexpected: second);
+        first.Should().NotBeSameAs(second);
     }
 
     [Fact]
@@ -49,9 +49,9 @@ public sealed class CliClientFactoryTests
     {
         CliClientFactory factory = new();
 
-        Exception? ex = Record.Exception(testCode: () =>
+        Exception? ex = Record.Exception(() =>
         {
-            using ICliClient client = factory.Create(pipeNameOrSocketPath: null);
+            using ICliClient client = factory.Create(null);
         });
 
         ex.Should().BeNull();

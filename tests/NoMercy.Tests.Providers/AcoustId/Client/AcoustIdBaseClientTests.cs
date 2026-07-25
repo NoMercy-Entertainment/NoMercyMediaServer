@@ -23,7 +23,7 @@ namespace NoMercy.Tests.Providers.AcoustId.Client;
 /// The loop body never executed (dead code).
 /// The fix: Remove the while loop and the unused `iteration` variable.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class AcoustIdBaseClientTests
 {
     [Fact]
@@ -33,29 +33,29 @@ public class AcoustIdBaseClientTests
         // that was incremented. After removing the dead while loop, the method
         // should have fewer local variables (no `iteration` int).
         MethodInfo? getMethod = typeof(AcoustIdBaseClient).GetMethod(
-            name: "Get",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "Get",
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(@object: getMethod);
+        Assert.NotNull(getMethod);
 
         // Get is async, so we need to find the state machine type
         Type? stateMachineType = getMethod
             .GetCustomAttribute<AsyncStateMachineAttribute>()
             ?.StateMachineType;
 
-        Assert.NotNull(@object: stateMachineType);
+        Assert.NotNull(stateMachineType);
 
         // The state machine's MoveNext method contains the actual compiled IL
         MethodInfo? moveNext = stateMachineType.GetMethod(
-            name: "MoveNext",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "MoveNext",
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(@object: moveNext);
+        Assert.NotNull(moveNext);
 
         MethodBody? body = moveNext.GetMethodBody();
-        Assert.NotNull(@object: body);
+        Assert.NotNull(body);
 
         // Get the IL bytes and look for branch-back instructions (while loop pattern).
         // A while loop in IL compiles to: condition check → branch forward (skip body) or
@@ -67,24 +67,24 @@ public class AcoustIdBaseClientTests
         // the while loop. After removing the while loop, there should be no local
         // variable named "iteration" in the state machine fields.
         FieldInfo? iterationField = stateMachineType.GetField(
-            name: "<iteration>5__",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public
+            "<iteration>5__",
+            BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public
         );
 
         // Also check with other possible compiler-generated name patterns
         FieldInfo[] allFields = stateMachineType.GetFields(
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public
+            BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public
         );
 
-        bool hasIterationField = allFields.Any(predicate: f =>
-            f.Name.Contains(value: "iteration", comparisonType: StringComparison.OrdinalIgnoreCase)
+        bool hasIterationField = allFields.Any(f =>
+            f.Name.Contains("iteration", StringComparison.OrdinalIgnoreCase)
         );
 
         Assert.False(
-            condition: hasIterationField,
-            userMessage: "PROV-H06 regression: State machine should NOT contain an 'iteration' field. "
+            hasIterationField,
+            "PROV-H06 regression: State machine should NOT contain an 'iteration' field. "
                          + "The contradictory while loop and its iteration variable should be removed. "
-                         + $"Fields found: [{string.Join(separator: ", ", values: allFields.Select(selector: f => $"{f.Name}: {f.FieldType.Name}"))}]"
+                         + $"Fields found: [{string.Join(", ", allFields.Select(f => $"{f.Name}: {f.FieldType.Name}"))}]"
         );
     }
 
@@ -92,47 +92,47 @@ public class AcoustIdBaseClientTests
     public void Get_Method_IsAsync_ReturnsGenericTask()
     {
         MethodInfo? getMethod = typeof(AcoustIdBaseClient).GetMethod(
-            name: "Get",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "Get",
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(@object: getMethod);
-        Assert.True(condition: getMethod.ReturnType.IsGenericType);
-        Assert.Equal(expected: typeof(Task<>), actual: getMethod.ReturnType.GetGenericTypeDefinition());
+        Assert.NotNull(getMethod);
+        Assert.True(getMethod.ReturnType.IsGenericType);
+        Assert.Equal(typeof(Task<>), getMethod.ReturnType.GetGenericTypeDefinition());
     }
 
     [Fact]
     public void Get_Method_HasAsyncStateMachineAttribute()
     {
         MethodInfo? getMethod = typeof(AcoustIdBaseClient).GetMethod(
-            name: "Get",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "Get",
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(@object: getMethod);
+        Assert.NotNull(getMethod);
 
         AsyncStateMachineAttribute? attr =
             getMethod.GetCustomAttribute<AsyncStateMachineAttribute>();
 
-        Assert.NotNull(@object: attr);
+        Assert.NotNull(attr);
     }
 
     [Fact]
     public void Get_Method_HasCorrectParameters()
     {
         MethodInfo? getMethod = typeof(AcoustIdBaseClient).GetMethod(
-            name: "Get",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "Get",
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(@object: getMethod);
+        Assert.NotNull(getMethod);
 
         ParameterInfo[] parameters = getMethod.GetParameters();
-        Assert.Equal(expected: 4, actual: parameters.Length);
-        Assert.Equal(expected: "url", actual: parameters[0].Name);
-        Assert.Equal(expected: "query", actual: parameters[1].Name);
-        Assert.Equal(expected: "priority", actual: parameters[2].Name);
-        Assert.Equal(expected: "skipCache", actual: parameters[3].Name);
+        Assert.Equal(4, parameters.Length);
+        Assert.Equal("url", parameters[0].Name);
+        Assert.Equal("query", parameters[1].Name);
+        Assert.Equal("priority", parameters[2].Name);
+        Assert.Equal("skipCache", parameters[3].Name);
     }
 
     [Fact]
@@ -142,19 +142,19 @@ public class AcoustIdBaseClientTests
         // the iteration counter as a field in the async state machine.
         // After removing the while loop, verify no such counter field exists.
         MethodInfo? getMethod = typeof(AcoustIdBaseClient).GetMethod(
-            name: "Get",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "Get",
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(@object: getMethod);
+        Assert.NotNull(getMethod);
 
         Type? stateMachineType = getMethod
             .GetCustomAttribute<AsyncStateMachineAttribute>()
             ?.StateMachineType;
-        Assert.NotNull(@object: stateMachineType);
+        Assert.NotNull(stateMachineType);
 
         FieldInfo[] fields = stateMachineType.GetFields(
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public
+            BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public
         );
 
         // The state machine should have fields for: url, query, priority, retry,
@@ -164,19 +164,19 @@ public class AcoustIdBaseClientTests
         // We check that no int-typed generated field corresponds to `iteration`.
 
         // Filter to user-code local variable fields (compiler-generated with 5__ pattern)
-        FieldInfo[] localFields = fields.Where(predicate: f => f.Name.Contains(value: "5__")).ToArray();
+        FieldInfo[] localFields = fields.Where(f => f.Name.Contains("5__")).ToArray();
 
         // Count int-type locals — removing the while loop should reduce this count.
         // The original code had `int iteration = 0;` as the only int local in the try block.
         // After removal, no int locals should exist in the try block portion.
         // (retry parameter is a state machine field, not a 5__ local)
-        bool hasIterationLikeField = localFields.Any(predicate: f =>
-            f.Name.Contains(value: "iteration", comparisonType: StringComparison.OrdinalIgnoreCase)
+        bool hasIterationLikeField = localFields.Any(f =>
+            f.Name.Contains("iteration", StringComparison.OrdinalIgnoreCase)
         );
 
         Assert.False(
-            condition: hasIterationLikeField,
-            userMessage: "PROV-H06 regression: No 'iteration' local variable should exist in the state machine "
+            hasIterationLikeField,
+            "PROV-H06 regression: No 'iteration' local variable should exist in the state machine "
                          + "after removing the contradictory while loop."
         );
     }
@@ -184,6 +184,6 @@ public class AcoustIdBaseClientTests
     [Fact]
     public void AcoustIdBaseClient_Implements_IDisposable()
     {
-        Assert.True(condition: typeof(IDisposable).IsAssignableFrom(c: typeof(AcoustIdBaseClient)));
+        Assert.True(typeof(IDisposable).IsAssignableFrom(typeof(AcoustIdBaseClient)));
     }
 }

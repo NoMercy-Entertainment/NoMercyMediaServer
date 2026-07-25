@@ -36,30 +36,30 @@ public sealed class ProbedMedia
     public required IReadOnlyList<JObject> FirstFrameSideData { get; init; }
 
     public IEnumerable<JObject> StreamsOfType(string codecType) =>
-        Streams.Where(predicate: s => (string?)s[propertyName: "codec_type"] == codecType);
+        Streams.Where(s => (string?)s["codec_type"] == codecType);
 
-    public IEnumerable<JObject> VideoStreams => StreamsOfType(codecType: "video");
-    public IEnumerable<JObject> AudioStreams => StreamsOfType(codecType: "audio");
-    public IEnumerable<JObject> SubtitleStreams => StreamsOfType(codecType: "subtitle");
+    public IEnumerable<JObject> VideoStreams => StreamsOfType("video");
+    public IEnumerable<JObject> AudioStreams => StreamsOfType("audio");
+    public IEnumerable<JObject> SubtitleStreams => StreamsOfType("subtitle");
 
     /// <summary>The primary (first) video stream, or null for audio-only media.</summary>
     public JObject? PrimaryVideo => VideoStreams.FirstOrDefault();
 
     public bool HasSideData(string sideDataType) =>
-        FirstFrameSideData.Any(predicate: sd =>
+        FirstFrameSideData.Any(sd =>
             string.Equals(
-                a: (string?)sd[propertyName: "side_data_type"],
-                b: sideDataType,
-                comparisonType: StringComparison.OrdinalIgnoreCase
+                (string?)sd["side_data_type"],
+                sideDataType,
+                StringComparison.OrdinalIgnoreCase
             )
         );
 
     public JObject? SideData(string sideDataType) =>
-        FirstFrameSideData.FirstOrDefault(predicate: sd =>
+        FirstFrameSideData.FirstOrDefault(sd =>
             string.Equals(
-                a: (string?)sd[propertyName: "side_data_type"],
-                b: sideDataType,
-                comparisonType: StringComparison.OrdinalIgnoreCase
+                (string?)sd["side_data_type"],
+                sideDataType,
+                StringComparison.OrdinalIgnoreCase
             )
         );
 }
@@ -74,8 +74,8 @@ public static class FfprobeRunner
     public static ProbedMedia Probe(string ffprobePath, string filePath)
     {
         JObject root = RunJson(
-            ffprobePath: ffprobePath,
-            args: ["-show_streams", "-show_format", "-show_chapters", "-i", filePath]
+            ffprobePath,
+            ["-show_streams", "-show_format", "-show_chapters", "-i", filePath]
         );
 
         // First-frame side data: select the primary video stream, read one frame.
@@ -84,8 +84,7 @@ public static class FfprobeRunner
         try
         {
             JObject frames = RunJson(
-                ffprobePath: ffprobePath,
-                args:
+                ffprobePath,
                 [
                     "-select_streams",
                     "v:0",
@@ -98,9 +97,9 @@ public static class FfprobeRunner
                     filePath,
                 ]
             );
-            JArray? frameArr = frames[propertyName: "frames"] as JArray;
+            JArray? frameArr = frames["frames"] as JArray;
             JObject? firstFrame = frameArr?.OfType<JObject>().FirstOrDefault();
-            if (firstFrame?[propertyName: "side_data_list"] is JArray sd)
+            if (firstFrame?["side_data_list"] is JArray sd)
                 sideData = sd.OfType<JObject>().ToList();
         }
         catch
@@ -111,9 +110,9 @@ public static class FfprobeRunner
         return new ProbedMedia
         {
             Path = filePath,
-            Streams = (root[propertyName: "streams"] as JArray)?.OfType<JObject>().ToList() ?? [],
-            Format = root[propertyName: "format"] as JObject ?? new JObject(),
-            Chapters = (root[propertyName: "chapters"] as JArray)?.OfType<JObject>().ToList() ?? [],
+            Streams = (root["streams"] as JArray)?.OfType<JObject>().ToList() ?? [],
+            Format = root["format"] as JObject ?? new JObject(),
+            Chapters = (root["chapters"] as JArray)?.OfType<JObject>().ToList() ?? [],
             FirstFrameSideData = sideData,
         };
     }
@@ -128,27 +127,27 @@ public static class FfprobeRunner
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        psi.ArgumentList.Add(item: "-hide_banner");
-        psi.ArgumentList.Add(item: "-loglevel");
-        psi.ArgumentList.Add(item: "error");
-        psi.ArgumentList.Add(item: "-print_format");
-        psi.ArgumentList.Add(item: "json");
+        psi.ArgumentList.Add("-hide_banner");
+        psi.ArgumentList.Add("-loglevel");
+        psi.ArgumentList.Add("error");
+        psi.ArgumentList.Add("-print_format");
+        psi.ArgumentList.Add("json");
         foreach (string arg in args)
-            psi.ArgumentList.Add(item: arg);
+            psi.ArgumentList.Add(arg);
 
         using Process process =
-            Process.Start(startInfo: psi) ?? throw new InvalidOperationException(message: "ffprobe failed to start");
+            Process.Start(psi) ?? throw new InvalidOperationException("ffprobe failed to start");
         Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
         Task<string> stderrTask = process.StandardError.ReadToEndAsync();
-        process.WaitForExit(milliseconds: 60_000);
+        process.WaitForExit(60_000);
         string stdout = stdoutTask.GetAwaiter().GetResult();
         string stderr = stderrTask.GetAwaiter().GetResult();
 
         if (process.ExitCode != 0)
             throw new InvalidOperationException(
-                message: $"ffprobe exited {process.ExitCode} for {string.Join(separator: ' ', values: args)}: {stderr}"
+                $"ffprobe exited {process.ExitCode} for {string.Join(' ', args)}: {stderr}"
             );
 
-        return JObject.Parse(json: string.IsNullOrWhiteSpace(value: stdout) ? "{}" : stdout);
+        return JObject.Parse(string.IsNullOrWhiteSpace(stdout) ? "{}" : stdout);
     }
 }

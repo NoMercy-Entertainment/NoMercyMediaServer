@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TVDB.Models.Shared;
 
 public class TvdbAlias
 {
-    [JsonProperty(propertyName: "language")]
+    [JsonProperty("language")]
     public string Language { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 }

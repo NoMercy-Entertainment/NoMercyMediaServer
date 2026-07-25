@@ -16,18 +16,18 @@ namespace NoMercy.Setup.Dto;
 
 public class ServerRegisterResponse
 {
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public ServerRegisterResponseData Data { get; set; } = new();
 }
 
 public class ServerRegisterResponseData
 {
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string ServerId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "user")]
+    [JsonProperty("user")]
     public User User { get; set; } = new();
 }

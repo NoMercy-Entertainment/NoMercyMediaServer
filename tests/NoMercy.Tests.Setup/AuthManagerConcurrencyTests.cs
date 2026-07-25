@@ -37,7 +37,7 @@ namespace NoMercy.Tests.Setup;
 /// window the in-memory commands finish too fast to ever overlap, and the race
 /// hides.</para>
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class AuthManagerConcurrencyTests : IDisposable
 {
     private readonly AppDbContext _appContext;
@@ -49,32 +49,32 @@ public class AuthManagerConcurrencyTests : IDisposable
         ServiceCollection services = new();
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(serviceProvider: provider);
+        TokenStore.Initialize(provider);
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
-        optionsBuilder.AddInterceptors(interceptors: new LeaseHoldingInterceptor());
-        _appContext = new(options: optionsBuilder.Options);
+        optionsBuilder.UseSqlite("Data Source=:memory:");
+        optionsBuilder.AddInterceptors(new LeaseHoldingInterceptor());
+        _appContext = new(optionsBuilder.Options);
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(appContext: _appContext, driver: new LocalStorageDriver(), authTokenStore: _authTokenStore);
+        _authManager = new(_appContext, new LocalStorageDriver(), _authTokenStore);
     }
 
     public void Dispose()
     {
         _appContext.Database.CloseConnection();
         _appContext.Dispose();
-        _authTokenStore.SetAccessToken(token: null);
+        _authTokenStore.SetAccessToken(null);
     }
 
     [Fact]
     public async Task ConcurrentReadAndWrite_OnSharedContext_DoesNotThrowConcurrencyException()
     {
-        await SeedSecureValue(key: "auth_access_token", value: CreateValidJwt(validTo: DateTime.UtcNow.AddHours(value: 2)));
+        await SeedSecureValue("auth_access_token", CreateValidJwt(DateTime.UtcNow.AddHours(2)));
         await SeedSecureValue(
-            key: "auth_token_metadata",
-            value: $"{{\"expires_at\":\"{DateTime.UtcNow.AddHours(value: 2):O}\",\"token_type\":\"Bearer\"}}"
+            "auth_token_metadata",
+            $"{{\"expires_at\":\"{DateTime.UtcNow.AddHours(2):O}\",\"token_type\":\"Bearer\"}}"
         );
 
         // Reads (InitializeAsync) interleaved with writes (StoreTokensAsync) on the
@@ -89,23 +89,23 @@ public class AuthManagerConcurrencyTests : IDisposable
             _authManager.InitializeAsync(),
         ];
 
-        Exception? thrown = await Record.ExceptionAsync(testCode: () => Task.WhenAll(tasks: tasks));
+        Exception? thrown = await Record.ExceptionAsync(() => Task.WhenAll(tasks));
 
-        Assert.Null(@object: thrown);
+        Assert.Null(thrown);
     }
 
     private Task StoreAsync() =>
         _authManager.StoreTokensAsync(
-            accessToken: CreateValidJwt(validTo: DateTime.UtcNow.AddHours(value: 2)),
-            refreshToken: "refresh-token",
-            expiresAt: DateTime.UtcNow.AddHours(value: 2),
-            tokenType: "Bearer"
+            CreateValidJwt(DateTime.UtcNow.AddHours(2)),
+            "refresh-token",
+            DateTime.UtcNow.AddHours(2),
+            "Bearer"
         );
 
     private async Task SeedSecureValue(string key, string value)
     {
         _appContext.Configuration.Add(
-            entity: new()
+            new()
             {
                 Key = key,
                 Value = string.Empty,
@@ -119,15 +119,15 @@ public class AuthManagerConcurrencyTests : IDisposable
     {
         JwtSecurityTokenHandler handler = new();
         DateTime notBefore =
-            validTo < DateTime.UtcNow ? validTo.AddMinutes(value: -10) : DateTime.UtcNow.AddMinutes(value: -5);
+            validTo < DateTime.UtcNow ? validTo.AddMinutes(-10) : DateTime.UtcNow.AddMinutes(-5);
         JwtSecurityToken token = new(
             issuer: "https://auth.nomercy.tv/realms/NoMercyTV",
             audience: "nomercy-server",
-            claims: [new(type: "sub", value: Guid.NewGuid().ToString())],
+            claims: [new("sub", Guid.NewGuid().ToString())],
             notBefore: notBefore,
             expires: validTo
         );
-        return handler.WriteToken(token: token);
+        return handler.WriteToken(token);
     }
 
     /// <summary>
@@ -146,8 +146,8 @@ public class AuthManagerConcurrencyTests : IDisposable
             CancellationToken cancellationToken = default
         )
         {
-            await Task.Delay(millisecondsDelay: DelayMs, cancellationToken: cancellationToken);
-            return await base.ReaderExecutingAsync(command: command, eventData: eventData, result: result, cancellationToken: cancellationToken);
+            await Task.Delay(DelayMs, cancellationToken);
+            return await base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
         }
 
         public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
@@ -157,8 +157,8 @@ public class AuthManagerConcurrencyTests : IDisposable
             CancellationToken cancellationToken = default
         )
         {
-            await Task.Delay(millisecondsDelay: DelayMs, cancellationToken: cancellationToken);
-            return await base.NonQueryExecutingAsync(command: command, eventData: eventData, result: result, cancellationToken: cancellationToken);
+            await Task.Delay(DelayMs, cancellationToken);
+            return await base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
         }
 
         public override async ValueTask<InterceptionResult<object>> ScalarExecutingAsync(
@@ -168,8 +168,8 @@ public class AuthManagerConcurrencyTests : IDisposable
             CancellationToken cancellationToken = default
         )
         {
-            await Task.Delay(millisecondsDelay: DelayMs, cancellationToken: cancellationToken);
-            return await base.ScalarExecutingAsync(command: command, eventData: eventData, result: result, cancellationToken: cancellationToken);
+            await Task.Delay(DelayMs, cancellationToken);
+            return await base.ScalarExecutingAsync(command, eventData, result, cancellationToken);
         }
     }
 }

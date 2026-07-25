@@ -19,28 +19,28 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record SeasonDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "season_number")]
+    [JsonProperty("season_number")]
     public long SeasonNumber { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "episodes")]
+    [JsonProperty("episodes")]
     public IEnumerable<EpisodeDto> Episodes { get; set; }
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public IEnumerable<TranslationDto> Translations { get; set; }
 
     public SeasonDto(Season season)
@@ -49,52 +49,52 @@ public record SeasonDto
         string? overview = season.Translations.FirstOrDefault()?.Overview;
 
         Id = season.Id;
-        Title = !string.IsNullOrEmpty(value: title) ? title : season.Title;
-        Overview = !string.IsNullOrEmpty(value: overview) ? overview : season.Overview;
+        Title = !string.IsNullOrEmpty(title) ? title : season.Title;
+        Overview = !string.IsNullOrEmpty(overview) ? overview : season.Overview;
         Poster = season.Poster;
         SeasonNumber = season.SeasonNumber;
         ColorPalette = season.ColorPalette;
-        Translations = season.Translations.Select(selector: translation => new TranslationDto(translation: translation));
+        Translations = season.Translations.Select(translation => new TranslationDto(translation));
         Episodes = season
-            .Episodes.OrderBy(keySelector: episode => episode.EpisodeNumber)
-            .Select(selector: episode => new EpisodeDto(episode: episode));
+            .Episodes.OrderBy(episode => episode.EpisodeNumber)
+            .Select(episode => new EpisodeDto(episode));
     }
 
     public SeasonDto(int tvId, TmdbSeason tmdbSeason, string country)
     {
-        TmdbSeasonClient tmdbSeasonClient = new(tvId: tvId, seasonNumber: tmdbSeason.SeasonNumber);
+        TmdbSeasonClient tmdbSeasonClient = new(tvId, tmdbSeason.SeasonNumber);
         TmdbSeasonAppends? seasonData = tmdbSeasonClient.WithAllAppends().Result;
 
         string? title = seasonData
-            ?.Translations.Translations.FirstOrDefault(predicate: translation =>
+            ?.Translations.Translations.FirstOrDefault(translation =>
                 translation.Iso31661 == country
             )
             ?.Data.Title;
 
         string? overview = seasonData
-            ?.Translations.Translations.FirstOrDefault(predicate: translation =>
+            ?.Translations.Translations.FirstOrDefault(translation =>
                 translation.Iso31661 == country
             )
             ?.Data.Overview;
 
         Id = tmdbSeason.Id;
-        Title = !string.IsNullOrEmpty(value: title) ? title : tmdbSeason.Name;
-        Overview = !string.IsNullOrEmpty(value: overview) ? overview : tmdbSeason.Overview;
+        Title = !string.IsNullOrEmpty(title) ? title : tmdbSeason.Name;
+        Overview = !string.IsNullOrEmpty(overview) ? overview : tmdbSeason.Overview;
         Poster = tmdbSeason.PosterPath;
         SeasonNumber = tmdbSeason.SeasonNumber;
         ColorPalette = new();
         Translations =
-            seasonData?.Translations.Translations.Select(selector: translation => new TranslationDto(
-                translation: translation
+            seasonData?.Translations.Translations.Select(translation => new TranslationDto(
+                translation
             )) ?? [];
         Episodes =
             seasonData
-                ?.Episodes.OrderBy(keySelector: episode => episode.EpisodeNumber)
-                .Select(selector: episode => new EpisodeDto(
-                    tvId: tvId,
-                    seasonNumber: tmdbSeason.SeasonNumber,
-                    episodeNumber: episode.EpisodeNumber,
-                    language: country
+                ?.Episodes.OrderBy(episode => episode.EpisodeNumber)
+                .Select(episode => new EpisodeDto(
+                    tvId,
+                    tmdbSeason.SeasonNumber,
+                    episode.EpisodeNumber,
+                    country
                 ))
             ?? [];
     }

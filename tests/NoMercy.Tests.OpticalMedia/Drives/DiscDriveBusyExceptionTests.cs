@@ -19,45 +19,45 @@ namespace NoMercy.Tests.OpticalMedia.Drives;
 /// drive's lock key and a stable rule id so API controllers can surface a
 /// 409 with a dashboard-linkable rule, and the message must name the drive.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class DiscDriveBusyExceptionTests
 {
     [Fact]
     public void Constructor_SetsDriveKeyProperty()
     {
-        DiscDriveBusyException ex = new(driveKey: "D:\\");
+        DiscDriveBusyException ex = new("D:\\");
 
-        ex.DriveKey.Should().Be(expected: "D:\\");
+        ex.DriveKey.Should().Be("D:\\");
     }
 
     [Fact]
     public void Constructor_SetsStableRuleId()
     {
-        DiscDriveBusyException ex = new(driveKey: "D:\\");
+        DiscDriveBusyException ex = new("D:\\");
 
-        ex.RuleId.Should().Be(expected: EncoderRuleId.DiscDriveBusy);
+        ex.RuleId.Should().Be(EncoderRuleId.DiscDriveBusy);
     }
 
     [Fact]
     public void Message_MentionsDriveKey()
     {
-        DiscDriveBusyException ex = new(driveKey: "volume-uuid-123");
+        DiscDriveBusyException ex = new("volume-uuid-123");
 
-        ex.Message.Should().Contain(expected: "volume-uuid-123");
+        ex.Message.Should().Contain("volume-uuid-123");
     }
 
     [Fact]
     public void Message_ExplainsInProgressRip()
     {
-        DiscDriveBusyException ex = new(driveKey: "D:\\");
+        DiscDriveBusyException ex = new("D:\\");
 
-        ex.Message.Should().Contain(expected: "already being ripped");
+        ex.Message.Should().Contain("already being ripped");
     }
 
     [Fact]
     public void IsInvalidOperationException()
     {
-        DiscDriveBusyException ex = new(driveKey: "D:\\");
+        DiscDriveBusyException ex = new("D:\\");
 
         ex.Should().BeAssignableTo<InvalidOperationException>();
     }

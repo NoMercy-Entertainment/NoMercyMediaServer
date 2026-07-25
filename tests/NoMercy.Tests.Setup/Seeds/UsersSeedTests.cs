@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Setup.Seeds;
 /// never re-runs once any user exists (that ongoing job now belongs to
 /// <c>ServerUserSyncCronJob</c>, covered separately).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class UsersSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -35,26 +35,25 @@ public class UsersSeedTests : IDisposable
 
     public UsersSeedTests()
     {
-        _connection = new(connectionString: "DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
 
-        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(connection: _connection).Options;
+        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(_connection).Options;
 
-        using MediaContext ctx = new(options: _options);
+        using MediaContext ctx = new(_options);
         ctx.Database.EnsureCreated();
     }
 
     public void Dispose() => _connection.Dispose();
 
-    private MediaContext CreateContext() => new(options: _options);
+    private MediaContext CreateContext() => new(_options);
 
-    private static readonly Guid OwnerId = Guid.Parse(input: "33333333-3333-3333-3333-333333333333");
+    private static readonly Guid OwnerId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
     [Fact]
     public async Task Init_EmptyUsersTable_SeedsFromUpstream()
     {
-        FakeServerUserApiClient api = new(response:
-        [
+        FakeServerUserApiClient api = new([
             new()
             {
                 UserId = OwnerId.ToString(),
@@ -64,15 +63,15 @@ public class UsersSeedTests : IDisposable
                 Enabled = true,
             },
         ]);
-        ServerUserSyncService realSyncService = new(apiClient: api);
+        ServerUserSyncService realSyncService = new(api);
 
         await using MediaContext ctx = CreateContext();
-        await ctx.Init(storage: NoLibrariesStorage.Object, accessToken: "valid-token", syncService: realSyncService);
+        await ctx.Init(NoLibrariesStorage.Object, "valid-token", realSyncService);
 
-        User? owner = await ctx.Users.FirstOrDefaultAsync(predicate: u => u.Id == OwnerId);
-        Assert.NotNull(@object: owner);
-        Assert.True(condition: owner!.Owner);
-        Assert.True(condition: api.WasCalled);
+        User? owner = await ctx.Users.FirstOrDefaultAsync(u => u.Id == OwnerId);
+        Assert.NotNull(owner);
+        Assert.True(owner!.Owner);
+        Assert.True(api.WasCalled);
     }
 
     [Fact]
@@ -80,7 +79,7 @@ public class UsersSeedTests : IDisposable
     {
         await using MediaContext seedCtx = CreateContext();
         seedCtx.Users.Add(
-            entity: new()
+            new()
             {
                 Id = OwnerId,
                 Email = "owner@example.com",
@@ -91,14 +90,14 @@ public class UsersSeedTests : IDisposable
         );
         await seedCtx.SaveChangesAsync();
 
-        FakeServerUserApiClient api = new(response: []);
-        ServerUserSyncService realSyncService = new(apiClient: api);
+        FakeServerUserApiClient api = new([]);
+        ServerUserSyncService realSyncService = new(api);
 
         await using MediaContext ctx = CreateContext();
-        await ctx.Init(storage: NoLibrariesStorage.Object, accessToken: "valid-token", syncService: realSyncService);
+        await ctx.Init(NoLibrariesStorage.Object, "valid-token", realSyncService);
 
         // The one-shot seed must stay gated — ongoing sync is the cron job's job.
-        Assert.False(condition: api.WasCalled);
+        Assert.False(api.WasCalled);
     }
 
     [Fact]
@@ -106,10 +105,10 @@ public class UsersSeedTests : IDisposable
     {
         await using MediaContext ctx = CreateContext();
 
-        Exception? exception = await Record.ExceptionAsync(testCode: () =>
-            UsersSeed.Init(dbContext: ctx, storage: NoLibrariesStorage.Object, accessToken: null)
+        Exception? exception = await Record.ExceptionAsync(() =>
+            UsersSeed.Init(ctx, NoLibrariesStorage.Object, null)
         );
 
-        Assert.Null(@object: exception);
+        Assert.Null(exception);
     }
 }

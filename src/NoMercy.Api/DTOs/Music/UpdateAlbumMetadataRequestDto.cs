@@ -15,15 +15,15 @@ namespace NoMercy.Api.DTOs.Music;
 
 public class UpdateMusicMetadataRequestDto
 {
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 }

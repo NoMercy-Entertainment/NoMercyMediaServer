@@ -15,24 +15,24 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbImage
 {
-    [JsonProperty(propertyName: "aspect_ratio")]
+    [JsonProperty("aspect_ratio")]
     public double AspectRatio { get; set; }
 
-    [JsonProperty(propertyName: "file_path")]
+    [JsonProperty("file_path")]
     public string FilePath { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "height")]
+    [JsonProperty("height")]
     public int Height { get; set; }
 
-    [JsonProperty(propertyName: "iso_639_1")]
+    [JsonProperty("iso_639_1")]
     public string? Iso6391 { get; set; }
 
-    [JsonProperty(propertyName: "vote_average")]
+    [JsonProperty("vote_average")]
     public float VoteAverage { get; set; }
 
-    [JsonProperty(propertyName: "vote_count")]
+    [JsonProperty("vote_count")]
     public int VoteCount { get; set; }
 
-    [JsonProperty(propertyName: "width")]
+    [JsonProperty("width")]
     public int Width { get; set; }
 }

@@ -68,62 +68,62 @@ public partial class MusicLogic : IAsyncDisposable
 
         Files = listPath.Files;
 
-        Match match = PathRegex().Match(input: listPath.Path);
-        ArtistName = match.Groups[groupname: "artist"].Success ? match.Groups[groupname: "artist"].Value : string.Empty;
-        AlbumName = match.Groups[groupname: "album"].Success ? match.Groups[groupname: "album"].Value : string.Empty;
-        Year = match.Groups[groupname: "year"].Success ? Convert.ToInt32(value: match.Groups[groupname: "year"].Value) : 1970;
+        Match match = PathRegex().Match(listPath.Path);
+        ArtistName = match.Groups["artist"].Success ? match.Groups["artist"].Value : string.Empty;
+        AlbumName = match.Groups["album"].Success ? match.Groups["album"].Value : string.Empty;
+        Year = match.Groups["year"].Success ? Convert.ToInt32(match.Groups["year"].Value) : 1970;
 
         // Post-migration: Folder.Path = "" (sub-path inside driver root). Match
         // by resolving each folder's driver root and comparing against the scan path.
         Folder = Library
-            .FolderLibraries.Select(selector: folderLibrary => folderLibrary.Folder)
-            .FirstOrDefault(predicate: folder =>
+            .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
+            .FirstOrDefault(folder =>
             {
                 IStorage folderStorage = _storageFactory.For(
-                    folderId: folder.Id,
-                    driverId: folder.DriverId,
-                    subPath: string.Empty
+                    folder.Id,
+                    folder.DriverId,
+                    string.Empty
                 );
                 // Resolve through the driver, not the IStorage facade: the facade's
                 // GetFullPath is a LocalStorage-only escape hatch that throws on every
                 // remote backend, so a facade call here killed folder matching for
                 // NFS / SMB / S3 / WebDAV music libraries.
-                string driverRoot = folderStorage.Driver.GetFullPath(path: folder.Path);
-                return listPath.Path.StartsWith(value: driverRoot, comparisonType: StringComparison.OrdinalIgnoreCase);
+                string driverRoot = folderStorage.Driver.GetFullPath(folder.Path);
+                return listPath.Path.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
             });
 
-        _logger.LogTrace(message: "Files");
-        _logger.LogTrace(message: "{Files}", args: Files ?? []);
+        _logger.LogTrace("Files");
+        _logger.LogTrace("{Files}", Files ?? []);
 
-        _logger.LogTrace(message: "ArtistName: {ArtistName}", args: ArtistName);
-        _logger.LogTrace(message: "AlbumName {AlbumName}", args: AlbumName);
-        _logger.LogTrace(message: "Year: {Year}", args: Year);
+        _logger.LogTrace("ArtistName: {ArtistName}", ArtistName);
+        _logger.LogTrace("AlbumName {AlbumName}", AlbumName);
+        _logger.LogTrace("Year: {Year}", Year);
 
-        _logger.LogTrace(message: "Folder: {Path}", args: Folder?.Path);
+        _logger.LogTrace("Folder: {Path}", Folder?.Path);
     }
 
     public async Task Process()
     {
-        _logger.LogTrace(message: "Processing Folder: {Path}", args: Folder?.Path);
+        _logger.LogTrace("Processing Folder: {Path}", Folder?.Path);
         await Parallel.ForEachAsync(
-            source: Files ?? [],
-            parallelOptions: SystemParallelism.Options,
-            body: async (file, cancellationToken) =>
+            Files ?? [],
+            SystemParallelism.Options,
+            async (file, cancellationToken) =>
             {
                 await using MediaContext mediaContext =
-                    await _mediaContextFactory.CreateDbContextAsync(cancellationToken: cancellationToken);
+                    await _mediaContextFactory.CreateDbContextAsync(cancellationToken);
 
                 try
                 {
-                    _logger.LogDebug(message: "Analyzing File: {Name}", args: file.Name);
+                    _logger.LogDebug("Analyzing File: {Name}", file.Name);
                     FfProbeData ffProbeData = await FfProbe.CreateAsync(
-                        file: file.Path,
-                        ct: cancellationToken
+                        file.Path,
+                        cancellationToken
                     );
 
                     AcoustIdFingerprintRecording? fingerPrintRecording = await MatchTrack(
-                        file: file,
-                        ffProbeData: ffProbeData
+                        file,
+                        ffProbeData
                     );
                     if (fingerPrintRecording is not null)
                     {
@@ -134,19 +134,19 @@ public partial class MusicLogic : IAsyncDisposable
                         {
                             if (release.TrackCount == null || release.TrackCount != Files?.Count)
                             {
-                                _logger.LogTrace(message: "Track Count Mismatch: {Title}", args: release.Title);
+                                _logger.LogTrace("Track Count Mismatch: {Title}", release.Title);
                                 return;
                             }
 
                             try
                             {
-                                await ProcessRelease(mediaContext: mediaContext, release: release, mediaFile: file);
+                                await ProcessRelease(mediaContext, release, file);
                             }
                             catch (Exception e)
                             {
-                                if (e.Message.Contains(value: "404"))
+                                if (e.Message.Contains("404"))
                                     return;
-                                _logger.LogError(message: e.Message);
+                                _logger.LogError(e.Message);
                             }
                         }
 
@@ -154,19 +154,19 @@ public partial class MusicLogic : IAsyncDisposable
                     }
 
                     AcoustIdFingerprintReleaseGroups? fallbackParsedResult = FallbackParser(
-                        file: file,
-                        ffProbeData: ffProbeData
+                        file,
+                        ffProbeData
                     );
                     if (fallbackParsedResult is null)
                         return;
 
-                    await ProcessRelease(mediaContext: mediaContext, release: fallbackParsedResult, mediaFile: file);
+                    await ProcessRelease(mediaContext, fallbackParsedResult, file);
                 }
                 catch (Exception e)
                 {
-                    if (e.Message.Contains(value: "404"))
+                    if (e.Message.Contains("404"))
                         return;
-                    _logger.LogError(message: e.Message);
+                    _logger.LogError(e.Message);
                 }
             }
         );
@@ -178,58 +178,58 @@ public partial class MusicLogic : IAsyncDisposable
         MediaFile mediaFile
     )
     {
-        _logger.LogTrace(message: "Processing release: {Title} with id: {Id}", args: [release.Title, release.Id]);
+        _logger.LogTrace("Processing release: {Title} with id: {Id}", [release.Title, release.Id]);
 
-        using MusicBrainzReleaseClient musicBrainzReleaseClient = new(id: release.Id);
+        using MusicBrainzReleaseClient musicBrainzReleaseClient = new(release.Id);
 
         MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends();
 
-        if (releaseAppends is null || string.IsNullOrEmpty(value: releaseAppends.Title))
+        if (releaseAppends is null || string.IsNullOrEmpty(releaseAppends.Title))
         {
-            _logger.LogWarning(message: "Release not found: {Title}", args: release.Title);
+            _logger.LogWarning("Release not found: {Title}", release.Title);
             await Task.CompletedTask;
             return;
         }
 
-        if (await StoreReleaseGroups(mediaContext: mediaContext, musicBrainzRelease: releaseAppends) is null)
+        if (await StoreReleaseGroups(mediaContext, releaseAppends) is null)
             _logger.LogTrace(
-                message: "Release Group already exists: {Title}",
-                args: releaseAppends.MusicBrainzReleaseGroup.Title
+                "Release Group already exists: {Title}",
+                releaseAppends.MusicBrainzReleaseGroup.Title
             );
         // await Task.CompletedTask;
         // return;
         else
             _logger.LogDebug(
-                message: "Processing release: {Title} with id: {Id}", args: [release.Title, release.Id]
+                "Processing release: {Title} with id: {Id}", [release.Title, release.Id]
             );
 
-        if (await StoreRelease(mediaContext: mediaContext, musicBrainzRelease: releaseAppends, mediaFile: mediaFile) is null)
-            _logger.LogTrace(message: "Release already exists: {Title}", args: releaseAppends.Title);
+        if (await StoreRelease(mediaContext, releaseAppends, mediaFile) is null)
+            _logger.LogTrace("Release already exists: {Title}", releaseAppends.Title);
         // await Task.CompletedTask;
         // return;
-        await LinkReleaseToReleaseGroup(mediaContext: mediaContext, musicBrainzRelease: releaseAppends);
-        await LinkReleaseToLibrary(mediaContext: mediaContext, musicBrainzRelease: releaseAppends);
+        await LinkReleaseToReleaseGroup(mediaContext, releaseAppends);
+        await LinkReleaseToLibrary(mediaContext, releaseAppends);
 
         foreach (MusicBrainzMedia media in releaseAppends.Media)
         foreach (MusicBrainzTrack track in media.Tracks)
         {
-            if (await StoreTrack(mediaContext: mediaContext, musicBrainzRelease: releaseAppends, musicBrainzTrack: track, musicBrainzMedia: media, mediaFile: mediaFile) is null)
+            if (await StoreTrack(mediaContext, releaseAppends, track, media, mediaFile) is null)
                 continue;
 
-            await LinkTrackToRelease(mediaContext: mediaContext, track: track, release: releaseAppends);
+            await LinkTrackToRelease(mediaContext, track, releaseAppends);
 
             foreach (ReleaseArtistCredit artist in track.ArtistCredit)
             {
-                await StoreArtist(mediaContext: mediaContext, musicBrainzArtist: artist.MusicBrainzArtist);
-                await LinkArtistToTrack(mediaContext: mediaContext, musicBrainzArtistMusicBrainzArtist: artist.MusicBrainzArtist, musicBrainzTrack: track);
+                await StoreArtist(mediaContext, artist.MusicBrainzArtist);
+                await LinkArtistToTrack(mediaContext, artist.MusicBrainzArtist, track);
 
-                await LinkArtistToAlbum(mediaContext: mediaContext, musicBrainzArtistMusicBrainzArtist: artist.MusicBrainzArtist, musicBrainzRelease: releaseAppends);
-                await LinkArtistToLibrary(mediaContext: mediaContext, musicBrainzArtistMusicBrainzArtist: artist.MusicBrainzArtist);
+                await LinkArtistToAlbum(mediaContext, artist.MusicBrainzArtist, releaseAppends);
+                await LinkArtistToLibrary(mediaContext, artist.MusicBrainzArtist);
 
                 await LinkArtistToReleaseGroup(
-                    mediaContext: mediaContext,
-                    musicBrainzRelease: releaseAppends,
-                    artistId: artist.MusicBrainzArtist.Id
+                    mediaContext,
+                    releaseAppends,
+                    artist.MusicBrainzArtist.Id
                 );
             }
         }
@@ -242,20 +242,20 @@ public partial class MusicLogic : IAsyncDisposable
         FfProbeData ffProbeData
     )
     {
-        _logger.LogTrace(message: "Matching Track: {Name}", args: file.Name);
+        _logger.LogTrace("Matching Track: {Name}", file.Name);
 
         AcoustIdFingerprint? lookupResult;
         try
         {
-            AcoustIdFingerprintClient acoustIdFingerprintClient = new(fingerprinter: _audioFingerprinter);
-            lookupResult = await acoustIdFingerprintClient.Lookup(file: file.Path);
+            AcoustIdFingerprintClient acoustIdFingerprintClient = new(_audioFingerprinter);
+            lookupResult = await acoustIdFingerprintClient.Lookup(file.Path);
             acoustIdFingerprintClient.Dispose();
             if (lookupResult is null)
                 return null;
         }
         catch (Exception e)
         {
-            _logger.LogError(message: e.Message);
+            _logger.LogError(e.Message);
             throw;
         }
 
@@ -263,18 +263,18 @@ public partial class MusicLogic : IAsyncDisposable
 
         foreach (AcoustIdFingerprintResult fingerPrint in lookupResult.Results ?? [])
         {
-            _logger.LogTrace(message: "Matching Recording: {Id}", args: fingerPrint.Id);
+            _logger.LogTrace("Matching Recording: {Id}", fingerPrint.Id);
             foreach (AcoustIdFingerprintRecording? recording in fingerPrint.Recordings ?? [])
             {
                 if (recording?.Releases is null)
                     continue;
 
-                fingerPrintRecording = MatchRelease(file: file, recording: recording, ffProbeData: ffProbeData);
+                fingerPrintRecording = MatchRelease(file, recording, ffProbeData);
 
                 if (fingerPrintRecording is not null)
                     break;
 
-                fingerPrintRecording = MatchRelease(file: file, recording: recording, ffProbeData: ffProbeData, strictMatch: false);
+                fingerPrintRecording = MatchRelease(file, recording, ffProbeData, false);
             }
         }
 
@@ -286,12 +286,12 @@ public partial class MusicLogic : IAsyncDisposable
         FfProbeData ffProbeData
     )
     {
-        _logger.LogTrace(message: "Fallback Parser: {Name}", args: file.Name);
+        _logger.LogTrace("Fallback Parser: {Name}", file.Name);
         string? albumId = ffProbeData
-            .Format.Tags?.FirstOrDefault(predicate: t => t.Key == "MusicBrainz Album Id")
+            .Format.Tags?.FirstOrDefault(t => t.Key == "MusicBrainz Album Id")
             .Value;
 
-        _logger.LogTrace(message: "AlbumId: {AlbumId}", args: albumId);
+        _logger.LogTrace("AlbumId: {AlbumId}", albumId);
 
         if (albumId is null)
             return null;
@@ -306,7 +306,7 @@ public partial class MusicLogic : IAsyncDisposable
         bool strictMatch = true
     )
     {
-        _logger.LogTrace(message: "Matching Release: {Title}", args: recording?.Title);
+        _logger.LogTrace("Matching Release: {Title}", recording?.Title);
         if (recording is null)
             return null;
 
@@ -326,9 +326,9 @@ public partial class MusicLogic : IAsyncDisposable
                 recording.Title?.RemoveDiacritics().RemoveNonAlphaNumericCharacters()
             ).OrEmpty();
             bool matchesName =
-                !fileNameSanitized.Equals(value: string.Empty)
-                && !recordNameSanitized.Equals(value: string.Empty)
-                && fileNameSanitized.Contains(value: recordNameSanitized);
+                !fileNameSanitized.Equals(string.Empty)
+                && !recordNameSanitized.Equals(string.Empty)
+                && fileNameSanitized.Contains(recordNameSanitized);
 
             // var ffProbeData = FFProbe.AnalyseAsync(file.Path).Result;
             double fileDuration = ffProbeData.Format.Duration.TotalSeconds;
@@ -336,7 +336,7 @@ public partial class MusicLogic : IAsyncDisposable
             bool matchesDuration =
                 fileDuration > 0
                 && recordDuration > 0
-                && Math.Abs(value: recordDuration - fileDuration) < 10;
+                && Math.Abs(recordDuration - fileDuration) < 10;
 
             if (strictMatch && matchesName && matchesDuration)
             {
@@ -357,9 +357,9 @@ public partial class MusicLogic : IAsyncDisposable
     {
         string artistName = artist.RemoveDiacritics();
 
-        string artistFolder = char.IsNumber(c: artistName[index: 0])
+        string artistFolder = char.IsNumber(artistName[0])
             ? "#"
-            : artistName[index: 0].ToString().ToUpper();
+            : artistName[0].ToString().ToUpper();
 
         return $"/{artistFolder}/{artistName}";
     }
@@ -370,13 +370,13 @@ public partial class MusicLogic : IAsyncDisposable
     )
     {
         _logger.LogTrace(
-            message: "Storing Release Group: {Title}",
-            args: musicBrainzRelease.MusicBrainzReleaseGroup.Title
+            "Storing Release Group: {Title}",
+            musicBrainzRelease.MusicBrainzReleaseGroup.Title
         );
 
         bool hasReleaseGroup = mediaContext
             .ReleaseGroups.AsNoTracking()
-            .Any(predicate: r => r.Id == musicBrainzRelease.MusicBrainzReleaseGroup.Id);
+            .Any(r => r.Id == musicBrainzRelease.MusicBrainzReleaseGroup.Id);
 
         if (hasReleaseGroup)
             return null;
@@ -386,7 +386,7 @@ public partial class MusicLogic : IAsyncDisposable
             Id = musicBrainzRelease.MusicBrainzReleaseGroup.Id,
             Title = musicBrainzRelease.MusicBrainzReleaseGroup.Title,
             Description = string.IsNullOrEmpty(
-                value: musicBrainzRelease.MusicBrainzReleaseGroup.Disambiguation
+                musicBrainzRelease.MusicBrainzReleaseGroup.Disambiguation
             )
                 ? null
                 : musicBrainzRelease.MusicBrainzReleaseGroup.Disambiguation,
@@ -397,10 +397,9 @@ public partial class MusicLogic : IAsyncDisposable
         try
         {
             await mediaContext
-                .ReleaseGroups.Upsert(entity: insert)
-                .On(match: e => new { e.Id })
-                .WhenMatched(
-                    updater: (s, i) =>
+                .ReleaseGroups.Upsert(insert)
+                .On(e => new { e.Id })
+                .WhenMatched((s, i) =>
                         new()
                         {
                             Id = i.Id,
@@ -417,23 +416,23 @@ public partial class MusicLogic : IAsyncDisposable
                     ?? []
             )
                 await LinkGenreToReleaseGroup(
-                    mediaContext: mediaContext,
-                    musicBrainzReleaseGroup: musicBrainzRelease.MusicBrainzReleaseGroup,
-                    musicBrainzGenre: genre
+                    mediaContext,
+                    musicBrainzRelease.MusicBrainzReleaseGroup,
+                    genre
                 );
 
-            MusicMetadataJob musicDescriptionJob = new(musicBrainzReleaseGroup: musicBrainzRelease.MusicBrainzReleaseGroup);
-            QueueRunner.Current!.Dispatcher.Dispatch(job: musicDescriptionJob);
+            MusicMetadataJob musicDescriptionJob = new(musicBrainzRelease.MusicBrainzReleaseGroup);
+            QueueRunner.Current!.Dispatcher.Dispatch(musicDescriptionJob);
         }
         catch (Exception e)
         {
-            _logger.LogError(message: e.Message);
+            _logger.LogError(e.Message);
             return null;
         }
 
         _logger.LogTrace(
-            message: "Release Group stored: {Title}",
-            args: musicBrainzRelease.MusicBrainzReleaseGroup.Title
+            "Release Group stored: {Title}",
+            musicBrainzRelease.MusicBrainzReleaseGroup.Title
         );
         return musicBrainzRelease;
     }
@@ -444,22 +443,22 @@ public partial class MusicLogic : IAsyncDisposable
         MediaFile mediaFile
     )
     {
-        _logger.LogTrace(message: "Storing Release: {Title}", args: musicBrainzRelease.Title);
-        MusicBrainzMedia? media = musicBrainzRelease.Media.FirstOrDefault(predicate: m => m.Tracks.Length > 0);
+        _logger.LogTrace("Storing Release: {Title}", musicBrainzRelease.Title);
+        MusicBrainzMedia? media = musicBrainzRelease.Media.FirstOrDefault(m => m.Tracks.Length > 0);
         if (media is null)
             return null;
 
         bool hasAlbum = mediaContext
             .Albums.AsNoTracking()
-            .Any(predicate: a => a.Id == musicBrainzRelease.Id && a.Cover != null);
+            .Any(a => a.Id == musicBrainzRelease.Id && a.Cover != null);
 
         if (hasAlbum)
             return musicBrainzRelease;
 
         string folder =
             mediaFile
-                .Parsed?.FilePath.Replace(oldValue: "/" + mediaFile.Name, newValue: "")
-                .Replace(oldValue: "\\" + mediaFile.Name, newValue: "")
+                .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                .Replace("\\" + mediaFile.Name, "")
             ?? string.Empty;
 
         Album insert = new()
@@ -468,7 +467,7 @@ public partial class MusicLogic : IAsyncDisposable
             Name = musicBrainzRelease.Title,
             TitleSort = musicBrainzRelease.Title.TitleSort(),
             Country = musicBrainzRelease.Country,
-            Disambiguation = string.IsNullOrEmpty(value: musicBrainzRelease.Disambiguation)
+            Disambiguation = string.IsNullOrEmpty(musicBrainzRelease.Disambiguation)
                 ? null
                 : musicBrainzRelease.Disambiguation,
             Year =
@@ -479,17 +478,16 @@ public partial class MusicLogic : IAsyncDisposable
 
             LibraryId = Library.Id,
             FolderId = Folder!.Id,
-            Folder = folder.Replace(oldValue: ResolveLibraryRoot(), newValue: "").Replace(oldValue: "\\", newValue: "/"),
+            Folder = folder.Replace(ResolveLibraryRoot(), "").Replace("\\", "/"),
             HostFolder = folder.PathName(),
         };
 
         try
         {
             await mediaContext
-                .Albums.Upsert(entity: insert)
-                .On(match: e => new { e.Id })
-                .WhenMatched(
-                    updater: (s, i) =>
+                .Albums.Upsert(insert)
+                .On(e => new { e.Id })
+                .WhenMatched((s, i) =>
                         new()
                         {
                             Id = i.Id,
@@ -509,17 +507,17 @@ public partial class MusicLogic : IAsyncDisposable
                 .RunAsync();
 
             foreach (MusicBrainzGenreDetails genre in musicBrainzRelease.Genres)
-                await LinkGenreToRelease(mediaContext: mediaContext, artist: musicBrainzRelease, musicBrainzGenre: genre);
+                await LinkGenreToRelease(mediaContext, musicBrainzRelease, genre);
 
-            CoverArtImageJob coverArtImageJob = new(musicBrainzRelease: musicBrainzRelease);
-            QueueRunner.Current!.Dispatcher.Dispatch(job: coverArtImageJob);
+            CoverArtImageJob coverArtImageJob = new(musicBrainzRelease);
+            QueueRunner.Current!.Dispatcher.Dispatch(coverArtImageJob);
 
-            FanArtImagesJob fanartImagesJob = new(musicBrainzRelease: musicBrainzRelease);
-            QueueRunner.Current!.Dispatcher.Dispatch(job: fanartImagesJob);
+            FanArtImagesJob fanartImagesJob = new(musicBrainzRelease);
+            QueueRunner.Current!.Dispatcher.Dispatch(fanartImagesJob);
 
             if (EventBusProvider.IsConfigured)
                 await EventBusProvider.Current.PublishAsync(
-                    @event: new LibraryRefreshedEvent
+                    new LibraryRefreshedEvent
                     {
                         QueryKey = ["music", "album", musicBrainzRelease.Id.ToString()],
                     }
@@ -527,11 +525,11 @@ public partial class MusicLogic : IAsyncDisposable
         }
         catch (Exception e)
         {
-            _logger.LogError(message: e.Message);
+            _logger.LogError(e.Message);
             return null;
         }
 
-        _logger.LogTrace(message: "Release stored: {Title}", args: musicBrainzRelease.Title);
+        _logger.LogTrace("Release stored: {Title}", musicBrainzRelease.Title);
 
         return musicBrainzRelease;
     }
@@ -541,19 +539,19 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzArtistDetails musicBrainzArtist
     )
     {
-        _logger.LogTrace(message: "Processing Artist: {Name}", args: musicBrainzArtist.Name);
+        _logger.LogTrace("Processing Artist: {Name}", musicBrainzArtist.Name);
 
-        bool hasArtist = mediaContext.Artists.AsNoTracking().Any(predicate: a => a.Id == musicBrainzArtist.Id);
+        bool hasArtist = mediaContext.Artists.AsNoTracking().Any(a => a.Id == musicBrainzArtist.Id);
 
         if (hasArtist)
             return;
 
-        string artistFolder = MakeArtistFolder(artist: musicBrainzArtist.Name);
+        string artistFolder = MakeArtistFolder(musicBrainzArtist.Name);
         Artist insert = new()
         {
             Id = musicBrainzArtist.Id,
             Name = musicBrainzArtist.Name,
-            Disambiguation = string.IsNullOrEmpty(value: musicBrainzArtist.Disambiguation)
+            Disambiguation = string.IsNullOrEmpty(musicBrainzArtist.Disambiguation)
                 ? null
                 : musicBrainzArtist.Disambiguation,
             Country = musicBrainzArtist.Country,
@@ -564,7 +562,7 @@ public partial class MusicLogic : IAsyncDisposable
             TitleSort = musicBrainzArtist.Name.TitleSort(),
 
             Folder = artistFolder,
-            HostFolder = Path.Join(path1: ResolveLibraryRoot(), path2: artistFolder).PathName(),
+            HostFolder = Path.Join(ResolveLibraryRoot(), artistFolder).PathName(),
             LibraryId = Library.Id,
             FolderId = Folder!.Id,
         };
@@ -572,10 +570,9 @@ public partial class MusicLogic : IAsyncDisposable
         try
         {
             await mediaContext
-                .Artists.Upsert(entity: insert)
-                .On(match: e => new { e.Id })
-                .WhenMatched(
-                    updater: (s, i) =>
+                .Artists.Upsert(insert)
+                .On(e => new { e.Id })
+                .WhenMatched((s, i) =>
                         new()
                         {
                             Id = i.Id,
@@ -594,29 +591,29 @@ public partial class MusicLogic : IAsyncDisposable
         }
         catch (Exception e)
         {
-            _logger.LogError(message: e.Message);
+            _logger.LogError(e.Message);
             return;
         }
 
         try
         {
             foreach (MusicBrainzGenreDetails genre in musicBrainzArtist.Genres)
-                await LinkGenreToArtist(mediaContext: mediaContext, musicBrainzArtist: musicBrainzArtist, musicBrainzGenre: genre);
+                await LinkGenreToArtist(mediaContext, musicBrainzArtist, genre);
         }
         catch (Exception e)
         {
-            _logger.LogError(message: e.Message);
+            _logger.LogError(e.Message);
         }
 
         MusicMetadataJob musicDescriptionJob = new() { MusicBrainzArtist = musicBrainzArtist };
-        QueueRunner.Current!.Dispatcher.Dispatch(job: musicDescriptionJob);
+        QueueRunner.Current!.Dispatcher.Dispatch(musicDescriptionJob);
 
-        FanArtImagesJob fanartImagesJob = new(musicBrainzArtist: musicBrainzArtist);
-        QueueRunner.Current!.Dispatcher.Dispatch(job: fanartImagesJob);
+        FanArtImagesJob fanartImagesJob = new(musicBrainzArtist);
+        QueueRunner.Current!.Dispatcher.Dispatch(fanartImagesJob);
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                @event: new LibraryRefreshedEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey = ["music", "artist", musicBrainzArtist.Id.ToString()],
                 }
@@ -631,11 +628,11 @@ public partial class MusicLogic : IAsyncDisposable
         MediaFile mediaFile
     )
     {
-        _logger.LogTrace(message: "Processing Track: {Title}", args: musicBrainzTrack.Title);
+        _logger.LogTrace("Processing Track: {Title}", musicBrainzTrack.Title);
 
         bool hasTrack = mediaContext
             .Tracks.AsNoTracking()
-            .Any(predicate: t => t.Id == musicBrainzTrack.Id && t.Filename != null && t.Duration != null);
+            .Any(t => t.Id == musicBrainzTrack.Id && t.Filename != null && t.Duration != null);
 
         if (hasTrack)
             return null;
@@ -651,34 +648,33 @@ public partial class MusicLogic : IAsyncDisposable
             TrackNumber = musicBrainzTrack.Position,
         };
 
-        string? file = FileMatch(musicBrainzRelease: musicBrainzRelease, musicBrainzMedia: musicBrainzMedia, track: insert);
+        string? file = FileMatch(musicBrainzRelease, musicBrainzMedia, insert);
 
         if (file is not null)
         {
-            _logger.LogTrace(message: "File Match: {File}", args: file);
-            FfProbeData ffProbeData = await FfProbe.CreateAsync(file: file);
+            _logger.LogTrace("File Match: {File}", file);
+            FfProbeData ffProbeData = await FfProbe.CreateAsync(file);
             string folder =
                 mediaFile
-                    .Parsed?.FilePath.Replace(oldValue: "/" + mediaFile.Name, newValue: "")
-                    .Replace(oldValue: "\\" + mediaFile.Name, newValue: "")
+                    .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                    .Replace("\\" + mediaFile.Name, "")
                 ?? string.Empty;
 
-            insert.Filename = "/" + StoragePathHelpers.GetName(path: file.Replace(oldChar: '\\', newChar: '/'));
-            insert.Quality = (int)Math.Floor(d: ffProbeData.Format.BitRate / 1000.0);
-            insert.Duration = HmsRegex().Replace(input: ffProbeData.Duration.ToString(format: @"hh\:mm\:ss"), replacement: "");
+            insert.Filename = "/" + StoragePathHelpers.GetName(file.Replace('\\', '/'));
+            insert.Quality = (int)Math.Floor(ffProbeData.Format.BitRate / 1000.0);
+            insert.Duration = HmsRegex().Replace(ffProbeData.Duration.ToString(@"hh\:mm\:ss"), "");
 
             insert.FolderId = Folder!.Id;
-            insert.Folder = folder.Replace(oldValue: ResolveLibraryRoot(), newValue: "").Replace(oldValue: "\\", newValue: "/");
+            insert.Folder = folder.Replace(ResolveLibraryRoot(), "").Replace("\\", "/");
             insert.HostFolder = folder.PathName();
         }
 
         try
         {
             await mediaContext
-                .Tracks.Upsert(entity: insert)
-                .On(match: e => new { e.Id })
-                .WhenMatched(
-                    updater: (ts, ti) =>
+                .Tracks.Upsert(insert)
+                .On(e => new { e.Id })
+                .WhenMatched((ts, ti) =>
                         new()
                         {
                             Id = ti.Id,
@@ -699,22 +695,22 @@ public partial class MusicLogic : IAsyncDisposable
         }
         catch (Exception e)
         {
-            _logger.LogError(message: e.Message);
+            _logger.LogError(e.Message);
             return null;
         }
 
         try
         {
             foreach (MusicBrainzGenreDetails genre in musicBrainzTrack.Genres ?? [])
-                await LinkGenreToTrack(mediaContext: mediaContext, musicBrainzTrack: musicBrainzTrack, musicBrainzGenre: genre);
+                await LinkGenreToTrack(mediaContext, musicBrainzTrack, genre);
         }
         catch (Exception e)
         {
-            _logger.LogError(message: e.Message);
+            _logger.LogError(e.Message);
             return null;
         }
 
-        _logger.LogTrace(message: "Track stored: {Title}", args: musicBrainzTrack.Title);
+        _logger.LogTrace("Track stored: {Title}", musicBrainzTrack.Title);
         return musicBrainzTrack;
     }
 
@@ -725,45 +721,45 @@ public partial class MusicLogic : IAsyncDisposable
     )
     {
         string? file = FindTrackWithAlbumNumberByNumberPadded(
-            musicBrainzMedia: musicBrainzMedia,
-            file: null,
-            numberOfAlbums: musicBrainzRelease.Media.Length,
-            trackNumber: track.TrackNumber,
-            padding: 4
+            musicBrainzMedia,
+            null,
+            musicBrainzRelease.Media.Length,
+            track.TrackNumber,
+            4
         );
         file = FindTrackWithAlbumNumberByNumberPadded(
-            musicBrainzMedia: musicBrainzMedia,
-            file: file,
-            numberOfAlbums: musicBrainzRelease.Media.Length,
-            trackNumber: track.TrackNumber,
-            padding: 3
+            musicBrainzMedia,
+            file,
+            musicBrainzRelease.Media.Length,
+            track.TrackNumber,
+            3
         );
         file = FindTrackWithAlbumNumberByNumberPadded(
-            musicBrainzMedia: musicBrainzMedia,
-            file: file,
-            numberOfAlbums: musicBrainzRelease.Media.Length,
-            trackNumber: track.TrackNumber
+            musicBrainzMedia,
+            file,
+            musicBrainzRelease.Media.Length,
+            track.TrackNumber
         );
 
         file = FindTrackWithoutAlbumNumberByNumberPadded(
-            musicBrainzMedia: musicBrainzMedia,
-            file: file,
-            numberOfAlbums: musicBrainzRelease.Media.Length,
-            trackNumber: track.TrackNumber,
-            padding: 4
+            musicBrainzMedia,
+            file,
+            musicBrainzRelease.Media.Length,
+            track.TrackNumber,
+            4
         );
         file = FindTrackWithoutAlbumNumberByNumberPadded(
-            musicBrainzMedia: musicBrainzMedia,
-            file: file,
-            numberOfAlbums: musicBrainzRelease.Media.Length,
-            trackNumber: track.TrackNumber,
-            padding: 3
+            musicBrainzMedia,
+            file,
+            musicBrainzRelease.Media.Length,
+            track.TrackNumber,
+            3
         );
         file = FindTrackWithoutAlbumNumberByNumberPadded(
-            musicBrainzMedia: musicBrainzMedia,
-            file: file,
-            numberOfAlbums: musicBrainzRelease.Media.Length,
-            trackNumber: track.TrackNumber
+            musicBrainzMedia,
+            file,
+            musicBrainzRelease.Media.Length,
+            track.TrackNumber
         );
 
         return file;
@@ -775,8 +771,8 @@ public partial class MusicLogic : IAsyncDisposable
     )
     {
         _logger.LogTrace(
-            message: "Linking Release to Release Group: {Title}",
-            args: musicBrainzRelease.MusicBrainzReleaseGroup.Title
+            "Linking Release to Release Group: {Title}",
+            musicBrainzRelease.MusicBrainzReleaseGroup.Title
         );
         AlbumReleaseGroup insert = new()
         {
@@ -785,9 +781,9 @@ public partial class MusicLogic : IAsyncDisposable
         };
 
         await mediaContext
-            .AlbumReleaseGroup.Upsert(entity: insert)
-            .On(match: e => new { e.AlbumId, e.ReleaseGroupId })
-            .WhenMatched(updater: (s, i) => new() { AlbumId = i.AlbumId, ReleaseGroupId = i.ReleaseGroupId })
+            .AlbumReleaseGroup.Upsert(insert)
+            .On(e => new { e.AlbumId, e.ReleaseGroupId })
+            .WhenMatched((s, i) => new() { AlbumId = i.AlbumId, ReleaseGroupId = i.ReleaseGroupId })
             .RunAsync();
     }
 
@@ -798,8 +794,8 @@ public partial class MusicLogic : IAsyncDisposable
     )
     {
         _logger.LogTrace(
-            message: "Linking Artist to Release Group: {Title}",
-            args: musicBrainzRelease.MusicBrainzReleaseGroup.Title
+            "Linking Artist to Release Group: {Title}",
+            musicBrainzRelease.MusicBrainzReleaseGroup.Title
         );
         ArtistReleaseGroup insert = new()
         {
@@ -808,10 +804,10 @@ public partial class MusicLogic : IAsyncDisposable
         };
 
         await mediaContext
-            .ArtistReleaseGroup.Upsert(entity: insert)
-            .On(match: e => new { e.ArtistId, e.ReleaseGroupId })
+            .ArtistReleaseGroup.Upsert(insert)
+            .On(e => new { e.ArtistId, e.ReleaseGroupId })
             .WhenMatched(
-                updater: (s, i) => new() { ArtistId = i.ArtistId, ReleaseGroupId = i.ReleaseGroupId }
+                (s, i) => new() { ArtistId = i.ArtistId, ReleaseGroupId = i.ReleaseGroupId }
             )
             .RunAsync();
     }
@@ -821,13 +817,13 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzReleaseAppends musicBrainzRelease
     )
     {
-        _logger.LogTrace(message: "Linking Release to Library: {Title}", args: musicBrainzRelease.Title);
+        _logger.LogTrace("Linking Release to Library: {Title}", musicBrainzRelease.Title);
         AlbumLibrary insert = new() { AlbumId = musicBrainzRelease.Id, LibraryId = Library.Id };
 
         await mediaContext
-            .AlbumLibrary.Upsert(entity: insert)
-            .On(match: e => new { e.AlbumId, e.LibraryId })
-            .WhenMatched(updater: (s, i) => new() { AlbumId = i.AlbumId, LibraryId = i.LibraryId })
+            .AlbumLibrary.Upsert(insert)
+            .On(e => new { e.AlbumId, e.LibraryId })
+            .WhenMatched((s, i) => new() { AlbumId = i.AlbumId, LibraryId = i.LibraryId })
             .RunAsync();
     }
 
@@ -837,8 +833,8 @@ public partial class MusicLogic : IAsyncDisposable
     )
     {
         _logger.LogTrace(
-            message: "Linking Artist to Library: {Name}",
-            args: musicBrainzArtistMusicBrainzArtist.Name
+            "Linking Artist to Library: {Name}",
+            musicBrainzArtistMusicBrainzArtist.Name
         );
         ArtistLibrary insert = new()
         {
@@ -847,9 +843,9 @@ public partial class MusicLogic : IAsyncDisposable
         };
 
         await mediaContext
-            .ArtistLibrary.Upsert(entity: insert)
-            .On(match: e => new { e.ArtistId, e.LibraryId })
-            .WhenMatched(updater: (s, i) => new() { ArtistId = i.ArtistId, LibraryId = i.LibraryId })
+            .ArtistLibrary.Upsert(insert)
+            .On(e => new { e.ArtistId, e.LibraryId })
+            .WhenMatched((s, i) => new() { ArtistId = i.ArtistId, LibraryId = i.LibraryId })
             .RunAsync();
     }
 
@@ -859,16 +855,16 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzReleaseAppends? release
     )
     {
-        _logger.LogTrace(message: "Linking Track to Release: {Title}", args: track?.Title);
+        _logger.LogTrace("Linking Track to Release: {Title}", track?.Title);
         if (track == null || release == null)
             return;
 
         AlbumTrack insert = new() { AlbumId = release.Id, TrackId = track.Id };
 
         await mediaContext
-            .AlbumTrack.Upsert(entity: insert)
-            .On(match: e => new { e.AlbumId, e.TrackId })
-            .WhenMatched(updater: (s, i) => new() { AlbumId = i.AlbumId, TrackId = i.TrackId })
+            .AlbumTrack.Upsert(insert)
+            .On(e => new { e.AlbumId, e.TrackId })
+            .WhenMatched((s, i) => new() { AlbumId = i.AlbumId, TrackId = i.TrackId })
             .RunAsync();
     }
 
@@ -878,7 +874,7 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzReleaseAppends musicBrainzRelease
     )
     {
-        _logger.LogTrace(message: "Linking Artist to Album: {Title}", args: musicBrainzRelease.Title);
+        _logger.LogTrace("Linking Artist to Album: {Title}", musicBrainzRelease.Title);
         AlbumArtist insert = new()
         {
             AlbumId = musicBrainzRelease.Id,
@@ -886,9 +882,9 @@ public partial class MusicLogic : IAsyncDisposable
         };
 
         await mediaContext
-            .AlbumArtist.Upsert(entity: insert)
-            .On(match: e => new { e.AlbumId, e.ArtistId })
-            .WhenMatched(updater: (s, i) => new() { AlbumId = i.AlbumId, ArtistId = i.ArtistId })
+            .AlbumArtist.Upsert(insert)
+            .On(e => new { e.AlbumId, e.ArtistId })
+            .WhenMatched((s, i) => new() { AlbumId = i.AlbumId, ArtistId = i.ArtistId })
             .RunAsync();
     }
 
@@ -898,7 +894,7 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzTrack musicBrainzTrack
     )
     {
-        _logger.LogTrace(message: "Linking Artist to Track: {Title}", args: musicBrainzTrack.Title);
+        _logger.LogTrace("Linking Artist to Track: {Title}", musicBrainzTrack.Title);
         ArtistTrack insert = new()
         {
             ArtistId = musicBrainzArtistMusicBrainzArtist.Id,
@@ -906,9 +902,9 @@ public partial class MusicLogic : IAsyncDisposable
         };
 
         await mediaContext
-            .ArtistTrack.Upsert(entity: insert)
-            .On(match: e => new { e.ArtistId, e.TrackId })
-            .WhenMatched(updater: (s, i) => new() { ArtistId = i.ArtistId, TrackId = i.TrackId })
+            .ArtistTrack.Upsert(insert)
+            .On(e => new { e.ArtistId, e.TrackId })
+            .WhenMatched((s, i) => new() { ArtistId = i.ArtistId, TrackId = i.TrackId })
             .RunAsync();
     }
 
@@ -918,7 +914,7 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzGenreDetails musicBrainzGenre
     )
     {
-        _logger.LogTrace(message: "Linking Genre to Release Group: {Title}", args: musicBrainzReleaseGroup.Title);
+        _logger.LogTrace("Linking Genre to Release Group: {Title}", musicBrainzReleaseGroup.Title);
         MusicGenreReleaseGroup insert = new()
         {
             GenreId = musicBrainzGenre.Id,
@@ -926,9 +922,9 @@ public partial class MusicLogic : IAsyncDisposable
         };
 
         await mediaContext
-            .MusicGenreReleaseGroup.Upsert(entity: insert)
-            .On(match: e => new { e.GenreId, e.ReleaseGroupId })
-            .WhenMatched(updater: (s, i) => new() { GenreId = i.GenreId, ReleaseGroupId = i.ReleaseGroupId })
+            .MusicGenreReleaseGroup.Upsert(insert)
+            .On(e => new { e.GenreId, e.ReleaseGroupId })
+            .WhenMatched((s, i) => new() { GenreId = i.GenreId, ReleaseGroupId = i.ReleaseGroupId })
             .RunAsync();
     }
 
@@ -938,15 +934,15 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzGenreDetails musicBrainzGenre
     )
     {
-        _logger.LogTrace(message: "Linking Genre to Artist: {Name}", args: musicBrainzArtist.Name);
+        _logger.LogTrace("Linking Genre to Artist: {Name}", musicBrainzArtist.Name);
 
         bool genreExists = mediaContext
             .MusicGenres.AsNoTracking()
-            .Any(predicate: g => g.Id == musicBrainzGenre.Id);
+            .Any(g => g.Id == musicBrainzGenre.Id);
 
         if (!genreExists)
         {
-            _logger.LogTrace(message: "Genre does not exist: {Name}, creating it", args: musicBrainzGenre.Name);
+            _logger.LogTrace("Genre does not exist: {Name}, creating it", musicBrainzGenre.Name);
             MusicGenre genreInsert = new()
             {
                 Id = musicBrainzGenre.Id,
@@ -954,9 +950,9 @@ public partial class MusicLogic : IAsyncDisposable
             };
 
             await mediaContext
-                .MusicGenres.Upsert(entity: genreInsert)
-                .On(match: e => new { e.Id })
-                .WhenMatched(updater: (s, i) => new() { Id = i.Id, Name = i.Name })
+                .MusicGenres.Upsert(genreInsert)
+                .On(e => new { e.Id })
+                .WhenMatched((s, i) => new() { Id = i.Id, Name = i.Name })
                 .RunAsync();
         }
 
@@ -967,9 +963,9 @@ public partial class MusicLogic : IAsyncDisposable
         };
 
         await mediaContext
-            .ArtistMusicGenre.Upsert(entity: insert)
-            .On(match: e => new { e.MusicGenreId, e.ArtistId })
-            .WhenMatched(updater: (s, i) => new() { MusicGenreId = i.MusicGenreId, ArtistId = i.ArtistId })
+            .ArtistMusicGenre.Upsert(insert)
+            .On(e => new { e.MusicGenreId, e.ArtistId })
+            .WhenMatched((s, i) => new() { MusicGenreId = i.MusicGenreId, ArtistId = i.ArtistId })
             .RunAsync();
     }
 
@@ -979,13 +975,13 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzGenreDetails musicBrainzGenre
     )
     {
-        _logger.LogTrace(message: "Linking Genre to Album: {Title}", args: artist.Title);
+        _logger.LogTrace("Linking Genre to Album: {Title}", artist.Title);
         AlbumMusicGenre insert = new() { MusicGenreId = musicBrainzGenre.Id, AlbumId = artist.Id };
 
         await mediaContext
-            .AlbumMusicGenre.Upsert(entity: insert)
-            .On(match: e => new { e.MusicGenreId, e.AlbumId })
-            .WhenMatched(updater: (s, i) => new() { MusicGenreId = i.MusicGenreId, AlbumId = i.AlbumId })
+            .AlbumMusicGenre.Upsert(insert)
+            .On(e => new { e.MusicGenreId, e.AlbumId })
+            .WhenMatched((s, i) => new() { MusicGenreId = i.MusicGenreId, AlbumId = i.AlbumId })
             .RunAsync();
     }
 
@@ -995,7 +991,7 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzGenreDetails musicBrainzGenre
     )
     {
-        _logger.LogTrace(message: "Linking Genre to Track: {Title}", args: musicBrainzTrack.Title);
+        _logger.LogTrace("Linking Genre to Track: {Title}", musicBrainzTrack.Title);
         MusicGenreTrack insert = new()
         {
             GenreId = musicBrainzGenre.Id,
@@ -1003,9 +999,9 @@ public partial class MusicLogic : IAsyncDisposable
         };
 
         await mediaContext
-            .MusicGenreTrack.Upsert(entity: insert)
-            .On(match: e => new { e.GenreId, e.TrackId })
-            .WhenMatched(updater: (s, i) => new() { GenreId = i.GenreId, TrackId = i.TrackId })
+            .MusicGenreTrack.Upsert(insert)
+            .On(e => new { e.GenreId, e.TrackId })
+            .WhenMatched((s, i) => new() { GenreId = i.GenreId, TrackId = i.TrackId })
             .RunAsync();
     }
 
@@ -1023,22 +1019,22 @@ public partial class MusicLogic : IAsyncDisposable
             return file;
 
         return Files
-            ?.FirstOrDefault(predicate: f =>
+            ?.FirstOrDefault(f =>
             {
-                string fileName = Path.GetFileName(path: f.Parsed!.FilePath)
+                string fileName = Path.GetFileName(f.Parsed!.FilePath)
                     .RemoveDiacritics()
                     .RemoveNonAlphaNumericCharacters()
                     .ToLower();
 
-                string matchNumber = $"{trackNumber.ToString().PadLeft(totalWidth: padding, paddingChar: '0')} ";
+                string matchNumber = $"{trackNumber.ToString().PadLeft(padding, '0')} ";
                 string matchString = musicBrainzMedia
                     .Tracks[trackNumber - 1]
                     .Title.RemoveDiacritics()
                     .RemoveNonAlphaNumericCharacters()
                     .ToLower()
-                    .Replace(oldValue: ".mp3", newValue: "");
+                    .Replace(".mp3", "");
 
-                return fileName.StartsWith(value: matchNumber) && fileName.Contains(value: matchString);
+                return fileName.StartsWith(matchNumber) && fileName.Contains(matchString);
             })
             ?.Parsed!.FilePath;
     }
@@ -1057,28 +1053,28 @@ public partial class MusicLogic : IAsyncDisposable
             return file;
 
         return Files
-            ?.FirstOrDefault(predicate: f =>
+            ?.FirstOrDefault(f =>
             {
-                string fileName = Path.GetFileName(path: f.Parsed!.FilePath)
+                string fileName = Path.GetFileName(f.Parsed!.FilePath)
                     .RemoveDiacritics()
                     .RemoveNonAlphaNumericCharacters()
                     .ToLower();
 
                 string matchNumber =
-                    $"{musicBrainzMedia.Position}-{trackNumber.ToString().PadLeft(totalWidth: padding, paddingChar: '0')} ";
+                    $"{musicBrainzMedia.Position}-{trackNumber.ToString().PadLeft(padding, '0')} ";
                 string matchString = musicBrainzMedia
                     .Tracks[trackNumber - 1]
                     .Title.RemoveDiacritics()
                     .RemoveNonAlphaNumericCharacters()
                     .ToLower()
-                    .Replace(oldValue: ".mp3", newValue: "");
+                    .Replace(".mp3", "");
 
-                return fileName.StartsWith(value: matchNumber) && fileName.Contains(value: matchString);
+                return fileName.StartsWith(matchNumber) && fileName.Contains(matchString);
             })
             ?.Parsed!.FilePath;
     }
 
-    [GeneratedRegex(pattern: "^00:")]
+    [GeneratedRegex("^00:")]
     private static partial Regex HmsRegex();
 
     public ValueTask DisposeAsync()
@@ -1090,16 +1086,16 @@ public partial class MusicLogic : IAsyncDisposable
     {
         if (Folder is null)
             return string.Empty;
-        IStorage folderStorage = _storageFactory.For(folderId: Folder.Id, driverId: Folder.DriverId, subPath: string.Empty);
+        IStorage folderStorage = _storageFactory.For(Folder.Id, Folder.DriverId, string.Empty);
         // Resolve through the driver, not the IStorage facade: the facade's
         // GetFullPath is a LocalStorage-only escape hatch that throws on every
         // remote backend, so a facade call here killed folder-path resolution
         // for NFS / SMB / S3 / WebDAV music libraries.
-        return folderStorage.Driver.GetFullPath(path: Folder.Path);
+        return folderStorage.Driver.GetFullPath(Folder.Path);
     }
 
     [GeneratedRegex(
-        pattern: @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]?\s?(?<album>.*)?)"
+        @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]?\s?(?<album>.*)?)"
     )]
     private static partial Regex PathRegex();
 }

@@ -34,7 +34,7 @@ namespace NoMercy.Tests.Api;
 // ILiveStreamingService mocks and a real LiveSession/LiveRuntimeSession pair,
 // mocking only the SignalR plumbing (HubCallerContext) a live connection would
 // normally supply.
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class LiveTranscodeHubReportPlayheadTests
 {
     private static LiveQuality MakeQuality() =>
@@ -61,25 +61,25 @@ public class LiveTranscodeHubReportPlayheadTests
         httpContext.Request.Path = "/liveTranscodeHub";
 
         LiveTranscodeHub hub = new(
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: Mock.Of<IDbContextFactory<MediaContext>>(),
-            connectedClients: new ConnectedClients(),
-            activityLogger: Mock.Of<IActivityLogger>(),
-            sessionManager: sessionManager,
-            streamingService: streamingService,
-            presenceTracker: Mock.Of<ILiveSessionPresenceTracker>(),
-            logger: NullLogger<LiveTranscodeHub>.Instance
+            new HttpContextAccessorStub(httpContext),
+            Mock.Of<IDbContextFactory<MediaContext>>(),
+            new ConnectedClients(),
+            Mock.Of<IActivityLogger>(),
+            sessionManager,
+            streamingService,
+            Mock.Of<ILiveSessionPresenceTracker>(),
+            NullLogger<LiveTranscodeHub>.Instance
         );
 
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: callerUserId)], authenticationType: "TestAuth")
+            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, callerUserId)], "TestAuth")
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(expression: c => c.User).Returns(value: principal);
-        context.Setup(expression: c => c.UserIdentifier).Returns(value: callerUserId);
-        context.Setup(expression: c => c.ConnectionId).Returns(value: Guid.NewGuid().ToString());
-        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
+        context.Setup(c => c.User).Returns(principal);
+        context.Setup(c => c.UserIdentifier).Returns(callerUserId);
+        context.Setup(c => c.ConnectionId).Returns(Guid.NewGuid().ToString());
+        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
 
         Mock<IHubCallerClients> clients = new();
         hub.Context = context.Object;
@@ -94,28 +94,28 @@ public class LiveTranscodeHubReportPlayheadTests
         const string sessionId = "sess-owner";
         const string ownerId = "user-1";
 
-        LiveSession session = new(sessionId: sessionId, quality: MakeQuality());
+        LiveSession session = new(sessionId, MakeQuality());
         // SeekAsync sets TranscodedPosition to the target too (PushSegment is
         // internal and not visible from this test assembly), giving a known
         // 60s TranscodedPosition to measure BufferAhead against.
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 60), ct: CancellationToken.None);
-        LiveRuntimeSession runtime = new(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 6));
+        await session.SeekAsync(TimeSpan.FromSeconds(60), CancellationToken.None);
+        LiveRuntimeSession runtime = new(session, TimeSpan.FromSeconds(6));
         DateTime lastAccessBeforeCall = runtime.LastAccess;
 
         Mock<ISessionManager> sessionManager = new();
-        sessionManager.Setup(expression: m => m.GetOwnerUserId(sessionId)).Returns(value: ownerId);
+        sessionManager.Setup(m => m.GetOwnerUserId(sessionId)).Returns(ownerId);
 
         Mock<ILiveStreamingService> streamingService = new();
-        streamingService.Setup(expression: s => s.TryGetRuntime(sessionId, out runtime)).Returns(value: true);
+        streamingService.Setup(s => s.TryGetRuntime(sessionId, out runtime)).Returns(true);
 
-        LiveTranscodeHub hub = CreateHub(sessionManager: sessionManager.Object, streamingService: streamingService.Object, callerUserId: ownerId);
+        LiveTranscodeHub hub = CreateHub(sessionManager.Object, streamingService.Object, ownerId);
 
-        hub.ReportPlayhead(sessionId: sessionId, currentTimeSeconds: 42.5);
+        hub.ReportPlayhead(sessionId, 42.5);
 
         // TranscodedPosition is 60s (from the pushed segment); the reported
         // playhead of 42.5s must be applied authoritatively.
-        session.BufferAhead.Should().Be(expected: TimeSpan.FromSeconds(value: 17.5));
-        runtime.LastAccess.Should().BeOnOrAfter(expected: lastAccessBeforeCall);
+        session.BufferAhead.Should().Be(TimeSpan.FromSeconds(17.5));
+        runtime.LastAccess.Should().BeOnOrAfter(lastAccessBeforeCall);
     }
 
     [Fact]
@@ -124,21 +124,21 @@ public class LiveTranscodeHubReportPlayheadTests
         const string sessionId = "sess-clamp";
         const string ownerId = "user-1";
 
-        LiveSession session = new(sessionId: sessionId, quality: MakeQuality());
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 10), ct: CancellationToken.None);
-        LiveRuntimeSession runtime = new(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 6));
+        LiveSession session = new(sessionId, MakeQuality());
+        await session.SeekAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
+        LiveRuntimeSession runtime = new(session, TimeSpan.FromSeconds(6));
 
         Mock<ISessionManager> sessionManager = new();
-        sessionManager.Setup(expression: m => m.GetOwnerUserId(sessionId)).Returns(value: ownerId);
+        sessionManager.Setup(m => m.GetOwnerUserId(sessionId)).Returns(ownerId);
 
         Mock<ILiveStreamingService> streamingService = new();
-        streamingService.Setup(expression: s => s.TryGetRuntime(sessionId, out runtime)).Returns(value: true);
+        streamingService.Setup(s => s.TryGetRuntime(sessionId, out runtime)).Returns(true);
 
-        LiveTranscodeHub hub = CreateHub(sessionManager: sessionManager.Object, streamingService: streamingService.Object, callerUserId: ownerId);
+        LiveTranscodeHub hub = CreateHub(sessionManager.Object, streamingService.Object, ownerId);
 
-        hub.ReportPlayhead(sessionId: sessionId, currentTimeSeconds: -5);
+        hub.ReportPlayhead(sessionId, -5);
 
-        session.BufferAhead.Should().Be(expected: TimeSpan.FromSeconds(seconds: 10));
+        session.BufferAhead.Should().Be(TimeSpan.FromSeconds(10));
     }
 
     [Fact]
@@ -148,24 +148,24 @@ public class LiveTranscodeHubReportPlayheadTests
         const string ownerId = "user-1";
         const string callerId = "user-2";
 
-        LiveSession session = new(sessionId: sessionId, quality: MakeQuality());
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 60), ct: CancellationToken.None);
-        LiveRuntimeSession runtime = new(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 6));
+        LiveSession session = new(sessionId, MakeQuality());
+        await session.SeekAsync(TimeSpan.FromSeconds(60), CancellationToken.None);
+        LiveRuntimeSession runtime = new(session, TimeSpan.FromSeconds(6));
         DateTime lastAccessBeforeCall = runtime.LastAccess;
         TimeSpan bufferAheadBeforeCall = session.BufferAhead;
 
         Mock<ISessionManager> sessionManager = new();
-        sessionManager.Setup(expression: m => m.GetOwnerUserId(sessionId)).Returns(value: ownerId);
+        sessionManager.Setup(m => m.GetOwnerUserId(sessionId)).Returns(ownerId);
 
         Mock<ILiveStreamingService> streamingService = new();
-        streamingService.Setup(expression: s => s.TryGetRuntime(sessionId, out runtime)).Returns(value: true);
+        streamingService.Setup(s => s.TryGetRuntime(sessionId, out runtime)).Returns(true);
 
-        LiveTranscodeHub hub = CreateHub(sessionManager: sessionManager.Object, streamingService: streamingService.Object, callerUserId: callerId);
+        LiveTranscodeHub hub = CreateHub(sessionManager.Object, streamingService.Object, callerId);
 
-        hub.ReportPlayhead(sessionId: sessionId, currentTimeSeconds: 42.5);
+        hub.ReportPlayhead(sessionId, 42.5);
 
-        session.BufferAhead.Should().Be(expected: bufferAheadBeforeCall);
-        runtime.LastAccess.Should().Be(expected: lastAccessBeforeCall);
+        session.BufferAhead.Should().Be(bufferAheadBeforeCall);
+        runtime.LastAccess.Should().Be(lastAccessBeforeCall);
     }
 
     [Fact]
@@ -176,14 +176,14 @@ public class LiveTranscodeHubReportPlayheadTests
         // No Setup for TryGetRuntime — unconfigured returns false with a null
         // out value, mirroring an unknown/expired session id.
 
-        LiveTranscodeHub hub = CreateHub(sessionManager: sessionManager.Object, streamingService: streamingService.Object, callerUserId: "user-1");
+        LiveTranscodeHub hub = CreateHub(sessionManager.Object, streamingService.Object, "user-1");
 
-        Action act = () => hub.ReportPlayhead(sessionId: "sess-unknown", currentTimeSeconds: 10);
+        Action act = () => hub.ReportPlayhead("sess-unknown", 10);
 
         act.Should().NotThrow();
         // Mirrors Heartbeat's order: TryGetRuntime is checked before the owner
         // lookup, so an unknown session never reaches GetOwnerUserId.
-        sessionManager.Verify(expression: m => m.GetOwnerUserId(It.IsAny<string>()), times: Times.Never);
+        sessionManager.Verify(m => m.GetOwnerUserId(It.IsAny<string>()), Times.Never);
     }
 
     private sealed class HttpContextAccessorStub(HttpContext httpContext) : IHttpContextAccessor

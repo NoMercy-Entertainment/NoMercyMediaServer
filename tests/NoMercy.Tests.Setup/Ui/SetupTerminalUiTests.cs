@@ -30,7 +30,7 @@ namespace NoMercy.Tests.Setup.Ui;
 /// Console.Clear()/WindowWidth succeeding — see the itemized note at the bottom of
 /// this file for exactly which lines that leaves uncovered.
 /// </remarks>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class SetupTerminalUiTests : IDisposable
 {
     public void Dispose()
@@ -45,7 +45,7 @@ public sealed class SetupTerminalUiTests : IDisposable
     {
         SetupTerminalUi.ForceInteractiveForTests = true;
 
-        Assert.True(condition: SetupTerminalUi.IsInteractiveTerminal);
+        Assert.True(SetupTerminalUi.IsInteractiveTerminal);
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public sealed class SetupTerminalUiTests : IDisposable
 
         bool result = SetupTerminalUi.IsInteractiveTerminal;
 
-        Assert.IsType<bool>(@object: result);
+        Assert.IsType<bool>(result);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class SetupTerminalUiTests : IDisposable
     {
         SetupTerminalUi.ForceInteractiveForTests = false;
 
-        Assert.False(condition: SetupTerminalUi.IsInteractiveTerminal);
+        Assert.False(SetupTerminalUi.IsInteractiveTerminal);
     }
 
     // ── Non-interactive behavior (production-common: Docker/systemd/service) ───
@@ -80,10 +80,10 @@ public sealed class SetupTerminalUiTests : IDisposable
         using SetupTerminalUi ui = new();
 
         ui.Show(
-            verificationUriComplete: "https://auth.nomercy.tv/device?code=ABCD",
-            verificationUri: "https://auth.nomercy.tv/device",
-            userCode: "ABCD-1234",
-            setupPageUrl: "http://localhost:7626/setup"
+            "https://auth.nomercy.tv/device?code=ABCD",
+            "https://auth.nomercy.tv/device",
+            "ABCD-1234",
+            "http://localhost:7626/setup"
         );
     }
 
@@ -93,7 +93,7 @@ public sealed class SetupTerminalUiTests : IDisposable
         SetupTerminalUi.ForceInteractiveForTests = false;
         using SetupTerminalUi ui = new();
 
-        ui.SetStatus(message: "Waiting for you to sign in...");
+        ui.SetStatus("Waiting for you to sign in...");
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public sealed class SetupTerminalUiTests : IDisposable
         SetupTerminalUi.ForceInteractiveForTests = false;
         using SetupTerminalUi ui = new();
 
-        ui.ShowProgress(phase: "Registering", detail: "Connecting your server to NoMercy...");
+        ui.ShowProgress("Registering", "Connecting your server to NoMercy...");
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public sealed class SetupTerminalUiTests : IDisposable
         SetupTerminalUi.ForceInteractiveForTests = false;
         using SetupTerminalUi ui = new();
 
-        ui.ShowComplete(serverUrl: "https://abc123.nomercy.app");
+        ui.ShowComplete("https://abc123.nomercy.app");
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public sealed class SetupTerminalUiTests : IDisposable
         SetupTerminalUi.ForceInteractiveForTests = true;
         using SetupTerminalUi ui = new();
 
-        ui.ShowProgress(phase: "Registered", detail: "Setting up your server address...");
+        ui.ShowProgress("Registered", "Setting up your server address...");
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public sealed class SetupTerminalUiTests : IDisposable
         SetupTerminalUi.ForceInteractiveForTests = true;
         using SetupTerminalUi ui = new();
 
-        ui.ShowComplete(serverUrl: "https://abc123.nomercy.app");
+        ui.ShowComplete("https://abc123.nomercy.app");
     }
 
     [Fact]
@@ -155,10 +155,10 @@ public sealed class SetupTerminalUiTests : IDisposable
         SetupTerminalUi ui = new();
 
         ui.Show(
-            verificationUriComplete: "https://auth.nomercy.tv/device?code=ABCD",
-            verificationUri: "https://auth.nomercy.tv/device",
-            userCode: "ABCD-1234",
-            setupPageUrl: "http://localhost:7626/setup"
+            "https://auth.nomercy.tv/device?code=ABCD",
+            "https://auth.nomercy.tv/device",
+            "ABCD-1234",
+            "http://localhost:7626/setup"
         );
 
         // Give the resize watcher's background loop at least one 250ms tick, then
@@ -168,9 +168,9 @@ public sealed class SetupTerminalUiTests : IDisposable
         // calls run, corrupting that test's own Console.Clear/SetCursorPosition
         // sequence (observed: ShowProgress/ShowComplete's SetCursorPosition call
         // throwing when a leaked watcher from this test was still active).
-        Thread.Sleep(millisecondsTimeout: 300);
+        Thread.Sleep(300);
         ui.Dispose();
-        Thread.Sleep(millisecondsTimeout: 300);
+        Thread.Sleep(300);
     }
 
     // ── GenerateAsciiQr (pure, no Console dependency) ────────────────────────
@@ -179,25 +179,25 @@ public sealed class SetupTerminalUiTests : IDisposable
     public void GenerateAsciiQr_WideTerminal_ReturnsNonEmptyLines()
     {
         string[] lines = SetupTerminalUi.GenerateAsciiQr(
-            text: "https://auth.nomercy.tv/device?code=ABCD",
-            terminalWidth: 200
+            "https://auth.nomercy.tv/device?code=ABCD",
+            200
         );
 
-        Assert.NotEmpty(collection: lines);
+        Assert.NotEmpty(lines);
         // Every line must be the same width (a real block-character QR grid).
         int width = lines[0].Length;
-        Assert.All(collection: lines, action: line => Assert.Equal(expected: width, actual: line.Length));
+        Assert.All(lines, line => Assert.Equal(width, line.Length));
     }
 
     [Fact]
     public void GenerateAsciiQr_TooNarrowTerminal_ReturnsEmpty()
     {
         string[] lines = SetupTerminalUi.GenerateAsciiQr(
-            text: "https://auth.nomercy.tv/device?code=ABCD",
-            terminalWidth: 1
+            "https://auth.nomercy.tv/device?code=ABCD",
+            1
         );
 
-        Assert.Empty(collection: lines);
+        Assert.Empty(lines);
     }
 
     [Fact]
@@ -207,9 +207,9 @@ public sealed class SetupTerminalUiTests : IDisposable
         // valid (near-empty-pattern) QR grid. This documents that behavior rather
         // than asserting the exception-catch branch, which needs a genuinely
         // malformed input to reach (see the next test).
-        string[] lines = SetupTerminalUi.GenerateAsciiQr(text: string.Empty, terminalWidth: 200);
+        string[] lines = SetupTerminalUi.GenerateAsciiQr(string.Empty, 200);
 
-        Assert.NotNull(@object: lines);
+        Assert.NotNull(lines);
     }
 
     [Fact]
@@ -218,23 +218,23 @@ public sealed class SetupTerminalUiTests : IDisposable
         // QR codes cap out at ~2953 bytes for the lowest error-correction level —
         // exceeding it makes QRCodeGenerator.CreateQrCode itself throw, which is what
         // GenerateAsciiQr's own catch(Exception) branch converts into an empty result.
-        string[] lines = SetupTerminalUi.GenerateAsciiQr(text: new string(c: 'x', count: 5000), terminalWidth: 300);
+        string[] lines = SetupTerminalUi.GenerateAsciiQr(new string('x', 5000), 300);
 
-        Assert.Empty(collection: lines);
+        Assert.Empty(lines);
     }
 
     [Fact]
     public void GenerateAsciiQr_LongUrl_StillFitsOrGracefullyEmpties()
     {
         string longUrl =
-            "https://auth.nomercy.tv/device?code=ABCD-1234&extra_param=" + new string(c: 'x', count: 200);
+            "https://auth.nomercy.tv/device?code=ABCD-1234&extra_param=" + new string('x', 200);
 
-        string[] lines = SetupTerminalUi.GenerateAsciiQr(text: longUrl, terminalWidth: 300);
+        string[] lines = SetupTerminalUi.GenerateAsciiQr(longUrl, 300);
 
         // A very long payload produces a bigger QR grid — either it still fits the
         // generous terminal width, or GenerateAsciiQr's own width check empties it.
         // Either outcome must not throw; assert the method actually returned.
-        Assert.NotNull(@object: lines);
+        Assert.NotNull(lines);
     }
 }
 

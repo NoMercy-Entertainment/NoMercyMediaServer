@@ -19,11 +19,11 @@ public class RuntimeErrorsTests
     [Fact]
     public void GpuCapacityExhausted_carries_409_and_catalogued_id()
     {
-        EncoderRuntimeException ex = RuntimeErrors.GpuCapacityExhausted(gpu: "RTX 4090", sessions: 3);
+        EncoderRuntimeException ex = RuntimeErrors.GpuCapacityExhausted("RTX 4090", 3);
 
-        ex.HttpStatusCode.Should().Be(expected: 409);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.GpuCapacityExhausted);
-        ex.Shape.Message.Should().Contain(expected: "RTX 4090").And.Contain(expected: "3 active");
+        ex.HttpStatusCode.Should().Be(409);
+        ex.Shape.Id.Should().Be(EncoderRuleId.GpuCapacityExhausted);
+        ex.Shape.Message.Should().Contain("RTX 4090").And.Contain("3 active");
         ex.Shape.Suggestion.Should().NotBeNullOrWhiteSpace();
         ex.Shape.Details.Should().BeOfType<RuntimeErrors.GpuCapacityDetails>();
     }
@@ -32,141 +32,141 @@ public class RuntimeErrorsTests
     public void GpuCapacityExhausted_accepts_custom_suggestion()
     {
         EncoderRuntimeException ex = RuntimeErrors.GpuCapacityExhausted(
-            gpu: "RTX 4090",
-            sessions: 3,
-            suggestion: "Wait 30s — current encode at 87%."
+            "RTX 4090",
+            3,
+            "Wait 30s — current encode at 87%."
         );
 
-        ex.Shape.Suggestion.Should().Be(expected: "Wait 30s — current encode at 87%.");
+        ex.Shape.Suggestion.Should().Be("Wait 30s — current encode at 87%.");
     }
 
     [Fact]
     public void EncoderInitFailed_returns_500()
     {
         EncoderRuntimeException ex = RuntimeErrors.EncoderInitFailed(
-            handle: "h264_nvenc",
-            reason: "driver too old"
+            "h264_nvenc",
+            "driver too old"
         );
 
-        ex.HttpStatusCode.Should().Be(expected: 500);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.EncoderInitFailed);
-        ex.Shape.Message.Should().Contain(expected: "h264_nvenc").And.Contain(expected: "driver too old");
+        ex.HttpStatusCode.Should().Be(500);
+        ex.Shape.Id.Should().Be(EncoderRuleId.EncoderInitFailed);
+        ex.Shape.Message.Should().Contain("h264_nvenc").And.Contain("driver too old");
     }
 
     [Fact]
     public void SourceNotAccessible_returns_404()
     {
-        EncoderRuntimeException ex = RuntimeErrors.SourceNotAccessible(path: "/movies/missing.mkv");
+        EncoderRuntimeException ex = RuntimeErrors.SourceNotAccessible("/movies/missing.mkv");
 
-        ex.HttpStatusCode.Should().Be(expected: 404);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.SourceNotAccessible);
+        ex.HttpStatusCode.Should().Be(404);
+        ex.Shape.Id.Should().Be(EncoderRuleId.SourceNotAccessible);
     }
 
     [Fact]
     public void SourceReadError_returns_500()
     {
-        EncoderRuntimeException ex = RuntimeErrors.SourceReadError(path: "/movies/x.mkv", detail: "EIO");
+        EncoderRuntimeException ex = RuntimeErrors.SourceReadError("/movies/x.mkv", "EIO");
 
-        ex.HttpStatusCode.Should().Be(expected: 500);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.SourceReadError);
+        ex.HttpStatusCode.Should().Be(500);
+        ex.Shape.Id.Should().Be(EncoderRuleId.SourceReadError);
     }
 
     [Fact]
     public void OutputWriteError_returns_500()
     {
-        EncoderRuntimeException ex = RuntimeErrors.OutputWriteError(path: "/out/v.m3u8", detail: "ENOSPC");
+        EncoderRuntimeException ex = RuntimeErrors.OutputWriteError("/out/v.m3u8", "ENOSPC");
 
-        ex.HttpStatusCode.Should().Be(expected: 500);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.OutputWriteError);
+        ex.HttpStatusCode.Should().Be(500);
+        ex.Shape.Id.Should().Be(EncoderRuleId.OutputWriteError);
     }
 
     [Fact]
     public void OutputPathNotAllowed_returns_403_and_includes_reason()
     {
         EncoderRuntimeException ex = RuntimeErrors.OutputPathNotAllowed(
-            path: "/etc/passwd",
-            reason: "path is not under any allowed root"
+            "/etc/passwd",
+            "path is not under any allowed root"
         );
 
-        ex.HttpStatusCode.Should().Be(expected: 403);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.OutputPathNotAllowed);
-        ex.Shape.Message.Should().Contain(expected: "/etc/passwd");
+        ex.HttpStatusCode.Should().Be(403);
+        ex.Shape.Id.Should().Be(EncoderRuleId.OutputPathNotAllowed);
+        ex.Shape.Message.Should().Contain("/etc/passwd");
     }
 
     [Fact]
     public void LicenseRevoked_returns_403()
     {
-        EncoderRuntimeException ex = RuntimeErrors.LicenseRevoked(reason: "subscription expired");
+        EncoderRuntimeException ex = RuntimeErrors.LicenseRevoked("subscription expired");
 
-        ex.HttpStatusCode.Should().Be(expected: 403);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.LicenseRevoked);
+        ex.HttpStatusCode.Should().Be(403);
+        ex.Shape.Id.Should().Be(EncoderRuleId.LicenseRevoked);
     }
 
     [Fact]
     public void LicenseUnreachable_returns_503()
     {
-        EncoderRuntimeException ex = RuntimeErrors.LicenseUnreachable(url: "https://api.nomercy.tv");
+        EncoderRuntimeException ex = RuntimeErrors.LicenseUnreachable("https://api.nomercy.tv");
 
-        ex.HttpStatusCode.Should().Be(expected: 503);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.LicenseUnreachable);
+        ex.HttpStatusCode.Should().Be(503);
+        ex.Shape.Id.Should().Be(EncoderRuleId.LicenseUnreachable);
     }
 
     [Fact]
     public void HardwareForcedButUnavailable_returns_422()
     {
-        EncoderRuntimeException ex = RuntimeErrors.HardwareForcedButUnavailable(requested: "h264_nvenc");
+        EncoderRuntimeException ex = RuntimeErrors.HardwareForcedButUnavailable("h264_nvenc");
 
-        ex.HttpStatusCode.Should().Be(expected: 422);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.HardwareForcedButUnavailable);
-        ex.Shape.Message.Should().Contain(expected: "h264_nvenc");
+        ex.HttpStatusCode.Should().Be(422);
+        ex.Shape.Id.Should().Be(EncoderRuleId.HardwareForcedButUnavailable);
+        ex.Shape.Message.Should().Contain("h264_nvenc");
     }
 
     [Fact]
     public void JobInterruptedNoCheckpoint_returns_500()
     {
-        EncoderRuntimeException ex = RuntimeErrors.JobInterruptedNoCheckpoint(jobId: "job-123");
+        EncoderRuntimeException ex = RuntimeErrors.JobInterruptedNoCheckpoint("job-123");
 
-        ex.HttpStatusCode.Should().Be(expected: 500);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.JobInterruptedNoCheckpoint);
+        ex.HttpStatusCode.Should().Be(500);
+        ex.Shape.Id.Should().Be(EncoderRuleId.JobInterruptedNoCheckpoint);
     }
 
     [Fact]
     public void DiscDriveBusy_returns_409()
     {
-        EncoderRuntimeException ex = RuntimeErrors.DiscDriveBusy(drivePath: "/dev/sr0");
+        EncoderRuntimeException ex = RuntimeErrors.DiscDriveBusy("/dev/sr0");
 
-        ex.HttpStatusCode.Should().Be(expected: 409);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.DiscDriveBusy);
+        ex.HttpStatusCode.Should().Be(409);
+        ex.Shape.Id.Should().Be(EncoderRuleId.DiscDriveBusy);
     }
 
     [Fact]
     public void DiscAacsCertMissing_returns_409()
     {
-        EncoderRuntimeException ex = RuntimeErrors.DiscAacsCertMissing(volumeId: "VOL-123");
+        EncoderRuntimeException ex = RuntimeErrors.DiscAacsCertMissing("VOL-123");
 
-        ex.HttpStatusCode.Should().Be(expected: 409);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.DiscAacsCertMissing);
+        ex.HttpStatusCode.Should().Be(409);
+        ex.Shape.Id.Should().Be(EncoderRuleId.DiscAacsCertMissing);
     }
 
     [Fact]
     public void DiscBdplusConverterMissing_returns_409()
     {
-        EncoderRuntimeException ex = RuntimeErrors.DiscBdplusConverterMissing(volumeId: "VOL-456");
+        EncoderRuntimeException ex = RuntimeErrors.DiscBdplusConverterMissing("VOL-456");
 
-        ex.HttpStatusCode.Should().Be(expected: 409);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.DiscBdplusConverterMissing);
+        ex.HttpStatusCode.Should().Be(409);
+        ex.Shape.Id.Should().Be(EncoderRuleId.DiscBdplusConverterMissing);
     }
 
     [Fact]
     public void DiscReadError_returns_500_with_stderr_tail()
     {
         EncoderRuntimeException ex = RuntimeErrors.DiscReadError(
-            drivePath: "/dev/sr0",
-            ffmpegStderrTail: "I/O error at sector 12345"
+            "/dev/sr0",
+            "I/O error at sector 12345"
         );
 
-        ex.HttpStatusCode.Should().Be(expected: 500);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.DiscReadError);
+        ex.HttpStatusCode.Should().Be(500);
+        ex.Shape.Id.Should().Be(EncoderRuleId.DiscReadError);
         ex.Shape.Details.Should().BeOfType<RuntimeErrors.DiscReadDetails>();
     }
 
@@ -175,29 +175,29 @@ public class RuntimeErrorsTests
     {
         EncoderRuntimeException ex = RuntimeErrors.DistributionHmacInvalid();
 
-        ex.HttpStatusCode.Should().Be(expected: 401);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.DistributionHmacInvalid);
+        ex.HttpStatusCode.Should().Be(401);
+        ex.Shape.Id.Should().Be(EncoderRuleId.DistributionHmacInvalid);
     }
 
     [Fact]
     public void DistributionTimestampReplay_returns_401()
     {
-        EncoderRuntimeException ex = RuntimeErrors.DistributionTimestampReplay(ageSeconds: 900);
+        EncoderRuntimeException ex = RuntimeErrors.DistributionTimestampReplay(900);
 
-        ex.HttpStatusCode.Should().Be(expected: 401);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.DistributionTimestampReplay);
-        ex.Shape.Message.Should().Contain(expected: "900s");
+        ex.HttpStatusCode.Should().Be(401);
+        ex.Shape.Id.Should().Be(EncoderRuleId.DistributionTimestampReplay);
+        ex.Shape.Message.Should().Contain("900s");
     }
 
     [Fact]
     public void DistributionWorkerNotRegistered_returns_404()
     {
         EncoderRuntimeException ex = RuntimeErrors.DistributionWorkerNotRegistered(
-            workerId: "worker-eagle-1"
+            "worker-eagle-1"
         );
 
-        ex.HttpStatusCode.Should().Be(expected: 404);
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.DistributionWorkerNotRegistered);
+        ex.HttpStatusCode.Should().Be(404);
+        ex.Shape.Id.Should().Be(EncoderRuleId.DistributionWorkerNotRegistered);
     }
 
     [Fact]
@@ -205,31 +205,31 @@ public class RuntimeErrorsTests
     {
         EncoderRuntimeException[] all =
         [
-            RuntimeErrors.GpuCapacityExhausted(gpu: "g", sessions: 1),
-            RuntimeErrors.EncoderInitFailed(handle: "h", reason: "r"),
-            RuntimeErrors.SourceNotAccessible(path: "p"),
-            RuntimeErrors.SourceReadError(path: "p", detail: "d"),
-            RuntimeErrors.OutputWriteError(path: "p", detail: "d"),
-            RuntimeErrors.OutputPathNotAllowed(path: "p", reason: "r"),
-            RuntimeErrors.LicenseRevoked(reason: "r"),
-            RuntimeErrors.LicenseUnreachable(url: "u"),
-            RuntimeErrors.HardwareForcedButUnavailable(requested: "h"),
-            RuntimeErrors.JobInterruptedNoCheckpoint(jobId: "j"),
-            RuntimeErrors.DiscDriveBusy(drivePath: "/dev/sr0"),
-            RuntimeErrors.DiscAacsCertMissing(volumeId: "v"),
-            RuntimeErrors.DiscBdplusConverterMissing(volumeId: "v"),
-            RuntimeErrors.DiscReadError(drivePath: "d", ffmpegStderrTail: "s"),
+            RuntimeErrors.GpuCapacityExhausted("g", 1),
+            RuntimeErrors.EncoderInitFailed("h", "r"),
+            RuntimeErrors.SourceNotAccessible("p"),
+            RuntimeErrors.SourceReadError("p", "d"),
+            RuntimeErrors.OutputWriteError("p", "d"),
+            RuntimeErrors.OutputPathNotAllowed("p", "r"),
+            RuntimeErrors.LicenseRevoked("r"),
+            RuntimeErrors.LicenseUnreachable("u"),
+            RuntimeErrors.HardwareForcedButUnavailable("h"),
+            RuntimeErrors.JobInterruptedNoCheckpoint("j"),
+            RuntimeErrors.DiscDriveBusy("/dev/sr0"),
+            RuntimeErrors.DiscAacsCertMissing("v"),
+            RuntimeErrors.DiscBdplusConverterMissing("v"),
+            RuntimeErrors.DiscReadError("d", "s"),
             RuntimeErrors.DistributionHmacInvalid(),
-            RuntimeErrors.DistributionTimestampReplay(ageSeconds: 1),
-            RuntimeErrors.DistributionWorkerNotRegistered(workerId: "w"),
+            RuntimeErrors.DistributionTimestampReplay(1),
+            RuntimeErrors.DistributionWorkerNotRegistered("w"),
         ];
 
         // Reflect over EncoderRuleId to confirm every emitted ID exists in the catalogue.
         IEnumerable<string> catalogued = typeof(EncoderRuleId)
-            .GetFields(bindingAttr: BindingFlags.Public | BindingFlags.Static)
-            .Select(selector: f => (string)f.GetValue(obj: null)!);
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Select(f => (string)f.GetValue(null)!);
 
         foreach (EncoderRuntimeException ex in all)
-            catalogued.Should().Contain(expected: ex.Shape.Id, because: $"{ex.Shape.Id} must be in EncoderRuleId");
+            catalogued.Should().Contain(ex.Shape.Id, $"{ex.Shape.Id} must be in EncoderRuleId");
     }
 }

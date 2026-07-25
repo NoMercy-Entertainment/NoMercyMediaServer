@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -8,25 +7,22 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace NoMercy.Analyzers;
 
-[DiagnosticAnalyzer(firstLanguage: LanguageNames.CSharp)]
-[SuppressMessage(category: "MicrosoftCodeAnalysisCorrectness", checkId: "RS1038")]
+[DiagnosticAnalyzer(LanguageNames.CSharp)]
+[SuppressMessage("MicrosoftCodeAnalysisCorrectness", "RS1038")]
 public sealed class NamedArgumentsAnalyzer : DiagnosticAnalyzer
 {
     private static readonly DiagnosticDescriptor Rule =
-        DiagnosticDescriptors.RequireNamedArgumentsForMultiParameterMethods;
+        DiagnosticDescriptors.RequireNamedArgumentsForSingleLetterCallbacks;
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        ImmutableArray.Create(item: Rule);
+        ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {
         context.EnableConcurrentExecution();
-        context.ConfigureGeneratedCodeAnalysis(analysisMode: GeneratedCodeAnalysisFlags.None);
+        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
 
-        context.RegisterSyntaxNodeAction(
-            action: AnalyzeInvocation,
-            syntaxKinds: SyntaxKind.InvocationExpression
-        );
+        context.RegisterSyntaxNodeAction(AnalyzeInvocation, SyntaxKind.InvocationExpression);
     }
 
     private static void AnalyzeInvocation(SyntaxNodeAnalysisContext context)
@@ -34,38 +30,36 @@ public sealed class NamedArgumentsAnalyzer : DiagnosticAnalyzer
         if (context.Node is not InvocationExpressionSyntax invocation)
             return;
 
-        if (
-            context.SemanticModel.GetSymbolInfo(expression: invocation).Symbol
-            is not IMethodSymbol symbol
-        )
+        if (context.SemanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol symbol)
             return;
 
-        if (symbol.Parameters.Length <= 2)
-            return;
+        SeparatedSyntaxList<ArgumentSyntax> arguments = invocation.ArgumentList.Arguments;
 
-        // A trailing params parameter can't be named without either wrapping every
-        // trailing value in an explicit collection (params only accepts a name in
-        // normal form, i.e. the whole array) or forcing a syntax error (C# disallows
-        // a positional argument, which the params tail must remain, after any named
-        // argument). Naming isn't practical either way, so skip the whole invocation.
-        if (symbol.Parameters[index: symbol.Parameters.Length - 1].IsParams)
-            return;
-
-        foreach (
-            ArgumentSyntax argumentSyntax in invocation.ArgumentList.Arguments.Where(
-                predicate: argumentSyntax => argumentSyntax.NameColon == null
-            )
-        )
+        for (int index = 0; index < arguments.Count; index++)
         {
+            ArgumentSyntax argumentSyntax = arguments[index];
+
             if (argumentSyntax.NameColon != null)
                 continue;
 
-            Diagnostic diagnostic = Diagnostic.Create(
-                descriptor: Rule,
-                location: argumentSyntax.GetLocation()
-            );
+            // Only a callback whose parameter is a single letter is opaque enough to
+            // need the label: `Count(a => ...)` says nothing about what `a` is for,
+            // while `Count(predicate: a => ...)` does. Every other argument reads fine
+            // positionally, and labelling them all is what made this rule unusable.
+            if (!LambdaArgumentHelpers.HasSingleLetterParameter(argumentSyntax.Expression))
+                continue;
 
-            context.ReportDiagnostic(diagnostic: diagnostic);
+            if (index >= symbol.Parameters.Length)
+                continue;
+
+            // A params argument only accepts a name in normal form (the whole array),
+            // so the label can't be added to the value sitting in the params tail.
+            if (symbol.Parameters[index].IsParams)
+                continue;
+
+            Diagnostic diagnostic = Diagnostic.Create(Rule, argumentSyntax.GetLocation());
+
+            context.ReportDiagnostic(diagnostic);
         }
     }
 }

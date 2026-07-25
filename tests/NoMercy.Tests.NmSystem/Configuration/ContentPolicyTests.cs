@@ -14,7 +14,7 @@ using NoMercy.NmSystem.Configuration;
 
 namespace NoMercy.Tests.NmSystem.Configuration;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ContentPolicyTests
 {
     [Fact]
@@ -51,14 +51,14 @@ public class ContentPolicyTests
     }
 
     [Theory]
-    [InlineData(data: [null, false])]
-    [InlineData(data: [false, false])]
-    [InlineData(data: [true, true])]
+    [InlineData([null, false])]
+    [InlineData([false, false])]
+    [InlineData([true, true])]
     public void ShowAdultContent_MatchesAllThreeInputStates(bool? configured, bool expected)
     {
         ContentPolicy policy = new() { AllowAdultContent = configured };
 
-        policy.ShowAdultContent.Should().Be(expected: expected);
+        policy.ShowAdultContent.Should().Be(expected);
     }
 
     [Fact]
@@ -81,34 +81,34 @@ public class ContentPolicyTests
     public void ShowAdultContent_IsComputed_NotMutable()
     {
         PropertyInfo property = typeof(ContentPolicy).GetProperty(
-            name: nameof(ContentPolicy.ShowAdultContent)
+            nameof(ContentPolicy.ShowAdultContent)
         )!;
 
         property.Should().NotBeNull();
         property
             .CanWrite.Should()
-            .BeFalse(because: "ShowAdultContent must be a read-only computed guard, not a settable field");
+            .BeFalse("ShowAdultContent must be a read-only computed guard, not a settable field");
     }
 
     [Fact]
     public void Meta_AllDecisionProperties_AreCoveredByThisSuite()
     {
-        HashSet<string> knownDecisionProperties = new(comparer: StringComparer.Ordinal)
+        HashSet<string> knownDecisionProperties = new(StringComparer.Ordinal)
         {
             nameof(ContentPolicy.ShowAdultContent),
         };
 
         IEnumerable<PropertyInfo> computedBoolProperties = typeof(ContentPolicy)
-            .GetProperties(bindingAttr: BindingFlags.Public | BindingFlags.Instance)
-            .Where(predicate: p => p.PropertyType == typeof(bool) && !p.CanWrite);
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.PropertyType == typeof(bool) && !p.CanWrite);
 
         foreach (PropertyInfo prop in computedBoolProperties)
         {
             knownDecisionProperties
                 .Should()
                 .Contain(
-                    expected: prop.Name,
-                    because: $"computed bool '{prop.Name}' was added to ContentPolicy without a guard test — add it to knownDecisionProperties and write FIRES/SILENT tests"
+                    prop.Name,
+                    $"computed bool '{prop.Name}' was added to ContentPolicy without a guard test — add it to knownDecisionProperties and write FIRES/SILENT tests"
                 );
         }
     }

@@ -15,66 +15,66 @@ namespace NoMercy.Launcher.Models;
 
 public class ServerStatusResponse
 {
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "server_name")]
+    [JsonProperty("server_name")]
     public string ServerName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "version")]
+    [JsonProperty("version")]
     public string Version { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "platform")]
+    [JsonProperty("platform")]
     public string Platform { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "architecture")]
+    [JsonProperty("architecture")]
     public string Architecture { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "os")]
+    [JsonProperty("os")]
     public string Os { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "uptime_seconds")]
+    [JsonProperty("uptime_seconds")]
     public long UptimeSeconds { get; set; }
 
-    [JsonProperty(propertyName: "start_time")]
+    [JsonProperty("start_time")]
     public DateTime StartTime { get; set; }
 
-    [JsonProperty(propertyName: "is_dev")]
+    [JsonProperty("is_dev")]
     public bool IsDev { get; set; }
 
-    [JsonProperty(propertyName: "auto_start")]
+    [JsonProperty("auto_start")]
     public bool AutoStart { get; set; }
 
-    [JsonProperty(propertyName: "is_docker")]
+    [JsonProperty("is_docker")]
     public bool IsDocker { get; set; }
 
-    [JsonProperty(propertyName: "update_available")]
+    [JsonProperty("update_available")]
     public bool UpdateAvailable { get; set; }
 
-    [JsonProperty(propertyName: "restart_needed")]
+    [JsonProperty("restart_needed")]
     public bool RestartNeeded { get; set; }
 
-    [JsonProperty(propertyName: "latest_version")]
+    [JsonProperty("latest_version")]
     public string? LatestVersion { get; set; }
 
-    [JsonProperty(propertyName: "setup_phase")]
+    [JsonProperty("setup_phase")]
     public string? SetupPhase { get; set; }
 
-    [JsonProperty(propertyName: "internal_address")]
+    [JsonProperty("internal_address")]
     public string? InternalAddress { get; set; }
 
-    [JsonProperty(propertyName: "external_address")]
+    [JsonProperty("external_address")]
     public string? ExternalAddress { get; set; }
 
-    [JsonProperty(propertyName: "app_status")]
+    [JsonProperty("app_status")]
     public AppStatusInfo? AppStatus { get; set; }
 }
 
 public class AppStatusInfo
 {
-    [JsonProperty(propertyName: "running")]
+    [JsonProperty("running")]
     public bool Running { get; set; }
 
-    [JsonProperty(propertyName: "pid")]
+    [JsonProperty("pid")]
     public int? Pid { get; set; }
 }

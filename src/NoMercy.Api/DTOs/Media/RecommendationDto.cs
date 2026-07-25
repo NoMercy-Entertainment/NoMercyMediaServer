@@ -17,29 +17,29 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record RecommendationDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link =>
         new(
-            uriString: $"/dashboard/recommendations/{(Type != "movie" ? "tv" : "movie")}/{Id}",
-            uriKind: UriKind.Relative
+            $"/dashboard/recommendations/{(Type != "movie" ? "tv" : "movie")}/{Id}",
+            UriKind.Relative
         );
 
     // Internal properties used for scoring/diversity — not serialized to JSON
@@ -61,96 +61,96 @@ public record RecommendationDto
 
 public record RecommendationDetailDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "logo")]
+    [JsonProperty("logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string MediaType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int? Year { get; set; }
 
-    [JsonProperty(propertyName: "voteAverage")]
+    [JsonProperty("voteAverage")]
     public double? VoteAverage { get; set; }
 
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public IEnumerable<GenreDto> Genres { get; set; } = [];
 
-    [JsonProperty(propertyName: "content_ratings")]
+    [JsonProperty("content_ratings")]
     public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
 
-    [JsonProperty(propertyName: "external_ids")]
+    [JsonProperty("external_ids")]
     public ExternalIds? ExternalIds { get; set; }
 
-    [JsonProperty(propertyName: "because_you_have")]
+    [JsonProperty("because_you_have")]
     public List<RecommendationDetailSourceDto> BecauseYouHave { get; set; } = [];
 
-    [JsonProperty(propertyName: "link")]
-    public Uri Link => new(uriString: $"/{MediaType}/{Id}", uriKind: UriKind.Relative);
+    [JsonProperty("link")]
+    public Uri Link => new($"/{MediaType}/{Id}", UriKind.Relative);
 }
 
 public record RecommendationDetailSourceDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "titleSort")]
+    [JsonProperty("titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "logo")]
+    [JsonProperty("logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int? Year { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "link")]
-    public Uri Link => new(uriString: $"/{MediaType}/{Id}", uriKind: UriKind.Relative);
+    [JsonProperty("link")]
+    public Uri Link => new($"/{MediaType}/{Id}", UriKind.Relative);
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string MediaType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "have_items")]
+    [JsonProperty("have_items")]
     public int HaveItems { get; set; }
 
-    [JsonProperty(propertyName: "number_of_items")]
+    [JsonProperty("number_of_items")]
     public int NumberOfItems { get; set; }
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public int? Duration { get; set; }
 
-    [JsonProperty(propertyName: "tags")]
+    [JsonProperty("tags")]
     public IEnumerable<string> Tags { get; set; } = [];
 }

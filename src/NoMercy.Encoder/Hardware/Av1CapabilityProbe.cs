@@ -51,9 +51,9 @@ internal sealed class Av1CapabilityProbe(IProcessRunner processRunner, ILogger l
         vendor switch
         {
             GpuVendor.Nvidia => NvidiaSupportsAv1NvencAsync(),
-            GpuVendor.Amd => Task.FromResult(result: AmdSupports(gpuName: gpuName)),
-            GpuVendor.Intel => Task.FromResult(result: IntelSupports(gpuName: gpuName)),
-            _ => Task.FromResult(result: true),
+            GpuVendor.Amd => Task.FromResult(AmdSupports(gpuName)),
+            GpuVendor.Intel => Task.FromResult(IntelSupports(gpuName)),
+            _ => Task.FromResult(true),
         };
 
     /// <summary>
@@ -79,17 +79,17 @@ internal sealed class Av1CapabilityProbe(IProcessRunner processRunner, ILogger l
         // Confirmed pre-AV1 generations. Block these explicitly so the
         // benchmark doesn't waste time probing a known-failing encoder.
         if (
-            upper.Contains(value: "RX 5")
-            || upper.Contains(value: "RX 6")
-            || upper.Contains(value: "PRO W5")
-            || upper.Contains(value: "PRO W6")
-            || upper.Contains(value: "VEGA")
-            || upper.Contains(value: "POLARIS")
+            upper.Contains("RX 5")
+            || upper.Contains("RX 6")
+            || upper.Contains("PRO W5")
+            || upper.Contains("PRO W6")
+            || upper.Contains("VEGA")
+            || upper.Contains("POLARIS")
         )
         {
             logger.LogInformation(
-                message: "AV1 AMF unavailable on {Name} — RDNA 1/2 / Vega / Polaris silicon predates the AV1 encoder block.",
-                args: gpuName
+                "AV1 AMF unavailable on {Name} — RDNA 1/2 / Vega / Polaris silicon predates the AV1 encoder block.",
+                gpuName
             );
             return false;
         }
@@ -121,21 +121,21 @@ internal sealed class Av1CapabilityProbe(IProcessRunner processRunner, ILogger l
 
         // Pre-Arc iGPUs — known to lack AV1 encode silicon.
         if (
-            upper.Contains(value: "IRIS XE")
-            || upper.Contains(value: "UHD GRAPHICS")
-            || upper.Contains(value: "HD GRAPHICS")
+            upper.Contains("IRIS XE")
+            || upper.Contains("UHD GRAPHICS")
+            || upper.Contains("HD GRAPHICS")
         )
         {
             logger.LogInformation(
-                message: "AV1 QSV/VAAPI unavailable on {Name} — pre-Arc Intel iGPUs lack the AV1 encoder block.",
-                args: gpuName
+                "AV1 QSV/VAAPI unavailable on {Name} — pre-Arc Intel iGPUs lack the AV1 encoder block.",
+                gpuName
             );
             return false;
         }
 
         // Arc family — discrete cards and modern Core Ultra integrated GPUs
         // both ship the encoder block.
-        if (upper.Contains(value: "ARC"))
+        if (upper.Contains("ARC"))
             return true;
 
         // Anything else — default allow, let the probe decide.
@@ -162,32 +162,32 @@ internal sealed class Av1CapabilityProbe(IProcessRunner processRunner, ILogger l
         {
             ProcessResult result = await processRunner
                 .RunAsync(
-                    executable: "nvidia-smi",
-                    arguments: ["--query-gpu=compute_cap", "--format=csv,noheader,nounits"],
-                    workingDirectory: null,
-                    cancellationToken: CancellationToken.None
+                    "nvidia-smi",
+                    ["--query-gpu=compute_cap", "--format=csv,noheader,nounits"],
+                    null,
+                    CancellationToken.None
                 )
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .ConfigureAwait(false);
 
-            if (!result.IsSuccess || string.IsNullOrWhiteSpace(value: result.StdOut))
+            if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
             {
                 logger.LogDebug(
-                    message: "nvidia-smi compute_cap query failed (exit {Code}) — assuming AV1 NVENC available",
-                    args: result.ExitCode
+                    "nvidia-smi compute_cap query failed (exit {Code}) — assuming AV1 NVENC available",
+                    result.ExitCode
                 );
                 return true;
             }
 
             foreach (
-                string line in result.StdOut.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries)
+                string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             )
             {
                 if (
                     double.TryParse(
-                        s: line.Trim(),
-                        style: NumberStyles.Float,
-                        provider: CultureInfo.InvariantCulture,
-                        result: out double cap
+                        line.Trim(),
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out double cap
                     )
                     && cap >= 8.9
                 )
@@ -198,7 +198,7 @@ internal sealed class Av1CapabilityProbe(IProcessRunner processRunner, ILogger l
             {
                 _unavailableLogged = true;
                 logger.LogInformation(
-                    message: "AV1 NVENC unavailable — every Nvidia GPU on the host is below compute capability 8.9 (Ada Lovelace). The encoder block does not exist on Turing / Ampere silicon."
+                    "AV1 NVENC unavailable — every Nvidia GPU on the host is below compute capability 8.9 (Ada Lovelace). The encoder block does not exist on Turing / Ampere silicon."
                 );
             }
             return false;
@@ -206,8 +206,8 @@ internal sealed class Av1CapabilityProbe(IProcessRunner processRunner, ILogger l
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogDebug(
-                exception: ex,
-                message: "nvidia-smi compute_cap query threw — assuming AV1 NVENC available"
+                ex,
+                "nvidia-smi compute_cap query threw — assuming AV1 NVENC available"
             );
             return true;
         }

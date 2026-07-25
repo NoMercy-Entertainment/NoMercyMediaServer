@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.NmSystem.Dto;
@@ -21,8 +22,6 @@ using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
-
-using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -54,7 +53,7 @@ public abstract class AbstractMusicEncoderJob : IShouldQueue, IJobStorageInjecto
     public ILoggerFactory LoggerFactory { get; set; } = null!;
 
     [JsonIgnore]
-    protected ILogger Log => field ??= LoggerFactory.CreateLogger(type: GetType());
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
 
     public abstract string QueueName { get; }
     public abstract int Priority { get; }

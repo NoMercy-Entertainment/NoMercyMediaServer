@@ -20,23 +20,23 @@ public static class FileAttributes
     {
         try
         {
-            File.SetCreationTimeUtc(path: filePath, creationTimeUtc: createdAt.UtcDateTime);
+            File.SetCreationTimeUtc(filePath, createdAt.UtcDateTime);
             // CheckLocalVersion compares the file's last-write time against the
             // release date. Archive-extracted binaries (ffmpeg/ffprobe/ffplay)
             // keep the zip entry's original mtime, which predates the release,
             // so without this they look stale and re-download on every boot.
-            File.SetLastWriteTimeUtc(path: filePath, lastWriteTimeUtc: createdAt.UtcDateTime);
+            File.SetLastWriteTimeUtc(filePath, createdAt.UtcDateTime);
 
             Logger.System(
-                message: $"Set creation and modification dates for {filePath} to {createdAt}",
-                level: LogEventLevel.Verbose
+                $"Set creation and modification dates for {filePath} to {createdAt}",
+                LogEventLevel.Verbose
             );
         }
         catch (Exception ex)
         {
             Logger.System(
-                message: $"Failed to set file attributes for {filePath}: {ex.Message}",
-                level: LogEventLevel.Warning
+                $"Failed to set file attributes for {filePath}: {ex.Message}",
+                LogEventLevel.Warning
             );
         }
 

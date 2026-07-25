@@ -45,13 +45,13 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         _logger = logger;
         _authTokenStore = authTokenStore;
         _networkDiscovery = networkDiscovery;
-        _strategies = strategies.OrderBy(keySelector: s => s.Priority);
+        _strategies = strategies.OrderBy(s => s.Priority);
         _bootStatus = bootStatus;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _executingTask = ExecuteAsync(cancellationToken: _stoppingCts.Token);
+        _executingTask = ExecuteAsync(_stoppingCts.Token);
         return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
     }
 
@@ -60,25 +60,25 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         try
         {
             while (!_bootStatus.IsStarted && !cancellationToken.IsCancellationRequested)
-                await Task.Delay(millisecondsDelay: 1000, cancellationToken: cancellationToken);
+                await Task.Delay(1000, cancellationToken);
 
             if (cancellationToken.IsCancellationRequested)
                 return;
 
             if (_authTokenStore.AccessToken is null)
             {
-                _logger.LogDebug(message: "ConnectivityManager waiting for authentication...");
+                _logger.LogDebug("ConnectivityManager waiting for authentication...");
                 int maxWait = 30;
                 while (
                     _authTokenStore.AccessToken is null
                     && maxWait-- > 0
                     && !cancellationToken.IsCancellationRequested
                 )
-                    await Task.Delay(millisecondsDelay: 1000, cancellationToken: cancellationToken);
+                    await Task.Delay(1000, cancellationToken);
 
                 if (_authTokenStore.AccessToken is null)
                 {
-                    _logger.LogDebug(message: "ConnectivityManager skipped — no authentication available");
+                    _logger.LogDebug("ConnectivityManager skipped — no authentication available");
                     return;
                 }
             }
@@ -87,7 +87,7 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
             // so IsPortOpenAsync has the real external IP (not "0.0.0.0")
             await _networkDiscovery.DiscoverExternalIpAsync();
 
-            await EvaluateAsync(ct: cancellationToken);
+            await EvaluateAsync(cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -95,13 +95,13 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(message: "Error in ConnectivityManager: {Message}", args: ex.Message);
+            _logger.LogWarning("Error in ConnectivityManager: {Message}", ex.Message);
         }
     }
 
     public async Task EvaluateAsync(CancellationToken ct)
     {
-        SetState(state: ConnectivityState.Evaluating);
+        SetState(ConnectivityState.Evaluating);
 
         // Tear down any existing strategy
         if (_activeStrategy is not null)
@@ -117,8 +117,8 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
 
             try
             {
-                _logger.LogInformation(message: "Trying connectivity strategy: {Name}", args: strategy.Name);
-                bool success = await strategy.TryEstablishAsync(ct: ct);
+                _logger.LogInformation("Trying connectivity strategy: {Name}", strategy.Name);
+                bool success = await strategy.TryEstablishAsync(ct);
                 if (success)
                 {
                     _activeStrategy = strategy;
@@ -129,21 +129,21 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
                         ConnectivityType.CloudflareTunnel => ConnectivityState.Tunneled,
                         _ => ConnectivityState.DirectAccess,
                     };
-                    SetState(state: newState);
-                    _logger.LogInformation(message: "Connectivity established via {Name}", args: strategy.Name);
+                    SetState(newState);
+                    _logger.LogInformation("Connectivity established via {Name}", strategy.Name);
                     return;
                 }
 
-                _logger.LogDebug(message: "Strategy {Name} did not succeed, trying next...", args: strategy.Name);
+                _logger.LogDebug("Strategy {Name} did not succeed, trying next...", strategy.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(message: "Strategy {Name} failed: {Message}", args: [strategy.Name, ex.Message]);
+                _logger.LogWarning("Strategy {Name} failed: {Message}", [strategy.Name, ex.Message]);
             }
         }
 
-        SetState(state: ConnectivityState.LocalOnly);
-        _logger.LogWarning(message: "No remote connectivity strategy succeeded — server is local-only");
+        SetState(ConnectivityState.LocalOnly);
+        _logger.LogWarning("No remote connectivity strategy succeeded — server is local-only");
     }
 
     private void SetState(ConnectivityState state)
@@ -151,7 +151,7 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         if (CurrentState == state)
             return;
         CurrentState = state;
-        StateChanged?.Invoke(obj: state);
+        StateChanged?.Invoke(state);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -166,8 +166,8 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         finally
         {
             await Task.WhenAny(
-                task1: _executingTask,
-                task2: Task.Delay(delay: TimeSpan.FromSeconds(seconds: 3), cancellationToken: cancellationToken)
+                _executingTask,
+                Task.Delay(TimeSpan.FromSeconds(3), cancellationToken)
             );
         }
 
@@ -192,6 +192,6 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         }
         catch (ObjectDisposedException) { }
 
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 }

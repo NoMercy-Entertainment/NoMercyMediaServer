@@ -24,99 +24,99 @@ public class TvdbArtworkTypesResponse : TvdbResponse<TvdbArtworkType[]> { }
 
 public class TvdbArtwork
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "image")]
+    [JsonProperty("image")]
     public string Image { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "thumbnail")]
+    [JsonProperty("thumbnail")]
     public string Thumbnail { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "language")]
+    [JsonProperty("language")]
     public string? Language { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public int Type { get; set; }
 
-    [JsonProperty(propertyName: "score")]
+    [JsonProperty("score")]
     public double Score { get; set; }
 
-    [JsonProperty(propertyName: "width")]
+    [JsonProperty("width")]
     public int Width { get; set; }
 
-    [JsonProperty(propertyName: "height")]
+    [JsonProperty("height")]
     public int Height { get; set; }
 
-    [JsonProperty(propertyName: "includesText")]
+    [JsonProperty("includesText")]
     public bool IncludesText { get; set; }
 }
 
 public class TvdbArtworkExtended : TvdbArtwork
 {
-    [JsonProperty(propertyName: "episodeId")]
+    [JsonProperty("episodeId")]
     public long? EpisodeId { get; set; }
 
-    [JsonProperty(propertyName: "movieId")]
+    [JsonProperty("movieId")]
     public long? MovieId { get; set; }
 
-    [JsonProperty(propertyName: "networkId")]
+    [JsonProperty("networkId")]
     public long? NetworkId { get; set; }
 
-    [JsonProperty(propertyName: "peopleId")]
+    [JsonProperty("peopleId")]
     public long? PeopleId { get; set; }
 
-    [JsonProperty(propertyName: "seasonId")]
+    [JsonProperty("seasonId")]
     public long? SeasonId { get; set; }
 
-    [JsonProperty(propertyName: "seriesId")]
+    [JsonProperty("seriesId")]
     public long? SeriesId { get; set; }
 
-    [JsonProperty(propertyName: "seriesPeopleId")]
+    [JsonProperty("seriesPeopleId")]
     public long? SeriesPeopleId { get; set; }
 
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public TvdbStatus? Status { get; set; }
 
-    [JsonProperty(propertyName: "tagOptions")]
+    [JsonProperty("tagOptions")]
     public TvdbTagOption[] TagOptions { get; set; } = [];
 
-    [JsonProperty(propertyName: "thumbnailHeight")]
+    [JsonProperty("thumbnailHeight")]
     public int ThumbnailHeight { get; set; }
 
-    [JsonProperty(propertyName: "thumbnailWidth")]
+    [JsonProperty("thumbnailWidth")]
     public int ThumbnailWidth { get; set; }
 
-    [JsonProperty(propertyName: "updatedAt")]
+    [JsonProperty("updatedAt")]
     public long UpdatedAt { get; set; }
 }
 
 public class TvdbArtworkType
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "recordType")]
+    [JsonProperty("recordType")]
     public string RecordType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "slug")]
+    [JsonProperty("slug")]
     public string Slug { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "imageFormat")]
+    [JsonProperty("imageFormat")]
     public string ImageFormat { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "width")]
+    [JsonProperty("width")]
     public int Width { get; set; }
 
-    [JsonProperty(propertyName: "height")]
+    [JsonProperty("height")]
     public int Height { get; set; }
 
-    [JsonProperty(propertyName: "thumbWidth")]
+    [JsonProperty("thumbWidth")]
     public int ThumbWidth { get; set; }
 
-    [JsonProperty(propertyName: "thumbHeight")]
+    [JsonProperty("thumbHeight")]
     public int ThumbHeight { get; set; }
 }

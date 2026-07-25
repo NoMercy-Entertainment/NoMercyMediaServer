@@ -48,8 +48,8 @@ public class ResourceBudgetBranchTests
 {
     private static GpuDevice Nvidia(string name = "RTX 4090", int sessions = 3) =>
         new(
-            Vendor: GpuVendor.Nvidia,
-            Name: name,
+            GpuVendor.Nvidia,
+            name,
             VramMb: 24576,
             MaxEncoderSessions: sessions,
             SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
@@ -57,8 +57,8 @@ public class ResourceBudgetBranchTests
 
     private static GpuDevice Amd(string name = "RX 7900 XT", int sessions = 2) =>
         new(
-            Vendor: GpuVendor.Amd,
-            Name: name,
+            GpuVendor.Amd,
+            name,
             VramMb: 20480,
             MaxEncoderSessions: sessions,
             SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
@@ -67,33 +67,33 @@ public class ResourceBudgetBranchTests
     // ── Vendor-token aliases ────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: "nvenc")]
-    [InlineData(data: "h264_nvenc")]
-    [InlineData(data: "hevc_nvenc")]
-    [InlineData(data: "av1_nvenc")]
+    [InlineData("nvenc")]
+    [InlineData("h264_nvenc")]
+    [InlineData("hevc_nvenc")]
+    [InlineData("av1_nvenc")]
     public void Nvidia_vendor_token_aliases_share_semaphore_with_canonical_name(string alias)
     {
         // Acquiring through alias must decrease the canonical-name count.
         GpuDevice gpu = Nvidia(sessions: 3);
-        ResourceBudget budget = new(gpuDevices: [gpu], cpuCores: 4);
+        ResourceBudget budget = new([gpu], cpuCores: 4);
 
-        ResourceLease lease = budget.Acquire(requirement: new(GpuDeviceKey: alias, GpuSlots: 1, CpuThreads: 0));
+        ResourceLease lease = budget.Acquire(new(GpuDeviceKey: alias, GpuSlots: 1, CpuThreads: 0));
 
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: 2);
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: alias).Should().Be(expected: 2);
-        budget.Release(lease: lease);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(2);
+        budget.AvailableGpuEncoderSlots(alias).Should().Be(2);
+        budget.Release(lease);
     }
 
     [Theory]
-    [InlineData(data: [GpuVendor.Amd, "amf", "h264_amf"])]
-    [InlineData(data: [GpuVendor.Amd, "amf", "hevc_amf"])]
-    [InlineData(data: [GpuVendor.Amd, "amf", "av1_amf"])]
-    [InlineData(data: [GpuVendor.Intel, "qsv", "h264_qsv"])]
-    [InlineData(data: [GpuVendor.Intel, "qsv", "hevc_qsv"])]
-    [InlineData(data: [GpuVendor.Intel, "qsv", "vp9_qsv"])]
-    [InlineData(data: [GpuVendor.Intel, "vaapi", "h264_vaapi"])]
-    [InlineData(data: [GpuVendor.Apple, "videotoolbox", "h264_videotoolbox"])]
-    [InlineData(data: [GpuVendor.Apple, "videotoolbox", "hevc_videotoolbox"])]
+    [InlineData(GpuVendor.Amd, "amf", "h264_amf")]
+    [InlineData(GpuVendor.Amd, "amf", "hevc_amf")]
+    [InlineData(GpuVendor.Amd, "amf", "av1_amf")]
+    [InlineData(GpuVendor.Intel, "qsv", "h264_qsv")]
+    [InlineData(GpuVendor.Intel, "qsv", "hevc_qsv")]
+    [InlineData(GpuVendor.Intel, "qsv", "vp9_qsv")]
+    [InlineData(GpuVendor.Intel, "vaapi", "h264_vaapi")]
+    [InlineData(GpuVendor.Apple, "videotoolbox", "h264_videotoolbox")]
+    [InlineData(GpuVendor.Apple, "videotoolbox", "hevc_videotoolbox")]
     public void Vendor_token_and_encoder_name_share_semaphore_across_vendors(
         GpuVendor vendor,
         string vendorToken,
@@ -104,24 +104,24 @@ public class ResourceBudgetBranchTests
         // semaphore as the GPU's canonical Name — wrong mapping = wrong
         // worker semaphore + leaked slots.
         GpuDevice gpu = new(
-            Vendor: vendor,
+            vendor,
             Name: $"{vendor}-test",
             VramMb: 16384,
             MaxEncoderSessions: 2,
             SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
         );
-        ResourceBudget budget = new(gpuDevices: [gpu], cpuCores: 4);
+        ResourceBudget budget = new([gpu], cpuCores: 4);
 
         ResourceLease leaseViaToken = budget.Acquire(
-            requirement: new(GpuDeviceKey: vendorToken, GpuSlots: 1, CpuThreads: 0)
+            new(GpuDeviceKey: vendorToken, GpuSlots: 1, CpuThreads: 0)
         );
 
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: 1);
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: vendorToken).Should().Be(expected: 1);
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: encoderName).Should().Be(expected: 1);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(1);
+        budget.AvailableGpuEncoderSlots(vendorToken).Should().Be(1);
+        budget.AvailableGpuEncoderSlots(encoderName).Should().Be(1);
 
-        budget.Release(lease: leaseViaToken);
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: 2);
+        budget.Release(leaseViaToken);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(2);
     }
 
     [Fact]
@@ -132,18 +132,18 @@ public class ResourceBudgetBranchTests
         // Pins documented "first-vendor-wins" trade-off.
         GpuDevice firstNvidia = Nvidia(name: "RTX 4090", sessions: 3);
         GpuDevice secondNvidia = Nvidia(name: "RTX 3070", sessions: 2);
-        ResourceBudget budget = new(gpuDevices: [firstNvidia, secondNvidia], cpuCores: 8);
+        ResourceBudget budget = new([firstNvidia, secondNvidia], cpuCores: 8);
 
         // Acquiring via "nvenc" decreases first GPU, not second.
         ResourceLease lease = budget.Acquire(
-            requirement: new(GpuDeviceKey: "nvenc", GpuSlots: 1, CpuThreads: 0)
+            new(GpuDeviceKey: "nvenc", GpuSlots: 1, CpuThreads: 0)
         );
 
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: "RTX 4090").Should().Be(expected: 2);
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: "RTX 3070").Should().Be(expected: 2); // untouched
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: "nvenc").Should().Be(expected: 2); // alias of first
+        budget.AvailableGpuEncoderSlots("RTX 4090").Should().Be(2);
+        budget.AvailableGpuEncoderSlots("RTX 3070").Should().Be(2); // untouched
+        budget.AvailableGpuEncoderSlots("nvenc").Should().Be(2); // alias of first
 
-        budget.Release(lease: lease);
+        budget.Release(lease);
     }
 
     [Fact]
@@ -153,17 +153,17 @@ public class ResourceBudgetBranchTests
         // affect "amf" availability.
         GpuDevice nv = Nvidia(sessions: 3);
         GpuDevice amd = Amd(sessions: 2);
-        ResourceBudget budget = new(gpuDevices: [nv, amd], cpuCores: 8);
+        ResourceBudget budget = new([nv, amd], cpuCores: 8);
 
         ResourceLease nvLease = budget.Acquire(
-            requirement: new(GpuDeviceKey: "nvenc", GpuSlots: 2, CpuThreads: 0)
+            new(GpuDeviceKey: "nvenc", GpuSlots: 2, CpuThreads: 0)
         );
 
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: "nvenc").Should().Be(expected: 1);
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: "amf").Should().Be(expected: 2); // unaffected
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: amd.Name).Should().Be(expected: 2);
+        budget.AvailableGpuEncoderSlots("nvenc").Should().Be(1);
+        budget.AvailableGpuEncoderSlots("amf").Should().Be(2); // unaffected
+        budget.AvailableGpuEncoderSlots(amd.Name).Should().Be(2);
 
-        budget.Release(lease: nvLease);
+        budget.Release(nvLease);
     }
 
     // ── AcquireAsync cancellation rollback ───────────────────────────────────
@@ -175,21 +175,21 @@ public class ResourceBudgetBranchTests
         // slots with a cancellation source — the second slot wait will block;
         // cancelling must release the first slot we DID acquire.
         GpuDevice gpu = Nvidia(sessions: 3);
-        ResourceBudget budget = new(gpuDevices: [gpu], cpuCores: 4);
+        ResourceBudget budget = new([gpu], cpuCores: 4);
 
         // Soak 2 of 3 slots so AcquireAsync(2 slots) grabs one then blocks.
         ResourceLease soak = budget.Acquire(
-            requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 2, CpuThreads: 0)
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 2, CpuThreads: 0)
         );
 
         CancellationTokenSource cts = new();
         Task<ResourceLease> waiting = budget.AcquireAsync(
-            requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 2, CpuThreads: 0),
-            cancellationToken: cts.Token
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 2, CpuThreads: 0),
+            cts.Token
         );
 
         // Give the first slot acquire a chance to land then cancel.
-        await Task.Delay(millisecondsDelay: 50);
+        await Task.Delay(50);
         await cts.CancelAsync();
 
         Func<Task> act = () => waiting;
@@ -197,8 +197,8 @@ public class ResourceBudgetBranchTests
 
         // The one slot AcquireAsync DID grab must be released back into the
         // pool — releasing the soak then querying availability should show 3.
-        budget.Release(lease: soak);
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: 3);
+        budget.Release(soak);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(3);
     }
 
     [Fact]
@@ -206,23 +206,23 @@ public class ResourceBudgetBranchTests
     {
         // 2 CPU cores; soak 1; AcquireAsync for 2 CPU threads will grab the
         // remaining 1, then block. Cancel: must release that 1.
-        ResourceBudget budget = new(gpuDevices: [], cpuCores: 2);
-        ResourceLease soak = budget.Acquire(requirement: new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 1));
+        ResourceBudget budget = new([], cpuCores: 2);
+        ResourceLease soak = budget.Acquire(new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 1));
 
         CancellationTokenSource cts = new();
         Task<ResourceLease> waiting = budget.AcquireAsync(
-            requirement: new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 2),
-            cancellationToken: cts.Token
+            new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 2),
+            cts.Token
         );
 
-        await Task.Delay(millisecondsDelay: 50);
+        await Task.Delay(50);
         await cts.CancelAsync();
 
         Func<Task> act = () => waiting;
         await act.Should().ThrowAsync<OperationCanceledException>();
 
-        budget.Release(lease: soak);
-        budget.AvailableCpuThreads().Should().Be(expected: 2);
+        budget.Release(soak);
+        budget.AvailableCpuThreads().Should().Be(2);
     }
 
     // ── TryAcquire rollback paths ────────────────────────────────────────────
@@ -234,19 +234,19 @@ public class ResourceBudgetBranchTests
         // 1 CPU. Must release the GPU it grabbed when CPU times out, so the
         // GPU is still available for the next caller.
         GpuDevice gpu = Nvidia(sessions: 3);
-        ResourceBudget budget = new(gpuDevices: [gpu], cpuCores: 1);
-        ResourceLease cpuSoak = budget.Acquire(requirement: new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 1));
+        ResourceBudget budget = new([gpu], cpuCores: 1);
+        ResourceLease cpuSoak = budget.Acquire(new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 1));
 
         ResourceLease? attempt = budget.TryAcquire(
-            requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1),
-            timeout: TimeSpan.FromMilliseconds(milliseconds: 50)
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1),
+            TimeSpan.FromMilliseconds(50)
         );
 
         attempt.Should().BeNull();
         // GPU slot must NOT have been leaked.
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: 3);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(3);
 
-        budget.Release(lease: cpuSoak);
+        budget.Release(cpuSoak);
     }
 
     [Fact]
@@ -255,20 +255,20 @@ public class ResourceBudgetBranchTests
         // 1 GPU slot soaked, 2 free. TryAcquire wants 2 GPU slots — gets one,
         // times out on second, must release the first.
         GpuDevice gpu = Nvidia(sessions: 2);
-        ResourceBudget budget = new(gpuDevices: [gpu], cpuCores: 4);
+        ResourceBudget budget = new([gpu], cpuCores: 4);
         ResourceLease soak = budget.Acquire(
-            requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0)
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0)
         );
 
         ResourceLease? attempt = budget.TryAcquire(
-            requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 2, CpuThreads: 0),
-            timeout: TimeSpan.FromMilliseconds(milliseconds: 50)
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 2, CpuThreads: 0),
+            TimeSpan.FromMilliseconds(50)
         );
 
         attempt.Should().BeNull();
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: 1); // soak only
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(1); // soak only
 
-        budget.Release(lease: soak);
+        budget.Release(soak);
     }
 
     // ── Unknown-key behavior ─────────────────────────────────────────────────
@@ -278,24 +278,24 @@ public class ResourceBudgetBranchTests
     {
         // Worker probes unknown keys all the time — must NOT throw. Returning
         // 0 is the documented "not registered" signal.
-        ResourceBudget budget = new(gpuDevices: [Nvidia()], cpuCores: 8);
+        ResourceBudget budget = new([Nvidia()], cpuCores: 8);
 
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: "does_not_exist").Should().Be(expected: 0);
+        budget.AvailableGpuEncoderSlots("does_not_exist").Should().Be(0);
     }
 
     [Fact]
     public void Acquire_with_unknown_gpu_key_throws_with_available_keys_listed()
     {
-        ResourceBudget budget = new(gpuDevices: [Nvidia(name: "RTX 4090")], cpuCores: 8);
+        ResourceBudget budget = new([Nvidia(name: "RTX 4090")], cpuCores: 8);
 
         Action act = () =>
-            budget.Acquire(requirement: new(GpuDeviceKey: "h264_amf", GpuSlots: 1, CpuThreads: 0));
+            budget.Acquire(new(GpuDeviceKey: "h264_amf", GpuSlots: 1, CpuThreads: 0));
 
         act.Should()
             .Throw<InvalidOperationException>()
             .Which.Message.Should()
-            .Contain(expected: "h264_amf")
-            .And.Contain(expected: "RTX 4090"); // available keys listed
+            .Contain("h264_amf")
+            .And.Contain("RTX 4090"); // available keys listed
     }
 
     // ── Monitor wiring ───────────────────────────────────────────────────────
@@ -303,18 +303,18 @@ public class ResourceBudgetBranchTests
     [Fact]
     public void CurrentGpuEncodeUtilization_returns_zero_when_monitor_null()
     {
-        ResourceBudget budget = new(gpuDevices: [Nvidia()], cpuCores: 8);
-        budget.CurrentGpuEncodeUtilization(gpuDeviceKey: "anything").Should().Be(expected: 0.0);
+        ResourceBudget budget = new([Nvidia()], cpuCores: 8);
+        budget.CurrentGpuEncodeUtilization("anything").Should().Be(0.0);
     }
 
     [Fact]
     public void CurrentGpuEncodeUtilization_delegates_to_monitor_when_set()
     {
         Mock<IResourceMonitor> monitor = new();
-        monitor.Setup(expression: m => m.GetGpuEncodeUtilization("rtx-4090")).Returns(value: 0.42);
-        ResourceBudget budget = new(gpuDevices: [Nvidia()], cpuCores: 8, monitor: monitor.Object);
+        monitor.Setup(m => m.GetGpuEncodeUtilization("rtx-4090")).Returns(0.42);
+        ResourceBudget budget = new([Nvidia()], cpuCores: 8, monitor: monitor.Object);
 
-        budget.CurrentGpuEncodeUtilization(gpuDeviceKey: "rtx-4090").Should().Be(expected: 0.42);
+        budget.CurrentGpuEncodeUtilization("rtx-4090").Should().Be(0.42);
     }
 
     // ── Acquire / Release with no resource requirement ──────────────────────
@@ -324,24 +324,24 @@ public class ResourceBudgetBranchTests
     {
         // Zero-requirement acquires are valid synthetic requests (analyze
         // tasks etc.) — must complete instantly with an empty lease.
-        ResourceBudget budget = new(gpuDevices: [Nvidia()], cpuCores: 8);
+        ResourceBudget budget = new([Nvidia()], cpuCores: 8);
 
-        ResourceLease lease = budget.Acquire(requirement: new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 0));
+        ResourceLease lease = budget.Acquire(new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 0));
 
         lease.LeaseId.Should().NotBeNullOrEmpty();
-        lease.GpuSlots.Should().Be(expected: 0);
-        lease.CpuThreads.Should().Be(expected: 0);
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: "nvenc").Should().Be(expected: 3);
-        budget.AvailableCpuThreads().Should().Be(expected: 8);
+        lease.GpuSlots.Should().Be(0);
+        lease.CpuThreads.Should().Be(0);
+        budget.AvailableGpuEncoderSlots("nvenc").Should().Be(3);
+        budget.AvailableCpuThreads().Should().Be(8);
     }
 
     [Fact]
     public void Release_with_zero_slots_does_not_throw()
     {
-        ResourceBudget budget = new(gpuDevices: [Nvidia()], cpuCores: 8);
-        ResourceLease lease = new(LeaseId: "L1", GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 0);
+        ResourceBudget budget = new([Nvidia()], cpuCores: 8);
+        ResourceLease lease = new("L1", null, 0, 0);
 
-        Action act = () => budget.Release(lease: lease);
+        Action act = () => budget.Release(lease);
         act.Should().NotThrow();
     }
 
@@ -352,17 +352,17 @@ public class ResourceBudgetBranchTests
     {
         GpuDevice gpu = Nvidia();
         Mock<IHardwareCapabilities> caps = new();
-        caps.Setup(expression: c => c.Gpus).Returns(value: [gpu]);
-        caps.Setup(expression: c => c.CpuCores).Returns(value: 8);
+        caps.Setup(c => c.Gpus).Returns([gpu]);
+        caps.Setup(c => c.CpuCores).Returns(8);
 
         ResourceBudget budget = new(
-            hardware: caps.Object,
+            caps.Object,
             monitor: null,
             logger: NullLogger<ResourceBudget>.Instance
         );
 
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: gpu.MaxEncoderSessions);
-        budget.AvailableCpuThreads().Should().Be(expected: 8);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(gpu.MaxEncoderSessions);
+        budget.AvailableCpuThreads().Should().Be(8);
     }
 
     [Fact]
@@ -374,24 +374,24 @@ public class ResourceBudgetBranchTests
         // "current state" probe and intentionally does NOT trigger it.
         List<GpuDevice> liveList = [];
         Mock<IHardwareCapabilities> caps = new();
-        caps.Setup(expression: c => c.Gpus).Returns(valueFunction: () => liveList);
-        caps.Setup(expression: c => c.CpuCores).Returns(value: 4);
+        caps.Setup(c => c.Gpus).Returns(() => liveList);
+        caps.Setup(c => c.CpuCores).Returns(4);
 
         ResourceBudget budget = new(
-            hardware: caps.Object,
+            caps.Object,
             monitor: null,
             logger: NullLogger<ResourceBudget>.Instance
         );
 
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: "nvenc").Should().Be(expected: 0);
+        budget.AvailableGpuEncoderSlots("nvenc").Should().Be(0);
 
         GpuDevice gpu = Nvidia();
-        liveList.Add(item: gpu);
+        liveList.Add(gpu);
 
         // Even after the live list populates, Available alone does not
         // trigger registration — the worker is expected to call Acquire
         // first, which DOES.
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: 0);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(0);
     }
 
     [Fact]
@@ -401,24 +401,24 @@ public class ResourceBudgetBranchTests
         // calls TryRegisterGpus on miss.
         List<GpuDevice> liveList = [];
         Mock<IHardwareCapabilities> caps = new();
-        caps.Setup(expression: c => c.Gpus).Returns(valueFunction: () => liveList);
-        caps.Setup(expression: c => c.CpuCores).Returns(value: 4);
+        caps.Setup(c => c.Gpus).Returns(() => liveList);
+        caps.Setup(c => c.CpuCores).Returns(4);
 
         ResourceBudget budget = new(
-            hardware: caps.Object,
+            caps.Object,
             monitor: null,
             logger: NullLogger<ResourceBudget>.Instance
         );
 
         GpuDevice gpu = Nvidia();
-        liveList.Add(item: gpu);
+        liveList.Add(gpu);
 
         ResourceLease lease = budget.Acquire(
-            requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0)
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0)
         );
 
-        lease.GpuSlots.Should().Be(expected: 1);
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: gpu.MaxEncoderSessions - 1);
+        lease.GpuSlots.Should().Be(1);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(gpu.MaxEncoderSessions - 1);
     }
 
     [Fact]
@@ -431,21 +431,21 @@ public class ResourceBudgetBranchTests
         // populates, the same way GetGpuSemaphore already retries.
         List<GpuDevice> liveList = [];
         Mock<IHardwareCapabilities> caps = new();
-        caps.Setup(expression: c => c.Gpus).Returns(valueFunction: () => liveList);
-        caps.Setup(expression: c => c.CpuCores).Returns(value: 4);
+        caps.Setup(c => c.Gpus).Returns(() => liveList);
+        caps.Setup(c => c.CpuCores).Returns(4);
 
         ResourceBudget budget = new(
-            hardware: caps.Object,
+            caps.Object,
             monitor: null,
             logger: NullLogger<ResourceBudget>.Instance
         );
 
         GpuDevice gpu = Nvidia();
-        budget.IsGpuDeviceRegistered(gpuDeviceKey: gpu.Name).Should().BeFalse();
+        budget.IsGpuDeviceRegistered(gpu.Name).Should().BeFalse();
 
-        liveList.Add(item: gpu);
+        liveList.Add(gpu);
 
-        budget.IsGpuDeviceRegistered(gpuDeviceKey: gpu.Name).Should().BeTrue();
+        budget.IsGpuDeviceRegistered(gpu.Name).Should().BeTrue();
     }
 
     // ── Acquire(requirement, timeout) rollback ───────────────────────────────
@@ -463,19 +463,19 @@ public class ResourceBudgetBranchTests
         // the CPU wait times out, so the GPU stays available for the next
         // caller.
         GpuDevice gpu = Nvidia(sessions: 3);
-        ResourceBudget budget = new(gpuDevices: [gpu], cpuCores: 1);
-        ResourceLease cpuSoak = budget.Acquire(requirement: new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 1));
+        ResourceBudget budget = new([gpu], cpuCores: 1);
+        ResourceLease cpuSoak = budget.Acquire(new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 1));
 
         Action act = () =>
             budget.Acquire(
-                requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1),
-                timeout: TimeSpan.FromMilliseconds(milliseconds: 50)
+                new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1),
+                TimeSpan.FromMilliseconds(50)
             );
 
         act.Should().Throw<TimeoutException>();
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: 3);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(3);
 
-        budget.Release(lease: cpuSoak);
+        budget.Release(cpuSoak);
     }
 
     [Fact]
@@ -484,41 +484,41 @@ public class ResourceBudgetBranchTests
         // 1 of 2 GPU slots free. Requesting 2 slots grabs the 1 free slot
         // then times out waiting for the second — the first must roll back.
         GpuDevice gpu = Nvidia(sessions: 2);
-        ResourceBudget budget = new(gpuDevices: [gpu], cpuCores: 4);
+        ResourceBudget budget = new([gpu], cpuCores: 4);
         ResourceLease soak = budget.Acquire(
-            requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0)
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0)
         );
 
         Action act = () =>
             budget.Acquire(
-                requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 2, CpuThreads: 0),
-                timeout: TimeSpan.FromMilliseconds(milliseconds: 50)
+                new(GpuDeviceKey: gpu.Name, GpuSlots: 2, CpuThreads: 0),
+                TimeSpan.FromMilliseconds(50)
             );
 
         act.Should().Throw<TimeoutException>();
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: 1);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(1);
 
-        budget.Release(lease: soak);
+        budget.Release(soak);
     }
 
     [Fact]
     public void Acquire_WithTimeout_ThrowsTimeoutException_WhenGpuFullySaturated()
     {
         GpuDevice gpu = Nvidia(sessions: 1);
-        ResourceBudget budget = new(gpuDevices: [gpu], cpuCores: 4);
+        ResourceBudget budget = new([gpu], cpuCores: 4);
         ResourceLease soak = budget.Acquire(
-            requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0)
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0)
         );
 
         Action act = () =>
             budget.Acquire(
-                requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0),
-                timeout: TimeSpan.FromMilliseconds(milliseconds: 50)
+                new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0),
+                TimeSpan.FromMilliseconds(50)
             );
 
-        act.Should().Throw<TimeoutException>().WithMessage(expectedWildcardPattern: "*GPU slot*");
+        act.Should().Throw<TimeoutException>().WithMessage("*GPU slot*");
 
-        budget.Release(lease: soak);
+        budget.Release(soak);
     }
 
     [Fact]
@@ -527,15 +527,15 @@ public class ResourceBudgetBranchTests
         // The default-timeout overload must behave exactly like the old
         // unconditional Acquire when the budget is NOT saturated.
         GpuDevice gpu = Nvidia(sessions: 2);
-        ResourceBudget budget = new(gpuDevices: [gpu], cpuCores: 4);
+        ResourceBudget budget = new([gpu], cpuCores: 4);
 
         ResourceLease lease = budget.Acquire(
-            requirement: new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1)
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1)
         );
 
         lease.Should().NotBeNull();
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: 1);
-        budget.Release(lease: lease);
-        budget.AvailableGpuEncoderSlots(gpuDeviceKey: gpu.Name).Should().Be(expected: 2);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(1);
+        budget.Release(lease);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(2);
     }
 }

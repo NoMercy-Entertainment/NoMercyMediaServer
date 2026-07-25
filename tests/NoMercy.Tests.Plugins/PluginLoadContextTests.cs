@@ -30,18 +30,18 @@ public class PluginLoadContextTests
     private static string GetFailuresPluginDllPath()
     {
         string testBinDir = Path.GetDirectoryName(
-            path: typeof(PluginLoadContextTests).Assembly.Location
+            typeof(PluginLoadContextTests).Assembly.Location
         )!;
-        string configDir = Path.GetDirectoryName(path: testBinDir)!;
-        string buildConfig = Path.GetFileName(path: configDir);
-        string repoRoot = Path.GetFullPath(path: Path.Combine(paths: [testBinDir, "..", "..", "..", "..", ".."]));
+        string configDir = Path.GetDirectoryName(testBinDir)!;
+        string buildConfig = Path.GetFileName(configDir);
+        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
 
-        string dllPath = Path.Combine(paths: [repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0", "NoMercy.Plugin.Samples.Failures.dll"]
+        string dllPath = Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0", "NoMercy.Plugin.Samples.Failures.dll"]
         );
 
-        if (!File.Exists(path: dllPath))
+        if (!File.Exists(dllPath))
             throw new FileNotFoundException(
-                message: $"Failures plugin DLL not found at '{dllPath}'. Build NoMercy.Plugin.Samples.Failures first."
+                $"Failures plugin DLL not found at '{dllPath}'. Build NoMercy.Plugin.Samples.Failures first."
             );
 
         return dllPath;
@@ -50,11 +50,11 @@ public class PluginLoadContextTests
     [Fact]
     public void Load_SharedAssemblyName_ReturnsNull_FallsBackToDefaultContext()
     {
-        using ExposedPluginLoadContext context = new(pluginPath: GetFailuresPluginDllPath());
+        using ExposedPluginLoadContext context = new(GetFailuresPluginDllPath());
 
-        Assembly? resolved = context.InvokeLoad(assemblyName: new AssemblyName(assemblyName: "NoMercy.Plugins.Abstractions"));
+        Assembly? resolved = context.InvokeLoad(new AssemblyName("NoMercy.Plugins.Abstractions"));
 
-        resolved.Should().BeNull(because: "shared assemblies must defer to the default AssemblyLoadContext");
+        resolved.Should().BeNull("shared assemblies must defer to the default AssemblyLoadContext");
     }
 
     [Fact]
@@ -65,11 +65,11 @@ public class PluginLoadContextTests
         // resolution machinery would realistically pass, but the `is not
         // null` guard exists for exactly this shape and deserves a direct,
         // deterministic test rather than being left unreached.
-        using ExposedPluginLoadContext context = new(pluginPath: GetFailuresPluginDllPath());
+        using ExposedPluginLoadContext context = new(GetFailuresPluginDllPath());
         AssemblyName unnamed = new();
-        unnamed.Name.Should().BeNull(because: "this is exactly the edge case under test");
+        unnamed.Name.Should().BeNull("this is exactly the edge case under test");
 
-        Assembly? resolved = context.InvokeLoad(assemblyName: unnamed);
+        Assembly? resolved = context.InvokeLoad(unnamed);
 
         resolved.Should().BeNull();
     }
@@ -77,9 +77,9 @@ public class PluginLoadContextTests
     [Fact]
     public void Load_NonSharedNameWithNoResolvablePath_ReturnsNull()
     {
-        using ExposedPluginLoadContext context = new(pluginPath: GetFailuresPluginDllPath());
+        using ExposedPluginLoadContext context = new(GetFailuresPluginDllPath());
 
-        Assembly? resolved = context.InvokeLoad(assemblyName: new AssemblyName(assemblyName: "Totally.Unknown.Assembly.Xyz"));
+        Assembly? resolved = context.InvokeLoad(new AssemblyName("Totally.Unknown.Assembly.Xyz"));
 
         resolved.Should().BeNull();
     }
@@ -91,32 +91,32 @@ public class PluginLoadContextTests
         // specifically because it is NOT in PluginHostOptions.DefaultSharedAssemblies —
         // the only way to reach the resolver's "found a path" branch is a real,
         // non-shared dependency the plugin's own .deps.json actually declares.
-        using ExposedPluginLoadContext context = new(pluginPath: GetFailuresPluginDllPath());
+        using ExposedPluginLoadContext context = new(GetFailuresPluginDllPath());
 
-        Assembly? resolved = context.InvokeLoad(assemblyName: new AssemblyName(assemblyName: "Newtonsoft.Json"));
+        Assembly? resolved = context.InvokeLoad(new AssemblyName("Newtonsoft.Json"));
 
         resolved.Should().NotBeNull();
-        resolved!.GetName().Name.Should().Be(expected: "Newtonsoft.Json");
+        resolved!.GetName().Name.Should().Be("Newtonsoft.Json");
     }
 
     [Fact]
     public void LoadUnmanagedDll_UnresolvableName_ReturnsZero()
     {
-        using ExposedPluginLoadContext context = new(pluginPath: GetFailuresPluginDllPath());
+        using ExposedPluginLoadContext context = new(GetFailuresPluginDllPath());
 
-        IntPtr handle = context.InvokeLoadUnmanagedDll(unmanagedDllName: "nomercy-test-nonexistent-native-lib");
+        IntPtr handle = context.InvokeLoadUnmanagedDll("nomercy-test-nonexistent-native-lib");
 
-        handle.Should().Be(expected: IntPtr.Zero);
+        handle.Should().Be(IntPtr.Zero);
     }
 
     private sealed class ExposedPluginLoadContext(string pluginPath)
-        : PluginLoadContext(pluginPath: pluginPath),
+        : PluginLoadContext(pluginPath),
             IDisposable
     {
-        public Assembly? InvokeLoad(AssemblyName assemblyName) => Load(assemblyName: assemblyName);
+        public Assembly? InvokeLoad(AssemblyName assemblyName) => Load(assemblyName);
 
         public IntPtr InvokeLoadUnmanagedDll(string unmanagedDllName) =>
-            LoadUnmanagedDll(unmanagedDllName: unmanagedDllName);
+            LoadUnmanagedDll(unmanagedDllName);
 
         public void Dispose() => Unload();
     }

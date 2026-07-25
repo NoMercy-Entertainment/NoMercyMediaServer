@@ -26,16 +26,16 @@ public static class PluginManifestParser
 
     public static PluginManifest Parse(string json)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(argument: json);
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
 
-        PluginManifest? manifest = JsonSerializer.Deserialize<PluginManifest>(json: json, options: JsonOptions);
+        PluginManifest? manifest = JsonSerializer.Deserialize<PluginManifest>(json, JsonOptions);
 
         if (manifest is null)
         {
-            throw new InvalidOperationException(message: "Failed to deserialize plugin manifest.");
+            throw new InvalidOperationException("Failed to deserialize plugin manifest.");
         }
 
-        Validate(manifest: manifest);
+        Validate(manifest);
         return manifest;
     }
 
@@ -45,16 +45,16 @@ public static class PluginManifestParser
         CancellationToken ct = default
     )
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(argument: filePath);
-        ArgumentNullException.ThrowIfNull(argument: storage);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        ArgumentNullException.ThrowIfNull(storage);
 
-        if (!storage.Exists(path: filePath))
+        if (!storage.Exists(filePath))
         {
-            throw new FileNotFoundException(message: $"Plugin manifest not found: {filePath}", fileName: filePath);
+            throw new FileNotFoundException($"Plugin manifest not found: {filePath}", filePath);
         }
 
-        string json = await storage.ReadAllTextAsync(path: filePath, ct: ct);
-        return Parse(json: json);
+        string json = await storage.ReadAllTextAsync(filePath, ct);
+        return Parse(json);
     }
 
     public static PluginInfo ToPluginInfo(
@@ -66,9 +66,9 @@ public static class PluginManifestParser
         bool trusted = false
     )
     {
-        ArgumentNullException.ThrowIfNull(argument: manifest);
+        ArgumentNullException.ThrowIfNull(manifest);
 
-        Version version = Version.Parse(input: manifest.Version);
+        Version version = Version.Parse(manifest.Version);
 
         return new()
         {
@@ -92,34 +92,34 @@ public static class PluginManifestParser
     {
         if (manifest.Id == Guid.Empty)
         {
-            throw new InvalidOperationException(message: "Plugin manifest 'id' must not be empty.");
+            throw new InvalidOperationException("Plugin manifest 'id' must not be empty.");
         }
 
-        if (string.IsNullOrWhiteSpace(value: manifest.Name))
+        if (string.IsNullOrWhiteSpace(manifest.Name))
         {
-            throw new InvalidOperationException(message: "Plugin manifest 'name' is required.");
+            throw new InvalidOperationException("Plugin manifest 'name' is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(value: manifest.Version))
+        if (string.IsNullOrWhiteSpace(manifest.Version))
         {
-            throw new InvalidOperationException(message: "Plugin manifest 'version' is required.");
+            throw new InvalidOperationException("Plugin manifest 'version' is required.");
         }
 
-        if (!Version.TryParse(input: manifest.Version, result: out _))
+        if (!Version.TryParse(manifest.Version, out _))
         {
             throw new InvalidOperationException(
-                message: $"Plugin manifest 'version' is not a valid version string: '{manifest.Version}'."
+                $"Plugin manifest 'version' is not a valid version string: '{manifest.Version}'."
             );
         }
 
-        if (string.IsNullOrWhiteSpace(value: manifest.Description))
+        if (string.IsNullOrWhiteSpace(manifest.Description))
         {
-            throw new InvalidOperationException(message: "Plugin manifest 'description' is required.");
+            throw new InvalidOperationException("Plugin manifest 'description' is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(value: manifest.Assembly))
+        if (string.IsNullOrWhiteSpace(manifest.Assembly))
         {
-            throw new InvalidOperationException(message: "Plugin manifest 'assembly' is required.");
+            throw new InvalidOperationException("Plugin manifest 'assembly' is required.");
         }
     }
 }

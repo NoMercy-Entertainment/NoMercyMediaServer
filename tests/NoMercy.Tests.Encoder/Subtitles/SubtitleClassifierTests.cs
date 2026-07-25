@@ -25,27 +25,27 @@ namespace NoMercy.Tests.Encoder.Subtitles;
 public class SubtitleClassifierTests
 {
     [Theory]
-    [InlineData(data: "srt")]
-    [InlineData(data: "subrip")]
-    [InlineData(data: "ass")]
-    [InlineData(data: "ssa")]
-    [InlineData(data: "webvtt")]
-    [InlineData(data: "mov_text")]
-    [InlineData(data: "text")]
+    [InlineData("srt")]
+    [InlineData("subrip")]
+    [InlineData("ass")]
+    [InlineData("ssa")]
+    [InlineData("webvtt")]
+    [InlineData("mov_text")]
+    [InlineData("text")]
     public void IsTextBased_KnownTextCodecs_ReturnsTrue(string codec)
     {
-        SubtitleClassifier.IsTextBased(codec: codec).Should().BeTrue();
+        SubtitleClassifier.IsTextBased(codec).Should().BeTrue();
     }
 
     [Theory]
-    [InlineData(data: "hdmv_pgs_subtitle")]
-    [InlineData(data: "pgs")] // NoMercy short alias for hdmv_pgs_subtitle
-    [InlineData(data: "dvd_subtitle")]
-    [InlineData(data: "vobsub")] // libavformat alternative name for dvd_subtitle
-    [InlineData(data: "dvb_subtitle")]
+    [InlineData("hdmv_pgs_subtitle")]
+    [InlineData("pgs")] // NoMercy short alias for hdmv_pgs_subtitle
+    [InlineData("dvd_subtitle")]
+    [InlineData("vobsub")] // libavformat alternative name for dvd_subtitle
+    [InlineData("dvb_subtitle")]
     public void IsBitmapBased_KnownBitmapCodecs_ReturnsTrue(string codec)
     {
-        SubtitleClassifier.IsBitmapBased(codec: codec).Should().BeTrue();
+        SubtitleClassifier.IsBitmapBased(codec).Should().BeTrue();
     }
 
     [Fact]
@@ -53,16 +53,16 @@ public class SubtitleClassifierTests
     {
         // ffprobe output is typically lowercase but user-facing / mkv
         // tooling can emit uppercase variants. Classifier must accept both.
-        SubtitleClassifier.IsTextBased(codec: "SRT").Should().BeTrue();
-        SubtitleClassifier.IsTextBased(codec: "SubRip").Should().BeTrue();
-        SubtitleClassifier.IsTextBased(codec: "ASS").Should().BeTrue();
+        SubtitleClassifier.IsTextBased("SRT").Should().BeTrue();
+        SubtitleClassifier.IsTextBased("SubRip").Should().BeTrue();
+        SubtitleClassifier.IsTextBased("ASS").Should().BeTrue();
     }
 
     [Fact]
     public void IsBitmapBased_CaseInsensitive()
     {
-        SubtitleClassifier.IsBitmapBased(codec: "HDMV_PGS_SUBTITLE").Should().BeTrue();
-        SubtitleClassifier.IsBitmapBased(codec: "DVD_Subtitle").Should().BeTrue();
+        SubtitleClassifier.IsBitmapBased("HDMV_PGS_SUBTITLE").Should().BeTrue();
+        SubtitleClassifier.IsBitmapBased("DVD_Subtitle").Should().BeTrue();
     }
 
     [Fact]
@@ -71,13 +71,13 @@ public class SubtitleClassifierTests
         // PGS is the most common trap — bluray subs. Misclassifying as
         // text would pipe the bitmap stream into "extract to webvtt"
         // which outputs nothing useful.
-        SubtitleClassifier.IsTextBased(codec: "hdmv_pgs_subtitle").Should().BeFalse();
+        SubtitleClassifier.IsTextBased("hdmv_pgs_subtitle").Should().BeFalse();
     }
 
     [Fact]
     public void SrtNotClassifiedAsBitmap()
     {
-        SubtitleClassifier.IsBitmapBased(codec: "srt").Should().BeFalse();
+        SubtitleClassifier.IsBitmapBased("srt").Should().BeFalse();
     }
 
     [Fact]
@@ -86,15 +86,15 @@ public class SubtitleClassifierTests
         // e.g. "cc_data" (708/608 captions) — we don't handle these yet.
         // The classifier must say no to both paths so the extractor
         // logs "unsupported" rather than corrupting data.
-        SubtitleClassifier.IsTextBased(codec: "cc_data").Should().BeFalse();
-        SubtitleClassifier.IsBitmapBased(codec: "cc_data").Should().BeFalse();
+        SubtitleClassifier.IsTextBased("cc_data").Should().BeFalse();
+        SubtitleClassifier.IsBitmapBased("cc_data").Should().BeFalse();
     }
 
     [Fact]
     public void EmptyCodec_ClassifiedAsNeither()
     {
-        SubtitleClassifier.IsTextBased(codec: "").Should().BeFalse();
-        SubtitleClassifier.IsBitmapBased(codec: "").Should().BeFalse();
+        SubtitleClassifier.IsTextBased("").Should().BeFalse();
+        SubtitleClassifier.IsBitmapBased("").Should().BeFalse();
     }
 
     [Fact]
@@ -114,9 +114,9 @@ public class SubtitleClassifierTests
         ];
 
         foreach (string t in textCodecs)
-            SubtitleClassifier.IsBitmapBased(codec: t).Should().BeFalse();
+            SubtitleClassifier.IsBitmapBased(t).Should().BeFalse();
         foreach (string b in bitmapCodecs)
-            SubtitleClassifier.IsTextBased(codec: b).Should().BeFalse();
+            SubtitleClassifier.IsTextBased(b).Should().BeFalse();
     }
 
     // ── ResolveVariant ──────────────────────────────────────────────────────
@@ -136,35 +136,35 @@ public class SubtitleClassifierTests
         );
 
     [Theory]
-    [InlineData(data: "Signs & Songs")]
-    [InlineData(data: "s&s")]
-    [InlineData(data: "English [Signs]")]
-    [InlineData(data: "English (Songs)")]
+    [InlineData("Signs & Songs")]
+    [InlineData("s&s")]
+    [InlineData("English [Signs]")]
+    [InlineData("English (Songs)")]
     public void ResolveVariant_TitleMentionsSignsOrSongs_ReturnsSign(string title)
     {
-        SubtitleClassifier.ResolveVariant(stream: Stream(title: title)).Should().Be(expected: "sign");
+        SubtitleClassifier.ResolveVariant(Stream(title: title)).Should().Be("sign");
     }
 
     [Theory]
-    [InlineData(data: "SDH")]
-    [InlineData(data: "English SDH")]
-    [InlineData(data: "English (Hearing Impaired)")]
+    [InlineData("SDH")]
+    [InlineData("English SDH")]
+    [InlineData("English (Hearing Impaired)")]
     public void ResolveVariant_TitleMentionsSdhOrHearing_ReturnsSdh(string title)
     {
-        SubtitleClassifier.ResolveVariant(stream: Stream(title: title)).Should().Be(expected: "sdh");
+        SubtitleClassifier.ResolveVariant(Stream(title: title)).Should().Be("sdh");
     }
 
     [Fact]
     public void ResolveVariant_ForcedFlag_WithoutTitle_ReturnsSign()
     {
         // Forced subs are typically signs / foreign-language passages.
-        SubtitleClassifier.ResolveVariant(stream: Stream(isForced: true)).Should().Be(expected: "sign");
+        SubtitleClassifier.ResolveVariant(Stream(isForced: true)).Should().Be("sign");
     }
 
     [Fact]
     public void ResolveVariant_DefaultFlag_WithoutTitleOrForced_ReturnsFull()
     {
-        SubtitleClassifier.ResolveVariant(stream: Stream(isDefault: true)).Should().Be(expected: "full");
+        SubtitleClassifier.ResolveVariant(Stream(isDefault: true)).Should().Be("full");
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class SubtitleClassifierTests
         // the regular language track. "alt" is reserved for the per-language
         // overflow case (see ResolveVariants) — it shouldn't be the fallback
         // for a stream with no peer context.
-        SubtitleClassifier.ResolveVariant(stream: Stream()).Should().Be(expected: "full");
+        SubtitleClassifier.ResolveVariant(Stream()).Should().Be("full");
     }
 
     // ── ResolveVariants (multi-stream, per-language disambiguation) ─────────
@@ -202,9 +202,9 @@ public class SubtitleClassifierTests
             ),
         ];
 
-        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams: streams);
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
 
-        variants.Should().Equal(expected: ["full", "full"]);
+        variants.Should().Equal("full", "full");
     }
 
     [Fact]
@@ -238,9 +238,9 @@ public class SubtitleClassifierTests
             ),
         ];
 
-        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams: streams);
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
 
-        variants.Should().Equal(expected: ["full", "alt", "alt"]);
+        variants.Should().Equal("full", "alt", "alt");
     }
 
     [Fact]
@@ -274,9 +274,9 @@ public class SubtitleClassifierTests
             ),
         ];
 
-        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams: streams);
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
 
-        variants.Should().Equal(expected: ["alt", "full", "alt"]);
+        variants.Should().Equal("alt", "full", "alt");
     }
 
     [Fact]
@@ -313,9 +313,9 @@ public class SubtitleClassifierTests
             ),
         ];
 
-        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams: streams);
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
 
-        variants.Should().Equal(expected: ["sdh", "sign", "full"]);
+        variants.Should().Equal("sdh", "sign", "full");
     }
 
     [Fact]
@@ -359,9 +359,9 @@ public class SubtitleClassifierTests
             ),
         ];
 
-        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams: streams);
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
 
-        variants.Should().Equal(expected: ["full", "alt", "full", "alt"]);
+        variants.Should().Equal("full", "alt", "full", "alt");
     }
 
     [Fact]
@@ -387,9 +387,9 @@ public class SubtitleClassifierTests
             ),
         ];
 
-        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams: streams);
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
 
-        variants.Should().Equal(expected: ["full", "alt"]);
+        variants.Should().Equal("full", "alt");
     }
 
     [Fact]
@@ -398,18 +398,18 @@ public class SubtitleClassifierTests
         // Title beats disposition flags so a "Sign & Song" track flagged
         // as default doesn't land in "full".
         SubtitleClassifier
-            .ResolveVariant(stream: Stream(title: "SDH", isForced: true, isDefault: true))
+            .ResolveVariant(Stream(title: "SDH", isForced: true, isDefault: true))
             .Should()
-            .Be(expected: "sdh");
+            .Be("sdh");
     }
 
     [Fact]
     public void ResolveVariant_TitleCaseInsensitive()
     {
-        SubtitleClassifier.ResolveVariant(stream: Stream(title: "SDH")).Should().Be(expected: "sdh");
-        SubtitleClassifier.ResolveVariant(stream: Stream(title: "sdh")).Should().Be(expected: "sdh");
-        SubtitleClassifier.ResolveVariant(stream: Stream(title: "Sign")).Should().Be(expected: "sign");
-        SubtitleClassifier.ResolveVariant(stream: Stream(title: "SIGNS")).Should().Be(expected: "sign");
+        SubtitleClassifier.ResolveVariant(Stream(title: "SDH")).Should().Be("sdh");
+        SubtitleClassifier.ResolveVariant(Stream(title: "sdh")).Should().Be("sdh");
+        SubtitleClassifier.ResolveVariant(Stream(title: "Sign")).Should().Be("sign");
+        SubtitleClassifier.ResolveVariant(Stream(title: "SIGNS")).Should().Be("sign");
     }
 
     // ── Bitmap sidecar extensions ────────────────────────────────────────────
@@ -418,13 +418,13 @@ public class SubtitleClassifierTests
     // gives the player an entry it can list but never render.
 
     [Theory]
-    [InlineData(data: "mks")]
-    [InlineData(data: "sup")]
-    [InlineData(data: "idx")]
-    [InlineData(data: "vob")]
+    [InlineData("mks")]
+    [InlineData("sup")]
+    [InlineData("idx")]
+    [InlineData("vob")]
     public void IsBitmapSidecarExtension_IsTrueForEveryFormatTheExtractionPassWrites(string ext)
     {
-        SubtitleClassifier.IsBitmapSidecarExtension(extension: ext).Should().BeTrue();
+        SubtitleClassifier.IsBitmapSidecarExtension(ext).Should().BeTrue();
     }
 
     [Fact]
@@ -433,17 +433,17 @@ public class SubtitleClassifierTests
         // Guarded on its own: a list of just sup/vob let every extracted bitmap
         // track through, so each one was published alongside its OCR sidecar and
         // every subtitle appeared twice in the player.
-        SubtitleClassifier.IsBitmapSidecarExtension(extension: "mks").Should().BeTrue();
+        SubtitleClassifier.IsBitmapSidecarExtension("mks").Should().BeTrue();
     }
 
     [Theory]
-    [InlineData(data: "vtt")]
-    [InlineData(data: "srt")]
-    [InlineData(data: "ass")]
-    [InlineData(data: "ssa")]
+    [InlineData("vtt")]
+    [InlineData("srt")]
+    [InlineData("ass")]
+    [InlineData("ssa")]
     public void IsBitmapSidecarExtension_IsFalseForTextFormats(string ext)
     {
-        SubtitleClassifier.IsBitmapSidecarExtension(extension: ext).Should().BeFalse();
+        SubtitleClassifier.IsBitmapSidecarExtension(ext).Should().BeFalse();
     }
 
     [Fact]
@@ -451,9 +451,9 @@ public class SubtitleClassifierTests
     {
         // Callers reach it from Path.GetExtension (".MKS") and from a regex
         // capture group ("mks") alike.
-        SubtitleClassifier.IsBitmapSidecarExtension(extension: ".mks").Should().BeTrue();
-        SubtitleClassifier.IsBitmapSidecarExtension(extension: ".MKS").Should().BeTrue();
-        SubtitleClassifier.IsBitmapSidecarExtension(extension: "MKS").Should().BeTrue();
-        SubtitleClassifier.IsBitmapSidecarExtension(extension: ".VTT").Should().BeFalse();
+        SubtitleClassifier.IsBitmapSidecarExtension(".mks").Should().BeTrue();
+        SubtitleClassifier.IsBitmapSidecarExtension(".MKS").Should().BeTrue();
+        SubtitleClassifier.IsBitmapSidecarExtension("MKS").Should().BeTrue();
+        SubtitleClassifier.IsBitmapSidecarExtension(".VTT").Should().BeFalse();
     }
 }

@@ -56,8 +56,8 @@ public partial class NumberConverter
         return number switch
         {
             0 => "zero",
-            < 0 => "minus " + NumberToWords(number: Math.Abs(value: number)),
-            _ => NumberToWordsRecursive(number: number),
+            < 0 => "minus " + NumberToWords(Math.Abs(number)),
+            _ => NumberToWordsRecursive(number),
         };
     }
 
@@ -65,22 +65,22 @@ public partial class NumberConverter
     {
         return number switch
         {
-            < 20 => UnitsMap[key: number],
-            < 100 => TensMap[key: number / 10] + (number % 10 != 0 ? " " + UnitsMap[key: number % 10] : ""),
-            < 1000 => UnitsMap[key: number / 100]
+            < 20 => UnitsMap[number],
+            < 100 => TensMap[number / 10] + (number % 10 != 0 ? " " + UnitsMap[number % 10] : ""),
+            < 1000 => UnitsMap[number / 100]
                 + " hundred"
-                + (number % 100 != 0 ? " " + NumberToWordsRecursive(number: number % 100) : ""),
-            < 1000000 => NumberToWordsRecursive(number: number / 1000)
+                + (number % 100 != 0 ? " " + NumberToWordsRecursive(number % 100) : ""),
+            < 1000000 => NumberToWordsRecursive(number / 1000)
                 + " thousand"
-                + (number % 1000 != 0 ? " " + NumberToWordsRecursive(number: number % 1000) : ""),
-            < 1000000000 => NumberToWordsRecursive(number: number / 1000000)
+                + (number % 1000 != 0 ? " " + NumberToWordsRecursive(number % 1000) : ""),
+            < 1000000000 => NumberToWordsRecursive(number / 1000000)
                 + " million"
-                + (number % 1000000 != 0 ? " " + NumberToWordsRecursive(number: number % 1000000) : ""),
-            _ => NumberToWordsRecursive(number: number / 1000000000)
+                + (number % 1000000 != 0 ? " " + NumberToWordsRecursive(number % 1000000) : ""),
+            _ => NumberToWordsRecursive(number / 1000000000)
                 + " billion"
                 + (
                     number % 1000000000 != 0
-                        ? " " + NumberToWordsRecursive(number: number % 1000000000)
+                        ? " " + NumberToWordsRecursive(number % 1000000000)
                         : ""
                 ),
         };
@@ -88,9 +88,9 @@ public partial class NumberConverter
 
     public static string NormalizeAspectRatio(double width, double height)
     {
-        int w = (int)Math.Round(a: width);
-        int h = (int)Math.Round(a: height);
-        return NormalizeAspectRatio(width: w, height: h);
+        int w = (int)Math.Round(width);
+        int h = (int)Math.Round(height);
+        return NormalizeAspectRatio(w, h);
     }
 
     public static string NormalizeAspectRatio(int width, int height)
@@ -98,7 +98,7 @@ public partial class NumberConverter
         if (width <= 0 || height <= 0)
             return "1:1";
 
-        int gcd = CalculateGcd(a: width, b: height);
+        int gcd = CalculateGcd(width, height);
         int normalizedWidth = width / gcd;
         int normalizedHeight = height / gcd;
 
@@ -117,7 +117,7 @@ public partial class NumberConverter
         // Check if it matches a common ratio (with some tolerance)
         foreach (KeyValuePair<(int w, int h), string> ratio in commonRatios)
         {
-            if (IsCloseToRatio(w1: normalizedWidth, h1: normalizedHeight, w2: ratio.Key.w, h2: ratio.Key.h))
+            if (IsCloseToRatio(normalizedWidth, normalizedHeight, ratio.Key.w, ratio.Key.h))
                 return ratio.Value;
         }
 
@@ -128,7 +128,7 @@ public partial class NumberConverter
     {
         double ratio1 = (double)w1 / h1;
         double ratio2 = (double)w2 / h2;
-        return Math.Abs(value: ratio1 - ratio2) < tolerance;
+        return Math.Abs(ratio1 - ratio2) < tolerance;
     }
 
     private static int CalculateGcd(int a, int b)
@@ -144,9 +144,9 @@ public partial class NumberConverter
 
     internal static string ConvertNumbersInString(string input)
     {
-        return MyRegex().Replace(input: input, evaluator: match => NumberToWords(number: int.Parse(s: match.Value)));
+        return MyRegex().Replace(input, match => NumberToWords(int.Parse(match.Value)));
     }
 
-    [GeneratedRegex(pattern: @"\b\d+\b")]
+    [GeneratedRegex(@"\b\d+\b")]
     private static partial Regex MyRegex();
 }

@@ -26,70 +26,69 @@ namespace NoMercy.Tests.Cli.Commands;
 /// response DTO is a private nested type, so this runs against a real
 /// <see cref="FakeManagementPipeServer"/> rather than a mock.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class UpdateCommandDownloadTests
 {
     private static async Task<int> RunAsync(string pipeName)
     {
-        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
-        RootCommand root = new(description: "test");
-        root.Options.Add(item: pipeOption);
-        root.Subcommands.Add(item: UpdateCommand.Create(pipeOption: pipeOption, clientFactory: new CliClientFactory()));
-        return await root.Parse(args: ["--pipe", pipeName, "update"]).InvokeAsync();
+        Option<string?> pipeOption = new("--pipe", "-p");
+        RootCommand root = new("test");
+        root.Options.Add(pipeOption);
+        root.Subcommands.Add(UpdateCommand.Create(pipeOption, new CliClientFactory()));
+        return await root.Parse(["--pipe", pipeName, "update"]).InvokeAsync();
     }
 
     [Fact]
     public async Task Download_ServerUnreachable_PrintsFallbackMessage_AndReturnsServerError()
     {
         FakeManagementPipeServer server = new();
-        Task<string> serverTask = server.RunOnceAsync(respond: stream =>
-            FakeManagementPipeServer.WriteResponseAsync(stream: stream, statusCode: 500, reasonPhrase: "Internal Server Error", body: "")
+        Task<string> serverTask = server.RunOnceAsync(stream =>
+            FakeManagementPipeServer.WriteResponseAsync(stream, 500, "Internal Server Error", "")
         );
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(pipeName: server.PipeName);
+        int exitCode = await RunAsync(server.PipeName);
 
         await serverTask;
-        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
-        console.Error.Should().Contain(expected: "Failed to download update.");
+        exitCode.Should().Be((int)ExitCode.ServerError);
+        console.Error.Should().Contain("Failed to download update.");
     }
 
     [Fact]
     public async Task Download_StatusNotOk_PrintsServerMessage_AndReturnsServerError_WithoutStopping()
     {
         FakeManagementPipeServer server = new();
-        Task<string> serverTask = server.RunOnceAsync(respond: stream =>
+        Task<string> serverTask = server.RunOnceAsync(stream =>
             FakeManagementPipeServer.WriteResponseAsync(
-                stream: stream,
-                statusCode: 200,
-                reasonPhrase: "OK",
-                body: """{"status":"fail","message":"disk full"}"""
+                stream,
+                200,
+                "OK",
+                """{"status":"fail","message":"disk full"}"""
             )
         );
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(pipeName: server.PipeName);
+        int exitCode = await RunAsync(server.PipeName);
 
         string request = await serverTask;
-        request.Should().StartWith(expected: "POST /manage/update");
-        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
-        console.Error.Should().Contain(expected: "disk full");
+        request.Should().StartWith("POST /manage/update");
+        exitCode.Should().Be((int)ExitCode.ServerError);
+        console.Error.Should().Contain("disk full");
     }
 
     [Fact]
     public async Task Download_Ok_PrintsMessage_AndProceedsToStop()
     {
         FakeManagementPipeServer server = new();
-        Task<List<string>> requestsTask = server.RunSequenceAsync(responders:
-            [
+        Task<List<string>> requestsTask = server.RunSequenceAsync([
                 stream =>
                     FakeManagementPipeServer.WriteResponseAsync(
-                        stream: stream,
-                        statusCode: 200,
-                        reasonPhrase: "OK",
-                        body: """{"status":"ok","message":"Downloaded 120MB"}"""
+                        stream,
+                        200,
+                        "OK",
+                        """{"status":"ok","message":"Downloaded 120MB"}"""
                     ),
-                stream => FakeManagementPipeServer.WriteResponseAsync(stream: stream, statusCode: 200, reasonPhrase: "OK", body: "true"), // The run continues past stop into the wait-for-exit poll once the
+                stream => FakeManagementPipeServer.WriteResponseAsync(stream, 200, "OK", "true"), // The run continues past stop into the wait-for-exit poll once the
                 // two responders above are exhausted. Accepting that third
                 // connection and dropping it immediately (no response written)
                 // makes the client observe a fast connection failure instead of
@@ -104,14 +103,14 @@ public sealed class UpdateCommandDownloadTests
         // that a second request (stop) really was sent — it deliberately
         // ignores the overall exit code, since the run continues past stop
         // into the wait-for-exit/file-swap steps (covered separately).
-        _ = await RunAsync(pipeName: server.PipeName);
+        _ = await RunAsync(server.PipeName);
 
         List<string> requests = await requestsTask;
-        requests.Should().HaveCount(expected: 3);
-        requests[index: 0].Should().StartWith(expected: "POST /manage/update");
-        requests[index: 1].Should().StartWith(expected: "POST /manage/stop");
-        console.Out.Should().Contain(expected: "Downloading update...");
-        console.Out.Should().Contain(expected: "Downloaded 120MB");
-        console.Out.Should().Contain(expected: "Stopping server...");
+        requests.Should().HaveCount(3);
+        requests[0].Should().StartWith("POST /manage/update");
+        requests[1].Should().StartWith("POST /manage/stop");
+        console.Out.Should().Contain("Downloading update...");
+        console.Out.Should().Contain("Downloaded 120MB");
+        console.Out.Should().Contain("Stopping server...");
     }
 }

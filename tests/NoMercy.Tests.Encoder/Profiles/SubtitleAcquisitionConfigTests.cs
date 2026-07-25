@@ -22,17 +22,17 @@ public class SubtitleAcquisitionConfigTests
         SubtitleAcquisitionConfig config = new();
 
         config.Enabled.Should().BeFalse();
-        config.Providers.Should().BeEquivalentTo(expectation: [SubtitleProvider.OpenSubtitles]);
+        config.Providers.Should().BeEquivalentTo([SubtitleProvider.OpenSubtitles]);
         config.Languages.Should().BeEmpty();
-        config.Strategy.Should().Be(expected: SubtitleMatchStrategy.HashThenFilenameThenTitle);
-        config.MaxPerLanguage.Should().Be(expected: 1);
-        config.MinRating.Should().Be(expected: 0.0);
-        config.MinDownloads.Should().Be(expected: 0);
+        config.Strategy.Should().Be(SubtitleMatchStrategy.HashThenFilenameThenTitle);
+        config.MaxPerLanguage.Should().Be(1);
+        config.MinRating.Should().Be(0.0);
+        config.MinDownloads.Should().Be(0);
         config.TrustedUploadersOnly.Should().BeFalse();
         config.RequireMatchingFps.Should().BeFalse();
-        config.PerRequestTimeout.Should().Be(expected: TimeSpan.FromSeconds(seconds: 5));
+        config.PerRequestTimeout.Should().Be(TimeSpan.FromSeconds(5));
         config.FillMissingOnly.Should().BeTrue();
-        config.EmbedPolicy.Should().Be(expected: SubtitleEmbedPolicy.ExactMatchOnly);
+        config.EmbedPolicy.Should().Be(SubtitleEmbedPolicy.ExactMatchOnly);
     }
 
     [Fact]
@@ -49,33 +49,33 @@ public class SubtitleAcquisitionConfigTests
             MinDownloads = 100,
             TrustedUploadersOnly = true,
             RequireMatchingFps = true,
-            PerRequestTimeout = TimeSpan.FromSeconds(seconds: 10),
+            PerRequestTimeout = TimeSpan.FromSeconds(10),
             FillMissingOnly = false,
             EmbedPolicy = SubtitleEmbedPolicy.AlwaysSidecar,
         };
 
-        string json = JsonConvert.SerializeObject(value: original);
+        string json = JsonConvert.SerializeObject(original);
         SubtitleAcquisitionConfig? restored =
-            JsonConvert.DeserializeObject<SubtitleAcquisitionConfig>(value: json);
+            JsonConvert.DeserializeObject<SubtitleAcquisitionConfig>(json);
 
         restored.Should().NotBeNull();
         restored!.Enabled.Should().BeTrue();
-        restored.Languages.Should().BeEquivalentTo(expectation: ["en", "nl"]);
-        restored.Strategy.Should().Be(expected: SubtitleMatchStrategy.HashOnly);
-        restored.MaxPerLanguage.Should().Be(expected: 3);
-        restored.MinRating.Should().Be(expected: 7.5);
-        restored.MinDownloads.Should().Be(expected: 100);
+        restored.Languages.Should().BeEquivalentTo(["en", "nl"]);
+        restored.Strategy.Should().Be(SubtitleMatchStrategy.HashOnly);
+        restored.MaxPerLanguage.Should().Be(3);
+        restored.MinRating.Should().Be(7.5);
+        restored.MinDownloads.Should().Be(100);
         restored.TrustedUploadersOnly.Should().BeTrue();
         restored.RequireMatchingFps.Should().BeTrue();
-        restored.PerRequestTimeout.Should().Be(expected: TimeSpan.FromSeconds(seconds: 10));
+        restored.PerRequestTimeout.Should().Be(TimeSpan.FromSeconds(10));
         restored.FillMissingOnly.Should().BeFalse();
-        restored.EmbedPolicy.Should().Be(expected: SubtitleEmbedPolicy.AlwaysSidecar);
+        restored.EmbedPolicy.Should().Be(SubtitleEmbedPolicy.AlwaysSidecar);
     }
 
     [Fact]
     public void EncodingProfile_SubtitleAcquisition_DefaultsToNull()
     {
-        EncodingProfile profile = new(Id: Ulid.NewUlid(), Name: "Test", Container: Container.Mkv, Video: null, Audio: [], Subtitles: []);
+        EncodingProfile profile = new(Ulid.NewUlid(), "Test", Container.Mkv, null, [], []);
 
         profile.SubtitleAcquisition.Should().BeNull();
     }

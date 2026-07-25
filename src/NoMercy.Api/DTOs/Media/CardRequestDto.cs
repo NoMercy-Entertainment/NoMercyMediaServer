@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record CardRequestDto
 {
-    [JsonProperty(propertyName: "replace_id")]
+    [JsonProperty("replace_id")]
     public Ulid ReplaceId { get; set; }
 }

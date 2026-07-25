@@ -12,7 +12,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
@@ -27,7 +26,7 @@ namespace NoMercy.Tests.Api.Media;
 /// Moderator-vs-MediaAccess auth split, the paginated-list envelope
 /// (including the pageSize clamp), and the Create validation rules.
 /// </summary>
-[Trait(name: "Category", value: "ContentSegments")]
+[Trait("Category", "ContentSegments")]
 public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLifetime
 {
     private readonly HttpClient _authed;
@@ -54,8 +53,7 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         _episodeSegmentId = Ulid.NewUlid();
 
         await using MediaContext ctx = new();
-        ctx.ContentSegments.AddRange(entities:
-            [
+        ctx.ContentSegments.AddRange([
                 new ContentSegment
                 {
                     Id = _introSegmentId,
@@ -92,91 +90,91 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
     {
         await using MediaContext ctx = new();
         Ulid[] ids = [_introSegmentId, _outroSegmentId, _episodeSegmentId];
-        await ctx.ContentSegments.Where(predicate: s => ids.Contains(s.Id)).ExecuteDeleteAsync();
+        await ctx.ContentSegments.Where(s => ids.Contains(s.Id)).ExecuteDeleteAsync();
     }
 
     [Fact]
     public async Task List_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: "/api/v1/content-segments");
+        HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/content-segments");
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task List_ReturnsEnvelopeWithDataAndMeta_WhenModerator()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/content-segments");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/content-segments");
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
         JsonElement root = doc.RootElement;
 
-        root.TryGetProperty(propertyName: "data", value: out JsonElement data).Should().BeTrue();
-        data.ValueKind.Should().Be(expected: JsonValueKind.Array);
+        root.TryGetProperty("data", out JsonElement data).Should().BeTrue();
+        data.ValueKind.Should().Be(JsonValueKind.Array);
 
-        root.TryGetProperty(propertyName: "meta", value: out JsonElement meta).Should().BeTrue();
-        meta.TryGetProperty(propertyName: "total", value: out _).Should().BeTrue();
-        meta.TryGetProperty(propertyName: "pageSize", value: out _).Should().BeTrue();
-        meta.TryGetProperty(propertyName: "pageIndex", value: out _).Should().BeTrue();
-        meta.TryGetProperty(propertyName: "totalPages", value: out _).Should().BeTrue();
+        root.TryGetProperty("meta", out JsonElement meta).Should().BeTrue();
+        meta.TryGetProperty("total", out _).Should().BeTrue();
+        meta.TryGetProperty("pageSize", out _).Should().BeTrue();
+        meta.TryGetProperty("pageIndex", out _).Should().BeTrue();
+        meta.TryGetProperty("totalPages", out _).Should().BeTrue();
 
         bool containsSeededIntro = data.EnumerateArray()
-            .Any(predicate: e => e.GetProperty(propertyName: "id").GetString() == _introSegmentId.ToString());
-        containsSeededIntro.Should().BeTrue(because: "the seeded intro segment must be visible in the list");
+            .Any(e => e.GetProperty("id").GetString() == _introSegmentId.ToString());
+        containsSeededIntro.Should().BeTrue("the seeded intro segment must be visible in the list");
     }
 
     [Fact]
     public async Task List_PageSizeAboveMax_IsClampedTo500()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: "/api/v1/content-segments?pageSize=999999"
+            "/api/v1/content-segments?pageSize=999999"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        doc.RootElement.GetProperty(propertyName: "meta").GetProperty(propertyName: "pageSize").GetInt32().Should().Be(expected: 500);
+        doc.RootElement.GetProperty("meta").GetProperty("pageSize").GetInt32().Should().Be(500);
     }
 
     [Fact]
     public async Task List_PageSizeBelowMin_IsClampedTo1()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: "/api/v1/content-segments?pageSize=0"
+            "/api/v1/content-segments?pageSize=0"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        doc.RootElement.GetProperty(propertyName: "meta").GetProperty(propertyName: "pageSize").GetInt32().Should().Be(expected: 1);
+        doc.RootElement.GetProperty("meta").GetProperty("pageSize").GetInt32().Should().Be(1);
     }
 
     [Fact]
     public async Task List_FilteredByType_OnlyReturnsThatType()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: "/api/v1/content-segments?type=Outro&pageSize=500"
+            "/api/v1/content-segments?type=Outro&pageSize=500"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
 
-        data.GetArrayLength().Should().BeGreaterThan(expected: 0);
+        data.GetArrayLength().Should().BeGreaterThan(0);
         foreach (JsonElement item in data.EnumerateArray())
-            item.GetProperty(propertyName: "segment_type").GetString().Should().Be(expected: "Outro");
+            item.GetProperty("segment_type").GetString().Should().Be("Outro");
 
         bool containsSeededOutro = data.EnumerateArray()
-            .Any(predicate: e => e.GetProperty(propertyName: "id").GetString() == _outroSegmentId.ToString());
+            .Any(e => e.GetProperty("id").GetString() == _outroSegmentId.ToString());
         containsSeededOutro.Should().BeTrue();
     }
 
@@ -184,68 +182,68 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
     public async Task GetByEpisode_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            requestUri: $"/api/v1/content-segments/episode/{SeededEpisodeId}"
+            $"/api/v1/content-segments/episode/{SeededEpisodeId}"
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetByEpisode_ReturnsSeededSegment_WhenAuthenticated()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: $"/api/v1/content-segments/episode/{SeededEpisodeId}"
+            $"/api/v1/content-segments/episode/{SeededEpisodeId}"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
 
-        data.ValueKind.Should().Be(expected: JsonValueKind.Array);
-        data.GetArrayLength().Should().Be(expected: 1);
+        data.ValueKind.Should().Be(JsonValueKind.Array);
+        data.GetArrayLength().Should().Be(1);
 
-        JsonElement segment = data[index: 0];
-        segment.GetProperty(propertyName: "id").GetString().Should().Be(expected: _episodeSegmentId.ToString());
-        segment.GetProperty(propertyName: "episode_id").GetInt32().Should().Be(expected: SeededEpisodeId);
-        segment.GetProperty(propertyName: "segment_type").GetString().Should().Be(expected: "Intro");
+        JsonElement segment = data[0];
+        segment.GetProperty("id").GetString().Should().Be(_episodeSegmentId.ToString());
+        segment.GetProperty("episode_id").GetInt32().Should().Be(SeededEpisodeId);
+        segment.GetProperty("segment_type").GetString().Should().Be("Intro");
     }
 
     [Fact]
     public async Task GetByMovie_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            requestUri: $"/api/v1/content-segments/movie/{SeededMovieId}"
+            $"/api/v1/content-segments/movie/{SeededMovieId}"
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetByMovie_ReturnsSeededSegmentsOrderedByStart_WhenAuthenticated()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: $"/api/v1/content-segments/movie/{SeededMovieId}"
+            $"/api/v1/content-segments/movie/{SeededMovieId}"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
 
-        data.GetArrayLength().Should().Be(expected: 2, because: "movie 129 was seeded with an intro and an outro");
+        data.GetArrayLength().Should().Be(2, "movie 129 was seeded with an intro and an outro");
 
-        JsonElement first = data[index: 0];
-        JsonElement second = data[index: 1];
-        first.GetProperty(propertyName: "id").GetString().Should().Be(expected: _introSegmentId.ToString());
-        second.GetProperty(propertyName: "id").GetString().Should().Be(expected: _outroSegmentId.ToString());
+        JsonElement first = data[0];
+        JsonElement second = data[1];
+        first.GetProperty("id").GetString().Should().Be(_introSegmentId.ToString());
+        second.GetProperty("id").GetString().Should().Be(_outroSegmentId.ToString());
         first
-            .GetProperty(propertyName: "start_seconds")
+            .GetProperty("start_seconds")
             .GetDouble()
             .Should()
-            .BeLessThan(expected: second.GetProperty(propertyName: "start_seconds").GetDouble());
+            .BeLessThan(second.GetProperty("start_seconds").GetDouble());
     }
 
     [Fact]
@@ -260,11 +258,11 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         };
 
         HttpResponseMessage response = await _unauthed.PostAsJsonAsync(
-            requestUri: "/api/v1/content-segments",
-            value: payload
+            "/api/v1/content-segments",
+            payload
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -279,35 +277,35 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         };
 
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/content-segments",
-            value: payload
+            "/api/v1/content-segments",
+            payload
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
         JsonElement root = doc.RootElement;
 
-        root.GetProperty(propertyName: "segment_type").GetString().Should().Be(expected: "Recap");
-        root.GetProperty(propertyName: "movie_id").GetInt32().Should().Be(expected: SeededMovieId);
-        root.GetProperty(propertyName: "source").GetString().Should().Be(expected: "manual");
-        Ulid createdId = Ulid.Parse(base32: root.GetProperty(propertyName: "id").GetString()!);
+        root.GetProperty("segment_type").GetString().Should().Be("Recap");
+        root.GetProperty("movie_id").GetInt32().Should().Be(SeededMovieId);
+        root.GetProperty("source").GetString().Should().Be("manual");
+        Ulid createdId = Ulid.Parse(root.GetProperty("id").GetString()!);
 
         try
         {
             await using MediaContext ctx = new();
             ContentSegment? persisted = await ctx
                 .ContentSegments.AsNoTracking()
-                .FirstOrDefaultAsync(predicate: s => s.Id == createdId);
+                .FirstOrDefaultAsync(s => s.Id == createdId);
             persisted.Should().NotBeNull();
-            persisted!.StartSeconds.Should().Be(expected: 100.0);
-            persisted.EndSeconds.Should().Be(expected: 130.0);
+            persisted!.StartSeconds.Should().Be(100.0);
+            persisted.EndSeconds.Should().Be(130.0);
         }
         finally
         {
             await using MediaContext cleanup = new();
-            await cleanup.ContentSegments.Where(predicate: s => s.Id == createdId).ExecuteDeleteAsync();
+            await cleanup.ContentSegments.Where(s => s.Id == createdId).ExecuteDeleteAsync();
         }
     }
 
@@ -323,11 +321,11 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         };
 
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/content-segments",
-            value: payload
+            "/api/v1/content-segments",
+            payload
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -341,11 +339,11 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         };
 
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/content-segments",
-            value: payload
+            "/api/v1/content-segments",
+            payload
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -361,11 +359,11 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         };
 
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/content-segments",
-            value: payload
+            "/api/v1/content-segments",
+            payload
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -374,11 +372,11 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         object payload = new { start_seconds = 1.0 };
 
         HttpResponseMessage response = await _unauthed.PutAsJsonAsync(
-            requestUri: $"/api/v1/content-segments/{_introSegmentId}",
-            value: payload
+            $"/api/v1/content-segments/{_introSegmentId}",
+            payload
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -387,26 +385,26 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         object payload = new { start_seconds = 2.0, end_seconds = 95.0 };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: $"/api/v1/content-segments/{_introSegmentId}",
-            value: payload
+            $"/api/v1/content-segments/{_introSegmentId}",
+            payload
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
         JsonElement root = doc.RootElement;
 
-        root.GetProperty(propertyName: "start_seconds").GetDouble().Should().Be(expected: 2.0);
-        root.GetProperty(propertyName: "end_seconds").GetDouble().Should().Be(expected: 95.0);
-        root.GetProperty(propertyName: "source").GetString().Should().Be(expected: "manual");
+        root.GetProperty("start_seconds").GetDouble().Should().Be(2.0);
+        root.GetProperty("end_seconds").GetDouble().Should().Be(95.0);
+        root.GetProperty("source").GetString().Should().Be("manual");
 
         await using MediaContext ctx = new();
         ContentSegment? persisted = await ctx
             .ContentSegments.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: s => s.Id == _introSegmentId);
+            .FirstOrDefaultAsync(s => s.Id == _introSegmentId);
         persisted.Should().NotBeNull();
-        persisted!.Source.Should().Be(expected: "manual");
+        persisted!.Source.Should().Be("manual");
     }
 
     [Fact]
@@ -416,11 +414,11 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         Ulid unknownId = Ulid.NewUlid();
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: $"/api/v1/content-segments/{unknownId}",
-            value: payload
+            $"/api/v1/content-segments/{unknownId}",
+            payload
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -429,34 +427,34 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         object payload = new { start_seconds = 1.0 };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: "/api/v1/content-segments/not-a-valid-ulid",
-            value: payload
+            "/api/v1/content-segments/not-a-valid-ulid",
+            payload
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Delete_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.DeleteAsync(
-            requestUri: $"/api/v1/content-segments/{_outroSegmentId}"
+            $"/api/v1/content-segments/{_outroSegmentId}"
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Delete_Existing_Returns204AndRemovesRow_WhenModerator()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            requestUri: $"/api/v1/content-segments/{_outroSegmentId}"
+            $"/api/v1/content-segments/{_outroSegmentId}"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         await using MediaContext ctx = new();
-        bool stillExists = await ctx.ContentSegments.AnyAsync(predicate: s => s.Id == _outroSegmentId);
+        bool stillExists = await ctx.ContentSegments.AnyAsync(s => s.Id == _outroSegmentId);
         stillExists.Should().BeFalse();
     }
 
@@ -466,19 +464,19 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         Ulid unknownId = Ulid.NewUlid();
 
         HttpResponseMessage response = await _authed.DeleteAsync(
-            requestUri: $"/api/v1/content-segments/{unknownId}"
+            $"/api/v1/content-segments/{unknownId}"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task Delete_InvalidId_Returns400()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            requestUri: "/api/v1/content-segments/not-a-valid-ulid"
+            "/api/v1/content-segments/not-a-valid-ulid"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

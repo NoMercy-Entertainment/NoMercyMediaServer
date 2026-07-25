@@ -13,9 +13,9 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
-using NoMercyQueue.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -38,7 +38,7 @@ public abstract class AbstractMusicDescriptionJob : IShouldQueue
     public ILoggerFactory LoggerFactory { get; private set; } = null!;
 
     [JsonIgnore]
-    protected ILogger Log => field ??= LoggerFactory.CreateLogger(type: GetType());
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
 
     public abstract string QueueName { get; }
     public abstract int Priority { get; }

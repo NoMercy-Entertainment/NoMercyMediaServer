@@ -48,7 +48,7 @@ public class HmacValidationMiddleware(
     ILicenseTokenClient? licenseTokenClient = null
 )
 {
-    private static readonly TimeSpan ReplayWindow = TimeSpan.FromMinutes(minutes: 5);
+    private static readonly TimeSpan ReplayWindow = TimeSpan.FromMinutes(5);
 
     // Paths exempt from HMAC (anonymous per spec).
     private static readonly string[] ExemptSuffixes = ["/progress"];
@@ -57,35 +57,35 @@ public class HmacValidationMiddleware(
     {
         string path = context.Request.Path.Value ?? string.Empty;
 
-        if (!IsProtected(path: path))
+        if (!IsProtected(path))
         {
-            await next(context: context);
+            await next(context);
             return;
         }
 
-        if (IsExempt(path: path))
+        if (IsExempt(path))
         {
-            await next(context: context);
+            await next(context);
             return;
         }
 
         // Determine the signing secret.
         // Remote-worker path: X-NoMercy-WorkerToken is present → introspect it.
-        string? workerToken = context.Request.Headers[key: "X-NoMercy-WorkerToken"].ToString();
+        string? workerToken = context.Request.Headers["X-NoMercy-WorkerToken"].ToString();
         string? secret;
 
-        if (!string.IsNullOrWhiteSpace(value: workerToken) && licenseTokenClient is not null)
+        if (!string.IsNullOrWhiteSpace(workerToken) && licenseTokenClient is not null)
         {
             IntrospectResult introspect = await licenseTokenClient
-                .IntrospectAsync(token: workerToken, ct: context.RequestAborted)
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .IntrospectAsync(workerToken, context.RequestAborted)
+                .ConfigureAwait(false);
 
             if (!introspect.Active)
             {
                 await WriteHmacError(
-                    context: context,
-                    reason: "worker_token_invalid",
-                    detail: introspect.Message ?? "Worker token is not active"
+                    context,
+                    "worker_token_invalid",
+                    introspect.Message ?? "Worker token is not active"
                 );
                 return;
             }
@@ -98,7 +98,7 @@ public class HmacValidationMiddleware(
             secret = encoderOptions.Value.DistributedEncodingSigningKey;
         }
 
-        if (string.IsNullOrWhiteSpace(value: secret))
+        if (string.IsNullOrWhiteSpace(secret))
         {
             // Signing key absent but path is protected — reject rather than
             // pass through. A missing key means distributed encoding is
@@ -107,34 +107,34 @@ public class HmacValidationMiddleware(
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(
-                text: "{\"error\":\"hmac_unavailable\",\"detail\":\"Distributed encoding signing key is not configured.\"}",
-                encoding: Encoding.UTF8
+                "{\"error\":\"hmac_unavailable\",\"detail\":\"Distributed encoding signing key is not configured.\"}",
+                Encoding.UTF8
             );
             return;
         }
 
         if (
-            !context.Request.Headers.TryGetValue(key: "X-NoMercy-Timestamp", value: out StringValues tsHeader)
-            || !long.TryParse(s: tsHeader.ToString(), result: out long timestamp)
+            !context.Request.Headers.TryGetValue("X-NoMercy-Timestamp", out StringValues tsHeader)
+            || !long.TryParse(tsHeader.ToString(), out long timestamp)
         )
         {
             await WriteHmacError(
-                context: context,
-                reason: "missing_timestamp",
-                detail: "X-NoMercy-Timestamp header is required"
+                context,
+                "missing_timestamp",
+                "X-NoMercy-Timestamp header is required"
             );
             return;
         }
 
         if (
-            !context.Request.Headers.TryGetValue(key: "X-NoMercy-Signature", value: out StringValues sigHeader)
-            || string.IsNullOrWhiteSpace(value: sigHeader.ToString())
+            !context.Request.Headers.TryGetValue("X-NoMercy-Signature", out StringValues sigHeader)
+            || string.IsNullOrWhiteSpace(sigHeader.ToString())
         )
         {
             await WriteHmacError(
-                context: context,
-                reason: "missing_signature",
-                detail: "X-NoMercy-Signature header is required"
+                context,
+                "missing_signature",
+                "X-NoMercy-Signature header is required"
             );
             return;
         }
@@ -144,40 +144,40 @@ public class HmacValidationMiddleware(
         byte[] bodyBytes;
         using (MemoryStream ms = new())
         {
-            await context.Request.Body.CopyToAsync(destination: ms);
+            await context.Request.Body.CopyToAsync(ms);
             bodyBytes = ms.ToArray();
         }
 
         context.Request.Body.Position = 0;
 
-        HmacSigner signer = new(secret: secret);
+        HmacSigner signer = new(secret);
         bool valid = signer.Verify(
-            method: context.Request.Method,
-            path: path,
-            timestamp: timestamp,
-            body: bodyBytes,
-            signature: sigHeader.ToString(),
-            replayWindow: ReplayWindow
+            context.Request.Method,
+            path,
+            timestamp,
+            bodyBytes,
+            sigHeader.ToString(),
+            ReplayWindow
         );
 
         if (!valid)
         {
             await WriteHmacError(
-                context: context,
-                reason: "signature_invalid",
-                detail: "HMAC signature verification failed"
+                context,
+                "signature_invalid",
+                "HMAC signature verification failed"
             );
             return;
         }
 
-        await next(context: context);
+        await next(context);
     }
 
     private bool IsProtected(string path)
     {
         foreach (string prefix in hmacOptions.Value.ProtectedPrefixes)
         {
-            if (path.StartsWith(value: prefix, comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 
@@ -188,7 +188,7 @@ public class HmacValidationMiddleware(
     {
         foreach (string suffix in ExemptSuffixes)
         {
-            if (path.EndsWith(value: suffix, comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (path.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 
@@ -207,6 +207,6 @@ public class HmacValidationMiddleware(
             detail,
         };
 
-        await context.Response.WriteAsync(text: JsonConvert.SerializeObject(value: body), encoding: Encoding.UTF8);
+        await context.Response.WriteAsync(JsonConvert.SerializeObject(body), Encoding.UTF8);
     }
 }

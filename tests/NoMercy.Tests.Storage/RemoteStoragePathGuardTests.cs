@@ -33,7 +33,7 @@ namespace NoMercy.Tests.Storage;
 ///
 /// Empty string must still pass (Rule 3 — empty = scope root).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class RemoteStoragePathGuardTests
 {
     // -----------------------------------------------------------------------
@@ -43,31 +43,31 @@ public sealed class RemoteStoragePathGuardTests
     private static RemoteStorage BuildNfsStorage()
     {
         FaultyLibNfs fake = new();
-        fake.SeedDir(path: "/");
-        NfsDriverConfig config = NfsDriverConfig.For(server: "fake-server", export: "/export");
-        NfsStorageDriver driver = new(config: config, libNfs: fake, log: NullLogger.Instance);
-        return new(driver: driver);
+        fake.SeedDir("/");
+        NfsDriverConfig config = NfsDriverConfig.For("fake-server", "/export");
+        NfsStorageDriver driver = new(config, fake, NullLogger.Instance);
+        return new(driver);
     }
 
     private static RemoteStorage BuildS3Storage()
     {
         S3StorageDriver driver = new(
-            bucket: "test-bucket",
-            region: "us-east-1",
-            prefix: null,
-            endpoint: "http://localhost:19999",
-            accessKey: "test-access-key",
-            secretKey: "test-secret-key"
+            "test-bucket",
+            "us-east-1",
+            null,
+            "http://localhost:19999",
+            "test-access-key",
+            "test-secret-key"
         );
-        return new(driver: driver);
+        return new(driver);
     }
 
     private static RemoteStorage BuildWebDavStorage()
     {
-        HttpClient httpClient = new() { BaseAddress = new(uriString: "http://localhost:19998/") };
-        WebDavClient client = new(httpClient: httpClient);
-        WebDavStorageDriver driver = new(client: client, baseUrl: "http://localhost:19998/");
-        return new(driver: driver);
+        HttpClient httpClient = new() { BaseAddress = new("http://localhost:19998/") };
+        WebDavClient client = new(httpClient);
+        WebDavStorageDriver driver = new(client, "http://localhost:19998/");
+        return new(driver);
     }
 
     // -----------------------------------------------------------------------
@@ -90,39 +90,39 @@ public sealed class RemoteStoragePathGuardTests
     // -----------------------------------------------------------------------
 
     [Theory]
-    [MemberData(memberName: nameof(AbsolutePathForms))]
+    [MemberData(nameof(AbsolutePathForms))]
     public async Task NFS_ExistsAsync_rejects_absolute_path(string path, string form)
     {
         RemoteStorage storage = BuildNfsStorage();
-        Func<Task> act = () => storage.ExistsAsync(path: path, ct: CancellationToken.None);
+        Func<Task> act = () => storage.ExistsAsync(path, CancellationToken.None);
         await act.Should()
             .ThrowAsync<StoragePathNotAllowedException>(
-                because: $"NFS RemoteStorage must reject absolute path form: {form}"
+                $"NFS RemoteStorage must reject absolute path form: {form}"
             );
     }
 
     [Theory]
-    [MemberData(memberName: nameof(AbsolutePathForms))]
+    [MemberData(nameof(AbsolutePathForms))]
     public async Task NFS_ReadAsync_rejects_absolute_path(string path, string form)
     {
         RemoteStorage storage = BuildNfsStorage();
-        Func<Task> act = () => storage.ReadAsync(path: path, ct: CancellationToken.None);
+        Func<Task> act = () => storage.ReadAsync(path, CancellationToken.None);
         await act.Should()
             .ThrowAsync<StoragePathNotAllowedException>(
-                because: $"NFS RemoteStorage must reject absolute path form: {form}"
+                $"NFS RemoteStorage must reject absolute path form: {form}"
             );
     }
 
     [Theory]
-    [MemberData(memberName: nameof(AbsolutePathForms))]
+    [MemberData(nameof(AbsolutePathForms))]
     public async Task NFS_WriteAsync_rejects_absolute_path(string path, string form)
     {
         RemoteStorage storage = BuildNfsStorage();
         Func<Task> act = () =>
-            storage.WriteAsync(path: path, bytes: new byte[] { 0x01 }, ct: CancellationToken.None);
+            storage.WriteAsync(path, new byte[] { 0x01 }, CancellationToken.None);
         await act.Should()
             .ThrowAsync<StoragePathNotAllowedException>(
-                because: $"NFS RemoteStorage must reject absolute path form: {form}"
+                $"NFS RemoteStorage must reject absolute path form: {form}"
             );
     }
 
@@ -131,27 +131,27 @@ public sealed class RemoteStoragePathGuardTests
     // -----------------------------------------------------------------------
 
     [Theory]
-    [MemberData(memberName: nameof(AbsolutePathForms))]
+    [MemberData(nameof(AbsolutePathForms))]
     public async Task S3_ExistsAsync_rejects_absolute_path(string path, string form)
     {
         RemoteStorage storage = BuildS3Storage();
-        Func<Task> act = () => storage.ExistsAsync(path: path, ct: CancellationToken.None);
+        Func<Task> act = () => storage.ExistsAsync(path, CancellationToken.None);
         await act.Should()
             .ThrowAsync<StoragePathNotAllowedException>(
-                because: $"S3 RemoteStorage must reject absolute path form: {form}"
+                $"S3 RemoteStorage must reject absolute path form: {form}"
             );
     }
 
     [Theory]
-    [MemberData(memberName: nameof(AbsolutePathForms))]
+    [MemberData(nameof(AbsolutePathForms))]
     public async Task S3_WriteAsync_rejects_absolute_path(string path, string form)
     {
         RemoteStorage storage = BuildS3Storage();
         Func<Task> act = () =>
-            storage.WriteAsync(path: path, bytes: new byte[] { 0x01 }, ct: CancellationToken.None);
+            storage.WriteAsync(path, new byte[] { 0x01 }, CancellationToken.None);
         await act.Should()
             .ThrowAsync<StoragePathNotAllowedException>(
-                because: $"S3 RemoteStorage must reject absolute path form: {form}"
+                $"S3 RemoteStorage must reject absolute path form: {form}"
             );
     }
 
@@ -160,27 +160,27 @@ public sealed class RemoteStoragePathGuardTests
     // -----------------------------------------------------------------------
 
     [Theory]
-    [MemberData(memberName: nameof(AbsolutePathForms))]
+    [MemberData(nameof(AbsolutePathForms))]
     public async Task WebDav_ExistsAsync_rejects_absolute_path(string path, string form)
     {
         RemoteStorage storage = BuildWebDavStorage();
-        Func<Task> act = () => storage.ExistsAsync(path: path, ct: CancellationToken.None);
+        Func<Task> act = () => storage.ExistsAsync(path, CancellationToken.None);
         await act.Should()
             .ThrowAsync<StoragePathNotAllowedException>(
-                because: $"WebDAV RemoteStorage must reject absolute path form: {form}"
+                $"WebDAV RemoteStorage must reject absolute path form: {form}"
             );
     }
 
     [Theory]
-    [MemberData(memberName: nameof(AbsolutePathForms))]
+    [MemberData(nameof(AbsolutePathForms))]
     public async Task WebDav_WriteAsync_rejects_absolute_path(string path, string form)
     {
         RemoteStorage storage = BuildWebDavStorage();
         Func<Task> act = () =>
-            storage.WriteAsync(path: path, bytes: new byte[] { 0x01 }, ct: CancellationToken.None);
+            storage.WriteAsync(path, new byte[] { 0x01 }, CancellationToken.None);
         await act.Should()
             .ThrowAsync<StoragePathNotAllowedException>(
-                because: $"WebDAV RemoteStorage must reject absolute path form: {form}"
+                $"WebDAV RemoteStorage must reject absolute path form: {form}"
             );
     }
 
@@ -198,12 +198,12 @@ public sealed class RemoteStoragePathGuardTests
         {
             try
             {
-                await storage.ExistsAsync(path: "", ct: CancellationToken.None);
+                await storage.ExistsAsync("", CancellationToken.None);
             }
             catch (StoragePathNotAllowedException ex)
             {
                 throw new InvalidOperationException(
-                    message: $"Rule 3 violated: empty string must not be rejected by V(), got: {ex.Message}"
+                    $"Rule 3 violated: empty string must not be rejected by V(), got: {ex.Message}"
                 );
             }
             catch
@@ -212,7 +212,7 @@ public sealed class RemoteStoragePathGuardTests
             }
         };
 
-        act.Should().NotThrowAsync(because: "empty string must pass structural validation (Rule 3)");
+        act.Should().NotThrowAsync("empty string must pass structural validation (Rule 3)");
     }
 
     [Fact]
@@ -223,12 +223,12 @@ public sealed class RemoteStoragePathGuardTests
         {
             try
             {
-                await storage.ExistsAsync(path: "", ct: CancellationToken.None);
+                await storage.ExistsAsync("", CancellationToken.None);
             }
             catch (StoragePathNotAllowedException ex)
             {
                 throw new InvalidOperationException(
-                    message: $"Rule 3 violated: empty string must not be rejected by V(), got: {ex.Message}"
+                    $"Rule 3 violated: empty string must not be rejected by V(), got: {ex.Message}"
                 );
             }
             catch
@@ -237,7 +237,7 @@ public sealed class RemoteStoragePathGuardTests
             }
         };
 
-        act.Should().NotThrowAsync(because: "empty string must pass structural validation (Rule 3)");
+        act.Should().NotThrowAsync("empty string must pass structural validation (Rule 3)");
     }
 
     [Fact]
@@ -248,12 +248,12 @@ public sealed class RemoteStoragePathGuardTests
         {
             try
             {
-                await storage.ExistsAsync(path: "", ct: CancellationToken.None);
+                await storage.ExistsAsync("", CancellationToken.None);
             }
             catch (StoragePathNotAllowedException ex)
             {
                 throw new InvalidOperationException(
-                    message: $"Rule 3 violated: empty string must not be rejected by V(), got: {ex.Message}"
+                    $"Rule 3 violated: empty string must not be rejected by V(), got: {ex.Message}"
                 );
             }
             catch
@@ -262,7 +262,7 @@ public sealed class RemoteStoragePathGuardTests
             }
         };
 
-        act.Should().NotThrowAsync(because: "empty string must pass structural validation (Rule 3)");
+        act.Should().NotThrowAsync("empty string must pass structural validation (Rule 3)");
     }
 
     // -----------------------------------------------------------------------
@@ -274,10 +274,10 @@ public sealed class RemoteStoragePathGuardTests
     public async Task NFS_contract_absolute_path_throws_not_returns_false()
     {
         RemoteStorage storage = BuildNfsStorage();
-        Func<Task> act = () => storage.ExistsAsync(path: "/abs/path/escape", ct: CancellationToken.None);
+        Func<Task> act = () => storage.ExistsAsync("/abs/path/escape", CancellationToken.None);
         await act.Should()
             .ThrowAsync<StoragePathNotAllowedException>(
-                because: "absolute path must now throw, not silently return false, for NFS via RemoteStorage"
+                "absolute path must now throw, not silently return false, for NFS via RemoteStorage"
             );
     }
 }

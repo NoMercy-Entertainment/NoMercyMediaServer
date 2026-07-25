@@ -30,7 +30,7 @@ namespace NoMercy.Tests.Api;
 /// controller logic against mocked dispatcher / progress-store — no HTTP
 /// server is required.
 /// </summary>
-[Trait(name: "Category", value: "CoordinatorDispatch")]
+[Trait("Category", "CoordinatorDispatch")]
 public class CoordinatorDispatchController_Tests
 {
     // Shared owner GUID across all Tests.Api fixtures that seed
@@ -38,7 +38,7 @@ public class CoordinatorDispatchController_Tests
     // u.Owner==true user, so all fixtures must agree on the same id —
     // otherwise test execution order can desync principal NameIdentifier
     // from the resolved Owner.Id and IsOwner() flips to false.
-    private static readonly Guid OwnerUserId = Guid.Parse(input: "11111111-1111-1111-1111-111111111111");
+    private static readonly Guid OwnerUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     // ── Owner seeding — reset+reseed unconditionally for order-independence ──
 
@@ -51,7 +51,7 @@ public class CoordinatorDispatchController_Tests
         UserCache.Current.Reset();
 
         UserCache.Current.AddUser(
-            user: new()
+            new()
             {
                 Id = OwnerUserId,
                 Owner = true,
@@ -63,23 +63,23 @@ public class CoordinatorDispatchController_Tests
     // ── Route shape ─────────────────────────────────────────────────────────
 
     private static IEnumerable<string> ControllerRoutes(Type controller) =>
-        controller.GetCustomAttributes<RouteAttribute>().Select(selector: a => a.Template);
+        controller.GetCustomAttributes<RouteAttribute>().Select(a => a.Template);
 
     private static IEnumerable<string> ActionRoutes(Type controller, Type httpVerb) =>
         controller
-            .GetMethods(bindingAttr: BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .SelectMany(selector: m => m.GetCustomAttributes(attributeType: httpVerb, inherit: false))
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .SelectMany(m => m.GetCustomAttributes(httpVerb, inherit: false))
             .Cast<HttpMethodAttribute>()
-            .Select(selector: a => a.Template ?? string.Empty);
+            .Select(a => a.Template ?? string.Empty);
 
     [Fact]
     public void CoordinatorDispatch_Exposes_Distribution_Route()
     {
-        IEnumerable<string> routes = ControllerRoutes(controller: typeof(CoordinatorDispatchController));
+        IEnumerable<string> routes = ControllerRoutes(typeof(CoordinatorDispatchController));
         Assert.Contains(
-            expected: "api/v{version:apiVersion}/distribution/workers/dispatch",
-            collection: routes,
-            comparer: StringComparer.OrdinalIgnoreCase
+            "api/v{version:apiVersion}/distribution/workers/dispatch",
+            routes,
+            StringComparer.OrdinalIgnoreCase
         );
     }
 
@@ -88,12 +88,12 @@ public class CoordinatorDispatchController_Tests
     {
         // The root POST has a null/empty template (no sub-path).
         IEnumerable<string> posts = ActionRoutes(
-            controller: typeof(CoordinatorDispatchController),
-            httpVerb: typeof(HttpPostAttribute)
+            typeof(CoordinatorDispatchController),
+            typeof(HttpPostAttribute)
         );
         Assert.True(
-            condition: posts.Any(predicate: t => string.IsNullOrEmpty(value: t)),
-            userMessage: "POST / (root) action must exist on the dispatch controller"
+            posts.Any(t => string.IsNullOrEmpty(t)),
+            "POST / (root) action must exist on the dispatch controller"
         );
     }
 
@@ -101,10 +101,10 @@ public class CoordinatorDispatchController_Tests
     public void CoordinatorDispatch_GetStatus_Action_Exists()
     {
         IEnumerable<string> gets = ActionRoutes(
-            controller: typeof(CoordinatorDispatchController),
-            httpVerb: typeof(HttpGetAttribute)
+            typeof(CoordinatorDispatchController),
+            typeof(HttpGetAttribute)
         );
-        Assert.Contains(expected: "{taskId}/status", collection: gets, comparer: StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("{taskId}/status", gets, StringComparer.OrdinalIgnoreCase);
     }
 
     // ── Controller factory ──────────────────────────────────────────────────
@@ -122,16 +122,16 @@ public class CoordinatorDispatchController_Tests
 
         if (dispatcherMock is null)
         {
-            d.SetupGet(expression: x => x.AvailableWorkerCount).Returns(value: 1);
-            d.Setup(expression: x => x.DispatchAsync(It.IsAny<EncodeTask[]>(), It.IsAny<CancellationToken>()))
+            d.SetupGet(x => x.AvailableWorkerCount).Returns(1);
+            d.Setup(x => x.DispatchAsync(It.IsAny<EncodeTask[]>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(
-                    valueFunction: (EncodeTask[] tasks, CancellationToken _) =>
+                    (EncodeTask[] tasks, CancellationToken _) =>
                         tasks
-                            .Select(selector: t => new DispatchResult(
+                            .Select(t => new DispatchResult(
                                 TaskId: t.TaskId,
                                 Success: true,
                                 OutputPath: t.OutputPath,
-                                Duration: TimeSpan.FromSeconds(seconds: 1),
+                                Duration: TimeSpan.FromSeconds(1),
                                 WorkerId: "mock-worker"
                             ))
                             .ToArray()
@@ -139,7 +139,7 @@ public class CoordinatorDispatchController_Tests
         }
 
         if (storeMock is null)
-            s.Setup(expression: x => x.GetAll()).Returns(value: []);
+            s.Setup(x => x.GetAll()).Returns([]);
 
         CoordinatorDispatchController controller = new(
             dispatcher: d.Object,
@@ -150,9 +150,9 @@ public class CoordinatorDispatchController_Tests
         DefaultHttpContext ctx = new()
         {
             User = new(
-                identity: new ClaimsIdentity(
-                    claims: [new(type: ClaimTypes.NameIdentifier, value: OwnerUserId.ToString())],
-                    authenticationType: "test"
+                new ClaimsIdentity(
+                    [new(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
+                    "test"
                 )
             ),
         };
@@ -168,12 +168,12 @@ public class CoordinatorDispatchController_Tests
         CoordinatorDispatchController sut = BuildController();
 
         IActionResult result = await sut.Dispatch(
-            request: new(Tasks: []),
-            ct: CancellationToken.None
+            new(Tasks: []),
+            CancellationToken.None
         );
 
-        ObjectResult obj = Assert.IsType<ObjectResult>(@object: result);
-        Assert.Equal(expected: StatusCodes.Status400BadRequest, actual: obj.StatusCode);
+        ObjectResult obj = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, obj.StatusCode);
     }
 
     [Fact]
@@ -182,27 +182,26 @@ public class CoordinatorDispatchController_Tests
         CoordinatorDispatchController sut = BuildController();
 
         IActionResult result = await sut.Dispatch(
-            request: new(Tasks: null),
-            ct: CancellationToken.None
+            new(Tasks: null),
+            CancellationToken.None
         );
 
-        ObjectResult obj = Assert.IsType<ObjectResult>(@object: result);
-        Assert.Equal(expected: StatusCodes.Status400BadRequest, actual: obj.StatusCode);
+        ObjectResult obj = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, obj.StatusCode);
     }
 
     [Fact]
     public async Task Dispatch_ValidTasks_CallsDispatcher_ReturnsOk()
     {
         Mock<IWorkerDispatcher> mock = new();
-        mock.SetupGet(expression: d => d.AvailableWorkerCount).Returns(value: 2);
-        mock.Setup(expression: d => d.DispatchAsync(It.IsAny<EncodeTask[]>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value:
-            [
+        mock.SetupGet(d => d.AvailableWorkerCount).Returns(2);
+        mock.Setup(d => d.DispatchAsync(It.IsAny<EncodeTask[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
                 new(
                     TaskId: "t1",
                     Success: true,
                     OutputPath: "/out/t1",
-                    Duration: TimeSpan.FromSeconds(seconds: 2),
+                    Duration: TimeSpan.FromSeconds(2),
                     WorkerId: "worker-a"
                 ),
             ]);
@@ -210,20 +209,20 @@ public class CoordinatorDispatchController_Tests
         CoordinatorDispatchController sut = BuildController(dispatcherMock: mock);
 
         IActionResult result = await sut.Dispatch(
-            request: new(
+            new(
                 Tasks: [new(OutputPath: "/out/t1", TaskId: "t1")]
             ),
-            ct: CancellationToken.None
+            CancellationToken.None
         );
 
-        Assert.IsType<OkObjectResult>(@object: result);
+        Assert.IsType<OkObjectResult>(result);
         mock.Verify(
-            expression: d =>
+            d =>
                 d.DispatchAsync(
                     It.Is<EncodeTask[]>(arr => arr.Length == 1),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -232,17 +231,17 @@ public class CoordinatorDispatchController_Tests
     {
         List<EncodeTask[]> captured = [];
         Mock<IWorkerDispatcher> mock = new();
-        mock.SetupGet(expression: d => d.AvailableWorkerCount).Returns(value: 1);
-        mock.Setup(expression: d => d.DispatchAsync(It.IsAny<EncodeTask[]>(), It.IsAny<CancellationToken>()))
-            .Callback<EncodeTask[], CancellationToken>(action: (tasks, _) => captured.Add(item: tasks))
+        mock.SetupGet(d => d.AvailableWorkerCount).Returns(1);
+        mock.Setup(d => d.DispatchAsync(It.IsAny<EncodeTask[]>(), It.IsAny<CancellationToken>()))
+            .Callback<EncodeTask[], CancellationToken>((tasks, _) => captured.Add(tasks))
             .ReturnsAsync(
-                valueFunction: (EncodeTask[] tasks, CancellationToken _) =>
+                (EncodeTask[] tasks, CancellationToken _) =>
                     tasks
-                        .Select(selector: t => new DispatchResult(
-                            TaskId: t.TaskId,
-                            Success: true,
-                            OutputPath: t.OutputPath,
-                            Duration: TimeSpan.Zero
+                        .Select(t => new DispatchResult(
+                            t.TaskId,
+                            true,
+                            t.OutputPath,
+                            TimeSpan.Zero
                         ))
                         .ToArray()
             );
@@ -250,16 +249,16 @@ public class CoordinatorDispatchController_Tests
         CoordinatorDispatchController sut = BuildController(dispatcherMock: mock);
 
         await sut.Dispatch(
-            request: new(
+            new(
                 Tasks: [new(OutputPath: "/out/auto", TaskId: null)]
             ),
-            ct: CancellationToken.None
+            CancellationToken.None
         );
 
-        Assert.Single(collection: captured);
+        Assert.Single(captured);
         Assert.False(
-            condition: string.IsNullOrWhiteSpace(value: captured[index: 0][0].TaskId),
-            userMessage: "A task ID must be auto-generated when the caller omits it"
+            string.IsNullOrWhiteSpace(captured[0][0].TaskId),
+            "A task ID must be auto-generated when the caller omits it"
         );
     }
 
@@ -267,16 +266,16 @@ public class CoordinatorDispatchController_Tests
     public async Task Dispatch_MultipleTasks_AllPassedToDispatcher()
     {
         Mock<IWorkerDispatcher> mock = new();
-        mock.SetupGet(expression: d => d.AvailableWorkerCount).Returns(value: 3);
-        mock.Setup(expression: d => d.DispatchAsync(It.IsAny<EncodeTask[]>(), It.IsAny<CancellationToken>()))
+        mock.SetupGet(d => d.AvailableWorkerCount).Returns(3);
+        mock.Setup(d => d.DispatchAsync(It.IsAny<EncodeTask[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(
-                valueFunction: (EncodeTask[] tasks, CancellationToken _) =>
+                (EncodeTask[] tasks, CancellationToken _) =>
                     tasks
-                        .Select(selector: t => new DispatchResult(
-                            TaskId: t.TaskId,
-                            Success: true,
-                            OutputPath: t.OutputPath,
-                            Duration: TimeSpan.Zero
+                        .Select(t => new DispatchResult(
+                            t.TaskId,
+                            true,
+                            t.OutputPath,
+                            TimeSpan.Zero
                         ))
                         .ToArray()
             );
@@ -284,7 +283,7 @@ public class CoordinatorDispatchController_Tests
         CoordinatorDispatchController sut = BuildController(dispatcherMock: mock);
 
         await sut.Dispatch(
-            request: new(
+            new(
                 Tasks:
                 [
                     new(OutputPath: "/out/a", TaskId: "a"),
@@ -292,16 +291,16 @@ public class CoordinatorDispatchController_Tests
                     new(OutputPath: "/out/c", TaskId: "c"),
                 ]
             ),
-            ct: CancellationToken.None
+            CancellationToken.None
         );
 
         mock.Verify(
-            expression: d =>
+            d =>
                 d.DispatchAsync(
                     It.Is<EncodeTask[]>(arr => arr.Length == 3),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -311,14 +310,14 @@ public class CoordinatorDispatchController_Tests
     public void GetTaskStatus_UnknownTask_ReturnsNotFound()
     {
         Mock<ITaskProgressStore> store = new();
-        store.Setup(expression: s => s.GetAll()).Returns(value: []);
+        store.Setup(s => s.GetAll()).Returns([]);
 
         CoordinatorDispatchController sut = BuildController(storeMock: store);
 
-        IActionResult result = sut.GetTaskStatus(taskId: "does-not-exist");
+        IActionResult result = sut.GetTaskStatus("does-not-exist");
 
-        ObjectResult obj = Assert.IsType<ObjectResult>(@object: result);
-        Assert.Equal(expected: StatusCodes.Status404NotFound, actual: obj.StatusCode);
+        ObjectResult obj = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status404NotFound, obj.StatusCode);
     }
 
     [Fact]
@@ -339,12 +338,12 @@ public class CoordinatorDispatchController_Tests
         );
 
         Mock<ITaskProgressStore> store = new();
-        store.Setup(expression: s => s.GetAll()).Returns(value: [snapshot]);
+        store.Setup(s => s.GetAll()).Returns([snapshot]);
 
         CoordinatorDispatchController sut = BuildController(storeMock: store);
 
-        IActionResult result = sut.GetTaskStatus(taskId: "t-known");
+        IActionResult result = sut.GetTaskStatus("t-known");
 
-        Assert.IsType<OkObjectResult>(@object: result);
+        Assert.IsType<OkObjectResult>(result);
     }
 }

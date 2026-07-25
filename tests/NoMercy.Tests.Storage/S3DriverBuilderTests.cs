@@ -26,30 +26,30 @@ namespace NoMercy.Tests.Storage;
 /// instead of a clear message. Every validation and credential-resolution
 /// branch is demanded here.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class S3DriverBuilderTests
 {
     private static readonly Ulid FolderId = Ulid.NewUlid();
 
     [Theory]
-    [InlineData(data: null)]
-    [InlineData(data: "")]
-    [InlineData(data: "   ")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     public void Build_throws_when_driver_config_json_is_missing(string? json)
     {
-        S3DriverBuilder builder = new(logger: NullLogger.Instance);
+        S3DriverBuilder builder = new(NullLogger.Instance);
 
-        Action act = () => builder.Build(folderId: FolderId, driverType: "s3", driverConfigJson: json, subPath: "");
+        Action act = () => builder.Build(FolderId, "s3", json, "");
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*driver_config*");
+        act.Should().Throw<ArgumentException>().WithMessage("*driver_config*");
     }
 
     [Fact]
     public void Build_throws_on_malformed_json()
     {
-        S3DriverBuilder builder = new(logger: NullLogger.Instance);
+        S3DriverBuilder builder = new(NullLogger.Instance);
 
-        Action act = () => builder.Build(folderId: FolderId, driverType: "s3", driverConfigJson: "{not json", subPath: "");
+        Action act = () => builder.Build(FolderId, "s3", "{not json", "");
 
         act.Should()
             .Throw<ArgumentException>()
@@ -59,52 +59,52 @@ public sealed class S3DriverBuilderTests
     [Fact]
     public void Build_throws_on_json_null_literal()
     {
-        S3DriverBuilder builder = new(logger: NullLogger.Instance);
+        S3DriverBuilder builder = new(NullLogger.Instance);
 
-        Action act = () => builder.Build(folderId: FolderId, driverType: "s3", driverConfigJson: "null", subPath: "");
+        Action act = () => builder.Build(FolderId, "s3", "null", "");
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*null*");
+        act.Should().Throw<ArgumentException>().WithMessage("*null*");
     }
 
     [Fact]
     public void Build_throws_when_bucket_is_missing()
     {
-        S3DriverBuilder builder = new(logger: NullLogger.Instance);
+        S3DriverBuilder builder = new(NullLogger.Instance);
 
-        Action act = () => builder.Build(folderId: FolderId, driverType: "s3", driverConfigJson: """{"region":"us-east-1"}""", subPath: "");
+        Action act = () => builder.Build(FolderId, "s3", """{"region":"us-east-1"}""", "");
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*bucket*");
+        act.Should().Throw<ArgumentException>().WithMessage("*bucket*");
     }
 
     [Fact]
     public void Build_throws_when_region_is_missing()
     {
-        S3DriverBuilder builder = new(logger: NullLogger.Instance);
+        S3DriverBuilder builder = new(NullLogger.Instance);
 
-        Action act = () => builder.Build(folderId: FolderId, driverType: "s3", driverConfigJson: """{"bucket":"media"}""", subPath: "");
+        Action act = () => builder.Build(FolderId, "s3", """{"bucket":"media"}""", "");
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*region*");
+        act.Should().Throw<ArgumentException>().WithMessage("*region*");
     }
 
     [Fact]
     public void Build_throws_for_r2_without_endpoint()
     {
-        S3DriverBuilder builder = new(logger: NullLogger.Instance);
+        S3DriverBuilder builder = new(NullLogger.Instance);
         Mock<ICredentialResolver> resolver = new();
-        resolver.Setup(expression: r => r.Resolve(It.IsAny<string>())).Returns(value: ("ak", "sk"));
-        S3DriverBuilder builderWithCreds = new(logger: NullLogger.Instance, credentialResolver: resolver.Object);
+        resolver.Setup(r => r.Resolve(It.IsAny<string>())).Returns(("ak", "sk"));
+        S3DriverBuilder builderWithCreds = new(NullLogger.Instance, resolver.Object);
 
         Action act = () =>
             builderWithCreds.Build(
-                folderId: FolderId,
-                driverType: "r2",
-                driverConfigJson: """{"bucket":"media","region":"auto"}""",
-                subPath: ""
+                FolderId,
+                "r2",
+                """{"bucket":"media","region":"auto"}""",
+                ""
             );
 
         act.Should()
-            .Throw<ArgumentException>(because: "R2 has no meaningful default endpoint the way AWS S3 does")
-            .WithMessage(expectedWildcardPattern: "*endpoint*");
+            .Throw<ArgumentException>("R2 has no meaningful default endpoint the way AWS S3 does")
+            .WithMessage("*endpoint*");
     }
 
     [Fact]
@@ -113,57 +113,57 @@ public sealed class S3DriverBuilderTests
         // With no resolver at all, accessKey/secretKey stay null and the
         // "no credentials configured" guard must fire — the driver must
         // NEVER silently fall through to the AWS default credential chain.
-        S3DriverBuilder builder = new(logger: NullLogger.Instance, credentialResolver: null);
+        S3DriverBuilder builder = new(NullLogger.Instance, null);
 
         Action act = () =>
             builder.Build(
-                folderId: FolderId,
-                driverType: "s3",
-                driverConfigJson: """{"bucket":"media","region":"us-east-1"}""",
-                subPath: ""
+                FolderId,
+                "s3",
+                """{"bucket":"media","region":"us-east-1"}""",
+                ""
             );
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*no credentials configured*");
+        act.Should().Throw<ArgumentException>().WithMessage("*no credentials configured*");
     }
 
     [Fact]
     public void Build_throws_when_resolver_present_but_finds_no_credentials()
     {
         Mock<ICredentialResolver> resolver = new();
-        resolver.Setup(expression: r => r.Resolve(It.IsAny<string>())).Returns(value: ((string, string)?)null);
-        S3DriverBuilder builder = new(logger: NullLogger.Instance, credentialResolver: resolver.Object);
+        resolver.Setup(r => r.Resolve(It.IsAny<string>())).Returns(((string, string)?)null);
+        S3DriverBuilder builder = new(NullLogger.Instance, resolver.Object);
 
         Action act = () =>
             builder.Build(
-                folderId: FolderId,
-                driverType: "s3",
-                driverConfigJson: """{"bucket":"media","region":"us-east-1"}""",
-                subPath: ""
+                FolderId,
+                "s3",
+                """{"bucket":"media","region":"us-east-1"}""",
+                ""
             );
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*no credentials configured*");
+        act.Should().Throw<ArgumentException>().WithMessage("*no credentials configured*");
     }
 
     [Fact]
     public void Build_resolves_credentials_via_explicit_credentials_ref_first()
     {
         Mock<ICredentialResolver> resolver = new();
-        resolver.Setup(expression: r => r.Resolve("my-custom-ref")).Returns(value: ("ak", "sk"));
-        S3DriverBuilder builder = new(logger: NullLogger.Instance, credentialResolver: resolver.Object);
+        resolver.Setup(r => r.Resolve("my-custom-ref")).Returns(("ak", "sk"));
+        S3DriverBuilder builder = new(NullLogger.Instance, resolver.Object);
 
         IStorage storage = builder.Build(
-            folderId: FolderId,
-            driverType: "s3",
-            driverConfigJson: """{"bucket":"media","region":"us-east-1","credentialsRef":"my-custom-ref"}""",
-            subPath: ""
+            FolderId,
+            "s3",
+            """{"bucket":"media","region":"us-east-1","credentialsRef":"my-custom-ref"}""",
+            ""
         );
 
         storage.Should().BeOfType<RemoteStorage>();
-        resolver.Verify(expression: r => r.Resolve("my-custom-ref"), times: Times.Once);
+        resolver.Verify(r => r.Resolve("my-custom-ref"), Times.Once);
         resolver.Verify(
-            expression: r => r.Resolve($"driver:{FolderId}"),
-            times: Times.Never,
-            failMessage: "the explicit ref must win — no fallback lookup needed when it resolves"
+            r => r.Resolve($"driver:{FolderId}"),
+            Times.Never,
+            "the explicit ref must win — no fallback lookup needed when it resolves"
         );
     }
 
@@ -171,23 +171,23 @@ public sealed class S3DriverBuilderTests
     public void Build_falls_back_to_driver_key_when_credentials_ref_does_not_resolve()
     {
         Mock<ICredentialResolver> resolver = new();
-        resolver.Setup(expression: r => r.Resolve("missing-ref")).Returns(value: ((string, string)?)null);
-        resolver.Setup(expression: r => r.Resolve($"driver:{FolderId}")).Returns(value: ("ak", "sk"));
+        resolver.Setup(r => r.Resolve("missing-ref")).Returns(((string, string)?)null);
+        resolver.Setup(r => r.Resolve($"driver:{FolderId}")).Returns(("ak", "sk"));
         Mock<ILogger> logger = new();
-        S3DriverBuilder builder = new(logger: logger.Object, credentialResolver: resolver.Object);
+        S3DriverBuilder builder = new(logger.Object, resolver.Object);
 
         IStorage storage = builder.Build(
-            folderId: FolderId,
-            driverType: "s3",
-            driverConfigJson: """{"bucket":"media","region":"us-east-1","credentialsRef":"missing-ref"}""",
-            subPath: ""
+            FolderId,
+            "s3",
+            """{"bucket":"media","region":"us-east-1","credentialsRef":"missing-ref"}""",
+            ""
         );
 
         storage.Should().NotBeNull();
         resolver.Verify(
-            expression: r => r.Resolve($"driver:{FolderId}"),
-            times: Times.Once,
-            failMessage: "must fall back to the per-folder key when the explicit ref is not found"
+            r => r.Resolve($"driver:{FolderId}"),
+            Times.Once,
+            "must fall back to the per-folder key when the explicit ref is not found"
         );
     }
 
@@ -195,32 +195,32 @@ public sealed class S3DriverBuilderTests
     public void Build_resolves_credentials_via_driver_key_when_no_credentials_ref_given()
     {
         Mock<ICredentialResolver> resolver = new();
-        resolver.Setup(expression: r => r.Resolve($"driver:{FolderId}")).Returns(value: ("ak", "sk"));
-        S3DriverBuilder builder = new(logger: NullLogger.Instance, credentialResolver: resolver.Object);
+        resolver.Setup(r => r.Resolve($"driver:{FolderId}")).Returns(("ak", "sk"));
+        S3DriverBuilder builder = new(NullLogger.Instance, resolver.Object);
 
         IStorage storage = builder.Build(
-            folderId: FolderId,
-            driverType: "s3",
-            driverConfigJson: """{"bucket":"media","region":"us-east-1"}""",
-            subPath: ""
+            FolderId,
+            "s3",
+            """{"bucket":"media","region":"us-east-1"}""",
+            ""
         );
 
         storage.Should().NotBeNull();
-        resolver.Verify(expression: r => r.Resolve($"driver:{FolderId}"), times: Times.Once);
+        resolver.Verify(r => r.Resolve($"driver:{FolderId}"), Times.Once);
     }
 
     [Fact]
     public void Build_succeeds_for_r2_when_endpoint_and_credentials_are_present()
     {
         Mock<ICredentialResolver> resolver = new();
-        resolver.Setup(expression: r => r.Resolve(It.IsAny<string>())).Returns(value: ("ak", "sk"));
-        S3DriverBuilder builder = new(logger: NullLogger.Instance, credentialResolver: resolver.Object);
+        resolver.Setup(r => r.Resolve(It.IsAny<string>())).Returns(("ak", "sk"));
+        S3DriverBuilder builder = new(NullLogger.Instance, resolver.Object);
 
         IStorage storage = builder.Build(
-            folderId: FolderId,
-            driverType: "r2",
-            driverConfigJson: """{"bucket":"media","region":"auto","endpoint":"https://accountid.r2.cloudflarestorage.com"}""",
-            subPath: ""
+            FolderId,
+            "r2",
+            """{"bucket":"media","region":"auto","endpoint":"https://accountid.r2.cloudflarestorage.com"}""",
+            ""
         );
 
         storage.Should().BeOfType<RemoteStorage>();
@@ -230,8 +230,8 @@ public sealed class S3DriverBuilderTests
     [Fact]
     public void SupportedTypes_declares_s3_and_r2()
     {
-        S3DriverBuilder builder = new(logger: NullLogger.Instance);
+        S3DriverBuilder builder = new(NullLogger.Instance);
 
-        builder.SupportedTypes.Should().BeEquivalentTo(expectation: ["s3", "r2"]);
+        builder.SupportedTypes.Should().BeEquivalentTo(["s3", "r2"]);
     }
 }

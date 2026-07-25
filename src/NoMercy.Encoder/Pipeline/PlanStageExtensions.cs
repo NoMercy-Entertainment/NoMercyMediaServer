@@ -33,10 +33,10 @@ public static class PlanStageExtensions
         IPlanResultProjector projector
     )
     {
-        ArgumentNullException.ThrowIfNull(argument: context);
+        ArgumentNullException.ThrowIfNull(context);
 
         if (result is StageSuccess<ExecutionPlan> success)
-            return projector.FromExecutionPlan(plan: success.Value, context: context);
+            return projector.FromExecutionPlan(success.Value, context);
 
         return null;
     }

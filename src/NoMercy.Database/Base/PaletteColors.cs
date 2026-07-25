@@ -17,21 +17,21 @@ namespace NoMercy.Database;
 
 public class PaletteColors
 {
-    [JsonProperty(propertyName: "dominant", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("dominant", NullValueHandling = NullValueHandling.Ignore)]
     public string Dominant { get; set; }
 
-    [JsonProperty(propertyName: "primary", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("primary", NullValueHandling = NullValueHandling.Ignore)]
     public string Primary { get; set; }
 
-    [JsonProperty(propertyName: "lightVibrant", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("lightVibrant", NullValueHandling = NullValueHandling.Ignore)]
     public string LightVibrant { get; set; }
 
-    [JsonProperty(propertyName: "darkVibrant", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("darkVibrant", NullValueHandling = NullValueHandling.Ignore)]
     public string DarkVibrant { get; set; }
 
-    [JsonProperty(propertyName: "lightMuted", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("lightMuted", NullValueHandling = NullValueHandling.Ignore)]
     public string LightMuted { get; set; }
 
-    [JsonProperty(propertyName: "darkMuted", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("darkMuted", NullValueHandling = NullValueHandling.Ignore)]
     public string DarkMuted { get; set; }
 }

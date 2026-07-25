@@ -15,15 +15,15 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class Titles
 {
-    [JsonProperty(propertyName: "en")]
+    [JsonProperty("en")]
     public string? En { get; set; }
 
-    [JsonProperty(propertyName: "en_jp")]
+    [JsonProperty("en_jp")]
     public string? EnJp { get; set; }
 
-    [JsonProperty(propertyName: "ja_jp")]
+    [JsonProperty("ja_jp")]
     public string? JaJp { get; set; }
 
-    [JsonProperty(propertyName: "th_th")]
+    [JsonProperty("th_th")]
     public string? ThTh { get; set; }
 }

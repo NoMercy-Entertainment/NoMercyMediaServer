@@ -9,15 +9,12 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Networking.Certificate;
@@ -32,7 +29,7 @@ namespace NoMercy.Tests.Networking;
 /// Encrypt cert is available, the server must still serve HTTPS via a generated,
 /// cached, DB-persisted self-signed certificate instead of dropping to plaintext.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class SelfSignedCertificateFallbackTests : IDisposable
 {
     public SelfSignedCertificateFallbackTests()
@@ -42,7 +39,7 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
         // directory and schema exist on this process-isolated test DB
         // (NOMERCY_APP_PATH) before writing — TestEnvironmentSetup only creates the
         // app-data root, not the "data" subfolder SQLite needs for app.db.
-        Directory.CreateDirectory(path: AppFiles.DataPath);
+        Directory.CreateDirectory(AppFiles.DataPath);
         using AppDbContext db = new();
         db.Database.EnsureCreated();
     }
@@ -51,7 +48,7 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
     {
         using AppDbContext db = new();
         db.Configuration.RemoveRange(
-            entities: db.Configuration.Where(predicate: c =>
+            db.Configuration.Where(c =>
                 c.Key == "ssl_selfsigned_certificate" || c.Key == "ssl_selfsigned_private_key"
             )
         );
@@ -61,19 +58,19 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
     private static CertificateService BuildService(INetworkDiscovery? networkDiscovery = null)
     {
         return new(
-            logger: NullLogger<CertificateService>.Instance,
-            httpClientFactory: new NullHttpClientFactory(),
-            networkDiscovery: networkDiscovery
+            NullLogger<CertificateService>.Instance,
+            new NullHttpClientFactory(),
+            networkDiscovery
         );
     }
 
     private static X509Certificate2? GetCachedSelfSignedCertificate(CertificateService service)
     {
         FieldInfo field = typeof(CertificateService).GetField(
-            name: "_selfSignedCertificate",
-            bindingAttr: BindingFlags.Instance | BindingFlags.NonPublic
+            "_selfSignedCertificate",
+            BindingFlags.Instance | BindingFlags.NonPublic
         )!;
-        return (X509Certificate2?)field.GetValue(obj: service);
+        return (X509Certificate2?)field.GetValue(service);
     }
 
     private static void InjectCachedRealCertificate(
@@ -82,22 +79,22 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
     )
     {
         FieldInfo field = typeof(CertificateService).GetField(
-            name: "_cachedCertificate",
-            bindingAttr: BindingFlags.Instance | BindingFlags.NonPublic
+            "_cachedCertificate",
+            BindingFlags.Instance | BindingFlags.NonPublic
         )!;
-        field.SetValue(obj: service, value: cert);
+        field.SetValue(service, cert);
     }
 
     private static X509Certificate2 CreateRealCert(DateTimeOffset notAfter)
     {
-        using RSA rsa = RSA.Create(keySizeInBits: 2048);
+        using RSA rsa = RSA.Create(2048);
         CertificateRequest req = new(
-            subjectName: "CN=real.nomercy.tv",
-            key: rsa,
-            hashAlgorithm: HashAlgorithmName.SHA256,
-            padding: RSASignaturePadding.Pkcs1
+            "CN=real.nomercy.tv",
+            rsa,
+            HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1
         );
-        return req.CreateSelfSigned(notBefore: DateTimeOffset.UtcNow.AddDays(days: -1), notAfter: notAfter);
+        return req.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), notAfter);
     }
 
     private static Func<
@@ -107,11 +104,11 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
     > GetServerCertificateSelector(CertificateService service)
     {
         MethodInfo method = typeof(CertificateService).GetMethod(
-            name: "HttpsConnectionAdapterOptions",
-            bindingAttr: BindingFlags.Instance | BindingFlags.NonPublic
+            "HttpsConnectionAdapterOptions",
+            BindingFlags.Instance | BindingFlags.NonPublic
         )!;
         HttpsConnectionAdapterOptions options = (HttpsConnectionAdapterOptions)
-            method.Invoke(obj: service, parameters: null)!;
+            method.Invoke(service, null)!;
         return options.ServerCertificateSelector!;
     }
 
@@ -123,10 +120,10 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
     private static bool IsTlsEnabled(ListenOptions listenOptions)
     {
         PropertyInfo property = typeof(ListenOptions).GetProperty(
-            name: "IsTls",
-            bindingAttr: BindingFlags.Instance | BindingFlags.NonPublic
+            "IsTls",
+            BindingFlags.Instance | BindingFlags.NonPublic
         )!;
-        return (bool)property.GetValue(obj: listenOptions)!;
+        return (bool)property.GetValue(listenOptions)!;
     }
 
     /// <summary>
@@ -149,7 +146,7 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
     {
         public HttpClient CreateClient(string name) =>
             throw new InvalidOperationException(
-                message: "HttpClientFactory must not be called in this test"
+                "HttpClientFactory must not be called in this test"
             );
     }
 
@@ -171,75 +168,75 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
 
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
-        public Task<bool> IsPortOpenAsync() => Task.FromResult(result: false);
+        public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
     }
 
     [Fact]
     public void EnsureHttpsCertificate_GeneratesSelfSignedCert_WithExpectedSans()
     {
         FakeNetworkDiscovery discovery = new();
-        CertificateService service = BuildService(networkDiscovery: discovery);
+        CertificateService service = BuildService(discovery);
 
         bool result = service.EnsureHttpsCertificate();
 
-        Assert.True(condition: result);
-        X509Certificate2? cert = GetCachedSelfSignedCertificate(service: service);
-        Assert.NotNull(@object: cert);
+        Assert.True(result);
+        X509Certificate2? cert = GetCachedSelfSignedCertificate(service);
+        Assert.NotNull(cert);
 
         X509Extension sanExtension = Assert.Single(
-            collection: cert!.Extensions.Cast<X509Extension>(),
-            predicate: e => e.Oid?.Value == "2.5.29.17"
+            cert!.Extensions.Cast<X509Extension>(),
+            e => e.Oid?.Value == "2.5.29.17"
         );
-        string sanText = sanExtension.Format(multiLine: false);
+        string sanText = sanExtension.Format(false);
 
-        Assert.Contains(expectedSubstring: "localhost", actualString: sanText, comparisonType: StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(expectedSubstring: "127.0.0.1", actualString: sanText);
-        Assert.Contains(expectedSubstring: discovery.InternalDomain, actualString: sanText);
-        Assert.Contains(expectedSubstring: discovery.ExternalDomain, actualString: sanText);
-        Assert.True(condition: cert.NotAfter > DateTime.Now.AddMonths(months: 6));
-        Assert.True(condition: cert.NotAfter < DateTime.Now.AddYears(value: 2));
+        Assert.Contains("localhost", sanText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("127.0.0.1", sanText);
+        Assert.Contains(discovery.InternalDomain, sanText);
+        Assert.Contains(discovery.ExternalDomain, sanText);
+        Assert.True(cert.NotAfter > DateTime.Now.AddMonths(6));
+        Assert.True(cert.NotAfter < DateTime.Now.AddYears(2));
     }
 
     [Fact]
     public void EnsureHttpsCertificate_DoesNotGenerateSelfSigned_WhenRealCertIsValid()
     {
         CertificateService service = BuildService();
-        using X509Certificate2 realCert = CreateRealCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 60));
-        InjectCachedRealCertificate(service: service, cert: realCert);
+        using X509Certificate2 realCert = CreateRealCert(DateTimeOffset.UtcNow.AddDays(60));
+        InjectCachedRealCertificate(service, realCert);
 
         bool result = service.EnsureHttpsCertificate();
 
-        Assert.True(condition: result);
-        Assert.Null(@object: GetCachedSelfSignedCertificate(service: service));
+        Assert.True(result);
+        Assert.Null(GetCachedSelfSignedCertificate(service));
     }
 
     [Fact]
     public void ServerCertificateSelector_PrefersRealCert_OverSelfSignedFallback()
     {
         CertificateService service = BuildService();
-        using X509Certificate2 realCert = CreateRealCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 60));
-        InjectCachedRealCertificate(service: service, cert: realCert);
+        using X509Certificate2 realCert = CreateRealCert(DateTimeOffset.UtcNow.AddDays(60));
+        InjectCachedRealCertificate(service, realCert);
 
         // Force a self-signed fallback to exist too, so both are cached simultaneously —
         // the selector must still hand back the real cert.
-        Assert.True(condition: service.EnsureHttpsCertificate());
+        Assert.True(service.EnsureHttpsCertificate());
         FieldInfo selfSignedField = typeof(CertificateService).GetField(
-            name: "_selfSignedCertificate",
-            bindingAttr: BindingFlags.Instance | BindingFlags.NonPublic
+            "_selfSignedCertificate",
+            BindingFlags.Instance | BindingFlags.NonPublic
         )!;
-        using X509Certificate2 forcedSelfSigned = CreateRealCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 30));
-        selfSignedField.SetValue(obj: service, value: forcedSelfSigned);
+        using X509Certificate2 forcedSelfSigned = CreateRealCert(DateTimeOffset.UtcNow.AddDays(30));
+        selfSignedField.SetValue(service, forcedSelfSigned);
 
         Func<
             Microsoft.AspNetCore.Connections.ConnectionContext?,
             string?,
             X509Certificate2?
-        > selector = GetServerCertificateSelector(service: service);
-        X509Certificate2? selected = selector(arg1: null, arg2: null);
+        > selector = GetServerCertificateSelector(service);
+        X509Certificate2? selected = selector(null, null);
 
-        Assert.NotNull(@object: selected);
-        Assert.Equal(expected: realCert.Thumbprint, actual: selected!.Thumbprint);
-        Assert.NotEqual(expected: forcedSelfSigned.Thumbprint, actual: selected.Thumbprint);
+        Assert.NotNull(selected);
+        Assert.Equal(realCert.Thumbprint, selected!.Thumbprint);
+        Assert.NotEqual(forcedSelfSigned.Thumbprint, selected.Thumbprint);
     }
 
     [Fact]
@@ -247,19 +244,19 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
     {
         CertificateService service = BuildService();
 
-        Assert.True(condition: service.EnsureHttpsCertificate());
-        X509Certificate2? generated = GetCachedSelfSignedCertificate(service: service);
-        Assert.NotNull(@object: generated);
+        Assert.True(service.EnsureHttpsCertificate());
+        X509Certificate2? generated = GetCachedSelfSignedCertificate(service);
+        Assert.NotNull(generated);
 
         Func<
             Microsoft.AspNetCore.Connections.ConnectionContext?,
             string?,
             X509Certificate2?
-        > selector = GetServerCertificateSelector(service: service);
-        X509Certificate2? selected = selector(arg1: null, arg2: null);
+        > selector = GetServerCertificateSelector(service);
+        X509Certificate2? selected = selector(null, null);
 
-        Assert.NotNull(@object: selected);
-        Assert.Equal(expected: generated!.Thumbprint, actual: selected!.Thumbprint);
+        Assert.NotNull(selected);
+        Assert.Equal(generated!.Thumbprint, selected!.Thumbprint);
     }
 
     [Fact]
@@ -267,22 +264,22 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
     {
         // First "boot": no cached cert anywhere, no DB row yet — must generate and persist.
         CertificateService firstBoot = BuildService();
-        Assert.True(condition: firstBoot.EnsureHttpsCertificate());
-        X509Certificate2? generated = GetCachedSelfSignedCertificate(service: firstBoot);
-        Assert.NotNull(@object: generated);
+        Assert.True(firstBoot.EnsureHttpsCertificate());
+        X509Certificate2? generated = GetCachedSelfSignedCertificate(firstBoot);
+        Assert.NotNull(generated);
 
         // Second "boot": a brand new instance (mirrors a fresh CertificateService built
         // by a new DI container after a restart) with an EMPTY in-memory cache. It must
         // reload the persisted cert from the DB rather than minting a new identity.
         CertificateService secondBoot = BuildService();
-        Assert.Null(@object: GetCachedSelfSignedCertificate(service: secondBoot));
+        Assert.Null(GetCachedSelfSignedCertificate(secondBoot));
 
-        Assert.True(condition: secondBoot.EnsureHttpsCertificate());
-        X509Certificate2? reloaded = GetCachedSelfSignedCertificate(service: secondBoot);
+        Assert.True(secondBoot.EnsureHttpsCertificate());
+        X509Certificate2? reloaded = GetCachedSelfSignedCertificate(secondBoot);
 
-        Assert.NotNull(@object: reloaded);
-        Assert.Equal(expected: generated!.Thumbprint, actual: reloaded!.Thumbprint);
-        Assert.Equal(expected: generated.SerialNumber, actual: reloaded.SerialNumber);
+        Assert.NotNull(reloaded);
+        Assert.Equal(generated!.Thumbprint, reloaded!.Thumbprint);
+        Assert.Equal(generated.SerialNumber, reloaded.SerialNumber);
     }
 
     [Fact]
@@ -296,19 +293,19 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
         ListenOptions? captured = null;
 
         kestrelOptions.ListenLocalhost(
-            port: 57126,
-            configure: listenOptions =>
+            57126,
+            listenOptions =>
             {
                 // Mirror what WebHostFactory sets before delegating to the cert service.
                 listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
-                service.ConfigureHttpsListener(listenOptions: listenOptions);
+                service.ConfigureHttpsListener(listenOptions);
                 captured = listenOptions;
             }
         );
 
-        Assert.NotNull(@object: captured);
-        Assert.True(condition: IsTlsEnabled(listenOptions: captured!));
-        Assert.NotEqual(expected: HttpProtocols.Http1, actual: captured.Protocols);
+        Assert.NotNull(captured);
+        Assert.True(IsTlsEnabled(captured!));
+        Assert.NotEqual(HttpProtocols.Http1, captured.Protocols);
     }
 
     [Fact]
@@ -317,7 +314,7 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
         // A NetworkDiscovery whose InternalDomain throws simulates the "self-signed
         // generation itself fails" case — ConfigureHttpsListener must still degrade to
         // plaintext HTTP/1.1 rather than crash the listener setup.
-        CertificateService service = BuildService(networkDiscovery: new ThrowingNetworkDiscovery());
+        CertificateService service = BuildService(new ThrowingNetworkDiscovery());
         KestrelServerOptions kestrelOptions = new()
         {
             ApplicationServices = BuildMinimalKestrelServices(),
@@ -325,39 +322,39 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
         ListenOptions? captured = null;
 
         kestrelOptions.ListenLocalhost(
-            port: 57126,
-            configure: listenOptions =>
+            57126,
+            listenOptions =>
             {
                 listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
-                service.ConfigureHttpsListener(listenOptions: listenOptions);
+                service.ConfigureHttpsListener(listenOptions);
                 captured = listenOptions;
             }
         );
 
-        Assert.NotNull(@object: captured);
-        Assert.False(condition: IsTlsEnabled(listenOptions: captured!));
-        Assert.Equal(expected: HttpProtocols.Http1, actual: captured.Protocols);
+        Assert.NotNull(captured);
+        Assert.False(IsTlsEnabled(captured!));
+        Assert.Equal(HttpProtocols.Http1, captured.Protocols);
     }
 
     private sealed class ThrowingNetworkDiscovery : INetworkDiscovery
     {
         public string InternalIp
         {
-            get => throw new InvalidOperationException(message: "boom");
-            set => throw new InvalidOperationException(message: "boom");
+            get => throw new InvalidOperationException("boom");
+            set => throw new InvalidOperationException("boom");
         }
-        public string RegistrationInternalIp => throw new InvalidOperationException(message: "boom");
+        public string RegistrationInternalIp => throw new InvalidOperationException("boom");
         public string ExternalIp
         {
-            get => throw new InvalidOperationException(message: "boom");
-            set => throw new InvalidOperationException(message: "boom");
+            get => throw new InvalidOperationException("boom");
+            set => throw new InvalidOperationException("boom");
         }
         public string? InternalIpV6 => null;
         public string? ExternalIpV6 { get; set; }
-        public string InternalDomain => throw new InvalidOperationException(message: "boom");
-        public string InternalAddress => throw new InvalidOperationException(message: "boom");
-        public string ExternalDomain => throw new InvalidOperationException(message: "boom");
-        public string ExternalAddress => throw new InvalidOperationException(message: "boom");
+        public string InternalDomain => throw new InvalidOperationException("boom");
+        public string InternalAddress => throw new InvalidOperationException("boom");
+        public string ExternalDomain => throw new InvalidOperationException("boom");
+        public string ExternalAddress => throw new InvalidOperationException("boom");
         public string? ExternalAddressV6 => null;
         public bool Ipv6Enabled => false;
 
@@ -365,6 +362,6 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
 
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
-        public Task<bool> IsPortOpenAsync() => Task.FromResult(result: false);
+        public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
     }
 }

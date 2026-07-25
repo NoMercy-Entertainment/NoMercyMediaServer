@@ -43,7 +43,7 @@ public sealed class HolderBackedHardwareCapabilities(HardwareCapabilitiesHolder 
         holder.Current?.UsableHardwareEncoders ?? EmptyUsableHardwareEncoders;
 
     public bool SupportsHardwareEncoding(VideoCodecType codec) =>
-        holder.Current?.SupportsHardwareEncoding(codec: codec) ?? false;
+        holder.Current?.SupportsHardwareEncoding(codec) ?? false;
 
-    public GpuDevice? GetGpuForCodec(VideoCodecType codec) => holder.Current?.GetGpuForCodec(codec: codec);
+    public GpuDevice? GetGpuForCodec(VideoCodecType codec) => holder.Current?.GetGpuForCodec(codec);
 }

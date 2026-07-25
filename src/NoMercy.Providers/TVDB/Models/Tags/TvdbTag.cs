@@ -20,18 +20,18 @@ public class TvdbTagOptionResponse : TvdbResponse<TvdbTag> { }
 
 public class TvdbTag
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "allowsMultiple")]
+    [JsonProperty("allowsMultiple")]
     public bool AllowsMultiple { get; set; }
 
-    [JsonProperty(propertyName: "helpText")]
+    [JsonProperty("helpText")]
     public string? HelpText { get; set; }
 
-    [JsonProperty(propertyName: "options")]
+    [JsonProperty("options")]
     public TvdbTagOption[] Options { get; set; } = [];
 }

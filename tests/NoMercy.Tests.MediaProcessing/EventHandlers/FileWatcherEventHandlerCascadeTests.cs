@@ -44,32 +44,32 @@ internal sealed class FileWatcherTestQueueContext : IQueueContext
     public void AddJob(QueueJobModel job)
     {
         job.Id = _nextId++;
-        Jobs.Add(item: job);
+        Jobs.Add(job);
     }
 
-    public void RemoveJob(QueueJobModel job) => Jobs.RemoveAll(match: j => j.Id == job.Id);
+    public void RemoveJob(QueueJobModel job) => Jobs.RemoveAll(j => j.Id == job.Id);
 
     public QueueJobModel? GetNextJob(
         string queueName,
         byte maxAttempts,
         long? currentJobId,
         DateTime now
-    ) => Jobs.FirstOrDefault(predicate: j => string.IsNullOrEmpty(value: queueName) || j.Queue == queueName);
+    ) => Jobs.FirstOrDefault(j => string.IsNullOrEmpty(queueName) || j.Queue == queueName);
 
-    public QueueJobModel? FindJob(int id) => Jobs.FirstOrDefault(predicate: j => j.Id == id);
+    public QueueJobModel? FindJob(int id) => Jobs.FirstOrDefault(j => j.Id == id);
 
-    public bool JobExists(string payload) => Jobs.Any(predicate: j => j.Payload == payload);
+    public bool JobExists(string payload) => Jobs.Any(j => j.Payload == payload);
 
     public void UpdateJob(QueueJobModel job)
     {
-        int idx = Jobs.FindIndex(match: j => j.Id == job.Id);
+        int idx = Jobs.FindIndex(j => j.Id == job.Id);
         if (idx >= 0)
-            Jobs[index: idx] = job;
+            Jobs[idx] = job;
     }
 
     public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)
     {
-        QueueJobModel? job = Jobs.FirstOrDefault(predicate: j => j.Id == jobId);
+        QueueJobModel? job = Jobs.FirstOrDefault(j => j.Id == jobId);
         if (job is null)
             return;
         job.Payload = newPayload;
@@ -84,7 +84,7 @@ internal sealed class FileWatcherTestQueueContext : IQueueContext
     }
 
     public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) =>
-        Jobs.Where(predicate: j => j.ReservedAt < cutoffUtc).ToList();
+        Jobs.Where(j => j.ReservedAt < cutoffUtc).ToList();
 
     public bool IsParentFailed(int parentJobId) => false;
 
@@ -93,7 +93,7 @@ internal sealed class FileWatcherTestQueueContext : IQueueContext
     public void RemoveFailedJob(FailedJobModel failedJob) { }
 
     public void AddFailedJobAndRemoveJob(FailedJobModel failedJob, QueueJobModel job) =>
-        RemoveJob(job: job);
+        RemoveJob(job);
 
     public FailedJobModel? FindFailedJob(int id) => null;
 
@@ -120,7 +120,7 @@ internal sealed class FileWatcherTmdbMockFactory : IHttpClientFactory
     private const int ShowId = 1396;
 
     public HttpClient CreateClient(string name) =>
-        new(handler: new Handler()) { BaseAddress = new(uriString: "https://api.themoviedb.org/3/") };
+        new(new Handler()) { BaseAddress = new("https://api.themoviedb.org/3/") };
 
     private sealed class Handler : HttpMessageHandler
     {
@@ -133,21 +133,21 @@ internal sealed class FileWatcherTmdbMockFactory : IHttpClientFactory
 
             string? body = true switch
             {
-                _ when path.Contains(value: "/search/movie") => SearchMovieJson(),
-                _ when path.Contains(value: "/search/tv") => SearchTvJson(),
-                _ when path.Contains(value: $"/movie/{MovieId}") => MovieDetailJson(),
-                _ when path.Contains(value: $"/tv/{ShowId}") => TvDetailJson(),
+                _ when path.Contains("/search/movie") => SearchMovieJson(),
+                _ when path.Contains("/search/tv") => SearchTvJson(),
+                _ when path.Contains($"/movie/{MovieId}") => MovieDetailJson(),
+                _ when path.Contains($"/tv/{ShowId}") => TvDetailJson(),
                 _ => null,
             };
 
             HttpResponseMessage response = body is null
-                ? new(statusCode: HttpStatusCode.NotFound)
-                : new HttpResponseMessage(statusCode: HttpStatusCode.OK)
+                ? new(HttpStatusCode.NotFound)
+                : new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new StringContent(content: body, encoding: Encoding.UTF8, mediaType: "application/json"),
+                    Content = new StringContent(body, Encoding.UTF8, "application/json"),
                 };
 
-            return Task.FromResult(result: response);
+            return Task.FromResult(response);
         }
 
         private static string SearchMovieJson() =>
@@ -168,8 +168,8 @@ internal sealed class FileWatcherTmdbMockFactory : IHttpClientFactory
     }
 }
 
-[Collection(name: "EventBusProvider")]
-[Trait(name: "Category", value: "Integration")]
+[Collection("EventBusProvider")]
+[Trait("Category", "Integration")]
 public class FileWatcherEventHandlerCascadeTests : IDisposable
 {
     private static readonly int ExpectedMovieId = 550;
@@ -183,55 +183,55 @@ public class FileWatcherEventHandlerCascadeTests : IDisposable
 
     public FileWatcherEventHandlerCascadeTests()
     {
-        HttpClientProvider.Initialize(factory: new FileWatcherTmdbMockFactory());
+        HttpClientProvider.Initialize(new FileWatcherTmdbMockFactory());
 
         _queueContext = new();
-        QueueConfiguration config = new() { WorkerCounts = new() { [key: "import"] = 0 } };
-        _queueRunner = new(queueContext: _queueContext, configuration: config, loggerFactory: NullLoggerFactory.Instance);
+        QueueConfiguration config = new() { WorkerCounts = new() { ["import"] = 0 } };
+        _queueRunner = new(_queueContext, config, NullLoggerFactory.Instance);
 
-        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: "nm-fweh-" + Path.GetRandomFileName());
-        Directory.CreateDirectory(path: _tempRoot);
+        _tempRoot = Path.Combine(Path.GetTempPath(), "nm-fweh-" + Path.GetRandomFileName());
+        Directory.CreateDirectory(_tempRoot);
 
         _localDriver = new LocalStorageDriver();
-        _storageFactory = new(driver: _localDriver, logger: NullLogger<StorageFactory>.Instance);
+        _storageFactory = new(_localDriver, NullLogger<StorageFactory>.Instance);
     }
 
     public void Dispose()
     {
-        HttpClientProvider.Initialize(factory: new TmdbMockHttpClientFactory());
+        HttpClientProvider.Initialize(new TmdbMockHttpClientFactory());
         _queueRunner.StopAll();
 
         try
         {
-            Directory.Delete(path: _tempRoot, recursive: true);
+            Directory.Delete(_tempRoot, recursive: true);
         }
         catch { }
     }
 
     private FileWatcherEventHandler MakeHandler() =>
         new(
-            logger: NullLogger<FileWatcherEventHandler>.Instance,
-            eventBus: new InMemoryEventBus(),
-            storageDriver: _localDriver,
-            storageFactory: _storageFactory
+            NullLogger<FileWatcherEventHandler>.Instance,
+            new InMemoryEventBus(),
+            _localDriver,
+            _storageFactory
         );
 
     private string CreateMovieFolder(string name = "Fight Club (1999)")
     {
-        string folder = Path.Combine(path1: _tempRoot, path2: name);
-        Directory.CreateDirectory(path: folder);
-        File.WriteAllBytes(path: Path.Combine(path1: folder, path2: "Fight.Club.1999.mkv"), bytes: [0x00, 0x00]);
+        string folder = Path.Combine(_tempRoot, name);
+        Directory.CreateDirectory(folder);
+        File.WriteAllBytes(Path.Combine(folder, "Fight.Club.1999.mkv"), [0x00, 0x00]);
         return folder;
     }
 
     private string CreateTvFolder(string name = "Breaking Bad (2008)")
     {
-        string folder = Path.Combine(path1: _tempRoot, path2: name);
-        Directory.CreateDirectory(path: folder);
-        Directory.CreateDirectory(path: Path.Combine(path1: folder, path2: "Season 01"));
+        string folder = Path.Combine(_tempRoot, name);
+        Directory.CreateDirectory(folder);
+        Directory.CreateDirectory(Path.Combine(folder, "Season 01"));
         File.WriteAllBytes(
-            path: Path.Combine(path1: folder, path2: "Season 01", path3: "Breaking.Bad.S01E01.mkv"),
-            bytes: [0x00, 0x00]
+            Path.Combine(folder, "Season 01", "Breaking.Bad.S01E01.mkv"),
+            [0x00, 0x00]
         );
         return folder;
     }
@@ -250,22 +250,22 @@ public class FileWatcherEventHandlerCascadeTests : IDisposable
             LibraryType = MediaTypes.MovieMediaType,
         };
 
-        await handler.OnFileCreated(@event: @event, ct: CancellationToken.None);
+        await handler.OnFileCreated(@event, CancellationToken.None);
 
-        _queueContext.Jobs.Should().ContainSingle(because: "one movie folder → one MovieImportJob");
+        _queueContext.Jobs.Should().ContainSingle("one movie folder → one MovieImportJob");
 
-        QueueJobModel queued = _queueContext.Jobs[index: 0];
-        queued.Queue.Should().Be(expected: "import");
+        QueueJobModel queued = _queueContext.Jobs[0];
+        queued.Queue.Should().Be("import");
 
-        JObject payload = JObject.Parse(json: queued.Payload);
-        string? typeName = payload[propertyName: "$type"]?.Value<string>();
-        typeName.Should().Contain(expected: "MovieImportJob");
+        JObject payload = JObject.Parse(queued.Payload);
+        string? typeName = payload["$type"]?.Value<string>();
+        typeName.Should().Contain("MovieImportJob");
 
-        int dispatchedId = payload[propertyName: "id"]?.Value<int>() ?? 0;
-        dispatchedId.Should().Be(expected: ExpectedMovieId, because: "TMDB search returned movie id 550 (Fight Club)");
+        int dispatchedId = payload["id"]?.Value<int>() ?? 0;
+        dispatchedId.Should().Be(ExpectedMovieId, "TMDB search returned movie id 550 (Fight Club)");
 
-        string? libraryId = payload[propertyName: "libraryId"]?.Value<string>();
-        libraryId.Should().Be(expected: @event.LibraryId.ToString());
+        string? libraryId = payload["libraryId"]?.Value<string>();
+        libraryId.Should().Be(@event.LibraryId.ToString());
     }
 
     [Fact]
@@ -282,30 +282,30 @@ public class FileWatcherEventHandlerCascadeTests : IDisposable
             LibraryType = MediaTypes.TvMediaType,
         };
 
-        await handler.OnFileCreated(@event: @event, ct: CancellationToken.None);
+        await handler.OnFileCreated(@event, CancellationToken.None);
 
-        _queueContext.Jobs.Should().ContainSingle(because: "one TV folder → one ShowImportJob");
+        _queueContext.Jobs.Should().ContainSingle("one TV folder → one ShowImportJob");
 
-        QueueJobModel queued = _queueContext.Jobs[index: 0];
-        queued.Queue.Should().Be(expected: "import");
+        QueueJobModel queued = _queueContext.Jobs[0];
+        queued.Queue.Should().Be("import");
 
-        JObject payload = JObject.Parse(json: queued.Payload);
-        string? typeName = payload[propertyName: "$type"]?.Value<string>();
-        typeName.Should().Contain(expected: "ShowImportJob");
+        JObject payload = JObject.Parse(queued.Payload);
+        string? typeName = payload["$type"]?.Value<string>();
+        typeName.Should().Contain("ShowImportJob");
 
-        int dispatchedId = payload[propertyName: "id"]?.Value<int>() ?? 0;
+        int dispatchedId = payload["id"]?.Value<int>() ?? 0;
         dispatchedId
             .Should()
-            .Be(expected: ExpectedShowId, because: "TMDB search returned TV show id 1396 (Breaking Bad)");
+            .Be(ExpectedShowId, "TMDB search returned TV show id 1396 (Breaking Bad)");
 
-        string? libraryId = payload[propertyName: "libraryId"]?.Value<string>();
-        libraryId.Should().Be(expected: @event.LibraryId.ToString());
+        string? libraryId = payload["libraryId"]?.Value<string>();
+        libraryId.Should().Be(@event.LibraryId.ToString());
     }
 
     [Fact]
     public async Task AnimeLibrary_FileCreated_DispatchesShowImportJob()
     {
-        string tvFolder = CreateTvFolder(name: "Breaking Bad Anime (2008)");
+        string tvFolder = CreateTvFolder("Breaking Bad Anime (2008)");
 
         FileWatcherEventHandler handler = MakeHandler();
 
@@ -316,21 +316,21 @@ public class FileWatcherEventHandlerCascadeTests : IDisposable
             LibraryType = MediaTypes.AnimeMediaType,
         };
 
-        await handler.OnFileCreated(@event: @event, ct: CancellationToken.None);
+        await handler.OnFileCreated(@event, CancellationToken.None);
 
-        _queueContext.Jobs.Should().ContainSingle(because: "anime library uses TV path → ShowImportJob");
+        _queueContext.Jobs.Should().ContainSingle("anime library uses TV path → ShowImportJob");
 
-        JObject payload = JObject.Parse(json: _queueContext.Jobs[index: 0].Payload);
-        string? typeName = payload[propertyName: "$type"]?.Value<string>();
-        typeName.Should().Contain(expected: "ShowImportJob");
+        JObject payload = JObject.Parse(_queueContext.Jobs[0].Payload);
+        string? typeName = payload["$type"]?.Value<string>();
+        typeName.Should().Contain("ShowImportJob");
     }
 
     [Fact]
     public async Task InboxLibrary_FileCreated_DoesNotDispatchAnyJob()
     {
-        string folder = Path.Combine(path1: _tempRoot, path2: "inbox");
-        Directory.CreateDirectory(path: folder);
-        File.WriteAllBytes(path: Path.Combine(path1: folder, path2: "somefile.mkv"), bytes: [0x00]);
+        string folder = Path.Combine(_tempRoot, "inbox");
+        Directory.CreateDirectory(folder);
+        File.WriteAllBytes(Path.Combine(folder, "somefile.mkv"), [0x00]);
 
         FileWatcherEventHandler handler = MakeHandler();
 
@@ -341,23 +341,23 @@ public class FileWatcherEventHandlerCascadeTests : IDisposable
             LibraryType = MediaTypes.InboxMediaType,
         };
 
-        await handler.OnFileCreated(@event: @event, ct: CancellationToken.None);
+        await handler.OnFileCreated(@event, CancellationToken.None);
 
         _queueContext
             .Jobs.Should()
             .BeEmpty(
-                because: "inbox type exits immediately — FileWatcherEventHandler must not dispatch import jobs for inbox folders"
+                "inbox type exits immediately — FileWatcherEventHandler must not dispatch import jobs for inbox folders"
             );
     }
 
     [Fact]
     public async Task MovieLibrary_TmdbNoMatch_NoJobDispatched()
     {
-        string folder = Path.Combine(path1: _tempRoot, path2: "XYZ Completely Unknown Movie ZZZZZ");
-        Directory.CreateDirectory(path: folder);
-        File.WriteAllBytes(path: Path.Combine(path1: folder, path2: "movie.mkv"), bytes: [0x00]);
+        string folder = Path.Combine(_tempRoot, "XYZ Completely Unknown Movie ZZZZZ");
+        Directory.CreateDirectory(folder);
+        File.WriteAllBytes(Path.Combine(folder, "movie.mkv"), [0x00]);
 
-        HttpClientProvider.Initialize(factory: new NoResultsTmdbFactory());
+        HttpClientProvider.Initialize(new NoResultsTmdbFactory());
 
         FileWatcherEventHandler handler = MakeHandler();
 
@@ -368,17 +368,17 @@ public class FileWatcherEventHandlerCascadeTests : IDisposable
             LibraryType = MediaTypes.MovieMediaType,
         };
 
-        await handler.OnFileCreated(@event: @event, ct: CancellationToken.None);
+        await handler.OnFileCreated(@event, CancellationToken.None);
 
         _queueContext
             .Jobs.Should()
-            .BeEmpty(because: "when TMDB returns no results the handler must not dispatch");
+            .BeEmpty("when TMDB returns no results the handler must not dispatch");
     }
 
     private sealed class NoResultsTmdbFactory : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) =>
-            new(handler: new Handler()) { BaseAddress = new(uriString: "https://api.themoviedb.org/3/") };
+            new(new Handler()) { BaseAddress = new("https://api.themoviedb.org/3/") };
 
         private sealed class Handler : HttpMessageHandler
         {
@@ -387,12 +387,12 @@ public class FileWatcherEventHandlerCascadeTests : IDisposable
                 CancellationToken cancellationToken
             ) =>
                 Task.FromResult(
-                    result: new HttpResponseMessage(statusCode: HttpStatusCode.OK)
+                    new HttpResponseMessage(HttpStatusCode.OK)
                     {
                         Content = new StringContent(
-                            content: """{"page":1,"results":[],"total_pages":0,"total_results":0}""",
-                            encoding: Encoding.UTF8,
-                            mediaType: "application/json"
+                            """{"page":1,"results":[],"total_pages":0,"total_results":0}""",
+                            Encoding.UTF8,
+                            "application/json"
                         ),
                     }
                 );
@@ -400,8 +400,8 @@ public class FileWatcherEventHandlerCascadeTests : IDisposable
     }
 }
 
-[Collection(name: "EventBusProvider")]
-[Trait(name: "Category", value: "Integration")]
+[Collection("EventBusProvider")]
+[Trait("Category", "Integration")]
 public class InboxClassifierCascadeViaEventBusTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -410,16 +410,16 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
     public InboxClassifierCascadeViaEventBusTests()
     {
         string dbName = Guid.NewGuid().ToString();
-        _connection = new(connectionString: $"DataSource={dbName};Mode=Memory;Cache=Shared");
+        _connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         _connection.Open();
 
         DbContextOptions<MediaContext> opts = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: _connection)
+            .UseSqlite(_connection)
             .Options;
 
-        _sharedContext = new(options: opts);
+        _sharedContext = new(opts);
         _sharedContext.Database.EnsureCreated();
-        _sharedContext.Database.ExecuteSqlRaw(sql: "PRAGMA foreign_keys = OFF;");
+        _sharedContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
     }
 
     public void Dispose()
@@ -431,9 +431,9 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
     private MediaContext CreateContext()
     {
         DbContextOptions<MediaContext> opts = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: _connection)
+            .UseSqlite(_connection)
             .Options;
-        return new(options: opts);
+        return new(opts);
     }
 
     private Ulid SeedInboxLibrary(string folderPath)
@@ -443,7 +443,7 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
         Ulid driverId = Ulid.NewUlid();
 
         _sharedContext.Libraries.Add(
-            entity: new()
+            new()
             {
                 Id = libraryId,
                 Title = "Inbox",
@@ -451,14 +451,14 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
             }
         );
         _sharedContext.Folders.Add(
-            entity: new()
+            new()
             {
                 Id = folderId,
                 Path = folderPath,
                 DriverId = driverId,
             }
         );
-        _sharedContext.FolderLibrary.Add(entity: new() { LibraryId = libraryId, FolderId = folderId });
+        _sharedContext.FolderLibrary.Add(new() { LibraryId = libraryId, FolderId = folderId });
         _sharedContext.SaveChanges();
 
         return libraryId;
@@ -474,57 +474,57 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
 
         Mock<IInboxMetadataProbe> probeMock = new();
         probeMock
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchMoviesAsync(
                     It.IsAny<string>(),
                     It.IsAny<int?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
         probeMock
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchTvAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
         probeMock
-            .Setup(expression: p => p.LookupMusicReleaseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (CandidateMatch?)null);
+            .Setup(p => p.LookupMusicReleaseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CandidateMatch?)null);
 
         Mock<IInboxAudioTagReader> tagMock = new();
         tagMock
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.ReadAsync(It.IsAny<string>(), It.IsAny<Ulid>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: (InboxAudioTags?)null);
+            .ReturnsAsync((InboxAudioTags?)null);
 
         Mock<IStorage> storageMock = new();
         storageMock
-            .Setup(expression: s => s.List("", null, false))
-            .Returns(value: [new(Path: childFile, IsDirectory: false, SizeBytes: 1024, LastModified: DateTimeOffset.UtcNow)]);
+            .Setup(s => s.List("", null, false))
+            .Returns([new(childFile, false, 1024, DateTimeOffset.UtcNow)]);
         storageMock
-            .Setup(expression: s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>(valueFunction: (parent, child) => $"{parent}/{child}");
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<string, string>((parent, child) => $"{parent}/{child}");
         storageMock
-            .Setup(expression: s => s.OpenRead(It.IsAny<string>()))
-            .Returns(value: new MemoryStream(buffer: [0x1A, 0x45, 0xDF, 0xA3, 0x00, 0x00, 0x00, 0x00]));
+            .Setup(s => s.OpenRead(It.IsAny<string>()))
+            .Returns(new MemoryStream([0x1A, 0x45, 0xDF, 0xA3, 0x00, 0x00, 0x00, 0x00]));
 
         Mock<IStorageFactory> storageFactoryMock = new();
         storageFactoryMock
-            .Setup(expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
-            .Returns(value: storageMock.Object);
+            .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
+            .Returns(storageMock.Object);
 
-        InboxClassifier classifier = new(probe: probeMock.Object, tagReader: tagMock.Object);
+        InboxClassifier classifier = new(probeMock.Object, tagMock.Object);
         NoMercy.MediaProcessing.Jobs.JobDispatcher jobDispatcher = new();
-        InboxRoutingService routing = new(storageFactory: storageFactoryMock.Object, jobDispatcher: jobDispatcher);
+        InboxRoutingService routing = new(storageFactoryMock.Object, jobDispatcher);
 
         InboxClassifierEventHandler handler = new(
-            logger: NullLogger<InboxClassifierEventHandler>.Instance,
-            eventBus: bus,
-            classifier: classifier,
-            routing: routing,
-            contextFactory: CreateContext,
-            storageFactory: storageFactoryMock.Object
+            NullLogger<InboxClassifierEventHandler>.Instance,
+            bus,
+            classifier,
+            routing,
+            CreateContext,
+            storageFactoryMock.Object
         );
 
         return (bus, handler, storageFactoryMock);
@@ -533,21 +533,21 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
     [Fact]
     public async Task FileCreatedEvent_InboxLibrary_PropagatesTo_InboxItemDetectedEvent_ViaRealBus()
     {
-        Ulid libraryId = SeedInboxLibrary(folderPath: "/inbox");
+        Ulid libraryId = SeedInboxLibrary("/inbox");
         (InMemoryEventBus bus, InboxClassifierEventHandler _, Mock<IStorageFactory> _) =
             BuildChain();
 
         List<InboxItemDetectedEvent> detected = [];
         bus.Subscribe<InboxItemDetectedEvent>(
-            handler: (evt, _) =>
+            (evt, _) =>
             {
-                detected.Add(item: evt);
+                detected.Add(evt);
                 return Task.CompletedTask;
             }
         );
 
         await bus.PublishAsync(
-            @event: new FileCreatedEvent
+            new FileCreatedEvent
             {
                 FolderPath = "/inbox/item.mkv",
                 LibraryId = libraryId,
@@ -558,10 +558,10 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
         detected
             .Should()
             .ContainSingle(
-                because: "FileCreatedEvent for an inbox library must chain to InboxItemDetectedEvent"
+                "FileCreatedEvent for an inbox library must chain to InboxItemDetectedEvent"
             );
-        detected[index: 0].DetectedType.Should().NotBeNullOrEmpty();
-        detected[index: 0].Status.Should().NotBeNullOrEmpty();
+        detected[0].DetectedType.Should().NotBeNullOrEmpty();
+        detected[0].Status.Should().NotBeNullOrEmpty();
     }
 
     [Fact]
@@ -575,15 +575,15 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
 
         List<InboxItemDetectedEvent> detected = [];
         bus.Subscribe<InboxItemDetectedEvent>(
-            handler: (evt, _) =>
+            (evt, _) =>
             {
-                detected.Add(item: evt);
+                detected.Add(evt);
                 return Task.CompletedTask;
             }
         );
 
         await bus.PublishAsync(
-            @event: new FileCreatedEvent
+            new FileCreatedEvent
             {
                 FolderPath = "/media/movies/Inception (2010)/Inception.mkv",
                 LibraryId = Ulid.NewUlid(),
@@ -594,26 +594,26 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
         detected
             .Should()
             .BeEmpty(
-                because: "InboxClassifierEventHandler ignores non-inbox library events — no InboxItemDetectedEvent must be published"
+                "InboxClassifierEventHandler ignores non-inbox library events — no InboxItemDetectedEvent must be published"
             );
 
         storageFactoryMock.Verify(
-            expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()),
-            times: Times.Never,
-            failMessage: "storage was never accessed — the handler exited before any classification attempt"
+            f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()),
+            Times.Never,
+            "storage was never accessed — the handler exited before any classification attempt"
         );
     }
 
     [Fact]
     public async Task FileCreatedEvent_InboxLibrary_PublishedEventCarriesCorrectPayload()
     {
-        Ulid libraryId = SeedInboxLibrary(folderPath: "/inbox");
+        Ulid libraryId = SeedInboxLibrary("/inbox");
         (InMemoryEventBus bus, InboxClassifierEventHandler _, Mock<IStorageFactory> _) =
             BuildChain();
 
         InboxItemDetectedEvent? captured = null;
         bus.Subscribe<InboxItemDetectedEvent>(
-            handler: (evt, _) =>
+            (evt, _) =>
             {
                 captured = evt;
                 return Task.CompletedTask;
@@ -621,7 +621,7 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
         );
 
         await bus.PublishAsync(
-            @event: new FileCreatedEvent
+            new FileCreatedEvent
             {
                 FolderPath = "/inbox/item.mkv",
                 LibraryId = libraryId,
@@ -630,10 +630,10 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
         );
 
         captured.Should().NotBeNull();
-        captured!.Id.Should().NotBeNullOrEmpty(because: "event Id must be the saved InboxItem Ulid");
+        captured!.Id.Should().NotBeNullOrEmpty("event Id must be the saved InboxItem Ulid");
         captured
             .DetectedType.Should()
-            .NotBeNullOrEmpty(because: "must have a detected type from the classifier");
+            .NotBeNullOrEmpty("must have a detected type from the classifier");
         captured.Confidence.Should().NotBeNullOrEmpty();
         captured.Status.Should().NotBeNullOrEmpty();
     }
@@ -649,15 +649,15 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
 
         List<InboxItemDetectedEvent> detected = [];
         bus.Subscribe<InboxItemDetectedEvent>(
-            handler: (evt, _) =>
+            (evt, _) =>
             {
-                detected.Add(item: evt);
+                detected.Add(evt);
                 return Task.CompletedTask;
             }
         );
 
         await bus.PublishAsync(
-            @event: new FileCreatedEvent
+            new FileCreatedEvent
             {
                 FolderPath = "/inbox/item.mkv",
                 LibraryId = Ulid.NewUlid(),
@@ -668,7 +668,7 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
         detected
             .Should()
             .BeEmpty(
-                because: "when the library is not in the DB the handler returns early — no event must propagate"
+                "when the library is not in the DB the handler returns early — no event must propagate"
             );
     }
 }

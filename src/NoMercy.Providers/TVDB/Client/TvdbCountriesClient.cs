@@ -17,6 +17,6 @@ public class TvdbCountriesClient : TvdbBaseClient
 {
     public Task<TvdbCountriesResponse?> Countries(bool? priority = false)
     {
-        return Get<TvdbCountriesResponse>(url: "countries", priority: priority);
+        return Get<TvdbCountriesResponse>("countries", priority: priority);
     }
 }

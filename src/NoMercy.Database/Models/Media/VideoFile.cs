@@ -16,75 +16,75 @@ using NoMercy.Database.Infrastructure;
 
 namespace NoMercy.Database.Models.Media;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(Filename), additionalPropertyNames: nameof(HostFolder), IsUnique = true)]
-[Index(propertyName: nameof(EpisodeId))]
-[Index(propertyName: nameof(MovieId))]
-[Index(propertyName: nameof(Folder))]
-[Index(propertyName: nameof(Quality))]
-[Index(propertyName: nameof(Duration))]
-[Index(propertyName: nameof(MovieId), additionalPropertyNames: nameof(Folder))]
-[Index(propertyName: nameof(EpisodeId), additionalPropertyNames: nameof(Folder))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(Filename), nameof(HostFolder), IsUnique = true)]
+[Index(nameof(EpisodeId))]
+[Index(nameof(MovieId))]
+[Index(nameof(Folder))]
+[Index(nameof(Quality))]
+[Index(nameof(Duration))]
+[Index(nameof(MovieId), nameof(Folder))]
+[Index(nameof(EpisodeId), nameof(Folder))]
 public class VideoFile : VideoTracks
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public string? Duration { get; set; }
 
-    [JsonProperty(propertyName: "filename")]
+    [JsonProperty("filename")]
     public string Filename
     {
         get;
-        set => field = PathNormalizer.Normalize(value: value);
+        set => field = PathNormalizer.Normalize(value);
     } = string.Empty;
 
-    [JsonProperty(propertyName: "folder")]
+    [JsonProperty("folder")]
     public string? Folder
     {
         get;
-        set => field = PathNormalizer.NormalizeNullable(value: value);
+        set => field = PathNormalizer.NormalizeNullable(value);
     }
 
-    [JsonProperty(propertyName: "host_folder")]
+    [JsonProperty("host_folder")]
     public string HostFolder
     {
         get;
-        set => field = PathNormalizer.Normalize(value: value);
+        set => field = PathNormalizer.Normalize(value);
     } = string.Empty;
 
-    [JsonProperty(propertyName: "languages")]
+    [JsonProperty("languages")]
     public string Languages { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "quality")]
+    [JsonProperty("quality")]
     public string Quality { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "share")]
+    [JsonProperty("share")]
     public string Share { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "subtitles")]
+    [JsonProperty("subtitles")]
     public string? Subtitles { get; set; }
 
-    [JsonProperty(propertyName: "chapters")]
+    [JsonProperty("chapters")]
     public string? Chapters { get; set; }
 
-    [JsonProperty(propertyName: "episode_id")]
+    [JsonProperty("episode_id")]
     public int? EpisodeId { get; set; }
     public Episode? Episode { get; set; }
 
-    [JsonProperty(propertyName: "last_episode_number")]
+    [JsonProperty("last_episode_number")]
     public int? LastEpisodeNumber { get; set; }
 
-    [JsonProperty(propertyName: "movie_id")]
+    [JsonProperty("movie_id")]
     public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
-    [JsonProperty(propertyName: "metadata_id")]
+    [JsonProperty("metadata_id")]
     public Ulid? MetadataId { get; set; }
     public Metadata? Metadata { get; set; }
 
-    [JsonProperty(propertyName: "user_data")]
+    [JsonProperty("user_data")]
     public ICollection<UserData> UserData { get; set; } = [];
 }

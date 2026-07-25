@@ -24,41 +24,41 @@ namespace NoMercy.Tests.Storage.Contract;
 /// client, and a distinct instance shares no session state with the one being
 /// exercised, so it is a valid out-of-band seed/verify path.
 /// </summary>
-[Collection(name: "StorageBackends")]
-[Trait(name: "Category", value: "Integration")]
+[Collection("StorageBackends")]
+[Trait("Category", "Integration")]
 public sealed class SmbStorageContractTests(StorageBackendsFixture fixture) : IStorageContractTests
 {
     protected override IStorage CreateStorage()
     {
-        Skip.If(condition: !fixture.Available, reason: fixture.StartupError ?? "storage container not available");
-        return new RemoteStorage(driver: fixture.BuildSmbDriver());
+        Skip.If(!fixture.Available, fixture.StartupError ?? "storage container not available");
+        return new RemoteStorage(fixture.BuildSmbDriver());
     }
 
     protected override async Task SeedFile(string relativePath, byte[] content)
     {
-        string normalized = relativePath.Replace(oldChar: '\\', newChar: '/').TrimStart(trimChar: '/');
-        string? parent = Path.GetDirectoryName(path: normalized)?.Replace(oldChar: '\\', newChar: '/');
+        string normalized = relativePath.Replace('\\', '/').TrimStart('/');
+        string? parent = Path.GetDirectoryName(normalized)?.Replace('\\', '/');
         using SmbStorageDriver seed = fixture.BuildSmbDriver();
-        if (!string.IsNullOrEmpty(value: parent))
-            seed.CreateDirectory(path: parent);
+        if (!string.IsNullOrEmpty(parent))
+            seed.CreateDirectory(parent);
 
-        await using Stream w = seed.OpenWrite(path: normalized, overwrite: true);
-        await w.WriteAsync(buffer: content);
+        await using Stream w = seed.OpenWrite(normalized, true);
+        await w.WriteAsync(content);
     }
 
     protected override Task SeedDirectory(string relativePath)
     {
-        string normalized = relativePath.Replace(oldChar: '\\', newChar: '/').Trim(trimChar: '/');
+        string normalized = relativePath.Replace('\\', '/').Trim('/');
         using SmbStorageDriver seed = fixture.BuildSmbDriver();
-        seed.CreateDirectory(path: normalized);
+        seed.CreateDirectory(normalized);
         return Task.CompletedTask;
     }
 
     protected override Task<bool> BackendHasFile(string relativePath)
     {
-        string normalized = relativePath.Replace(oldChar: '\\', newChar: '/').TrimStart(trimChar: '/');
+        string normalized = relativePath.Replace('\\', '/').TrimStart('/');
         using SmbStorageDriver verify = fixture.BuildSmbDriver();
-        return Task.FromResult(result: verify.FileExists(path: normalized));
+        return Task.FromResult(verify.FileExists(normalized));
     }
 
     protected override Task DisposeStorage()
@@ -72,18 +72,18 @@ public sealed class SmbStorageContractTests(StorageBackendsFixture fixture) : IS
             using SmbStorageDriver cleaner = fixture.BuildSmbDriver();
             foreach (
                 string entry in cleaner.EnumerateFileSystemEntries(
-                    directory: string.Empty,
-                    searchPattern: "*",
-                    option: SearchOption.TopDirectoryOnly
+                    string.Empty,
+                    "*",
+                    SearchOption.TopDirectoryOnly
                 )
             )
             {
                 try
                 {
-                    if (cleaner.DirectoryExists(path: entry))
-                        cleaner.DeleteDirectory(path: entry, recursive: true);
+                    if (cleaner.DirectoryExists(entry))
+                        cleaner.DeleteDirectory(entry, true);
                     else
-                        cleaner.DeleteFile(path: entry);
+                        cleaner.DeleteFile(entry);
                 }
                 catch
                 {

@@ -22,23 +22,23 @@ namespace NoMercy.Tests.Api.WebSockets;
 public class ResourceMonitorServiceDelayTests
 {
     [Theory]
-    [InlineData(data: 5)]
-    [InlineData(data: 900)]
-    [InlineData(data: 5000)]
+    [InlineData(5)]
+    [InlineData(900)]
+    [InlineData(5000)]
     public void NextDelayMs_OnFailure_AlwaysBacksOffFullInterval(int elapsedMs)
     {
-        Assert.Equal(expected: 1000, actual: ResourceMonitorService.NextDelayMs(failed: true, elapsedMs: elapsedMs, intervalMs: 1000));
+        Assert.Equal(1000, ResourceMonitorService.NextDelayMs(true, elapsedMs, 1000));
     }
 
     [Fact]
     public void NextDelayMs_OnSuccess_PacesDownByElapsed()
     {
-        Assert.Equal(expected: 800, actual: ResourceMonitorService.NextDelayMs(failed: false, elapsedMs: 200, intervalMs: 1000));
+        Assert.Equal(800, ResourceMonitorService.NextDelayMs(false, 200, 1000));
     }
 
     [Fact]
     public void NextDelayMs_OnSuccess_WhenWorkOutranInterval_IsNonPositive()
     {
-        Assert.True(condition: ResourceMonitorService.NextDelayMs(failed: false, elapsedMs: 1500, intervalMs: 1000) <= 0);
+        Assert.True(ResourceMonitorService.NextDelayMs(false, 1500, 1000) <= 0);
     }
 }

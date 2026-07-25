@@ -35,7 +35,7 @@ public class ConsoleQrCode
     {
         string setupPageUrl =
             $"http://localhost:{RuntimeServerSettings.Current.InternalServerPort}/setup";
-        Display(verificationUriComplete: verificationUriComplete, verificationUri: verificationUri, userCode: userCode, setupPageUrl: setupPageUrl);
+        Display(verificationUriComplete, verificationUri, userCode, setupPageUrl);
     }
 
     /// <summary>
@@ -50,14 +50,14 @@ public class ConsoleQrCode
     {
         if (!SetupTerminalUi.IsInteractiveTerminal)
         {
-            Logger.Auth(message: $"Scan QR code or visit: {verificationUriComplete}");
-            Logger.Auth(message: $"Code: {userCode}");
-            Logger.Auth(message: $"Setup page: {setupPageUrl}");
+            Logger.Auth($"Scan QR code or visit: {verificationUriComplete}");
+            Logger.Auth($"Code: {userCode}");
+            Logger.Auth($"Setup page: {setupPageUrl}");
             return;
         }
 
         SetupTerminalUi ui = new();
-        ui.Show(verificationUriComplete: verificationUriComplete, verificationUri: verificationUri, userCode: userCode, setupPageUrl: setupPageUrl);
+        ui.Show(verificationUriComplete, verificationUri, userCode, setupPageUrl);
 
         // Keep the UI alive until the process ends — the terminal UI object
         // is intentionally not disposed here so the resize watcher keeps running.
@@ -74,11 +74,11 @@ public class ConsoleQrCode
         string displayUri;
         try
         {
-            Uri uri = new(uriString: verificationUriComplete);
+            Uri uri = new(verificationUriComplete);
             displayUri = $"{uri.Scheme}://{uri.Host}";
             if (!uri.IsDefaultPort)
                 displayUri += $":{uri.Port}";
-            displayUri += uri.AbsolutePath.TrimEnd(trimChar: '/');
+            displayUri += uri.AbsolutePath.TrimEnd('/');
         }
         catch
         {
@@ -89,15 +89,15 @@ public class ConsoleQrCode
         try
         {
             NameValueCollection query = HttpUtility.ParseQueryString(
-                query: new Uri(uriString: verificationUriComplete).Query
+                new Uri(verificationUriComplete).Query
             );
-            userCode = query[name: "user_code"] ?? "";
+            userCode = query["user_code"] ?? "";
         }
         catch
         {
             userCode = "";
         }
 
-        Display(verificationUriComplete: verificationUriComplete, verificationUri: displayUri, userCode: userCode);
+        Display(verificationUriComplete, displayUri, userCode);
     }
 }

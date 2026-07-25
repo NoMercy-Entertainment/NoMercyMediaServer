@@ -31,7 +31,7 @@ public class HardwareInitializationServiceTests
     {
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -39,7 +39,7 @@ public class HardwareInitializationServiceTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero));
         return processRunner;
     }
 
@@ -52,10 +52,10 @@ public class HardwareInitializationServiceTests
     {
         Mock<IHardwareEncoderProbe> probe = new();
         probe
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: (IReadOnlySet<string>)new HashSet<string>());
+            .ReturnsAsync((IReadOnlySet<string>)new HashSet<string>());
         return probe.Object;
     }
 
@@ -70,7 +70,7 @@ public class HardwareInitializationServiceTests
     {
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.Is<string[]>(a => a.Length == 1 && a[0] == "-encoders"),
@@ -78,9 +78,9 @@ public class HardwareInitializationServiceTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: encoderOutput, StdErr: "", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, encoderOutput, "", TimeSpan.Zero));
         processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.Is<string[]>(a => a.Length == 1 && a[0] != "-encoders"),
@@ -88,7 +88,7 @@ public class HardwareInitializationServiceTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero));
         return processRunner;
     }
 
@@ -103,11 +103,11 @@ public class HardwareInitializationServiceTests
     private static ServerPhaseTracker ServerReadyTracker()
     {
         ServerPhaseTracker tracker = new();
-        tracker.MarkComplete(stage: BootStage.Essential);
-        tracker.MarkComplete(stage: BootStage.Auth);
-        tracker.MarkComplete(stage: BootStage.Binaries);
-        tracker.MarkComplete(stage: BootStage.Network);
-        tracker.MarkComplete(stage: BootStage.Registered);
+        tracker.MarkComplete(BootStage.Essential);
+        tracker.MarkComplete(BootStage.Auth);
+        tracker.MarkComplete(BootStage.Binaries);
+        tracker.MarkComplete(BootStage.Network);
+        tracker.MarkComplete(BootStage.Registered);
         return tracker;
     }
 
@@ -118,7 +118,7 @@ public class HardwareInitializationServiceTests
     /// behaviour must supply a detected device.
     /// </summary>
     private static IReadOnlyList<GpuDevice> OneNvidiaGpu() =>
-        [new(Vendor: GpuVendor.Nvidia, Name: "NVIDIA GeForce RTX 4090", VramMb: 24576, MaxEncoderSessions: 8, SupportedCodecs: [])];
+        [new(GpuVendor.Nvidia, "NVIDIA GeForce RTX 4090", 24576, 8, [])];
 
     // -------------------------------------------------------------------------
     // Core detection
@@ -129,32 +129,32 @@ public class HardwareInitializationServiceTests
     {
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Array.Empty<GpuDevice>());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
         detector
-            .Setup(expression: d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 4);
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
 
-        FfmpegCapabilities ffmpegCaps = new(processRunner: BuildProcessRunnerSuccess().Object);
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerSuccess().Object);
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: StubEncoderProbe(),
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: ServerReadyTracker(),
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            StubEncoderProbe(),
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            0
         );
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
 
         service.IsReady.Should().BeTrue();
         service.Capabilities.Should().NotBeNull();
-        service.Capabilities!.CpuCores.Should().Be(expected: 4);
+        service.Capabilities!.CpuCores.Should().Be(4);
         service.Capabilities.HasGpu.Should().BeFalse();
     }
 
@@ -163,29 +163,29 @@ public class HardwareInitializationServiceTests
     {
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Array.Empty<GpuDevice>());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
         detector
-            .Setup(expression: d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 8);
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(8);
 
-        FfmpegCapabilities ffmpegCaps = new(processRunner: BuildProcessRunnerSuccess().Object);
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerSuccess().Object);
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: StubEncoderProbe(),
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: ServerReadyTracker(),
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            StubEncoderProbe(),
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            0
         );
 
         service.IsReady.Should().BeFalse();
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
 
         service.IsReady.Should().BeTrue();
@@ -196,30 +196,30 @@ public class HardwareInitializationServiceTests
     {
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(exception: new InvalidOperationException(message: "GPU probe exploded"));
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("GPU probe exploded"));
 
-        FfmpegCapabilities ffmpegCaps = new(processRunner: BuildProcessRunnerSuccess().Object);
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerSuccess().Object);
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: StubEncoderProbe(),
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: ServerReadyTracker(),
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            StubEncoderProbe(),
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            0
         );
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
 
         service.IsReady.Should().BeTrue();
         service.Capabilities.Should().NotBeNull();
         service.Capabilities!.HasGpu.Should().BeFalse();
-        service.Capabilities.CpuCores.Should().Be(expected: Environment.ProcessorCount);
+        service.Capabilities.CpuCores.Should().Be(Environment.ProcessorCount);
     }
 
     [Fact]
@@ -227,29 +227,29 @@ public class HardwareInitializationServiceTests
     {
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Array.Empty<GpuDevice>());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
         detector
-            .Setup(expression: d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 4);
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
 
-        FfmpegCapabilities ffmpegCaps = new(processRunner: BuildProcessRunnerSuccess().Object);
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerSuccess().Object);
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: StubEncoderProbe(),
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: ServerReadyTracker(),
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            StubEncoderProbe(),
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            0
         );
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
-        await service.StopAsync(cancellationToken: CancellationToken.None);
+        await service.StopAsync(CancellationToken.None);
 
         service.IsReady.Should().BeTrue();
     }
@@ -272,40 +272,40 @@ public class HardwareInitializationServiceTests
 
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Array.Empty<GpuDevice>());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
         detector
-            .Setup(expression: d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 4);
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
 
-        FfmpegCapabilities ffmpegCaps = new(processRunner: BuildProcessRunnerSuccess().Object);
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerSuccess().Object);
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: StubEncoderProbe(),
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: tracker,
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            StubEncoderProbe(),
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            tracker,
+            0
         );
 
         // StartAsync must complete before we signal Binaries — if it blocks
         // internally the test would deadlock here (caught by xUnit timeout).
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
-        await service.StartAsync(cancellationToken: cts.Token);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await service.StartAsync(cts.Token);
 
         // Service is not yet ready — detection is gated on BootStage.All.
         service.IsReady.Should().BeFalse();
 
         // Now unblock the gate (every stage in BootStage.All) and let detection finish.
-        tracker.MarkComplete(stage: BootStage.Essential);
-        tracker.MarkComplete(stage: BootStage.Auth);
-        tracker.MarkComplete(stage: BootStage.Binaries);
-        tracker.MarkComplete(stage: BootStage.Network);
-        tracker.MarkComplete(stage: BootStage.Registered);
+        tracker.MarkComplete(BootStage.Essential);
+        tracker.MarkComplete(BootStage.Auth);
+        tracker.MarkComplete(BootStage.Binaries);
+        tracker.MarkComplete(BootStage.Network);
+        tracker.MarkComplete(BootStage.Registered);
         await service.DetectionTask;
 
         service.IsReady.Should().BeTrue();
@@ -324,7 +324,7 @@ public class HardwareInitializationServiceTests
         int callCount = 0;
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.Is<string[]>(a => a.Length == 1 && a[0] == "-encoders"),
@@ -332,14 +332,14 @@ public class HardwareInitializationServiceTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(valueFunction: () =>
+            .ReturnsAsync(() =>
             {
                 callCount++;
                 string stdout = callCount <= 2 ? "" : encoderOutput;
-                return new(ExitCode: 0, StdOut: stdout, StdErr: "", Duration: TimeSpan.Zero);
+                return new(0, stdout, "", TimeSpan.Zero);
             });
         processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.Is<string[]>(a => a.Length == 1 && a[0] != "-encoders"),
@@ -347,36 +347,36 @@ public class HardwareInitializationServiceTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero));
 
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Array.Empty<GpuDevice>());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
         detector
-            .Setup(expression: d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 4);
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
 
-        FfmpegCapabilities ffmpegCaps = new(processRunner: processRunner.Object);
+        FfmpegCapabilities ffmpegCaps = new(processRunner.Object);
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: StubEncoderProbe(),
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: ServerReadyTracker(),
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            StubEncoderProbe(),
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            0
         );
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
 
         service.IsReady.Should().BeTrue();
         // Encoder list was populated on the third attempt — not stuck on empty.
-        ffmpegCaps.AvailableEncoders.Should().Contain(expected: "h264_nvenc");
+        ffmpegCaps.AvailableEncoders.Should().Contain("h264_nvenc");
     }
 
     /// <summary>
@@ -387,29 +387,29 @@ public class HardwareInitializationServiceTests
     [Fact]
     public async Task StartAsync_WhenProbeAlwaysEmpty_FallsBackToCpuOnly()
     {
-        FfmpegCapabilities ffmpegCaps = new(processRunner: BuildProcessRunnerSuccess().Object);
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerSuccess().Object);
 
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Array.Empty<GpuDevice>());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
         detector
-            .Setup(expression: d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Environment.ProcessorCount);
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Environment.ProcessorCount);
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: StubEncoderProbe(),
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: ServerReadyTracker(),
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            StubEncoderProbe(),
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            0
         );
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
 
         service.IsReady.Should().BeTrue();
@@ -426,7 +426,7 @@ public class HardwareInitializationServiceTests
     {
         Mock<IProcessRunner> failingRunner = new();
         failingRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -434,31 +434,31 @@ public class HardwareInitializationServiceTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "ffmpeg: command not found", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", "ffmpeg: command not found", TimeSpan.Zero));
 
-        FfmpegCapabilities ffmpegCaps = new(processRunner: failingRunner.Object);
+        FfmpegCapabilities ffmpegCaps = new(failingRunner.Object);
 
         Mock<IHardwareDetector> detector = new();
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: StubEncoderProbe(),
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: ServerReadyTracker(),
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            StubEncoderProbe(),
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            0
         );
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
 
         service.IsReady.Should().BeTrue();
         service.Capabilities.Should().NotBeNull();
         service.Capabilities!.HasGpu.Should().BeFalse();
-        service.Capabilities.CpuCores.Should().Be(expected: Environment.ProcessorCount);
+        service.Capabilities.CpuCores.Should().Be(Environment.ProcessorCount);
     }
 
     // -------------------------------------------------------------------------
@@ -481,45 +481,45 @@ public class HardwareInitializationServiceTests
             + "V..... h264_amf             AMD AMF H.264 encoder (codec h264)\n"
             + "A..... aac                  AAC (Advanced Audio Coding) (codec aac)";
 
-        FfmpegCapabilities ffmpegCaps = new(processRunner: BuildProcessRunnerWithEncoders(encoderOutput: encoderOutput).Object);
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerWithEncoders(encoderOutput).Object);
 
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: OneNvidiaGpu());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OneNvidiaGpu());
         detector
-            .Setup(expression: d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 4);
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
 
         IEnumerable<string>? capturedCandidates = null;
         Mock<IHardwareEncoderProbe> encoderProbe = new();
         encoderProbe
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())
             )
             .Callback<IEnumerable<string>, CancellationToken>(
-                action: (candidates, _) => capturedCandidates = candidates.ToList()
+                (candidates, _) => capturedCandidates = candidates.ToList()
             )
-            .ReturnsAsync(value: (IReadOnlySet<string>)new HashSet<string>());
+            .ReturnsAsync((IReadOnlySet<string>)new HashSet<string>());
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: encoderProbe.Object,
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: ServerReadyTracker(),
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            encoderProbe.Object,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            0
         );
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
 
         capturedCandidates.Should().NotBeNull();
-        capturedCandidates.Should().Contain(expected: ["h264_nvenc", "h264_amf"]);
-        capturedCandidates.Should().NotContain(unexpected: ["libx264", "aac"]);
+        capturedCandidates.Should().Contain(["h264_nvenc", "h264_amf"]);
+        capturedCandidates.Should().NotContain(["libx264", "aac"]);
     }
 
     /// <summary>
@@ -536,41 +536,41 @@ public class HardwareInitializationServiceTests
         string encoderOutput =
             "V..... h264_nvenc           NVIDIA NVENC H.264 encoder (codec h264)\n"
             + "V..... h264_vaapi           VAAPI H.264 encoder (codec h264)";
-        FfmpegCapabilities ffmpegCaps = new(processRunner: BuildProcessRunnerWithEncoders(encoderOutput: encoderOutput).Object);
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerWithEncoders(encoderOutput).Object);
 
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Array.Empty<GpuDevice>());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
         detector
-            .Setup(expression: d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 4);
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
 
         Mock<IHardwareEncoderProbe> encoderProbe = new();
         encoderProbe
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: (IReadOnlySet<string>)new HashSet<string>());
+            .ReturnsAsync((IReadOnlySet<string>)new HashSet<string>());
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: encoderProbe.Object,
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: ServerReadyTracker(),
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            encoderProbe.Object,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            0
         );
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
 
         encoderProbe.Verify(
-            expression: p => p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()),
-            times: Times.Never
+            p => p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
         service.Capabilities.Should().NotBeNull();
         service.Capabilities!.UsableHardwareEncoders.Should().BeEmpty();
@@ -587,41 +587,41 @@ public class HardwareInitializationServiceTests
     {
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: OneNvidiaGpu());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OneNvidiaGpu());
         detector
-            .Setup(expression: d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 4);
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
 
         string encoderOutput =
             "V..... libx264              libx264 H.264 (codec h264)\n"
             + "V..... h264_nvenc           NVIDIA NVENC H.264 encoder (codec h264)";
-        FfmpegCapabilities ffmpegCaps = new(processRunner: BuildProcessRunnerWithEncoders(encoderOutput: encoderOutput).Object);
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerWithEncoders(encoderOutput).Object);
 
         Mock<IHardwareEncoderProbe> encoderProbe = new();
         encoderProbe
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: (IReadOnlySet<string>)new HashSet<string> { "h264_nvenc" });
+            .ReturnsAsync((IReadOnlySet<string>)new HashSet<string> { "h264_nvenc" });
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: encoderProbe.Object,
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: ServerReadyTracker(),
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            encoderProbe.Object,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            0
         );
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
 
         service.Capabilities.Should().NotBeNull();
-        service.Capabilities!.UsableHardwareEncoders.Should().Contain(expected: "h264_nvenc");
+        service.Capabilities!.UsableHardwareEncoders.Should().Contain("h264_nvenc");
     }
 
     /// <summary>
@@ -635,37 +635,37 @@ public class HardwareInitializationServiceTests
     {
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: OneNvidiaGpu());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OneNvidiaGpu());
         detector
-            .Setup(expression: d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 4);
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
 
         string encoderOutput =
             "V..... libx264              libx264 H.264 (codec h264)\n"
             + "V..... h264_nvenc           NVIDIA NVENC H.264 encoder (codec h264)";
-        FfmpegCapabilities ffmpegCaps = new(processRunner: BuildProcessRunnerWithEncoders(encoderOutput: encoderOutput).Object);
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerWithEncoders(encoderOutput).Object);
 
         Mock<IHardwareEncoderProbe> encoderProbe = new();
         encoderProbe
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())
             )
-            .ThrowsAsync(exception: new InvalidOperationException(message: "probe exploded"));
+            .ThrowsAsync(new InvalidOperationException("probe exploded"));
 
         HardwareInitializationService service = new(
-            hardwareDetector: detector.Object,
-            ffmpegCapabilities: ffmpegCaps,
-            hardwareEncoderProbe: encoderProbe.Object,
-            driverChangeDetector: Mock.Of<IDriverChangeDetector>(),
-            benchmarkJobTracker: Mock.Of<IBenchmarkJobTracker>(),
-            capabilitiesHolder: new(),
-            logger: Mock.Of<ILogger<HardwareInitializationService>>(),
-            phaseTracker: ServerReadyTracker(),
-            probeRetryDelayMs: 0
+            detector.Object,
+            ffmpegCaps,
+            encoderProbe.Object,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            0
         );
 
-        await service.StartAsync(cancellationToken: CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
 
         service.IsReady.Should().BeTrue();

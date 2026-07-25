@@ -40,19 +40,19 @@ namespace NoMercy.Tests.Plugins;
 public class PluginLoaderFailureFixtureTests : IDisposable
 {
     private static readonly Guid ConstructorThrowsPluginId = Guid.Parse(
-        input: "11111111-0000-0000-0000-000000000001"
+        "11111111-0000-0000-0000-000000000001"
     );
     private static readonly Guid InitializeThrowsPluginId = Guid.Parse(
-        input: "22222222-0000-0000-0000-000000000002"
+        "22222222-0000-0000-0000-000000000002"
     );
     private static readonly Guid ServiceRegistratorPluginId = Guid.Parse(
-        input: "33333333-0000-0000-0000-000000000003"
+        "33333333-0000-0000-0000-000000000003"
     );
     private static readonly Guid InitializeThrowsDisposeSucceedsPluginId = Guid.Parse(
-        input: "44444444-0000-0000-0000-000000000004"
+        "44444444-0000-0000-0000-000000000004"
     );
     private static readonly Guid TypeSignatureDependsOnMissingAssemblyPluginId = Guid.Parse(
-        input: "55555555-0000-0000-0000-000000000005"
+        "55555555-0000-0000-0000-000000000005"
     );
 
     private readonly string _tempPluginsDir;
@@ -62,19 +62,19 @@ public class PluginLoaderFailureFixtureTests : IDisposable
     public PluginLoaderFailureFixtureTests()
     {
         _tempPluginsDir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nomercy-loader-failures-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nomercy-loader-failures-" + Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: _tempPluginsDir);
+        Directory.CreateDirectory(_tempPluginsDir);
 
         _eventBus = new();
         _manager = new(
-            eventBus: _eventBus,
-            serviceProvider: new MinimalServiceProvider(),
-            logger: NullLogger<PluginManager>.Instance,
-            pluginsPath: _tempPluginsDir,
-            storage: TestStorageHelper.CreateStorage(rootPath: _tempPluginsDir),
-            driver: TestStorageHelper.CreateBackend()
+            _eventBus,
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            TestStorageHelper.CreateBackend()
         );
     }
 
@@ -88,8 +88,8 @@ public class PluginLoaderFailureFixtureTests : IDisposable
 
         try
         {
-            if (Directory.Exists(path: _tempPluginsDir))
-                Directory.Delete(path: _tempPluginsDir, recursive: true);
+            if (Directory.Exists(_tempPluginsDir))
+                Directory.Delete(_tempPluginsDir, true);
         }
         catch (Exception) { }
     }
@@ -97,37 +97,37 @@ public class PluginLoaderFailureFixtureTests : IDisposable
     private static string GetFailuresPluginBinDir()
     {
         string testBinDir = Path.GetDirectoryName(
-            path: typeof(PluginLoaderFailureFixtureTests).Assembly.Location
+            typeof(PluginLoaderFailureFixtureTests).Assembly.Location
         )!;
         string tfmDir = testBinDir;
-        string configDir = Path.GetDirectoryName(path: tfmDir)!;
-        string buildConfig = Path.GetFileName(path: configDir);
-        string repoRoot = Path.GetFullPath(path: Path.Combine(paths: [testBinDir, "..", "..", "..", "..", ".."]));
+        string configDir = Path.GetDirectoryName(tfmDir)!;
+        string buildConfig = Path.GetFileName(configDir);
+        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
 
-        return Path.Combine(paths: [repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0"]
+        return Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0"]
         );
     }
 
     private string StageFailuresPluginDll()
     {
         string binDir = GetFailuresPluginBinDir();
-        string dllSrc = Path.Combine(path1: binDir, path2: "NoMercy.Plugin.Samples.Failures.dll");
+        string dllSrc = Path.Combine(binDir, "NoMercy.Plugin.Samples.Failures.dll");
 
-        if (!File.Exists(path: dllSrc))
+        if (!File.Exists(dllSrc))
             throw new FileNotFoundException(
-                message: $"Failures plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Failures first."
+                $"Failures plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Failures first."
             );
 
-        string pluginDir = Path.Combine(path1: _tempPluginsDir, path2: "Failures");
-        Directory.CreateDirectory(path: pluginDir);
+        string pluginDir = Path.Combine(_tempPluginsDir, "Failures");
+        Directory.CreateDirectory(pluginDir);
 
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.dll"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: pluginDir, path2: Path.GetFileName(path: file)), overwrite: true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
 
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.deps.json"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: pluginDir, path2: Path.GetFileName(path: file)), overwrite: true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
 
-        return Path.Combine(path1: pluginDir, path2: "NoMercy.Plugin.Samples.Failures.dll");
+        return Path.Combine(pluginDir, "NoMercy.Plugin.Samples.Failures.dll");
     }
 
     // NoMercy.Plugins.Abstractions.dll is a real, validly-loadable .NET
@@ -145,48 +145,48 @@ public class PluginLoaderFailureFixtureTests : IDisposable
     {
         string dllPath = StageFailuresPluginDll();
 
-        await _manager.LoadPluginAssemblyAsync(assemblyPath: dllPath);
+        await _manager.LoadPluginAssemblyAsync(dllPath);
 
         IReadOnlyList<PluginInfo> installed = _manager.GetInstalledPlugins();
 
         // ConstructorThrowsPlugin never produced an instance, so SafePluginIdentity
         // read a null instance back — Id stayed Guid.Empty, and the loader's
         // `if (identity.Id != Guid.Empty)` guard means it was never recorded at all.
-        installed.Should().NotContain(predicate: p => p.Id == ConstructorThrowsPluginId);
+        installed.Should().NotContain(p => p.Id == ConstructorThrowsPluginId);
 
         // InitializeThrowsPlugin constructed fine (a real, non-empty Id was read),
         // so its failure IS recorded — as Malfunctioned, not silently dropped.
         // Its OWN Dispose() also throws, exercising the nested disposeEx catch.
-        PluginInfo? malfunctioned = installed.FirstOrDefault(predicate: p => p.Id == InitializeThrowsPluginId);
+        PluginInfo? malfunctioned = installed.FirstOrDefault(p => p.Id == InitializeThrowsPluginId);
         malfunctioned.Should().NotBeNull();
-        malfunctioned!.Status.Should().Be(expected: PluginStatus.Malfunctioned);
+        malfunctioned!.Status.Should().Be(PluginStatus.Malfunctioned);
 
         // Same Initialize-throws shape, but its Dispose() succeeds cleanly —
         // the complementary case to InitializeThrowsPlugin above.
-        PluginInfo? malfunctionedCleanDispose = installed.FirstOrDefault(predicate: p =>
+        PluginInfo? malfunctionedCleanDispose = installed.FirstOrDefault(p =>
             p.Id == InitializeThrowsDisposeSucceedsPluginId
         );
         malfunctionedCleanDispose.Should().NotBeNull();
-        malfunctionedCleanDispose!.Status.Should().Be(expected: PluginStatus.Malfunctioned);
+        malfunctionedCleanDispose!.Status.Should().Be(PluginStatus.Malfunctioned);
 
         // ServiceRegistratorPlugin is one of two healthy types — it must load
         // Active with a live instance, proving the failing types never aborted
         // the rest of the assembly's load.
-        PluginInfo? healthy = installed.FirstOrDefault(predicate: p => p.Id == ServiceRegistratorPluginId);
+        PluginInfo? healthy = installed.FirstOrDefault(p => p.Id == ServiceRegistratorPluginId);
         healthy.Should().NotBeNull();
-        healthy!.Status.Should().Be(expected: PluginStatus.Active);
-        _manager.GetPluginInstance(pluginId: ServiceRegistratorPluginId).Should().NotBeNull();
+        healthy!.Status.Should().Be(PluginStatus.Active);
+        _manager.GetPluginInstance(ServiceRegistratorPluginId).Should().NotBeNull();
 
         // The other healthy type — its own type SIGNATURE references
         // Newtonsoft.Json (present here), unlike ServiceRegistratorPlugin which
         // only references it from inside a method body.
-        PluginInfo? otherHealthy = installed.FirstOrDefault(predicate: p =>
+        PluginInfo? otherHealthy = installed.FirstOrDefault(p =>
             p.Id == TypeSignatureDependsOnMissingAssemblyPluginId
         );
         otherHealthy.Should().NotBeNull();
-        otherHealthy!.Status.Should().Be(expected: PluginStatus.Active);
+        otherHealthy!.Status.Should().Be(PluginStatus.Active);
 
-        installed.Should().HaveCount(expected: 4, because: "ConstructorThrowsPlugin must never reach the registry");
+        installed.Should().HaveCount(4, "ConstructorThrowsPlugin must never reach the registry");
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class PluginLoaderFailureFixtureTests : IDisposable
     {
         string abstractionsPath = GetAbstractionsAssemblyPath();
 
-        Func<Task> act = () => _manager.LoadPluginAssemblyAsync(assemblyPath: abstractionsPath);
+        Func<Task> act = () => _manager.LoadPluginAssemblyAsync(abstractionsPath);
 
         await act.Should().NotThrowAsync();
         _manager.GetInstalledPlugins().Should().BeEmpty();
@@ -204,7 +204,7 @@ public class PluginLoaderFailureFixtureTests : IDisposable
     public async Task GetPluginsOfType_MixedRegistry_ReturnsOnlyMatchingActiveInstances()
     {
         string dllPath = StageFailuresPluginDll();
-        await _manager.LoadPluginAssemblyAsync(assemblyPath: dllPath);
+        await _manager.LoadPluginAssemblyAsync(dllPath);
 
         // Two Active instances (ServiceRegistratorPlugin,
         // TypeSignatureDependsOnMissingAssemblyPlugin) are in the registry —
@@ -212,7 +212,7 @@ public class PluginLoaderFailureFixtureTests : IDisposable
         // return both, while a type NONE of them implement returns empty.
         // Proves the `is T` half of the predicate genuinely filters by type.
         IEnumerable<IPlugin> allPlugins = _manager.GetPluginsOfType<IPlugin>();
-        allPlugins.Should().HaveCount(expected: 2);
+        allPlugins.Should().HaveCount(2);
 
         IEnumerable<IEncoderPlugin> encoderPlugins = _manager.GetPluginsOfType<IEncoderPlugin>();
         encoderPlugins.Should().BeEmpty();
@@ -227,8 +227,8 @@ public class PluginLoaderFailureFixtureTests : IDisposable
         // needing a second fixture, isolating the `&& Info.Status == Active`
         // half of the predicate from the `is T` half.
         string dllPath = StageFailuresPluginDll();
-        await _manager.LoadPluginAssemblyAsync(assemblyPath: dllPath);
-        await _manager.DisablePluginAsync(pluginId: ServiceRegistratorPluginId);
+        await _manager.LoadPluginAssemblyAsync(dllPath);
+        await _manager.DisablePluginAsync(ServiceRegistratorPluginId);
 
         IEnumerable<IPlugin> allPlugins = _manager.GetPluginsOfType<IPlugin>();
 
@@ -236,33 +236,33 @@ public class PluginLoaderFailureFixtureTests : IDisposable
             .Should()
             .ContainSingle()
             .Which.Id.Should()
-            .Be(expected: TypeSignatureDependsOnMissingAssemblyPluginId);
+            .Be(TypeSignatureDependsOnMissingAssemblyPluginId);
     }
 
     [Fact]
     public async Task DisablePluginAsync_KnownActivePlugin_TransitionsToDisabled()
     {
         string dllPath = StageFailuresPluginDll();
-        await _manager.LoadPluginAssemblyAsync(assemblyPath: dllPath);
+        await _manager.LoadPluginAssemblyAsync(dllPath);
 
-        await _manager.DisablePluginAsync(pluginId: ServiceRegistratorPluginId);
+        await _manager.DisablePluginAsync(ServiceRegistratorPluginId);
 
         PluginInfo? info = _manager
             .GetInstalledPlugins()
-            .FirstOrDefault(predicate: p => p.Id == ServiceRegistratorPluginId);
+            .FirstOrDefault(p => p.Id == ServiceRegistratorPluginId);
         info.Should().NotBeNull();
-        info!.Status.Should().Be(expected: PluginStatus.Disabled);
+        info!.Status.Should().Be(PluginStatus.Disabled);
     }
 
     [Fact]
     public async Task UninstallPluginAsync_KnownActivePlugin_RemovesFromRegistry()
     {
         string dllPath = StageFailuresPluginDll();
-        await _manager.LoadPluginAssemblyAsync(assemblyPath: dllPath);
+        await _manager.LoadPluginAssemblyAsync(dllPath);
 
-        await _manager.UninstallPluginAsync(pluginId: ServiceRegistratorPluginId);
+        await _manager.UninstallPluginAsync(ServiceRegistratorPluginId);
 
-        _manager.GetInstalledPlugins().Should().NotContain(predicate: p => p.Id == ServiceRegistratorPluginId);
+        _manager.GetInstalledPlugins().Should().NotContain(p => p.Id == ServiceRegistratorPluginId);
     }
 
     [Fact]
@@ -272,33 +272,33 @@ public class PluginLoaderFailureFixtureTests : IDisposable
         List<PluginLoadedEvent> loaded = [];
         List<PluginErrorOccurredEvent> errors = [];
         _eventBus.Subscribe<PluginLoadedEvent>(
-            handler: (evt, _) =>
+            (evt, _) =>
             {
-                loaded.Add(item: evt);
+                loaded.Add(evt);
                 return Task.CompletedTask;
             }
         );
         _eventBus.Subscribe<PluginErrorOccurredEvent>(
-            handler: (evt, _) =>
+            (evt, _) =>
             {
-                errors.Add(item: evt);
+                errors.Add(evt);
                 return Task.CompletedTask;
             }
         );
 
-        await _manager.LoadPluginAssemblyAsync(assemblyPath: dllPath);
+        await _manager.LoadPluginAssemblyAsync(dllPath);
 
         loaded
             .Should()
-            .Contain(predicate: e => e.PluginId == ServiceRegistratorPluginId.ToString())
-            .And.Contain(predicate: e =>
+            .Contain(e => e.PluginId == ServiceRegistratorPluginId.ToString())
+            .And.Contain(e =>
                 e.PluginId == TypeSignatureDependsOnMissingAssemblyPluginId.ToString()
             );
         errors
             .Should()
-            .Contain(predicate: e => e.PluginId == InitializeThrowsPluginId.ToString())
-            .And.Contain(predicate: e => e.PluginId == InitializeThrowsDisposeSucceedsPluginId.ToString())
-            .And.Contain(predicate: e => e.PluginId == Guid.Empty.ToString());
+            .Contain(e => e.PluginId == InitializeThrowsPluginId.ToString())
+            .And.Contain(e => e.PluginId == InitializeThrowsDisposeSucceedsPluginId.ToString())
+            .And.Contain(e => e.PluginId == Guid.Empty.ToString());
     }
 
     [Fact]
@@ -306,7 +306,7 @@ public class PluginLoaderFailureFixtureTests : IDisposable
     {
         string dllPath = StageFailuresPluginDll();
 
-        await _manager.LoadPluginAssemblyAsync(assemblyPath: dllPath);
+        await _manager.LoadPluginAssemblyAsync(dllPath);
 
         IEnumerable<IPluginServiceRegistrator> registrators = _manager.GetServiceRegistrators();
 
@@ -321,15 +321,15 @@ public class PluginLoaderFailureFixtureTests : IDisposable
         // suite that gets a real registrator instance through the full loader
         // pipeline into that method rather than calling RegisterServices directly.
         string dllPath = StageFailuresPluginDll();
-        await _manager.LoadPluginAssemblyAsync(assemblyPath: dllPath);
+        await _manager.LoadPluginAssemblyAsync(dllPath);
         ServiceCollection services = new();
 
-        services.RegisterPluginServices(pluginManager: _manager);
+        services.RegisterPluginServices(_manager);
 
         services.Should().ContainSingle();
-        services[index: 0]
+        services[0]
             .ServiceType.FullName.Should()
-            .Be(expected: "NoMercy.Plugin.Samples.Failures.FailuresPluginMarker");
+            .Be("NoMercy.Plugin.Samples.Failures.FailuresPluginMarker");
     }
 
     [Fact]
@@ -340,22 +340,22 @@ public class PluginLoaderFailureFixtureTests : IDisposable
         // load-context-construction catch block (distinct from the later
         // "assembly failed to load" catches, which all require the load context
         // to have been constructed successfully first).
-        string missingPath = Path.Combine(path1: _tempPluginsDir, path2: "totally-missing-plugin.dll");
+        string missingPath = Path.Combine(_tempPluginsDir, "totally-missing-plugin.dll");
         List<PluginErrorOccurredEvent> errors = [];
         _eventBus.Subscribe<PluginErrorOccurredEvent>(
-            handler: (evt, _) =>
+            (evt, _) =>
             {
-                errors.Add(item: evt);
+                errors.Add(evt);
                 return Task.CompletedTask;
             }
         );
 
-        Func<Task> act = () => _manager.LoadPluginAssemblyAsync(assemblyPath: missingPath);
+        Func<Task> act = () => _manager.LoadPluginAssemblyAsync(missingPath);
 
         await act.Should().NotThrowAsync();
         errors.Should().ContainSingle();
-        errors[index: 0].PluginName.Should().Be(expected: "totally-missing-plugin");
-        errors[index: 0].ErrorMessage.Should().Contain(expected: "load context");
+        errors[0].PluginName.Should().Be("totally-missing-plugin");
+        errors[0].ErrorMessage.Should().Contain("load context");
     }
 
     private sealed class MinimalServiceProvider : IServiceProvider

@@ -17,39 +17,39 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbMovieAppends : TmdbMovieDetails
 {
-    [JsonProperty(propertyName: "alternative_titles")]
+    [JsonProperty("alternative_titles")]
     public TmdbMovieAlternativeTitles AlternativeTitles { get; set; } = new();
 
-    [JsonProperty(propertyName: "credits")]
+    [JsonProperty("credits")]
     public TmdbMovieCredits Credits { get; set; } = new();
 
-    [JsonProperty(propertyName: "external_ids")]
+    [JsonProperty("external_ids")]
     public TmdbMovieExternalIds ExternalIds { get; set; } = new();
 
-    [JsonProperty(propertyName: "images")]
+    [JsonProperty("images")]
     public TmdbImages Images { get; set; } = new();
 
-    [JsonProperty(propertyName: "keywords")]
+    [JsonProperty("keywords")]
     public TmdbMovieKeywords Keywords { get; set; } = new();
 
-    [JsonProperty(propertyName: "recommendations")]
+    [JsonProperty("recommendations")]
     public TmdbMovieRecommendations Recommendations { get; set; } = new();
 
-    [JsonProperty(propertyName: "similar")]
+    [JsonProperty("similar")]
     public TmdbMovieSimilar Similar { get; set; } = new();
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public TmdbCombinedTranslations Translations { get; set; } = new();
 
-    [JsonProperty(propertyName: "videos")]
+    [JsonProperty("videos")]
     public TmdbMovieVideos Videos { get; set; } = new();
 
-    [JsonProperty(propertyName: "watch/providers")]
+    [JsonProperty("watch/providers")]
     public TmdbWatchProviders WatchProviders { get; set; } = new();
 
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public new TmdbGenre[] Genres { get; set; } = [];
 
-    [JsonProperty(propertyName: "release_dates")]
+    [JsonProperty("release_dates")]
     public TmdbMovieReleaseDates ReleaseDates { get; set; } = new();
 }

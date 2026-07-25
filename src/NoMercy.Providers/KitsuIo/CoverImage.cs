@@ -15,18 +15,18 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class CoverImage
 {
-    [JsonProperty(propertyName: "tiny")]
+    [JsonProperty("tiny")]
     public Uri? Tiny { get; set; }
 
-    [JsonProperty(propertyName: "large")]
+    [JsonProperty("large")]
     public Uri? Large { get; set; }
 
-    [JsonProperty(propertyName: "small")]
+    [JsonProperty("small")]
     public Uri? Small { get; set; }
 
-    [JsonProperty(propertyName: "original")]
+    [JsonProperty("original")]
     public Uri? Original { get; set; }
 
-    [JsonProperty(propertyName: "meta")]
+    [JsonProperty("meta")]
     public CoverImageMeta? Meta { get; set; }
 }

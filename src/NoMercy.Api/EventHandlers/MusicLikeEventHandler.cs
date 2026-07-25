@@ -22,16 +22,16 @@ public class MusicLikeEventHandler : IDisposable
     public MusicLikeEventHandler(IEventBus eventBus, MusicPlaybackService musicPlaybackService)
     {
         _musicPlaybackService = musicPlaybackService;
-        _subscriptions.Add(item: eventBus.Subscribe<MusicItemLikedEvent>(handler: OnMusicItemLiked));
+        _subscriptions.Add(eventBus.Subscribe<MusicItemLikedEvent>(OnMusicItemLiked));
     }
 
     internal Task OnMusicItemLiked(MusicItemLikedEvent @event, CancellationToken ct)
     {
         return _musicPlaybackService.ApplyItemLikeAsync(
-            userId: @event.UserId,
-            itemId: @event.ItemId,
-            liked: @event.Liked,
-            cancellationToken: ct
+            @event.UserId,
+            @event.ItemId,
+            @event.Liked,
+            ct
         );
     }
 

@@ -35,32 +35,32 @@ public static class LogReader
         Func<LogEntry, bool>? filter = null
     )
     {
-        bool dirExists = await storage.ExistsAsync(path: logDirectoryPath, ct: CancellationToken.None);
+        bool dirExists = await storage.ExistsAsync(logDirectoryPath, CancellationToken.None);
         if (!dirExists)
-            throw new DirectoryNotFoundException(message: $"Log directory not found: {logDirectoryPath}");
+            throw new DirectoryNotFoundException($"Log directory not found: {logDirectoryPath}");
 
-        IReadOnlyList<StorageEntry> textEntries = storage.List(path: logDirectoryPath, pattern: "*.txt", recursive: false);
+        IReadOnlyList<StorageEntry> textEntries = storage.List(logDirectoryPath, "*.txt", false);
         IReadOnlyList<StorageEntry> jsonlEntries = storage.List(
-            path: logDirectoryPath,
-            pattern: "run-*.jsonl",
-            recursive: false
+            logDirectoryPath,
+            "run-*.jsonl",
+            false
         );
         IOrderedEnumerable<StorageEntry> logFiles = textEntries
-            .Concat(second: jsonlEntries)
-            .OrderByDescending(keySelector: e => e.LastModified);
+            .Concat(jsonlEntries)
+            .OrderByDescending(e => e.LastModified);
 
         List<LogEntry> logEntries = [];
 
-        IEnumerable<Task<IEnumerable<LogEntry>>> tasks = logFiles.Select(selector: entry =>
-            ProcessFileAsync(storage: storage, filePath: entry.Path, filter: filter)
+        IEnumerable<Task<IEnumerable<LogEntry>>> tasks = logFiles.Select(entry =>
+            ProcessFileAsync(storage, entry.Path, filter)
         );
-        IEnumerable<LogEntry>[] results = await Task.WhenAll(tasks: tasks);
+        IEnumerable<LogEntry>[] results = await Task.WhenAll(tasks);
 
         foreach (IEnumerable<LogEntry> chunk in results)
-            logEntries.AddRange(collection: chunk);
+            logEntries.AddRange(chunk);
 
         return logEntries
-            .DistinctBy(keySelector: entry =>
+            .DistinctBy(entry =>
                 (
                     entry.Type,
                     entry.Level,
@@ -77,19 +77,19 @@ public static class LogReader
         Func<LogEntry, bool>? filter = null
     )
     {
-        bool dirExists = await storage.ExistsAsync(path: logDirectoryPath, ct: CancellationToken.None);
+        bool dirExists = await storage.ExistsAsync(logDirectoryPath, CancellationToken.None);
         if (!dirExists)
             return [];
 
-        IReadOnlyList<StorageEntry> entries = storage.List(path: logDirectoryPath, pattern: "run-*.jsonl", recursive: false);
+        IReadOnlyList<StorageEntry> entries = storage.List(logDirectoryPath, "run-*.jsonl", false);
         StorageEntry? latest = entries
-            .OrderByDescending(keySelector: e => e.LastModified)
-            .ThenByDescending(keySelector: e => e.Path, comparer: StringComparer.Ordinal)
+            .OrderByDescending(e => e.LastModified)
+            .ThenByDescending(e => e.Path, StringComparer.Ordinal)
             .FirstOrDefault();
         if (latest is null)
             return [];
 
-        IEnumerable<LogEntry> logs = await ProcessFileAsync(storage: storage, filePath: latest.Path, filter: filter);
+        IEnumerable<LogEntry> logs = await ProcessFileAsync(storage, latest.Path, filter);
         return logs.ToList();
     }
 
@@ -101,9 +101,9 @@ public static class LogReader
     {
         List<LogEntry> logEntries = new();
 
-        if (!storage.Exists(path: filePath))
+        if (!storage.Exists(filePath))
         {
-            Logger.App(message: $"File not found: {filePath}", level: LogEventLevel.Warning);
+            Logger.App($"File not found: {filePath}", LogEventLevel.Warning);
             return logEntries;
         }
 
@@ -117,19 +117,19 @@ public static class LogReader
             // used by another process'. Open the log file directly with
             // ReadWrite|Delete so co-existing readers/writers don't collide.
             await using FileStream fileStream = new(
-                path: filePath,
-                mode: FileMode.Open,
-                access: FileAccess.Read,
-                share: FileShare.ReadWrite | FileShare.Delete
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete
             );
-            using StreamReader reader = new(stream: fileStream);
+            using StreamReader reader = new(fileStream);
 
             while (await reader.ReadLineAsync() is { } line)
                 try
                 {
-                    LogEntry? logEntry = JsonSerializer.Deserialize<LogEntry>(json: line);
-                    if (logEntry != null && (filter == null || filter(arg: logEntry)))
-                        logEntries.Add(item: logEntry);
+                    LogEntry? logEntry = JsonSerializer.Deserialize<LogEntry>(line);
+                    if (logEntry != null && (filter == null || filter(logEntry)))
+                        logEntries.Add(logEntry);
                 }
                 catch (JsonException)
                 {
@@ -138,7 +138,7 @@ public static class LogReader
         }
         catch (Exception ex)
         {
-            Logger.App(message: $"Error processing file {filePath}: {ex.Message}", level: LogEventLevel.Error);
+            Logger.App($"Error processing file {filePath}: {ex.Message}", LogEventLevel.Error);
         }
 
         return logEntries;

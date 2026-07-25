@@ -14,11 +14,9 @@ using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Profiles;
-using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.Storage.Drivers.Local;
-using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.DiscRipping;
 
@@ -41,10 +39,10 @@ public class DiscRipperTests : IDisposable
 
     public DiscRipperTests()
     {
-        _outputDir = Path.Combine(path1: Path.GetTempPath(), path2: $"Rip_{Guid.NewGuid():N}");
+        _outputDir = Path.Combine(Path.GetTempPath(), $"Rip_{Guid.NewGuid():N}");
 
         _processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -53,16 +51,16 @@ public class DiscRipperTests : IDisposable
                 )
             )
             .Callback<string, string[], string?, CancellationToken>(
-                action: (_, args, _, _) => _capturedArgs.Add(item: args)
+                (_, args, _, _) => _capturedArgs.Add(args)
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _outputDir))
-            Directory.Delete(path: _outputDir, recursive: true);
-        GC.SuppressFinalize(obj: this);
+        if (Directory.Exists(_outputDir))
+            Directory.Delete(_outputDir, true);
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -70,23 +68,23 @@ public class DiscRipperTests : IDisposable
     {
         DiscRipper ripper = BuildRipper();
         RipRequest request = Request(
-            drivePath: "bluray:/dev/sr0",
-            titles: [0],
-            audioTracks: [new(StreamIndex: 0, Include: true)],
-            subtitles: []
+            "bluray:/dev/sr0",
+            [0],
+            [new(0, true)],
+            []
         );
 
         DiscRipResult[] results = await ripper.RipAsync(
-            request: request,
-            outputDirectory: _outputDir,
-            ct: CancellationToken.None
+            request,
+            _outputDir,
+            CancellationToken.None
         );
 
-        results.Should().HaveCount(expected: 1);
+        results.Should().HaveCount(1);
         results[0].Success.Should().BeTrue();
-        _capturedArgs.Should().HaveCount(expected: 1);
-        _capturedArgs[index: 0].Should().Contain(expected: "-playlist").And.Contain(expected: "0");
-        _capturedArgs[index: 0].Should().Contain(expected: "bluray:/dev/sr0");
+        _capturedArgs.Should().HaveCount(1);
+        _capturedArgs[0].Should().Contain("-playlist").And.Contain("0");
+        _capturedArgs[0].Should().Contain("bluray:/dev/sr0");
     }
 
     [Fact]
@@ -94,16 +92,16 @@ public class DiscRipperTests : IDisposable
     {
         DiscRipper ripper = BuildRipper();
         RipRequest request = Request(
-            drivePath: "D:\\",
-            titles: [0],
-            audioTracks: [new(StreamIndex: 0, Include: true)],
-            subtitles: []
+            "D:\\",
+            [0],
+            [new(0, true)],
+            []
         );
 
-        await ripper.RipAsync(request: request, outputDirectory: _outputDir, ct: CancellationToken.None);
+        await ripper.RipAsync(request, _outputDir, CancellationToken.None);
 
-        _capturedArgs[index: 0].Should().NotContain(unexpected: "-playlist");
-        _capturedArgs[index: 0].Should().Contain(expected: "D:\\");
+        _capturedArgs[0].Should().NotContain("-playlist");
+        _capturedArgs[0].Should().Contain("D:\\");
     }
 
     [Fact]
@@ -111,19 +109,19 @@ public class DiscRipperTests : IDisposable
     {
         DiscRipper ripper = BuildRipper();
         RipRequest request = Request(
-            drivePath: "bluray:/dev/sr0",
-            titles: [0],
-            audioTracks: [new(StreamIndex: 0, Include: true), new(StreamIndex: 1, Include: false), new(StreamIndex: 2, Include: true)],
-            subtitles: []
+            "bluray:/dev/sr0",
+            [0],
+            [new(0, true), new(1, false), new(2, true)],
+            []
         );
 
-        await ripper.RipAsync(request: request, outputDirectory: _outputDir, ct: CancellationToken.None);
+        await ripper.RipAsync(request, _outputDir, CancellationToken.None);
 
-        string[] args = _capturedArgs[index: 0];
+        string[] args = _capturedArgs[0];
         // Two -map entries for audio (stream 0 and 2) + one for video.
-        args.Where(predicate: a => a == "-map").Should().HaveCount(expected: 3);
-        args.Should().Contain(expected: "0:a:0").And.Contain(expected: "0:a:2");
-        args.Should().NotContain(unexpected: "0:a:1");
+        args.Where(a => a == "-map").Should().HaveCount(3);
+        args.Should().Contain("0:a:0").And.Contain("0:a:2");
+        args.Should().NotContain("0:a:1");
     }
 
     [Fact]
@@ -131,17 +129,17 @@ public class DiscRipperTests : IDisposable
     {
         DiscRipper ripper = BuildRipper();
         RipRequest request = Request(
-            drivePath: "bluray:/dev/sr0",
-            titles: [0],
-            audioTracks: [new(StreamIndex: 0, Include: true)],
-            subtitles: [new(StreamIndex: 0, Include: true, Policy: SubtitlePolicy.Copy), new(StreamIndex: 1, Include: false, Policy: SubtitlePolicy.Copy)]
+            "bluray:/dev/sr0",
+            [0],
+            [new(0, true)],
+            [new(0, true, SubtitlePolicy.Copy), new(1, false, SubtitlePolicy.Copy)]
         );
 
-        await ripper.RipAsync(request: request, outputDirectory: _outputDir, ct: CancellationToken.None);
+        await ripper.RipAsync(request, _outputDir, CancellationToken.None);
 
-        string[] args = _capturedArgs[index: 0];
-        args.Should().Contain(expected: "0:s:0");
-        args.Should().NotContain(unexpected: "0:s:1");
+        string[] args = _capturedArgs[0];
+        args.Should().Contain("0:s:0");
+        args.Should().NotContain("0:s:1");
     }
 
     [Fact]
@@ -149,18 +147,18 @@ public class DiscRipperTests : IDisposable
     {
         DiscRipper ripper = BuildRipper();
         RipRequest request = Request(
-            drivePath: "D:\\",
-            titles: [0],
-            audioTracks: [new(StreamIndex: 0, Include: true)],
-            subtitles: []
+            "D:\\",
+            [0],
+            [new(0, true)],
+            []
         );
 
-        await ripper.RipAsync(request: request, outputDirectory: _outputDir, ct: CancellationToken.None);
+        await ripper.RipAsync(request, _outputDir, CancellationToken.None);
 
-        string[] args = _capturedArgs[index: 0];
-        int cIdx = Array.IndexOf(array: args, value: "-c");
-        cIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[cIdx + 1].Should().Be(expected: "copy");
+        string[] args = _capturedArgs[0];
+        int cIdx = Array.IndexOf(args, "-c");
+        cIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[cIdx + 1].Should().Be("copy");
     }
 
     [Fact]
@@ -168,21 +166,21 @@ public class DiscRipperTests : IDisposable
     {
         DiscRipper ripper = BuildRipper();
         RipRequest request = Request(
-            drivePath: "bluray:/dev/sr0",
-            titles: [3, 7],
-            audioTracks: [new(StreamIndex: 0, Include: true)],
-            subtitles: []
+            "bluray:/dev/sr0",
+            [3, 7],
+            [new(0, true)],
+            []
         );
 
         DiscRipResult[] results = await ripper.RipAsync(
-            request: request,
-            outputDirectory: _outputDir,
-            ct: CancellationToken.None
+            request,
+            _outputDir,
+            CancellationToken.None
         );
 
-        results.Should().HaveCount(expected: 2);
-        results[0].OutputPath.Should().EndWith(expected: "title_03.mkv");
-        results[1].OutputPath.Should().EndWith(expected: "title_07.mkv");
+        results.Should().HaveCount(2);
+        results[0].OutputPath.Should().EndWith("title_03.mkv");
+        results[1].OutputPath.Should().EndWith("title_07.mkv");
     }
 
     [Fact]
@@ -190,7 +188,7 @@ public class DiscRipperTests : IDisposable
     {
         _processRunner.Reset();
         _processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -198,24 +196,24 @@ public class DiscRipperTests : IDisposable
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "disc read error", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            .ReturnsAsync(new ProcessResult(1, "", "disc read error", TimeSpan.FromSeconds(1)));
 
         DiscRipper ripper = BuildRipper();
         RipRequest request = Request(
-            drivePath: "bluray:/dev/sr0",
-            titles: [0],
-            audioTracks: [new(StreamIndex: 0, Include: true)],
-            subtitles: []
+            "bluray:/dev/sr0",
+            [0],
+            [new(0, true)],
+            []
         );
 
         DiscRipResult[] results = await ripper.RipAsync(
-            request: request,
-            outputDirectory: _outputDir,
-            ct: CancellationToken.None
+            request,
+            _outputDir,
+            CancellationToken.None
         );
 
         results[0].Success.Should().BeFalse();
-        results[0].Error.Should().Contain(expected: "exited with code 1");
+        results[0].Error.Should().Contain("exited with code 1");
     }
 
     [Fact]
@@ -226,14 +224,14 @@ public class DiscRipperTests : IDisposable
 
         DiscRipper ripper = BuildRipper();
         RipRequest request = Request(
-            drivePath: "bluray:/dev/sr0",
-            titles: [0, 1, 2],
-            audioTracks: [new(StreamIndex: 0, Include: true)],
-            subtitles: []
+            "bluray:/dev/sr0",
+            [0, 1, 2],
+            [new(0, true)],
+            []
         );
 
-        await Assert.ThrowsAsync<OperationCanceledException>(testCode: () =>
-            ripper.RipAsync(request: request, outputDirectory: _outputDir, ct: cts.Token)
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            ripper.RipAsync(request, _outputDir, cts.Token)
         );
 
         _capturedArgs.Should().BeEmpty();
@@ -242,13 +240,13 @@ public class DiscRipperTests : IDisposable
     private DiscRipper BuildRipper()
     {
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver: driver, guard: new(allowedRoots: [], driver: driver));
+        LocalStorage storage = new(driver, new([], driver));
         return new(
-            options: _options,
-            processRunner: _processRunner.Object,
-            storage: storage,
-            driveLockRegistry: new(),
-            logger: NullLogger<DiscRipper>.Instance
+            _options,
+            _processRunner.Object,
+            storage,
+            new(),
+            NullLogger<DiscRipper>.Instance
         );
     }
 
@@ -259,14 +257,14 @@ public class DiscRipperTests : IDisposable
         SubtitleSelection[] subtitles
     ) =>
         new(
-            DrivePath: drivePath,
-            SelectedTitleIndices: titles,
-            MetadataId: null,
-            Custom: null,
-            LibraryId: Ulid.NewUlid(),
-            FolderId: Ulid.NewUlid(),
-            EncodingProfileId: null,
-            AudioTracks: audioTracks,
-            Subtitles: subtitles
+            drivePath,
+            titles,
+            null,
+            null,
+            Ulid.NewUlid(),
+            Ulid.NewUlid(),
+            null,
+            audioTracks,
+            subtitles
         );
 }

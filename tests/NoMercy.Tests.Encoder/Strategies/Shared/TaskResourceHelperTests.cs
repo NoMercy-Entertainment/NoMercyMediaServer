@@ -24,101 +24,101 @@ public class TaskResourceHelperTests
 {
     private static VideoOutputPlan VideoWith(string encoderName) =>
         new(
-            Width: 1920,
-            Height: 1080,
-            EncoderName: encoderName,
-            Crf: 23,
-            BitrateKbps: 0,
-            Preset: "medium",
-            Profile: "main",
-            Level: "4.0",
-            TenBit: false,
-            PixelFormat: "yuv420p",
-            MapLabel: "[v]",
-            ExtraFlags: []
+            1920,
+            1080,
+            encoderName,
+            23,
+            0,
+            "medium",
+            "main",
+            "4.0",
+            false,
+            "yuv420p",
+            "[v]",
+            []
         );
 
     // ── GPU encoder detection ──────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: "h264_nvenc")]
-    [InlineData(data: "hevc_nvenc")]
-    [InlineData(data: "av1_nvenc")]
-    [InlineData(data: "h264_amf")]
-    [InlineData(data: "hevc_amf")]
-    [InlineData(data: "h264_qsv")]
-    [InlineData(data: "hevc_qsv")]
-    [InlineData(data: "av1_qsv")]
-    [InlineData(data: "vp9_qsv")]
-    [InlineData(data: "h264_vaapi")]
-    [InlineData(data: "hevc_vaapi")]
-    [InlineData(data: "av1_vaapi")]
-    [InlineData(data: "h264_videotoolbox")]
-    [InlineData(data: "hevc_videotoolbox")]
-    [InlineData(data: "h264_cuvid")] // decoder, but treated as GPU too
+    [InlineData("h264_nvenc")]
+    [InlineData("hevc_nvenc")]
+    [InlineData("av1_nvenc")]
+    [InlineData("h264_amf")]
+    [InlineData("hevc_amf")]
+    [InlineData("h264_qsv")]
+    [InlineData("hevc_qsv")]
+    [InlineData("av1_qsv")]
+    [InlineData("vp9_qsv")]
+    [InlineData("h264_vaapi")]
+    [InlineData("hevc_vaapi")]
+    [InlineData("av1_vaapi")]
+    [InlineData("h264_videotoolbox")]
+    [InlineData("hevc_videotoolbox")]
+    [InlineData("h264_cuvid")] // decoder, but treated as GPU too
     public void ForVideoOutput_GpuEncoder_ReservesGpuSlot(string encoderName)
     {
-        VideoOutputPlan plan = VideoWith(encoderName: encoderName);
-        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(video: plan);
+        VideoOutputPlan plan = VideoWith(encoderName);
+        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(plan);
 
-        req.GpuSlots.Should().Be(expected: 1);
-        req.GpuDeviceKey.Should().Be(expected: encoderName);
-        req.CpuThreads.Should().Be(expected: 2); // GPU encodes still spawn 2 CPU helper threads
+        req.GpuSlots.Should().Be(1);
+        req.GpuDeviceKey.Should().Be(encoderName);
+        req.CpuThreads.Should().Be(2); // GPU encodes still spawn 2 CPU helper threads
     }
 
     [Theory]
-    [InlineData(data: "libx264")]
-    [InlineData(data: "libx265")]
-    [InlineData(data: "libsvtav1")]
-    [InlineData(data: "libaom-av1")]
-    [InlineData(data: "libvpx-vp9")]
+    [InlineData("libx264")]
+    [InlineData("libx265")]
+    [InlineData("libsvtav1")]
+    [InlineData("libaom-av1")]
+    [InlineData("libvpx-vp9")]
     public void ForVideoOutput_SoftwareEncoder_ReservesCpuOnly(string encoderName)
     {
-        VideoOutputPlan plan = VideoWith(encoderName: encoderName);
-        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(video: plan);
+        VideoOutputPlan plan = VideoWith(encoderName);
+        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(plan);
 
-        req.GpuSlots.Should().Be(expected: 0);
+        req.GpuSlots.Should().Be(0);
         req.GpuDeviceKey.Should().BeNull();
-        req.CpuThreads.Should().BeGreaterThan(expected: 0);
+        req.CpuThreads.Should().BeGreaterThan(0);
     }
 
     [Fact]
     public void ForVideoOutput_SoftwareEncoder_UsesHalfTheCpuCores()
     {
-        VideoOutputPlan plan = VideoWith(encoderName: "libx264");
-        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(video: plan);
+        VideoOutputPlan plan = VideoWith("libx264");
+        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(plan);
 
-        int expected = Math.Max(val1: 1, val2: Environment.ProcessorCount / 2);
-        req.CpuThreads.Should().Be(expected: expected);
+        int expected = Math.Max(1, Environment.ProcessorCount / 2);
+        req.CpuThreads.Should().Be(expected);
     }
 
     [Fact]
     public void ForVideoOutput_EmptyEncoder_TreatedAsSoftware()
     {
-        VideoOutputPlan plan = VideoWith(encoderName: "");
-        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(video: plan);
+        VideoOutputPlan plan = VideoWith("");
+        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(plan);
 
-        req.GpuSlots.Should().Be(expected: 0);
+        req.GpuSlots.Should().Be(0);
         req.GpuDeviceKey.Should().BeNull();
     }
 
     [Fact]
     public void ForVideoOutput_UnknownEncoder_TreatedAsSoftware()
     {
-        VideoOutputPlan plan = VideoWith(encoderName: "totally_made_up_encoder");
-        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(video: plan);
+        VideoOutputPlan plan = VideoWith("totally_made_up_encoder");
+        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(plan);
 
-        req.GpuSlots.Should().Be(expected: 0);
+        req.GpuSlots.Should().Be(0);
     }
 
     [Fact]
     public void ForVideoOutput_CaseInsensitive_StillDetectsGpu()
     {
         // Encoder names from upstream sources may differ in case.
-        VideoOutputPlan plan = VideoWith(encoderName: "H264_NVENC");
-        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(video: plan);
+        VideoOutputPlan plan = VideoWith("H264_NVENC");
+        ResourceRequirement req = TaskResourceHelper.ForVideoOutput(plan);
 
-        req.GpuSlots.Should().Be(expected: 1);
+        req.GpuSlots.Should().Be(1);
     }
 
     // ── CpuOnly helper ──────────────────────────────────────────────────────
@@ -128,16 +128,16 @@ public class TaskResourceHelperTests
     {
         ResourceRequirement req = TaskResourceHelper.CpuOnly();
 
-        req.GpuSlots.Should().Be(expected: 0);
+        req.GpuSlots.Should().Be(0);
         req.GpuDeviceKey.Should().BeNull();
-        req.CpuThreads.Should().Be(expected: 1);
+        req.CpuThreads.Should().Be(1);
     }
 
     [Fact]
     public void CpuOnly_CustomThreadCount_FlowsThrough()
     {
-        ResourceRequirement req = TaskResourceHelper.CpuOnly(cpuThreads: 8);
+        ResourceRequirement req = TaskResourceHelper.CpuOnly(8);
 
-        req.CpuThreads.Should().Be(expected: 8);
+        req.CpuThreads.Should().Be(8);
     }
 }

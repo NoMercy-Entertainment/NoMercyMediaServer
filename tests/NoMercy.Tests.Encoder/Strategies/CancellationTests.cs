@@ -19,7 +19,6 @@ using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Encoder.Storage;
 using Container = NoMercy.Encoder.Profiles.Container;
-using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.Tests.Encoder.Strategies;
 
@@ -42,27 +41,27 @@ public class CancellationTests : IDisposable
 
     public CancellationTests()
     {
-        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: $"CancelTest_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempRoot);
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"CancelTest_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempRoot);
 
-        _encoder = new(behavior: MockBehavior.Strict);
+        _encoder = new(MockBehavior.Strict);
         _checkpointStore = new();
         _storage = TestStorageFactory.CreateLocal();
 
         _strategy = new(
-            encoder: _encoder.Object,
-            checkpointStore: _checkpointStore.Object,
-            logger: NullLogger<HlsTwoPassStrategy>.Instance,
-            storage: _storage
+            _encoder.Object,
+            _checkpointStore.Object,
+            NullLogger<HlsTwoPassStrategy>.Instance,
+            _storage
         );
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempRoot))
-            Directory.Delete(path: _tempRoot, recursive: true);
+        if (Directory.Exists(_tempRoot))
+            Directory.Delete(_tempRoot, true);
 
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -72,26 +71,26 @@ public class CancellationTests : IDisposable
     [Fact]
     public async Task EncodeAsync_CancellationDuringPass1_DeletesPartialOutputAndCheckpoint()
     {
-        string outputDir = Path.Combine(path1: _tempRoot, path2: "output_cancel");
-        Directory.CreateDirectory(path: outputDir);
+        string outputDir = Path.Combine(_tempRoot, "output_cancel");
+        Directory.CreateDirectory(outputDir);
 
         // Seed a partial output file — simulates bytes written before cancel.
-        string partialFile = Path.Combine(path1: outputDir, path2: "segment-000.ts");
-        await File.WriteAllTextAsync(path: partialFile, contents: "partial data");
+        string partialFile = Path.Combine(outputDir, "segment-000.ts");
+        await File.WriteAllTextAsync(partialFile, "partial data");
 
         // Seed a checkpoint — simulates pass 1 having completed then cancel firing.
-        string checkpointPath = Path.Combine(path1: outputDir, path2: ".checkpoint.json");
-        await File.WriteAllTextAsync(path: checkpointPath, contents: "{}");
+        string checkpointPath = Path.Combine(outputDir, ".checkpoint.json");
+        await File.WriteAllTextAsync(checkpointPath, "{}");
 
         // No existing checkpoint in store — pass 1 must run.
         _checkpointStore
-            .Setup(expression: s => s.LoadAsync(outputDir, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (JobCheckpoint?)null);
+            .Setup(s => s.LoadAsync(outputDir, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobCheckpoint?)null);
 
         // The inner encoder throws OperationCanceledException when ct fires.
         using CancellationTokenSource cts = new();
         _encoder
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -99,36 +98,36 @@ public class CancellationTests : IDisposable
                 )
             )
             .Returns(
-                valueFunction: async (EncodingRequest _, IProgressObserver? _, CancellationToken ct) =>
+                async (EncodingRequest _, IProgressObserver? _, CancellationToken ct) =>
                 {
                     cts.Cancel();
-                    await Task.Delay(millisecondsDelay: 1, cancellationToken: ct); // yields — lets cancellation propagate
+                    await Task.Delay(1, ct); // yields — lets cancellation propagate
                     ct.ThrowIfCancellationRequested();
-                    return new(Success: true, OutputPath: outputDir, Duration: TimeSpan.Zero, Error: null, Metrics: null);
+                    return new(true, outputDir, TimeSpan.Zero, null, null);
                 }
             );
 
         // DeleteAsync on the checkpoint store must be called.
         _checkpointStore
-            .Setup(expression: s => s.DeleteAsync(outputDir, It.IsAny<CancellationToken>()))
-            .Returns(value: Task.CompletedTask)
+            .Setup(s => s.DeleteAsync(outputDir, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask)
             .Verifiable();
 
-        EncodingRequest request = BuildRequest(outputDir: outputDir);
+        EncodingRequest request = BuildRequest(outputDir);
 
         Func<Task> act = async () =>
-            await _strategy.EncodeAsync(request: request, progress: null, ct: cts.Token);
+            await _strategy.EncodeAsync(request, null, cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
 
         // Checkpoint store Delete was called.
         _checkpointStore.Verify(
-            expression: s => s.DeleteAsync(outputDir, It.IsAny<CancellationToken>()),
-            times: Times.Once
+            s => s.DeleteAsync(outputDir, It.IsAny<CancellationToken>()),
+            Times.Once
         );
 
         // Partial output file was deleted from the real filesystem.
-        File.Exists(path: partialFile).Should().BeFalse(because: "partial output must be removed on cancel");
+        File.Exists(partialFile).Should().BeFalse("partial output must be removed on cancel");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -138,79 +137,79 @@ public class CancellationTests : IDisposable
     [Fact]
     public async Task EncodeAsync_FfmpegCrashes_CheckpointPersistsForResume()
     {
-        string outputDir = Path.Combine(path1: _tempRoot, path2: "output_crash");
-        Directory.CreateDirectory(path: outputDir);
+        string outputDir = Path.Combine(_tempRoot, "output_crash");
+        Directory.CreateDirectory(outputDir);
 
         // No existing checkpoint — fresh encode.
         _checkpointStore
-            .Setup(expression: s => s.LoadAsync(outputDir, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (JobCheckpoint?)null);
+            .Setup(s => s.LoadAsync(outputDir, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobCheckpoint?)null);
 
         // SaveAsync records the checkpoint (pass 1 succeeded).
         JobCheckpoint? savedCheckpoint = null;
         _checkpointStore
-            .Setup(expression: s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()))
-            .Callback<JobCheckpoint, CancellationToken>(action: (cp, _) => savedCheckpoint = cp)
-            .Returns(value: Task.CompletedTask);
+            .Setup(s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()))
+            .Callback<JobCheckpoint, CancellationToken>((cp, _) => savedCheckpoint = cp)
+            .Returns(Task.CompletedTask);
 
         // Pass 1 succeeds.
         EncodingError crashError = new(
-            Kind: EncodingErrorKind.ProcessCrashed,
-            Message: "FFmpeg exited with code 1",
-            FfmpegStderr: "Killed",
-            StageName: "Execute",
-            Recoverable: true
+            EncodingErrorKind.ProcessCrashed,
+            "FFmpeg exited with code 1",
+            "Killed",
+            "Execute",
+            true
         );
 
         int callCount = 0;
         _encoder
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(valueFunction: () =>
+            .ReturnsAsync(() =>
             {
                 callCount++;
                 // First call = pass 1 → success (checkpoint will be saved).
                 // Second call = pass 2 → crash.
                 return callCount == 1
-                    ? new(Success: true, OutputPath: outputDir, Duration: TimeSpan.FromSeconds(seconds: 10), Error: null, Metrics: null)
+                    ? new(true, outputDir, TimeSpan.FromSeconds(10), null, null)
                     : new EncodingResult(
-                        Success: false,
-                        OutputPath: outputDir,
-                        Duration: TimeSpan.FromSeconds(seconds: 5),
-                        Error: crashError,
-                        Metrics: null
+                        false,
+                        outputDir,
+                        TimeSpan.FromSeconds(5),
+                        crashError,
+                        null
                     );
             });
 
         // DeleteAsync must NOT be called — crash should preserve checkpoint.
         _checkpointStore
-            .Setup(expression: s => s.DeleteAsync(outputDir, It.IsAny<CancellationToken>()))
-            .Returns(value: Task.CompletedTask);
+            .Setup(s => s.DeleteAsync(outputDir, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        EncodingRequest request = BuildRequest(outputDir: outputDir);
+        EncodingRequest request = BuildRequest(outputDir);
 
         EncodingResult result = await _strategy.EncodeAsync(
-            request: request,
-            progress: null,
-            ct: CancellationToken.None
+            request,
+            null,
+            CancellationToken.None
         );
 
         result.Success.Should().BeFalse();
 
         // Checkpoint was saved after pass 1.
-        savedCheckpoint.Should().NotBeNull(because: "checkpoint must be saved after pass 1 for resume");
+        savedCheckpoint.Should().NotBeNull("checkpoint must be saved after pass 1 for resume");
         savedCheckpoint!.Pass1Completed.Should().BeTrue();
 
         // DeleteAsync was NOT called — crash path must leave checkpoint intact.
         _checkpointStore.Verify(
-            expression: s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            times: Times.Never,
-            failMessage: "a crash must not delete the checkpoint — resume depends on it"
+            s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "a crash must not delete the checkpoint — resume depends on it"
         );
     }
 
@@ -220,15 +219,15 @@ public class CancellationTests : IDisposable
 
     private static EncodingRequest BuildRequest(string outputDir) =>
         new(
-            InputPath: "/media/source/movie.mkv",
-            OutputDirectory: outputDir,
-            Profile: new(
-                Id: Ulid.NewUlid(),
-                Name: "Test HLS",
-                Container: Container.HlsTs,
-                Video: null,
-                Audio: [],
-                Subtitles: []
+            "/media/source/movie.mkv",
+            outputDir,
+            new(
+                Ulid.NewUlid(),
+                "Test HLS",
+                Container.HlsTs,
+                null,
+                [],
+                []
             )
         );
 }

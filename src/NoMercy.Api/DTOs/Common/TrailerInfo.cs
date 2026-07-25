@@ -17,440 +17,440 @@ namespace NoMercy.Api.DTOs.Common;
 
 public class TrailerInfo
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string? Id { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "formats")]
+    [JsonProperty("formats")]
     public Format[] Formats { get; set; } = [];
 
-    [JsonProperty(propertyName: "thumbnails")]
+    [JsonProperty("thumbnails")]
     public Thumbnail[] Thumbnails { get; set; } = [];
 
-    [JsonProperty(propertyName: "thumbnail")]
+    [JsonProperty("thumbnail")]
     public Uri? Thumbnail { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "channel_id")]
+    [JsonProperty("channel_id")]
     public string? ChannelId { get; set; }
 
-    [JsonProperty(propertyName: "channel_url")]
+    [JsonProperty("channel_url")]
     public Uri? ChannelUrl { get; set; }
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public long Duration { get; set; }
 
-    [JsonProperty(propertyName: "view_count")]
+    [JsonProperty("view_count")]
     public long ViewCount { get; set; }
 
-    [JsonProperty(propertyName: "average_rating")]
+    [JsonProperty("average_rating")]
     public object? AverageRating { get; set; }
 
-    [JsonProperty(propertyName: "age_limit")]
+    [JsonProperty("age_limit")]
     public long AgeLimit { get; set; }
 
-    [JsonProperty(propertyName: "webpage_url")]
+    [JsonProperty("webpage_url")]
     public Uri? WebpageUrl { get; set; }
 
-    [JsonProperty(propertyName: "categories")]
+    [JsonProperty("categories")]
     public string[] Categories { get; set; } = [];
 
-    [JsonProperty(propertyName: "tags")]
+    [JsonProperty("tags")]
     public string[] Tags { get; set; } = [];
 
-    [JsonProperty(propertyName: "playable_in_embed")]
+    [JsonProperty("playable_in_embed")]
     public bool PlayableInEmbed { get; set; }
 
-    [JsonProperty(propertyName: "live_status")]
+    [JsonProperty("live_status")]
     public string? LiveStatus { get; set; }
 
-    [JsonProperty(propertyName: "release_timestamp")]
+    [JsonProperty("release_timestamp")]
     public object? ReleaseTimestamp { get; set; }
 
-    [JsonProperty(propertyName: "_format_sort_fields")]
+    [JsonProperty("_format_sort_fields")]
     public string[] FormatSortFields { get; set; } = [];
 
-    [JsonProperty(propertyName: "automatic_captions")]
+    [JsonProperty("automatic_captions")]
     public Dictionary<string, Caption> AutomaticCaptions { get; set; } = new();
 
-    [JsonProperty(propertyName: "subtitles")]
+    [JsonProperty("subtitles")]
     public Dictionary<string, Caption[]> Subtitles { get; set; } = new();
 
-    [JsonProperty(propertyName: "comment_count")]
+    [JsonProperty("comment_count")]
     public long CommentCount { get; set; }
 
-    [JsonProperty(propertyName: "chapters")]
+    [JsonProperty("chapters")]
     public object? Chapters { get; set; }
 
-    [JsonProperty(propertyName: "heatmap")]
+    [JsonProperty("heatmap")]
     public Heatmap[] Heatmap { get; set; } = [];
 
-    [JsonProperty(propertyName: "like_count")]
+    [JsonProperty("like_count")]
     public long LikeCount { get; set; }
 
-    [JsonProperty(propertyName: "channel")]
+    [JsonProperty("channel")]
     public string? Channel { get; set; }
 
-    [JsonProperty(propertyName: "channel_follower_count")]
+    [JsonProperty("channel_follower_count")]
     public long ChannelFollowerCount { get; set; }
 
-    [JsonProperty(propertyName: "channel_is_verified")]
+    [JsonProperty("channel_is_verified")]
     public bool ChannelIsVerified { get; set; }
 
-    [JsonProperty(propertyName: "uploader")]
+    [JsonProperty("uploader")]
     public string? Uploader { get; set; }
 
-    [JsonProperty(propertyName: "uploader_id")]
+    [JsonProperty("uploader_id")]
     public string? UploaderId { get; set; }
 
-    [JsonProperty(propertyName: "uploader_url")]
+    [JsonProperty("uploader_url")]
     public Uri? UploaderUrl { get; set; }
 
-    [JsonProperty(propertyName: "upload_date")]
-    [JsonConverter(converterType: typeof(ParseStringConverter))]
+    [JsonProperty("upload_date")]
+    [JsonConverter(typeof(ParseStringConverter))]
     public long UploadDate { get; set; }
 
-    [JsonProperty(propertyName: "timestamp")]
+    [JsonProperty("timestamp")]
     public long Timestamp { get; set; }
 
-    [JsonProperty(propertyName: "availability")]
+    [JsonProperty("availability")]
     public string? Availability { get; set; }
 
-    [JsonProperty(propertyName: "original_url")]
+    [JsonProperty("original_url")]
     public string? OriginalUrl { get; set; }
 
-    [JsonProperty(propertyName: "webpage_url_basename")]
+    [JsonProperty("webpage_url_basename")]
     public string? WebpageUrlBasename { get; set; }
 
-    [JsonProperty(propertyName: "webpage_url_domain")]
+    [JsonProperty("webpage_url_domain")]
     public string? WebpageUrlDomain { get; set; }
 
-    [JsonProperty(propertyName: "extractor")]
+    [JsonProperty("extractor")]
     public string? Extractor { get; set; }
 
-    [JsonProperty(propertyName: "extractor_key")]
+    [JsonProperty("extractor_key")]
     public string? ExtractorKey { get; set; }
 
-    [JsonProperty(propertyName: "playlist")]
+    [JsonProperty("playlist")]
     public object? Playlist { get; set; }
 
-    [JsonProperty(propertyName: "playlist_index")]
+    [JsonProperty("playlist_index")]
     public object? PlaylistIndex { get; set; }
 
-    [JsonProperty(propertyName: "display_id")]
+    [JsonProperty("display_id")]
     public string? DisplayId { get; set; }
 
-    [JsonProperty(propertyName: "fulltitle")]
+    [JsonProperty("fulltitle")]
     public string? Fulltitle { get; set; }
 
-    [JsonProperty(propertyName: "duration_string")]
+    [JsonProperty("duration_string")]
     public string? DurationString { get; set; }
 
-    [JsonProperty(propertyName: "release_year")]
+    [JsonProperty("release_year")]
     public object? ReleaseYear { get; set; }
 
-    [JsonProperty(propertyName: "is_live")]
+    [JsonProperty("is_live")]
     public bool IsLive { get; set; }
 
-    [JsonProperty(propertyName: "was_live")]
+    [JsonProperty("was_live")]
     public bool WasLive { get; set; }
 
-    [JsonProperty(propertyName: "requested_subtitles")]
+    [JsonProperty("requested_subtitles")]
     public object? RequestedSubtitles { get; set; }
 
-    [JsonProperty(propertyName: "_has_drm")]
+    [JsonProperty("_has_drm")]
     public object? HasDrm { get; set; }
 
-    [JsonProperty(propertyName: "epoch")]
+    [JsonProperty("epoch")]
     public long Epoch { get; set; }
 
-    [JsonProperty(propertyName: "requested_formats")]
+    [JsonProperty("requested_formats")]
     public Format[] RequestedFormats { get; set; } = [];
 
-    [JsonProperty(propertyName: "format")]
+    [JsonProperty("format")]
     public string? Format { get; set; }
 
-    [JsonProperty(propertyName: "format_id")]
+    [JsonProperty("format_id")]
     public string? FormatId { get; set; }
 
-    [JsonProperty(propertyName: "ext")]
+    [JsonProperty("ext")]
     public string? Ext { get; set; }
 
-    [JsonProperty(propertyName: "protocol")]
+    [JsonProperty("protocol")]
     public string? Protocol { get; set; }
 
-    [JsonProperty(propertyName: "language")]
+    [JsonProperty("language")]
     public string? Language { get; set; }
 
-    [JsonProperty(propertyName: "format_note")]
+    [JsonProperty("format_note")]
     public string? FormatNote { get; set; }
 
-    [JsonProperty(propertyName: "filesize_approx")]
+    [JsonProperty("filesize_approx")]
     public long FilesizeApprox { get; set; }
 
-    [JsonProperty(propertyName: "tbr")]
+    [JsonProperty("tbr")]
     public double Tbr { get; set; }
 
-    [JsonProperty(propertyName: "width")]
+    [JsonProperty("width")]
     public long Width { get; set; }
 
-    [JsonProperty(propertyName: "height")]
+    [JsonProperty("height")]
     public long Height { get; set; }
 
-    [JsonProperty(propertyName: "resolution")]
+    [JsonProperty("resolution")]
     public string? Resolution { get; set; }
 
-    [JsonProperty(propertyName: "fps")]
+    [JsonProperty("fps")]
     public long Fps { get; set; }
 
-    [JsonProperty(propertyName: "dynamic_range")]
+    [JsonProperty("dynamic_range")]
     public string? DynamicRange { get; set; }
 
-    [JsonProperty(propertyName: "vcodec")]
+    [JsonProperty("vcodec")]
     public string? Vcodec { get; set; }
 
-    [JsonProperty(propertyName: "vbr")]
+    [JsonProperty("vbr")]
     public double Vbr { get; set; }
 
-    [JsonProperty(propertyName: "stretched_ratio")]
+    [JsonProperty("stretched_ratio")]
     public object? StretchedRatio { get; set; }
 
-    [JsonProperty(propertyName: "aspect_ratio")]
+    [JsonProperty("aspect_ratio")]
     public double AspectRatio { get; set; }
 
-    [JsonProperty(propertyName: "acodec")]
+    [JsonProperty("acodec")]
     public string? Acodec { get; set; }
 
-    [JsonProperty(propertyName: "abr")]
+    [JsonProperty("abr")]
     public double Abr { get; set; }
 
-    [JsonProperty(propertyName: "asr")]
+    [JsonProperty("asr")]
     public long Asr { get; set; }
 
-    [JsonProperty(propertyName: "audio_channels")]
+    [JsonProperty("audio_channels")]
     public long AudioChannels { get; set; }
 
-    [JsonProperty(propertyName: "_filename")]
+    [JsonProperty("_filename")]
     public string? Filename { get; set; }
 
-    [JsonProperty(propertyName: "filename")]
+    [JsonProperty("filename")]
     public string? TrailerInfoFilename { get; set; }
 
-    [JsonProperty(propertyName: "_type")]
+    [JsonProperty("_type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "_version")]
+    [JsonProperty("_version")]
     public Version? Version { get; set; }
 }
 
 public class Caption
 {
-    [JsonProperty(propertyName: "ext")]
+    [JsonProperty("ext")]
     public string? Ext { get; set; }
 
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri? Url { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
-    [JsonProperty(propertyName: "__yt_dlp_client")]
+    [JsonProperty("__yt_dlp_client")]
     public string? YtDlpClient { get; set; }
 }
 
 public class Format
 {
-    [JsonProperty(propertyName: "format_id")]
+    [JsonProperty("format_id")]
     public string? FormatId { get; set; }
 
-    [JsonProperty(propertyName: "format_note", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("format_note", NullValueHandling = NullValueHandling.Ignore)]
     public string? FormatNote { get; set; }
 
-    [JsonProperty(propertyName: "ext")]
+    [JsonProperty("ext")]
     public string? Ext { get; set; }
 
-    [JsonProperty(propertyName: "protocol")]
+    [JsonProperty("protocol")]
     public Protocol Protocol { get; set; }
 
-    [JsonProperty(propertyName: "acodec", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("acodec", NullValueHandling = NullValueHandling.Ignore)]
     public string? Acodec { get; set; }
 
-    [JsonProperty(propertyName: "vcodec")]
+    [JsonProperty("vcodec")]
     public string? Vcodec { get; set; }
 
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri? Url { get; set; }
 
-    [JsonProperty(propertyName: "width")]
+    [JsonProperty("width")]
     public long? Width { get; set; }
 
-    [JsonProperty(propertyName: "height")]
+    [JsonProperty("height")]
     public long? Height { get; set; }
 
-    [JsonProperty(propertyName: "fps")]
+    [JsonProperty("fps")]
     public double? Fps { get; set; }
 
-    [JsonProperty(propertyName: "rows", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("rows", NullValueHandling = NullValueHandling.Ignore)]
     public long? Rows { get; set; }
 
-    [JsonProperty(propertyName: "columns", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("columns", NullValueHandling = NullValueHandling.Ignore)]
     public long? Columns { get; set; }
 
-    [JsonProperty(propertyName: "fragments", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("fragments", NullValueHandling = NullValueHandling.Ignore)]
     public Fragment[] Fragments { get; set; } = [];
 
-    [JsonProperty(propertyName: "resolution")]
+    [JsonProperty("resolution")]
     public string? Resolution { get; set; }
 
-    [JsonProperty(propertyName: "aspect_ratio")]
+    [JsonProperty("aspect_ratio")]
     public double? AspectRatio { get; set; }
 
-    [JsonProperty(propertyName: "filesize_approx")]
+    [JsonProperty("filesize_approx")]
     public long? FilesizeApprox { get; set; }
 
-    [JsonProperty(propertyName: "http_headers")]
+    [JsonProperty("http_headers")]
     public HttpHeaders? HttpHeaders { get; set; }
 
-    [JsonProperty(propertyName: "audio_ext")]
+    [JsonProperty("audio_ext")]
     public string? AudioExt { get; set; }
 
-    [JsonProperty(propertyName: "video_ext")]
+    [JsonProperty("video_ext")]
     public string? VideoExt { get; set; }
 
-    [JsonProperty(propertyName: "vbr")]
+    [JsonProperty("vbr")]
     public double Vbr { get; set; }
 
-    [JsonProperty(propertyName: "abr")]
+    [JsonProperty("abr")]
     public double? Abr { get; set; }
 
-    [JsonProperty(propertyName: "tbr")]
+    [JsonProperty("tbr")]
     public double? Tbr { get; set; }
 
-    [JsonProperty(propertyName: "format")]
+    [JsonProperty("format")]
     public string? FormatFormat { get; set; }
 
-    [JsonProperty(propertyName: "format_index")]
+    [JsonProperty("format_index")]
     public object? FormatIndex { get; set; }
 
-    [JsonProperty(propertyName: "manifest_url", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("manifest_url", NullValueHandling = NullValueHandling.Ignore)]
     public Uri? ManifestUrl { get; set; }
 
-    [JsonProperty(propertyName: "language")]
+    [JsonProperty("language")]
     public object? Language { get; set; }
 
-    [JsonProperty(propertyName: "preference")]
+    [JsonProperty("preference")]
     public object? Preference { get; set; }
 
-    [JsonProperty(propertyName: "quality", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("quality", NullValueHandling = NullValueHandling.Ignore)]
     public long? Quality { get; set; }
 
-    [JsonProperty(propertyName: "has_drm", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("has_drm", NullValueHandling = NullValueHandling.Ignore)]
     public bool? HasDrm { get; set; }
 
-    [JsonProperty(propertyName: "source_preference", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("source_preference", NullValueHandling = NullValueHandling.Ignore)]
     public long? SourcePreference { get; set; }
 
-    [JsonProperty(propertyName: "asr")]
+    [JsonProperty("asr")]
     public long? Asr { get; set; }
 
-    [JsonProperty(propertyName: "filesize", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("filesize", NullValueHandling = NullValueHandling.Ignore)]
     public long? Filesize { get; set; }
 
-    [JsonProperty(propertyName: "audio_channels")]
+    [JsonProperty("audio_channels")]
     public long? AudioChannels { get; set; }
 
-    [JsonProperty(propertyName: "language_preference", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("language_preference", NullValueHandling = NullValueHandling.Ignore)]
     public long? LanguagePreference { get; set; }
 
-    [JsonProperty(propertyName: "dynamic_range")]
+    [JsonProperty("dynamic_range")]
     public string? DynamicRange { get; set; }
 
-    [JsonProperty(propertyName: "container", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("container", NullValueHandling = NullValueHandling.Ignore)]
     public string? Container { get; set; }
 
-    [JsonProperty(propertyName: "downloader_options", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("downloader_options", NullValueHandling = NullValueHandling.Ignore)]
     public DownloaderOptions? DownloaderOptions { get; set; }
 }
 
 public class DownloaderOptions
 {
-    [JsonProperty(propertyName: "http_chunk_size")]
+    [JsonProperty("http_chunk_size")]
     public long HttpChunkSize { get; set; }
 }
 
 public class Fragment
 {
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri? Url { get; set; }
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public double Duration { get; set; }
 }
 
 public class HttpHeaders
 {
-    [JsonProperty(propertyName: "User-Agent")]
+    [JsonProperty("User-Agent")]
     public string? UserAgent { get; set; }
 
-    [JsonProperty(propertyName: "Accept")]
+    [JsonProperty("Accept")]
     public string? Accept { get; set; }
 
-    [JsonProperty(propertyName: "Accept-Language")]
+    [JsonProperty("Accept-Language")]
     public string? AcceptLanguage { get; set; }
 
-    [JsonProperty(propertyName: "Sec-Fetch-Mode")]
+    [JsonProperty("Sec-Fetch-Mode")]
     public string? SecFetchMode { get; set; }
 }
 
 public class Heatmap
 {
-    [JsonProperty(propertyName: "start_time")]
+    [JsonProperty("start_time")]
     public double StartTime { get; set; }
 
-    [JsonProperty(propertyName: "end_time")]
+    [JsonProperty("end_time")]
     public double EndTime { get; set; }
 
-    [JsonProperty(propertyName: "value")]
+    [JsonProperty("value")]
     public double Value { get; set; }
 }
 
 public class Thumbnail
 {
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri? Url { get; set; }
 
-    [JsonProperty(propertyName: "preference")]
+    [JsonProperty("preference")]
     public long Preference { get; set; }
 
-    [JsonProperty(propertyName: "id")]
-    [JsonConverter(converterType: typeof(ParseStringConverter))]
+    [JsonProperty("id")]
+    [JsonConverter(typeof(ParseStringConverter))]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "height", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("height", NullValueHandling = NullValueHandling.Ignore)]
     public long? Height { get; set; }
 
-    [JsonProperty(propertyName: "width", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("width", NullValueHandling = NullValueHandling.Ignore)]
     public long? Width { get; set; }
 
-    [JsonProperty(propertyName: "resolution", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("resolution", NullValueHandling = NullValueHandling.Ignore)]
     public string? Resolution { get; set; }
 }
 
 public class Version
 {
-    [JsonProperty(propertyName: "version")]
+    [JsonProperty("version")]
     public string? VersionVersion { get; set; }
 
-    [JsonProperty(propertyName: "current_git_head")]
+    [JsonProperty("current_git_head")]
     public object? CurrentGitHead { get; set; }
 
-    [JsonProperty(propertyName: "release_git_head")]
+    [JsonProperty("release_git_head")]
     public string? ReleaseGitHead { get; set; }
 
-    [JsonProperty(propertyName: "repository")]
+    [JsonProperty("repository")]
     public string? Repository { get; set; }
 }

@@ -9,12 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -------- -----------------------------------------------------------------------
 
-using System.Globalization;
-using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
-using NoMercy.Encoder.Pipeline;
 
 namespace NoMercy.Tests.Encoder.Output;
 
@@ -25,41 +22,41 @@ public class PlaylistGeneratorChapterTests
     private string GenerateWithChapters(OutputPlan plan)
     {
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
-            keySelector: v => VideoVariantKey(video: v),
-            elementSelector: _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
+            v => VideoVariantKey(v),
+            _ => new VariantMetrics(5_000_000, 4_500_000)
         );
 
         Dictionary<string, VariantMetrics> audioMetrics = plan.AudioOutputs.ToDictionary(
-            keySelector: a => AudioVariantKey(audio: a),
-            elementSelector: _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
+            a => AudioVariantKey(a),
+            _ => new VariantMetrics(192_000, 180_000)
         );
 
         PlaylistGenerator generator = new();
-        return generator.GenerateMasterPlaylist(plan: plan, mediaTitle: MediaTitle, videoMetrics: videoMetrics, audioMetrics: audioMetrics);
+        return generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
     }
 
     private static string VideoVariantKey(VideoOutputPlan video) =>
         TemplateResolver.Resolve(
-            template: video.PlaylistNameTemplate,
-            values: TemplateResolver.VideoTokens(width: video.Width, height: video.Height, isHdrOutput: video.IsHdrOutput)
+            video.PlaylistNameTemplate,
+            TemplateResolver.VideoTokens(video.Width, video.Height, video.IsHdrOutput)
         );
 
     private static string AudioVariantKey(AudioOutputPlan audio) =>
         TemplateResolver.Resolve(
-            template: audio.PlaylistNameTemplate,
-            values: TemplateResolver.AudioTokens(language: audio.Language ?? "und", codecName: audio.CodecToken, channels: audio.Channels)
+            audio.PlaylistNameTemplate,
+            TemplateResolver.AudioTokens(audio.Language ?? "und", audio.CodecToken, audio.Channels)
         );
 
     [Fact]
     public void GenerateMasterPlaylist_NoChapters_OmitsDaterRanges()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
+            OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
             AudioOutputs: [],
@@ -68,21 +65,21 @@ public class PlaylistGeneratorChapterTests
             Chapters: null
         );
 
-        string master = GenerateWithChapters(plan: plan);
+        string master = GenerateWithChapters(plan);
 
-        master.Should().NotContain(unexpected: "#EXT-X-DATERANGE");
+        master.Should().NotContain("#EXT-X-DATERANGE");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_WithChapters_EmitsDaterRanges()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
+            OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
             AudioOutputs: [],
@@ -90,28 +87,28 @@ public class PlaylistGeneratorChapterTests
             Thumbnails: null,
             Chapters:
             [
-                new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 5), Title: "Chapter 1"),
-                new(Start: TimeSpan.FromMinutes(minutes: 5), End: TimeSpan.FromMinutes(minutes: 15), Title: "Chapter 2"),
+                new(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Chapter 1"),
+                new(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), "Chapter 2"),
             ]
         );
 
-        string master = GenerateWithChapters(plan: plan);
+        string master = GenerateWithChapters(plan);
 
-        master.Should().Contain(expected: "#EXT-X-DATERANGE");
-        master.Should().Contain(expected: "ID=\"ch0\"");
-        master.Should().Contain(expected: "ID=\"ch1\"");
+        master.Should().Contain("#EXT-X-DATERANGE");
+        master.Should().Contain("ID=\"ch0\"");
+        master.Should().Contain("ID=\"ch1\"");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_ChapterDates_ArIso8601()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
+            OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
             AudioOutputs: [],
@@ -119,25 +116,25 @@ public class PlaylistGeneratorChapterTests
             Thumbnails: null,
             Chapters:
             [
-                new(Start: TimeSpan.Zero, End: TimeSpan.FromSeconds(seconds: 60), Title: "Intro"),
+                new(TimeSpan.Zero, TimeSpan.FromSeconds(60), "Intro"),
             ]
         );
 
-        string master = GenerateWithChapters(plan: plan);
+        string master = GenerateWithChapters(plan);
 
-        master.Should().Contain(expected: "START-DATE=\"1970-01-01T00:00:00.000Z\"");
+        master.Should().Contain("START-DATE=\"1970-01-01T00:00:00.000Z\"");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_ChapterDuration_Correct()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
+            OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
             AudioOutputs: [],
@@ -145,26 +142,26 @@ public class PlaylistGeneratorChapterTests
             Thumbnails: null,
             Chapters:
             [
-                new(Start: TimeSpan.FromSeconds(seconds: 30), End: TimeSpan.FromSeconds(seconds: 90), Title: "Act 1"),
-                new(Start: TimeSpan.FromSeconds(seconds: 90), End: TimeSpan.FromSeconds(seconds: 150), Title: "Act 2"),
+                new(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(90), "Act 1"),
+                new(TimeSpan.FromSeconds(90), TimeSpan.FromSeconds(150), "Act 2"),
             ]
         );
 
-        string master = GenerateWithChapters(plan: plan);
+        string master = GenerateWithChapters(plan);
 
-        master.Should().Contain(expected: "DURATION=60");
+        master.Should().Contain("DURATION=60");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_ChapterTitle_EscapesQuotes()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
+            OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
             AudioOutputs: [],
@@ -172,26 +169,26 @@ public class PlaylistGeneratorChapterTests
             Thumbnails: null,
             Chapters:
             [
-                new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 5), Title: "Chapter \"1\" with \"quotes\""),
+                new(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Chapter \"1\" with \"quotes\""),
             ]
         );
 
-        string master = GenerateWithChapters(plan: plan);
+        string master = GenerateWithChapters(plan);
 
         master.Should()
-            .Contain(expected: "X-COM-NOMERCY-CHAPTER-TITLE=\"Chapter \\\"1\\\" with \\\"quotes\\\"\"");
+            .Contain("X-COM-NOMERCY-CHAPTER-TITLE=\"Chapter \\\"1\\\" with \\\"quotes\\\"\"");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_MultipleChapters_SequentialIds()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
+            OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
             AudioOutputs: [],
@@ -199,32 +196,32 @@ public class PlaylistGeneratorChapterTests
             Thumbnails: null,
             Chapters:
             [
-                new(Start: TimeSpan.FromMinutes(minutes: 0), End: TimeSpan.FromMinutes(minutes: 10), Title: "Chapter 1"),
-                new(Start: TimeSpan.FromMinutes(minutes: 10), End: TimeSpan.FromMinutes(minutes: 20), Title: "Chapter 2"),
-                new(Start: TimeSpan.FromMinutes(minutes: 20), End: TimeSpan.FromMinutes(minutes: 30), Title: "Chapter 3"),
+                new(TimeSpan.FromMinutes(0), TimeSpan.FromMinutes(10), "Chapter 1"),
+                new(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(20), "Chapter 2"),
+                new(TimeSpan.FromMinutes(20), TimeSpan.FromMinutes(30), "Chapter 3"),
             ]
         );
 
-        string master = GenerateWithChapters(plan: plan);
+        string master = GenerateWithChapters(plan);
 
-        int chapterCount = master.Split(separator: "ID=\"ch").Length - 1;
-        chapterCount.Should().Be(expected: 3);
+        int chapterCount = master.Split("ID=\"ch").Length - 1;
+        chapterCount.Should().Be(3);
 
-        master.Should().Contain(expected: "ID=\"ch0\"");
-        master.Should().Contain(expected: "ID=\"ch1\"");
-        master.Should().Contain(expected: "ID=\"ch2\"");
+        master.Should().Contain("ID=\"ch0\"");
+        master.Should().Contain("ID=\"ch1\"");
+        master.Should().Contain("ID=\"ch2\"");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_EmptyChapterTitle_GeneratesDefault()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
+            OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
             AudioOutputs: [],
@@ -232,25 +229,25 @@ public class PlaylistGeneratorChapterTests
             Thumbnails: null,
             Chapters:
             [
-                new(Start: TimeSpan.FromSeconds(seconds: 0), End: TimeSpan.FromSeconds(seconds: 60), Title: null),
+                new(TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(60), null),
             ]
         );
 
-        string master = GenerateWithChapters(plan: plan);
+        string master = GenerateWithChapters(plan);
 
-        master.Should().Contain(expected: "X-COM-NOMERCY-CHAPTER-TITLE=\"Chapter 1\"");
+        master.Should().Contain("X-COM-NOMERCY-CHAPTER-TITLE=\"Chapter 1\"");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_ChaptersWithoutChaptersOption_Ignored()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
+            OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
             AudioOutputs: [],
@@ -259,21 +256,21 @@ public class PlaylistGeneratorChapterTests
             Chapters: []
         );
 
-        string master = GenerateWithChapters(plan: plan);
+        string master = GenerateWithChapters(plan);
 
-        master.Should().NotContain(unexpected: "#EXT-X-DATERANGE");
+        master.Should().NotContain("#EXT-X-DATERANGE");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_ChapterDurationUsingNextChapterStart()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
+            OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
             AudioOutputs: [],
@@ -281,17 +278,17 @@ public class PlaylistGeneratorChapterTests
             Thumbnails: null,
             Chapters:
             [
-                new(Start: TimeSpan.FromSeconds(seconds: 0), End: TimeSpan.FromSeconds(seconds: 1000), Title: "Chapter 1"),
-                new(Start: TimeSpan.FromSeconds(seconds: 30), End: TimeSpan.FromSeconds(seconds: 1000), Title: "Chapter 2"),
+                new(TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(1000), "Chapter 1"),
+                new(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1000), "Chapter 2"),
             ]
         );
 
-        string master = GenerateWithChapters(plan: plan);
+        string master = GenerateWithChapters(plan);
 
-        string[] dateRangeLines = master.Split(separator: '\n').Where(predicate: l => l.Contains(value: "ID=\"ch")).ToArray();
-        dateRangeLines.Should().HaveCount(expected: 2);
+        string[] dateRangeLines = master.Split('\n').Where(l => l.Contains("ID=\"ch")).ToArray();
+        dateRangeLines.Should().HaveCount(2);
 
-        dateRangeLines[0].Should().Contain(expected: "DURATION=30");
-        dateRangeLines[1].Should().Contain(expected: "DURATION=970");
+        dateRangeLines[0].Should().Contain("DURATION=30");
+        dateRangeLines[1].Should().Contain("DURATION=970");
     }
 }

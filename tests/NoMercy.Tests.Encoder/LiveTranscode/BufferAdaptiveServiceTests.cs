@@ -23,92 +23,90 @@ public class BufferAdaptiveServiceTests
 {
     private static LiveQuality MakeQuality(string id = "1080p", int bitrateKbps = 8000) =>
         new(
-            Id: id,
-            Label: id,
-            Width: 1920,
-            Height: 1080,
-            Codec: VideoCodecType.H264,
-            BitrateKbps: bitrateKbps,
-            Encoder: "libx264",
-            IsHardwareAccelerated: false,
-            ExpectedSpeed: 2.0,
-            CanRealtime: true
+            id,
+            id,
+            1920,
+            1080,
+            VideoCodecType.H264,
+            bitrateKbps,
+            "libx264",
+            false,
+            2.0,
+            true
         );
 
     private static LiveQuality MakeLowQuality() =>
         new(
-            Id: "720p",
-            Label: "720p",
-            Width: 1280,
-            Height: 720,
-            Codec: VideoCodecType.H264,
-            BitrateKbps: 3000,
-            Encoder: "libx264",
-            IsHardwareAccelerated: false,
-            ExpectedSpeed: 3.0,
-            CanRealtime: true
+            "720p",
+            "720p",
+            1280,
+            720,
+            VideoCodecType.H264,
+            3000,
+            "libx264",
+            false,
+            3.0,
+            true
         );
 
     private static MediaInfo MakeMediaInfo() =>
         new(
-            FilePath: "/media/test.mkv",
-            Format: "matroska,webm",
-            Duration: TimeSpan.FromMinutes(minutes: 90),
-            OverallBitRateKbps: 10000,
-            FileSizeBytes: 1_000_000_000L,
-            VideoStreams:
+            "/media/test.mkv",
+            "matroska,webm",
+            TimeSpan.FromMinutes(90),
+            10000,
+            1_000_000_000L,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: "bt709",
-                    ColorTransfer: "bt709",
-                    ColorSpace: "bt709",
-                    IsDefault: true,
-                    BitRateKbps: 8000
+                    0,
+                    "h264",
+                    1920,
+                    1080,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    "bt709",
+                    "bt709",
+                    "bt709",
+                    true,
+                    8000
                 ),
             ],
-            AudioStreams:
             [
                 new(
-                    Index: 1,
-                    Codec: "aac",
-                    Channels: 2,
-                    SampleRate: 48000,
-                    BitRateKbps: 192,
-                    Language: "eng",
-                    IsDefault: true,
-                    IsForced: false
+                    1,
+                    "aac",
+                    2,
+                    48000,
+                    192,
+                    "eng",
+                    true,
+                    false
                 ),
             ],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            []
         );
 
     private static ClientCapabilities MakeClientCapabilities() =>
         new(
-            SupportedVideoCodecs: [VideoCodecType.H264],
-            SupportedAudioCodecs: [AudioCodecType.Aac],
-            SupportedContainers: ["mkv", "mp4"],
-            MaxWidth: 1920,
-            MaxHeight: 1080,
-            SupportsHdr: false,
-            Supports10Bit: false,
-            MaxBitrateKbps: 0
+            [VideoCodecType.H264],
+            [AudioCodecType.Aac],
+            ["mkv", "mp4"],
+            1920,
+            1080,
+            false,
+            false,
+            0
         );
 
     private static LiveStreamingService NewStreamingService()
     {
         NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         return new(
-            logger: NullLogger<LiveStreamingService>.Instance,
-            storage: storage,
-            segmentInventory: TestStorageFactory.CreateSegmentInventory(storage: storage)
+            NullLogger<LiveStreamingService>.Instance,
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage)
         );
     }
 
@@ -119,20 +117,20 @@ public class BufferAdaptiveServiceTests
     )
     {
         LiveSessionLimits sessionLimits = limits ?? new();
-        BufferManager bufferManager = new(limits: sessionLimits);
-        SpeedIndex speedIndex = new(Measurements: new());
+        BufferManager bufferManager = new(sessionLimits);
+        SpeedIndex speedIndex = new(new());
         Mock<IResourceBudget> budgetMock = new();
 
         ILiveQualitySelector selector = qualitySelector ?? Mock.Of<ILiveQualitySelector>();
 
         return new(
-            streamingService: streamingService,
-            qualitySelector: selector,
-            bufferManager: bufferManager,
-            speedIndex: speedIndex,
-            resourceBudget: budgetMock.Object,
-            limits: sessionLimits,
-            logger: NullLogger<BufferAdaptiveService>.Instance
+            streamingService,
+            selector,
+            bufferManager,
+            speedIndex,
+            budgetMock.Object,
+            sessionLimits,
+            NullLogger<BufferAdaptiveService>.Instance
         );
     }
 
@@ -145,18 +143,18 @@ public class BufferAdaptiveServiceTests
     {
         LiveStreamingService streamingService = NewStreamingService();
 
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Transcoding);
-        streamingService.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
+        streamingService.Register(session, TimeSpan.FromSeconds(4));
 
         // Simulate 40 s transcoded, 0 s reported — buffer = 40 s (above suspend threshold of 30)
-        session.PushSegment(segment: new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 40), FilePath: "/tmp/seg0.ts", SizeBytes: 1000));
+        session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(40), "/tmp/seg0.ts", 1000));
 
-        BufferAdaptiveService service = BuildService(streamingService: streamingService);
+        BufferAdaptiveService service = BuildService(streamingService);
 
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
+        await service.EvaluateAllAsync(CancellationToken.None);
 
-        session.State.Should().Be(expected: LiveSessionState.Buffered);
+        session.State.Should().Be(LiveSessionState.Buffered);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -168,30 +166,30 @@ public class BufferAdaptiveServiceTests
     {
         LiveStreamingService streamingService = NewStreamingService();
 
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Buffered);
-        streamingService.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Buffered);
+        streamingService.Register(session, TimeSpan.FromSeconds(4));
 
         // Simulate 10 s transcoded, 0 s reported — buffer = 10 s (below resume threshold of 15)
-        session.PushSegment(segment: new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 10), FilePath: "/tmp/seg0.ts", SizeBytes: 1000));
+        session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(10), "/tmp/seg0.ts", 1000));
 
         bool runnerSpawned = false;
         session.AttachRunnerFactory(
-            factory: (_, _) =>
+            (_, _) =>
             {
                 runnerSpawned = true;
                 return Task.CompletedTask;
             }
         );
 
-        BufferAdaptiveService service = BuildService(streamingService: streamingService);
+        BufferAdaptiveService service = BuildService(streamingService);
 
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
+        await service.EvaluateAllAsync(CancellationToken.None);
 
         // State flips synchronously; the fire-and-forget runner needs a moment.
-        await Task.Delay(millisecondsDelay: 100);
+        await Task.Delay(100);
 
-        session.State.Should().Be(expected: LiveSessionState.Transcoding);
+        session.State.Should().Be(LiveSessionState.Transcoding);
         runnerSpawned.Should().BeTrue();
     }
 
@@ -204,26 +202,26 @@ public class BufferAdaptiveServiceTests
     {
         LiveStreamingService streamingService = NewStreamingService();
 
-        LiveQuality highQuality = MakeQuality(id: "1080p");
+        LiveQuality highQuality = MakeQuality("1080p");
         LiveQuality lowQuality = MakeLowQuality();
 
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: highQuality);
-        session.SetState(state: LiveSessionState.Transcoding);
-        streamingService.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = new(Ulid.NewUlid().ToString(), highQuality);
+        session.SetState(LiveSessionState.Transcoding);
+        streamingService.Register(session, TimeSpan.FromSeconds(4));
 
         streamingService.StampRequestContext(
-            sessionId: session.SessionId,
-            mediaInfo: MakeMediaInfo(),
-            client: MakeClientCapabilities()
+            session.SessionId,
+            MakeMediaInfo(),
+            MakeClientCapabilities()
         );
 
         // Simulate 4 s of buffer — triggers DropQuality (below 5 s threshold)
-        session.PushSegment(segment: new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 4), FilePath: "/tmp/seg0.ts", SizeBytes: 1000));
+        session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(4), "/tmp/seg0.ts", 1000));
         // Report 0 position so BufferAhead = 4 s
 
         Mock<ILiveQualitySelector> selectorMock = new();
         selectorMock
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.GetAvailableQualities(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
@@ -231,15 +229,15 @@ public class BufferAdaptiveServiceTests
                     It.IsAny<IResourceBudget>()
                 )
             )
-            .Returns(value: [highQuality, lowQuality]);
+            .Returns([highQuality, lowQuality]);
 
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
-        BufferAdaptiveService service = BuildService(streamingService: streamingService, qualitySelector: selectorMock.Object);
+        BufferAdaptiveService service = BuildService(streamingService, selectorMock.Object);
 
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
+        await service.EvaluateAllAsync(CancellationToken.None);
 
-        session.CurrentQuality.Id.Should().Be(expected: "720p");
+        session.CurrentQuality.Id.Should().Be("720p");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -251,18 +249,18 @@ public class BufferAdaptiveServiceTests
     {
         LiveStreamingService streamingService = NewStreamingService();
 
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Transcoding);
-        streamingService.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
+        streamingService.Register(session, TimeSpan.FromSeconds(4));
 
         // 20 s buffered — within the healthy range
-        session.PushSegment(segment: new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 20), FilePath: "/tmp/seg0.ts", SizeBytes: 1000));
+        session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(20), "/tmp/seg0.ts", 1000));
 
-        BufferAdaptiveService service = BuildService(streamingService: streamingService);
+        BufferAdaptiveService service = BuildService(streamingService);
 
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
+        await service.EvaluateAllAsync(CancellationToken.None);
 
-        session.State.Should().Be(expected: LiveSessionState.Transcoding);
+        session.State.Should().Be(LiveSessionState.Transcoding);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -274,24 +272,24 @@ public class BufferAdaptiveServiceTests
     {
         LiveStreamingService streamingService = NewStreamingService();
 
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Transcoding);
-        streamingService.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
+        streamingService.Register(session, TimeSpan.FromSeconds(4));
 
         // Mark as complete so it drains
-        session.PushSegment(segment: new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 40), FilePath: "/tmp/seg0.ts", SizeBytes: 1000));
+        session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(40), "/tmp/seg0.ts", 1000));
         session.Complete();
 
-        if (streamingService.TryGetRuntime(sessionId: session.SessionId, runtime: out LiveRuntimeSession runtime))
+        if (streamingService.TryGetRuntime(session.SessionId, out LiveRuntimeSession runtime))
             runtime.MarkComplete();
 
-        BufferAdaptiveService service = BuildService(streamingService: streamingService);
+        BufferAdaptiveService service = BuildService(streamingService);
 
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
+        await service.EvaluateAllAsync(CancellationToken.None);
 
         // Complete sessions are skipped — state should not have been flipped to Buffered
         // even though buffer is way ahead (the session is done)
-        session.State.Should().NotBe(unexpected: LiveSessionState.Buffered);
+        session.State.Should().NotBe(LiveSessionState.Buffered);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -305,7 +303,7 @@ public class BufferAdaptiveServiceTests
     {
         Mock<ILiveQualitySelector> selectorMock = new();
         selectorMock
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.GetAvailableQualities(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
@@ -313,9 +311,9 @@ public class BufferAdaptiveServiceTests
                     It.IsAny<IResourceBudget>()
                 )
             )
-            .Returns(value: available);
+            .Returns(available);
         selectorMock
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.SelectForBandwidth(
                     It.IsAny<LiveQuality[]>(),
                     It.IsAny<int>(),
@@ -323,7 +321,7 @@ public class BufferAdaptiveServiceTests
                     It.IsAny<LiveQuality>()
                 )
             )
-            .Returns(value: bandwidthFit);
+            .Returns(bandwidthFit);
         return selectorMock;
     }
 
@@ -338,42 +336,42 @@ public class BufferAdaptiveServiceTests
     {
         LiveStreamingService streamingService = NewStreamingService();
 
-        LiveQuality quality1080 = MakeQuality(id: "1080p", bitrateKbps: 8000);
-        LiveQuality quality720 = MakeQuality(id: "720p", bitrateKbps: 4000);
-        LiveQuality quality480 = MakeQuality(id: "480p", bitrateKbps: 2000);
+        LiveQuality quality1080 = MakeQuality("1080p", 8000);
+        LiveQuality quality720 = MakeQuality("720p", 4000);
+        LiveQuality quality480 = MakeQuality("480p", 2000);
         LiveQuality[] available = [quality1080, quality720, quality480];
 
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: quality1080);
-        session.SetState(state: LiveSessionState.Transcoding);
-        streamingService.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = new(Ulid.NewUlid().ToString(), quality1080);
+        session.SetState(LiveSessionState.Transcoding);
+        streamingService.Register(session, TimeSpan.FromSeconds(4));
         streamingService.StampRequestContext(
-            sessionId: session.SessionId,
-            mediaInfo: MakeMediaInfo(),
-            client: MakeClientCapabilities()
+            session.SessionId,
+            MakeMediaInfo(),
+            MakeClientCapabilities()
         );
 
         // Encoder-lead buffer is 40 s — above SuspendAboveSeconds (30) — so the
         // encoder-capacity axis alone would suspend this session.
-        session.PushSegment(segment: new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 40), FilePath: "/tmp/seg0.ts", SizeBytes: 1000));
+        session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(40), "/tmp/seg0.ts", 1000));
 
         // Fresh client health: healthy download buffer (not near-stall) but a
         // downlink that only fits the lowest tier.
-        session.ReportClientBufferHealth(bufferedAhead: TimeSpan.FromSeconds(seconds: 20), observedBandwidthKbps: 3000);
+        session.ReportClientBufferHealth(TimeSpan.FromSeconds(20), 3000);
 
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
         Mock<ILiveQualitySelector> selectorMock = BuildNetworkAwareSelectorMock(
-            available: available,
-            bandwidthFit: quality480
+            available,
+            quality480
         );
 
-        BufferAdaptiveService service = BuildService(streamingService: streamingService, qualitySelector: selectorMock.Object);
+        BufferAdaptiveService service = BuildService(streamingService, selectorMock.Object);
 
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
-        await Task.Delay(millisecondsDelay: 50);
+        await service.EvaluateAllAsync(CancellationToken.None);
+        await Task.Delay(50);
 
-        session.CurrentQuality.Id.Should().Be(expected: "480p");
-        session.State.Should().NotBe(unexpected: LiveSessionState.Buffered);
+        session.CurrentQuality.Id.Should().Be("480p");
+        session.State.Should().NotBe(LiveSessionState.Buffered);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -386,41 +384,41 @@ public class BufferAdaptiveServiceTests
     {
         LiveStreamingService streamingService = NewStreamingService();
 
-        LiveQuality quality1080 = MakeQuality(id: "1080p", bitrateKbps: 8000);
-        LiveQuality quality720 = MakeQuality(id: "720p", bitrateKbps: 4000);
-        LiveQuality quality480 = MakeQuality(id: "480p", bitrateKbps: 2000);
+        LiveQuality quality1080 = MakeQuality("1080p", 8000);
+        LiveQuality quality720 = MakeQuality("720p", 4000);
+        LiveQuality quality480 = MakeQuality("480p", 2000);
         LiveQuality[] available = [quality1080, quality720, quality480];
 
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: quality1080);
-        session.SetState(state: LiveSessionState.Transcoding);
-        streamingService.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = new(Ulid.NewUlid().ToString(), quality1080);
+        session.SetState(LiveSessionState.Transcoding);
+        streamingService.Register(session, TimeSpan.FromSeconds(4));
         streamingService.StampRequestContext(
-            sessionId: session.SessionId,
-            mediaInfo: MakeMediaInfo(),
-            client: MakeClientCapabilities()
+            session.SessionId,
+            MakeMediaInfo(),
+            MakeClientCapabilities()
         );
 
         // Encoder-lead buffer is healthy (15 s) — the encoder-capacity axis
         // would not act on its own.
-        session.PushSegment(segment: new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 15), FilePath: "/tmp/seg0.ts", SizeBytes: 1000));
+        session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(15), "/tmp/seg0.ts", 1000));
 
         // Client's download buffer is draining toward a stall (below the 2 s
         // default emergency threshold) — bandwidth itself is irrelevant here.
-        session.ReportClientBufferHealth(bufferedAhead: TimeSpan.FromSeconds(seconds: 1), observedBandwidthKbps: 20000);
+        session.ReportClientBufferHealth(TimeSpan.FromSeconds(1), 20000);
 
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
         Mock<ILiveQualitySelector> selectorMock = BuildNetworkAwareSelectorMock(
-            available: available,
-            bandwidthFit: quality1080
+            available,
+            quality1080
         );
 
-        BufferAdaptiveService service = BuildService(streamingService: streamingService, qualitySelector: selectorMock.Object);
+        BufferAdaptiveService service = BuildService(streamingService, selectorMock.Object);
 
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
-        await Task.Delay(millisecondsDelay: 50);
+        await service.EvaluateAllAsync(CancellationToken.None);
+        await Task.Delay(50);
 
-        session.CurrentQuality.Id.Should().Be(expected: "480p");
+        session.CurrentQuality.Id.Should().Be("480p");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -433,49 +431,49 @@ public class BufferAdaptiveServiceTests
     {
         LiveStreamingService streamingService = NewStreamingService();
 
-        LiveQuality quality1080 = MakeQuality(id: "1080p", bitrateKbps: 8000);
-        LiveQuality quality720 = MakeQuality(id: "720p", bitrateKbps: 4000);
-        LiveQuality quality480 = MakeQuality(id: "480p", bitrateKbps: 2000);
+        LiveQuality quality1080 = MakeQuality("1080p", 8000);
+        LiveQuality quality720 = MakeQuality("720p", 4000);
+        LiveQuality quality480 = MakeQuality("480p", 2000);
         LiveQuality[] available = [quality1080, quality720, quality480];
 
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: quality480);
-        session.SetState(state: LiveSessionState.Transcoding);
-        streamingService.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = new(Ulid.NewUlid().ToString(), quality480);
+        session.SetState(LiveSessionState.Transcoding);
+        streamingService.Register(session, TimeSpan.FromSeconds(4));
         streamingService.StampRequestContext(
-            sessionId: session.SessionId,
-            mediaInfo: MakeMediaInfo(),
-            client: MakeClientCapabilities()
+            session.SessionId,
+            MakeMediaInfo(),
+            MakeClientCapabilities()
         );
 
         // Encoder-lead buffer stays in the healthy "no action" band across sweeps.
-        session.PushSegment(segment: new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 15), FilePath: "/tmp/seg0.ts", SizeBytes: 1000));
+        session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(15), "/tmp/seg0.ts", 1000));
 
         // Downlink comfortably fits the top tier and the client buffer is
         // healthy — sustained across every sweep below.
-        session.ReportClientBufferHealth(bufferedAhead: TimeSpan.FromSeconds(seconds: 20), observedBandwidthKbps: 15000);
+        session.ReportClientBufferHealth(TimeSpan.FromSeconds(20), 15000);
 
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
         Mock<ILiveQualitySelector> selectorMock = BuildNetworkAwareSelectorMock(
-            available: available,
-            bandwidthFit: quality1080
+            available,
+            quality1080
         );
 
         LiveSessionLimits limits = new();
-        BufferAdaptiveService service = BuildService(streamingService: streamingService, qualitySelector: selectorMock.Object, limits: limits);
+        BufferAdaptiveService service = BuildService(streamingService, selectorMock.Object, limits);
 
         // RaiseSustainSweeps defaults to 3 — the first two sweeps must not raise.
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
-        session.CurrentQuality.Id.Should().Be(expected: "480p");
+        await service.EvaluateAllAsync(CancellationToken.None);
+        session.CurrentQuality.Id.Should().Be("480p");
 
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
-        session.CurrentQuality.Id.Should().Be(expected: "480p");
+        await service.EvaluateAllAsync(CancellationToken.None);
+        session.CurrentQuality.Id.Should().Be("480p");
 
         // Third consecutive eligible sweep meets the hysteresis count — raises
         // exactly ONE tier up (720p), not straight to the bandwidth-fitting 1080p.
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
-        await Task.Delay(millisecondsDelay: 50);
-        session.CurrentQuality.Id.Should().Be(expected: "720p");
+        await service.EvaluateAllAsync(CancellationToken.None);
+        await Task.Delay(50);
+        session.CurrentQuality.Id.Should().Be("720p");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -489,20 +487,20 @@ public class BufferAdaptiveServiceTests
     {
         LiveStreamingService streamingService = NewStreamingService();
 
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Transcoding);
-        streamingService.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
+        streamingService.Register(session, TimeSpan.FromSeconds(4));
 
         // Old client never calls ReportClientBufferHealth — ClientBufferedAhead
         // and ObservedBandwidthKbps stay at their defaults, and
         // HasFreshClientHealth stays false, exactly as for a pre-upgrade client.
-        session.PushSegment(segment: new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 40), FilePath: "/tmp/seg0.ts", SizeBytes: 1000));
+        session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(40), "/tmp/seg0.ts", 1000));
 
-        BufferAdaptiveService service = BuildService(streamingService: streamingService);
+        BufferAdaptiveService service = BuildService(streamingService);
 
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
+        await service.EvaluateAllAsync(CancellationToken.None);
 
-        session.State.Should().Be(expected: LiveSessionState.Buffered);
+        session.State.Should().Be(LiveSessionState.Buffered);
     }
 
     [Fact]
@@ -510,23 +508,23 @@ public class BufferAdaptiveServiceTests
     {
         LiveStreamingService streamingService = NewStreamingService();
 
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Transcoding);
-        streamingService.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
+        streamingService.Register(session, TimeSpan.FromSeconds(4));
 
         // A report landed once, but it is older than the staleness window by
         // the time the sweep runs — treated exactly like no report at all.
-        session.ReportClientBufferHealth(bufferedAhead: TimeSpan.FromSeconds(seconds: 1), observedBandwidthKbps: 1000);
-        await Task.Delay(millisecondsDelay: 50);
+        session.ReportClientBufferHealth(TimeSpan.FromSeconds(1), 1000);
+        await Task.Delay(50);
 
-        session.PushSegment(segment: new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 40), FilePath: "/tmp/seg0.ts", SizeBytes: 1000));
+        session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(40), "/tmp/seg0.ts", 1000));
 
         LiveSessionLimits limits = new();
         limits.Buffer.ClientHealthStalenessSeconds = 0;
-        BufferAdaptiveService service = BuildService(streamingService: streamingService, limits: limits);
+        BufferAdaptiveService service = BuildService(streamingService, limits: limits);
 
-        await service.EvaluateAllAsync(ct: CancellationToken.None);
+        await service.EvaluateAllAsync(CancellationToken.None);
 
-        session.State.Should().Be(expected: LiveSessionState.Buffered);
+        session.State.Should().Be(LiveSessionState.Buffered);
     }
 }

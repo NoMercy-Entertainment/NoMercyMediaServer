@@ -35,14 +35,14 @@ public sealed partial class StoragePathGuard
 
     public StoragePathGuard(IEnumerable<string> allowedRoots, IStorageDriver driver)
     {
-        _driver = driver ?? throw new ArgumentNullException(paramName: nameof(driver));
+        _driver = driver ?? throw new ArgumentNullException(nameof(driver));
         _comparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
         _normalizedRoots = (allowedRoots ?? [])
-            .Where(predicate: static r => !string.IsNullOrWhiteSpace(value: r))
-            .Select(selector: NormalizeRoot)
-            .Distinct(comparer: StringComparerFromComparison.For(c: _comparison))
+            .Where(static r => !string.IsNullOrWhiteSpace(r))
+            .Select(NormalizeRoot)
+            .Distinct(StringComparerFromComparison.For(_comparison))
             .ToArray();
     }
 
@@ -59,28 +59,28 @@ public sealed partial class StoragePathGuard
         if (requestedPath is null || requestedPath.Length == 0)
             return;
 
-        if (requestedPath.Contains(value: '\0'))
-            throw new StoragePathNotAllowedException(attemptedPath: requestedPath, reason: "null byte in path");
+        if (requestedPath.Contains('\0'))
+            throw new StoragePathNotAllowedException(requestedPath, "null byte in path");
 
         if (
             requestedPath == ".."
-            || requestedPath.StartsWith(value: "../", comparisonType: StringComparison.Ordinal)
-            || requestedPath.StartsWith(value: "..\\", comparisonType: StringComparison.Ordinal)
-            || requestedPath.EndsWith(value: "/..", comparisonType: StringComparison.Ordinal)
-            || requestedPath.EndsWith(value: "\\..", comparisonType: StringComparison.Ordinal)
-            || requestedPath.Contains(value: "/../", comparisonType: StringComparison.Ordinal)
-            || requestedPath.Contains(value: @"\..\", comparisonType: StringComparison.Ordinal)
+            || requestedPath.StartsWith("../", StringComparison.Ordinal)
+            || requestedPath.StartsWith("..\\", StringComparison.Ordinal)
+            || requestedPath.EndsWith("/..", StringComparison.Ordinal)
+            || requestedPath.EndsWith("\\..", StringComparison.Ordinal)
+            || requestedPath.Contains("/../", StringComparison.Ordinal)
+            || requestedPath.Contains(@"\..\", StringComparison.Ordinal)
         )
-            throw new StoragePathNotAllowedException(attemptedPath: requestedPath, reason: ".. traversal is not allowed");
+            throw new StoragePathNotAllowedException(requestedPath, ".. traversal is not allowed");
 
         if (
             OperatingSystem.IsWindows()
             && (
-                requestedPath.StartsWith(value: @"\\?\", comparisonType: StringComparison.Ordinal)
-                || requestedPath.StartsWith(value: @"\\.\", comparisonType: StringComparison.Ordinal)
+                requestedPath.StartsWith(@"\\?\", StringComparison.Ordinal)
+                || requestedPath.StartsWith(@"\\.\", StringComparison.Ordinal)
             )
         )
-            throw new StoragePathNotAllowedException(attemptedPath: requestedPath, reason: "device paths are not allowed");
+            throw new StoragePathNotAllowedException(requestedPath, "device paths are not allowed");
     }
 
     /// <summary>
@@ -98,17 +98,17 @@ public sealed partial class StoragePathGuard
         if (path.Length == 0)
             return;
 
-        char first = path[index: 0];
+        char first = path[0];
         if (first == '/' || first == '\\')
             throw new StoragePathNotAllowedException(
-                attemptedPath: path,
-                reason: "absolute paths are not allowed as scope-relative keys"
+                path,
+                "absolute paths are not allowed as scope-relative keys"
             );
 
-        if (path is [_, ':', ..] && char.IsLetter(c: path[index: 0]))
+        if (path is [_, ':', ..] && char.IsLetter(path[0]))
             throw new StoragePathNotAllowedException(
-                attemptedPath: path,
-                reason: "absolute paths are not allowed as scope-relative keys"
+                path,
+                "absolute paths are not allowed as scope-relative keys"
             );
     }
 
@@ -130,18 +130,18 @@ public sealed partial class StoragePathGuard
     /// </summary>
     public static bool IsRootedAnyStyle(string? path)
     {
-        if (string.IsNullOrEmpty(value: path))
+        if (string.IsNullOrEmpty(path))
             return false;
 
-        return Path.IsPathRooted(path: path)
-            || WindowsDriveLetterRoot().IsMatch(input: path)
-            || WindowsUncRoot().IsMatch(input: path);
+        return Path.IsPathRooted(path)
+            || WindowsDriveLetterRoot().IsMatch(path)
+            || WindowsUncRoot().IsMatch(path);
     }
 
-    [GeneratedRegex(pattern: @"^[A-Za-z]:[\\/]")]
+    [GeneratedRegex(@"^[A-Za-z]:[\\/]")]
     private static partial Regex WindowsDriveLetterRoot();
 
-    [GeneratedRegex(pattern: @"^\\\\")]
+    [GeneratedRegex(@"^\\\\")]
     private static partial Regex WindowsUncRoot();
 
     /// <summary>
@@ -156,36 +156,36 @@ public sealed partial class StoragePathGuard
     /// </summary>
     public string Validate(string requestedPath)
     {
-        if (string.IsNullOrWhiteSpace(value: requestedPath))
-            throw new StoragePathNotAllowedException(attemptedPath: requestedPath ?? "<null>", reason: "path is empty");
+        if (string.IsNullOrWhiteSpace(requestedPath))
+            throw new StoragePathNotAllowedException(requestedPath ?? "<null>", "path is empty");
 
-        StructuralValidate(requestedPath: requestedPath);
+        StructuralValidate(requestedPath);
 
         string canonical;
         try
         {
-            canonical = _driver.GetFullPath(path: requestedPath);
+            canonical = _driver.GetFullPath(requestedPath);
         }
         catch (Exception ex)
         {
             throw new StoragePathNotAllowedException(
-                attemptedPath: requestedPath,
-                reason: $"cannot canonicalize: {ex.Message}"
+                requestedPath,
+                $"cannot canonicalize: {ex.Message}"
             );
         }
 
         if (!Enforced)
             return canonical;
 
-        string resolved = _driver.ResolveLinkTarget(path: canonical) ?? canonical;
+        string resolved = _driver.ResolveLinkTarget(canonical) ?? canonical;
 
         foreach (string root in _normalizedRoots)
-            if (IsUnderRoot(fullPath: resolved, root: root, cmp: _comparison))
+            if (IsUnderRoot(resolved, root, _comparison))
                 return canonical;
 
         throw new StoragePathNotAllowedException(
-            attemptedPath: requestedPath,
-            reason: $"path is not under any allowed root: [{string.Join(separator: ", ", value: _normalizedRoots)}]"
+            requestedPath,
+            $"path is not under any allowed root: [{string.Join(", ", _normalizedRoots)}]"
         );
     }
 
@@ -193,12 +193,12 @@ public sealed partial class StoragePathGuard
     // local-enforcement boundary, not a storage-contract path (NMS002).
 #pragma warning disable NMS002
     private static string NormalizeRoot(string root) =>
-        Path.TrimEndingDirectorySeparator(path: Path.GetFullPath(path: root));
+        Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
 #pragma warning restore NMS002
 
     private static bool IsUnderRoot(string fullPath, string root, StringComparison cmp)
     {
-        if (string.Equals(a: fullPath, b: root, comparisonType: cmp))
+        if (string.Equals(fullPath, root, cmp))
             return true;
         // A drive/volume root (e.g. "G:\", "/") already ends in a separator;
         // appending another would produce "G:\\" which no real child path starts
@@ -211,7 +211,7 @@ public sealed partial class StoragePathGuard
                 || root[^1] == Path.AltDirectorySeparatorChar
             );
         string withSep = rootEndsWithSeparator ? root : root + Path.DirectorySeparatorChar;
-        return fullPath.StartsWith(value: withSep, comparisonType: cmp);
+        return fullPath.StartsWith(withSep, cmp);
     }
 }
 

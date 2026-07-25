@@ -22,7 +22,6 @@ using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
-using NoMercy.Storage.Validation;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Tests.MediaProcessing.EventHandlers;
@@ -46,12 +45,12 @@ public class AutoEncodeSubscriberLifecycleTests
     private static IStorage NoOpStorage()
     {
         IStorageDriver driver = new LocalStorageDriver();
-        return new LocalStorage(driver: driver, guard: new(allowedRoots: [], driver: driver));
+        return new LocalStorage(driver, new([], driver));
     }
 
     private static IDbContextFactory<MediaContext> ContextFactory(out SqliteConnection connection)
     {
-        SqliteConnection conn = new(connectionString: "DataSource=:memory:");
+        SqliteConnection conn = new("DataSource=:memory:");
         conn.Open();
         connection = conn;
 
@@ -65,17 +64,17 @@ public class AutoEncodeSubscriberLifecycleTests
         }
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: conn)
+            .UseSqlite(conn)
             .Options;
 
-        using (MediaContext seed = new(options: options))
+        using (MediaContext seed = new(options))
             seed.Database.EnsureCreated();
 
         Mock<IDbContextFactory<MediaContext>> factory = new();
         factory
-            .Setup(expression: f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(valueFunction: () => new(options: options));
-        factory.Setup(expression: f => f.CreateDbContext()).Returns(valueFunction: () => new(options: options));
+            .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new(options));
+        factory.Setup(f => f.CreateDbContext()).Returns(() => new(options));
         return factory.Object;
     }
 
@@ -85,23 +84,23 @@ public class AutoEncodeSubscriberLifecycleTests
         InMemoryEventBus bus = new();
         Mock<IJobDispatcher> dispatcher = new();
         AutoEncodeSubscriber subscriber = new(
-            eventBus: bus,
-            logger: NullLogger<AutoEncodeSubscriber>.Instance,
-            storage: NoOpStorage(),
-            contextFactory: ContextFactory(connection: out SqliteConnection connection),
-            dispatcher: dispatcher.Object
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            NoOpStorage(),
+            ContextFactory(out SqliteConnection connection),
+            dispatcher.Object
         );
 
-        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
+        await subscriber.StartAsync(CancellationToken.None);
 
         // Publishing an event while subscribed should reach the handler without
         // throwing. No library exists for this id, so the handler returns early.
         await bus.PublishAsync(
-            @event: new MediaFilesScannedEvent { MediaId = -1, LibraryId = Ulid.NewUlid() }
+            new MediaFilesScannedEvent { MediaId = -1, LibraryId = Ulid.NewUlid() }
         );
 
         connection.Dispose();
-        Assert.True(condition: true);
+        Assert.True(true);
     }
 
     [Fact]
@@ -110,18 +109,18 @@ public class AutoEncodeSubscriberLifecycleTests
         TrackingEventBus bus = new();
         Mock<IJobDispatcher> dispatcher = new();
         AutoEncodeSubscriber subscriber = new(
-            eventBus: bus,
-            logger: NullLogger<AutoEncodeSubscriber>.Instance,
-            storage: NoOpStorage(),
-            contextFactory: ContextFactory(connection: out SqliteConnection connection),
-            dispatcher: dispatcher.Object
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            NoOpStorage(),
+            ContextFactory(out SqliteConnection connection),
+            dispatcher.Object
         );
 
-        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
-        Assert.Single(collection: bus.ActiveSubscriptions);
+        await subscriber.StartAsync(CancellationToken.None);
+        Assert.Single(bus.ActiveSubscriptions);
 
-        await subscriber.StopAsync(cancellationToken: CancellationToken.None);
-        Assert.Empty(collection: bus.ActiveSubscriptions);
+        await subscriber.StopAsync(CancellationToken.None);
+        Assert.Empty(bus.ActiveSubscriptions);
         connection.Dispose();
     }
 
@@ -131,20 +130,20 @@ public class AutoEncodeSubscriberLifecycleTests
         TrackingEventBus bus = new();
         Mock<IJobDispatcher> dispatcher = new();
         AutoEncodeSubscriber subscriber = new(
-            eventBus: bus,
-            logger: NullLogger<AutoEncodeSubscriber>.Instance,
-            storage: NoOpStorage(),
-            contextFactory: ContextFactory(connection: out SqliteConnection connection),
-            dispatcher: dispatcher.Object
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            NoOpStorage(),
+            ContextFactory(out SqliteConnection connection),
+            dispatcher.Object
         );
 
         for (int i = 0; i < 3; i++)
         {
-            await subscriber.StartAsync(cancellationToken: CancellationToken.None);
-            await subscriber.StopAsync(cancellationToken: CancellationToken.None);
+            await subscriber.StartAsync(CancellationToken.None);
+            await subscriber.StopAsync(CancellationToken.None);
         }
 
-        Assert.Empty(collection: bus.ActiveSubscriptions);
+        Assert.Empty(bus.ActiveSubscriptions);
         connection.Dispose();
     }
 
@@ -157,43 +156,43 @@ public class AutoEncodeSubscriberLifecycleTests
         Ulid libraryId = Ulid.NewUlid();
         Ulid mediaId = Ulid.NewUlid();
 
-        IDbContextFactory<MediaContext> factory = ContextFactory(connection: out SqliteConnection connection);
-        (int movieId, Ulid presetId) = SeedPresetMappedMovie(factory: factory, libraryId: libraryId, mediaId: mediaId);
+        IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
+        (int movieId, Ulid presetId) = SeedPresetMappedMovie(factory, libraryId, mediaId);
 
         List<VideoEncodeJob> dispatched = [];
         Mock<IJobDispatcher> dispatcher = new();
         dispatcher
-            .Setup(expression: d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()))
+            .Setup(d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()))
             .Callback<IShouldQueue, string, int>(
-                action: (job, _, _) =>
+                (job, _, _) =>
                 {
                     if (job is VideoEncodeJob encodeJob)
-                        dispatched.Add(item: encodeJob);
+                        dispatched.Add(encodeJob);
                 }
             );
         InMemoryEventBus bus = new();
         AutoEncodeSubscriber subscriber = new(
-            eventBus: bus,
-            logger: NullLogger<AutoEncodeSubscriber>.Instance,
-            storage: NoOpStorage(),
-            contextFactory: factory,
-            dispatcher: dispatcher.Object
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            NoOpStorage(),
+            factory,
+            dispatcher.Object
         );
-        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
+        await subscriber.StartAsync(CancellationToken.None);
 
         await bus.PublishAsync(
-            @event: new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
+            new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
         );
 
         dispatched
             .Should()
-            .HaveCount(expected: 1, because: "a V2-preset-mapped folder must queue exactly one VideoEncodeJob");
-        dispatched[index: 0].LibraryId.Should().Be(expected: libraryId);
-        dispatched[index: 0].Id.Should().Be(expected: movieId.ToString());
-        dispatched[index: 0].InputFile.Should().Contain(expected: "Movie.mkv");
-        dispatched[index: 0]
+            .HaveCount(1, "a V2-preset-mapped folder must queue exactly one VideoEncodeJob");
+        dispatched[0].LibraryId.Should().Be(libraryId);
+        dispatched[0].Id.Should().Be(movieId.ToString());
+        dispatched[0].InputFile.Should().Contain("Movie.mkv");
+        dispatched[0]
             .PresetId.Should()
-            .Be(expected: presetId, because: "the job must run the library's assigned preset");
+            .Be(presetId, "the job must run the library's assigned preset");
         connection.Dispose();
     }
 
@@ -202,26 +201,26 @@ public class AutoEncodeSubscriberLifecycleTests
     {
         Ulid libraryId = Ulid.NewUlid();
 
-        IDbContextFactory<MediaContext> factory = ContextFactory(connection: out SqliteConnection connection);
-        SeedGateOnlyLibrary(factory: factory, libraryId: libraryId, autoEncodeOnScan: true, assignEncodePreset: true);
+        IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
+        SeedGateOnlyLibrary(factory, libraryId, true, true);
 
         Mock<IJobDispatcher> dispatcher = new();
         InMemoryEventBus bus = new();
         AutoEncodeSubscriber subscriber = new(
-            eventBus: bus,
-            logger: NullLogger<AutoEncodeSubscriber>.Instance,
-            storage: NoOpStorage(),
-            contextFactory: factory,
-            dispatcher: dispatcher.Object
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            NoOpStorage(),
+            factory,
+            dispatcher.Object
         );
-        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
+        await subscriber.StartAsync(CancellationToken.None);
 
-        await bus.PublishAsync(@event: new MediaFilesScannedEvent { MediaId = 1, LibraryId = libraryId });
+        await bus.PublishAsync(new MediaFilesScannedEvent { MediaId = 1, LibraryId = libraryId });
 
         dispatcher.Verify(
-            expression: d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
-            times: Times.Never,
-            failMessage: "no encoding-preset folder link means no auto-encode"
+            d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
+            Times.Never,
+            "no encoding-preset folder link means no auto-encode"
         );
         connection.Dispose();
     }
@@ -234,33 +233,33 @@ public class AutoEncodeSubscriberLifecycleTests
         Ulid libraryId = Ulid.NewUlid();
         Ulid mediaId = Ulid.NewUlid();
 
-        IDbContextFactory<MediaContext> factory = ContextFactory(connection: out SqliteConnection connection);
+        IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
         (int movieId, _) = SeedPresetMappedMovie(
-            factory: factory,
-            libraryId: libraryId,
-            mediaId: mediaId,
-            autoEncodeOnScan: false
+            factory,
+            libraryId,
+            mediaId,
+            false
         );
 
         Mock<IJobDispatcher> dispatcher = new();
         InMemoryEventBus bus = new();
         AutoEncodeSubscriber subscriber = new(
-            eventBus: bus,
-            logger: NullLogger<AutoEncodeSubscriber>.Instance,
-            storage: NoOpStorage(),
-            contextFactory: factory,
-            dispatcher: dispatcher.Object
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            NoOpStorage(),
+            factory,
+            dispatcher.Object
         );
-        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
+        await subscriber.StartAsync(CancellationToken.None);
 
         await bus.PublishAsync(
-            @event: new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
+            new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
         );
 
         dispatcher.Verify(
-            expression: d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
-            times: Times.Never,
-            failMessage: "AutoEncodeOnScan defaults off and must not be bypassed by a preset-mapped folder"
+            d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
+            Times.Never,
+            "AutoEncodeOnScan defaults off and must not be bypassed by a preset-mapped folder"
         );
         connection.Dispose();
     }
@@ -273,34 +272,34 @@ public class AutoEncodeSubscriberLifecycleTests
         Ulid libraryId = Ulid.NewUlid();
         Ulid mediaId = Ulid.NewUlid();
 
-        IDbContextFactory<MediaContext> factory = ContextFactory(connection: out SqliteConnection connection);
+        IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
         (int movieId, _) = SeedPresetMappedMovie(
-            factory: factory,
-            libraryId: libraryId,
-            mediaId: mediaId,
-            autoEncodeOnScan: true,
-            assignEncodePreset: false
+            factory,
+            libraryId,
+            mediaId,
+            true,
+            false
         );
 
         Mock<IJobDispatcher> dispatcher = new();
         InMemoryEventBus bus = new();
         AutoEncodeSubscriber subscriber = new(
-            eventBus: bus,
-            logger: NullLogger<AutoEncodeSubscriber>.Instance,
-            storage: NoOpStorage(),
-            contextFactory: factory,
-            dispatcher: dispatcher.Object
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            NoOpStorage(),
+            factory,
+            dispatcher.Object
         );
-        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
+        await subscriber.StartAsync(CancellationToken.None);
 
         await bus.PublishAsync(
-            @event: new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
+            new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
         );
 
         dispatcher.Verify(
-            expression: d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
-            times: Times.Never,
-            failMessage: "a library with no EncodePresetId must not auto-encode even with the flag on"
+            d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
+            Times.Never,
+            "a library with no EncodePresetId must not auto-encode even with the flag on"
         );
         connection.Dispose();
     }
@@ -326,7 +325,7 @@ public class AutoEncodeSubscriberLifecycleTests
             ProfileJson = "{}",
             IsBuiltIn = false,
         };
-        context.EncodingPresets.Add(entity: preset);
+        context.EncodingPresets.Add(preset);
 
         Library library = new()
         {
@@ -335,7 +334,7 @@ public class AutoEncodeSubscriberLifecycleTests
             AutoEncodeOnScan = autoEncodeOnScan,
             EncodePresetId = assignEncodePreset ? preset.Id : null,
         };
-        context.Libraries.Add(entity: library);
+        context.Libraries.Add(library);
 
         Folder folder = new()
         {
@@ -343,11 +342,11 @@ public class AutoEncodeSubscriberLifecycleTests
             Path = folderPath,
             DriverId = driverId,
         };
-        context.Folders.Add(entity: folder);
-        context.FolderLibrary.Add(entity: new() { FolderId = folderId, LibraryId = libraryId });
+        context.Folders.Add(folder);
+        context.FolderLibrary.Add(new() { FolderId = folderId, LibraryId = libraryId });
 
         context.EncodingPresetFolders.Add(
-            entity: new()
+            new()
             {
                 PresetId = preset.Id,
                 FolderId = folderId,
@@ -357,7 +356,7 @@ public class AutoEncodeSubscriberLifecycleTests
 
         int movieId = 4242;
         context.VideoFiles.Add(
-            entity: new()
+            new()
             {
                 Id = Ulid.NewUlid(),
                 MovieId = movieId,
@@ -389,7 +388,7 @@ public class AutoEncodeSubscriberLifecycleTests
             AutoEncodeOnScan = autoEncodeOnScan,
             EncodePresetId = assignEncodePreset ? Ulid.NewUlid() : null,
         };
-        context.Libraries.Add(entity: library);
+        context.Libraries.Add(library);
 
         context.SaveChanges();
     }
@@ -405,23 +404,23 @@ public class AutoEncodeSubscriberLifecycleTests
         public List<IDisposable> ActiveSubscriptions { get; } = [];
 
         public Task PublishAsync<TEvent>(TEvent @event, CancellationToken ct = default)
-            where TEvent : IEvent => _inner.PublishAsync(@event: @event, ct: ct);
+            where TEvent : IEvent => _inner.PublishAsync(@event, ct);
 
         public IDisposable Subscribe<TEvent>(Func<TEvent, CancellationToken, Task> handler)
             where TEvent : IEvent
         {
-            IDisposable subscription = _inner.Subscribe(handler: handler);
-            TrackingSubscription tracker = new(inner: subscription, owner: this);
-            ActiveSubscriptions.Add(item: tracker);
+            IDisposable subscription = _inner.Subscribe(handler);
+            TrackingSubscription tracker = new(subscription, this);
+            ActiveSubscriptions.Add(tracker);
             return tracker;
         }
 
         public IDisposable Subscribe<TEvent>(IEventHandler<TEvent> handler)
             where TEvent : IEvent
         {
-            IDisposable subscription = _inner.Subscribe(handler: handler);
-            TrackingSubscription tracker = new(inner: subscription, owner: this);
-            ActiveSubscriptions.Add(item: tracker);
+            IDisposable subscription = _inner.Subscribe(handler);
+            TrackingSubscription tracker = new(subscription, this);
+            ActiveSubscriptions.Add(tracker);
             return tracker;
         }
 
@@ -431,7 +430,7 @@ public class AutoEncodeSubscriberLifecycleTests
             public void Dispose()
             {
                 inner.Dispose();
-                owner.ActiveSubscriptions.Remove(item: this);
+                owner.ActiveSubscriptions.Remove(this);
             }
         }
     }

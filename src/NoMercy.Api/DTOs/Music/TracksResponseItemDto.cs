@@ -17,49 +17,49 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record TracksResponseItemDto
 {
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "country")]
+    [JsonProperty("country")]
     public string? Country { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public Uri? Cover { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "favorite")]
+    [JsonProperty("favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty(propertyName: "folder")]
+    [JsonProperty("folder")]
     public string? Folder { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "library_id")]
+    [JsonProperty("library_id")]
     public Ulid? LibraryId { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int? Year { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; } = null!;
 
-    [JsonProperty(propertyName: "artists")]
+    [JsonProperty("artists")]
     public List<ArtistDto> Artists { get; set; } = [];
 
-    [JsonProperty(propertyName: "albums")]
+    [JsonProperty("albums")]
     public List<AlbumDto> Albums { get; set; } = [];
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public List<ArtistTrackDto> Tracks { get; set; } = [];
 
     public TracksResponseItemDto()
@@ -72,22 +72,22 @@ public record TracksResponseItemDto
         Id = track.Id;
         Name = track.Name;
         Cover = track.Cover is not null
-            ? new Uri(uriString: $"/images/music{track.Cover}", uriKind: UriKind.Relative)
+            ? new Uri($"/images/music{track.Cover}", UriKind.Relative)
             : null;
-        Link = new(uriString: $"/music/tracks/{track.Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/tracks/{track.Id}", UriKind.Relative);
 
         ColorPalette = track.ColorPalette;
         Favorite = track.TrackUser.Count != 0;
         Type = "favorites";
 
         Artists = track
-            .ArtistTrack.Select(selector: trackArtist => new ArtistDto(artistTrack: trackArtist, country: country))
+            .ArtistTrack.Select(trackArtist => new ArtistDto(trackArtist, country))
             .ToList();
 
-        Albums = track.AlbumTrack.Select(selector: albumTrack => new AlbumDto(albumTrack: albumTrack, country: country)).ToList();
+        Albums = track.AlbumTrack.Select(albumTrack => new AlbumDto(albumTrack, country)).ToList();
 
         Tracks = track
-            .ArtistTrack.Select(selector: albumTrack => new ArtistTrackDto(artistTrack: albumTrack, country: country))
+            .ArtistTrack.Select(albumTrack => new ArtistTrackDto(albumTrack, country))
             .ToList();
     }
 }

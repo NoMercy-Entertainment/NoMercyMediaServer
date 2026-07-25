@@ -15,14 +15,14 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Music;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class GenreResponseItemDtoTests
 {
     private static MusicGenre BuildGenre(string name, MusicGenreTrack[]? tracks = null)
     {
         MusicGenre genre = new() { Id = Guid.NewGuid(), Name = name };
         foreach (MusicGenreTrack track in tracks ?? [])
-            genre.MusicGenreTracks.Add(item: track);
+            genre.MusicGenreTracks.Add(track);
         return genre;
     }
 
@@ -50,59 +50,59 @@ public class GenreResponseItemDtoTests
     [Fact]
     public void Ctor_NameIsTitleCased()
     {
-        MusicGenre genre = BuildGenre(name: "test genre");
+        MusicGenre genre = BuildGenre("test genre");
 
-        GenreResponseItemDto dto = new(genre: genre);
+        GenreResponseItemDto dto = new(genre);
 
-        dto.Name.Should().Be(expected: "Test Genre");
+        dto.Name.Should().Be("Test Genre");
     }
 
     [Fact]
     public void Ctor_IdMatchesGenreId()
     {
-        MusicGenre genre = BuildGenre(name: "rock");
+        MusicGenre genre = BuildGenre("rock");
 
-        GenreResponseItemDto dto = new(genre: genre);
+        GenreResponseItemDto dto = new(genre);
 
-        dto.Id.Should().Be(expected: genre.Id);
+        dto.Id.Should().Be(genre.Id);
     }
 
     [Fact]
     public void Ctor_LinkUsesGenreId()
     {
-        MusicGenre genre = BuildGenre(name: "rock");
+        MusicGenre genre = BuildGenre("rock");
 
-        GenreResponseItemDto dto = new(genre: genre);
+        GenreResponseItemDto dto = new(genre);
 
-        dto.Link.ToString().Should().Be(expected: $"/music/genres/{genre.Id}");
+        dto.Link.ToString().Should().Be($"/music/genres/{genre.Id}");
     }
 
     [Fact]
     public void Ctor_TypeIsGenre()
     {
-        MusicGenre genre = BuildGenre(name: "rock");
+        MusicGenre genre = BuildGenre("rock");
 
-        GenreResponseItemDto dto = new(genre: genre);
+        GenreResponseItemDto dto = new(genre);
 
-        dto.Type.Should().Be(expected: "genre");
+        dto.Type.Should().Be("genre");
     }
 
     [Fact]
     public void Ctor_TracksOrderedByDiscThenByTrackNumber()
     {
-        MusicGenre genre = BuildGenre(name: "rock");
+        MusicGenre genre = BuildGenre("rock");
         Guid genreId = genre.Id;
-        MusicGenreTrack discTwoTrackOne = BuildGenreTrack(genreId: genreId, discNumber: 2, trackNumber: 1);
-        MusicGenreTrack discOneTrackTwo = BuildGenreTrack(genreId: genreId, discNumber: 1, trackNumber: 2);
-        MusicGenreTrack discOneTrackOne = BuildGenreTrack(genreId: genreId, discNumber: 1, trackNumber: 1);
-        genre.MusicGenreTracks.Add(item: discTwoTrackOne);
-        genre.MusicGenreTracks.Add(item: discOneTrackTwo);
-        genre.MusicGenreTracks.Add(item: discOneTrackOne);
+        MusicGenreTrack discTwoTrackOne = BuildGenreTrack(genreId, 2, 1);
+        MusicGenreTrack discOneTrackTwo = BuildGenreTrack(genreId, 1, 2);
+        MusicGenreTrack discOneTrackOne = BuildGenreTrack(genreId, 1, 1);
+        genre.MusicGenreTracks.Add(discTwoTrackOne);
+        genre.MusicGenreTracks.Add(discOneTrackTwo);
+        genre.MusicGenreTracks.Add(discOneTrackOne);
 
-        GenreResponseItemDto dto = new(genre: genre);
+        GenreResponseItemDto dto = new(genre);
 
-        dto.Tracks.Select(selector: track => (track.Disc, track.Track))
+        dto.Tracks.Select(track => (track.Disc, track.Track))
             .Should()
-            .Equal(elements: [(1, 1), (1, 2), (2, 1)]);
+            .Equal([(1, 1), (1, 2), (2, 1)]);
     }
 }

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
@@ -8,10 +7,10 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace NoMercy.Analyzers;
 
-[DiagnosticAnalyzer(firstLanguage: LanguageNames.CSharp)]
+[DiagnosticAnalyzer(LanguageNames.CSharp)]
 [SuppressMessage(
-    category: "MicrosoftCodeAnalysisCorrectness",
-    checkId: "RS1038:Compiler extensions should be implemented in assemblies with compiler-provided references"
+    "MicrosoftCodeAnalysisCorrectness",
+    "RS1038:Compiler extensions should be implemented in assemblies with compiler-provided references"
 )]
 public sealed class CallbackParameterAnalyzer : DiagnosticAnalyzer
 {
@@ -19,21 +18,15 @@ public sealed class CallbackParameterAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.CallbackParameterShouldBeRenamed;
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        ImmutableArray.Create(item: Rule);
+        ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {
         context.EnableConcurrentExecution();
-        context.ConfigureGeneratedCodeAnalysis(analysisMode: GeneratedCodeAnalysisFlags.None);
+        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
 
-        context.RegisterSyntaxNodeAction(
-            action: AnalyzeLambda,
-            syntaxKinds: SyntaxKind.SimpleLambdaExpression
-        );
-        context.RegisterSyntaxNodeAction(
-            action: AnalyzeLambda,
-            syntaxKinds: SyntaxKind.ParenthesizedLambdaExpression
-        );
+        context.RegisterSyntaxNodeAction(AnalyzeLambda, SyntaxKind.SimpleLambdaExpression);
+        context.RegisterSyntaxNodeAction(AnalyzeLambda, SyntaxKind.ParenthesizedLambdaExpression);
     }
 
     private static void AnalyzeLambda(SyntaxNodeAnalysisContext ctx)
@@ -41,11 +34,11 @@ public sealed class CallbackParameterAnalyzer : DiagnosticAnalyzer
         switch (ctx.Node)
         {
             case SimpleLambdaExpressionSyntax simple:
-                AnalyzeSimpleLambda(ctx: ctx, lambda: simple);
+                AnalyzeSimpleLambda(ctx, simple);
                 break;
 
             case ParenthesizedLambdaExpressionSyntax paren:
-                AnalyzeParenLambda(ctx: ctx, lambda: paren);
+                AnalyzeParenLambda(ctx, paren);
                 break;
         }
     }
@@ -55,19 +48,15 @@ public sealed class CallbackParameterAnalyzer : DiagnosticAnalyzer
         SimpleLambdaExpressionSyntax lambda
     )
     {
-        if (!IsCallbackLambda(lambda: lambda))
+        if (!IsCallbackLambda(lambda))
             return;
 
-        var p = lambda.Parameter;
+        ParameterSyntax parameter = lambda.Parameter;
 
-        if (IsSingleLetter(name: p.Identifier.Text))
+        if (LambdaArgumentHelpers.IsSingleLetter(parameter.Identifier.Text))
         {
             ctx.ReportDiagnostic(
-                diagnostic: Diagnostic.Create(
-                    descriptor: Rule,
-                    location: p.GetLocation(),
-                    messageArgs: p.Identifier.Text
-                )
+                Diagnostic.Create(Rule, parameter.GetLocation(), parameter.Identifier.Text)
             );
         }
     }
@@ -77,25 +66,19 @@ public sealed class CallbackParameterAnalyzer : DiagnosticAnalyzer
         ParenthesizedLambdaExpressionSyntax lambda
     )
     {
-        if (!IsCallbackLambda(lambda: lambda))
+        if (!IsCallbackLambda(lambda))
             return;
 
-        foreach (var p in lambda.ParameterList.Parameters)
+        foreach (ParameterSyntax parameter in lambda.ParameterList.Parameters)
         {
-            if (IsSingleLetter(name: p.Identifier.Text))
+            if (LambdaArgumentHelpers.IsSingleLetter(parameter.Identifier.Text))
             {
                 ctx.ReportDiagnostic(
-                    diagnostic: Diagnostic.Create(
-                        descriptor: Rule,
-                        location: p.GetLocation(),
-                        messageArgs: p.Identifier.Text
-                    )
+                    Diagnostic.Create(Rule, parameter.GetLocation(), parameter.Identifier.Text)
                 );
             }
         }
     }
-
-    private static bool IsSingleLetter(string name) => name.Length == 1 && name != "_";
 
     private static bool IsCallbackLambda(LambdaExpressionSyntax lambda)
     {

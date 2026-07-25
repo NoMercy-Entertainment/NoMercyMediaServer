@@ -22,11 +22,11 @@ public class SqliteNormalizeSearchInterceptor : DbConnectionInterceptor
     {
         if (connection is SqliteConnection sqliteConnection)
         {
-            EnableWalMode(connection: sqliteConnection);
-            RegisterFunction(connection: sqliteConnection);
+            EnableWalMode(sqliteConnection);
+            RegisterFunction(sqliteConnection);
         }
 
-        base.ConnectionOpened(connection: connection, eventData: eventData);
+        base.ConnectionOpened(connection, eventData);
     }
 
     public override async Task ConnectionOpenedAsync(
@@ -37,11 +37,11 @@ public class SqliteNormalizeSearchInterceptor : DbConnectionInterceptor
     {
         if (connection is SqliteConnection sqliteConnection)
         {
-            EnableWalMode(connection: sqliteConnection);
-            RegisterFunction(connection: sqliteConnection);
+            EnableWalMode(sqliteConnection);
+            RegisterFunction(sqliteConnection);
         }
 
-        await base.ConnectionOpenedAsync(connection: connection, eventData: eventData, cancellationToken: cancellationToken);
+        await base.ConnectionOpenedAsync(connection, eventData, cancellationToken);
     }
 
     private static void EnableWalMode(SqliteConnection connection)
@@ -66,8 +66,8 @@ public class SqliteNormalizeSearchInterceptor : DbConnectionInterceptor
     private static void RegisterFunction(SqliteConnection connection)
     {
         connection.CreateFunction(
-            name: "normalize_search",
-            function: (string? input) => input?.NormalizeSearch().OrEmpty()
+            "normalize_search",
+            (string? input) => input?.NormalizeSearch().OrEmpty()
         );
     }
 }

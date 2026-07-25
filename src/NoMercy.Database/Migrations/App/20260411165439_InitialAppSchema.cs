@@ -22,24 +22,24 @@ namespace NoMercy.Database.Migrations.App
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "Configuration",
+                "Configuration",
                 columns: table => new
                 {
                     Id = table
-                        .Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation(name: "Sqlite:Autoincrement", value: true),
-                    Key = table.Column<string>(type: "TEXT", nullable: false),
-                    Value = table.Column<string>(type: "TEXT", nullable: false),
-                    ModifiedBy = table.Column<Guid>(type: "TEXT", nullable: true),
-                    SecureValue = table.Column<string>(type: "TEXT", nullable: true),
+                        .Column<int>("INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Key = table.Column<string>("TEXT", nullable: false),
+                    Value = table.Column<string>("TEXT", nullable: false),
+                    ModifiedBy = table.Column<Guid>("TEXT", nullable: true),
+                    SecureValue = table.Column<string>("TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(
-                        type: "TEXT",
+                        "TEXT",
                         rowVersion: true,
                         nullable: false,
                         defaultValueSql: "CURRENT_TIMESTAMP"
                     ),
                     UpdatedAt = table.Column<DateTime>(
-                        type: "TEXT",
+                        "TEXT",
                         rowVersion: true,
                         nullable: false,
                         defaultValueSql: "CURRENT_TIMESTAMP"
@@ -47,12 +47,12 @@ namespace NoMercy.Database.Migrations.App
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey(name: "PK_Configuration", columns: x => x.Id);
+                    table.PrimaryKey("PK_Configuration", x => x.Id);
                 }
             );
 
             migrationBuilder.CreateIndex(
-                name: "IX_Configuration_Key",
+                "IX_Configuration_Key",
                 table: "Configuration",
                 column: "Key",
                 unique: true
@@ -62,7 +62,7 @@ namespace NoMercy.Database.Migrations.App
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(name: "Configuration");
+            migrationBuilder.DropTable("Configuration");
         }
     }
 }

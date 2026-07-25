@@ -18,13 +18,13 @@ public static class EventBusProvider
     public static IEventBus Current =>
         _instance
         ?? throw new InvalidOperationException(
-            message: "EventBus has not been configured. Call EventBusProvider.Configure() during startup."
+            "EventBus has not been configured. Call EventBusProvider.Configure() during startup."
         );
 
     public static bool IsConfigured => _instance is not null;
 
     public static void Configure(IEventBus eventBus)
     {
-        _instance = eventBus ?? throw new ArgumentNullException(paramName: nameof(eventBus));
+        _instance = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
     }
 }

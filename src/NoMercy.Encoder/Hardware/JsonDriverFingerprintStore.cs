@@ -31,35 +31,35 @@ public class JsonDriverFingerprintStore(
     private string ResolvePath()
     {
         string dir =
-            Path.GetDirectoryName(path: options.SpeedIndexCachePath ?? "speed_index.json")
+            Path.GetDirectoryName(options.SpeedIndexCachePath ?? "speed_index.json")
             ?? Path.GetTempPath();
 
-        return Path.Combine(path1: dir, path2: "driver_fingerprint.json");
+        return Path.Combine(dir, "driver_fingerprint.json");
     }
 
     public Task<string?> LoadHashAsync(CancellationToken ct = default)
     {
         string path = ResolvePath();
 
-        if (!storage.Exists(path: path))
-            return Task.FromResult<string?>(result: null);
+        if (!storage.Exists(path))
+            return Task.FromResult<string?>(null);
 
         try
         {
-            string json = Encoding.UTF8.GetString(bytes: storage.Read(path: path));
-            FingerprintDto? dto = JsonConvert.DeserializeObject<FingerprintDto>(value: json);
+            string json = Encoding.UTF8.GetString(storage.Read(path));
+            FingerprintDto? dto = JsonConvert.DeserializeObject<FingerprintDto>(json);
             string? hash = dto?.Hash is { Length: > 0 } h ? h : null;
 
-            return Task.FromResult(result: hash);
+            return Task.FromResult(hash);
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "Could not load driver fingerprint at {Path} — treating as missing",
-                args: path
+                ex,
+                "Could not load driver fingerprint at {Path} — treating as missing",
+                path
             );
-            return Task.FromResult<string?>(result: null);
+            return Task.FromResult<string?>(null);
         }
     }
 
@@ -69,27 +69,27 @@ public class JsonDriverFingerprintStore(
 
         try
         {
-            string? dir = Path.GetDirectoryName(path: path);
-            if (!string.IsNullOrWhiteSpace(value: dir))
-                storage.CreateDirectory(path: dir);
+            string? dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrWhiteSpace(dir))
+                storage.CreateDirectory(dir);
 
-            FingerprintDto dto = new(Hash: hash);
+            FingerprintDto dto = new(hash);
             string tmp = path + ".tmp";
             storage.Write(
-                path: tmp,
-                bytes: Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: dto, formatting: Formatting.Indented))
+                tmp,
+                Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(dto, Formatting.Indented))
             );
-            if (storage.Exists(path: path))
-                storage.Delete(path: path);
-            storage.Move(from: tmp, to: path);
+            if (storage.Exists(path))
+                storage.Delete(path);
+            storage.Move(tmp, path);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(exception: ex, message: "Could not save driver fingerprint to {Path}", args: path);
+            logger.LogWarning(ex, "Could not save driver fingerprint to {Path}", path);
         }
 
         return Task.CompletedTask;
     }
 
-    private sealed record FingerprintDto([property: JsonProperty(propertyName: "hash")] string Hash);
+    private sealed record FingerprintDto([property: JsonProperty("hash")] string Hash);
 }

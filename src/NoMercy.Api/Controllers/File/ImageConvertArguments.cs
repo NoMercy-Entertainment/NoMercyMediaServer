@@ -16,16 +16,16 @@ namespace NoMercy.Api.Controllers.File;
 
 public class ImageConvertArguments
 {
-    [JsonProperty(propertyName: "width")]
+    [JsonProperty("width")]
     public int? Width { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "quality")]
+    [JsonProperty("quality")]
     public int? Quality { get; set; }
 
     [FromQuery(Name = "aspect_ratio")]
-    [JsonProperty(propertyName: "aspect_ratio")]
+    [JsonProperty("aspect_ratio")]
     public double? AspectRatio { get; set; }
 }

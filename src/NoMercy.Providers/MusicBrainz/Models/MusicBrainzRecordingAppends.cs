@@ -17,50 +17,50 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 public class MusicBrainzRecordingAppends : MusicBrainzRecording
 {
     // ReSharper disable once InconsistentNaming
-    [JsonProperty(propertyName: "first-release-date")]
+    [JsonProperty("first-release-date")]
     private string? _firstReleaseDate { get; set; }
 
     public DateTime? FirstReleaseDate
     {
         get =>
-            !string.IsNullOrWhiteSpace(value: _firstReleaseDate)
-            && !string.IsNullOrEmpty(value: _firstReleaseDate)
-            && _firstReleaseDate.TryParseToDateTime(dateTime: out DateTime dt)
+            !string.IsNullOrWhiteSpace(_firstReleaseDate)
+            && !string.IsNullOrEmpty(_firstReleaseDate)
+            && _firstReleaseDate.TryParseToDateTime(out DateTime dt)
                 ? dt
                 : null;
         set => _firstReleaseDate = value.ToString();
     }
 
-    [JsonProperty(propertyName: "media")]
+    [JsonProperty("media")]
     public MusicBrainzMedia[] Media { get; set; } = [];
 
-    [JsonProperty(propertyName: "tags")]
+    [JsonProperty("tags")]
     public MusicBrainzTag[] Tags { get; set; } = [];
 
-    [JsonProperty(propertyName: "releases")]
+    [JsonProperty("releases")]
     public MusicBrainzRelease[] Releases { get; set; } = [];
 
-    [JsonProperty(propertyName: "artist-credit")]
+    [JsonProperty("artist-credit")]
     public MusicBrainzArtistCredit[] ArtistCredit { get; set; } = [];
 }
 
 public class MusicBrainzSearchResponse
 {
-    [JsonProperty(propertyName: "created")]
+    [JsonProperty("created")]
     public DateTime Created { get; set; }
 
-    [JsonProperty(propertyName: "count")]
+    [JsonProperty("count")]
     public int Count { get; set; }
 
-    [JsonProperty(propertyName: "offset")]
+    [JsonProperty("offset")]
     public int Offset { get; set; }
 
-    [JsonProperty(propertyName: "recordings")]
+    [JsonProperty("recordings")]
     public List<MusicBrainzSearchRecording> Recordings { get; set; } = [];
 }
 
 public class MusicBrainzSearchRecording : MusicBrainzRecordingAppends
 {
-    [JsonProperty(propertyName: "score")]
+    [JsonProperty("score")]
     public int Score { get; set; }
 }

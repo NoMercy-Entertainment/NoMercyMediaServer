@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbTvContentRating
 {
-    [JsonProperty(propertyName: "iso_3166_1")]
+    [JsonProperty("iso_3166_1")]
     public string Iso31661 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "rating")]
+    [JsonProperty("rating")]
     public string Rating { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "descriptors")]
+    [JsonProperty("descriptors")]
     public string[] Descriptors { get; set; } = [];
 }

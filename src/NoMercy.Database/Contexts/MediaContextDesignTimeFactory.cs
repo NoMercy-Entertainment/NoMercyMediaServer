@@ -20,9 +20,9 @@ public class MediaContextDesignTimeFactory : IDesignTimeDbContextFactory<MediaCo
     {
         DbContextOptionsBuilder<MediaContext> optionsBuilder = new();
         optionsBuilder.UseSqlite(
-            connectionString: "Data Source=media_designtime.db",
-            sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
+            "Data Source=media_designtime.db",
+            o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
         );
-        return new(options: optionsBuilder.Options);
+        return new(optionsBuilder.Options);
     }
 }

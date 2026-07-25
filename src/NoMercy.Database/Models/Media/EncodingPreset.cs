@@ -27,32 +27,32 @@ namespace NoMercy.Database.Models.Media;
 /// walking <see cref="ParentPresetId"/> chains — wherever a caller only
 /// holds the preset's <see cref="Id"/>.
 /// </summary>
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(Name))]
-[Index(propertyName: nameof(IsBuiltIn))]
-[Index(propertyName: nameof(Source))]
-[Index(propertyName: nameof(ParentPresetId))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(Name))]
+[Index(nameof(IsBuiltIn))]
+[Index(nameof(Source))]
+[Index(nameof(ParentPresetId))]
 public class EncodingPreset : Timestamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "name")]
-    [MaxLength(length: 256)]
+    [JsonProperty("name")]
+    [MaxLength(256)]
     public required string Name { get; set; }
 
-    [JsonProperty(propertyName: "description")]
-    [MaxLength(length: 2048)]
+    [JsonProperty("description")]
+    [MaxLength(2048)]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "author")]
-    [MaxLength(length: 256)]
+    [JsonProperty("author")]
+    [MaxLength(256)]
     public string? Author { get; set; }
 
     /// <summary>Comma-separated tag list (e.g. "anime,1080p,archival").</summary>
-    [JsonProperty(propertyName: "tags")]
-    [MaxLength(length: 1024)]
+    [JsonProperty("tags")]
+    [MaxLength(1024)]
     public string? Tags { get; set; }
 
     /// <summary>
@@ -60,7 +60,7 @@ public class EncodingPreset : Timestamps
     /// this and walks the parent chain (if any) to produce the effective
     /// profile a caller can hand to the encoder.
     /// </summary>
-    [JsonProperty(propertyName: "profile_json")]
+    [JsonProperty("profile_json")]
     public required string ProfileJson { get; set; }
 
     /// <summary>
@@ -70,7 +70,7 @@ public class EncodingPreset : Timestamps
     /// presets that tweak a base preset's CRF / codec / etc. without
     /// duplicating the full profile.
     /// </summary>
-    [JsonProperty(propertyName: "parent_preset_id")]
+    [JsonProperty("parent_preset_id")]
     public Ulid? ParentPresetId { get; set; }
 
     [JsonIgnore]
@@ -78,14 +78,14 @@ public class EncodingPreset : Timestamps
 
     /// <summary>Built-in presets are seeded from JSON shipped with the server
     /// and cannot be deleted from the UI — only disabled.</summary>
-    [JsonProperty(propertyName: "is_built_in")]
+    [JsonProperty("is_built_in")]
     public bool IsBuiltIn { get; set; }
 
     /// <summary>
     /// Origin of the preset: "db" for user-created/imported, "file" for
     /// presets loaded from disk at startup, "community" for remotely fetched.
     /// </summary>
-    [JsonProperty(propertyName: "source")]
-    [MaxLength(length: 64)]
+    [JsonProperty("source")]
+    [MaxLength(64)]
     public string Source { get; set; } = "db";
 }

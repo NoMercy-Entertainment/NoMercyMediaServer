@@ -15,21 +15,21 @@ namespace NoMercy.Providers.AcoustId.Models;
 
 public class AcoustIdFingerprintRecording
 {
-    [JsonProperty(propertyName: "artists")]
+    [JsonProperty("artists")]
     public AcoustIdFingerprintArtist[] Artists { get; set; } = [];
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public int Duration { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "releases")]
+    [JsonProperty("releases")]
     public AcoustIdFingerprintReleaseGroups[]? Releases { get; set; } = [];
 
-    [JsonProperty(propertyName: "sources")]
+    [JsonProperty("sources")]
     public int Sources { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 }

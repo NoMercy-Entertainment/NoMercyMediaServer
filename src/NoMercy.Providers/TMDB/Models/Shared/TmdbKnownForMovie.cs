@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbKnownForMovie
 {
-    [JsonProperty(propertyName: "release_date")]
+    [JsonProperty("release_date")]
     public DateTime? ReleaseDate { get; set; }
 }

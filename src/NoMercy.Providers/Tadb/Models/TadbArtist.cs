@@ -15,192 +15,192 @@ namespace NoMercy.Providers.Tadb.Models;
 
 public class TadbArtist
 {
-    [JsonProperty(propertyName: "idArtist")]
+    [JsonProperty("idArtist")]
     public string? IdArtist { get; set; }
 
-    [JsonProperty(propertyName: "strArtist")]
+    [JsonProperty("strArtist")]
     public string? StrArtist { get; set; }
 
-    [JsonProperty(propertyName: "strArtistStripped")]
+    [JsonProperty("strArtistStripped")]
     public string? StrArtistStripped { get; set; }
 
-    [JsonProperty(propertyName: "strArtistAlternate")]
+    [JsonProperty("strArtistAlternate")]
     public string? StrArtistAlternate { get; set; }
 
-    [JsonProperty(propertyName: "strLabel")]
+    [JsonProperty("strLabel")]
     public string? StrLabel { get; set; }
 
-    [JsonProperty(propertyName: "idLabel")]
+    [JsonProperty("idLabel")]
     public string? IdLabel { get; set; }
 
-    [JsonProperty(propertyName: "intFormedYear")]
+    [JsonProperty("intFormedYear")]
     public string? IntFormedYear { get; set; }
 
-    [JsonProperty(propertyName: "intBornYear")]
+    [JsonProperty("intBornYear")]
     public string? IntBornYear { get; set; }
 
-    [JsonProperty(propertyName: "intDiedYear")]
+    [JsonProperty("intDiedYear")]
     public string? IntDiedYear { get; set; }
 
-    [JsonProperty(propertyName: "strDisbanded")]
+    [JsonProperty("strDisbanded")]
     public string? StrDisbanded { get; set; }
 
-    [JsonProperty(propertyName: "strStyle")]
+    [JsonProperty("strStyle")]
     public string? StrStyle { get; set; }
 
-    [JsonProperty(propertyName: "strGenre")]
+    [JsonProperty("strGenre")]
     public string? StrGenre { get; set; }
 
-    [JsonProperty(propertyName: "strMood")]
+    [JsonProperty("strMood")]
     public string? StrMood { get; set; }
 
-    [JsonProperty(propertyName: "strWebsite")]
+    [JsonProperty("strWebsite")]
     public string? StrWebsite { get; set; }
 
-    [JsonProperty(propertyName: "strFacebook")]
+    [JsonProperty("strFacebook")]
     public string? StrFacebook { get; set; }
 
-    [JsonProperty(propertyName: "strTwitter")]
+    [JsonProperty("strTwitter")]
     public string? StrTwitter { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyEN")]
+    [JsonProperty("strBiographyEN")]
     public string? StrBiographyEn { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyDE")]
+    [JsonProperty("strBiographyDE")]
     public string? StrBiographyDe { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyFR")]
+    [JsonProperty("strBiographyFR")]
     public string? StrBiographyFr { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyCN")]
+    [JsonProperty("strBiographyCN")]
     public string? StrBiographyCn { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyIT")]
+    [JsonProperty("strBiographyIT")]
     public string? StrBiographyIt { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyJP")]
+    [JsonProperty("strBiographyJP")]
     public string? StrBiographyJp { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyRU")]
+    [JsonProperty("strBiographyRU")]
     public string? StrBiographyRu { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyES")]
+    [JsonProperty("strBiographyES")]
     public string? StrBiographyEs { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyPT")]
+    [JsonProperty("strBiographyPT")]
     public string? StrBiographyPt { get; set; }
 
-    [JsonProperty(propertyName: "strBiographySE")]
+    [JsonProperty("strBiographySE")]
     public string? StrBiographySe { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyNL")]
+    [JsonProperty("strBiographyNL")]
     public string? StrBiographyNl { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyHU")]
+    [JsonProperty("strBiographyHU")]
     public string? StrBiographyHu { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyNO")]
+    [JsonProperty("strBiographyNO")]
     public string? StrBiographyNo { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyIL")]
+    [JsonProperty("strBiographyIL")]
     public string? StrBiographyIl { get; set; }
 
-    [JsonProperty(propertyName: "strBiographyPL")]
+    [JsonProperty("strBiographyPL")]
     public string? StrBiographyPl { get; set; }
 
-    [JsonProperty(propertyName: "strGender")]
+    [JsonProperty("strGender")]
     public string? StrGender { get; set; }
 
-    [JsonProperty(propertyName: "intMembers")]
+    [JsonProperty("intMembers")]
     public string? IntMembers { get; set; }
 
-    [JsonProperty(propertyName: "strCountry")]
+    [JsonProperty("strCountry")]
     public string? StrCountry { get; set; }
 
-    [JsonProperty(propertyName: "strCountryCode")]
+    [JsonProperty("strCountryCode")]
     public string? StrCountryCode { get; set; }
 
-    [JsonProperty(propertyName: "strArtistThumb")]
+    [JsonProperty("strArtistThumb")]
     public string? StrArtistThumb { get; set; }
 
-    [JsonProperty(propertyName: "strArtistLogo")]
+    [JsonProperty("strArtistLogo")]
     public string? StrArtistLogo { get; set; }
 
-    [JsonProperty(propertyName: "strArtistCutout")]
+    [JsonProperty("strArtistCutout")]
     public string? StrArtistCutout { get; set; }
 
-    [JsonProperty(propertyName: "strArtistClearart")]
+    [JsonProperty("strArtistClearart")]
     public string? StrArtistClearart { get; set; }
 
-    [JsonProperty(propertyName: "strArtistWideThumb")]
+    [JsonProperty("strArtistWideThumb")]
     public string? StrArtistWideThumb { get; set; }
 
-    [JsonProperty(propertyName: "strArtistFanart")]
+    [JsonProperty("strArtistFanart")]
     public string? StrArtistFanart { get; set; }
 
-    [JsonProperty(propertyName: "strArtistFanart2")]
+    [JsonProperty("strArtistFanart2")]
     public string? StrArtistFanart2 { get; set; }
 
-    [JsonProperty(propertyName: "strArtistFanart3")]
+    [JsonProperty("strArtistFanart3")]
     public string? StrArtistFanart3 { get; set; }
 
-    [JsonProperty(propertyName: "strArtistFanart4")]
+    [JsonProperty("strArtistFanart4")]
     public string? StrArtistFanart4 { get; set; }
 
-    [JsonProperty(propertyName: "strArtistBanner")]
+    [JsonProperty("strArtistBanner")]
     public string? StrArtistBanner { get; set; }
 
-    [JsonProperty(propertyName: "strMusicBrainzID")]
+    [JsonProperty("strMusicBrainzID")]
     public string? StrMusicBrainzId { get; set; }
 
-    [JsonProperty(propertyName: "strISNIcode")]
+    [JsonProperty("strISNIcode")]
     public string? StrIsnIcode { get; set; }
 
-    [JsonProperty(propertyName: "strLastFMChart")]
+    [JsonProperty("strLastFMChart")]
     public string? StrLastFmChart { get; set; }
 
-    [JsonProperty(propertyName: "intCharted")]
+    [JsonProperty("intCharted")]
     public string? IntCharted { get; set; }
 
-    [JsonProperty(propertyName: "strLocked")]
+    [JsonProperty("strLocked")]
     public string? StrLocked { get; set; }
 
-    [JsonProperty(propertyName: "descriptions")]
+    [JsonProperty("descriptions")]
     public List<TadbLanguageDescription> Descriptions
     {
         get
         {
             List<TadbLanguageDescription> descriptions = [];
             if (StrBiographyCn != null)
-                descriptions.Add(item: new() { Iso31661 = "CN", Description = StrBiographyCn });
+                descriptions.Add(new() { Iso31661 = "CN", Description = StrBiographyCn });
             if (StrBiographyDe != null)
-                descriptions.Add(item: new() { Iso31661 = "DE", Description = StrBiographyDe });
+                descriptions.Add(new() { Iso31661 = "DE", Description = StrBiographyDe });
             if (StrBiographyEn != null)
-                descriptions.Add(item: new() { Iso31661 = "EN", Description = StrBiographyEn });
+                descriptions.Add(new() { Iso31661 = "EN", Description = StrBiographyEn });
             if (StrBiographyEs != null)
-                descriptions.Add(item: new() { Iso31661 = "ES", Description = StrBiographyEs });
+                descriptions.Add(new() { Iso31661 = "ES", Description = StrBiographyEs });
             if (StrBiographyFr != null)
-                descriptions.Add(item: new() { Iso31661 = "FR", Description = StrBiographyFr });
+                descriptions.Add(new() { Iso31661 = "FR", Description = StrBiographyFr });
             if (StrBiographyHu != null)
-                descriptions.Add(item: new() { Iso31661 = "HU", Description = StrBiographyHu });
+                descriptions.Add(new() { Iso31661 = "HU", Description = StrBiographyHu });
             if (StrBiographyIl != null)
-                descriptions.Add(item: new() { Iso31661 = "IL", Description = StrBiographyIl });
+                descriptions.Add(new() { Iso31661 = "IL", Description = StrBiographyIl });
             if (StrBiographyIt != null)
-                descriptions.Add(item: new() { Iso31661 = "IT", Description = StrBiographyIt });
+                descriptions.Add(new() { Iso31661 = "IT", Description = StrBiographyIt });
             if (StrBiographyJp != null)
-                descriptions.Add(item: new() { Iso31661 = "JP", Description = StrBiographyJp });
+                descriptions.Add(new() { Iso31661 = "JP", Description = StrBiographyJp });
             if (StrBiographyNl != null)
-                descriptions.Add(item: new() { Iso31661 = "NL", Description = StrBiographyNl });
+                descriptions.Add(new() { Iso31661 = "NL", Description = StrBiographyNl });
             if (StrBiographyNo != null)
-                descriptions.Add(item: new() { Iso31661 = "NO", Description = StrBiographyNo });
+                descriptions.Add(new() { Iso31661 = "NO", Description = StrBiographyNo });
             if (StrBiographyPl != null)
-                descriptions.Add(item: new() { Iso31661 = "PL", Description = StrBiographyPl });
+                descriptions.Add(new() { Iso31661 = "PL", Description = StrBiographyPl });
             if (StrBiographyPt != null)
-                descriptions.Add(item: new() { Iso31661 = "PT", Description = StrBiographyPt });
+                descriptions.Add(new() { Iso31661 = "PT", Description = StrBiographyPt });
             if (StrBiographyRu != null)
-                descriptions.Add(item: new() { Iso31661 = "RU", Description = StrBiographyRu });
+                descriptions.Add(new() { Iso31661 = "RU", Description = StrBiographyRu });
             if (StrBiographySe != null)
-                descriptions.Add(item: new() { Iso31661 = "SE", Description = StrBiographySe });
+                descriptions.Add(new() { Iso31661 = "SE", Description = StrBiographySe });
 
             return descriptions;
         }

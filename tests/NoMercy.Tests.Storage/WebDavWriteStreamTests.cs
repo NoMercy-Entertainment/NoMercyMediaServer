@@ -22,33 +22,33 @@ public class WebDavWriteStreamTests
         Mock<IWebDavClient> client = new();
         byte[] captured = [];
         client
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.PutFile(It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<PutFileParameters>())
             )
             .Returns(
-                valueFunction: (string _, Stream stream, PutFileParameters _) =>
+                (string _, Stream stream, PutFileParameters _) =>
                 {
                     using MemoryStream ms = new();
-                    stream.CopyTo(destination: ms);
+                    stream.CopyTo(ms);
                     captured = ms.ToArray();
-                    return Task.FromResult(result: new WebDavResponse(statusCode: 200));
+                    return Task.FromResult(new WebDavResponse(200));
                 }
             );
 
-        byte[] payload = Enumerable.Range(start: 0, count: 5000).Select(selector: i => (byte)i).ToArray();
+        byte[] payload = Enumerable.Range(0, 5000).Select(i => (byte)i).ToArray();
 
         await using (
             WebDavWriteStream upload = new(
-                client: client.Object,
-                uri: "https://nas.local/dav/f.bin",
-                overwrite: true
+                client.Object,
+                "https://nas.local/dav/f.bin",
+                true
             )
         )
         {
-            await upload.WriteAsync(buffer: payload);
+            await upload.WriteAsync(payload);
         }
 
-        captured.Should().Equal(elements: payload);
+        captured.Should().Equal(payload);
     }
 
     [Fact]
@@ -57,29 +57,29 @@ public class WebDavWriteStreamTests
         Mock<IWebDavClient> client = new();
         PutFileParameters? seen = null;
         client
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.PutFile(It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<PutFileParameters>())
             )
             .Returns(
-                valueFunction: (string _, Stream _, PutFileParameters p) =>
+                (string _, Stream _, PutFileParameters p) =>
                 {
                     seen = p;
-                    return Task.FromResult(result: new WebDavResponse(statusCode: 201));
+                    return Task.FromResult(new WebDavResponse(201));
                 }
             );
 
         await using (
             WebDavWriteStream upload = new(
-                client: client.Object,
-                uri: "https://nas.local/dav/f.bin",
-                overwrite: false
+                client.Object,
+                "https://nas.local/dav/f.bin",
+                false
             )
         )
         {
-            await upload.WriteAsync(buffer: new byte[] { 1, 2, 3 });
+            await upload.WriteAsync(new byte[] { 1, 2, 3 });
         }
 
         seen.Should().NotBeNull();
-        seen!.Headers.Should().Contain(predicate: h => h.Key == "If-None-Match" && h.Value == "*");
+        seen!.Headers.Should().Contain(h => h.Key == "If-None-Match" && h.Value == "*");
     }
 }

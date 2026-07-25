@@ -26,11 +26,11 @@ public class ImagePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         return await db
-            .Images.Where(predicate: i => i.Id == id)
-            .Select(selector: i => i._colorPalette)
-            .FirstOrDefaultAsync(cancellationToken: ct);
+            .Images.Where(i => i.Id == id)
+            .Select(i => i._colorPalette)
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -39,15 +39,15 @@ public class ImagePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
-        Image? image = await db.Images.FirstOrDefaultAsync(predicate: i => i.Id == id, cancellationToken: ct);
+        int id = int.Parse(entityId);
+        Image? image = await db.Images.FirstOrDefaultAsync(i => i.Id == id, ct);
         if (image is null)
             return PaletteResult.NoImage();
 
         // Guard: only TMDB-hosted images, no SVGs, and matching language
         if (image.Site != "https://image.tmdb.org/t/p/")
             return PaletteResult.NoImage();
-        if (image.FilePath.EndsWith(value: ".svg"))
+        if (image.FilePath.EndsWith(".svg"))
             return PaletteResult.NoImage();
 
         string lang = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
@@ -59,10 +59,10 @@ public class ImagePaletteSource : IPaletteSource
         if (!languageOk)
             return PaletteResult.NoImage();
 
-        string json = await MovieDbImageManager.ColorPalette(type: "image", path: image.FilePath);
-        return string.IsNullOrWhiteSpace(value: json)
+        string json = await MovieDbImageManager.ColorPalette("image", image.FilePath);
+        return string.IsNullOrWhiteSpace(json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json: json);
+            : PaletteResult.Success(json);
     }
 
     public async Task PersistAsync(
@@ -72,9 +72,9 @@ public class ImagePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         await db
-            .Images.Where(predicate: i => i.Id == id)
-            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: i => i._colorPalette, valueExpression: json), cancellationToken: ct);
+            .Images.Where(i => i.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i._colorPalette, json), ct);
     }
 }

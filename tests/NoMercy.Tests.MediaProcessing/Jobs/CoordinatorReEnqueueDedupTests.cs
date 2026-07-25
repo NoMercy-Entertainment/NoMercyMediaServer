@@ -26,24 +26,24 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 // publishes with only the first bundle's variants.
 //
 // Fix: WakeSequence bumps on every ReEnqueueSelf, guaranteeing payload divergence.
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class CoordinatorReEnqueueDedupTests
 {
     [Fact]
     public void CoordinatorState_WakeSequenceDefaultsToZero()
     {
         CoordinatorState state = new(
-            GroupTag: "G",
-            TaskIds: ["t1"],
-            Phase: CoordinatorPhase.WaitChildren,
-            Pass1DispatchedAt: null,
-            Pass2DispatchedAt: null,
-            Pass1StatsPath: null,
-            PresetId: Ulid.NewUlid(),
-            ExpectedFinalCount: 1
+            "G",
+            ["t1"],
+            CoordinatorPhase.WaitChildren,
+            null,
+            null,
+            null,
+            Ulid.NewUlid(),
+            1
         );
 
-        Assert.Equal(expected: 0, actual: state.WakeSequence);
+        Assert.Equal(0, state.WakeSequence);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class CoordinatorReEnqueueDedupTests
         // Identical otherwise — same Phase, same bundle index, same group, same
         // task list. Pre-fix this collision is exactly what killed the coordinator.
         CoordinatorState first = new(
-            GroupTag: "G",
+            "G",
             TaskIds: ["t1", "t2"],
             Phase: CoordinatorPhase.WaitChildren,
             Pass1DispatchedAt: null,
@@ -69,10 +69,10 @@ public class CoordinatorReEnqueueDedupTests
         VideoEncodeJob firstJob = new() { Coordinator = first };
         VideoEncodeJob secondJob = new() { Coordinator = second };
 
-        string firstPayload = SerializationHelper.Serialize(obj: firstJob);
-        string secondPayload = SerializationHelper.Serialize(obj: secondJob);
+        string firstPayload = SerializationHelper.Serialize(firstJob);
+        string secondPayload = SerializationHelper.Serialize(secondJob);
 
-        Assert.NotEqual(expected: firstPayload, actual: secondPayload);
+        Assert.NotEqual(firstPayload, secondPayload);
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class CoordinatorReEnqueueDedupTests
         // (e.g. retry after crash with the same WakeSequence). The nonce only
         // diverges via ReEnqueueSelf's explicit increment.
         CoordinatorState a = new(
-            GroupTag: "G",
+            "G",
             TaskIds: ["t1"],
             Phase: CoordinatorPhase.WaitChildren,
             Pass1DispatchedAt: null,
@@ -96,6 +96,6 @@ public class CoordinatorReEnqueueDedupTests
         VideoEncodeJob jobA = new() { Coordinator = a };
         VideoEncodeJob jobB = new() { Coordinator = a };
 
-        Assert.Equal(expected: SerializationHelper.Serialize(obj: jobA), actual: SerializationHelper.Serialize(obj: jobB));
+        Assert.Equal(SerializationHelper.Serialize(jobA), SerializationHelper.Serialize(jobB));
     }
 }

@@ -42,9 +42,9 @@ internal sealed class PluginLifecycleManager(
 
     public async Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        if (!_registry.TryGetValue(id: pluginId, plugin: out LoadedPlugin? loaded))
+        if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
         {
-            throw new InvalidOperationException(message: $"Plugin {pluginId} is not installed.");
+            throw new InvalidOperationException($"Plugin {pluginId} is not installed.");
         }
 
         if (loaded.Info.Status == PluginStatus.Active)
@@ -54,7 +54,7 @@ internal sealed class PluginLifecycleManager(
 
         if (loaded.Instance is null && loaded.Info.AssemblyPath is not null)
         {
-            await _loader.LoadPluginAssemblyAsync(assemblyPath: loaded.Info.AssemblyPath, ct: ct);
+            await _loader.LoadPluginAssemblyAsync(loaded.Info.AssemblyPath, ct);
             return;
         }
 
@@ -62,31 +62,31 @@ internal sealed class PluginLifecycleManager(
         {
             try
             {
-                string dataFolder = Path.Combine(path1: _pluginsPath, path2: "data", path3: pluginId.ToString(format: "N"));
-                if (!_storage.Exists(path: dataFolder))
+                string dataFolder = Path.Combine(_pluginsPath, "data", pluginId.ToString("N"));
+                if (!_storage.Exists(dataFolder))
                 {
-                    _storage.CreateDirectory(path: dataFolder);
+                    _storage.CreateDirectory(dataFolder);
                 }
 
                 PluginContext context = new(
-                    eventBus: _eventBus,
-                    services: _serviceProvider,
-                    logger: _logger,
-                    dataFolderPath: dataFolder,
-                    storage: _storage,
-                    capabilities: loaded.Info.Capabilities
+                    _eventBus,
+                    _serviceProvider,
+                    _logger,
+                    dataFolder,
+                    _storage,
+                    loaded.Info.Capabilities
                 );
-                loaded.Instance.Initialize(context: context);
-                PluginLifecycle.Transition(info: loaded.Info, newStatus: PluginStatus.Active);
+                loaded.Instance.Initialize(context);
+                PluginLifecycle.Transition(loaded.Info, PluginStatus.Active);
 
                 await _eventBus.PublishAsync(
-                    @event: new PluginLoadedEvent
+                    new PluginLoadedEvent
                     {
                         PluginId = pluginId.ToString(),
                         PluginName = loaded.Info.Name,
                         Version = loaded.Info.Version.ToString(),
                     },
-                    ct: ct
+                    ct
                 );
             }
             catch (InvalidOperationException)
@@ -107,14 +107,14 @@ internal sealed class PluginLifecycleManager(
                 loaded.Info.Status = PluginStatus.Malfunctioned;
 
                 await _eventBus.PublishAsync(
-                    @event: new PluginErrorOccurredEvent
+                    new PluginErrorOccurredEvent
                     {
                         PluginId = pluginId.ToString(),
                         PluginName = loaded.Info.Name,
                         ErrorMessage = ex.Message,
                         ExceptionType = ex.GetType().Name,
                     },
-                    ct: ct
+                    ct
                 );
             }
         }
@@ -122,9 +122,9 @@ internal sealed class PluginLifecycleManager(
 
     public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        if (!_registry.TryGetValue(id: pluginId, plugin: out LoadedPlugin? loaded))
+        if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
         {
-            throw new InvalidOperationException(message: $"Plugin {pluginId} is not installed.");
+            throw new InvalidOperationException($"Plugin {pluginId} is not installed.");
         }
 
         if (loaded.Info.Status == PluginStatus.Disabled)
@@ -133,30 +133,30 @@ internal sealed class PluginLifecycleManager(
         }
 
         loaded.Instance?.Dispose();
-        PluginLifecycle.Transition(info: loaded.Info, newStatus: PluginStatus.Disabled);
+        PluginLifecycle.Transition(loaded.Info, PluginStatus.Disabled);
 
         return Task.CompletedTask;
     }
 
     public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        if (!_registry.TryRemove(id: pluginId, plugin: out LoadedPlugin? loaded))
+        if (!_registry.TryRemove(pluginId, out LoadedPlugin? loaded))
         {
-            throw new InvalidOperationException(message: $"Plugin {pluginId} is not installed.");
+            throw new InvalidOperationException($"Plugin {pluginId} is not installed.");
         }
 
         loaded.Instance?.Dispose();
         loaded.LoadContext?.Unload();
-        PluginLifecycle.Transition(info: loaded.Info, newStatus: PluginStatus.Deleted);
+        PluginLifecycle.Transition(loaded.Info, PluginStatus.Deleted);
 
         if (loaded.Info.AssemblyPath is not null)
         {
-            string? pluginDir = Path.GetDirectoryName(path: loaded.Info.AssemblyPath);
-            if (pluginDir is not null && _storage.Exists(path: pluginDir))
+            string? pluginDir = Path.GetDirectoryName(loaded.Info.AssemblyPath);
+            if (pluginDir is not null && _storage.Exists(pluginDir))
             {
                 try
                 {
-                    _storage.DeleteDirectory(path: pluginDir, recursive: true);
+                    _storage.DeleteDirectory(pluginDir, true);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
@@ -170,8 +170,8 @@ internal sealed class PluginLifecycleManager(
                     // instead of logging the same "files may be locked" warning
                     // this catch already exists to produce.
                     _logger.LogWarning(
-                        message: "Could not delete plugin directory {PluginDir}. Files may be locked.",
-                        args: pluginDir
+                        "Could not delete plugin directory {PluginDir}. Files may be locked.",
+                        pluginDir
                     );
                 }
             }

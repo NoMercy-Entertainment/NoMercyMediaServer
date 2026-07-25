@@ -28,16 +28,16 @@ public static class RipStagingPath
     /// </summary>
     public static bool IsWithinStaging(string? ripOutputPath, string? stagingRoot)
     {
-        if (string.IsNullOrWhiteSpace(value: ripOutputPath) || string.IsNullOrWhiteSpace(value: stagingRoot))
+        if (string.IsNullOrWhiteSpace(ripOutputPath) || string.IsNullOrWhiteSpace(stagingRoot))
             return false;
 
         string root;
         string candidate;
         try
         {
-            root = Path.GetFullPath(path: stagingRoot)
-                .TrimEnd(trimChars: [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
-            candidate = Path.GetFullPath(path: ripOutputPath);
+            root = Path.GetFullPath(stagingRoot)
+                .TrimEnd([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
+            candidate = Path.GetFullPath(ripOutputPath);
         }
         catch
         {
@@ -45,10 +45,10 @@ public static class RipStagingPath
         }
 
         return candidate.Length > root.Length
-            && candidate.StartsWith(value: root, comparisonType: StringComparison.OrdinalIgnoreCase)
+            && candidate.StartsWith(root, StringComparison.OrdinalIgnoreCase)
             && (
-                candidate[index: root.Length] == Path.DirectorySeparatorChar
-                || candidate[index: root.Length] == Path.AltDirectorySeparatorChar
+                candidate[root.Length] == Path.DirectorySeparatorChar
+                || candidate[root.Length] == Path.AltDirectorySeparatorChar
             );
     }
 }

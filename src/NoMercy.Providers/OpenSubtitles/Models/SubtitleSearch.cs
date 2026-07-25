@@ -15,61 +15,61 @@ namespace NoMercy.Providers.OpenSubtitles.Models;
 
 public class SubtitleSearch
 {
-    [XmlElement(elementName: "methodCall")]
+    [XmlElement("methodCall")]
     public MethodCall MethodCall { get; set; } = new();
 }
 
 public class MethodCall
 {
-    [XmlElement(elementName: "methodName")]
+    [XmlElement("methodName")]
     public string MethodName { get; set; } = string.Empty;
 
-    [XmlElement(elementName: "params")]
+    [XmlElement("params")]
     public SubtitleSearchParams Params { get; set; } = new();
 }
 
 public class SubtitleSearchParams
 {
-    [XmlElement(elementName: "param")]
+    [XmlElement("param")]
     public SubtitleSearchParam[] Param { get; set; } = [];
 }
 
 public class SubtitleSearchParam
 {
-    [XmlElement(elementName: "value")]
+    [XmlElement("value")]
     public SubtitleSearchParamValue Value { get; set; } = new();
 }
 
 public class SubtitleSearchParamValue
 {
-    [XmlElement(elementName: "string", IsNullable = true)]
+    [XmlElement("string", IsNullable = true)]
     public string String { get; set; } = string.Empty;
 
-    [XmlElement(elementName: "array", IsNullable = true)]
+    [XmlElement("array", IsNullable = true)]
     public SubtitleSearchArray Array { get; set; } = new();
 }
 
 public class SubtitleSearchArray
 {
-    [XmlElement(elementName: "data")]
+    [XmlElement("data")]
     public SubtitleSearchData Data { get; set; } = new();
 }
 
 public class SubtitleSearchData
 {
-    [XmlElement(elementName: "value")]
+    [XmlElement("value")]
     public SubtitleSearchDataValue Value { get; set; } = new();
 }
 
 public class SubtitleSearchDataValue
 {
-    [XmlElement(elementName: "struct")]
+    [XmlElement("struct")]
     public SubtitleSearchStruct Struct { get; set; } = new();
 }
 
 public class SubtitleSearchStruct
 {
-    [XmlElement(elementName: "member")]
+    [XmlElement("member")]
     public SubtitleSearchMember[] Member { get; set; } = [];
 }
 
@@ -86,15 +86,15 @@ public class SubtitleSearchMember
         Value = value;
     }
 
-    [XmlElement(elementName: "name")]
+    [XmlElement("name")]
     public string Name { get; set; } = string.Empty;
 
-    [XmlElement(elementName: "value")]
+    [XmlElement("value")]
     public SubtitleSearchMemberValue Value { get; set; } = new();
 }
 
 public class SubtitleSearchMemberValue
 {
-    [XmlElement(elementName: "string")]
+    [XmlElement("string")]
     public string String { get; set; } = string.Empty;
 }

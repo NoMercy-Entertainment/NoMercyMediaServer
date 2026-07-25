@@ -33,23 +33,23 @@ public class ProcessThrottleTests
     }
 
     private ProcessThrottle Build() =>
-        new(logger: NullLogger<ProcessThrottle>.Instance, suspender: new NoOpSuspender());
+        new(NullLogger<ProcessThrottle>.Instance, new NoOpSuspender());
 
     [Fact]
     public void IsSuspended_InitiallyFalse()
     {
         ProcessThrottle throttle = Build();
-        throttle.IsSuspended(processId: 12345).Should().BeFalse();
+        throttle.IsSuspended(12345).Should().BeFalse();
     }
 
     [Fact]
     public void IsSuspended_DifferentPidNotTracked_StaysFalse()
     {
         ProcessThrottle throttle = Build();
-        throttle.Suspend(processId: FakePid);
+        throttle.Suspend(FakePid);
 
-        throttle.IsSuspended(processId: FakePid).Should().BeTrue();
-        throttle.IsSuspended(processId: FakePid + 1).Should().BeFalse();
+        throttle.IsSuspended(FakePid).Should().BeTrue();
+        throttle.IsSuspended(FakePid + 1).Should().BeFalse();
     }
 
     [Fact]
@@ -60,20 +60,20 @@ public class ProcessThrottleTests
         // matching resume can flip it back.
         ProcessThrottle throttle = Build();
 
-        throttle.Suspend(processId: FakePid);
+        throttle.Suspend(FakePid);
 
-        throttle.IsSuspended(processId: FakePid).Should().BeTrue();
+        throttle.IsSuspended(FakePid).Should().BeTrue();
     }
 
     [Fact]
     public void Resume_AfterSuspend_ClearsState()
     {
         ProcessThrottle throttle = Build();
-        throttle.Suspend(processId: FakePid);
+        throttle.Suspend(FakePid);
 
-        throttle.Resume(processId: FakePid);
+        throttle.Resume(FakePid);
 
-        throttle.IsSuspended(processId: FakePid).Should().BeFalse();
+        throttle.IsSuspended(FakePid).Should().BeFalse();
     }
 
     [Fact]
@@ -84,10 +84,10 @@ public class ProcessThrottleTests
         // without remembering whether it ever called Suspend.
         ProcessThrottle throttle = Build();
 
-        Action act = () => throttle.Resume(processId: FakePid);
+        Action act = () => throttle.Resume(FakePid);
 
         act.Should().NotThrow();
-        throttle.IsSuspended(processId: FakePid).Should().BeFalse();
+        throttle.IsSuspended(FakePid).Should().BeFalse();
     }
 
     [Fact]
@@ -97,11 +97,11 @@ public class ProcessThrottleTests
         // boolean per PID, and Resume should clear it on the first call.
         ProcessThrottle throttle = Build();
 
-        throttle.Suspend(processId: FakePid);
-        throttle.Suspend(processId: FakePid);
-        throttle.Resume(processId: FakePid);
+        throttle.Suspend(FakePid);
+        throttle.Suspend(FakePid);
+        throttle.Resume(FakePid);
 
-        throttle.IsSuspended(processId: FakePid).Should().BeFalse();
+        throttle.IsSuspended(FakePid).Should().BeFalse();
     }
 
     [Fact]
@@ -109,14 +109,14 @@ public class ProcessThrottleTests
     {
         ProcessThrottle throttle = Build();
 
-        throttle.Suspend(processId: 100);
-        throttle.Suspend(processId: 200);
-        throttle.Suspend(processId: 300);
-        throttle.Resume(processId: 200);
+        throttle.Suspend(100);
+        throttle.Suspend(200);
+        throttle.Suspend(300);
+        throttle.Resume(200);
 
-        throttle.IsSuspended(processId: 100).Should().BeTrue();
-        throttle.IsSuspended(processId: 200).Should().BeFalse();
-        throttle.IsSuspended(processId: 300).Should().BeTrue();
+        throttle.IsSuspended(100).Should().BeTrue();
+        throttle.IsSuspended(200).Should().BeFalse();
+        throttle.IsSuspended(300).Should().BeTrue();
     }
 
     [Fact]
@@ -131,23 +131,23 @@ public class ProcessThrottleTests
         const int iterations = 50;
 
         Task[] tasks = Enumerable
-            .Range(start: 1, count: pidCount)
-            .Select(selector: p =>
-                Task.Run(action: () =>
+            .Range(1, pidCount)
+            .Select(p =>
+                Task.Run(() =>
                 {
                     for (int i = 0; i < iterations; i++)
                     {
-                        throttle.Suspend(processId: p);
-                        throttle.Resume(processId: p);
+                        throttle.Suspend(p);
+                        throttle.Resume(p);
                     }
                 })
             )
             .ToArray();
 
-        await Task.WhenAll(tasks: tasks);
+        await Task.WhenAll(tasks);
 
         for (int p = 1; p <= pidCount; p++)
-            throttle.IsSuspended(processId: p).Should().BeFalse(because: $"pid {p} must be resumed");
+            throttle.IsSuspended(p).Should().BeFalse($"pid {p} must be resumed");
     }
 
     [Fact]
@@ -159,23 +159,23 @@ public class ProcessThrottleTests
         const int pidCount = 16;
 
         Task[] suspendTasks = Enumerable
-            .Range(start: 1, count: pidCount)
-            .Select(selector: p => Task.Run(action: () => throttle.Suspend(processId: p)))
+            .Range(1, pidCount)
+            .Select(p => Task.Run(() => throttle.Suspend(p)))
             .ToArray();
 
-        await Task.WhenAll(tasks: suspendTasks);
+        await Task.WhenAll(suspendTasks);
 
         for (int p = 1; p <= pidCount; p++)
-            throttle.IsSuspended(processId: p).Should().BeTrue(because: $"pid {p} must be suspended");
+            throttle.IsSuspended(p).Should().BeTrue($"pid {p} must be suspended");
 
         Task[] resumeTasks = Enumerable
-            .Range(start: 1, count: pidCount)
-            .Select(selector: p => Task.Run(action: () => throttle.Resume(processId: p)))
+            .Range(1, pidCount)
+            .Select(p => Task.Run(() => throttle.Resume(p)))
             .ToArray();
 
-        await Task.WhenAll(tasks: resumeTasks);
+        await Task.WhenAll(resumeTasks);
 
         for (int p = 1; p <= pidCount; p++)
-            throttle.IsSuspended(processId: p).Should().BeFalse(because: $"pid {p} must be resumed");
+            throttle.IsSuspended(p).Should().BeFalse($"pid {p} must be resumed");
     }
 }

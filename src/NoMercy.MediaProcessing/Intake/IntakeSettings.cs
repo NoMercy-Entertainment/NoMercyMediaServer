@@ -24,36 +24,36 @@ public sealed class IntakeSettings(IConfigurationStore configurationStore) : IIn
     {
         ct.ThrowIfCancellationRequested();
 
-        string? value = configurationStore.GetValue(key: DropFolderKey);
-        return Task.FromResult(result: string.IsNullOrEmpty(value: value) ? null : value);
+        string? value = configurationStore.GetValue(DropFolderKey);
+        return Task.FromResult(string.IsNullOrEmpty(value) ? null : value);
     }
 
     public async Task SetDropFolderAsync(string? path, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        await configurationStore.SetValueAsync(key: DropFolderKey, value: path ?? string.Empty);
+        await configurationStore.SetValueAsync(DropFolderKey, path ?? string.Empty);
     }
 
     public Task<bool> HasTokenAsync(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        return Task.FromResult(result: configurationStore.HasKey(key: TokenHashKey));
+        return Task.FromResult(configurationStore.HasKey(TokenHashKey));
     }
 
     public async Task<string> IssueTokenAsync(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        byte[] tokenBytes = RandomNumberGenerator.GetBytes(count: 32);
+        byte[] tokenBytes = RandomNumberGenerator.GetBytes(32);
         string plaintext = Convert
-            .ToBase64String(inArray: tokenBytes)
-            .TrimEnd(trimChar: '=')
-            .Replace(oldChar: '+', newChar: '-')
-            .Replace(oldChar: '/', newChar: '_');
+            .ToBase64String(tokenBytes)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
 
-        await configurationStore.SetValueAsync(key: TokenHashKey, value: HashToken(plaintext: plaintext));
+        await configurationStore.SetValueAsync(TokenHashKey, HashToken(plaintext));
 
         return plaintext;
     }
@@ -62,24 +62,24 @@ public sealed class IntakeSettings(IConfigurationStore configurationStore) : IIn
     {
         ct.ThrowIfCancellationRequested();
 
-        if (string.IsNullOrEmpty(value: presented))
-            return Task.FromResult(result: false);
+        if (string.IsNullOrEmpty(presented))
+            return Task.FromResult(false);
 
-        string? storedHash = configurationStore.GetValue(key: TokenHashKey);
-        if (string.IsNullOrEmpty(value: storedHash))
-            return Task.FromResult(result: false);
+        string? storedHash = configurationStore.GetValue(TokenHashKey);
+        if (string.IsNullOrEmpty(storedHash))
+            return Task.FromResult(false);
 
-        byte[] storedHashBytes = Convert.FromHexString(s: storedHash);
-        byte[] presentedHashBytes = Convert.FromHexString(s: HashToken(plaintext: presented));
+        byte[] storedHashBytes = Convert.FromHexString(storedHash);
+        byte[] presentedHashBytes = Convert.FromHexString(HashToken(presented));
 
         return Task.FromResult(
-            result: CryptographicOperations.FixedTimeEquals(left: storedHashBytes, right: presentedHashBytes)
+            CryptographicOperations.FixedTimeEquals(storedHashBytes, presentedHashBytes)
         );
     }
 
     private static string HashToken(string plaintext)
     {
-        byte[] hashBytes = SHA256.HashData(source: Encoding.UTF8.GetBytes(s: plaintext));
-        return Convert.ToHexStringLower(inArray: hashBytes);
+        byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(plaintext));
+        return Convert.ToHexStringLower(hashBytes);
     }
 }

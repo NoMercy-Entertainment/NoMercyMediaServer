@@ -44,11 +44,11 @@ public class PersonManager(
             List<Crew> crews,
             List<Role> roles,
             List<Job> jobs
-        ) = CollectPeople(show: show);
+        ) = CollectPeople(show);
 
-        List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(ids: peopleIds);
+        List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(peopleIds);
 
-        IEnumerable<Person> people = peopleAppends.Select(selector: person => new Person
+        IEnumerable<Person> people = peopleAppends.Select(person => new Person
         {
             Id = person.Id,
             Adult = person.Adult,
@@ -68,28 +68,28 @@ public class PersonManager(
             TitleSort = person.Name,
         });
 
-        await personRepository.Store(people: people);
-        logger.LogInformation(message: "Show {Name}: People stored", args: show.Name);
+        await personRepository.Store(people);
+        logger.LogInformation("Show {Name}: People stored", show.Name);
 
-        await personRepository.StoreRoles(roles: roles);
-        logger.LogDebug(message: "Show {Name}: Roles stored", args: show.Name);
+        await personRepository.StoreRoles(roles);
+        logger.LogDebug("Show {Name}: Roles stored", show.Name);
 
-        await personRepository.StoreJobs(job: jobs);
-        logger.LogDebug(message: "Show {Name}: Jobs stored", args: show.Name);
+        await personRepository.StoreJobs(jobs);
+        logger.LogDebug("Show {Name}: Jobs stored", show.Name);
 
         List<int> ids = personRepository.GetIds();
 
         await personRepository.StoreAggregateCreditsAsync(
-            cast: casts.Where(predicate: c => ids.Contains(item: c.PersonId)),
-            crew: crews.Where(predicate: c => ids.Contains(item: c.PersonId)),
-            type: Type.TvShow
+            casts.Where(c => ids.Contains(c.PersonId)),
+            crews.Where(c => ids.Contains(c.PersonId)),
+            Type.TvShow
         );
-        logger.LogDebug(message: "Show {Name}: Aggregate credits stored", args: show.Name);
+        logger.LogDebug("Show {Name}: Aggregate credits stored", show.Name);
 
         foreach (Person person in people)
-            jobDispatcher.DispatchColorPaletteJob(entityType: "person", entityId: person.Id.ToString());
+            jobDispatcher.DispatchColorPaletteJob("person", person.Id.ToString());
 
-        jobDispatcher.DispatchJob<PersonExtrasJob, TmdbPersonAppends>(data: peopleAppends, name: show.Name);
+        jobDispatcher.DispatchJob<PersonExtrasJob, TmdbPersonAppends>(peopleAppends, show.Name);
     }
 
     public async Task Store(TmdbSeasonAppends season)
@@ -100,11 +100,11 @@ public class PersonManager(
             List<Crew> crews,
             List<Role> roles,
             List<Job> jobs
-        ) = CollectPeople(season: season);
+        ) = CollectPeople(season);
 
-        List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(ids: peopleIds);
+        List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(peopleIds);
 
-        IEnumerable<Person> people = peopleAppends.Select(selector: person => new Person
+        IEnumerable<Person> people = peopleAppends.Select(person => new Person
         {
             Id = person.Id,
             Adult = person.Adult,
@@ -124,31 +124,31 @@ public class PersonManager(
             TitleSort = person.Name,
         });
 
-        await personRepository.Store(people: people);
+        await personRepository.Store(people);
         logger.LogInformation(
-            message: "Show {Name}; Season {SeasonNumber}: People stored", args: [season.Name, season.SeasonNumber]
+            "Show {Name}; Season {SeasonNumber}: People stored", [season.Name, season.SeasonNumber]
         );
 
-        await personRepository.StoreRoles(roles: roles);
+        await personRepository.StoreRoles(roles);
         logger.LogDebug(
-            message: "Show {Name}; Season {SeasonNumber}: Roles stored", args: [season.Name, season.SeasonNumber]
+            "Show {Name}; Season {SeasonNumber}: Roles stored", [season.Name, season.SeasonNumber]
         );
 
-        await personRepository.StoreJobs(job: jobs);
+        await personRepository.StoreJobs(jobs);
         logger.LogDebug(
-            message: "Show {Name}; Season {SeasonNumber}: Jobs stored", args: [season.Name, season.SeasonNumber]
+            "Show {Name}; Season {SeasonNumber}: Jobs stored", [season.Name, season.SeasonNumber]
         );
 
         List<int> ids = personRepository.GetIds();
 
-        await personRepository.StoreCast(cast: casts.Where(predicate: c => ids.Contains(item: c.PersonId)), type: Type.Season);
+        await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.Season);
         logger.LogDebug(
-            message: "Show {Name}; Season {SeasonNumber}: Cast stored", args: [season.Name, season.SeasonNumber]
+            "Show {Name}; Season {SeasonNumber}: Cast stored", [season.Name, season.SeasonNumber]
         );
 
-        await personRepository.StoreCrew(crew: crews.Where(predicate: c => ids.Contains(item: c.PersonId)), type: Type.Season);
+        await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Season);
         logger.LogDebug(
-            message: "Show {Name}; Season {SeasonNumber}: Crew stored", args: [season.Name, season.SeasonNumber]
+            "Show {Name}; Season {SeasonNumber}: Crew stored", [season.Name, season.SeasonNumber]
         );
     }
 
@@ -160,11 +160,11 @@ public class PersonManager(
             List<Crew> crews,
             List<Role> roles,
             List<Job> jobs
-        ) = CollectPeople(episode: episode);
+        ) = CollectPeople(episode);
 
-        List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(ids: peopleIds);
+        List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(peopleIds);
 
-        IEnumerable<Person> people = peopleAppends.Select(selector: person => new Person
+        IEnumerable<Person> people = peopleAppends.Select(person => new Person
         {
             Id = person.Id,
             Adult = person.Adult,
@@ -184,31 +184,31 @@ public class PersonManager(
             TitleSort = person.Name,
         });
 
-        await personRepository.Store(people: people);
+        await personRepository.Store(people);
         logger.LogInformation(
-            message: "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: People stored", args: [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: People stored", [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
         );
 
-        await personRepository.StoreRoles(roles: roles);
+        await personRepository.StoreRoles(roles);
         logger.LogDebug(
-            message: "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Roles stored", args: [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Roles stored", [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
         );
 
-        await personRepository.StoreJobs(job: jobs);
+        await personRepository.StoreJobs(jobs);
         logger.LogDebug(
-            message: "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Jobs stored", args: [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Jobs stored", [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
         );
 
         List<int> ids = personRepository.GetIds();
 
-        await personRepository.StoreCast(cast: casts.Where(predicate: c => ids.Contains(item: c.PersonId)), type: Type.Episode);
+        await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.Episode);
         logger.LogDebug(
-            message: "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Cast stored", args: [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Cast stored", [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
         );
 
-        await personRepository.StoreCrew(crew: crews.Where(predicate: c => ids.Contains(item: c.PersonId)), type: Type.Episode);
+        await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Episode);
         logger.LogDebug(
-            message: "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Crew stored", args: [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Crew stored", [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
         );
     }
 
@@ -220,11 +220,11 @@ public class PersonManager(
             List<Crew> crews,
             List<Role> roles,
             List<Job> jobs
-        ) = CollectPeople(movie: movie);
+        ) = CollectPeople(movie);
 
-        List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(ids: peopleIds);
+        List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(peopleIds);
 
-        IEnumerable<Person> people = peopleAppends.Select(selector: person => new Person
+        IEnumerable<Person> people = peopleAppends.Select(person => new Person
         {
             Id = person.Id,
             Adult = person.Adult,
@@ -244,49 +244,48 @@ public class PersonManager(
             TitleSort = person.Name,
         });
 
-        await personRepository.Store(people: people);
-        logger.LogInformation(message: "Movie: {Title}: People stored", args: movie.Title);
+        await personRepository.Store(people);
+        logger.LogInformation("Movie: {Title}: People stored", movie.Title);
 
-        await personRepository.StoreRoles(roles: roles);
-        logger.LogDebug(message: "Movie: {Title}: Roles stored", args: movie.Title);
+        await personRepository.StoreRoles(roles);
+        logger.LogDebug("Movie: {Title}: Roles stored", movie.Title);
 
-        await personRepository.StoreJobs(job: jobs);
-        logger.LogDebug(message: "Movie: {Title}: Jobs stored", args: movie.Title);
+        await personRepository.StoreJobs(jobs);
+        logger.LogDebug("Movie: {Title}: Jobs stored", movie.Title);
 
         List<int> ids = personRepository.GetIds();
 
-        await personRepository.StoreCast(cast: casts.Where(predicate: c => ids.Contains(item: c.PersonId)), type: Type.Movie);
-        logger.LogDebug(message: "Movie: {Title}: Cast stored", args: movie.Title);
+        await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.Movie);
+        logger.LogDebug("Movie: {Title}: Cast stored", movie.Title);
 
-        await personRepository.StoreCrew(crew: crews.Where(predicate: c => ids.Contains(item: c.PersonId)), type: Type.Movie);
-        logger.LogDebug(message: "Movie: {Title}: Crew stored", args: movie.Title);
+        await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Movie);
+        logger.LogDebug("Movie: {Title}: Crew stored", movie.Title);
 
         foreach (Person person in people)
-            jobDispatcher.DispatchColorPaletteJob(entityType: "person", entityId: person.Id.ToString());
+            jobDispatcher.DispatchColorPaletteJob("person", person.Id.ToString());
 
-        jobDispatcher.DispatchJob<PersonExtrasJob, TmdbPersonAppends>(data: peopleAppends, name: movie.Title);
+        jobDispatcher.DispatchJob<PersonExtrasJob, TmdbPersonAppends>(peopleAppends, movie.Title);
     }
 
     public Task Update(string showName, TmdbTvShowAppends show)
     {
         // Re-importing the show's people/credits is an idempotent upsert,
         // so re-running Store refreshes them in place.
-        return Store(show: show);
+        return Store(show);
     }
 
     public async Task Remove(string showName, TmdbTvShowAppends show)
     {
         // Remove this show's cast/crew associations. Shared Person rows are
         // left intact as they may still be referenced by other titles.
-        await personRepository.RemoveAggregateCreditsAsync(tvId: show.Id);
-        logger.LogDebug(message: "Show {ShowName}: People credits removed", args: showName);
+        await personRepository.RemoveAggregateCreditsAsync(show.Id);
+        logger.LogDebug("Show {ShowName}: People credits removed", showName);
     }
 
     public async Task UpdatePersonAsync(int personId)
     {
-        using TmdbPersonClient personClient = new(id: personId);
-        TmdbPersonAppends? person = await personClient.WithAppends(appendices:
-        [
+        using TmdbPersonClient personClient = new(personId);
+        TmdbPersonAppends? person = await personClient.WithAppends([
             "external_ids",
             "images",
             "translations",
@@ -294,15 +293,15 @@ public class PersonManager(
 
         if (person?.Name is null)
         {
-            logger.LogWarning(message: "Person {PersonId} not found during refresh", args: personId);
+            logger.LogWarning("Person {PersonId} not found during refresh", personId);
             return;
         }
 
-        await personRepository.Store(people: [ToPersonEntity(person: person)]);
-        await StoreTranslations(person: person);
-        await StoreImages(person: person);
+        await personRepository.Store([ToPersonEntity(person)]);
+        await StoreTranslations(person);
+        await StoreImages(person);
 
-        logger.LogDebug(message: "Person {Name}: refreshed from TMDB changes", args: person.Name);
+        logger.LogDebug("Person {Name}: refreshed from TMDB changes", person.Name);
     }
 
     private static Person ToPersonEntity(TmdbPersonAppends person)
@@ -331,10 +330,10 @@ public class PersonManager(
     internal async Task StoreTranslations(TmdbPersonAppends person)
     {
         IEnumerable<Translation> translations = person
-            .Translations.Translations.Where(predicate: translation =>
+            .Translations.Translations.Where(translation =>
                 translation.TmdbPersonTranslationData.Overview != ""
             )
-            .Select(selector: translation => new Translation
+            .Select(translation => new Translation
             {
                 Iso31661 = translation.Iso31661,
                 Iso6391 = translation.Iso6391,
@@ -344,13 +343,13 @@ public class PersonManager(
                 PersonId = person.Id,
             });
 
-        await personRepository.StoreTranslationsAsync(translations: translations);
+        await personRepository.StoreTranslationsAsync(translations);
     }
 
     internal async Task StoreImages(TmdbPersonAppends person)
     {
         IEnumerable<Image> posters = person
-            .Images.Profiles.Select(selector: image => new Image
+            .Images.Profiles.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 Height = image.Height,
@@ -365,7 +364,7 @@ public class PersonManager(
             })
             .ToList();
 
-        await personRepository.StoreImagesAsync(images: posters);
+        await personRepository.StoreImagesAsync(posters);
     }
 
     private (
@@ -384,10 +383,10 @@ public class PersonManager(
 
         foreach (TmdbTmdbAggregatedCast aggregateCast in show.AggregateCredits.Cast)
         {
-            peopleIds.Add(item: aggregateCast.Id);
+            peopleIds.Add(aggregateCast.Id);
 
             roles.AddRange(
-                collection: aggregateCast.Roles.Select(selector: creditRole => new Role
+                aggregateCast.Roles.Select(creditRole => new Role
                 {
                     CreditId = creditRole.CreditId,
                     Character = creditRole.Character,
@@ -397,7 +396,7 @@ public class PersonManager(
             );
 
             casts.AddRange(
-                collection: aggregateCast.Roles.Select(selector: creditRole => new Cast
+                aggregateCast.Roles.Select(creditRole => new Cast
                 {
                     CreditId = creditRole.CreditId,
                     PersonId = aggregateCast.Id,
@@ -408,10 +407,10 @@ public class PersonManager(
 
         foreach (TmdbTmdbAggregatedCrew aggregateCrew in show.AggregateCredits.Crew)
         {
-            peopleIds.Add(item: aggregateCrew.Id);
+            peopleIds.Add(aggregateCrew.Id);
 
             jobs.AddRange(
-                collection: aggregateCrew.Jobs.Select(selector: crewJob => new Job
+                aggregateCrew.Jobs.Select(crewJob => new Job
                 {
                     CreditId = crewJob.CreditId.OrEmpty(),
                     Task = crewJob.Job,
@@ -421,7 +420,7 @@ public class PersonManager(
             );
 
             crews.AddRange(
-                collection: aggregateCrew.Jobs.Select(selector: crewJob => new Crew
+                aggregateCrew.Jobs.Select(crewJob => new Crew
                 {
                     CreditId = crewJob.CreditId,
                     PersonId = aggregateCrew.Id,
@@ -449,10 +448,10 @@ public class PersonManager(
 
         foreach (TmdbTmdbAggregatedCast aggregateCast in season.AggregateCredits.Cast)
         {
-            peopleIds.Add(item: aggregateCast.Id);
+            peopleIds.Add(aggregateCast.Id);
 
             roles.AddRange(
-                collection: aggregateCast.Roles.Select(selector: r => new Role
+                aggregateCast.Roles.Select(r => new Role
                 {
                     CreditId = r.CreditId,
                     Character = r.Character,
@@ -462,7 +461,7 @@ public class PersonManager(
             );
 
             casts.AddRange(
-                collection: aggregateCast.Roles.Select(selector: creditRole => new Cast
+                aggregateCast.Roles.Select(creditRole => new Cast
                 {
                     CreditId = creditRole.CreditId,
                     PersonId = aggregateCast.Id,
@@ -473,10 +472,10 @@ public class PersonManager(
 
         foreach (TmdbTmdbAggregatedCrew aggregateCrew in season.AggregateCredits.Crew)
         {
-            peopleIds.Add(item: aggregateCrew.Id);
+            peopleIds.Add(aggregateCrew.Id);
 
             jobs.AddRange(
-                collection: aggregateCrew.Jobs.Select(selector: j => new Job
+                aggregateCrew.Jobs.Select(j => new Job
                 {
                     CreditId = j.CreditId.OrEmpty(),
                     Task = j.Job,
@@ -486,7 +485,7 @@ public class PersonManager(
             );
 
             crews.AddRange(
-                collection: aggregateCrew.Jobs.Select(selector: crewJob => new Crew
+                aggregateCrew.Jobs.Select(crewJob => new Crew
                 {
                     CreditId = crewJob.CreditId,
                     PersonId = aggregateCrew.Id,
@@ -514,10 +513,10 @@ public class PersonManager(
 
         foreach (TmdbCast tmdbCast in episode.Cast)
         {
-            peopleIds.Add(item: tmdbCast.Id);
+            peopleIds.Add(tmdbCast.Id);
 
             roles.Add(
-                item: new()
+                new()
                 {
                     CreditId = tmdbCast.CreditId,
                     Character = tmdbCast.Character,
@@ -526,7 +525,7 @@ public class PersonManager(
             );
 
             casts.Add(
-                item: new()
+                new()
                 {
                     CreditId = tmdbCast.CreditId,
                     PersonId = tmdbCast.Id,
@@ -537,10 +536,10 @@ public class PersonManager(
 
         foreach (TmdbCrew tmdbCrew in episode.Crew)
         {
-            peopleIds.Add(item: tmdbCrew.Id);
+            peopleIds.Add(tmdbCrew.Id);
 
             jobs.Add(
-                item: new()
+                new()
                 {
                     CreditId = tmdbCrew.CreditId.OrEmpty(),
                     Task = tmdbCrew.Job,
@@ -549,7 +548,7 @@ public class PersonManager(
             );
 
             crews.Add(
-                item: new()
+                new()
                 {
                     CreditId = tmdbCrew.CreditId,
                     PersonId = tmdbCrew.Id,
@@ -577,10 +576,10 @@ public class PersonManager(
 
         foreach (TmdbCast aggregateCast in movie.Credits.Cast)
         {
-            peopleIds.Add(item: aggregateCast.Id);
+            peopleIds.Add(aggregateCast.Id);
 
             roles.Add(
-                item: new()
+                new()
                 {
                     CreditId = aggregateCast.CreditId,
                     Character = aggregateCast.Character,
@@ -589,7 +588,7 @@ public class PersonManager(
             );
 
             casts.Add(
-                item: new()
+                new()
                 {
                     CreditId = aggregateCast.CreditId,
                     PersonId = aggregateCast.Id,
@@ -600,10 +599,10 @@ public class PersonManager(
 
         foreach (TmdbCrew tmdbCrew in movie.Credits.Crew)
         {
-            peopleIds.Add(item: tmdbCrew.Id);
+            peopleIds.Add(tmdbCrew.Id);
 
             jobs.Add(
-                item: new()
+                new()
                 {
                     CreditId = tmdbCrew.CreditId.OrEmpty(),
                     Task = tmdbCrew.Job,
@@ -612,7 +611,7 @@ public class PersonManager(
             );
 
             crews.Add(
-                item: new()
+                new()
                 {
                     CreditId = tmdbCrew.CreditId,
                     PersonId = tmdbCrew.Id,
@@ -632,15 +631,14 @@ public class PersonManager(
             ConcurrentBag<TmdbPersonAppends> personAppends = [];
 
             await Parallel.ForEachAsync(
-                source: ids,
-                parallelOptions: SystemParallelism.Options,
-                body: async (id, _) =>
+                ids,
+                SystemParallelism.Options,
+                async (id, _) =>
                 {
                     try
                     {
-                        using TmdbPersonClient personClient = new(id: id);
-                        TmdbPersonAppends? personTask = await personClient.WithAppends(appendices:
-                        [
+                        using TmdbPersonClient personClient = new(id);
+                        TmdbPersonAppends? personTask = await personClient.WithAppends([
                             "external_ids",
                             "images",
                             "translations",
@@ -648,24 +646,24 @@ public class PersonManager(
 
                         if (personTask?.Name is null)
                         {
-                            logger.LogWarning(message: "Person {Id} not found", args: id);
+                            logger.LogWarning("Person {Id} not found", id);
                             return;
                         }
 
-                        personAppends.Add(item: personTask);
+                        personAppends.Add(personTask);
                     }
                     catch (Exception e)
                     {
-                        logger.LogError(message: e.Message);
+                        logger.LogError(e.Message);
                     }
                 }
             );
 
-            return personAppends.Where(predicate: f => f is { Name: not null }).OrderBy(keySelector: f => f!.Name).ToList();
+            return personAppends.Where(f => f is { Name: not null }).OrderBy(f => f!.Name).ToList();
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
+            logger.LogError(e.Message);
         }
 
         return [];

@@ -22,17 +22,17 @@ namespace NoMercy.Tests.Providers.NoMercy.Client;
 /// content — producing corrupt/empty images.
 /// The fix: Read content once as byte[] and use it for both file writing and image loading.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class NoMercyImageClientTests
 {
     private static MethodInfo GetDownloadMethod()
     {
         MethodInfo? method = typeof(NoMercyImageClient).GetMethod(
-            name: "Download",
-            bindingAttr: BindingFlags.Public | BindingFlags.Static
+            "Download",
+            BindingFlags.Public | BindingFlags.Static
         );
 
-        Assert.NotNull(@object: method);
+        Assert.NotNull(method);
         return method;
     }
 
@@ -48,21 +48,21 @@ public class NoMercyImageClientTests
         // We search all nested types (including nested-of-nested) for one
         // that has MoveNext and IAsyncStateMachine.
         Type[] allNested = typeof(NoMercyImageClient).GetNestedTypes(
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Public
+            BindingFlags.NonPublic | BindingFlags.Public
         );
 
         foreach (Type nested in allNested)
         {
             // Check nested types within the display class
-            Type[] deepNested = nested.GetNestedTypes(bindingAttr: BindingFlags.NonPublic | BindingFlags.Public);
+            Type[] deepNested = nested.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public);
 
             foreach (Type deep in deepNested)
             {
-                if (typeof(IAsyncStateMachine).IsAssignableFrom(c: deep))
+                if (typeof(IAsyncStateMachine).IsAssignableFrom(deep))
                 {
                     MethodInfo? moveNext = deep.GetMethod(
-                        name: "MoveNext",
-                        bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+                        "MoveNext",
+                        BindingFlags.NonPublic | BindingFlags.Instance
                     );
 
                     if (moveNext != null)
@@ -71,11 +71,11 @@ public class NoMercyImageClientTests
             }
 
             // Also check the nested type itself
-            if (typeof(IAsyncStateMachine).IsAssignableFrom(c: nested))
+            if (typeof(IAsyncStateMachine).IsAssignableFrom(nested))
             {
                 MethodInfo? moveNext = nested.GetMethod(
-                    name: "MoveNext",
-                    bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+                    "MoveNext",
+                    BindingFlags.NonPublic | BindingFlags.Instance
                 );
 
                 if (moveNext != null)
@@ -84,7 +84,7 @@ public class NoMercyImageClientTests
         }
 
         throw new InvalidOperationException(
-            message: "Could not find async state machine for the local Task() function in NoMercyImageClient.Download"
+            "Could not find async state machine for the local Task() function in NoMercyImageClient.Download"
         );
     }
 
@@ -98,12 +98,12 @@ public class NoMercyImageClientTests
         {
             if ((ilBytes[i] == 0x28 || ilBytes[i] == 0x6F) && i + 4 < ilBytes.Length)
             {
-                int token = BitConverter.ToInt32(value: ilBytes, startIndex: i + 1);
+                int token = BitConverter.ToInt32(ilBytes, i + 1);
                 try
                 {
-                    MethodBase? calledMethod = module.ResolveMethod(metadataToken: token);
+                    MethodBase? calledMethod = module.ResolveMethod(token);
                     if (calledMethod != null)
-                        names.Add(item: calledMethod.Name);
+                        names.Add(calledMethod.Name);
                 }
                 catch (Exception)
                 {
@@ -120,9 +120,9 @@ public class NoMercyImageClientTests
     {
         MethodInfo method = GetDownloadMethod();
 
-        Assert.True(condition: method.IsStatic, userMessage: "Download should be a static method");
-        Assert.True(condition: method.ReturnType.IsGenericType);
-        Assert.Equal(expected: typeof(Task<>), actual: method.ReturnType.GetGenericTypeDefinition());
+        Assert.True(method.IsStatic, "Download should be a static method");
+        Assert.True(method.ReturnType.IsGenericType);
+        Assert.Equal(typeof(Task<>), method.ReturnType.GetGenericTypeDefinition());
     }
 
     [Fact]
@@ -131,58 +131,58 @@ public class NoMercyImageClientTests
         MethodInfo method = GetDownloadMethod();
         ParameterInfo[] parameters = method.GetParameters();
 
-        Assert.Equal(expected: 3, actual: parameters.Length);
-        Assert.Equal(expected: typeof(string), actual: parameters[0].ParameterType);
-        Assert.Equal(expected: "path", actual: parameters[0].Name);
-        Assert.Equal(expected: typeof(bool?), actual: parameters[1].ParameterType);
-        Assert.Equal(expected: "download", actual: parameters[1].Name);
-        Assert.True(condition: parameters[1].HasDefaultValue);
-        Assert.Equal(expected: true, actual: parameters[1].DefaultValue);
-        Assert.Equal(expected: "maxDecodeSize", actual: parameters[2].Name);
-        Assert.Equal(expected: "Size", actual: Nullable.GetUnderlyingType(nullableType: parameters[2].ParameterType)?.Name);
-        Assert.True(condition: parameters[2].HasDefaultValue);
-        Assert.Null(@object: parameters[2].DefaultValue);
+        Assert.Equal(3, parameters.Length);
+        Assert.Equal(typeof(string), parameters[0].ParameterType);
+        Assert.Equal("path", parameters[0].Name);
+        Assert.Equal(typeof(bool?), parameters[1].ParameterType);
+        Assert.Equal("download", parameters[1].Name);
+        Assert.True(parameters[1].HasDefaultValue);
+        Assert.Equal(true, parameters[1].DefaultValue);
+        Assert.Equal("maxDecodeSize", parameters[2].Name);
+        Assert.Equal("Size", Nullable.GetUnderlyingType(parameters[2].ParameterType)?.Name);
+        Assert.True(parameters[2].HasDefaultValue);
+        Assert.Null(parameters[2].DefaultValue);
     }
 
     [Fact]
     public void Download_LocalFunction_DoesNotCallReadAsStreamAsync()
     {
         (Type _, MethodInfo moveNext) = GetLocalFunctionStateMachine();
-        List<string> calledMethods = GetCalledMethodNames(moveNext: moveNext);
+        List<string> calledMethods = GetCalledMethodNames(moveNext);
 
-        Assert.DoesNotContain(expected: "ReadAsStreamAsync", collection: calledMethods);
+        Assert.DoesNotContain("ReadAsStreamAsync", calledMethods);
     }
 
     [Fact]
     public void Download_LocalFunction_CallsReadAsByteArrayAsync()
     {
         (Type _, MethodInfo moveNext) = GetLocalFunctionStateMachine();
-        List<string> calledMethods = GetCalledMethodNames(moveNext: moveNext);
+        List<string> calledMethods = GetCalledMethodNames(moveNext);
 
-        Assert.Contains(expected: "ReadAsByteArrayAsync", collection: calledMethods);
+        Assert.Contains("ReadAsByteArrayAsync", calledMethods);
     }
 
     [Fact]
     public void Download_LocalFunction_CallsReadAsByteArrayAsyncExactlyOnce()
     {
         (Type _, MethodInfo moveNext) = GetLocalFunctionStateMachine();
-        List<string> calledMethods = GetCalledMethodNames(moveNext: moveNext);
+        List<string> calledMethods = GetCalledMethodNames(moveNext);
 
-        int count = calledMethods.Count(predicate: n => n == "ReadAsByteArrayAsync");
-        Assert.Equal(expected: 1, actual: count);
+        int count = calledMethods.Count(n => n == "ReadAsByteArrayAsync");
+        Assert.Equal(1, count);
     }
 
     [Fact]
     public void Download_LocalFunction_DoesNotCallContentReadMultipleTimes()
     {
         (Type _, MethodInfo moveNext) = GetLocalFunctionStateMachine();
-        List<string> calledMethods = GetCalledMethodNames(moveNext: moveNext);
+        List<string> calledMethods = GetCalledMethodNames(moveNext);
 
-        int contentReadCalls = calledMethods.Count(predicate: n =>
+        int contentReadCalls = calledMethods.Count(n =>
             n is "ReadAsByteArrayAsync" or "ReadAsStreamAsync" or "ReadAsStringAsync"
         );
 
-        Assert.Equal(expected: 1, actual: contentReadCalls);
+        Assert.Equal(1, contentReadCalls);
     }
 
     [Fact]
@@ -199,10 +199,10 @@ public class NoMercyImageClientTests
         {
             if ((ilBytes[i] == 0x28 || ilBytes[i] == 0x6F) && i + 4 < ilBytes.Length)
             {
-                int token = BitConverter.ToInt32(value: ilBytes, startIndex: i + 1);
+                int token = BitConverter.ToInt32(ilBytes, i + 1);
                 try
                 {
-                    MethodBase? calledMethod = module.ResolveMethod(metadataToken: token);
+                    MethodBase? calledMethod = module.ResolveMethod(token);
                     if (calledMethod?.Name == "Load" && calledMethod.GetParameters().Length > 0)
                     {
                         ParameterInfo firstParam = calledMethod.GetParameters()[0];
@@ -223,8 +223,8 @@ public class NoMercyImageClientTests
         }
 
         Assert.True(
-            condition: hasImageLoadWithByteArray,
-            userMessage: "PROV-H16: Image.Load should use the byte[] overload, not Stream, "
+            hasImageLoadWithByteArray,
+            "PROV-H16: Image.Load should use the byte[] overload, not Stream, "
                          + "to avoid consuming a stream that might be reused."
         );
     }
@@ -237,8 +237,8 @@ public class NoMercyImageClientTests
         // it generates local async functions.
         (Type stateMachineType, MethodInfo moveNext) = GetLocalFunctionStateMachine();
 
-        Assert.NotNull(@object: stateMachineType);
-        Assert.NotNull(@object: moveNext);
-        Assert.True(condition: typeof(IAsyncStateMachine).IsAssignableFrom(c: stateMachineType));
+        Assert.NotNull(stateMachineType);
+        Assert.NotNull(moveNext);
+        Assert.True(typeof(IAsyncStateMachine).IsAssignableFrom(stateMachineType));
     }
 }

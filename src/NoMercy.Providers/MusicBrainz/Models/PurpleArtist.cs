@@ -15,25 +15,25 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class PurpleArtist
 {
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string Disambiguation { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
     // [JsonProperty("label-code")] public object LabelCode { get; set; }
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "sort-name")]
+    [JsonProperty("sort-name")]
     public string SortName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "type-id")]
+    [JsonProperty("type-id")]
     public Guid? TypeId { get; set; }
 
-    [JsonProperty(propertyName: "iso-3166-1-codes")]
+    [JsonProperty("iso-3166-1-codes")]
     public string[] Iso31661Codes { get; set; } = [];
 }

@@ -23,21 +23,21 @@ public sealed class SignalRLiveSessionTransport(
 {
     public async Task SendToClientAsync(string sessionId, object message, CancellationToken ct)
     {
-        string groupName = LiveTranscodeHub.GroupName(sessionId: sessionId);
+        string groupName = LiveTranscodeHub.GroupName(sessionId);
         string eventName = message.GetType().Name;
 
         try
         {
             await hubContext
-                .Clients.Group(groupName: groupName)
-                .SendAsync(method: eventName, arg1: message, cancellationToken: ct)
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .Clients.Group(groupName)
+                .SendAsync(eventName, message, ct)
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             logger.LogDebug(
-                exception: ex,
-                message: "SignalR send failed for event {Event} on session {SessionId}", args: [eventName, sessionId]
+                ex,
+                "SignalR send failed for event {Event} on session {SessionId}", [eventName, sessionId]
             );
         }
     }

@@ -70,7 +70,7 @@ public class FinalizeStageHlsDerivativesTests
 
         Mock<IOutputStrategy> strategyMock = new();
         strategyMock
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.FinalizeAsync(
                     It.IsAny<string>(),
                     It.IsAny<OutputPlan>(),
@@ -78,34 +78,34 @@ public class FinalizeStageHlsDerivativesTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(value: Task.CompletedTask);
-        strategyMock.Setup(expression: s => s.Format).Returns(value: OutputFormat.Hls);
+            .Returns(Task.CompletedTask);
+        strategyMock.Setup(s => s.Format).Returns(OutputFormat.Hls);
 
         Mock<IOutputStrategyFactory> factoryMock = new();
-        factoryMock.Setup(expression: f => f.Resolve(It.IsAny<OutputFormat>())).Returns(value: strategyMock.Object);
+        factoryMock.Setup(f => f.Resolve(It.IsAny<OutputFormat>())).Returns(strategyMock.Object);
 
         Mock<IChapterWriter> chapterMock = new();
         chapterMock
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.WriteChaptersAsync(
                     It.IsAny<string>(),
                     It.IsAny<IReadOnlyList<ChapterInfo>>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(value: Task.CompletedTask);
+            .Returns(Task.CompletedTask);
 
         Mock<IFontExtractor> fontMock = new();
         fontMock
-            .Setup(expression: f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 0);
+            .Setup(f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
 
         FinalizeStage stage = new(
-            chapterWriter: chapterMock.Object,
-            fontExtractor: fontMock.Object,
-            outputStrategyFactory: factoryMock.Object,
-            logger: NullLogger<FinalizeStage>.Instance,
-            storage: storage
+            chapterMock.Object,
+            fontMock.Object,
+            factoryMock.Object,
+            NullLogger<FinalizeStage>.Instance,
+            storage
         );
 
         return (stage, chapterMock, fontMock, storage);
@@ -114,11 +114,11 @@ public class FinalizeStageHlsDerivativesTests
     private static EncodingContext ContextWithChapters(int chapterCount = 2)
     {
         ChapterInfo[] chapters = Enumerable
-            .Range(start: 0, count: chapterCount)
-            .Select(selector: i => new ChapterInfo(
-                Start: TimeSpan.FromMinutes(minutes: i),
-                End: TimeSpan.FromMinutes(minutes: i + 1),
-                Title: $"Chapter {i + 1}"
+            .Range(0, chapterCount)
+            .Select(i => new ChapterInfo(
+                TimeSpan.FromMinutes(i),
+                TimeSpan.FromMinutes(i + 1),
+                $"Chapter {i + 1}"
             ))
             .ToArray();
 
@@ -127,7 +127,7 @@ public class FinalizeStageHlsDerivativesTests
             MediaInfo = new(
                 FilePath: "/src/movie.mkv",
                 Format: "matroska",
-                Duration: TimeSpan.FromHours(hours: 2),
+                Duration: TimeSpan.FromHours(2),
                 OverallBitRateKbps: 8000,
                 FileSizeBytes: 7_200_000_000L,
                 VideoStreams: [],
@@ -145,18 +145,18 @@ public class FinalizeStageHlsDerivativesTests
     {
         (FinalizeStage stage, Mock<IChapterWriter> chapterMock, _, _) = BuildStage();
         FinalizeInput input = MakeInput(hlsDerivatives: new() { GenerateChapters = true });
-        EncodingContext ctx = ContextWithChapters(chapterCount: 2);
+        EncodingContext ctx = ContextWithChapters(2);
 
-        await stage.ExecuteAsync(input: input, context: ctx, ct: CancellationToken.None);
+        await stage.ExecuteAsync(input, ctx, CancellationToken.None);
 
         chapterMock.Verify(
-            expression: c =>
+            c =>
                 c.WriteChaptersAsync(
                     It.IsAny<string>(),
                     It.IsAny<IReadOnlyList<ChapterInfo>>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -165,18 +165,18 @@ public class FinalizeStageHlsDerivativesTests
     {
         (FinalizeStage stage, Mock<IChapterWriter> chapterMock, _, _) = BuildStage();
         FinalizeInput input = MakeInput(hlsDerivatives: new() { GenerateChapters = false });
-        EncodingContext ctx = ContextWithChapters(chapterCount: 2);
+        EncodingContext ctx = ContextWithChapters(2);
 
-        await stage.ExecuteAsync(input: input, context: ctx, ct: CancellationToken.None);
+        await stage.ExecuteAsync(input, ctx, CancellationToken.None);
 
         chapterMock.Verify(
-            expression: c =>
+            c =>
                 c.WriteChaptersAsync(
                     It.IsAny<string>(),
                     It.IsAny<IReadOnlyList<ChapterInfo>>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -188,11 +188,11 @@ public class FinalizeStageHlsDerivativesTests
         (FinalizeStage stage, _, Mock<IFontExtractor> fontMock, _) = BuildStage();
         FinalizeInput input = MakeInput(hlsDerivatives: new() { GenerateFontsJson = true });
 
-        await stage.ExecuteAsync(input: input, context: EncodingContext.Create(), ct: CancellationToken.None);
+        await stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
 
         fontMock.Verify(
-            expression: f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            times: Times.Once
+            f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once
         );
     }
 
@@ -202,11 +202,11 @@ public class FinalizeStageHlsDerivativesTests
         (FinalizeStage stage, _, Mock<IFontExtractor> fontMock, _) = BuildStage();
         FinalizeInput input = MakeInput(hlsDerivatives: new() { GenerateFontsJson = false });
 
-        await stage.ExecuteAsync(input: input, context: EncodingContext.Create(), ct: CancellationToken.None);
+        await stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
 
         fontMock.Verify(
-            expression: f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            times: Times.Never
+            f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
     }
 
@@ -218,25 +218,25 @@ public class FinalizeStageHlsDerivativesTests
         (FinalizeStage stage, Mock<IChapterWriter> chapterMock, Mock<IFontExtractor> fontMock, _) =
             BuildStage();
         FinalizeInput input = MakeInput(hlsDerivatives: null);
-        EncodingContext ctx = ContextWithChapters(chapterCount: 2);
+        EncodingContext ctx = ContextWithChapters(2);
 
-        await stage.ExecuteAsync(input: input, context: ctx, ct: CancellationToken.None);
+        await stage.ExecuteAsync(input, ctx, CancellationToken.None);
 
         // GenerateChapters defaults to true
         chapterMock.Verify(
-            expression: c =>
+            c =>
                 c.WriteChaptersAsync(
                     It.IsAny<string>(),
                     It.IsAny<IReadOnlyList<ChapterInfo>>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
 
         // GenerateFontsJson defaults to true
         fontMock.Verify(
-            expression: f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            times: Times.Once
+            f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once
         );
     }
 
@@ -248,18 +248,18 @@ public class FinalizeStageHlsDerivativesTests
         (FinalizeStage stage, Mock<IChapterWriter> chapterMock, _, _) = BuildStage();
         FinalizeInput input = MakeInput(hlsDerivatives: new() { GenerateChapters = true });
         // MediaInfo with zero chapters
-        EncodingContext ctx = ContextWithChapters(chapterCount: 0);
+        EncodingContext ctx = ContextWithChapters(0);
 
-        await stage.ExecuteAsync(input: input, context: ctx, ct: CancellationToken.None);
+        await stage.ExecuteAsync(input, ctx, CancellationToken.None);
 
         chapterMock.Verify(
-            expression: c =>
+            c =>
                 c.WriteChaptersAsync(
                     It.IsAny<string>(),
                     It.IsAny<IReadOnlyList<ChapterInfo>>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -284,7 +284,7 @@ public class FinalizeStageHlsDerivativesTests
         );
 
         Func<Task> act = () =>
-            stage.ExecuteAsync(input: input, context: EncodingContext.Create(), ct: CancellationToken.None);
+            stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }

@@ -30,10 +30,10 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Analysis;
 /// auto-detection pipeline without kicking off a full encode.
 /// </summary>
 [ApiController]
-[Tags(tags: "Dashboard Content Analysis")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Content Analysis")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "Owner")]
-[Route(template: "api/v{version:apiVersion}/dashboard/content-analysis")]
+[Route("api/v{version:apiVersion}/dashboard/content-analysis")]
 public class ContentAnalysisController(
     ICropDetector cropDetector,
     ISubtitleOcrEngine? ocrEngine,
@@ -54,33 +54,33 @@ public class ContentAnalysisController(
     /// <b>Deprecated.</b> Use <c>POST /api/v1/encoder/content-analysis/crop/{videoFileId}</c>
     /// instead. This alias will be removed in a future release.
     /// </remarks>
-    [HttpGet(template: "crop/{videoFileId}")]
+    [HttpGet("crop/{videoFileId}")]
     public async Task<IActionResult> DetectCrop(string videoFileId, CancellationToken ct)
     {
-        if (!Ulid.TryParse(base32: videoFileId, ulid: out Ulid fileId))
-            return BadRequestResponse(detail: "Invalid video file id");
+        if (!Ulid.TryParse(videoFileId, out Ulid fileId))
+            return BadRequestResponse("Invalid video file id");
 
-        VideoFile? file = await videoFileRepository.GetByIdAsync(id: fileId, ct: ct);
+        VideoFile? file = await videoFileRepository.GetByIdAsync(fileId, ct);
 
         if (file is null)
-            return NotFoundResponse(detail: "Video file not found");
+            return NotFoundResponse("Video file not found");
 
-        string path = storageDriver.CombinePath(parent: file.HostFolder, child: file.Filename);
-        if (!storageDriver.FileExists(path: path))
-            return NotFoundResponse(detail: $"Source file missing on disk: {path}");
+        string path = storageDriver.CombinePath(file.HostFolder, file.Filename);
+        if (!storageDriver.FileExists(path))
+            return NotFoundResponse($"Source file missing on disk: {path}");
 
-        Guid sourceVideoFileId = new(b: fileId.ToByteArray());
+        Guid sourceVideoFileId = new(fileId.ToByteArray());
 
         try
         {
             CropResult result = await cropDetector.DetectAsync(
-                inputPath: path,
-                sourceVideoFileId: sourceVideoFileId,
-                sourceIsHdr: null,
-                ct: ct
+                path,
+                sourceVideoFileId,
+                null,
+                ct
             );
             return Ok(
-                value: new
+                new
                 {
                     source_video_file_id = result.SourceVideoFileId,
                     should_crop = result.ShouldCrop,
@@ -95,7 +95,7 @@ public class ContentAnalysisController(
         }
         catch (Exception ex)
         {
-            return InternalServerErrorResponse(detail: $"Crop detection failed: {ex.Message}");
+            return InternalServerErrorResponse($"Crop detection failed: {ex.Message}");
         }
     }
 
@@ -105,7 +105,7 @@ public class ContentAnalysisController(
     /// WebVTT track. Useful for spot-checking OCR quality before enabling
     /// it on a library-wide re-encode.
     /// </summary>
-    [HttpPost(template: "ocr/{videoFileId}")]
+    [HttpPost("ocr/{videoFileId}")]
     public async Task<IActionResult> OcrBitmapSubtitle(
         string videoFileId,
         [FromQuery] int streamIndex,
@@ -114,34 +114,34 @@ public class ContentAnalysisController(
     )
     {
         if (ocrEngine is null)
-            return NotImplementedResponse(detail: "Subtitle OCR engine is not registered on this build");
+            return NotImplementedResponse("Subtitle OCR engine is not registered on this build");
 
-        if (!Ulid.TryParse(base32: videoFileId, ulid: out Ulid fileId))
-            return BadRequestResponse(detail: "Invalid video file id");
+        if (!Ulid.TryParse(videoFileId, out Ulid fileId))
+            return BadRequestResponse("Invalid video file id");
 
-        if (string.IsNullOrWhiteSpace(value: language))
-            return BadRequestResponse(detail: "language query parameter is required");
+        if (string.IsNullOrWhiteSpace(language))
+            return BadRequestResponse("language query parameter is required");
 
-        VideoFile? file = await videoFileRepository.GetByIdAsync(id: fileId, ct: ct);
+        VideoFile? file = await videoFileRepository.GetByIdAsync(fileId, ct);
 
         if (file is null)
-            return NotFoundResponse(detail: "Video file not found");
+            return NotFoundResponse("Video file not found");
 
-        string path = storageDriver.CombinePath(parent: file.HostFolder, child: file.Filename);
-        if (!storageDriver.FileExists(path: path))
-            return NotFoundResponse(detail: $"Source file missing on disk: {path}");
+        string path = storageDriver.CombinePath(file.HostFolder, file.Filename);
+        if (!storageDriver.FileExists(path))
+            return NotFoundResponse($"Source file missing on disk: {path}");
 
         try
         {
             SubtitleTrack track = await ocrEngine.OcrAsync(
-                inputPath: path,
-                streamIndex: streamIndex,
-                language: language,
-                outputFormat: SubtitleCodecType.WebVtt,
-                ct: ct
+                path,
+                streamIndex,
+                language,
+                SubtitleCodecType.WebVtt,
+                ct
             );
             return Ok(
-                value: new
+                new
                 {
                     language,
                     stream_index = streamIndex,
@@ -152,7 +152,7 @@ public class ContentAnalysisController(
         }
         catch (Exception ex)
         {
-            return InternalServerErrorResponse(detail: $"OCR failed: {ex.Message}");
+            return InternalServerErrorResponse($"OCR failed: {ex.Message}");
         }
     }
 
@@ -163,7 +163,7 @@ public class ContentAnalysisController(
     /// intended for dashboard spot-checks of transcription quality, not
     /// library-wide jobs (the encode pipeline handles those).
     /// </summary>
-    [HttpPost(template: "transcribe/{videoFileId}")]
+    [HttpPost("transcribe/{videoFileId}")]
     public async Task<IActionResult> Transcribe(
         string videoFileId,
         [FromQuery] string language,
@@ -172,41 +172,41 @@ public class ContentAnalysisController(
     )
     {
         if (whisperTranscriber is null)
-            return NotImplementedResponse(detail: "Whisper transcriber is not registered on this build");
+            return NotImplementedResponse("Whisper transcriber is not registered on this build");
 
-        if (!Ulid.TryParse(base32: videoFileId, ulid: out Ulid fileId))
-            return BadRequestResponse(detail: "Invalid video file id");
+        if (!Ulid.TryParse(videoFileId, out Ulid fileId))
+            return BadRequestResponse("Invalid video file id");
 
-        if (string.IsNullOrWhiteSpace(value: language))
-            return BadRequestResponse(detail: "language query parameter is required");
+        if (string.IsNullOrWhiteSpace(language))
+            return BadRequestResponse("language query parameter is required");
 
-        VideoFile? file = await videoFileRepository.GetByIdAsync(id: fileId, ct: ct);
+        VideoFile? file = await videoFileRepository.GetByIdAsync(fileId, ct);
 
         if (file is null)
-            return NotFoundResponse(detail: "Video file not found");
+            return NotFoundResponse("Video file not found");
 
-        string path = storageDriver.CombinePath(parent: file.HostFolder, child: file.Filename);
-        if (!storageDriver.FileExists(path: path))
-            return NotFoundResponse(detail: $"Source file missing on disk: {path}");
+        string path = storageDriver.CombinePath(file.HostFolder, file.Filename);
+        if (!storageDriver.FileExists(path))
+            return NotFoundResponse($"Source file missing on disk: {path}");
 
         WhisperOptions options = new(
-            ModelPath: string.Empty, // Transcriber reads from EncoderOptions.WhisperModelPath.
-            ModelSize: WhisperModelSize.LargeV3,
-            TranslateToEnglish: translateToEnglish
+            string.Empty, // Transcriber reads from EncoderOptions.WhisperModelPath.
+            WhisperModelSize.LargeV3,
+            translateToEnglish
         );
 
         try
         {
             SubtitleTrack track = await whisperTranscriber.TranscribeAsync(
-                inputPath: path,
-                audioStreamIndex: 0,
-                language: language,
-                options: options,
-                progress: null,
-                ct: ct
+                path,
+                0,
+                language,
+                options,
+                null,
+                ct
             );
             return Ok(
-                value: new
+                new
                 {
                     language,
                     translate_to_english = translateToEnglish,
@@ -217,7 +217,7 @@ public class ContentAnalysisController(
         }
         catch (Exception ex)
         {
-            return InternalServerErrorResponse(detail: $"Transcription failed: {ex.Message}");
+            return InternalServerErrorResponse($"Transcription failed: {ex.Message}");
         }
     }
 
@@ -229,17 +229,17 @@ public class ContentAnalysisController(
     /// output. Owner-only — fingerprinting every episode is minutes of
     /// ffmpeg work per episode.
     /// </summary>
-    [HttpPost(template: "intro/{seasonId:int}")]
+    [HttpPost("intro/{seasonId:int}")]
     public async Task<IActionResult> DetectIntroForSeason(int seasonId, CancellationToken ct)
     {
         List<Episode> encoded = await videoFileRepository.GetEncodedEpisodesForSeasonAsync(
-            seasonId: seasonId,
-            ct: ct
+            seasonId,
+            ct
         );
 
         if (encoded.Count < 2)
             return BadRequestResponse(
-                detail: $"Need at least 2 encoded episodes, season has {encoded.Count}"
+                $"Need at least 2 encoded episodes, season has {encoded.Count}"
             );
 
         List<AudioFingerprint> intros = [];
@@ -252,50 +252,50 @@ public class ContentAnalysisController(
             if (source is null)
                 continue;
 
-            string path = storageDriver.CombinePath(parent: source.HostFolder, child: source.Filename);
-            if (!storageDriver.FileExists(path: path))
+            string path = storageDriver.CombinePath(source.HostFolder, source.Filename);
+            if (!storageDriver.FileExists(path))
                 continue;
 
             try
             {
                 AudioFingerprint introPrint = await fingerprinter.FingerprintAsync(
-                    filePath: path,
-                    window: new(Start: TimeSpan.Zero, Duration: TimeSpan.FromMinutes(minutes: 3)),
-                    ct: ct
+                    path,
+                    new(TimeSpan.Zero, TimeSpan.FromMinutes(3)),
+                    ct
                 );
-                intros.Add(item: introPrint);
+                intros.Add(introPrint);
 
-                TimeSpan duration = TimeSpan.TryParse(s: source.Duration, result: out TimeSpan parsed)
+                TimeSpan duration = TimeSpan.TryParse(source.Duration, out TimeSpan parsed)
                     ? parsed
                     : TimeSpan.Zero;
                 TimeSpan outroStart =
-                    duration > TimeSpan.FromMinutes(minutes: 3)
-                        ? duration - TimeSpan.FromMinutes(minutes: 3)
+                    duration > TimeSpan.FromMinutes(3)
+                        ? duration - TimeSpan.FromMinutes(3)
                         : TimeSpan.Zero;
 
                 AudioFingerprint outroPrint = await fingerprinter.FingerprintAsync(
-                    filePath: path,
-                    window: new(Start: outroStart, Duration: TimeSpan.FromMinutes(minutes: 3)),
-                    ct: ct
+                    path,
+                    new(outroStart, TimeSpan.FromMinutes(3)),
+                    ct
                 );
-                outros.Add(item: outroPrint);
+                outros.Add(outroPrint);
             }
             catch (Exception ex)
             {
                 return InternalServerErrorResponse(
-                    detail: $"Fingerprinting failed for episode {ep.Id}: {ex.Message}"
+                    $"Fingerprinting failed for episode {ep.Id}: {ex.Message}"
                 );
             }
         }
 
         if (intros.Count < 2)
-            return BadRequestResponse(detail: "Not enough successful fingerprints to compare");
+            return BadRequestResponse("Not enough successful fingerprints to compare");
 
-        IntroMarker? introMarker = introDetector.DetectIntro(episodeFingerprints: intros);
-        IntroMarker? outroMarker = introDetector.DetectOutro(episodeFingerprints: outros);
+        IntroMarker? introMarker = introDetector.DetectIntro(intros);
+        IntroMarker? outroMarker = introDetector.DetectOutro(outros);
 
         return Ok(
-            value: new
+            new
             {
                 season_id = seasonId,
                 episodes_scanned = intros.Count,

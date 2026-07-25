@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbScreenedTheatricallyResult
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "episode_number")]
+    [JsonProperty("episode_number")]
     public int EpisodeNumber { get; set; }
 
-    [JsonProperty(propertyName: "season_number")]
+    [JsonProperty("season_number")]
     public int SeasonNumber { get; set; }
 }

@@ -20,14 +20,14 @@ public static class LogCache
 
     public static bool TryGetCachedEntries(string filePath, out List<LogEntry>? cachedEntries)
     {
-        return Cache.TryGetValue(key: filePath, value: out cachedEntries);
+        return Cache.TryGetValue(filePath, out cachedEntries);
     }
 
     public static void AddToCache(string filePath, List<LogEntry>? entries)
     {
-        if (!Cache.ContainsKey(key: filePath) && Cache.Count >= MaxEntries)
-            Cache.Remove(key: Cache.Keys.First());
+        if (!Cache.ContainsKey(filePath) && Cache.Count >= MaxEntries)
+            Cache.Remove(Cache.Keys.First());
 
-        Cache[key: filePath] = entries;
+        Cache[filePath] = entries;
     }
 }

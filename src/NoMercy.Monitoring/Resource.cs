@@ -15,15 +15,15 @@ namespace NoMercy.Monitoring;
 
 public class Resource
 {
-    [JsonProperty(propertyName: "cpu")]
+    [JsonProperty("cpu")]
     public Cpu Cpu { get; set; } = new();
 
     // ReSharper disable once InconsistentNaming
     internal Dictionary<string, Gpu> _gpu { get; set; } = [];
 
-    [JsonProperty(propertyName: "memory")]
+    [JsonProperty("memory")]
     public Memory Memory { get; set; } = new();
 
-    [JsonProperty(propertyName: "gpu")]
+    [JsonProperty("gpu")]
     public List<Gpu> Gpu => _gpu.Values.ToList();
 }

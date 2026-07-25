@@ -23,94 +23,94 @@ namespace NoMercy.Api.DTOs.Media;
 
 public class VideoPlaylistResponseDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "show")]
+    [JsonProperty("show")]
     public string? Show { get; set; }
 
-    [JsonProperty(propertyName: "origin")]
+    [JsonProperty("origin")]
     public Guid Origin { get; set; }
 
-    [JsonProperty(propertyName: "uuid")]
+    [JsonProperty("uuid")]
     public int Uuid { get; set; }
 
-    [JsonProperty(propertyName: "video_id")]
+    [JsonProperty("video_id")]
     public Ulid VideoId { get; set; }
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public string Duration { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "tmdb_id")]
+    [JsonProperty("tmdb_id")]
     public int TmdbId { get; set; }
 
-    [JsonProperty(propertyName: "video_type")]
+    [JsonProperty("video_type")]
     public string VideoType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "library_type")]
+    [JsonProperty("library_type")]
     public string LibraryType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "playlist_type")]
+    [JsonProperty("playlist_type")]
     public string PlaylistType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "playlist_id")]
+    [JsonProperty("playlist_id")]
     public dynamic PlaylistId { get; set; } = null!;
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public long Year { get; set; }
 
-    [JsonProperty(propertyName: "file")]
+    [JsonProperty("file")]
     public string File { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "progress")]
+    [JsonProperty("progress")]
     public ProgressDto? Progress { get; set; }
 
-    [JsonProperty(propertyName: "image")]
+    [JsonProperty("image")]
     public string? Image { get; set; }
 
-    [JsonProperty(propertyName: "logo")]
+    [JsonProperty("logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty(propertyName: "sources")]
+    [JsonProperty("sources")]
     public SourceDto[] Sources { get; set; } = [];
 
-    [JsonProperty(propertyName: "fonts")]
+    [JsonProperty("fonts")]
     public List<IFont> Fonts { get; set; } = [];
 
-    [JsonProperty(propertyName: "chapters")]
+    [JsonProperty("chapters")]
     public List<IChapter> Chapters { get; set; } = [];
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public List<VideoTrack> Tracks { get; set; } = [];
 
-    [JsonProperty(propertyName: "rating")]
+    [JsonProperty("rating")]
     public RatingClass? ContentRating { get; set; }
 
-    [JsonProperty(propertyName: "audio")]
+    [JsonProperty("audio")]
     public List<IAudio> Audio { get; set; } = [];
 
-    [JsonProperty(propertyName: "captions")]
+    [JsonProperty("captions")]
     public List<ISubtitle> Captions { get; set; } = [];
 
-    [JsonProperty(propertyName: "qualities")]
+    [JsonProperty("qualities")]
     public List<IVideo> Qualities { get; set; } = [];
 
-    [JsonProperty(propertyName: "season")]
+    [JsonProperty("season")]
     public int? Season { get; set; }
 
-    [JsonProperty(propertyName: "episode")]
+    [JsonProperty("episode")]
     public int? Episode { get; set; }
 
-    [JsonProperty(propertyName: "seasonName")]
+    [JsonProperty("seasonName")]
     public string? SeasonName { get; set; }
 
-    [JsonProperty(propertyName: "episode_id")]
+    [JsonProperty("episode_id")]
     public int? EpisodeId { get; set; }
 
     public VideoPlaylistResponseDto() { }
@@ -134,8 +134,8 @@ public class VideoPlaylistResponseDto
         string baseFolder = $"/{videoFile.Share}{videoFile.Folder}";
 
         string? logo = episode
-            .Tv.Images.OrderByDescending(keySelector: image => image.VoteAverage)
-            .FirstOrDefault(predicate: image => image.Type == "logo")
+            .Tv.Images.OrderByDescending(image => image.VoteAverage)
+            .FirstOrDefault(image => image.Type == "logo")
             ?.FilePath;
 
         string tvTitle = episode.Tv.Translations.FirstOrDefault()?.Title ?? episode.Tv.Title;
@@ -147,7 +147,7 @@ public class VideoPlaylistResponseDto
             ? $"{tvTitle} %S{episode.SeasonNumber} %E{episode.EpisodeNumber} - {title}"
             : title;
 
-        Subs subs = Subtitles(videoFile: videoFile);
+        Subs subs = Subtitles(videoFile);
         Id = episode.Id;
         Title = specialTitle;
         Description = overview;
@@ -166,7 +166,7 @@ public class VideoPlaylistResponseDto
             ? new ProgressDto
             {
                 Time = userData.Time ?? 0,
-                Date = DateTime.Parse(s: userData.LastPlayedDate),
+                Date = DateTime.Parse(userData.LastPlayedDate),
             }
             : null;
         Image = episode.Still;
@@ -177,11 +177,11 @@ public class VideoPlaylistResponseDto
             new()
             {
                 Src = $"{baseFolder}{videoFile.Filename}",
-                Type = videoFile.Filename.Contains(value: ".mp4") ? "video/mp4" : "application/x-mpegURL",
+                Type = videoFile.Filename.Contains(".mp4") ? "video/mp4" : "application/x-mpegURL",
                 Languages =
                     JsonConvert
-                        .DeserializeObject<string?[]>(value: videoFile.Languages)
-                        ?.Where(predicate: lang => lang != null)
+                        .DeserializeObject<string?[]>(videoFile.Languages)
+                        ?.Where(lang => lang != null)
                         .ToArray()
                     ?? [],
             },
@@ -197,17 +197,17 @@ public class VideoPlaylistResponseDto
             : [];
 
         Tracks = videoFile
-            .Tracks.Select(selector: t => new VideoTrack
+            .Tracks.Select(t => new VideoTrack
             {
                 Label = t.Label,
                 File = $"{baseFolder}{t.File}",
                 Language = t.Language,
                 Kind = t.Kind,
             })
-            .Concat(second: subs.TextTracks)
-            .Concat(second: fontsTrack)
-            .Concat(second: chaptersTrack)
-            .OrderBy(keySelector: track => track.Language)
+            .Concat(subs.TextTracks)
+            .Concat(fontsTrack)
+            .Concat(chaptersTrack)
+            .OrderBy(track => track.Language)
             .ToList();
 
         Season = index is not null ? 0 : episode.SeasonNumber;
@@ -217,7 +217,7 @@ public class VideoPlaylistResponseDto
         Chapters = videoFile.Metadata?.Chapters ?? [];
         Fonts =
             videoFile
-                .Metadata?.Fonts?.Select(selector: font => new IFont
+                .Metadata?.Fonts?.Select(font => new IFont
                 {
                     FileName = $"{baseFolder}{font.FileName}",
                     FileHash = font.FileHash,
@@ -231,16 +231,16 @@ public class VideoPlaylistResponseDto
         Qualities = videoFile.Metadata?.Video ?? [];
 
         ContentRating = episode
-            .Tv.CertificationTvs.Where(predicate: certificationMovie =>
+            .Tv.CertificationTvs.Where(certificationMovie =>
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(selector: certificationTv => new RatingClass
+            .Select(certificationTv => new RatingClass
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
                 Image = new(
-                    value: $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
+                    $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
                 ),
             })
             .FirstOrDefault();
@@ -260,8 +260,8 @@ public class VideoPlaylistResponseDto
             return;
 
         string? logo = movie
-            .Images.OrderByDescending(keySelector: image => image.VoteAverage)
-            .FirstOrDefault(predicate: image => image.Type == "logo")
+            .Images.OrderByDescending(image => image.VoteAverage)
+            .FirstOrDefault(image => image.Type == "logo")
             ?.FilePath;
         UserData? userData = videoFile.UserData.FirstOrDefault();
         string baseFolder = $"/{videoFile.Share}{videoFile.Folder}";
@@ -269,7 +269,7 @@ public class VideoPlaylistResponseDto
         string title = movie.Translations.FirstOrDefault()?.Title ?? movie.Title;
         string? overview = movie.Translations.FirstOrDefault()?.Overview ?? movie.Overview;
 
-        Subs subs = Subtitles(videoFile: videoFile);
+        Subs subs = Subtitles(videoFile);
         Id = movie.Id;
         Title = title;
         Description = overview;
@@ -287,7 +287,7 @@ public class VideoPlaylistResponseDto
             ? new ProgressDto
             {
                 Time = userData.Time ?? 0,
-                Date = DateTime.Parse(s: userData.LastPlayedDate),
+                Date = DateTime.Parse(userData.LastPlayedDate),
             }
             : null;
         Image = movie.Backdrop;
@@ -298,11 +298,11 @@ public class VideoPlaylistResponseDto
             new()
             {
                 Src = $"{baseFolder}{videoFile.Filename}",
-                Type = videoFile.Filename.Contains(value: ".mp4") ? "video/mp4" : "application/x-mpegURL",
+                Type = videoFile.Filename.Contains(".mp4") ? "video/mp4" : "application/x-mpegURL",
                 Languages =
                     JsonConvert
-                        .DeserializeObject<string?[]>(value: videoFile.Languages)
-                        ?.Where(predicate: lang => lang != null)
+                        .DeserializeObject<string?[]>(videoFile.Languages)
+                        ?.Where(lang => lang != null)
                         .ToArray()
                     ?? [],
             },
@@ -318,23 +318,23 @@ public class VideoPlaylistResponseDto
             : [];
 
         Tracks = videoFile
-            .Tracks.Select(selector: t => new VideoTrack
+            .Tracks.Select(t => new VideoTrack
             {
                 Label = t.Label,
                 File = $"{baseFolder}{t.File}",
                 Language = t.Language,
                 Kind = t.Kind,
             })
-            .Concat(second: subs.TextTracks)
-            .Concat(second: fontsTrack)
-            .Concat(second: chaptersTrack)
-            .OrderBy(keySelector: track => track.Language)
+            .Concat(subs.TextTracks)
+            .Concat(fontsTrack)
+            .Concat(chaptersTrack)
+            .OrderBy(track => track.Language)
             .ToList();
 
         Chapters = videoFile.Metadata?.Chapters ?? [];
         Fonts =
             videoFile
-                .Metadata?.Fonts?.Select(selector: font => new IFont
+                .Metadata?.Fonts?.Select(font => new IFont
                 {
                     FileName = $"{baseFolder}{font.FileName}",
                     FileHash = font.FileHash,
@@ -348,16 +348,16 @@ public class VideoPlaylistResponseDto
         Qualities = videoFile.Metadata?.Video ?? [];
 
         ContentRating = movie
-            .CertificationMovies.Where(predicate: certificationMovie =>
+            .CertificationMovies.Where(certificationMovie =>
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(selector: certificationTv => new RatingClass
+            .Select(certificationTv => new RatingClass
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
                 Image = new(
-                    value: $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
+                    $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
                 ),
             })
             .FirstOrDefault();
@@ -377,13 +377,13 @@ public class VideoPlaylistResponseDto
 
     public class Subtitle
     {
-        [JsonProperty(propertyName: "language")]
+        [JsonProperty("language")]
         public string Language { get; set; } = "eng";
 
-        [JsonProperty(propertyName: "type")]
+        [JsonProperty("type")]
         public string Type { get; set; } = "full";
 
-        [JsonProperty(propertyName: "ext")]
+        [JsonProperty("ext")]
         public string Ext { get; set; } = "vtt";
     }
 
@@ -399,7 +399,7 @@ public class VideoPlaylistResponseDto
         List<Subtitle>? subtitleList;
         try
         {
-            subtitleList = JsonConvert.DeserializeObject<List<Subtitle>>(value: subtitles);
+            subtitleList = JsonConvert.DeserializeObject<List<Subtitle>>(subtitles);
         }
         catch (JsonException)
         {
@@ -415,13 +415,13 @@ public class VideoPlaylistResponseDto
             string ext = sub.Ext;
 
             textTracks.Add(
-                item: new()
+                new()
                 {
                     Label = type,
                     File =
                         $"{baseFolder}/subtitles{(videoFile?.Filename).OrEmpty()
-                    .Replace(oldValue: ".mp4", newValue: "")
-                    .Replace(oldValue: ".m3u8", newValue: "")}.{language}.{type}.{ext}",
+                    .Replace(".mp4", "")
+                    .Replace(".m3u8", "")}.{language}.{type}.{ext}",
                     Language = language,
                     Kind = "subtitles",
                 }

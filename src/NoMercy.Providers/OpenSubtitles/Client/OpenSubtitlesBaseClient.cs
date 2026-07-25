@@ -26,7 +26,7 @@ public class OpenSubtitlesBaseClient : ExternalApiClient
     internal static string? AccessToken { get; set; } = null;
 
     protected override string HttpClientName => HttpClientNames.OpenSubtitles;
-    protected override Uri BaseUrl => new(uriString: "https://api.opensubtitles.org/xml-rpc");
+    protected override Uri BaseUrl => new("https://api.opensubtitles.org/xml-rpc");
 
     // OpenSubtitles uses XML-RPC over POST rather than the shared JSON GET flow,
     // so it provides its own request method while reusing the shared Client,
@@ -36,18 +36,18 @@ public class OpenSubtitlesBaseClient : ExternalApiClient
         where T2 : class
     {
         string xml = query.ToXml();
-        Logger.OpenSubs(message: Redact(payload: xml), level: LogEventLevel.Verbose);
+        Logger.OpenSubs(Redact(xml), LogEventLevel.Verbose);
 
         string newUrl = QueryHelpers.AddQueryString(
-            uri: url,
-            queryString: new Dictionary<string, string?> { { "query", xml } }
+            url,
+            new Dictionary<string, string?> { { "query", xml } }
         );
 
-        string response = await RequestQueue.Enqueue(task: () => SendAsync(url: url, xml: xml), url: newUrl, priority: priority);
+        string response = await RequestQueue.Enqueue(() => SendAsync(url, xml), newUrl, priority);
 
-        await CacheController.Write(url: newUrl, data: response);
+        await CacheController.Write(newUrl, response);
 
-        Logger.OpenSubs(message: Redact(payload: response), level: LogEventLevel.Verbose);
+        Logger.OpenSubs(Redact(response), LogEventLevel.Verbose);
 
         return response.FromXml<T2>();
     }
@@ -57,15 +57,15 @@ public class OpenSubtitlesBaseClient : ExternalApiClient
     // verbatim leaked the token on every call.
     private static string Redact(string payload)
     {
-        return string.IsNullOrEmpty(value: AccessToken) || string.IsNullOrEmpty(value: payload)
+        return string.IsNullOrEmpty(AccessToken) || string.IsNullOrEmpty(payload)
             ? payload
-            : payload.Replace(oldValue: AccessToken, newValue: "***");
+            : payload.Replace(AccessToken, "***");
     }
 
     private async Task<string> SendAsync(string url, string xml)
     {
-        using StringContent content = new(content: xml, encoding: Encoding.UTF8, mediaType: "text/xml");
-        using HttpResponseMessage response = await Client.PostAsync(requestUri: url, content: content);
+        using StringContent content = new(xml, Encoding.UTF8, "text/xml");
+        using HttpResponseMessage response = await Client.PostAsync(url, content);
         // TODO(subtitle-acquisition): handle HTTP 429 — log WARN, return empty, enforce backoff window
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsStringAsync();

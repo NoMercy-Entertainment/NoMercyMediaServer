@@ -40,12 +40,12 @@ public class MusicPlaylistManager
         {
             // For type="track", the track ID is in the listId parameter (second param)
             // Call format: StartPlaybackCommand("track", trackId, null/empty)
-            "track" => await GetSingleTrack(userId: userId, trackId: listId, country: country),
-            "playlist" => await GetPlaylistTracks(userId: userId, listId: listId, trackId: trackId, country: country),
-            "album" => await GetAlbumTracks(userId: userId, listId: listId, trackId: trackId, country: country),
-            "artist" => await GetArtistTracks(userId: userId, listId: listId, trackId: trackId, country: country),
-            "genre" => await GetGenreTracks(userId: userId, listId: listId, trackId: trackId, country: country),
-            _ => throw new ArgumentException(message: $"Invalid playlist type: '{type}'", paramName: nameof(type)),
+            "track" => await GetSingleTrack(userId, listId, country),
+            "playlist" => await GetPlaylistTracks(userId, listId, trackId, country),
+            "album" => await GetAlbumTracks(userId, listId, trackId, country),
+            "artist" => await GetArtistTracks(userId, listId, trackId, country),
+            "genre" => await GetGenreTracks(userId, listId, trackId, country),
+            _ => throw new ArgumentException($"Invalid playlist type: '{type}'", nameof(type)),
         };
     }
 
@@ -54,12 +54,12 @@ public class MusicPlaylistManager
         Guid currentTrackId
     )
     {
-        int index = playlist.FindIndex(match: p => p.Id == currentTrackId);
+        int index = playlist.FindIndex(p => p.Id == currentTrackId);
         if (index == -1)
             return ([], playlist);
 
-        List<PlaylistTrackDto> before = playlist.GetRange(index: 0, count: index);
-        List<PlaylistTrackDto> after = playlist.GetRange(index: index + 1, count: playlist.Count - index - 1);
+        List<PlaylistTrackDto> before = playlist.GetRange(0, index);
+        List<PlaylistTrackDto> after = playlist.GetRange(index + 1, playlist.Count - index - 1);
 
         return (before, after);
     }
@@ -70,22 +70,22 @@ public class MusicPlaylistManager
         string country
     )
     {
-        Track? track = await _musicRepository.GetTrackAsync(id: trackId);
+        Track? track = await _musicRepository.GetTrackAsync(trackId);
 
         if (track is null)
-            throw new(message: "Track not found");
+            throw new("Track not found");
 
         // Load TrackUser data for favorite status
-        bool isFavorite = await _mediaContext.TrackUser.AnyAsync(predicate: tu =>
+        bool isFavorite = await _mediaContext.TrackUser.AnyAsync(tu =>
             tu.TrackId == trackId && tu.UserId == userId
         );
 
-        if (isFavorite && !track.TrackUser.Any(predicate: tu => tu.UserId == userId))
+        if (isFavorite && !track.TrackUser.Any(tu => tu.UserId == userId))
         {
-            track.TrackUser.Add(item: new() { TrackId = trackId, UserId = userId });
+            track.TrackUser.Add(new() { TrackId = trackId, UserId = userId });
         }
 
-        PlaylistTrackDto trackDto = new(track: track, country: country);
+        PlaylistTrackDto trackDto = new(track, country);
 
         // Return the track with an empty playlist (no other tracks to play)
         return (trackDto, []);
@@ -99,26 +99,26 @@ public class MusicPlaylistManager
     )
     {
         List<PlaylistTrack> playlistTracks = await _musicRepository.GetPlaylistTracksAsync(
-            userId: userId,
-            playlistId: listId
+            userId,
+            listId
         );
 
         if (playlistTracks.Count == 0)
-            throw new(message: "Playlist track not found");
+            throw new("Playlist track not found");
 
         List<PlaylistTrackDto> playlist = playlistTracks
-            .Select(selector: x => new PlaylistTrackDto(trackTrack: x, country: country))
+            .Select(x => new PlaylistTrackDto(x, country))
             .ToList();
 
         PlaylistTrackDto item =
-            playlist.FirstOrDefault(predicate: p => p.Id == trackId) ?? throw new(message: "Playlist track not found");
+            playlist.FirstOrDefault(p => p.Id == trackId) ?? throw new("Playlist track not found");
         (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) = SplitPlaylist(
-            playlist: playlist,
-            currentTrackId: trackId
+            playlist,
+            trackId
         );
         List<PlaylistTrackDto> sortedPlaylist = [];
-        sortedPlaylist.AddRange(collection: after);
-        sortedPlaylist.AddRange(collection: before);
+        sortedPlaylist.AddRange(after);
+        sortedPlaylist.AddRange(before);
 
         return (item, sortedPlaylist);
     }
@@ -130,26 +130,26 @@ public class MusicPlaylistManager
         string country
     )
     {
-        List<AlbumTrack> albumTracks = await _musicRepository.GetAlbumTracksAsync(userId: userId, albumId: listId);
+        List<AlbumTrack> albumTracks = await _musicRepository.GetAlbumTracksAsync(userId, listId);
 
         if (albumTracks.Count == 0)
-            throw new(message: "Album track not found");
+            throw new("Album track not found");
 
         List<PlaylistTrackDto> playlist = albumTracks
-            .Select(selector: x => new PlaylistTrackDto(artistTrack: x, country: country))
-            .OrderBy(keySelector: x => x.Disc)
-            .ThenBy(keySelector: x => x.Track)
+            .Select(x => new PlaylistTrackDto(x, country))
+            .OrderBy(x => x.Disc)
+            .ThenBy(x => x.Track)
             .ToList();
 
         PlaylistTrackDto item =
-            playlist.FirstOrDefault(predicate: p => p.Id == trackId) ?? throw new(message: "Album track not found");
+            playlist.FirstOrDefault(p => p.Id == trackId) ?? throw new("Album track not found");
         (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) = SplitPlaylist(
-            playlist: playlist,
-            currentTrackId: trackId
+            playlist,
+            trackId
         );
         List<PlaylistTrackDto> sortedPlaylist = [];
-        sortedPlaylist.AddRange(collection: after);
-        sortedPlaylist.AddRange(collection: before);
+        sortedPlaylist.AddRange(after);
+        sortedPlaylist.AddRange(before);
 
         return (item, sortedPlaylist);
     }
@@ -162,30 +162,30 @@ public class MusicPlaylistManager
     )
     {
         List<ArtistTrack> artistTracks = await _musicRepository.GetArtistTracksAsync(
-            userId: userId,
-            artistId: listId
+            userId,
+            listId
         );
 
         if (artistTracks.Count == 0)
-            throw new(message: "Artist track not found");
+            throw new("Artist track not found");
 
         List<PlaylistTrackDto> playlist = artistTracks
-            .Select(selector: x => new PlaylistTrackDto(artistTrack: x, country: country))
-            .DistinctBy(keySelector: x => x.Id)
-            .OrderBy(keySelector: x => x.AlbumName)
-            .ThenBy(keySelector: x => x.Disc)
-            .ThenBy(keySelector: x => x.Track)
+            .Select(x => new PlaylistTrackDto(x, country))
+            .DistinctBy(x => x.Id)
+            .OrderBy(x => x.AlbumName)
+            .ThenBy(x => x.Disc)
+            .ThenBy(x => x.Track)
             .ToList();
 
         PlaylistTrackDto item =
-            playlist.FirstOrDefault(predicate: p => p.Id == trackId) ?? throw new(message: "Artist track not found");
+            playlist.FirstOrDefault(p => p.Id == trackId) ?? throw new("Artist track not found");
         (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) = SplitPlaylist(
-            playlist: playlist,
-            currentTrackId: trackId
+            playlist,
+            trackId
         );
         List<PlaylistTrackDto> sortedPlaylist = [];
-        sortedPlaylist.AddRange(collection: after);
-        sortedPlaylist.AddRange(collection: before);
+        sortedPlaylist.AddRange(after);
+        sortedPlaylist.AddRange(before);
 
         return (item, sortedPlaylist);
     }
@@ -198,29 +198,29 @@ public class MusicPlaylistManager
     )
     {
         List<MusicGenreTrack> genreTracks = await _musicRepository.GetGenreTracksAsync(
-            userId: userId,
-            genreId: listId
+            userId,
+            listId
         );
 
         if (genreTracks.Count == 0)
-            throw new(message: "Genre track not found");
+            throw new("Genre track not found");
 
         List<PlaylistTrackDto> playlist = genreTracks
-            .Select(selector: x => new PlaylistTrackDto(genreTrack: x, country: country))
-            .DistinctBy(keySelector: x => x.Id)
-            .OrderBy(keySelector: x => x.Disc)
-            .ThenBy(keySelector: x => x.Track)
+            .Select(x => new PlaylistTrackDto(x, country))
+            .DistinctBy(x => x.Id)
+            .OrderBy(x => x.Disc)
+            .ThenBy(x => x.Track)
             .ToList();
 
         PlaylistTrackDto item =
-            playlist.FirstOrDefault(predicate: p => p.Id == trackId) ?? throw new(message: "Genre track not found");
+            playlist.FirstOrDefault(p => p.Id == trackId) ?? throw new("Genre track not found");
         (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) = SplitPlaylist(
-            playlist: playlist,
-            currentTrackId: trackId
+            playlist,
+            trackId
         );
         List<PlaylistTrackDto> sortedPlaylist = [];
-        sortedPlaylist.AddRange(collection: after);
-        sortedPlaylist.AddRange(collection: before);
+        sortedPlaylist.AddRange(after);
+        sortedPlaylist.AddRange(before);
 
         return (item, sortedPlaylist);
     }

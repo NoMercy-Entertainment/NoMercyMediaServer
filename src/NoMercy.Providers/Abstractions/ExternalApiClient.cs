@@ -64,9 +64,9 @@ public abstract class ExternalApiClient : IExternalProvider
 
     protected ExternalApiClient()
     {
-        Client = HttpClientProvider.CreateClient(name: HttpClientName);
+        Client = HttpClientProvider.CreateClient(HttpClientName);
         Client.BaseAddress ??= BaseUrl;
-        ConfigureClient(client: Client);
+        ConfigureClient(Client);
     }
 
     protected ExternalApiClient(Guid id)
@@ -79,7 +79,7 @@ public abstract class ExternalApiClient : IExternalProvider
     protected virtual void ConfigureClient(HttpClient client) { }
 
     /// <summary>Per-provider verbose request log. Default: the generic HTTP channel.</summary>
-    protected virtual void LogRequest(string url) => Logger.Http(message: url, level: LogEventLevel.Verbose);
+    protected virtual void LogRequest(string url) => Logger.Http(url, LogEventLevel.Verbose);
 
     /// <summary>
     /// Per-provider hook to inject non-secret query parameters (fixed format
@@ -110,10 +110,10 @@ public abstract class ExternalApiClient : IExternalProvider
 
     protected Queue RequestQueue =>
         Queues.GetOrAdd(
-            key: HttpClientName,
-            valueFactory: _ =>
+            HttpClientName,
+            _ =>
                 new(
-                    options: new()
+                    new()
                     {
                         Concurrent = ConcurrentRequests,
                         Interval = RequestIntervalMs,
@@ -131,44 +131,44 @@ public abstract class ExternalApiClient : IExternalProvider
         where T : class
     {
         // Copy so AugmentQuery / our own additions never mutate the caller's dict.
-        Dictionary<string, string?> effectiveQuery = query is null ? new() : new(dictionary: query);
-        AugmentQuery(query: effectiveQuery);
+        Dictionary<string, string?> effectiveQuery = query is null ? new() : new(query);
+        AugmentQuery(effectiveQuery);
 
         // Cache key and log line are built WITHOUT secrets.
-        string newUrl = QueryHelpers.AddQueryString(uri: url, queryString: effectiveQuery);
+        string newUrl = QueryHelpers.AddQueryString(url, effectiveQuery);
 
         if (!skipCache)
         {
-            (bool found, T? result) = await CacheController.ReadAsync<T>(url: newUrl);
+            (bool found, T? result) = await CacheController.ReadAsync<T>(newUrl);
             if (found)
                 return result;
         }
 
-        LogRequest(url: BaseUrl + newUrl);
+        LogRequest(BaseUrl + newUrl);
 
         // Secrets are appended to the outgoing request URL only.
         Dictionary<string, string?> secretQuery = new();
-        AddSecretQuery(query: secretQuery);
+        AddSecretQuery(secretQuery);
         string requestUrl =
-            secretQuery.Count == 0 ? newUrl : QueryHelpers.AddQueryString(uri: newUrl, queryString: secretQuery);
+            secretQuery.Count == 0 ? newUrl : QueryHelpers.AddQueryString(newUrl, secretQuery);
 
         try
         {
             // No retry here: Queue.Enqueue already retries transient failures.
             string response = await RequestQueue.Enqueue(
-                task: () => Client.GetStringAsync(requestUri: requestUrl),
-                url: newUrl,
-                priority: priority
+                () => Client.GetStringAsync(requestUrl),
+                newUrl,
+                priority
             );
 
             if (!skipCache)
-                await CacheController.Write(url: newUrl, data: response);
+                await CacheController.Write(newUrl, response);
             return response.FromJson<T>();
         }
-        catch (HttpRequestException ex) when (ShouldSoftFail(status: ex.StatusCode))
+        catch (HttpRequestException ex) when (ShouldSoftFail(ex.StatusCode))
         {
             // Provider signalled "not found" — soft-fail to null.
-            OnSoftFail(status: ex.StatusCode, url: newUrl);
+            OnSoftFail(ex.StatusCode, newUrl);
             return null;
         }
     }
@@ -176,6 +176,6 @@ public abstract class ExternalApiClient : IExternalProvider
     public void Dispose()
     {
         Disposed = true;
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 }

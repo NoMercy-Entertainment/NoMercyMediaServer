@@ -11,7 +11,6 @@
 
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Moq;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
@@ -19,7 +18,7 @@ using NoMercy.Setup.Auth;
 
 namespace NoMercy.Tests.Setup.Auth;
 
-[Trait(name: "Category", value: "Data")]
+[Trait("Category", "Data")]
 public class UserProvisioningServiceTests : IDisposable
 {
     private readonly List<SqliteConnection> _connections = [];
@@ -29,26 +28,26 @@ public class UserProvisioningServiceTests : IDisposable
     public UserProvisioningServiceTests()
     {
         _mediaContextFactory = CreateFactory();
-        _userProvisioningService = new(mediaContextFactory: _mediaContextFactory);
+        _userProvisioningService = new(_mediaContextFactory);
         UserCache.Current.Reset();
     }
 
     private IDbContextFactory<MediaContext> CreateFactory()
     {
-        SqliteConnection connection = new(connectionString: "Data Source=:memory:");
+        SqliteConnection connection = new("Data Source=:memory:");
         connection.Open();
-        _connections.Add(item: connection);
+        _connections.Add(connection);
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: connection)
+            .UseSqlite(connection)
             .Options;
 
-        using (MediaContext init = new(options: options))
+        using (MediaContext init = new(options))
             init.Database.EnsureCreated();
 
         Mock<IDbContextFactory<MediaContext>> mock = new();
-        mock.Setup(expression: x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(valueFunction: () => new(options: options));
+        mock.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new(options));
 
         return mock.Object;
     }
@@ -80,22 +79,22 @@ public class UserProvisioningServiceTests : IDisposable
             NoTranscoding = true,
         };
 
-        await _userProvisioningService.ProvisionOwner(user: newUser);
+        await _userProvisioningService.ProvisionOwner(newUser);
 
         await using MediaContext verify = await _mediaContextFactory.CreateDbContextAsync();
         User? persisted = await verify
             .Users.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: u => u.Id == userId);
+            .FirstOrDefaultAsync(u => u.Id == userId);
 
-        Assert.NotNull(@object: persisted);
-        Assert.Equal(expected: "Test Owner", actual: persisted.Name);
-        Assert.Equal(expected: "owner@test.local", actual: persisted.Email);
-        Assert.True(condition: persisted.Owner);
-        Assert.True(condition: persisted.Allowed);
-        Assert.True(condition: persisted.Manage);
-        Assert.True(condition: persisted.AudioTranscoding);
-        Assert.True(condition: persisted.VideoTranscoding);
-        Assert.True(condition: persisted.NoTranscoding);
+        Assert.NotNull(persisted);
+        Assert.Equal("Test Owner", persisted.Name);
+        Assert.Equal("owner@test.local", persisted.Email);
+        Assert.True(persisted.Owner);
+        Assert.True(persisted.Allowed);
+        Assert.True(persisted.Manage);
+        Assert.True(persisted.AudioTranscoding);
+        Assert.True(persisted.VideoTranscoding);
+        Assert.True(persisted.NoTranscoding);
     }
 
     [Fact]
@@ -117,7 +116,7 @@ public class UserProvisioningServiceTests : IDisposable
 
         await using (MediaContext seed = await _mediaContextFactory.CreateDbContextAsync())
         {
-            seed.Users.Add(entity: initialUser);
+            seed.Users.Add(initialUser);
             await seed.SaveChangesAsync();
         }
 
@@ -134,19 +133,19 @@ public class UserProvisioningServiceTests : IDisposable
             NoTranscoding = true,
         };
 
-        await _userProvisioningService.ProvisionOwner(user: updatedUser);
+        await _userProvisioningService.ProvisionOwner(updatedUser);
 
         await using MediaContext verify = await _mediaContextFactory.CreateDbContextAsync();
         User? persisted = await verify
             .Users.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: u => u.Id == userId);
+            .FirstOrDefaultAsync(u => u.Id == userId);
 
-        Assert.NotNull(@object: persisted);
-        Assert.Equal(expected: "Updated Name", actual: persisted.Name);
-        Assert.Equal(expected: "updated@test.local", actual: persisted.Email);
-        Assert.True(condition: persisted.Owner);
-        Assert.True(condition: persisted.Allowed);
-        Assert.True(condition: persisted.Manage);
+        Assert.NotNull(persisted);
+        Assert.Equal("Updated Name", persisted.Name);
+        Assert.Equal("updated@test.local", persisted.Email);
+        Assert.True(persisted.Owner);
+        Assert.True(persisted.Allowed);
+        Assert.True(persisted.Manage);
     }
 
     [Fact]
@@ -170,7 +169,7 @@ public class UserProvisioningServiceTests : IDisposable
 
         await using (MediaContext seed = await _mediaContextFactory.CreateDbContextAsync())
         {
-            seed.Users.Add(entity: otherUser);
+            seed.Users.Add(otherUser);
             await seed.SaveChangesAsync();
         }
 
@@ -187,23 +186,23 @@ public class UserProvisioningServiceTests : IDisposable
             NoTranscoding = true,
         };
 
-        await _userProvisioningService.ProvisionOwner(user: ownerUser);
+        await _userProvisioningService.ProvisionOwner(ownerUser);
 
         await using MediaContext verify = await _mediaContextFactory.CreateDbContextAsync();
         User? owner = await verify
             .Users.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: u => u.Id == ownerUserId);
+            .FirstOrDefaultAsync(u => u.Id == ownerUserId);
         User? other = await verify
             .Users.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: u => u.Id == otherUserId);
+            .FirstOrDefaultAsync(u => u.Id == otherUserId);
 
-        Assert.NotNull(@object: owner);
-        Assert.True(condition: owner.Owner);
-        Assert.Equal(expected: "owner@test.local", actual: owner.Email);
+        Assert.NotNull(owner);
+        Assert.True(owner.Owner);
+        Assert.Equal("owner@test.local", owner.Email);
 
-        Assert.NotNull(@object: other);
-        Assert.False(condition: other.Owner);
-        Assert.Equal(expected: "other@test.local", actual: other.Email);
+        Assert.NotNull(other);
+        Assert.False(other.Owner);
+        Assert.Equal("other@test.local", other.Email);
     }
 
     [Fact]
@@ -225,11 +224,11 @@ public class UserProvisioningServiceTests : IDisposable
             NoTranscoding = true,
         };
 
-        await _userProvisioningService.ProvisionOwner(user: newUser);
+        await _userProvisioningService.ProvisionOwner(newUser);
 
-        User? cached = UserCache.Current.GetUser(userId: userId);
-        Assert.NotNull(@object: cached);
-        Assert.Equal(expected: "Cache Test", actual: cached.Name);
-        Assert.Equal(expected: "cache@test.local", actual: cached.Email);
+        User? cached = UserCache.Current.GetUser(userId);
+        Assert.NotNull(cached);
+        Assert.Equal("Cache Test", cached.Name);
+        Assert.Equal("cache@test.local", cached.Email);
     }
 }

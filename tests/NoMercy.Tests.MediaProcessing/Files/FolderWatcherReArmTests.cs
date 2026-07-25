@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.MediaProcessing.Files;
-using Xunit;
 
 namespace NoMercy.Tests.MediaProcessing.Files;
 
@@ -25,29 +24,29 @@ public class FolderWatcherReArmTests
     public void TryReArm_ReEnablesAStoppedWatcher()
     {
         string dir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nm-fw-rearm-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nm-fw-rearm-" + Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: dir);
+        Directory.CreateDirectory(dir);
         try
         {
-            using FileSystemWatcher watcher = new(path: dir) { EnableRaisingEvents = true };
+            using FileSystemWatcher watcher = new(dir) { EnableRaisingEvents = true };
             watcher.EnableRaisingEvents = false;
 
-            bool result = FolderWatcher.TryReArm(watcher: watcher);
+            bool result = FolderWatcher.TryReArm(watcher);
 
-            Assert.True(condition: result);
-            Assert.True(condition: watcher.EnableRaisingEvents);
+            Assert.True(result);
+            Assert.True(watcher.EnableRaisingEvents);
         }
         finally
         {
-            Directory.Delete(path: dir, recursive: true);
+            Directory.Delete(dir, true);
         }
     }
 
     [Fact]
     public void TryReArm_NullWatcher_ReturnsFalse()
     {
-        Assert.False(condition: FolderWatcher.TryReArm(watcher: null));
+        Assert.False(FolderWatcher.TryReArm(null));
     }
 }

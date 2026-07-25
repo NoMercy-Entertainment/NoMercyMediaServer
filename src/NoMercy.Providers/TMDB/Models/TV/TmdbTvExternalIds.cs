@@ -15,27 +15,27 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbTvExternalIds
 {
-    [JsonProperty(propertyName: "imdb_id")]
+    [JsonProperty("imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty(propertyName: "freebase_mid")]
+    [JsonProperty("freebase_mid")]
     public string? FreebaseMid { get; set; }
 
-    [JsonProperty(propertyName: "freebase_id")]
+    [JsonProperty("freebase_id")]
     public string? FreebaseId { get; set; }
 
-    [JsonProperty(propertyName: "tvdb_id")]
+    [JsonProperty("tvdb_id")]
     public int? TvdbId { get; set; }
 
-    [JsonProperty(propertyName: "tvrage_id")]
+    [JsonProperty("tvrage_id")]
     public int? TvrageId { get; set; }
 
-    [JsonProperty(propertyName: "facebook_id")]
+    [JsonProperty("facebook_id")]
     public string? FacebookId { get; set; }
 
-    [JsonProperty(propertyName: "instagram_id")]
+    [JsonProperty("instagram_id")]
     public string? InstagramId { get; set; }
 
-    [JsonProperty(propertyName: "twitter_id")]
+    [JsonProperty("twitter_id")]
     public string? TwitterId { get; set; }
 }

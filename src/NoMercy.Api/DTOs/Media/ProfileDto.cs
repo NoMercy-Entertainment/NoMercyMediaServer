@@ -15,24 +15,24 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record ProfileDto
 {
-    [JsonProperty(propertyName: "aspect_ratio")]
+    [JsonProperty("aspect_ratio")]
     public double AspectRatio { get; set; }
 
-    [JsonProperty(propertyName: "height")]
+    [JsonProperty("height")]
     public long Height { get; set; }
 
-    [JsonProperty(propertyName: "iso_639_1")]
+    [JsonProperty("iso_639_1")]
     public object Iso6391 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "file_path")]
+    [JsonProperty("file_path")]
     public string FilePath { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "vote_average")]
+    [JsonProperty("vote_average")]
     public double VoteAverage { get; set; }
 
-    [JsonProperty(propertyName: "vote_count")]
+    [JsonProperty("vote_count")]
     public long VoteCount { get; set; }
 
-    [JsonProperty(propertyName: "width")]
+    [JsonProperty("width")]
     public long Width { get; set; }
 }

@@ -18,15 +18,15 @@ public class TvdbLanguagesResponse : TvdbResponse<TvdbLanguage[]> { }
 
 public class TvdbLanguage
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "nativeName")]
+    [JsonProperty("nativeName")]
     public string NativeName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "shortCode")]
+    [JsonProperty("shortCode")]
     public string ShortCode { get; set; } = string.Empty;
 }

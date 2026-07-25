@@ -30,7 +30,7 @@ public class LibraryAutoEncodeFieldsTests : IDisposable
 
     public LibraryAutoEncodeFieldsTests()
     {
-        _connection = new(connectionString: "DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
 
         using (SqliteCommand pragma = _connection.CreateCommand())
@@ -40,10 +40,10 @@ public class LibraryAutoEncodeFieldsTests : IDisposable
         }
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: _connection)
+            .UseSqlite(_connection)
             .Options;
 
-        _context = new(options: options);
+        _context = new(options);
         _context.Database.EnsureCreated();
     }
 
@@ -58,7 +58,7 @@ public class LibraryAutoEncodeFieldsTests : IDisposable
     {
         Ulid libraryId = Ulid.NewUlid();
         _context.Libraries.Add(
-            entity: new()
+            new()
             {
                 Id = libraryId,
                 Title = "Test Movies",
@@ -69,7 +69,7 @@ public class LibraryAutoEncodeFieldsTests : IDisposable
 
         _context.ChangeTracker.Clear();
 
-        Library reloaded = await _context.Libraries.SingleAsync(predicate: l => l.Id == libraryId);
+        Library reloaded = await _context.Libraries.SingleAsync(l => l.Id == libraryId);
 
         reloaded.AutoEncodeOnScan.Should().BeFalse();
         reloaded.EncodePresetId.Should().BeNull();

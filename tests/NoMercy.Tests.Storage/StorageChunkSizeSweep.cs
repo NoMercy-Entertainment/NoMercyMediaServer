@@ -34,13 +34,13 @@ namespace NoMercy.Tests.Storage;
 /// on demand: <c>dotnet test --filter "Category=Benchmark"</c>. Payload is
 /// overridable with <c>NM_BENCH_MB</c> (default 256 MiB).</para>
 /// </summary>
-[Collection(name: "StorageBackends")]
-[Trait(name: "Category", value: "Integration")]
-[Trait(name: "Category", value: "Benchmark")]
+[Collection("StorageBackends")]
+[Trait("Category", "Integration")]
+[Trait("Category", "Benchmark")]
 public sealed class StorageChunkSizeSweep(StorageBackendsFixture fix, ITestOutputHelper output)
 {
     private static int PayloadBytes =>
-        (int.TryParse(s: Environment.GetEnvironmentVariable(variable: "NM_BENCH_MB"), result: out int mb) ? mb : 256)
+        (int.TryParse(Environment.GetEnvironmentVariable("NM_BENCH_MB"), out int mb) ? mb : 256)
         * 1024
         * 1024;
 
@@ -74,7 +74,7 @@ public sealed class StorageChunkSizeSweep(StorageBackendsFixture fix, ITestOutpu
     {
         TheoryData<int> data = [];
         foreach (int chunk in NfsChunks)
-            data.Add(p: chunk);
+            data.Add(chunk);
         return data;
     }
 
@@ -82,7 +82,7 @@ public sealed class StorageChunkSizeSweep(StorageBackendsFixture fix, ITestOutpu
     {
         TheoryData<int> data = [];
         foreach (int chunk in SmbChunks)
-            data.Add(p: chunk);
+            data.Add(chunk);
         return data;
     }
 
@@ -90,43 +90,43 @@ public sealed class StorageChunkSizeSweep(StorageBackendsFixture fix, ITestOutpu
     {
         TheoryData<int> data = [];
         foreach (int part in S3Parts)
-            data.Add(p: part);
+            data.Add(part);
         return data;
     }
 
     [SkippableTheory]
-    [MemberData(memberName: nameof(SmbChunkCases))]
+    [MemberData(nameof(SmbChunkCases))]
     public void Smb_chunk_sweep(int chunk)
     {
-        Skip.If(condition: !fix.Available, reason: fix.StartupError ?? "storage container not available");
+        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
         using SmbStorageDriver driver = fix.BuildSmbDriver();
         driver.StreamChunkSize = chunk;
-        (double w, double r) = Transfer(driver: driver, path: $"sweep/smb-{chunk}-{Ulid.NewUlid()}.bin");
-        output.WriteLine(message: $"SMB   chunk {KiB(bytes: chunk), 5}  write {w, 7:F1}  read {r, 7:F1} MB/s");
+        (double w, double r) = Transfer(driver, $"sweep/smb-{chunk}-{Ulid.NewUlid()}.bin");
+        output.WriteLine($"SMB   chunk {KiB(chunk), 5}  write {w, 7:F1}  read {r, 7:F1} MB/s");
     }
 
     [SkippableTheory]
-    [MemberData(memberName: nameof(NfsChunkCases))]
+    [MemberData(nameof(NfsChunkCases))]
     public void Nfs_chunk_sweep(int chunk)
     {
-        Skip.If(condition: !fix.Available, reason: fix.StartupError ?? "storage container not available");
-        Skip.If(condition: !fix.NfsMountable, reason: fix.NfsUnavailableReason ?? "NFS export not mountable");
+        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
+        Skip.If(!fix.NfsMountable, fix.NfsUnavailableReason ?? "NFS export not mountable");
         using NfsStorageDriver? driver = fix.TryBuildNfsDriver();
-        Skip.If(condition: driver is null, reason: "libnfs native library not installed");
+        Skip.If(driver is null, "libnfs native library not installed");
         driver!.StreamChunkSize = chunk;
-        (double w, double r) = Transfer(driver: driver, path: $"/sweep-nfs-{chunk}-{Ulid.NewUlid()}.bin");
-        output.WriteLine(message: $"NFS   chunk {KiB(bytes: chunk), 5}  write {w, 7:F1}  read {r, 7:F1} MB/s");
+        (double w, double r) = Transfer(driver, $"/sweep-nfs-{chunk}-{Ulid.NewUlid()}.bin");
+        output.WriteLine($"NFS   chunk {KiB(chunk), 5}  write {w, 7:F1}  read {r, 7:F1} MB/s");
     }
 
     [SkippableTheory]
-    [MemberData(memberName: nameof(S3PartCases))]
+    [MemberData(nameof(S3PartCases))]
     public void S3_part_sweep(int part)
     {
-        Skip.If(condition: !fix.Available, reason: fix.StartupError ?? "storage container not available");
+        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
         using S3StorageDriver driver = fix.BuildS3Driver();
         driver.StreamPartSize = part;
-        (double w, double r) = Transfer(driver: driver, path: $"sweep/s3-{part}-{Ulid.NewUlid()}.bin");
-        output.WriteLine(message: $"S3    part  {KiB(bytes: part), 5}  write {w, 7:F1}  read {r, 7:F1} MB/s");
+        (double w, double r) = Transfer(driver, $"sweep/s3-{part}-{Ulid.NewUlid()}.bin");
+        output.WriteLine($"S3    part  {KiB(part), 5}  write {w, 7:F1}  read {r, 7:F1} MB/s");
     }
 
     private static (double WriteMBps, double ReadMBps) Transfer(IStorageDriver driver, string path)
@@ -134,30 +134,30 @@ public sealed class StorageChunkSizeSweep(StorageBackendsFixture fix, ITestOutpu
         int payload = PayloadBytes;
 
         double write = Time(
-            payload: payload,
-            transfer: () =>
+            payload,
+            () =>
             {
-                using Stream w = driver.OpenWrite(path: path, overwrite: true);
-                using GeneratedStream src = new(length: payload);
-                src.CopyTo(destination: w, bufferSize: 1024 * 1024);
+                using Stream w = driver.OpenWrite(path, true);
+                using GeneratedStream src = new(payload);
+                src.CopyTo(w, 1024 * 1024);
             }
         );
 
         double read = Time(
-            payload: payload,
-            transfer: () =>
+            payload,
+            () =>
             {
-                using Stream r = driver.OpenRead(path: path);
+                using Stream r = driver.OpenRead(path);
                 using CountingSink sink = new();
-                r.CopyTo(destination: sink, bufferSize: 1024 * 1024);
+                r.CopyTo(sink, 1024 * 1024);
                 if (sink.Total != payload)
-                    throw new IOException(message: $"read {sink.Total} of {payload} bytes");
+                    throw new IOException($"read {sink.Total} of {payload} bytes");
             }
         );
 
-        if (driver.GetFileSize(path: path) != payload)
-            throw new IOException(message: "stored size mismatch");
-        driver.DeleteFile(path: path);
+        if (driver.GetFileSize(path) != payload)
+            throw new IOException("stored size mismatch");
+        driver.DeleteFile(path);
         return (write, read);
     }
 

@@ -19,54 +19,54 @@ namespace NoMercy.Api.DTOs.Music;
 
 public class ArtistDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public JToken? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
     public ArtistDto(AlbumArtist albumArtist, string country)
     {
         string? description = albumArtist
-            .Artist.Translations.FirstOrDefault(predicate: translation => translation.Iso31661 == country)
+            .Artist.Translations.FirstOrDefault(translation => translation.Iso31661 == country)
             ?.Description;
 
-        Image? img = albumArtist.Artist.Images.FirstOrDefault(predicate: image => image.Type == "background");
+        Image? img = albumArtist.Artist.Images.FirstOrDefault(image => image.Type == "background");
 
         Id = albumArtist.Artist.Id;
         Name = albumArtist.Artist.Name;
-        Description = !string.IsNullOrEmpty(value: description)
+        Description = !string.IsNullOrEmpty(description)
             ? description
             : albumArtist.Artist.Description;
         Disambiguation = albumArtist.Artist.Disambiguation;
         Cover = albumArtist.Artist.Cover is not null
-            ? new Uri(uriString: $"/images/music{albumArtist.Artist.Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{albumArtist.Artist.Cover}", UriKind.Relative).ToString()
             : null;
         Backdrop = img?.FilePath is not null
-            ? new Uri(uriString: $"/images/music{img.FilePath}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
-        Link = new(uriString: $"/music/artists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Type = "artist";
 
         ColorPalette = albumArtist.Artist._colorPalette.ToRaw();
@@ -75,23 +75,23 @@ public class ArtistDto
     public ArtistDto(ArtistTrack artistTrack, string country)
     {
         string? description = artistTrack
-            .Artist.Translations.FirstOrDefault(predicate: translation => translation.Iso31661 == country)
+            .Artist.Translations.FirstOrDefault(translation => translation.Iso31661 == country)
             ?.Description;
-        Image? img = artistTrack.Artist.Images.FirstOrDefault(predicate: image => image.Type == "background");
+        Image? img = artistTrack.Artist.Images.FirstOrDefault(image => image.Type == "background");
 
         Id = artistTrack.Artist.Id;
         Name = artistTrack.Artist.Name;
-        Description = !string.IsNullOrEmpty(value: description)
+        Description = !string.IsNullOrEmpty(description)
             ? description
             : artistTrack.Artist.Description;
         Disambiguation = artistTrack.Artist.Disambiguation;
         Cover = artistTrack.Artist.Cover is not null
-            ? new Uri(uriString: $"/images/music{artistTrack.Artist.Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{artistTrack.Artist.Cover}", UriKind.Relative).ToString()
             : null;
         Backdrop = img?.FilePath is not null
-            ? new Uri(uriString: $"/images/music{img.FilePath}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
-        Link = new(uriString: $"/music/artists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Description = artistTrack.Artist.Description;
         Type = "artist";
         Disambiguation = artistTrack.Artist.Disambiguation;

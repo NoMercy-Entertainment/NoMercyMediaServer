@@ -27,9 +27,9 @@ public class LicenseTokenClientTests
     [Fact]
     public async Task RequestAsync_SuccessResponse_ReturnsToken()
     {
-        DateTime expiresAt = DateTime.UtcNow.AddHours(value: 1);
+        DateTime expiresAt = DateTime.UtcNow.AddHours(1);
         string body = JsonSerializer.Serialize(
-            value: new
+            new
             {
                 secret = "super-secret-key",
                 expires_at = expiresAt,
@@ -37,58 +37,58 @@ public class LicenseTokenClientTests
             }
         );
 
-        ILicenseTokenClient sut = MakeClient(handler: _ => new(statusCode: HttpStatusCode.OK)
+        ILicenseTokenClient sut = MakeClient(_ => new(HttpStatusCode.OK)
         {
-            Content = new StringContent(content: body, encoding: Encoding.UTF8, mediaType: "application/json"),
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
         });
 
-        ClusterTokenResult result = await sut.RequestAsync(ct: CancellationToken.None);
+        ClusterTokenResult result = await sut.RequestAsync(CancellationToken.None);
 
         result.Token.Should().NotBeNull();
         result.Failure.Should().BeNull();
-        result.Token!.Secret.Should().Be(expected: "super-secret-key");
-        result.Token.Scopes.Should().Contain(expected: "distributed_encoding");
-        result.Token.ExpiresAt.Should().BeCloseTo(nearbyTime: expiresAt, precision: TimeSpan.FromSeconds(seconds: 2));
+        result.Token!.Secret.Should().Be("super-secret-key");
+        result.Token.Scopes.Should().Contain("distributed_encoding");
+        result.Token.ExpiresAt.Should().BeCloseTo(expiresAt, TimeSpan.FromSeconds(2));
     }
 
     [Fact]
     public async Task RequestAsync_401Response_ReturnsUnauthenticated()
     {
-        ILicenseTokenClient sut = MakeClient(handler: _ => new(
-            statusCode: HttpStatusCode.Unauthorized
+        ILicenseTokenClient sut = MakeClient(_ => new(
+            HttpStatusCode.Unauthorized
         ));
 
-        ClusterTokenResult result = await sut.RequestAsync(ct: CancellationToken.None);
+        ClusterTokenResult result = await sut.RequestAsync(CancellationToken.None);
 
         result.Token.Should().BeNull();
-        result.Failure.Should().Be(expected: LicenseFailureKind.Unauthenticated);
+        result.Failure.Should().Be(LicenseFailureKind.Unauthenticated);
         result.Message.Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
     public async Task RequestAsync_403Response_ReturnsEntitlementRevoked()
     {
-        ILicenseTokenClient sut = MakeClient(handler: _ => new(
-            statusCode: HttpStatusCode.Forbidden
+        ILicenseTokenClient sut = MakeClient(_ => new(
+            HttpStatusCode.Forbidden
         ));
 
-        ClusterTokenResult result = await sut.RequestAsync(ct: CancellationToken.None);
+        ClusterTokenResult result = await sut.RequestAsync(CancellationToken.None);
 
         result.Token.Should().BeNull();
-        result.Failure.Should().Be(expected: LicenseFailureKind.EntitlementRevoked);
+        result.Failure.Should().Be(LicenseFailureKind.EntitlementRevoked);
         result.Message.Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
     public async Task RequestAsync_NetworkException_ReturnsNetworkError()
     {
-        ILicenseTokenClient sut = MakeClient(handler: _ => throw new HttpRequestException(message: "timeout"));
+        ILicenseTokenClient sut = MakeClient(_ => throw new HttpRequestException("timeout"));
 
-        ClusterTokenResult result = await sut.RequestAsync(ct: CancellationToken.None);
+        ClusterTokenResult result = await sut.RequestAsync(CancellationToken.None);
 
         result.Token.Should().BeNull();
-        result.Failure.Should().Be(expected: LicenseFailureKind.NetworkError);
-        result.Message.Should().Contain(expected: "timeout");
+        result.Failure.Should().Be(LicenseFailureKind.NetworkError);
+        result.Message.Should().Contain("timeout");
     }
 
     [Fact]
@@ -96,29 +96,29 @@ public class LicenseTokenClientTests
     {
         string? capturedAuth = null;
         string body = JsonSerializer.Serialize(
-            value: new
+            new
             {
                 secret = "s",
-                expires_at = DateTime.UtcNow.AddMinutes(value: 10),
+                expires_at = DateTime.UtcNow.AddMinutes(10),
                 scopes = Array.Empty<string>(),
             }
         );
 
         ILicenseTokenClient sut = MakeClient(
-            handler: req =>
+            req =>
             {
                 capturedAuth = req.Headers.Authorization?.ToString();
-                return new(statusCode: HttpStatusCode.OK)
+                return new(HttpStatusCode.OK)
                 {
-                    Content = new StringContent(content: body, encoding: Encoding.UTF8, mediaType: "application/json"),
+                    Content = new StringContent(body, Encoding.UTF8, "application/json"),
                 };
             },
-            accessToken: "my-access-token"
+            "my-access-token"
         );
 
-        await sut.RequestAsync(ct: CancellationToken.None);
+        await sut.RequestAsync(CancellationToken.None);
 
-        capturedAuth.Should().Be(expected: "Bearer my-access-token");
+        capturedAuth.Should().Be("Bearer my-access-token");
     }
 
     // ── IntrospectAsync ──────────────────────────────────────────────────────
@@ -127,35 +127,35 @@ public class LicenseTokenClientTests
     public async Task IntrospectAsync_ActiveToken_ReturnsActiveTrue()
     {
         string body = JsonSerializer.Serialize(
-            value: new { active = true, scopes = new[] { "distributed_encoding" } }
+            new { active = true, scopes = new[] { "distributed_encoding" } }
         );
 
-        ILicenseTokenClient sut = MakeClient(handler: _ => new(statusCode: HttpStatusCode.OK)
+        ILicenseTokenClient sut = MakeClient(_ => new(HttpStatusCode.OK)
         {
-            Content = new StringContent(content: body, encoding: Encoding.UTF8, mediaType: "application/json"),
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
         });
 
-        IntrospectResult result = await sut.IntrospectAsync(token: "some-token", ct: CancellationToken.None);
+        IntrospectResult result = await sut.IntrospectAsync("some-token", CancellationToken.None);
 
         result.Active.Should().BeTrue();
-        result.Scopes.Should().Contain(expected: "distributed_encoding");
+        result.Scopes.Should().Contain("distributed_encoding");
     }
 
     [Fact]
     public async Task IntrospectAsync_InactiveToken_ReturnsActiveFalse()
     {
         string body = JsonSerializer.Serialize(
-            value: new { active = false, scopes = Array.Empty<string>() }
+            new { active = false, scopes = Array.Empty<string>() }
         );
 
-        ILicenseTokenClient sut = MakeClient(handler: _ => new(statusCode: HttpStatusCode.OK)
+        ILicenseTokenClient sut = MakeClient(_ => new(HttpStatusCode.OK)
         {
-            Content = new StringContent(content: body, encoding: Encoding.UTF8, mediaType: "application/json"),
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
         });
 
         IntrospectResult result = await sut.IntrospectAsync(
-            token: "expired-token",
-            ct: CancellationToken.None
+            "expired-token",
+            CancellationToken.None
         );
 
         result.Active.Should().BeFalse();
@@ -166,24 +166,24 @@ public class LicenseTokenClientTests
     {
         int callCount = 0;
         string body = JsonSerializer.Serialize(
-            value: new { active = true, scopes = Array.Empty<string>() }
+            new { active = true, scopes = Array.Empty<string>() }
         );
 
-        ILicenseTokenClient sut = MakeClient(handler: _ =>
+        ILicenseTokenClient sut = MakeClient(_ =>
         {
-            Interlocked.Increment(location: ref callCount);
-            return new(statusCode: HttpStatusCode.OK)
+            Interlocked.Increment(ref callCount);
+            return new(HttpStatusCode.OK)
             {
-                Content = new StringContent(content: body, encoding: Encoding.UTF8, mediaType: "application/json"),
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
             };
         });
 
         const string token = "cached-token";
-        await sut.IntrospectAsync(token: token, ct: CancellationToken.None);
-        await sut.IntrospectAsync(token: token, ct: CancellationToken.None);
-        await sut.IntrospectAsync(token: token, ct: CancellationToken.None);
+        await sut.IntrospectAsync(token, CancellationToken.None);
+        await sut.IntrospectAsync(token, CancellationToken.None);
+        await sut.IntrospectAsync(token, CancellationToken.None);
 
-        callCount.Should().Be(expected: 1, because: "subsequent calls for same token must be served from cache");
+        callCount.Should().Be(1, "subsequent calls for same token must be served from cache");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -193,9 +193,9 @@ public class LicenseTokenClientTests
         string? accessToken = null
     )
     {
-        FakeHandler fake = new(respond: handler);
-        HttpClient http = new(handler: fake) { BaseAddress = new(uriString: "https://api.nomercy.tv/") };
-        return new LicenseTokenClient(http: http, accessTokenProvider: () => accessToken);
+        FakeHandler fake = new(handler);
+        HttpClient http = new(fake) { BaseAddress = new("https://api.nomercy.tv/") };
+        return new LicenseTokenClient(http, () => accessToken);
     }
 
     private sealed class FakeHandler(Func<HttpRequestMessage, HttpResponseMessage> respond)
@@ -207,7 +207,7 @@ public class LicenseTokenClientTests
         )
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(result: respond(arg: request));
+            return Task.FromResult(respond(request));
         }
     }
 }

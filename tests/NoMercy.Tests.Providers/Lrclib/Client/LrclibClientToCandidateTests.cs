@@ -9,14 +9,13 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Lrclib.Client;
 using NoMercy.Providers.Lrclib.Models;
 using NoMercy.Providers.NoMercy.Models;
 
 namespace NoMercy.Tests.Providers.Lrclib.Client;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class LrclibClientToCandidateTests
 {
     [Fact]
@@ -31,7 +30,7 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "[00:00.00]Instrumental",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
         candidate.Should().BeNull();
     }
@@ -49,7 +48,7 @@ public class LrclibClientToCandidateTests
             PlainLyrics = "",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
         candidate.Should().BeNull();
     }
@@ -67,7 +66,7 @@ public class LrclibClientToCandidateTests
             PlainLyrics = "Plain line",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
         candidate.Should().NotBeNull();
         candidate!.HasSyncedLyrics.Should().BeTrue();
@@ -86,7 +85,7 @@ public class LrclibClientToCandidateTests
             PlainLyrics = "Plain line",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
         candidate.Should().NotBeNull();
         candidate!.HasSyncedLyrics.Should().BeFalse();
@@ -104,9 +103,9 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "[00:01.00]Line",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.DurationSeconds.Should().Be(expected: 201);
+        candidate!.DurationSeconds.Should().Be(201);
     }
 
     [Fact]
@@ -121,9 +120,9 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "[00:01.00]Line",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.DurationSeconds.Should().Be(expected: 200);
+        candidate!.DurationSeconds.Should().Be(200);
     }
 
     [Fact]
@@ -138,7 +137,7 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "[00:01.00]Line",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
         candidate!.DurationSeconds.Should().BeNull();
     }
@@ -155,10 +154,10 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "[00:01.00]Line",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.Title.Should().Be(expected: "Bohemian Rhapsody");
-        candidate.Artist.Should().Be(expected: "Queen");
+        candidate!.Title.Should().Be("Bohemian Rhapsody");
+        candidate.Artist.Should().Be("Queen");
     }
 
     [Fact]
@@ -173,13 +172,13 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "[00:01.50]First\n[00:03.20]Second",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.Lines.Should().HaveCount(expected: 2);
-        candidate.Lines[0].Text.Should().Be(expected: "First");
-        candidate.Lines[0].Time.Total.Should().Be(expected: 1.5);
-        candidate.Lines[1].Text.Should().Be(expected: "Second");
-        candidate.Lines[1].Time.Total.Should().Be(expected: 3.2);
+        candidate!.Lines.Should().HaveCount(2);
+        candidate.Lines[0].Text.Should().Be("First");
+        candidate.Lines[0].Time.Total.Should().Be(1.5);
+        candidate.Lines[1].Text.Should().Be("Second");
+        candidate.Lines[1].Time.Total.Should().Be(3.2);
     }
 
     [Fact]
@@ -194,11 +193,11 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "[00:01.00]First\n\n[00:02.00]Second",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.Lines.Should().HaveCount(expected: 2);
-        candidate.Lines[0].Text.Should().Be(expected: "First");
-        candidate.Lines[1].Text.Should().Be(expected: "Second");
+        candidate!.Lines.Should().HaveCount(2);
+        candidate.Lines[0].Text.Should().Be("First");
+        candidate.Lines[1].Text.Should().Be("Second");
     }
 
     [Fact]
@@ -213,7 +212,7 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "\n\n\n",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
         candidate.Should().BeNull();
     }
@@ -230,13 +229,13 @@ public class LrclibClientToCandidateTests
             PlainLyrics = "First line\nSecond line",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.Lines.Should().HaveCount(expected: 2);
-        candidate.Lines[0].Text.Should().Be(expected: "First line");
-        candidate.Lines[0].Time.Total.Should().Be(expected: 0);
-        candidate.Lines[1].Text.Should().Be(expected: "Second line");
-        candidate.Lines[1].Time.Total.Should().Be(expected: 0);
+        candidate!.Lines.Should().HaveCount(2);
+        candidate.Lines[0].Text.Should().Be("First line");
+        candidate.Lines[0].Time.Total.Should().Be(0);
+        candidate.Lines[1].Text.Should().Be("Second line");
+        candidate.Lines[1].Time.Total.Should().Be(0);
     }
 
     [Fact]
@@ -251,13 +250,13 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "Line without timestamp\n[00:01.00]Timed line",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.Lines.Should().HaveCount(expected: 2);
-        candidate.Lines[0].Text.Should().Be(expected: "Line without timestamp");
-        candidate.Lines[0].Time.Total.Should().Be(expected: 0);
-        candidate.Lines[1].Text.Should().Be(expected: "Timed line");
-        candidate.Lines[1].Time.Total.Should().Be(expected: 1.0);
+        candidate!.Lines.Should().HaveCount(2);
+        candidate.Lines[0].Text.Should().Be("Line without timestamp");
+        candidate.Lines[0].Time.Total.Should().Be(0);
+        candidate.Lines[1].Text.Should().Be("Timed line");
+        candidate.Lines[1].Time.Total.Should().Be(1.0);
     }
 
     [Fact]
@@ -272,12 +271,12 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "[02:15.42]Line at 2:15.42",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.Lines[0].Time.Minutes.Should().Be(expected: 2);
-        candidate.Lines[0].Time.Seconds.Should().Be(expected: 15);
-        candidate.Lines[0].Time.Hundredths.Should().Be(expected: 42);
-        candidate.Lines[0].Time.Total.Should().Be(expected: 135.42);
+        candidate!.Lines[0].Time.Minutes.Should().Be(2);
+        candidate.Lines[0].Time.Seconds.Should().Be(15);
+        candidate.Lines[0].Time.Hundredths.Should().Be(42);
+        candidate.Lines[0].Time.Total.Should().Be(135.42);
     }
 
     [Fact]
@@ -296,15 +295,15 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "[00:00.000](Future)\n[00:01.900](Future nostalgia)",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.Lines.Should().HaveCount(expected: 2);
-        candidate.Lines[0].Text.Should().Be(expected: "(Future)");
-        candidate.Lines[0].Time.Total.Should().Be(expected: 0);
-        candidate.Lines[1].Text.Should().Be(expected: "(Future nostalgia)");
-        candidate.Lines[1].Time.Total.Should().Be(expected: 1.9);
-        candidate.Lines[1].Time.Seconds.Should().Be(expected: 1);
-        candidate.Lines[1].Time.Hundredths.Should().Be(expected: 90);
+        candidate!.Lines.Should().HaveCount(2);
+        candidate.Lines[0].Text.Should().Be("(Future)");
+        candidate.Lines[0].Time.Total.Should().Be(0);
+        candidate.Lines[1].Text.Should().Be("(Future nostalgia)");
+        candidate.Lines[1].Time.Total.Should().Be(1.9);
+        candidate.Lines[1].Time.Seconds.Should().Be(1);
+        candidate.Lines[1].Time.Hundredths.Should().Be(90);
     }
 
     [Fact]
@@ -321,12 +320,12 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "[00:00:00]Intro\n[01:05:50]Later line",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.Lines[0].Text.Should().Be(expected: "Intro");
-        candidate.Lines[0].Time.Total.Should().Be(expected: 0);
-        candidate.Lines[1].Text.Should().Be(expected: "Later line");
-        candidate.Lines[1].Time.Total.Should().Be(expected: 65.5);
+        candidate!.Lines[0].Text.Should().Be("Intro");
+        candidate.Lines[0].Time.Total.Should().Be(0);
+        candidate.Lines[1].Text.Should().Be("Later line");
+        candidate.Lines[1].Time.Total.Should().Be(65.5);
     }
 
     [Fact]
@@ -341,10 +340,10 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "[01:05]No fraction",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.Lines[0].Text.Should().Be(expected: "No fraction");
-        candidate.Lines[0].Time.Total.Should().Be(expected: 65);
+        candidate!.Lines[0].Text.Should().Be("No fraction");
+        candidate.Lines[0].Time.Total.Should().Be(65);
     }
 
     [Fact]
@@ -359,13 +358,13 @@ public class LrclibClientToCandidateTests
             SyncedLyrics = "  [00:01.00]  Text with spaces  ",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
-        candidate!.Lines[0].Text.Should().Be(expected: "Text with spaces");
+        candidate!.Lines[0].Text.Should().Be("Text with spaces");
     }
 
     [Theory]
-    [InlineData(data: "")]
+    [InlineData("")]
     public void ToCandidate_WithEmptyOrNullSyncedLyrics_UsesPlainsyncedIfAvailable(string synced)
     {
         LrclibSongResult result = new()
@@ -378,7 +377,7 @@ public class LrclibClientToCandidateTests
             PlainLyrics = "Plain lyrics available",
         };
 
-        LyricCandidate? candidate = LrclibClient.ToCandidate(result: result);
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
 
         candidate.Should().NotBeNull();
         candidate!.HasSyncedLyrics.Should().BeFalse();

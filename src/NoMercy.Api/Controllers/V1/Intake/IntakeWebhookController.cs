@@ -40,10 +40,10 @@ namespace NoMercy.Api.Controllers.V1.Intake;
 /// itself is never logged.
 /// </summary>
 [ApiController]
-[Tags(tags: "Intake")]
-[ApiVersion(version: 1.0)]
+[Tags("Intake")]
+[ApiVersion(1.0)]
 [AllowAnonymous]
-[Route(template: "api/v{version:apiVersion}/intake/webhook")]
+[Route("api/v{version:apiVersion}/intake/webhook")]
 public class IntakeWebhookController(
     IIntakeSettings intakeSettings,
     IDbContextFactory<MediaContext> contextFactory
@@ -57,14 +57,14 @@ public class IntakeWebhookController(
         CancellationToken ct
     )
     {
-        string presentedToken = Request.Headers[key: TokenHeaderName].ToString();
+        string presentedToken = Request.Headers[TokenHeaderName].ToString();
 
         bool tokenIsValid;
         try
         {
             tokenIsValid =
-                !string.IsNullOrEmpty(value: presentedToken)
-                && await intakeSettings.VerifyTokenAsync(presented: presentedToken, ct: ct);
+                !string.IsNullOrEmpty(presentedToken)
+                && await intakeSettings.VerifyTokenAsync(presentedToken, ct);
         }
         catch
         {
@@ -72,78 +72,78 @@ public class IntakeWebhookController(
         }
 
         if (!tokenIsValid)
-            return UnauthenticatedResponse(detail: "Missing or invalid intake token.");
+            return UnauthenticatedResponse("Missing or invalid intake token.");
 
-        string? dropFolder = await intakeSettings.GetDropFolderAsync(ct: ct);
-        if (string.IsNullOrEmpty(value: dropFolder))
-            return ConflictResponse(detail: "No drop folder is configured for intake.");
+        string? dropFolder = await intakeSettings.GetDropFolderAsync(ct);
+        if (string.IsNullOrEmpty(dropFolder))
+            return ConflictResponse("No drop folder is configured for intake.");
 
         if (
             request is null
-            || string.IsNullOrWhiteSpace(value: request.Path)
-            || !IsPathUnderRoot(candidatePath: request.Path, rootPath: dropFolder)
+            || string.IsNullOrWhiteSpace(request.Path)
+            || !IsPathUnderRoot(request.Path, dropFolder)
         )
             return BadRequestResponse(
-                detail: "path is required and must resolve to a location inside the configured drop folder."
+                "path is required and must resolve to a location inside the configured drop folder."
             );
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         List<Library> inboxLibraries = await context
             .Libraries.AsNoTracking()
-            .Include(navigationPropertyPath: library => library.FolderLibraries)
-                .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Folder)
-            .Where(predicate: library => library.Type == MediaTypes.InboxMediaType)
-            .ToListAsync(cancellationToken: ct);
+            .Include(library => library.FolderLibraries)
+                .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .Where(library => library.Type == MediaTypes.InboxMediaType)
+            .ToListAsync(ct);
 
         FolderLibrary? ownedFolder = inboxLibraries
-            .SelectMany(selector: library => library.FolderLibraries)
-            .FirstOrDefault(predicate: folderLibrary =>
-                FolderOwnsDropFolder(folderPath: folderLibrary.Folder.Path, dropFolder: dropFolder)
+            .SelectMany(library => library.FolderLibraries)
+            .FirstOrDefault(folderLibrary =>
+                FolderOwnsDropFolder(folderLibrary.Folder.Path, dropFolder)
             );
 
         if (ownedFolder is null)
             return ConflictResponse(
-                detail: "The configured drop folder is not registered as an inbox library."
+                "The configured drop folder is not registered as an inbox library."
             );
 
         if (!EventBusProvider.IsConfigured)
             return ServiceUnavailableResponse(
-                detail: "The event bus is not configured; the dropped file cannot be processed right now."
+                "The event bus is not configured; the dropped file cannot be processed right now."
             );
 
         await EventBusProvider.Current.PublishAsync(
-            @event: new FileCreatedEvent
+            new FileCreatedEvent
             {
                 FolderPath = ownedFolder.Folder.Path,
                 LibraryId = ownedFolder.LibraryId,
                 LibraryType = MediaTypes.InboxMediaType,
             },
-            ct: ct
+            ct
         );
 
-        return StatusCode(statusCode: StatusCodes.Status202Accepted, value: new { status = "accepted" });
+        return StatusCode(StatusCodes.Status202Accepted, new { status = "accepted" });
     }
 
     private static bool IsPathUnderRoot(string candidatePath, string rootPath)
     {
-        string fullRoot = Path.GetFullPath(path: rootPath)
-            .TrimEnd(trimChars: [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
-        string fullCandidate = Path.GetFullPath(path: candidatePath);
+        string fullRoot = Path.GetFullPath(rootPath)
+            .TrimEnd([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
+        string fullCandidate = Path.GetFullPath(candidatePath);
         string rootWithSeparator = fullRoot + Path.DirectorySeparatorChar;
 
-        return fullCandidate.Equals(value: fullRoot, comparisonType: StringComparison.OrdinalIgnoreCase)
-            || fullCandidate.StartsWith(value: rootWithSeparator, comparisonType: StringComparison.OrdinalIgnoreCase);
+        return fullCandidate.Equals(fullRoot, StringComparison.OrdinalIgnoreCase)
+            || fullCandidate.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool FolderOwnsDropFolder(string folderPath, string dropFolder)
     {
-        string normalizedFolder = NormalizeForComparison(path: folderPath);
-        string normalizedDrop = NormalizeForComparison(path: dropFolder);
+        string normalizedFolder = NormalizeForComparison(folderPath);
+        string normalizedDrop = NormalizeForComparison(dropFolder);
 
-        return normalizedDrop.Equals(value: normalizedFolder, comparisonType: StringComparison.OrdinalIgnoreCase);
+        return normalizedDrop.Equals(normalizedFolder, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeForComparison(string path) =>
-        path.Replace(oldChar: '\\', newChar: '/').TrimEnd(trimChar: '/');
+        path.Replace('\\', '/').TrimEnd('/');
 }

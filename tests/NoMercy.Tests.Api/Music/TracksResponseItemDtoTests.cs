@@ -16,7 +16,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Music;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class TracksResponseItemDtoTests
 {
     private static Track BuildTrack(
@@ -40,13 +40,13 @@ public class TracksResponseItemDtoTests
         if (colorPalette is not null)
             track.ColorPalette = colorPalette;
         foreach (TrackUser trackUser in trackUsers ?? [])
-            track.TrackUser.Add(item: trackUser);
+            track.TrackUser.Add(trackUser);
 
         for (int i = 0; i < artistTrackCount; i++)
         {
             Artist artist = new() { Id = Guid.NewGuid(), Name = $"Artist {i}" };
             track.ArtistTrack.Add(
-                item: new()
+                new()
                 {
                     ArtistId = artist.Id,
                     Artist = artist,
@@ -59,7 +59,7 @@ public class TracksResponseItemDtoTests
         {
             Album album = new() { Id = Guid.NewGuid(), Name = $"Album {i}" };
             track.AlbumTrack.Add(
-                item: new()
+                new()
                 {
                     AlbumId = album.Id,
                     Album = album,
@@ -76,8 +76,8 @@ public class TracksResponseItemDtoTests
     {
         TracksResponseItemDto dto = new();
 
-        dto.Name.Should().Be(expected: string.Empty);
-        dto.Type.Should().Be(expected: string.Empty);
+        dto.Name.Should().Be(string.Empty);
+        dto.Type.Should().Be(string.Empty);
         dto.Link.Should().BeNull();
         dto.Artists.Should().BeEmpty();
         dto.Albums.Should().BeEmpty();
@@ -89,11 +89,11 @@ public class TracksResponseItemDtoTests
     {
         Track track = BuildTrack();
 
-        TracksResponseItemDto dto = new(track: track, country: "US");
+        TracksResponseItemDto dto = new(track, "US");
 
-        dto.Id.Should().Be(expected: track.Id);
-        dto.Name.Should().Be(expected: "Track Name");
-        dto.Link.ToString().Should().Be(expected: $"/music/tracks/{track.Id}");
+        dto.Id.Should().Be(track.Id);
+        dto.Name.Should().Be("Track Name");
+        dto.Link.ToString().Should().Be($"/music/tracks/{track.Id}");
     }
 
     [Fact]
@@ -101,10 +101,10 @@ public class TracksResponseItemDtoTests
     {
         Track track = BuildTrack(cover: "/track-cover.jpg");
 
-        TracksResponseItemDto dto = new(track: track, country: "US");
+        TracksResponseItemDto dto = new(track, "US");
 
         dto.Cover.Should().NotBeNull();
-        dto.Cover!.ToString().Should().Be(expected: "/images/music/track-cover.jpg");
+        dto.Cover!.ToString().Should().Be("/images/music/track-cover.jpg");
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class TracksResponseItemDtoTests
     {
         Track track = BuildTrack(cover: null);
 
-        TracksResponseItemDto dto = new(track: track, country: "US");
+        TracksResponseItemDto dto = new(track, "US");
 
         dto.Cover.Should().BeNull();
     }
@@ -123,10 +123,10 @@ public class TracksResponseItemDtoTests
         ColorPalette palette = new() { Cover = new() { Dominant = "#0f0f0f" } };
         Track track = BuildTrack(colorPalette: palette);
 
-        TracksResponseItemDto dto = new(track: track, country: "US");
+        TracksResponseItemDto dto = new(track, "US");
 
         dto.ColorPalette.Should().NotBeNull();
-        dto.ColorPalette!.Cover!.Dominant.Should().Be(expected: "#0f0f0f");
+        dto.ColorPalette!.Cover!.Dominant.Should().Be("#0f0f0f");
     }
 
     [Fact]
@@ -134,18 +134,18 @@ public class TracksResponseItemDtoTests
     {
         Track track = BuildTrack();
 
-        TracksResponseItemDto dto = new(track: track, country: "US");
+        TracksResponseItemDto dto = new(track, "US");
 
-        dto.Type.Should().Be(expected: "favorites");
+        dto.Type.Should().Be("favorites");
     }
 
     [Fact]
     public void Ctor_FavoriteTrue_WhenTrackHasTrackUserEntries()
     {
-        TrackUser trackUser = new(trackId: Guid.NewGuid(), userId: Guid.NewGuid());
+        TrackUser trackUser = new(Guid.NewGuid(), Guid.NewGuid());
         Track track = BuildTrack(trackUsers: [trackUser]);
 
-        TracksResponseItemDto dto = new(track: track, country: "US");
+        TracksResponseItemDto dto = new(track, "US");
 
         dto.Favorite.Should().BeTrue();
     }
@@ -155,7 +155,7 @@ public class TracksResponseItemDtoTests
     {
         Track track = BuildTrack(trackUsers: []);
 
-        TracksResponseItemDto dto = new(track: track, country: "US");
+        TracksResponseItemDto dto = new(track, "US");
 
         dto.Favorite.Should().BeFalse();
     }
@@ -165,9 +165,9 @@ public class TracksResponseItemDtoTests
     {
         Track track = BuildTrack(artistTrackCount: 3);
 
-        TracksResponseItemDto dto = new(track: track, country: "US");
+        TracksResponseItemDto dto = new(track, "US");
 
-        dto.Artists.Should().HaveCount(expected: 3);
+        dto.Artists.Should().HaveCount(3);
     }
 
     [Fact]
@@ -175,9 +175,9 @@ public class TracksResponseItemDtoTests
     {
         Track track = BuildTrack(albumTrackCount: 2);
 
-        TracksResponseItemDto dto = new(track: track, country: "US");
+        TracksResponseItemDto dto = new(track, "US");
 
-        dto.Albums.Should().HaveCount(expected: 2);
+        dto.Albums.Should().HaveCount(2);
     }
 
     [Fact]
@@ -185,8 +185,8 @@ public class TracksResponseItemDtoTests
     {
         Track track = BuildTrack(artistTrackCount: 2);
 
-        TracksResponseItemDto dto = new(track: track, country: "US");
+        TracksResponseItemDto dto = new(track, "US");
 
-        dto.Tracks.Should().HaveCount(expected: 2);
+        dto.Tracks.Should().HaveCount(2);
     }
 }

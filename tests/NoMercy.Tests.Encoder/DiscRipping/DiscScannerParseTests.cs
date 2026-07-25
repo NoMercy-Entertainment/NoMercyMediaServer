@@ -63,27 +63,27 @@ public class DiscScannerParseTests
             }
             """;
 
-        DiscInfo info = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
+        DiscInfo info = DiscScanner.Parse(json, OpticalDiscType.BluRay);
 
-        info.Type.Should().Be(expected: OpticalDiscType.BluRay);
-        info.DiscLabel.Should().Be(expected: "THE_MATRIX");
-        info.TotalDuration.Should().Be(expected: TimeSpan.FromSeconds(seconds: 8160));
-        info.Titles.Should().HaveCount(expected: 1);
+        info.Type.Should().Be(OpticalDiscType.BluRay);
+        info.DiscLabel.Should().Be("THE_MATRIX");
+        info.TotalDuration.Should().Be(TimeSpan.FromSeconds(8160));
+        info.Titles.Should().HaveCount(1);
 
         DiscTitle title = info.Titles[0];
         title.IsMainFeature.Should().BeTrue();
-        title.VideoStreams.Should().HaveCount(expected: 1);
-        title.VideoStreams[0].Codec.Should().Be(expected: "hevc");
-        title.VideoStreams[0].Width.Should().Be(expected: 1920);
-        title.AudioStreams.Should().HaveCount(expected: 1);
-        title.AudioStreams[0].Codec.Should().Be(expected: "truehd");
-        title.AudioStreams[0].Channels.Should().Be(expected: 8);
-        title.AudioStreams[0].SampleRate.Should().Be(expected: 48000);
-        title.AudioStreams[0].Language.Should().Be(expected: "eng");
-        title.Subtitles.Should().HaveCount(expected: 1);
-        title.Subtitles[0].Codec.Should().Be(expected: "hdmv_pgs_subtitle");
-        title.Chapters.Should().HaveCount(expected: 2);
-        title.Chapters[0].Title.Should().Be(expected: "Intro");
+        title.VideoStreams.Should().HaveCount(1);
+        title.VideoStreams[0].Codec.Should().Be("hevc");
+        title.VideoStreams[0].Width.Should().Be(1920);
+        title.AudioStreams.Should().HaveCount(1);
+        title.AudioStreams[0].Codec.Should().Be("truehd");
+        title.AudioStreams[0].Channels.Should().Be(8);
+        title.AudioStreams[0].SampleRate.Should().Be(48000);
+        title.AudioStreams[0].Language.Should().Be("eng");
+        title.Subtitles.Should().HaveCount(1);
+        title.Subtitles[0].Codec.Should().Be("hdmv_pgs_subtitle");
+        title.Chapters.Should().HaveCount(2);
+        title.Chapters[0].Title.Should().Be("Intro");
     }
 
     [Fact]
@@ -105,12 +105,12 @@ public class DiscScannerParseTests
             }
             """;
 
-        DiscInfo info = DiscScanner.Parse(json: json, discType: OpticalDiscType.Dvd);
+        DiscInfo info = DiscScanner.Parse(json, OpticalDiscType.Dvd);
 
-        info.Type.Should().Be(expected: OpticalDiscType.Dvd);
-        info.Titles.Should().HaveCount(expected: 1);
-        info.Titles[0].VideoStreams[0].Codec.Should().Be(expected: "mpeg2video");
-        info.Titles[0].VideoStreams[0].Width.Should().Be(expected: 720);
+        info.Type.Should().Be(OpticalDiscType.Dvd);
+        info.Titles.Should().HaveCount(1);
+        info.Titles[0].VideoStreams[0].Codec.Should().Be("mpeg2video");
+        info.Titles[0].VideoStreams[0].Width.Should().Be(720);
         info.Titles[0].Chapters.Should().BeEmpty();
     }
 
@@ -121,9 +121,9 @@ public class DiscScannerParseTests
             { "format": { "duration": "0.000000" } }
             """;
 
-        DiscInfo info = DiscScanner.Parse(json: json, discType: OpticalDiscType.Dvd);
+        DiscInfo info = DiscScanner.Parse(json, OpticalDiscType.Dvd);
 
-        info.Titles.Should().HaveCount(expected: 1);
+        info.Titles.Should().HaveCount(1);
         info.Titles[0].VideoStreams.Should().BeEmpty();
         info.Titles[0].AudioStreams.Should().BeEmpty();
         info.Titles[0].Subtitles.Should().BeEmpty();
@@ -139,10 +139,10 @@ public class DiscScannerParseTests
             }
             """;
 
-        DiscInfo info = DiscScanner.Parse(json: json, discType: OpticalDiscType.Dvd);
+        DiscInfo info = DiscScanner.Parse(json, OpticalDiscType.Dvd);
 
-        info.TotalDuration.Should().Be(expected: TimeSpan.Zero);
-        info.DiscLabel.Should().Be(expected: "DISC");
+        info.TotalDuration.Should().Be(TimeSpan.Zero);
+        info.DiscLabel.Should().Be("DISC");
     }
 
     [Fact]
@@ -160,9 +160,9 @@ public class DiscScannerParseTests
             }
             """;
 
-        DiscInfo info = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
+        DiscInfo info = DiscScanner.Parse(json, OpticalDiscType.BluRay);
 
-        info.Titles[0].AudioStreams.Should().HaveCount(expected: 3);
-        info.Titles[0].AudioStreams.Select(selector: a => a.Language).Should().Equal(expected: ["eng", "fre", "spa"]);
+        info.Titles[0].AudioStreams.Should().HaveCount(3);
+        info.Titles[0].AudioStreams.Select(a => a.Language).Should().Equal(["eng", "fre", "spa"]);
     }
 }

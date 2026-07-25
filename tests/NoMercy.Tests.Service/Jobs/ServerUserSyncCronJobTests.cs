@@ -9,11 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.NmSystem.Auth;
@@ -21,7 +18,6 @@ using NoMercy.Service.Jobs;
 using NoMercy.Service.Seeds;
 using NoMercy.Storage;
 using NoMercy.Tests.Service.TestHelpers;
-using Xunit;
 
 namespace NoMercy.Tests.Service.Jobs;
 
@@ -34,7 +30,7 @@ namespace NoMercy.Tests.Service.Jobs;
 /// running it unconditionally would just be wasted DB round-trips on every
 /// 5-minute tick), and never crash the cron worker regardless of outcome.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ServerUserSyncCronJobTests
 {
     private static SqliteMediaContextFactory NewContextFactory()
@@ -47,32 +43,32 @@ public class ServerUserSyncCronJobTests
     {
         Mock<IServerUserSyncService> syncService = new();
         Mock<IAuthTokenStore> tokenStore = new();
-        tokenStore.SetupGet(expression: t => t.AccessToken).Returns(value: (string?)null);
+        tokenStore.SetupGet(t => t.AccessToken).Returns((string?)null);
         Mock<IUserCache> userCache = new();
         await using SqliteMediaContextFactory contextFactory = NewContextFactory();
 
         ServerUserSyncCronJob job = new(
-            contextFactory: contextFactory,
-            syncService: syncService.Object,
-            storage: Mock.Of<IStorage>(),
-            authTokenStore: tokenStore.Object,
-            userCache: userCache.Object,
-            logger: NullLogger<ServerUserSyncCronJob>.Instance
+            contextFactory,
+            syncService.Object,
+            Mock.Of<IStorage>(),
+            tokenStore.Object,
+            userCache.Object,
+            NullLogger<ServerUserSyncCronJob>.Instance
         );
 
-        await job.ExecuteAsync(parameters: string.Empty);
+        await job.ExecuteAsync(string.Empty);
 
         syncService.Verify(
-            expression: s =>
+            s =>
                 s.SyncAsync(
                     It.IsAny<MediaContext>(),
                     It.IsAny<IStorage>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
-        userCache.Verify(expression: c => c.RefreshUsersAsync(It.IsAny<MediaContext>()), times: Times.Never);
+        userCache.Verify(c => c.RefreshUsersAsync(It.IsAny<MediaContext>()), Times.Never);
     }
 
     [Fact]
@@ -80,7 +76,7 @@ public class ServerUserSyncCronJobTests
     {
         Mock<IServerUserSyncService> syncService = new();
         syncService
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.SyncAsync(
                     It.IsAny<MediaContext>(),
                     It.IsAny<IStorage>(),
@@ -88,24 +84,24 @@ public class ServerUserSyncCronJobTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ServerUserSyncResult(Attempted: false, UpstreamUserCount: 0, RevokedCount: 0));
+            .ReturnsAsync(new ServerUserSyncResult(false, 0, 0));
         Mock<IAuthTokenStore> tokenStore = new();
-        tokenStore.SetupGet(expression: t => t.AccessToken).Returns(value: "token");
+        tokenStore.SetupGet(t => t.AccessToken).Returns("token");
         Mock<IUserCache> userCache = new();
         await using SqliteMediaContextFactory contextFactory = NewContextFactory();
 
         ServerUserSyncCronJob job = new(
-            contextFactory: contextFactory,
-            syncService: syncService.Object,
-            storage: Mock.Of<IStorage>(),
-            authTokenStore: tokenStore.Object,
-            userCache: userCache.Object,
-            logger: NullLogger<ServerUserSyncCronJob>.Instance
+            contextFactory,
+            syncService.Object,
+            Mock.Of<IStorage>(),
+            tokenStore.Object,
+            userCache.Object,
+            NullLogger<ServerUserSyncCronJob>.Instance
         );
 
-        await job.ExecuteAsync(parameters: string.Empty);
+        await job.ExecuteAsync(string.Empty);
 
-        userCache.Verify(expression: c => c.RefreshUsersAsync(It.IsAny<MediaContext>()), times: Times.Never);
+        userCache.Verify(c => c.RefreshUsersAsync(It.IsAny<MediaContext>()), Times.Never);
     }
 
     [Fact]
@@ -113,7 +109,7 @@ public class ServerUserSyncCronJobTests
     {
         Mock<IServerUserSyncService> syncService = new();
         syncService
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.SyncAsync(
                     It.IsAny<MediaContext>(),
                     It.IsAny<IStorage>(),
@@ -121,24 +117,24 @@ public class ServerUserSyncCronJobTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ServerUserSyncResult(Attempted: true, UpstreamUserCount: 3, RevokedCount: 0));
+            .ReturnsAsync(new ServerUserSyncResult(true, 3, 0));
         Mock<IAuthTokenStore> tokenStore = new();
-        tokenStore.SetupGet(expression: t => t.AccessToken).Returns(value: "token");
+        tokenStore.SetupGet(t => t.AccessToken).Returns("token");
         Mock<IUserCache> userCache = new();
         await using SqliteMediaContextFactory contextFactory = NewContextFactory();
 
         ServerUserSyncCronJob job = new(
-            contextFactory: contextFactory,
-            syncService: syncService.Object,
-            storage: Mock.Of<IStorage>(),
-            authTokenStore: tokenStore.Object,
-            userCache: userCache.Object,
-            logger: NullLogger<ServerUserSyncCronJob>.Instance
+            contextFactory,
+            syncService.Object,
+            Mock.Of<IStorage>(),
+            tokenStore.Object,
+            userCache.Object,
+            NullLogger<ServerUserSyncCronJob>.Instance
         );
 
-        await job.ExecuteAsync(parameters: string.Empty);
+        await job.ExecuteAsync(string.Empty);
 
-        userCache.Verify(expression: c => c.RefreshUsersAsync(It.IsAny<MediaContext>()), times: Times.Once);
+        userCache.Verify(c => c.RefreshUsersAsync(It.IsAny<MediaContext>()), Times.Once);
     }
 
     [Fact]
@@ -146,7 +142,7 @@ public class ServerUserSyncCronJobTests
     {
         Mock<IServerUserSyncService> syncService = new();
         syncService
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.SyncAsync(
                     It.IsAny<MediaContext>(),
                     It.IsAny<IStorage>(),
@@ -154,26 +150,26 @@ public class ServerUserSyncCronJobTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ServerUserSyncResult(Attempted: true, UpstreamUserCount: 5, RevokedCount: 2));
+            .ReturnsAsync(new ServerUserSyncResult(true, 5, 2));
         Mock<IAuthTokenStore> tokenStore = new();
-        tokenStore.SetupGet(expression: t => t.AccessToken).Returns(value: "token");
+        tokenStore.SetupGet(t => t.AccessToken).Returns("token");
         Mock<IUserCache> userCache = new();
         Mock<ILogger<ServerUserSyncCronJob>> logger = new();
         await using SqliteMediaContextFactory contextFactory = NewContextFactory();
 
         ServerUserSyncCronJob job = new(
-            contextFactory: contextFactory,
-            syncService: syncService.Object,
-            storage: Mock.Of<IStorage>(),
-            authTokenStore: tokenStore.Object,
-            userCache: userCache.Object,
-            logger: logger.Object
+            contextFactory,
+            syncService.Object,
+            Mock.Of<IStorage>(),
+            tokenStore.Object,
+            userCache.Object,
+            logger.Object
         );
 
-        await job.ExecuteAsync(parameters: string.Empty);
+        await job.ExecuteAsync(string.Empty);
 
         logger.Verify(
-            expression: l =>
+            l =>
                 l.Log(
                     LogLevel.Information,
                     It.IsAny<EventId>(),
@@ -181,7 +177,7 @@ public class ServerUserSyncCronJobTests
                     null,
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -190,7 +186,7 @@ public class ServerUserSyncCronJobTests
     {
         Mock<IServerUserSyncService> syncService = new();
         syncService
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.SyncAsync(
                     It.IsAny<MediaContext>(),
                     It.IsAny<IStorage>(),
@@ -198,26 +194,26 @@ public class ServerUserSyncCronJobTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ServerUserSyncResult(Attempted: true, UpstreamUserCount: 5, RevokedCount: 0));
+            .ReturnsAsync(new ServerUserSyncResult(true, 5, 0));
         Mock<IAuthTokenStore> tokenStore = new();
-        tokenStore.SetupGet(expression: t => t.AccessToken).Returns(value: "token");
+        tokenStore.SetupGet(t => t.AccessToken).Returns("token");
         Mock<IUserCache> userCache = new();
         Mock<ILogger<ServerUserSyncCronJob>> logger = new();
         await using SqliteMediaContextFactory contextFactory = NewContextFactory();
 
         ServerUserSyncCronJob job = new(
-            contextFactory: contextFactory,
-            syncService: syncService.Object,
-            storage: Mock.Of<IStorage>(),
-            authTokenStore: tokenStore.Object,
-            userCache: userCache.Object,
-            logger: logger.Object
+            contextFactory,
+            syncService.Object,
+            Mock.Of<IStorage>(),
+            tokenStore.Object,
+            userCache.Object,
+            logger.Object
         );
 
-        await job.ExecuteAsync(parameters: string.Empty);
+        await job.ExecuteAsync(string.Empty);
 
         logger.Verify(
-            expression: l =>
+            l =>
                 l.Log(
                     LogLevel.Debug,
                     It.IsAny<EventId>(),
@@ -225,7 +221,7 @@ public class ServerUserSyncCronJobTests
                     null,
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -233,29 +229,29 @@ public class ServerUserSyncCronJobTests
     public void CronExpression_RunsEveryFiveMinutes()
     {
         ServerUserSyncCronJob job = new(
-            contextFactory: NewContextFactory(),
-            syncService: Mock.Of<IServerUserSyncService>(),
-            storage: Mock.Of<IStorage>(),
-            authTokenStore: Mock.Of<IAuthTokenStore>(),
-            userCache: Mock.Of<IUserCache>(),
-            logger: NullLogger<ServerUserSyncCronJob>.Instance
+            NewContextFactory(),
+            Mock.Of<IServerUserSyncService>(),
+            Mock.Of<IStorage>(),
+            Mock.Of<IAuthTokenStore>(),
+            Mock.Of<IUserCache>(),
+            NullLogger<ServerUserSyncCronJob>.Instance
         );
 
-        job.CronExpression.Should().Be(expected: "*/5 * * * *");
+        job.CronExpression.Should().Be("*/5 * * * *");
     }
 
     [Fact]
     public void JobName_IsHumanReadable()
     {
         ServerUserSyncCronJob job = new(
-            contextFactory: NewContextFactory(),
-            syncService: Mock.Of<IServerUserSyncService>(),
-            storage: Mock.Of<IStorage>(),
-            authTokenStore: Mock.Of<IAuthTokenStore>(),
-            userCache: Mock.Of<IUserCache>(),
-            logger: NullLogger<ServerUserSyncCronJob>.Instance
+            NewContextFactory(),
+            Mock.Of<IServerUserSyncService>(),
+            Mock.Of<IStorage>(),
+            Mock.Of<IAuthTokenStore>(),
+            Mock.Of<IUserCache>(),
+            NullLogger<ServerUserSyncCronJob>.Instance
         );
 
-        job.JobName.Should().Be(expected: "Server User Sync");
+        job.JobName.Should().Be("Server User Sync");
     }
 }

@@ -19,7 +19,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class MovieRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -31,111 +31,111 @@ public class MovieRepositoryTests : IDisposable
     {
         (_factory, _connection) = TestMediaContextFactory.CreateSeededFactory();
         _context = _factory.CreateDbContext();
-        _repository = new(contextFactory: _factory, logger: NullLogger<MovieRepository>.Instance);
+        _repository = new(_factory, NullLogger<MovieRepository>.Instance);
     }
 
     [Fact]
     public async Task GetMovieAsync_ReturnsMovie_WhenUserHasAccess()
     {
-        Movie? movie = await _repository.GetMovieAsync(userId: SeedConstants.UserId, id: 129, language: "en", country: "US");
+        Movie? movie = await _repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 
-        Assert.NotNull(@object: movie);
-        Assert.Equal(expected: 129, actual: movie.Id);
-        Assert.Equal(expected: "Spirited Away", actual: movie.Title);
+        Assert.NotNull(movie);
+        Assert.Equal(129, movie.Id);
+        Assert.Equal("Spirited Away", movie.Title);
     }
 
     [Fact]
     public async Task GetMovieAsync_ReturnsNull_WhenUserHasNoAccess()
     {
-        Movie? movie = await _repository.GetMovieAsync(userId: SeedConstants.OtherUserId, id: 129, language: "en", country: "US");
+        Movie? movie = await _repository.GetMovieAsync(SeedConstants.OtherUserId, 129, "en", "US");
 
-        Assert.Null(@object: movie);
+        Assert.Null(movie);
     }
 
     [Fact]
     public async Task GetMovieAsync_ReturnsNull_WhenMovieDoesNotExist()
     {
-        Movie? movie = await _repository.GetMovieAsync(userId: SeedConstants.UserId, id: 999999, language: "en", country: "US");
+        Movie? movie = await _repository.GetMovieAsync(SeedConstants.UserId, 999999, "en", "US");
 
-        Assert.Null(@object: movie);
+        Assert.Null(movie);
     }
 
     [Fact]
     public async Task GetMovieAsync_IncludesVideoFiles()
     {
-        Movie? movie = await _repository.GetMovieAsync(userId: SeedConstants.UserId, id: 129, language: "en", country: "US");
+        Movie? movie = await _repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 
-        Assert.NotNull(@object: movie);
-        Assert.NotEmpty(collection: movie.VideoFiles);
-        Assert.Contains(collection: movie.VideoFiles, filter: vf => vf.Filename == "Spirited.Away.2001.1080p.mkv");
+        Assert.NotNull(movie);
+        Assert.NotEmpty(movie.VideoFiles);
+        Assert.Contains(movie.VideoFiles, vf => vf.Filename == "Spirited.Away.2001.1080p.mkv");
     }
 
     [Fact]
     public async Task GetMovieAvailableAsync_ReturnsTrue_WhenMovieHasVideoFiles()
     {
-        bool available = await _repository.GetMovieAvailableAsync(userId: SeedConstants.UserId, id: 129);
+        bool available = await _repository.GetMovieAvailableAsync(SeedConstants.UserId, 129);
 
-        Assert.True(condition: available);
+        Assert.True(available);
     }
 
     [Fact]
     public async Task GetMovieAvailableAsync_ReturnsFalse_WhenUserHasNoAccess()
     {
-        bool available = await _repository.GetMovieAvailableAsync(userId: SeedConstants.OtherUserId, id: 129);
+        bool available = await _repository.GetMovieAvailableAsync(SeedConstants.OtherUserId, 129);
 
-        Assert.False(condition: available);
+        Assert.False(available);
     }
 
     [Fact]
     public async Task GetMoviePlaylistAsync_ReturnsMovieWithVideoFiles()
     {
         List<Movie> playlist = await _repository.GetMoviePlaylistAsync(
-            userId: SeedConstants.UserId,
-            id: 129,
-            language: "en",
-            country: "US"
+            SeedConstants.UserId,
+            129,
+            "en",
+            "US"
         );
 
-        Assert.NotEmpty(collection: playlist);
-        Assert.Equal(expected: 129, actual: playlist[index: 0].Id);
-        Assert.NotEmpty(collection: playlist[index: 0].VideoFiles);
+        Assert.NotEmpty(playlist);
+        Assert.Equal(129, playlist[0].Id);
+        Assert.NotEmpty(playlist[0].VideoFiles);
     }
 
     [Fact]
     public async Task DeleteMovieAsync_RemovesMovie()
     {
-        await _repository.DeleteAsync(id: 129);
+        await _repository.DeleteAsync(129);
 
-        Movie? movie = await _repository.GetMovieAsync(userId: SeedConstants.UserId, id: 129, language: "en", country: "US");
+        Movie? movie = await _repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 
-        Assert.Null(@object: movie);
+        Assert.Null(movie);
     }
 
     [Fact]
     public async Task LikeMovieAsync_AddsMovieUser_WhenLikeIsTrue()
     {
-        bool result = await _repository.LikeMovieAsync(id: 129, userId: SeedConstants.UserId, like: true);
+        bool result = await _repository.LikeMovieAsync(129, SeedConstants.UserId, true);
 
-        Assert.True(condition: result);
+        Assert.True(result);
 
-        MovieUser? movieUser = _context.MovieUser.FirstOrDefault(predicate: mu =>
+        MovieUser? movieUser = _context.MovieUser.FirstOrDefault(mu =>
             mu.MovieId == 129 && mu.UserId == SeedConstants.UserId
         );
-        Assert.NotNull(@object: movieUser);
+        Assert.NotNull(movieUser);
     }
 
     [Fact]
     public async Task LikeMovieAsync_RemovesMovieUser_WhenLikeIsFalse()
     {
-        await _repository.LikeMovieAsync(id: 129, userId: SeedConstants.UserId, like: true);
-        bool result = await _repository.LikeMovieAsync(id: 129, userId: SeedConstants.UserId, like: false);
+        await _repository.LikeMovieAsync(129, SeedConstants.UserId, true);
+        bool result = await _repository.LikeMovieAsync(129, SeedConstants.UserId, false);
 
-        Assert.True(condition: result);
+        Assert.True(result);
 
-        MovieUser? movieUser = _context.MovieUser.FirstOrDefault(predicate: mu =>
+        MovieUser? movieUser = _context.MovieUser.FirstOrDefault(mu =>
             mu.MovieId == 129 && mu.UserId == SeedConstants.UserId
         );
-        Assert.Null(@object: movieUser);
+        Assert.Null(movieUser);
     }
 
     public void Dispose()

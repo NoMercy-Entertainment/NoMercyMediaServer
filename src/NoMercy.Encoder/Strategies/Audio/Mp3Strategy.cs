@@ -21,7 +21,7 @@ namespace NoMercy.Encoder.Strategies.Audio;
 /// 2-pass — there's no MP3 two-pass strategy, just this single-pass one.
 /// </summary>
 public class Mp3Strategy(IEncoder encoder, ILogger<Mp3Strategy> logger, IStorage storage)
-    : SinglePassStrategyBase(encoder: encoder, logger: logger, storage: storage)
+    : SinglePassStrategyBase(encoder, logger, storage)
 {
     public override OutputFormat Format => OutputFormat.Mp3;
 }

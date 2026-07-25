@@ -21,24 +21,24 @@ namespace NoMercy.Providers.Abstractions;
 /// </summary>
 public class LyricLine
 {
-    [JsonProperty(propertyName: "text")]
+    [JsonProperty("text")]
     public string Text = string.Empty;
 
-    [JsonProperty(propertyName: "time")]
+    [JsonProperty("time")]
     public LineTime Time = new();
 
     public class LineTime
     {
-        [JsonProperty(propertyName: "total")]
+        [JsonProperty("total")]
         public double Total;
 
-        [JsonProperty(propertyName: "minutes")]
+        [JsonProperty("minutes")]
         public int Minutes;
 
-        [JsonProperty(propertyName: "seconds")]
+        [JsonProperty("seconds")]
         public int Seconds;
 
-        [JsonProperty(propertyName: "hundredths")]
+        [JsonProperty("hundredths")]
         public int Hundredths;
     }
 }

@@ -15,33 +15,33 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbTvVideo
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "iso_639_1")]
+    [JsonProperty("iso_639_1")]
     public string Iso6391 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "iso_3166_1")]
+    [JsonProperty("iso_3166_1")]
     public string Iso31661 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "key")]
+    [JsonProperty("key")]
     public string Key { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "site")]
+    [JsonProperty("site")]
     public string Site { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "size")]
+    [JsonProperty("size")]
     public int Size { get; set; }
 
-    [JsonProperty(propertyName: "official")]
+    [JsonProperty("official")]
     public bool Official { get; set; }
 
-    [JsonProperty(propertyName: "published_at")]
+    [JsonProperty("published_at")]
     public DateTime? PublishedAt { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 }

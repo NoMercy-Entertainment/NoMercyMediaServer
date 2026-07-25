@@ -44,83 +44,82 @@ public sealed partial class BlurayDiscSource(
 
     public async Task<DiscInfo> ProbeAsync(DiscDrive drive, CancellationToken ct)
     {
-        string drivePath = ToBlurayUrl(mountPath: drive.Path);
+        string drivePath = ToBlurayUrl(drive.Path);
 
         // libbluray dumps the full playlist set on stderr at -v info before
         // it commits to one. Run a thin probe just to capture that dump.
         ProcessResult result = await processRunner.RunAsync(
-            executable: options.FfprobePath,
-            arguments: ["-hide_banner", "-v", "info", "-i", drivePath],
-            workingDirectory: null,
-            cancellationToken: ct
+            options.FfprobePath,
+            ["-hide_banner", "-v", "info", "-i", drivePath],
+            null,
+            ct
         );
 
         // Classify protection state from the stderr — even when the disc is
         // AACS-locked we may still have enumerable playlists (libbluray
         // reads BDMV structure without keys), so we attach Protection to
         // the DiscInfo rather than throwing.
-        DiscProtection? protection = ClassifyProtection(stderr: result.StdErr);
+        DiscProtection? protection = ClassifyProtection(result.StdErr);
 
         // Read the disc-embedded title from bdmt_*.xml before evaluating
         // playlists — we want to populate DiscTitle regardless of whether
         // any playlists are found.
-        string? embeddedTitle = TryReadBdmtTitle(mountPath: drive.Path);
+        string? embeddedTitle = TryReadBdmtTitle(drive.Path);
 
         // ffprobe always exits non-zero here (no input format chosen) — the
         // stderr is the payload we want regardless.
-        List<(int Index, TimeSpan Duration)> playlists = ParsePlaylists(stderr: result.StdErr);
+        List<(int Index, TimeSpan Duration)> playlists = ParsePlaylists(result.StdErr);
         if (playlists.Count == 0)
         {
             // Loud warning at INFO level so we always see it in the log when
             // a probe came back empty — separate from the per-message format
             // so existing log-grep filters don't swallow it.
             logger.LogInformation(
-                message: "Bluray probe parsed 0 playlists for {Drive} | exit={Exit} stdout_len={StdOutLen} stderr_len={StdErrLen} stderr_head={StdErrHead}", args:
-                [drive.Path, result.ExitCode, result.StdOut.Length, result.StdErr.Length, (result.StdErr ?? "").Length > 600
+                "Bluray probe parsed 0 playlists for {Drive} | exit={Exit} stdout_len={StdOutLen} stderr_len={StdErrLen} stderr_head={StdErrHead}", [drive.Path, result.ExitCode, result.StdOut.Length, result.StdErr.Length, (result.StdErr ?? "").Length > 600
                     ? result.StdErr![..600]
                     : (result.StdErr ?? "(no stderr)")
                 ]
             );
             return new(
-                Type: OpticalDiscType.BluRay,
-                DiscLabel: drive.Label,
-                Titles: [],
-                AudioTracks: null,
-                TotalDuration: TimeSpan.Zero,
-                Protection: protection,
-                DiscTitle: embeddedTitle
+                OpticalDiscType.BluRay,
+                drive.Label,
+                [],
+                null,
+                TimeSpan.Zero,
+                protection,
+                embeddedTitle
             );
         }
 
         // Largest playlist by runtime is typically the disc's main feature
         // (movie disc) or the season-concat title (TV disc). Mark it so the
         // UI can highlight it as the default selection.
-        TimeSpan maxDuration = playlists.Max(selector: p => p.Duration);
+        TimeSpan maxDuration = playlists.Max(p => p.Duration);
         DiscTitle[] titles = playlists
-            .Select(selector: p => new DiscTitle(
-                Index: p.Index,
-                Name: $"Playlist {p.Index:D5}",
-                Duration: p.Duration,
-                VideoStreams: [],
-                AudioStreams: [],
-                Subtitles: [],
-                Chapters: [],
-                EstimatedSizeBytes: 0,
-                IsMainFeature: p.Duration == maxDuration
+            .Select(p => new DiscTitle(
+                p.Index,
+                $"Playlist {p.Index:D5}",
+                p.Duration,
+                [],
+                [],
+                [],
+                [],
+                0,
+                p.Duration == maxDuration
             ))
-            .OrderByDescending(keySelector: t => t.Duration)
+            .OrderByDescending(t => t.Duration)
             .ToArray();
 
         return new(
-            Type: OpticalDiscType.BluRay,
-            DiscLabel: drive.Label,
-            Titles: titles,
-            AudioTracks: null,
-            TotalDuration: titles.Sum(selector: t => t.Duration.Ticks) is long ticks
-                ? TimeSpan.FromTicks(value: ticks)
+            OpticalDiscType.BluRay,
+            drive.Label,
+            titles,
+            null,
+            titles.Sum(t => t.Duration.Ticks) is long ticks
+                ? TimeSpan.FromTicks(ticks)
                 : TimeSpan.Zero,
-            Protection: protection,
-            DiscTitle: embeddedTitle
+            protection,
+            embeddedTitle
         );
     }
 
@@ -131,25 +130,25 @@ public sealed partial class BlurayDiscSource(
     /// </summary>
     internal static DiscProtection? ClassifyProtection(string stderr)
     {
-        if (string.IsNullOrEmpty(value: stderr))
+        if (string.IsNullOrEmpty(stderr))
             return null;
 
         // libaacs SCSI MMC handshake fail (drive can't do AACS bus key)
         if (
             stderr.Contains(
-                value: "Drive does not support reading drive certificate",
-                comparisonType: StringComparison.OrdinalIgnoreCase
+                "Drive does not support reading drive certificate",
+                StringComparison.OrdinalIgnoreCase
             )
             || stderr.Contains(
-                value: "Unable to read drive certificate",
-                comparisonType: StringComparison.OrdinalIgnoreCase
+                "Unable to read drive certificate",
+                StringComparison.OrdinalIgnoreCase
             )
         )
         {
             return new(
-                Kind: "AACS",
-                VolumeId: null,
-                Message: "Disc is AACS-protected and the optical drive can't establish "
+                "AACS",
+                null,
+                "Disc is AACS-protected and the optical drive can't establish "
                     + "the bus key required to read encrypted units. The drive's firmware "
                     + "likely lacks AACS-MKI-1 SCSI MMC support."
             );
@@ -158,24 +157,24 @@ public sealed partial class BlurayDiscSource(
         // libaacs unable to derive VUK from KEYDB (no matching entry, or
         // entry present but key wrong)
         if (
-            stderr.Contains(value: "Unable to decrypt unit (AACS)", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || stderr.Contains(value: "no matching certificate", comparisonType: StringComparison.OrdinalIgnoreCase)
+            stderr.Contains("Unable to decrypt unit (AACS)", StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains("no matching certificate", StringComparison.OrdinalIgnoreCase)
         )
         {
             return new(
-                Kind: "AACS",
-                VolumeId: null,
-                Message: "Disc is AACS-protected but no matching key was found in KEYDB.cfg."
+                "AACS",
+                null,
+                "Disc is AACS-protected but no matching key was found in KEYDB.cfg."
             );
         }
 
         // libbdplus
-        if (stderr.Contains(value: "no matching converter", comparisonType: StringComparison.OrdinalIgnoreCase))
+        if (stderr.Contains("no matching converter", StringComparison.OrdinalIgnoreCase))
         {
             return new(
-                Kind: "BD+",
-                VolumeId: null,
-                Message: "Disc uses BD+ and the converter database has no entry for it."
+                "BD+",
+                null,
+                "Disc uses BD+ and the converter database has no entry for it."
             );
         }
 
@@ -188,20 +187,20 @@ public sealed partial class BlurayDiscSource(
         CancellationToken ct
     )
     {
-        string url = ToBlurayUrl(mountPath: drive.Path);
-        DiscInfo info = await ScanWithPlaylistAsync(drivePath: url, playlistIndex: titleIndex, ct: ct);
+        string url = ToBlurayUrl(drive.Path);
+        DiscInfo info = await ScanWithPlaylistAsync(url, titleIndex, ct);
         DiscTitle? single = info.Titles.FirstOrDefault();
         if (single is null)
             return new(
-                Index: titleIndex,
-                Name: $"Playlist {titleIndex:D5}",
-                Duration: TimeSpan.Zero,
-                VideoStreams: [],
-                AudioStreams: [],
-                Subtitles: [],
-                Chapters: [],
-                EstimatedSizeBytes: 0,
-                IsMainFeature: false
+                titleIndex,
+                $"Playlist {titleIndex:D5}",
+                TimeSpan.Zero,
+                [],
+                [],
+                [],
+                [],
+                0,
+                false
             );
 
         return single with
@@ -217,13 +216,12 @@ public sealed partial class BlurayDiscSource(
     )
     {
         ProcessResult result = await processRunner.RunAsync(
-            executable: options.FfprobePath,
-            arguments:
+            options.FfprobePath,
             [
                 "-v",
                 "quiet",
                 "-playlist",
-                playlistIndex.ToString(provider: CultureInfo.InvariantCulture),
+                playlistIndex.ToString(CultureInfo.InvariantCulture),
                 "-print_format",
                 "json",
                 "-show_format",
@@ -232,21 +230,21 @@ public sealed partial class BlurayDiscSource(
                 "-i",
                 drivePath,
             ],
-            workingDirectory: null,
-            cancellationToken: ct
+            null,
+            ct
         );
 
-        if (!result.IsSuccess || string.IsNullOrWhiteSpace(value: result.StdOut))
+        if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
         {
             logger.LogWarning(
-                message: "Per-playlist probe failed for {Drive} #{Playlist} (exit {Exit}): {Stderr}", args: [drivePath, playlistIndex, result.ExitCode, TrimStderr(stdErr: result.StdErr)]
+                "Per-playlist probe failed for {Drive} #{Playlist} (exit {Exit}): {Stderr}", [drivePath, playlistIndex, result.ExitCode, TrimStderr(result.StdErr)]
             );
-            return new(Type: OpticalDiscType.BluRay, DiscLabel: null, Titles: [], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+            return new(OpticalDiscType.BluRay, null, [], null, TimeSpan.Zero);
         }
 
         try
         {
-            return DiscScanner.Parse(json: result.StdOut, discType: OpticalDiscType.BluRay);
+            return DiscScanner.Parse(result.StdOut, OpticalDiscType.BluRay);
         }
         catch (InvalidOperationException ex)
         {
@@ -256,65 +254,65 @@ public sealed partial class BlurayDiscSource(
             // here, the same way the !result.IsSuccess branch above does,
             // rather than crash the per-playlist detail fetch.
             logger.LogWarning(
-                exception: ex,
-                message: "Per-playlist probe returned unparsable JSON for {Drive} #{Playlist}", args: [drivePath, playlistIndex]
+                ex,
+                "Per-playlist probe returned unparsable JSON for {Drive} #{Playlist}", [drivePath, playlistIndex]
             );
-            return new(Type: OpticalDiscType.BluRay, DiscLabel: null, Titles: [], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+            return new(OpticalDiscType.BluRay, null, [], null, TimeSpan.Zero);
         }
     }
 
     internal static List<(int Index, TimeSpan Duration)> ParsePlaylists(string stderr)
     {
         List<(int, TimeSpan)> playlists = new();
-        if (string.IsNullOrEmpty(value: stderr))
+        if (string.IsNullOrEmpty(stderr))
             return playlists;
 
-        foreach (Match match in PlaylistRegex().Matches(input: stderr))
+        foreach (Match match in PlaylistRegex().Matches(stderr))
         {
-            string indexText = match.Groups[groupname: "index"].Value;
-            string durText = match.Groups[groupname: "duration"].Value;
+            string indexText = match.Groups["index"].Value;
+            string durText = match.Groups["duration"].Value;
 
             if (
                 !int.TryParse(
-                    s: indexText,
-                    style: NumberStyles.Integer,
-                    provider: CultureInfo.InvariantCulture,
-                    result: out int idx
+                    indexText,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out int idx
                 )
             )
                 continue;
-            if (!TryParseHmsDuration(value: durText, dur: out TimeSpan dur))
+            if (!TryParseHmsDuration(durText, out TimeSpan dur))
                 continue;
 
-            playlists.Add(item: (idx, dur));
+            playlists.Add((idx, dur));
         }
 
-        return playlists.DistinctBy(keySelector: p => p.Item1).ToList();
+        return playlists.DistinctBy(p => p.Item1).ToList();
     }
 
     private static bool TryParseHmsDuration(string value, out TimeSpan dur)
     {
         dur = TimeSpan.Zero;
-        string[] parts = value.Split(separator: ':');
+        string[] parts = value.Split(':');
         if (parts.Length != 3)
             return false;
         if (
-            !int.TryParse(s: parts[0], style: NumberStyles.Integer, provider: CultureInfo.InvariantCulture, result: out int h)
+            !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int h)
             || !int.TryParse(
-                s: parts[1],
-                style: NumberStyles.Integer,
-                provider: CultureInfo.InvariantCulture,
-                result: out int m
+                parts[1],
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out int m
             )
             || !int.TryParse(
-                s: parts[2],
-                style: NumberStyles.Integer,
-                provider: CultureInfo.InvariantCulture,
-                result: out int s
+                parts[2],
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out int s
             )
         )
             return false;
-        dur = new(hours: h, minutes: m, seconds: s);
+        dur = new(h, m, s);
         return true;
     }
 
@@ -329,35 +327,35 @@ public sealed partial class BlurayDiscSource(
     {
         try
         {
-            string trimmed = mountPath.TrimEnd(trimChars: ['\\', '/']);
-            string dlDir = Path.Combine(path1: trimmed, path2: "BDMV", path3: "META", path4: "DL");
+            string trimmed = mountPath.TrimEnd(['\\', '/']);
+            string dlDir = Path.Combine(trimmed, "BDMV", "META", "DL");
 
-            if (!storageDriver.DirectoryExists(path: dlDir))
+            if (!storageDriver.DirectoryExists(dlDir))
                 return null;
 
             // Prefer English; fall back to the first locale present.
-            string englishPath = Path.Combine(path1: dlDir, path2: "bdmt_eng.xml");
-            string? xmlPath = storageDriver.FileExists(path: englishPath)
+            string englishPath = Path.Combine(dlDir, "bdmt_eng.xml");
+            string? xmlPath = storageDriver.FileExists(englishPath)
                 ? englishPath
                 : storageDriver
-                    .EnumerateFileSystemEntries(directory: dlDir, searchPattern: "bdmt_*.xml", option: SearchOption.TopDirectoryOnly)
+                    .EnumerateFileSystemEntries(dlDir, "bdmt_*.xml", SearchOption.TopDirectoryOnly)
                     .FirstOrDefault();
 
-            if (xmlPath is null || !storageDriver.FileExists(path: xmlPath))
+            if (xmlPath is null || !storageDriver.FileExists(xmlPath))
                 return null;
 
-            using Stream stream = storageDriver.OpenRead(path: xmlPath);
-            using StreamReader reader = new(stream: stream);
+            using Stream stream = storageDriver.OpenRead(xmlPath);
+            using StreamReader reader = new(stream);
             string xmlContent = reader.ReadToEnd();
-            XDocument doc = XDocument.Parse(text: xmlContent);
+            XDocument doc = XDocument.Parse(xmlContent);
             XNamespace di = "urn:BDA:bdmv;discinfo";
-            return doc.Descendants(name: di + "name").FirstOrDefault()?.Value;
+            return doc.Descendants(di + "name").FirstOrDefault()?.Value;
         }
         catch (Exception ex)
         {
             logger.LogInformation(
-                exception: ex,
-                message: "Could not read bdmt title from {Mount}: {Message}", args: [mountPath, ex.Message]
+                ex,
+                "Could not read bdmt title from {Mount}: {Message}", [mountPath, ex.Message]
             );
             return null;
         }
@@ -365,25 +363,25 @@ public sealed partial class BlurayDiscSource(
 
     private static string ToBlurayUrl(string mountPath)
     {
-        if (mountPath.StartsWith(value: "bluray:", comparisonType: StringComparison.OrdinalIgnoreCase))
+        if (mountPath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
             return mountPath;
         // libbluray needs a trailing separator on Windows: "bluray:D:/" works,
         // "bluray:D:" never enumerates playlists.
-        string trimmed = mountPath.TrimEnd(trimChars: ['\\', '/']);
+        string trimmed = mountPath.TrimEnd(['\\', '/']);
         return $"bluray:{trimmed}/";
     }
 
     private static string TrimStderr(string stdErr)
     {
-        if (string.IsNullOrEmpty(value: stdErr))
+        if (string.IsNullOrEmpty(stdErr))
             return "(no stderr)";
-        string[] lines = stdErr.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries);
-        return lines.Length <= 3 ? stdErr : string.Join(separator: '\n', value: lines[^3..]);
+        string[] lines = stdErr.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        return lines.Length <= 3 ? stdErr : string.Join('\n', lines[^3..]);
     }
 
     [GeneratedRegex(
-        pattern: @"playlist\s+(?<index>\d+)\.mpls\s+\((?<duration>\d{1,}:\d{1,}:\d{1,})\)",
-        options: RegexOptions.IgnoreCase
+        @"playlist\s+(?<index>\d+)\.mpls\s+\((?<duration>\d{1,}:\d{1,}:\d{1,})\)",
+        RegexOptions.IgnoreCase
     )]
     private static partial Regex PlaylistRegex();
 }

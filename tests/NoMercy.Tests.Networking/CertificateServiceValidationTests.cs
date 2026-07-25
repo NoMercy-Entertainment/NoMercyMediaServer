@@ -13,7 +13,6 @@ using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
@@ -21,7 +20,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Networking;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class CertificateServiceValidationTests : IDisposable
 {
     private readonly string _certDir;
@@ -29,8 +28,8 @@ public sealed class CertificateServiceValidationTests : IDisposable
 
     public CertificateServiceValidationTests()
     {
-        _certDir = Path.Combine(path1: AppFiles.AppPath, path2: "security", path3: "certs");
-        Directory.CreateDirectory(path: _certDir);
+        _certDir = Path.Combine(AppFiles.AppPath, "security", "certs");
+        Directory.CreateDirectory(_certDir);
     }
 
     public void Dispose()
@@ -39,16 +38,16 @@ public sealed class CertificateServiceValidationTests : IDisposable
             return;
         _disposed = true;
 
-        if (Directory.Exists(path: _certDir))
+        if (Directory.Exists(_certDir))
         {
-            foreach (string f in Directory.GetFiles(path: _certDir))
-                File.Delete(path: f);
+            foreach (string f in Directory.GetFiles(_certDir))
+                File.Delete(f);
         }
     }
 
     private static CertificateService BuildService(IHttpClientFactory? factory = null)
     {
-        return new(logger: NullLogger<CertificateService>.Instance, httpClientFactory: factory ?? new NullHttpClientFactory());
+        return new(NullLogger<CertificateService>.Instance, factory ?? new NullHttpClientFactory());
     }
 
     /// <summary>
@@ -58,11 +57,11 @@ public sealed class CertificateServiceValidationTests : IDisposable
     /// </summary>
     private static CertificateService BuildFastRetryService(IHttpClientFactory factory)
     {
-        return new NoDelayCertificateService(factory: factory);
+        return new NoDelayCertificateService(factory);
     }
 
     private sealed class NoDelayCertificateService(IHttpClientFactory factory)
-        : CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: factory)
+        : CertificateService(NullLogger<CertificateService>.Instance, factory)
     {
         protected override Task DelayBetweenAttemptsAsync(TimeSpan delay, CancellationToken ct) =>
             Task.CompletedTask;
@@ -70,23 +69,23 @@ public sealed class CertificateServiceValidationTests : IDisposable
 
     private static X509Certificate2 CreateSelfSignedCert(DateTimeOffset notAfter)
     {
-        using RSA rsa = RSA.Create(keySizeInBits: 2048);
+        using RSA rsa = RSA.Create(2048);
         CertificateRequest req = new(
-            subjectName: "CN=test.nomercy.tv",
-            key: rsa,
-            hashAlgorithm: HashAlgorithmName.SHA256,
-            padding: RSASignaturePadding.Pkcs1
+            "CN=test.nomercy.tv",
+            rsa,
+            HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1
         );
-        return req.CreateSelfSigned(notBefore: DateTimeOffset.UtcNow.AddDays(days: -1), notAfter: notAfter);
+        return req.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), notAfter);
     }
 
     private static void InjectCachedCertificate(CertificateService service, X509Certificate2? cert)
     {
         FieldInfo field = typeof(CertificateService).GetField(
-            name: "_cachedCertificate",
-            bindingAttr: BindingFlags.Instance | BindingFlags.NonPublic
+            "_cachedCertificate",
+            BindingFlags.Instance | BindingFlags.NonPublic
         )!;
-        field.SetValue(obj: service, value: cert);
+        field.SetValue(service, cert);
     }
 
     private static void WritePemFiles(string certDir, X509Certificate2 cert)
@@ -96,11 +95,11 @@ public sealed class CertificateServiceValidationTests : IDisposable
         string keyPath = AppFiles.KeyFile;
 #pragma warning restore CS0618
 
-        Directory.CreateDirectory(path: Path.GetDirectoryName(path: certPath)!);
-        File.WriteAllText(path: certPath, contents: cert.ExportCertificatePem());
+        Directory.CreateDirectory(Path.GetDirectoryName(certPath)!);
+        File.WriteAllText(certPath, cert.ExportCertificatePem());
 
         using RSA? rsa = cert.GetRSAPrivateKey();
-        File.WriteAllText(path: keyPath, contents: rsa is null ? string.Empty : rsa.ExportRSAPrivateKeyPem());
+        File.WriteAllText(keyPath, rsa is null ? string.Empty : rsa.ExportRSAPrivateKeyPem());
     }
 
     /// <summary>
@@ -108,8 +107,8 @@ public sealed class CertificateServiceValidationTests : IDisposable
     /// </summary>
     private sealed class StubCertificateService(string? certPem, IHttpClientFactory? factory = null)
         : CertificateService(
-            logger: NullLogger<CertificateService>.Instance,
-            httpClientFactory: factory ?? new NullHttpClientFactory()
+            NullLogger<CertificateService>.Instance,
+            factory ?? new NullHttpClientFactory()
         )
     {
         protected override string? ReadCertificatePemFromDb() => certPem;
@@ -119,7 +118,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
     {
         public HttpClient CreateClient(string name) =>
             throw new InvalidOperationException(
-                message: "HttpClientFactory must not be called in this test"
+                "HttpClientFactory must not be called in this test"
             );
     }
 
@@ -128,9 +127,9 @@ public sealed class CertificateServiceValidationTests : IDisposable
     ) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) =>
-            new(handler: new DelegatingFakeHandler(handler: handler))
+            new(new DelegatingFakeHandler(handler))
             {
-                BaseAddress = new(uriString: "https://test.nomercy.tv/v1/server/"),
+                BaseAddress = new("https://test.nomercy.tv/v1/server/"),
             };
 
         private sealed class DelegatingFakeHandler(
@@ -140,7 +139,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
             protected override Task<HttpResponseMessage> SendAsync(
                 HttpRequestMessage request,
                 CancellationToken cancellationToken
-            ) => Task.FromResult(result: handler(arg: request));
+            ) => Task.FromResult(handler(request));
         }
     }
 
@@ -148,50 +147,50 @@ public sealed class CertificateServiceValidationTests : IDisposable
     public void HasValidCertificate_ReturnsFalse_WhenCachedCertIsExpired()
     {
         CertificateService service = BuildService();
-        using X509Certificate2 expired = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddSeconds(seconds: -1));
-        InjectCachedCertificate(service: service, cert: expired);
+        using X509Certificate2 expired = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddSeconds(-1));
+        InjectCachedCertificate(service, expired);
 
         bool result = service.HasValidCertificate();
 
-        Assert.False(condition: result);
+        Assert.False(result);
     }
 
     [Fact]
     public void HasValidCertificate_ReturnsTrue_WhenCachedCertIsValid()
     {
         CertificateService service = BuildService();
-        using X509Certificate2 valid = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 30));
-        InjectCachedCertificate(service: service, cert: valid);
+        using X509Certificate2 valid = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(30));
+        InjectCachedCertificate(service, valid);
 
         bool result = service.HasValidCertificate();
 
-        Assert.True(condition: result);
+        Assert.True(result);
     }
 
     [Fact]
     public void HasValidCertificate_ReturnsFalse_WhenOnlyCertFileExists_KeyFileMissing()
     {
         CertificateService service = BuildService();
-        using X509Certificate2 cert = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 30));
+        using X509Certificate2 cert = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(30));
 #pragma warning disable CS0618
-        File.WriteAllText(path: AppFiles.CertFile, contents: cert.ExportCertificatePem());
+        File.WriteAllText(AppFiles.CertFile, cert.ExportCertificatePem());
 #pragma warning restore CS0618
 
         bool result = service.HasValidCertificate();
 
-        Assert.False(condition: result);
+        Assert.False(result);
     }
 
     [Fact]
     public void HasValidCertificate_ReturnsTrue_WhenBothLegacyPemFilesExist()
     {
         CertificateService service = BuildService();
-        using X509Certificate2 cert = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 30));
-        WritePemFiles(certDir: _certDir, cert: cert);
+        using X509Certificate2 cert = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(30));
+        WritePemFiles(_certDir, cert);
 
         bool result = service.HasValidCertificate();
 
-        Assert.True(condition: result);
+        Assert.True(result);
     }
 
     [Fact]
@@ -201,7 +200,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
 
         bool result = service.HasValidCertificate();
 
-        Assert.False(condition: result);
+        Assert.False(result);
     }
 
     // Regression: DB-presence branch must load + check NotAfter, not just check row existence.
@@ -210,257 +209,257 @@ public sealed class CertificateServiceValidationTests : IDisposable
     [Fact]
     public void HasValidCertificate_ReturnsFalse_WhenDbCertIsExpired()
     {
-        using X509Certificate2 expired = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddSeconds(seconds: -1));
+        using X509Certificate2 expired = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddSeconds(-1));
         string certPem = expired.ExportCertificatePem();
-        StubCertificateService service = new(certPem: certPem);
+        StubCertificateService service = new(certPem);
 
         bool result = service.HasValidCertificate();
 
-        Assert.False(condition: result);
+        Assert.False(result);
     }
 
     [Fact]
     public void HasValidCertificate_ReturnsTrue_WhenDbCertIsValid()
     {
-        using X509Certificate2 valid = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 30));
+        using X509Certificate2 valid = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(30));
         string certPem = valid.ExportCertificatePem();
-        StubCertificateService service = new(certPem: certPem);
+        StubCertificateService service = new(certPem);
 
         bool result = service.HasValidCertificate();
 
-        Assert.True(condition: result);
+        Assert.True(result);
     }
 
     [Fact]
     public async Task RenewSslCertificate_CallsFactory_WhenCachedCertIsNull()
     {
         bool factoryCalled = false;
-        StubHttpClientFactory factory = new(handler: _ =>
+        StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new(statusCode: HttpStatusCode.Accepted);
+            return new(HttpStatusCode.Accepted);
         });
-        CertificateService service = BuildFastRetryService(factory: factory);
+        CertificateService service = BuildFastRetryService(factory);
 
-        await service.RenewSslCertificate(accessToken: "test-token", maxRetries: 1);
+        await service.RenewSslCertificate("test-token", 1);
 
-        Assert.True(condition: factoryCalled);
+        Assert.True(factoryCalled);
     }
 
     [Fact]
     public async Task RenewSslCertificate_DoesNotCallFactory_WhenCertValidBeyondRenewalThreshold()
     {
         bool factoryCalled = false;
-        StubHttpClientFactory factory = new(handler: _ =>
+        StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new(statusCode: HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         });
-        CertificateService service = BuildService(factory: factory);
-        using X509Certificate2 valid = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 14));
-        InjectCachedCertificate(service: service, cert: valid);
+        CertificateService service = BuildService(factory);
+        using X509Certificate2 valid = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(14));
+        InjectCachedCertificate(service, valid);
 
-        await service.RenewSslCertificate(accessToken: "test-token", maxRetries: 1);
+        await service.RenewSslCertificate("test-token", 1);
 
-        Assert.False(condition: factoryCalled);
+        Assert.False(factoryCalled);
     }
 
     [Fact]
     public async Task RenewSslCertificate_CallsFactory_WhenCertExpiresWithinRenewalThreshold()
     {
         bool factoryCalled = false;
-        StubHttpClientFactory factory = new(handler: _ =>
+        StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new(statusCode: HttpStatusCode.Accepted);
+            return new(HttpStatusCode.Accepted);
         });
-        CertificateService service = BuildFastRetryService(factory: factory);
-        using X509Certificate2 nearExpiry = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 12));
-        InjectCachedCertificate(service: service, cert: nearExpiry);
+        CertificateService service = BuildFastRetryService(factory);
+        using X509Certificate2 nearExpiry = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(12));
+        InjectCachedCertificate(service, nearExpiry);
 
-        await service.RenewSslCertificate(accessToken: "test-token", maxRetries: 1);
+        await service.RenewSslCertificate("test-token", 1);
 
-        Assert.True(condition: factoryCalled);
+        Assert.True(factoryCalled);
     }
 
     [Fact]
     public async Task RenewSslCertificate_CallsFactory_WhenCertIsActuallyExpired()
     {
         bool factoryCalled = false;
-        StubHttpClientFactory factory = new(handler: _ =>
+        StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new(statusCode: HttpStatusCode.Accepted);
+            return new(HttpStatusCode.Accepted);
         });
-        CertificateService service = BuildFastRetryService(factory: factory);
-        using X509Certificate2 expired = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddSeconds(seconds: -1));
-        InjectCachedCertificate(service: service, cert: expired);
+        CertificateService service = BuildFastRetryService(factory);
+        using X509Certificate2 expired = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddSeconds(-1));
+        InjectCachedCertificate(service, expired);
 
-        await service.RenewSslCertificate(accessToken: "test-token", maxRetries: 1);
+        await service.RenewSslCertificate("test-token", 1);
 
-        Assert.True(condition: factoryCalled);
+        Assert.True(factoryCalled);
     }
 
     [Fact]
     public async Task RenewSslCertificate_SkipsHttpCall_WhenTokenIsNull()
     {
         bool factoryCalled = false;
-        StubHttpClientFactory factory = new(handler: _ =>
+        StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new(statusCode: HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         });
-        CertificateService service = BuildService(factory: factory);
+        CertificateService service = BuildService(factory);
 
-        await service.RenewSslCertificate(accessToken: null, maxRetries: 1);
+        await service.RenewSslCertificate(null, 1);
 
-        Assert.False(condition: factoryCalled);
+        Assert.False(factoryCalled);
     }
 
     [Fact]
     public async Task RenewSslCertificate_SkipsHttpCall_WhenTokenIsEmpty()
     {
         bool factoryCalled = false;
-        StubHttpClientFactory factory = new(handler: _ =>
+        StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new(statusCode: HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         });
-        CertificateService service = BuildService(factory: factory);
+        CertificateService service = BuildService(factory);
 
-        await service.RenewSslCertificate(accessToken: string.Empty, maxRetries: 1);
+        await service.RenewSslCertificate(string.Empty, 1);
 
-        Assert.False(condition: factoryCalled);
+        Assert.False(factoryCalled);
     }
 
     [Fact]
     public async Task RenewSslCertificate_DoesNotRetry_WhenApiReturns400()
     {
         int callCount = 0;
-        StubHttpClientFactory factory = new(handler: _ =>
+        StubHttpClientFactory factory = new(_ =>
         {
             callCount++;
-            return new(statusCode: HttpStatusCode.BadRequest)
+            return new(HttpStatusCode.BadRequest)
             {
                 Content = new StringContent(
-                    content: "{\"status\":\"error\",\"message\":\"Certificate is not due for renewal yet\"}"
+                    "{\"status\":\"error\",\"message\":\"Certificate is not due for renewal yet\"}"
                 ),
             };
         });
-        CertificateService service = BuildService(factory: factory);
+        CertificateService service = BuildService(factory);
 
-        await service.RenewSslCertificate(accessToken: "test-token", maxRetries: 5);
+        await service.RenewSslCertificate("test-token", 5);
 
-        Assert.Equal(expected: 1, actual: callCount);
+        Assert.Equal(1, callCount);
     }
 
     [Fact]
     public async Task RenewSslCertificate_ShortCircuits_On400WithEmptyBody()
     {
         int callCount = 0;
-        StubHttpClientFactory factory = new(handler: _ =>
+        StubHttpClientFactory factory = new(_ =>
         {
             callCount++;
-            return new(statusCode: HttpStatusCode.BadRequest) { Content = new StringContent(content: string.Empty) };
+            return new(HttpStatusCode.BadRequest) { Content = new StringContent(string.Empty) };
         });
-        CertificateService service = BuildService(factory: factory);
+        CertificateService service = BuildService(factory);
 
-        await service.RenewSslCertificate(accessToken: "test-token", maxRetries: 5);
+        await service.RenewSslCertificate("test-token", 5);
 
-        Assert.Equal(expected: 1, actual: callCount);
+        Assert.Equal(1, callCount);
     }
 
     [Fact]
     public async Task RenewSslCertificate_FallsBackToRawBody_When400BodyIsNotJson()
     {
         int callCount = 0;
-        StubHttpClientFactory factory = new(handler: _ =>
+        StubHttpClientFactory factory = new(_ =>
         {
             callCount++;
-            return new(statusCode: HttpStatusCode.BadRequest)
+            return new(HttpStatusCode.BadRequest)
             {
-                Content = new StringContent(content: "plain text error message"),
+                Content = new StringContent("plain text error message"),
             };
         });
-        CertificateService service = BuildService(factory: factory);
+        CertificateService service = BuildService(factory);
 
-        await service.RenewSslCertificate(accessToken: "test-token", maxRetries: 3);
+        await service.RenewSslCertificate("test-token", 3);
 
-        Assert.Equal(expected: 1, actual: callCount);
+        Assert.Equal(1, callCount);
     }
 
     [Fact]
     public async Task RenewSslCertificate_Retries_On202_UpToMaxRetries()
     {
         int callCount = 0;
-        StubHttpClientFactory factory = new(handler: _ =>
+        StubHttpClientFactory factory = new(_ =>
         {
             callCount++;
-            return new(statusCode: HttpStatusCode.Accepted);
+            return new(HttpStatusCode.Accepted);
         });
-        CertificateService service = BuildFastRetryService(factory: factory);
+        CertificateService service = BuildFastRetryService(factory);
 
-        await service.RenewSslCertificate(accessToken: "test-token", maxRetries: 2);
+        await service.RenewSslCertificate("test-token", 2);
 
-        Assert.Equal(expected: 2, actual: callCount);
+        Assert.Equal(2, callCount);
     }
 
     [Fact]
     public async Task RenewSslCertificate_Retries_OnGatewayTimeout()
     {
         int callCount = 0;
-        StubHttpClientFactory factory = new(handler: _ =>
+        StubHttpClientFactory factory = new(_ =>
         {
             callCount++;
-            return new(statusCode: HttpStatusCode.GatewayTimeout);
+            return new(HttpStatusCode.GatewayTimeout);
         });
-        CertificateService service = BuildFastRetryService(factory: factory);
+        CertificateService service = BuildFastRetryService(factory);
 
-        await Assert.ThrowsAsync<HttpRequestException>(testCode: () =>
-            service.RenewSslCertificate(accessToken: "test-token", maxRetries: 2)
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            service.RenewSslCertificate("test-token", 2)
         );
 
-        Assert.Equal(expected: 2, actual: callCount);
+        Assert.Equal(2, callCount);
     }
 
     [Fact]
     public void CatalogueCompleteness_AllGuardRulesAreCoveredOrDocumented()
     {
         string sourceFile = FindSourceFile(
-            relativePath: "src/NoMercy.Networking/Certificate/CertificateService.cs"
+            "src/NoMercy.Networking/Certificate/CertificateService.cs"
         );
-        string source = File.ReadAllText(path: sourceFile);
+        string source = File.ReadAllText(sourceFile);
 
-        Assert.Contains(expectedSubstring: "_cachedCertificate.NotAfter > DateTime.Now", actualString: source);
+        Assert.Contains("_cachedCertificate.NotAfter > DateTime.Now", source);
 
         // DB branch must load + check NotAfter, not just assert row presence.
-        Assert.Contains(expectedSubstring: "ReadCertificatePemFromDb", actualString: source);
-        Assert.Contains(expectedSubstring: "dbCert.NotAfter > DateTime.Now", actualString: source);
+        Assert.Contains("ReadCertificatePemFromDb", source);
+        Assert.Contains("dbCert.NotAfter > DateTime.Now", source);
 
         Assert.Contains(
-            expectedSubstring: "_driver.FileExists(AppFiles.CertFile) && _driver.FileExists(AppFiles.KeyFile)",
-            actualString: source
+            "_driver.FileExists(AppFiles.CertFile) && _driver.FileExists(AppFiles.KeyFile)",
+            source
         );
 
-        Assert.Contains(expectedSubstring: "_cachedCertificate is null", actualString: source);
+        Assert.Contains("_cachedCertificate is null", source);
 
-        Assert.Contains(expectedSubstring: "_cachedCertificate.NotAfter <= DateTime.Now", actualString: source);
+        Assert.Contains("_cachedCertificate.NotAfter <= DateTime.Now", source);
 
-        Assert.Contains(expectedSubstring: "RenewalThresholdDays", actualString: source);
-        Assert.Contains(expectedSubstring: "private const int RenewalThresholdDays = 13", actualString: source);
+        Assert.Contains("RenewalThresholdDays", source);
+        Assert.Contains("private const int RenewalThresholdDays = 13", source);
 
-        Assert.Contains(expectedSubstring: "string.IsNullOrEmpty(token)", actualString: source);
+        Assert.Contains("string.IsNullOrEmpty(token)", source);
 
-        Assert.Contains(expectedSubstring: "HttpStatusCode.Accepted", actualString: source);
+        Assert.Contains("HttpStatusCode.Accepted", source);
 
-        Assert.Contains(expectedSubstring: "HttpStatusCode.BadRequest", actualString: source);
+        Assert.Contains("HttpStatusCode.BadRequest", source);
 
-        Assert.Contains(expectedSubstring: "CertificateNotDueException", actualString: source);
+        Assert.Contains("CertificateNotDueException", source);
 
-        Assert.Contains(expectedSubstring: "string.IsNullOrWhiteSpace(body)", actualString: source);
-        Assert.Contains(expectedSubstring: "parsed?.Message", actualString: source);
+        Assert.Contains("string.IsNullOrWhiteSpace(body)", source);
+        Assert.Contains("parsed?.Message", source);
 
-        Assert.Contains(expectedSubstring: "HttpProtocols.Http1", actualString: source);
+        Assert.Contains("HttpProtocols.Http1", source);
     }
 
     private static string FindSourceFile(string relativePath)
@@ -468,18 +467,18 @@ public sealed class CertificateServiceValidationTests : IDisposable
         string? dir = AppDomain.CurrentDomain.BaseDirectory;
         while (dir != null)
         {
-            string candidate = Path.Combine(path1: dir, path2: relativePath);
-            if (File.Exists(path: candidate))
+            string candidate = Path.Combine(dir, relativePath);
+            if (File.Exists(candidate))
                 return candidate;
 
-            string repoCandidate = Path.Combine(paths: [dir, "..", "..", "..", "..", "..", relativePath]);
-            string resolved = Path.GetFullPath(path: repoCandidate);
-            if (File.Exists(path: resolved))
+            string repoCandidate = Path.Combine([dir, "..", "..", "..", "..", "..", relativePath]);
+            string resolved = Path.GetFullPath(repoCandidate);
+            if (File.Exists(resolved))
                 return resolved;
 
-            dir = Directory.GetParent(path: dir)?.FullName;
+            dir = Directory.GetParent(dir)?.FullName;
         }
 
-        throw new FileNotFoundException(message: $"Could not locate {relativePath}");
+        throw new FileNotFoundException($"Could not locate {relativePath}");
     }
 }

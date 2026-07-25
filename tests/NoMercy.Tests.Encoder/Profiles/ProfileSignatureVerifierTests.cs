@@ -18,7 +18,6 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Signers;
-using Org.BouncyCastle.Security;
 
 namespace NoMercy.Tests.Encoder.Profiles;
 
@@ -36,7 +35,7 @@ public class ProfileSignatureVerifierTests
     ) GenerateKeyPair()
     {
         Ed25519KeyPairGenerator generator = new();
-        generator.Init(parameters: new Ed25519KeyGenerationParameters(random: new()));
+        generator.Init(new Ed25519KeyGenerationParameters(new()));
         AsymmetricCipherKeyPair pair = generator.GenerateKeyPair();
         return ((Ed25519PublicKeyParameters)pair.Public, (Ed25519PrivateKeyParameters)pair.Private);
     }
@@ -45,18 +44,18 @@ public class ProfileSignatureVerifierTests
     private static string Fingerprint(Ed25519PublicKeyParameters pubKey)
     {
         byte[] pubBytes = pubKey.GetEncoded();
-        byte[] hash = SHA256.HashData(source: pubBytes);
-        return Convert.ToHexString(inArray: hash).ToLowerInvariant();
+        byte[] hash = SHA256.HashData(pubBytes);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     /// <summary>Signs SHA-256(json) with the given private key and returns the base64 signature.</summary>
     private static string Sign(string json, Ed25519PrivateKeyParameters privateKey)
     {
-        byte[] digest = SHA256.HashData(source: Encoding.UTF8.GetBytes(s: json));
+        byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(json));
         Ed25519Signer signer = new();
-        signer.Init(forSigning: true, parameters: privateKey);
-        signer.BlockUpdate(buf: digest, off: 0, len: digest.Length);
-        return Convert.ToBase64String(inArray: signer.GenerateSignature());
+        signer.Init(true, privateKey);
+        signer.BlockUpdate(digest, 0, digest.Length);
+        return Convert.ToBase64String(signer.GenerateSignature());
     }
 
     /// <summary>Builds a TrustedPublisherKey record from a BouncyCastle public key.</summary>
@@ -64,9 +63,9 @@ public class ProfileSignatureVerifierTests
     {
         return new()
         {
-            Fingerprint = Fingerprint(pubKey: pubKey),
+            Fingerprint = Fingerprint(pubKey),
             Label = "Test Publisher",
-            PublicKeyBase64 = Convert.ToBase64String(inArray: pubKey.GetEncoded()),
+            PublicKeyBase64 = Convert.ToBase64String(pubKey.GetEncoded()),
             AddedAt = DateTime.UtcNow,
             AddedBy = "test",
         };
@@ -82,15 +81,15 @@ public class ProfileSignatureVerifierTests
         (Ed25519PublicKeyParameters pubKey, Ed25519PrivateKeyParameters privKey) =
             GenerateKeyPair();
         string json = """{"name":"Test","format":"Hls"}""";
-        string fingerprint = Fingerprint(pubKey: pubKey);
-        string sig = Sign(json: json, privateKey: privKey);
-        TrustedPublisherKey trustedKey = MakeTrustedKey(pubKey: pubKey);
+        string fingerprint = Fingerprint(pubKey);
+        string sig = Sign(json, privKey);
+        TrustedPublisherKey trustedKey = MakeTrustedKey(pubKey);
 
         EncoderRule? result = _verifier.Verify(
-            profileJson: json,
-            fingerprint: fingerprint,
-            base64Signature: sig,
-            keyLookup: fp => fp == fingerprint ? trustedKey : null
+            json,
+            fingerprint,
+            sig,
+            fp => fp == fingerprint ? trustedKey : null
         );
 
         result.Should().BeNull();
@@ -102,14 +101,14 @@ public class ProfileSignatureVerifierTests
         string json = """{"name":"Test"}""";
 
         EncoderRule? result = _verifier.Verify(
-            profileJson: json,
-            fingerprint: "deadbeef",
-            base64Signature: Convert.ToBase64String(inArray: new byte[64]),
-            keyLookup: _ => null
+            json,
+            "deadbeef",
+            Convert.ToBase64String(new byte[64]),
+            _ => null
         );
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: EncoderRuleId.ImportPublisherUntrusted);
+        result!.Id.Should().Be(EncoderRuleId.ImportPublisherUntrusted);
     }
 
     [Fact]
@@ -118,24 +117,24 @@ public class ProfileSignatureVerifierTests
         (Ed25519PublicKeyParameters pubKey, Ed25519PrivateKeyParameters privKey) =
             GenerateKeyPair();
         string json = """{"name":"Test","format":"Hls"}""";
-        string fingerprint = Fingerprint(pubKey: pubKey);
-        string sig = Sign(json: json, privateKey: privKey);
-        TrustedPublisherKey trustedKey = MakeTrustedKey(pubKey: pubKey);
+        string fingerprint = Fingerprint(pubKey);
+        string sig = Sign(json, privKey);
+        TrustedPublisherKey trustedKey = MakeTrustedKey(pubKey);
 
         // Flip a byte in the middle of the signature
-        byte[] sigBytes = Convert.FromBase64String(s: sig);
+        byte[] sigBytes = Convert.FromBase64String(sig);
         sigBytes[32] ^= 0xFF;
-        string corruptedSig = Convert.ToBase64String(inArray: sigBytes);
+        string corruptedSig = Convert.ToBase64String(sigBytes);
 
         EncoderRule? result = _verifier.Verify(
-            profileJson: json,
-            fingerprint: fingerprint,
-            base64Signature: corruptedSig,
-            keyLookup: fp => fp == fingerprint ? trustedKey : null
+            json,
+            fingerprint,
+            corruptedSig,
+            fp => fp == fingerprint ? trustedKey : null
         );
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: EncoderRuleId.ImportSignatureInvalid);
+        result!.Id.Should().Be(EncoderRuleId.ImportSignatureInvalid);
     }
 
     [Fact]
@@ -145,19 +144,19 @@ public class ProfileSignatureVerifierTests
             GenerateKeyPair();
         string originalJson = """{"name":"Legit","format":"Hls"}""";
         string tamperedJson = """{"name":"Tampered","format":"Hls"}""";
-        string fingerprint = Fingerprint(pubKey: pubKey);
-        string sig = Sign(json: originalJson, privateKey: privKey);
-        TrustedPublisherKey trustedKey = MakeTrustedKey(pubKey: pubKey);
+        string fingerprint = Fingerprint(pubKey);
+        string sig = Sign(originalJson, privKey);
+        TrustedPublisherKey trustedKey = MakeTrustedKey(pubKey);
 
         // Verify the tampered payload against the original signature
         EncoderRule? result = _verifier.Verify(
-            profileJson: tamperedJson,
-            fingerprint: fingerprint,
-            base64Signature: sig,
-            keyLookup: fp => fp == fingerprint ? trustedKey : null
+            tamperedJson,
+            fingerprint,
+            sig,
+            fp => fp == fingerprint ? trustedKey : null
         );
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: EncoderRuleId.ImportSignatureInvalid);
+        result!.Id.Should().Be(EncoderRuleId.ImportSignatureInvalid);
     }
 }

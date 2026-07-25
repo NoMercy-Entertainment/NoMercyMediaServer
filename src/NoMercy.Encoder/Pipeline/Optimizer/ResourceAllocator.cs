@@ -20,27 +20,27 @@ public class ResourceAllocator(IHardwareCapabilities hardware, IResourceMonitor 
         IReadOnlyList<GpuProcessSample> gpuSamples = hardware.HasGpu
             ? await monitor.SampleGpuAsync()
             : [];
-        int leastLoadedGpuIndex = FindLeastLoadedGpuIndex(samples: gpuSamples);
-        int softwareThreadBudget = Math.Max(val1: 1, val2: Environment.ProcessorCount / 2);
+        int leastLoadedGpuIndex = FindLeastLoadedGpuIndex(gpuSamples);
+        int softwareThreadBudget = Math.Max(1, Environment.ProcessorCount / 2);
 
         for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
         {
-            ExecutionGroup group = groups[index: groupIndex];
+            ExecutionGroup group = groups[groupIndex];
 
             if (group.RequiresGpu && hardware.HasGpu)
             {
                 string gpuDeviceId =
                     leastLoadedGpuIndex < hardware.Gpus.Count
-                        ? hardware.Gpus[index: leastLoadedGpuIndex].Name
-                        : hardware.Gpus[index: 0].Name;
+                        ? hardware.Gpus[leastLoadedGpuIndex].Name
+                        : hardware.Gpus[0].Name;
 
-                groups[index: groupIndex] = group with { DeviceId = gpuDeviceId };
+                groups[groupIndex] = group with { DeviceId = gpuDeviceId };
                 continue;
             }
 
             if (group is { RequiresGpu: false, CpuThreadsRequired: 0 })
             {
-                groups[index: groupIndex] = group with { CpuThreadsRequired = softwareThreadBudget };
+                groups[groupIndex] = group with { CpuThreadsRequired = softwareThreadBudget };
             }
         }
     }
@@ -54,10 +54,10 @@ public class ResourceAllocator(IHardwareCapabilities hardware, IResourceMonitor 
 
         foreach (GpuProcessSample sample in samples)
         {
-            if (!utilizationByGpu.TryGetValue(key: sample.GpuIndex, value: out int current))
+            if (!utilizationByGpu.TryGetValue(sample.GpuIndex, out int current))
                 current = 0;
 
-            utilizationByGpu[key: sample.GpuIndex] = current + sample.EncoderUtilizationPercent;
+            utilizationByGpu[sample.GpuIndex] = current + sample.EncoderUtilizationPercent;
         }
 
         int leastLoadedIndex = 0;
@@ -80,7 +80,7 @@ public class ResourceAllocator(IHardwareCapabilities hardware, IResourceMonitor 
         long estimatedPeakMb = 0;
         foreach (ExecutionGroup group in groups)
         {
-            int encodeCount = group.Nodes.Count(predicate: n => n.Operation == OperationType.Encode);
+            int encodeCount = group.Nodes.Count(n => n.Operation == OperationType.Encode);
             estimatedPeakMb += encodeCount * 200;
         }
 

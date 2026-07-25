@@ -24,7 +24,7 @@ public class EncodingHistoryRepository(MediaContext context) : IEncodingHistoryR
 {
     public Task AddAsync(EncodingHistory entry)
     {
-        context.EncodingHistory.Add(entity: entry);
+        context.EncodingHistory.Add(entry);
         return context.SaveChangesAsync();
     }
 
@@ -37,27 +37,27 @@ public class EncodingHistoryRepository(MediaContext context) : IEncodingHistoryR
 
         return context
             .EncodingHistory.AsNoTracking()
-            .OrderByDescending(keySelector: h => h.CreatedAt)
-            .ThenByDescending(keySelector: h => h.Id)
-            .Skip(count: pageIndex * pageSize)
-            .Take(count: pageSize)
+            .OrderByDescending(h => h.CreatedAt)
+            .ThenByDescending(h => h.Id)
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
             .ToListAsync();
     }
 
     public Task<int> GetTotalCountAsync() => context.EncodingHistory.CountAsync();
 
     public Task<EncodingHistory?> GetByIdAsync(Ulid id) =>
-        context.EncodingHistory.AsNoTracking().FirstOrDefaultAsync(predicate: h => h.Id == id);
+        context.EncodingHistory.AsNoTracking().FirstOrDefaultAsync(h => h.Id == id);
 
     public async Task<bool> DeleteAsync(Ulid id)
     {
-        EncodingHistory? existing = await context.EncodingHistory.FirstOrDefaultAsync(predicate: h =>
+        EncodingHistory? existing = await context.EncodingHistory.FirstOrDefaultAsync(h =>
             h.Id == id
         );
         if (existing is null)
             return false;
 
-        context.EncodingHistory.Remove(entity: existing);
+        context.EncodingHistory.Remove(existing);
         await context.SaveChangesAsync();
         return true;
     }
@@ -69,7 +69,7 @@ public class EncodingHistoryRepository(MediaContext context) : IEncodingHistoryR
     /// surface it.
     /// </summary>
     public Task<int> DeleteOlderThanAsync(DateTime olderThan) =>
-        context.EncodingHistory.Where(predicate: h => h.CreatedAt < olderThan).ExecuteDeleteAsync();
+        context.EncodingHistory.Where(h => h.CreatedAt < olderThan).ExecuteDeleteAsync();
 
     public Task<int> DeleteAllAsync() => context.EncodingHistory.ExecuteDeleteAsync();
 
@@ -82,8 +82,8 @@ public class EncodingHistoryRepository(MediaContext context) : IEncodingHistoryR
     public async Task<EncodingHistoryStats> GetAggregateStatsAsync()
     {
         var raw = await context
-            .EncodingHistory.GroupBy(keySelector: _ => 1)
-            .Select(selector: g => new
+            .EncodingHistory.GroupBy(_ => 1)
+            .Select(g => new
             {
                 TotalEncodes = g.Count(),
                 TotalInputBytes = g.Sum(h => h.InputSizeBytes),
@@ -95,23 +95,23 @@ public class EncodingHistoryRepository(MediaContext context) : IEncodingHistoryR
             .FirstOrDefaultAsync();
 
         return raw is null
-            ? new(TotalEncodes: 0, TotalInputBytes: 0, TotalOutputBytes: 0, AverageSpeed: 0, AverageCompressionRatio: 0, AverageFps: 0)
+            ? new(0, 0, 0, 0, 0, 0)
             : new EncodingHistoryStats(
-                TotalEncodes: raw.TotalEncodes,
-                TotalInputBytes: raw.TotalInputBytes,
-                TotalOutputBytes: raw.TotalOutputBytes,
-                AverageSpeed: raw.AverageSpeed,
-                AverageCompressionRatio: raw.AverageCompressionRatio,
-                AverageFps: raw.AverageFps
+                raw.TotalEncodes,
+                raw.TotalInputBytes,
+                raw.TotalOutputBytes,
+                raw.AverageSpeed,
+                raw.AverageCompressionRatio,
+                raw.AverageFps
             );
     }
 }
 
 public record EncodingHistoryStats(
-    [property: JsonProperty(propertyName: "total_encodes")] int TotalEncodes,
-    [property: JsonProperty(propertyName: "total_input_bytes")] long TotalInputBytes,
-    [property: JsonProperty(propertyName: "total_output_bytes")] long TotalOutputBytes,
-    [property: JsonProperty(propertyName: "average_speed")] double AverageSpeed,
-    [property: JsonProperty(propertyName: "average_compression_ratio")] double AverageCompressionRatio,
-    [property: JsonProperty(propertyName: "average_fps")] double AverageFps
+    [property: JsonProperty("total_encodes")] int TotalEncodes,
+    [property: JsonProperty("total_input_bytes")] long TotalInputBytes,
+    [property: JsonProperty("total_output_bytes")] long TotalOutputBytes,
+    [property: JsonProperty("average_speed")] double AverageSpeed,
+    [property: JsonProperty("average_compression_ratio")] double AverageCompressionRatio,
+    [property: JsonProperty("average_fps")] double AverageFps
 );

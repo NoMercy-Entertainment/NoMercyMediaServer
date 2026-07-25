@@ -20,7 +20,6 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Startup;
-using AudioOutput = NoMercy.Encoder.Profiles.AudioOutput;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using ContainerCompatibility = NoMercy.Encoder.Profiles.ContainerCompatibility;
@@ -28,14 +27,10 @@ using DownmixConfig = NoMercy.Encoder.Profiles.DownmixConfig;
 using DownmixMode = NoMercy.Encoder.Profiles.DownmixMode;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using HardwarePreference = NoMercy.Encoder.Profiles.HardwarePreference;
-using HlsDerivatives = NoMercy.Encoder.Profiles.HlsDerivatives;
-using LoudnessConfig = NoMercy.Encoder.Profiles.LoudnessConfig;
 using LoudnessMode = NoMercy.Encoder.Profiles.LoudnessMode;
 using RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
-using SubtitleOutput = NoMercy.Encoder.Profiles.SubtitleOutput;
 using SubtitlePolicy = NoMercy.Encoder.Profiles.SubtitlePolicy;
-using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Integration;
 
@@ -52,8 +47,8 @@ namespace NoMercy.Tests.Encoder.Integration;
 /// is not a code bug. When a case fails, the ffmpeg stderr is surfaced so a real
 /// codec/container rule violation is visible.
 /// </summary>
-[Trait(name: "Category", value: "Integration")]
-[Collection(name: "RealEncode")]
+[Trait("Category", "Integration")]
+[Collection("RealEncode")]
 public class FfmpegMatrixOracleTests : IAsyncLifetime
 {
     private string _testDir = string.Empty;
@@ -70,19 +65,18 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
         // Fork first (custom muxers), then env, then stock ffmpeg on PATH — the
         // oracle only needs standard codecs, so a stock build is enough.
         _ffmpegPath = NoMercyFfmpegProbe.ResolveFfmpegPath() ?? "ffmpeg";
-        _ffprobePath = NoMercyFfmpegProbe.ResolveFfprobePath(ffmpegPath: _ffmpegPath) ?? "ffprobe";
+        _ffprobePath = NoMercyFfmpegProbe.ResolveFfprobePath(_ffmpegPath) ?? "ffprobe";
 
         _testDir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nomercy-oracle-" + Guid.NewGuid().ToString(format: "N")[..8]
+            Path.GetTempPath(),
+            "nomercy-oracle-" + Guid.NewGuid().ToString("N")[..8]
         );
-        Directory.CreateDirectory(path: _testDir);
-        _inputFile = Path.Combine(path1: _testDir, path2: "src.mp4");
+        Directory.CreateDirectory(_testDir);
+        _inputFile = Path.Combine(_testDir, "src.mp4");
 
         // A 1-second 10-bit-capable synthetic clip. yuv420p10le lets the 10-bit
         // profiles encode without a source-depth mismatch.
-        int exit = await RunFfmpegAsync(args:
-        [
+        int exit = await RunFfmpegAsync([
             "-y",
             "-f",
             "lavfi",
@@ -103,14 +97,13 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             _inputFile,
         ]);
         if (exit != 0)
-            throw new InvalidOperationException(message: "Oracle test-clip generation failed.");
+            throw new InvalidOperationException("Oracle test-clip generation failed.");
 
         // A 5.1 source so the downmix pan matrix and channel-reduction paths have
         // real surround channels to fold — a stereo source would make -ac 6 an
         // upmix and mask the downmix behaviour the tests mean to exercise.
-        _surroundInputFile = Path.Combine(path1: _testDir, path2: "src51.mkv");
-        int surroundExit = await RunFfmpegAsync(args:
-        [
+        _surroundInputFile = Path.Combine(_testDir, "src51.mkv");
+        int surroundExit = await RunFfmpegAsync([
             "-y",
             "-f",
             "lavfi",
@@ -131,19 +124,18 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             _surroundInputFile,
         ]);
         if (surroundExit != 0)
-            throw new InvalidOperationException(message: "Oracle 5.1 test-clip generation failed.");
+            throw new InvalidOperationException("Oracle 5.1 test-clip generation failed.");
 
         // A source carrying a real text (SRT) subtitle stream so the extract /
         // copy / text-burn-in paths run against an actual subtitle the pipeline
         // maps by index — not a profile that references a stream that isn't there.
-        string srtPath = Path.Combine(path1: _testDir, path2: "sub.srt");
+        string srtPath = Path.Combine(_testDir, "sub.srt");
         await File.WriteAllTextAsync(
-            path: srtPath,
-            contents: "1\n00:00:00,000 --> 00:00:01,000\nOracle subtitle line\n"
+            srtPath,
+            "1\n00:00:00,000 --> 00:00:01,000\nOracle subtitle line\n"
         );
-        _subtitleInputFile = Path.Combine(path1: _testDir, path2: "src_sub.mkv");
-        int subExit = await RunFfmpegAsync(args:
-        [
+        _subtitleInputFile = Path.Combine(_testDir, "src_sub.mkv");
+        int subExit = await RunFfmpegAsync([
             "-y",
             "-f",
             "lavfi",
@@ -168,20 +160,20 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             _subtitleInputFile,
         ]);
         if (subExit != 0)
-            throw new InvalidOperationException(message: "Oracle subtitle test-clip generation failed.");
+            throw new InvalidOperationException("Oracle subtitle test-clip generation failed.");
 
         _availableEncoders = await ProbeAvailableEncodersAsync();
 
         ServiceCollection services = new();
         services.AddLogging();
-        string suffix = Guid.NewGuid().ToString(format: "N")[..8];
-        services.AddDbContextFactory<MediaContext>(optionsAction: o =>
-            o.UseInMemoryDatabase(databaseName: $"oracle-media-{suffix}")
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        services.AddDbContextFactory<MediaContext>(o =>
+            o.UseInMemoryDatabase($"oracle-media-{suffix}")
         );
-        services.AddDbContextFactory<AppDbContext>(optionsAction: o =>
-            o.UseInMemoryDatabase(databaseName: $"oracle-app-{suffix}")
+        services.AddDbContextFactory<AppDbContext>(o =>
+            o.UseInMemoryDatabase($"oracle-app-{suffix}")
         );
-        services.AddNoMercyEncoder(configure: opts =>
+        services.AddNoMercyEncoder(opts =>
         {
             opts.FfmpegPathOverride = _ffmpegPath;
             opts.FfprobePathOverride = _ffprobePath;
@@ -197,7 +189,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
 
         HardwareInitializationService hwInit =
             _serviceProvider.GetRequiredService<HardwareInitializationService>();
-        await hwInit.StartAsync(cancellationToken: CancellationToken.None);
+        await hwInit.StartAsync(CancellationToken.None);
     }
 
     private sealed class TestHostLifetime : IHostApplicationLifetime
@@ -214,8 +206,8 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
         _serviceProvider.Dispose();
         try
         {
-            if (Directory.Exists(path: _testDir))
-                Directory.Delete(path: _testDir, recursive: true);
+            if (Directory.Exists(_testDir))
+                Directory.Delete(_testDir, true);
         }
         catch
         {
@@ -257,8 +249,8 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
         {
             // Only emit pairs the support matrix actually allows.
             if (
-                !ContainerCompatibility.SupportsVideo(container: container, codec: video)
-                || !ContainerCompatibility.SupportsAudio(container: container, codec: audio)
+                !ContainerCompatibility.SupportsVideo(container, video)
+                || !ContainerCompatibility.SupportsAudio(container, audio)
             )
                 continue;
 
@@ -267,45 +259,45 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
     }
 
     [SkippableTheory]
-    [MemberData(memberName: nameof(Matrix))]
+    [MemberData(nameof(Matrix))]
     public async Task ValidCodecContainerPair_FfmpegAcceptsTheGeneratedCommand(
         Container container,
         VideoCodecType video,
         AudioCodecType audio
     )
     {
-        string videoEncoder = VideoEncoderName(codec: video);
-        string audioEncoder = AudioCodecDefinitions.GetEncoder(codecType: audio).FfmpegName;
+        string videoEncoder = VideoEncoderName(video);
+        string audioEncoder = AudioCodecDefinitions.GetEncoder(audio).FfmpegName;
 
         // Skip codecs THIS ffmpeg build cannot encode — an environment gap, not a
         // code defect. fdk_aac is fork-only; some HW/experimental encoders absent.
         Skip.IfNot(
-            condition: _availableEncoders.Contains(item: videoEncoder),
-            reason: $"video encoder {videoEncoder} not available in this ffmpeg build"
+            _availableEncoders.Contains(videoEncoder),
+            $"video encoder {videoEncoder} not available in this ffmpeg build"
         );
         Skip.IfNot(
-            condition: _availableEncoders.Contains(item: audioEncoder),
-            reason: $"audio encoder {audioEncoder} not available in this ffmpeg build"
+            _availableEncoders.Contains(audioEncoder),
+            $"audio encoder {audioEncoder} not available in this ffmpeg build"
         );
 
-        string outputDir = Path.Combine(path1: _testDir, path2: $"{container}_{video}_{audio}");
-        Directory.CreateDirectory(path: outputDir);
+        string outputDir = Path.Combine(_testDir, $"{container}_{video}_{audio}");
+        Directory.CreateDirectory(outputDir);
 
-        EncodingProfile profile = BuildProfile(container: container, video: video, audio: audio);
+        EncodingProfile profile = BuildProfile(container, video, audio);
         EncodingRequest request = new(
-            InputPath: _inputFile,
-            OutputDirectory: outputDir,
-            Profile: profile
+            _inputFile,
+            outputDir,
+            profile
         );
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 2));
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(2));
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
-        EncodingResult result = await encoder.EncodeAsync(request: request, progress: null, ct: cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request, null, cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
-                because: $"ffmpeg must accept {container}/{video}/{audio}. "
+                $"ffmpeg must accept {container}/{video}/{audio}. "
                          + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
     }
@@ -334,43 +326,43 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
     }
 
     [SkippableTheory]
-    [MemberData(memberName: nameof(BitDepthProfileMatrix))]
+    [MemberData(nameof(BitDepthProfileMatrix))]
     public async Task BitDepthAndProfile_FfmpegAcceptsTheGeneratedCommand(
         VideoCodecType video,
         int bitDepth,
         CodecProfile codecProfile
     )
     {
-        string videoEncoder = VideoEncoderName(codec: video);
+        string videoEncoder = VideoEncoderName(video);
         Skip.IfNot(
-            condition: _availableEncoders.Contains(item: videoEncoder),
-            reason: $"video encoder {videoEncoder} not available in this ffmpeg build"
+            _availableEncoders.Contains(videoEncoder),
+            $"video encoder {videoEncoder} not available in this ffmpeg build"
         );
 
-        string outputDir = Path.Combine(path1: _testDir, path2: $"bd_{video}_{bitDepth}_{codecProfile}");
-        Directory.CreateDirectory(path: outputDir);
+        string outputDir = Path.Combine(_testDir, $"bd_{video}_{bitDepth}_{codecProfile}");
+        Directory.CreateDirectory(outputDir);
 
         EncodingProfile profile = BuildProfile(
-            container: Container.Mkv,
-            video: video,
-            audio: AudioCodecType.Aac,
-            bitDepth: bitDepth,
-            codecProfile: codecProfile
+            Container.Mkv,
+            video,
+            AudioCodecType.Aac,
+            bitDepth,
+            codecProfile
         );
         EncodingRequest request = new(
-            InputPath: _inputFile,
-            OutputDirectory: outputDir,
-            Profile: profile
+            _inputFile,
+            outputDir,
+            profile
         );
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 2));
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(2));
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
-        EncodingResult result = await encoder.EncodeAsync(request: request, progress: null, ct: cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request, null, cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
-                because: $"ffmpeg must accept {video} {bitDepth}-bit profile={codecProfile}. "
+                $"ffmpeg must accept {video} {bitDepth}-bit profile={codecProfile}. "
                          + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
     }
@@ -387,28 +379,28 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
     }
 
     [SkippableTheory]
-    [MemberData(memberName: nameof(RateControlMatrix))]
+    [MemberData(nameof(RateControlMatrix))]
     public async Task RateControl_FfmpegAcceptsTheGeneratedCommand(
         RateControlMode rateControl,
         EncodeMode encodeMode
     )
     {
         Skip.IfNot(
-            condition: _availableEncoders.Contains(item: "libx264"),
-            reason: "libx264 not available in this ffmpeg build"
+            _availableEncoders.Contains("libx264"),
+            "libx264 not available in this ffmpeg build"
         );
 
-        string outputDir = Path.Combine(path1: _testDir, path2: $"rc_{rateControl}_{encodeMode}");
-        Directory.CreateDirectory(path: outputDir);
+        string outputDir = Path.Combine(_testDir, $"rc_{rateControl}_{encodeMode}");
+        Directory.CreateDirectory(outputDir);
 
         EncodingProfile profile = BuildProfile(
-            container: Container.Mp4,
-            video: VideoCodecType.H264,
-            audio: AudioCodecType.Aac
+            Container.Mp4,
+            VideoCodecType.H264,
+            AudioCodecType.Aac
         ) with
         {
             EncodeMode = encodeMode,
-            Video = BuildProfile(container: Container.Mp4, video: VideoCodecType.H264, audio: AudioCodecType.Aac).Video! with
+            Video = BuildProfile(Container.Mp4, VideoCodecType.H264, AudioCodecType.Aac).Video! with
             {
                 RateControl = rateControl,
                 Crf = 0,
@@ -418,12 +410,12 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             },
         };
 
-        EncodingResult result = await RunEncodeAsync(profile: profile, inputPath: _inputFile, outputDir: outputDir);
+        EncodingResult result = await RunEncodeAsync(profile, _inputFile, outputDir);
 
         result
             .Success.Should()
             .BeTrue(
-                because: $"ffmpeg must accept rate_control={rateControl} encode_mode={encodeMode}. "
+                $"ffmpeg must accept rate_control={rateControl} encode_mode={encodeMode}. "
                          + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
     }
@@ -444,7 +436,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
     }
 
     [SkippableTheory]
-    [MemberData(memberName: nameof(AudioProcessingMatrix))]
+    [MemberData(nameof(AudioProcessingMatrix))]
     public async Task AudioProcessing_FfmpegAcceptsTheGeneratedCommand(
         LoudnessMode loudness,
         DownmixMode downmix,
@@ -452,17 +444,17 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
     )
     {
         Skip.IfNot(
-            condition: _availableEncoders.Contains(item: "libx264"),
-            reason: "libx264 not available in this ffmpeg build"
+            _availableEncoders.Contains("libx264"),
+            "libx264 not available in this ffmpeg build"
         );
 
-        string outputDir = Path.Combine(path1: _testDir, path2: $"audio_{loudness}_{downmix}_{channels}");
-        Directory.CreateDirectory(path: outputDir);
+        string outputDir = Path.Combine(_testDir, $"audio_{loudness}_{downmix}_{channels}");
+        Directory.CreateDirectory(outputDir);
 
         EncodingProfile baseProfile = BuildProfile(
-            container: Container.Mkv,
-            video: VideoCodecType.H264,
-            audio: AudioCodecType.Aac
+            Container.Mkv,
+            VideoCodecType.H264,
+            AudioCodecType.Aac
         );
         EncodingProfile profile = baseProfile with
         {
@@ -472,21 +464,21 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
                 {
                     Channels = channels,
                     Loudness = new(
-                        Mode: loudness,
-                        TargetLufs: loudness == LoudnessMode.EbuR128 ? -16 : null,
-                        TruePeakDb: loudness == LoudnessMode.EbuR128 ? -1.5 : null
+                        loudness,
+                        loudness == LoudnessMode.EbuR128 ? -16 : null,
+                        loudness == LoudnessMode.EbuR128 ? -1.5 : null
                     ),
-                    Downmix = downmix == DownmixMode.Auto ? null : new DownmixConfig(Mode: downmix),
+                    Downmix = downmix == DownmixMode.Auto ? null : new DownmixConfig(downmix),
                 },
             ],
         };
 
-        EncodingResult result = await RunEncodeAsync(profile: profile, inputPath: _surroundInputFile, outputDir: outputDir);
+        EncodingResult result = await RunEncodeAsync(profile, _surroundInputFile, outputDir);
 
         result
             .Success.Should()
             .BeTrue(
-                because: $"ffmpeg must accept loudness={loudness} downmix={downmix} channels={channels}. "
+                $"ffmpeg must accept loudness={loudness} downmix={downmix} channels={channels}. "
                          + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
     }
@@ -505,46 +497,46 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
     }
 
     [SkippableTheory]
-    [MemberData(memberName: nameof(SubtitleMatrix))]
+    [MemberData(nameof(SubtitleMatrix))]
     public async Task Subtitle_FfmpegAcceptsTheGeneratedCommand(
         SubtitlePolicy policy,
         SubtitleCodecType codec
     )
     {
         Skip.IfNot(
-            condition: _availableEncoders.Contains(item: "libx264"),
-            reason: "libx264 not available in this ffmpeg build"
+            _availableEncoders.Contains("libx264"),
+            "libx264 not available in this ffmpeg build"
         );
 
-        string outputDir = Path.Combine(path1: _testDir, path2: $"sub_{policy}_{codec}");
-        Directory.CreateDirectory(path: outputDir);
+        string outputDir = Path.Combine(_testDir, $"sub_{policy}_{codec}");
+        Directory.CreateDirectory(outputDir);
 
         EncodingProfile baseProfile = BuildProfile(
-            container: Container.Mkv,
-            video: VideoCodecType.H264,
-            audio: AudioCodecType.Aac
+            Container.Mkv,
+            VideoCodecType.H264,
+            AudioCodecType.Aac
         );
         EncodingProfile profile = baseProfile with
         {
             Subtitles =
             [
                 new(
-                    Policy: policy,
-                    Codec: codec,
-                    AllowedLanguages: ["und", "eng"],
-                    IncludeForced: false,
-                    OcrLanguage: null,
-                    PlaylistNameTemplate: "subs/:language:"
+                    policy,
+                    codec,
+                    ["und", "eng"],
+                    false,
+                    null,
+                    "subs/:language:"
                 ),
             ],
         };
 
-        EncodingResult result = await RunEncodeAsync(profile: profile, inputPath: _subtitleInputFile, outputDir: outputDir);
+        EncodingResult result = await RunEncodeAsync(profile, _subtitleInputFile, outputDir);
 
         result
             .Success.Should()
             .BeTrue(
-                because: $"ffmpeg must accept subtitle policy={policy} codec={codec}. "
+                $"ffmpeg must accept subtitle policy={policy} codec={codec}. "
                          + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
     }
@@ -556,13 +548,13 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
     )
     {
         EncodingRequest request = new(
-            InputPath: inputPath,
-            OutputDirectory: outputDir,
-            Profile: profile
+            inputPath,
+            outputDir,
+            profile
         );
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 2));
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(2));
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
-        return await encoder.EncodeAsync(request: request, progress: null, ct: cts.Token);
+        return await encoder.EncodeAsync(request, null, cts.Token);
     }
 
     private static EncodingProfile BuildProfile(
@@ -573,47 +565,46 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
         CodecProfile codecProfile = CodecProfile.Auto
     ) =>
         new(
-            Id: Ulid.NewUlid(),
-            Name: $"oracle-{container}-{video}-{audio}",
-            Container: container,
-            Video: new(
-                Policy: StreamPolicy.Transcode,
-                Codec: video,
-                Width: 320,
-                Height: 180,
-                RateControl: RateControlMode.Crf,
-                Crf: 40,
-                BitrateKbps: 0,
-                MaxBitrateKbps: null,
-                BufferSizeKbps: null,
-                Preset: "ultrafast",
-                CodecProfile: codecProfile,
-                Level: null,
-                Tune: null,
-                BitDepth: bitDepth,
-                PixelFormat: null,
-                KeyframeIntervalSeconds: 2,
-                ConvertHdrToSdr: false,
-                SegmentNameTemplate: "video/:framesize:",
-                PlaylistNameTemplate: "video/:framesize:/playlist"
+            Ulid.NewUlid(),
+            $"oracle-{container}-{video}-{audio}",
+            container,
+            new(
+                StreamPolicy.Transcode,
+                video,
+                320,
+                180,
+                RateControlMode.Crf,
+                40,
+                0,
+                null,
+                null,
+                "ultrafast",
+                codecProfile,
+                null,
+                null,
+                bitDepth,
+                null,
+                2,
+                false,
+                "video/:framesize:",
+                "video/:framesize:/playlist"
             ),
-            Audio:
             [
                 new(
-                    Policy: StreamPolicy.Transcode,
-                    Codec: audio,
-                    BitrateKbps: 128,
-                    Channels: 2,
-                    SampleRateHz: 48000,
-                    AllowedLanguages: ["und"],
-                    DefaultLanguage: null,
-                    Loudness: new(Mode: LoudnessMode.None),
-                    Downmix: null,
-                    SegmentNameTemplate: "audio/:codec:",
-                    PlaylistNameTemplate: "audio/:codec:/playlist"
+                    StreamPolicy.Transcode,
+                    audio,
+                    128,
+                    2,
+                    48000,
+                    ["und"],
+                    null,
+                    new(LoudnessMode.None),
+                    null,
+                    "audio/:codec:",
+                    "audio/:codec:/playlist"
                 ),
             ],
-            Subtitles: []
+            []
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,
@@ -639,7 +630,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
 
     private async Task<IReadOnlySet<string>> ProbeAvailableEncodersAsync()
     {
-        HashSet<string> encoders = new(comparer: StringComparer.Ordinal);
+        HashSet<string> encoders = new(StringComparer.Ordinal);
         ProcessStartInfo psi = new()
         {
             FileName = _ffmpegPath,
@@ -648,27 +639,27 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        psi.ArgumentList.Add(item: "-hide_banner");
-        psi.ArgumentList.Add(item: "-encoders");
+        psi.ArgumentList.Add("-hide_banner");
+        psi.ArgumentList.Add("-encoders");
 
-        using Process process = Process.Start(startInfo: psi)!;
+        using Process process = Process.Start(psi)!;
         string stdout = await process.StandardOutput.ReadToEndAsync();
         await process.WaitForExitAsync();
 
         // Lines look like: " V..... libx264   H.264 ..." — the second whitespace
         // token is the encoder name.
-        foreach (string line in stdout.Split(separator: '\n'))
+        foreach (string line in stdout.Split('\n'))
         {
             string trimmed = line.Trim();
             string[] parts = trimmed.Split(
-                separator: ' ',
-                options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+                ' ',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
             );
             if (
                 parts is [{ Length: 6 }, _, ..]
-                && parts[0].All(predicate: c => c is 'V' or 'A' or 'S' or 'F' or 'X' or 'B' or 'D' or '.')
+                && parts[0].All(c => c is 'V' or 'A' or 'S' or 'F' or 'X' or 'B' or 'D' or '.')
             )
-                encoders.Add(item: parts[1]);
+                encoders.Add(parts[1]);
         }
         return encoders;
     }
@@ -684,9 +675,9 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             RedirectStandardError = true,
         };
         foreach (string arg in args)
-            psi.ArgumentList.Add(item: arg);
+            psi.ArgumentList.Add(arg);
 
-        using Process process = Process.Start(startInfo: psi)!;
+        using Process process = Process.Start(psi)!;
         Task<string> stderr = process.StandardError.ReadToEndAsync();
         Task<string> stdout = process.StandardOutput.ReadToEndAsync();
         await process.WaitForExitAsync();

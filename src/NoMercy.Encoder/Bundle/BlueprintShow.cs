@@ -18,6 +18,6 @@ namespace NoMercy.Encoder.Bundle;
 /// <see cref="BlueprintIdentity.Type"/> is <c>"episode"</c>.
 /// </summary>
 public record BlueprintShow(
-    [property: JsonProperty(propertyName: "tmdb_id")] long TmdbId,
-    [property: JsonProperty(propertyName: "title")] string Title
+    [property: JsonProperty("tmdb_id")] long TmdbId,
+    [property: JsonProperty("title")] string Title
 );

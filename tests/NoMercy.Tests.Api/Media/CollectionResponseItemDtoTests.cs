@@ -11,13 +11,11 @@
 
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Providers.TMDB.Models.Collections;
-using NoMercy.Providers.TMDB.Models.Combined;
-using NoMercy.Providers.TMDB.Models.Movies;
 using Xunit;
 
 namespace NoMercy.Tests.Api.Media;
 
-[Trait(name: "Category", value: "Collections")]
+[Trait("Category", "Collections")]
 public class CollectionResponseItemDtoTests
 {
     [Fact]
@@ -54,10 +52,10 @@ public class CollectionResponseItemDtoTests
             },
         };
 
-        CollectionResponseItemDto dto = new(tmdbCollectionAppends: appends);
+        CollectionResponseItemDto dto = new(appends);
 
-        Assert.Equal(expected: "De Matrix Collectie", actual: dto.Title);
-        Assert.Equal(expected: "Nederlandse samenvatting.", actual: dto.Overview);
+        Assert.Equal("De Matrix Collectie", dto.Title);
+        Assert.Equal("Nederlandse samenvatting.", dto.Overview);
     }
 
     [Fact]
@@ -80,9 +78,9 @@ public class CollectionResponseItemDtoTests
             Translations = new() { Translations = [] },
         };
 
-        CollectionResponseItemDto dto = new(tmdbCollectionAppends: appends);
+        CollectionResponseItemDto dto = new(appends);
 
-        Assert.Equal(expected: "The Matrix Collection", actual: dto.Title);
-        Assert.Equal(expected: "English overview.", actual: dto.Overview);
+        Assert.Equal("The Matrix Collection", dto.Title);
+        Assert.Equal("English overview.", dto.Overview);
     }
 }

@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Api;
 /// anonymous Cast Receiver) holding a music session forever after it stops
 /// actually producing audio.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MusicPlaybackServiceLivenessTests
 {
     private static MusicPlayerState MakePlayingState(string? deviceId, DateTime lastHeartbeatUtc)
@@ -35,7 +35,7 @@ public class MusicPlaybackServiceLivenessTests
         {
             DeviceId = deviceId,
             PlayState = true,
-            CurrentList = new(uriString: "/music/albums/test", uriKind: UriKind.Relative),
+            CurrentList = new("/music/albums/test", UriKind.Relative),
             LastActiveHeartbeatUtc = lastHeartbeatUtc,
         };
     }
@@ -51,7 +51,7 @@ public class MusicPlaybackServiceLivenessTests
             Folder = "/music/",
             FolderId = Ulid.NewUlid(),
         };
-        return new(track: track, country: "US");
+        return new(track, "US");
     }
 
     private static (
@@ -65,7 +65,7 @@ public class MusicPlaybackServiceLivenessTests
         MusicActiveDeviceRegistry registry = new();
         Mock<IClientMessenger> messenger = new();
         messenger
-            .Setup(expression: m =>
+            .Setup(m =>
                 m.SendTo(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
@@ -73,13 +73,13 @@ public class MusicPlaybackServiceLivenessTests
                     It.IsAny<object?>()
                 )
             )
-            .Returns(value: Task.CompletedTask);
+            .Returns(Task.CompletedTask);
 
         MusicPlaybackService service = new(
-            stateManager: stateManager,
-            serviceProvider: Mock.Of<IServiceProvider>(),
-            clientMessenger: messenger.Object,
-            activeDeviceRegistry: registry
+            stateManager,
+            Mock.Of<IServiceProvider>(),
+            messenger.Object,
+            registry
         );
 
         return (service, stateManager, registry, messenger);
@@ -91,9 +91,9 @@ public class MusicPlaybackServiceLivenessTests
     public void IsActiveDeviceStale_False_WhenHeartbeatIsRecent()
     {
         DateTime now = DateTime.UtcNow;
-        MusicPlayerState state = MakePlayingState(deviceId: "device-a", lastHeartbeatUtc: now.AddSeconds(value: -5));
+        MusicPlayerState state = MakePlayingState("device-a", now.AddSeconds(-5));
 
-        MusicPlaybackService.IsActiveDeviceStale(state: state, nowUtc: now).Should().BeFalse();
+        MusicPlaybackService.IsActiveDeviceStale(state, now).Should().BeFalse();
     }
 
     [Fact]
@@ -101,11 +101,11 @@ public class MusicPlaybackServiceLivenessTests
     {
         DateTime now = DateTime.UtcNow;
         MusicPlayerState state = MakePlayingState(
-            deviceId: "device-a",
-            lastHeartbeatUtc: now.AddMilliseconds(value: -(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1))
+            "device-a",
+            now.AddMilliseconds(-(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1))
         );
 
-        MusicPlaybackService.IsActiveDeviceStale(state: state, nowUtc: now).Should().BeTrue();
+        MusicPlaybackService.IsActiveDeviceStale(state, now).Should().BeTrue();
     }
 
     [Fact]
@@ -113,11 +113,11 @@ public class MusicPlaybackServiceLivenessTests
     {
         DateTime now = DateTime.UtcNow;
         MusicPlayerState state = MakePlayingState(
-            deviceId: "device-a",
-            lastHeartbeatUtc: now.AddMilliseconds(value: -MusicPlaybackService.ActiveDeviceStaleTimeoutMs)
+            "device-a",
+            now.AddMilliseconds(-MusicPlaybackService.ActiveDeviceStaleTimeoutMs)
         );
 
-        MusicPlaybackService.IsActiveDeviceStale(state: state, nowUtc: now).Should().BeFalse();
+        MusicPlaybackService.IsActiveDeviceStale(state, now).Should().BeFalse();
     }
 
     [Fact]
@@ -127,19 +127,19 @@ public class MusicPlaybackServiceLivenessTests
         // MusicPlaybackCommandHandler.HandleStop relies on the active device
         // staying sticky through a stop to block hijack from a passive tap.
         DateTime now = DateTime.UtcNow;
-        MusicPlayerState state = MakePlayingState(deviceId: "device-a", lastHeartbeatUtc: now.AddHours(value: -1));
+        MusicPlayerState state = MakePlayingState("device-a", now.AddHours(-1));
         state.PlayState = false;
 
-        MusicPlaybackService.IsActiveDeviceStale(state: state, nowUtc: now).Should().BeFalse();
+        MusicPlaybackService.IsActiveDeviceStale(state, now).Should().BeFalse();
     }
 
     [Fact]
     public void IsActiveDeviceStale_False_WhenNoActiveDeviceRecorded()
     {
         DateTime now = DateTime.UtcNow;
-        MusicPlayerState state = MakePlayingState(deviceId: null, lastHeartbeatUtc: now.AddHours(value: -1));
+        MusicPlayerState state = MakePlayingState(null, now.AddHours(-1));
 
-        MusicPlaybackService.IsActiveDeviceStale(state: state, nowUtc: now).Should().BeFalse();
+        MusicPlaybackService.IsActiveDeviceStale(state, now).Should().BeFalse();
     }
 
     // ── IsCallerTheActiveDevice ──────────────────────────────────────────────
@@ -147,17 +147,17 @@ public class MusicPlaybackServiceLivenessTests
     [Fact]
     public void IsCallerTheActiveDevice_True_WhenCallerMatchesActiveDeviceId()
     {
-        MusicPlayerState state = MakePlayingState(deviceId: "device-a", lastHeartbeatUtc: DateTime.UtcNow);
+        MusicPlayerState state = MakePlayingState("device-a", DateTime.UtcNow);
 
-        MusicPlaybackService.IsCallerTheActiveDevice(state: state, callerDeviceId: "device-a").Should().BeTrue();
+        MusicPlaybackService.IsCallerTheActiveDevice(state, "device-a").Should().BeTrue();
     }
 
     [Fact]
     public void IsCallerTheActiveDevice_True_IsCaseInsensitive()
     {
-        MusicPlayerState state = MakePlayingState(deviceId: "Device-A", lastHeartbeatUtc: DateTime.UtcNow);
+        MusicPlayerState state = MakePlayingState("Device-A", DateTime.UtcNow);
 
-        MusicPlaybackService.IsCallerTheActiveDevice(state: state, callerDeviceId: "device-a").Should().BeTrue();
+        MusicPlaybackService.IsCallerTheActiveDevice(state, "device-a").Should().BeTrue();
     }
 
     [Fact]
@@ -165,25 +165,25 @@ public class MusicPlaybackServiceLivenessTests
     {
         // A stray report from a device that is NOT active must never refresh
         // the real active device's clock — that would mask a truly-dead device.
-        MusicPlayerState state = MakePlayingState(deviceId: "device-a", lastHeartbeatUtc: DateTime.UtcNow);
+        MusicPlayerState state = MakePlayingState("device-a", DateTime.UtcNow);
 
-        MusicPlaybackService.IsCallerTheActiveDevice(state: state, callerDeviceId: "device-b").Should().BeFalse();
+        MusicPlaybackService.IsCallerTheActiveDevice(state, "device-b").Should().BeFalse();
     }
 
     [Fact]
     public void IsCallerTheActiveDevice_False_WhenCallerDeviceIdIsNull()
     {
-        MusicPlayerState state = MakePlayingState(deviceId: "device-a", lastHeartbeatUtc: DateTime.UtcNow);
+        MusicPlayerState state = MakePlayingState("device-a", DateTime.UtcNow);
 
-        MusicPlaybackService.IsCallerTheActiveDevice(state: state, callerDeviceId: null).Should().BeFalse();
+        MusicPlaybackService.IsCallerTheActiveDevice(state, null).Should().BeFalse();
     }
 
     [Fact]
     public void IsCallerTheActiveDevice_False_WhenNoActiveDeviceRecorded()
     {
-        MusicPlayerState state = MakePlayingState(deviceId: null, lastHeartbeatUtc: DateTime.UtcNow);
+        MusicPlayerState state = MakePlayingState(null, DateTime.UtcNow);
 
-        MusicPlaybackService.IsCallerTheActiveDevice(state: state, callerDeviceId: "device-a").Should().BeFalse();
+        MusicPlaybackService.IsCallerTheActiveDevice(state, "device-a").Should().BeFalse();
     }
 
     // ── TryRefreshHeartbeat ───────────────────────────────────────────────────
@@ -196,20 +196,20 @@ public class MusicPlaybackServiceLivenessTests
     [Fact]
     public void TryRefreshHeartbeat_RefreshesHeartbeatAndReturnsTrue_WhenCallerIsActiveDevice()
     {
-        MusicPlayerState state = MakePlayingState(deviceId: "device-a", lastHeartbeatUtc: DateTime.UtcNow.AddSeconds(value: -10));
+        MusicPlayerState state = MakePlayingState("device-a", DateTime.UtcNow.AddSeconds(-10));
 
-        bool result = MusicPlaybackService.TryRefreshHeartbeat(state: state, callerDeviceId: "device-a");
+        bool result = MusicPlaybackService.TryRefreshHeartbeat(state, "device-a");
 
         result.Should().BeTrue();
-        state.LastActiveHeartbeatUtc.Should().BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromSeconds(seconds: 1));
+        state.LastActiveHeartbeatUtc.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
     [Fact]
     public void TryRefreshHeartbeat_IsCaseInsensitive()
     {
-        MusicPlayerState state = MakePlayingState(deviceId: "Device-A", lastHeartbeatUtc: DateTime.UtcNow.AddSeconds(value: -10));
+        MusicPlayerState state = MakePlayingState("Device-A", DateTime.UtcNow.AddSeconds(-10));
 
-        MusicPlaybackService.TryRefreshHeartbeat(state: state, callerDeviceId: "device-a").Should().BeTrue();
+        MusicPlaybackService.TryRefreshHeartbeat(state, "device-a").Should().BeTrue();
     }
 
     [Fact]
@@ -220,28 +220,28 @@ public class MusicPlaybackServiceLivenessTests
         // be a complete no-op: it may neither extend the active device's grace
         // window nor (per the caller's use of the false return) overwrite the
         // authoritative position with its own.
-        DateTime lastHeartbeat = DateTime.UtcNow.AddSeconds(value: -10);
-        MusicPlayerState state = MakePlayingState(deviceId: "device-a", lastHeartbeatUtc: lastHeartbeat);
+        DateTime lastHeartbeat = DateTime.UtcNow.AddSeconds(-10);
+        MusicPlayerState state = MakePlayingState("device-a", lastHeartbeat);
 
-        MusicPlaybackService.TryRefreshHeartbeat(state: state, callerDeviceId: "device-b").Should().BeFalse();
+        MusicPlaybackService.TryRefreshHeartbeat(state, "device-b").Should().BeFalse();
 
-        state.LastActiveHeartbeatUtc.Should().Be(expected: lastHeartbeat);
+        state.LastActiveHeartbeatUtc.Should().Be(lastHeartbeat);
     }
 
     [Fact]
     public void TryRefreshHeartbeat_ReturnsFalse_WhenCallerDeviceIdIsNull()
     {
-        MusicPlayerState state = MakePlayingState(deviceId: "device-a", lastHeartbeatUtc: DateTime.UtcNow.AddSeconds(value: -10));
+        MusicPlayerState state = MakePlayingState("device-a", DateTime.UtcNow.AddSeconds(-10));
 
-        MusicPlaybackService.TryRefreshHeartbeat(state: state, callerDeviceId: null).Should().BeFalse();
+        MusicPlaybackService.TryRefreshHeartbeat(state, null).Should().BeFalse();
     }
 
     [Fact]
     public void TryRefreshHeartbeat_ReturnsFalse_WhenNoActiveDeviceRecorded()
     {
-        MusicPlayerState state = MakePlayingState(deviceId: null, lastHeartbeatUtc: DateTime.UtcNow.AddSeconds(value: -10));
+        MusicPlayerState state = MakePlayingState(null, DateTime.UtcNow.AddSeconds(-10));
 
-        MusicPlaybackService.TryRefreshHeartbeat(state: state, callerDeviceId: "device-a").Should().BeFalse();
+        MusicPlaybackService.TryRefreshHeartbeat(state, "device-a").Should().BeFalse();
     }
 
     // ── EndStaleActiveSessionAsync ───────────────────────────────────────────
@@ -258,29 +258,29 @@ public class MusicPlaybackServiceLivenessTests
 
         Guid userId = Guid.NewGuid();
         User user = new() { Id = userId, Name = "Test User" };
-        registry.Set(userId: userId, device: new() { DeviceId = "stale-device", Type = "web" });
+        registry.Set(userId, new() { DeviceId = "stale-device", Type = "web" });
 
-        MusicPlayerState state = MakePlayingState(deviceId: "stale-device", lastHeartbeatUtc: DateTime.UtcNow.AddSeconds(value: -30));
+        MusicPlayerState state = MakePlayingState("stale-device", DateTime.UtcNow.AddSeconds(-30));
         state.CurrentItem = MakeTrack();
         state.Playlist = [MakeTrack()];
         state.Backlog = [MakeTrack()];
 
-        await service.EndStaleActiveSessionAsync(user: user, state: state);
+        await service.EndStaleActiveSessionAsync(user, state);
 
         state.CurrentItem.Should().BeNull();
         state.PlayState.Should().BeFalse();
         state.DeviceId.Should().BeNull();
-        state.Time.Should().Be(expected: 0);
+        state.Time.Should().Be(0);
         state.Playlist.Should().BeEmpty();
         state.Backlog.Should().BeEmpty();
         state.Actions.Disallows.Resuming.Should().BeTrue();
         state.Actions.Disallows.Pausing.Should().BeTrue();
 
-        registry.TryGet(userId: userId, device: out _).Should().BeFalse();
+        registry.TryGet(userId, out _).Should().BeFalse();
 
         messenger.Verify(
-            expression: m => m.SendTo("MusicPlayerState", "musicHub", userId, It.IsAny<object>()),
-            times: Times.Once
+            m => m.SendTo("MusicPlayerState", "musicHub", userId, It.IsAny<object>()),
+            Times.Once
         );
     }
 
@@ -293,15 +293,15 @@ public class MusicPlaybackServiceLivenessTests
 
         Guid userId = Guid.NewGuid();
         User user = new() { Id = userId, Name = "Test User" };
-        registry.Set(userId: userId, device: new() { DeviceId = "new-device", Type = "web" });
+        registry.Set(userId, new() { DeviceId = "new-device", Type = "web" });
 
-        MusicPlayerState state = MakePlayingState(deviceId: "stale-device", lastHeartbeatUtc: DateTime.UtcNow.AddSeconds(value: -30));
+        MusicPlayerState state = MakePlayingState("stale-device", DateTime.UtcNow.AddSeconds(-30));
         state.CurrentItem = MakeTrack();
 
-        await service.EndStaleActiveSessionAsync(user: user, state: state);
+        await service.EndStaleActiveSessionAsync(user, state);
 
-        registry.TryGet(userId: userId, device: out Device? found).Should().BeTrue();
-        found!.DeviceId.Should().Be(expected: "new-device");
+        registry.TryGet(userId, out Device? found).Should().BeTrue();
+        found!.DeviceId.Should().Be("new-device");
     }
 
     // ── Real timer wiring ────────────────────────────────────────────────────
@@ -323,11 +323,11 @@ public class MusicPlaybackServiceLivenessTests
 
         Guid userId = Guid.NewGuid();
         User user = new() { Id = userId, Name = "Test User" };
-        registry.Set(userId: userId, device: new() { DeviceId = "zombie-device", Type = "web" });
+        registry.Set(userId, new() { DeviceId = "zombie-device", Type = "web" });
 
-        MusicPlayerState state = MakePlayingState(deviceId: "zombie-device", lastHeartbeatUtc: DateTime.UtcNow);
+        MusicPlayerState state = MakePlayingState("zombie-device", DateTime.UtcNow);
         state.CurrentItem = MakeTrack();
-        stateManager.UpdateState(userId: userId, state: state);
+        stateManager.UpdateState(userId, state);
 
         try
         {
@@ -335,9 +335,9 @@ public class MusicPlaybackServiceLivenessTests
             // resume-after-pause fix below), so back-date it AFTER starting —
             // simulating time passing with no further position reports, the
             // actual real-world staleness path — rather than fighting that stamp.
-            service.StartPlaybackTimer(user: user);
+            service.StartPlaybackTimer(user);
             state.LastActiveHeartbeatUtc = DateTime.UtcNow.AddMilliseconds(
-                value: -(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1_000)
+                -(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1_000)
             );
 
             MusicPlayerState? observed = null;
@@ -347,18 +347,18 @@ public class MusicPlaybackServiceLivenessTests
                 attempt++
             )
             {
-                await Task.Delay(millisecondsDelay: 50);
-                stateManager.TryGetValue(userId: userId, state: out observed);
+                await Task.Delay(50);
+                stateManager.TryGetValue(userId, out observed);
             }
 
             observed.Should().NotBeNull();
             observed!.CurrentItem.Should().BeNull();
             observed.PlayState.Should().BeFalse();
-            registry.TryGet(userId: userId, device: out _).Should().BeFalse();
+            registry.TryGet(userId, out _).Should().BeFalse();
         }
         finally
         {
-            service.RemoveTimer(userId: userId);
+            service.RemoveTimer(userId);
         }
     }
 
@@ -378,31 +378,31 @@ public class MusicPlaybackServiceLivenessTests
 
         Guid userId = Guid.NewGuid();
         User user = new() { Id = userId, Name = "Test User" };
-        registry.Set(userId: userId, device: new() { DeviceId = "device-a", Type = "web" });
+        registry.Set(userId, new() { DeviceId = "device-a", Type = "web" });
 
         MusicPlayerState state = MakePlayingState(
-            deviceId: "device-a",
-            lastHeartbeatUtc: DateTime.UtcNow.AddHours(value: -1) // long stale-looking pause
+            "device-a",
+            DateTime.UtcNow.AddHours(-1) // long stale-looking pause
         );
         state.CurrentItem = MakeTrack();
-        stateManager.UpdateState(userId: userId, state: state);
+        stateManager.UpdateState(userId, state);
 
         try
         {
-            service.StartPlaybackTimer(user: user);
+            service.StartPlaybackTimer(user);
 
-            await Task.Delay(millisecondsDelay: 300);
+            await Task.Delay(300);
 
-            stateManager.TryGetValue(userId: userId, state: out MusicPlayerState? observed);
+            stateManager.TryGetValue(userId, out MusicPlayerState? observed);
             observed.Should().NotBeNull();
             observed!
                 .CurrentItem.Should()
-                .NotBeNull(because: "resuming after a normal pause must not end the session");
+                .NotBeNull("resuming after a normal pause must not end the session");
             observed.PlayState.Should().BeTrue();
         }
         finally
         {
-            service.RemoveTimer(userId: userId);
+            service.RemoveTimer(userId);
         }
     }
 
@@ -420,14 +420,14 @@ public class MusicPlaybackServiceLivenessTests
         (MusicPlaybackService service, MusicPlayerStateManager stateManager, _, _) = MakeService();
 
         Guid userId = Guid.NewGuid();
-        MusicPlayerState state = MakePlayingState(deviceId: "device-a", lastHeartbeatUtc: DateTime.UtcNow.AddHours(value: -1));
-        stateManager.UpdateState(userId: userId, state: state);
+        MusicPlayerState state = MakePlayingState("device-a", DateTime.UtcNow.AddHours(-1));
+        stateManager.UpdateState(userId, state);
 
-        service.BeginPlaybackStart(userId: userId);
+        service.BeginPlaybackStart(userId);
 
-        state.LastActiveHeartbeatUtc.Should().BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromSeconds(seconds: 2));
+        state.LastActiveHeartbeatUtc.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(2));
 
-        service.EndPlaybackStart(userId: userId);
+        service.EndPlaybackStart(userId);
     }
 
     [Fact]
@@ -436,13 +436,13 @@ public class MusicPlaybackServiceLivenessTests
         (MusicPlaybackService service, _, _, _) = MakeService();
         Guid userId = Guid.NewGuid();
 
-        service.IsPlaybackStartInFlight(userId: userId).Should().BeFalse();
+        service.IsPlaybackStartInFlight(userId).Should().BeFalse();
 
-        service.BeginPlaybackStart(userId: userId);
-        service.IsPlaybackStartInFlight(userId: userId).Should().BeTrue();
+        service.BeginPlaybackStart(userId);
+        service.IsPlaybackStartInFlight(userId).Should().BeTrue();
 
-        service.EndPlaybackStart(userId: userId);
-        service.IsPlaybackStartInFlight(userId: userId).Should().BeFalse();
+        service.EndPlaybackStart(userId);
+        service.IsPlaybackStartInFlight(userId).Should().BeFalse();
     }
 
     [Fact]
@@ -457,37 +457,37 @@ public class MusicPlaybackServiceLivenessTests
 
         Guid userId = Guid.NewGuid();
         User user = new() { Id = userId, Name = "Test User" };
-        registry.Set(userId: userId, device: new() { DeviceId = "zombie-device", Type = "web" });
+        registry.Set(userId, new() { DeviceId = "zombie-device", Type = "web" });
 
-        MusicPlayerState state = MakePlayingState(deviceId: "zombie-device", lastHeartbeatUtc: DateTime.UtcNow);
+        MusicPlayerState state = MakePlayingState("zombie-device", DateTime.UtcNow);
         state.CurrentItem = MakeTrack();
-        stateManager.UpdateState(userId: userId, state: state);
+        stateManager.UpdateState(userId, state);
 
         try
         {
-            service.BeginPlaybackStart(userId: userId);
-            service.StartPlaybackTimer(user: user);
+            service.BeginPlaybackStart(userId);
+            service.StartPlaybackTimer(user);
 
             // Simulate the long GetPlaylist fetch: no further reports arrive and the
             // heartbeat ages well past ActiveDeviceStaleTimeoutMs while the flag is set.
             state.LastActiveHeartbeatUtc = DateTime.UtcNow.AddMilliseconds(
-                value: -(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1_000)
+                -(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1_000)
             );
 
-            await Task.Delay(millisecondsDelay: 300);
+            await Task.Delay(300);
 
-            stateManager.TryGetValue(userId: userId, state: out MusicPlayerState? observed);
+            stateManager.TryGetValue(userId, out MusicPlayerState? observed);
             observed.Should().NotBeNull();
             observed!
                 .CurrentItem.Should()
-                .NotBeNull(because: "a start in flight must never look stale to the watchdog");
+                .NotBeNull("a start in flight must never look stale to the watchdog");
             observed.PlayState.Should().BeTrue();
-            registry.TryGet(userId: userId, device: out _).Should().BeTrue();
+            registry.TryGet(userId, out _).Should().BeTrue();
         }
         finally
         {
-            service.EndPlaybackStart(userId: userId);
-            service.RemoveTimer(userId: userId);
+            service.EndPlaybackStart(userId);
+            service.RemoveTimer(userId);
         }
     }
 
@@ -506,23 +506,23 @@ public class MusicPlaybackServiceLivenessTests
 
         Guid userId = Guid.NewGuid();
         User user = new() { Id = userId, Name = "Test User" };
-        registry.Set(userId: userId, device: new() { DeviceId = "zombie-device", Type = "web" });
+        registry.Set(userId, new() { DeviceId = "zombie-device", Type = "web" });
 
-        MusicPlayerState state = MakePlayingState(deviceId: "zombie-device", lastHeartbeatUtc: DateTime.UtcNow);
+        MusicPlayerState state = MakePlayingState("zombie-device", DateTime.UtcNow);
         state.CurrentItem = MakeTrack();
-        stateManager.UpdateState(userId: userId, state: state);
+        stateManager.UpdateState(userId, state);
 
         try
         {
-            service.BeginPlaybackStart(userId: userId);
-            service.StartPlaybackTimer(user: user);
+            service.BeginPlaybackStart(userId);
+            service.StartPlaybackTimer(user);
             state.LastActiveHeartbeatUtc = DateTime.UtcNow.AddMilliseconds(
-                value: -(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1_000)
+                -(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1_000)
             );
 
             // The flag clears — mirrors StartPlaybackCommand's finally block once its
             // (slow) work finishes without ever receiving a fresh report.
-            service.EndPlaybackStart(userId: userId);
+            service.EndPlaybackStart(userId);
 
             MusicPlayerState? observed = null;
             for (
@@ -531,18 +531,18 @@ public class MusicPlaybackServiceLivenessTests
                 attempt++
             )
             {
-                await Task.Delay(millisecondsDelay: 50);
-                stateManager.TryGetValue(userId: userId, state: out observed);
+                await Task.Delay(50);
+                stateManager.TryGetValue(userId, out observed);
             }
 
             observed.Should().NotBeNull();
             observed!.CurrentItem.Should().BeNull();
             observed.PlayState.Should().BeFalse();
-            registry.TryGet(userId: userId, device: out _).Should().BeFalse();
+            registry.TryGet(userId, out _).Should().BeFalse();
         }
         finally
         {
-            service.RemoveTimer(userId: userId);
+            service.RemoveTimer(userId);
         }
     }
 }

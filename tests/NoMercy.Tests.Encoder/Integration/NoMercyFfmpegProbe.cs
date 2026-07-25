@@ -38,16 +38,16 @@ internal static class NoMercyFfmpegProbe
 
     public static string? ResolveFfmpegPath()
     {
-        string? overridePath = Environment.GetEnvironmentVariable(variable: "NOMERCY_FFMPEG_PATH");
-        if (!string.IsNullOrWhiteSpace(value: overridePath) && File.Exists(path: overridePath))
+        string? overridePath = Environment.GetEnvironmentVariable("NOMERCY_FFMPEG_PATH");
+        if (!string.IsNullOrWhiteSpace(overridePath) && File.Exists(overridePath))
             return overridePath;
 
         string binaryName = OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg";
 
         foreach (string root in CandidateRoots())
         {
-            string candidate = Path.Combine(path1: root, path2: "binaries", path3: "ffmpeg", path4: binaryName);
-            if (File.Exists(path: candidate))
+            string candidate = Path.Combine(root, "binaries", "ffmpeg", binaryName);
+            if (File.Exists(candidate))
                 return candidate;
         }
 
@@ -56,13 +56,13 @@ internal static class NoMercyFfmpegProbe
 
     public static string? ResolveFfprobePath(string? ffmpegPath)
     {
-        if (string.IsNullOrWhiteSpace(value: ffmpegPath))
+        if (string.IsNullOrWhiteSpace(ffmpegPath))
             return null;
 
-        string dir = Path.GetDirectoryName(path: ffmpegPath) ?? string.Empty;
+        string dir = Path.GetDirectoryName(ffmpegPath) ?? string.Empty;
         string probeName = OperatingSystem.IsWindows() ? "ffprobe.exe" : "ffprobe";
-        string candidate = Path.Combine(path1: dir, path2: probeName);
-        return File.Exists(path: candidate) ? candidate : null;
+        string candidate = Path.Combine(dir, probeName);
+        return File.Exists(candidate) ? candidate : null;
     }
 
     /// <summary>
@@ -72,16 +72,16 @@ internal static class NoMercyFfmpegProbe
     /// </summary>
     public static string? ResolveShakaPackagerPath()
     {
-        string? overridePath = Environment.GetEnvironmentVariable(variable: "SHAKA_PACKAGER_PATH");
-        if (!string.IsNullOrWhiteSpace(value: overridePath) && File.Exists(path: overridePath))
+        string? overridePath = Environment.GetEnvironmentVariable("SHAKA_PACKAGER_PATH");
+        if (!string.IsNullOrWhiteSpace(overridePath) && File.Exists(overridePath))
             return overridePath;
 
         string binaryName = OperatingSystem.IsWindows() ? "packager.exe" : "packager";
 
         foreach (string root in CandidateRoots())
         {
-            string candidate = Path.Combine(path1: root, path2: "binaries", path3: "ffmpeg", path4: binaryName);
-            if (File.Exists(path: candidate))
+            string candidate = Path.Combine(root, "binaries", "ffmpeg", binaryName);
+            if (File.Exists(candidate))
                 return candidate;
         }
 
@@ -106,18 +106,18 @@ internal static class NoMercyFfmpegProbe
                 RedirectStandardError = true,
                 CreateNoWindow = true,
             };
-            psi.ArgumentList.Add(item: "-hide_banner");
-            psi.ArgumentList.Add(item: "-h");
-            psi.ArgumentList.Add(item: "muxer=spritevtt");
+            psi.ArgumentList.Add("-hide_banner");
+            psi.ArgumentList.Add("-h");
+            psi.ArgumentList.Add("muxer=spritevtt");
 
-            using Process process = Process.Start(startInfo: psi)!;
+            using Process process = Process.Start(psi)!;
             string stdout = process.StandardOutput.ReadToEnd();
             string stderr = process.StandardError.ReadToEnd();
-            process.WaitForExit(milliseconds: 5000);
+            process.WaitForExit(5000);
 
             string combined = stdout + stderr;
-            return combined.Contains(value: SpritevttMarker, comparisonType: StringComparison.OrdinalIgnoreCase)
-                && !combined.Contains(value: "Unknown muxer", comparisonType: StringComparison.OrdinalIgnoreCase);
+            return combined.Contains(SpritevttMarker, StringComparison.OrdinalIgnoreCase)
+                && !combined.Contains("Unknown muxer", StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
@@ -128,20 +128,20 @@ internal static class NoMercyFfmpegProbe
     private static IEnumerable<string> CandidateRoots()
     {
         string? localAppData = Environment.GetFolderPath(
-            folder: Environment.SpecialFolder.LocalApplicationData
+            Environment.SpecialFolder.LocalApplicationData
         );
-        string? home = Environment.GetEnvironmentVariable(variable: "HOME");
+        string? home = Environment.GetEnvironmentVariable("HOME");
 
-        if (!string.IsNullOrWhiteSpace(value: localAppData))
+        if (!string.IsNullOrWhiteSpace(localAppData))
         {
-            yield return Path.Combine(path1: localAppData, path2: "NoMercy_dev");
-            yield return Path.Combine(path1: localAppData, path2: "NoMercy");
+            yield return Path.Combine(localAppData, "NoMercy_dev");
+            yield return Path.Combine(localAppData, "NoMercy");
         }
 
-        if (!string.IsNullOrWhiteSpace(value: home))
+        if (!string.IsNullOrWhiteSpace(home))
         {
-            yield return Path.Combine(path1: home, path2: ".local", path3: "share", path4: "NoMercy_dev");
-            yield return Path.Combine(path1: home, path2: ".local", path3: "share", path4: "NoMercy");
+            yield return Path.Combine(home, ".local", "share", "NoMercy_dev");
+            yield return Path.Combine(home, ".local", "share", "NoMercy");
         }
     }
 }

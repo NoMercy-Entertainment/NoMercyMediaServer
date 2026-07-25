@@ -23,14 +23,14 @@ public class LocalStorageSyncTests
 {
     private static (LocalStorage storage, Mock<IStorageDriver> driver) Build()
     {
-        Mock<IStorageDriver> driver = new(behavior: MockBehavior.Loose);
+        Mock<IStorageDriver> driver = new(MockBehavior.Loose);
         driver
-            .Setup(expression: b => b.GetFullPath(It.IsAny<string>()))
-            .Returns<string>(valueFunction: p => Path.GetFullPath(path: p));
-        driver.Setup(expression: b => b.ResolveLinkTarget(It.IsAny<string>())).Returns(value: (string?)null);
+            .Setup(b => b.GetFullPath(It.IsAny<string>()))
+            .Returns<string>(p => Path.GetFullPath(p));
+        driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
 
-        StoragePathGuard guard = new(allowedRoots: [], driver: driver.Object);
-        LocalStorage storage = new(driver: driver.Object, guard: guard);
+        StoragePathGuard guard = new([], driver.Object);
+        LocalStorage storage = new(driver.Object, guard);
         return (storage, driver);
     }
 
@@ -38,34 +38,34 @@ public class LocalStorageSyncTests
     public void SizeOrZero_returns_zero_when_file_missing()
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
-        driver.Setup(expression: b => b.FileExists(It.IsAny<string>())).Returns(value: false);
+        driver.Setup(b => b.FileExists(It.IsAny<string>())).Returns(false);
 
-        long result = storage.SizeOrZero(path: "missing.bin");
+        long result = storage.SizeOrZero("missing.bin");
 
-        result.Should().Be(expected: 0);
-        driver.Verify(expression: b => b.GetFileSize(It.IsAny<string>()), times: Times.Never);
+        result.Should().Be(0);
+        driver.Verify(b => b.GetFileSize(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
     public void SizeOrZero_returns_size_when_file_present()
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
-        driver.Setup(expression: b => b.FileExists(It.IsAny<string>())).Returns(value: true);
-        driver.Setup(expression: b => b.GetFileSize(It.IsAny<string>())).Returns(value: 2048);
+        driver.Setup(b => b.FileExists(It.IsAny<string>())).Returns(true);
+        driver.Setup(b => b.GetFileSize(It.IsAny<string>())).Returns(2048);
 
-        long result = storage.SizeOrZero(path: "file.bin");
+        long result = storage.SizeOrZero("file.bin");
 
-        result.Should().Be(expected: 2048);
+        result.Should().Be(2048);
     }
 
     [Fact]
     public void Exists_reports_file_or_directory()
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
-        driver.Setup(expression: b => b.FileExists(It.IsAny<string>())).Returns(value: false);
-        driver.Setup(expression: b => b.DirectoryExists(It.IsAny<string>())).Returns(value: true);
+        driver.Setup(b => b.FileExists(It.IsAny<string>())).Returns(false);
+        driver.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(true);
 
-        storage.Exists(path: "some/dir").Should().BeTrue();
+        storage.Exists("some/dir").Should().BeTrue();
     }
 
     [Fact]
@@ -73,23 +73,23 @@ public class LocalStorageSyncTests
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
 
-        storage.CreateDirectory(path: "nested/dir");
+        storage.CreateDirectory("nested/dir");
 
-        driver.Verify(expression: b => b.CreateDirectory(It.IsAny<string>()), times: Times.Once);
+        driver.Verify(b => b.CreateDirectory(It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
     public void Write_creates_parent_directory_when_missing_and_overwrites()
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
-        driver.Setup(expression: b => b.DirectoryExists(It.IsAny<string>())).Returns(value: false);
+        driver.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(false);
         MemoryStream sink = new();
-        driver.Setup(expression: b => b.OpenWrite(It.IsAny<string>(), true)).Returns(value: sink);
+        driver.Setup(b => b.OpenWrite(It.IsAny<string>(), true)).Returns(sink);
 
-        storage.Write(path: "nested/file.bin", bytes: [0x42, 0x43]);
+        storage.Write("nested/file.bin", [0x42, 0x43]);
 
-        driver.Verify(expression: b => b.CreateDirectory(It.IsAny<string>()), times: Times.Once);
-        sink.ToArray().Should().Equal(elements: [0x42, 0x43]);
+        driver.Verify(b => b.CreateDirectory(It.IsAny<string>()), Times.Once);
+        sink.ToArray().Should().Equal([0x42, 0x43]);
     }
 
     [Fact]
@@ -97,46 +97,46 @@ public class LocalStorageSyncTests
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
         byte[] payload = [0xAA, 0xBB, 0xCC];
-        driver.Setup(expression: b => b.OpenRead(It.IsAny<string>())).Returns(valueFunction: () => new MemoryStream(buffer: payload));
+        driver.Setup(b => b.OpenRead(It.IsAny<string>())).Returns(() => new MemoryStream(payload));
 
-        storage.Read(path: "file.bin").Should().Equal(elements: payload);
+        storage.Read("file.bin").Should().Equal(payload);
     }
 
     [Fact]
     public void Delete_no_op_when_file_missing()
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
-        driver.Setup(expression: b => b.FileExists(It.IsAny<string>())).Returns(value: false);
+        driver.Setup(b => b.FileExists(It.IsAny<string>())).Returns(false);
 
-        storage.Delete(path: "missing.bin");
+        storage.Delete("missing.bin");
 
-        driver.Verify(expression: b => b.DeleteFile(It.IsAny<string>()), times: Times.Never);
+        driver.Verify(b => b.DeleteFile(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
     public void Move_validates_both_paths_and_creates_destination_parent()
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
-        driver.Setup(expression: b => b.DirectoryExists(It.IsAny<string>())).Returns(value: false);
+        driver.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(false);
 
-        storage.Move(from: "a/file", to: "b/sub/file");
+        storage.Move("a/file", "b/sub/file");
 
         driver.Verify(
-            expression: b => b.CreateDirectory(It.Is<string>(s => s.EndsWith(Path.Combine("b", "sub")))),
-            times: Times.Once
+            b => b.CreateDirectory(It.Is<string>(s => s.EndsWith(Path.Combine("b", "sub")))),
+            Times.Once
         );
-        driver.Verify(expression: b => b.MoveFile(It.IsAny<string>(), It.IsAny<string>()), times: Times.Once);
+        driver.Verify(b => b.MoveFile(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
     public void Copy_uses_overwrite_true()
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
-        driver.Setup(expression: b => b.DirectoryExists(It.IsAny<string>())).Returns(value: true);
+        driver.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(true);
 
-        storage.Copy(from: "src/a", to: "dst/b");
+        storage.Copy("src/a", "dst/b");
 
-        driver.Verify(expression: b => b.CopyFile(It.IsAny<string>(), It.IsAny<string>(), true), times: Times.Once);
+        driver.Verify(b => b.CopyFile(It.IsAny<string>(), It.IsAny<string>(), true), Times.Once);
     }
 
     [Fact]
@@ -144,40 +144,39 @@ public class LocalStorageSyncTests
     {
         (LocalStorage storage, Mock<IStorageDriver> _) = Build();
 
-        LocalPathLease lease = storage.AcquireLocalPath(path: "some/file.bin");
+        LocalPathLease lease = storage.AcquireLocalPath("some/file.bin");
 
-        lease.Path.Should().Be(expected: Path.GetFullPath(path: "some/file.bin"));
+        lease.Path.Should().Be(Path.GetFullPath("some/file.bin"));
     }
 
     [Fact]
     public void List_returns_entries_with_metadata()
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
-        string root = Path.Combine(path1: Path.GetTempPath(), path2: "nm-listing-sync");
-        string fileA = Path.Combine(path1: root, path2: "a.txt");
-        string subDir = Path.Combine(path1: root, path2: "sub");
+        string root = Path.Combine(Path.GetTempPath(), "nm-listing-sync");
+        string fileA = Path.Combine(root, "a.txt");
+        string subDir = Path.Combine(root, "sub");
 
         driver
-            .Setup(expression: b =>
+            .Setup(b =>
                 b.EnumerateEntries(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SearchOption>())
             )
-            .Returns(value:
-            [
-                new StorageEntryInfo(Path: fileA, IsDirectory: false, Size: 42, LastWriteUtc: DateTime.UtcNow),
-                new StorageEntryInfo(Path: subDir, IsDirectory: true, Size: 0, LastWriteUtc: DateTime.UtcNow),
+            .Returns([
+                new StorageEntryInfo(fileA, false, 42, DateTime.UtcNow),
+                new StorageEntryInfo(subDir, true, 0, DateTime.UtcNow),
             ]);
 
-        IReadOnlyList<StorageEntry> entries = storage.List(path: root, pattern: "*", recursive: false);
+        IReadOnlyList<StorageEntry> entries = storage.List(root, "*", false);
 
-        entries.Should().HaveCount(expected: 2);
+        entries.Should().HaveCount(2);
         // LocalStorage normalizes paths to forward-slash per the IStorage
         // Rule 2 contract — driver hands out OS-native paths but the
         // facade emits forward-slash for consumer uniformity.
-        entries[index: 0].Path.Should().Be(expected: fileA.Replace(oldChar: '\\', newChar: '/'));
-        entries[index: 0].IsDirectory.Should().BeFalse();
-        entries[index: 0].SizeBytes.Should().Be(expected: 42);
-        entries[index: 1].IsDirectory.Should().BeTrue();
-        entries[index: 1].SizeBytes.Should().Be(expected: 0);
+        entries[0].Path.Should().Be(fileA.Replace('\\', '/'));
+        entries[0].IsDirectory.Should().BeFalse();
+        entries[0].SizeBytes.Should().Be(42);
+        entries[1].IsDirectory.Should().BeTrue();
+        entries[1].SizeBytes.Should().Be(0);
     }
 
     [Fact]
@@ -185,9 +184,9 @@ public class LocalStorageSyncTests
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
 
-        Action act = () => storage.Read(path: "bad\0path");
+        Action act = () => storage.Read("bad\0path");
 
         act.Should().Throw<StoragePathNotAllowedException>();
-        driver.Verify(expression: b => b.OpenRead(It.IsAny<string>()), times: Times.Never);
+        driver.Verify(b => b.OpenRead(It.IsAny<string>()), Times.Never);
     }
 }

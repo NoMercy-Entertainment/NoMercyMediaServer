@@ -21,7 +21,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
-[Trait(name: "Category", value: "Devices")]
+[Trait("Category", "Devices")]
 public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLifetime
 {
     private readonly NoMercyApiFactory _factory;
@@ -52,12 +52,12 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
         _onlineDeviceId = Ulid.NewUlid();
         _offlineDeviceId = Ulid.NewUlid();
 
-        Guid otherUserId = Guid.Parse(input: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        Guid otherUserId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
-        if (!await ctx.Users.AnyAsync(predicate: u => u.Id == otherUserId))
+        if (!await ctx.Users.AnyAsync(u => u.Id == otherUserId))
         {
             ctx.Users.Add(
-                entity: new()
+                new()
                 {
                     Id = otherUserId,
                     Email = "other@nomercy.tv",
@@ -69,8 +69,7 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
             );
         }
 
-        ctx.Devices.AddRange(entities:
-            [
+        ctx.Devices.AddRange([
                 new Device
                 {
                     Id = _ownedDeviceId,
@@ -125,7 +124,7 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
         );
 
         ctx.ActivityLogs.Add(
-            entity: new()
+            new()
             {
                 Category = ActivityCategory.Auth,
                 Type = "auth.login",
@@ -143,7 +142,7 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
     {
         await using MediaContext ctx = new();
         Ulid[] ids = [_ownedDeviceId, _otherDeviceId, _onlineDeviceId, _offlineDeviceId];
-        await ctx.Devices.Where(predicate: d => ids.Contains(d.Id)).ExecuteDeleteAsync();
+        await ctx.Devices.Where(d => ids.Contains(d.Id)).ExecuteDeleteAsync();
     }
 
     // =========================================================================
@@ -154,21 +153,21 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
     public async Task DestroyOne_OwnDevice_DeletesDeviceAndLogsAndReturns200()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            requestUri: $"/api/v1/dashboard/devices/{_ownedDeviceId}"
+            $"/api/v1/dashboard/devices/{_ownedDeviceId}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected 200, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected 200, got {(int)response.StatusCode}: {body}"
         );
 
         await using MediaContext ctx = new();
-        bool deviceGone = !await ctx.Devices.AnyAsync(predicate: d => d.Id == _ownedDeviceId);
-        bool logsGone = !await ctx.ActivityLogs.AnyAsync(predicate: l => l.DeviceId == _ownedDeviceId);
+        bool deviceGone = !await ctx.Devices.AnyAsync(d => d.Id == _ownedDeviceId);
+        bool logsGone = !await ctx.ActivityLogs.AnyAsync(l => l.DeviceId == _ownedDeviceId);
 
-        Assert.True(condition: deviceGone, userMessage: "Device row must be removed from the DB");
-        Assert.True(condition: logsGone, userMessage: "ActivityLog rows must be cascade-deleted with the device");
+        Assert.True(deviceGone, "Device row must be removed from the DB");
+        Assert.True(logsGone, "ActivityLog rows must be cascade-deleted with the device");
     }
 
     // =========================================================================
@@ -180,18 +179,18 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
     public async Task DestroyOne_AsModerator_DeletesAnyUsersDevice_Returns200()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            requestUri: $"/api/v1/dashboard/devices/{_otherDeviceId}"
+            $"/api/v1/dashboard/devices/{_otherDeviceId}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected 200 (moderator deletes any device), got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected 200 (moderator deletes any device), got {(int)response.StatusCode}: {body}"
         );
 
         await using MediaContext ctx = new();
-        bool deviceGone = !await ctx.Devices.AnyAsync(predicate: d => d.Id == _otherDeviceId);
-        Assert.True(condition: deviceGone, userMessage: "A moderator must be able to delete another user's device");
+        bool deviceGone = !await ctx.Devices.AnyAsync(d => d.Id == _otherDeviceId);
+        Assert.True(deviceGone, "A moderator must be able to delete another user's device");
     }
 
     // =========================================================================
@@ -202,12 +201,12 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
     public async Task DestroyOne_InvalidId_Returns400()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            requestUri: "/api/v1/dashboard/devices/not-a-valid-ulid"
+            "/api/v1/dashboard/devices/not-a-valid-ulid"
         );
 
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.BadRequest,
-            userMessage: $"Expected 400, got {(int)response.StatusCode}"
+            response.StatusCode == HttpStatusCode.BadRequest,
+            $"Expected 400, got {(int)response.StatusCode}"
         );
     }
 
@@ -219,12 +218,12 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
     public async Task DestroyOne_Unauthenticated_ReturnsUnauthorized()
     {
         HttpResponseMessage response = await _unauthed.DeleteAsync(
-            requestUri: $"/api/v1/dashboard/devices/{_ownedDeviceId}"
+            $"/api/v1/dashboard/devices/{_ownedDeviceId}"
         );
 
         Assert.True(
-            condition: response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            userMessage: $"Expected 401 or 403, got {(int)response.StatusCode}"
+            response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
+            $"Expected 401 or 403, got {(int)response.StatusCode}"
         );
     }
 
@@ -254,30 +253,30 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
         // controller the online device is deleted and the DB assertion goes red.
         ConnectedClients connectedClients = _factory.GetConnectedClients();
         string onlineClientKey = $"test-online-{_onlineDeviceId}";
-        connectedClients.Clients[key: onlineClientKey] = new() { Id = _onlineDeviceId };
+        connectedClients.Clients[onlineClientKey] = new() { Id = _onlineDeviceId };
 
         try
         {
             HttpResponseMessage response = await _authed.DeleteAsync(
-                requestUri: "/api/v1/dashboard/devices/offline"
+                "/api/v1/dashboard/devices/offline"
             );
 
             string body = await response.Content.ReadAsStringAsync();
             Assert.True(
-                condition: response.StatusCode == HttpStatusCode.OK,
-                userMessage: $"Expected 200, got {(int)response.StatusCode}: {body}"
+                response.StatusCode == HttpStatusCode.OK,
+                $"Expected 200, got {(int)response.StatusCode}: {body}"
             );
 
-            JsonDocument json = JsonDocument.Parse(json: body);
-            JsonElement data = json.RootElement.GetProperty(propertyName: "data");
+            JsonDocument json = JsonDocument.Parse(body);
+            JsonElement data = json.RootElement.GetProperty("data");
 
             Assert.True(
-                condition: data.TryGetProperty(propertyName: "removed", value: out _),
-                userMessage: "Response must include 'removed' count"
+                data.TryGetProperty("removed", out _),
+                "Response must include 'removed' count"
             );
             Assert.True(
-                condition: data.TryGetProperty(propertyName: "devices", value: out _),
-                userMessage: "Response must include 'devices' list"
+                data.TryGetProperty("devices", out _),
+                "Response must include 'devices' list"
             );
 
             // The online device must NOT be in the removed set — it is still in the DB.
@@ -285,29 +284,29 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
             // _offlineDeviceId) may have been removed depending on test ordering, but
             // _onlineDeviceId is always protected by the !connectedClients guard.
             await using MediaContext ctx = new();
-            bool onlineDeviceStillExists = await ctx.Devices.AnyAsync(predicate: d => d.Id == _onlineDeviceId);
+            bool onlineDeviceStillExists = await ctx.Devices.AnyAsync(d => d.Id == _onlineDeviceId);
             Assert.True(
-                condition: onlineDeviceStillExists,
-                userMessage: $"Online device must NOT be deleted — the online guard must have protected it. Body: {body}"
+                onlineDeviceStillExists,
+                $"Online device must NOT be deleted — the online guard must have protected it. Body: {body}"
             );
 
             // Also verify the device is present in the 'devices' remaining list in the response.
             string onlineDeviceIdStr = _onlineDeviceId.ToString().ToLower();
-            bool onlineInRemainingList = data.GetProperty(propertyName: "devices")
+            bool onlineInRemainingList = data.GetProperty("devices")
                 .EnumerateArray()
-                .Any(predicate: d =>
-                    d.TryGetProperty(propertyName: "id", value: out JsonElement idEl)
+                .Any(d =>
+                    d.TryGetProperty("id", out JsonElement idEl)
                     && idEl.GetString()?.ToLower() == onlineDeviceIdStr
                 );
             Assert.True(
-                condition: onlineInRemainingList,
-                userMessage: $"Online device must appear in the remaining 'devices' list. Body: {body}"
+                onlineInRemainingList,
+                $"Online device must appear in the remaining 'devices' list. Body: {body}"
             );
         }
         finally
         {
             // Clean up the seeded client so other tests are not affected.
-            connectedClients.Clients.TryRemove(key: onlineClientKey, value: out Client? _);
+            connectedClients.Clients.TryRemove(onlineClientKey, out Client? _);
         }
     }
 
@@ -319,12 +318,12 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
     public async Task DestroyOffline_Unauthenticated_ReturnsUnauthorized()
     {
         HttpResponseMessage response = await _unauthed.DeleteAsync(
-            requestUri: "/api/v1/dashboard/devices/offline"
+            "/api/v1/dashboard/devices/offline"
         );
 
         Assert.True(
-            condition: response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            userMessage: $"Expected 401 or 403, got {(int)response.StatusCode}"
+            response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
+            $"Expected 401 or 403, got {(int)response.StatusCode}"
         );
     }
 
@@ -338,13 +337,13 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
         // "offline" is not a valid Ulid; if route order is wrong this would
         // return 400 (bad id parse) instead of hitting the correct action.
         HttpResponseMessage response = await _authed.DeleteAsync(
-            requestUri: "/api/v1/dashboard/devices/offline"
+            "/api/v1/dashboard/devices/offline"
         );
 
         // 200 = correct prune action was hit, not the {id} action returning 400.
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Route collision: expected 200 from prune action, got {(int)response.StatusCode}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Route collision: expected 200 from prune action, got {(int)response.StatusCode}"
         );
     }
 
@@ -371,38 +370,38 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
                 UserId = TestUserId,
                 DeviceId = _ownedDeviceId,
             };
-            seedCtx.ActivityLogs.Add(entity: fresh);
+            seedCtx.ActivityLogs.Add(fresh);
             await seedCtx.SaveChangesAsync();
             freshLogId = fresh.Id;
         }
 
-        HttpResponseMessage response = await _authed.DeleteAsync(requestUri: "/api/v1/dashboard/devices");
+        HttpResponseMessage response = await _authed.DeleteAsync("/api/v1/dashboard/devices");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected 200, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected 200, got {(int)response.StatusCode}: {body}"
         );
 
         // The freshly-inserted log must be gone — checked by ID to avoid false positives
         // from parallel tests that may add/remove other logs for the same device.
         await using MediaContext after = new();
-        bool freshLogStillExists = await after.ActivityLogs.AnyAsync(predicate: l => l.Id == freshLogId);
+        bool freshLogStillExists = await after.ActivityLogs.AnyAsync(l => l.Id == freshLogId);
         Assert.False(
-            condition: freshLogStillExists,
-            userMessage: "The freshly-inserted ActivityLog must be deleted by Destroy()"
+            freshLogStillExists,
+            "The freshly-inserted ActivityLog must be deleted by Destroy()"
         );
 
         // Device rows themselves must be untouched.
-        bool deviceStillExists = await after.Devices.AnyAsync(predicate: d => d.Id == _ownedDeviceId);
-        Assert.True(condition: deviceStillExists, userMessage: "Device rows must NOT be deleted by Destroy()");
+        bool deviceStillExists = await after.Devices.AnyAsync(d => d.Id == _ownedDeviceId);
+        Assert.True(deviceStillExists, "Device rows must NOT be deleted by Destroy()");
     }
 
     [Fact]
     public async Task Destroy_AsModerator_ClearsAllActivityLogs_IncludingOtherUsers()
     {
         // Seed a log for the other user's device and capture its id.
-        Guid otherUserId = Guid.Parse(input: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        Guid otherUserId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         int otherLogId;
         await using (MediaContext seedCtx = new())
         {
@@ -415,35 +414,35 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
                 UserId = otherUserId,
                 DeviceId = _otherDeviceId,
             };
-            seedCtx.ActivityLogs.Add(entity: otherLog);
+            seedCtx.ActivityLogs.Add(otherLog);
             await seedCtx.SaveChangesAsync();
             otherLogId = otherLog.Id;
         }
 
-        HttpResponseMessage response = await _authed.DeleteAsync(requestUri: "/api/v1/dashboard/devices");
-        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
+        HttpResponseMessage response = await _authed.DeleteAsync("/api/v1/dashboard/devices");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         // The admin clear-logs action wipes the entire activity history, so even
         // another user's log is removed. Device rows themselves stay untouched.
         await using MediaContext after = new();
-        bool otherLogStillExists = await after.ActivityLogs.AnyAsync(predicate: l => l.Id == otherLogId);
+        bool otherLogStillExists = await after.ActivityLogs.AnyAsync(l => l.Id == otherLogId);
         Assert.False(
-            condition: otherLogStillExists,
-            userMessage: "Moderator clear-logs must remove ALL activity logs, including other users'"
+            otherLogStillExists,
+            "Moderator clear-logs must remove ALL activity logs, including other users'"
         );
 
-        bool otherDeviceStillExists = await after.Devices.AnyAsync(predicate: d => d.Id == _otherDeviceId);
-        Assert.True(condition: otherDeviceStillExists, userMessage: "Clearing logs must NOT delete device rows");
+        bool otherDeviceStillExists = await after.Devices.AnyAsync(d => d.Id == _otherDeviceId);
+        Assert.True(otherDeviceStillExists, "Clearing logs must NOT delete device rows");
     }
 
     [Fact]
     public async Task Destroy_Unauthenticated_ReturnsUnauthorized()
     {
-        HttpResponseMessage response = await _unauthed.DeleteAsync(requestUri: "/api/v1/dashboard/devices");
+        HttpResponseMessage response = await _unauthed.DeleteAsync("/api/v1/dashboard/devices");
 
         Assert.True(
-            condition: response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            userMessage: $"Expected 401 or 403, got {(int)response.StatusCode}"
+            response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
+            $"Expected 401 or 403, got {(int)response.StatusCode}"
         );
     }
 }

@@ -17,25 +17,25 @@ namespace NoMercy.Api.DTOs.Media;
 
 public class NetworkDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "headquarters")]
+    [JsonProperty("headquarters")]
     public string? Headquarters { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri? Homepage { get; set; }
 
-    [JsonProperty(propertyName: "logo")]
+    [JsonProperty("logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty(propertyName: "origin_country")]
+    [JsonProperty("origin_country")]
     public string? OriginCountry { get; set; }
 
     public NetworkDto(NetworkTv ntv)

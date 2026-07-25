@@ -20,7 +20,6 @@ using NoMercy.Plugins.Hooks;
 using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
-using NoMercy.Storage.Validation;
 
 namespace NoMercy.Plugins;
 
@@ -31,42 +30,42 @@ public static class PluginServiceCollectionExtensions
         string pluginsPath
     )
     {
-        ArgumentNullException.ThrowIfNull(argument: services);
-        ArgumentException.ThrowIfNullOrWhiteSpace(argument: pluginsPath);
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(pluginsPath);
 
         services.AddSingleton<IPluginVerifier, PluginVerifier>();
 
-        services.AddSingleton<IPluginConsentStore>(implementationFactory: sp =>
+        services.AddSingleton<IPluginConsentStore>(sp =>
         {
             IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
-            IStorage storage = new LocalStorage(driver: driver, guard: new(allowedRoots: [pluginsPath], driver: driver));
-            string platformDataFolder = Path.Combine(path1: pluginsPath, path2: "data", path3: "platform");
+            IStorage storage = new LocalStorage(driver, new([pluginsPath], driver));
+            string platformDataFolder = Path.Combine(pluginsPath, "data", "platform");
             IPluginConfiguration configuration = new PluginConfiguration(
-                dataFolderPath: platformDataFolder,
-                storage: storage
+                platformDataFolder,
+                storage
             );
-            return new ConfigPluginConsentStore(configuration: configuration);
+            return new ConfigPluginConsentStore(configuration);
         });
 
         services.AddSingleton<IPluginConsentService, PluginConsentService>();
 
-        services.AddSingleton<IPluginManager>(implementationFactory: sp =>
+        services.AddSingleton<IPluginManager>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             ILogger<PluginManager> logger = sp.GetRequiredService<ILogger<PluginManager>>();
             IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
             IPluginVerifier verifier = sp.GetRequiredService<IPluginVerifier>();
             IPluginConsentService consentService = sp.GetRequiredService<IPluginConsentService>();
-            IStorage storage = new LocalStorage(driver: driver, guard: new(allowedRoots: [pluginsPath], driver: driver));
+            IStorage storage = new LocalStorage(driver, new([pluginsPath], driver));
             return new PluginManager(
-                eventBus: eventBus,
-                serviceProvider: sp,
-                logger: logger,
-                pluginsPath: pluginsPath,
-                storage: storage,
-                driver: driver,
-                verifier: verifier,
-                consentService: consentService
+                eventBus,
+                sp,
+                logger,
+                pluginsPath,
+                storage,
+                driver,
+                verifier,
+                consentService
             );
         });
 
@@ -88,12 +87,12 @@ public static class PluginServiceCollectionExtensions
         PluginManager pluginManager
     )
     {
-        ArgumentNullException.ThrowIfNull(argument: services);
-        ArgumentNullException.ThrowIfNull(argument: pluginManager);
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(pluginManager);
 
         foreach (IPluginServiceRegistrator registrator in pluginManager.GetServiceRegistrators())
         {
-            registrator.RegisterServices(services: services);
+            registrator.RegisterServices(services);
         }
     }
 
@@ -110,50 +109,50 @@ public static class PluginServiceCollectionExtensions
         string pluginsPath
     )
     {
-        ArgumentNullException.ThrowIfNull(argument: services);
+        ArgumentNullException.ThrowIfNull(services);
 
-        if (!Directory.Exists(path: pluginsPath))
+        if (!Directory.Exists(pluginsPath))
             return services;
 
-        foreach (string pluginDir in Directory.EnumerateDirectories(path: pluginsPath))
+        foreach (string pluginDir in Directory.EnumerateDirectories(pluginsPath))
         {
-            string dirName = Path.GetFileName(path: pluginDir);
+            string dirName = Path.GetFileName(pluginDir);
             if (dirName is "configurations" or "data")
                 continue;
 
-            string manifestPath = Path.Combine(path1: pluginDir, path2: "plugin.json");
-            if (!File.Exists(path: manifestPath))
+            string manifestPath = Path.Combine(pluginDir, "plugin.json");
+            if (!File.Exists(manifestPath))
                 continue;
 
             try
             {
-                string manifestJson = File.ReadAllText(path: manifestPath);
-                PluginManifest manifest = PluginManifestParser.Parse(json: manifestJson);
-                string assemblyPath = Path.Combine(path1: pluginDir, path2: manifest.Assembly);
+                string manifestJson = File.ReadAllText(manifestPath);
+                PluginManifest manifest = PluginManifestParser.Parse(manifestJson);
+                string assemblyPath = Path.Combine(pluginDir, manifest.Assembly);
 
-                if (!File.Exists(path: assemblyPath))
+                if (!File.Exists(assemblyPath))
                     continue;
 
                 // Load into a temporary context for discovery only; unloaded after registration.
-                PluginLoadContext discoveryCtx = new(pluginPath: assemblyPath);
+                PluginLoadContext discoveryCtx = new(assemblyPath);
                 try
                 {
-                    Assembly assembly = discoveryCtx.LoadFromAssemblyPath(assemblyPath: assemblyPath);
+                    Assembly assembly = discoveryCtx.LoadFromAssemblyPath(assemblyPath);
 
                     IEnumerable<Type> registratorTypes = assembly
                         .GetTypes()
-                        .Where(predicate: t =>
-                            typeof(IPluginServiceRegistrator).IsAssignableFrom(c: t)
+                        .Where(t =>
+                            typeof(IPluginServiceRegistrator).IsAssignableFrom(t)
                             && t is { IsAbstract: false, IsInterface: false }
                         );
 
                     foreach (Type registratorType in registratorTypes)
                     {
                         if (
-                            Activator.CreateInstance(type: registratorType)
+                            Activator.CreateInstance(registratorType)
                             is IPluginServiceRegistrator registrator
                         )
-                            registrator.RegisterServices(services: services);
+                            registrator.RegisterServices(services);
                     }
                 }
                 finally

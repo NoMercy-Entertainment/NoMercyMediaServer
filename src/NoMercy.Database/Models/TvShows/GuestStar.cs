@@ -16,26 +16,26 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.TvShows;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(CreditId), additionalPropertyNames: nameof(EpisodeId), IsUnique = true)]
-[Index(propertyName: nameof(CreditId))]
-[Index(propertyName: nameof(EpisodeId))]
-[Index(propertyName: nameof(PersonId))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(CreditId), nameof(EpisodeId), IsUnique = true)]
+[Index(nameof(CreditId))]
+[Index(nameof(EpisodeId))]
+[Index(nameof(PersonId))]
 public class GuestStar
 {
     [Key]
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "credit_id")]
+    [JsonProperty("credit_id")]
     public string? CreditId { get; set; }
 
-    [JsonProperty(propertyName: "episode_id")]
+    [JsonProperty("episode_id")]
     public int EpisodeId { get; set; }
     public Episode Episode { get; set; } = null!;
 
-    [JsonProperty(propertyName: "person_id")]
+    [JsonProperty("person_id")]
     public int PersonId { get; set; }
     public Person Person { get; set; } = null!;
 }

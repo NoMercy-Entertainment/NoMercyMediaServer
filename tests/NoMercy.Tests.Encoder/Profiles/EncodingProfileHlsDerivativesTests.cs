@@ -21,12 +21,12 @@ public class EncodingProfileHlsDerivativesTests
     public void HlsDerivatives_DefaultsToNull_WhenNotProvided()
     {
         EncodingProfile profile = new(
-            Id: Ulid.NewUlid(),
-            Name: "test",
-            Container: Container.HlsFmp4,
-            Video: null,
-            Audio: [],
-            Subtitles: []
+            Ulid.NewUlid(),
+            "test",
+            Container.HlsFmp4,
+            null,
+            [],
+            []
         );
 
         profile.HlsDerivatives.Should().BeNull();
@@ -38,12 +38,12 @@ public class EncodingProfileHlsDerivativesTests
     public void HlsDerivatives_NullCoalesces_ToDefaults()
     {
         EncodingProfile profile = new(
-            Id: Ulid.NewUlid(),
-            Name: "test",
-            Container: Container.HlsFmp4,
-            Video: null,
-            Audio: [],
-            Subtitles: []
+            Ulid.NewUlid(),
+            "test",
+            Container.HlsFmp4,
+            null,
+            [],
+            []
         );
 
         HlsDerivatives effective = profile.HlsDerivatives ?? new HlsDerivatives();
@@ -61,7 +61,7 @@ public class EncodingProfileHlsDerivativesTests
     {
         HlsDerivatives override_ = new() { GenerateIFramePlaylists = true };
         EncodingProfile profile = new(
-            Id: Ulid.NewUlid(),
+            Ulid.NewUlid(),
             Name: "test",
             Container: Container.HlsFmp4,
             Video: null,

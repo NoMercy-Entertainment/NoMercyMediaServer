@@ -21,76 +21,76 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record SpecialResponseItemDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "logo")]
+    [JsonProperty("logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "titleSort")]
+    [JsonProperty("titleSort")]
     public string TitleSort { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string MediaType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "collection")]
+    [JsonProperty("collection")]
     public IEnumerable<SpecialItemDto>? Special { get; set; }
 
-    [JsonProperty(propertyName: "number_of_items")]
+    [JsonProperty("number_of_items")]
     public int? NumberOfItems { get; set; }
 
-    [JsonProperty(propertyName: "have_items")]
+    [JsonProperty("have_items")]
     public int? HaveItems { get; set; }
 
-    [JsonProperty(propertyName: "favorite")]
+    [JsonProperty("favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty(propertyName: "watched")]
+    [JsonProperty("watched")]
     public bool Watched { get; set; }
 
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public IEnumerable<GenreDto> Genres { get; set; }
 
-    [JsonProperty(propertyName: "total_duration")]
+    [JsonProperty("total_duration")]
     public int TotalDuration { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
-    [JsonProperty(propertyName: "cast")]
+    [JsonProperty("cast")]
     public IEnumerable<PeopleDto> Cast { get; set; }
 
-    [JsonProperty(propertyName: "crew")]
+    [JsonProperty("crew")]
     public IEnumerable<PeopleDto> Crew { get; set; }
 
-    [JsonProperty(propertyName: "backdrops")]
+    [JsonProperty("backdrops")]
     public IEnumerable<ImageDto> Backdrops { get; set; }
 
-    [JsonProperty(propertyName: "posters")]
+    [JsonProperty("posters")]
     public IEnumerable<ImageDto> Posters { get; set; }
 
-    [JsonProperty(propertyName: "content_ratings")]
+    [JsonProperty("content_ratings")]
     public IEnumerable<Certification?> ContentRatings { get; set; }
 
-    [JsonProperty(propertyName: "vote_average")]
+    [JsonProperty("vote_average")]
     public double VoteAverage { get; set; }
 
     public SpecialResponseItemDto(Special special, List<SpecialItemsDto> items)
@@ -99,42 +99,42 @@ public record SpecialResponseItemDto
         foreach (SpecialItem specialItem in special.Items)
             if (specialItem.MovieId is not null)
             {
-                SpecialItemsDto? newItem = items.Find(match: i => i.Id == specialItem.MovieId);
+                SpecialItemsDto? newItem = items.Find(i => i.Id == specialItem.MovieId);
                 if (newItem is null)
                     continue;
 
-                SpecialItemDto item = new(item: newItem);
-                specialItems.Add(item: item);
+                SpecialItemDto item = new(newItem);
+                specialItems.Add(item);
             }
             else
             {
-                SpecialItemsDto? newItem = items.FirstOrDefault(predicate: i =>
-                    i.EpisodeIds.Contains(value: specialItem.EpisodeId ?? 0)
+                SpecialItemsDto? newItem = items.FirstOrDefault(i =>
+                    i.EpisodeIds.Contains(specialItem.EpisodeId ?? 0)
                 );
                 if (newItem is null)
                     continue;
 
-                SpecialItemDto item = new(item: newItem);
-                specialItems.Add(item: item);
+                SpecialItemDto item = new(newItem);
+                specialItems.Add(item);
             }
 
         IEnumerable<PeopleDto> cast = items
-            .SelectMany(selector: tv => tv.Cast)
-            .DistinctBy(keySelector: people => people.Id)
+            .SelectMany(tv => tv.Cast)
+            .DistinctBy(people => people.Id)
             .ToList();
 
         IEnumerable<PeopleDto> crew = items
-            .SelectMany(selector: item => item.Crew)
-            .DistinctBy(keySelector: people => people.Id)
+            .SelectMany(item => item.Crew)
+            .DistinctBy(people => people.Id)
             .ToList();
 
-        IEnumerable<ImageDto> posters = items.SelectMany(selector: item => item.Posters).ToList();
+        IEnumerable<ImageDto> posters = items.SelectMany(item => item.Posters).ToList();
 
-        IEnumerable<ImageDto> backdrops = items.SelectMany(selector: item => item.Backdrops).ToList();
+        IEnumerable<ImageDto> backdrops = items.SelectMany(item => item.Backdrops).ToList();
 
         IEnumerable<GenreDto> genres = items
-            .SelectMany(selector: item => item.Genres)
-            .DistinctBy(keySelector: genre => genre.Id)
+            .SelectMany(item => item.Genres)
+            .DistinctBy(genre => genre.Id)
             .ToList();
 
         foreach (SpecialItemsDto item in items)
@@ -149,13 +149,13 @@ public record SpecialResponseItemDto
         Id = special.Id;
         Title = special.Title.OrEmpty();
         Overview = special.Overview;
-        Backdrop = special.Backdrop?.Replace(oldValue: "https://storage.nomercy.tv/laravel", newValue: "");
+        Backdrop = special.Backdrop?.Replace("https://storage.nomercy.tv/laravel", "");
         Poster = special.Poster;
         Logo = special.Logo;
         TitleSort = special.Title.TitleSort();
         Type = "specials";
         MediaType = "specials";
-        Link = new(uriString: $"/specials/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/specials/{Id}", UriKind.Relative);
         ColorPalette = special.ColorPalette;
         Backdrops = backdrops;
         Posters = posters;
@@ -165,30 +165,30 @@ public record SpecialResponseItemDto
 
         Favorite = special.SpecialUser.Count != 0;
         Watched =
-            special.Items.Count(predicate: specialItem => specialItem.UserData.Count > 0)
+            special.Items.Count(specialItem => specialItem.UserData.Count > 0)
             == special.Items.Count;
 
         NumberOfItems = special.Items.Count;
 
-        int haveMovies = special.Items.Count(predicate: item =>
+        int haveMovies = special.Items.Count(item =>
             item.MovieId is not null && item.Movie?.VideoFiles.Count > 0
         );
-        int haveEpisodes = special.Items.Count(predicate: item =>
+        int haveEpisodes = special.Items.Count(item =>
             item.EpisodeId is not null && item.Episode?.VideoFiles.Count > 0
         );
         HaveItems = haveMovies + haveEpisodes;
 
-        TotalDuration = items.Sum(selector: item => item.TotalDuration);
+        TotalDuration = items.Sum(item => item.TotalDuration);
 
         VoteAverage =
-            items.Where(predicate: item => item.VoteAverage != null).Select(selector: item => item.VoteAverage).Average()
+            items.Where(item => item.VoteAverage != null).Select(item => item.VoteAverage).Average()
             ?? 0;
 
         ContentRatings = items
-            .Select(selector: specialItem => specialItem.Rating)
-            .DistinctBy(keySelector: rating => rating.Iso31661);
+            .Select(specialItem => specialItem.Rating)
+            .DistinctBy(rating => rating.Iso31661);
 
-        Special = specialItems.DistinctBy(keySelector: si => si.Id);
+        Special = specialItems.DistinctBy(si => si.Id);
     }
 
     public SpecialResponseItemDto(Special special)
@@ -196,21 +196,21 @@ public record SpecialResponseItemDto
         Id = special.Id;
         Title = special.Title.OrEmpty();
         Overview = special.Overview;
-        Backdrop = special.Backdrop?.Replace(oldValue: "https://storage.nomercy.tv/laravel", newValue: "");
+        Backdrop = special.Backdrop?.Replace("https://storage.nomercy.tv/laravel", "");
         Logo = special.Logo;
         Poster = special.Poster;
         TitleSort = special.Title.TitleSort();
         Type = "specials";
         MediaType = "specials";
-        Link = new(uriString: $"/specials/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/specials/{Id}", UriKind.Relative);
         ColorPalette = special.ColorPalette;
         Favorite = special.SpecialUser.Count != 0;
         NumberOfItems = special.Items.Count;
 
-        int movies = special.Items.Count(predicate: item =>
+        int movies = special.Items.Count(item =>
             item.MovieId is not null && item.Movie?.VideoFiles.Count > 0
         );
-        int episodes = special.Items.Count(predicate: item =>
+        int episodes = special.Items.Count(item =>
             item.EpisodeId is not null && item.Episode?.VideoFiles.Count > 0
         );
 
@@ -222,22 +222,22 @@ public record SpecialResponseItemDto
         Posters = [];
         Genres = [];
 
-        TotalDuration = special.Items.Sum(selector: item => item.Movie?.Runtime ?? 0);
+        TotalDuration = special.Items.Sum(item => item.Movie?.Runtime ?? 0);
 
         VoteAverage =
             special
-                .Items.Where(predicate: item => item.Movie?.VoteAverage != null)
-                .Select(selector: item => item.Movie?.VoteAverage)
+                .Items.Where(item => item.Movie?.VoteAverage != null)
+                .Select(item => item.Movie?.VoteAverage)
                 .Average()
             ?? 0;
 
         ContentRatings = special
-            .Items.Select(selector: specialItem =>
+            .Items.Select(specialItem =>
                 specialItem
-                    .Movie?.CertificationMovies.Select(selector: certification => certification.Certification)
+                    .Movie?.CertificationMovies.Select(certification => certification.Certification)
                     .FirstOrDefault()
             )
-            .DistinctBy(keySelector: rating => rating?.Iso31661);
+            .DistinctBy(rating => rating?.Iso31661);
     }
 
     public SpecialResponseItemDto(SpecialDetailDto detail, List<SpecialItemsDto> items)
@@ -246,42 +246,42 @@ public record SpecialResponseItemDto
         foreach (SpecialItemRefDto itemRef in detail.Items)
             if (itemRef.MovieId is not null)
             {
-                SpecialItemsDto? newItem = items.Find(match: i => i.Id == itemRef.MovieId);
+                SpecialItemsDto? newItem = items.Find(i => i.Id == itemRef.MovieId);
                 if (newItem is null)
                     continue;
 
-                SpecialItemDto item = new(item: newItem);
-                specialItems.Add(item: item);
+                SpecialItemDto item = new(newItem);
+                specialItems.Add(item);
             }
             else
             {
-                SpecialItemsDto? newItem = items.FirstOrDefault(predicate: i =>
-                    i.EpisodeIds.Contains(value: itemRef.EpisodeId ?? 0)
+                SpecialItemsDto? newItem = items.FirstOrDefault(i =>
+                    i.EpisodeIds.Contains(itemRef.EpisodeId ?? 0)
                 );
                 if (newItem is null)
                     continue;
 
-                SpecialItemDto item = new(item: newItem);
-                specialItems.Add(item: item);
+                SpecialItemDto item = new(newItem);
+                specialItems.Add(item);
             }
 
         IEnumerable<PeopleDto> cast = items
-            .SelectMany(selector: tv => tv.Cast)
-            .DistinctBy(keySelector: people => people.Id)
+            .SelectMany(tv => tv.Cast)
+            .DistinctBy(people => people.Id)
             .ToList();
 
         IEnumerable<PeopleDto> crew = items
-            .SelectMany(selector: item => item.Crew)
-            .DistinctBy(keySelector: people => people.Id)
+            .SelectMany(item => item.Crew)
+            .DistinctBy(people => people.Id)
             .ToList();
 
-        IEnumerable<ImageDto> posters = items.SelectMany(selector: item => item.Posters).ToList();
+        IEnumerable<ImageDto> posters = items.SelectMany(item => item.Posters).ToList();
 
-        IEnumerable<ImageDto> backdrops = items.SelectMany(selector: item => item.Backdrops).ToList();
+        IEnumerable<ImageDto> backdrops = items.SelectMany(item => item.Backdrops).ToList();
 
         IEnumerable<GenreDto> genres = items
-            .SelectMany(selector: item => item.Genres)
-            .DistinctBy(keySelector: genre => genre.Id)
+            .SelectMany(item => item.Genres)
+            .DistinctBy(genre => genre.Id)
             .ToList();
 
         foreach (SpecialItemsDto item in items)
@@ -296,14 +296,14 @@ public record SpecialResponseItemDto
         Id = detail.Id;
         Title = detail.Title;
         Overview = detail.Overview;
-        Backdrop = detail.Backdrop?.Replace(oldValue: "https://storage.nomercy.tv/laravel", newValue: "");
+        Backdrop = detail.Backdrop?.Replace("https://storage.nomercy.tv/laravel", "");
         Poster = detail.Poster;
         Logo = detail.Logo;
         TitleSort = detail.Title.TitleSort();
         Type = "specials";
         MediaType = "specials";
-        Link = new(uriString: $"/specials/{Id}", uriKind: UriKind.Relative);
-        ColorPalette = ColorPalette.FromJsonOrNull(json: detail.ColorPalette);
+        Link = new($"/specials/{Id}", UriKind.Relative);
+        ColorPalette = ColorPalette.FromJsonOrNull(detail.ColorPalette);
         Backdrops = backdrops;
         Posters = posters;
         Cast = cast;
@@ -315,16 +315,16 @@ public record SpecialResponseItemDto
         NumberOfItems = detail.NumberOfItems;
         HaveItems = detail.HaveMovies + detail.HaveEpisodes;
 
-        TotalDuration = items.Sum(selector: item => item.TotalDuration);
+        TotalDuration = items.Sum(item => item.TotalDuration);
 
         VoteAverage =
-            items.Where(predicate: item => item.VoteAverage != null).Select(selector: item => item.VoteAverage).Average()
+            items.Where(item => item.VoteAverage != null).Select(item => item.VoteAverage).Average()
             ?? 0;
 
         ContentRatings = items
-            .Select(selector: specialItem => specialItem.Rating)
-            .DistinctBy(keySelector: rating => rating.Iso31661);
+            .Select(specialItem => specialItem.Rating)
+            .DistinctBy(rating => rating.Iso31661);
 
-        Special = specialItems.DistinctBy(keySelector: si => si.Id);
+        Special = specialItems.DistinctBy(si => si.Id);
     }
 }

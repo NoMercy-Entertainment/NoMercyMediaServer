@@ -23,16 +23,16 @@ using NoMercy.NmSystem.Domain;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 [ApiController]
-[Tags(tags: "Media Recommendations")]
-[ApiVersion(version: 1.0)]
+[Tags("Media Recommendations")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/dashboard/recommendations")]
+[Route("api/v{version:apiVersion}/dashboard/recommendations")]
 public class RecommendationsController(
     RecommendationService recommendationService,
     IRecommendationRepository recommendationRepository
 ) : BaseController
 {
-    [HttpGet(template: "movies")]
+    [HttpGet("movies")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetMovieRecommendations(
         [FromQuery] int take = 200,
@@ -43,22 +43,22 @@ public class RecommendationsController(
 
         List<RecommendationDto> recommendations =
             await recommendationService.GetPersonalizedRecommendationsAsync(
-                userId: userId,
-                mediaTypeFilter: MediaTypes.MovieMediaType,
-                take: take,
-                ct: ct
+                userId,
+                MediaTypes.MovieMediaType,
+                take,
+                ct
             );
 
         ComponentEnvelope response = Component
             .Grid()
-            .WithId(id: "recommendations-movies")
-            .WithTitle(title: "Recommended Movies")
-            .WithItems(builders: recommendations.Select(selector: rec => Component.Card().WithData(data: new(rec: rec))));
+            .WithId("recommendations-movies")
+            .WithTitle("Recommended Movies")
+            .WithItems(recommendations.Select(rec => Component.Card().WithData(new(rec))));
 
-        return Ok(value: ComponentResponse.From(component: response));
+        return Ok(ComponentResponse.From(response));
     }
 
-    [HttpGet(template: "tv")]
+    [HttpGet("tv")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetTvRecommendations(
         [FromQuery] int take = 200,
@@ -69,22 +69,22 @@ public class RecommendationsController(
 
         List<RecommendationDto> recommendations =
             await recommendationService.GetPersonalizedRecommendationsAsync(
-                userId: userId,
-                mediaTypeFilter: MediaTypes.TvMediaType,
-                take: take,
-                ct: ct
+                userId,
+                MediaTypes.TvMediaType,
+                take,
+                ct
             );
 
         ComponentEnvelope response = Component
             .Grid()
-            .WithId(id: "recommendations-tv")
-            .WithTitle(title: "Recommended TV Shows")
-            .WithItems(builders: recommendations.Select(selector: rec => Component.Card().WithData(data: new(rec: rec))));
+            .WithId("recommendations-tv")
+            .WithTitle("Recommended TV Shows")
+            .WithItems(recommendations.Select(rec => Component.Card().WithData(new(rec))));
 
-        return Ok(value: ComponentResponse.From(component: response));
+        return Ok(ComponentResponse.From(response));
     }
 
-    [HttpGet(template: "anime")]
+    [HttpGet("anime")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetAnimeRecommendations(
         [FromQuery] int take = 200,
@@ -95,30 +95,30 @@ public class RecommendationsController(
 
         List<RecommendationDto> recommendations =
             await recommendationService.GetPersonalizedRecommendationsAsync(
-                userId: userId,
-                mediaTypeFilter: MediaTypes.AnimeMediaType,
-                take: take,
-                ct: ct
+                userId,
+                MediaTypes.AnimeMediaType,
+                take,
+                ct
             );
 
         ComponentEnvelope response = Component
             .Grid()
-            .WithId(id: "recommendations-anime")
-            .WithTitle(title: "Recommended Anime")
-            .WithItems(builders: recommendations.Select(selector: rec => Component.Card().WithData(data: new(rec: rec))));
+            .WithId("recommendations-anime")
+            .WithTitle("Recommended Anime")
+            .WithItems(recommendations.Select(rec => Component.Card().WithData(new(rec))));
 
-        return Ok(value: ComponentResponse.From(component: response));
+        return Ok(ComponentResponse.From(response));
     }
 
-    [HttpGet(template: "diagnostics")]
+    [HttpGet("diagnostics")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> GetDiagnostics(CancellationToken ct = default)
     {
         RecommendationDiagnosticsDto diagnostics =
-            await recommendationRepository.GetDiagnosticsAsync(ct: ct);
+            await recommendationRepository.GetDiagnosticsAsync(ct);
 
         return Ok(
-            value: new
+            new
             {
                 libraries = diagnostics.Libraries,
                 animeByLibraryType = diagnostics.AnimeByLibraryType,
@@ -133,7 +133,7 @@ public class RecommendationsController(
         );
     }
 
-    [HttpGet(template: "{type}/{id:int}")]
+    [HttpGet("{type}/{id:int}")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetRecommendationDetail(
         string type,
@@ -142,7 +142,7 @@ public class RecommendationsController(
     )
     {
         if (type is not ("movie" or "tv" or "anime"))
-            return BadRequestResponse(detail: "Type must be 'movie', 'tv', or 'anime'");
+            return BadRequestResponse("Type must be 'movie', 'tv', or 'anime'");
 
         // Anime uses the same TMDB TV endpoint
         string resolvedType = type == "anime" ? "tv" : type;
@@ -152,20 +152,20 @@ public class RecommendationsController(
         string language = Language();
 
         RecommendationDetailDto? detail = await recommendationService.GetRecommendationDetailAsync(
-            userId: userId,
-            mediaId: id,
-            mediaType: resolvedType,
-            country: country,
-            language: language,
-            ct: ct
+            userId,
+            id,
+            resolvedType,
+            country,
+            language,
+            ct
         );
 
         if (detail is not null)
             detail.MediaType = type;
 
         if (detail is null)
-            return NotFoundResponse(detail: "Recommendation not found");
+            return NotFoundResponse("Recommendation not found");
 
-        return Ok(value: new { data = detail });
+        return Ok(new { data = detail });
     }
 }

@@ -42,15 +42,15 @@ public class WebhookNotificationDispatcher(
         CancellationToken ct
     ) =>
         DispatchAsync(
-            eventName: "encoding.started",
-            payload: new
+            "encoding.started",
+            new
             {
                 job_id = notification.JobId,
                 input_path = notification.InputPath,
                 output_path = notification.OutputPath,
                 profile_name = notification.ProfileName,
             },
-            ct: ct
+            ct
         );
 
     public Task NotifyCompletedAsync(
@@ -58,27 +58,27 @@ public class WebhookNotificationDispatcher(
         CancellationToken ct
     ) =>
         DispatchAsync(
-            eventName: "encoding.completed",
-            payload: new
+            "encoding.completed",
+            new
             {
                 job_id = notification.JobId,
                 output_path = notification.OutputPath,
                 duration_seconds = notification.Duration.TotalSeconds,
             },
-            ct: ct
+            ct
         );
 
     public Task NotifyFailedAsync(EncodingFailedNotification notification, CancellationToken ct) =>
         DispatchAsync(
-            eventName: "encoding.failed",
-            payload: new
+            "encoding.failed",
+            new
             {
                 job_id = notification.JobId,
                 input_path = notification.InputPath,
                 error_message = notification.ErrorMessage,
                 exception_type = notification.ExceptionType,
             },
-            ct: ct
+            ct
         );
 
     private async Task DispatchAsync(string eventName, object payload, CancellationToken ct)
@@ -88,18 +88,18 @@ public class WebhookNotificationDispatcher(
             return;
 
         string body = JsonSerializer.Serialize(
-            value: new
+            new
             {
                 @event = eventName,
-                timestamp = DateTime.UtcNow.ToString(format: "O"),
+                timestamp = DateTime.UtcNow.ToString("O"),
                 payload,
             },
-            options: JsonOptions
+            JsonOptions
         );
 
         foreach (string url in urls)
         {
-            await PostWithRetryAsync(url: url, body: body, ct: ct);
+            await PostWithRetryAsync(url, body, ct);
         }
     }
 
@@ -112,13 +112,13 @@ public class WebhookNotificationDispatcher(
 
             try
             {
-                using StringContent content = new(content: body, encoding: Encoding.UTF8, mediaType: "application/json");
-                using HttpResponseMessage response = await httpClient.PostAsync(requestUri: url, content: content, cancellationToken: ct);
+                using StringContent content = new(body, Encoding.UTF8, "application/json");
+                using HttpResponseMessage response = await httpClient.PostAsync(url, content, ct);
                 if (response.IsSuccessStatusCode)
                     return;
 
                 logger.LogWarning(
-                    message: "Webhook {Url} returned {Status} on attempt {Attempt}/{Max}", args: [url, (int)response.StatusCode, attempt, MaxRetries]
+                    "Webhook {Url} returned {Status} on attempt {Attempt}/{Max}", [url, (int)response.StatusCode, attempt, MaxRetries]
                 );
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -128,17 +128,17 @@ public class WebhookNotificationDispatcher(
             catch (Exception ex)
             {
                 logger.LogWarning(
-                    exception: ex,
-                    message: "Webhook {Url} threw on attempt {Attempt}/{Max}", args: [url, attempt, MaxRetries]
+                    ex,
+                    "Webhook {Url} threw on attempt {Attempt}/{Max}", [url, attempt, MaxRetries]
                 );
             }
 
             if (attempt < MaxRetries)
             {
-                TimeSpan delay = TimeSpan.FromSeconds(value: Math.Pow(x: 2, y: attempt - 1));
+                TimeSpan delay = TimeSpan.FromSeconds(Math.Pow(2, attempt - 1));
                 try
                 {
-                    await Task.Delay(delay: delay, cancellationToken: ct);
+                    await Task.Delay(delay, ct);
                 }
                 catch (OperationCanceledException)
                 {
@@ -147,6 +147,6 @@ public class WebhookNotificationDispatcher(
             }
         }
 
-        logger.LogWarning(message: "Webhook {Url} exhausted {Max} retries — giving up", args: [url, MaxRetries]);
+        logger.LogWarning("Webhook {Url} exhausted {Max} retries — giving up", [url, MaxRetries]);
     }
 }

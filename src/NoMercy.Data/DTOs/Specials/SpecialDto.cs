@@ -15,27 +15,27 @@ namespace NoMercy.Data.DTOs.Specials;
 
 public class SpecialDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string Backdrop { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string Poster { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "logo")]
+    [JsonProperty("logo")]
     public string Logo { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string Description { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "Item")]
+    [JsonProperty("Item")]
     public SpecialItemDto[] Item { get; set; } = [];
 
-    [JsonProperty(propertyName: "creator")]
+    [JsonProperty("creator")]
     public string Creator { get; set; } = string.Empty;
 }

@@ -18,63 +18,63 @@ public class TvdbCharacterResponse : TvdbResponse<TvdbCharacter> { }
 
 public class TvdbCharacter
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "personName")]
+    [JsonProperty("personName")]
     public string PersonName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "aliases")]
+    [JsonProperty("aliases")]
     public List<TvdbAlias> Aliases { get; set; } = [];
 
-    [JsonProperty(propertyName: "episodeId")]
+    [JsonProperty("episodeId")]
     public long? EpisodeId { get; set; }
 
-    [JsonProperty(propertyName: "image")]
+    [JsonProperty("image")]
     public Uri? Image { get; set; }
 
-    [JsonProperty(propertyName: "isFeatured")]
+    [JsonProperty("isFeatured")]
     public bool IsFeatured { get; set; }
 
-    [JsonProperty(propertyName: "movieId")]
+    [JsonProperty("movieId")]
     public long? MovieId { get; set; }
 
-    [JsonProperty(propertyName: "movie")]
+    [JsonProperty("movie")]
     public TvdbInfo? Movie { get; set; }
 
-    [JsonProperty(propertyName: "nameTranslations")]
+    [JsonProperty("nameTranslations")]
     public string[] NameTranslations { get; set; } = [];
 
-    [JsonProperty(propertyName: "overviewTranslations")]
+    [JsonProperty("overviewTranslations")]
     public string[] OverviewTranslations { get; set; } = [];
 
-    [JsonProperty(propertyName: "peopleId")]
+    [JsonProperty("peopleId")]
     public long PeopleId { get; set; }
 
-    [JsonProperty(propertyName: "personImgURL")]
+    [JsonProperty("personImgURL")]
     public Uri? PersonImgUrl { get; set; }
 
-    [JsonProperty(propertyName: "peopleType")]
+    [JsonProperty("peopleType")]
     public string PeopleType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "seriesId")]
+    [JsonProperty("seriesId")]
     public long? SeriesId { get; set; }
 
-    [JsonProperty(propertyName: "series")]
+    [JsonProperty("series")]
     public TvdbInfo? Series { get; set; }
 
-    [JsonProperty(propertyName: "sort")]
+    [JsonProperty("sort")]
     public int Sort { get; set; }
 
-    [JsonProperty(propertyName: "tagOptions")]
+    [JsonProperty("tagOptions")]
     public List<TvdbTagOption> TagOptions { get; set; } = [];
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public int Type { get; set; }
 
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri? Url { get; set; }
 }

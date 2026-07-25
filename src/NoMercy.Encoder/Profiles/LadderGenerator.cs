@@ -52,12 +52,12 @@ public class LadderGenerator : ILadderGenerator
     // Order: descending by height (widest first) so top-rung logic is natural.
     private static readonly TableRung[] DefaultTable =
     [
-        new(Width: 3840, Height: 2160, H264BitrateKbps: 15000),
-        new(Width: 2560, Height: 1440, H264BitrateKbps: 8000),
-        new(Width: 1920, Height: 1080, H264BitrateKbps: 5000),
-        new(Width: 1280, Height: 720, H264BitrateKbps: 3000),
-        new(Width: 854, Height: 480, H264BitrateKbps: 1500),
-        new(Width: 640, Height: 360, H264BitrateKbps: 800),
+        new(3840, 2160, 15000),
+        new(2560, 1440, 8000),
+        new(1920, 1080, 5000),
+        new(1280, 720, 3000),
+        new(854, 480, 1500),
+        new(640, 360, 800),
     ];
 
     public IReadOnlyList<VideoOutput> Generate(
@@ -72,14 +72,14 @@ public class LadderGenerator : ILadderGenerator
         if (userRungs is { Length: > 0 })
         {
             decisions.Add(
-                entry: new(
-                    Stage: "plan",
-                    Key: "plan.ladder_user_supplied",
-                    Message: $"Using {userRungs.Length} user-supplied rung(s); default table skipped."
+                new(
+                    "plan",
+                    "plan.ladder_user_supplied",
+                    $"Using {userRungs.Length} user-supplied rung(s); default table skipped."
                 )
             );
             return userRungs
-                .Select(selector: r =>
+                .Select(r =>
                     reference with
                     {
                         Width = r.Width,
@@ -95,10 +95,10 @@ public class LadderGenerator : ILadderGenerator
         if (complexity is ComplexityHint.Auto)
         {
             decisions.Add(
-                entry: new(
-                    Stage: "plan",
-                    Key: "plan.ladder_complexity_unknown",
-                    Message: "Complexity is Auto — defaulted to live-action table. "
+                new(
+                    "plan",
+                    "plan.ladder_complexity_unknown",
+                    "Complexity is Auto — defaulted to live-action table. "
                         + "A scene-analysis probe will refine this in a later phase."
                 )
             );
@@ -110,15 +110,15 @@ public class LadderGenerator : ILadderGenerator
         {
             if (rung.Width <= source.Width && rung.Height <= source.Height)
             {
-                candidates.Add(item: rung);
+                candidates.Add(rung);
             }
             else
             {
                 decisions.Add(
-                    entry: new(
-                        Stage: "plan",
-                        Key: "plan.ladder_rung_skipped_above_source",
-                        Message: $"Rung {rung.Width}x{rung.Height} skipped — exceeds source "
+                    new(
+                        "plan",
+                        "plan.ladder_rung_skipped_above_source",
+                        $"Rung {rung.Width}x{rung.Height} skipped — exceeds source "
                             + $"{source.Width}x{source.Height} (no upscaling)."
                     )
                 );
@@ -131,12 +131,12 @@ public class LadderGenerator : ILadderGenerator
             // Keep only even-indexed entries when sorted descending by height.
             // This retains the top rung plus every other step, which is sufficient
             // for flat-colour content that compresses aggressively.
-            candidates = candidates.Where(predicate: (_, i) => i % 2 == 0).ToList();
+            candidates = candidates.Where((_, i) => i % 2 == 0).ToList();
             decisions.Add(
-                entry: new(
-                    Stage: "plan",
-                    Key: "plan.ladder_animated_thinned",
-                    Message: $"Animated complexity — thinned to every-other rung "
+                new(
+                    "plan",
+                    "plan.ladder_animated_thinned",
+                    $"Animated complexity — thinned to every-other rung "
                         + $"({candidates.Count} rung(s)). Flat colour compresses well with fewer bitrate steps."
                 )
             );
@@ -145,29 +145,29 @@ public class LadderGenerator : ILadderGenerator
         {
             // Keep all — grain requires denser bitrate exploration.
             decisions.Add(
-                entry: new(
-                    Stage: "plan",
-                    Key: "plan.ladder_grainy_full",
-                    Message: $"Grainy complexity — retaining all {candidates.Count} fitting rung(s). "
+                new(
+                    "plan",
+                    "plan.ladder_grainy_full",
+                    $"Grainy complexity — retaining all {candidates.Count} fitting rung(s). "
                         + "Grain forces denser bitrate exploration."
                 )
             );
         }
 
         // ── Append native-resolution top rung if not already in table ────────
-        bool sourceMatchesTable = DefaultTable.Any(predicate: t =>
+        bool sourceMatchesTable = DefaultTable.Any(t =>
             t.Width == source.Width && t.Height == source.Height
         );
 
         if (!sourceMatchesTable && source is { Width: > 0, Height: > 0 })
         {
-            int nativeBitrate = InterpolateNativeBitrate(codec: reference.Codec, source: source);
+            int nativeBitrate = InterpolateNativeBitrate(reference.Codec, source);
             candidates.Insert(
-                index: 0,
-                item: new(
-                    Width: source.Width,
-                    Height: source.Height,
-                    H264BitrateKbps: nativeBitrate
+                0,
+                new(
+                    source.Width,
+                    source.Height,
+                    nativeBitrate
                 )
             );
         }
@@ -176,9 +176,9 @@ public class LadderGenerator : ILadderGenerator
         List<VideoOutput> outputs = [];
         foreach (TableRung rung in candidates)
         {
-            int bitrateKbps = PickBitrate(codec: reference.Codec, rung: rung);
+            int bitrateKbps = PickBitrate(reference.Codec, rung);
             outputs.Add(
-                item: reference with
+                reference with
                 {
                     Width = rung.Width,
                     Height = rung.Height,
@@ -208,13 +208,13 @@ public class LadderGenerator : ILadderGenerator
         // Table is ordered descending by resolution — find the two neighbours.
         // "upper" = first entry with MORE pixels than source (i.e. above source).
         // "lower" = first entry with FEWER pixels (i.e. below or equal to source).
-        TableRung? upper = DefaultTable.FirstOrDefault(predicate: t => (long)t.Width * t.Height > srcPixels);
-        TableRung? lower = DefaultTable.FirstOrDefault(predicate: t => (long)t.Width * t.Height <= srcPixels);
+        TableRung? upper = DefaultTable.FirstOrDefault(t => (long)t.Width * t.Height > srcPixels);
+        TableRung? lower = DefaultTable.FirstOrDefault(t => (long)t.Width * t.Height <= srcPixels);
 
         if (upper is null || lower is null)
         {
             // Source is at or above the largest entry — use the top rung's bitrate.
-            return PickBitrate(codec: codec, rung: DefaultTable[0]);
+            return PickBitrate(codec, DefaultTable[0]);
         }
 
         long upperPixels = (long)upper.Width * upper.Height;
@@ -222,20 +222,20 @@ public class LadderGenerator : ILadderGenerator
         long range = upperPixels - lowerPixels;
 
         if (range <= 0)
-            return PickBitrate(codec: codec, rung: lower);
+            return PickBitrate(codec, lower);
 
-        int upperBitrate = PickBitrate(codec: codec, rung: upper);
-        int lowerBitrate = PickBitrate(codec: codec, rung: lower);
+        int upperBitrate = PickBitrate(codec, upper);
+        int lowerBitrate = PickBitrate(codec, lower);
         double t = (double)(srcPixels - lowerPixels) / range;
-        return (int)Math.Round(a: lowerBitrate + (upperBitrate - lowerBitrate) * t);
+        return (int)Math.Round(lowerBitrate + (upperBitrate - lowerBitrate) * t);
     }
 
     private static int PickBitrate(VideoCodecType codec, TableRung rung) =>
         codec switch
         {
-            VideoCodecType.H265 => (int)Math.Round(a: rung.H264BitrateKbps * HevcMultiplier),
-            VideoCodecType.Vp9 => (int)Math.Round(a: rung.H264BitrateKbps * Vp9Multiplier),
-            VideoCodecType.Av1 => (int)Math.Round(a: rung.H264BitrateKbps * Av1Multiplier),
+            VideoCodecType.H265 => (int)Math.Round(rung.H264BitrateKbps * HevcMultiplier),
+            VideoCodecType.Vp9 => (int)Math.Round(rung.H264BitrateKbps * Vp9Multiplier),
+            VideoCodecType.Av1 => (int)Math.Round(rung.H264BitrateKbps * Av1Multiplier),
             _ => rung.H264BitrateKbps,
         };
 

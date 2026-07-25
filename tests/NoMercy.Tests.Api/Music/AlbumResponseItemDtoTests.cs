@@ -17,7 +17,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Music;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class AlbumResponseItemDtoTests
 {
     private static Album BuildAlbum(
@@ -43,18 +43,18 @@ public class AlbumResponseItemDtoTests
         if (colorPalette is not null)
             album.ColorPalette = colorPalette;
         foreach (AlbumUser albumUser in albumUsers ?? [])
-            album.AlbumUser.Add(item: albumUser);
+            album.AlbumUser.Add(albumUser);
         foreach (AlbumArtist albumArtist in albumArtists ?? [])
         {
             albumArtist.Album = album;
-            album.AlbumArtist.Add(item: albumArtist);
+            album.AlbumArtist.Add(albumArtist);
         }
         foreach (AlbumMusicGenre albumGenre in albumGenres ?? [])
-            album.AlbumMusicGenre.Add(item: albumGenre);
+            album.AlbumMusicGenre.Add(albumGenre);
         foreach (Image image in images ?? [])
-            album.Images.Add(item: image);
+            album.Images.Add(image);
         foreach (AlbumTrack albumTrack in albumTracks ?? [])
-            album.AlbumTrack.Add(item: albumTrack);
+            album.AlbumTrack.Add(albumTrack);
 
         return album;
     }
@@ -97,10 +97,10 @@ public class AlbumResponseItemDtoTests
         ColorPalette palette = new() { Cover = new() { Dominant = "#010101" } };
         Album album = BuildAlbum(colorPalette: palette);
 
-        AlbumResponseItemDto dto = new(album: album);
+        AlbumResponseItemDto dto = new(album);
 
         dto.ColorPalette.Should().NotBeNull();
-        dto.ColorPalette!.Cover!.Dominant.Should().Be(expected: "#010101");
+        dto.ColorPalette!.Cover!.Dominant.Should().Be("#010101");
     }
 
     [Fact]
@@ -108,9 +108,9 @@ public class AlbumResponseItemDtoTests
     {
         Album album = BuildAlbum(cover: "/album-cover.jpg");
 
-        AlbumResponseItemDto dto = new(album: album);
+        AlbumResponseItemDto dto = new(album);
 
-        dto.Cover.Should().Be(expected: "/images/music/album-cover.jpg");
+        dto.Cover.Should().Be("/images/music/album-cover.jpg");
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class AlbumResponseItemDtoTests
     {
         Album album = BuildAlbum(cover: null);
 
-        AlbumResponseItemDto dto = new(album: album);
+        AlbumResponseItemDto dto = new(album);
 
         dto.Cover.Should().BeNull();
     }
@@ -130,24 +130,24 @@ public class AlbumResponseItemDtoTests
         Album album = BuildAlbum(libraryId: libraryId);
         Guid albumId = album.Id;
 
-        AlbumResponseItemDto dto = new(album: album);
+        AlbumResponseItemDto dto = new(album);
 
-        dto.Id.Should().Be(expected: albumId);
-        dto.LibraryId.Should().Be(expected: libraryId);
-        dto.Name.Should().Be(expected: "Test Album");
-        dto.Disambiguation.Should().Be(expected: "Deluxe");
-        dto.Description.Should().Be(expected: "Album description");
-        dto.Type.Should().Be(expected: "album");
-        dto.Link.ToString().Should().Be(expected: $"/music/albums/{albumId}");
+        dto.Id.Should().Be(albumId);
+        dto.LibraryId.Should().Be(libraryId);
+        dto.Name.Should().Be("Test Album");
+        dto.Disambiguation.Should().Be("Deluxe");
+        dto.Description.Should().Be("Album description");
+        dto.Type.Should().Be("album");
+        dto.Link.ToString().Should().Be($"/music/albums/{albumId}");
     }
 
     [Fact]
     public void Ctor_FavoriteTrue_WhenAlbumUserHasEntries()
     {
-        AlbumUser albumUser = new(albumId: Guid.NewGuid(), userId: Guid.NewGuid());
+        AlbumUser albumUser = new(Guid.NewGuid(), Guid.NewGuid());
         Album album = BuildAlbum(albumUsers: [albumUser]);
 
-        AlbumResponseItemDto dto = new(album: album);
+        AlbumResponseItemDto dto = new(album);
 
         dto.Favorite.Should().BeTrue();
     }
@@ -157,7 +157,7 @@ public class AlbumResponseItemDtoTests
     {
         Album album = BuildAlbum(albumUsers: []);
 
-        AlbumResponseItemDto dto = new(album: album);
+        AlbumResponseItemDto dto = new(album);
 
         dto.Favorite.Should().BeFalse();
     }
@@ -166,26 +166,26 @@ public class AlbumResponseItemDtoTests
     public void Ctor_ArtistsDeduplicatedByArtistId()
     {
         Guid sharedArtistId = Guid.NewGuid();
-        AlbumArtist duplicateOne = BuildAlbumArtist(artistId: sharedArtistId);
-        AlbumArtist duplicateTwo = BuildAlbumArtist(artistId: sharedArtistId);
-        AlbumArtist distinctOther = BuildAlbumArtist(artistId: Guid.NewGuid());
+        AlbumArtist duplicateOne = BuildAlbumArtist(sharedArtistId);
+        AlbumArtist duplicateTwo = BuildAlbumArtist(sharedArtistId);
+        AlbumArtist distinctOther = BuildAlbumArtist(Guid.NewGuid());
         Album album = BuildAlbum(albumArtists: [duplicateOne, duplicateTwo, distinctOther]);
 
-        AlbumResponseItemDto dto = new(album: album);
+        AlbumResponseItemDto dto = new(album);
 
-        dto.Artists.Should().HaveCount(expected: 2);
+        dto.Artists.Should().HaveCount(2);
     }
 
     [Fact]
     public void Ctor_GenresMappedFromAlbumMusicGenre()
     {
-        AlbumMusicGenre genreOne = BuildAlbumGenre(name: "Rock");
-        AlbumMusicGenre genreTwo = BuildAlbumGenre(name: "Pop");
+        AlbumMusicGenre genreOne = BuildAlbumGenre("Rock");
+        AlbumMusicGenre genreTwo = BuildAlbumGenre("Pop");
         Album album = BuildAlbum(albumGenres: [genreOne, genreTwo]);
 
-        AlbumResponseItemDto dto = new(album: album);
+        AlbumResponseItemDto dto = new(album);
 
-        dto.Genres.Select(selector: genre => genre.Name).Should().BeEquivalentTo(expectation: ["Rock", "Pop"]);
+        dto.Genres.Select(genre => genre.Name).Should().BeEquivalentTo(["Rock", "Pop"]);
     }
 
     [Fact]
@@ -200,24 +200,24 @@ public class AlbumResponseItemDtoTests
         };
         Album album = BuildAlbum(images: [image]);
 
-        AlbumResponseItemDto dto = new(album: album);
+        AlbumResponseItemDto dto = new(album);
 
         dto.Images.Should().ContainSingle();
-        dto.Images.First().Type.Should().Be(expected: "poster");
-        dto.Images.First().Width.Should().Be(expected: 500);
+        dto.Images.First().Type.Should().Be("poster");
+        dto.Images.First().Width.Should().Be(500);
     }
 
     [Fact]
     public void Ctor_TracksMappedFromAlbumTrack()
     {
         Album album = BuildAlbum();
-        AlbumTrack trackOne = BuildAlbumTrack(album: album);
-        AlbumTrack trackTwo = BuildAlbumTrack(album: album);
-        album.AlbumTrack.Add(item: trackOne);
-        album.AlbumTrack.Add(item: trackTwo);
+        AlbumTrack trackOne = BuildAlbumTrack(album);
+        AlbumTrack trackTwo = BuildAlbumTrack(album);
+        album.AlbumTrack.Add(trackOne);
+        album.AlbumTrack.Add(trackTwo);
 
-        AlbumResponseItemDto dto = new(album: album);
+        AlbumResponseItemDto dto = new(album);
 
-        dto.Tracks.Should().HaveCount(expected: 2);
+        dto.Tracks.Should().HaveCount(2);
     }
 }

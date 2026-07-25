@@ -14,36 +14,35 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
-using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 public class LiveTranscodeOrphanSweeperTests : IDisposable
 {
     private readonly string _cacheRoot = Path.Combine(
-        path1: Path.GetTempPath(),
-        path2: "nomercy-orphan-test-" + Ulid.NewUlid()
+        Path.GetTempPath(),
+        "nomercy-orphan-test-" + Ulid.NewUlid()
     );
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _cacheRoot))
-            Directory.Delete(path: _cacheRoot, recursive: true);
+        if (Directory.Exists(_cacheRoot))
+            Directory.Delete(_cacheRoot, true);
     }
 
     private static IStorage MakeStorage() =>
         new LocalStorage(
-            driver: new LocalStorageDriver(),
-            guard: new(allowedRoots: [], driver: new LocalStorageDriver())
+            new LocalStorageDriver(),
+            new([], new LocalStorageDriver())
         );
 
     private LiveTranscodeOrphanSweeper BuildSweeper()
     {
         EncoderOptions opts = new() { LiveTranscodeCachePath = _cacheRoot };
         return new(
-            options: opts,
-            logger: NullLogger<LiveTranscodeOrphanSweeper>.Instance,
-            storage: MakeStorage()
+            opts,
+            NullLogger<LiveTranscodeOrphanSweeper>.Instance,
+            MakeStorage()
         );
     }
 
@@ -54,17 +53,17 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
     [Fact]
     public async Task StartAsync_DeletesLtsPrefixedDirectories()
     {
-        Directory.CreateDirectory(path: _cacheRoot);
-        string orphan1 = Path.Combine(path1: _cacheRoot, path2: "lts-01J0000000000000000000000A");
-        string orphan2 = Path.Combine(path1: _cacheRoot, path2: "lts-01J0000000000000000000000B");
-        Directory.CreateDirectory(path: orphan1);
-        Directory.CreateDirectory(path: orphan2);
+        Directory.CreateDirectory(_cacheRoot);
+        string orphan1 = Path.Combine(_cacheRoot, "lts-01J0000000000000000000000A");
+        string orphan2 = Path.Combine(_cacheRoot, "lts-01J0000000000000000000000B");
+        Directory.CreateDirectory(orphan1);
+        Directory.CreateDirectory(orphan2);
 
         LiveTranscodeOrphanSweeper sweeper = BuildSweeper();
-        await sweeper.StartAsync(cancellationToken: CancellationToken.None);
+        await sweeper.StartAsync(CancellationToken.None);
 
-        Directory.Exists(path: orphan1).Should().BeFalse();
-        Directory.Exists(path: orphan2).Should().BeFalse();
+        Directory.Exists(orphan1).Should().BeFalse();
+        Directory.Exists(orphan2).Should().BeFalse();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -74,14 +73,14 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
     [Fact]
     public async Task StartAsync_PreservesNonLtsDirectories()
     {
-        Directory.CreateDirectory(path: _cacheRoot);
-        string keepDir = Path.Combine(path1: _cacheRoot, path2: "thumbnails");
-        Directory.CreateDirectory(path: keepDir);
+        Directory.CreateDirectory(_cacheRoot);
+        string keepDir = Path.Combine(_cacheRoot, "thumbnails");
+        Directory.CreateDirectory(keepDir);
 
         LiveTranscodeOrphanSweeper sweeper = BuildSweeper();
-        await sweeper.StartAsync(cancellationToken: CancellationToken.None);
+        await sweeper.StartAsync(CancellationToken.None);
 
-        Directory.Exists(path: keepDir).Should().BeTrue();
+        Directory.Exists(keepDir).Should().BeTrue();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -91,17 +90,17 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
     [Fact]
     public async Task StartAsync_RecursivelyDeletesOrphanContents()
     {
-        Directory.CreateDirectory(path: _cacheRoot);
-        string orphanDir = Path.Combine(path1: _cacheRoot, path2: "lts-01J0000000000000000000000C");
-        Directory.CreateDirectory(path: orphanDir);
-        string segFile = Path.Combine(path1: orphanDir, path2: "seg_00001.ts");
-        await File.WriteAllBytesAsync(path: segFile, bytes: [0x00, 0x01, 0x02]);
+        Directory.CreateDirectory(_cacheRoot);
+        string orphanDir = Path.Combine(_cacheRoot, "lts-01J0000000000000000000000C");
+        Directory.CreateDirectory(orphanDir);
+        string segFile = Path.Combine(orphanDir, "seg_00001.ts");
+        await File.WriteAllBytesAsync(segFile, [0x00, 0x01, 0x02]);
 
         LiveTranscodeOrphanSweeper sweeper = BuildSweeper();
-        await sweeper.StartAsync(cancellationToken: CancellationToken.None);
+        await sweeper.StartAsync(CancellationToken.None);
 
-        Directory.Exists(path: orphanDir).Should().BeFalse();
-        File.Exists(path: segFile).Should().BeFalse();
+        Directory.Exists(orphanDir).Should().BeFalse();
+        File.Exists(segFile).Should().BeFalse();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -115,18 +114,18 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
         EncoderOptions opts = new()
         {
             LiveTranscodeCachePath = Path.Combine(
-                path1: Path.GetTempPath(),
-                path2: "nomercy-does-not-exist-" + Ulid.NewUlid()
+                Path.GetTempPath(),
+                "nomercy-does-not-exist-" + Ulid.NewUlid()
             ),
         };
 
         LiveTranscodeOrphanSweeper sweeper = new(
-            options: opts,
-            logger: NullLogger<LiveTranscodeOrphanSweeper>.Instance,
-            storage: MakeStorage()
+            opts,
+            NullLogger<LiveTranscodeOrphanSweeper>.Instance,
+            MakeStorage()
         );
 
-        Func<Task> act = () => sweeper.StartAsync(cancellationToken: CancellationToken.None);
+        Func<Task> act = () => sweeper.StartAsync(CancellationToken.None);
         await act.Should().NotThrowAsync();
     }
 
@@ -137,11 +136,11 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
     [Fact]
     public async Task StartAsync_EmptyCacheRoot_DoesNotThrow()
     {
-        Directory.CreateDirectory(path: _cacheRoot);
+        Directory.CreateDirectory(_cacheRoot);
 
         LiveTranscodeOrphanSweeper sweeper = BuildSweeper();
 
-        Func<Task> act = () => sweeper.StartAsync(cancellationToken: CancellationToken.None);
+        Func<Task> act = () => sweeper.StartAsync(CancellationToken.None);
         await act.Should().NotThrowAsync();
     }
 
@@ -152,14 +151,14 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
     [Fact]
     public async Task StartAsync_DeletesDirectoryNamedLtsFollowedByUlid()
     {
-        Directory.CreateDirectory(path: _cacheRoot);
+        Directory.CreateDirectory(_cacheRoot);
         string sessionId = Ulid.NewUlid().ToString();
-        string sessionDir = Path.Combine(path1: _cacheRoot, path2: $"lts-{sessionId}");
-        Directory.CreateDirectory(path: sessionDir);
+        string sessionDir = Path.Combine(_cacheRoot, $"lts-{sessionId}");
+        Directory.CreateDirectory(sessionDir);
 
         LiveTranscodeOrphanSweeper sweeper = BuildSweeper();
-        await sweeper.StartAsync(cancellationToken: CancellationToken.None);
+        await sweeper.StartAsync(CancellationToken.None);
 
-        Directory.Exists(path: sessionDir).Should().BeFalse();
+        Directory.Exists(sessionDir).Should().BeFalse();
     }
 }

@@ -33,10 +33,10 @@ public static partial class RipOutputPathHelper
     )
     {
         CustomMetadata? meta = request.Custom;
-        if (meta is null || string.IsNullOrWhiteSpace(value: meta.Title))
+        if (meta is null || string.IsNullOrWhiteSpace(meta.Title))
             return $"disc-rips/title_{titleIndex:D2}.mkv";
 
-        string safeTitle = SanitizeForPath(input: meta.Title);
+        string safeTitle = SanitizeForPath(meta.Title);
         string yearSuffix = meta.Year is { } year ? $" ({year})" : "";
         string showRoot = $"{safeTitle}{yearSuffix}";
 
@@ -63,13 +63,13 @@ public static partial class RipOutputPathHelper
 
     private static string SanitizeForPath(string input)
     {
-        string trimmed = InvalidFsChars().Replace(input: input, replacement: " ").Trim();
-        return WhitespaceRun().Replace(input: trimmed, replacement: " ");
+        string trimmed = InvalidFsChars().Replace(input, " ").Trim();
+        return WhitespaceRun().Replace(trimmed, " ");
     }
 
-    [GeneratedRegex(pattern: @"[<>:""/\\|?*\x00-\x1F]")]
+    [GeneratedRegex(@"[<>:""/\\|?*\x00-\x1F]")]
     private static partial Regex InvalidFsChars();
 
-    [GeneratedRegex(pattern: @"\s+")]
+    [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRun();
 }

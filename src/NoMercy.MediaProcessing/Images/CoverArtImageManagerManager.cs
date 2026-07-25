@@ -21,18 +21,18 @@ namespace NoMercy.MediaProcessing.Images;
 public class CoverArtImageManagerManager : ICoverArtImageManagerManager
 {
     private static readonly Size PaletteDecodeSize = new(
-        width: ColorQuantizer.MaxDimension,
-        height: ColorQuantizer.MaxDimension
+        ColorQuantizer.MaxDimension,
+        ColorQuantizer.MaxDimension
     );
 
     public static async Task<string> ColorPalette(string type, Uri url, bool? download = true)
     {
         return await BaseImageManager.ColorPalette(
-            client: CoverArtCoverArtClient.Download,
-            type: type,
-            path: url,
-            download: download,
-            maxDecodeSize: PaletteDecodeSize
+            CoverArtCoverArtClient.Download,
+            type,
+            url,
+            download,
+            PaletteDecodeSize
         );
     }
 
@@ -42,10 +42,10 @@ public class CoverArtImageManagerManager : ICoverArtImageManagerManager
     )
     {
         return await BaseImageManager.MultiColorPalette(
-            client: CoverArtCoverArtClient.Download,
-            items: items,
-            download: download,
-            maxDecodeSize: PaletteDecodeSize
+            CoverArtCoverArtClient.Download,
+            items,
+            download,
+            PaletteDecodeSize
         );
     }
 
@@ -59,22 +59,22 @@ public class CoverArtImageManagerManager : ICoverArtImageManagerManager
     {
         try
         {
-            CoverArtCoverArtClient coverArtCoverArtClient = new(id: id);
-            CoverArtCovers? covers = await coverArtCoverArtClient.Cover(priority: priority);
+            CoverArtCoverArtClient coverArtCoverArtClient = new(id);
+            CoverArtCovers? covers = await coverArtCoverArtClient.Cover(priority);
             if (covers is null)
                 return null;
 
-            CoverArtImage? coverItem = covers.Images.FirstOrDefault(predicate: image =>
-                image.Types.Contains(value: "Front")
+            CoverArtImage? coverItem = covers.Images.FirstOrDefault(image =>
+                image.Types.Contains("Front")
             );
 
             return coverItem?.CoverArtThumbnails.Large;
         }
         catch (Exception e)
         {
-            if (e.Message.Contains(value: "404"))
+            if (e.Message.Contains("404"))
                 return null;
-            Logger.FanArt(message: e.Message, level: LogEventLevel.Verbose);
+            Logger.FanArt(e.Message, LogEventLevel.Verbose);
             return null;
         }
     }
@@ -83,23 +83,23 @@ public class CoverArtImageManagerManager : ICoverArtImageManagerManager
     {
         try
         {
-            CoverArtCoverArtClient coverArtCoverArtClient = new(id: id);
-            CoverArtCovers? covers = await coverArtCoverArtClient.GroupCover(priority: priority);
+            CoverArtCoverArtClient coverArtCoverArtClient = new(id);
+            CoverArtCovers? covers = await coverArtCoverArtClient.GroupCover(priority);
             if (covers is null)
                 return null;
 
             List<CoverArtImage> coverList = covers
-                .Images.Where(predicate: image => image.Types.Contains(value: "Front"))
+                .Images.Where(image => image.Types.Contains("Front"))
                 .ToList();
 
             foreach (CoverArtImage coverItem in coverList)
             {
-                if (!coverItem.CoverArtThumbnails.Large.HasSuccessStatus(contentType: "image/*"))
+                if (!coverItem.CoverArtThumbnails.Large.HasSuccessStatus("image/*"))
                     continue;
 
                 return new()
                 {
-                    Palette = await ColorPalette(type: "cover", url: coverItem.CoverArtThumbnails.Large),
+                    Palette = await ColorPalette("cover", coverItem.CoverArtThumbnails.Large),
                     Url = coverItem.CoverArtThumbnails.Large,
                 };
             }
@@ -108,9 +108,9 @@ public class CoverArtImageManagerManager : ICoverArtImageManagerManager
         }
         catch (Exception e)
         {
-            if (e.Message.Contains(value: "404"))
+            if (e.Message.Contains("404"))
                 return null;
-            Logger.FanArt(message: e.Message, level: LogEventLevel.Verbose);
+            Logger.FanArt(e.Message, LogEventLevel.Verbose);
             return null;
         }
     }

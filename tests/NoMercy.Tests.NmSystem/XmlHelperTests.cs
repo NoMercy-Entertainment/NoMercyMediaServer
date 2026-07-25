@@ -10,20 +10,19 @@
 // -----------------------------------------------------------------------------
 
 using System.Xml.Serialization;
-using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.NmSystem;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class XmlHelperTests
 {
-    [XmlRoot(elementName: "TestObject")]
+    [XmlRoot("TestObject")]
     public class TestObject
     {
-        [XmlElement(elementName: "Name")]
+        [XmlElement("Name")]
         public string? Name { get; set; }
 
-        [XmlElement(elementName: "Value")]
+        [XmlElement("Value")]
         public int Value { get; set; }
 
         public TestObject() { }
@@ -43,18 +42,18 @@ public class XmlHelperTests
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(value1: Name, value2: Value);
+            return HashCode.Combine(Name, Value);
         }
     }
 
     [Fact]
     public void ToXml_SerializesObjectToXml()
     {
-        TestObject obj = new(name: "Test", value: 42);
+        TestObject obj = new("Test", 42);
         string xml = obj.ToXml();
-        xml.Should().Contain(expected: "TestObject");
-        xml.Should().Contain(expected: "Test");
-        xml.Should().Contain(expected: "42");
+        xml.Should().Contain("TestObject");
+        xml.Should().Contain("Test");
+        xml.Should().Contain("42");
     }
 
     [Fact]
@@ -63,20 +62,20 @@ public class XmlHelperTests
         string xml = "<TestObject><Name>Test</Name><Value>42</Value></TestObject>";
         TestObject? result = xml.FromXml<TestObject>();
         result.Should().NotBeNull();
-        result!.Name.Should().Be(expected: "Test");
-        result.Value.Should().Be(expected: 42);
+        result!.Name.Should().Be("Test");
+        result.Value.Should().Be(42);
     }
 
     [Fact]
     public void ToXml_ThenFromXml_RoundTrips()
     {
-        TestObject original = new(name: "Round Trip", value: 99);
+        TestObject original = new("Round Trip", 99);
         string xml = original.ToXml();
-        string xmlWithoutBom = xml.TrimStart(trimChar: '﻿');
+        string xmlWithoutBom = xml.TrimStart('﻿');
         TestObject? restored = xmlWithoutBom.FromXml<TestObject>();
         restored.Should().NotBeNull();
-        restored!.Name.Should().Be(expected: "Round Trip");
-        restored.Value.Should().Be(expected: 99);
+        restored!.Name.Should().Be("Round Trip");
+        restored.Value.Should().Be(99);
     }
 
     [Fact]
@@ -97,10 +96,10 @@ public class XmlHelperTests
     [Fact]
     public void ToXml_WithNullProperties_StillSerializes()
     {
-        TestObject obj = new(name: null, value: 5);
+        TestObject obj = new(null, 5);
         string xml = obj.ToXml();
-        xml.Should().Contain(expected: "TestObject");
-        xml.Should().Contain(expected: "5");
+        xml.Should().Contain("TestObject");
+        xml.Should().Contain("5");
     }
 
     [Fact]
@@ -109,7 +108,7 @@ public class XmlHelperTests
         string xml = "<TestObject><Name>OnlyName</Name></TestObject>";
         TestObject? result = xml.FromXml<TestObject>();
         result.Should().NotBeNull();
-        result!.Name.Should().Be(expected: "OnlyName");
-        result.Value.Should().Be(expected: 0);
+        result!.Name.Should().Be("OnlyName");
+        result.Value.Should().Be(0);
     }
 }

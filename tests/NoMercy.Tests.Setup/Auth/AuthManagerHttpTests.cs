@@ -42,7 +42,7 @@ namespace NoMercy.Tests.Setup.Auth;
 /// loopback <see cref="LoopbackHttpServer"/> exercises the actual HTTP round trip without
 /// touching the live internet or a real Keycloak.
 /// </remarks>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class AuthManagerHttpTests : IDisposable
 {
     private readonly AppDbContext _appContext;
@@ -55,15 +55,15 @@ public sealed class AuthManagerHttpTests : IDisposable
         ServiceCollection services = new();
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(serviceProvider: provider);
+        TokenStore.Initialize(provider);
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
-        _appContext = new(options: optionsBuilder.Options);
+        optionsBuilder.UseSqlite("Data Source=:memory:");
+        _appContext = new(optionsBuilder.Options);
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(appContext: _appContext, driver: new LocalStorageDriver(), authTokenStore: _authTokenStore);
+        _authManager = new(_appContext, new LocalStorageDriver(), _authTokenStore);
         _originalTokenClientId = ExternalServicesConfig.Current.TokenClientId;
     }
 
@@ -71,7 +71,7 @@ public sealed class AuthManagerHttpTests : IDisposable
     {
         _appContext.Database.CloseConnection();
         _appContext.Dispose();
-        _authTokenStore.SetAccessToken(token: null);
+        _authTokenStore.SetAccessToken(null);
         ExternalServicesConfig.Current.TokenClientId = _originalTokenClientId ?? "nomercy-server";
     }
 
@@ -83,22 +83,22 @@ public sealed class AuthManagerHttpTests : IDisposable
         DateTime nbf =
             notBefore
             ?? (
-                validTo < DateTime.UtcNow ? validTo.AddMinutes(value: -10) : DateTime.UtcNow.AddMinutes(value: -5)
+                validTo < DateTime.UtcNow ? validTo.AddMinutes(-10) : DateTime.UtcNow.AddMinutes(-5)
             );
         JwtSecurityToken token = new(
             issuer: "https://auth.nomercy.tv/realms/NoMercyTV",
             audience: "nomercy-server",
-            claims: [new(type: "sub", value: Guid.NewGuid().ToString())],
+            claims: [new("sub", Guid.NewGuid().ToString())],
             notBefore: nbf,
             expires: validTo
         );
-        return handler.WriteToken(token: token);
+        return handler.WriteToken(token);
     }
 
     private async Task SeedRefreshToken(string value)
     {
         _appContext.Configuration.Add(
-            entity: new()
+            new()
             {
                 Key = "auth_refresh_token",
                 Value = string.Empty,
@@ -109,14 +109,14 @@ public sealed class AuthManagerHttpTests : IDisposable
     }
 
     private async Task<Configuration?> ReadConfig(string key) =>
-        await _appContext.Configuration.AsNoTracking().FirstOrDefaultAsync(predicate: c => c.Key == key);
+        await _appContext.Configuration.AsNoTracking().FirstOrDefaultAsync(c => c.Key == key);
 
     private static string AuthResponseJson(
         string accessToken,
         string? refreshToken = "new-refresh"
     ) =>
         JsonConvert.SerializeObject(
-            value: new AuthResponse
+            new AuthResponse
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
@@ -130,107 +130,107 @@ public sealed class AuthManagerHttpTests : IDisposable
     [Fact]
     public async Task RefreshAsync_NoRefreshTokenInDb_ClearsAccessTokenAndReturns()
     {
-        _authTokenStore.SetAccessToken(token: "stale-access-token");
+        _authTokenStore.SetAccessToken("stale-access-token");
 
         await _authManager.RefreshAsync();
 
-        Assert.Null(@object: _authTokenStore.AccessToken);
+        Assert.Null(_authTokenStore.AccessToken);
     }
 
     [Fact]
     public async Task RefreshAsync_Success_StoresNewTokensAndSetsAccessToken()
     {
-        await SeedRefreshToken(value: "old-refresh-token");
-        string newJwt = CreateJwt(validTo: DateTime.UtcNow.AddHours(value: 1));
+        await SeedRefreshToken("old-refresh-token");
+        string newJwt = CreateJwt(DateTime.UtcNow.AddHours(1));
 
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(StatusCode: 200, Body: AuthResponseJson(accessToken: newJwt));
+        server.Handler = _ => new(200, AuthResponseJson(newJwt));
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         await _authManager.RefreshAsync();
 
-        Assert.Equal(expected: newJwt, actual: _authTokenStore.AccessToken);
-        Configuration? refreshRow = await ReadConfig(key: "auth_refresh_token");
-        Assert.Equal(expected: "new-refresh", actual: refreshRow?.SecureValue);
+        Assert.Equal(newJwt, _authTokenStore.AccessToken);
+        Configuration? refreshRow = await ReadConfig("auth_refresh_token");
+        Assert.Equal("new-refresh", refreshRow?.SecureValue);
     }
 
     [Fact]
     public async Task RefreshAsync_TransientServerError_ClearsAccessToken_KeepsRefreshToken()
     {
-        await SeedRefreshToken(value: "still-valid-refresh-token");
+        await SeedRefreshToken("still-valid-refresh-token");
 
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(StatusCode: 503, Body: "service unavailable");
+        server.Handler = _ => new(503, "service unavailable");
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
-        _authTokenStore.SetAccessToken(token: "stale-token");
+        _authTokenStore.SetAccessToken("stale-token");
         await _authManager.RefreshAsync();
 
-        Assert.Null(@object: _authTokenStore.AccessToken);
+        Assert.Null(_authTokenStore.AccessToken);
         // A transient failure must not discard the still-valid refresh token —
         // only an explicit invalid_grant does that (see the invalid_grant test below).
-        Configuration? refreshRow = await ReadConfig(key: "auth_refresh_token");
-        Assert.Equal(expected: "still-valid-refresh-token", actual: refreshRow?.SecureValue);
+        Configuration? refreshRow = await ReadConfig("auth_refresh_token");
+        Assert.Equal("still-valid-refresh-token", refreshRow?.SecureValue);
     }
 
     [Fact]
     public async Task RefreshAsync_InvalidGrant_PermanentlyClearsRefreshToken()
     {
-        await SeedRefreshToken(value: "dead-refresh-token");
+        await SeedRefreshToken("dead-refresh-token");
 
         using LoopbackHttpServer server = new();
         server.Handler = _ =>
-            new(StatusCode: 400, Body: "{\"error\":\"invalid_grant\",\"error_description\":\"Session not found\"}");
+            new(400, "{\"error\":\"invalid_grant\",\"error_description\":\"Session not found\"}");
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         await _authManager.RefreshAsync();
 
-        Assert.Null(@object: _authTokenStore.AccessToken);
-        Configuration? refreshRow = await ReadConfig(key: "auth_refresh_token");
+        Assert.Null(_authTokenStore.AccessToken);
+        Configuration? refreshRow = await ReadConfig("auth_refresh_token");
         // Empty string round-trips to null through TokenStore's encrypt/decrypt
         // converter (see TokenStore.DecryptToken) — both mean "cleared".
         Assert.True(
-            condition: string.IsNullOrEmpty(value: refreshRow?.SecureValue),
-            userMessage: "invalid_grant must permanently clear the refresh token"
+            string.IsNullOrEmpty(refreshRow?.SecureValue),
+            "invalid_grant must permanently clear the refresh token"
         );
     }
 
     [Fact]
     public async Task RefreshAsync_NetworkUnreachable_ReturnsFalseWithoutThrowing()
     {
-        await SeedRefreshToken(value: "some-refresh-token");
+        await SeedRefreshToken("some-refresh-token");
         // Port 1 on loopback: nothing listens there — connection refused immediately,
         // no live network dependency and no multi-second timeout.
         using ExternalServicesConfigScope scope = new(authBaseUrl: "http://127.0.0.1:1/");
 
         await _authManager.RefreshAsync();
 
-        Assert.Null(@object: _authTokenStore.AccessToken);
+        Assert.Null(_authTokenStore.AccessToken);
     }
 
     [Fact]
     public async Task RefreshAsync_TokenClientIdNotConfigured_ReturnsFalseWithoutCallingNetwork()
     {
-        await SeedRefreshToken(value: "some-refresh-token");
+        await SeedRefreshToken("some-refresh-token");
         ExternalServicesConfig.Current.TokenClientId = string.Empty;
 
         await _authManager.RefreshAsync();
 
-        Assert.Null(@object: _authTokenStore.AccessToken);
+        Assert.Null(_authTokenStore.AccessToken);
     }
 
     [Fact]
     public async Task RefreshAsync_ResponseMissingAccessToken_ReturnsFalse()
     {
-        await SeedRefreshToken(value: "some-refresh-token");
+        await SeedRefreshToken("some-refresh-token");
 
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(StatusCode: 200, Body: "{\"token_type\":\"Bearer\"}");
+        server.Handler = _ => new(200, "{\"token_type\":\"Bearer\"}");
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         await _authManager.RefreshAsync();
 
-        Assert.Null(@object: _authTokenStore.AccessToken);
+        Assert.Null(_authTokenStore.AccessToken);
     }
 
     // ── StoreTokensAsync(AuthResponse) ───────────────────────────────────────
@@ -238,20 +238,20 @@ public sealed class AuthManagerHttpTests : IDisposable
     [Fact]
     public async Task StoreTokensAsync_AuthResponse_NullAccessToken_DoesNotPersist()
     {
-        await _authManager.StoreTokensAsync(tokens: new AuthResponse { AccessToken = null });
+        await _authManager.StoreTokensAsync(new AuthResponse { AccessToken = null });
 
-        Configuration? row = await ReadConfig(key: "auth_access_token");
-        Assert.Null(@object: row);
+        Configuration? row = await ReadConfig("auth_access_token");
+        Assert.Null(row);
     }
 
     [Fact]
     public async Task StoreTokensAsync_AuthResponse_ValidJwt_UsesJwtExpiry()
     {
-        DateTime expiry = DateTime.UtcNow.AddHours(value: 3);
-        string jwt = CreateJwt(validTo: expiry);
+        DateTime expiry = DateTime.UtcNow.AddHours(3);
+        string jwt = CreateJwt(expiry);
 
         await _authManager.StoreTokensAsync(
-            tokens: new AuthResponse
+            new AuthResponse
             {
                 AccessToken = jwt,
                 RefreshToken = "r1",
@@ -260,16 +260,16 @@ public sealed class AuthManagerHttpTests : IDisposable
             }
         );
 
-        Configuration? metaRow = await ReadConfig(key: "auth_token_metadata");
-        Assert.NotNull(@object: metaRow);
-        Assert.Contains(expectedSubstring: expiry.ToString(format: "O")[..16], actualString: metaRow!.SecureValue);
+        Configuration? metaRow = await ReadConfig("auth_token_metadata");
+        Assert.NotNull(metaRow);
+        Assert.Contains(expiry.ToString("O")[..16], metaRow!.SecureValue);
     }
 
     [Fact]
     public async Task StoreTokensAsync_AuthResponse_UnparsableToken_FallsBackToExpiresIn()
     {
         await _authManager.StoreTokensAsync(
-            tokens: new AuthResponse
+            new AuthResponse
             {
                 AccessToken = "not-a-real-jwt",
                 RefreshToken = "r2",
@@ -278,9 +278,9 @@ public sealed class AuthManagerHttpTests : IDisposable
             }
         );
 
-        Assert.Equal(expected: "not-a-real-jwt", actual: _authTokenStore.AccessToken);
-        Configuration? metaRow = await ReadConfig(key: "auth_token_metadata");
-        Assert.NotNull(@object: metaRow);
+        Assert.Equal("not-a-real-jwt", _authTokenStore.AccessToken);
+        Configuration? metaRow = await ReadConfig("auth_token_metadata");
+        Assert.NotNull(metaRow);
     }
 
     [Fact]
@@ -289,7 +289,7 @@ public sealed class AuthManagerHttpTests : IDisposable
         DateTime before = DateTime.UtcNow;
 
         await _authManager.StoreTokensAsync(
-            tokens: new AuthResponse
+            new AuthResponse
             {
                 AccessToken = "still-not-a-jwt",
                 RefreshToken = "r3",
@@ -298,24 +298,24 @@ public sealed class AuthManagerHttpTests : IDisposable
             }
         );
 
-        Configuration? metaRow = await ReadConfig(key: "auth_token_metadata");
-        Assert.NotNull(@object: metaRow);
+        Configuration? metaRow = await ReadConfig("auth_token_metadata");
+        Assert.NotNull(metaRow);
         // Parse back the persisted expires_at and confirm it lands ~300s out (not 0, not huge).
         PersistedTokenMetadata meta =
-            JsonConvert.DeserializeObject<PersistedTokenMetadata>(value: metaRow!.SecureValue!)
-            ?? throw new InvalidOperationException(message: "metadata did not deserialize");
+            JsonConvert.DeserializeObject<PersistedTokenMetadata>(metaRow!.SecureValue!)
+            ?? throw new InvalidOperationException("metadata did not deserialize");
         DateTime expiresAt = DateTime.Parse(
-            s: meta.ExpiresAt!,
-            provider: null,
-            styles: System.Globalization.DateTimeStyles.RoundtripKind
+            meta.ExpiresAt!,
+            null,
+            System.Globalization.DateTimeStyles.RoundtripKind
         );
         TimeSpan delta = expiresAt - before;
-        Assert.InRange(actual: delta.TotalSeconds, low: 250, high: 350);
+        Assert.InRange(delta.TotalSeconds, 250, 350);
     }
 
     private sealed class PersistedTokenMetadata
     {
-        [JsonProperty(propertyName: "expires_at")]
+        [JsonProperty("expires_at")]
         public string? ExpiresAt { get; set; }
     }
 
@@ -325,90 +325,90 @@ public sealed class AuthManagerHttpTests : IDisposable
     public async Task TryCompletePkceFromCallbackAsync_NoPendingFlow_ReturnsFalse()
     {
         bool result = await AuthManager.TryCompletePkceFromCallbackAsync(
-            code: "some-code",
-            state: "some-state",
-            redirectUri: "http://localhost/callback"
+            "some-code",
+            "some-state",
+            "http://localhost/callback"
         );
 
-        Assert.False(condition: result);
+        Assert.False(result);
     }
 
     [Fact]
     public async Task TryCompletePkceFromCallbackAsync_StateMismatch_ReturnsFalse()
     {
-        AuthManager.PreparePkceBrowserFlow(codeVerifier: "verifier-abc", state: "expected-state");
+        AuthManager.PreparePkceBrowserFlow("verifier-abc", "expected-state");
 
         bool result = await AuthManager.TryCompletePkceFromCallbackAsync(
-            code: "some-code",
-            state: "wrong-state",
-            redirectUri: "http://localhost/callback"
+            "some-code",
+            "wrong-state",
+            "http://localhost/callback"
         );
 
-        Assert.False(condition: result);
+        Assert.False(result);
 
         // Clean up: a state mismatch does not consume the pending flow, so drain it
         // with a matching-but-doomed call to avoid leaking static state into other tests.
         await AuthManager.TryCompletePkceFromCallbackAsync(
-            code: "any",
-            state: "expected-state",
-            redirectUri: "http://localhost/callback"
+            "any",
+            "expected-state",
+            "http://localhost/callback"
         );
     }
 
     [Fact]
     public async Task TryCompletePkceFromCallbackAsync_Success_SetsAccessTokenAndReturnsTrue()
     {
-        AuthManager.PreparePkceBrowserFlow(codeVerifier: "verifier-xyz", state: "state-xyz");
-        string jwt = CreateJwt(validTo: DateTime.UtcNow.AddHours(value: 1));
+        AuthManager.PreparePkceBrowserFlow("verifier-xyz", "state-xyz");
+        string jwt = CreateJwt(DateTime.UtcNow.AddHours(1));
 
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(StatusCode: 200, Body: AuthResponseJson(accessToken: jwt));
+        server.Handler = _ => new(200, AuthResponseJson(jwt));
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         bool result = await AuthManager.TryCompletePkceFromCallbackAsync(
-            code: "auth-code",
-            state: "state-xyz",
-            redirectUri: "http://localhost/callback",
-            authTokenStore: _authTokenStore
+            "auth-code",
+            "state-xyz",
+            "http://localhost/callback",
+            _authTokenStore
         );
 
-        Assert.True(condition: result);
-        Assert.Equal(expected: jwt, actual: _authTokenStore.AccessToken);
+        Assert.True(result);
+        Assert.Equal(jwt, _authTokenStore.AccessToken);
     }
 
     [Fact]
     public async Task TryCompletePkceFromCallbackAsync_TokenExchangeFails_ReturnsFalse()
     {
-        AuthManager.PreparePkceBrowserFlow(codeVerifier: "verifier-fail", state: "state-fail");
+        AuthManager.PreparePkceBrowserFlow("verifier-fail", "state-fail");
 
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(StatusCode: 400, Body: "{\"error\":\"invalid_request\"}");
+        server.Handler = _ => new(400, "{\"error\":\"invalid_request\"}");
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         bool result = await AuthManager.TryCompletePkceFromCallbackAsync(
-            code: "auth-code",
-            state: "state-fail",
-            redirectUri: "http://localhost/callback",
-            authTokenStore: _authTokenStore
+            "auth-code",
+            "state-fail",
+            "http://localhost/callback",
+            _authTokenStore
         );
 
-        Assert.False(condition: result);
+        Assert.False(result);
     }
 
     [Fact]
     public async Task TryCompletePkceFromCallbackAsync_TokenClientIdMissing_ReturnsFalse()
     {
-        AuthManager.PreparePkceBrowserFlow(codeVerifier: "verifier-noclient", state: "state-noclient");
+        AuthManager.PreparePkceBrowserFlow("verifier-noclient", "state-noclient");
         ExternalServicesConfig.Current.TokenClientId = string.Empty;
 
         bool result = await AuthManager.TryCompletePkceFromCallbackAsync(
-            code: "auth-code",
-            state: "state-noclient",
-            redirectUri: "http://localhost/callback",
-            authTokenStore: _authTokenStore
+            "auth-code",
+            "state-noclient",
+            "http://localhost/callback",
+            _authTokenStore
         );
 
-        Assert.False(condition: result);
+        Assert.False(result);
     }
 
     // ── ScheduleBackgroundRefresh ────────────────────────────────────────────
@@ -416,31 +416,31 @@ public sealed class AuthManagerHttpTests : IDisposable
     [Fact]
     public async Task ScheduleBackgroundRefresh_NearExpiryToken_TriggersImmediateRefresh()
     {
-        await SeedRefreshToken(value: "bg-refresh-token");
+        await SeedRefreshToken("bg-refresh-token");
         // Expiring in 2s means (expiry - now - 60s) is negative, so the loop skips its
         // wait entirely and calls RefreshAsync on the very first iteration.
-        string aboutToExpire = CreateJwt(validTo: DateTime.UtcNow.AddSeconds(value: 2));
-        _authTokenStore.SetAccessToken(token: aboutToExpire);
+        string aboutToExpire = CreateJwt(DateTime.UtcNow.AddSeconds(2));
+        _authTokenStore.SetAccessToken(aboutToExpire);
 
         using LoopbackHttpServer server = new();
-        string freshJwt = CreateJwt(validTo: DateTime.UtcNow.AddHours(value: 1));
-        server.Handler = _ => new(StatusCode: 200, Body: AuthResponseJson(accessToken: freshJwt));
+        string freshJwt = CreateJwt(DateTime.UtcNow.AddHours(1));
+        server.Handler = _ => new(200, AuthResponseJson(freshJwt));
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         using CancellationTokenSource cts = new();
-        _authManager.ScheduleBackgroundRefresh(ct: cts.Token);
+        _authManager.ScheduleBackgroundRefresh(cts.Token);
 
-        DateTime deadline = DateTime.UtcNow.AddSeconds(value: 5);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(5);
         while (server.RequestCount == 0 && DateTime.UtcNow < deadline)
-            await Task.Delay(millisecondsDelay: 50);
+            await Task.Delay(50);
 
         Assert.True(
-            condition: server.RequestCount > 0,
-            userMessage: "Background refresh should have hit the token endpoint"
+            server.RequestCount > 0,
+            "Background refresh should have hit the token endpoint"
         );
 
         cts.Cancel();
-        await Task.Delay(millisecondsDelay: 100); // let the loop observe cancellation and exit
+        await Task.Delay(100); // let the loop observe cancellation and exit
     }
 
     [Fact]
@@ -450,15 +450,15 @@ public sealed class AuthManagerHttpTests : IDisposable
         // sitting inside `await Task.Delay(delay, linked)` when we cancel — this is
         // the OperationCanceledException break branch, distinct from the near-expiry
         // "refresh fires immediately" path above.
-        string farFuture = CreateJwt(validTo: DateTime.UtcNow.AddDays(value: 1));
-        _authTokenStore.SetAccessToken(token: farFuture);
+        string farFuture = CreateJwt(DateTime.UtcNow.AddDays(1));
+        _authTokenStore.SetAccessToken(farFuture);
 
         using CancellationTokenSource cts = new();
-        _authManager.ScheduleBackgroundRefresh(ct: cts.Token);
+        _authManager.ScheduleBackgroundRefresh(cts.Token);
 
-        await Task.Delay(millisecondsDelay: 50);
+        await Task.Delay(50);
         cts.Cancel();
-        await Task.Delay(millisecondsDelay: 100);
+        await Task.Delay(100);
 
         // No assertion beyond "did not throw / did not hang" — the loop's own
         // cancellation branch is what this test exercises.
@@ -469,32 +469,32 @@ public sealed class AuthManagerHttpTests : IDisposable
     [Fact]
     public void SecureDeleteFile_NonExistentFile_DoesNothing()
     {
-        string path = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-secdel-missing-{Guid.NewGuid():N}.tmp");
+        string path = Path.Combine(Path.GetTempPath(), $"nm-secdel-missing-{Guid.NewGuid():N}.tmp");
 
-        _authManager.SecureDeleteFile(path: path);
+        _authManager.SecureDeleteFile(path);
 
-        Assert.False(condition: File.Exists(path: path));
+        Assert.False(File.Exists(path));
     }
 
     [Fact]
     public void SecureDeleteFile_ExistingFile_OverwritesAndDeletes()
     {
-        string path = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-secdel-{Guid.NewGuid():N}.tmp");
-        File.WriteAllText(path: path, contents: "sensitive-token-contents");
+        string path = Path.Combine(Path.GetTempPath(), $"nm-secdel-{Guid.NewGuid():N}.tmp");
+        File.WriteAllText(path, "sensitive-token-contents");
 
-        _authManager.SecureDeleteFile(path: path);
+        _authManager.SecureDeleteFile(path);
 
-        Assert.False(condition: File.Exists(path: path));
+        Assert.False(File.Exists(path));
     }
 
     [Fact]
     public void SecureDeleteFile_EmptyFile_DeletesWithoutZeroingContent()
     {
-        string path = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-secdel-empty-{Guid.NewGuid():N}.tmp");
-        File.WriteAllText(path: path, contents: string.Empty);
+        string path = Path.Combine(Path.GetTempPath(), $"nm-secdel-empty-{Guid.NewGuid():N}.tmp");
+        File.WriteAllText(path, string.Empty);
 
-        _authManager.SecureDeleteFile(path: path);
+        _authManager.SecureDeleteFile(path);
 
-        Assert.False(condition: File.Exists(path: path));
+        Assert.False(File.Exists(path));
     }
 }

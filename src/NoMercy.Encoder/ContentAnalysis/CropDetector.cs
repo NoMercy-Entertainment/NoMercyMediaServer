@@ -42,7 +42,7 @@ public partial class CropDetector(
     // windows (the previous 60s) misclassified scope-aspect content whose
     // letterbox settled only after long fade-ins.
     private const int StartOffsetSeconds = 60;
-    private static readonly TimeSpan ScanDuration = TimeSpan.FromSeconds(seconds: 180);
+    private static readonly TimeSpan ScanDuration = TimeSpan.FromSeconds(180);
 
     // round=4 forces detected crop dimensions to multiples of 4. Multiples
     // of 2 (the previous default) tripped a handful of HEVC encoders that
@@ -66,13 +66,13 @@ public partial class CropDetector(
     private static readonly HashSet<string> HdrTransfers = ["smpte2084", "arib-std-b67"];
 
     public Task<CropResult> DetectAsync(string inputPath, CancellationToken ct) =>
-        DetectAsync(inputPath: inputPath, sourceVideoFileId: null, sourceIsHdr: false, ct: ct);
+        DetectAsync(inputPath, null, false, ct);
 
     public Task<CropResult> DetectAsync(
         string inputPath,
         Guid? sourceVideoFileId,
         CancellationToken ct
-    ) => DetectAsync(inputPath: inputPath, sourceVideoFileId: sourceVideoFileId, sourceIsHdr: false, ct: ct);
+    ) => DetectAsync(inputPath, sourceVideoFileId, false, ct);
 
     public async Task<CropResult> DetectAsync(
         string inputPath,
@@ -81,14 +81,14 @@ public partial class CropDetector(
         CancellationToken ct
     )
     {
-        await using LocalPathLease inputLease = storage.AcquireLocalPath(path: inputPath);
+        await using LocalPathLease inputLease = storage.AcquireLocalPath(inputPath);
 
         // Callers that already analysed the source (PlanStage) pass the known
         // HDR flag so no extra probe runs. Callers that don't (the on-demand
         // content-analysis API) pass null and we probe the transfer here so
         // the limit is still transfer-correct instead of silently SDR.
         bool isHdr =
-            sourceIsHdr ?? await ProbeIsHdrAsync(localPath: inputLease.Path, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+            sourceIsHdr ?? await ProbeIsHdrAsync(inputLease.Path, ct).ConfigureAwait(false);
 
         string[] args =
         [
@@ -100,7 +100,7 @@ public partial class CropDetector(
             "-t",
             ((int)ScanDuration.TotalSeconds).ToString(),
             "-vf",
-            CropDetectFilter(sourceIsHdr: isHdr),
+            CropDetectFilter(isHdr),
             "-f",
             "null",
             "-",
@@ -108,65 +108,65 @@ public partial class CropDetector(
 
         Dictionary<string, int> observations = [];
 
-        string jobId = sourceVideoFileId?.ToString(format: "N") ?? Guid.NewGuid().ToString(format: "N");
+        string jobId = sourceVideoFileId?.ToString("N") ?? Guid.NewGuid().ToString("N");
         IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
-        observer.Report(jobId: jobId, type: "crop", percent: 0, stage: "scanning");
+        observer.Report(jobId, "crop", 0, "scanning");
 
         ProcessResult result = await processRunner.RunAsync(
-            executable: options.FfmpegPath,
-            arguments: args,
-            onStdOut: null,
-            onStdErr: line =>
+            options.FfmpegPath,
+            args,
+            null,
+            line =>
             {
-                Match match = CropRegex().Match(input: line);
+                Match match = CropRegex().Match(line);
                 if (!match.Success)
                     return;
 
-                string crop = match.Groups[groupname: "crop"].Value;
-                observations[key: crop] = observations.GetValueOrDefault(key: crop) + 1;
+                string crop = match.Groups["crop"].Value;
+                observations[crop] = observations.GetValueOrDefault(crop) + 1;
             },
-            workingDirectory: null,
-            cancellationToken: ct
+            null,
+            ct
         );
 
-        observer.Report(jobId: jobId, type: "crop", percent: 100, stage: "done");
+        observer.Report(jobId, "crop", 100, "done");
 
         int totalObservations = observations.Values.Sum();
 
         if (!result.IsSuccess)
         {
             logger.LogWarning(
-                message: "cropdetect returned exit code {ExitCode}. Skipping crop.",
-                args: result.ExitCode
+                "cropdetect returned exit code {ExitCode}. Skipping crop.",
+                result.ExitCode
             );
             return new(
-                Width: 0,
-                Height: 0,
-                X: 0,
-                Y: 0,
-                ShouldCrop: false,
-                SourceVideoFileId: sourceVideoFileId,
-                SampleFramesAnalyzed: totalObservations,
-                Confidence: 0
+                0,
+                0,
+                0,
+                0,
+                false,
+                sourceVideoFileId,
+                totalObservations,
+                0
             );
         }
 
         if (observations.Count == 0)
         {
-            logger.LogDebug(message: "cropdetect observed no crop values for {Input}", args: inputPath);
+            logger.LogDebug("cropdetect observed no crop values for {Input}", inputPath);
             return new(
-                Width: 0,
-                Height: 0,
-                X: 0,
-                Y: 0,
-                ShouldCrop: false,
-                SourceVideoFileId: sourceVideoFileId,
-                SampleFramesAnalyzed: 0,
-                Confidence: 0
+                0,
+                0,
+                0,
+                0,
+                false,
+                sourceVideoFileId,
+                0,
+                0
             );
         }
 
-        KeyValuePair<string, int> top = observations.OrderByDescending(keySelector: kv => kv.Value).First();
+        KeyValuePair<string, int> top = observations.OrderByDescending(kv => kv.Value).First();
         string bestCrop = top.Key;
         int count = top.Value;
 
@@ -175,69 +175,69 @@ public partial class CropDetector(
         if (count < MinObservations)
         {
             logger.LogDebug(
-                message: "cropdetect top result {Crop} has only {Count} observations; not cropping", args: [bestCrop, count]
+                "cropdetect top result {Crop} has only {Count} observations; not cropping", [bestCrop, count]
             );
             return new(
-                Width: 0,
-                Height: 0,
-                X: 0,
-                Y: 0,
-                ShouldCrop: false,
-                SourceVideoFileId: sourceVideoFileId,
-                SampleFramesAnalyzed: count,
-                Confidence: confidence
+                0,
+                0,
+                0,
+                0,
+                false,
+                sourceVideoFileId,
+                count,
+                confidence
             );
         }
 
         // crop=W:H:X:Y — parse the four parts.
-        string[] parts = bestCrop.Split(separator: ':');
+        string[] parts = bestCrop.Split(':');
         if (parts.Length != 4)
             return new(
-                Width: 0,
-                Height: 0,
-                X: 0,
-                Y: 0,
-                ShouldCrop: false,
-                SourceVideoFileId: sourceVideoFileId,
-                SampleFramesAnalyzed: count,
-                Confidence: confidence
+                0,
+                0,
+                0,
+                0,
+                false,
+                sourceVideoFileId,
+                count,
+                confidence
             );
 
         if (
-            !int.TryParse(s: parts[0], result: out int width)
-            || !int.TryParse(s: parts[1], result: out int height)
-            || !int.TryParse(s: parts[2], result: out int x)
-            || !int.TryParse(s: parts[3], result: out int y)
+            !int.TryParse(parts[0], out int width)
+            || !int.TryParse(parts[1], out int height)
+            || !int.TryParse(parts[2], out int x)
+            || !int.TryParse(parts[3], out int y)
         )
         {
             return new(
-                Width: 0,
-                Height: 0,
-                X: 0,
-                Y: 0,
-                ShouldCrop: false,
-                SourceVideoFileId: sourceVideoFileId,
-                SampleFramesAnalyzed: count,
-                Confidence: confidence
+                0,
+                0,
+                0,
+                0,
+                false,
+                sourceVideoFileId,
+                count,
+                confidence
             );
         }
 
         logger.LogInformation(
-            message: "cropdetect → {Width}x{Height} at ({X},{Y}) ({Count} obs, confidence {Confidence:P0})", args: [width, height, x, y, count, confidence]
+            "cropdetect → {Width}x{Height} at ({X},{Y}) ({Count} obs, confidence {Confidence:P0})", [width, height, x, y, count, confidence]
         );
 
         // Do not crop when the detected rectangle matches the full frame.
         bool shouldCrop = x > 0 || y > 0;
 
         return new(
-            Width: width,
-            Height: height,
-            X: x,
-            Y: y,
-            ShouldCrop: shouldCrop,
-            SourceVideoFileId: sourceVideoFileId,
-            SampleFramesAnalyzed: count,
-            Confidence: confidence
+            width,
+            height,
+            x,
+            y,
+            shouldCrop,
+            sourceVideoFileId,
+            count,
+            confidence
         );
     }
 
@@ -264,26 +264,26 @@ public partial class CropDetector(
             ];
 
             ProcessResult probe = await processRunner
-                .RunAsync(executable: options.FfprobePath, arguments: args, workingDirectory: null, cancellationToken: ct)
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .RunAsync(options.FfprobePath, args, null, ct)
+                .ConfigureAwait(false);
 
             if (!probe.IsSuccess)
                 return false;
 
             string transfer = probe.StdOut.Trim().ToLowerInvariant();
-            return HdrTransfers.Contains(item: transfer);
+            return HdrTransfers.Contains(transfer);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogDebug(
-                exception: ex,
-                message: "HDR transfer probe failed for {Input}; assuming SDR crop threshold",
-                args: localPath
+                ex,
+                "HDR transfer probe failed for {Input}; assuming SDR crop threshold",
+                localPath
             );
             return false;
         }
     }
 
-    [GeneratedRegex(pattern: @"crop=(?<crop>\d+:\d+:\d+:\d+)")]
+    [GeneratedRegex(@"crop=(?<crop>\d+:\d+:\d+:\d+)")]
     private static partial Regex CropRegex();
 }

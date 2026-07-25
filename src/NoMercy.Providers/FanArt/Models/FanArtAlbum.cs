@@ -15,12 +15,12 @@ namespace NoMercy.Providers.FanArt.Models;
 
 public class FanArtAlbum
 {
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "mbid_id")]
+    [JsonProperty("mbid_id")]
     public string MbId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "albums")]
+    [JsonProperty("albums")]
     public Dictionary<Guid, Albums> Albums { get; set; } = [];
 }

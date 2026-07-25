@@ -44,7 +44,7 @@ namespace NoMercy.Tests.Api;
 /// NoMercyApiFactory), mocking only the SignalR plumbing (HubCallerContext,
 /// IHubCallerClients) and IChromeCastService (native Cast SDK has no test double).
 /// </summary>
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -72,38 +72,38 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         httpContext.Request.Path = "/videoHub";
 
         VideoHub hub = new(
-            logger: NullLogger<VideoHub>.Instance,
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: contextFactory,
-            connectedClients: _factory.GetConnectedClients(),
-            clientMessenger: _factory.Services.GetRequiredService<IClientMessenger>(),
-            videoPlaybackService: _factory.Services.GetRequiredService<VideoPlaybackService>(),
-            videoPlayerStateManager: _factory.Services.GetRequiredService<VideoPlayerStateManager>(),
-            videoDeviceManager: new VideoDeviceManager(mediaContext: new MediaContext()),
-            videoPlaylistManager: scope.ServiceProvider.GetRequiredService<VideoPlaylistManager>(),
-            commandHandler: _factory.Services.GetRequiredService<VideoPlaybackCommandHandler>(),
-            activityLogger: Mock.Of<IActivityLogger>(),
-            castTokenService: _factory.Services.GetRequiredService<CastSessionTokenService>(),
-            busRegistry: _factory.Services.GetRequiredService<DeviceBusRegistry>(),
-            chromeCast: Mock.Of<IChromeCastService>(),
-            userDataRepository: userDataRepository.Object,
-            networkDiscovery: null as INetworkDiscovery
+            NullLogger<VideoHub>.Instance,
+            new HttpContextAccessorStub(httpContext),
+            contextFactory,
+            _factory.GetConnectedClients(),
+            _factory.Services.GetRequiredService<IClientMessenger>(),
+            _factory.Services.GetRequiredService<VideoPlaybackService>(),
+            _factory.Services.GetRequiredService<VideoPlayerStateManager>(),
+            new VideoDeviceManager(new MediaContext()),
+            scope.ServiceProvider.GetRequiredService<VideoPlaylistManager>(),
+            _factory.Services.GetRequiredService<VideoPlaybackCommandHandler>(),
+            Mock.Of<IActivityLogger>(),
+            _factory.Services.GetRequiredService<CastSessionTokenService>(),
+            _factory.Services.GetRequiredService<DeviceBusRegistry>(),
+            Mock.Of<IChromeCastService>(),
+            userDataRepository.Object,
+            null as INetworkDiscovery
         );
 
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: userId.ToString())], authenticationType: "TestAuth")
+            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, userId.ToString())], "TestAuth")
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(expression: c => c.User).Returns(value: principal);
-        context.Setup(expression: c => c.ConnectionId).Returns(value: connectionId);
-        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
+        context.Setup(c => c.User).Returns(principal);
+        context.Setup(c => c.ConnectionId).Returns(connectionId);
+        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
 
         clients = new();
         Mock<ISingleClientProxy> callerProxy = new();
         Mock<ISingleClientProxy> userProxy = new();
-        clients.Setup(expression: c => c.Caller).Returns(value: callerProxy.Object);
-        clients.Setup(expression: c => c.User(It.IsAny<string>())).Returns(value: userProxy.Object);
+        clients.Setup(c => c.Caller).Returns(callerProxy.Object);
+        clients.Setup(c => c.User(It.IsAny<string>())).Returns(userProxy.Object);
 
         hub.Context = context.Object;
         hub.Clients = clients.Object;
@@ -117,7 +117,7 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
             IDbContextFactory<MediaContext>
         >();
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
-        return await ctx.VideoFiles.Where(predicate: v => v.MovieId == movieId).Select(selector: v => v.Id).FirstAsync();
+        return await ctx.VideoFiles.Where(v => v.MovieId == movieId).Select(v => v.Id).FirstAsync();
     }
 
     private async Task<UserData?> FindUserDataAsync(Ulid videoFileId, Guid userId)
@@ -126,7 +126,7 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
             IDbContextFactory<MediaContext>
         >();
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
-        return await ctx.UserData.FirstOrDefaultAsync(predicate: u =>
+        return await ctx.UserData.FirstOrDefaultAsync(u =>
             u.VideoFileId == videoFileId && u.UserId == userId
         );
     }
@@ -144,7 +144,7 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         >();
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
 
-        int movieId = Random.Shared.Next(minValue: 600_000_000, maxValue: 699_000_000);
+        int movieId = Random.Shared.Next(600_000_000, 699_000_000);
         User user = new()
         {
             Id = Guid.NewGuid(),
@@ -160,8 +160,8 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
             Title = "SetTime Isolated Test Movie",
             TitleSort = "setTime isolated test movie",
         };
-        ctx.Users.Add(entity: user);
-        ctx.Movies.Add(entity: movie);
+        ctx.Users.Add(user);
+        ctx.Movies.Add(movie);
         await ctx.SaveChangesAsync();
 
         VideoFile videoFile = new()
@@ -175,10 +175,10 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
             Share = "movies",
             MovieId = movieId,
         };
-        ctx.VideoFiles.Add(entity: videoFile);
+        ctx.VideoFiles.Add(videoFile);
         await ctx.SaveChangesAsync();
 
-        UserCache.Current.AddUser(user: user);
+        UserCache.Current.AddUser(user);
 
         return (user, movieId, videoFile.Id);
     }
@@ -191,13 +191,13 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
     public async Task SetTime_UnknownVideoFile_DoesNotUpsert()
     {
         (VideoHub hub, _) = CreateHub(
-            connectionId: Guid.NewGuid().ToString(),
-            userId: TestAuthHandler.DefaultUserId,
-            clients: out _
+            Guid.NewGuid().ToString(),
+            TestAuthHandler.DefaultUserId,
+            out _
         );
 
         await hub.SetTime(
-            request: new()
+            new()
             {
                 VideoId = Ulid.NewUlid(),
                 TmdbId = 129,
@@ -217,10 +217,10 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
 
         try
         {
-            (VideoHub hub, _) = CreateHub(connectionId: Guid.NewGuid().ToString(), userId: user.Id, clients: out _);
+            (VideoHub hub, _) = CreateHub(Guid.NewGuid().ToString(), user.Id, out _);
 
             await hub.SetTime(
-                request: new()
+                new()
                 {
                     VideoId = videoFileId,
                     TmdbId = movieId,
@@ -232,14 +232,14 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
                 }
             );
 
-            UserData? row = await FindUserDataAsync(videoFileId: videoFileId, userId: user.Id);
+            UserData? row = await FindUserDataAsync(videoFileId, user.Id);
             row.Should().NotBeNull();
-            row!.MovieId.Should().Be(expected: movieId);
-            row.Time.Should().Be(expected: 42_000);
+            row!.MovieId.Should().Be(movieId);
+            row.Time.Should().Be(42_000);
         }
         finally
         {
-            UserCache.Current.RemoveUser(user: user);
+            UserCache.Current.RemoveUser(user);
         }
     }
 
@@ -247,11 +247,11 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
     public async Task SetTime_MovieIdNotInDatabase_DoesNotUpsert()
     {
         Guid userId = TestAuthHandler.DefaultUserId;
-        Ulid videoFileId = await SeededVideoFileIdAsync(movieId: 129);
-        (VideoHub hub, _) = CreateHub(connectionId: Guid.NewGuid().ToString(), userId: userId, clients: out _);
+        Ulid videoFileId = await SeededVideoFileIdAsync(129);
+        (VideoHub hub, _) = CreateHub(Guid.NewGuid().ToString(), userId, out _);
 
         await hub.SetTime(
-            request: new()
+            new()
             {
                 VideoId = videoFileId,
                 TmdbId = 999_999_999,
@@ -260,24 +260,24 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        UserData? row = await FindUserDataAsync(videoFileId: videoFileId, userId: userId);
+        UserData? row = await FindUserDataAsync(videoFileId, userId);
         // Either no row was ever written for this (videoFileId, userId, movieId=999999999)
         // combination, or an earlier test already wrote one for MovieId 129 — either
         // way the bogus TmdbId must never have been persisted.
         if (row is not null)
-            row.MovieId.Should().NotBe(unexpected: 999_999_999);
+            row.MovieId.Should().NotBe(999_999_999);
     }
 
     [Fact]
     public async Task SetTime_CollectionPlaylistId_NonNumeric_DoesNotThrow()
     {
         Guid userId = TestAuthHandler.DefaultUserId;
-        Ulid videoFileId = await SeededVideoFileIdAsync(movieId: 129);
-        (VideoHub hub, _) = CreateHub(connectionId: Guid.NewGuid().ToString(), userId: userId, clients: out _);
+        Ulid videoFileId = await SeededVideoFileIdAsync(129);
+        (VideoHub hub, _) = CreateHub(Guid.NewGuid().ToString(), userId, out _);
 
         Func<Task> act = async () =>
             await hub.SetTime(
-                request: new()
+                new()
                 {
                     VideoId = videoFileId,
                     TmdbId = 129,
@@ -294,12 +294,12 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
     public async Task SetTime_SpecialPlaylistId_NonUlid_DoesNotThrow()
     {
         Guid userId = TestAuthHandler.DefaultUserId;
-        Ulid videoFileId = await SeededVideoFileIdAsync(movieId: 129);
-        (VideoHub hub, _) = CreateHub(connectionId: Guid.NewGuid().ToString(), userId: userId, clients: out _);
+        Ulid videoFileId = await SeededVideoFileIdAsync(129);
+        (VideoHub hub, _) = CreateHub(Guid.NewGuid().ToString(), userId, out _);
 
         Func<Task> act = async () =>
             await hub.SetTime(
-                request: new()
+                new()
                 {
                     VideoId = videoFileId,
                     TmdbId = 129,
@@ -319,11 +319,11 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         // entry — SetTime's very first guard (`user is null`) must return
         // before touching the database at all.
         Guid unknownUserId = Guid.NewGuid();
-        (VideoHub hub, _) = CreateHub(connectionId: Guid.NewGuid().ToString(), userId: unknownUserId, clients: out _);
+        (VideoHub hub, _) = CreateHub(Guid.NewGuid().ToString(), unknownUserId, out _);
 
         Func<Task> act = async () =>
             await hub.SetTime(
-                request: new()
+                new()
                 {
                     VideoId = Ulid.NewUlid(),
                     TmdbId = 129,
@@ -344,15 +344,15 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
     {
         Guid userId = TestAuthHandler.DefaultUserId;
         (VideoHub hub, Mock<IUserDataRepository> repo) = CreateHub(
-            connectionId: Guid.NewGuid().ToString(),
-            userId: userId,
-            clients: out _
+            Guid.NewGuid().ToString(),
+            userId,
+            out _
         );
 
-        await hub.RemoveWatched(request: new() { TmdbId = 129, PlaylistType = MediaTypes.MovieMediaType });
+        await hub.RemoveWatched(new() { TmdbId = 129, PlaylistType = MediaTypes.MovieMediaType });
 
         repo.Verify(
-            expression: r =>
+            r =>
                 r.RemoveForItemAsync(
                     userId,
                     MediaTypes.MovieMediaType,
@@ -360,7 +360,7 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
                     null,
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -370,13 +370,13 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         Guid userId = TestAuthHandler.DefaultUserId;
         Ulid specialId = Ulid.NewUlid();
         (VideoHub hub, Mock<IUserDataRepository> repo) = CreateHub(
-            connectionId: Guid.NewGuid().ToString(),
-            userId: userId,
-            clients: out _
+            Guid.NewGuid().ToString(),
+            userId,
+            out _
         );
 
         await hub.RemoveWatched(
-            request: new()
+            new()
             {
                 TmdbId = 0,
                 SpecialId = specialId,
@@ -385,7 +385,7 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         );
 
         repo.Verify(
-            expression: r =>
+            r =>
                 r.RemoveForItemAsync(
                     userId,
                     MediaTypes.SpecialMediaType,
@@ -393,7 +393,7 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
                     specialId,
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -405,9 +405,9 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
     public async Task PlaybackCommand_UnknownCachedUser_IsNoOp()
     {
         Guid unknownUserId = Guid.NewGuid();
-        (VideoHub hub, _) = CreateHub(connectionId: Guid.NewGuid().ToString(), userId: unknownUserId, clients: out _);
+        (VideoHub hub, _) = CreateHub(Guid.NewGuid().ToString(), unknownUserId, out _);
 
-        Func<Task> act = async () => await hub.PlaybackCommand(command: "play");
+        Func<Task> act = async () => await hub.PlaybackCommand("play");
 
         await act.Should().NotThrowAsync();
     }
@@ -418,10 +418,10 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         Guid userId = TestAuthHandler.DefaultUserId;
         VideoPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<VideoPlayerStateManager>();
-        stateManager.RemoveState(userId: userId);
-        (VideoHub hub, _) = CreateHub(connectionId: Guid.NewGuid().ToString(), userId: userId, clients: out _);
+        stateManager.RemoveState(userId);
+        (VideoHub hub, _) = CreateHub(Guid.NewGuid().ToString(), userId, out _);
 
-        Func<Task> act = async () => await hub.PlaybackCommand(command: "play");
+        Func<Task> act = async () => await hub.PlaybackCommand("play");
 
         await act.Should().NotThrowAsync();
     }
@@ -433,20 +433,20 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         VideoPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<VideoPlayerStateManager>();
         VideoPlayerState state = new() { PlayState = false };
-        stateManager.UpdateState(userId: userId, state: state);
+        stateManager.UpdateState(userId, state);
 
         try
         {
-            (VideoHub hub, _) = CreateHub(connectionId: Guid.NewGuid().ToString(), userId: userId, clients: out _);
+            (VideoHub hub, _) = CreateHub(Guid.NewGuid().ToString(), userId, out _);
 
-            await hub.PlaybackCommand(command: "play");
+            await hub.PlaybackCommand("play");
 
             state.PlayState.Should().BeTrue();
         }
         finally
         {
-            _factory.Services.GetRequiredService<VideoPlaybackService>().RemoveTimer(userId: userId);
-            stateManager.RemoveState(userId: userId);
+            _factory.Services.GetRequiredService<VideoPlaybackService>().RemoveTimer(userId);
+            stateManager.RemoveState(userId);
         }
     }
 
@@ -458,7 +458,7 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         VideoPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<VideoPlayerStateManager>();
         VideoPlayerState state = new() { PlayState = false, DeviceId = null };
-        stateManager.UpdateState(userId: userId, state: state);
+        stateManager.UpdateState(userId, state);
 
         string deviceId = $"caller-device-{Guid.NewGuid()}";
         Client callerClient = new()
@@ -472,22 +472,22 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
             VolumePercent = 77,
         };
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        connectedClients.Clients[key: connectionId] = callerClient;
+        connectedClients.Clients[connectionId] = callerClient;
 
         try
         {
-            (VideoHub hub, _) = CreateHub(connectionId: connectionId, userId: userId, clients: out _);
+            (VideoHub hub, _) = CreateHub(connectionId, userId, out _);
 
-            await hub.PlaybackCommand(command: "mute");
+            await hub.PlaybackCommand("mute");
 
-            state.DeviceId.Should().Be(expected: deviceId);
-            state.VolumePercentage.Should().Be(expected: 77);
+            state.DeviceId.Should().Be(deviceId);
+            state.VolumePercentage.Should().Be(77);
         }
         finally
         {
-            connectedClients.Clients.TryRemove(key: connectionId, value: out _);
-            _factory.Services.GetRequiredService<VideoPlaybackService>().RemoveTimer(userId: userId);
-            stateManager.RemoveState(userId: userId);
+            connectedClients.Clients.TryRemove(connectionId, out _);
+            _factory.Services.GetRequiredService<VideoPlaybackService>().RemoveTimer(userId);
+            stateManager.RemoveState(userId);
         }
     }
 
@@ -499,9 +499,9 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
     public async Task ChangeDeviceCommand_EmptyDeviceId_IsNoOp()
     {
         Guid userId = TestAuthHandler.DefaultUserId;
-        (VideoHub hub, _) = CreateHub(connectionId: Guid.NewGuid().ToString(), userId: userId, clients: out _);
+        (VideoHub hub, _) = CreateHub(Guid.NewGuid().ToString(), userId, out _);
 
-        Func<Task> act = async () => await hub.ChangeDeviceCommand(deviceId: "");
+        Func<Task> act = async () => await hub.ChangeDeviceCommand("");
 
         await act.Should().NotThrowAsync();
     }
@@ -512,13 +512,13 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         Guid userId = TestAuthHandler.DefaultUserId;
         VideoPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<VideoPlayerStateManager>();
-        stateManager.RemoveState(userId: userId);
-        (VideoHub hub, _) = CreateHub(connectionId: Guid.NewGuid().ToString(), userId: userId, clients: out _);
+        stateManager.RemoveState(userId);
+        (VideoHub hub, _) = CreateHub(Guid.NewGuid().ToString(), userId, out _);
 
-        Func<Task> act = async () => await hub.ChangeDeviceCommand(deviceId: "some-device-id");
+        Func<Task> act = async () => await hub.ChangeDeviceCommand("some-device-id");
 
         await act.Should().NotThrowAsync();
-        stateManager.HasState(userId: userId).Should().BeFalse();
+        stateManager.HasState(userId).Should().BeFalse();
     }
 
     [Fact]
@@ -528,21 +528,21 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         VideoPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<VideoPlayerStateManager>();
         VideoPlayerState state = new() { PlayState = false };
-        stateManager.UpdateState(userId: userId, state: state);
+        stateManager.UpdateState(userId, state);
 
         string targetDeviceId = $"phone-{Guid.NewGuid()}";
 
         try
         {
-            (VideoHub hub, _) = CreateHub(connectionId: Guid.NewGuid().ToString(), userId: userId, clients: out _);
+            (VideoHub hub, _) = CreateHub(Guid.NewGuid().ToString(), userId, out _);
 
-            await hub.ChangeDeviceCommand(deviceId: targetDeviceId);
+            await hub.ChangeDeviceCommand(targetDeviceId);
 
-            state.DeviceId.Should().Be(expected: targetDeviceId);
+            state.DeviceId.Should().Be(targetDeviceId);
         }
         finally
         {
-            stateManager.RemoveState(userId: userId);
+            stateManager.RemoveState(userId);
         }
     }
 

@@ -28,7 +28,7 @@ public class DashTwoPassStrategy(
     ICheckpointStore checkpointStore,
     ILogger<DashTwoPassStrategy> logger,
     IStorage storage
-) : TwoPassStrategyBase(encoder: encoder, checkpointStore: checkpointStore, logger: logger, storage: storage)
+) : TwoPassStrategyBase(encoder, checkpointStore, logger, storage)
 {
     public override OutputFormat Format => OutputFormat.Dash;
 }

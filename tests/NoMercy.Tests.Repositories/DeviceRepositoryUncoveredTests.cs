@@ -28,7 +28,7 @@ public class DeviceRepositoryUncoveredTests : IDisposable
 
     public DeviceRepositoryUncoveredTests()
     {
-        _connection = new(connectionString: "Data Source=:memory:");
+        _connection = new("Data Source=:memory:");
         _connection.Open();
 
         using (SqliteCommand fkOff = _connection.CreateCommand())
@@ -37,9 +37,9 @@ public class DeviceRepositoryUncoveredTests : IDisposable
             fkOff.ExecuteNonQuery();
         }
 
-        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(connection: _connection).Options;
+        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(_connection).Options;
 
-        using MediaContext ctx = new(options: _options);
+        using MediaContext ctx = new(_options);
         ctx.Database.EnsureCreated();
     }
 
@@ -50,7 +50,7 @@ public class DeviceRepositoryUncoveredTests : IDisposable
 
     private MediaContext OpenContext()
     {
-        return new(options: _options);
+        return new(_options);
     }
 
     private static Device MakeDevice(Guid? ownerUserId = null, string suffix = "A")
@@ -76,11 +76,11 @@ public class DeviceRepositoryUncoveredTests : IDisposable
         Device deviceWithoutLog = MakeDevice(suffix: "WithoutLog");
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Devices.AddRange(entities: [deviceWithLog, deviceWithoutLog]);
+        seedCtx.Devices.AddRange(deviceWithLog, deviceWithoutLog);
         await seedCtx.SaveChangesAsync();
 
         seedCtx.ActivityLogs.Add(
-            entity: new()
+            new()
             {
                 Category = ActivityCategory.Auth,
                 Type = "auth.login",
@@ -92,13 +92,13 @@ public class DeviceRepositoryUncoveredTests : IDisposable
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        DeviceRepository repository = new(context: queryCtx);
+        DeviceRepository repository = new(queryCtx);
 
         List<Device> result = await repository.GetDevices();
 
-        result.Should().HaveCount(expected: 2);
-        result.Single(predicate: d => d.Id == deviceWithLog.Id).ActivityLogs.Should().ContainSingle();
-        result.Single(predicate: d => d.Id == deviceWithoutLog.Id).ActivityLogs.Should().BeEmpty();
+        result.Should().HaveCount(2);
+        result.Single(d => d.Id == deviceWithLog.Id).ActivityLogs.Should().ContainSingle();
+        result.Single(d => d.Id == deviceWithoutLog.Id).ActivityLogs.Should().BeEmpty();
     }
 
     [Fact]
@@ -107,14 +107,14 @@ public class DeviceRepositoryUncoveredTests : IDisposable
         Device device = MakeDevice(suffix: "Added");
 
         await using MediaContext ctx = OpenContext();
-        DeviceRepository repository = new(context: ctx);
+        DeviceRepository repository = new(ctx);
 
-        await repository.AddDeviceAsync(device: device);
+        await repository.AddDeviceAsync(device);
 
         await using MediaContext verifyCtx = OpenContext();
-        Device? persisted = await verifyCtx.Devices.FirstOrDefaultAsync(predicate: d => d.Id == device.Id);
+        Device? persisted = await verifyCtx.Devices.FirstOrDefaultAsync(d => d.Id == device.Id);
         persisted.Should().NotBeNull();
-        persisted!.DeviceId.Should().Be(expected: device.DeviceId);
+        persisted!.DeviceId.Should().Be(device.DeviceId);
     }
 
     [Fact]
@@ -124,27 +124,27 @@ public class DeviceRepositoryUncoveredTests : IDisposable
         Device toKeep = MakeDevice(suffix: "ToKeep");
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Devices.AddRange(entities: [toDelete, toKeep]);
+        seedCtx.Devices.AddRange(toDelete, toKeep);
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext deleteCtx = OpenContext();
-        Device tracked = await deleteCtx.Devices.FirstAsync(predicate: d => d.Id == toDelete.Id);
-        DeviceRepository repository = new(context: deleteCtx);
+        Device tracked = await deleteCtx.Devices.FirstAsync(d => d.Id == toDelete.Id);
+        DeviceRepository repository = new(deleteCtx);
 
-        await repository.DeleteDeviceAsync(device: tracked);
+        await repository.DeleteDeviceAsync(tracked);
 
         await using MediaContext verifyCtx = OpenContext();
-        (await verifyCtx.Devices.AnyAsync(predicate: d => d.Id == toDelete.Id)).Should().BeFalse();
-        (await verifyCtx.Devices.AnyAsync(predicate: d => d.Id == toKeep.Id)).Should().BeTrue();
+        (await verifyCtx.Devices.AnyAsync(d => d.Id == toDelete.Id)).Should().BeFalse();
+        (await verifyCtx.Devices.AnyAsync(d => d.Id == toKeep.Id)).Should().BeTrue();
     }
 
     [Fact]
     public async Task GetByIdAsync_UnknownId_ReturnsNull()
     {
         await using MediaContext ctx = OpenContext();
-        DeviceRepository repository = new(context: ctx);
+        DeviceRepository repository = new(ctx);
 
-        Device? result = await repository.GetByIdAsync(deviceId: Ulid.NewUlid());
+        Device? result = await repository.GetByIdAsync(Ulid.NewUlid());
 
         result.Should().BeNull();
     }
@@ -154,16 +154,16 @@ public class DeviceRepositoryUncoveredTests : IDisposable
     {
         Device device = MakeDevice(suffix: "ById");
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Devices.Add(entity: device);
+        seedCtx.Devices.Add(device);
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        DeviceRepository repository = new(context: queryCtx);
+        DeviceRepository repository = new(queryCtx);
 
-        Device? result = await repository.GetByIdAsync(deviceId: device.Id);
+        Device? result = await repository.GetByIdAsync(device.Id);
 
         result.Should().NotBeNull();
-        result!.DeviceId.Should().Be(expected: device.DeviceId);
+        result!.DeviceId.Should().Be(device.DeviceId);
     }
 
     [Fact]
@@ -171,20 +171,20 @@ public class DeviceRepositoryUncoveredTests : IDisposable
     {
         Guid owner1 = Guid.NewGuid();
         Guid owner2 = Guid.NewGuid();
-        Device device1 = MakeDevice(ownerUserId: owner1, suffix: "Owner1");
-        Device device2 = MakeDevice(ownerUserId: owner2, suffix: "Owner2");
+        Device device1 = MakeDevice(owner1, "Owner1");
+        Device device2 = MakeDevice(owner2, "Owner2");
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Devices.AddRange(entities: [device1, device2]);
+        seedCtx.Devices.AddRange(device1, device2);
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        DeviceRepository repository = new(context: queryCtx);
+        DeviceRepository repository = new(queryCtx);
 
         List<Device> result = await repository.GetAllAsync();
 
-        result.Should().HaveCount(expected: 2);
-        result.Select(selector: d => d.Id).Should().BeEquivalentTo(expectation: [device1.Id, device2.Id]);
+        result.Should().HaveCount(2);
+        result.Select(d => d.Id).Should().BeEquivalentTo([device1.Id, device2.Id]);
     }
 
     [Fact]
@@ -192,50 +192,48 @@ public class DeviceRepositoryUncoveredTests : IDisposable
     {
         Guid targetOwner = Guid.NewGuid();
         Guid otherOwner = Guid.NewGuid();
-        Device ownedDevice = MakeDevice(ownerUserId: targetOwner, suffix: "Owned");
-        Device otherDevice = MakeDevice(ownerUserId: otherOwner, suffix: "Other");
+        Device ownedDevice = MakeDevice(targetOwner, "Owned");
+        Device otherDevice = MakeDevice(otherOwner, "Other");
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Devices.AddRange(entities: [ownedDevice, otherDevice]);
+        seedCtx.Devices.AddRange(ownedDevice, otherDevice);
         await seedCtx.SaveChangesAsync();
 
-        seedCtx.ActivityLogs.AddRange(entities:
-            [
-                new ActivityLog
-                {
-                    Category = ActivityCategory.Auth,
-                    Type = "auth.login",
-                    Time = DateTime.UtcNow,
-                    UserId = Guid.NewGuid(),
-                    DeviceId = ownedDevice.Id,
-                },
-                new ActivityLog
-                {
-                    Category = ActivityCategory.Auth,
-                    Type = "auth.login",
-                    Time = DateTime.UtcNow,
-                    UserId = Guid.NewGuid(),
-                    DeviceId = otherDevice.Id,
-                }
-            ]
+        seedCtx.ActivityLogs.AddRange(
+            new ActivityLog
+            {
+                Category = ActivityCategory.Auth,
+                Type = "auth.login",
+                Time = DateTime.UtcNow,
+                UserId = Guid.NewGuid(),
+                DeviceId = ownedDevice.Id,
+            },
+            new ActivityLog
+            {
+                Category = ActivityCategory.Auth,
+                Type = "auth.login",
+                Time = DateTime.UtcNow,
+                UserId = Guid.NewGuid(),
+                DeviceId = otherDevice.Id,
+            }
         );
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext deleteCtx = OpenContext();
-        DeviceRepository repository = new(context: deleteCtx);
+        DeviceRepository repository = new(deleteCtx);
 
-        await repository.DeleteActivityLogsByOwnerAsync(ownerUserId: targetOwner);
+        await repository.DeleteActivityLogsByOwnerAsync(targetOwner);
 
         await using MediaContext verifyCtx = OpenContext();
-        (await verifyCtx.ActivityLogs.AnyAsync(predicate: l => l.DeviceId == ownedDevice.Id))
+        (await verifyCtx.ActivityLogs.AnyAsync(l => l.DeviceId == ownedDevice.Id))
             .Should()
             .BeFalse();
-        (await verifyCtx.ActivityLogs.AnyAsync(predicate: l => l.DeviceId == otherDevice.Id))
+        (await verifyCtx.ActivityLogs.AnyAsync(l => l.DeviceId == otherDevice.Id))
             .Should()
             .BeTrue();
-        (await verifyCtx.Devices.AnyAsync(predicate: d => d.Id == ownedDevice.Id))
+        (await verifyCtx.Devices.AnyAsync(d => d.Id == ownedDevice.Id))
             .Should()
-            .BeTrue(because: "only the log history is cleared, not the device itself");
+            .BeTrue("only the log history is cleared, not the device itself");
     }
 
     [Fact]
@@ -245,38 +243,36 @@ public class DeviceRepositoryUncoveredTests : IDisposable
         Device device2 = MakeDevice(suffix: "All2");
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Devices.AddRange(entities: [device1, device2]);
+        seedCtx.Devices.AddRange(device1, device2);
         await seedCtx.SaveChangesAsync();
 
-        seedCtx.ActivityLogs.AddRange(entities:
-            [
-                new ActivityLog
-                {
-                    Category = ActivityCategory.Auth,
-                    Type = "auth.login",
-                    Time = DateTime.UtcNow,
-                    UserId = Guid.NewGuid(),
-                    DeviceId = device1.Id,
-                },
-                new ActivityLog
-                {
-                    Category = ActivityCategory.Playback,
-                    Type = "playback.started",
-                    Time = DateTime.UtcNow,
-                    UserId = Guid.NewGuid(),
-                    DeviceId = device2.Id,
-                }
-            ]
+        seedCtx.ActivityLogs.AddRange(
+            new ActivityLog
+            {
+                Category = ActivityCategory.Auth,
+                Type = "auth.login",
+                Time = DateTime.UtcNow,
+                UserId = Guid.NewGuid(),
+                DeviceId = device1.Id,
+            },
+            new ActivityLog
+            {
+                Category = ActivityCategory.Playback,
+                Type = "playback.started",
+                Time = DateTime.UtcNow,
+                UserId = Guid.NewGuid(),
+                DeviceId = device2.Id,
+            }
         );
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext deleteCtx = OpenContext();
-        DeviceRepository repository = new(context: deleteCtx);
+        DeviceRepository repository = new(deleteCtx);
 
         await repository.DeleteAllActivityLogsAsync();
 
         await using MediaContext verifyCtx = OpenContext();
-        (await verifyCtx.ActivityLogs.CountAsync()).Should().Be(expected: 0);
-        (await verifyCtx.Devices.CountAsync()).Should().Be(expected: 2);
+        (await verifyCtx.ActivityLogs.CountAsync()).Should().Be(0);
+        (await verifyCtx.Devices.CountAsync()).Should().Be(2);
     }
 }

@@ -39,68 +39,68 @@ public static class RuntimeErrors
     )
     {
         EncoderErrorShape shape = new(
-            Id: EncoderRuleId.GpuCapacityExhausted,
-            Message: $"All NVENC sessions on '{gpu}' are in use ({sessions} active). New encode held until a slot frees.",
-            Suggestion: suggestion
+            EncoderRuleId.GpuCapacityExhausted,
+            $"All NVENC sessions on '{gpu}' are in use ({sessions} active). New encode held until a slot frees.",
+            suggestion
                         ?? "Set hardware_preference=force_software for this profile to encode on CPU instead, or wait for a slot to free.",
-            Details: new GpuCapacityDetails(Gpu: gpu, Sessions: sessions)
+            new GpuCapacityDetails(gpu, sessions)
         );
-        return new(shape: shape, httpStatusCode: 409);
+        return new(shape, 409);
     }
 
     public static EncoderRuntimeException EncoderInitFailed(string handle, string reason) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.EncoderInitFailed,
-                Message: $"Encoder '{handle}' failed to initialise: {reason}",
-                Suggestion: "Check the ffmpeg capability probe at /api/v1/encoder/capabilities — the encoder may be missing from this build.",
-                Details: new EncoderInitDetails(Handle: handle, Reason: reason)
+            new(
+                EncoderRuleId.EncoderInitFailed,
+                $"Encoder '{handle}' failed to initialise: {reason}",
+                "Check the ffmpeg capability probe at /api/v1/encoder/capabilities — the encoder may be missing from this build.",
+                new EncoderInitDetails(handle, reason)
             ),
-            httpStatusCode: 500
+            500
         );
 
     public static EncoderRuntimeException SourceNotAccessible(string path) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.SourceNotAccessible,
-                Message: $"Source file is not accessible: {path}",
-                Suggestion: "Verify the file exists and the encoder process has read permission. For network shares, check the mount is active.",
-                Details: new SourcePathDetails(Path: path)
+            new(
+                EncoderRuleId.SourceNotAccessible,
+                $"Source file is not accessible: {path}",
+                "Verify the file exists and the encoder process has read permission. For network shares, check the mount is active.",
+                new SourcePathDetails(path)
             ),
-            httpStatusCode: 404
+            404
         );
 
     public static EncoderRuntimeException SourceReadError(string path, string detail) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.SourceReadError,
-                Message: $"Source read failed: {path} — {detail}",
-                Suggestion: "If this is a network share, verify connectivity. For local files, run a filesystem check.",
-                Details: new SourcePathDetails(Path: path)
+            new(
+                EncoderRuleId.SourceReadError,
+                $"Source read failed: {path} — {detail}",
+                "If this is a network share, verify connectivity. For local files, run a filesystem check.",
+                new SourcePathDetails(path)
             ),
-            httpStatusCode: 500
+            500
         );
 
     public static EncoderRuntimeException OutputWriteError(string path, string detail) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.OutputWriteError,
-                Message: $"Output write failed: {path} — {detail}",
-                Suggestion: "Check disk space and that the output directory has write permission for the encoder process.",
-                Details: new OutputPathDetails(Path: path)
+            new(
+                EncoderRuleId.OutputWriteError,
+                $"Output write failed: {path} — {detail}",
+                "Check disk space and that the output directory has write permission for the encoder process.",
+                new OutputPathDetails(path)
             ),
-            httpStatusCode: 500
+            500
         );
 
     public static EncoderRuntimeException OutputPathNotAllowed(string path, string reason) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.OutputPathNotAllowed,
-                Message: $"Output path rejected: {reason} (path={path})",
-                Suggestion: "Add the parent directory to EncoderOptions.Storage.AllowedRoots, or write the output to an existing allowed root.",
-                Details: new OutputPathDetails(Path: path)
+            new(
+                EncoderRuleId.OutputPathNotAllowed,
+                $"Output path rejected: {reason} (path={path})",
+                "Add the parent directory to EncoderOptions.Storage.AllowedRoots, or write the output to an existing allowed root.",
+                new OutputPathDetails(path)
             ),
-            httpStatusCode: 403
+            403
         );
 
     /// <summary>
@@ -111,79 +111,79 @@ public static class RuntimeErrors
     /// </summary>
     public static EncoderRuntimeException LicenseRevoked(string reason) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.LicenseRevoked,
-                Message: $"Cluster license revoked: {reason}",
-                Suggestion: "Re-link the server to your NoMercy account at https://nomercy.tv/dashboard/devices, or downgrade to standalone mode.",
-                Details: null
+            new(
+                EncoderRuleId.LicenseRevoked,
+                $"Cluster license revoked: {reason}",
+                "Re-link the server to your NoMercy account at https://nomercy.tv/dashboard/devices, or downgrade to standalone mode.",
+                null
             ),
-            httpStatusCode: 403
+            403
         );
 
     public static EncoderRuntimeException LicenseUnreachable(string url) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.LicenseUnreachable,
-                Message: $"Cluster license server is unreachable at {url}.",
-                Suggestion: "Check this server's outbound connectivity to api.nomercy.tv. Distributed encoding will resume automatically when the server is reachable again.",
-                Details: null
+            new(
+                EncoderRuleId.LicenseUnreachable,
+                $"Cluster license server is unreachable at {url}.",
+                "Check this server's outbound connectivity to api.nomercy.tv. Distributed encoding will resume automatically when the server is reachable again.",
+                null
             ),
-            httpStatusCode: 503
+            503
         );
 
     public static EncoderRuntimeException HardwareForcedButUnavailable(string requested) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.HardwareForcedButUnavailable,
-                Message: $"hardware_preference=force_hardware was set but no compatible hardware encoder is available for '{requested}'.",
-                Suggestion: "Switch hardware_preference to prefer_hardware (auto-fallback to software), or install the missing GPU drivers and run /api/v1/encoder/hardware/benchmark.",
-                Details: new HardwareDetails(Requested: requested)
+            new(
+                EncoderRuleId.HardwareForcedButUnavailable,
+                $"hardware_preference=force_hardware was set but no compatible hardware encoder is available for '{requested}'.",
+                "Switch hardware_preference to prefer_hardware (auto-fallback to software), or install the missing GPU drivers and run /api/v1/encoder/hardware/benchmark.",
+                new HardwareDetails(requested)
             ),
-            httpStatusCode: 422
+            422
         );
 
     public static EncoderRuntimeException JobInterruptedNoCheckpoint(string jobId) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.JobInterruptedNoCheckpoint,
-                Message: $"Job {jobId} was interrupted by shutdown and has no checkpoint to resume from.",
-                Suggestion: "Re-dispatch the job — it will start from the beginning.",
-                Details: new JobDetails(JobId: jobId)
+            new(
+                EncoderRuleId.JobInterruptedNoCheckpoint,
+                $"Job {jobId} was interrupted by shutdown and has no checkpoint to resume from.",
+                "Re-dispatch the job — it will start from the beginning.",
+                new JobDetails(jobId)
             ),
-            httpStatusCode: 500
+            500
         );
 
     public static EncoderRuntimeException DiscDriveBusy(string drivePath) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.DiscDriveBusy,
-                Message: $"Drive {drivePath} is already busy with an active rip.",
-                Suggestion: "Wait for the active rip to finish, or insert the disc in a different drive.",
-                Details: new DriveDetails(DrivePath: drivePath)
+            new(
+                EncoderRuleId.DiscDriveBusy,
+                $"Drive {drivePath} is already busy with an active rip.",
+                "Wait for the active rip to finish, or insert the disc in a different drive.",
+                new DriveDetails(drivePath)
             ),
-            httpStatusCode: 409
+            409
         );
 
     public static EncoderRuntimeException DiscAacsCertMissing(string volumeId) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.DiscAacsCertMissing,
-                Message: $"AACS: no matching certificate for volume {volumeId}.",
-                Suggestion: "Add the volume key to KEYDB.cfg or point EncoderOptions.BluRay.KeyDbOverridePath at your own KEYDB.",
-                Details: new DiscDetails(VolumeId: volumeId)
+            new(
+                EncoderRuleId.DiscAacsCertMissing,
+                $"AACS: no matching certificate for volume {volumeId}.",
+                "Add the volume key to KEYDB.cfg or point EncoderOptions.BluRay.KeyDbOverridePath at your own KEYDB.",
+                new DiscDetails(volumeId)
             ),
-            httpStatusCode: 409
+            409
         );
 
     public static EncoderRuntimeException DiscBdplusConverterMissing(string volumeId) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.DiscBdplusConverterMissing,
-                Message: $"BD+: no matching converter for volume {volumeId}.",
-                Suggestion: "Update libbdplus / the BDSVM converter database, or rip the disc on a system that has it.",
-                Details: new DiscDetails(VolumeId: volumeId)
+            new(
+                EncoderRuleId.DiscBdplusConverterMissing,
+                $"BD+: no matching converter for volume {volumeId}.",
+                "Update libbdplus / the BDSVM converter database, or rip the disc on a system that has it.",
+                new DiscDetails(volumeId)
             ),
-            httpStatusCode: 409
+            409
         );
 
     public static EncoderRuntimeException DiscReadError(
@@ -191,46 +191,46 @@ public static class RuntimeErrors
         string ffmpegStderrTail
     ) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.DiscReadError,
-                Message: $"Disc read failed on {drivePath}.",
-                Suggestion: "Clean the disc surface and try again. If it persists, the disc may be physically damaged.",
-                Details: new DiscReadDetails(DrivePath: drivePath, FfmpegStderrTail: ffmpegStderrTail)
+            new(
+                EncoderRuleId.DiscReadError,
+                $"Disc read failed on {drivePath}.",
+                "Clean the disc surface and try again. If it persists, the disc may be physically damaged.",
+                new DiscReadDetails(drivePath, ffmpegStderrTail)
             ),
-            httpStatusCode: 500
+            500
         );
 
     public static EncoderRuntimeException DistributionHmacInvalid() =>
         new(
-            shape: new(
-                Id: EncoderRuleId.DistributionHmacInvalid,
-                Message: "HMAC signature on the inbound request did not verify.",
-                Suggestion: "Confirm both coordinator and worker share the same DistributedEncodingSigningKey (or that the worker's cluster token is fresh).",
-                Details: null
+            new(
+                EncoderRuleId.DistributionHmacInvalid,
+                "HMAC signature on the inbound request did not verify.",
+                "Confirm both coordinator and worker share the same DistributedEncodingSigningKey (or that the worker's cluster token is fresh).",
+                null
             ),
-            httpStatusCode: 401
+            401
         );
 
     public static EncoderRuntimeException DistributionTimestampReplay(long ageSeconds) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.DistributionTimestampReplay,
-                Message: $"Inbound request timestamp is {ageSeconds}s old — outside the 300s replay window.",
-                Suggestion: "Sync the system clock on the worker (NTP) and retry.",
-                Details: new ReplayDetails(AgeSeconds: ageSeconds)
+            new(
+                EncoderRuleId.DistributionTimestampReplay,
+                $"Inbound request timestamp is {ageSeconds}s old — outside the 300s replay window.",
+                "Sync the system clock on the worker (NTP) and retry.",
+                new ReplayDetails(ageSeconds)
             ),
-            httpStatusCode: 401
+            401
         );
 
     public static EncoderRuntimeException DistributionWorkerNotRegistered(string workerId) =>
         new(
-            shape: new(
-                Id: EncoderRuleId.DistributionWorkerNotRegistered,
-                Message: $"Worker '{workerId}' is not registered with this coordinator.",
-                Suggestion: "Set CoordinatorUrl on the worker and let the self-registration service heartbeat once.",
-                Details: new WorkerDetails(WorkerId: workerId)
+            new(
+                EncoderRuleId.DistributionWorkerNotRegistered,
+                $"Worker '{workerId}' is not registered with this coordinator.",
+                "Set CoordinatorUrl on the worker and let the self-registration service heartbeat once.",
+                new WorkerDetails(workerId)
             ),
-            httpStatusCode: 404
+            404
         );
 
     // -- Detail records --------------------------------------------------------
@@ -264,7 +264,7 @@ public static class RuntimeErrors
 /// shape, and return <see cref="HttpStatusCode"/>.
 /// </summary>
 public sealed class EncoderRuntimeException(EncoderErrorShape shape, int httpStatusCode)
-    : Exception(message: shape.Message)
+    : Exception(shape.Message)
 {
     public EncoderErrorShape Shape { get; } = shape;
     public int HttpStatusCode { get; } = httpStatusCode;

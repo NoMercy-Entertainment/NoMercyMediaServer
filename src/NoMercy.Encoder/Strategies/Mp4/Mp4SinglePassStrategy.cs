@@ -26,7 +26,7 @@ public class Mp4SinglePassStrategy(
     IEncoder encoder,
     ILogger<Mp4SinglePassStrategy> logger,
     IStorage storage
-) : SinglePassStrategyBase(encoder: encoder, logger: logger, storage: storage)
+) : SinglePassStrategyBase(encoder, logger, storage)
 {
     public override OutputFormat Format => OutputFormat.Mp4;
 }

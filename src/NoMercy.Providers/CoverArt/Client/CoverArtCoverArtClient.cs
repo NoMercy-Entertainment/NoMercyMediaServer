@@ -35,11 +35,11 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
     private static IStorage Storage =>
         _storage
         ?? throw new InvalidOperationException(
-            message: "CoverArtCoverArtClient has not been initialized. Call CoverArtCoverArtClient.Initialize() at startup."
+            "CoverArtCoverArtClient has not been initialized. Call CoverArtCoverArtClient.Initialize() at startup."
         );
 
     public CoverArtCoverArtClient(Guid id)
-        : base(id: id)
+        : base(id)
     {
         Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
     }
@@ -53,11 +53,11 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
 
         try
         {
-            return Get<CoverArtCovers>(url: "release/" + Id, query: queryParams, priority: priority);
+            return Get<CoverArtCovers>("release/" + Id, queryParams, priority);
         }
         catch (Exception)
         {
-            return Task.FromResult<CoverArtCovers?>(result: null);
+            return Task.FromResult<CoverArtCovers?>(null);
         }
     }
 
@@ -70,11 +70,11 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
 
         try
         {
-            return Get<CoverArtCovers>(url: "release-group/" + Id, query: queryParams, priority: priority);
+            return Get<CoverArtCovers>("release-group/" + Id, queryParams, priority);
         }
         catch (Exception)
         {
-            return Task.FromResult<CoverArtCovers?>(result: null);
+            return Task.FromResult<CoverArtCovers?>(null);
         }
     }
 
@@ -85,39 +85,39 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
     )
     {
         string filePath = Path.Combine(
-            path1: AppFiles.MusicImagesPath,
-            path2: Path.GetFileName(path: (url?.LocalPath).OrEmpty())
+            AppFiles.MusicImagesPath,
+            Path.GetFileName((url?.LocalPath).OrEmpty())
         );
 
         IStorage storage = Storage;
-        if (await storage.ExistsAsync(path: filePath, ct: CancellationToken.None))
+        if (await storage.ExistsAsync(filePath, CancellationToken.None))
         {
             if (maxDecodeSize.HasValue)
             {
                 DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
-                return Image.Load<Rgba32>(options: options, path: filePath);
+                return Image.Load<Rgba32>(options, filePath);
             }
 
-            return Image.Load<Rgba32>(path: filePath);
+            return Image.Load<Rgba32>(filePath);
         }
 
-        HttpClient httpClient = HttpClientProvider.CreateClient(name: HttpClientNames.CoverArtImage);
+        HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.CoverArtImage);
 
-        using HttpResponseMessage response = await httpClient.GetAsync(requestUri: url);
+        using HttpResponseMessage response = await httpClient.GetAsync(url);
         if (!response.IsSuccessStatusCode)
             return null;
 
         byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 
-        if (download is not false && !await storage.ExistsAsync(path: filePath, ct: CancellationToken.None))
-            await storage.WriteAsync(path: filePath, bytes: bytes, ct: CancellationToken.None);
+        if (download is not false && !await storage.ExistsAsync(filePath, CancellationToken.None))
+            await storage.WriteAsync(filePath, bytes, CancellationToken.None);
 
         if (maxDecodeSize.HasValue)
         {
             DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
-            return Image.Load<Rgba32>(options: options, data: bytes);
+            return Image.Load<Rgba32>(options, bytes);
         }
 
-        return Image.Load<Rgba32>(data: bytes);
+        return Image.Load<Rgba32>(bytes);
     }
 }

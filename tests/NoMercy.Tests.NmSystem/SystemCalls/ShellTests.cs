@@ -25,25 +25,25 @@ public class ShellTests
     [Fact]
     public void EscapeShellArgument_PlainPath_WrapsInSingleQuotes()
     {
-        string result = Shell.EscapeShellArgument(value: "/mnt/data");
+        string result = Shell.EscapeShellArgument("/mnt/data");
 
-        Assert.Equal(expected: "'/mnt/data'", actual: result);
+        Assert.Equal("'/mnt/data'", result);
     }
 
     [Fact]
     public void EscapeShellArgument_PathWithSpace_StaysAsSingleToken()
     {
-        string result = Shell.EscapeShellArgument(value: "/mnt/my data");
+        string result = Shell.EscapeShellArgument("/mnt/my data");
 
-        Assert.Equal(expected: "'/mnt/my data'", actual: result);
+        Assert.Equal("'/mnt/my data'", result);
     }
 
     [Fact]
     public void EscapeShellArgument_PathWithEmbeddedSingleQuote_UsesCloseEscapeReopen()
     {
-        string result = Shell.EscapeShellArgument(value: "/mnt/it's");
+        string result = Shell.EscapeShellArgument("/mnt/it's");
 
-        Assert.Equal(expected: "'/mnt/it'\\''s'", actual: result);
+        Assert.Equal("'/mnt/it'\\''s'", result);
     }
 
     [Fact]
@@ -54,13 +54,13 @@ public class ShellTests
         // the whole payload is one inert argv token to `df`.
         string malicious = "/mnt/data; rm -rf /";
 
-        string result = Shell.EscapeShellArgument(value: malicious);
+        string result = Shell.EscapeShellArgument(malicious);
 
-        Assert.Equal(expected: "'/mnt/data; rm -rf /'", actual: result);
+        Assert.Equal("'/mnt/data; rm -rf /'", result);
         // Exactly the opening and closing quote — no unescaped quote inside
         // the payload, so a shell parsing this can't split it into a second
         // command.
-        Assert.Equal(expected: 2, actual: result.Count(predicate: c => c == '\''));
+        Assert.Equal(2, result.Count(c => c == '\''));
     }
 
     [Fact]
@@ -68,9 +68,9 @@ public class ShellTests
     {
         string malicious = "/mnt/`whoami`";
 
-        string result = Shell.EscapeShellArgument(value: malicious);
+        string result = Shell.EscapeShellArgument(malicious);
 
-        Assert.Equal(expected: "'/mnt/`whoami`'", actual: result);
+        Assert.Equal("'/mnt/`whoami`'", result);
     }
 
     [Fact]
@@ -84,10 +84,10 @@ public class ShellTests
         string maliciousLookingArgument = "hello; rm -rf /";
 
         Shell.ExecResult result = OperatingSystem.IsWindows()
-            ? await Shell.ExecAsync(executable: "cmd", arguments: ["/c", "echo", maliciousLookingArgument])
-            : await Shell.ExecAsync(executable: "echo", arguments: [maliciousLookingArgument]);
+            ? await Shell.ExecAsync("cmd", ["/c", "echo", maliciousLookingArgument])
+            : await Shell.ExecAsync("echo", [maliciousLookingArgument]);
 
-        Assert.Equal(expected: 0, actual: result.ExitCode);
-        Assert.Contains(expectedSubstring: maliciousLookingArgument, actualString: result.StandardOutput);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains(maliciousLookingArgument, result.StandardOutput);
     }
 }

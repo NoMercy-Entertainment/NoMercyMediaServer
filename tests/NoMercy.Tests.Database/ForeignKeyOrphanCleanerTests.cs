@@ -20,82 +20,82 @@ public class ForeignKeyOrphanCleanerTests
     public void Clean_RemovesRowWhoseParentIsMissing()
     {
         using SqliteConnection connection = NewDatabase();
-        Execute(connection: connection, sql: "INSERT INTO Parent (Id) VALUES (1);");
-        Execute(connection: connection, sql: "INSERT INTO Child (Id, ParentId) VALUES (1, 1);");
-        Execute(connection: connection, sql: "INSERT INTO Child (Id, ParentId) VALUES (2, 999);");
+        Execute(connection, "INSERT INTO Parent (Id) VALUES (1);");
+        Execute(connection, "INSERT INTO Child (Id, ParentId) VALUES (1, 1);");
+        Execute(connection, "INSERT INTO Child (Id, ParentId) VALUES (2, 999);");
 
         IReadOnlyDictionary<string, int> removed = ForeignKeyOrphanCleaner.Clean(
-            connection: connection,
-            contextName: "Test"
+            connection,
+            "Test"
         );
 
-        Assert.Equal(expected: 1, actual: removed[key: "Child"]);
-        Assert.Equal(expected: 0, actual: CountViolations(connection: connection));
-        Assert.Equal(expected: 1, actual: Scalar(connection: connection, sql: "SELECT COUNT(*) FROM Child;"));
-        Assert.Equal(expected: 1, actual: Scalar(connection: connection, sql: "SELECT Id FROM Child;"));
+        Assert.Equal(1, removed["Child"]);
+        Assert.Equal(0, CountViolations(connection));
+        Assert.Equal(1, Scalar(connection, "SELECT COUNT(*) FROM Child;"));
+        Assert.Equal(1, Scalar(connection, "SELECT Id FROM Child;"));
     }
 
     [Fact]
     public void Clean_CascadesThroughChainedOrphans()
     {
-        using SqliteConnection connection = new(connectionString: "Data Source=:memory:");
+        using SqliteConnection connection = new("Data Source=:memory:");
         connection.Open();
-        Execute(connection: connection, sql: "PRAGMA foreign_keys = OFF;");
-        Execute(connection: connection, sql: "CREATE TABLE A (Id INTEGER PRIMARY KEY);");
+        Execute(connection, "PRAGMA foreign_keys = OFF;");
+        Execute(connection, "CREATE TABLE A (Id INTEGER PRIMARY KEY);");
         Execute(
-            connection: connection,
-            sql: "CREATE TABLE B (Id INTEGER PRIMARY KEY, AId INTEGER REFERENCES A(Id));"
+            connection,
+            "CREATE TABLE B (Id INTEGER PRIMARY KEY, AId INTEGER REFERENCES A(Id));"
         );
         Execute(
-            connection: connection,
-            sql: "CREATE TABLE C (Id INTEGER PRIMARY KEY, BId INTEGER REFERENCES B(Id));"
+            connection,
+            "CREATE TABLE C (Id INTEGER PRIMARY KEY, BId INTEGER REFERENCES B(Id));"
         );
-        Execute(connection: connection, sql: "INSERT INTO B (Id, AId) VALUES (1, 999);");
-        Execute(connection: connection, sql: "INSERT INTO C (Id, BId) VALUES (1, 1);");
+        Execute(connection, "INSERT INTO B (Id, AId) VALUES (1, 999);");
+        Execute(connection, "INSERT INTO C (Id, BId) VALUES (1, 1);");
 
-        ForeignKeyOrphanCleaner.Clean(connection: connection, contextName: "Test");
+        ForeignKeyOrphanCleaner.Clean(connection, "Test");
 
-        Assert.Equal(expected: 0, actual: CountViolations(connection: connection));
-        Assert.Equal(expected: 0, actual: Scalar(connection: connection, sql: "SELECT COUNT(*) FROM B;"));
-        Assert.Equal(expected: 0, actual: Scalar(connection: connection, sql: "SELECT COUNT(*) FROM C;"));
+        Assert.Equal(0, CountViolations(connection));
+        Assert.Equal(0, Scalar(connection, "SELECT COUNT(*) FROM B;"));
+        Assert.Equal(0, Scalar(connection, "SELECT COUNT(*) FROM C;"));
     }
 
     [Fact]
     public void Clean_LeavesCleanDatabaseUntouched()
     {
         using SqliteConnection connection = NewDatabase();
-        Execute(connection: connection, sql: "INSERT INTO Parent (Id) VALUES (1);");
-        Execute(connection: connection, sql: "INSERT INTO Child (Id, ParentId) VALUES (1, 1);");
+        Execute(connection, "INSERT INTO Parent (Id) VALUES (1);");
+        Execute(connection, "INSERT INTO Child (Id, ParentId) VALUES (1, 1);");
 
         IReadOnlyDictionary<string, int> removed = ForeignKeyOrphanCleaner.Clean(
-            connection: connection,
-            contextName: "Test"
+            connection,
+            "Test"
         );
 
-        Assert.Empty(collection: removed);
-        Assert.Equal(expected: 1, actual: Scalar(connection: connection, sql: "SELECT COUNT(*) FROM Child;"));
+        Assert.Empty(removed);
+        Assert.Equal(1, Scalar(connection, "SELECT COUNT(*) FROM Child;"));
     }
 
     [Fact]
     public void Clean_RestoresForeignKeyEnforcement()
     {
         using SqliteConnection connection = NewDatabase();
-        Execute(connection: connection, sql: "PRAGMA foreign_keys = ON;");
+        Execute(connection, "PRAGMA foreign_keys = ON;");
 
-        ForeignKeyOrphanCleaner.Clean(connection: connection, contextName: "Test");
+        ForeignKeyOrphanCleaner.Clean(connection, "Test");
 
-        Assert.Equal(expected: 1, actual: Scalar(connection: connection, sql: "PRAGMA foreign_keys;"));
+        Assert.Equal(1, Scalar(connection, "PRAGMA foreign_keys;"));
     }
 
     private static SqliteConnection NewDatabase()
     {
-        SqliteConnection connection = new(connectionString: "Data Source=:memory:");
+        SqliteConnection connection = new("Data Source=:memory:");
         connection.Open();
-        Execute(connection: connection, sql: "PRAGMA foreign_keys = OFF;");
-        Execute(connection: connection, sql: "CREATE TABLE Parent (Id INTEGER PRIMARY KEY);");
+        Execute(connection, "PRAGMA foreign_keys = OFF;");
+        Execute(connection, "CREATE TABLE Parent (Id INTEGER PRIMARY KEY);");
         Execute(
-            connection: connection,
-            sql: "CREATE TABLE Child (Id INTEGER PRIMARY KEY, ParentId INTEGER REFERENCES Parent(Id));"
+            connection,
+            "CREATE TABLE Child (Id INTEGER PRIMARY KEY, ParentId INTEGER REFERENCES Parent(Id));"
         );
         return connection;
     }
@@ -111,9 +111,9 @@ public class ForeignKeyOrphanCleanerTests
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = sql;
-        return Convert.ToInt64(value: command.ExecuteScalar());
+        return Convert.ToInt64(command.ExecuteScalar());
     }
 
     private static long CountViolations(SqliteConnection connection) =>
-        Scalar(connection: connection, sql: "SELECT COUNT(*) FROM pragma_foreign_key_check;");
+        Scalar(connection, "SELECT COUNT(*) FROM pragma_foreign_key_check;");
 }

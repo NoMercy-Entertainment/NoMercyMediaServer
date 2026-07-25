@@ -28,24 +28,24 @@ public class HlsSinglePassStrategyTests
     public void Format_IsHls()
     {
         HlsSinglePassStrategy strategy = new(
-            encoder: Mock.Of<IEncoder>(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            Mock.Of<IEncoder>(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
 
-        Assert.Equal(expected: OutputFormat.Hls, actual: strategy.Format);
+        Assert.Equal(OutputFormat.Hls, strategy.Format);
     }
 
     [Fact]
     public void EncodeMode_IsSinglePass()
     {
         HlsSinglePassStrategy strategy = new(
-            encoder: Mock.Of<IEncoder>(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            Mock.Of<IEncoder>(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
 
-        Assert.Equal(expected: EncodeMode.SinglePass, actual: strategy.EncodeMode);
+        Assert.Equal(EncodeMode.SinglePass, strategy.EncodeMode);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class HlsSinglePassStrategyTests
     {
         Mock<IEncoder> encoder = new();
         encoder
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -61,83 +61,83 @@ public class HlsSinglePassStrategyTests
                 )
             )
             .ReturnsAsync(
-                value: new EncodingResult(
-                    Success: true,
-                    OutputPath: "/out",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
-                    Error: null,
-                    Metrics: new(OutputSizeBytes: 1024, AverageSpeed: 2.0, AverageFps: 24.0, EncoderUsed: "libx264", GpuUsed: null)
+                new EncodingResult(
+                    true,
+                    "/out",
+                    TimeSpan.FromSeconds(1),
+                    null,
+                    new(1024, 2.0, 24.0, "libx264", null)
                 )
             );
 
         HlsSinglePassStrategy strategy = new(
-            encoder: encoder.Object,
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            encoder.Object,
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
 
         EncodingRequest request = new(
-            InputPath: "/media/test.mkv",
-            OutputDirectory: "/out",
-            Profile: new(
-                Id: Ulid.NewUlid(),
-                Name: "HLS 1080p",
-                Container: Container.HlsTs,
-                Video: null,
-                Audio: [],
-                Subtitles: []
+            "/media/test.mkv",
+            "/out",
+            new(
+                Ulid.NewUlid(),
+                "HLS 1080p",
+                Container.HlsTs,
+                null,
+                [],
+                []
             )
         );
 
         EncodingResult result = await strategy.EncodeAsync(
-            request: request,
-            progress: null,
-            ct: CancellationToken.None
+            request,
+            null,
+            CancellationToken.None
         );
 
-        Assert.True(condition: result.Success);
-        Assert.NotNull(@object: result.Metrics);
-        Assert.Equal(expected: "libx264", actual: result.Metrics.EncoderUsed);
+        Assert.True(result.Success);
+        Assert.NotNull(result.Metrics);
+        Assert.Equal("libx264", result.Metrics.EncoderUsed);
         encoder.Verify(
-            expression: e =>
+            e =>
                 e.EncodeAsync(
                     request,
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
     // ── EstimateVideoCost cost-banding through Decompose ───────────────────
 
     [Theory]
-    [InlineData(data: [3840, 8])] // 4K → 8 units
-    [InlineData(data: [1920, 4])] // 1080p → 4 units
-    [InlineData(data: [1280, 2])] // 720p → 2 units
-    [InlineData(data: [854, 1])] // 480p → 1 unit
-    [InlineData(data: [640, 1])] // 360p → 1 unit (default)
+    [InlineData([3840, 8])] // 4K → 8 units
+    [InlineData([1920, 4])] // 1080p → 4 units
+    [InlineData([1280, 2])] // 720p → 2 units
+    [InlineData([854, 1])] // 480p → 1 unit
+    [InlineData([640, 1])] // 360p → 1 unit (default)
     public void Decompose_VideoCostBanding_MatchesResolution(int width, int expectedCost)
     {
         // Cost units gate dispatcher concurrency — wrong banding = wrong
         // bundle sizing under load. Pin the mapping.
         HlsSinglePassStrategy strategy = new(
-            encoder: Mock.Of<IEncoder>(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            Mock.Of<IEncoder>(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [Video(width: width, height: width * 9 / 16)],
-            AudioOutputs: [],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [Video(width, width * 9 / 16)],
+            [],
+            [],
+            null
         );
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: "g");
+        DecomposedTask[] tasks = strategy.Decompose(plan, "g");
 
-        DecomposedTask video = tasks.Single(predicate: t => t.Kind == EncodeTaskKind.Video);
-        video.EstimatedCostUnits.Should().Be(expected: expectedCost);
+        DecomposedTask video = tasks.Single(t => t.Kind == EncodeTaskKind.Video);
+        video.EstimatedCostUnits.Should().Be(expectedCost);
     }
 
     [Fact]
@@ -146,24 +146,24 @@ public class HlsSinglePassStrategyTests
         // SDR tonemap pass piles extra CPU work on top of decode/encode —
         // cost bumps by one to reflect that.
         HlsSinglePassStrategy strategy = new(
-            encoder: Mock.Of<IEncoder>(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            Mock.Of<IEncoder>(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [Video(width: 1920, height: 1080, convertHdrToSdr: true)],
-            AudioOutputs: [],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [Video(1920, height: 1080, convertHdrToSdr: true)],
+            [],
+            [],
+            null
         );
 
         DecomposedTask task = strategy
-            .Decompose(plan: plan, groupTag: "g")
-            .Single(predicate: t => t.Kind == EncodeTaskKind.Video);
+            .Decompose(plan, "g")
+            .Single(t => t.Kind == EncodeTaskKind.Video);
 
         // 1080p baseline = 4 units; +1 for tonemap = 5.
-        task.EstimatedCostUnits.Should().Be(expected: 5);
+        task.EstimatedCostUnits.Should().Be(5);
     }
 
     [Fact]
@@ -172,24 +172,24 @@ public class HlsSinglePassStrategyTests
         // VideoWidth + VideoEncoderName drive bundle-cap resolution at
         // dispatch — must NOT be lost in decomposition.
         HlsSinglePassStrategy strategy = new(
-            encoder: Mock.Of<IEncoder>(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            Mock.Of<IEncoder>(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [Video(width: 1920, height: 1080, encoderName: "hevc_nvenc")],
-            AudioOutputs: [],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [Video(1920, 1080, "hevc_nvenc")],
+            [],
+            [],
+            null
         );
 
         DecomposedTask task = strategy
-            .Decompose(plan: plan, groupTag: "g")
-            .Single(predicate: t => t.Kind == EncodeTaskKind.Video);
+            .Decompose(plan, "g")
+            .Single(t => t.Kind == EncodeTaskKind.Video);
 
-        task.VideoWidth.Should().Be(expected: 1920);
-        task.VideoEncoderName.Should().Be(expected: "hevc_nvenc");
+        task.VideoWidth.Should().Be(1920);
+        task.VideoEncoderName.Should().Be("hevc_nvenc");
     }
 
     [Fact]
@@ -198,34 +198,33 @@ public class HlsSinglePassStrategyTests
         // Dashboard sorts on label — pinning the format catches reflow bugs
         // where channels or language ordering drifts.
         HlsSinglePassStrategy strategy = new(
-            encoder: Mock.Of<IEncoder>(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            Mock.Of<IEncoder>(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [],
-            AudioOutputs:
+            OutputFormat.Hls,
+            [],
             [
                 new(
-                    EncoderName: "eac3",
-                    BitrateKbps: 384,
-                    Channels: 6,
-                    SampleRate: 48000,
-                    Action: StreamAction.Transcode,
-                    Language: "eng",
-                    MapLabel: "[a0]"
+                    "eac3",
+                    384,
+                    6,
+                    48000,
+                    StreamAction.Transcode,
+                    "eng",
+                    "[a0]"
                 ),
             ],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            null
         );
 
         DecomposedTask task = strategy
-            .Decompose(plan: plan, groupTag: "g")
-            .Single(predicate: t => t.Kind == EncodeTaskKind.Audio);
+            .Decompose(plan, "g")
+            .Single(t => t.Kind == EncodeTaskKind.Audio);
 
-        task.Label.Should().Be(expected: "eng eac3 6ch");
+        task.Label.Should().Be("eng eac3 6ch");
     }
 
     [Fact]
@@ -233,59 +232,58 @@ public class HlsSinglePassStrategyTests
     {
         // No language → "und" (undetermined) per ISO 639-2.
         HlsSinglePassStrategy strategy = new(
-            encoder: Mock.Of<IEncoder>(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            Mock.Of<IEncoder>(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [],
-            AudioOutputs:
+            OutputFormat.Hls,
+            [],
             [
                 new(
-                    EncoderName: "aac",
-                    BitrateKbps: 192,
-                    Channels: 2,
-                    SampleRate: 48000,
-                    Action: StreamAction.Transcode,
-                    Language: null,
-                    MapLabel: "[a0]"
+                    "aac",
+                    192,
+                    2,
+                    48000,
+                    StreamAction.Transcode,
+                    null,
+                    "[a0]"
                 ),
             ],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            null
         );
 
         DecomposedTask task = strategy
-            .Decompose(plan: plan, groupTag: "g")
-            .Single(predicate: t => t.Kind == EncodeTaskKind.Audio);
+            .Decompose(plan, "g")
+            .Single(t => t.Kind == EncodeTaskKind.Audio);
 
-        task.Label.Should().StartWith(expected: "und ");
+        task.Label.Should().StartWith("und ");
     }
 
     [Fact]
     public void Decompose_ThumbnailsPresent_AddsOneTask()
     {
         HlsSinglePassStrategy strategy = new(
-            encoder: Mock.Of<IEncoder>(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            Mock.Of<IEncoder>(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [Video()],
-            AudioOutputs: [],
-            SubtitleOutputs: [],
-            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10)
+            OutputFormat.Hls,
+            [Video()],
+            [],
+            [],
+            new(160, 90, 10)
         );
 
         DecomposedTask[] thumbs = strategy
-            .Decompose(plan: plan, groupTag: "g")
-            .Where(predicate: t => t.Kind == EncodeTaskKind.Thumbnails)
+            .Decompose(plan, "g")
+            .Where(t => t.Kind == EncodeTaskKind.Thumbnails)
             .ToArray();
 
         thumbs.Should().ContainSingle();
-        thumbs[0].Label.Should().Contain(expected: "160x90");
+        thumbs[0].Label.Should().Contain("160x90");
     }
 
     [Fact]
@@ -294,22 +292,22 @@ public class HlsSinglePassStrategyTests
         // Empty plan → fall back to a single "whole" task so the strategy
         // contract (always at least one task) holds.
         HlsSinglePassStrategy strategy = new(
-            encoder: Mock.Of<IEncoder>(),
-            logger: NullLogger<HlsSinglePassStrategy>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            Mock.Of<IEncoder>(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [],
-            AudioOutputs: [],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [],
+            [],
+            [],
+            null
         );
 
-        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: "g");
+        DecomposedTask[] tasks = strategy.Decompose(plan, "g");
 
         tasks.Should().ContainSingle();
-        tasks[0].Kind.Should().Be(expected: EncodeTaskKind.Whole);
+        tasks[0].Kind.Should().Be(EncodeTaskKind.Whole);
     }
 
     private static VideoOutputPlan Video(
@@ -319,18 +317,18 @@ public class HlsSinglePassStrategyTests
         bool convertHdrToSdr = false
     ) =>
         new(
-            Width: width,
-            Height: height,
-            EncoderName: encoderName,
-            Crf: 23,
-            BitrateKbps: 0,
-            Preset: "medium",
-            Profile: "high",
-            Level: "4.0",
-            TenBit: false,
-            PixelFormat: "yuv420p",
-            MapLabel: "[v0]",
-            ExtraFlags: []
+            width,
+            height,
+            encoderName,
+            23,
+            0,
+            "medium",
+            "high",
+            "4.0",
+            false,
+            "yuv420p",
+            "[v0]",
+            []
         )
         {
             ConvertHdrToSdr = convertHdrToSdr,

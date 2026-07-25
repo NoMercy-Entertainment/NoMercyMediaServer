@@ -28,24 +28,24 @@ public class AutoStartupManager
 
     internal static string GetExecutablePath() => StartupManagerShared.GetExecutablePath();
 
-    [SupportedOSPlatform(platformName: "macos")]
+    [SupportedOSPlatform("macos")]
     public static (string Content, string Path) GenerateLaunchdPlist() =>
         MacStartupManager.GenerateLaunchdPlist();
 
-    [SupportedOSPlatform(platformName: "macos")]
+    [SupportedOSPlatform("macos")]
     internal static string GetLaunchdPlistPath() => MacStartupManager.GetLaunchdPlistPath();
 
-    [SupportedOSPlatform(platformName: "linux")]
+    [SupportedOSPlatform("linux")]
     public static (string Content, string Path) GenerateSystemdUnit() =>
         LinuxStartupManager.GenerateSystemdUnit();
 
-    [SupportedOSPlatform(platformName: "linux")]
+    [SupportedOSPlatform("linux")]
     public static (string Content, string Path) GenerateXdgAutostart(string launcherPath) =>
-        LinuxStartupManager.GenerateXdgAutostart(launcherPath: launcherPath);
+        LinuxStartupManager.GenerateXdgAutostart(launcherPath);
 
-    [SupportedOSPlatform(platformName: "linux")]
+    [SupportedOSPlatform("linux")]
     internal static string GetSystemdUnitPath() => LinuxStartupManager.GetSystemdUnitPath();
 
-    [SupportedOSPlatform(platformName: "linux")]
+    [SupportedOSPlatform("linux")]
     internal static string GetXdgAutostartPath() => LinuxStartupManager.GetXdgAutostartPath();
 }

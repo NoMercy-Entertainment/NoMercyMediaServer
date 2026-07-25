@@ -18,22 +18,22 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record TopMusicDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = "albums";
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; } = null!;
 
     public TopMusicDto()
@@ -47,10 +47,10 @@ public record TopMusicDto
         Name = musicPlay.Playlist.Name;
         ColorPalette = musicPlay.Playlist.ColorPalette;
         Type = "playlist";
-        Link = new(uriString: $"/music/playlists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/playlists/{Id}", UriKind.Relative);
         Cover = musicPlay.Playlist.Cover;
         Cover = Cover is not null
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
     }
 
@@ -60,10 +60,10 @@ public record TopMusicDto
         Name = albumTrack.Album.Name;
         ColorPalette = albumTrack.Album.ColorPalette;
         Type = "album";
-        Link = new(uriString: $"/music/albums/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
         Cover = albumTrack.Album.Cover;
         Cover = Cover is not null
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
     }
 
@@ -73,10 +73,10 @@ public record TopMusicDto
         Name = artistTrack.Artist.Name;
         ColorPalette = artistTrack.Artist.ColorPalette;
         Type = "artist";
-        Link = new(uriString: $"/music/artists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Cover = artistTrack.Artist.Cover;
         Cover = Cover is not null
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
     }
 
@@ -84,18 +84,18 @@ public record TopMusicDto
     {
         Id = item.Id;
         Name = item.Name;
-        ColorPalette = ColorPalette.FromJsonOrNull(json: item.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(item.ColorPalette);
         Type = item.Type;
         Link = item.Type switch
         {
-            "artist" => new(uriString: $"/music/artists/{Id}", uriKind: UriKind.Relative),
-            "album" => new(uriString: $"/music/albums/{Id}", uriKind: UriKind.Relative),
-            "playlist" => new(uriString: $"/music/playlists/{Id}", uriKind: UriKind.Relative),
-            _ => new(uriString: $"/music/{Id}", uriKind: UriKind.Relative),
+            "artist" => new($"/music/artists/{Id}", UriKind.Relative),
+            "album" => new($"/music/albums/{Id}", UriKind.Relative),
+            "playlist" => new($"/music/playlists/{Id}", UriKind.Relative),
+            _ => new($"/music/{Id}", UriKind.Relative),
         };
         Cover = item.Cover;
         Cover = Cover is not null
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
     }
 }

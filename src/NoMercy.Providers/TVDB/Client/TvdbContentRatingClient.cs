@@ -17,6 +17,6 @@ public class TvdbContentRatingClient : TvdbBaseClient
 {
     public Task<TvdbContentRatingsResponse?> ContentRatings(bool? priority = false)
     {
-        return Get<TvdbContentRatingsResponse>(url: "content/ratings", priority: priority);
+        return Get<TvdbContentRatingsResponse>("content/ratings", priority: priority);
     }
 }

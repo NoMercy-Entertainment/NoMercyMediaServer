@@ -54,10 +54,10 @@ using Image = NoMercy.Database.Models.Media.Image;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
-[Tags(tags: "Dashboard Server Management")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Server Management")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/dashboard/server", Order = 10)]
+[Route("api/v{version:apiVersion}/dashboard/server", Order = 10)]
 public class ServerController(
     ILogger<ServerController> logger,
     ResourceMonitor resourceMonitor,
@@ -91,29 +91,29 @@ public class ServerController(
     }
 
     [HttpGet]
-    [Route(template: "setup")]
+    [Route("setup")]
     public async Task<IActionResult> Setup()
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsModerator(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to access the setup");
+        if (!AuthPolicy.IsModerator(User))
+            return UnauthorizedResponse("You do not have permission to access the setup");
 
-        List<Library> libraries = await libraryRepository.GetLibraries(userId: userId);
+        List<Library> libraries = await libraryRepository.GetLibraries(userId);
 
         int libraryCount = libraries.Count;
 
         int folderCount = libraries
-            .SelectMany(selector: library => library.FolderLibraries)
-            .Select(selector: folderLibrary => folderLibrary.Folder)
+            .SelectMany(library => library.FolderLibraries)
+            .Select(folderLibrary => folderLibrary.Folder)
             .Count();
 
         int encoderProfileCount = libraries
-            .SelectMany(selector: library => library.FolderLibraries)
-            .Select(selector: folderLibrary => folderLibrary.Folder)
-            .Count(predicate: folder => folder.EncodingPresetFolders.Count > 0);
+            .SelectMany(library => library.FolderLibraries)
+            .Select(folderLibrary => folderLibrary.Folder)
+            .Count(folder => folder.EncodingPresetFolders.Count > 0);
 
         return Ok(
-            value: new StatusResponseDto<SetupResponseDto>
+            new StatusResponseDto<SetupResponseDto>
             {
                 Status = "ok",
                 Data = new()
@@ -125,98 +125,98 @@ public class ServerController(
     }
 
     [HttpPost]
-    [Route(template: "start")]
+    [Route("start")]
     [Authorize(Policy = "MediaAccess")]
     public IActionResult StartServer()
     {
-        return NotImplementedResponse(detail: "Starting the server via the API is not implemented.");
+        return NotImplementedResponse("Starting the server via the API is not implemented.");
     }
 
     [HttpPost]
-    [Route(template: "stop")]
+    [Route("stop")]
     [Authorize(Policy = "Moderator")]
     public IActionResult StopServer()
     {
         ApplicationLifetime.StopApplication();
-        return Content(content: "Done");
+        return Content("Done");
     }
 
     public class InvalidateRequest
     {
-        [JsonProperty(propertyName: "queryKey")]
+        [JsonProperty("queryKey")]
         public dynamic[] QueryKey { get; set; } = [];
     }
 
     [HttpPost]
-    [Route(template: "invalidate")]
+    [Route("invalidate")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Invalidate([FromBody] InvalidateRequest request)
     {
-        await eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = request.QueryKey });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = request.QueryKey });
 
-        return Content(content: "Done");
+        return Content("Done");
     }
 
     [HttpPost]
-    [Route(template: "restart")]
+    [Route("restart")]
     [Authorize(Policy = "Moderator")]
     public IActionResult RestartServer()
     {
-        return NotImplementedResponse(detail: "Restarting the server via the API is not implemented.");
+        return NotImplementedResponse("Restarting the server via the API is not implemented.");
     }
 
-    [HttpGet(template: "update/check")]
+    [HttpGet("update/check")]
     public async Task<IActionResult> CheckForUpdate()
     {
-        return Ok(value: new { updateAvailable = await updateChecker.IsUpdateAvailableAsync() });
+        return Ok(new { updateAvailable = await updateChecker.IsUpdateAvailableAsync() });
     }
 
     [HttpPost]
-    [Route(template: "shutdown")]
+    [Route("shutdown")]
     [Authorize(Policy = "Moderator")]
     public IActionResult Shutdown()
     {
         ApplicationLifetime.StopApplication();
-        return Content(content: "Done");
+        return Content("Done");
     }
 
     [HttpPost]
-    [Route(template: "loglevel")]
+    [Route("loglevel")]
     [Authorize(Policy = "Moderator")]
     public IActionResult LogLevel(LogEventLevel level)
     {
-        Logger.SetLogLevel(level: level);
+        Logger.SetLogLevel(level);
 
-        return Content(content: "Log level set to " + level);
+        return Content("Log level set to " + level);
     }
 
     [HttpPost]
-    [Route(template: "addfiles")]
+    [Route("addfiles")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> AddFiles([FromBody] AddFilesRequest request)
     {
-        Library? library = await libraryRepository.GetLibraryByIdLiteAsync(id: request.LibraryId);
+        Library? library = await libraryRepository.GetLibraryByIdLiteAsync(request.LibraryId);
 
         if (library == null)
-            return NotFoundResponse(detail: "Library not found");
+            return NotFoundResponse("Library not found");
 
         // Determine whether the folder lives on a remote driver. When it does,
         // the path from filelist is already driver-relative — do not call
         // Path.GetFullPath, which would prepend the process working directory.
-        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId: request.FolderId);
+        Folder? folder = await folderRepository.GetFolderByIdAsync(request.FolderId);
 
         bool isRemoteDriver =
             folder?.Driver is not null
-            && !string.Equals(a: folder.Driver.Type, b: "local", comparisonType: StringComparison.OrdinalIgnoreCase);
+            && !string.Equals(folder.Driver.Type, "local", StringComparison.OrdinalIgnoreCase);
 
         // When source_driver_id is provided (NFS/SMB source different from the
         // destination library folder), the path is driver-relative and must not
         // be expanded via Path.GetFullPath.
         Ulid? sourceDriverId = null;
         bool isRemoteSource = false;
-        if (!string.IsNullOrWhiteSpace(value: request.SourceDriverId))
+        if (!string.IsNullOrWhiteSpace(request.SourceDriverId))
         {
-            if (Ulid.TryParse(base32: request.SourceDriverId, ulid: out Ulid parsedSourceDriver))
+            if (Ulid.TryParse(request.SourceDriverId, out Ulid parsedSourceDriver))
             {
                 sourceDriverId = parsedSourceDriver;
                 isRemoteSource = true;
@@ -227,20 +227,20 @@ public class ServerController(
         {
             if (library.Type == "music")
             {
-                logger.LogTrace(message: "Adding music files to library");
+                logger.LogTrace("Adding music files to library");
                 string directoryPath =
                     isRemoteDriver || isRemoteSource
                         ? request.Files[0].Path
-                        : Path.GetFullPath(path: request.Files[0].Path);
+                        : Path.GetFullPath(request.Files[0].Path);
 
                 jobDispatcher.DispatchJob<ReleaseImportJob>(
-                    libraryId: library.Id,
-                    folderId: request.FolderId,
-                    releaseId: request.Files[0].Id.ToGuid(),
-                    filePath: directoryPath
+                    library.Id,
+                    request.FolderId,
+                    request.Files[0].Id.ToGuid(),
+                    directoryPath
                 );
 
-                return Ok(value: request);
+                return Ok(request);
             }
 
             // Manual "add files" is a deliberate operator action to import and
@@ -255,7 +255,7 @@ public class ServerController(
             foreach (AddFile file in request.Files)
             {
                 string filePath =
-                    isRemoteDriver || isRemoteSource ? file.Path : Path.GetFullPath(path: file.Path);
+                    isRemoteDriver || isRemoteSource ? file.Path : Path.GetFullPath(file.Path);
 
                 VideoEncodeJob job = new()
                 {
@@ -266,32 +266,32 @@ public class ServerController(
                     SourceDriverId = sourceDriverId,
                     PresetId = library.EncodePresetId,
                 };
-                jobDispatcher.Dispatch(job: job, onQueue: job.QueueName, priority: job.Priority);
+                jobDispatcher.Dispatch(job, job.QueueName, job.Priority);
             }
-            return Ok(value: request);
+            return Ok(request);
         }
         catch (Exception e)
         {
-            logger.LogError(exception: e, message: "Failed to add file to library");
-            return BadRequestResponse(detail: e.Message);
+            logger.LogError(e, "Failed to add file to library");
+            return BadRequestResponse(e.Message);
         }
     }
 
     [HttpPost]
-    [Route(template: "directorytree")]
+    [Route("directorytree")]
     [Authorize(Policy = "Moderator")]
     public IActionResult DirectoryTree([FromBody] PathRequest request)
     {
         try
         {
-            List<DirectoryTree> array = fileRepository.GetDirectoryTree(folder: request.Folder);
+            List<DirectoryTree> array = fileRepository.GetDirectoryTree(request.Folder);
 
-            return Ok(value: new StatusResponseDto<List<DirectoryTree>> { Status = "ok", Data = array });
+            return Ok(new StatusResponseDto<List<DirectoryTree>> { Status = "ok", Data = array });
         }
         catch (Exception)
         {
             return InternalServerErrorResponse(
-                detail: "Something went wrong retrieving the directory tree"
+                "Something went wrong retrieving the directory tree"
             );
         }
     }
@@ -300,48 +300,48 @@ public class ServerController(
     private static Ulid SyntheticFileListFolderId(Ulid driverId) => driverId;
 
     [HttpPost]
-    [Route(template: "filelist")]
+    [Route("filelist")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> FileList([FromBody] FileListRequest request)
     {
         System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
         logger.LogInformation(
-            message: "[FileList] folder={Folder} type={Type} driver={DriverId}", args: [request.Folder, request.Type, request.DriverId]
+            "[FileList] folder={Folder} type={Type} driver={DriverId}", [request.Folder, request.Type, request.DriverId]
         );
 
         IStorage? resolvedStorage = null;
-        if (!string.IsNullOrWhiteSpace(value: request.DriverId))
+        if (!string.IsNullOrWhiteSpace(request.DriverId))
         {
-            if (!Ulid.TryParse(base32: request.DriverId, ulid: out Ulid driverId))
-                return BadRequestResponse(detail: "driver_id is not a valid ULID.");
+            if (!Ulid.TryParse(request.DriverId, out Ulid driverId))
+                return BadRequestResponse("driver_id is not a valid ULID.");
 
             resolvedStorage = storageFactory.For(
-                folderId: SyntheticFileListFolderId(driverId: driverId),
-                driverId: driverId,
-                subPath: string.Empty
+                SyntheticFileListFolderId(driverId),
+                driverId,
+                string.Empty
             );
         }
 
         if (request.Type == "music")
         {
             IStorageDriver effectiveDriver = resolvedStorage is not null
-                ? FileRepository.StorageDriverFromStorage(storage: resolvedStorage)
+                ? FileRepository.StorageDriverFromStorage(resolvedStorage)
                 : fileRepository.StorageDriver;
 
             List<FileItem> fileList = await FileRepository.GetMusicBrainzReleasesInDirectory(
-                folder: request.Folder,
-                storageDriver: effectiveDriver,
-                audioFingerprinter: audioFingerprinter
+                request.Folder,
+                effectiveDriver,
+                audioFingerprinter
             );
 
             logger.LogInformation(
-                message: "[FileList] returned {Count} entries in {ElapsedMilliseconds}ms (music)", args: [fileList.Count, sw.ElapsedMilliseconds]
+                "[FileList] returned {Count} entries in {ElapsedMilliseconds}ms (music)", [fileList.Count, sw.ElapsedMilliseconds]
             );
 
             return Ok(
-                value: new DataResponseDto<FileListResponseDto>
+                new DataResponseDto<FileListResponseDto>
                 {
-                    Data = new() { Status = "ok", Files = SortFileList(files: fileList) },
+                    Data = new() { Status = "ok", Files = SortFileList(fileList) },
                 }
             );
         }
@@ -349,20 +349,20 @@ public class ServerController(
         {
             List<FileItem> fileList = resolvedStorage is not null
                 ? await fileListService.GetFilesInDirectory(
-                    directoryPath: request.Folder,
-                    libraryType: request.Type,
-                    storage: resolvedStorage
+                    request.Folder,
+                    request.Type,
+                    resolvedStorage
                 )
-                : await fileListService.GetFilesInDirectory(directoryPath: request.Folder, libraryType: request.Type);
+                : await fileListService.GetFilesInDirectory(request.Folder, request.Type);
 
             logger.LogInformation(
-                message: "[FileList] returned {Count} entries in {ElapsedMilliseconds}ms", args: [fileList.Count, sw.ElapsedMilliseconds]
+                "[FileList] returned {Count} entries in {ElapsedMilliseconds}ms", [fileList.Count, sw.ElapsedMilliseconds]
             );
 
             return Ok(
-                value: new DataResponseDto<FileListResponseDto>
+                new DataResponseDto<FileListResponseDto>
                 {
-                    Data = new() { Status = "ok", Files = SortFileList(files: fileList) },
+                    Data = new() { Status = "ok", Files = SortFileList(fileList) },
                 }
             );
         }
@@ -373,23 +373,23 @@ public class ServerController(
     // Path string for files without a season/episode match.
     private static List<FileItem> SortFileList(List<FileItem> files) =>
         files
-            .OrderBy(keySelector: f => f.Parsed?.Title ?? string.Empty, comparer: StringComparer.OrdinalIgnoreCase)
-            .ThenBy(keySelector: f => f.Parsed?.Season ?? int.MaxValue)
-            .ThenBy(keySelector: f => f.Parsed?.Episode ?? int.MaxValue)
-            .ThenBy(keySelector: f => f.Path, comparer: StringComparer.OrdinalIgnoreCase)
+            .OrderBy(f => f.Parsed?.Title ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(f => f.Parsed?.Season ?? int.MaxValue)
+            .ThenBy(f => f.Parsed?.Episode ?? int.MaxValue)
+            .ThenBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
     [NonAction]
     private string DeviceName()
     {
-        Configuration? device = appContext.Configuration.FirstOrDefault(predicate: device =>
+        Configuration? device = appContext.Configuration.FirstOrDefault(device =>
             device.Key == "serverName"
         );
         return device?.Value ?? Environment.MachineName;
     }
 
     [HttpGet]
-    [Route(template: "info")]
+    [Route("info")]
     [ResponseCache(NoStore = true)]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> ServerInfo()
@@ -397,7 +397,7 @@ public class ServerController(
         bool setupComplete = await libraryRepository.HasCompletedSetupAsync();
 
         return Ok(
-            value: new StatusResponseDto<ServerInfoDto>
+            new StatusResponseDto<ServerInfoDto>
             {
                 Status = "ok",
                 Data = new()
@@ -416,16 +416,16 @@ public class ServerController(
     }
 
     [HttpPatch]
-    [Route(template: "info")]
+    [Route("info")]
     public async Task<IActionResult> UpdateServerInfo([FromBody] ServerUpdateRequest request)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsModerator(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to update server information");
+        if (!AuthPolicy.IsModerator(User))
+            return UnauthorizedResponse("You do not have permission to update server information");
 
         Configuration? configuration = await appContext
             .Configuration.AsTracking()
-            .FirstOrDefaultAsync(predicate: configuration => configuration.Key == "serverName");
+            .FirstOrDefaultAsync(configuration => configuration.Key == "serverName");
 
         try
         {
@@ -437,7 +437,7 @@ public class ServerController(
                     Value = request.Name,
                     ModifiedBy = userId,
                 };
-                await appContext.Configuration.AddAsync(entity: configuration);
+                await appContext.Configuration.AddAsync(configuration);
             }
             else
             {
@@ -447,40 +447,40 @@ public class ServerController(
 
             await appContext.SaveChangesAsync();
 
-            HttpClient client = httpClientFactory.CreateClient(name: HttpClientNames.General);
-            client.BaseAddress = new(uriString: ExternalServicesConfig.Current.ApiServerBaseUrl);
+            HttpClient client = httpClientFactory.CreateClient(HttpClientNames.General);
+            client.BaseAddress = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
 
             string? token = authTokenStore.AccessToken;
-            if (string.IsNullOrEmpty(value: token))
+            if (string.IsNullOrEmpty(token))
             {
-                return ServiceUnavailableResponse(detail: "Re-authentication in progress");
+                return ServiceUnavailableResponse("Re-authentication in progress");
             }
 
-            client.DefaultRequestHeaders.Authorization = new(scheme: "Bearer", parameter: token);
+            client.DefaultRequestHeaders.Authorization = new("Bearer", token);
 
-            HttpRequestMessage httpRequestMessage = new(method: HttpMethod.Patch, requestUri: "name")
+            HttpRequestMessage httpRequestMessage = new(HttpMethod.Patch, "name")
             {
                 Content = new FormUrlEncodedContent(
-                    nameValueCollection: new Dictionary<string, string>
+                    new Dictionary<string, string>
                     {
-                        [key: "id"] = Info.DeviceId.ToString(),
-                        [key: "name"] = request.Name,
+                        ["id"] = Info.DeviceId.ToString(),
+                        ["name"] = request.Name,
                     }
                 ),
             };
 
-            using HttpResponseMessage httpResponse = await client.SendAsync(request: httpRequestMessage);
+            using HttpResponseMessage httpResponse = await client.SendAsync(httpRequestMessage);
             string response = await httpResponse.Content.ReadAsStringAsync();
 
             StatusResponseDto<string>? data = JsonConvert.DeserializeObject<
                 StatusResponseDto<string>
-            >(value: response);
+            >(response);
 
             if (data == null)
-                return UnprocessableEntityResponse(detail: "Server name could not be updated");
+                return UnprocessableEntityResponse("Server name could not be updated");
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = data.Status,
                     Message = data.Message,
@@ -490,12 +490,12 @@ public class ServerController(
         }
         catch (Exception e)
         {
-            return UnprocessableEntityResponse(detail: "Server name could not be updated: " + e.Message);
+            return UnprocessableEntityResponse("Server name could not be updated: " + e.Message);
         }
     }
 
     [HttpGet]
-    [Route(template: "resources")]
+    [Route("resources")]
     [ResponseCache(NoStore = true)]
     [Authorize(Policy = "Moderator")]
     public IActionResult Resources()
@@ -508,14 +508,14 @@ public class ServerController(
         catch (Exception e)
         {
             return UnprocessableEntityResponse(
-                detail: "Resource monitor could not be started: " + e.Message
+                "Resource monitor could not be started: " + e.Message
             );
         }
 
         List<ResourceMonitorDto> storage = StorageMonitor.Main();
 
         return Ok(
-            value: new ResourceInfoDto
+            new ResourceInfoDto
             {
                 Cpu = resource.Cpu,
                 Gpu = resource.Gpu,
@@ -526,7 +526,7 @@ public class ServerController(
     }
 
     [HttpGet]
-    [Route(template: "paths")]
+    [Route("paths")]
     [ResponseCache(Duration = 3600)]
     [Authorize(Policy = "Moderator")]
     public IActionResult ServerPaths()
@@ -539,72 +539,72 @@ public class ServerController(
             new() { Key = "Configs", Value = AppFiles.ConfigPath },
         ];
 
-        return Ok(value: list);
+        return Ok(list);
     }
 
     [HttpGet]
-    [Route(template: "/files/${depth:int}/${path:required}")]
+    [Route("/files/${depth:int}/${path:required}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Files(string path, int depth)
     {
-        MediaScan mediaScan = new(driver: storageDriver);
+        MediaScan mediaScan = new(storageDriver);
 
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
-            .Process(rootFolder: path, depth: depth);
+            .Process(path, depth);
 
         await mediaScan.DisposeAsync();
 
-        return Ok(value: folders);
+        return Ok(folders);
     }
 
     [HttpPatch]
-    [Route(template: "workers/{worker}/{count:int:min(0)}")]
+    [Route("workers/{worker}/{count:int:min(0)}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> UpdateWorkers(string worker, int count)
     {
-        if (await queueRunner.SetWorkerCount(name: worker, max: count, userId: User.UserId()))
-            return Ok(value: $"{worker} worker count set to {count}");
+        if (await queueRunner.SetWorkerCount(worker, count, User.UserId()))
+            return Ok($"{worker} worker count set to {count}");
 
-        return BadRequestResponse(detail: $"{worker} worker count could not be set to {count}");
+        return BadRequestResponse($"{worker} worker count could not be set to {count}");
     }
 
     [HttpGet]
-    [Route(template: "storage")]
+    [Route("storage")]
     [Authorize(Policy = "Moderator")]
     public IActionResult Storage()
     {
         // StorageJob storageJob = new(StorageMonitor.Storage);
         // JobDispatcher.Dispatch(storageJob, "data", 1000);
 
-        return Ok(value: StorageMonitor.Storage);
+        return Ok(StorageMonitor.Storage);
     }
 
     [HttpPost]
-    [Route(template: "wallpaper")]
+    [Route("wallpaper")]
     [Authorize(Policy = "Owner")]
     public async Task<IActionResult> SetWallpaper([FromBody] WallpaperRequest request)
     {
         if (!wallpaperService.IsSupported)
-            return BadRequestResponse(detail: "Wallpaper setting is not supported on this platform");
+            return BadRequestResponse("Wallpaper setting is not supported on this platform");
 
-        Image? wallpaper = await imageRepository.GetImageByFilePathAsync(filePath: request.Path);
+        Image? wallpaper = await imageRepository.GetImageByFilePathAsync(request.Path);
 
         if (wallpaper?.FilePath is null)
-            return NotFoundResponse(detail: "Wallpaper not found");
+            return NotFoundResponse("Wallpaper not found");
 
         string path = Path.Combine(
-            path1: AppFiles.ImagesPath,
-            path2: "original",
-            path3: wallpaper.FilePath.Replace(oldValue: "/", newValue: "")
+            AppFiles.ImagesPath,
+            "original",
+            wallpaper.FilePath.Replace("/", "")
         );
 
-        string color = request.Color ?? await GetDominantColorAsync(path: path);
+        string color = request.Color ?? await GetDominantColorAsync(path);
 
-        wallpaperService.SetSilent(imagePath: path, style: request.Style, hexColor: color);
+        wallpaperService.SetSilent(path, request.Style, color);
 
         return Ok(
-            value: new StatusResponseDto<string> { Status = "ok", Message = "Wallpaper set successfully" }
+            new StatusResponseDto<string> { Status = "ok", Message = "Wallpaper set successfully" }
         );
     }
 
@@ -612,45 +612,45 @@ public class ServerController(
 
     private static async Task<string> GetDominantColorAsync(string path)
     {
-        if (DominantColorCache.TryGetValue(key: path, value: out string? cached))
+        if (DominantColorCache.TryGetValue(path, out string? cached))
             return cached;
 
-        string color = await Task.Run(function: () =>
+        string color = await Task.Run(() =>
         {
-            using Image<Rgb24> image = SixLabors.ImageSharp.Image.Load<Rgb24>(path: path);
-            image.Mutate(operation: x =>
+            using Image<Rgb24> image = SixLabors.ImageSharp.Image.Load<Rgb24>(path);
+            image.Mutate(x =>
                 x.Resize(
-                        options: new ResizeOptions
+                        new ResizeOptions
                         {
                             Sampler = KnownResamplers.NearestNeighbor,
-                            Size = new(width: 100, height: 0),
+                            Size = new(100, 0),
                         }
                     )
-                    .Quantize(quantizer: new OctreeQuantizer { Options = { MaxColors = 1 } })
+                    .Quantize(new OctreeQuantizer { Options = { MaxColors = 1 } })
             );
 
-            Rgb24 dominant = image[x: 0, y: 0];
+            Rgb24 dominant = image[0, 0];
             return dominant.ToHexString();
         });
 
-        DominantColorCache.TryAdd(key: path, value: color);
+        DominantColorCache.TryAdd(path, color);
         return color;
     }
 
     [HttpPost]
-    [Route(template: "changeIp")]
+    [Route("changeIp")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ChangeIp([FromBody] ChangeIpRequest request)
     {
-        if (string.IsNullOrEmpty(value: request.Ip))
-            return BadRequestResponse(detail: "New IP address is required");
+        if (string.IsNullOrEmpty(request.Ip))
+            return BadRequestResponse("New IP address is required");
 
-        logger.LogInformation(message: "Changing IP address to {Ip}", args: request.Ip);
+        logger.LogInformation("Changing IP address to {Ip}", request.Ip);
 
         networkDiscovery.InternalIp = request.Ip;
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = $"IP address changed to {request.Ip}",

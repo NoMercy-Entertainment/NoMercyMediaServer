@@ -14,7 +14,6 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
-using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
@@ -32,13 +31,13 @@ public class BuildStageFilterGraphTests
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
         _stage = new(
-            options: options,
-            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
-            subtitleExtractor: new SubtitleExtractor(),
-            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
-            drmProcessors: [],
-            logger: NullLogger<BuildStage>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            options,
+            new FontExtractor(TestStorageFactory.CreateLocal()),
+            new SubtitleExtractor(),
+            OutputStrategyFactoryTestHelper.Create(),
+            [],
+            NullLogger<BuildStage>.Instance,
+            TestStorageFactory.CreateLocal()
         );
     }
 
@@ -48,49 +47,47 @@ public class BuildStageFilterGraphTests
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
         new(
-            Groups:
             [
                 new(
-                    GroupId: "group_0",
-                    Nodes: [new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new())],
-                    DeviceId: null,
-                    GpuSlotsRequired: 0,
-                    CpuThreadsRequired: 4,
-                    RequiresGpu: false,
-                    Priority: 1
+                    "group_0",
+                    [new("decode_0", OperationType.Decode, [], new())],
+                    null,
+                    0,
+                    4,
+                    false,
+                    1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
-            OutputPlan: outputPlan
+            TimeSpan.FromMinutes(90),
+            outputPlan
         );
 
     private static MediaInfo BuildMediaInfo(int width, int height) =>
         new(
-            FilePath: "/movies/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 2),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 7_200_000_000,
-            VideoStreams:
+            "/movies/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(2),
+            8000,
+            7_200_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: width,
-                    Height: height,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: null,
-                    ColorTransfer: null,
-                    ColorSpace: null,
-                    IsDefault: true,
-                    BitRateKbps: 6000
+                    0,
+                    "h264",
+                    width,
+                    height,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    null,
+                    null,
+                    null,
+                    true,
+                    6000
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
     private static VideoOutputPlan BuildVideoOutput(
@@ -100,29 +97,29 @@ public class BuildStageFilterGraphTests
         string encoder = "libx264"
     ) =>
         new(
-            Width: width,
-            Height: height,
-            EncoderName: encoder,
-            Crf: 23,
-            BitrateKbps: 4000,
-            Preset: "medium",
-            Profile: "high",
-            Level: "4.1",
-            TenBit: false,
-            PixelFormat: "yuv420p",
-            MapLabel: mapLabel,
-            ExtraFlags: new()
+            width,
+            height,
+            encoder,
+            23,
+            4000,
+            "medium",
+            "high",
+            "4.1",
+            false,
+            "yuv420p",
+            mapLabel,
+            new()
         );
 
     private static AudioOutputPlan BuildAudioOutput() =>
         new(
-            EncoderName: "aac",
-            BitrateKbps: 192,
-            Channels: 2,
-            SampleRate: 48000,
-            Action: StreamAction.Transcode,
-            Language: "en",
-            MapLabel: "0:a:0"
+            "aac",
+            192,
+            2,
+            48000,
+            StreamAction.Transcode,
+            "en",
+            "0:a:0"
         );
 
     // ------------------------------------------------------------------
@@ -133,30 +130,30 @@ public class BuildStageFilterGraphTests
     public async Task BuildStage_SingleVideoSameResolution_GeneratesCopyFilter()
     {
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [BuildVideoOutput(width: 320, height: 180, mapLabel: "[v0]")],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [BuildVideoOutput(320, 180, "[v0]")],
+            [BuildAudioOutput()],
+            [],
+            null
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: BuildMediaInfo(width: 320, height: 180)
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfo(320, 180)
         );
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
-        int filterComplexIdx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
-        filterComplexIdx.Should().BeGreaterThan(expected: -1, because: "a -filter_complex argument must be present");
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
+        filterComplexIdx.Should().BeGreaterThan(-1, "a -filter_complex argument must be present");
 
         string filterValue = commands[0].Arguments[filterComplexIdx + 1];
-        filterValue.Should().Contain(expected: "copy");
+        filterValue.Should().Contain("copy");
     }
 
     // ------------------------------------------------------------------
@@ -167,30 +164,30 @@ public class BuildStageFilterGraphTests
     public async Task BuildStage_SingleVideoWithScaling_GeneratesScaleFilter()
     {
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [BuildVideoOutput(width: 1280, height: 720, mapLabel: "[v0]")],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [BuildVideoOutput(1280, 720, "[v0]")],
+            [BuildAudioOutput()],
+            [],
+            null
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: BuildMediaInfo(width: 1920, height: 1080)
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfo(1920, 1080)
         );
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
-        int filterComplexIdx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
-        filterComplexIdx.Should().BeGreaterThan(expected: -1, because: "a -filter_complex argument must be present");
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
+        filterComplexIdx.Should().BeGreaterThan(-1, "a -filter_complex argument must be present");
 
         string filterValue = commands[0].Arguments[filterComplexIdx + 1];
-        filterValue.Should().Contain(expected: "scale=1280:-2");
+        filterValue.Should().Contain("scale=1280:-2");
     }
 
     // ------------------------------------------------------------------
@@ -201,36 +198,35 @@ public class BuildStageFilterGraphTests
     public async Task BuildStage_MultipleVideos_GeneratesSplitAndScale()
     {
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
-                BuildVideoOutput(width: 1920, height: 1080, mapLabel: "[v0]"),
-                BuildVideoOutput(width: 1280, height: 720, mapLabel: "[v1]"),
+                BuildVideoOutput(1920, 1080, "[v0]"),
+                BuildVideoOutput(1280, 720, "[v1]"),
             ],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [BuildAudioOutput()],
+            [],
+            null
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: BuildMediaInfo(width: 1920, height: 1080)
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfo(1920, 1080)
         );
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
-        int filterComplexIdx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
-        filterComplexIdx.Should().BeGreaterThan(expected: -1, because: "a -filter_complex argument must be present");
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
+        filterComplexIdx.Should().BeGreaterThan(-1, "a -filter_complex argument must be present");
 
         string filterValue = commands[0].Arguments[filterComplexIdx + 1];
-        filterValue.Should().Contain(expected: "split=2");
-        filterValue.Should().Contain(expected: "copy");
-        filterValue.Should().Contain(expected: "scale=1280:-2");
+        filterValue.Should().Contain("split=2");
+        filterValue.Should().Contain("copy");
+        filterValue.Should().Contain("scale=1280:-2");
     }
 
     // ------------------------------------------------------------------
@@ -241,26 +237,26 @@ public class BuildStageFilterGraphTests
     public async Task BuildStage_AudioOnlyProfile_NoFilterComplex()
     {
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [],
+            [BuildAudioOutput()],
+            [],
+            null
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: BuildMediaInfo(width: 1920, height: 1080)
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfo(1920, 1080)
         );
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
-        commands[0].Arguments.Should().NotContain(unexpected: "-filter_complex");
+        commands[0].Arguments.Should().NotContain("-filter_complex");
     }
 
     // ------------------------------------------------------------------
@@ -271,36 +267,36 @@ public class BuildStageFilterGraphTests
     public async Task BuildStage_GpuResidentPlan_EmitsHwaccelDecodeAndGpuScale()
     {
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [BuildVideoOutput(width: 1280, height: 720, mapLabel: "[v0]", encoder: "h264_nvenc")],
+            OutputFormat.Hls,
+            VideoOutputs: [BuildVideoOutput(1280, 720, "[v0]", "h264_nvenc")],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
             Thumbnails: null,
-            GpuAccel: new(HwAccelDevice: "cuda", HwAccelOutputFormat: "cuda", ScaleFilter: "scale_cuda")
+            GpuAccel: new("cuda", "cuda", "scale_cuda")
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: BuildMediaInfo(width: 1920, height: 1080)
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfo(1920, 1080)
         );
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         string[] args = ((StageSuccess<FfmpegCommand[]>)result).Value[0].Arguments;
 
-        int hwaccelIdx = Array.IndexOf(array: args, value: "-hwaccel");
-        hwaccelIdx.Should().BeGreaterThan(expected: -1, because: "decode must be offloaded to the GPU");
-        args[hwaccelIdx + 1].Should().Be(expected: "cuda");
-        int outFmtIdx = Array.IndexOf(array: args, value: "-hwaccel_output_format");
-        outFmtIdx.Should().BeGreaterThan(expected: -1);
-        args[outFmtIdx + 1].Should().Be(expected: "cuda", because: "frames stay in GPU memory");
+        int hwaccelIdx = Array.IndexOf(args, "-hwaccel");
+        hwaccelIdx.Should().BeGreaterThan(-1, "decode must be offloaded to the GPU");
+        args[hwaccelIdx + 1].Should().Be("cuda");
+        int outFmtIdx = Array.IndexOf(args, "-hwaccel_output_format");
+        outFmtIdx.Should().BeGreaterThan(-1);
+        args[outFmtIdx + 1].Should().Be("cuda", "frames stay in GPU memory");
 
-        string filterValue = args[Array.IndexOf(array: args, value: "-filter_complex") + 1];
-        filterValue.Should().Contain(expected: "scale_cuda=1280:720", because: "scaling runs on the GPU");
-        filterValue.Should().NotContain(unexpected: "scale=1280:-2", because: "no CPU scale on the GPU-resident path");
+        string filterValue = args[Array.IndexOf(args, "-filter_complex") + 1];
+        filterValue.Should().Contain("scale_cuda=1280:720", "scaling runs on the GPU");
+        filterValue.Should().NotContain("scale=1280:-2", "no CPU scale on the GPU-resident path");
     }
 
     // ------------------------------------------------------------------
@@ -315,43 +311,43 @@ public class BuildStageFilterGraphTests
             "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,"
             + "tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p";
 
-        VideoOutputPlan sdrRung = BuildVideoOutput(width: 1920, height: 1080, mapLabel: "[v0]") with
+        VideoOutputPlan sdrRung = BuildVideoOutput(1920, 1080, "[v0]") with
         {
             ConvertHdrToSdr = true,
             TonemapFilterChain = tonemapChain,
         };
 
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [sdrRung],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [],
-            Thumbnails: new(Width: 320, Height: 180, IntervalSeconds: 10)
+            OutputFormat.Hls,
+            [sdrRung],
+            [BuildAudioOutput()],
+            [],
+            new(320, 180, 10)
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
-        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildHdrMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildHdrMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
-        int filterComplexIdx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
         string filterValue = commands[0].Arguments[filterComplexIdx + 1];
 
-        int tonemapCount = CountOccurrences(haystack: filterValue, needle: "tonemap=hable");
+        int tonemapCount = CountOccurrences(filterValue, "tonemap=hable");
         tonemapCount
             .Should()
-            .Be(expected: 1, because: "the rung and the sprite must share one full-res SDR intermediate");
+            .Be(1, "the rung and the sprite must share one full-res SDR intermediate");
     }
 
     private static int CountOccurrences(string haystack, string needle)
     {
         int count = 0;
         int index = 0;
-        while ((index = haystack.IndexOf(value: needle, startIndex: index, comparisonType: StringComparison.Ordinal)) != -1)
+        while ((index = haystack.IndexOf(needle, index, StringComparison.Ordinal)) != -1)
         {
             count++;
             index += needle.Length;
@@ -361,31 +357,30 @@ public class BuildStageFilterGraphTests
 
     private static MediaInfo BuildHdrMediaInfo() =>
         new(
-            FilePath: "/movies/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 2),
-            OverallBitRateKbps: 50000,
-            FileSizeBytes: 30_000_000_000,
-            VideoStreams:
+            "/movies/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(2),
+            50000,
+            30_000_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "hevc",
-                    Width: 3840,
-                    Height: 2160,
-                    FrameRate: 24.0,
-                    BitDepth: 10,
-                    PixelFormat: "yuv420p10le",
-                    ColorPrimaries: "bt2020",
-                    ColorTransfer: "smpte2084",
-                    ColorSpace: "bt2020nc",
-                    IsDefault: true,
-                    BitRateKbps: 45000
+                    0,
+                    "hevc",
+                    3840,
+                    2160,
+                    24.0,
+                    10,
+                    "yuv420p10le",
+                    "bt2020",
+                    "smpte2084",
+                    "bt2020nc",
+                    true,
+                    45000
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
     // ------------------------------------------------------------------
@@ -395,40 +390,40 @@ public class BuildStageFilterGraphTests
     [Fact]
     public async Task BuildStage_CropFilterSet_EmitsCropFilterBeforeScale()
     {
-        VideoOutputPlan videoWithCrop = BuildVideoOutput(width: 1280, height: 720, mapLabel: "[v0]") with
+        VideoOutputPlan videoWithCrop = BuildVideoOutput(1280, 720, "[v0]") with
         {
             CropFilter = "1920:800:0:140",
         };
 
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [videoWithCrop],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [videoWithCrop],
+            [BuildAudioOutput()],
+            [],
+            null
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: BuildMediaInfo(width: 1920, height: 1080)
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfo(1920, 1080)
         );
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
-        int filterComplexIdx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
         string filterValue = commands[0].Arguments[filterComplexIdx + 1];
 
-        filterValue.Should().Contain(expected: "crop=1920:800:0:140");
+        filterValue.Should().Contain("crop=1920:800:0:140");
 
         // Crop must appear before scale so the scaler operates on the cropped picture.
-        int cropIdx = filterValue.IndexOf(value: "crop=", comparisonType: StringComparison.Ordinal);
-        int scaleIdx = filterValue.IndexOf(value: "scale=", comparisonType: StringComparison.Ordinal);
-        cropIdx.Should().BeLessThan(expected: scaleIdx);
+        int cropIdx = filterValue.IndexOf("crop=", StringComparison.Ordinal);
+        int scaleIdx = filterValue.IndexOf("scale=", StringComparison.Ordinal);
+        cropIdx.Should().BeLessThan(scaleIdx);
     }
 
     // ------------------------------------------------------------------
@@ -448,13 +443,13 @@ public class BuildStageFilterGraphTests
             + "tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p";
         const string crop = "3616:1608:224:276";
 
-        VideoOutputPlan hdrRung = BuildVideoOutput(width: 3840, height: 2160, mapLabel: "[v0]", encoder: "hevc_nvenc") with
+        VideoOutputPlan hdrRung = BuildVideoOutput(3840, 2160, "[v0]", "hevc_nvenc") with
         {
             TenBit = true,
             PixelFormat = "p010le",
             CropFilter = crop,
         };
-        VideoOutputPlan sdrRung = BuildVideoOutput(width: 1920, height: 1080, mapLabel: "[v1]", encoder: "hevc_nvenc") with
+        VideoOutputPlan sdrRung = BuildVideoOutput(1920, 1080, "[v1]", "hevc_nvenc") with
         {
             ConvertHdrToSdr = true,
             TonemapFilterChain = tonemapChain,
@@ -462,41 +457,41 @@ public class BuildStageFilterGraphTests
         };
 
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [hdrRung, sdrRung],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [],
-            Thumbnails: new(Width: 320, Height: 180, IntervalSeconds: 10)
+            OutputFormat.Hls,
+            [hdrRung, sdrRung],
+            [BuildAudioOutput()],
+            [],
+            new(320, 180, 10)
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
-        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildHdrMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildHdrMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
-        int filterComplexIdx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
         string filterValue = commands[0].Arguments[filterComplexIdx + 1];
 
         // Exactly one crop for the whole graph — not one per rung, not one per branch.
-        CountOccurrences(haystack: filterValue, needle: $"crop={crop}")
+        CountOccurrences(filterValue, $"crop={crop}")
             .Should()
-            .Be(expected: 1, because: "the source is cropped once and every branch reuses the cropped picture");
+            .Be(1, "the source is cropped once and every branch reuses the cropped picture");
 
         // The single crop runs before the tonemap and before the split, so the
         // expensive tonemap and the sprite both operate on the cropped picture.
-        int cropIdx = filterValue.IndexOf(value: "crop=", comparisonType: StringComparison.Ordinal);
-        int tonemapIdx = filterValue.IndexOf(value: "tonemap=hable", comparisonType: StringComparison.Ordinal);
-        int splitIdx = filterValue.IndexOf(value: "split", comparisonType: StringComparison.Ordinal);
-        cropIdx.Should().BeGreaterThan(expected: -1);
-        cropIdx.Should().BeLessThan(expected: tonemapIdx, because: "tonemap must run on the cropped picture");
-        cropIdx.Should().BeLessThan(expected: splitIdx, because: "the crop feeds the split, not the other way round");
+        int cropIdx = filterValue.IndexOf("crop=", StringComparison.Ordinal);
+        int tonemapIdx = filterValue.IndexOf("tonemap=hable", StringComparison.Ordinal);
+        int splitIdx = filterValue.IndexOf("split", StringComparison.Ordinal);
+        cropIdx.Should().BeGreaterThan(-1);
+        cropIdx.Should().BeLessThan(tonemapIdx, "tonemap must run on the cropped picture");
+        cropIdx.Should().BeLessThan(splitIdx, "the crop feeds the split, not the other way round");
 
         // Tonemap still happens exactly once (shared SDR intermediate for the
         // 1080p rung and the sprite).
-        CountOccurrences(haystack: filterValue, needle: "tonemap=hable").Should().Be(expected: 1);
+        CountOccurrences(filterValue, "tonemap=hable").Should().Be(1);
     }
 }

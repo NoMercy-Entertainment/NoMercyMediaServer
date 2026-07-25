@@ -22,46 +22,46 @@ public class HlsOutputStrategyTests
     [Fact]
     public void ConfigureOutput_AddsHlsFlags()
     {
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan();
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
-        args.Should().Contain(expected: "-f hls");
-        args.Should().Contain(expected: "-hls_playlist_type vod");
-        args.Should().Contain(expected: "_%05d.ts");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+        args.Should().Contain("-f hls");
+        args.Should().Contain("-hls_playlist_type vod");
+        args.Should().Contain("_%05d.ts");
     }
 
     [Fact]
     public void GetOutputSubdirectories_ReturnsTemplateResolvedDirs()
     {
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         OutputPlan plan = CreateSimplePlan();
 
-        string[] dirs = strategy.GetOutputSubdirectories(plan: plan);
+        string[] dirs = strategy.GetOutputSubdirectories(plan);
 
-        dirs.Should().Contain(expected: "video_1920x1080_SDR");
-        dirs.Should().Contain(expected: "audio_eng_aac");
+        dirs.Should().Contain("video_1920x1080_SDR");
+        dirs.Should().Contain("audio_eng_aac");
     }
 
     [Fact]
     public void ConfigureOutput_UsesTemplateForNaming()
     {
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan();
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
-        args.Should().Contain(expected: "video_1920x1080_SDR");
-        args.Should().Contain(expected: "audio_eng_aac");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+        args.Should().Contain("video_1920x1080_SDR");
+        args.Should().Contain("audio_eng_aac");
     }
 
     [Fact]
@@ -69,16 +69,16 @@ public class HlsOutputStrategyTests
     {
         // HLS spec requires hvc1 tag for HEVC playback in Safari / iOS;
         // without it Apple devices refuse to play the variant.
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan(videoEncoder: "libx265");
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
-        args.Should().Contain(expected: "-tag:v hvc1");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+        args.Should().Contain("-tag:v hvc1");
     }
 
     [Fact]
@@ -86,16 +86,16 @@ public class HlsOutputStrategyTests
     {
         // libx264 must NOT emit the HEVC tag — players reject the stream
         // when the codec parameter and tag don't match.
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan(videoEncoder: "libx264");
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
-        args.Should().NotContain(unexpected: "-tag:v hvc1");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+        args.Should().NotContain("-tag:v hvc1");
     }
 
     // ── Stream metadata: the source's tags must not survive ──────────────────
@@ -105,51 +105,51 @@ public class HlsOutputStrategyTests
     [Fact]
     public void ConfigureOutput_StripsSourceMetadata_OnEveryOutput()
     {
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
-        strategy.ConfigureOutput(builder: builder, plan: CreateSimplePlan(), outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, CreateSimplePlan(), "/output");
 
-        string[] args = builder.Build(ffmpegPath: "ffmpeg").Arguments;
+        string[] args = builder.Build("ffmpeg").Arguments;
 
         // One -map_metadata -1 per output (video + audio).
-        CountPairs(args: args, flag: "-map_metadata", value: "-1").Should().Be(expected: 2);
+        CountPairs(args, "-map_metadata", "-1").Should().Be(2);
     }
 
     [Fact]
     public void ConfigureOutput_ClearsVideoLanguageAndTitle()
     {
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
-        strategy.ConfigureOutput(builder: builder, plan: CreateSimplePlan(), outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, CreateSimplePlan(), "/output");
 
-        string[] args = builder.Build(ffmpegPath: "ffmpeg").Arguments;
+        string[] args = builder.Build("ffmpeg").Arguments;
 
         // A video stream carries no language, and its source title was the
         // ripper's tag — both are cleared with an empty value.
-        HasTag(args: args, flag: "-metadata:s:v:0", keyValue: "language=").Should().BeTrue();
-        HasTag(args: args, flag: "-metadata:s:v:0", keyValue: "title=").Should().BeTrue();
+        HasTag(args, "-metadata:s:v:0", "language=").Should().BeTrue();
+        HasTag(args, "-metadata:s:v:0", "title=").Should().BeTrue();
         // Never the codec-parameter carried as a language.
-        HasTag(args: args, flag: "-metadata:s:v:0", keyValue: "language=jpn").Should().BeFalse();
+        HasTag(args, "-metadata:s:v:0", "language=jpn").Should().BeFalse();
     }
 
     [Fact]
     public void ConfigureOutput_TagsAudioWithItsLanguageAndReadableName()
     {
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
         // CreateSimplePlan's audio is eng.
-        strategy.ConfigureOutput(builder: builder, plan: CreateSimplePlan(), outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, CreateSimplePlan(), "/output");
 
-        string[] args = builder.Build(ffmpegPath: "ffmpeg").Arguments;
+        string[] args = builder.Build("ffmpeg").Arguments;
 
-        HasTag(args: args, flag: "-metadata:s:a:0", keyValue: "language=eng").Should().BeTrue();
-        HasTag(args: args, flag: "-metadata:s:a:0", keyValue: "title=English").Should().BeTrue();
+        HasTag(args, "-metadata:s:a:0", "language=eng").Should().BeTrue();
+        HasTag(args, "-metadata:s:a:0", "title=English").Should().BeTrue();
     }
 
     private static int CountPairs(string[] args, string flag, string value)
@@ -174,20 +174,20 @@ public class HlsOutputStrategyTests
     {
         // Dolby Vision passes through HEVC only when the muxer tags the
         // stream as dvh1 — hvc1 (regular HEVC) skips the DV decoder.
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan(videoEncoder: "libx265") with
         {
             PreserveDolbyVision = true,
         };
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
-        args.Should().Contain(expected: "-tag:v dvh1");
-        args.Should().NotContain(unexpected: "-tag:v hvc1");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+        args.Should().Contain("-tag:v dvh1");
+        args.Should().NotContain("-tag:v hvc1");
     }
 
     [Fact]
@@ -196,35 +196,35 @@ public class HlsOutputStrategyTests
         // fMP4 segments share an init.mp4 alongside the playlist. Without
         // -hls_fmp4_init_filename FFmpeg picks a random name and the
         // dashboard manifest can't reference it deterministically.
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan() with { HlsOptions = new() { SegmentType = "fmp4" } };
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
-        args.Should().Contain(expected: "-hls_fmp4_init_filename init.mp4");
-        args.Should().Contain(expected: "_%05d.m4s");
-        args.Should().NotContain(unexpected: "_%05d.ts");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+        args.Should().Contain("-hls_fmp4_init_filename init.mp4");
+        args.Should().Contain("_%05d.m4s");
+        args.Should().NotContain("_%05d.ts");
     }
 
     [Fact]
     public void ConfigureOutput_DefaultSegmentType_EmitsTsSegments()
     {
         // Default = mpegts (.ts) segments — broad player compatibility.
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan();
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
-        args.Should().Contain(expected: "_%05d.ts");
-        args.Should().NotContain(unexpected: "-hls_fmp4_init_filename");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+        args.Should().Contain("_%05d.ts");
+        args.Should().NotContain("-hls_fmp4_init_filename");
     }
 
     [Fact]
@@ -232,16 +232,16 @@ public class HlsOutputStrategyTests
     {
         // independent_segments is the foundation of clean HLS seek behaviour.
         // Players need it to know each segment is independently decodable.
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan();
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
-        args.Should().Contain(expected: "-hls_flags independent_segments");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+        args.Should().Contain("-hls_flags independent_segments");
     }
 
     [Fact]
@@ -250,32 +250,32 @@ public class HlsOutputStrategyTests
         // The -force_key_frames expression must align with the segment
         // duration so every segment starts on a keyframe — non-aligned
         // keyframes break seek and bandwidth switching.
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan() with { SegmentDurationSeconds = 4 };
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
-        args.Should().Contain(expected: "expr:gte(t,n_forced*4)");
-        args.Should().Contain(expected: "-hls_time 4");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+        args.Should().Contain("expr:gte(t,n_forced*4)");
+        args.Should().Contain("-hls_time 4");
     }
 
     [Fact]
     public void ConfigureOutput_PlaylistTypeVod_Default()
     {
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan();
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
-        args.Should().Contain(expected: "-hls_playlist_type vod");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+        args.Should().Contain("-hls_playlist_type vod");
     }
 
     [Fact]
@@ -283,17 +283,17 @@ public class HlsOutputStrategyTests
     {
         // Copy = no transcoding. Even so, HLS audio still needs its own
         // segmented playlist alongside the video variant.
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan(audioAction: StreamAction.Copy);
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
         // Audio segment output still appears in the command.
-        args.Should().Contain(expected: "audio_eng_aac");
+        args.Should().Contain("audio_eng_aac");
     }
 
     [Fact]
@@ -302,23 +302,23 @@ public class HlsOutputStrategyTests
         // A mixed-codec ladder (H.264 1080p + HEVC 720p) must emit each rung's
         // own -c:v, its own -map, and the hvc1 tag on the HEVC rung ONLY — a
         // shared tag would make players reject the H.264 variant.
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateMixedCodecPlan();
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, plan, "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
 
-        args.Should().Contain(expected: "-c:v libx264");
-        args.Should().Contain(expected: "-c:v libx265");
+        args.Should().Contain("-c:v libx264");
+        args.Should().Contain("-c:v libx265");
         // hvc1 belongs only to the HEVC rung — exactly one occurrence overall.
-        cmd.Arguments.Count(predicate: a => a == "hvc1").Should().Be(expected: 1);
+        cmd.Arguments.Count(a => a == "hvc1").Should().Be(1);
         // Each rung maps its own video label; no cross-mapping.
-        args.Should().Contain(expected: "-map [v0]");
-        args.Should().Contain(expected: "-map [v1]");
+        args.Should().Contain("-map [v0]");
+        args.Should().Contain("-map [v1]");
     }
 
     private static OutputPlan CreateMixedCodecPlan()
@@ -327,8 +327,8 @@ public class HlsOutputStrategyTests
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                CreateVideoOutput(width: 1920, height: 1080, encoder: "libx264", mapLabel: "[v0]"),
-                CreateVideoOutput(width: 1280, height: 720, encoder: "libx265", mapLabel: "[v1]"),
+                CreateVideoOutput(1920, 1080, "libx264", "[v0]"),
+                CreateVideoOutput(1280, 720, "libx265", "[v1]"),
             ],
             AudioOutputs: [],
             SubtitleOutputs: [],

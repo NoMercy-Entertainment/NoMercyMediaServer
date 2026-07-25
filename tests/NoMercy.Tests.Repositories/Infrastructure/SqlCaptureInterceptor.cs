@@ -28,8 +28,8 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         InterceptionResult<DbDataReader> result
     )
     {
-        _capturedSql.Add(item: command.CommandText);
-        return base.ReaderExecuting(command: command, eventData: eventData, result: result);
+        _capturedSql.Add(command.CommandText);
+        return base.ReaderExecuting(command, eventData, result);
     }
 
     public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
@@ -39,8 +39,8 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         CancellationToken cancellationToken = default
     )
     {
-        _capturedSql.Add(item: command.CommandText);
-        return base.ReaderExecutingAsync(command: command, eventData: eventData, result: result, cancellationToken: cancellationToken);
+        _capturedSql.Add(command.CommandText);
+        return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
     }
 
     public override InterceptionResult<object> ScalarExecuting(
@@ -49,8 +49,8 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         InterceptionResult<object> result
     )
     {
-        _capturedSql.Add(item: command.CommandText);
-        return base.ScalarExecuting(command: command, eventData: eventData, result: result);
+        _capturedSql.Add(command.CommandText);
+        return base.ScalarExecuting(command, eventData, result);
     }
 
     public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(
@@ -60,8 +60,8 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         CancellationToken cancellationToken = default
     )
     {
-        _capturedSql.Add(item: command.CommandText);
-        return base.ScalarExecutingAsync(command: command, eventData: eventData, result: result, cancellationToken: cancellationToken);
+        _capturedSql.Add(command.CommandText);
+        return base.ScalarExecutingAsync(command, eventData, result, cancellationToken);
     }
 
     public override InterceptionResult<int> NonQueryExecuting(
@@ -70,8 +70,8 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         InterceptionResult<int> result
     )
     {
-        _capturedSql.Add(item: command.CommandText);
-        return base.NonQueryExecuting(command: command, eventData: eventData, result: result);
+        _capturedSql.Add(command.CommandText);
+        return base.NonQueryExecuting(command, eventData, result);
     }
 
     public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
@@ -81,7 +81,7 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         CancellationToken cancellationToken = default
     )
     {
-        _capturedSql.Add(item: command.CommandText);
-        return base.NonQueryExecutingAsync(command: command, eventData: eventData, result: result, cancellationToken: cancellationToken);
+        _capturedSql.Add(command.CommandText);
+        return base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
     }
 }

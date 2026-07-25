@@ -20,7 +20,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Media;
 
-[Trait(name: "Category", value: "Playlist")]
+[Trait("Category", "Playlist")]
 public class VideoPlaylistResponseDtoTests
 {
     private static Episode BuildEpisodeWithVideoFile(
@@ -40,13 +40,13 @@ public class VideoPlaylistResponseDtoTests
             Id = 1399,
             Title = "Breaking Bad",
             TitleSort = "breaking bad",
-            FirstAirDate = new DateTime(year: 2008, month: 1, day: 20),
+            FirstAirDate = new DateTime(2008, 1, 20),
         };
         foreach (Image image in tvImages ?? [])
-            tv.Images.Add(item: image);
+            tv.Images.Add(image);
         foreach (Certification certification in certifications ?? [])
             tv.CertificationTvs.Add(
-                item: new()
+                new()
                 {
                     CertificationId = certification.Id,
                     Certification = certification,
@@ -55,7 +55,7 @@ public class VideoPlaylistResponseDtoTests
                 }
             );
         if (tvTranslation is not null)
-            tv.Translations.Add(item: tvTranslation);
+            tv.Translations.Add(tvTranslation);
 
         Season season = new()
         {
@@ -78,7 +78,7 @@ public class VideoPlaylistResponseDtoTests
             Season = season,
         };
         if (episodeTranslation is not null)
-            episode.Translations.Add(item: episodeTranslation);
+            episode.Translations.Add(episodeTranslation);
 
         VideoFile videoFile = new()
         {
@@ -94,8 +94,8 @@ public class VideoPlaylistResponseDtoTests
             Subtitles = subtitlesJson,
         };
         if (userData is not null)
-            videoFile.UserData.Add(item: userData);
-        episode.VideoFiles.Add(item: videoFile);
+            videoFile.UserData.Add(userData);
+        episode.VideoFiles.Add(videoFile);
 
         return episode;
     }
@@ -124,10 +124,10 @@ public class VideoPlaylistResponseDtoTests
             Overview = "A movie used for DTO tests.",
         };
         if (translation is not null)
-            movie.Translations.Add(item: translation);
+            movie.Translations.Add(translation);
 
         movie.CertificationMovies.Add(
-            item: new()
+            new()
             {
                 CertificationId = certification.Id,
                 Certification = certification,
@@ -137,7 +137,7 @@ public class VideoPlaylistResponseDtoTests
         );
 
         movie.VideoFiles.Add(
-            item: new()
+            new()
             {
                 Filename = "test-movie.mkv",
                 Folder = "/test",
@@ -157,80 +157,78 @@ public class VideoPlaylistResponseDtoTests
     [Fact]
     public void Ctor_PlainMovie_NoIndex_StillSetsContentRating()
     {
-        Movie movie = BuildMovieWithCertification(countryIso: "US");
+        Movie movie = BuildMovieWithCertification("US");
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        Assert.NotNull(@object: dto.ContentRating);
-        Assert.Equal(expected: "PG-13", actual: dto.ContentRating!.Rating);
+        Assert.NotNull(dto.ContentRating);
+        Assert.Equal("PG-13", dto.ContentRating!.Rating);
     }
 
     [Fact]
     public void Ctor_CollectionMovie_WithIndex_SetsContentRatingAndCollectionFields()
     {
-        Movie movie = BuildMovieWithCertification(countryIso: "US");
+        Movie movie = BuildMovieWithCertification("US");
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "collection", playlistId: 1, country: "US", index: 2);
+        VideoPlaylistResponseDto dto = new(movie, "collection", 1, "US", index: 2);
 
-        Assert.NotNull(@object: dto.ContentRating);
-        Assert.Equal(expected: "PG-13", actual: dto.ContentRating!.Rating);
-        Assert.Equal(expected: 0, actual: dto.Season);
-        Assert.Equal(expected: 2, actual: dto.Episode);
-        Assert.Equal(expected: "Collection", actual: dto.SeasonName);
+        Assert.NotNull(dto.ContentRating);
+        Assert.Equal("PG-13", dto.ContentRating!.Rating);
+        Assert.Equal(0, dto.Season);
+        Assert.Equal(2, dto.Episode);
+        Assert.Equal("Collection", dto.SeasonName);
     }
 
     [Fact]
     public void Ctor_SpriteKindTrack_IsExposedAsThumbnails()
     {
         Movie movie = BuildMovieWithCertification(
-            countryIso: "US",
-            tracks: [new() { File = "/sprite.webp", Kind = "sprite" }]
+            "US",
+            [new() { File = "/sprite.webp", Kind = "sprite" }]
         );
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        Assert.Contains(collection: dto.Tracks, filter: track => track.Kind == "thumbnails");
-        Assert.DoesNotContain(collection: dto.Tracks, filter: track => track.Kind == "sprite");
+        Assert.Contains(dto.Tracks, track => track.Kind == "thumbnails");
+        Assert.DoesNotContain(dto.Tracks, track => track.Kind == "sprite");
     }
 
     [Fact]
     public void Ctor_ThumbnailsKindTrack_StaysThumbnails()
     {
         Movie movie = BuildMovieWithCertification(
-            countryIso: "US",
-            tracks: [new() { File = "/thumbs_320x178.vtt", Kind = "thumbnails" }]
+            "US",
+            [new() { File = "/thumbs_320x178.vtt", Kind = "thumbnails" }]
         );
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        VideoTrack track = Assert.Single(collection: dto.Tracks, predicate: t => t.Kind == "thumbnails");
-        Assert.EndsWith(expectedEndString: ".vtt", actualString: track.File);
+        VideoTrack track = Assert.Single(dto.Tracks, t => t.Kind == "thumbnails");
+        Assert.EndsWith(".vtt", track.File);
     }
 
     [Fact]
     public void Ctor_SpriteAndThumbnailsBothPresent_DedupesToSingleVttThumbnailsTrack()
     {
         Movie movie = BuildMovieWithCertification(
-            countryIso: "US",
-            tracks:
+            "US",
             [
                 new() { File = "/thumbs_320x178.webp", Kind = "sprite" },
                 new() { File = "/thumbs_320x178.vtt", Kind = "thumbnails" },
             ]
         );
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        VideoTrack track = Assert.Single(collection: dto.Tracks, predicate: t => t.Kind == "thumbnails");
-        Assert.EndsWith(expectedEndString: ".vtt", actualString: track.File);
+        VideoTrack track = Assert.Single(dto.Tracks, t => t.Kind == "thumbnails");
+        Assert.EndsWith(".vtt", track.File);
     }
 
     [Fact]
     public void Ctor_TwoSpriteTracksNeitherIsVtt_DedupesToFirstOccurringTrack()
     {
         Movie movie = BuildMovieWithCertification(
-            countryIso: "US",
-            tracks:
+            "US",
             [
                 new()
                 {
@@ -247,10 +245,10 @@ public class VideoPlaylistResponseDtoTests
             ]
         );
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        VideoTrack track = Assert.Single(collection: dto.Tracks, predicate: t => t.Kind == "thumbnails");
-        Assert.EndsWith(expectedEndString: "/first.webp", actualString: track.File);
+        VideoTrack track = Assert.Single(dto.Tracks, t => t.Kind == "thumbnails");
+        Assert.EndsWith("/first.webp", track.File);
     }
 
     [Fact]
@@ -261,8 +259,7 @@ public class VideoPlaylistResponseDtoTests
         // the "track == keep" comparison it otherwise has to fall through to for
         // every thumbnails candidate.
         Movie movie = BuildMovieWithCertification(
-            countryIso: "US",
-            tracks:
+            "US",
             [
                 new() { File = "/first.webp", Kind = "sprite" },
                 new() { File = "/second.webp", Kind = "sprite" },
@@ -270,10 +267,10 @@ public class VideoPlaylistResponseDtoTests
             ]
         );
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        dto.Tracks.Should().ContainSingle(predicate: t => t.Kind == "thumbnails");
-        dto.Tracks.Should().ContainSingle(predicate: t => t.Kind == "audio");
+        dto.Tracks.Should().ContainSingle(t => t.Kind == "thumbnails");
+        dto.Tracks.Should().ContainSingle(t => t.Kind == "audio");
     }
 
     [Fact]
@@ -283,62 +280,61 @@ public class VideoPlaylistResponseDtoTests
         // A lone thumbnails track sharing space with an unrelated kind must return
         // early and leave both untouched.
         Movie movie = BuildMovieWithCertification(
-            countryIso: "US",
-            tracks:
+            "US",
             [
                 new() { File = "/thumbs.vtt", Kind = "thumbnails" },
                 new() { File = "/audio.m4a", Kind = "audio" },
             ]
         );
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        dto.Tracks.Should().Contain(predicate: t => t.Kind == "thumbnails");
-        dto.Tracks.Should().Contain(predicate: t => t.Kind == "audio");
+        dto.Tracks.Should().Contain(t => t.Kind == "thumbnails");
+        dto.Tracks.Should().Contain(t => t.Kind == "audio");
     }
 
     [Fact]
     public void Ctor_NonSubtitleTrackFile_IsPrefixedWithVideoFileBaseFolder()
     {
         Movie movie = BuildMovieWithCertification(
-            countryIso: "US",
-            tracks: [new() { File = "/thumbs.vtt", Kind = "thumbnails" }]
+            "US",
+            [new() { File = "/thumbs.vtt", Kind = "thumbnails" }]
         );
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        VideoTrack track = dto.Tracks.Single(predicate: t => t.Kind == "thumbnails");
-        track.File.Should().Be(expected: "/movies/test/thumbs.vtt");
+        VideoTrack track = dto.Tracks.Single(t => t.Kind == "thumbnails");
+        track.File.Should().Be("/movies/test/thumbs.vtt");
     }
 
     [Fact]
     public void Ctor_Movie_Mp4Filename_UsesVideoMp4SourceType()
     {
-        Movie movie = BuildMovieWithCertification(countryIso: "US");
+        Movie movie = BuildMovieWithCertification("US");
         movie.VideoFiles.First().Filename = "test-movie.mp4";
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
         dto.Sources.Should().ContainSingle();
-        dto.Sources[0].Type.Should().Be(expected: "video/mp4");
+        dto.Sources[0].Type.Should().Be("video/mp4");
     }
 
     [Fact]
     public void Ctor_Movie_LanguagesArrayContainsNullEntry_FiltersItOut()
     {
-        Movie movie = BuildMovieWithCertification(countryIso: "US", languagesJson: "[\"en\", null]");
+        Movie movie = BuildMovieWithCertification("US", languagesJson: "[\"en\", null]");
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        dto.Sources[0].Languages.Should().Equal(expected: "en");
+        dto.Sources[0].Languages.Should().Equal("en");
     }
 
     [Fact]
     public void Ctor_Movie_LanguagesJsonIsNullLiteral_YieldsEmptyLanguagesArray()
     {
-        Movie movie = BuildMovieWithCertification(countryIso: "US", languagesJson: "null");
+        Movie movie = BuildMovieWithCertification("US", languagesJson: "null");
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
         dto.Sources[0].Languages.Should().BeEmpty();
     }
@@ -347,7 +343,7 @@ public class VideoPlaylistResponseDtoTests
     public void Ctor_Movie_TranslationPresent_OverridesTitleAndOverview()
     {
         Movie movie = BuildMovieWithCertification(
-            countryIso: "US",
+            "US",
             translation: new()
             {
                 Iso6391 = "nl",
@@ -356,29 +352,29 @@ public class VideoPlaylistResponseDtoTests
             }
         );
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        dto.Title.Should().Be(expected: "Nederlandse titel");
-        dto.Description.Should().Be(expected: "Nederlandse samenvatting.");
+        dto.Title.Should().Be("Nederlandse titel");
+        dto.Description.Should().Be("Nederlandse samenvatting.");
     }
 
     [Fact]
     public void Ctor_Movie_Certification_MatchesUsExplicitly()
     {
-        Movie movie = BuildMovieWithCertification(countryIso: "US");
+        Movie movie = BuildMovieWithCertification("US");
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "NL");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "NL");
 
         dto.ContentRating.Should().NotBeNull();
-        dto.ContentRating!.Iso31661.Should().Be(expected: "US");
+        dto.ContentRating!.Iso31661.Should().Be("US");
     }
 
     [Fact]
     public void Ctor_Movie_NoIndex_LeavesCollectionOnlyFieldsNull()
     {
-        Movie movie = BuildMovieWithCertification(countryIso: "US");
+        Movie movie = BuildMovieWithCertification("US");
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
         dto.SeasonName.Should().BeNull();
         dto.Season.Should().BeNull();
@@ -395,36 +391,36 @@ public class VideoPlaylistResponseDtoTests
             TitleSort = "no file",
         };
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        dto.Id.Should().Be(expected: 0);
+        dto.Id.Should().Be(0);
         dto.Title.Should().BeNull();
     }
 
     [Fact]
     public void Ctor_Movie_CollectionProvided_UsesCollectionIdAsTmdbId()
     {
-        Movie movie = BuildMovieWithCertification(countryIso: "US");
+        Movie movie = BuildMovieWithCertification("US");
         Collection collection = new() { Id = 777, Title = "Franchise" };
 
         VideoPlaylistResponseDto dto = new(
-            movie: movie,
-            playlistType: "collection",
-            playlistId: 1,
-            country: "US",
+            movie,
+            "collection",
+            1,
+            "US",
             index: 1,
             collection: collection
         );
 
-        dto.TmdbId.Should().Be(expected: 777);
+        dto.TmdbId.Should().Be(777);
     }
 
     [Fact]
     public void Ctor_Movie_Certification_NoUsOrCountryMatch_LeavesContentRatingNull()
     {
-        Movie movie = BuildMovieWithCertification(countryIso: "DE");
+        Movie movie = BuildMovieWithCertification("DE");
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "NL");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "NL");
 
         dto.ContentRating.Should().BeNull();
     }
@@ -432,9 +428,9 @@ public class VideoPlaylistResponseDtoTests
     [Fact]
     public void Ctor_Movie_LogoPicksHighestVoteAverageLogoImage()
     {
-        Movie movie = BuildMovieWithCertification(countryIso: "US");
+        Movie movie = BuildMovieWithCertification("US");
         movie.Images.Add(
-            item: new()
+            new()
             {
                 Type = "logo",
                 FilePath = "/low.png",
@@ -442,7 +438,7 @@ public class VideoPlaylistResponseDtoTests
             }
         );
         movie.Images.Add(
-            item: new()
+            new()
             {
                 Type = "logo",
                 FilePath = "/high.png",
@@ -450,7 +446,7 @@ public class VideoPlaylistResponseDtoTests
             }
         );
         movie.Images.Add(
-            item: new()
+            new()
             {
                 Type = "poster",
                 FilePath = "/poster.png",
@@ -458,9 +454,9 @@ public class VideoPlaylistResponseDtoTests
             }
         );
 
-        VideoPlaylistResponseDto dto = new(movie: movie, playlistType: "movie", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        dto.Logo.Should().Be(expected: "/high.png");
+        dto.Logo.Should().Be("/high.png");
     }
 
     [Fact]
@@ -481,9 +477,9 @@ public class VideoPlaylistResponseDtoTests
             EpisodeNumber = 1,
         };
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
-        dto.Id.Should().Be(expected: 0);
+        dto.Id.Should().Be(0);
         dto.Title.Should().BeNull();
     }
 
@@ -497,7 +493,7 @@ public class VideoPlaylistResponseDtoTests
             EpisodeNumber = 1,
         };
         episode.VideoFiles.Add(
-            item: new()
+            new()
             {
                 Filename = "x.mkv",
                 Folder = "/tv",
@@ -510,9 +506,9 @@ public class VideoPlaylistResponseDtoTests
             }
         );
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
-        dto.Id.Should().Be(expected: 0);
+        dto.Id.Should().Be(0);
     }
 
     [Fact]
@@ -520,12 +516,12 @@ public class VideoPlaylistResponseDtoTests
     {
         Episode episode = BuildEpisodeWithVideoFile();
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "specials", playlistId: 1, country: "US", index: 3);
+        VideoPlaylistResponseDto dto = new(episode, "specials", 1, "US", index: 3);
 
-        dto.Title.Should().Be(expected: "Breaking Bad %S1 %E1 - Pilot");
+        dto.Title.Should().Be("Breaking Bad %S1 %E1 - Pilot");
         dto.Show.Should().BeNull();
-        dto.Season.Should().Be(expected: 0);
-        dto.Episode.Should().Be(expected: 3);
+        dto.Season.Should().Be(0);
+        dto.Episode.Should().Be(3);
     }
 
     [Fact]
@@ -533,14 +529,14 @@ public class VideoPlaylistResponseDtoTests
     {
         Episode episode = BuildEpisodeWithVideoFile();
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
-        dto.Title.Should().Be(expected: "Pilot");
-        dto.Show.Should().Be(expected: "Breaking Bad");
-        dto.Season.Should().Be(expected: 1);
-        dto.Episode.Should().Be(expected: 1);
-        dto.SeasonName.Should().Be(expected: "Season 1");
-        dto.EpisodeId.Should().Be(expected: episode.Id);
+        dto.Title.Should().Be("Pilot");
+        dto.Show.Should().Be("Breaking Bad");
+        dto.Season.Should().Be(1);
+        dto.Episode.Should().Be(1);
+        dto.SeasonName.Should().Be("Season 1");
+        dto.EpisodeId.Should().Be(episode.Id);
     }
 
     [Fact]
@@ -570,9 +566,9 @@ public class VideoPlaylistResponseDtoTests
             ]
         );
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
-        dto.Logo.Should().Be(expected: "/high.png");
+        dto.Logo.Should().Be("/high.png");
     }
 
     [Fact]
@@ -586,10 +582,10 @@ public class VideoPlaylistResponseDtoTests
         };
         Episode episode = BuildEpisodeWithVideoFile(userData: userData);
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
         dto.Progress.Should().NotBeNull();
-        dto.Progress!.Time.Should().Be(expected: 500);
+        dto.Progress!.Time.Should().Be(500);
     }
 
     [Fact]
@@ -597,7 +593,7 @@ public class VideoPlaylistResponseDtoTests
     {
         Episode episode = BuildEpisodeWithVideoFile();
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
         dto.Progress.Should().BeNull();
     }
@@ -615,10 +611,10 @@ public class VideoPlaylistResponseDtoTests
         };
         Episode episode = BuildEpisodeWithVideoFile(certifications: [us]);
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "NL");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "NL");
 
         dto.ContentRating.Should().NotBeNull();
-        dto.ContentRating!.Iso31661.Should().Be(expected: "US");
+        dto.ContentRating!.Iso31661.Should().Be("US");
     }
 
     [Fact]
@@ -634,11 +630,11 @@ public class VideoPlaylistResponseDtoTests
             }
         );
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
-        dto.Show.Should().Be(expected: "Zwaar Weer");
-        dto.Title.Should().Be(expected: "Proefaflevering");
-        dto.Description.Should().Be(expected: "Nederlandse samenvatting.");
+        dto.Show.Should().Be("Zwaar Weer");
+        dto.Title.Should().Be("Proefaflevering");
+        dto.Description.Should().Be("Nederlandse samenvatting.");
     }
 
     [Fact]
@@ -654,11 +650,11 @@ public class VideoPlaylistResponseDtoTests
         };
         Episode episode = BuildEpisodeWithVideoFile(certifications: [nl]);
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "NL");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "NL");
 
         dto.ContentRating.Should().NotBeNull();
-        dto.ContentRating!.Rating.Should().Be(expected: "12");
-        dto.ContentRating.Iso31661.Should().Be(expected: "NL");
+        dto.ContentRating!.Rating.Should().Be("12");
+        dto.ContentRating.Iso31661.Should().Be("NL");
     }
 
     [Fact]
@@ -674,7 +670,7 @@ public class VideoPlaylistResponseDtoTests
         };
         Episode episode = BuildEpisodeWithVideoFile(certifications: [de]);
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "NL");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "NL");
 
         dto.ContentRating.Should().BeNull();
     }
@@ -685,11 +681,11 @@ public class VideoPlaylistResponseDtoTests
         const string subtitlesJson = """[{"language":"nl","type":"full","ext":"vtt"}]""";
         Episode episode = BuildEpisodeWithVideoFile(subtitlesJson: subtitlesJson);
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
-        VideoTrack track = dto.Tracks.Single(predicate: t => t.Kind == "subtitles");
-        track.Language.Should().Be(expected: "nl");
-        track.File.Should().EndWith(expected: ".nl.full.vtt");
+        VideoTrack track = dto.Tracks.Single(t => t.Kind == "subtitles");
+        track.Language.Should().Be("nl");
+        track.File.Should().EndWith(".nl.full.vtt");
     }
 
     [Fact]
@@ -697,9 +693,9 @@ public class VideoPlaylistResponseDtoTests
     {
         Episode episode = BuildEpisodeWithVideoFile(subtitlesJson: "{not-valid-json");
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
-        dto.Tracks.Should().NotContain(predicate: t => t.Kind == "subtitles");
+        dto.Tracks.Should().NotContain(t => t.Kind == "subtitles");
     }
 
     [Fact]
@@ -707,9 +703,9 @@ public class VideoPlaylistResponseDtoTests
     {
         Episode episode = BuildEpisodeWithVideoFile(languagesJson: "[\"en\", null]");
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
-        dto.Sources[0].Languages.Should().Equal(expected: "en");
+        dto.Sources[0].Languages.Should().Equal("en");
     }
 
     [Fact]
@@ -717,7 +713,7 @@ public class VideoPlaylistResponseDtoTests
     {
         Episode episode = BuildEpisodeWithVideoFile(languagesJson: "null");
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
         dto.Sources[0].Languages.Should().BeEmpty();
     }
@@ -742,8 +738,8 @@ public class VideoPlaylistResponseDtoTests
         ];
         Episode episode = BuildEpisodeWithVideoFile(tracks: tracks);
 
-        VideoPlaylistResponseDto dto = new(episode: episode, playlistType: "tv", playlistId: 1, country: "US");
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
 
-        dto.Tracks.Select(selector: t => t.Language).Should().BeInAscendingOrder();
+        dto.Tracks.Select(t => t.Language).Should().BeInAscendingOrder();
     }
 }

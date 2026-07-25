@@ -16,13 +16,13 @@ namespace NoMercy.Data.DTOs;
 
 public class FolderLibraryDto
 {
-    [JsonProperty(propertyName: "folder_id")]
+    [JsonProperty("folder_id")]
     public Ulid FolderId { get; set; }
 
-    [JsonProperty(propertyName: "library_id")]
+    [JsonProperty("library_id")]
     public Ulid LibraryId { get; set; }
 
-    [JsonProperty(propertyName: "folder")]
+    [JsonProperty("folder")]
     public FolderDto Folder { get; set; } = new();
 
     public FolderLibraryDto() { }
@@ -31,12 +31,12 @@ public class FolderLibraryDto
     {
         if (folderFolderLibraries.Count == 0)
             throw new ArgumentException(
-                message: "The collection must contain at least one FolderLibrary.",
-                paramName: nameof(folderFolderLibraries)
+                "The collection must contain at least one FolderLibrary.",
+                nameof(folderFolderLibraries)
             );
 
         FolderId = folderFolderLibraries.First().FolderId;
         LibraryId = folderFolderLibraries.First().LibraryId;
-        Folder = new(folder: folderFolderLibraries.First().Folder);
+        Folder = new(folderFolderLibraries.First().Folder);
     }
 }

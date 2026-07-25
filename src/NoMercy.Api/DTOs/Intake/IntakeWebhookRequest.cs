@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Intake;
 
 public sealed class IntakeWebhookRequest
 {
-    [JsonProperty(propertyName: "path")]
+    [JsonProperty("path")]
     public string Path { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "mediaHints")]
+    [JsonProperty("mediaHints")]
     public string? MediaHints { get; set; }
 }

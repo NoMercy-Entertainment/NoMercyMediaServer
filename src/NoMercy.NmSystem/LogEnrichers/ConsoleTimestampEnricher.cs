@@ -20,8 +20,8 @@ internal class ConsoleTimestampEnricher : ILogEventEnricher
 {
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
-        string timestamp = DateTime.Now.ToString(format: "d-M-yyyy HH:mm").Pastel(color: Color.DarkGray);
+        string timestamp = DateTime.Now.ToString("d-M-yyyy HH:mm").Pastel(Color.DarkGray);
 
-        logEvent.AddPropertyIfAbsent(property: propertyFactory.CreateProperty(name: "Time", value: timestamp));
+        logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty("Time", timestamp));
     }
 }

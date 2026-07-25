@@ -15,30 +15,30 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class AttributeCredits
 {
-    [JsonProperty(propertyName: "Rhodes piano")]
+    [JsonProperty("Rhodes piano")]
     public string RhodesPiano { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "synthesizer")]
+    [JsonProperty("synthesizer")]
     public string Synthesizer { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "drums (drum set)")]
+    [JsonProperty("drums (drum set)")]
     public string? DrumsDrumSet { get; set; }
 
-    [JsonProperty(propertyName: "handclaps")]
+    [JsonProperty("handclaps")]
     public string Handclaps { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "Hammond organ")]
+    [JsonProperty("Hammond organ")]
     public string HammondOrgan { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "keyboard")]
+    [JsonProperty("keyboard")]
     public string Keyboard { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "drum machine")]
+    [JsonProperty("drum machine")]
     public string DrumMachine { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "foot stomps")]
+    [JsonProperty("foot stomps")]
     public string FootStomps { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "Wurlitzer electric piano")]
+    [JsonProperty("Wurlitzer electric piano")]
     public string WurlitzerElectricPiano { get; set; } = string.Empty;
 }

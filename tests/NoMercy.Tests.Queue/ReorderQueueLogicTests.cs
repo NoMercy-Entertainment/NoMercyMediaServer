@@ -20,7 +20,7 @@ namespace NoMercy.Tests.Queue;
 /// Tests the in-memory reorder algorithm extracted verbatim from
 /// TasksController.ReorderQueue. No DB, no DI, no HTTP — pure logic.
 /// </summary>
-[Trait(name: "Category", value: "Queue")]
+[Trait("Category", "Queue")]
 public class ReorderQueueLogicTests
 {
     // =========================================================================
@@ -49,22 +49,22 @@ public class ReorderQueueLogicTests
     /// </summary>
     private static List<QueueJob> RunReorder(List<QueueJob> allJobs, List<int> orderedJobIds)
     {
-        List<QueueJob> pendingJobs = allJobs.Where(predicate: j => j.ReservedAt == null).ToList();
+        List<QueueJob> pendingJobs = allJobs.Where(j => j.ReservedAt == null).ToList();
 
         HashSet<int> requestedSet = orderedJobIds.ToHashSet();
 
         List<QueueJob> reordered =
         [
             .. orderedJobIds
-                .Select(selector: id => pendingJobs.FirstOrDefault(predicate: j => j.Id == id))
-                .Where(predicate: j => j is not null)
+                .Select(id => pendingJobs.FirstOrDefault(j => j.Id == id))
+                .Where(j => j is not null)
                 .Cast<QueueJob>(),
-            .. pendingJobs.Where(predicate: j => !requestedSet.Contains(item: j.Id)),
+            .. pendingJobs.Where(j => !requestedSet.Contains(j.Id)),
         ];
 
         int basePriority = reordered.Count;
         for (int i = 0; i < reordered.Count; i++)
-            reordered[index: i].Priority = basePriority - i;
+            reordered[i].Priority = basePriority - i;
 
         return reordered;
     }
@@ -76,88 +76,88 @@ public class ReorderQueueLogicTests
     [Fact]
     public void ReorderQueue_PendingItems_AreReturnedInRequestedOrder()
     {
-        List<QueueJob> jobs = [MakeJob(id: 1), MakeJob(id: 2), MakeJob(id: 3)];
+        List<QueueJob> jobs = [MakeJob(1), MakeJob(2), MakeJob(3)];
 
-        List<QueueJob> result = RunReorder(allJobs: jobs, orderedJobIds: [3, 1, 2]);
+        List<QueueJob> result = RunReorder(jobs, [3, 1, 2]);
 
-        Assert.Equal(expected: [3, 1, 2], actual: result.Select(selector: j => j.Id));
+        Assert.Equal([3, 1, 2], result.Select(j => j.Id));
     }
 
     [Fact]
     public void ReorderQueue_PendingItems_HaveDescendingPriorityMatchingOrder()
     {
-        List<QueueJob> jobs = [MakeJob(id: 10), MakeJob(id: 20), MakeJob(id: 30)];
+        List<QueueJob> jobs = [MakeJob(10), MakeJob(20), MakeJob(30)];
 
-        List<QueueJob> result = RunReorder(allJobs: jobs, orderedJobIds: [30, 10, 20]);
+        List<QueueJob> result = RunReorder(jobs, [30, 10, 20]);
 
         // First item must have highest priority.
-        Assert.True(condition: result[index: 0].Priority > result[index: 1].Priority);
-        Assert.True(condition: result[index: 1].Priority > result[index: 2].Priority);
+        Assert.True(result[0].Priority > result[1].Priority);
+        Assert.True(result[1].Priority > result[2].Priority);
         // basePriority = count = 3, so slots are 3, 2, 1.
-        Assert.Equal(expected: 3, actual: result[index: 0].Priority);
-        Assert.Equal(expected: 2, actual: result[index: 1].Priority);
-        Assert.Equal(expected: 1, actual: result[index: 2].Priority);
+        Assert.Equal(3, result[0].Priority);
+        Assert.Equal(2, result[1].Priority);
+        Assert.Equal(1, result[2].Priority);
     }
 
     [Fact]
     public void ReorderQueue_RunningItems_AreNotIncludedInReorderedList()
     {
-        List<QueueJob> jobs = [MakeJob(id: 1), MakeJob(id: 99, reservedAt: DateTime.UtcNow), MakeJob(id: 2)];
+        List<QueueJob> jobs = [MakeJob(1), MakeJob(99, reservedAt: DateTime.UtcNow), MakeJob(2)];
 
-        List<QueueJob> result = RunReorder(allJobs: jobs, orderedJobIds: [2, 1]);
+        List<QueueJob> result = RunReorder(jobs, [2, 1]);
 
-        Assert.DoesNotContain(collection: result, filter: j => j.Id == 99);
-        Assert.Equal(expected: [2, 1], actual: result.Select(selector: j => j.Id));
+        Assert.DoesNotContain(result, j => j.Id == 99);
+        Assert.Equal([2, 1], result.Select(j => j.Id));
     }
 
     [Fact]
     public void ReorderQueue_RunningItems_PriorityIsNotModified()
     {
-        QueueJob running = MakeJob(id: 99, reservedAt: DateTime.UtcNow);
+        QueueJob running = MakeJob(99, reservedAt: DateTime.UtcNow);
         running.Priority = 999; // sentinel
 
-        List<QueueJob> jobs = [MakeJob(id: 1), running, MakeJob(id: 2)];
+        List<QueueJob> jobs = [MakeJob(1), running, MakeJob(2)];
 
-        RunReorder(allJobs: jobs, orderedJobIds: [2, 1]);
+        RunReorder(jobs, [2, 1]);
 
         // Running job object was never touched by the reorder.
-        Assert.Equal(expected: 999, actual: running.Priority);
+        Assert.Equal(999, running.Priority);
     }
 
     [Fact]
     public void ReorderQueue_UnknownIds_AreIgnored()
     {
-        List<QueueJob> jobs = [MakeJob(id: 1), MakeJob(id: 2)];
+        List<QueueJob> jobs = [MakeJob(1), MakeJob(2)];
 
         // 999 doesn't exist in the queue — should be silently skipped.
-        List<QueueJob> result = RunReorder(allJobs: jobs, orderedJobIds: [999, 2, 1]);
+        List<QueueJob> result = RunReorder(jobs, [999, 2, 1]);
 
-        Assert.Equal(expected: [2, 1], actual: result.Select(selector: j => j.Id));
+        Assert.Equal([2, 1], result.Select(j => j.Id));
     }
 
     [Fact]
     public void ReorderQueue_MissingIdsFromRequest_AreAppendedAtEnd()
     {
-        List<QueueJob> jobs = [MakeJob(id: 1), MakeJob(id: 2), MakeJob(id: 3), MakeJob(id: 4)];
+        List<QueueJob> jobs = [MakeJob(1), MakeJob(2), MakeJob(3), MakeJob(4)];
 
         // Only 3 and 1 are requested; 2 and 4 should trail in original order.
-        List<QueueJob> result = RunReorder(allJobs: jobs, orderedJobIds: [3, 1]);
+        List<QueueJob> result = RunReorder(jobs, [3, 1]);
 
-        Assert.Equal(expected: 3, actual: result[index: 0].Id);
-        Assert.Equal(expected: 1, actual: result[index: 1].Id);
-        List<int> tail = result.Skip(count: 2).Select(selector: j => j.Id).ToList();
-        Assert.Equal(expected: [2, 4], actual: tail);
+        Assert.Equal(3, result[0].Id);
+        Assert.Equal(1, result[1].Id);
+        List<int> tail = result.Skip(2).Select(j => j.Id).ToList();
+        Assert.Equal([2, 4], tail);
     }
 
     [Fact]
     public void ReorderQueue_EmptyRequest_LeavesAllPendingInOriginalOrder()
     {
-        List<QueueJob> jobs = [MakeJob(id: 1), MakeJob(id: 2), MakeJob(id: 3)];
+        List<QueueJob> jobs = [MakeJob(1), MakeJob(2), MakeJob(3)];
 
-        List<QueueJob> result = RunReorder(allJobs: jobs, orderedJobIds: []);
+        List<QueueJob> result = RunReorder(jobs, []);
 
-        Assert.Equal(expected: 3, actual: result.Count);
-        Assert.Equal(expected: [1, 2, 3], actual: result.Select(selector: j => j.Id));
+        Assert.Equal(3, result.Count);
+        Assert.Equal([1, 2, 3], result.Select(j => j.Id));
     }
 
     [Fact]
@@ -165,12 +165,12 @@ public class ReorderQueueLogicTests
     {
         List<QueueJob> jobs =
         [
-            MakeJob(id: 1, reservedAt: DateTime.UtcNow),
-            MakeJob(id: 2, reservedAt: DateTime.UtcNow),
+            MakeJob(1, reservedAt: DateTime.UtcNow),
+            MakeJob(2, reservedAt: DateTime.UtcNow),
         ];
 
-        List<QueueJob> result = RunReorder(allJobs: jobs, orderedJobIds: [1, 2]);
+        List<QueueJob> result = RunReorder(jobs, [1, 2]);
 
-        Assert.Empty(collection: result);
+        Assert.Empty(result);
     }
 }

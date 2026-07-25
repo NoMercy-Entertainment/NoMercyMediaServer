@@ -54,9 +54,9 @@ public static class OcrImagePreprocessor
         int expectedLength = width * height * 4;
         if (rgbaImage.Length != expectedLength)
             throw new ArgumentException(
-                message: $"Expected RGBA buffer of {expectedLength} bytes for {width}x{height} frame, "
+                $"Expected RGBA buffer of {expectedLength} bytes for {width}x{height} frame, "
                          + $"got {rgbaImage.Length}.",
-                paramName: nameof(rgbaImage)
+                nameof(rgbaImage)
             );
 
         byte[] grey = new byte[width * height];
@@ -75,7 +75,7 @@ public static class OcrImagePreprocessor
 
             double composited = a * luma + (1.0 - a) * 128.0;
 
-            grey[i] = (byte)Math.Clamp(value: Math.Round(a: composited), min: 0.0, max: 255.0);
+            grey[i] = (byte)Math.Clamp(Math.Round(composited), 0.0, 255.0);
         }
 
         return grey;

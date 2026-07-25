@@ -31,25 +31,25 @@ public sealed class HardwareEncoderProbe(
     // A hung or unresponsive driver stack must not stall boot indefinitely —
     // every family below completes in well under a second on a working
     // device, so this is generous headroom, not a target.
-    private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(seconds: 10);
+    private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(10);
 
     public async Task<IReadOnlySet<string>> ProbeAsync(
         IEnumerable<string> candidateHardwareEncoders,
         CancellationToken ct = default
     )
     {
-        HashSet<string> usable = new(comparer: StringComparer.OrdinalIgnoreCase);
+        HashSet<string> usable = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (
             string encoderName in candidateHardwareEncoders.Distinct(
-                comparer: StringComparer.OrdinalIgnoreCase
+                StringComparer.OrdinalIgnoreCase
             )
         )
         {
             ct.ThrowIfCancellationRequested();
 
-            if (await ProbeOneAsync(encoderName: encoderName, ct: ct).ConfigureAwait(continueOnCapturedContext: false))
-                usable.Add(item: encoderName);
+            if (await ProbeOneAsync(encoderName, ct).ConfigureAwait(false))
+                usable.Add(encoderName);
         }
 
         return usable;
@@ -57,31 +57,31 @@ public sealed class HardwareEncoderProbe(
 
     private async Task<bool> ProbeOneAsync(string encoderName, CancellationToken ct)
     {
-        string[]? arguments = BuildProbeArguments(encoderName: encoderName);
+        string[]? arguments = BuildProbeArguments(encoderName);
         if (arguments is null)
         {
             logger.LogWarning(
-                message: "No init-probe invocation known for hardware encoder {Encoder} — treating as unusable",
-                args: encoderName
+                "No init-probe invocation known for hardware encoder {Encoder} — treating as unusable",
+                encoderName
             );
             return false;
         }
 
-        using CancellationTokenSource timeoutCts = new(delay: ProbeTimeout);
+        using CancellationTokenSource timeoutCts = new(ProbeTimeout);
         using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-            token1: ct,
-            token2: timeoutCts.Token
+            ct,
+            timeoutCts.Token
         );
 
         try
         {
             ProcessResult result = await processRunner
-                .RunAsync(executable: AppFiles.FfmpegPath, arguments: arguments, workingDirectory: null, cancellationToken: linkedCts.Token)
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .RunAsync(AppFiles.FfmpegPath, arguments, null, linkedCts.Token)
+                .ConfigureAwait(false);
 
             if (result.IsSuccess)
             {
-                logger.LogInformation(message: "Hardware encoder init probe: {Encoder} usable", args: encoderName);
+                logger.LogInformation("Hardware encoder init probe: {Encoder} usable", encoderName);
                 return true;
             }
 
@@ -92,7 +92,7 @@ public sealed class HardwareEncoderProbe(
             // the first line carries the actual cause (e.g. "Cannot load
             // libcuda.so.1", "No VA display found"); the rest is downstream noise.
             logger.LogDebug(
-                message: "Hardware encoder init probe: {Encoder} unusable (exit {Code}): {Err}", args: [encoderName, result.ExitCode, FirstMeaningfulLine(stdErr: result.StdErr)]
+                "Hardware encoder init probe: {Encoder} unusable (exit {Code}): {Err}", [encoderName, result.ExitCode, FirstMeaningfulLine(result.StdErr)]
             );
             return false;
         }
@@ -101,16 +101,16 @@ public sealed class HardwareEncoderProbe(
             // Only the probe's own timeout fired — the caller's token is still
             // live. A hang means the encoder cannot be trusted; never usable.
             logger.LogWarning(
-                message: "Hardware encoder init probe timed out after {Timeout}: {Encoder} — treating as unusable", args: [ProbeTimeout, encoderName]
+                "Hardware encoder init probe timed out after {Timeout}: {Encoder} — treating as unusable", [ProbeTimeout, encoderName]
             );
             return false;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "Hardware encoder init probe threw for {Encoder} — treating as unusable",
-                args: encoderName
+                ex,
+                "Hardware encoder init probe threw for {Encoder} — treating as unusable",
+                encoderName
             );
             return false;
         }
@@ -123,7 +123,7 @@ public sealed class HardwareEncoderProbe(
     /// </summary>
     private static string FirstMeaningfulLine(string stdErr)
     {
-        foreach (string line in stdErr.Split(separator: '\n'))
+        foreach (string line in stdErr.Split('\n'))
         {
             string trimmed = line.Trim();
             if (trimmed.Length > 0)
@@ -140,25 +140,25 @@ public sealed class HardwareEncoderProbe(
     /// </summary>
     private static string[]? BuildProbeArguments(string encoderName)
     {
-        if (GpuEncoderTokens.NvencNames.Contains(value: encoderName, comparer: StringComparer.OrdinalIgnoreCase))
-            return DirectSoftwareFrameArgs(encoderName: encoderName);
+        if (GpuEncoderTokens.NvencNames.Contains(encoderName, StringComparer.OrdinalIgnoreCase))
+            return DirectSoftwareFrameArgs(encoderName);
 
-        if (GpuEncoderTokens.AmfNames.Contains(value: encoderName, comparer: StringComparer.OrdinalIgnoreCase))
-            return DirectSoftwareFrameArgs(encoderName: encoderName);
+        if (GpuEncoderTokens.AmfNames.Contains(encoderName, StringComparer.OrdinalIgnoreCase))
+            return DirectSoftwareFrameArgs(encoderName);
 
         if (
             GpuEncoderTokens.VideotoolboxNames.Contains(
-                value: encoderName,
-                comparer: StringComparer.OrdinalIgnoreCase
+                encoderName,
+                StringComparer.OrdinalIgnoreCase
             )
         )
-            return DirectSoftwareFrameArgs(encoderName: encoderName);
+            return DirectSoftwareFrameArgs(encoderName);
 
-        if (GpuEncoderTokens.QsvNames.Contains(value: encoderName, comparer: StringComparer.OrdinalIgnoreCase))
-            return QsvArgs(encoderName: encoderName);
+        if (GpuEncoderTokens.QsvNames.Contains(encoderName, StringComparer.OrdinalIgnoreCase))
+            return QsvArgs(encoderName);
 
-        if (GpuEncoderTokens.VaapiNames.Contains(value: encoderName, comparer: StringComparer.OrdinalIgnoreCase))
-            return VaapiArgs(encoderName: encoderName);
+        if (GpuEncoderTokens.VaapiNames.Contains(encoderName, StringComparer.OrdinalIgnoreCase))
+            return VaapiArgs(encoderName);
 
         return null;
     }

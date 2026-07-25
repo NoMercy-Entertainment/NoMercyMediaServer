@@ -107,41 +107,41 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             string dockerfileDir = LocateContainerDir();
 
             MediaDir = Path.Combine(
-                path1: Path.GetTempPath(),
-                path2: "nm-storage-media-" + Guid.NewGuid().ToString(format: "N")[..8]
+                Path.GetTempPath(),
+                "nm-storage-media-" + Guid.NewGuid().ToString("N")[..8]
             );
-            Directory.CreateDirectory(path: MediaDir);
+            Directory.CreateDirectory(MediaDir);
 
-            _nfsVolumeName = "nm-nfs-" + Guid.NewGuid().ToString(format: "N")[..8];
+            _nfsVolumeName = "nm-nfs-" + Guid.NewGuid().ToString("N")[..8];
 
             _image = new ImageFromDockerfileBuilder()
-                .WithDockerfileDirectory(dockerfileDirectory: dockerfileDir)
-                .WithDockerfile(dockerfile: "Dockerfile")
-                .WithName(name: "nomercy-storage-backends:test")
-                .WithCleanUp(cleanUp: false) // reuse the cached image across runs
+                .WithDockerfileDirectory(dockerfileDir)
+                .WithDockerfile("Dockerfile")
+                .WithName("nomercy-storage-backends:test")
+                .WithCleanUp(false) // reuse the cached image across runs
                 .Build();
             await _image.CreateAsync();
 
             _container = new ContainerBuilder()
-                .WithImage(image: _image)
+                .WithImage(_image)
                 // Host networking: the container binds the host's network
                 // namespace directly, so S3/WebDAV/NFS are reachable at their
                 // real ports with no per-port NAT forwarding. The NAT proxy
                 // mangles the NFSv4 mount RPC; host networking avoids it. Docker
                 // Desktop must have host networking enabled (it is here).
-                .WithCreateParameterModifier(parameterModifier: p => p.HostConfig.NetworkMode = "host")
+                .WithCreateParameterModifier(p => p.HostConfig.NetworkMode = "host")
                 // The kernel nfsd needs --privileged to mount nfsd/rpc_pipefs and
                 // export over the host's NFS module (Docker Desktop's Linux VM
                 // provides it). This is the proven path libnfs talks to cleanly.
-                .WithPrivileged(privileged: true)
+                .WithPrivileged(true)
                 // /data/nfs MUST be a real filesystem (a named volume = ext4) —
                 // the kernel nfsd cannot export the container's overlayfs root
                 // ("does not support NFS export"), which silently yields empty
                 // mounts. The volume is removed on teardown.
-                .WithVolumeMount(source: NfsVolumeName, destination: "/data/nfs")
+                .WithVolumeMount(NfsVolumeName, "/data/nfs")
                 // Generated encoder media lands in /media (bind-mounted to the
                 // host) so the encoder tests can read it.
-                .WithBindMount(source: MediaDir, destination: "/media")
+                .WithBindMount(MediaDir, "/media")
                 .Build();
 
             await CreateNfsVolumeAsync();
@@ -152,20 +152,20 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             S3Endpoint = "http://localhost:9000";
             WebDavBaseUrl = "http://localhost:8080/";
 
-            await WaitForTcpAsync(port: 9000, timeout: TimeSpan.FromSeconds(seconds: 20));
-            await WaitForHttpAsync(url: $"{S3Endpoint}/minio/health/live", timeout: TimeSpan.FromSeconds(seconds: 20));
+            await WaitForTcpAsync(9000, TimeSpan.FromSeconds(20));
+            await WaitForHttpAsync($"{S3Endpoint}/minio/health/live", TimeSpan.FromSeconds(20));
             await WaitForHttpAsync(
-                url: WebDavBaseUrl,
-                timeout: TimeSpan.FromSeconds(seconds: 20),
-                expectAnyResponse: true
+                WebDavBaseUrl,
+                TimeSpan.FromSeconds(20),
+                true
             );
             await SeedAsync();
             // Samba listens on 1445 (445 is taken by the Windows SMB server).
-            await WaitForTcpAsync(port: SmbPort, timeout: TimeSpan.FromSeconds(seconds: 20));
+            await WaitForTcpAsync(SmbPort, TimeSpan.FromSeconds(20));
             // NFS readiness can't be proven by a TCP probe alone — nfsd may
             // accept the connection before the export is serviceable. Retry an
             // actual libnfs mount until it succeeds (or libnfs is absent).
-            NfsMountable = await WaitForNfsMountAsync(timeout: TimeSpan.FromSeconds(seconds: 30));
+            NfsMountable = await WaitForNfsMountAsync(TimeSpan.FromSeconds(30));
 
             Available = true;
         }
@@ -190,7 +190,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             }
         }
 
-        if (!string.IsNullOrEmpty(value: _nfsVolumeName))
+        if (!string.IsNullOrEmpty(_nfsVolumeName))
         {
             try
             {
@@ -204,8 +204,8 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
 
         try
         {
-            if (!string.IsNullOrEmpty(value: MediaDir) && Directory.Exists(path: MediaDir))
-                Directory.Delete(path: MediaDir, recursive: true);
+            if (!string.IsNullOrEmpty(MediaDir) && Directory.Exists(MediaDir))
+                Directory.Delete(MediaDir, true);
         }
         catch
         {
@@ -223,42 +223,42 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             ForcePathStyle = true,
             AuthenticationRegion = "us-east-1",
         };
-        return new(credentials: new BasicAWSCredentials(accessKey: S3AccessKey, secretKey: S3SecretKey), clientConfig: cfg);
+        return new(new BasicAWSCredentials(S3AccessKey, S3SecretKey), cfg);
     }
 
     public S3StorageDriver BuildS3Driver(string? prefix = null) =>
         new(
-            bucket: S3Bucket,
-            region: "us-east-1",
-            prefix: prefix,
-            endpoint: S3Endpoint,
-            accessKey: S3AccessKey,
-            secretKey: S3SecretKey
+            S3Bucket,
+            "us-east-1",
+            prefix,
+            S3Endpoint,
+            S3AccessKey,
+            S3SecretKey
         );
 
     public WebDavStorageDriver BuildWebDavDriver()
     {
         WebDavClient client = new(
-            @params: new WebDavClientParams
+            new WebDavClientParams
             {
-                BaseAddress = new(uriString: WebDavBaseUrl),
-                Credentials = new NetworkCredential(userName: WebDavUser, password: WebDavPassword),
+                BaseAddress = new(WebDavBaseUrl),
+                Credentials = new NetworkCredential(WebDavUser, WebDavPassword),
             }
         );
-        return new(client: client, baseUrl: WebDavBaseUrl);
+        return new(client, WebDavBaseUrl);
     }
 
     public SmbStorageDriver BuildSmbDriver(string basePath = "")
     {
         SmbDriverConfig config = SmbDriverConfig.For(
-            host: SmbHost,
+            SmbHost,
             share: SmbShare,
             username: SmbUser,
             password: SmbPassword,
             port: SmbPort,
             basePath: basePath
         );
-        return new(config: config);
+        return new(config);
     }
 
     /// <summary>
@@ -270,8 +270,8 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
     {
         try
         {
-            NfsDriverConfig config = NfsDriverConfig.For(server: NfsHost, export: NfsExport, version: version);
-            return new(config: config);
+            NfsDriverConfig config = NfsDriverConfig.For(NfsHost, NfsExport, version);
+            return new(config);
         }
         catch (DllNotFoundException)
         {
@@ -287,7 +287,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
         // container's entrypoint before nfsd exports it — kernel nfsd serves the
         // already-populated volume, so the seed must land before exportfs.)
         using (AmazonS3Client s3 = BuildS3RawClient())
-            await s3.PutBucketAsync(bucketName: S3Bucket);
+            await s3.PutBucketAsync(S3Bucket);
 
         // Encoder media: generate the synthetic fixtures with the container's
         // ffmpeg into /media (host-mapped to MediaDir). Generic names — these
@@ -299,21 +299,21 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
     {
         // SD 480p
         await FfmpegAsync(
-            args: "-y -f lavfi -i testsrc2=size=854x480:rate=25:duration=5 "
+            "-y -f lavfi -i testsrc2=size=854x480:rate=25:duration=5 "
                   + "-f lavfi -i sine=frequency=440:duration=5 "
                   + "-c:v libx264 -preset ultrafast -crf 30 -c:a aac -b:a 96k "
                   + "/media/video-sd480p.mkv"
         );
         // 1080p
         await FfmpegAsync(
-            args: "-y -f lavfi -i testsrc2=size=1920x1080:rate=25:duration=5 "
+            "-y -f lavfi -i testsrc2=size=1920x1080:rate=25:duration=5 "
                   + "-f lavfi -i sine=frequency=440:duration=5 "
                   + "-c:v libx264 -preset ultrafast -crf 30 -c:a aac -b:a 96k "
                   + "/media/video-1080p.mkv"
         );
         // HDR10 (PQ / BT.2020) — color-tag the stream so MediaAnalyzer classifies it HDR.
         await FfmpegAsync(
-            args: "-y -f lavfi -i testsrc2=size=1920x1080:rate=25:duration=5 "
+            "-y -f lavfi -i testsrc2=size=1920x1080:rate=25:duration=5 "
                   + "-vf format=yuv420p10le,setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc "
                   + "-c:v libx265 -preset ultrafast -x265-params hdr10=1:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc "
                   + "-color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc "
@@ -321,29 +321,29 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
         );
         // Audio-only FLAC
         await FfmpegAsync(
-            args: "-y -f lavfi -i sine=frequency=440:duration=5 -c:a flac " + "/media/audio-only.flac"
+            "-y -f lavfi -i sine=frequency=440:duration=5 -c:a flac " + "/media/audio-only.flac"
         );
     }
 
     private Task FfmpegAsync(string args) =>
-        ExecAsync(command: ["bash", "-c", $"ffmpeg {args} >/dev/null 2>&1"]);
+        ExecAsync(["bash", "-c", $"ffmpeg {args} >/dev/null 2>&1"]);
 
     private async Task ExecAsync(params string[] command)
     {
-        ExecResult result = await _container!.ExecAsync(command: command);
+        ExecResult result = await _container!.ExecAsync(command);
         if (result.ExitCode != 0)
             throw new InvalidOperationException(
-                message: $"container exec failed ({string.Join(separator: ' ', value: command)}): {result.Stderr}"
+                $"container exec failed ({string.Join(' ', command)}): {result.Stderr}"
             );
     }
 
-    private Task CreateNfsVolumeAsync() => DockerCliAsync(args: ["volume", "create", NfsVolumeName]);
+    private Task CreateNfsVolumeAsync() => DockerCliAsync(["volume", "create", NfsVolumeName]);
 
-    private Task RemoveNfsVolumeAsync() => DockerCliAsync(args: ["volume", "rm", "-f", NfsVolumeName]);
+    private Task RemoveNfsVolumeAsync() => DockerCliAsync(["volume", "rm", "-f", NfsVolumeName]);
 
     private static async Task DockerCliAsync(params string[] args)
     {
-        System.Diagnostics.ProcessStartInfo psi = new(fileName: "docker")
+        System.Diagnostics.ProcessStartInfo psi = new("docker")
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -351,9 +351,9 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             CreateNoWindow = true,
         };
         foreach (string arg in args)
-            psi.ArgumentList.Add(item: arg);
+            psi.ArgumentList.Add(arg);
 
-        using System.Diagnostics.Process proc = System.Diagnostics.Process.Start(startInfo: psi)!;
+        using System.Diagnostics.Process proc = System.Diagnostics.Process.Start(psi)!;
         await proc.WaitForExitAsync();
     }
 
@@ -371,7 +371,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
     {
         // Give the nfsd grace window (entrypoint sets it to ~10s) time to clear
         // before the first mount, so the first real write isn't rejected.
-        await Task.Delay(delay: TimeSpan.FromSeconds(seconds: 12));
+        await Task.Delay(TimeSpan.FromSeconds(12));
 
         DateTime deadline = DateTime.UtcNow + timeout;
         while (DateTime.UtcNow < deadline)
@@ -379,12 +379,12 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             try
             {
                 using NfsStorageDriver probe = new(
-                    config: NfsDriverConfig.For(server: NfsHost, export: NfsExport, version: 4)
+                    NfsDriverConfig.For(NfsHost, NfsExport, 4)
                 );
                 // Read-only readiness: the seeded /Music must be visible.
-                if (probe.DirectoryExists(path: "/Music"))
+                if (probe.DirectoryExists("/Music"))
                     return true;
-                await Task.Delay(millisecondsDelay: 1000);
+                await Task.Delay(1000);
             }
             catch (DllNotFoundException)
             {
@@ -394,7 +394,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             catch (Exception ex)
             {
                 NfsUnavailableReason = ex.Message;
-                await Task.Delay(millisecondsDelay: 1000);
+                await Task.Delay(1000);
             }
         }
         return false;
@@ -407,12 +407,12 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
     )
     {
         DateTime deadline = DateTime.UtcNow + timeout;
-        using HttpClient http = new() { Timeout = TimeSpan.FromSeconds(seconds: 3) };
+        using HttpClient http = new() { Timeout = TimeSpan.FromSeconds(3) };
         while (DateTime.UtcNow < deadline)
         {
             try
             {
-                HttpResponseMessage response = await http.GetAsync(requestUri: url);
+                HttpResponseMessage response = await http.GetAsync(url);
                 // A reachable WebDAV root answers 401 (auth) — any HTTP status
                 // means the server is up; only a transport failure means "wait".
                 if (expectAnyResponse || response.IsSuccessStatusCode)
@@ -422,7 +422,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             {
                 // not up yet
             }
-            await Task.Delay(millisecondsDelay: 500);
+            await Task.Delay(500);
         }
     }
 
@@ -434,13 +434,13 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             try
             {
                 using TcpClient client = new();
-                await client.ConnectAsync(host: "localhost", port: port);
+                await client.ConnectAsync("localhost", port);
                 if (client.Connected)
                     return;
             }
             catch
             {
-                await Task.Delay(millisecondsDelay: 500);
+                await Task.Delay(500);
             }
         }
     }
@@ -451,24 +451,24 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
         string dir = AppContext.BaseDirectory;
         for (int i = 0; i < 8 && dir.Length > 3; i++)
         {
-            string candidate = Path.Combine(path1: dir, path2: "Container", path3: "Dockerfile");
-            if (File.Exists(path: candidate))
-                return Path.Combine(path1: dir, path2: "Container");
+            string candidate = Path.Combine(dir, "Container", "Dockerfile");
+            if (File.Exists(candidate))
+                return Path.Combine(dir, "Container");
 
-            string srcCandidate = Path.Combine(paths: [dir, "tests", "NoMercy.Tests.Storage", "Container", "Dockerfile"]
+            string srcCandidate = Path.Combine([dir, "tests", "NoMercy.Tests.Storage", "Container", "Dockerfile"]
             );
-            if (File.Exists(path: srcCandidate))
-                return Path.GetDirectoryName(path: srcCandidate)!;
+            if (File.Exists(srcCandidate))
+                return Path.GetDirectoryName(srcCandidate)!;
 
-            dir = Path.GetDirectoryName(path: dir.TrimEnd(trimChar: Path.DirectorySeparatorChar)) ?? dir;
+            dir = Path.GetDirectoryName(dir.TrimEnd(Path.DirectorySeparatorChar)) ?? dir;
         }
 
         throw new FileNotFoundException(
-            message: "Could not locate the storage-backends Container/Dockerfile relative to "
+            "Could not locate the storage-backends Container/Dockerfile relative to "
                      + AppContext.BaseDirectory
         );
     }
 }
 
-[CollectionDefinition(name: "StorageBackends")]
+[CollectionDefinition("StorageBackends")]
 public sealed class StorageBackendsCollection : ICollectionFixture<StorageBackendsFixture> { }

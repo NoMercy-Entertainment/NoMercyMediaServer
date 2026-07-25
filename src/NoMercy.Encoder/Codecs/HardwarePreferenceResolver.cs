@@ -40,10 +40,10 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
     // fall back to a lib<lowerCodecName> heuristic.
     private static readonly Dictionary<VideoCodecType, string> SoftwareHandles = new()
     {
-        [key: VideoCodecType.H264] = "libx264",
-        [key: VideoCodecType.H265] = "libx265",
-        [key: VideoCodecType.Av1] = "libsvtav1",
-        [key: VideoCodecType.Vp9] = "libvpx-vp9",
+        [VideoCodecType.H264] = "libx264",
+        [VideoCodecType.H265] = "libx265",
+        [VideoCodecType.Av1] = "libsvtav1",
+        [VideoCodecType.Vp9] = "libvpx-vp9",
     };
 
     public HardwareResolutionResult Resolve(
@@ -62,41 +62,41 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         if (codec == VideoCodecType.Copy)
         {
             decisions.Add(
-                entry: new(
-                    Stage: "encoder.select",
-                    Key: "encoder.select.copy",
-                    Message: "Stream copy — no encoder selection performed",
-                    Data: new { codec = codec.ToString() }
+                new(
+                    "encoder.select",
+                    "encoder.select.copy",
+                    "Stream copy — no encoder selection performed",
+                    new { codec = codec.ToString() }
                 )
             );
-            return new(EncoderHandle: "copy", Failure: null);
+            return new("copy", null);
         }
 
         return preference switch
         {
             HardwarePreference.ForceSoftware => ResolveForceSoftware(
-                codec: codec,
-                availableEncoders: availableEncoders,
-                decisions: decisions
+                codec,
+                availableEncoders,
+                decisions
             ),
             HardwarePreference.PreferQuality => ResolvePreferQuality(
-                codec: codec,
-                availableEncoders: availableEncoders,
-                decisions: decisions
+                codec,
+                availableEncoders,
+                decisions
             ),
             HardwarePreference.PreferHardware => ResolvePreferHardware(
-                codec: codec,
-                availableEncoders: availableEncoders,
-                speedIndex: speedIndex,
-                decisions: decisions
+                codec,
+                availableEncoders,
+                speedIndex,
+                decisions
             ),
             HardwarePreference.ForceHardware => ResolveForceHardware(
-                codec: codec,
-                availableEncoders: availableEncoders,
-                speedIndex: speedIndex,
-                decisions: decisions
+                codec,
+                availableEncoders,
+                speedIndex,
+                decisions
             ),
-            _ => ResolvePreferHardware(codec: codec, availableEncoders: availableEncoders, speedIndex: speedIndex, decisions: decisions),
+            _ => ResolvePreferHardware(codec, availableEncoders, speedIndex, decisions),
         };
     }
 
@@ -106,14 +106,14 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         IDecisionLogSink decisions
     )
     {
-        string handle = CanonicalSoftwareHandle(codec: codec);
+        string handle = CanonicalSoftwareHandle(codec);
 
         decisions.Add(
-            entry: new(
-                Stage: "plan",
-                Key: "plan.encoder_resolved",
-                Message: $"ForceSoftware → {handle}",
-                Data: new
+            new(
+                "plan",
+                "plan.encoder_resolved",
+                $"ForceSoftware → {handle}",
+                new
                 {
                     handle,
                     codec = codec.ToString(),
@@ -122,7 +122,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             )
         );
 
-        return new(EncoderHandle: handle, Failure: null);
+        return new(handle, null);
     }
 
     private static HardwareResolutionResult ResolvePreferQuality(
@@ -131,19 +131,19 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         IDecisionLogSink decisions
     )
     {
-        string handle = CanonicalSoftwareHandle(codec: codec);
-        bool hwAvailable = availableEncoders.Any(predicate: CodecRegistry.IsHardware);
+        string handle = CanonicalSoftwareHandle(codec);
+        bool hwAvailable = availableEncoders.Any(CodecRegistry.IsHardware);
 
         string message = hwAvailable
             ? $"PreferQuality → {handle} (HW available but quality preferred)"
             : $"PreferQuality → {handle}";
 
         decisions.Add(
-            entry: new(
-                Stage: "plan",
-                Key: "plan.encoder_resolved",
-                Message: message,
-                Data: new
+            new(
+                "plan",
+                "plan.encoder_resolved",
+                message,
+                new
                 {
                     handle,
                     codec = codec.ToString(),
@@ -153,7 +153,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             )
         );
 
-        return new(EncoderHandle: handle, Failure: null);
+        return new(handle, null);
     }
 
     private static HardwareResolutionResult ResolvePreferHardware(
@@ -163,9 +163,9 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         IDecisionLogSink decisions
     )
     {
-        string swHandle = CanonicalSoftwareHandle(codec: codec);
+        string swHandle = CanonicalSoftwareHandle(codec);
 
-        (string best, double bestFps) = BestHardwareEntry(codec: codec, speedIndex: speedIndex, availableEncoders: availableEncoders);
+        (string best, double bestFps) = BestHardwareEntry(codec, speedIndex, availableEncoders);
 
         if (best == string.Empty)
         {
@@ -175,17 +175,17 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             // PreferHardware actually prefers hardware until the benchmark
             // populates the cache. Codec match goes by the encoder-name prefix
             // ("hevc_nvenc" matches H265, not H264).
-            string? availableHw = availableEncoders.FirstOrDefault(predicate: e =>
-                CodecRegistry.IsHardware(ffmpegEncoderName: e) && MatchesCodec(ffmpegEncoderName: e, codec: codec)
+            string? availableHw = availableEncoders.FirstOrDefault(e =>
+                CodecRegistry.IsHardware(e) && MatchesCodec(e, codec)
             );
             if (availableHw is not null)
             {
                 decisions.Add(
-                    entry: new(
-                        Stage: "plan",
-                        Key: "plan.encoder_resolved",
-                        Message: $"PreferHardware → {availableHw} (no benchmark yet, picked from availableEncoders)",
-                        Data: new
+                    new(
+                        "plan",
+                        "plan.encoder_resolved",
+                        $"PreferHardware → {availableHw} (no benchmark yet, picked from availableEncoders)",
+                        new
                         {
                             handle = availableHw,
                             codec = codec.ToString(),
@@ -194,15 +194,15 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
                     )
                 );
 
-                return new(EncoderHandle: availableHw, Failure: null);
+                return new(availableHw, null);
             }
 
             decisions.Add(
-                entry: new(
-                    Stage: "plan",
-                    Key: "plan.encoder_resolved",
-                    Message: $"PreferHardware → {swHandle} (no HW encoder available)",
-                    Data: new
+                new(
+                    "plan",
+                    "plan.encoder_resolved",
+                    $"PreferHardware → {swHandle} (no HW encoder available)",
+                    new
                     {
                         handle = swHandle,
                         codec = codec.ToString(),
@@ -211,22 +211,22 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
                 )
             );
 
-            return new(EncoderHandle: swHandle, Failure: null);
+            return new(swHandle, null);
         }
 
         // Compute speed ratio vs software baseline
-        double swFps = BestFpsForHandle(codec: codec, handle: swHandle, speedIndex: speedIndex);
+        double swFps = BestFpsForHandle(codec, swHandle, speedIndex);
         // This ratio rides the DecisionLog Message/Data the dashboard reads over
         // the API — keep it period-decimal regardless of host locale.
         string ratio =
-            swFps > 0 ? $"{(bestFps / swFps).ToString(format: "F1", provider: CultureInfo.InvariantCulture)}×" : "?×";
+            swFps > 0 ? $"{(bestFps / swFps).ToString("F1", CultureInfo.InvariantCulture)}×" : "?×";
 
         decisions.Add(
-            entry: new(
-                Stage: "plan",
-                Key: "plan.encoder_resolved",
-                Message: $"PreferHardware → {best} ({ratio} over {swHandle})",
-                Data: new
+            new(
+                "plan",
+                "plan.encoder_resolved",
+                $"PreferHardware → {best} ({ratio} over {swHandle})",
+                new
                 {
                     handle = best,
                     codec = codec.ToString(),
@@ -238,7 +238,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             )
         );
 
-        return new(EncoderHandle: best, Failure: null);
+        return new(best, null);
     }
 
     private static HardwareResolutionResult ResolveForceHardware(
@@ -248,24 +248,24 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         IDecisionLogSink decisions
     )
     {
-        (string best, double bestFps) = BestHardwareEntry(codec: codec, speedIndex: speedIndex, availableEncoders: availableEncoders);
+        (string best, double bestFps) = BestHardwareEntry(codec, speedIndex, availableEncoders);
 
         if (best == string.Empty)
         {
             // Mirror PreferHardware's fallback: an unmeasured HW encoder is still
             // a HW encoder. Only hard-fail when availableEncoders also lacks a
             // codec-matching HW handle.
-            string? availableHw = availableEncoders.FirstOrDefault(predicate: e =>
-                CodecRegistry.IsHardware(ffmpegEncoderName: e) && MatchesCodec(ffmpegEncoderName: e, codec: codec)
+            string? availableHw = availableEncoders.FirstOrDefault(e =>
+                CodecRegistry.IsHardware(e) && MatchesCodec(e, codec)
             );
             if (availableHw is not null)
             {
                 decisions.Add(
-                    entry: new(
-                        Stage: "plan",
-                        Key: "plan.encoder_resolved",
-                        Message: $"ForceHardware → {availableHw} (no benchmark yet, picked from availableEncoders)",
-                        Data: new
+                    new(
+                        "plan",
+                        "plan.encoder_resolved",
+                        $"ForceHardware → {availableHw} (no benchmark yet, picked from availableEncoders)",
+                        new
                         {
                             handle = availableHw,
                             codec = codec.ToString(),
@@ -274,38 +274,38 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
                     )
                 );
 
-                return new(EncoderHandle: availableHw, Failure: null);
+                return new(availableHw, null);
             }
 
             EncoderRuntimeException failure = RuntimeErrors.HardwareForcedButUnavailable(
-                requested: codec.ToString()
+                codec.ToString()
             );
 
             decisions.Add(
-                entry: new(
-                    Stage: "plan",
-                    Key: "plan.encoder_resolved",
-                    Message: $"ForceHardware → FAILED (no HW encoder available for {codec})",
-                    Data: new { codec = codec.ToString(), reason = "force_hardware_failed" }
+                new(
+                    "plan",
+                    "plan.encoder_resolved",
+                    $"ForceHardware → FAILED (no HW encoder available for {codec})",
+                    new { codec = codec.ToString(), reason = "force_hardware_failed" }
                 )
             );
 
-            return new(EncoderHandle: null, Failure: failure);
+            return new(null, failure);
         }
 
-        string swHandle = CanonicalSoftwareHandle(codec: codec);
-        double swFps = BestFpsForHandle(codec: codec, handle: swHandle, speedIndex: speedIndex);
+        string swHandle = CanonicalSoftwareHandle(codec);
+        double swFps = BestFpsForHandle(codec, swHandle, speedIndex);
         // This ratio rides the DecisionLog Message/Data the dashboard reads over
         // the API — keep it period-decimal regardless of host locale.
         string ratio =
-            swFps > 0 ? $"{(bestFps / swFps).ToString(format: "F1", provider: CultureInfo.InvariantCulture)}×" : "?×";
+            swFps > 0 ? $"{(bestFps / swFps).ToString("F1", CultureInfo.InvariantCulture)}×" : "?×";
 
         decisions.Add(
-            entry: new(
-                Stage: "plan",
-                Key: "plan.encoder_resolved",
-                Message: $"ForceHardware → {best} ({ratio} over {swHandle})",
-                Data: new
+            new(
+                "plan",
+                "plan.encoder_resolved",
+                $"ForceHardware → {best} ({ratio} over {swHandle})",
+                new
                 {
                     handle = best,
                     codec = codec.ToString(),
@@ -316,7 +316,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             )
         );
 
-        return new(EncoderHandle: best, Failure: null);
+        return new(best, null);
     }
 
     // Returns the highest-fps hardware entry for the codec in the speed index.
@@ -333,7 +333,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         IReadOnlyList<string> availableEncoders
     )
     {
-        HashSet<string> available = new(collection: availableEncoders, comparer: StringComparer.OrdinalIgnoreCase);
+        HashSet<string> available = new(availableEncoders, StringComparer.OrdinalIgnoreCase);
 
         string bestHandle = string.Empty;
         double bestFps = 0;
@@ -343,10 +343,10 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             if (kv.Key.Codec != codec)
                 continue;
 
-            if (!CodecRegistry.IsHardware(ffmpegEncoderName: kv.Key.Encoder))
+            if (!CodecRegistry.IsHardware(kv.Key.Encoder))
                 continue;
 
-            if (!available.Contains(item: kv.Key.Encoder))
+            if (!available.Contains(kv.Key.Encoder))
                 continue;
 
             if (kv.Value.Fps > bestFps)
@@ -373,7 +373,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             if (kv.Key.Codec != codec)
                 continue;
 
-            if (!string.Equals(a: kv.Key.Encoder, b: handle, comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(kv.Key.Encoder, handle, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             if (kv.Value.Fps > best)
@@ -385,7 +385,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
 
     private static string CanonicalSoftwareHandle(VideoCodecType codec)
     {
-        return SoftwareHandles.TryGetValue(key: codec, value: out string? handle)
+        return SoftwareHandles.TryGetValue(codec, out string? handle)
             ? handle
             : $"lib{codec.ToString().ToLowerInvariant()}";
     }
@@ -404,6 +404,6 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         };
 
         return prefix.Length > 0
-            && ffmpegEncoderName.StartsWith(value: prefix, comparisonType: StringComparison.OrdinalIgnoreCase);
+            && ffmpegEncoderName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
     }
 }

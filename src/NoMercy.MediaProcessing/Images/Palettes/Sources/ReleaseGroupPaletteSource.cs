@@ -28,11 +28,11 @@ public class ReleaseGroupPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(input: entityId);
+        Guid id = Guid.Parse(entityId);
         return await db
-            .ReleaseGroups.Where(predicate: r => r.Id == id)
-            .Select(selector: r => r._colorPalette)
-            .FirstOrDefaultAsync(cancellationToken: ct);
+            .ReleaseGroups.Where(r => r.Id == id)
+            .Select(r => r._colorPalette)
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -41,10 +41,10 @@ public class ReleaseGroupPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(input: entityId);
+        Guid id = Guid.Parse(entityId);
         ReleaseGroup? releaseGroup = await db.ReleaseGroups.FirstOrDefaultAsync(
-            predicate: r => r.Id == id,
-            cancellationToken: ct
+            r => r.Id == id,
+            ct
         );
         if (releaseGroup is null)
             return PaletteResult.NoImage();
@@ -52,15 +52,14 @@ public class ReleaseGroupPaletteSource : IPaletteSource
             return PaletteResult.NoImage();
 
         string filePath = AppFiles.MusicImagesPath + releaseGroup.Cover;
-        if (!File.Exists(path: filePath))
+        if (!File.Exists(filePath))
             return PaletteResult.NoImage();
 
-        using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(path: filePath, cancellationToken: ct);
-        string json = BaseImageManager.GenerateColorPalette(items:
-        [
+        using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(filePath, ct);
+        string json = BaseImageManager.GenerateColorPalette([
             new() { Key = "cover", ImageData = image },
         ]);
-        return PaletteResult.Success(json: json);
+        return PaletteResult.Success(json);
     }
 
     public async Task PersistAsync(
@@ -70,9 +69,9 @@ public class ReleaseGroupPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(input: entityId);
+        Guid id = Guid.Parse(entityId);
         await db
-            .ReleaseGroups.Where(predicate: r => r.Id == id)
-            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: r => r._colorPalette, valueExpression: json), cancellationToken: ct);
+            .ReleaseGroups.Where(r => r.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r._colorPalette, json), ct);
     }
 }

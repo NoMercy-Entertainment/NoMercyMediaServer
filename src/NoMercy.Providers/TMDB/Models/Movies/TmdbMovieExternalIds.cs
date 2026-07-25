@@ -15,18 +15,18 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbMovieExternalIds
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "imdb_id")]
+    [JsonProperty("imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty(propertyName: "facebook_id")]
+    [JsonProperty("facebook_id")]
     public string? FacebookId { get; set; }
 
-    [JsonProperty(propertyName: "instagram_id")]
+    [JsonProperty("instagram_id")]
     public string? InstagramId { get; set; }
 
-    [JsonProperty(propertyName: "twitter_id")]
+    [JsonProperty("twitter_id")]
     public string? TwitterId { get; set; }
 }

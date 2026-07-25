@@ -9,13 +9,11 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Api.EventHandlers;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Inbox;
 using NoMercy.Service.Extensions;
-using Xunit;
 
 namespace NoMercy.Tests.Service.Extensions;
 
@@ -30,7 +28,7 @@ namespace NoMercy.Tests.Service.Extensions;
 /// method wires up is registered exactly once, as a Singleton (shared
 /// subscription state, not per-request).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class EventHandlerExtensionsTests
 {
     private static readonly Type[] ExpectedSingletonHandlerTypes =
@@ -64,13 +62,13 @@ public class EventHandlerExtensionsTests
             services
                 .Should()
                 .ContainSingle(
-                    predicate: d => d.ServiceType == handlerType,
-                    because: $"{handlerType.Name} must be registered exactly once"
+                    d => d.ServiceType == handlerType,
+                    $"{handlerType.Name} must be registered exactly once"
                 )
                 .Which.Lifetime.Should()
                 .Be(
-                    expected: ServiceLifetime.Singleton,
-                    because: $"{handlerType.Name} holds shared subscription state"
+                    ServiceLifetime.Singleton,
+                    $"{handlerType.Name} holds shared subscription state"
                 );
         }
     }
@@ -82,8 +80,8 @@ public class EventHandlerExtensionsTests
 
         services.AddSignalREventHandlers();
 
-        services.Should().Contain(predicate: d => d.ServiceType == typeof(IInboxMetadataProbe));
-        services.Should().Contain(predicate: d => d.ServiceType == typeof(IInboxAudioTagReader));
+        services.Should().Contain(d => d.ServiceType == typeof(IInboxMetadataProbe));
+        services.Should().Contain(d => d.ServiceType == typeof(IInboxAudioTagReader));
     }
 
     [Fact]
@@ -93,6 +91,6 @@ public class EventHandlerExtensionsTests
 
         IServiceCollection result = services.AddSignalREventHandlers();
 
-        result.Should().BeSameAs(expected: services);
+        result.Should().BeSameAs(services);
     }
 }

@@ -17,7 +17,7 @@ using NoMercy.Service.Seeds;
 
 namespace NoMercy.Tests.Setup;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class SystemLocalDriverSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -25,17 +25,17 @@ public class SystemLocalDriverSeedTests : IDisposable
 
     public SystemLocalDriverSeedTests()
     {
-        _connection = new(connectionString: "DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
 
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection: _connection,
-                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
+                _connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(options: _options);
+        using MediaContext ctx = new(_options);
         ctx.Database.EnsureCreated();
     }
 
@@ -44,17 +44,17 @@ public class SystemLocalDriverSeedTests : IDisposable
         _connection.Dispose();
     }
 
-    private MediaContext CreateContext() => new(options: _options);
+    private MediaContext CreateContext() => new(_options);
 
     [Fact]
     public async Task SeedSystemLocalDriver_InsertsSingleRow()
     {
         await using MediaContext ctx = CreateContext();
 
-        await DatabaseSeeder.SeedSystemLocalDriver(mediaContext: ctx);
+        await DatabaseSeeder.SeedSystemLocalDriver(ctx);
 
-        int count = await ctx.Drivers.CountAsync(predicate: d => d.Id == Driver.SystemLocalDriverId);
-        Assert.Equal(expected: 1, actual: count);
+        int count = await ctx.Drivers.CountAsync(d => d.Id == Driver.SystemLocalDriverId);
+        Assert.Equal(1, count);
     }
 
     [Fact]
@@ -62,11 +62,11 @@ public class SystemLocalDriverSeedTests : IDisposable
     {
         await using MediaContext ctx = CreateContext();
 
-        await DatabaseSeeder.SeedSystemLocalDriver(mediaContext: ctx);
-        await DatabaseSeeder.SeedSystemLocalDriver(mediaContext: ctx);
+        await DatabaseSeeder.SeedSystemLocalDriver(ctx);
+        await DatabaseSeeder.SeedSystemLocalDriver(ctx);
 
-        int count = await ctx.Drivers.CountAsync(predicate: d => d.Id == Driver.SystemLocalDriverId);
-        Assert.Equal(expected: 1, actual: count);
+        int count = await ctx.Drivers.CountAsync(d => d.Id == Driver.SystemLocalDriverId);
+        Assert.Equal(1, count);
     }
 
     [Fact]
@@ -74,12 +74,12 @@ public class SystemLocalDriverSeedTests : IDisposable
     {
         await using MediaContext ctx = CreateContext();
 
-        await DatabaseSeeder.SeedSystemLocalDriver(mediaContext: ctx);
+        await DatabaseSeeder.SeedSystemLocalDriver(ctx);
 
-        Driver? driver = await ctx.Drivers.FindAsync(keyValues: Driver.SystemLocalDriverId);
-        Assert.NotNull(@object: driver);
-        Assert.Equal(expected: "Local", actual: driver.Name);
-        Assert.Equal(expected: "local", actual: driver.Type);
+        Driver? driver = await ctx.Drivers.FindAsync(Driver.SystemLocalDriverId);
+        Assert.NotNull(driver);
+        Assert.Equal("Local", driver.Name);
+        Assert.Equal("local", driver.Type);
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class SystemLocalDriverSeedTests : IDisposable
 
         // Pre-insert a row with the same id to simulate an existing install.
         ctx.Drivers.Add(
-            entity: new()
+            new()
             {
                 Id = Driver.SystemLocalDriverId,
                 Name = "Local",
@@ -102,10 +102,10 @@ public class SystemLocalDriverSeedTests : IDisposable
         await ctx.SaveChangesAsync();
 
         // Should not throw a unique-constraint violation.
-        await DatabaseSeeder.SeedSystemLocalDriver(mediaContext: ctx);
+        await DatabaseSeeder.SeedSystemLocalDriver(ctx);
 
-        int count = await ctx.Drivers.CountAsync(predicate: d => d.Id == Driver.SystemLocalDriverId);
-        Assert.Equal(expected: 1, actual: count);
+        int count = await ctx.Drivers.CountAsync(d => d.Id == Driver.SystemLocalDriverId);
+        Assert.Equal(1, count);
     }
 
     [Fact]
@@ -113,6 +113,6 @@ public class SystemLocalDriverSeedTests : IDisposable
     {
         // The id must never change between builds — clients rely on it.
         Ulid id = Driver.SystemLocalDriverId;
-        Assert.Equal(expected: "01JKQSTS00000000000000000A", actual: id.ToString());
+        Assert.Equal("01JKQSTS00000000000000000A", id.ToString());
     }
 }

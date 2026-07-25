@@ -25,86 +25,86 @@ public class LiveAudioSelectorTests
 {
     private static AudioStreamInfo Stream(int index, string? language, bool isDefault = false) =>
         new(
-            Index: index,
-            Codec: "aac",
-            Channels: 2,
-            SampleRate: 48000,
-            BitRateKbps: 128,
-            Language: language,
-            IsDefault: isDefault,
-            IsForced: false
+            index,
+            "aac",
+            2,
+            48000,
+            128,
+            language,
+            isDefault,
+            false
         );
 
     [Fact]
     public void Select_PrefersLibraryLanguage_OverFileDefault()
     {
         // Anime: Japanese is the file's default (index 0), English is index 1.
-        AudioStreamInfo[] streams = [Stream(index: 0, language: "jpn", isDefault: true), Stream(index: 1, language: "eng")];
+        AudioStreamInfo[] streams = [Stream(0, "jpn", true), Stream(1, "eng")];
 
-        int index = LiveAudioSelector.Select(audioStreams: streams, preferredIso6391: ["en"]);
+        int index = LiveAudioSelector.Select(streams, ["en"]);
 
         index
             .Should()
-            .Be(expected: 1, because: "an English-configured library opens the English track, not the default");
+            .Be(1, "an English-configured library opens the English track, not the default");
     }
 
     [Fact]
     public void Select_MatchesBibliographicIso6392_Tag()
     {
         // ffmpeg tags Dutch as the /B form "dut"; the library stores "nl".
-        AudioStreamInfo[] streams = [Stream(index: 0, language: "eng", isDefault: true), Stream(index: 1, language: "dut")];
+        AudioStreamInfo[] streams = [Stream(0, "eng", true), Stream(1, "dut")];
 
-        LiveAudioSelector.Select(audioStreams: streams, preferredIso6391: ["nl"]).Should().Be(expected: 1);
+        LiveAudioSelector.Select(streams, ["nl"]).Should().Be(1);
     }
 
     [Fact]
     public void Select_HonoursPreferenceOrder()
     {
-        AudioStreamInfo[] streams = [Stream(index: 0, language: "eng"), Stream(index: 1, language: "jpn"), Stream(index: 2, language: "spa")];
+        AudioStreamInfo[] streams = [Stream(0, "eng"), Stream(1, "jpn"), Stream(2, "spa")];
 
         // Spanish first in the preference list wins even though English is stream 0.
-        LiveAudioSelector.Select(audioStreams: streams, preferredIso6391: ["es", "en"]).Should().Be(expected: 2);
+        LiveAudioSelector.Select(streams, ["es", "en"]).Should().Be(2);
     }
 
     [Fact]
     public void Select_NoPreferredMatch_FallsBackToSourceDefault()
     {
-        AudioStreamInfo[] streams = [Stream(index: 0, language: "jpn"), Stream(index: 1, language: "fra", isDefault: true)];
+        AudioStreamInfo[] streams = [Stream(0, "jpn"), Stream(1, "fra", true)];
 
         LiveAudioSelector
-            .Select(audioStreams: streams, preferredIso6391: ["en"])
+            .Select(streams, ["en"])
             .Should()
-            .Be(expected: 1, because: "no English track exists, so honour the file's default");
+            .Be(1, "no English track exists, so honour the file's default");
     }
 
     [Fact]
     public void Select_NoPreferredAndNoDefault_FallsBackToFirst()
     {
-        AudioStreamInfo[] streams = [Stream(index: 0, language: "jpn"), Stream(index: 1, language: "kor")];
+        AudioStreamInfo[] streams = [Stream(0, "jpn"), Stream(1, "kor")];
 
-        LiveAudioSelector.Select(audioStreams: streams, preferredIso6391: ["en"]).Should().Be(expected: 0);
+        LiveAudioSelector.Select(streams, ["en"]).Should().Be(0);
     }
 
     [Fact]
     public void Select_EmptyPreferences_UsesSourceDefault()
     {
-        AudioStreamInfo[] streams = [Stream(index: 0, language: "jpn"), Stream(index: 1, language: "eng", isDefault: true)];
+        AudioStreamInfo[] streams = [Stream(0, "jpn"), Stream(1, "eng", true)];
 
-        LiveAudioSelector.Select(audioStreams: streams, preferredIso6391: []).Should().Be(expected: 1);
+        LiveAudioSelector.Select(streams, []).Should().Be(1);
     }
 
     [Fact]
     public void Select_NoAudioStreams_ReturnsZero()
     {
-        LiveAudioSelector.Select(audioStreams: [], preferredIso6391: ["en"]).Should().Be(expected: 0);
+        LiveAudioSelector.Select([], ["en"]).Should().Be(0);
     }
 
     [Fact]
     public void Select_ExactCodeMatch_WhenTagAlreadyIso6391()
     {
         // Some muxers write the 639-1 code directly.
-        AudioStreamInfo[] streams = [Stream(index: 0, language: "ja"), Stream(index: 1, language: "en")];
+        AudioStreamInfo[] streams = [Stream(0, "ja"), Stream(1, "en")];
 
-        LiveAudioSelector.Select(audioStreams: streams, preferredIso6391: ["en"]).Should().Be(expected: 1);
+        LiveAudioSelector.Select(streams, ["en"]).Should().Be(1);
     }
 }

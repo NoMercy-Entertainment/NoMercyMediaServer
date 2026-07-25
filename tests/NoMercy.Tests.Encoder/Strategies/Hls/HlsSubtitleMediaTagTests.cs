@@ -31,16 +31,16 @@ public class HlsSubtitleMediaTagTests
         // AudioVariantKey), not MapLabel — every rung re-plans as MapLabel "[v0]"
         // in its own bundle, so keying by label collapsed the ladder.
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
-            keySelector: PlaylistGenerator.VideoVariantKey,
-            elementSelector: _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
+            PlaylistGenerator.VideoVariantKey,
+            _ => new VariantMetrics(5_000_000, 4_500_000)
         );
         Dictionary<string, VariantMetrics> audioMetrics = plan.AudioOutputs.ToDictionary(
-            keySelector: PlaylistGenerator.AudioVariantKey,
-            elementSelector: _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
+            PlaylistGenerator.AudioVariantKey,
+            _ => new VariantMetrics(192_000, 180_000)
         );
 
         PlaylistGenerator gen = new();
-        return gen.GenerateMasterPlaylist(plan: plan, mediaTitle: "Test.Movie", videoMetrics: videoMetrics, audioMetrics: audioMetrics);
+        return gen.GenerateMasterPlaylist(plan, "Test.Movie", videoMetrics, audioMetrics);
     }
 
     // ----------------------------------------------------------------
@@ -50,16 +50,15 @@ public class HlsSubtitleMediaTagTests
     [Fact]
     public void MasterPlaylist_HasOneExtXMediaPerSubtitleStream()
     {
-        OutputPlan plan = BuildPlan(subs:
-        [
-            Sub(codec: SubtitleCodecType.WebVtt, lang: "eng"),
-            Sub(codec: SubtitleCodecType.WebVtt, lang: "fra"),
+        OutputPlan plan = BuildPlan([
+            Sub(SubtitleCodecType.WebVtt, "eng"),
+            Sub(SubtitleCodecType.WebVtt, "fra"),
         ]);
 
-        string playlist = GenerateMaster(plan: plan);
+        string playlist = GenerateMaster(plan);
 
-        int tagCount = CountOccurrences(haystack: playlist, needle: "TYPE=SUBTITLES");
-        tagCount.Should().Be(expected: 2, because: "two subtitle streams → two EXT-X-MEDIA tags");
+        int tagCount = CountOccurrences(playlist, "TYPE=SUBTITLES");
+        tagCount.Should().Be(2, "two subtitle streams → two EXT-X-MEDIA tags");
     }
 
     // ----------------------------------------------------------------
@@ -69,21 +68,21 @@ public class HlsSubtitleMediaTagTests
     [Fact]
     public void StreamInf_IncludesSubtitlesAttribute_WhenSubtitlesPresentAll()
     {
-        OutputPlan plan = BuildPlan(subs: [Sub(codec: SubtitleCodecType.WebVtt, lang: "eng")]);
+        OutputPlan plan = BuildPlan([Sub(SubtitleCodecType.WebVtt, "eng")]);
 
-        string playlist = GenerateMaster(plan: plan);
+        string playlist = GenerateMaster(plan);
 
-        playlist.Should().Contain(expected: "SUBTITLES=\"subs\"");
+        playlist.Should().Contain("SUBTITLES=\"subs\"");
     }
 
     [Fact]
     public void StreamInf_NoSubtitlesAttribute_WhenNoSubtitles()
     {
-        OutputPlan plan = BuildPlan(subs: []);
+        OutputPlan plan = BuildPlan([]);
 
-        string playlist = GenerateMaster(plan: plan);
+        string playlist = GenerateMaster(plan);
 
-        playlist.Should().NotContain(unexpected: "SUBTITLES=");
+        playlist.Should().NotContain("SUBTITLES=");
     }
 
     // ----------------------------------------------------------------
@@ -95,38 +94,38 @@ public class HlsSubtitleMediaTagTests
     {
         // PGS with Drop action should NOT appear; SRT and ASS (Extract) should.
         SubtitleOutputPlan srt = new(
-            OutputCodec: SubtitleCodecType.WebVtt,
-            Action: StreamAction.Extract,
-            Language: "eng",
-            SourceIndex: 0,
-            MapLabel: "0:s:0"
+            SubtitleCodecType.WebVtt,
+            StreamAction.Extract,
+            "eng",
+            0,
+            "0:s:0"
         );
 
         SubtitleOutputPlan pgs = new(
-            OutputCodec: SubtitleCodecType.Pgs,
-            Action: StreamAction.Drop,
-            Language: "eng",
-            SourceIndex: 1,
-            MapLabel: "0:s:1"
+            SubtitleCodecType.Pgs,
+            StreamAction.Drop,
+            "eng",
+            1,
+            "0:s:1"
         );
 
         SubtitleOutputPlan ass = new(
-            OutputCodec: SubtitleCodecType.Ass,
-            Action: StreamAction.Extract,
-            Language: "fra",
-            SourceIndex: 2,
-            MapLabel: "0:s:2"
+            SubtitleCodecType.Ass,
+            StreamAction.Extract,
+            "fra",
+            2,
+            "0:s:2"
         );
 
-        OutputPlan plan = BuildPlan(subs: [srt, pgs, ass]);
+        OutputPlan plan = BuildPlan([srt, pgs, ass]);
 
-        string playlist = GenerateMaster(plan: plan);
+        string playlist = GenerateMaster(plan);
 
-        int tagCount = CountOccurrences(haystack: playlist, needle: "TYPE=SUBTITLES");
-        tagCount.Should().Be(expected: 2, because: "SRT and ASS are active; PGS is dropped and must not appear");
+        int tagCount = CountOccurrences(playlist, "TYPE=SUBTITLES");
+        tagCount.Should().Be(2, "SRT and ASS are active; PGS is dropped and must not appear");
 
-        playlist.Should().Contain(expected: "LANGUAGE=\"fra\"");
-        playlist.Should().Contain(expected: "LANGUAGE=\"eng\"");
+        playlist.Should().Contain("LANGUAGE=\"fra\"");
+        playlist.Should().Contain("LANGUAGE=\"eng\"");
     }
 
     // ----------------------------------------------------------------
@@ -141,19 +140,19 @@ public class HlsSubtitleMediaTagTests
         // copying font files to the output dir; the playlist itself doesn't
         // list fonts. This test validates the ASS playlist format.
         SubtitleOutputPlan sub = new(
-            OutputCodec: SubtitleCodecType.Ass,
-            Action: StreamAction.Extract,
-            Language: "eng",
-            SourceIndex: 0,
-            MapLabel: "0:s:0"
+            SubtitleCodecType.Ass,
+            StreamAction.Extract,
+            "eng",
+            0,
+            "0:s:0"
         );
 
-        string playlist = PlaylistGenerator.GenerateAssMediaPlaylist(sub: sub, assFileName: "subs_eng.ass", segmentDurationSeconds: 6);
+        string playlist = PlaylistGenerator.GenerateAssMediaPlaylist(sub, "subs_eng.ass", 6);
 
-        playlist.Should().StartWith(expected: "#EXTM3U");
-        playlist.Should().Contain(expected: "subs_eng.ass");
-        playlist.Should().Contain(expected: "#EXT-X-ENDLIST");
-        playlist.Should().Contain(expected: "#EXT-X-TARGETDURATION:6");
+        playlist.Should().StartWith("#EXTM3U");
+        playlist.Should().Contain("subs_eng.ass");
+        playlist.Should().Contain("#EXT-X-ENDLIST");
+        playlist.Should().Contain("#EXT-X-TARGETDURATION:6");
     }
 
     // ----------------------------------------------------------------
@@ -169,25 +168,25 @@ public class HlsSubtitleMediaTagTests
             + "00:00:07.000 --> 00:00:08.000\nWorld\n";
 
         IReadOnlyList<WebVttSegment> segments = segmenter.SliceContent(
-            vttContent: vttContent,
-            segmentDuration: TimeSpan.FromSeconds(seconds: 6)
+            vttContent,
+            TimeSpan.FromSeconds(6)
         );
 
         SubtitleOutputPlan sub = new(
-            OutputCodec: SubtitleCodecType.WebVtt,
-            Action: StreamAction.Extract,
-            Language: "eng",
-            SourceIndex: 0,
-            MapLabel: "0:s:0"
+            SubtitleCodecType.WebVtt,
+            StreamAction.Extract,
+            "eng",
+            0,
+            "0:s:0"
         );
 
-        string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(sub: sub, segments: segments, segmentDurationSeconds: 6);
+        string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(sub, segments, 6);
 
         // Playlist lives in subtitles/eng/ — segment URIs are relative to it.
-        playlist.Should().Contain(expected: "#EXTM3U");
-        playlist.Should().Contain(expected: "full_00000.vtt");
-        playlist.Should().Contain(expected: "full_00001.vtt");
-        playlist.Should().Contain(expected: "#EXT-X-ENDLIST");
+        playlist.Should().Contain("#EXTM3U");
+        playlist.Should().Contain("full_00000.vtt");
+        playlist.Should().Contain("full_00001.vtt");
+        playlist.Should().Contain("#EXT-X-ENDLIST");
     }
 
     // ----------------------------------------------------------------
@@ -196,54 +195,54 @@ public class HlsSubtitleMediaTagTests
 
     private static OutputPlan BuildPlan(SubtitleOutputPlan[] subs) =>
         new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [BuildVideo()],
-            AudioOutputs: [BuildAudio()],
-            SubtitleOutputs: subs,
-            Thumbnails: null
+            OutputFormat.Hls,
+            [BuildVideo()],
+            [BuildAudio()],
+            subs,
+            null
         );
 
     private static SubtitleOutputPlan Sub(SubtitleCodecType codec, string lang) =>
         new(
-            OutputCodec: codec,
-            Action: StreamAction.Extract,
-            Language: lang,
-            SourceIndex: 0,
-            MapLabel: "0:s:0"
+            codec,
+            StreamAction.Extract,
+            lang,
+            0,
+            "0:s:0"
         );
 
     private static VideoOutputPlan BuildVideo() =>
         new(
-            Width: 1920,
-            Height: 1080,
-            EncoderName: "libx264",
-            Crf: 23,
-            BitrateKbps: 4000,
-            Preset: "medium",
-            Profile: "high",
-            Level: "4.1",
-            TenBit: false,
-            PixelFormat: "yuv420p",
-            MapLabel: "[v0]",
-            ExtraFlags: new()
+            1920,
+            1080,
+            "libx264",
+            23,
+            4000,
+            "medium",
+            "high",
+            "4.1",
+            false,
+            "yuv420p",
+            "[v0]",
+            new()
         );
 
     private static AudioOutputPlan BuildAudio() =>
         new(
-            EncoderName: "aac",
-            BitrateKbps: 192,
-            Channels: 2,
-            SampleRate: 48000,
-            Action: StreamAction.Transcode,
-            Language: "eng",
-            MapLabel: "0:a:0"
+            "aac",
+            192,
+            2,
+            48000,
+            StreamAction.Transcode,
+            "eng",
+            "0:a:0"
         );
 
     private static int CountOccurrences(string haystack, string needle)
     {
         int count = 0;
         int idx = 0;
-        while ((idx = haystack.IndexOf(value: needle, startIndex: idx, comparisonType: StringComparison.Ordinal)) >= 0)
+        while ((idx = haystack.IndexOf(needle, idx, StringComparison.Ordinal)) >= 0)
         {
             count++;
             idx += needle.Length;

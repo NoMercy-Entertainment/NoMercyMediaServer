@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbKnownForTv
 {
-    [JsonProperty(propertyName: "first_air_date")]
+    [JsonProperty("first_air_date")]
     public DateTime? FirstAirDate { get; set; }
 }

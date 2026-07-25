@@ -42,98 +42,98 @@ public class TokenParamAuthMiddleware(
         if (
             context.Connection.LocalPort == RuntimeServerSettings.Current.InternalServerPort + 1
             && context.Connection.RemoteIpAddress is { } remoteIp
-            && IPAddress.IsLoopback(address: remoteIp)
+            && IPAddress.IsLoopback(remoteIp)
         )
         {
-            string ingestKey = context.Request.Headers[key: "X-NoMercy-Ingest-Key"].ToString();
+            string ingestKey = context.Request.Headers["X-NoMercy-Ingest-Key"].ToString();
             if (
-                !string.IsNullOrEmpty(value: ingestKey)
-                && ingestKeyStore.TryValidate(key: ingestKey, requestPath: context.Request.Path.Value ?? string.Empty)
+                !string.IsNullOrEmpty(ingestKey)
+                && ingestKeyStore.TryValidate(ingestKey, context.Request.Path.Value ?? string.Empty)
             )
             {
-                await next(context: context);
+                await next(context);
                 return;
             }
         }
 
         context.Request.Headers.Authorization = context
             .Request.Headers.Authorization.ToString()
-            .Split(separator: ",")
-            .ElementAt(index: 0)
-            .Split(separator: "&")
-            .ElementAt(index: 0);
+            .Split(",")
+            .ElementAt(0)
+            .Split("&")
+            .ElementAt(0);
 
         // Extract JWT from query params for all requests (enables ?token= and ?access_token= everywhere)
-        if (!context.Request.Headers.Authorization.ToString().Contains(value: "Bearer"))
+        if (!context.Request.Headers.Authorization.ToString().Contains("Bearer"))
         {
             string jwt = context
-                .Request.Query.FirstOrDefault(predicate: q => q.Key is "token" or "access_token")
+                .Request.Query.FirstOrDefault(q => q.Key is "token" or "access_token")
                 .Value.ToString();
 
-            if (!string.IsNullOrEmpty(value: jwt))
+            if (!string.IsNullOrEmpty(jwt))
             {
-                context.Request.Headers.Authorization = new(value: "Bearer " + jwt);
+                context.Request.Headers.Authorization = new("Bearer " + jwt);
             }
         }
 
         string url = context.Request.Path;
 
         if (
-            !UserCache.Current.FolderIds.Any(predicate: x => url.StartsWith(value: "/" + x))
-            || context.Request.Headers.Authorization.ToString().Contains(value: "Bearer")
+            !UserCache.Current.FolderIds.Any(x => url.StartsWith("/" + x))
+            || context.Request.Headers.Authorization.ToString().Contains("Bearer")
         )
         {
-            await next(context: context);
+            await next(context);
             return;
         }
 
-        string? claim = context.User.FindFirstValue(claimType: ClaimTypes.NameIdentifier);
+        string? claim = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        if (string.IsNullOrEmpty(value: claim))
+        if (string.IsNullOrEmpty(claim))
         {
-            logger.LogInformation(message: "Unauthorized request, no jwt: {Url}", args: url);
+            logger.LogInformation("Unauthorized request, no jwt: {Url}", url);
             await WriteProblemAsync(
-                context: context,
-                statusCode: (int)HttpStatusCode.Unauthorized,
-                type: "https://nomercy.tv/problems/no-token",
-                title: "Authentication required",
-                detail: "No bearer token was provided. Include a valid JWT in the Authorization header or as an access_token query parameter.",
-                authError: "NO_TOKEN"
+                context,
+                (int)HttpStatusCode.Unauthorized,
+                "https://nomercy.tv/problems/no-token",
+                "Authentication required",
+                "No bearer token was provided. Include a valid JWT in the Authorization header or as an access_token query parameter.",
+                "NO_TOKEN"
             );
             return;
         }
 
-        if (!Guid.TryParse(input: claim, result: out Guid userId) || userId == Guid.Empty)
+        if (!Guid.TryParse(claim, out Guid userId) || userId == Guid.Empty)
         {
-            logger.LogInformation(message: "Unauthorized request, guid malformed or empty: {Url}", args: url);
+            logger.LogInformation("Unauthorized request, guid malformed or empty: {Url}", url);
             await WriteProblemAsync(
-                context: context,
-                statusCode: (int)HttpStatusCode.Forbidden,
-                type: "https://nomercy.tv/problems/invalid-token",
-                title: "Invalid token",
-                detail: "The token subject (sub) is not a valid GUID. The token may be malformed.",
-                authError: "INVALID_TOKEN"
+                context,
+                (int)HttpStatusCode.Forbidden,
+                "https://nomercy.tv/problems/invalid-token",
+                "Invalid token",
+                "The token subject (sub) is not a valid GUID. The token may be malformed.",
+                "INVALID_TOKEN"
             );
             return;
         }
 
-        User? user = UserCache.Current.Users.FirstOrDefault(predicate: x => x.Id.Equals(g: userId));
+        User? user = UserCache.Current.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user is null)
         {
-            logger.LogInformation(message: "Unauthorized request, user not found: {Url}", args: url);
+            logger.LogInformation("Unauthorized request, user not found: {Url}", url);
             await WriteProblemAsync(
-                context: context,
-                statusCode: (int)HttpStatusCode.Forbidden,
-                type: "https://nomercy.tv/problems/user-not-found",
-                title: "User not found",
-                detail: "The authenticated user is not registered on this server. Ask the server owner to add your account.",
-                authError: "USER_NOT_FOUND"
+                context,
+                (int)HttpStatusCode.Forbidden,
+                "https://nomercy.tv/problems/user-not-found",
+                "User not found",
+                "The authenticated user is not registered on this server. Ask the server owner to add your account.",
+                "USER_NOT_FOUND"
             );
             return;
         }
 
-        await next(context: context);
+        await next(context);
     }
 
     private static async Task WriteProblemAsync(
@@ -158,6 +158,6 @@ public class TokenParamAuthMiddleware(
             authError,
         };
 
-        await context.Response.WriteAsync(text: JsonConvert.SerializeObject(value: body), encoding: Encoding.UTF8);
+        await context.Response.WriteAsync(JsonConvert.SerializeObject(body), Encoding.UTF8);
     }
 }

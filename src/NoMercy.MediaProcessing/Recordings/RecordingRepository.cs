@@ -22,10 +22,9 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
         if (update)
         {
             return context
-                .Tracks.Upsert(entity: recording)
-                .On(match: e => new { e.Id })
-                .WhenMatched(
-                    updater: (ts, ti) =>
+                .Tracks.Upsert(recording)
+                .On(e => new { e.Id })
+                .WhenMatched((ts, ti) =>
                         new()
                         {
                             Id = ti.Id,
@@ -45,10 +44,10 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
         }
 
         return context
-            .Tracks.Upsert(entity: recording)
-            .On(match: e => new { e.Id })
+            .Tracks.Upsert(recording)
+            .On(e => new { e.Id })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         Id = ti.Id,
@@ -70,45 +69,45 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
     public Task LinkToRelease(AlbumTrack trackRelease)
     {
         return context
-            .AlbumTrack.Upsert(entity: trackRelease)
-            .On(match: e => new { e.AlbumId, e.TrackId })
-            .WhenMatched(updater: (s, i) => new() { AlbumId = i.AlbumId, TrackId = i.TrackId })
+            .AlbumTrack.Upsert(trackRelease)
+            .On(e => new { e.AlbumId, e.TrackId })
+            .WhenMatched((s, i) => new() { AlbumId = i.AlbumId, TrackId = i.TrackId })
             .RunAsync();
     }
 
     public Task LinkToArtist(ArtistTrack insert)
     {
         return context
-            .ArtistTrack.Upsert(entity: insert)
-            .On(match: e => new { e.ArtistId, e.TrackId })
-            .WhenMatched(updater: (s, i) => new() { ArtistId = i.ArtistId, TrackId = i.TrackId })
+            .ArtistTrack.Upsert(insert)
+            .On(e => new { e.ArtistId, e.TrackId })
+            .WhenMatched((s, i) => new() { ArtistId = i.ArtistId, TrackId = i.TrackId })
             .RunAsync();
     }
 
     public Task LinkToLibrary(LibraryTrack libraryTrack)
     {
         return context
-            .LibraryTrack.Upsert(entity: new(libraryId: libraryTrack.LibraryId, trackId: libraryTrack.TrackId))
-            .On(match: v => new { v.LibraryId, v.TrackId })
-            .WhenMatched(updater: (lts, lti) => new() { LibraryId = lti.LibraryId, TrackId = lti.TrackId })
+            .LibraryTrack.Upsert(new(libraryTrack.LibraryId, libraryTrack.TrackId))
+            .On(v => new { v.LibraryId, v.TrackId })
+            .WhenMatched((lts, lti) => new() { LibraryId = lti.LibraryId, TrackId = lti.TrackId })
             .RunAsync();
     }
 
     public Task LinkToLibrary(ArtistLibrary artistLibrary)
     {
         return context
-            .ArtistLibrary.Upsert(entity: new(artistId: artistLibrary.ArtistId, libraryId: artistLibrary.LibraryId))
-            .On(match: v => new { v.ArtistId, v.LibraryId })
-            .WhenMatched(updater: (lts, lti) => new() { ArtistId = lti.ArtistId, LibraryId = lti.LibraryId })
+            .ArtistLibrary.Upsert(new(artistLibrary.ArtistId, artistLibrary.LibraryId))
+            .On(v => new { v.ArtistId, v.LibraryId })
+            .WhenMatched((lts, lti) => new() { ArtistId = lti.ArtistId, LibraryId = lti.LibraryId })
             .RunAsync();
     }
 
     public async Task<int> UpdateTrackLyricsAsync(Track track, string serializeObject)
     {
         return await context
-            .Upsert(entity: track)
-            .On(match: v => new { v.Id })
-            .WhenMatched(updater: v => new() { _lyrics = serializeObject })
+            .Upsert(track)
+            .On(v => new { v.Id })
+            .WhenMatched(v => new() { _lyrics = serializeObject })
             .RunAsync();
     }
 }

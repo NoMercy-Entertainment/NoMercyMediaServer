@@ -29,35 +29,35 @@ public static class LiveAudioSelector
     // muxers use either. Covers the languages real libraries are configured with;
     // anything outside the map falls back to a leading-two-letter compare.
     private static readonly Dictionary<string, string[]> Iso6392ByIso6391 = new(
-        comparer: StringComparer.OrdinalIgnoreCase
+        StringComparer.OrdinalIgnoreCase
     )
     {
-        [key: "en"] = ["eng"],
-        [key: "nl"] = ["nld", "dut"],
-        [key: "de"] = ["deu", "ger"],
-        [key: "fr"] = ["fra", "fre"],
-        [key: "es"] = ["spa"],
-        [key: "it"] = ["ita"],
-        [key: "pt"] = ["por"],
-        [key: "ru"] = ["rus"],
-        [key: "ja"] = ["jpn"],
-        [key: "ko"] = ["kor"],
-        [key: "zh"] = ["zho", "chi"],
-        [key: "ar"] = ["ara"],
-        [key: "hi"] = ["hin"],
-        [key: "sv"] = ["swe"],
-        [key: "no"] = ["nor"],
-        [key: "da"] = ["dan"],
-        [key: "fi"] = ["fin"],
-        [key: "pl"] = ["pol"],
-        [key: "tr"] = ["tur"],
-        [key: "cs"] = ["ces", "cze"],
-        [key: "el"] = ["ell", "gre"],
-        [key: "he"] = ["heb"],
-        [key: "hu"] = ["hun"],
-        [key: "th"] = ["tha"],
-        [key: "uk"] = ["ukr"],
-        [key: "vi"] = ["vie"],
+        ["en"] = ["eng"],
+        ["nl"] = ["nld", "dut"],
+        ["de"] = ["deu", "ger"],
+        ["fr"] = ["fra", "fre"],
+        ["es"] = ["spa"],
+        ["it"] = ["ita"],
+        ["pt"] = ["por"],
+        ["ru"] = ["rus"],
+        ["ja"] = ["jpn"],
+        ["ko"] = ["kor"],
+        ["zh"] = ["zho", "chi"],
+        ["ar"] = ["ara"],
+        ["hi"] = ["hin"],
+        ["sv"] = ["swe"],
+        ["no"] = ["nor"],
+        ["da"] = ["dan"],
+        ["fi"] = ["fin"],
+        ["pl"] = ["pol"],
+        ["tr"] = ["tur"],
+        ["cs"] = ["ces", "cze"],
+        ["el"] = ["ell", "gre"],
+        ["he"] = ["heb"],
+        ["hu"] = ["hun"],
+        ["th"] = ["tha"],
+        ["uk"] = ["ukr"],
+        ["vi"] = ["vie"],
     };
 
     /// <summary>
@@ -78,14 +78,14 @@ public static class LiveAudioSelector
         {
             for (int index = 0; index < audioStreams.Count; index++)
             {
-                if (LanguageMatches(streamLanguage: audioStreams[index: index].Language, preferredIso6391: preferred))
+                if (LanguageMatches(audioStreams[index].Language, preferred))
                     return index;
             }
         }
 
         for (int index = 0; index < audioStreams.Count; index++)
         {
-            if (audioStreams[index: index].IsDefault)
+            if (audioStreams[index].IsDefault)
                 return index;
         }
 
@@ -101,7 +101,7 @@ public static class LiveAudioSelector
     public static bool LanguageMatches(string? streamLanguage, string preferredIso6391)
     {
         if (
-            string.IsNullOrWhiteSpace(value: streamLanguage) || string.IsNullOrWhiteSpace(value: preferredIso6391)
+            string.IsNullOrWhiteSpace(streamLanguage) || string.IsNullOrWhiteSpace(preferredIso6391)
         )
             return false;
 
@@ -111,7 +111,7 @@ public static class LiveAudioSelector
         if (stream == preferred)
             return true;
 
-        if (Iso6392ByIso6391.TryGetValue(key: preferred, value: out string[]? forms) && forms.Contains(value: stream))
+        if (Iso6392ByIso6391.TryGetValue(preferred, out string[]? forms) && forms.Contains(stream))
             return true;
 
         return stream.Length >= 2 && preferred.Length >= 2 && stream[..2] == preferred[..2];

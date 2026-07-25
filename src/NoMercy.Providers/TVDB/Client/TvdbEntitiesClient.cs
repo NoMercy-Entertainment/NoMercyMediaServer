@@ -17,6 +17,6 @@ public class TvdbEntitiesClient : TvdbBaseClient
 {
     public Task<TvdbEntitiesResponse?> Entities(bool? priority = false)
     {
-        return Get<TvdbEntitiesResponse>(url: "entities/types", priority: priority);
+        return Get<TvdbEntitiesResponse>("entities/types", priority: priority);
     }
 }

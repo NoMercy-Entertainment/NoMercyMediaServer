@@ -21,32 +21,32 @@ namespace NoMercy.Tests.Api.Dtos;
 public class PageRequestDtoTests
 {
     [Theory]
-    [InlineData(data: [50, 50])]
-    [InlineData(data: [1000, 1000])]
-    [InlineData(data: [500000, 1000])]
-    [InlineData(data: [0, 300])]
-    [InlineData(data: [-5, 300])]
+    [InlineData([50, 50])]
+    [InlineData([1000, 1000])]
+    [InlineData([500000, 1000])]
+    [InlineData([0, 300])]
+    [InlineData([-5, 300])]
     public void Take_IsClampedToRange(int input, int expected)
     {
         PageRequestDto dto = new() { Take = input };
 
-        Assert.Equal(expected: expected, actual: dto.Take);
+        Assert.Equal(expected, dto.Take);
     }
 
     [Fact]
     public void Take_DefaultsTo300()
     {
-        Assert.Equal(expected: 300, actual: new PageRequestDto().Take);
+        Assert.Equal(300, new PageRequestDto().Take);
     }
 
     [Theory]
-    [InlineData(data: [5, 5])]
-    [InlineData(data: [0, 0])]
-    [InlineData(data: [-3, 0])]
+    [InlineData([5, 5])]
+    [InlineData([0, 0])]
+    [InlineData([-3, 0])]
     public void Page_FloorsAtZero(int input, int expected)
     {
         PageRequestDto dto = new() { Page = input };
 
-        Assert.Equal(expected: expected, actual: dto.Page);
+        Assert.Equal(expected, dto.Page);
     }
 }

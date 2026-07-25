@@ -31,7 +31,7 @@ namespace NoMercy.Tests.Setup.Auth;
 /// access/refresh token pair sitting in cleartext on disk is exactly what the
 /// DB-encrypted storage was introduced to eliminate.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class AuthManagerLegacyMigrationTests : IDisposable
 {
     private readonly AppDbContext _appContext;
@@ -43,17 +43,17 @@ public sealed class AuthManagerLegacyMigrationTests : IDisposable
         ServiceCollection services = new();
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(serviceProvider: provider);
+        TokenStore.Initialize(provider);
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
-        _appContext = new(options: optionsBuilder.Options);
+        optionsBuilder.UseSqlite("Data Source=:memory:");
+        _appContext = new(optionsBuilder.Options);
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(appContext: _appContext, driver: new LocalStorageDriver(), authTokenStore: _authTokenStore);
+        _authManager = new(_appContext, new LocalStorageDriver(), _authTokenStore);
 
-        Directory.CreateDirectory(path: AppFiles.ConfigPath);
+        Directory.CreateDirectory(AppFiles.ConfigPath);
         DeleteTokenFileIfPresent();
     }
 
@@ -61,25 +61,25 @@ public sealed class AuthManagerLegacyMigrationTests : IDisposable
     {
         _appContext.Database.CloseConnection();
         _appContext.Dispose();
-        _authTokenStore.SetAccessToken(token: null);
+        _authTokenStore.SetAccessToken(null);
         DeleteTokenFileIfPresent();
     }
 
 #pragma warning disable CS0618 // TokenFile is [Obsolete] — migration-detection only, by design
     private static void DeleteTokenFileIfPresent()
     {
-        if (File.Exists(path: AppFiles.TokenFile))
-            File.Delete(path: AppFiles.TokenFile);
+        if (File.Exists(AppFiles.TokenFile))
+            File.Delete(AppFiles.TokenFile);
     }
 
     private static void WriteTokenFile(string content) =>
-        File.WriteAllText(path: AppFiles.TokenFile, contents: content);
+        File.WriteAllText(AppFiles.TokenFile, content);
 
-    private static bool TokenFileExists() => File.Exists(path: AppFiles.TokenFile);
+    private static bool TokenFileExists() => File.Exists(AppFiles.TokenFile);
 #pragma warning restore CS0618
 
     private async Task<Configuration?> ReadConfig(string key) =>
-        await _appContext.Configuration.AsNoTracking().FirstOrDefaultAsync(predicate: c => c.Key == key);
+        await _appContext.Configuration.AsNoTracking().FirstOrDefaultAsync(c => c.Key == key);
 
     private static string CreateValidJwt(DateTime validTo)
     {
@@ -89,12 +89,12 @@ public sealed class AuthManagerLegacyMigrationTests : IDisposable
             audience: "nomercy-server",
             claims:
             [
-                new(type: System.Security.Claims.ClaimTypes.NameIdentifier, value: Guid.NewGuid().ToString()),
+                new(System.Security.Claims.ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
             ],
-            notBefore: DateTime.UtcNow.AddMinutes(value: -5),
+            notBefore: DateTime.UtcNow.AddMinutes(-5),
             expires: validTo
         );
-        return handler.WriteToken(token: token);
+        return handler.WriteToken(token);
     }
 
     [Fact]
@@ -102,40 +102,40 @@ public sealed class AuthManagerLegacyMigrationTests : IDisposable
     {
         bool result = await _authManager.InitializeAsync();
 
-        Assert.False(condition: result);
+        Assert.False(result);
     }
 
     [Fact]
     public async Task InitializeAsync_EmptyLegacyFile_DeletesFileWithoutMigrating()
     {
-        WriteTokenFile(content: string.Empty);
+        WriteTokenFile(string.Empty);
 
         await _authManager.InitializeAsync();
 
-        Assert.False(condition: TokenFileExists());
-        Assert.Null(@object: await ReadConfig(key: "auth_access_token"));
+        Assert.False(TokenFileExists());
+        Assert.Null(await ReadConfig("auth_access_token"));
     }
 
     [Fact]
     public async Task InitializeAsync_EmptyObjectLegacyFile_DeletesFileWithoutMigrating()
     {
-        WriteTokenFile(content: "{}");
+        WriteTokenFile("{}");
 
         await _authManager.InitializeAsync();
 
-        Assert.False(condition: TokenFileExists());
-        Assert.Null(@object: await ReadConfig(key: "auth_access_token"));
+        Assert.False(TokenFileExists());
+        Assert.Null(await ReadConfig("auth_access_token"));
     }
 
     [Fact]
     public async Task InitializeAsync_LegacyFileMissingAccessToken_DeletesFileWithoutMigrating()
     {
-        WriteTokenFile(content: "{\"refresh_token\":\"r1\"}");
+        WriteTokenFile("{\"refresh_token\":\"r1\"}");
 
         await _authManager.InitializeAsync();
 
-        Assert.False(condition: TokenFileExists());
-        Assert.Null(@object: await ReadConfig(key: "auth_access_token"));
+        Assert.False(TokenFileExists());
+        Assert.Null(await ReadConfig("auth_access_token"));
     }
 
     [Fact]
@@ -145,10 +145,10 @@ public sealed class AuthManagerLegacyMigrationTests : IDisposable
         // validates the migrated token immediately afterward (TokenIssuerMatchesConfiguredRealm)
         // and wipes anything that doesn't parse or doesn't match — a plain opaque string
         // would be migrated then instantly discarded, masking whether migration itself worked.
-        string legacyJwt = CreateValidJwt(validTo: DateTime.UtcNow.AddHours(value: 2));
+        string legacyJwt = CreateValidJwt(DateTime.UtcNow.AddHours(2));
         WriteTokenFile(
-            content: JsonConvert.SerializeObject(
-                value: new
+            JsonConvert.SerializeObject(
+                new
                 {
                     access_token = legacyJwt,
                     refresh_token = "legacy-refresh-token",
@@ -160,22 +160,22 @@ public sealed class AuthManagerLegacyMigrationTests : IDisposable
 
         await _authManager.InitializeAsync();
 
-        Assert.False(condition: TokenFileExists());
-        Configuration? accessRow = await ReadConfig(key: "auth_access_token");
-        Assert.Equal(expected: legacyJwt, actual: accessRow?.SecureValue);
+        Assert.False(TokenFileExists());
+        Configuration? accessRow = await ReadConfig("auth_access_token");
+        Assert.Equal(legacyJwt, accessRow?.SecureValue);
     }
 
     [Fact]
     public async Task InitializeAsync_MalformedJsonLegacyFile_LeavesFileIntact()
     {
-        WriteTokenFile(content: "{not-valid-json-at-all");
+        WriteTokenFile("{not-valid-json-at-all");
 
         await _authManager.InitializeAsync();
 
         // Malformed JSON is a parse exception, not an empty/garbage payload — the
         // migration code path explicitly leaves the file for manual inspection
         // rather than silently discarding a file it could not understand.
-        Assert.True(condition: TokenFileExists());
-        Assert.Null(@object: await ReadConfig(key: "auth_access_token"));
+        Assert.True(TokenFileExists());
+        Assert.Null(await ReadConfig("auth_access_token"));
     }
 }

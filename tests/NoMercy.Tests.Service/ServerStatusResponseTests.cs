@@ -11,7 +11,6 @@
 
 using Newtonsoft.Json;
 using NoMercy.Launcher.Models;
-using Xunit;
 
 namespace NoMercy.Tests.Service;
 
@@ -34,17 +33,17 @@ public class ServerStatusResponseTests
             }
             """;
 
-        ServerStatusResponse? result = JsonConvert.DeserializeObject<ServerStatusResponse>(value: json);
+        ServerStatusResponse? result = JsonConvert.DeserializeObject<ServerStatusResponse>(json);
 
-        Assert.NotNull(@object: result);
-        Assert.Equal(expected: "running", actual: result.Status);
-        Assert.Equal(expected: "TestServer", actual: result.ServerName);
-        Assert.Equal(expected: "1.2.3", actual: result.Version);
-        Assert.Equal(expected: "Linux", actual: result.Platform);
-        Assert.Equal(expected: "X64", actual: result.Architecture);
-        Assert.Equal(expected: "Linux 6.1", actual: result.Os);
-        Assert.Equal(expected: 3600, actual: result.UptimeSeconds);
-        Assert.True(condition: result.IsDev);
+        Assert.NotNull(result);
+        Assert.Equal("running", result.Status);
+        Assert.Equal("TestServer", result.ServerName);
+        Assert.Equal("1.2.3", result.Version);
+        Assert.Equal("Linux", result.Platform);
+        Assert.Equal("X64", result.Architecture);
+        Assert.Equal("Linux 6.1", result.Os);
+        Assert.Equal(3600, result.UptimeSeconds);
+        Assert.True(result.IsDev);
     }
 
     [Fact]
@@ -52,17 +51,17 @@ public class ServerStatusResponseTests
     {
         string json = """{ "status": "running" }""";
 
-        ServerStatusResponse? result = JsonConvert.DeserializeObject<ServerStatusResponse>(value: json);
+        ServerStatusResponse? result = JsonConvert.DeserializeObject<ServerStatusResponse>(json);
 
-        Assert.NotNull(@object: result);
-        Assert.Equal(expected: "running", actual: result.Status);
-        Assert.Equal(expected: string.Empty, actual: result.ServerName);
-        Assert.Equal(expected: string.Empty, actual: result.Version);
-        Assert.Equal(expected: string.Empty, actual: result.Platform);
-        Assert.Equal(expected: string.Empty, actual: result.Architecture);
-        Assert.Equal(expected: string.Empty, actual: result.Os);
-        Assert.Equal(expected: 0, actual: result.UptimeSeconds);
-        Assert.False(condition: result.IsDev);
+        Assert.NotNull(result);
+        Assert.Equal("running", result.Status);
+        Assert.Equal(string.Empty, result.ServerName);
+        Assert.Equal(string.Empty, result.Version);
+        Assert.Equal(string.Empty, result.Platform);
+        Assert.Equal(string.Empty, result.Architecture);
+        Assert.Equal(string.Empty, result.Os);
+        Assert.Equal(0, result.UptimeSeconds);
+        Assert.False(result.IsDev);
     }
 
     [Fact]
@@ -70,10 +69,10 @@ public class ServerStatusResponseTests
     {
         string json = """{ "status": "starting", "version": "0.9.0" }""";
 
-        ServerStatusResponse? result = JsonConvert.DeserializeObject<ServerStatusResponse>(value: json);
+        ServerStatusResponse? result = JsonConvert.DeserializeObject<ServerStatusResponse>(json);
 
-        Assert.NotNull(@object: result);
-        Assert.Equal(expected: "starting", actual: result.Status);
-        Assert.Equal(expected: "0.9.0", actual: result.Version);
+        Assert.NotNull(result);
+        Assert.Equal("starting", result.Status);
+        Assert.Equal("0.9.0", result.Version);
     }
 }

@@ -16,9 +16,9 @@ namespace NoMercy.Api.DTOs.Music;
 
 public class ImageUploadResponseDto
 {
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri Url { get; set; } = null!;
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 }

@@ -47,7 +47,7 @@ public static class DrmKeyStore
 
             IDataProtectionProvider dataProtectionProvider =
                 serviceProvider.GetRequiredService<IDataProtectionProvider>();
-            _protector = dataProtectionProvider.CreateProtector(purpose: ProtectorPurpose);
+            _protector = dataProtectionProvider.CreateProtector(ProtectorPurpose);
         }
     }
 
@@ -63,22 +63,22 @@ public static class DrmKeyStore
         CancellationToken ct
     )
     {
-        if (string.IsNullOrWhiteSpace(value: keyUri))
-            throw new ArgumentException(message: "keyUri is required", paramName: nameof(keyUri));
+        if (string.IsNullOrWhiteSpace(keyUri))
+            throw new ArgumentException("keyUri is required", nameof(keyUri));
         if (key.Length != 16)
-            throw new ArgumentException(message: $"key must be 16 bytes, got {key.Length}", paramName: nameof(key));
+            throw new ArgumentException($"key must be 16 bytes, got {key.Length}", nameof(key));
         if (iv.Length != 16)
-            throw new ArgumentException(message: $"iv must be 16 bytes, got {iv.Length}", paramName: nameof(iv));
+            throw new ArgumentException($"iv must be 16 bytes, got {iv.Length}", nameof(iv));
 
-        Directory.CreateDirectory(path: AppFiles.DrmKeysPath);
+        Directory.CreateDirectory(AppFiles.DrmKeysPath);
 
         byte[] payload = new byte[32];
-        Buffer.BlockCopy(src: key, srcOffset: 0, dst: payload, dstOffset: 0, count: 16);
-        Buffer.BlockCopy(src: iv, srcOffset: 0, dst: payload, dstOffset: 16, count: 16);
+        Buffer.BlockCopy(key, 0, payload, 0, 16);
+        Buffer.BlockCopy(iv, 0, payload, 16, 16);
 
-        string protectedBase64 = Convert.ToBase64String(inArray: EnsureInitialized().Protect(plaintext: payload));
-        string path = PathForKeyUri(keyUri: keyUri);
-        await File.WriteAllTextAsync(path: path, contents: protectedBase64, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+        string protectedBase64 = Convert.ToBase64String(EnsureInitialized().Protect(payload));
+        string path = PathForKeyUri(keyUri);
+        await File.WriteAllTextAsync(path, protectedBase64, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -91,15 +91,15 @@ public static class DrmKeyStore
         CancellationToken ct
     )
     {
-        string path = PathForKeyUri(keyUri: keyUri);
-        if (!File.Exists(path: path))
+        string path = PathForKeyUri(keyUri);
+        if (!File.Exists(path))
             return null;
 
         try
         {
-            string protectedBase64 = await File.ReadAllTextAsync(path: path, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+            string protectedBase64 = await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
             byte[] payload = EnsureInitialized()
-                .Unprotect(protectedData: Convert.FromBase64String(s: protectedBase64));
+                .Unprotect(Convert.FromBase64String(protectedBase64));
             return (payload[..16], payload[16..]);
         }
         catch (Exception)
@@ -111,9 +111,9 @@ public static class DrmKeyStore
 
     private static string PathForKeyUri(string keyUri)
     {
-        byte[] hash = SHA256.HashData(source: Encoding.UTF8.GetBytes(s: keyUri));
-        string id = Convert.ToHexString(inArray: hash).ToLowerInvariant();
-        return Path.Combine(path1: AppFiles.DrmKeysPath, path2: $"{id}.key.protected");
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(keyUri));
+        string id = Convert.ToHexString(hash).ToLowerInvariant();
+        return Path.Combine(AppFiles.DrmKeysPath, $"{id}.key.protected");
     }
 
     private static IDataProtector EnsureInitialized()
@@ -126,19 +126,19 @@ public static class DrmKeyStore
             if (_protector is not null)
                 return _protector;
 
-            if (!Directory.Exists(path: AppFiles.DataProtectionKeysDir))
-                Directory.CreateDirectory(path: AppFiles.DataProtectionKeysDir);
+            if (!Directory.Exists(AppFiles.DataProtectionKeysDir))
+                Directory.CreateDirectory(AppFiles.DataProtectionKeysDir);
 
             ServiceCollection services = new();
             services
                 .AddDataProtection()
-                .PersistKeysToFileSystem(directory: new(path: AppFiles.DataProtectionKeysDir))
-                .SetApplicationName(applicationName: "NoMercyMediaServer");
+                .PersistKeysToFileSystem(new(AppFiles.DataProtectionKeysDir))
+                .SetApplicationName("NoMercyMediaServer");
 
             ServiceProvider provider = services.BuildServiceProvider();
             IDataProtectionProvider dataProtectionProvider =
                 provider.GetRequiredService<IDataProtectionProvider>();
-            _protector = dataProtectionProvider.CreateProtector(purpose: ProtectorPurpose);
+            _protector = dataProtectionProvider.CreateProtector(ProtectorPurpose);
             return _protector;
         }
     }

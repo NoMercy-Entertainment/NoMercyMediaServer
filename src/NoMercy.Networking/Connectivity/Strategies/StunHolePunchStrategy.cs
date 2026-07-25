@@ -54,25 +54,25 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
         try
         {
             int localPort = RuntimeServerSettings.Current.StunPort;
-            _stunSocket = new(port: localPort);
+            _stunSocket = new(localPort);
 
             // Send STUN binding request to first server
             IPEndPoint? firstResult = await SendStunBindingRequest(
-                host: StunServers[0].Host,
-                port: StunServers[0].Port,
-                ct: ct
+                StunServers[0].Host,
+                StunServers[0].Port,
+                ct
             );
             if (firstResult is null)
             {
-                _logger.LogDebug(message: "STUN binding request to primary server failed");
+                _logger.LogDebug("STUN binding request to primary server failed");
                 return false;
             }
 
             // Send STUN binding request to second server from same socket
             IPEndPoint? secondResult = await SendStunBindingRequest(
-                host: StunServers[1].Host,
-                port: StunServers[1].Port,
-                ct: ct
+                StunServers[1].Host,
+                StunServers[1].Port,
+                ct
             );
 
             // Determine NAT type
@@ -84,7 +84,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             }
             else if (
                 firstResult.Port == secondResult.Port
-                && firstResult.Address.Equals(comparand: secondResult.Address)
+                && firstResult.Address.Equals(secondResult.Address)
             )
             {
                 // Same public IP:port from different servers → Full Cone or Restricted Cone
@@ -92,12 +92,12 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
                 _connectivityStatus.StunPublicPort = firstResult.Port;
             }
             else if (
-                firstResult.Address.Equals(comparand: secondResult.Address)
+                firstResult.Address.Equals(secondResult.Address)
                 && firstResult.Port != secondResult.Port
             )
             {
                 // Same IP but different port → Symmetric NAT, hole-punch won't work
-                _logger.LogDebug(message: "Symmetric NAT detected — STUN hole-punch not viable");
+                _logger.LogDebug("Symmetric NAT detected — STUN hole-punch not viable");
                 Cleanup();
                 return false;
             }
@@ -105,7 +105,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             {
                 // Different IPs → Symmetric NAT
                 _logger.LogDebug(
-                    message: "Symmetric NAT detected (different IPs) — STUN hole-punch not viable"
+                    "Symmetric NAT detected (different IPs) — STUN hole-punch not viable"
                 );
                 Cleanup();
                 return false;
@@ -113,38 +113,38 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
 
             _connectivityStatus.NatStatus = NatStatus.HolePunched;
             _logger.LogInformation(
-                message: "STUN discovered public endpoint: {StunPublicIp}:{StunPublicPort}", args: [_connectivityStatus.StunPublicIp, _connectivityStatus.StunPublicPort]
+                "STUN discovered public endpoint: {StunPublicIp}:{StunPublicPort}", [_connectivityStatus.StunPublicIp, _connectivityStatus.StunPublicPort]
             );
 
             // Start keep-alive to maintain NAT mapping
             _keepAliveTimer = new(
-                callback: async _ =>
+                async _ =>
                 {
                     try
                     {
                         if (_stunSocket is null)
                             return;
                         await SendStunBindingRequest(
-                            host: StunServers[0].Host,
-                            port: StunServers[0].Port,
-                            ct: CancellationToken.None
+                            StunServers[0].Host,
+                            StunServers[0].Port,
+                            CancellationToken.None
                         );
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogDebug(message: "STUN keep-alive failed: {Message}", args: ex.Message);
+                        _logger.LogDebug("STUN keep-alive failed: {Message}", ex.Message);
                     }
                 },
-                state: null,
-                dueTime: TimeSpan.FromSeconds(seconds: 25),
-                period: TimeSpan.FromSeconds(seconds: 25)
+                null,
+                TimeSpan.FromSeconds(25),
+                TimeSpan.FromSeconds(25)
             );
 
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(message: "STUN hole-punch failed: {Message}", args: ex.Message);
+            _logger.LogDebug("STUN hole-punch failed: {Message}", ex.Message);
             Cleanup();
             return false;
         }
@@ -161,28 +161,28 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
 
         try
         {
-            IPAddress[] addresses = await Dns.GetHostAddressesAsync(hostNameOrAddress: host, cancellationToken: ct);
+            IPAddress[] addresses = await Dns.GetHostAddressesAsync(host, ct);
             IPAddress serverAddress =
-                addresses.FirstOrDefault(predicate: a => a.AddressFamily == AddressFamily.InterNetwork)
-                ?? throw new(message: $"Could not resolve {host}");
-            IPEndPoint serverEndpoint = new(address: serverAddress, port: port);
+                addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork)
+                ?? throw new($"Could not resolve {host}");
+            IPEndPoint serverEndpoint = new(serverAddress, port);
 
             // Build STUN binding request (RFC 5389)
             StunMessage5389 request = new() { StunMessageType = StunMessageType.BindingRequest };
             byte[] requestBytes = new byte[request.Length];
-            request.WriteTo(buffer: requestBytes);
+            request.WriteTo(requestBytes);
 
-            await _stunSocket.SendAsync(datagram: requestBytes, bytes: requestBytes.Length, endPoint: serverEndpoint);
+            await _stunSocket.SendAsync(requestBytes, requestBytes.Length, serverEndpoint);
 
             // Wait for response with timeout
             using CancellationTokenSource timeoutCts =
-                CancellationTokenSource.CreateLinkedTokenSource(token: ct);
-            timeoutCts.CancelAfter(millisecondsDelay: 3000);
+                CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(3000);
 
-            UdpReceiveResult result = await _stunSocket.ReceiveAsync(cancellationToken: timeoutCts.Token);
+            UdpReceiveResult result = await _stunSocket.ReceiveAsync(timeoutCts.Token);
 
             StunMessage5389 response = new();
-            response.TryParse(buffer: result.Buffer);
+            response.TryParse(result.Buffer);
 
             // Extract XOR-MAPPED-ADDRESS or MAPPED-ADDRESS from response attributes
             foreach (StunAttribute attr in response.Attributes)
@@ -190,10 +190,10 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
                 if (
                     attr.Value is XorMappedAddressStunAttributeValue { Address: not null } xorMapped
                 )
-                    return new(address: xorMapped.Address, port: xorMapped.Port);
+                    return new(xorMapped.Address, xorMapped.Port);
 
                 if (attr.Value is MappedAddressStunAttributeValue { Address: not null } mapped)
-                    return new(address: mapped.Address, port: mapped.Port);
+                    return new(mapped.Address, mapped.Port);
             }
 
             return null;
@@ -205,7 +205,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
         catch (Exception ex)
         {
             _logger.LogDebug(
-                message: "STUN request to {Host}:{Port} failed: {Message}", args: [host, port, ex.Message]
+                "STUN request to {Host}:{Port} failed: {Message}", [host, port, ex.Message]
             );
             return null;
         }
@@ -228,6 +228,6 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
     public void Dispose()
     {
         Cleanup();
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 }

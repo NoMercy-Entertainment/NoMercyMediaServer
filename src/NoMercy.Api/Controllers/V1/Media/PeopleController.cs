@@ -24,8 +24,8 @@ using NoMercy.Providers.TMDB.Models.People;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags(tags: "Media People")]
-[ApiVersion(version: 1.0)]
+[Tags("Media People")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "MediaAccess")]
 public class PeopleController(
     IPeopleRepository peopleRepository,
@@ -34,7 +34,7 @@ public class PeopleController(
 ) : BaseController
 {
     [HttpGet]
-    [Route(template: "api/v{version:apiVersion}/person")] // match themoviedb.org API
+    [Route("api/v{version:apiVersion}/person")] // match themoviedb.org API
     [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page"])]
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
@@ -43,16 +43,16 @@ public class PeopleController(
         string language = Language();
 
         List<PeopleResponseItemDto> people = (
-            await peopleRepository.GetPeopleAsync(userId: userId, language: language, take: request.Take, page: request.Page)
+            await peopleRepository.GetPeopleAsync(userId, language, request.Take, request.Page)
         )
-            .Select(selector: person => new PeopleResponseItemDto(person: person))
+            .Select(person => new PeopleResponseItemDto(person))
             .ToList();
 
-        return GetPaginatedResponse(data: people, request: request);
+        return GetPaginatedResponse(people, request);
     }
 
     [HttpGet]
-    [Route(template: "/api/v{version:apiVersion}/person/{id:int}")] // match themoviedb.org API
+    [Route("/api/v{version:apiVersion}/person/{id:int}")] // match themoviedb.org API
     [ResponseCache(Duration = 300)]
     public async Task<IActionResult> Show(int id)
     {
@@ -61,25 +61,25 @@ public class PeopleController(
         TmdbPersonAppends? personAppends;
         try
         {
-            personAppends = await personMetadataProvider.GetPersonAsync(id: id, ct: default);
+            personAppends = await personMetadataProvider.GetPersonAsync(id, default);
         }
         catch (Exception)
         {
             // Mirror Movies/Tv: a transient provider (TMDB) failure degrades to a
             // clean 404 rather than surfacing an unhandled 500.
-            return NotFoundResponse(detail: "Person not found");
+            return NotFoundResponse("Person not found");
         }
 
         if (personAppends is null)
-            return NotFoundResponse(detail: "Person not found");
+            return NotFoundResponse("Person not found");
 
         if (personAppends.Adult && !config.ShowAdultContent)
             return UnauthorizedResponse(
-                detail: "Person is adult which is not allowed by the server configuration"
+                "Person is adult which is not allowed by the server configuration"
             );
 
-        Person? person = await peopleRepository.GetPersonWithCreditsAsync(id: id);
+        Person? person = await peopleRepository.GetPersonWithCreditsAsync(id);
 
-        return Ok(value: new PersonResponseDto { Data = new(tmdbPersonAppends: personAppends, country: country, person: person) });
+        return Ok(new PersonResponseDto { Data = new(personAppends, country, person) });
     }
 }

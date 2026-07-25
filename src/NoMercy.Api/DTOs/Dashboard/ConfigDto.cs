@@ -15,51 +15,51 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public class ConfigDto
 {
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public ConfigDtoData Data { get; set; } = new();
 }
 
 public class ConfigDtoData
 {
-    [JsonProperty(propertyName: "internal_port")]
+    [JsonProperty("internal_port")]
     public int InternalServerPort { get; set; }
 
-    [JsonProperty(propertyName: "external_port")]
+    [JsonProperty("external_port")]
     public int ExternalServerPort { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? ServerName { get; set; }
 
-    [JsonProperty(propertyName: "library_workers")]
+    [JsonProperty("library_workers")]
     public int? LibraryWorkers { get; set; }
 
-    [JsonProperty(propertyName: "import_workers")]
+    [JsonProperty("import_workers")]
     public int? ImportWorkers { get; set; }
 
-    [JsonProperty(propertyName: "extras_workers")]
+    [JsonProperty("extras_workers")]
     public int? ExtrasWorkers { get; set; }
 
-    [JsonProperty(propertyName: "encoder_workers")]
+    [JsonProperty("encoder_workers")]
     public int? EncoderWorkers { get; set; }
 
-    [JsonProperty(propertyName: "cron_workers")]
+    [JsonProperty("cron_workers")]
     public int? CronWorkers { get; set; }
 
-    [JsonProperty(propertyName: "image_workers")]
+    [JsonProperty("image_workers")]
     public int? ImageWorkers { get; set; }
 
-    [JsonProperty(propertyName: "file_workers")]
+    [JsonProperty("file_workers")]
     public int? FileWorkers { get; set; }
 
-    [JsonProperty(propertyName: "music_workers")]
+    [JsonProperty("music_workers")]
     public int? MusicWorkers { get; set; }
 
-    [JsonProperty(propertyName: "swagger")]
+    [JsonProperty("swagger")]
     public bool? Swagger { get; set; }
 
-    [JsonProperty(propertyName: "allow_adult_content")]
+    [JsonProperty("allow_adult_content")]
     public bool? AllowAdultContent { get; set; }
 
-    [JsonProperty(propertyName: "use_synthesized_dns")]
+    [JsonProperty("use_synthesized_dns")]
     public bool? UseSynthesizedDns { get; set; }
 }

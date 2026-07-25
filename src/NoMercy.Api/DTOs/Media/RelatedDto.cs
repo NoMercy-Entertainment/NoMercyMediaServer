@@ -21,43 +21,43 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record RelatedDto
 {
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool? Adult { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "titleSort")]
+    [JsonProperty("titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string MediaType { get; set; }
 
-    [JsonProperty(propertyName: "number_of_items")]
+    [JsonProperty("number_of_items")]
     public int? NumberOfItems { get; set; }
 
-    [JsonProperty(propertyName: "have_items")]
+    [JsonProperty("have_items")]
     public int? HaveItems { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
     public RelatedDto(Recommendation recommendation, string type, Tv[]? recommendations = null)
@@ -71,19 +71,19 @@ public record RelatedDto
         Type = type;
         MediaType = type;
         ColorPalette = recommendation.ColorPalette;
-        Link = new(uriString: $"/{type}/{recommendation.MediaId}", uriKind: UriKind.Relative);
+        Link = new($"/{type}/{recommendation.MediaId}", UriKind.Relative);
         NumberOfItems =
             type == "tv"
                 ? recommendations
-                    ?.FirstOrDefault(predicate: t => t.Id == recommendation.MediaId)
+                    ?.FirstOrDefault(t => t.Id == recommendation.MediaId)
                     ?.NumberOfEpisodes
                 : null;
         HaveItems =
             type == "tv"
                 ? recommendations
-                    ?.FirstOrDefault(predicate: t => t.Id == recommendation.MediaId)
-                    ?.Episodes.Where(predicate: e => e.SeasonNumber > 0)
-                    .Count(predicate: episode => episode.VideoFiles.Any(predicate: videoFile => videoFile.Folder != null))
+                    ?.FirstOrDefault(t => t.Id == recommendation.MediaId)
+                    ?.Episodes.Where(e => e.SeasonNumber > 0)
+                    .Count(episode => episode.VideoFiles.Any(videoFile => videoFile.Folder != null))
                 : null;
     }
 
@@ -98,17 +98,17 @@ public record RelatedDto
         Type = type;
         MediaType = type;
         ColorPalette = similar.ColorPalette;
-        Link = new(uriString: $"/{type}/{similar.MediaId}", uriKind: UriKind.Relative);
+        Link = new($"/{type}/{similar.MediaId}", UriKind.Relative);
         NumberOfItems =
             type == "tv"
-                ? similars?.FirstOrDefault(predicate: s => s.Id == similar.MediaId)?.NumberOfEpisodes
+                ? similars?.FirstOrDefault(s => s.Id == similar.MediaId)?.NumberOfEpisodes
                 : null;
         HaveItems =
             type == "tv"
                 ? similars
-                    ?.FirstOrDefault(predicate: t => t.Id == similar.MediaId)
-                    ?.Episodes.Where(predicate: e => e.SeasonNumber > 0)
-                    .Count(predicate: episode => episode.VideoFiles.Any(predicate: videoFile => videoFile.Folder != null))
+                    ?.FirstOrDefault(t => t.Id == similar.MediaId)
+                    ?.Episodes.Where(e => e.SeasonNumber > 0)
+                    .Count(episode => episode.VideoFiles.Any(videoFile => videoFile.Folder != null))
                 : null;
     }
 
@@ -120,10 +120,10 @@ public record RelatedDto
         Poster = tmdbSimilar.PosterPath;
         Backdrop = tmdbSimilar.BackdropPath;
         Title = tmdbSimilar.Title;
-        TitleSort = tmdbSimilar.Title.TitleSort(date: tmdbSimilar.ReleaseDate);
+        TitleSort = tmdbSimilar.Title.TitleSort(tmdbSimilar.ReleaseDate);
         Type = type;
         MediaType = type;
-        Link = new(uriString: $"/{type}/{tmdbSimilar.Id}", uriKind: UriKind.Relative);
+        Link = new($"/{type}/{tmdbSimilar.Id}", UriKind.Relative);
         ColorPalette = new();
         NumberOfItems = 0;
         HaveItems = 0;
@@ -139,7 +139,7 @@ public record RelatedDto
         TitleSort = recommendation.Name.TitleSort();
         Type = type;
         MediaType = type;
-        Link = new(uriString: $"/{type}/{recommendation.Id}", uriKind: UriKind.Relative);
+        Link = new($"/{type}/{recommendation.Id}", UriKind.Relative);
         ColorPalette = new();
         NumberOfItems = 0;
         HaveItems = 0;

@@ -33,7 +33,7 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 // the shared file-backed MediaContext (same DB the method opens internally)
 // and moves real files on a real LocalStorage, exactly like a live move.
 // ---------------------------------------------------------------------------
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
 {
     private readonly string _tempRoot;
@@ -45,30 +45,30 @@ public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
 
     public FileManagerMoveToLibraryFolderTests()
     {
-        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-movelib-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempRoot);
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"nm-movelib-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempRoot);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempRoot))
-            Directory.Delete(path: _tempRoot, recursive: true);
+        if (Directory.Exists(_tempRoot))
+            Directory.Delete(_tempRoot, true);
 
         using MediaContext cleanup = new();
         cleanup.LibraryMovie.RemoveRange(
-            entities: cleanup.LibraryMovie.Where(predicate: lm => _movieIds.Contains(lm.MovieId))
+            cleanup.LibraryMovie.Where(lm => _movieIds.Contains(lm.MovieId))
         );
-        cleanup.LibraryTv.RemoveRange(entities: cleanup.LibraryTv.Where(predicate: lt => _tvIds.Contains(lt.TvId)));
-        cleanup.Movies.RemoveRange(entities: cleanup.Movies.Where(predicate: m => _movieIds.Contains(m.Id)));
-        cleanup.Tvs.RemoveRange(entities: cleanup.Tvs.Where(predicate: t => _tvIds.Contains(t.Id)));
+        cleanup.LibraryTv.RemoveRange(cleanup.LibraryTv.Where(lt => _tvIds.Contains(lt.TvId)));
+        cleanup.Movies.RemoveRange(cleanup.Movies.Where(m => _movieIds.Contains(m.Id)));
+        cleanup.Tvs.RemoveRange(cleanup.Tvs.Where(t => _tvIds.Contains(t.Id)));
         cleanup.SaveChanges();
         cleanup.FolderLibrary.RemoveRange(
-            entities: cleanup.FolderLibrary.Where(predicate: fl => _libraryIds.Contains(fl.LibraryId))
+            cleanup.FolderLibrary.Where(fl => _libraryIds.Contains(fl.LibraryId))
         );
-        cleanup.Folders.RemoveRange(entities: cleanup.Folders.Where(predicate: f => _folderIds.Contains(f.Id)));
-        cleanup.Libraries.RemoveRange(entities: cleanup.Libraries.Where(predicate: l => _libraryIds.Contains(l.Id)));
+        cleanup.Folders.RemoveRange(cleanup.Folders.Where(f => _folderIds.Contains(f.Id)));
+        cleanup.Libraries.RemoveRange(cleanup.Libraries.Where(l => _libraryIds.Contains(l.Id)));
         cleanup.SaveChanges();
-        cleanup.Drivers.RemoveRange(entities: cleanup.Drivers.Where(predicate: d => _driverIds.Contains(d.Id)));
+        cleanup.Drivers.RemoveRange(cleanup.Drivers.Where(d => _driverIds.Contains(d.Id)));
         cleanup.SaveChanges();
     }
 
@@ -78,7 +78,7 @@ public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
     )
     {
         Ulid libraryId = Ulid.NewUlid();
-        _libraryIds.Add(item: libraryId);
+        _libraryIds.Add(libraryId);
 
         Driver driver = new()
         {
@@ -86,7 +86,7 @@ public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
             Name = $"test-driver-{Ulid.NewUlid()}",
             Type = "local",
         };
-        _driverIds.Add(item: driver.Id);
+        _driverIds.Add(driver.Id);
 
         Folder folder = new()
         {
@@ -94,7 +94,7 @@ public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
             Path = folderPath,
             DriverId = driver.Id,
         };
-        _folderIds.Add(item: folder.Id);
+        _folderIds.Add(folder.Id);
 
         Library library = new()
         {
@@ -104,10 +104,10 @@ public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
         };
 
         using MediaContext context = new();
-        context.Drivers.Add(entity: driver);
-        context.Libraries.Add(entity: library);
-        context.Folders.Add(entity: folder);
-        context.FolderLibrary.Add(entity: new(folderId: folder.Id, libraryId: libraryId));
+        context.Drivers.Add(driver);
+        context.Libraries.Add(library);
+        context.Folders.Add(folder);
+        context.FolderLibrary.Add(new(folder.Id, libraryId));
         context.SaveChanges();
 
         return (library, folder);
@@ -117,20 +117,20 @@ public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
     {
         Mock<IStorageDriver> driverMock = new();
         Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
-        return new(fileRepository: repoMock.Object, storageFactory: factory, storageDriver: driverMock.Object, mediaAnalyzer: mediaAnalyzerMock.Object);
+        return new(repoMock.Object, factory, driverMock.Object, mediaAnalyzerMock.Object);
     }
 
     [Fact]
     public async Task MoveToLibraryFolder_MovieFolderMissingEverywhere_LogsAndReturnsWithoutThrowing()
     {
         (Library sourceLibrary, Folder sourceFolder) = SeedLibraryWithFolder(
-            libraryType: MediaTypes.MovieMediaType,
-            folderPath: Path.Combine(path1: _tempRoot, path2: "source-empty")
+            MediaTypes.MovieMediaType,
+            Path.Combine(_tempRoot, "source-empty")
         );
-        Directory.CreateDirectory(path: sourceFolder.Path);
+        Directory.CreateDirectory(sourceFolder.Path);
 
         int movieId = 500_001;
-        _movieIds.Add(item: movieId);
+        _movieIds.Add(movieId);
         Movie movie = new()
         {
             Id = movieId,
@@ -140,62 +140,62 @@ public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
         };
         using (MediaContext seed = new())
         {
-            seed.Movies.Add(entity: movie);
+            seed.Movies.Add(movie);
             seed.SaveChanges();
         }
 
         Mock<IStorageFactory> factoryMock = new();
         LocalStorageDriver driver = new();
         factoryMock
-            .Setup(expression: f => f.For(sourceFolder.Id, sourceFolder.DriverId, string.Empty))
-            .Returns(value: new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver)));
+            .Setup(f => f.For(sourceFolder.Id, sourceFolder.DriverId, string.Empty))
+            .Returns(new LocalStorage(driver, new StoragePathGuard([], driver)));
 
         Mock<IFileRepository> repoMock = new();
-        FileManager manager = BuildManager(repoMock: repoMock, factory: factoryMock.Object);
+        FileManager manager = BuildManager(repoMock, factoryMock.Object);
 
         (Library destLibrary, Folder destFolder) = SeedLibraryWithFolder(
-            libraryType: MediaTypes.MovieMediaType,
-            folderPath: Path.Combine(path1: _tempRoot, path2: "dest-unused")
+            MediaTypes.MovieMediaType,
+            Path.Combine(_tempRoot, "dest-unused")
         );
 
-        Func<Task> act = () => manager.MoveToLibraryFolder(id: movieId, folder: destFolder);
+        Func<Task> act = () => manager.MoveToLibraryFolder(movieId, destFolder);
 
         await act.Should()
-            .NotThrowAsync(because: "a folder that resolves nowhere must log and return, never throw");
+            .NotThrowAsync("a folder that resolves nowhere must log and return, never throw");
 
         using MediaContext verify = new();
-        Movie? unchanged = await verify.Movies.FirstOrDefaultAsync(predicate: m => m.Id == movieId);
+        Movie? unchanged = await verify.Movies.FirstOrDefaultAsync(m => m.Id == movieId);
         unchanged!
             .LibraryId.Should()
-            .Be(expected: sourceLibrary.Id, because: "no folder found means no library move happens");
+            .Be(sourceLibrary.Id, "no folder found means no library move happens");
     }
 
     [Fact]
     public async Task MoveToLibraryFolder_MovieFound_MovesFilesAndRepointsLibraryAndLibraryMovie()
     {
         (Library sourceLibrary, Folder sourceFolder) = SeedLibraryWithFolder(
-            libraryType: MediaTypes.MovieMediaType,
-            folderPath: Path.Combine(path1: _tempRoot, path2: "source-lib")
+            MediaTypes.MovieMediaType,
+            Path.Combine(_tempRoot, "source-lib")
         );
         (Library destLibrary, Folder destFolder) = SeedLibraryWithFolder(
-            libraryType: MediaTypes.MovieMediaType,
-            folderPath: Path.Combine(path1: _tempRoot, path2: "dest-lib")
+            MediaTypes.MovieMediaType,
+            Path.Combine(_tempRoot, "dest-lib")
         );
         // Directory.Move (the same-backend fast path) requires the
         // destination's PARENT to already exist — the configured library
         // root, in production terms.
-        Directory.CreateDirectory(path: destFolder.Path);
+        Directory.CreateDirectory(destFolder.Path);
 
         string movieFolderName = "My.Movie.2020";
-        string sourceMovieDir = Path.Combine(path1: sourceFolder.Path, path2: movieFolderName);
-        Directory.CreateDirectory(path: sourceMovieDir);
+        string sourceMovieDir = Path.Combine(sourceFolder.Path, movieFolderName);
+        Directory.CreateDirectory(sourceMovieDir);
         // A non-media file: keeps the move meaningfully non-empty without
         // MediaScan's post-move rescan invoking the real ffprobe binary
         // (info.nfo doesn't match any of MediaScan's extension filters).
-        File.WriteAllText(path: Path.Combine(path1: sourceMovieDir, path2: "info.nfo"), contents: "movie info");
+        File.WriteAllText(Path.Combine(sourceMovieDir, "info.nfo"), "movie info");
 
         int movieId = 500_002;
-        _movieIds.Add(item: movieId);
+        _movieIds.Add(movieId);
         Movie movie = new()
         {
             Id = movieId,
@@ -205,83 +205,83 @@ public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
         };
         using (MediaContext seed = new())
         {
-            seed.Movies.Add(entity: movie);
-            seed.LibraryMovie.Add(entity: new(libraryId: sourceLibrary.Id, movieId: movieId));
+            seed.Movies.Add(movie);
+            seed.LibraryMovie.Add(new(sourceLibrary.Id, movieId));
             seed.SaveChanges();
         }
 
         LocalStorageDriver sourceDriver = new();
         LocalStorageDriver destDriver = new();
         IStorage sourceStorage = new LocalStorage(
-            driver: sourceDriver,
-            guard: new StoragePathGuard(allowedRoots: [], driver: sourceDriver)
+            sourceDriver,
+            new StoragePathGuard([], sourceDriver)
         );
-        IStorage destStorage = new LocalStorage(driver: destDriver, guard: new StoragePathGuard(allowedRoots: [], driver: destDriver));
+        IStorage destStorage = new LocalStorage(destDriver, new StoragePathGuard([], destDriver));
 
         Mock<IStorageFactory> factoryMock = new();
         factoryMock
-            .Setup(expression: f => f.For(sourceFolder.Id, sourceFolder.DriverId, string.Empty))
-            .Returns(value: sourceStorage);
+            .Setup(f => f.For(sourceFolder.Id, sourceFolder.DriverId, string.Empty))
+            .Returns(sourceStorage);
         factoryMock
-            .Setup(expression: f => f.For(destFolder.Id, destFolder.DriverId, string.Empty))
-            .Returns(value: destStorage);
+            .Setup(f => f.For(destFolder.Id, destFolder.DriverId, string.Empty))
+            .Returns(destStorage);
 
         Mock<IFileRepository> repoMock = new();
         repoMock
-            .Setup(expression: r => r.MediaType(movieId, It.IsAny<Library>()))
-            .ReturnsAsync(value: (movie, (Tv?)null, MediaTypes.MovieMediaType));
+            .Setup(r => r.MediaType(movieId, It.IsAny<Library>()))
+            .ReturnsAsync((movie, (Tv?)null, MediaTypes.MovieMediaType));
 
-        FileManager manager = BuildManager(repoMock: repoMock, factory: factoryMock.Object);
+        FileManager manager = BuildManager(repoMock, factoryMock.Object);
 
-        await manager.MoveToLibraryFolder(id: movieId, folder: destFolder);
+        await manager.MoveToLibraryFolder(movieId, destFolder);
 
         Directory
-            .Exists(path: sourceMovieDir)
+            .Exists(sourceMovieDir)
             .Should()
-            .BeFalse(because: "the source folder must be gone after a same-backend move");
-        string destMovieDir = Path.Combine(path1: destFolder.Path, path2: movieFolderName);
+            .BeFalse("the source folder must be gone after a same-backend move");
+        string destMovieDir = Path.Combine(destFolder.Path, movieFolderName);
         Directory
-            .Exists(path: destMovieDir)
+            .Exists(destMovieDir)
             .Should()
-            .BeTrue(because: "the folder must exist under the new library root");
-        File.Exists(path: Path.Combine(path1: destMovieDir, path2: "info.nfo")).Should().BeTrue();
+            .BeTrue("the folder must exist under the new library root");
+        File.Exists(Path.Combine(destMovieDir, "info.nfo")).Should().BeTrue();
 
         using MediaContext verify = new();
-        Movie? moved = await verify.Movies.FirstOrDefaultAsync(predicate: m => m.Id == movieId);
+        Movie? moved = await verify.Movies.FirstOrDefaultAsync(m => m.Id == movieId);
         moved!
             .LibraryId.Should()
-            .Be(expected: destLibrary.Id, because: "the movie must be repointed at the destination library");
-        moved.Folder.Should().Be(expected: movieFolderName);
+            .Be(destLibrary.Id, "the movie must be repointed at the destination library");
+        moved.Folder.Should().Be(movieFolderName);
 
-        LibraryMovie? libraryMovie = await verify.LibraryMovie.FirstOrDefaultAsync(predicate: lm =>
+        LibraryMovie? libraryMovie = await verify.LibraryMovie.FirstOrDefaultAsync(lm =>
             lm.MovieId == movieId
         );
         libraryMovie.Should().NotBeNull();
         libraryMovie!
             .LibraryId.Should()
-            .Be(expected: destLibrary.Id, because: "the LibraryMovie link must follow the move too");
+            .Be(destLibrary.Id, "the LibraryMovie link must follow the move too");
     }
 
     [Fact]
     public async Task MoveToLibraryFolder_TvFound_MovesFilesAndRepointsLibraryAndLibraryTv()
     {
         (Library sourceLibrary, Folder sourceFolder) = SeedLibraryWithFolder(
-            libraryType: MediaTypes.TvMediaType,
-            folderPath: Path.Combine(path1: _tempRoot, path2: "source-tv-lib")
+            MediaTypes.TvMediaType,
+            Path.Combine(_tempRoot, "source-tv-lib")
         );
         (Library destLibrary, Folder destFolder) = SeedLibraryWithFolder(
-            libraryType: MediaTypes.TvMediaType,
-            folderPath: Path.Combine(path1: _tempRoot, path2: "dest-tv-lib")
+            MediaTypes.TvMediaType,
+            Path.Combine(_tempRoot, "dest-tv-lib")
         );
-        Directory.CreateDirectory(path: destFolder.Path);
+        Directory.CreateDirectory(destFolder.Path);
 
         string showFolderName = "My.Tv.Show";
-        string sourceShowDir = Path.Combine(path1: sourceFolder.Path, path2: showFolderName);
-        Directory.CreateDirectory(path: sourceShowDir);
-        File.WriteAllText(path: Path.Combine(path1: sourceShowDir, path2: "info.nfo"), contents: "show info");
+        string sourceShowDir = Path.Combine(sourceFolder.Path, showFolderName);
+        Directory.CreateDirectory(sourceShowDir);
+        File.WriteAllText(Path.Combine(sourceShowDir, "info.nfo"), "show info");
 
         int tvId = 500_003;
-        _tvIds.Add(item: tvId);
+        _tvIds.Add(tvId);
         Tv show = new()
         {
             Id = tvId,
@@ -291,46 +291,46 @@ public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
         };
         using (MediaContext seed = new())
         {
-            seed.Tvs.Add(entity: show);
-            seed.LibraryTv.Add(entity: new(libraryId: sourceLibrary.Id, tvId: tvId));
+            seed.Tvs.Add(show);
+            seed.LibraryTv.Add(new(sourceLibrary.Id, tvId));
             seed.SaveChanges();
         }
 
         LocalStorageDriver sourceDriver = new();
         LocalStorageDriver destDriver = new();
         IStorage sourceStorage = new LocalStorage(
-            driver: sourceDriver,
-            guard: new StoragePathGuard(allowedRoots: [], driver: sourceDriver)
+            sourceDriver,
+            new StoragePathGuard([], sourceDriver)
         );
-        IStorage destStorage = new LocalStorage(driver: destDriver, guard: new StoragePathGuard(allowedRoots: [], driver: destDriver));
+        IStorage destStorage = new LocalStorage(destDriver, new StoragePathGuard([], destDriver));
 
         Mock<IStorageFactory> factoryMock = new();
         factoryMock
-            .Setup(expression: f => f.For(sourceFolder.Id, sourceFolder.DriverId, string.Empty))
-            .Returns(value: sourceStorage);
+            .Setup(f => f.For(sourceFolder.Id, sourceFolder.DriverId, string.Empty))
+            .Returns(sourceStorage);
         factoryMock
-            .Setup(expression: f => f.For(destFolder.Id, destFolder.DriverId, string.Empty))
-            .Returns(value: destStorage);
+            .Setup(f => f.For(destFolder.Id, destFolder.DriverId, string.Empty))
+            .Returns(destStorage);
 
         Mock<IFileRepository> repoMock = new();
         repoMock
-            .Setup(expression: r => r.MediaType(tvId, It.IsAny<Library>()))
-            .ReturnsAsync(value: ((Movie?)null, show, MediaTypes.TvMediaType));
+            .Setup(r => r.MediaType(tvId, It.IsAny<Library>()))
+            .ReturnsAsync(((Movie?)null, show, MediaTypes.TvMediaType));
 
-        FileManager manager = BuildManager(repoMock: repoMock, factory: factoryMock.Object);
+        FileManager manager = BuildManager(repoMock, factoryMock.Object);
 
-        await manager.MoveToLibraryFolder(id: tvId, folder: destFolder);
+        await manager.MoveToLibraryFolder(tvId, destFolder);
 
-        Directory.Exists(path: sourceShowDir).Should().BeFalse();
-        string destShowDir = Path.Combine(path1: destFolder.Path, path2: showFolderName);
-        Directory.Exists(path: destShowDir).Should().BeTrue();
+        Directory.Exists(sourceShowDir).Should().BeFalse();
+        string destShowDir = Path.Combine(destFolder.Path, showFolderName);
+        Directory.Exists(destShowDir).Should().BeTrue();
 
         using MediaContext verify = new();
-        Tv? moved = await verify.Tvs.FirstOrDefaultAsync(predicate: t => t.Id == tvId);
-        moved!.LibraryId.Should().Be(expected: destLibrary.Id);
+        Tv? moved = await verify.Tvs.FirstOrDefaultAsync(t => t.Id == tvId);
+        moved!.LibraryId.Should().Be(destLibrary.Id);
 
-        LibraryTv? libraryTv = await verify.LibraryTv.FirstOrDefaultAsync(predicate: lt => lt.TvId == tvId);
+        LibraryTv? libraryTv = await verify.LibraryTv.FirstOrDefaultAsync(lt => lt.TvId == tvId);
         libraryTv.Should().NotBeNull();
-        libraryTv!.LibraryId.Should().Be(expected: destLibrary.Id);
+        libraryTv!.LibraryId.Should().Be(destLibrary.Id);
     }
 }

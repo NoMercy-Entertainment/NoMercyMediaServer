@@ -25,7 +25,7 @@ namespace NoMercy.Tests.OpticalMedia.Capabilities;
 /// otherwise the bundled default — without ever throwing (a missing
 /// Blu-ray capability must degrade, not crash startup).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class FfmpegBluRayCapabilityTests
 {
     private static EncoderOptions MakeOptions(BluRayOptions? bluRay = null) =>
@@ -39,7 +39,7 @@ public class FfmpegBluRayCapabilityTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -48,7 +48,7 @@ public class FfmpegBluRayCapabilityTests
                 )
             )
             .ReturnsAsync(
-                value: new ProcessResult(ExitCode: exitCode, StdOut: stdOut, StdErr: stdErr, Duration: TimeSpan.FromMilliseconds(milliseconds: 10))
+                new ProcessResult(exitCode, stdOut, stdErr, TimeSpan.FromMilliseconds(10))
             );
         return runner;
     }
@@ -56,11 +56,11 @@ public class FfmpegBluRayCapabilityTests
     [Fact]
     public async Task ProbeAsync_StdoutContainsBluray_SetsProtocolPresentTrue()
     {
-        Mock<IProcessRunner> runner = MakeRunner(stdOut: "file,http,bluray,rtmp");
+        Mock<IProcessRunner> runner = MakeRunner("file,http,bluray,rtmp");
         FfmpegBluRayCapability capability = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            MakeOptions(),
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await capability.ProbeAsync();
@@ -73,11 +73,11 @@ public class FfmpegBluRayCapabilityTests
     {
         // ffmpeg -protocols can exit non-zero yet still write the protocol
         // list to stderr depending on the build — both streams are checked.
-        Mock<IProcessRunner> runner = MakeRunner(stdErr: "bluray: supported");
+        Mock<IProcessRunner> runner = MakeRunner("bluray: supported");
         FfmpegBluRayCapability capability = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            MakeOptions(),
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await capability.ProbeAsync();
@@ -88,11 +88,11 @@ public class FfmpegBluRayCapabilityTests
     [Fact]
     public async Task ProbeAsync_NeitherStreamContainsBluray_SetsProtocolPresentFalse()
     {
-        Mock<IProcessRunner> runner = MakeRunner(stdOut: "file,http,rtmp");
+        Mock<IProcessRunner> runner = MakeRunner("file,http,rtmp");
         FfmpegBluRayCapability capability = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            MakeOptions(),
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await capability.ProbeAsync();
@@ -103,11 +103,11 @@ public class FfmpegBluRayCapabilityTests
     [Fact]
     public async Task ProbeAsync_BlurayCheckIsCaseInsensitive()
     {
-        Mock<IProcessRunner> runner = MakeRunner(stdOut: "FILE,BLURAY,RTMP");
+        Mock<IProcessRunner> runner = MakeRunner("FILE,BLURAY,RTMP");
         FfmpegBluRayCapability capability = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            MakeOptions(),
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await capability.ProbeAsync();
@@ -118,48 +118,48 @@ public class FfmpegBluRayCapabilityTests
     [Fact]
     public async Task ProbeAsync_NoKeyDbOverride_ReportsBundledDefault()
     {
-        Mock<IProcessRunner> runner = MakeRunner(stdOut: "bluray");
+        Mock<IProcessRunner> runner = MakeRunner("bluray");
         FfmpegBluRayCapability capability = new(
-            options: MakeOptions(bluRay: null),
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            MakeOptions(null),
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await capability.ProbeAsync();
 
-        capability.ActiveKeyDbPath.Should().Be(expected: "bundled (nomercy-ffmpeg default)");
+        capability.ActiveKeyDbPath.Should().Be("bundled (nomercy-ffmpeg default)");
     }
 
     [Fact]
     public async Task ProbeAsync_KeyDbOverrideConfigured_ReportsOverridePath()
     {
-        Mock<IProcessRunner> runner = MakeRunner(stdOut: "bluray");
+        Mock<IProcessRunner> runner = MakeRunner("bluray");
         BluRayOptions bluRay = new() { KeyDbOverridePath = "/etc/nomercy/KEYDB.cfg" };
         FfmpegBluRayCapability capability = new(
-            options: MakeOptions(bluRay: bluRay),
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            MakeOptions(bluRay),
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await capability.ProbeAsync();
 
-        capability.ActiveKeyDbPath.Should().Be(expected: "override:/etc/nomercy/KEYDB.cfg");
+        capability.ActiveKeyDbPath.Should().Be("override:/etc/nomercy/KEYDB.cfg");
     }
 
     [Fact]
     public async Task ProbeAsync_WhitespaceKeyDbOverride_FallsBackToBundledDefault()
     {
-        Mock<IProcessRunner> runner = MakeRunner(stdOut: "bluray");
+        Mock<IProcessRunner> runner = MakeRunner("bluray");
         BluRayOptions bluRay = new() { KeyDbOverridePath = "   " };
         FfmpegBluRayCapability capability = new(
-            options: MakeOptions(bluRay: bluRay),
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            MakeOptions(bluRay),
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await capability.ProbeAsync();
 
-        capability.ActiveKeyDbPath.Should().Be(expected: "bundled (nomercy-ffmpeg default)");
+        capability.ActiveKeyDbPath.Should().Be("bundled (nomercy-ffmpeg default)");
     }
 
     [Fact]
@@ -167,12 +167,12 @@ public class FfmpegBluRayCapabilityTests
     {
         // AacsKeysOverridePath only drives an extra log line; assert the
         // no-throw contract rather than the log text itself.
-        Mock<IProcessRunner> runner = MakeRunner(stdOut: "bluray");
+        Mock<IProcessRunner> runner = MakeRunner("bluray");
         BluRayOptions bluRay = new() { AacsKeysOverridePath = "/etc/nomercy/bdplus" };
         FfmpegBluRayCapability capability = new(
-            options: MakeOptions(bluRay: bluRay),
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            MakeOptions(bluRay),
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         Func<Task> act = () => capability.ProbeAsync();
@@ -183,11 +183,11 @@ public class FfmpegBluRayCapabilityTests
     [Fact]
     public async Task ProbeAsync_BeforeCalled_PropertiesHaveSafeDefaults()
     {
-        Mock<IProcessRunner> runner = MakeRunner(stdOut: "bluray");
+        Mock<IProcessRunner> runner = MakeRunner("bluray");
         FfmpegBluRayCapability capability = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            MakeOptions(),
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         capability.BluRayProtocolPresent.Should().BeFalse();
@@ -197,17 +197,17 @@ public class FfmpegBluRayCapabilityTests
     [Fact]
     public async Task ProbeAsync_PassesHideBannerAndProtocolsFlags()
     {
-        Mock<IProcessRunner> runner = MakeRunner(stdOut: "bluray");
+        Mock<IProcessRunner> runner = MakeRunner("bluray");
         FfmpegBluRayCapability capability = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            MakeOptions(),
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await capability.ProbeAsync();
 
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     "ffmpeg",
                     It.Is<string[]>(args =>
@@ -216,7 +216,7 @@ public class FfmpegBluRayCapabilityTests
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 }

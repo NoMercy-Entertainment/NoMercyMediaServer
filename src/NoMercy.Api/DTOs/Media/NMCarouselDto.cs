@@ -16,26 +16,26 @@ namespace NoMercy.Api.DTOs.Media;
 
 public class NmCarouselDto<T>
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public dynamic Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "next_id")]
+    [JsonProperty("next_id")]
     public dynamic NextId { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "previous_id")]
+    [JsonProperty("previous_id")]
     public dynamic PreviousId { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "more_link")]
+    [JsonProperty("more_link")]
     public Uri? MoreLink { get; set; }
 
-    [JsonProperty(propertyName: "items")]
+    [JsonProperty("items")]
     public List<T> Items { get; set; } = [];
 
     [NotMapped]
     [JsonIgnore]
-    [JsonProperty(propertyName: "source")]
+    [JsonProperty("source")]
     public IEnumerable<HomeSourceDto> Source { get; set; } = [];
 }

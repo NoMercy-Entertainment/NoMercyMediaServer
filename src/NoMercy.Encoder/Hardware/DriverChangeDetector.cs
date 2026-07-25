@@ -16,33 +16,33 @@ public class DriverChangeDetector(IHardwareDetector hardwareDetector, IDriverFin
 {
     public async Task<DriverChangeResult> DetectAndPersistAsync(CancellationToken ct = default)
     {
-        IReadOnlyList<GpuDevice> gpus = await hardwareDetector.DetectGpusAsync(ct: ct);
+        IReadOnlyList<GpuDevice> gpus = await hardwareDetector.DetectGpusAsync(ct);
 
         List<GpuDriverInfo> driverInfos = gpus.Select(
-                selector: (gpu, index) =>
+                (gpu, index) =>
                     new GpuDriverInfo(
-                        Vendor: gpu.Vendor.ToString(),
-                        Model: gpu.Name,
-                        DriverVersion: gpu.DriverVersion ?? string.Empty,
-                        Index: index
+                        gpu.Vendor.ToString(),
+                        gpu.Name,
+                        gpu.DriverVersion ?? string.Empty,
+                        index
                     )
             )
             .ToList();
 
-        DriverFingerprint fingerprint = new(Gpus: driverInfos);
+        DriverFingerprint fingerprint = new(driverInfos);
         string currentHash = fingerprint.ComputeHash();
 
-        string? previousHash = await store.LoadHashAsync(ct: ct);
-        await store.SaveHashAsync(hash: currentHash, ct: ct);
+        string? previousHash = await store.LoadHashAsync(ct);
+        await store.SaveHashAsync(currentHash, ct);
 
         bool isFirstBoot = previousHash is null;
         bool changed = !isFirstBoot && previousHash != currentHash;
 
         return new(
-            CurrentHash: currentHash,
-            PreviousHash: previousHash,
-            Changed: changed,
-            IsFirstBoot: isFirstBoot
+            currentHash,
+            previousHash,
+            changed,
+            isFirstBoot
         );
     }
 }

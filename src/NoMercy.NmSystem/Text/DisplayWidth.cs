@@ -27,7 +27,7 @@ public static class DisplayWidth
     /// <summary>Display width, in terminal cells, of <paramref name="text"/>.</summary>
     public static int Of(string? text)
     {
-        if (string.IsNullOrEmpty(value: text))
+        if (string.IsNullOrEmpty(text))
             return 0;
 
         ReadOnlySpan<char> span = text.AsSpan();
@@ -35,9 +35,9 @@ public static class DisplayWidth
         int index = 0;
         while (index < span.Length)
         {
-            if (span[index: index] == '')
+            if (span[index] == '')
             {
-                int escapeLength = EscapeLength(span: span[index..]);
+                int escapeLength = EscapeLength(span[index..]);
                 if (escapeLength > 0)
                 {
                     index += escapeLength;
@@ -45,8 +45,8 @@ public static class DisplayWidth
                 }
             }
 
-            Rune.DecodeFromUtf16(source: span[index..], result: out Rune rune, charsConsumed: out int consumed);
-            width += RuneWidth(rune: rune);
+            Rune.DecodeFromUtf16(span[index..], out Rune rune, out int consumed);
+            width += RuneWidth(rune);
             index += consumed;
         }
 
@@ -57,16 +57,16 @@ public static class DisplayWidth
     public static string PadRight(string? text, int width)
     {
         text ??= string.Empty;
-        int padding = width - Of(text: text);
-        return padding > 0 ? text + new string(c: ' ', count: padding) : text;
+        int padding = width - Of(text);
+        return padding > 0 ? text + new string(' ', padding) : text;
     }
 
     /// <summary>Pads <paramref name="text"/> on the left with spaces to <paramref name="width"/> cells.</summary>
     public static string PadLeft(string? text, int width)
     {
         text ??= string.Empty;
-        int padding = width - Of(text: text);
-        return padding > 0 ? new string(c: ' ', count: padding) + text : text;
+        int padding = width - Of(text);
+        return padding > 0 ? new string(' ', padding) + text : text;
     }
 
     /// <summary>
@@ -76,12 +76,12 @@ public static class DisplayWidth
     /// </summary>
     public static string Truncate(string? text, int maxWidth, string ellipsis = "…")
     {
-        if (string.IsNullOrEmpty(value: text) || maxWidth <= 0)
+        if (string.IsNullOrEmpty(text) || maxWidth <= 0)
             return string.Empty;
-        if (Of(text: text) <= maxWidth)
+        if (Of(text) <= maxWidth)
             return text;
 
-        int budget = maxWidth - Of(text: ellipsis);
+        int budget = maxWidth - Of(ellipsis);
         if (budget < 0)
             budget = 0;
 
@@ -91,28 +91,28 @@ public static class DisplayWidth
         int index = 0;
         while (index < span.Length)
         {
-            if (span[index: index] == '')
+            if (span[index] == '')
             {
-                int escapeLength = EscapeLength(span: span[index..]);
+                int escapeLength = EscapeLength(span[index..]);
                 if (escapeLength > 0)
                 {
-                    builder.Append(value: span.Slice(start: index, length: escapeLength));
+                    builder.Append(span.Slice(index, escapeLength));
                     index += escapeLength;
                     continue;
                 }
             }
 
-            Rune.DecodeFromUtf16(source: span[index..], result: out Rune rune, charsConsumed: out int consumed);
-            int runeWidth = RuneWidth(rune: rune);
+            Rune.DecodeFromUtf16(span[index..], out Rune rune, out int consumed);
+            int runeWidth = RuneWidth(rune);
             if (used + runeWidth > budget)
                 break;
 
-            builder.Append(value: span.Slice(start: index, length: consumed));
+            builder.Append(span.Slice(index, consumed));
             used += runeWidth;
             index += consumed;
         }
 
-        builder.Append(value: ellipsis);
+        builder.Append(ellipsis);
         return builder.ToString();
     }
 
@@ -120,22 +120,22 @@ public static class DisplayWidth
     public static IReadOnlyList<string> Wrap(string? text, int width)
     {
         List<string> lines = new();
-        if (string.IsNullOrEmpty(value: text) || width <= 0)
+        if (string.IsNullOrEmpty(text) || width <= 0)
         {
-            lines.Add(item: text ?? string.Empty);
+            lines.Add(text ?? string.Empty);
             return lines;
         }
 
         StringBuilder current = new();
         int currentWidth = 0;
-        foreach (string word in text.Split(separator: ' '))
+        foreach (string word in text.Split(' '))
         {
-            int wordWidth = Of(text: word);
+            int wordWidth = Of(word);
             if (wordWidth > width)
             {
                 if (currentWidth > 0)
                 {
-                    lines.Add(item: current.ToString());
+                    lines.Add(current.ToString());
                     current.Clear();
                     currentWidth = 0;
                 }
@@ -144,14 +144,14 @@ public static class DisplayWidth
                 // breaks terminal hyperlink auto-detection and corrupts copy-paste.
                 // Let it overflow the column as one unbroken line instead — the
                 // terminal soft-wraps it visually without touching the real text.
-                if (LooksLikeUrl(word: word))
+                if (LooksLikeUrl(word))
                 {
-                    lines.Add(item: word);
+                    lines.Add(word);
                 }
                 else
                 {
-                    foreach (string piece in HardSplit(word: word, width: width))
-                        lines.Add(item: piece);
+                    foreach (string piece in HardSplit(word, width))
+                        lines.Add(piece);
                 }
                 continue;
             }
@@ -159,30 +159,30 @@ public static class DisplayWidth
             int needed = currentWidth == 0 ? wordWidth : wordWidth + 1;
             if (currentWidth > 0 && currentWidth + needed > width)
             {
-                lines.Add(item: current.ToString());
+                lines.Add(current.ToString());
                 current.Clear();
                 currentWidth = 0;
             }
 
             if (currentWidth > 0)
             {
-                current.Append(value: ' ');
+                current.Append(' ');
                 currentWidth += 1;
             }
 
-            current.Append(value: word);
+            current.Append(word);
             currentWidth += wordWidth;
         }
 
         if (currentWidth > 0 || lines.Count == 0)
-            lines.Add(item: current.ToString());
+            lines.Add(current.ToString());
 
         return lines;
     }
 
     private static bool LooksLikeUrl(string word) =>
-        word.StartsWith(value: "http://", comparisonType: StringComparison.Ordinal)
-        || word.StartsWith(value: "https://", comparisonType: StringComparison.Ordinal);
+        word.StartsWith("http://", StringComparison.Ordinal)
+        || word.StartsWith("https://", StringComparison.Ordinal);
 
     private static IEnumerable<string> HardSplit(string word, int width)
     {
@@ -193,45 +193,45 @@ public static class DisplayWidth
         int index = 0;
         while (index < span.Length)
         {
-            Rune.DecodeFromUtf16(source: span[index..], result: out Rune rune, charsConsumed: out int consumed);
-            int runeWidth = RuneWidth(rune: rune);
+            Rune.DecodeFromUtf16(span[index..], out Rune rune, out int consumed);
+            int runeWidth = RuneWidth(rune);
             if (builderWidth > 0 && builderWidth + runeWidth > width)
             {
-                pieces.Add(item: builder.ToString());
+                pieces.Add(builder.ToString());
                 builder.Clear();
                 builderWidth = 0;
             }
 
-            builder.Append(value: span.Slice(start: index, length: consumed));
+            builder.Append(span.Slice(index, consumed));
             builderWidth += runeWidth;
             index += consumed;
         }
 
         if (builderWidth > 0)
-            pieces.Add(item: builder.ToString());
+            pieces.Add(builder.ToString());
 
         return pieces;
     }
 
     private static int EscapeLength(ReadOnlySpan<char> span)
     {
-        if (span.Length == 0 || span[index: 0] != '')
+        if (span.Length == 0 || span[0] != '')
             return 0;
 
-        if (span.Length >= 2 && span[index: 1] == '[')
+        if (span.Length >= 2 && span[1] == '[')
         {
             int index = 2;
-            while (index < span.Length && !(span[index: index] >= '@' && span[index: index] <= '~'))
+            while (index < span.Length && !(span[index] >= '@' && span[index] <= '~'))
                 index++;
             return index < span.Length ? index + 1 : span.Length;
         }
 
-        if (span.Length >= 2 && span[index: 1] == ']')
+        if (span.Length >= 2 && span[1] == ']')
         {
             int index = 2;
-            while (index < span.Length && span[index: index] != '')
+            while (index < span.Length && span[index] != '')
             {
-                if (span[index: index] == '' && index + 1 < span.Length && span[index: index + 1] == '\\')
+                if (span[index] == '' && index + 1 < span.Length && span[index + 1] == '\\')
                     return index + 2;
                 index++;
             }
@@ -249,7 +249,7 @@ public static class DisplayWidth
         if (value < 0x20 || value is >= 0x7f and < 0xa0)
             return 0;
 
-        UnicodeCategory category = Rune.GetUnicodeCategory(value: rune);
+        UnicodeCategory category = Rune.GetUnicodeCategory(rune);
         if (
             category == UnicodeCategory.NonSpacingMark
             || category == UnicodeCategory.EnclosingMark
@@ -257,7 +257,7 @@ public static class DisplayWidth
         )
             return 0;
 
-        return IsWide(value: value) ? 2 : 1;
+        return IsWide(value) ? 2 : 1;
     }
 
     private static bool IsWide(int value)

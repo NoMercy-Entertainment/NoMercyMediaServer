@@ -19,18 +19,18 @@ public sealed class MdnsDeviceScannerHostedService(
     ILogger<MdnsDeviceScannerHostedService> logger
 ) : BackgroundService
 {
-    private static readonly TimeSpan ProbeInterval = TimeSpan.FromSeconds(seconds: 30);
+    private static readonly TimeSpan ProbeInterval = TimeSpan.FromSeconds(30);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        scanner.Start(stoppingToken: stoppingToken);
+        scanner.Start(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 scanner.Probe();
-                await Task.Delay(delay: ProbeInterval, cancellationToken: stoppingToken);
+                await Task.Delay(ProbeInterval, stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -41,10 +41,10 @@ public sealed class MdnsDeviceScannerHostedService(
                 // mDNS multicast can flake when interfaces flip (VPN connect,
                 // hotspot toggle, NIC sleep). Don't let a probe failure tear
                 // down the host — log and retry on the next interval.
-                logger.LogWarning(exception: ex, message: "mDNS probe failed; will retry");
+                logger.LogWarning(ex, "mDNS probe failed; will retry");
                 try
                 {
-                    await Task.Delay(delay: ProbeInterval, cancellationToken: stoppingToken);
+                    await Task.Delay(ProbeInterval, stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {

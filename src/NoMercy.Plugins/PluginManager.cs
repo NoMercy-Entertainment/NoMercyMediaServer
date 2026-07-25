@@ -43,54 +43,54 @@ public class PluginManager : IPluginManager, IDisposable
         IPluginConsentService? consentService = null
     )
     {
-        _eventBus = eventBus ?? throw new ArgumentNullException(paramName: nameof(eventBus));
+        _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         _serviceProvider =
-            serviceProvider ?? throw new ArgumentNullException(paramName: nameof(serviceProvider));
-        _logger = logger ?? throw new ArgumentNullException(paramName: nameof(logger));
-        _pluginsPath = pluginsPath ?? throw new ArgumentNullException(paramName: nameof(pluginsPath));
-        _driver = driver ?? throw new ArgumentNullException(paramName: nameof(driver));
-        _storage = storage ?? throw new ArgumentNullException(paramName: nameof(storage));
+            serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _pluginsPath = pluginsPath ?? throw new ArgumentNullException(nameof(pluginsPath));
+        _driver = driver ?? throw new ArgumentNullException(nameof(driver));
+        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         _verifier = verifier ?? new PluginVerifier();
         _consentService =
             consentService
             ?? new PluginConsentService(
-                store: new ConfigPluginConsentStore(
-                    configuration: new PluginConfiguration(
-                        dataFolderPath: Path.Combine(path1: _pluginsPath, path2: "data", path3: "platform"),
-                        storage: _storage
+                new ConfigPluginConsentStore(
+                    new PluginConfiguration(
+                        Path.Combine(_pluginsPath, "data", "platform"),
+                        _storage
                     )
                 )
             );
         _registry = new PluginRegistry();
         _loader = new(
-            eventBus: _eventBus,
-            serviceProvider: _serviceProvider,
-            logger: _logger,
-            pluginsPath: _pluginsPath,
-            storage: _storage,
-            registry: _registry,
-            verifier: _verifier,
-            consentService: _consentService
+            _eventBus,
+            _serviceProvider,
+            _logger,
+            _pluginsPath,
+            _storage,
+            _registry,
+            _verifier,
+            _consentService
         );
         _lifecycle = new(
-            eventBus: _eventBus,
-            serviceProvider: _serviceProvider,
-            logger: _logger,
-            pluginsPath: _pluginsPath,
-            storage: _storage,
-            registry: _registry,
-            loader: _loader
+            _eventBus,
+            _serviceProvider,
+            _logger,
+            _pluginsPath,
+            _storage,
+            _registry,
+            _loader
         );
     }
 
     public IReadOnlyList<PluginInfo> GetInstalledPlugins()
     {
-        return _registry.Values.Select(selector: lp => lp.Info).ToList().AsReadOnly();
+        return _registry.Values.Select(lp => lp.Info).ToList().AsReadOnly();
     }
 
     public Task InstallPluginAsync(string packagePath, CancellationToken ct = default)
     {
-        return InstallPluginAsync(packagePath: packagePath, expectedChecksum: null, ct: ct);
+        return InstallPluginAsync(packagePath, null, ct);
     }
 
     public async Task InstallPluginAsync(
@@ -99,19 +99,19 @@ public class PluginManager : IPluginManager, IDisposable
         CancellationToken ct = default
     )
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(argument: packagePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(packagePath);
 
-        string fullPath = Path.GetFullPath(path: packagePath);
+        string fullPath = Path.GetFullPath(packagePath);
 
         // Source assembly may be anywhere on disk (user-supplied install path).
         // Use the raw backend for the existence check and copy-in; the destination
         // is always inside the allowlisted plugin root so _storage covers it.
-        if (!_driver.FileExists(path: fullPath))
+        if (!_driver.FileExists(fullPath))
         {
-            throw new FileNotFoundException(message: $"Plugin assembly not found: {fullPath}", fileName: fullPath);
+            throw new FileNotFoundException($"Plugin assembly not found: {fullPath}", fullPath);
         }
 
-        if (!string.IsNullOrWhiteSpace(value: expectedChecksum))
+        if (!string.IsNullOrWhiteSpace(expectedChecksum))
         {
             // This install path receives a bare assembly with no plugin.json
             // alongside it, so ABI cannot be judged here (TargetAbi stays null
@@ -120,63 +120,63 @@ public class PluginManager : IPluginManager, IDisposable
             PluginManifest checksumManifest = new()
             {
                 Id = Guid.Empty,
-                Name = Path.GetFileNameWithoutExtension(path: fullPath),
+                Name = Path.GetFileNameWithoutExtension(fullPath),
                 Description = string.Empty,
                 Version = "0.0.0",
-                Assembly = Path.GetFileName(path: fullPath),
+                Assembly = Path.GetFileName(fullPath),
             };
 
             PluginVerificationResult verification = _verifier.Verify(
-                manifest: checksumManifest,
-                assemblyPath: fullPath,
-                expectedChecksum: expectedChecksum
+                checksumManifest,
+                fullPath,
+                expectedChecksum
             );
 
             if (!verification.Verified)
             {
                 throw new PluginVerificationException(
-                    message: $"Plugin '{checksumManifest.Name}' failed verification: {string.Join(separator: "; ", values: verification.Failures)}"
+                    $"Plugin '{checksumManifest.Name}' failed verification: {string.Join("; ", verification.Failures)}"
                 );
             }
         }
 
-        string pluginName = Path.GetFileNameWithoutExtension(path: fullPath);
-        string pluginDir = Path.Combine(path1: _pluginsPath, path2: pluginName);
+        string pluginName = Path.GetFileNameWithoutExtension(fullPath);
+        string pluginDir = Path.Combine(_pluginsPath, pluginName);
 
-        if (!_storage.Exists(path: pluginDir))
+        if (!_storage.Exists(pluginDir))
         {
-            _storage.CreateDirectory(path: pluginDir);
+            _storage.CreateDirectory(pluginDir);
         }
 
-        string destPath = Path.Combine(path1: pluginDir, path2: Path.GetFileName(path: fullPath));
-        _driver.CopyFile(source: fullPath, destination: destPath, overwrite: true);
+        string destPath = Path.Combine(pluginDir, Path.GetFileName(fullPath));
+        _driver.CopyFile(fullPath, destPath, true);
 
-        await LoadPluginAssemblyAsync(assemblyPath: destPath, ct: ct);
+        await LoadPluginAssemblyAsync(destPath, ct);
     }
 
     public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        return _lifecycle.EnablePluginAsync(pluginId: pluginId, ct: ct);
+        return _lifecycle.EnablePluginAsync(pluginId, ct);
     }
 
     public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        return _lifecycle.DisablePluginAsync(pluginId: pluginId, ct: ct);
+        return _lifecycle.DisablePluginAsync(pluginId, ct);
     }
 
     public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        return _lifecycle.UninstallPluginAsync(pluginId: pluginId, ct: ct);
+        return _lifecycle.UninstallPluginAsync(pluginId, ct);
     }
 
     public async Task LoadPluginsFromDirectoryAsync(CancellationToken ct = default)
     {
-        if (!_storage.Exists(path: _pluginsPath))
+        if (!_storage.Exists(_pluginsPath))
         {
             return;
         }
 
-        IReadOnlyList<StorageEntry> entries = _storage.List(path: _pluginsPath, pattern: null, recursive: false);
+        IReadOnlyList<StorageEntry> entries = _storage.List(_pluginsPath, null, false);
         foreach (StorageEntry entry in entries)
         {
             if (!entry.IsDirectory)
@@ -185,7 +185,7 @@ public class PluginManager : IPluginManager, IDisposable
             }
 
             string pluginDir = entry.Path;
-            string dirName = Path.GetFileName(path: pluginDir);
+            string dirName = Path.GetFileName(pluginDir);
             if (dirName is "configurations" or "data")
             {
                 continue;
@@ -193,23 +193,23 @@ public class PluginManager : IPluginManager, IDisposable
 
             try
             {
-                string manifestPath = Path.Combine(path1: pluginDir, path2: "plugin.json");
-                if (_storage.Exists(path: manifestPath))
+                string manifestPath = Path.Combine(pluginDir, "plugin.json");
+                if (_storage.Exists(manifestPath))
                 {
-                    await LoadPluginFromManifestAsync(manifestPath: manifestPath, ct: ct);
+                    await LoadPluginFromManifestAsync(manifestPath, ct);
                     continue;
                 }
 
                 IReadOnlyList<StorageEntry> dllEntries = _storage.List(
-                    path: pluginDir,
-                    pattern: "*.dll",
-                    recursive: false
+                    pluginDir,
+                    "*.dll",
+                    false
                 );
                 foreach (StorageEntry dllEntry in dllEntries)
                 {
                     if (!dllEntry.IsDirectory)
                     {
-                        await LoadPluginAssemblyAsync(assemblyPath: dllEntry.Path, ct: ct);
+                        await LoadPluginAssemblyAsync(dllEntry.Path, ct);
                     }
                 }
             }
@@ -219,9 +219,9 @@ public class PluginManager : IPluginManager, IDisposable
                 // failures, but an unexpected throw must not stop the remaining
                 // plugin directories from being scanned.
                 _logger.LogError(
-                    exception: ex,
-                    message: "Unexpected failure while loading plugin directory {PluginDir}; skipping it.",
-                    args: pluginDir
+                    ex,
+                    "Unexpected failure while loading plugin directory {PluginDir}; skipping it.",
+                    pluginDir
                 );
             }
         }
@@ -229,16 +229,16 @@ public class PluginManager : IPluginManager, IDisposable
 
     public async Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default)
     {
-        if (!_storage.Exists(path: _pluginsPath))
+        if (!_storage.Exists(_pluginsPath))
         {
             _logger.LogInformation(
-                message: "Plugins directory missing: {Path}. No plugins loaded.",
-                args: _pluginsPath
+                "Plugins directory missing: {Path}. No plugins loaded.",
+                _pluginsPath
             );
             return [];
         }
 
-        await LoadPluginsFromDirectoryAsync(ct: ct);
+        await LoadPluginsFromDirectoryAsync(ct);
 
         List<PluginLoadResult> results = [];
         foreach (LoadedPlugin loaded in _registry.Values)
@@ -246,11 +246,11 @@ public class PluginManager : IPluginManager, IDisposable
             if (loaded.Instance is not null && loaded.Info.Status == PluginStatus.Active)
             {
                 results.Add(
-                    item: new(
-                        PluginId: loaded.Info.Id,
-                        Name: loaded.Info.Name,
-                        Version: loaded.Info.Version.ToString(),
-                        Instance: loaded.Instance
+                    new(
+                        loaded.Info.Id,
+                        loaded.Info.Name,
+                        loaded.Info.Version.ToString(),
+                        loaded.Instance
                     )
                 );
             }
@@ -261,17 +261,17 @@ public class PluginManager : IPluginManager, IDisposable
 
     internal Task LoadPluginFromManifestAsync(string manifestPath, CancellationToken ct = default)
     {
-        return _loader.LoadPluginFromManifestAsync(manifestPath: manifestPath, ct: ct);
+        return _loader.LoadPluginFromManifestAsync(manifestPath, ct);
     }
 
     internal Task LoadPluginAssemblyAsync(string assemblyPath, CancellationToken ct = default)
     {
-        return _loader.LoadPluginAssemblyAsync(assemblyPath: assemblyPath, ct: ct);
+        return _loader.LoadPluginAssemblyAsync(assemblyPath, ct);
     }
 
     public IPlugin? GetPluginInstance(Guid pluginId)
     {
-        if (_registry.TryGetValue(id: pluginId, plugin: out LoadedPlugin? loaded))
+        if (_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
         {
             return loaded.Instance;
         }
@@ -283,18 +283,18 @@ public class PluginManager : IPluginManager, IDisposable
         where T : IPlugin
     {
         return _registry
-            .Values.Where(predicate: lp => lp is { Instance: T, Info.Status: PluginStatus.Active })
-            .Select(selector: lp => (T)lp.Instance!)
+            .Values.Where(lp => lp is { Instance: T, Info.Status: PluginStatus.Active })
+            .Select(lp => (T)lp.Instance!)
             .ToList();
     }
 
     public IEnumerable<IPluginServiceRegistrator> GetServiceRegistrators()
     {
         return _registry
-            .Values.Where(predicate: lp =>
+            .Values.Where(lp =>
                 lp is { Instance: IPluginServiceRegistrator, Info.Status: PluginStatus.Active }
             )
-            .Select(selector: lp => (IPluginServiceRegistrator)lp.Instance!)
+            .Select(lp => (IPluginServiceRegistrator)lp.Instance!)
             .ToList();
     }
 

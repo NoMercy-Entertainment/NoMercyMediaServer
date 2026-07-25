@@ -26,30 +26,30 @@ public class PlaybackDecisionEngineDirectPlayTests
 
     private static VideoStreamInfo MakeCompatibleVideo() =>
         new(
-            Index: 0,
-            Codec: "h264",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: 24.0,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            ColorPrimaries: "bt709",
-            ColorTransfer: "bt709",
-            ColorSpace: "bt709",
-            IsDefault: true,
-            BitRateKbps: 5000
+            0,
+            "h264",
+            1920,
+            1080,
+            24.0,
+            8,
+            "yuv420p",
+            "bt709",
+            "bt709",
+            "bt709",
+            true,
+            5000
         );
 
     private static AudioStreamInfo MakeCompatibleAudio() =>
         new(
-            Index: 1,
-            Codec: "aac",
-            Channels: 2,
-            SampleRate: 48000,
-            BitRateKbps: 192,
-            Language: "eng",
-            IsDefault: true,
-            IsForced: false
+            1,
+            "aac",
+            2,
+            48000,
+            192,
+            "eng",
+            true,
+            false
         );
 
     private static MediaInfo MakeMedia(
@@ -61,15 +61,15 @@ public class PlaybackDecisionEngineDirectPlayTests
         List<VideoStreamInfo> videos = video is not null ? [video] : [];
         List<AudioStreamInfo> audios = audio is not null ? [audio] : [];
         return new(
-            FilePath: "/media/movie.mkv",
-            Format: format,
-            Duration: TimeSpan.FromMinutes(minutes: 120),
-            OverallBitRateKbps: 5200,
-            FileSizeBytes: 4_000_000_000L,
-            VideoStreams: videos,
-            AudioStreams: audios,
-            SubtitleStreams: [],
-            Chapters: []
+            "/media/movie.mkv",
+            format,
+            TimeSpan.FromMinutes(120),
+            5200,
+            4_000_000_000L,
+            videos,
+            audios,
+            [],
+            []
         );
     }
 
@@ -80,22 +80,22 @@ public class PlaybackDecisionEngineDirectPlayTests
     [Fact]
     public void CompatibleH264MkvToMkvClient_IsDirectPlay()
     {
-        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeCompatibleVideo(), audio: MakeCompatibleAudio());
+        MediaInfo media = MakeMedia("matroska,webm", MakeCompatibleVideo(), MakeCompatibleAudio());
 
         ClientCapabilities client = new(
-            SupportedVideoCodecs: [VideoCodecType.H264],
-            SupportedAudioCodecs: [AudioCodecType.Aac],
-            SupportedContainers: ["mkv"],
-            MaxWidth: 7680,
-            MaxHeight: 4320,
-            SupportsHdr: true,
-            Supports10Bit: true,
-            MaxBitrateKbps: 0
+            [VideoCodecType.H264],
+            [AudioCodecType.Aac],
+            ["mkv"],
+            7680,
+            4320,
+            true,
+            true,
+            0
         );
 
-        PlaybackDecision decision = _engine.Decide(media: media, client: client);
+        PlaybackDecision decision = _engine.Decide(media, client);
 
-        decision.Action.Should().Be(expected: PlaybackAction.DirectPlay);
+        decision.Action.Should().Be(PlaybackAction.DirectPlay);
         decision.Reason.Should().BeNull();
     }
 
@@ -105,20 +105,20 @@ public class PlaybackDecisionEngineDirectPlayTests
         // The engine itself never produces a URL — that is the controller's job.
         // This test documents the contract: engine returns null, controller builds
         // the URL from VideoFile.HostFolder / VideoFile.Filename.
-        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeCompatibleVideo(), audio: MakeCompatibleAudio());
+        MediaInfo media = MakeMedia("matroska,webm", MakeCompatibleVideo(), MakeCompatibleAudio());
 
         ClientCapabilities client = new(
-            SupportedVideoCodecs: [VideoCodecType.H264],
-            SupportedAudioCodecs: [AudioCodecType.Aac],
-            SupportedContainers: ["mkv"],
-            MaxWidth: 7680,
-            MaxHeight: 4320,
-            SupportsHdr: true,
-            Supports10Bit: true,
-            MaxBitrateKbps: 0
+            [VideoCodecType.H264],
+            [AudioCodecType.Aac],
+            ["mkv"],
+            7680,
+            4320,
+            true,
+            true,
+            0
         );
 
-        PlaybackDecision decision = _engine.Decide(media: media, client: client);
+        PlaybackDecision decision = _engine.Decide(media, client);
 
         decision.DirectStreamUrl.Should().BeNull();
     }
@@ -131,89 +131,89 @@ public class PlaybackDecisionEngineDirectPlayTests
     public void IncompatibleCodec_IsTranscodeVideo_NotDirectPlay()
     {
         VideoStreamInfo hevc = new(
-            Index: 0,
-            Codec: "hevc",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: 24.0,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            ColorPrimaries: "bt709",
-            ColorTransfer: "bt709",
-            ColorSpace: "bt709",
-            IsDefault: true,
-            BitRateKbps: 5000
+            0,
+            "hevc",
+            1920,
+            1080,
+            24.0,
+            8,
+            "yuv420p",
+            "bt709",
+            "bt709",
+            "bt709",
+            true,
+            5000
         );
 
-        MediaInfo media = MakeMedia(format: "matroska,webm", video: hevc, audio: MakeCompatibleAudio());
+        MediaInfo media = MakeMedia("matroska,webm", hevc, MakeCompatibleAudio());
 
         ClientCapabilities client = new(
-            SupportedVideoCodecs: [VideoCodecType.H264],
-            SupportedAudioCodecs: [AudioCodecType.Aac],
-            SupportedContainers: ["mkv"],
-            MaxWidth: 7680,
-            MaxHeight: 4320,
-            SupportsHdr: true,
-            Supports10Bit: true,
-            MaxBitrateKbps: 0
+            [VideoCodecType.H264],
+            [AudioCodecType.Aac],
+            ["mkv"],
+            7680,
+            4320,
+            true,
+            true,
+            0
         );
 
-        PlaybackDecision decision = _engine.Decide(media: media, client: client);
+        PlaybackDecision decision = _engine.Decide(media, client);
 
-        decision.Action.Should().Be(expected: PlaybackAction.TranscodeVideo);
+        decision.Action.Should().Be(PlaybackAction.TranscodeVideo);
     }
 
     [Fact]
     public void WrongContainer_IsRemux_NotDirectPlay()
     {
-        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeCompatibleVideo(), audio: MakeCompatibleAudio());
+        MediaInfo media = MakeMedia("matroska,webm", MakeCompatibleVideo(), MakeCompatibleAudio());
 
         ClientCapabilities client = new(
-            SupportedVideoCodecs: [VideoCodecType.H264],
-            SupportedAudioCodecs: [AudioCodecType.Aac],
-            SupportedContainers: ["mp4"],
-            MaxWidth: 7680,
-            MaxHeight: 4320,
-            SupportsHdr: true,
-            Supports10Bit: true,
-            MaxBitrateKbps: 0
+            [VideoCodecType.H264],
+            [AudioCodecType.Aac],
+            ["mp4"],
+            7680,
+            4320,
+            true,
+            true,
+            0
         );
 
-        PlaybackDecision decision = _engine.Decide(media: media, client: client);
+        PlaybackDecision decision = _engine.Decide(media, client);
 
-        decision.Action.Should().Be(expected: PlaybackAction.Remux);
+        decision.Action.Should().Be(PlaybackAction.Remux);
     }
 
     [Fact]
     public void IncompatibleAudio_IsTranscodeAudio_NotDirectPlay()
     {
         AudioStreamInfo ac3 = new(
-            Index: 1,
-            Codec: "ac3",
-            Channels: 6,
-            SampleRate: 48000,
-            BitRateKbps: 640,
-            Language: "eng",
-            IsDefault: true,
-            IsForced: false
+            1,
+            "ac3",
+            6,
+            48000,
+            640,
+            "eng",
+            true,
+            false
         );
 
-        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeCompatibleVideo(), audio: ac3);
+        MediaInfo media = MakeMedia("matroska,webm", MakeCompatibleVideo(), ac3);
 
         ClientCapabilities client = new(
-            SupportedVideoCodecs: [VideoCodecType.H264],
-            SupportedAudioCodecs: [AudioCodecType.Aac],
-            SupportedContainers: ["mkv"],
-            MaxWidth: 7680,
-            MaxHeight: 4320,
-            SupportsHdr: true,
-            Supports10Bit: true,
-            MaxBitrateKbps: 0
+            [VideoCodecType.H264],
+            [AudioCodecType.Aac],
+            ["mkv"],
+            7680,
+            4320,
+            true,
+            true,
+            0
         );
 
-        PlaybackDecision decision = _engine.Decide(media: media, client: client);
+        PlaybackDecision decision = _engine.Decide(media, client);
 
-        decision.Action.Should().Be(expected: PlaybackAction.TranscodeAudio);
+        decision.Action.Should().Be(PlaybackAction.TranscodeAudio);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ public class PlaybackDecisionEngineDirectPlayTests
 
         // The actual assembly is in the controller — this test documents the contract.
         string builtUrl = $"/{hostFolder}/{filename}";
-        builtUrl.Should().Be(expected: expectedUrl);
+        builtUrl.Should().Be(expectedUrl);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -243,23 +243,23 @@ public class PlaybackDecisionEngineDirectPlayTests
     [Fact]
     public void DecideBatch_AllDirectPlay_ReturnsSameCountAsInput()
     {
-        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeCompatibleVideo(), audio: MakeCompatibleAudio());
+        MediaInfo media = MakeMedia("matroska,webm", MakeCompatibleVideo(), MakeCompatibleAudio());
 
         ClientCapabilities client = new(
-            SupportedVideoCodecs: [VideoCodecType.H264],
-            SupportedAudioCodecs: [AudioCodecType.Aac],
-            SupportedContainers: ["mkv"],
-            MaxWidth: 7680,
-            MaxHeight: 4320,
-            SupportsHdr: true,
-            Supports10Bit: true,
-            MaxBitrateKbps: 0
+            [VideoCodecType.H264],
+            [AudioCodecType.Aac],
+            ["mkv"],
+            7680,
+            4320,
+            true,
+            true,
+            0
         );
 
         MediaInfo[] library = [media, media, media];
-        PlaybackDecision[] decisions = _engine.DecideBatch(library: library, client: client);
+        PlaybackDecision[] decisions = _engine.DecideBatch(library, client);
 
-        decisions.Should().HaveCount(expected: 3);
-        decisions.Should().AllSatisfy(expected: d => d.Action.Should().Be(expected: PlaybackAction.DirectPlay));
+        decisions.Should().HaveCount(3);
+        decisions.Should().AllSatisfy(d => d.Action.Should().Be(PlaybackAction.DirectPlay));
     }
 }

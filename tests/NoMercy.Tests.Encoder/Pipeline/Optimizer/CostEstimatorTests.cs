@@ -16,8 +16,8 @@ namespace NoMercy.Tests.Encoder.Pipeline.Optimizer;
 public class CostEstimatorTests
 {
     private static readonly CostEstimator Estimator = new();
-    private static readonly TimeSpan TwoHours = TimeSpan.FromHours(hours: 2);
-    private static readonly TimeSpan NinetyMinutes = TimeSpan.FromMinutes(minutes: 90);
+    private static readonly TimeSpan TwoHours = TimeSpan.FromHours(2);
+    private static readonly TimeSpan NinetyMinutes = TimeSpan.FromMinutes(90);
 
     // ------------------------------------------------------------------
     // Subtitle / chapter group → near-instant estimate
@@ -27,37 +27,37 @@ public class CostEstimatorTests
     public void SubtitleGroup_EstimatesNearInstantDuration()
     {
         ExecutionGroup group = new(
-            GroupId: "group_0",
-            Nodes: [new(Id: "sub_0", Operation: OperationType.SubtitleExtract, DependsOn: [], Parameters: new())],
-            DeviceId: null,
-            GpuSlotsRequired: 0,
-            CpuThreadsRequired: 1,
-            RequiresGpu: false,
-            Priority: 0
+            "group_0",
+            [new("sub_0", OperationType.SubtitleExtract, [], new())],
+            null,
+            0,
+            1,
+            false,
+            0
         );
 
-        CostEstimate estimate = Estimator.EstimateGroup(group: group, inputDuration: TwoHours);
+        CostEstimate estimate = Estimator.EstimateGroup(group, TwoHours);
 
-        estimate.EstimatedDuration.Should().BeLessThan(expected: TimeSpan.FromMinutes(minutes: 1));
-        estimate.GpuUtilization.Should().Be(expected: 0);
+        estimate.EstimatedDuration.Should().BeLessThan(TimeSpan.FromMinutes(1));
+        estimate.GpuUtilization.Should().Be(0);
     }
 
     [Fact]
     public void ChapterGroup_EstimatesNearInstantDuration()
     {
         ExecutionGroup group = new(
-            GroupId: "group_0",
-            Nodes: [new(Id: "ch_0", Operation: OperationType.ChapterExtract, DependsOn: [], Parameters: new())],
-            DeviceId: null,
-            GpuSlotsRequired: 0,
-            CpuThreadsRequired: 1,
-            RequiresGpu: false,
-            Priority: 0
+            "group_0",
+            [new("ch_0", OperationType.ChapterExtract, [], new())],
+            null,
+            0,
+            1,
+            false,
+            0
         );
 
-        CostEstimate estimate = Estimator.EstimateGroup(group: group, inputDuration: TwoHours);
+        CostEstimate estimate = Estimator.EstimateGroup(group, TwoHours);
 
-        estimate.EstimatedDuration.Should().BeLessThan(expected: TimeSpan.FromMinutes(minutes: 1));
+        estimate.EstimatedDuration.Should().BeLessThan(TimeSpan.FromMinutes(1));
     }
 
     // ------------------------------------------------------------------
@@ -68,69 +68,67 @@ public class CostEstimatorTests
     public void GpuVideoEncodeGroup_EstimatesLessThanInputDuration()
     {
         ExecutionGroup group = new(
-            GroupId: "group_0",
-            Nodes:
+            "group_0",
             [
-                new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new()),
-                new(Id: "encode_0", Operation: OperationType.Encode, DependsOn: ["decode_0"], Parameters: new()),
+                new("decode_0", OperationType.Decode, [], new()),
+                new("encode_0", OperationType.Encode, ["decode_0"], new()),
             ],
-            DeviceId: "RTX 4090",
-            GpuSlotsRequired: 1,
-            CpuThreadsRequired: 0,
-            RequiresGpu: true,
-            Priority: 1
+            "RTX 4090",
+            1,
+            0,
+            true,
+            1
         );
 
-        CostEstimate estimate = Estimator.EstimateGroup(group: group, inputDuration: NinetyMinutes);
+        CostEstimate estimate = Estimator.EstimateGroup(group, NinetyMinutes);
 
         // GPU is faster-than-realtime: estimate should be less than input duration
-        estimate.EstimatedDuration.Should().BeLessThan(expected: NinetyMinutes);
-        estimate.EstimatedDuration.Should().BeGreaterThan(expected: TimeSpan.Zero);
+        estimate.EstimatedDuration.Should().BeLessThan(NinetyMinutes);
+        estimate.EstimatedDuration.Should().BeGreaterThan(TimeSpan.Zero);
     }
 
     [Fact]
     public void SoftwareVideoEncodeGroup_ReturnsPositiveDuration()
     {
         ExecutionGroup group = new(
-            GroupId: "group_0",
-            Nodes:
+            "group_0",
             [
-                new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new()),
-                new(Id: "encode_0", Operation: OperationType.Encode, DependsOn: ["decode_0"], Parameters: new()),
+                new("decode_0", OperationType.Decode, [], new()),
+                new("encode_0", OperationType.Encode, ["decode_0"], new()),
             ],
-            DeviceId: null,
-            GpuSlotsRequired: 0,
-            CpuThreadsRequired: 4,
-            RequiresGpu: false,
-            Priority: 1
+            null,
+            0,
+            4,
+            false,
+            1
         );
 
-        CostEstimate estimate = Estimator.EstimateGroup(group: group, inputDuration: NinetyMinutes);
+        CostEstimate estimate = Estimator.EstimateGroup(group, NinetyMinutes);
 
-        estimate.EstimatedDuration.Should().BeGreaterThan(expected: TimeSpan.Zero);
-        estimate.GpuUtilization.Should().Be(expected: 0);
-        estimate.CpuUtilization.Should().BeGreaterThan(expected: 0);
+        estimate.EstimatedDuration.Should().BeGreaterThan(TimeSpan.Zero);
+        estimate.GpuUtilization.Should().Be(0);
+        estimate.CpuUtilization.Should().BeGreaterThan(0);
     }
 
     [Fact]
     public void GpuEncodeGroup_GpuUtilizationIsProportionalToSlots()
     {
         ExecutionGroup group1Slot = new(
-            GroupId: "group_1",
-            Nodes: [new(Id: "enc_0", Operation: OperationType.Encode, DependsOn: [], Parameters: new())],
-            DeviceId: "RTX 4090",
-            GpuSlotsRequired: 1,
-            CpuThreadsRequired: 0,
-            RequiresGpu: true,
-            Priority: 1
+            "group_1",
+            [new("enc_0", OperationType.Encode, [], new())],
+            "RTX 4090",
+            1,
+            0,
+            true,
+            1
         );
 
         ExecutionGroup group6Slots = group1Slot with { GpuSlotsRequired = 6, GroupId = "group_6" };
 
-        CostEstimate estimate1 = Estimator.EstimateGroup(group: group1Slot, inputDuration: NinetyMinutes);
-        CostEstimate estimate6 = Estimator.EstimateGroup(group: group6Slots, inputDuration: NinetyMinutes);
+        CostEstimate estimate1 = Estimator.EstimateGroup(group1Slot, NinetyMinutes);
+        CostEstimate estimate6 = Estimator.EstimateGroup(group6Slots, NinetyMinutes);
 
-        estimate6.GpuUtilization.Should().BeGreaterThan(expected: estimate1.GpuUtilization);
+        estimate6.GpuUtilization.Should().BeGreaterThan(estimate1.GpuUtilization);
     }
 
     // ------------------------------------------------------------------
@@ -143,45 +141,44 @@ public class CostEstimatorTests
         List<ExecutionGroup> groups =
         [
             new(
-                GroupId: "sub",
-                Nodes: [new(Id: "sub_0", Operation: OperationType.SubtitleExtract, DependsOn: [], Parameters: new())],
-                DeviceId: null,
-                GpuSlotsRequired: 0,
-                CpuThreadsRequired: 1,
-                RequiresGpu: false,
-                Priority: 0
+                "sub",
+                [new("sub_0", OperationType.SubtitleExtract, [], new())],
+                null,
+                0,
+                1,
+                false,
+                0
             ),
             new(
-                GroupId: "main",
-                Nodes:
+                "main",
                 [
-                    new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new()),
-                    new(Id: "encode_0", Operation: OperationType.Encode, DependsOn: ["decode_0"], Parameters: new()),
+                    new("decode_0", OperationType.Decode, [], new()),
+                    new("encode_0", OperationType.Encode, ["decode_0"], new()),
                 ],
-                DeviceId: "RTX 4090",
-                GpuSlotsRequired: 1,
-                CpuThreadsRequired: 0,
-                RequiresGpu: true,
-                Priority: 1
+                "RTX 4090",
+                1,
+                0,
+                true,
+                1
             ),
         ];
 
-        TimeSpan total = Estimator.EstimateTotal(groups: groups, inputDuration: NinetyMinutes);
+        TimeSpan total = Estimator.EstimateTotal(groups, NinetyMinutes);
 
         // Sum of sub (instant ~10s) + main encode (< 90 min for GPU) should be positive and < 2h
-        total.Should().BeGreaterThan(expected: TimeSpan.Zero);
+        total.Should().BeGreaterThan(TimeSpan.Zero);
 
         // Verify it's the sum of individual estimates
         TimeSpan manual = groups
-            .Select(selector: g => Estimator.EstimateGroup(group: g, inputDuration: NinetyMinutes).EstimatedDuration)
-            .Aggregate(seed: TimeSpan.Zero, func: (acc, d) => acc + d);
-        total.Should().Be(expected: manual);
+            .Select(g => Estimator.EstimateGroup(g, NinetyMinutes).EstimatedDuration)
+            .Aggregate(TimeSpan.Zero, (acc, d) => acc + d);
+        total.Should().Be(manual);
     }
 
     [Fact]
     public void EstimateTotal_EmptyGroups_ReturnsZero()
     {
-        TimeSpan total = Estimator.EstimateTotal(groups: [], inputDuration: NinetyMinutes);
-        total.Should().Be(expected: TimeSpan.Zero);
+        TimeSpan total = Estimator.EstimateTotal([], NinetyMinutes);
+        total.Should().Be(TimeSpan.Zero);
     }
 }

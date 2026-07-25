@@ -46,15 +46,15 @@ public class ServiceRegistrationTests : IDisposable
         // here so GetServices<IHostedService>() can construct background
         // services that depend on it without setting up a full host.
         services.AddSingleton<IHostApplicationLifetime, TestHostLifetime>();
-        services.AddDbContextFactory<MediaContext>(optionsAction: o => o.UseInMemoryDatabase(databaseName: "test-media"));
-        services.AddDbContextFactory<AppDbContext>(optionsAction: o => o.UseInMemoryDatabase(databaseName: "test-app"));
-        services.AddNoMercyEncoder(configure: opts =>
+        services.AddDbContextFactory<MediaContext>(o => o.UseInMemoryDatabase("test-media"));
+        services.AddDbContextFactory<AppDbContext>(o => o.UseInMemoryDatabase("test-app"));
+        services.AddNoMercyEncoder(opts =>
         {
             opts.FfmpegPathOverride = "ffmpeg";
             opts.FfprobePathOverride = "ffprobe";
         });
         ServiceProvider provider = services.BuildServiceProvider();
-        _providers.Add(item: provider);
+        _providers.Add(provider);
         return provider;
     }
 
@@ -93,7 +93,7 @@ public class ServiceRegistrationTests : IDisposable
     {
         ServiceProvider provider = BuildProvider();
         IEnumerable<IHostedService> hostedServices = provider.GetServices<IHostedService>();
-        hostedServices.Should().Contain(predicate: s => s.GetType().Name == "HardwareInitializationService");
+        hostedServices.Should().Contain(s => s.GetType().Name == "HardwareInitializationService");
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class ServiceRegistrationTests : IDisposable
         ServiceProvider provider = BuildProvider();
         CodecRegistry first = provider.GetRequiredService<CodecRegistry>();
         CodecRegistry second = provider.GetRequiredService<CodecRegistry>();
-        first.Should().BeSameAs(expected: second);
+        first.Should().BeSameAs(second);
     }
 
     [Fact]
@@ -110,15 +110,15 @@ public class ServiceRegistrationTests : IDisposable
     {
         ServiceCollection services = new();
         services.AddLogging();
-        services.AddNoMercyEncoder(configure: opts =>
+        services.AddNoMercyEncoder(opts =>
         {
             opts.FfmpegPathOverride = "/usr/bin/ffmpeg";
             opts.FfprobePathOverride = "/usr/bin/ffprobe";
         });
         ServiceProvider provider = services.BuildServiceProvider();
         EncoderOptions resolved = provider.GetRequiredService<EncoderOptions>();
-        resolved.FfmpegPathOverride.Should().Be(expected: "/usr/bin/ffmpeg");
-        resolved.FfprobePathOverride.Should().Be(expected: "/usr/bin/ffprobe");
+        resolved.FfmpegPathOverride.Should().Be("/usr/bin/ffmpeg");
+        resolved.FfprobePathOverride.Should().Be("/usr/bin/ffprobe");
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public class ServiceRegistrationTests : IDisposable
             provider.GetRequiredService<HardwareInitializationService>();
         HardwareInitializationService second =
             provider.GetRequiredService<HardwareInitializationService>();
-        first.Should().BeSameAs(expected: second);
+        first.Should().BeSameAs(second);
     }
 
     [Fact]

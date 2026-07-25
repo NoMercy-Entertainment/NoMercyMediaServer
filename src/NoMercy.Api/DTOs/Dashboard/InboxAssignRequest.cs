@@ -16,18 +16,18 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public sealed class InboxAssignRequest
 {
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public required string Type { get; set; }
 
-    [JsonProperty(propertyName: "match")]
+    [JsonProperty("match")]
     public required CandidateMatch Match { get; set; }
 
-    [JsonProperty(propertyName: "target_library_id")]
+    [JsonProperty("target_library_id")]
     public required Ulid TargetLibraryId { get; set; }
 
-    [JsonProperty(propertyName: "target_folder_id")]
+    [JsonProperty("target_folder_id")]
     public required Ulid TargetFolderId { get; set; }
 
-    [JsonProperty(propertyName: "target_profile_id")]
+    [JsonProperty("target_profile_id")]
     public required Ulid TargetProfileId { get; set; }
 }

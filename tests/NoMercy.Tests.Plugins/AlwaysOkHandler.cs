@@ -20,6 +20,6 @@ internal sealed class AlwaysOkHandler : HttpMessageHandler
         CancellationToken cancellationToken
     )
     {
-        return Task.FromResult(result: new HttpResponseMessage(statusCode: HttpStatusCode.OK));
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
     }
 }

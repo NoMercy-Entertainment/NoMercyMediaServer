@@ -31,7 +31,7 @@ public class SessionManager(LiveSessionLimits limits) : ISessionManager
 
         if (userId is not null)
         {
-            int userCount = _sessionUserMap.Values.Count(predicate: uid => uid == userId);
+            int userCount = _sessionUserMap.Values.Count(uid => uid == userId);
             if (userCount >= limits.MaxSessionsPerUser)
                 return false;
         }
@@ -41,21 +41,21 @@ public class SessionManager(LiveSessionLimits limits) : ISessionManager
 
     public void RegisterSession(ILiveSession session, string? userId = null)
     {
-        _sessions[key: session.SessionId] = session;
+        _sessions[session.SessionId] = session;
 
         if (userId is not null)
-            _sessionUserMap[key: session.SessionId] = userId;
+            _sessionUserMap[session.SessionId] = userId;
     }
 
     public void RemoveSession(string sessionId)
     {
-        _sessions.TryRemove(key: sessionId, value: out _);
-        _sessionUserMap.TryRemove(key: sessionId, value: out _);
+        _sessions.TryRemove(sessionId, out _);
+        _sessionUserMap.TryRemove(sessionId, out _);
     }
 
     public string? GetOwnerUserId(string sessionId)
     {
-        _sessionUserMap.TryGetValue(key: sessionId, value: out string? userId);
+        _sessionUserMap.TryGetValue(sessionId, out string? userId);
         return userId;
     }
 
@@ -64,7 +64,7 @@ public class SessionManager(LiveSessionLimits limits) : ISessionManager
         if (userId is null)
             return [];
 
-        return _sessionUserMap.Where(predicate: kv => kv.Value == userId).Select(selector: kv => kv.Key).ToList();
+        return _sessionUserMap.Where(kv => kv.Value == userId).Select(kv => kv.Key).ToList();
     }
 
     public void PruneDeadSessions(IReadOnlyCollection<string> aliveSessionIds)
@@ -73,10 +73,10 @@ public class SessionManager(LiveSessionLimits limits) : ISessionManager
 
         // Union of both maps' keys — either could hold a ghost id the other has
         // already dropped.
-        foreach (string sessionId in _sessions.Keys.Concat(second: _sessionUserMap.Keys).Distinct())
+        foreach (string sessionId in _sessions.Keys.Concat(_sessionUserMap.Keys).Distinct())
         {
-            if (!alive.Contains(item: sessionId))
-                RemoveSession(sessionId: sessionId);
+            if (!alive.Contains(sessionId))
+                RemoveSession(sessionId);
         }
     }
 }

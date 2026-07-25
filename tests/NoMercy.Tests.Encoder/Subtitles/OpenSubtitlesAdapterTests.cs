@@ -24,12 +24,12 @@ public class MovieHashAlgorithmTests
     public void ComputeMovieHash_AllZeroFile_EqualsFileSize()
     {
         byte[] bytes = new byte[65537]; // 64KB + 1 byte, all zeros
-        using MemoryStream stream = new(buffer: bytes);
+        using MemoryStream stream = new(bytes);
 
-        ulong hash = MovieHashHelper.ComputeMovieHash(stream: stream, fileSize: bytes.Length);
+        ulong hash = MovieHashHelper.ComputeMovieHash(stream, bytes.Length);
 
         // fileSize + sum of all 0-value chunks = fileSize
-        hash.Should().Be(expected: (ulong)bytes.Length);
+        hash.Should().Be((ulong)bytes.Length);
     }
 
     [Fact]
@@ -39,31 +39,31 @@ public class MovieHashAlgorithmTests
         byte[] bytes = new byte[1024];
         // Set first 8 bytes to 1 so we can verify the contribution
         bytes[0] = 1;
-        using MemoryStream stream = new(buffer: bytes);
+        using MemoryStream stream = new(bytes);
 
-        ulong hash = MovieHashHelper.ComputeMovieHash(stream: stream, fileSize: bytes.Length);
+        ulong hash = MovieHashHelper.ComputeMovieHash(stream, bytes.Length);
 
         // With a 1024-byte file: fileSize=1024, head window sum = 1 (first chunk), tail window sum = 1 (same data)
         // hash = 1024 + 1 + 1 = 1026
-        hash.Should().Be(expected: 1026UL);
+        hash.Should().Be(1026UL);
     }
 
     [Fact]
     public void FormatMovieHash_ReturnsLowercase16Chars()
     {
         ulong hash = 0x8e245d9679d31e12UL;
-        string formatted = MovieHashHelper.FormatHash(hash: hash);
+        string formatted = MovieHashHelper.FormatHash(hash);
 
-        formatted.Should().Be(expected: "8e245d9679d31e12");
-        formatted.Should().HaveLength(expected: 16);
-        formatted.Should().MatchRegex(regularExpression: "^[0-9a-f]{16}$");
+        formatted.Should().Be("8e245d9679d31e12");
+        formatted.Should().HaveLength(16);
+        formatted.Should().MatchRegex("^[0-9a-f]{16}$");
     }
 
     [Fact]
     public void FormatMovieHash_ZeroHash_ProducesAllZeros()
     {
-        string formatted = MovieHashHelper.FormatHash(hash: 0UL);
-        formatted.Should().Be(expected: "0000000000000000");
+        string formatted = MovieHashHelper.FormatHash(0UL);
+        formatted.Should().Be("0000000000000000");
     }
 }
 
@@ -74,7 +74,7 @@ public class OpenSubtitlesAdapterTests
 
     public OpenSubtitlesAdapterTests()
     {
-        _adapter = new(provider: _provider.Object);
+        _adapter = new(_provider.Object);
     }
 
     [Fact]
@@ -83,19 +83,19 @@ public class OpenSubtitlesAdapterTests
         List<OpenSubtitlesSearchResult> providerResults =
         [
             new(
-                Language: "en",
-                SubRating: "8.5",
-                SubDownloadsCnt: "1234",
-                SubFromTrusted: "1",
-                MovieFPS: "23.976",
-                SubDownloadLink: "https://dl.example.com/sub1.srt",
-                SubFormat: "srt",
-                MatchedBy: "moviehash"
+                "en",
+                "8.5",
+                "1234",
+                "1",
+                "23.976",
+                "https://dl.example.com/sub1.srt",
+                "srt",
+                "moviehash"
             ),
         ];
 
         _provider
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -103,26 +103,26 @@ public class OpenSubtitlesAdapterTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: providerResults);
+            .ReturnsAsync(providerResults);
 
         IReadOnlyList<SubtitleCandidate> candidates = await _adapter.SearchByHashAsync(
-            movieHash: "8e245d9679d31e12",
-            fileSize: 1234567890L,
-            languages: ["en"],
-            timeout: TimeSpan.FromSeconds(seconds: 5),
-            ct: CancellationToken.None
+            "8e245d9679d31e12",
+            1234567890L,
+            ["en"],
+            TimeSpan.FromSeconds(5),
+            CancellationToken.None
         );
 
-        candidates.Should().HaveCount(expected: 1);
-        SubtitleCandidate c = candidates[index: 0];
-        c.Language.Should().Be(expected: "en");
-        c.Rating.Should().BeApproximately(expectedValue: 8.5, precision: 0.001);
-        c.Downloads.Should().Be(expected: 1234);
+        candidates.Should().HaveCount(1);
+        SubtitleCandidate c = candidates[0];
+        c.Language.Should().Be("en");
+        c.Rating.Should().BeApproximately(8.5, 0.001);
+        c.Downloads.Should().Be(1234);
         c.IsTrustedUploader.Should().BeTrue();
-        c.Fps.Should().BeApproximately(expectedValue: 23.976, precision: 0.001);
-        c.DownloadUrl.Should().Be(expected: "https://dl.example.com/sub1.srt");
-        c.Format.Should().Be(expected: "srt");
-        c.Provider.Should().Be(expected: "OpenSubtitles");
+        c.Fps.Should().BeApproximately(23.976, 0.001);
+        c.DownloadUrl.Should().Be("https://dl.example.com/sub1.srt");
+        c.Format.Should().Be("srt");
+        c.Provider.Should().Be("OpenSubtitles");
     }
 
     [Fact]
@@ -131,29 +131,29 @@ public class OpenSubtitlesAdapterTests
         List<OpenSubtitlesSearchResult> providerResults =
         [
             new(
-                Language: "en",
-                SubRating: "7.0",
-                SubDownloadsCnt: "500",
-                SubFromTrusted: "0",
-                MovieFPS: null,
-                SubDownloadLink: "https://dl.example.com/sub2.srt",
-                SubFormat: "srt",
-                MatchedBy: "moviehash"
+                "en",
+                "7.0",
+                "500",
+                "0",
+                null,
+                "https://dl.example.com/sub2.srt",
+                "srt",
+                "moviehash"
             ),
             new(
-                Language: "en",
-                SubRating: "6.0",
-                SubDownloadsCnt: "200",
-                SubFromTrusted: "1",
-                MovieFPS: null,
-                SubDownloadLink: "https://dl.example.com/sub3.srt",
-                SubFormat: "srt",
-                MatchedBy: "moviehash"
+                "en",
+                "6.0",
+                "200",
+                "1",
+                null,
+                "https://dl.example.com/sub3.srt",
+                "srt",
+                "moviehash"
             ),
         ];
 
         _provider
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -161,26 +161,26 @@ public class OpenSubtitlesAdapterTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: providerResults);
+            .ReturnsAsync(providerResults);
 
         IReadOnlyList<SubtitleCandidate> candidates = await _adapter.SearchByHashAsync(
-            movieHash: "abc",
-            fileSize: 1000L,
-            languages: ["en"],
-            timeout: TimeSpan.FromSeconds(seconds: 5),
-            ct: CancellationToken.None,
-            trustedOnly: true
+            "abc",
+            1000L,
+            ["en"],
+            TimeSpan.FromSeconds(5),
+            CancellationToken.None,
+            true
         );
 
-        candidates.Should().HaveCount(expected: 1);
-        candidates[index: 0].IsTrustedUploader.Should().BeTrue();
+        candidates.Should().HaveCount(1);
+        candidates[0].IsTrustedUploader.Should().BeTrue();
     }
 
     [Fact]
     public async Task SearchByHash_RateLimited_ReturnsEmpty()
     {
         _provider
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -188,14 +188,14 @@ public class OpenSubtitlesAdapterTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(exception: new OpenSubtitlesRateLimitException());
+            .ThrowsAsync(new OpenSubtitlesRateLimitException());
 
         IReadOnlyList<SubtitleCandidate> candidates = await _adapter.SearchByHashAsync(
-            movieHash: "abc",
-            fileSize: 1000L,
-            languages: ["en"],
-            timeout: TimeSpan.FromSeconds(seconds: 5),
-            ct: CancellationToken.None
+            "abc",
+            1000L,
+            ["en"],
+            TimeSpan.FromSeconds(5),
+            CancellationToken.None
         );
 
         candidates.Should().BeEmpty();
@@ -207,19 +207,19 @@ public class OpenSubtitlesAdapterTests
         List<OpenSubtitlesSearchResult> providerResults =
         [
             new(
-                Language: "nl",
-                SubRating: "5.0",
-                SubDownloadsCnt: "99",
-                SubFromTrusted: "0",
-                MovieFPS: "25.0",
-                SubDownloadLink: "https://dl.example.com/sub.vtt",
-                SubFormat: "vtt",
-                MatchedBy: "moviehash"
+                "nl",
+                "5.0",
+                "99",
+                "0",
+                "25.0",
+                "https://dl.example.com/sub.vtt",
+                "vtt",
+                "moviehash"
             ),
         ];
 
         _provider
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -227,23 +227,23 @@ public class OpenSubtitlesAdapterTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: providerResults);
+            .ReturnsAsync(providerResults);
 
         IReadOnlyList<SubtitleCandidate> candidates = await _adapter.SearchByHashAsync(
-            movieHash: "def",
-            fileSize: 2000L,
-            languages: ["nl"],
-            timeout: TimeSpan.FromSeconds(seconds: 5),
-            ct: CancellationToken.None
+            "def",
+            2000L,
+            ["nl"],
+            TimeSpan.FromSeconds(5),
+            CancellationToken.None
         );
 
-        candidates.Should().HaveCount(expected: 1);
-        SubtitleCandidate c = candidates[index: 0];
-        c.Language.Should().Be(expected: "nl");
-        c.Rating.Should().Be(expected: 5.0);
-        c.Downloads.Should().Be(expected: 99);
-        c.Fps.Should().Be(expected: 25.0);
-        c.DownloadUrl.Should().Be(expected: "https://dl.example.com/sub.vtt");
-        c.Format.Should().Be(expected: "vtt");
+        candidates.Should().HaveCount(1);
+        SubtitleCandidate c = candidates[0];
+        c.Language.Should().Be("nl");
+        c.Rating.Should().Be(5.0);
+        c.Downloads.Should().Be(99);
+        c.Fps.Should().Be(25.0);
+        c.DownloadUrl.Should().Be("https://dl.example.com/sub.vtt");
+        c.Format.Should().Be("vtt");
     }
 }

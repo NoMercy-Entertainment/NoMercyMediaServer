@@ -17,30 +17,30 @@ namespace NoMercy.MediaProcessing.Files;
 
 public class FileItem
 {
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "mode")]
+    [JsonProperty("mode")]
     public int Mode { get; set; }
 
-    [JsonProperty(propertyName: "parent")]
+    [JsonProperty("parent")]
     public string? Parent { get; set; }
 
-    [JsonProperty(propertyName: "size")]
+    [JsonProperty("size")]
     public long Size { get; set; }
 
-    [JsonProperty(propertyName: "parsed")]
+    [JsonProperty("parsed")]
     public MovieFile? Parsed { get; set; }
 
-    [JsonProperty(propertyName: "match")]
+    [JsonProperty("match")]
     public MovieOrEpisode Match { get; set; } = new();
 
-    [JsonProperty(propertyName: "streams")]
+    [JsonProperty("streams")]
     public Streams Streams { get; set; } = new();
 
-    [JsonProperty(propertyName: "path")]
+    [JsonProperty("path")]
     public string Path { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public int Tracks { get; set; }
 }

@@ -27,78 +27,78 @@ public class TvdbAwardCategoryExtendedResponse : TvdbResponse<TvdbAwardCategoryE
 
 public class TvdbAward
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 }
 
 public class TvdbAwardExtended
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "score")]
+    [JsonProperty("score")]
     public int Score { get; set; }
 
-    [JsonProperty(propertyName: "categories")]
+    [JsonProperty("categories")]
     public List<TvdbAwardCategory> Categories { get; set; } = [];
 }
 
 public class TvdbAwardCategory
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "allowCoNominees")]
+    [JsonProperty("allowCoNominees")]
     public bool AllowCoNominees { get; set; }
 
-    [JsonProperty(propertyName: "award")]
+    [JsonProperty("award")]
     public TvdbAward Award { get; set; } = new();
 
-    [JsonProperty(propertyName: "forMovies")]
+    [JsonProperty("forMovies")]
     public bool ForMovies { get; set; }
 
-    [JsonProperty(propertyName: "forSeries")]
+    [JsonProperty("forSeries")]
     public bool ForSeries { get; set; }
 }
 
 public class TvdbAwardCategoryExtended : TvdbAwardCategory
 {
-    [JsonProperty(propertyName: "nominees")]
+    [JsonProperty("nominees")]
     public List<TvdbNominee> Nominees { get; set; } = [];
 }
 
 public class TvdbNominee
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int Year { get; set; }
 
-    [JsonProperty(propertyName: "details")]
+    [JsonProperty("details")]
     public string? Details { get; set; }
 
-    [JsonProperty(propertyName: "isWinner")]
+    [JsonProperty("isWinner")]
     public bool IsWinner { get; set; }
 
-    [JsonProperty(propertyName: "category")]
+    [JsonProperty("category")]
     public string? Category { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
-    [JsonProperty(propertyName: "series")]
+    [JsonProperty("series")]
     public string? Series { get; set; }
 
-    [JsonProperty(propertyName: "movie")]
+    [JsonProperty("movie")]
     public TvdbMovie? Movie { get; set; }
 }

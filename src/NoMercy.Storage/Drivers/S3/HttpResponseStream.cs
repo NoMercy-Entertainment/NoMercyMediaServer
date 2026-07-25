@@ -38,21 +38,21 @@ internal sealed class HttpResponseStream : Stream
     }
 
     public override int Read(byte[] buffer, int offset, int count) =>
-        _inner.Read(buffer: buffer, offset: offset, count: count);
+        _inner.Read(buffer, offset, count);
 
-    public override int Read(Span<byte> buffer) => _inner.Read(buffer: buffer);
+    public override int Read(Span<byte> buffer) => _inner.Read(buffer);
 
     public override Task<int> ReadAsync(
         byte[] buffer,
         int offset,
         int count,
         CancellationToken ct
-    ) => _inner.ReadAsync(buffer: buffer, offset: offset, count: count, cancellationToken: ct);
+    ) => _inner.ReadAsync(buffer, offset, count, ct);
 
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default) =>
-        _inner.ReadAsync(buffer: buffer, cancellationToken: ct);
+        _inner.ReadAsync(buffer, ct);
 
-    public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset: offset, origin: origin);
+    public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
 
     public override void SetLength(long value) => throw new NotSupportedException();
 
@@ -61,7 +61,7 @@ internal sealed class HttpResponseStream : Stream
 
     public override void Flush() => _inner.Flush();
 
-    public override Task FlushAsync(CancellationToken ct) => _inner.FlushAsync(cancellationToken: ct);
+    public override Task FlushAsync(CancellationToken ct) => _inner.FlushAsync(ct);
 
     protected override void Dispose(bool disposing)
     {
@@ -70,7 +70,7 @@ internal sealed class HttpResponseStream : Stream
             _inner.Dispose();
             _response.Dispose();
         }
-        base.Dispose(disposing: disposing);
+        base.Dispose(disposing);
     }
 
     public override async ValueTask DisposeAsync()

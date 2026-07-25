@@ -31,10 +31,10 @@ using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags(tags: "Media Collections")]
-[ApiVersion(version: 1.0)]
+[Tags("Media Collections")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/collection/{id:int}")] // match themoviedb.org API
+[Route("api/v{version:apiVersion}/collection/{id:int}")] // match themoviedb.org API
 public class CollectionsController(
     ICollectionRepository collectionRepository,
     ILibraryRepository libraryRepository,
@@ -44,7 +44,7 @@ public class CollectionsController(
 ) : BaseController
 {
     [HttpGet]
-    [Route(template: "/api/v{version:apiVersion}/collection")]
+    [Route("/api/v{version:apiVersion}/collection")]
     [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page", "version"])]
     public async Task<IActionResult> Collections(
         [FromQuery] PageRequestDto request,
@@ -52,59 +52,59 @@ public class CollectionsController(
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view collections");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view collections");
 
         string language = Language();
         string country = Country();
 
         // Use optimized query that projects only needed data
         List<CollectionListDto> collectionDtos = await collectionRepository.GetCollectionsListAsync(
-            userId: userId,
-            language: language,
-            country: country,
-            take: request.Take,
-            page: request.Page
+            userId,
+            language,
+            country,
+            request.Take,
+            request.Page
         );
 
         if (request.Version != "lolomo")
         {
-            List<CardData> cardItems = collectionDtos.Select(selector: dto => new CardData(dto: dto)).ToList();
+            List<CardData> cardItems = collectionDtos.Select(dto => new CardData(dto)).ToList();
 
             ComponentEnvelope response = Component
                 .Grid()
-                .WithItems(builders: cardItems.Select(selector: item => Component.Card().WithData(data: item)));
+                .WithItems(cardItems.Select(item => Component.Card().WithData(item)));
 
-            return Ok(value: ComponentResponse.From(component: response));
+            return Ok(ComponentResponse.From(response));
         }
 
         List<ComponentEnvelope> carousels = Letters
             .Select(
-                selector: (letter, index) =>
+                (letter, index) =>
                 {
                     List<CardData> letterItems = collectionDtos
-                        .Select(selector: dto => new CardData(dto: dto))
-                        .Where(predicate: card => AlphaBucket.Matches(titleSort: card.TitleSort, bucket: letter))
-                        .OrderBy(keySelector: item => item.TitleSort)
+                        .Select(dto => new CardData(dto))
+                        .Where(card => AlphaBucket.Matches(card.TitleSort, letter))
+                        .OrderBy(item => item.TitleSort)
                         .ToList();
 
                     return Component
                         .Carousel()
-                        .WithId(id: letter)
-                        .WithTitle(title: letter)
+                        .WithId(letter)
+                        .WithTitle(letter)
                         .WithNavigation(
-                            previousId: index == 0 ? null : Letters[index - 1],
-                            nextId: index == Letters.Length - 1 ? null : Letters[index + 1]
+                            index == 0 ? null : Letters[index - 1],
+                            index == Letters.Length - 1 ? null : Letters[index + 1]
                         )
-                        .WithItems(builders: letterItems.Select(selector: item => Component.Card().WithData(data: item)))
+                        .WithItems(letterItems.Select(item => Component.Card().WithData(item)))
                         .Build();
                 }
             )
             .ToList();
 
-        ComponentEnvelope containerResponse = Component.Container().WithItems(items: carousels);
+        ComponentEnvelope containerResponse = Component.Container().WithItems(carousels);
 
-        return Ok(value: containerResponse);
+        return Ok(containerResponse);
     }
 
     [HttpGet]
@@ -112,17 +112,17 @@ public class CollectionsController(
     public async Task<IActionResult> Collection(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view collections");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view collections");
 
         string language = Language();
         string country = Country();
 
         Collection? collection = await collectionRepository.GetCollectionAsync(
-            userId: userId,
-            id: id,
-            language: language,
-            country: country
+            userId,
+            id,
+            language,
+            country
         );
 
         if (
@@ -130,36 +130,36 @@ public class CollectionsController(
             && collection.CollectionMovies.Count > 0
             && collection.Images.Count > 0
         )
-            return Ok(value: new CollectionResponseDto { Data = new(collection: collection) });
+            return Ok(new CollectionResponseDto { Data = new(collection) });
 
         TmdbCollectionAppends? collectionAppends =
-            await collectionMetadataProvider.GetCollectionAsync(id: id, language: language, ct: ct);
+            await collectionMetadataProvider.GetCollectionAsync(id, language, ct);
 
         if (collectionAppends is null)
-            return NotFoundResponse(detail: "Collection not found");
+            return NotFoundResponse("Collection not found");
 
-        return Ok(value: new CollectionResponseDto { Data = new(tmdbCollectionAppends: collectionAppends) });
+        return Ok(new CollectionResponseDto { Data = new(collectionAppends) });
     }
 
     [HttpGet]
-    [Route(template: "available")]
+    [Route("available")]
     public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view collections");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view collections");
 
-        Collection? collection = await collectionRepository.GetAvailableCollectionAsync(userId: userId, id: id);
+        Collection? collection = await collectionRepository.GetAvailableCollectionAsync(userId, id);
 
         bool available =
             collection is not null
-            && collection.CollectionMovies.Select(selector: movie => movie.Movie.VideoFiles).Any();
+            && collection.CollectionMovies.Select(movie => movie.Movie.VideoFiles).Any();
 
         if (!available)
-            return NotFoundResponse(detail: "Collection not found");
+            return NotFoundResponse("Collection not found");
 
         return Ok(
-            value: new StatusResponseDto<AvailableResponseDto>
+            new StatusResponseDto<AvailableResponseDto>
             {
                 Data = new() { Available = true },
                 Status = "ok",
@@ -169,43 +169,43 @@ public class CollectionsController(
     }
 
     [HttpGet]
-    [Route(template: "watch")]
+    [Route("watch")]
     public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view collections");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view collections");
 
         string language = Language();
         string country = Country();
 
         Collection? collection = await collectionRepository.GetCollectionPlaylistAsync(
-            userId: userId,
-            id: id,
-            language: language,
-            country: country
+            userId,
+            id,
+            language,
+            country
         );
 
         if (collection is null)
-            return NotFoundResponse(detail: "Collection not found");
+            return NotFoundResponse("Collection not found");
 
         return Ok(
-            value: collection.CollectionMovies.Select(
-                selector: (movie, index) =>
+            collection.CollectionMovies.Select(
+                (movie, index) =>
                     new VideoPlaylistResponseDto(
-                        movie: movie.Movie,
-                        playlistType: "collection",
-                        playlistId: id,
-                        country: country,
-                        index: index + 1,
-                        collection: collection
+                        movie.Movie,
+                        "collection",
+                        id,
+                        country,
+                        index + 1,
+                        collection
                     )
             )
         );
     }
 
     [HttpPost]
-    [Route(template: "like")]
+    [Route("like")]
     public async Task<IActionResult> Like(
         int id,
         [FromBody] LikeRequestDto request,
@@ -213,16 +213,16 @@ public class CollectionsController(
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to like collections");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to like collections");
 
-        bool success = await collectionRepository.LikeAsync(id: id, userId: userId, like: request.Value, ct: ct);
+        bool success = await collectionRepository.LikeAsync(id, userId, request.Value, ct);
 
         if (!success)
-            return UnprocessableEntityResponse(detail: "Collection not found");
+            return UnprocessableEntityResponse("Collection not found");
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "{1}",
@@ -232,7 +232,7 @@ public class CollectionsController(
     }
 
     [HttpPost]
-    [Route(template: "watch-list")]
+    [Route("watch-list")]
     public async Task<IActionResult> AddToWatchList(
         int id,
         [FromBody] WatchListRequestDto request,
@@ -240,16 +240,16 @@ public class CollectionsController(
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to manage watch list");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to manage watch list");
 
-        bool success = await collectionRepository.AddToWatchListAsync(collectionId: id, userId: userId, add: request.Add);
+        bool success = await collectionRepository.AddToWatchListAsync(id, userId, request.Add);
 
         if (!success)
-            return UnprocessableEntityResponse(detail: "Collection not found");
+            return UnprocessableEntityResponse("Collection not found");
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = request.Add
@@ -263,39 +263,39 @@ public class CollectionsController(
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
-        await collectionRepository.DeleteAsync(id: id, ct: ct);
+        await collectionRepository.DeleteAsync(id, ct);
 
-        return Ok(value: new StatusResponseDto<string> { Status = "ok", Message = "Movie deleted" });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Movie deleted" });
     }
 
     [HttpPost]
-    [Route(template: "rescan")]
+    [Route("rescan")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        Collection? collection = await collectionRepository.GetCollectionForRescanAsync(id: id, ct: ct);
+        Collection? collection = await collectionRepository.GetCollectionForRescanAsync(id, ct);
 
         if (collection is null)
-            return UnprocessableEntityResponse(detail: "Collection not found");
+            return UnprocessableEntityResponse("Collection not found");
 
         try
         {
             foreach (CollectionMovie collectionMovie in collection.CollectionMovies)
             {
                 jobDispatcher.DispatchJob<FileRescanJob>(
-                    id: collectionMovie.MovieId,
-                    libraryId: collectionMovie.Movie.LibraryId
+                    collectionMovie.MovieId,
+                    collectionMovie.Movie.LibraryId
                 );
             }
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
-            return InternalServerErrorResponse(detail: e.Message);
+            logger.LogError(e.Message);
+            return InternalServerErrorResponse(e.Message);
         }
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Rescanning {0} for files in the background",
@@ -305,36 +305,36 @@ public class CollectionsController(
     }
 
     [HttpPost]
-    [Route(template: "refresh")]
+    [Route("refresh")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Refresh(int id, CancellationToken ct = default)
     {
         Collection? collection = await collectionRepository.GetCollectionWithMovieLibrariesAsync(
-            id: id,
-            ct: ct
+            id,
+            ct
         );
 
         if (collection is null)
-            return UnprocessableEntityResponse(detail: "Collection not found");
+            return UnprocessableEntityResponse("Collection not found");
 
         try
         {
             foreach (CollectionMovie collectionMovie in collection.CollectionMovies)
             {
                 jobDispatcher.DispatchJob<MovieImportJob>(
-                    id: collectionMovie.MovieId,
-                    libraryId: collectionMovie.Movie.LibraryId
+                    collectionMovie.MovieId,
+                    collectionMovie.Movie.LibraryId
                 );
             }
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
-            return InternalServerErrorResponse(detail: e.Message);
+            logger.LogError(e.Message);
+            return InternalServerErrorResponse(e.Message);
         }
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Refreshing {0} in the background",
@@ -344,44 +344,44 @@ public class CollectionsController(
     }
 
     [HttpPost]
-    [Route(template: "add")]
+    [Route("add")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Add(int id, CancellationToken ct = default)
     {
         Library? library = await libraryRepository.GetLibraryByTypeAsync(
-            type: MediaTypes.MovieMediaType,
+            MediaTypes.MovieMediaType,
             ct: ct
         );
 
         if (library is null)
-            return UnprocessableEntityResponse(detail: "No movie library found");
+            return UnprocessableEntityResponse("No movie library found");
 
         Collection? collection = await collectionRepository.GetCollectionWithMovieLibrariesAsync(
-            id: id,
-            ct: ct
+            id,
+            ct
         );
 
         if (collection is null)
-            return UnprocessableEntityResponse(detail: "Collection not found");
+            return UnprocessableEntityResponse("Collection not found");
 
         try
         {
             foreach (CollectionMovie collectionMovie in collection.CollectionMovies)
             {
                 jobDispatcher.DispatchJob<MovieImportJob>(
-                    id: collectionMovie.MovieId,
-                    libraryId: collectionMovie.Movie.LibraryId
+                    collectionMovie.MovieId,
+                    collectionMovie.Movie.LibraryId
                 );
             }
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
-            return InternalServerErrorResponse(detail: e.Message);
+            logger.LogError(e.Message);
+            return InternalServerErrorResponse(e.Message);
         }
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Adding {0} in the background",

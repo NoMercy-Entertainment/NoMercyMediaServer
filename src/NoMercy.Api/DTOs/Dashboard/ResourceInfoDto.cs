@@ -16,15 +16,15 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record ResourceInfoDto
 {
-    [JsonProperty(propertyName: "cpu")]
+    [JsonProperty("cpu")]
     public Cpu Cpu { get; set; } = new();
 
-    [JsonProperty(propertyName: "gpu")]
+    [JsonProperty("gpu")]
     public List<Gpu> Gpu { get; set; } = new();
 
-    [JsonProperty(propertyName: "memory")]
+    [JsonProperty("memory")]
     public Memory Memory { get; set; } = new();
 
-    [JsonProperty(propertyName: "storage")]
+    [JsonProperty("storage")]
     public List<ResourceMonitorDto> Storage { get; set; } = new();
 }

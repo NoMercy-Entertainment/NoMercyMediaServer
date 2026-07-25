@@ -22,58 +22,58 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record TrackRowData
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = null!;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = null!;
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "path")]
+    [JsonProperty("path")]
     public string Path { get; set; } = null!;
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public string Link { get; set; } = null!;
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "date")]
+    [JsonProperty("date")]
     public string? Date { get; set; }
 
-    [JsonProperty(propertyName: "disc")]
+    [JsonProperty("disc")]
     public int? Disc { get; set; }
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public string? Duration { get; set; }
 
-    [JsonProperty(propertyName: "favorite")]
+    [JsonProperty("favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty(propertyName: "quality")]
+    [JsonProperty("quality")]
     public int? Quality { get; set; }
 
-    [JsonProperty(propertyName: "track")]
+    [JsonProperty("track")]
     public int? Track { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = null!;
 
-    [JsonProperty(propertyName: "lyrics")]
+    [JsonProperty("lyrics")]
     public IEnumerable<LyricLine>? Lyrics { get; set; }
 
-    [JsonProperty(propertyName: "album_id")]
+    [JsonProperty("album_id")]
     public string AlbumId { get; set; } = null!;
 
-    [JsonProperty(propertyName: "album_name")]
+    [JsonProperty("album_name")]
     public string AlbumName { get; set; } = null!;
 
-    [JsonProperty(propertyName: "album_track")]
+    [JsonProperty("album_track")]
     public IEnumerable<TrackArtist> AlbumTrack { get; set; } = [];
 
-    [JsonProperty(propertyName: "artist_track")]
+    [JsonProperty("artist_track")]
     public IEnumerable<TrackArtist> ArtistTrack { get; set; } = [];
 
     public TrackRowData() { }
@@ -86,7 +86,7 @@ public record TrackRowData
         Path = track.Filename.OrEmpty();
         Link = $"/music/tracks/{track.Id}";
         ColorPalette = track.ColorPalette;
-        Date = track.Date?.ToString(format: "yyyy-MM-dd");
+        Date = track.Date?.ToString("yyyy-MM-dd");
         Disc = track.DiscNumber;
         Duration = track.Duration;
         Favorite = isFavorite;
@@ -95,11 +95,11 @@ public record TrackRowData
         Type = "track";
         AlbumId = (track.AlbumTrack.FirstOrDefault()?.AlbumId.ToString()).OrEmpty();
         AlbumName = (track.AlbumTrack.FirstOrDefault()?.Album.Name).OrEmpty();
-        ArtistTrack = track.ArtistTrack.Select(selector: at => new TrackArtist
+        ArtistTrack = track.ArtistTrack.Select(at => new TrackArtist
         {
             Id = at.ArtistId.ToString(),
             Name = at.Artist.Name,
-            Link = new(uriString: $"/music/artists/{at.ArtistId}", uriKind: UriKind.Relative),
+            Link = new($"/music/artists/{at.ArtistId}", UriKind.Relative),
             Type = "artist",
         });
     }
@@ -117,7 +117,7 @@ public record TrackRowData
         Cover = cover is not null ? $"/images/music{cover}" : null;
         Path = $"/{track.FolderId}{track.Folder}{track.Filename}";
         Link = $"/music/tracks/{track.Id}";
-        Date = track.UpdatedAt.ToString(format: "yyyy-MM-dd");
+        Date = track.UpdatedAt.ToString("yyyy-MM-dd");
         Disc = track.DiscNumber;
         Duration = track.Duration;
         Favorite = track.TrackUser.Count != 0;
@@ -127,21 +127,21 @@ public record TrackRowData
         AlbumId = (track.AlbumTrack.FirstOrDefault()?.AlbumId.ToString()).OrEmpty();
         AlbumName = (track.AlbumTrack.FirstOrDefault()?.Album.Name).OrEmpty();
         ArtistTrack = track
-            .ArtistTrack.DistinctBy(keySelector: at => at.ArtistId)
-            .Select(selector: at => new TrackArtist
+            .ArtistTrack.DistinctBy(at => at.ArtistId)
+            .Select(at => new TrackArtist
             {
                 Id = at.ArtistId.ToString(),
                 Name = at.Artist.Name,
-                Link = new(uriString: $"/music/artists/{at.ArtistId}", uriKind: UriKind.Relative),
+                Link = new($"/music/artists/{at.ArtistId}", UriKind.Relative),
                 Type = "artist",
             });
         AlbumTrack = track
-            .AlbumTrack.DistinctBy(keySelector: at => at.AlbumId)
-            .Select(selector: at => new TrackArtist
+            .AlbumTrack.DistinctBy(at => at.AlbumId)
+            .Select(at => new TrackArtist
             {
                 Id = at.AlbumId.ToString(),
                 Name = at.Album.Name,
-                Link = new(uriString: $"/music/albums/{at.AlbumId}", uriKind: UriKind.Relative),
+                Link = new($"/music/albums/{at.AlbumId}", UriKind.Relative),
                 Type = "album",
             });
     }
@@ -151,12 +151,12 @@ public record TrackRowData
         Id = track.Id.ToString();
         Name = track.Name;
         string? colorPaletteStr = track.AlbumColorPalette ?? track.ArtistColorPalette;
-        ColorPalette = ColorPalette.FromJsonOrNull(json: colorPaletteStr);
+        ColorPalette = ColorPalette.FromJsonOrNull(colorPaletteStr);
         string? cover = track.AlbumCover ?? track.ArtistCover;
         Cover = cover is not null ? $"/images/music{cover}" : null;
         Path = $"/{track.FolderId}{track.Folder}{track.Filename}";
         Link = $"/music/tracks/{track.Id}";
-        Date = track.UpdatedAt.ToString(format: "yyyy-MM-dd");
+        Date = track.UpdatedAt.ToString("yyyy-MM-dd");
         Disc = track.DiscNumber;
         Duration = track.Duration;
         Favorite = track.Favorite;
@@ -165,18 +165,18 @@ public record TrackRowData
         Type = "track";
         AlbumId = track.AlbumId.OrEmpty();
         AlbumName = track.AlbumName.OrEmpty();
-        ArtistTrack = track.Artists.Select(selector: at => new TrackArtist
+        ArtistTrack = track.Artists.Select(at => new TrackArtist
         {
             Id = at.Id.ToString(),
             Name = at.Name,
-            Link = new(uriString: $"/music/artists/{at.Id}", uriKind: UriKind.Relative),
+            Link = new($"/music/artists/{at.Id}", UriKind.Relative),
             Type = "artist",
         });
-        AlbumTrack = track.Albums.Select(selector: at => new TrackArtist
+        AlbumTrack = track.Albums.Select(at => new TrackArtist
         {
             Id = at.Id.ToString(),
             Name = at.Name,
-            Link = new(uriString: $"/music/albums/{at.Id}", uriKind: UriKind.Relative),
+            Link = new($"/music/albums/{at.Id}", UriKind.Relative),
             Type = "album",
         });
     }
@@ -184,30 +184,30 @@ public record TrackRowData
 
 public record LyricLine
 {
-    [JsonProperty(propertyName: "time")]
+    [JsonProperty("time")]
     public double Time { get; set; }
 
-    [JsonProperty(propertyName: "text")]
+    [JsonProperty("text")]
     public string Text { get; set; } = null!;
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; } = null!;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = null!;
 }
 
 public record TrackArtist
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = null!;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = null!;
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; } = null!;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = null!;
 }

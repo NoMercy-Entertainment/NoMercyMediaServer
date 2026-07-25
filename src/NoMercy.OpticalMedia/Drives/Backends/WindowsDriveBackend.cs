@@ -24,11 +24,11 @@ namespace NoMercy.OpticalMedia.Drives.Backends;
 /// against <c>Win32_LogicalDisk</c> filtered to <c>DriveType=5</c> (CD-ROM).
 /// Falls back to <see cref="PollingDriveBackend"/> at construction failure.
 /// </summary>
-[SupportedOSPlatform(platformName: "windows")]
+[SupportedOSPlatform("windows")]
 public sealed class WindowsDriveBackend : IDriveBackend
 {
     private readonly Channel<DriveEvent> _events = Channel.CreateUnbounded<DriveEvent>(
-        options: new() { SingleReader = true, SingleWriter = true }
+        new() { SingleReader = true, SingleWriter = true }
     );
     private readonly ILogger<WindowsDriveBackend> _logger;
     private ManagementEventWatcher? _watcher;
@@ -38,11 +38,11 @@ public sealed class WindowsDriveBackend : IDriveBackend
         _logger = logger;
 
         WqlEventQuery query = new(
-            queryOrEventClassName: "SELECT * FROM __InstanceModificationEvent WITHIN 2 "
+            "SELECT * FROM __InstanceModificationEvent WITHIN 2 "
                                    + "WHERE TargetInstance ISA 'Win32_LogicalDisk' "
                                    + "AND TargetInstance.DriveType = 5"
         );
-        _watcher = new(query: query);
+        _watcher = new(query);
         _watcher.EventArrived += OnDriveChanged;
         _watcher.Start();
     }
@@ -50,13 +50,13 @@ public sealed class WindowsDriveBackend : IDriveBackend
     public IReadOnlyList<DiscDrive> GetDrives() =>
         Optical
             .GetOpticalDrives()
-            .Select(selector: kvp =>
+            .Select(kvp =>
             {
-                bool hasDisc = !string.IsNullOrEmpty(value: kvp.Value);
+                bool hasDisc = !string.IsNullOrEmpty(kvp.Value);
                 OpticalDiscType type = hasDisc
-                    ? Optical.GetDiscType(drivePath: kvp.Key)
+                    ? Optical.GetDiscType(kvp.Key)
                     : OpticalDiscType.None;
-                return new DiscDrive(Path: kvp.Key, Label: kvp.Value, HasDisc: hasDisc, DiscType: type);
+                return new DiscDrive(kvp.Key, kvp.Value, hasDisc, type);
             })
             .ToList();
 
@@ -69,7 +69,7 @@ public sealed class WindowsDriveBackend : IDriveBackend
             DriveEvent ev;
             try
             {
-                ev = await _events.Reader.ReadAsync(cancellationToken: ct);
+                ev = await _events.Reader.ReadAsync(ct);
             }
             catch (OperationCanceledException)
             {
@@ -83,24 +83,24 @@ public sealed class WindowsDriveBackend : IDriveBackend
     {
         try
         {
-            ManagementBaseObject target = (ManagementBaseObject)e.NewEvent[propertyName: "TargetInstance"];
-            string deviceId = (string)target[propertyName: "DeviceID"];
+            ManagementBaseObject target = (ManagementBaseObject)e.NewEvent["TargetInstance"];
+            string deviceId = (string)target["DeviceID"];
             string mount = deviceId + Path.DirectorySeparatorChar;
-            string? volumeName = target[propertyName: "VolumeName"] as string;
-            bool hasDisc = !string.IsNullOrEmpty(value: volumeName);
+            string? volumeName = target["VolumeName"] as string;
+            bool hasDisc = !string.IsNullOrEmpty(volumeName);
 
-            OpticalDiscType type = hasDisc ? Optical.GetDiscType(drivePath: mount) : OpticalDiscType.None;
-            DiscDrive drive = new(Path: mount, Label: volumeName, HasDisc: hasDisc, DiscType: type);
+            OpticalDiscType type = hasDisc ? Optical.GetDiscType(mount) : OpticalDiscType.None;
+            DiscDrive drive = new(mount, volumeName, hasDisc, type);
 
             DriveEventType eventType = hasDisc
                 ? DriveEventType.DiscInserted
                 : DriveEventType.DiscEjected;
 
-            _events.Writer.TryWrite(item: new(Type: eventType, Drive: drive));
+            _events.Writer.TryWrite(new(eventType, drive));
         }
         catch (Exception ex)
         {
-            _logger.LogInformation(message: "[WindowsDriveBackend] OnDriveChanged: {Error}", args: ex.Message);
+            _logger.LogInformation("[WindowsDriveBackend] OnDriveChanged: {Error}", ex.Message);
         }
     }
 

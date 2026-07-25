@@ -13,7 +13,6 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Plugins.Abstractions;
 using EncoderMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
-using EncoderVideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using PluginProfile = NoMercy.Plugins.Abstractions.EncodingProfile;
 
@@ -34,13 +33,13 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
 {
     public EncodingProfile Apply(EncodingProfile configured, EncoderMediaInfo media)
     {
-        MediaInfo pluginMedia = ToPluginMediaInfo(media: media);
+        MediaInfo pluginMedia = ToPluginMediaInfo(media);
 
         foreach (IEncoderPlugin plugin in pluginManager.GetPluginsOfType<IEncoderPlugin>())
         {
-            PluginProfile? pluginProfile = plugin.GetProfile(info: pluginMedia);
+            PluginProfile? pluginProfile = plugin.GetProfile(pluginMedia);
             if (pluginProfile is not null)
-                return ToEncodingProfile(profile: pluginProfile);
+                return ToEncodingProfile(pluginProfile);
         }
 
         return configured;
@@ -49,9 +48,9 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
     private static MediaInfo ToPluginMediaInfo(EncoderMediaInfo media)
     {
         Encoder.Analysis.VideoStreamInfo? video =
-            media.VideoStreams.Count > 0 ? media.VideoStreams[index: 0] : null;
+            media.VideoStreams.Count > 0 ? media.VideoStreams[0] : null;
         Encoder.Analysis.AudioStreamInfo? audio =
-            media.AudioStreams.Count > 0 ? media.AudioStreams[index: 0] : null;
+            media.AudioStreams.Count > 0 ? media.AudioStreams[0] : null;
 
         return new()
         {
@@ -69,58 +68,57 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
     private static EncodingProfile ToEncodingProfile(PluginProfile profile)
     {
         VideoCodecType videoCodec =
-            CodecFamilyClassifier.ClassifyVideo(encoderName: profile.VideoCodec) ?? VideoCodecType.H264;
+            CodecFamilyClassifier.ClassifyVideo(profile.VideoCodec) ?? VideoCodecType.H264;
         AudioCodecType audioCodec =
-            CodecFamilyClassifier.ClassifyAudio(encoderName: profile.AudioCodec) ?? AudioCodecType.Aac;
+            CodecFamilyClassifier.ClassifyAudio(profile.AudioCodec) ?? AudioCodecType.Aac;
 
         return new(
-            Id: Ulid.NewUlid(),
-            Name: profile.Name,
-            Container: ParseContainer(container: profile.Container),
-            Video: new(
-                Policy: Encoder.Profiles.StreamPolicy.Transcode,
-                Codec: videoCodec,
-                Width: profile.Width,
-                Height: profile.Height,
-                RateControl: profile.VideoBitrate is > 0
+            Ulid.NewUlid(),
+            profile.Name,
+            ParseContainer(profile.Container),
+            new(
+                Encoder.Profiles.StreamPolicy.Transcode,
+                videoCodec,
+                profile.Width,
+                profile.Height,
+                profile.VideoBitrate is > 0
                     ? Encoder.Profiles.RateControlMode.Vbr
                     : Encoder.Profiles.RateControlMode.Crf,
-                Crf: profile.VideoBitrate is > 0 ? 0 : 23,
-                BitrateKbps: profile.VideoBitrate ?? 0,
-                MaxBitrateKbps: null,
-                BufferSizeKbps: null,
-                Preset: "medium",
-                CodecProfile: Encoder.Profiles.CodecProfile.Auto,
-                Level: null,
-                Tune: null,
-                BitDepth: 8,
-                PixelFormat: null,
-                KeyframeIntervalSeconds: 2,
-                ConvertHdrToSdr: false,
-                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-                CustomArguments: profile.ExtraParameters.Count > 0
-                    ? new Dictionary<string, string>(dictionary: profile.ExtraParameters)
+                profile.VideoBitrate is > 0 ? 0 : 23,
+                profile.VideoBitrate ?? 0,
+                null,
+                null,
+                "medium",
+                Encoder.Profiles.CodecProfile.Auto,
+                null,
+                null,
+                8,
+                null,
+                2,
+                false,
+                ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                profile.ExtraParameters.Count > 0
+                    ? new Dictionary<string, string>(profile.ExtraParameters)
                     : null
             ),
-            Audio:
             [
                 new(
-                    Policy: Encoder.Profiles.StreamPolicy.Transcode,
-                    Codec: audioCodec,
-                    BitrateKbps: profile.AudioBitrate ?? 0,
-                    Channels: 2,
-                    SampleRateHz: 48000,
-                    AllowedLanguages: [],
-                    DefaultLanguage: null,
-                    Loudness: null,
-                    Downmix: null,
-                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                    CustomArguments: null
+                    Encoder.Profiles.StreamPolicy.Transcode,
+                    audioCodec,
+                    profile.AudioBitrate ?? 0,
+                    2,
+                    48000,
+                    [],
+                    null,
+                    null,
+                    null,
+                    ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    null
                 ),
             ],
-            Subtitles: []
+            []
         );
     }
 

@@ -15,21 +15,21 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzMedia
 {
-    [JsonProperty(propertyName: "track-count")]
+    [JsonProperty("track-count")]
     public int TrackCount { get; set; }
 
-    [JsonProperty(propertyName: "position")]
+    [JsonProperty("position")]
     public int Position { get; set; }
 
-    [JsonProperty(propertyName: "format")]
+    [JsonProperty("format")]
     public string Format { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "format-id")]
+    [JsonProperty("format-id")]
     public Guid? FormatId { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public MusicBrainzTrack[] Tracks { get; set; } = [];
 }

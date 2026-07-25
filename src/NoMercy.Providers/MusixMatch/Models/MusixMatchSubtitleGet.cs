@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchSubtitleGet
 {
-    [JsonProperty(propertyName: "message")]
+    [JsonProperty("message")]
     public MusixMatchSubtitleGetMessage? Message { get; set; }
 }

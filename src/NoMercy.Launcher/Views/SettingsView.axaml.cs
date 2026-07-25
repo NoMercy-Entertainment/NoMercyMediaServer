@@ -34,7 +34,7 @@ public partial class SettingsView : UserControl
         }
         catch (Exception ex)
         {
-            LauncherLog.Error(message: $"SettingsView.OnSaveConfigClick failed: {ex.Message}", ex: ex);
+            LauncherLog.Error($"SettingsView.OnSaveConfigClick failed: {ex.Message}", ex);
         }
     }
 }

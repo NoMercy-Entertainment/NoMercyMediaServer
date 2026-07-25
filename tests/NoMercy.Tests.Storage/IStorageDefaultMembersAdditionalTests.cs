@@ -21,15 +21,15 @@ namespace NoMercy.Tests.Storage;
 /// it (e.g. <c>"/file.txt"</c>), where the "parent" segment computes to an
 /// empty string rather than genuinely having no separator at all.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class IStorageDefaultMembersAdditionalTests
 {
     private static IStorage NewStorage()
     {
-        string root = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-istorage-defaults-{Guid.NewGuid():N}");
+        string root = Path.Combine(Path.GetTempPath(), $"nm-istorage-defaults-{Guid.NewGuid():N}");
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new(allowedRoots: [root], driver: driver);
-        return new LocalStorage(driver: driver, guard: guard);
+        StoragePathGuard guard = new([root], driver);
+        return new LocalStorage(driver, guard);
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public sealed class IStorageDefaultMembersAdditionalTests
     {
         IStorage storage = NewStorage();
 
-        storage.GetName(path: string.Empty).Should().Be(expected: string.Empty);
+        storage.GetName(string.Empty).Should().Be(string.Empty);
     }
 
     [Fact]
@@ -48,6 +48,6 @@ public sealed class IStorageDefaultMembersAdditionalTests
         // not be returned as a literal empty-string parent.
         IStorage storage = NewStorage();
 
-        storage.GetParent(path: "/file.txt").Should().BeNull();
+        storage.GetParent("/file.txt").Should().BeNull();
     }
 }

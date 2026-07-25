@@ -15,15 +15,15 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbAggregatedCrewJob
 {
-    [JsonProperty(propertyName: "credit_id")]
+    [JsonProperty("credit_id")]
     public string? CreditId { get; set; }
 
-    [JsonProperty(propertyName: "job")]
+    [JsonProperty("job")]
     public string? Job { get; set; }
 
-    [JsonProperty(propertyName: "episode_count")]
+    [JsonProperty("episode_count")]
     public int EpisodeCount { get; set; }
 
-    [JsonProperty(propertyName: "order")]
+    [JsonProperty("order")]
     public int? Order { get; set; }
 }

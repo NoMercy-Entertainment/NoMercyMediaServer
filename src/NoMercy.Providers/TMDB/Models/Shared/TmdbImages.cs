@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbImages
 {
-    [JsonProperty(propertyName: "backdrops")]
+    [JsonProperty("backdrops")]
     public TmdbImage[] Backdrops { get; set; } = [];
 
-    [JsonProperty(propertyName: "posters")]
+    [JsonProperty("posters")]
     public TmdbImage[] Posters { get; set; } = [];
 
-    [JsonProperty(propertyName: "logos")]
+    [JsonProperty("logos")]
     public TmdbImage[] Logos { get; set; } = [];
 }

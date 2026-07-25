@@ -43,16 +43,16 @@ public class PlanStageStereoModeTests
 
     public PlanStageStereoModeTests()
     {
-        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
-        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
-        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
-        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
+        _hardware.Setup(h => h.HasGpu).Returns(false);
+        _hardware.Setup(h => h.CpuCores).Returns(8);
+        _hardware.Setup(h => h.Gpus).Returns([]);
+        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
         _hardware
-            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns(value: (GpuDevice?)null);
+            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns((GpuDevice?)null);
 
         _codecResolver
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -60,38 +60,38 @@ public class PlanStageStereoModeTests
                 )
             )
             .Returns(
-                value: new ResolvedCodec(
-                    FfmpegEncoderName: "copy",
-                    EncoderInfo: new(
-                        FfmpegName: "copy",
-                        RequiredVendor: null,
-                        Presets: [],
-                        Profiles: [],
-                        Levels: [],
-                        QualityRange: new(Min: 0, Max: 51, Default: 23),
-                        SupportedRateControl: [RateControlMode.Crf],
-                        Supports10Bit: true,
-                        SupportsHdr: true,
-                        MaxConcurrentSessions: int.MaxValue,
-                        PixelFormat10Bit: "yuv420p10le",
-                        VendorSpecificFlags: new()
+                new ResolvedCodec(
+                    "copy",
+                    new(
+                        "copy",
+                        null,
+                        [],
+                        [],
+                        [],
+                        new(0, 51, 23),
+                        [RateControlMode.Crf],
+                        true,
+                        true,
+                        int.MaxValue,
+                        "yuv420p10le",
+                        new()
                     ),
-                    Device: null,
-                    DefaultRateControl: RateControlMode.Crf
+                    null,
+                    RateControlMode.Crf
                 )
             );
 
         _stage = new(
-            graphBuilder: new(),
-            groupingStrategy: new(),
-            costEstimator: new(),
-            codecResolver: _codecResolver.Object,
-            hardware: _hardware.Object,
-            tonemapSelector: new TonemapSelector(),
-            ffmpegCapabilities: _ffmpegCapabilities.Object,
-            abrLadderGenerator: new AbrLadderGenerator(),
-            cropDetector: new NoOpCropDetector(),
-            logger: NullLogger<PlanStage>.Instance
+            new(),
+            new(),
+            new(),
+            _codecResolver.Object,
+            _hardware.Object,
+            new TonemapSelector(),
+            _ffmpegCapabilities.Object,
+            new AbrLadderGenerator(),
+            new NoOpCropDetector(),
+            NullLogger<PlanStage>.Instance
         );
     }
 
@@ -101,73 +101,73 @@ public class PlanStageStereoModeTests
         EncodingProfile profile = BuildCopyProfile();
         MediaInfo media = BuildStereoMedia();
 
-        ValidateInput input = new(Media: media, Profile: profile);
+        ValidateInput input = new(media, profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
         OutputPlan plan = success.Value.OutputPlan;
 
-        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
-        video.ExtraFlags.Should().NotContainKey(unexpected: "-metadata:s:v stereo_mode");
+        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
+        video.ExtraFlags.Should().NotContainKey("-metadata:s:v stereo_mode");
         video
             .ExtraFlags.Should()
-            .ContainKey(expected: "-metadata:s:v")
+            .ContainKey("-metadata:s:v")
             .WhoseValue.Should()
-            .Be(expected: "stereo_mode=side_by_side_left");
+            .Be("stereo_mode=side_by_side_left");
     }
 
     private static EncodingProfile BuildCopyProfile() =>
         new(
-            Id: Ulid.NewUlid(),
-            Name: "Stereo Copy Test",
-            Container: Container.HlsTs,
-            Video: new(
-                Policy: StreamPolicy.Copy,
-                Codec: VideoCodecType.H264,
-                Width: 1920,
-                Height: 1080,
-                RateControl: V2RateControlMode.Crf,
-                Crf: 23,
-                BitrateKbps: 5000,
-                MaxBitrateKbps: null,
-                BufferSizeKbps: null,
-                Preset: "medium",
-                CodecProfile: CodecProfile.High,
-                Level: "4.1",
-                Tune: null,
-                BitDepth: 8,
-                PixelFormat: null,
-                KeyframeIntervalSeconds: 2,
-                ConvertHdrToSdr: false,
-                SegmentNameTemplate: "video/{label}",
-                PlaylistNameTemplate: "video/{label}/playlist"
+            Ulid.NewUlid(),
+            "Stereo Copy Test",
+            Container.HlsTs,
+            new(
+                StreamPolicy.Copy,
+                VideoCodecType.H264,
+                1920,
+                1080,
+                V2RateControlMode.Crf,
+                23,
+                5000,
+                null,
+                null,
+                "medium",
+                CodecProfile.High,
+                "4.1",
+                null,
+                8,
+                null,
+                2,
+                false,
+                "video/{label}",
+                "video/{label}/playlist"
             ),
-            Audio: [],
-            Subtitles: []
+            [],
+            []
         );
 
     private static MediaInfo BuildStereoMedia() =>
         new(
-            FilePath: "/media/stereo.mkv",
+            "/media/stereo.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 90),
+            Duration: TimeSpan.FromMinutes(90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: "bt709",
-                    ColorTransfer: "bt709",
-                    ColorSpace: "bt709",
-                    IsDefault: true,
-                    BitRateKbps: 6000
+                    0,
+                    "h264",
+                    1920,
+                    1080,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    "bt709",
+                    "bt709",
+                    "bt709",
+                    true,
+                    6000
                 ),
             ],
             AudioStreams: [],

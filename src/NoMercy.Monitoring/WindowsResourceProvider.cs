@@ -17,7 +17,7 @@ using Vortice.DXGI;
 
 namespace NoMercy.Monitoring;
 
-[SupportedOSPlatform(platformName: "windows")]
+[SupportedOSPlatform("windows")]
 internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
 {
     // -----------------------------------------------------------------------
@@ -46,7 +46,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             uint adapterIndex = 0;
             while (true)
             {
-                Result hr = dxgiFactory.EnumAdapters1(adapter: adapterIndex, adapterOut: out IDXGIAdapter1? adapter);
+                Result hr = dxgiFactory.EnumAdapters1(adapterIndex, out IDXGIAdapter1? adapter);
                 if (hr.Failure || adapter is null)
                     break;
 
@@ -65,12 +65,12 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
                 // that the flag alone can miss edge cases.
                 if (
                     desc.Description.StartsWith(
-                        value: "Microsoft Basic",
-                        comparisonType: StringComparison.OrdinalIgnoreCase
+                        "Microsoft Basic",
+                        StringComparison.OrdinalIgnoreCase
                     )
                     || desc.Description.Contains(
-                        value: "Basic Render Driver",
-                        comparisonType: StringComparison.OrdinalIgnoreCase
+                        "Basic Render Driver",
+                        StringComparison.OrdinalIgnoreCase
                     )
                 )
                 {
@@ -82,7 +82,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
                 string luidKey =
                     $"0x{desc.Luid.HighPart:X8}_0x{desc.Luid.LowPart:X8}".ToUpperInvariant();
 
-                map[key: luidKey] = desc.Description;
+                map[luidKey] = desc.Description;
                 adapterIndex++;
             }
         }
@@ -98,7 +98,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
     {
         // PDH LUID segments may be lowercase; normalise for lookup.
         string upperLuid = luid.ToUpperInvariant();
-        return DxgiLuidNames.TryGetValue(key: upperLuid, value: out string? name)
+        return DxgiLuidNames.TryGetValue(upperLuid, out string? name)
             ? name
             : $"GPU {fallbackIndex}";
     }
@@ -128,7 +128,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
     // Memory: P/Invoke
     // -----------------------------------------------------------------------
 
-    [StructLayout(layoutKind: LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
     private struct MemoryStatusEx
     {
         public uint dwLength;
@@ -142,8 +142,8 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         public ulong ullAvailExtendedVirtual;
     }
 
-    [DllImport(dllName: "kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    [return: MarshalAs(unmanagedType: UnmanagedType.Bool)]
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
 
     // -----------------------------------------------------------------------
@@ -167,14 +167,14 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         // Fall back to "% Processor Time" if "Processor Information" is unavailable.
         try
         {
-            _cpuTotal = new(categoryName: "Processor Information", counterName: "% Processor Utility", instanceName: "_Total", readOnly: true);
+            _cpuTotal = new("Processor Information", "% Processor Utility", "_Total", true);
         }
         catch
         {
             // Fall back to the standard busy/idle counter if the preferred one is absent
             try
             {
-                _cpuTotal = new(categoryName: "Processor", counterName: "% Processor Time", instanceName: "_Total", readOnly: true);
+                _cpuTotal = new("Processor", "% Processor Time", "_Total", true);
             }
             catch
             {
@@ -186,11 +186,11 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         // Filter out "_Total" and the aggregate "0,_Total" rollup instances.
         try
         {
-            PerformanceCounterCategory category = new(categoryName: "Processor Information");
+            PerformanceCounterCategory category = new("Processor Information");
             string[] instances = category
                 .GetInstanceNames()
-                .Where(predicate: n => n != "_Total" && !n.StartsWith(value: "0,_"))
-                .OrderBy(keySelector: n => n)
+                .Where(n => n != "_Total" && !n.StartsWith("0,_"))
+                .OrderBy(n => n)
                 .ToArray();
 
             foreach (string instance in instances)
@@ -198,12 +198,12 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
                 try
                 {
                     PerformanceCounter core = new(
-                        categoryName: "Processor Information",
-                        counterName: "% Processor Utility",
-                        instanceName: instance,
-                        readOnly: true
+                        "Processor Information",
+                        "% Processor Utility",
+                        instance,
+                        true
                     );
-                    _cpuCores.Add(item: core);
+                    _cpuCores.Add(core);
                 }
                 catch
                 {
@@ -231,16 +231,16 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
 
         try
         {
-            if (!PerformanceCounterCategory.Exists(categoryName: "GPU Engine"))
+            if (!PerformanceCounterCategory.Exists("GPU Engine"))
                 return result;
 
-            PerformanceCounterCategory category = new(categoryName: "GPU Engine");
+            PerformanceCounterCategory category = new("GPU Engine");
             string[] instances = category.GetInstanceNames();
 
             foreach (string instance in instances)
             {
-                string? luid = ExtractSegment(instance: instance, prefix: "luid_");
-                string? engType = ExtractEngineType(instance: instance);
+                string? luid = ExtractSegment(instance, "luid_");
+                string? engType = ExtractEngineType(instance);
 
                 if (luid is null || engType is null)
                     continue;
@@ -261,12 +261,12 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
                 try
                 {
                     PerformanceCounter counter = new(
-                        categoryName: "GPU Engine",
-                        counterName: "Utilization Percentage",
-                        instanceName: instance,
-                        readOnly: true
+                        "GPU Engine",
+                        "Utilization Percentage",
+                        instance,
+                        true
                     );
-                    result.Add(item: new(Luid: luid, EngineType: engType, Counter: counter));
+                    result.Add(new(luid, engType, counter));
                 }
                 catch
                 {
@@ -286,14 +286,14 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
     // "pid_X_luid_0xHIGH_0xLOW_phys_..." → "0xHIGH_0xLOW"
     private static string? ExtractSegment(string instance, string prefix)
     {
-        int start = instance.IndexOf(value: prefix, comparisonType: StringComparison.Ordinal);
+        int start = instance.IndexOf(prefix, StringComparison.Ordinal);
         if (start < 0)
             return null;
         start += prefix.Length;
 
         // LUID is two hex segments separated by '_': 0xXXXX_0xXXXX
         string remaining = instance[start..];
-        string[] parts = remaining.Split(separator: '_');
+        string[] parts = remaining.Split('_');
         if (parts.Length < 2)
             return null;
         return $"{parts[0]}_{parts[1]}";
@@ -303,7 +303,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
     private static string? ExtractEngineType(string instance)
     {
         const string marker = "_engtype_";
-        int idx = instance.LastIndexOf(value: marker, comparisonType: StringComparison.Ordinal);
+        int idx = instance.LastIndexOf(marker, StringComparison.Ordinal);
         if (idx < 0)
             return null;
         return instance[(idx + marker.Length)..];
@@ -349,7 +349,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         }
 
         // Let Windows PDH accumulate a valid sample interval
-        Thread.Sleep(millisecondsTimeout: 500);
+        Thread.Sleep(500);
     }
 
     // -----------------------------------------------------------------------
@@ -365,9 +365,9 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             _gpu = [],
         };
 
-        CollectCpu(resource: resource);
-        CollectMemory(resource: resource);
-        CollectGpu(resource: resource);
+        CollectCpu(resource);
+        CollectMemory(resource);
+        CollectGpu(resource);
 
         return resource;
     }
@@ -379,7 +379,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
 
         try
         {
-            resource.Cpu.Total = Math.Clamp(value: Math.Round(value: _cpuTotal.NextValue(), digits: 1), min: 0, max: 100);
+            resource.Cpu.Total = Math.Clamp(Math.Round(_cpuTotal.NextValue(), 1), 0, 100);
         }
         catch
         {
@@ -392,14 +392,14 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         {
             try
             {
-                double util = Math.Clamp(value: Math.Round(value: _cpuCores[index: i].NextValue(), digits: 1), min: 0, max: 100);
-                resource.Cpu.Core.Add(item: new() { Index = i, Utilization = util });
+                double util = Math.Clamp(Math.Round(_cpuCores[i].NextValue(), 1), 0, 100);
+                resource.Cpu.Core.Add(new() { Index = i, Utilization = util });
                 if (util > max)
                     max = util;
             }
             catch
             {
-                resource.Cpu.Core.Add(item: new() { Index = i, Utilization = 0 });
+                resource.Cpu.Core.Add(new() { Index = i, Utilization = 0 });
             }
         }
 
@@ -410,13 +410,13 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
     {
         MemoryStatusEx status = new() { dwLength = (uint)Marshal.SizeOf<MemoryStatusEx>() };
 
-        if (!GlobalMemoryStatusEx(lpBuffer: ref status))
+        if (!GlobalMemoryStatusEx(ref status))
             return;
 
         const double gb = 1024.0 * 1024.0 * 1024.0;
-        resource.Memory.Total = Math.Round(value: status.ullTotalPhys / gb, digits: 2);
-        resource.Memory.Available = Math.Round(value: status.ullAvailPhys / gb, digits: 2);
-        resource.Memory.Use = Math.Round(value: (status.ullTotalPhys - status.ullAvailPhys) / gb, digits: 2);
+        resource.Memory.Total = Math.Round(status.ullTotalPhys / gb, 2);
+        resource.Memory.Available = Math.Round(status.ullAvailPhys / gb, 2);
+        resource.Memory.Use = Math.Round((status.ullTotalPhys - status.ullAvailPhys) / gb, 2);
     }
 
     private void CollectGpu(Resource resource)
@@ -474,19 +474,19 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             {
                 float value = entry.Counter.NextValue();
 
-                if (!totals.TryGetValue(key: entry.Luid, value: out Dictionary<string, double>? engines))
+                if (!totals.TryGetValue(entry.Luid, out Dictionary<string, double>? engines))
                 {
                     engines = [];
-                    totals[key: entry.Luid] = engines;
+                    totals[entry.Luid] = engines;
                 }
 
-                engines.TryGetValue(key: entry.EngineType, value: out double existing);
-                engines[key: entry.EngineType] = existing + value;
+                engines.TryGetValue(entry.EngineType, out double existing);
+                engines[entry.EngineType] = existing + value;
             }
             catch
             {
                 // Counter is stale — queue it for removal.
-                stale.Add(item: entry);
+                stale.Add(entry);
             }
         }
 
@@ -501,7 +501,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             { /* ignore */
             }
 
-            _gpuCounters.Remove(item: e);
+            _gpuCounters.Remove(e);
         }
 
         // Build Gpu objects, one per LUID (= one per physical GPU).
@@ -516,7 +516,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             // If the LUID is absent from the DXGI map the adapter was filtered out
             // (software/Basic Render Driver).  Don't emit it at all.
             string upperLuid = kvp.Key.ToUpperInvariant();
-            if (!DxgiLuidNames.ContainsKey(key: upperLuid))
+            if (!DxgiLuidNames.ContainsKey(upperLuid))
                 continue;
 
             Dictionary<string, double> engines = kvp.Value;
@@ -524,26 +524,26 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             Gpu gpu = new()
             {
                 Identifier = $"gpu/{gpuIndex}",
-                Name = ResolveGpuName(luid: kvp.Key, fallbackIndex: gpuIndex),
-                D3D = Math.Round(value: engines.GetValueOrDefault(key: "3D"), digits: 1),
-                Decode = Math.Round(value: engines.GetValueOrDefault(key: "VideoDecode"), digits: 1),
-                Encode = Math.Round(value: engines.GetValueOrDefault(key: "VideoEncode"), digits: 1),
+                Name = ResolveGpuName(kvp.Key, gpuIndex),
+                D3D = Math.Round(engines.GetValueOrDefault("3D"), 1),
+                Decode = Math.Round(engines.GetValueOrDefault("VideoDecode"), 1),
+                Encode = Math.Round(engines.GetValueOrDefault("VideoEncode"), 1),
                 Core = Math.Round(
-                    value: new[]
+                    new[]
                     {
-                        engines.GetValueOrDefault(key: "3D"),
-                        engines.GetValueOrDefault(key: "Compute"),
-                        engines.GetValueOrDefault(key: "VideoProcessing"),
-                        engines.GetValueOrDefault(key: "VideoDecode"),
-                        engines.GetValueOrDefault(key: "VideoEncode"),
+                        engines.GetValueOrDefault("3D"),
+                        engines.GetValueOrDefault("Compute"),
+                        engines.GetValueOrDefault("VideoProcessing"),
+                        engines.GetValueOrDefault("VideoDecode"),
+                        engines.GetValueOrDefault("VideoEncode"),
                     }.Max(),
-                    digits: 1
+                    1
                 ),
                 Memory = 0, // not available via PDH GPU Engine category
                 Power = 0, // not available via PDH GPU Engine category
             };
 
-            resource._gpu[key: $"gpu/{gpuIndex}"] = gpu;
+            resource._gpu[$"gpu/{gpuIndex}"] = gpu;
             gpuIndex++;
         }
     }

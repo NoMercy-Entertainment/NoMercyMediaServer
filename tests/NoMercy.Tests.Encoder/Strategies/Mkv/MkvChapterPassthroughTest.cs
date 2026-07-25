@@ -27,79 +27,79 @@ public class MkvChapterPassthroughTest
 {
     private static readonly IReadOnlyList<ChapterInfo> ThreeChapters =
     [
-        new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 10), Title: "Opening"),
-        new(Start: TimeSpan.FromMinutes(minutes: 10), End: TimeSpan.FromMinutes(minutes: 50), Title: "Act One"),
-        new(Start: TimeSpan.FromMinutes(minutes: 50), End: TimeSpan.FromMinutes(minutes: 90), Title: "Finale"),
+        new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "Opening"),
+        new(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(50), "Act One"),
+        new(TimeSpan.FromMinutes(50), TimeSpan.FromMinutes(90), "Finale"),
     ];
 
     [Fact]
     public void ConfigureOutput_WithChapters_DoesNotStripMapMetadata()
     {
-        MkvOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        MkvOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
-        strategy.ConfigureOutput(builder: builder, plan: CreatePlanWithChapters(), outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, CreatePlanWithChapters(), "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
 
         // Must NOT contain -map_metadata -1 (that would strip chapters)
-        args.Should().NotContain(unexpected: "-map_metadata -1");
+        args.Should().NotContain("-map_metadata -1");
     }
 
     [Fact]
     public void ConfigureOutput_WithChapters_ContainsVideoMapArg()
     {
-        MkvOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        MkvOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
-        strategy.ConfigureOutput(builder: builder, plan: CreatePlanWithChapters(), outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, CreatePlanWithChapters(), "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
 
         // Must contain -map [v0] so the video stream (and implicitly chapters) is included
-        args.Should().Contain(expected: "-map [v0]");
+        args.Should().Contain("-map [v0]");
     }
 
     [Fact]
     public void ConfigureOutput_WithoutChapters_DoesNotStripMapMetadata()
     {
-        MkvOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        MkvOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
-        strategy.ConfigureOutput(builder: builder, plan: CreatePlanWithoutChapters(), outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, CreatePlanWithoutChapters(), "/output");
 
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
 
-        args.Should().NotContain(unexpected: "-map_metadata -1");
+        args.Should().NotContain("-map_metadata -1");
     }
 
     private static OutputPlan CreatePlanWithChapters() =>
         new(
-            Format: OutputFormat.Mkv,
+            OutputFormat.Mkv,
             VideoOutputs:
             [
                 new(
-                    Width: 1920,
-                    Height: 1080,
-                    EncoderName: "libx264",
-                    Crf: 23,
-                    BitrateKbps: 0,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.0",
-                    TenBit: false,
-                    PixelFormat: "yuv420p",
-                    MapLabel: "[v0]",
-                    ExtraFlags: new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    0,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs: [new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0")],
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null,
             Chapters: ThreeChapters
@@ -107,26 +107,25 @@ public class MkvChapterPassthroughTest
 
     private static OutputPlan CreatePlanWithoutChapters() =>
         new(
-            Format: OutputFormat.Mkv,
-            VideoOutputs:
+            OutputFormat.Mkv,
             [
                 new(
-                    Width: 1920,
-                    Height: 1080,
-                    EncoderName: "libx264",
-                    Crf: 23,
-                    BitrateKbps: 0,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.0",
-                    TenBit: false,
-                    PixelFormat: "yuv420p",
-                    MapLabel: "[v0]",
-                    ExtraFlags: new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    0,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs: [new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0")],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            [],
+            null
         );
 }

@@ -15,12 +15,12 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record SourceDto
 {
-    [JsonProperty(propertyName: "src")]
+    [JsonProperty("src")]
     public String Src { get; set; } = null!;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = null!;
 
-    [JsonProperty(propertyName: "languages")]
+    [JsonProperty("languages")]
     public string?[]? Languages { get; set; } = [];
 }

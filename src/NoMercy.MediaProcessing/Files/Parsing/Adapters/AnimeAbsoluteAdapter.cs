@@ -28,7 +28,7 @@ public sealed partial class AnimeAbsoluteAdapter : IFilenameParseAdapter
     public string Name => "anime-absolute";
     public int Order => 50;
 
-    [GeneratedRegex(pattern: @"(?<![A-Za-z0-9])(\d{1,4})(?![A-Za-z0-9])")]
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(\d{1,4})(?![A-Za-z0-9])")]
     private static partial Regex StandaloneNumber();
 
     public MovieFile? TryParse(ParseContext context)
@@ -39,13 +39,13 @@ public sealed partial class AnimeAbsoluteAdapter : IFilenameParseAdapter
         )
             return null;
 
-        MatchCollection matches = StandaloneNumber().Matches(input: context.CleanedFileName);
+        MatchCollection matches = StandaloneNumber().Matches(context.CleanedFileName);
         Match? episode = null;
         for (int i = matches.Count - 1; i >= 0; i--)
         {
-            if (LooksLikeYear(number: matches[i: i].Groups[groupnum: 1].Value))
+            if (LooksLikeYear(matches[i].Groups[1].Value))
                 continue;
-            episode = matches[i: i];
+            episode = matches[i];
             break;
         }
 
@@ -54,20 +54,20 @@ public sealed partial class AnimeAbsoluteAdapter : IFilenameParseAdapter
 
         string showTitle = context
             .CleanedFileName[..episode.Index]
-            .Replace(oldChar: '.', newChar: ' ')
-            .Replace(oldChar: '_', newChar: ' ')
-            .TrimEnd(trimChars: ['-', ' '])
+            .Replace('.', ' ')
+            .Replace('_', ' ')
+            .TrimEnd(['-', ' '])
             .Trim();
 
         showTitle = showTitle.CleanSeriesTitle();
 
-        if (string.IsNullOrWhiteSpace(value: showTitle) || showTitle.Length <= 1)
+        if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;
 
-        return new(filePath: context.Title)
+        return new(context.Title)
         {
             Title = showTitle,
-            Episode = int.Parse(s: episode.Groups[groupnum: 1].Value),
+            Episode = int.Parse(episode.Groups[1].Value),
             IsSeries = true,
             IsSuccess = true,
         };
@@ -75,5 +75,5 @@ public sealed partial class AnimeAbsoluteAdapter : IFilenameParseAdapter
 
     private static bool LooksLikeYear(string number) =>
         number.Length == 4
-        && (number.StartsWith(value: "18") || number.StartsWith(value: "19") || number.StartsWith(value: "20"));
+        && (number.StartsWith("18") || number.StartsWith("19") || number.StartsWith("20"));
 }

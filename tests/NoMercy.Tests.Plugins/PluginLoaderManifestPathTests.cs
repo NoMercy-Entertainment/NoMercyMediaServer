@@ -30,7 +30,7 @@ namespace NoMercy.Tests.Plugins;
 public class PluginLoaderManifestPathTests : IDisposable
 {
     private static readonly Guid ManifestFailurePluginId = Guid.Parse(
-        input: "77777777-8888-9999-aaaa-bbbbbbbbbbbb"
+        "77777777-8888-9999-aaaa-bbbbbbbbbbbb"
     );
 
     private readonly string _tempPluginsDir;
@@ -39,10 +39,10 @@ public class PluginLoaderManifestPathTests : IDisposable
     public PluginLoaderManifestPathTests()
     {
         _tempPluginsDir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nomercy-manifest-path-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nomercy-manifest-path-" + Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: _tempPluginsDir);
+        Directory.CreateDirectory(_tempPluginsDir);
         _eventBus = new();
     }
 
@@ -53,19 +53,19 @@ public class PluginLoaderManifestPathTests : IDisposable
 
         try
         {
-            if (Directory.Exists(path: _tempPluginsDir))
-                Directory.Delete(path: _tempPluginsDir, recursive: true);
+            if (Directory.Exists(_tempPluginsDir))
+                Directory.Delete(_tempPluginsDir, true);
         }
         catch (Exception) { }
     }
 
     private PluginManager BuildManager(IPluginConsentService? consentService = null) =>
         new(
-            eventBus: _eventBus,
+            _eventBus,
             serviceProvider: new MinimalServiceProvider(),
             logger: NullLogger<PluginManager>.Instance,
             pluginsPath: _tempPluginsDir,
-            storage: TestStorageHelper.CreateStorage(rootPath: _tempPluginsDir),
+            storage: TestStorageHelper.CreateStorage(_tempPluginsDir),
             driver: TestStorageHelper.CreateBackend(),
             consentService: consentService
         );
@@ -73,36 +73,36 @@ public class PluginLoaderManifestPathTests : IDisposable
     private static string GetManifestFailureBinDir()
     {
         string testBinDir = Path.GetDirectoryName(
-            path: typeof(PluginLoaderManifestPathTests).Assembly.Location
+            typeof(PluginLoaderManifestPathTests).Assembly.Location
         )!;
-        string configDir = Path.GetDirectoryName(path: testBinDir)!;
-        string buildConfig = Path.GetFileName(path: configDir);
-        string repoRoot = Path.GetFullPath(path: Path.Combine(paths: [testBinDir, "..", "..", "..", "..", ".."]));
+        string configDir = Path.GetDirectoryName(testBinDir)!;
+        string buildConfig = Path.GetFileName(configDir);
+        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
 
-        return Path.Combine(paths: [repoRoot, "tests", "NoMercy.Plugin.Samples.ManifestFailure", "bin", buildConfig, "net10.0"]
+        return Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.ManifestFailure", "bin", buildConfig, "net10.0"]
         );
     }
 
     private string StageManifestFailurePlugin(string manifestJson)
     {
         string binDir = GetManifestFailureBinDir();
-        string dllSrc = Path.Combine(path1: binDir, path2: "NoMercy.Plugin.Samples.ManifestFailure.dll");
+        string dllSrc = Path.Combine(binDir, "NoMercy.Plugin.Samples.ManifestFailure.dll");
 
-        if (!File.Exists(path: dllSrc))
+        if (!File.Exists(dllSrc))
             throw new FileNotFoundException(
-                message: $"ManifestFailure plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.ManifestFailure first."
+                $"ManifestFailure plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.ManifestFailure first."
             );
 
-        string pluginDir = Path.Combine(path1: _tempPluginsDir, path2: "ManifestFailure");
-        Directory.CreateDirectory(path: pluginDir);
+        string pluginDir = Path.Combine(_tempPluginsDir, "ManifestFailure");
+        Directory.CreateDirectory(pluginDir);
 
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.dll"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: pluginDir, path2: Path.GetFileName(path: file)), overwrite: true);
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.deps.json"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: pluginDir, path2: Path.GetFileName(path: file)), overwrite: true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
 
-        string manifestPath = Path.Combine(path1: pluginDir, path2: "plugin.json");
-        File.WriteAllText(path: manifestPath, contents: manifestJson);
+        string manifestPath = Path.Combine(pluginDir, "plugin.json");
+        File.WriteAllText(manifestPath, manifestJson);
         return manifestPath;
     }
 
@@ -119,29 +119,29 @@ public class PluginLoaderManifestPathTests : IDisposable
               "autoEnabled": true
             }
             """;
-        string manifestPath = StageManifestFailurePlugin(manifestJson: manifestJson);
+        string manifestPath = StageManifestFailurePlugin(manifestJson);
         PluginManager manager = BuildManager();
         List<PluginErrorOccurredEvent> errors = [];
         _eventBus.Subscribe<PluginErrorOccurredEvent>(
-            handler: (evt, _) =>
+            (evt, _) =>
             {
-                errors.Add(item: evt);
+                errors.Add(evt);
                 return Task.CompletedTask;
             }
         );
 
-        await manager.LoadPluginFromManifestAsync(manifestPath: manifestPath);
+        await manager.LoadPluginFromManifestAsync(manifestPath);
 
         PluginInfo? info = manager
             .GetInstalledPlugins()
-            .FirstOrDefault(predicate: p => p.Id == ManifestFailurePluginId);
+            .FirstOrDefault(p => p.Id == ManifestFailurePluginId);
         info.Should().NotBeNull();
-        info!.Status.Should().Be(expected: PluginStatus.Malfunctioned);
+        info!.Status.Should().Be(PluginStatus.Malfunctioned);
         manager
-            .GetPluginInstance(pluginId: ManifestFailurePluginId)
+            .GetPluginInstance(ManifestFailurePluginId)
             .Should()
-            .BeNull(because: "the failed instance was disposed and never stored");
-        errors.Should().ContainSingle(predicate: e => e.PluginId == ManifestFailurePluginId.ToString());
+            .BeNull("the failed instance was disposed and never stored");
+        errors.Should().ContainSingle(e => e.PluginId == ManifestFailurePluginId.ToString());
 
         manager.Dispose();
     }
@@ -165,13 +165,13 @@ public class PluginLoaderManifestPathTests : IDisposable
               "capabilities": { "rest": true }
             }
             """;
-        string manifestPath = StageManifestFailurePlugin(manifestJson: manifestJson);
+        string manifestPath = StageManifestFailurePlugin(manifestJson);
         InMemoryConsentStore consentStore = new();
-        consentStore.Add(pluginId: ManifestFailurePluginId);
-        PluginConsentService consentService = new(store: consentStore);
-        PluginManager manager = BuildManager(consentService: consentService);
+        consentStore.Add(ManifestFailurePluginId);
+        PluginConsentService consentService = new(consentStore);
+        PluginManager manager = BuildManager(consentService);
 
-        await manager.LoadPluginFromManifestAsync(manifestPath: manifestPath);
+        await manager.LoadPluginFromManifestAsync(manifestPath);
 
         // ManifestAutoEnableInitializeThrowsPlugin always throws in Initialize(),
         // so mayAutoEnable=true still ends in Malfunctioned — but reaching that
@@ -179,9 +179,9 @@ public class PluginLoaderManifestPathTests : IDisposable
         // true, which is exactly the branch this test targets.
         PluginInfo? info = manager
             .GetInstalledPlugins()
-            .FirstOrDefault(predicate: p => p.Id == ManifestFailurePluginId);
+            .FirstOrDefault(p => p.Id == ManifestFailurePluginId);
         info.Should().NotBeNull();
-        info!.Status.Should().Be(expected: PluginStatus.Malfunctioned);
+        info!.Status.Should().Be(PluginStatus.Malfunctioned);
 
         manager.Dispose();
     }
@@ -200,18 +200,18 @@ public class PluginLoaderManifestPathTests : IDisposable
               "capabilities": { "rest": true }
             }
             """;
-        string manifestPath = StageManifestFailurePlugin(manifestJson: manifestJson);
-        PluginManager manager = BuildManager(consentService: new PluginConsentService(store: new InMemoryConsentStore()));
+        string manifestPath = StageManifestFailurePlugin(manifestJson);
+        PluginManager manager = BuildManager(new PluginConsentService(new InMemoryConsentStore()));
 
-        await manager.LoadPluginFromManifestAsync(manifestPath: manifestPath);
+        await manager.LoadPluginFromManifestAsync(manifestPath);
 
         // Never auto-enabled, so Initialize() (which always throws) is never
         // even called — the plugin loads Disabled, not Malfunctioned.
         PluginInfo? info = manager
             .GetInstalledPlugins()
-            .FirstOrDefault(predicate: p => p.Id == ManifestFailurePluginId);
+            .FirstOrDefault(p => p.Id == ManifestFailurePluginId);
         info.Should().NotBeNull();
-        info!.Status.Should().Be(expected: PluginStatus.Disabled);
+        info!.Status.Should().Be(PluginStatus.Disabled);
 
         manager.Dispose();
     }
@@ -229,18 +229,18 @@ public class PluginLoaderManifestPathTests : IDisposable
         // the foreach that processes pluginTypes ever runs, regardless of
         // whether that foreach later aborts on a throwing type.
         string binDir = GetFailuresPluginBinDir();
-        string dllSrc = Path.Combine(path1: binDir, path2: "NoMercy.Plugin.Samples.Failures.dll");
-        if (!File.Exists(path: dllSrc))
+        string dllSrc = Path.Combine(binDir, "NoMercy.Plugin.Samples.Failures.dll");
+        if (!File.Exists(dllSrc))
             throw new FileNotFoundException(
-                message: $"Failures plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Failures first."
+                $"Failures plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Failures first."
             );
 
-        string pluginDir = Path.Combine(path1: _tempPluginsDir, path2: "FailuresViaManifest");
-        Directory.CreateDirectory(path: pluginDir);
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.dll"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: pluginDir, path2: Path.GetFileName(path: file)), overwrite: true);
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.deps.json"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: pluginDir, path2: Path.GetFileName(path: file)), overwrite: true);
+        string pluginDir = Path.Combine(_tempPluginsDir, "FailuresViaManifest");
+        Directory.CreateDirectory(pluginDir);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
 
         Guid manifestId = Guid.NewGuid();
         string manifestJson = $$"""
@@ -253,11 +253,11 @@ public class PluginLoaderManifestPathTests : IDisposable
               "autoEnabled": false
             }
             """;
-        string manifestPath = Path.Combine(path1: pluginDir, path2: "plugin.json");
-        File.WriteAllText(path: manifestPath, contents: manifestJson);
+        string manifestPath = Path.Combine(pluginDir, "plugin.json");
+        File.WriteAllText(manifestPath, manifestJson);
         PluginManager manager = BuildManager();
 
-        Func<Task> act = () => manager.LoadPluginFromManifestAsync(manifestPath: manifestPath);
+        Func<Task> act = () => manager.LoadPluginFromManifestAsync(manifestPath);
 
         await act.Should().NotThrowAsync();
 
@@ -267,13 +267,13 @@ public class PluginLoaderManifestPathTests : IDisposable
     private static string GetFailuresPluginBinDir()
     {
         string testBinDir = Path.GetDirectoryName(
-            path: typeof(PluginLoaderManifestPathTests).Assembly.Location
+            typeof(PluginLoaderManifestPathTests).Assembly.Location
         )!;
-        string configDir = Path.GetDirectoryName(path: testBinDir)!;
-        string buildConfig = Path.GetFileName(path: configDir);
-        string repoRoot = Path.GetFullPath(path: Path.Combine(paths: [testBinDir, "..", "..", "..", "..", ".."]));
+        string configDir = Path.GetDirectoryName(testBinDir)!;
+        string buildConfig = Path.GetFileName(configDir);
+        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
 
-        return Path.Combine(paths: [repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0"]
+        return Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0"]
         );
     }
 
@@ -283,11 +283,11 @@ public class PluginLoaderManifestPathTests : IDisposable
         // NoMercy.Plugins.Abstractions.dll is a real, validly-loadable assembly
         // with zero concrete IPlugin implementations — a manifest can
         // (incorrectly, but not fatally) point at any real assembly.
-        string pluginDir = Path.Combine(path1: _tempPluginsDir, path2: "NoPluginTypes");
-        Directory.CreateDirectory(path: pluginDir);
+        string pluginDir = Path.Combine(_tempPluginsDir, "NoPluginTypes");
+        Directory.CreateDirectory(pluginDir);
         string abstractionsSrc = typeof(IPlugin).Assembly.Location;
-        string abstractionsDest = Path.Combine(path1: pluginDir, path2: "NoMercy.Plugins.Abstractions.dll");
-        File.Copy(sourceFileName: abstractionsSrc, destFileName: abstractionsDest, overwrite: true);
+        string abstractionsDest = Path.Combine(pluginDir, "NoMercy.Plugins.Abstractions.dll");
+        File.Copy(abstractionsSrc, abstractionsDest, true);
 
         Guid manifestId = Guid.NewGuid();
         string manifestJson = $$"""
@@ -300,14 +300,14 @@ public class PluginLoaderManifestPathTests : IDisposable
               "autoEnabled": true
             }
             """;
-        string manifestPath = Path.Combine(path1: pluginDir, path2: "plugin.json");
-        File.WriteAllText(path: manifestPath, contents: manifestJson);
+        string manifestPath = Path.Combine(pluginDir, "plugin.json");
+        File.WriteAllText(manifestPath, manifestJson);
         PluginManager manager = BuildManager();
 
-        Func<Task> act = () => manager.LoadPluginFromManifestAsync(manifestPath: manifestPath);
+        Func<Task> act = () => manager.LoadPluginFromManifestAsync(manifestPath);
 
         await act.Should().NotThrowAsync();
-        manager.GetInstalledPlugins().Should().NotContain(predicate: p => p.Id == manifestId);
+        manager.GetInstalledPlugins().Should().NotContain(p => p.Id == manifestId);
 
         manager.Dispose();
     }

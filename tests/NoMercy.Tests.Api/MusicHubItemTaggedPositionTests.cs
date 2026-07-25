@@ -44,7 +44,7 @@ namespace NoMercy.Tests.Api;
 /// keep behaving like the untagged command when no tag is supplied at all —
 /// the same real-DI MusicHub harness MusicHubActiveDeviceDisconnectTests uses.
 /// </summary>
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -66,7 +66,7 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
             Folder = "/music/",
             FolderId = Ulid.NewUlid(),
         };
-        return new(track: track, country: "US");
+        return new(track, "US");
     }
 
     private static Client MakeClient(Guid userId, string deviceId, string type = "web")
@@ -101,51 +101,51 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
             _factory.Services.GetRequiredService<CastPanelWakeLauncher>();
         AuthManager authManager = _factory.Services.GetRequiredService<AuthManager>();
 
-        MusicDeviceManager musicDeviceManager = new(mediaContext: new());
+        MusicDeviceManager musicDeviceManager = new(new());
         MusicPlaylistManager musicPlaylistManager = new(
-            musicService: new MusicRepository(contextFactory: contextFactory),
-            mediaContext: new()
+            new MusicRepository(contextFactory),
+            new()
         );
-        DeviceBusRegistry busRegistry = new(contextFactory: contextFactory, hubContext: Mock.Of<IHubContext<DeviceHub>>());
-        CastSessionTokenService castTokenService = new(authManager: authManager, authTokenStore: new AuthTokenStore());
+        DeviceBusRegistry busRegistry = new(contextFactory, Mock.Of<IHubContext<DeviceHub>>());
+        CastSessionTokenService castTokenService = new(authManager, new AuthTokenStore());
 
         DefaultHttpContext httpContext = new() { RequestServices = null! };
         httpContext.Request.Path = "/musicHub";
 
         MusicHub hub = new(
-            logger: NullLogger<MusicHub>.Instance,
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: contextFactory,
-            connectedClients: connectedClients,
-            clientMessenger: clientMessenger,
-            musicPlaybackService: musicPlaybackService,
-            musicPlayerStateManager: stateManager,
-            musicDeviceManager: musicDeviceManager,
-            musicPlaylistManager: musicPlaylistManager,
-            commandHandler: commandHandler,
-            activityLogger: Mock.Of<IActivityLogger>(),
-            busRegistry: busRegistry,
-            castTokenService: castTokenService,
-            chromeCast: Mock.Of<IChromeCastService>(),
-            castPanelWakeLauncher: castPanelWakeLauncher,
-            activeDeviceRegistry: activeDeviceRegistry
+            NullLogger<MusicHub>.Instance,
+            new HttpContextAccessorStub(httpContext),
+            contextFactory,
+            connectedClients,
+            clientMessenger,
+            musicPlaybackService,
+            stateManager,
+            musicDeviceManager,
+            musicPlaylistManager,
+            commandHandler,
+            Mock.Of<IActivityLogger>(),
+            busRegistry,
+            castTokenService,
+            Mock.Of<IChromeCastService>(),
+            castPanelWakeLauncher,
+            activeDeviceRegistry
         );
 
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: userId.ToString())], authenticationType: "TestAuth")
+            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, userId.ToString())], "TestAuth")
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(expression: c => c.User).Returns(value: principal);
-        context.Setup(expression: c => c.ConnectionId).Returns(value: connectionId);
-        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
+        context.Setup(c => c.User).Returns(principal);
+        context.Setup(c => c.ConnectionId).Returns(connectionId);
+        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
 
         Mock<ISingleClientProxy> callerProxy = new();
         Mock<ISingleClientProxy> userProxy = new();
 
         Mock<IHubCallerClients> clients = new();
-        clients.Setup(expression: c => c.Caller).Returns(value: callerProxy.Object);
-        clients.Setup(expression: c => c.User(It.IsAny<string>())).Returns(value: userProxy.Object);
+        clients.Setup(c => c.Caller).Returns(callerProxy.Object);
+        clients.Setup(c => c.User(It.IsAny<string>())).Returns(userProxy.Object);
 
         hub.Context = context.Object;
         hub.Clients = clients.Object;
@@ -164,7 +164,7 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
             Allowed = true,
             Manage = false,
         };
-        UserCache.Current.AddUser(user: user);
+        UserCache.Current.AddUser(user);
         return user;
     }
 
@@ -178,14 +178,14 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
     ) SeedActiveSession()
     {
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId: userId);
+        User user = SeedTestUser(userId);
 
         string activeConnectionId = Guid.NewGuid().ToString();
         string activeDeviceId = $"web-{Guid.NewGuid()}";
 
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        Client activeClient = MakeClient(userId: userId, deviceId: activeDeviceId);
-        connectedClients.Clients[key: activeConnectionId] = activeClient;
+        Client activeClient = MakeClient(userId, activeDeviceId);
+        connectedClients.Clients[activeConnectionId] = activeClient;
 
         MusicPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<MusicPlayerStateManager>();
@@ -199,12 +199,12 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
             PlayState = true,
             CurrentItem = currentTrack,
             Playlist = [MakeTrack()],
-            CurrentList = new(uriString: "/music/albums/test", uriKind: UriKind.Relative),
+            CurrentList = new("/music/albums/test", UriKind.Relative),
             Time = 10_000,
             LastActiveHeartbeatUtc = DateTime.UtcNow,
         };
-        stateManager.UpdateState(userId: userId, state: state);
-        registry.Set(userId: userId, device: activeClient);
+        stateManager.UpdateState(userId, state);
+        registry.Set(userId, activeClient);
 
         return (userId, user, activeConnectionId, activeDeviceId, currentTrack, state);
     }
@@ -213,11 +213,11 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
     {
         ConnectedClients connectedClients = _factory.GetConnectedClients();
         foreach (string connectionId in connectionIds)
-            connectedClients.Clients.TryRemove(key: connectionId, value: out _);
+            connectedClients.Clients.TryRemove(connectionId, out _);
 
-        _factory.Services.GetRequiredService<MusicPlayerStateManager>().RemoveState(userId: userId);
-        _factory.Services.GetRequiredService<MusicActiveDeviceRegistry>().Remove(userId: userId);
-        UserCache.Current.RemoveUser(user: user);
+        _factory.Services.GetRequiredService<MusicPlayerStateManager>().RemoveState(userId);
+        _factory.Services.GetRequiredService<MusicActiveDeviceRegistry>().Remove(userId);
+        UserCache.Current.RemoveUser(user);
     }
 
     [Fact]
@@ -234,17 +234,17 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: activeConnectionId, userId: userId);
+            MusicHub hub = CreateHub(activeConnectionId, userId);
             long before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-            await hub.ReportPositionForItemCommand(positionMs: 5_000, itemId: currentTrack.Id.ToString());
+            await hub.ReportPositionForItemCommand(5_000, currentTrack.Id.ToString());
 
-            state.Time.Should().Be(expected: 5_000);
-            state.PositionCapturedAtMs.Should().BeGreaterThanOrEqualTo(expected: before);
+            state.Time.Should().Be(5_000);
+            state.PositionCapturedAtMs.Should().BeGreaterThanOrEqualTo(before);
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: activeConnectionId);
+            Cleanup(userId, user, activeConnectionId);
         }
     }
 
@@ -262,18 +262,18 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: activeConnectionId, userId: userId);
+            MusicHub hub = CreateHub(activeConnectionId, userId);
             long originalPositionCapturedAtMs = state.PositionCapturedAtMs;
 
-            await hub.ReportPositionForItemCommand(positionMs: 5_000, itemId: Guid.NewGuid().ToString());
+            await hub.ReportPositionForItemCommand(5_000, Guid.NewGuid().ToString());
 
             // Untouched — the stale-tagged report never reaches the mutation.
-            state.Time.Should().Be(expected: 10_000);
-            state.PositionCapturedAtMs.Should().Be(expected: originalPositionCapturedAtMs);
+            state.Time.Should().Be(10_000);
+            state.PositionCapturedAtMs.Should().Be(originalPositionCapturedAtMs);
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: activeConnectionId);
+            Cleanup(userId, user, activeConnectionId);
         }
     }
 
@@ -291,15 +291,15 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: activeConnectionId, userId: userId);
+            MusicHub hub = CreateHub(activeConnectionId, userId);
 
-            await hub.ReportPositionForItemCommand(positionMs: 7_500, itemId: null);
+            await hub.ReportPositionForItemCommand(7_500, null);
 
-            state.Time.Should().Be(expected: 7_500);
+            state.Time.Should().Be(7_500);
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: activeConnectionId);
+            Cleanup(userId, user, activeConnectionId);
         }
     }
 
@@ -319,15 +319,15 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: activeConnectionId, userId: userId);
+            MusicHub hub = CreateHub(activeConnectionId, userId);
 
-            await hub.ReportPositionCommand(positionMs: 6_000);
+            await hub.ReportPositionCommand(6_000);
 
-            state.Time.Should().Be(expected: 6_000);
+            state.Time.Should().Be(6_000);
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: activeConnectionId);
+            Cleanup(userId, user, activeConnectionId);
         }
     }
 
@@ -345,15 +345,15 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: activeConnectionId, userId: userId);
+            MusicHub hub = CreateHub(activeConnectionId, userId);
 
-            await hub.CurrentTimeForItemCommand(seconds: 3.5, itemId: currentTrack.Id.ToString());
+            await hub.CurrentTimeForItemCommand(3.5, currentTrack.Id.ToString());
 
-            state.Time.Should().Be(expected: 3_500);
+            state.Time.Should().Be(3_500);
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: activeConnectionId);
+            Cleanup(userId, user, activeConnectionId);
         }
     }
 
@@ -377,23 +377,23 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
 
         try
         {
-            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 5);
-            state.LastActiveHeartbeatUtc = DateTime.UtcNow.AddSeconds(value: -10);
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(5);
+            state.LastActiveHeartbeatUtc = DateTime.UtcNow.AddSeconds(-10);
 
-            MusicHub hub = CreateHub(connectionId: activeConnectionId, userId: userId);
+            MusicHub hub = CreateHub(activeConnectionId, userId);
 
-            await hub.ReportPositionForItemCommand(positionMs: 5_000, itemId: currentTrack.Id.ToString());
+            await hub.ReportPositionForItemCommand(5_000, currentTrack.Id.ToString());
 
             // Dropped by the ignore window — position must be untouched...
-            state.Time.Should().Be(expected: 10_000);
+            state.Time.Should().Be(10_000);
             // ...but the active device still proved it's alive right now.
             state
                 .LastActiveHeartbeatUtc.Should()
-                .BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromSeconds(seconds: 2));
+                .BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(2));
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: activeConnectionId);
+            Cleanup(userId, user, activeConnectionId);
         }
     }
 
@@ -411,24 +411,24 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
 
         try
         {
-            state.LastActiveHeartbeatUtc = DateTime.UtcNow.AddSeconds(value: -10);
+            state.LastActiveHeartbeatUtc = DateTime.UtcNow.AddSeconds(-10);
 
-            MusicHub hub = CreateHub(connectionId: activeConnectionId, userId: userId);
+            MusicHub hub = CreateHub(activeConnectionId, userId);
 
-            await hub.ReportPositionForItemCommand(positionMs: 5_000, itemId: Guid.NewGuid().ToString());
+            await hub.ReportPositionForItemCommand(5_000, Guid.NewGuid().ToString());
 
             // Dropped as stale-item — position untouched...
-            state.Time.Should().Be(expected: 10_000);
+            state.Time.Should().Be(10_000);
             // ...but the active device still proved it's alive right now: a report
             // that arrives just after a track change is still proof the connection
             // is up, even though its position value can't be trusted.
             state
                 .LastActiveHeartbeatUtc.Should()
-                .BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromSeconds(seconds: 2));
+                .BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(2));
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: activeConnectionId);
+            Cleanup(userId, user, activeConnectionId);
         }
     }
 
@@ -446,28 +446,28 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
 
         string passiveConnectionId = Guid.NewGuid().ToString();
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        connectedClients.Clients[key: passiveConnectionId] = MakeClient(
-            userId: userId,
-            deviceId: $"passive-{Guid.NewGuid()}"
+        connectedClients.Clients[passiveConnectionId] = MakeClient(
+            userId,
+            $"passive-{Guid.NewGuid()}"
         );
 
-        DateTime originalHeartbeat = DateTime.UtcNow.AddSeconds(value: -10);
+        DateTime originalHeartbeat = DateTime.UtcNow.AddSeconds(-10);
         state.LastActiveHeartbeatUtc = originalHeartbeat;
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: passiveConnectionId, userId: userId);
+            MusicHub hub = CreateHub(passiveConnectionId, userId);
 
-            await hub.ReportPositionForItemCommand(positionMs: 5_000, itemId: currentTrack.Id.ToString());
+            await hub.ReportPositionForItemCommand(5_000, currentTrack.Id.ToString());
 
             // A complete no-op: neither the position nor the liveness clock moves —
             // a passive mirror must never mask a truly-dead active device.
-            state.Time.Should().Be(expected: 10_000);
-            state.LastActiveHeartbeatUtc.Should().Be(expected: originalHeartbeat);
+            state.Time.Should().Be(10_000);
+            state.LastActiveHeartbeatUtc.Should().Be(originalHeartbeat);
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: [activeConnectionId, passiveConnectionId]);
+            Cleanup(userId, user, activeConnectionId, passiveConnectionId);
         }
     }
 
@@ -485,21 +485,21 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
 
         try
         {
-            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 5);
-            state.LastActiveHeartbeatUtc = DateTime.UtcNow.AddSeconds(value: -10);
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(5);
+            state.LastActiveHeartbeatUtc = DateTime.UtcNow.AddSeconds(-10);
 
-            MusicHub hub = CreateHub(connectionId: activeConnectionId, userId: userId);
+            MusicHub hub = CreateHub(activeConnectionId, userId);
 
-            await hub.ReportPositionCommand(positionMs: 5_000);
+            await hub.ReportPositionCommand(5_000);
 
-            state.Time.Should().Be(expected: 10_000);
+            state.Time.Should().Be(10_000);
             state
                 .LastActiveHeartbeatUtc.Should()
-                .BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromSeconds(seconds: 2));
+                .BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(2));
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: activeConnectionId);
+            Cleanup(userId, user, activeConnectionId);
         }
     }
 
@@ -517,26 +517,26 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
 
         string passiveConnectionId = Guid.NewGuid().ToString();
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        connectedClients.Clients[key: passiveConnectionId] = MakeClient(
-            userId: userId,
-            deviceId: $"passive-{Guid.NewGuid()}"
+        connectedClients.Clients[passiveConnectionId] = MakeClient(
+            userId,
+            $"passive-{Guid.NewGuid()}"
         );
 
-        DateTime originalHeartbeat = DateTime.UtcNow.AddSeconds(value: -10);
+        DateTime originalHeartbeat = DateTime.UtcNow.AddSeconds(-10);
         state.LastActiveHeartbeatUtc = originalHeartbeat;
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: passiveConnectionId, userId: userId);
+            MusicHub hub = CreateHub(passiveConnectionId, userId);
 
-            await hub.ReportPositionCommand(positionMs: 5_000);
+            await hub.ReportPositionCommand(5_000);
 
-            state.Time.Should().Be(expected: 10_000);
-            state.LastActiveHeartbeatUtc.Should().Be(expected: originalHeartbeat);
+            state.Time.Should().Be(10_000);
+            state.LastActiveHeartbeatUtc.Should().Be(originalHeartbeat);
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: [activeConnectionId, passiveConnectionId]);
+            Cleanup(userId, user, activeConnectionId, passiveConnectionId);
         }
     }
 

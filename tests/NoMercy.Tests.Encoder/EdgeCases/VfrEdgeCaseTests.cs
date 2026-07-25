@@ -38,68 +38,68 @@ public class VfrEdgeCaseTests
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
         _stage = new(
-            options: options,
-            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
-            subtitleExtractor: new SubtitleExtractor(),
-            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
-            drmProcessors: [],
-            logger: NullLogger<BuildStage>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            options,
+            new FontExtractor(TestStorageFactory.CreateLocal()),
+            new SubtitleExtractor(),
+            OutputStrategyFactoryTestHelper.Create(),
+            [],
+            NullLogger<BuildStage>.Instance,
+            TestStorageFactory.CreateLocal()
         );
     }
 
     [Fact]
     public async Task VfrNormalized_HlsOutput_EmitsFpsModeCfr()
     {
-        string[] args = await BuildArgs(format: OutputFormat.Hls, normalizeCfr: true);
+        string[] args = await BuildArgs(OutputFormat.Hls, true);
 
-        int idx = Array.IndexOf(array: args, value: "-fps_mode");
+        int idx = Array.IndexOf(args, "-fps_mode");
         idx.Should()
-            .BeGreaterThan(expected: -1, because: "a VFR source must be muxed at a constant frame rate for HLS");
-        args[idx + 1].Should().Be(expected: "cfr");
+            .BeGreaterThan(-1, "a VFR source must be muxed at a constant frame rate for HLS");
+        args[idx + 1].Should().Be("cfr");
     }
 
     [Fact]
     public async Task CfrSource_HlsOutput_NoFpsMode()
     {
-        string[] args = await BuildArgs(format: OutputFormat.Hls, normalizeCfr: false);
+        string[] args = await BuildArgs(OutputFormat.Hls, false);
 
-        args.Should().NotContain(unexpected: "-fps_mode", because: "a constant-frame-rate source needs no reshaping");
+        args.Should().NotContain("-fps_mode", "a constant-frame-rate source needs no reshaping");
     }
 
     [Fact]
     public async Task VfrNormalized_DashOutput_EmitsFpsModeCfr()
     {
-        string[] args = await BuildArgs(format: OutputFormat.Dash, normalizeCfr: true);
+        string[] args = await BuildArgs(OutputFormat.Dash, true);
 
-        int idx = Array.IndexOf(array: args, value: "-fps_mode");
+        int idx = Array.IndexOf(args, "-fps_mode");
         idx.Should()
-            .BeGreaterThan(expected: -1, because: "a VFR source must be muxed at a constant frame rate for DASH");
-        args[idx + 1].Should().Be(expected: "cfr");
+            .BeGreaterThan(-1, "a VFR source must be muxed at a constant frame rate for DASH");
+        args[idx + 1].Should().Be("cfr");
     }
 
     [Fact]
     public void IsVariableFrameRate_TrueOnlyWhenRealAndAverageDiffer()
     {
-        BuildVideoStream(real: 30.0, avg: 24.0).IsVariableFrameRate.Should().BeTrue();
-        BuildVideoStream(real: 24.0, avg: 24.0).IsVariableFrameRate.Should().BeFalse();
+        BuildVideoStream(30.0, 24.0).IsVariableFrameRate.Should().BeTrue();
+        BuildVideoStream(24.0, 24.0).IsVariableFrameRate.Should().BeFalse();
     }
 
     private async Task<string[]> BuildArgs(OutputFormat format, bool normalizeCfr)
     {
         OutputPlan outputPlan = new(
-            Format: format,
-            VideoOutputs: [BuildVideoOutput(width: 1280, height: 720, mapLabel: "[v0]")],
+            format,
+            VideoOutputs: [BuildVideoOutput(1280, 720, "[v0]")],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
             Thumbnails: null,
             NormalizeToConstantFrameRate: normalizeCfr
         );
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
-        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         return ((StageSuccess<FfmpegCommand[]>)result).Value[0].Arguments;
@@ -107,77 +107,76 @@ public class VfrEdgeCaseTests
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
         new(
-            Groups:
             [
                 new(
-                    GroupId: "group_0",
-                    Nodes: [new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new())],
-                    DeviceId: null,
-                    GpuSlotsRequired: 0,
-                    CpuThreadsRequired: 4,
-                    RequiresGpu: false,
-                    Priority: 1
+                    "group_0",
+                    [new("decode_0", OperationType.Decode, [], new())],
+                    null,
+                    0,
+                    4,
+                    false,
+                    1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
-            OutputPlan: outputPlan
+            TimeSpan.FromMinutes(90),
+            outputPlan
         );
 
     private static VideoOutputPlan BuildVideoOutput(int width, int height, string mapLabel) =>
         new(
-            Width: width,
-            Height: height,
-            EncoderName: "libx264",
-            Crf: 23,
-            BitrateKbps: 4000,
-            Preset: "medium",
-            Profile: "high",
-            Level: "4.1",
-            TenBit: false,
-            PixelFormat: "yuv420p",
-            MapLabel: mapLabel,
-            ExtraFlags: new()
+            width,
+            height,
+            "libx264",
+            23,
+            4000,
+            "medium",
+            "high",
+            "4.1",
+            false,
+            "yuv420p",
+            mapLabel,
+            new()
         );
 
     private static AudioOutputPlan BuildAudioOutput() =>
         new(
-            EncoderName: "aac",
-            BitrateKbps: 192,
-            Channels: 2,
-            SampleRate: 48000,
-            Action: StreamAction.Transcode,
-            Language: "en",
-            MapLabel: "0:a:0"
+            "aac",
+            192,
+            2,
+            48000,
+            StreamAction.Transcode,
+            "en",
+            "0:a:0"
         );
 
     private static VideoStreamInfo BuildVideoStream(double real, double avg) =>
         new(
-            Index: 0,
-            Codec: "h264",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: real,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            ColorPrimaries: null,
-            ColorTransfer: null,
-            ColorSpace: null,
-            IsDefault: true,
-            BitRateKbps: 6000,
-            AverageFrameRate: avg,
-            RealFrameRate: real
+            0,
+            "h264",
+            1920,
+            1080,
+            real,
+            8,
+            "yuv420p",
+            null,
+            null,
+            null,
+            true,
+            6000,
+            avg,
+            real
         );
 
     private static MediaInfo BuildMediaInfo() =>
         new(
-            FilePath: "/movies/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 2),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 7_200_000_000,
-            VideoStreams: [BuildVideoStream(real: 30.0, avg: 24.0)],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            "/movies/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(2),
+            8000,
+            7_200_000_000,
+            [BuildVideoStream(30.0, 24.0)],
+            [],
+            [],
+            []
         );
 }

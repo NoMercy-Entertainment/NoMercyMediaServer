@@ -28,7 +28,7 @@ namespace NoMercy.Tests.Networking;
 /// requires an actual device on the LAN and is itemized as not
 /// unit-testable — see the coverage report.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class ChromeCastServiceGuardClauseTests
 {
     private sealed class NoOpNetworkDiscovery : INetworkDiscovery
@@ -49,11 +49,11 @@ public sealed class ChromeCastServiceGuardClauseTests
 
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
-        public Task<bool> IsPortOpenAsync() => Task.FromResult(result: false);
+        public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
     }
 
     private static ChromeCastService BuildService() =>
-        new(logger: NullLogger<ChromeCastService>.Instance, networkDiscovery: new NoOpNetworkDiscovery());
+        new(NullLogger<ChromeCastService>.Instance, new NoOpNetworkDiscovery());
 
     [Fact]
     public void GetChromeCasts_BeforeInit_ReturnsEmptyArray()
@@ -62,7 +62,7 @@ public sealed class ChromeCastServiceGuardClauseTests
 
         string[] receivers = service.GetChromeCasts();
 
-        Assert.Empty(collection: receivers);
+        Assert.Empty(receivers);
     }
 
     [Fact]
@@ -70,9 +70,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        string? name = await service.FindReceiverNameByIpAsync(ip: null!);
+        string? name = await service.FindReceiverNameByIpAsync(null!);
 
-        Assert.Null(@object: name);
+        Assert.Null(name);
     }
 
     [Fact]
@@ -80,9 +80,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        string? name = await service.FindReceiverNameByIpAsync(ip: string.Empty);
+        string? name = await service.FindReceiverNameByIpAsync(string.Empty);
 
-        Assert.Null(@object: name);
+        Assert.Null(name);
     }
 
     [Fact]
@@ -90,11 +90,11 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () =>
-            service.SelectChromecast(receiver: (ChromecastReceiver?)null)
+        Exception? ex = await Record.ExceptionAsync(() =>
+            service.SelectChromecast((ChromecastReceiver?)null)
         );
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -102,11 +102,11 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () =>
-            service.SelectChromecast(name: "no-such-receiver")
+        Exception? ex = await Record.ExceptionAsync(() =>
+            service.SelectChromecast("no-such-receiver")
         );
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -114,9 +114,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => service.Launch());
+        Exception? ex = await Record.ExceptionAsync(() => service.Launch());
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -124,9 +124,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => service.Launch(name: "unknown-receiver"));
+        Exception? ex = await Record.ExceptionAsync(() => service.Launch("unknown-receiver"));
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -134,9 +134,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => service.LaunchAndroidReceiver());
+        Exception? ex = await Record.ExceptionAsync(() => service.LaunchAndroidReceiver());
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -144,11 +144,11 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () =>
-            service.LaunchAndroidReceiver(name: "unknown-receiver")
+        Exception? ex = await Record.ExceptionAsync(() =>
+            service.LaunchAndroidReceiver("unknown-receiver")
         );
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -156,9 +156,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => service.CastPlaylist(value: "movie/129"));
+        Exception? ex = await Record.ExceptionAsync(() => service.CastPlaylist("movie/129"));
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -166,11 +166,11 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () =>
-            service.CastPlaylist(value: "movie/129", name: "unknown-receiver")
+        Exception? ex = await Record.ExceptionAsync(() =>
+            service.CastPlaylist("movie/129", "unknown-receiver")
         );
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public sealed class ChromeCastServiceGuardClauseTests
         Sharpcaster.Models.ChromecastStatus.ChromecastStatus? status =
             service.GetChromecastStatus();
 
-        Assert.Null(@object: status);
+        Assert.Null(status);
     }
 
     [Fact]
@@ -190,10 +190,10 @@ public sealed class ChromeCastServiceGuardClauseTests
         ChromeCastService service = BuildService();
 
         Sharpcaster.Models.ChromecastStatus.ChromecastStatus? status = service.GetChromecastStatus(
-            name: "unknown-receiver"
+            "unknown-receiver"
         );
 
-        Assert.Null(@object: status);
+        Assert.Null(status);
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public sealed class ChromeCastServiceGuardClauseTests
 
         Sharpcaster.Models.Media.MediaStatus? status = service.GetMediaStatus();
 
-        Assert.Null(@object: status);
+        Assert.Null(status);
     }
 
     [Fact]
@@ -211,9 +211,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Sharpcaster.Models.Media.MediaStatus? status = service.GetMediaStatus(name: "unknown-receiver");
+        Sharpcaster.Models.Media.MediaStatus? status = service.GetMediaStatus("unknown-receiver");
 
-        Assert.Null(@object: status);
+        Assert.Null(status);
     }
 
     [Fact]
@@ -221,9 +221,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => service.Stop());
+        Exception? ex = await Record.ExceptionAsync(() => service.Stop());
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -231,9 +231,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => service.Stop(name: "unknown-receiver"));
+        Exception? ex = await Record.ExceptionAsync(() => service.Stop("unknown-receiver"));
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -241,9 +241,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => service.Disconnect());
+        Exception? ex = await Record.ExceptionAsync(() => service.Disconnect());
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -251,9 +251,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => service.Disconnect(name: "unknown-receiver"));
+        Exception? ex = await Record.ExceptionAsync(() => service.Disconnect("unknown-receiver"));
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -261,9 +261,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => service.Disconnect(name: "*"));
+        Exception? ex = await Record.ExceptionAsync(() => service.Disconnect("*"));
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -271,8 +271,8 @@ public sealed class ChromeCastServiceGuardClauseTests
     {
         ChromeCastService service = BuildService();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: service.DisconnectAllAsync);
+        Exception? ex = await Record.ExceptionAsync(service.DisconnectAllAsync);
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 }

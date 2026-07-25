@@ -17,18 +17,18 @@ internal static class RestartCommand
 {
     public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
-        Command command = new(name: "restart") { Description = "Restart the server" };
+        Command command = new("restart") { Description = "Restart the server" };
 
         command.SetAction(
-            action: async (parseResult, ct) =>
+            async (parseResult, ct) =>
             {
-                string? pipe = parseResult.GetValue(option: pipeOption);
-                using ICliClient client = clientFactory.Create(pipeNameOrSocketPath: pipe);
-                bool ok = await client.PostAsync(path: ApiRoutes.Restart, content: null, cancellationToken: ct);
+                string? pipe = parseResult.GetValue(pipeOption);
+                using ICliClient client = clientFactory.Create(pipe);
+                bool ok = await client.PostAsync(ApiRoutes.Restart, null, ct);
 
                 if (ok)
                 {
-                    Console.WriteLine(value: "Server restart requested.");
+                    Console.WriteLine("Server restart requested.");
                     return (int)ExitCode.Success;
                 }
 

@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record ContentRating
 {
-    [JsonProperty(propertyName: "rating")]
+    [JsonProperty("rating")]
     public string? Rating { get; set; }
 
-    [JsonProperty(propertyName: "iso_3166_1")]
+    [JsonProperty("iso_3166_1")]
     public string? Iso31661 { get; set; }
 }

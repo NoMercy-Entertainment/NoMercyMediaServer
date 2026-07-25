@@ -26,20 +26,20 @@ namespace NoMercy.Tests.OpticalMedia.Live;
 /// it via <see cref="IMediaAnalyzer"/>, and hand off to
 /// <see cref="ILiveEncoder.StartAsync"/> with that probed <see cref="MediaInfo"/>.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class LiveDiscSessionTests
 {
     private static MediaInfo MakeMediaInfo(string path) =>
         new(
-            FilePath: path,
-            Format: "mpegts",
-            Duration: TimeSpan.FromMinutes(minutes: 90),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 0,
-            VideoStreams: [],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            path,
+            "mpegts",
+            TimeSpan.FromMinutes(90),
+            8000,
+            0,
+            [],
+            [],
+            [],
+            []
         );
 
     private static (
@@ -51,18 +51,18 @@ public class LiveDiscSessionTests
         Mock<IMediaAnalyzer> analyzerMock = new();
         Mock<ILiveEncoder> encoderMock = new();
         LiveDiscSession session = new(
-            mediaAnalyzer: analyzerMock.Object,
-            liveEncoder: encoderMock.Object,
-            logger: NullLogger<LiveDiscSession>.Instance
+            analyzerMock.Object,
+            encoderMock.Object,
+            NullLogger<LiveDiscSession>.Instance
         );
         return (session, analyzerMock, encoderMock);
     }
 
     [Theory]
-    [InlineData(data: [OpticalDiscType.BluRay, "D:\\", 3, "bluray:D:/?playlist=3"])]
-    [InlineData(data: [OpticalDiscType.Dvd, "D:\\", 1, "D:/"])]
-    [InlineData(data: [OpticalDiscType.Cd, "/dev/sr0", 2, "/dev/sr0"])]
-    [InlineData(data: [OpticalDiscType.None, "D:\\", 0, "D:"])]
+    [InlineData([OpticalDiscType.BluRay, "D:\\", 3, "bluray:D:/?playlist=3"])]
+    [InlineData([OpticalDiscType.Dvd, "D:\\", 1, "D:/"])]
+    [InlineData([OpticalDiscType.Cd, "/dev/sr0", 2, "/dev/sr0"])]
+    [InlineData([OpticalDiscType.None, "D:\\", 0, "D:"])]
     public async Task StartAsync_BuildsInputPathForDiscType(
         OpticalDiscType discType,
         string drivePath,
@@ -78,18 +78,18 @@ public class LiveDiscSessionTests
 
         string? capturedPath = null;
         analyzerMock
-            .Setup(expression: a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<string, CancellationToken>(action: (path, _) => capturedPath = path)
-            .ReturnsAsync(valueFunction: (string path, CancellationToken _) => MakeMediaInfo(path: path));
+            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((path, _) => capturedPath = path)
+            .ReturnsAsync((string path, CancellationToken _) => MakeMediaInfo(path));
 
         encoderMock
-            .Setup(expression: e => e.StartAsync(It.IsAny<LiveEncodeRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Mock.Of<ILiveSession>());
+            .Setup(e => e.StartAsync(It.IsAny<LiveEncodeRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<ILiveSession>());
 
-        DiscDrive drive = new(Path: drivePath, Label: "LABEL", HasDisc: true, DiscType: discType);
-        await session.StartAsync(drive: drive, titleIndex: titleIndex, startPosition: TimeSpan.Zero, preferredQuality: null, ct: CancellationToken.None);
+        DiscDrive drive = new(drivePath, "LABEL", true, discType);
+        await session.StartAsync(drive, titleIndex, TimeSpan.Zero, null, CancellationToken.None);
 
-        capturedPath.Should().Be(expected: expectedInputPath);
+        capturedPath.Should().Be(expectedInputPath);
     }
 
     [Fact]
@@ -101,27 +101,27 @@ public class LiveDiscSessionTests
             Mock<ILiveEncoder> encoderMock
         ) = MakeSut();
 
-        MediaInfo probedInfo = MakeMediaInfo(path: "bluray:D:/?playlist=1");
+        MediaInfo probedInfo = MakeMediaInfo("bluray:D:/?playlist=1");
         analyzerMock
-            .Setup(expression: a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: probedInfo);
+            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(probedInfo);
 
         LiveEncodeRequest? capturedRequest = null;
         encoderMock
-            .Setup(expression: e => e.StartAsync(It.IsAny<LiveEncodeRequest>(), It.IsAny<CancellationToken>()))
-            .Callback<LiveEncodeRequest, CancellationToken>(action: (req, _) => capturedRequest = req)
-            .ReturnsAsync(value: Mock.Of<ILiveSession>());
+            .Setup(e => e.StartAsync(It.IsAny<LiveEncodeRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LiveEncodeRequest, CancellationToken>((req, _) => capturedRequest = req)
+            .ReturnsAsync(Mock.Of<ILiveSession>());
 
-        DiscDrive drive = new(Path: "D:\\", Label: "LABEL", HasDisc: true, DiscType: OpticalDiscType.BluRay);
-        TimeSpan startPosition = TimeSpan.FromMinutes(minutes: 5);
-        await session.StartAsync(drive: drive, titleIndex: 1, startPosition: startPosition, preferredQuality: "1080p", ct: CancellationToken.None);
+        DiscDrive drive = new("D:\\", "LABEL", true, OpticalDiscType.BluRay);
+        TimeSpan startPosition = TimeSpan.FromMinutes(5);
+        await session.StartAsync(drive, 1, startPosition, "1080p", CancellationToken.None);
 
         capturedRequest.Should().NotBeNull();
-        capturedRequest!.CachedInfo.Should().BeSameAs(expected: probedInfo);
-        capturedRequest.StartPosition.Should().Be(expected: startPosition);
-        capturedRequest.PreferredQuality.Should().Be(expected: "1080p");
-        capturedRequest.Client.MaxWidth.Should().Be(expected: 1920);
-        capturedRequest.Client.MaxHeight.Should().Be(expected: 1080);
+        capturedRequest!.CachedInfo.Should().BeSameAs(probedInfo);
+        capturedRequest.StartPosition.Should().Be(startPosition);
+        capturedRequest.PreferredQuality.Should().Be("1080p");
+        capturedRequest.Client.MaxWidth.Should().Be(1920);
+        capturedRequest.Client.MaxHeight.Should().Be(1080);
     }
 
     [Fact]
@@ -134,24 +134,24 @@ public class LiveDiscSessionTests
         ) = MakeSut();
 
         analyzerMock
-            .Setup(expression: a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: MakeMediaInfo(path: "D:/"));
+            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeMediaInfo("D:/"));
 
         ILiveSession expectedSession = Mock.Of<ILiveSession>();
         encoderMock
-            .Setup(expression: e => e.StartAsync(It.IsAny<LiveEncodeRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: expectedSession);
+            .Setup(e => e.StartAsync(It.IsAny<LiveEncodeRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedSession);
 
-        DiscDrive drive = new(Path: "D:\\", Label: "LABEL", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DiscDrive drive = new("D:\\", "LABEL", true, OpticalDiscType.Dvd);
         ILiveSession result = await session.StartAsync(
-            drive: drive,
-            titleIndex: 1,
-            startPosition: TimeSpan.Zero,
-            preferredQuality: null,
-            ct: CancellationToken.None
+            drive,
+            1,
+            TimeSpan.Zero,
+            null,
+            CancellationToken.None
         );
 
-        result.Should().BeSameAs(expected: expectedSession);
+        result.Should().BeSameAs(expectedSession);
     }
 
     [Fact]
@@ -165,16 +165,16 @@ public class LiveDiscSessionTests
 
         string? capturedPath = null;
         analyzerMock
-            .Setup(expression: a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<string, CancellationToken>(action: (path, _) => capturedPath = path)
-            .ReturnsAsync(valueFunction: (string path, CancellationToken _) => MakeMediaInfo(path: path));
+            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((path, _) => capturedPath = path)
+            .ReturnsAsync((string path, CancellationToken _) => MakeMediaInfo(path));
         encoderMock
-            .Setup(expression: e => e.StartAsync(It.IsAny<LiveEncodeRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: Mock.Of<ILiveSession>());
+            .Setup(e => e.StartAsync(It.IsAny<LiveEncodeRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<ILiveSession>());
 
-        DiscDrive drive = new(Path: "/media/bluray///", Label: "LABEL", HasDisc: true, DiscType: OpticalDiscType.BluRay);
-        await session.StartAsync(drive: drive, titleIndex: 5, startPosition: TimeSpan.Zero, preferredQuality: null, ct: CancellationToken.None);
+        DiscDrive drive = new("/media/bluray///", "LABEL", true, OpticalDiscType.BluRay);
+        await session.StartAsync(drive, 5, TimeSpan.Zero, null, CancellationToken.None);
 
-        capturedPath.Should().Be(expected: "bluray:/media/bluray/?playlist=5");
+        capturedPath.Should().Be("bluray:/media/bluray/?playlist=5");
     }
 }

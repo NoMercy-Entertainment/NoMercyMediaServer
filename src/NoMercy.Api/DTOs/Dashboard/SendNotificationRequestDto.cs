@@ -15,15 +15,15 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record SendNotificationRequestDto
 {
-    [JsonProperty(propertyName: "user_id")]
+    [JsonProperty("user_id")]
     public Guid UserId { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "body")]
+    [JsonProperty("body")]
     public string Body { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 }

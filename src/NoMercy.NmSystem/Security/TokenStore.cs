@@ -32,26 +32,26 @@ public static class TokenStore
 
             IDataProtectionProvider dataProtectionProvider =
                 serviceProvider.GetRequiredService<IDataProtectionProvider>();
-            _protector = dataProtectionProvider.CreateProtector(purpose: ProtectorPurpose);
+            _protector = dataProtectionProvider.CreateProtector(ProtectorPurpose);
         }
     }
 
     public static string EncryptToken(string? token)
     {
-        if (string.IsNullOrEmpty(value: token))
+        if (string.IsNullOrEmpty(token))
             return string.Empty;
 
-        return EnsureInitialized().Protect(plaintext: token);
+        return EnsureInitialized().Protect(token);
     }
 
     public static string? DecryptToken(string? token)
     {
-        if (string.IsNullOrEmpty(value: token))
+        if (string.IsNullOrEmpty(token))
             return null;
 
         try
         {
-            return EnsureInitialized().Unprotect(protectedData: token);
+            return EnsureInitialized().Unprotect(token);
         }
         catch (Exception)
         {
@@ -76,19 +76,19 @@ public static class TokenStore
             if (_protector is not null)
                 return _protector;
 
-            if (!Directory.Exists(path: AppFiles.DataProtectionKeysDir))
-                Directory.CreateDirectory(path: AppFiles.DataProtectionKeysDir);
+            if (!Directory.Exists(AppFiles.DataProtectionKeysDir))
+                Directory.CreateDirectory(AppFiles.DataProtectionKeysDir);
 
             ServiceCollection services = new();
             services
                 .AddDataProtection()
-                .PersistKeysToFileSystem(directory: new(path: AppFiles.DataProtectionKeysDir))
-                .SetApplicationName(applicationName: ApplicationName);
+                .PersistKeysToFileSystem(new(AppFiles.DataProtectionKeysDir))
+                .SetApplicationName(ApplicationName);
 
             ServiceProvider provider = services.BuildServiceProvider();
             IDataProtectionProvider dataProtectionProvider =
                 provider.GetRequiredService<IDataProtectionProvider>();
-            _protector = dataProtectionProvider.CreateProtector(purpose: ProtectorPurpose);
+            _protector = dataProtectionProvider.CreateProtector(ProtectorPurpose);
             return _protector;
         }
     }

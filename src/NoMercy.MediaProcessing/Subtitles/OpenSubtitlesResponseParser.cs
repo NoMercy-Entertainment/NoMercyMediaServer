@@ -35,7 +35,7 @@ public static class OpenSubtitlesResponseParser
             // array, never on the param's own value. Reading the param level finds an empty list
             // and reports "no subtitles found" over a response full of them.
             SubtitleSearchResponseMember? data = param.Value.InnerStruct.Members.FirstOrDefault(
-                predicate: member => member.Name.Equals(value: DataMember, comparisonType: StringComparison.OrdinalIgnoreCase)
+                member => member.Name.Equals(DataMember, StringComparison.OrdinalIgnoreCase)
             );
 
             if (data?.MemberValue.ArrayData.Values is null)
@@ -47,29 +47,29 @@ public static class OpenSubtitlesResponseParser
                     continue;
 
                 Dictionary<string, string> members = item
-                    .InnerStruct.Members.Where(predicate: member => member.Name is not null)
+                    .InnerStruct.Members.Where(member => member.Name is not null)
                     .ToDictionary(
-                        keySelector: member => member.Name,
-                        elementSelector: member => member.MemberValue.StringValue ?? string.Empty,
-                        comparer: StringComparer.OrdinalIgnoreCase
+                        member => member.Name,
+                        member => member.MemberValue.StringValue ?? string.Empty,
+                        StringComparer.OrdinalIgnoreCase
                     );
 
-                string language = Coalesce(candidates: [members.GetValueOrDefault(key: "SubLanguageID"), members.GetValueOrDefault(key: "ISO639"), "und"]
+                string language = Coalesce([members.GetValueOrDefault("SubLanguageID"), members.GetValueOrDefault("ISO639"), "und"]
                 );
 
                 yield return new(
-                    Language: language,
-                    SubRating: members.GetValueOrDefault(key: "SubRating"),
-                    SubDownloadsCnt: members.GetValueOrDefault(key: "SubDownloadsCnt"),
-                    SubFromTrusted: members.GetValueOrDefault(key: "SubFromTrusted"),
-                    MovieFPS: members.GetValueOrDefault(key: "MovieFPS"),
-                    SubDownloadLink: members.GetValueOrDefault(key: "SubDownloadLink"),
-                    SubFormat: members.GetValueOrDefault(key: "SubFormat"),
-                    MatchedBy: Coalesce(candidates: [members.GetValueOrDefault(key: "MatchedBy"), matchedBy]),
-                    SubFileName: members.GetValueOrDefault(key: "SubFileName"),
-                    MovieReleaseName: members.GetValueOrDefault(key: "MovieReleaseName"),
-                    SubHearingImpaired: members.GetValueOrDefault(key: "SubHearingImpaired"),
-                    UserNickName: members.GetValueOrDefault(key: "UserNickName")
+                    language,
+                    members.GetValueOrDefault("SubRating"),
+                    members.GetValueOrDefault("SubDownloadsCnt"),
+                    members.GetValueOrDefault("SubFromTrusted"),
+                    members.GetValueOrDefault("MovieFPS"),
+                    members.GetValueOrDefault("SubDownloadLink"),
+                    members.GetValueOrDefault("SubFormat"),
+                    Coalesce([members.GetValueOrDefault("MatchedBy"), matchedBy]),
+                    members.GetValueOrDefault("SubFileName"),
+                    members.GetValueOrDefault("MovieReleaseName"),
+                    members.GetValueOrDefault("SubHearingImpaired"),
+                    members.GetValueOrDefault("UserNickName")
                 );
             }
         }
@@ -77,7 +77,7 @@ public static class OpenSubtitlesResponseParser
 
     private static string Coalesce(params string?[] candidates)
     {
-        return candidates.FirstOrDefault(predicate: value => !string.IsNullOrWhiteSpace(value: value))
+        return candidates.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
             ?? string.Empty;
     }
 }

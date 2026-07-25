@@ -23,7 +23,7 @@ public static class MusicGenresSeed
 {
     public static async Task Init(this MediaContext dbContext)
     {
-        Logger.Setup(message: "Checking Music Genres seed", level: LogEventLevel.Verbose);
+        Logger.Setup("Checking Music Genres seed", LogEventLevel.Verbose);
 
         try
         {
@@ -33,8 +33,8 @@ public static class MusicGenresSeed
             if (firstPage is null)
             {
                 Logger.Setup(
-                    message: "Music genres seed skipped: MusicBrainz first-page fetch returned null",
-                    level: LogEventLevel.Warning
+                    "Music genres seed skipped: MusicBrainz first-page fetch returned null",
+                    LogEventLevel.Warning
                 );
                 return;
             }
@@ -46,26 +46,26 @@ public static class MusicGenresSeed
                 return;
 
             Logger.Setup(
-                message: $"Adding Music Genres ({actual}/{expected} present)",
-                level: LogEventLevel.Verbose
+                $"Adding Music Genres ({actual}/{expected} present)",
+                LogEventLevel.Verbose
             );
 
             List<MusicBrainzGenre> fetched = [.. firstPage.Genres];
-            fetched.AddRange(collection: await musicBrainzGenreClient.RemainingPages(firstPage: firstPage));
+            fetched.AddRange(await musicBrainzGenreClient.RemainingPages(firstPage));
 
             MusicGenre[] genres = fetched
-                .ConvertAll<MusicGenre>(converter: genre => new() { Id = genre.Id, Name = genre.Name })
+                .ConvertAll<MusicGenre>(genre => new() { Id = genre.Id, Name = genre.Name })
                 .ToArray();
 
             await dbContext
-                .MusicGenres.UpsertRange(entities: genres)
-                .On(match: v => new { v.Id })
-                .WhenMatched(updater: v => new() { Id = v.Id, Name = v.Name })
+                .MusicGenres.UpsertRange(genres)
+                .On(v => new { v.Id })
+                .WhenMatched(v => new() { Id = v.Id, Name = v.Name })
                 .RunAsync();
         }
         catch (Exception e)
         {
-            Logger.Setup(message: $"Music genres seed failed: {e.Message}", level: LogEventLevel.Warning);
+            Logger.Setup($"Music genres seed failed: {e.Message}", LogEventLevel.Warning);
         }
     }
 }

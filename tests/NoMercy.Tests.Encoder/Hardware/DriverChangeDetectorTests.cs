@@ -20,12 +20,12 @@ public class DriverChangeDetectorTests
     private static IReadOnlyList<GpuDevice> OneGpu(string? driver = "31.0.15.4601") =>
         [
             new(
-                Vendor: GpuVendor.Nvidia,
-                Name: "RTX 4090",
-                VramMb: 24576,
-                MaxEncoderSessions: 8,
-                SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265],
-                DriverVersion: driver
+                GpuVendor.Nvidia,
+                "RTX 4090",
+                24576,
+                8,
+                [VideoCodecType.H264, VideoCodecType.H265],
+                driver
             ),
         ];
 
@@ -34,18 +34,18 @@ public class DriverChangeDetectorTests
     {
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: OneGpu());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OneGpu());
 
         Mock<IDriverFingerprintStore> store = new();
         store
-            .Setup(expression: s => s.LoadHashAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (string?)null);
+            .Setup(s => s.LoadHashAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
         store
-            .Setup(expression: s => s.SaveHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(value: Task.CompletedTask);
+            .Setup(s => s.SaveHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        DriverChangeDetector sut = new(hardwareDetector: detector.Object, store: store.Object);
+        DriverChangeDetector sut = new(detector.Object, store.Object);
 
         DriverChangeResult result = await sut.DetectAndPersistAsync();
 
@@ -60,18 +60,18 @@ public class DriverChangeDetectorTests
     {
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: OneGpu(driver: "31.0.15.5000"));
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OneGpu("31.0.15.5000"));
 
         Mock<IDriverFingerprintStore> store = new();
         store
-            .Setup(expression: s => s.LoadHashAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: "aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233");
+            .Setup(s => s.LoadHashAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync("aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233");
         store
-            .Setup(expression: s => s.SaveHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(value: Task.CompletedTask);
+            .Setup(s => s.SaveHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        DriverChangeDetector sut = new(hardwareDetector: detector.Object, store: store.Object);
+        DriverChangeDetector sut = new(detector.Object, store.Object);
 
         DriverChangeResult result = await sut.DetectAndPersistAsync();
 
@@ -85,19 +85,19 @@ public class DriverChangeDetectorTests
         IReadOnlyList<GpuDevice> gpus = OneGpu();
 
         Mock<IHardwareDetector> detector = new();
-        detector.Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync(value: gpus);
+        detector.Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync(gpus);
 
         // Compute the expected hash so the stored hash matches
-        DriverFingerprint fp = new(Gpus: [new(Vendor: "Nvidia", Model: "RTX 4090", DriverVersion: "31.0.15.4601", Index: 0)]);
+        DriverFingerprint fp = new([new("Nvidia", "RTX 4090", "31.0.15.4601", 0)]);
         string expectedHash = fp.ComputeHash();
 
         Mock<IDriverFingerprintStore> store = new();
-        store.Setup(expression: s => s.LoadHashAsync(It.IsAny<CancellationToken>())).ReturnsAsync(value: expectedHash);
+        store.Setup(s => s.LoadHashAsync(It.IsAny<CancellationToken>())).ReturnsAsync(expectedHash);
         store
-            .Setup(expression: s => s.SaveHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(value: Task.CompletedTask);
+            .Setup(s => s.SaveHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        DriverChangeDetector sut = new(hardwareDetector: detector.Object, store: store.Object);
+        DriverChangeDetector sut = new(detector.Object, store.Object);
 
         DriverChangeResult result = await sut.DetectAndPersistAsync();
 
@@ -110,28 +110,28 @@ public class DriverChangeDetectorTests
     {
         Mock<IHardwareDetector> detector = new();
         detector
-            .Setup(expression: d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: OneGpu());
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OneGpu());
 
         Mock<IDriverFingerprintStore> store = new();
         store
-            .Setup(expression: s => s.LoadHashAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (string?)null);
+            .Setup(s => s.LoadHashAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
 
         string? savedHash = null;
         store
-            .Setup(expression: s => s.SaveHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<string, CancellationToken>(action: (h, _) => savedHash = h)
-            .Returns(value: Task.CompletedTask);
+            .Setup(s => s.SaveHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((h, _) => savedHash = h)
+            .Returns(Task.CompletedTask);
 
-        DriverChangeDetector sut = new(hardwareDetector: detector.Object, store: store.Object);
+        DriverChangeDetector sut = new(detector.Object, store.Object);
 
         DriverChangeResult result = await sut.DetectAndPersistAsync();
 
         store.Verify(
-            expression: s => s.SaveHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            times: Times.Once
+            s => s.SaveHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once
         );
-        savedHash.Should().Be(expected: result.CurrentHash);
+        savedHash.Should().Be(result.CurrentHash);
     }
 }

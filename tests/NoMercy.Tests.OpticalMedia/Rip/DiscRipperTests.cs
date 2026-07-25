@@ -30,7 +30,7 @@ namespace NoMercy.Tests.OpticalMedia.Rip;
 /// environment overrides only for <c>bluray:</c> paths, and always release
 /// the drive lock — even when ripping throws.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class DiscRipperTests
 {
     private static EncoderOptions MakeOptions(BluRayOptions? bluRay = null) =>
@@ -39,11 +39,11 @@ public class DiscRipperTests
     private static Mock<IStorage> MakeStorageMock(long sizeOrZero = 1_234_567)
     {
         Mock<IStorage> storage = new();
-        storage.Setup(expression: s => s.CreateDirectory(It.IsAny<string>()));
+        storage.Setup(s => s.CreateDirectory(It.IsAny<string>()));
         storage
-            .Setup(expression: s => s.AcquireLocalPath(It.IsAny<string>()))
-            .Returns<string>(valueFunction: path => new LocalPathLease(path: path));
-        storage.Setup(expression: s => s.SizeOrZero(It.IsAny<string>())).Returns(value: sizeOrZero);
+            .Setup(s => s.AcquireLocalPath(It.IsAny<string>()))
+            .Returns<string>(path => new LocalPathLease(path));
+        storage.Setup(s => s.SizeOrZero(It.IsAny<string>())).Returns(sizeOrZero);
         return storage;
     }
 
@@ -51,7 +51,7 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -59,7 +59,7 @@ public class DiscRipperTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: stdErr, Duration: TimeSpan.FromMilliseconds(milliseconds: 5)));
+            .ReturnsAsync(new ProcessResult(0, "", stdErr, TimeSpan.FromMilliseconds(5)));
         return runner;
     }
 
@@ -92,17 +92,17 @@ public class DiscRipperTests
     public async Task RipAsync_DriveAlreadyLocked_ThrowsDiscDriveBusyException()
     {
         DriveLockRegistry lockRegistry = new();
-        lockRegistry.TryAcquire(driveKey: "D:\\", driveLock: out _);
+        lockRegistry.TryAcquire("D:\\", out _);
 
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: MakeSucceedingRunner().Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: lockRegistry,
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            MakeSucceedingRunner().Object,
+            MakeStorageMock().Object,
+            lockRegistry,
+            NullLogger<DiscRipper>.Instance
         );
 
-        Func<Task> act = () => ripper.RipAsync(request: MakeVideoRequest(), outputDirectory: "/out", ct: CancellationToken.None);
+        Func<Task> act = () => ripper.RipAsync(MakeVideoRequest(), "/out", CancellationToken.None);
 
         await act.Should().ThrowAsync<DiscDriveBusyException>();
     }
@@ -111,23 +111,23 @@ public class DiscRipperTests
     public async Task RipAsync_UsesVolumeUuidAsLockKeyWhenPresent()
     {
         DriveLockRegistry lockRegistry = new();
-        lockRegistry.TryAcquire(driveKey: "volume-uuid-123", driveLock: out _);
+        lockRegistry.TryAcquire("volume-uuid-123", out _);
 
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: MakeSucceedingRunner().Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: lockRegistry,
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            MakeSucceedingRunner().Object,
+            MakeStorageMock().Object,
+            lockRegistry,
+            NullLogger<DiscRipper>.Instance
         );
 
         // DrivePath itself is free — only the VolumeUuid is locked — so the
         // busy exception proves VolumeUuid (not DrivePath) was used as the key.
         Func<Task> act = () =>
             ripper.RipAsync(
-                request: MakeVideoRequest(volumeUuid: "volume-uuid-123"),
-                outputDirectory: "/out",
-                ct: CancellationToken.None
+                MakeVideoRequest(volumeUuid: "volume-uuid-123"),
+                "/out",
+                CancellationToken.None
             );
 
         await act.Should().ThrowAsync<DiscDriveBusyException>();
@@ -138,20 +138,20 @@ public class DiscRipperTests
     {
         DriveLockRegistry lockRegistry = new();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: MakeSucceedingRunner().Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: lockRegistry,
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            MakeSucceedingRunner().Object,
+            MakeStorageMock().Object,
+            lockRegistry,
+            NullLogger<DiscRipper>.Instance
         );
 
-        await ripper.RipAsync(request: MakeVideoRequest(), outputDirectory: "/out", ct: CancellationToken.None);
+        await ripper.RipAsync(MakeVideoRequest(), "/out", CancellationToken.None);
         Func<Task> secondRip = () =>
-            ripper.RipAsync(request: MakeVideoRequest(), outputDirectory: "/out", ct: CancellationToken.None);
+            ripper.RipAsync(MakeVideoRequest(), "/out", CancellationToken.None);
 
         await secondRip
             .Should()
-            .NotThrowAsync(because: "the lock must be released once the first rip completes");
+            .NotThrowAsync("the lock must be released once the first rip completes");
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class DiscRipperTests
         DriveLockRegistry lockRegistry = new();
         Mock<IProcessRunner> throwingRunner = new();
         throwingRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -168,22 +168,22 @@ public class DiscRipperTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(exception: new InvalidOperationException(message: "ffmpeg crashed"));
+            .ThrowsAsync(new InvalidOperationException("ffmpeg crashed"));
 
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: throwingRunner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: lockRegistry,
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            throwingRunner.Object,
+            MakeStorageMock().Object,
+            lockRegistry,
+            NullLogger<DiscRipper>.Instance
         );
 
         Func<Task> firstRip = () =>
-            ripper.RipAsync(request: MakeVideoRequest(), outputDirectory: "/out", ct: CancellationToken.None);
+            ripper.RipAsync(MakeVideoRequest(), "/out", CancellationToken.None);
         await firstRip.Should().ThrowAsync<InvalidOperationException>();
 
-        bool reacquired = lockRegistry.TryAcquire(driveKey: "D:\\", driveLock: out _);
-        reacquired.Should().BeTrue(because: "the finally block must release the lock even on failure");
+        bool reacquired = lockRegistry.TryAcquire("D:\\", out _);
+        reacquired.Should().BeTrue("the finally block must release the lock even on failure");
     }
 
     // ── CreateDirectory always called ──────────────────────────────────────
@@ -193,23 +193,23 @@ public class DiscRipperTests
     {
         Mock<IStorage> storage = MakeStorageMock();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: MakeSucceedingRunner().Object,
-            storage: storage.Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            MakeSucceedingRunner().Object,
+            storage.Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
-        await ripper.RipAsync(request: MakeVideoRequest(), outputDirectory: "/out/dir", ct: CancellationToken.None);
+        await ripper.RipAsync(MakeVideoRequest(), "/out/dir", CancellationToken.None);
 
-        storage.Verify(expression: s => s.CreateDirectory("/out/dir"), times: Times.Once);
+        storage.Verify(s => s.CreateDirectory("/out/dir"), Times.Once);
     }
 
     // ── Video title rip: per-disc-type ffmpeg args ─────────────────────────
 
     [Theory]
-    [InlineData(data: [OpticalDiscType.BluRay, "-playlist"])]
-    [InlineData(data: [OpticalDiscType.Dvd, "-title"])]
+    [InlineData(OpticalDiscType.BluRay, "-playlist")]
+    [InlineData(OpticalDiscType.Dvd, "-title")]
     public async Task RipAsync_VideoDisc_PassesDiscTypeSpecificArgs(
         OpticalDiscType discType,
         string expectedFlag
@@ -217,24 +217,24 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
-        await ripper.RipAsync(request: MakeVideoRequest(discType: discType), outputDirectory: "/out", ct: CancellationToken.None);
+        await ripper.RipAsync(MakeVideoRequest(discType: discType), "/out", CancellationToken.None);
 
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     "ffmpeg",
                     It.Is<string[]>(args => args.Contains(expectedFlag) && args.Contains("copy")),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -243,28 +243,28 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         await ripper.RipAsync(
-            request: MakeVideoRequest(drivePath: "D:\\", discType: OpticalDiscType.BluRay),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(drivePath: "D:\\", discType: OpticalDiscType.BluRay),
+            "/out",
+            CancellationToken.None
         );
 
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     "ffmpeg",
                     It.Is<string[]>(args => args.Contains("bluray:D:/")),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -273,28 +273,28 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         await ripper.RipAsync(
-            request: MakeVideoRequest(drivePath: "D:\\", discType: OpticalDiscType.Dvd),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(drivePath: "D:\\", discType: OpticalDiscType.Dvd),
+            "/out",
+            CancellationToken.None
         );
 
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     "ffmpeg",
                     It.Is<string[]>(args => args.Contains("D:/VIDEO_TS/")),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -303,28 +303,28 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         RipRequest request = MakeVideoRequest(
             drivePath: "bluray:/dev/sr0/",
             discType: OpticalDiscType.BluRay
         );
-        await ripper.RipAsync(request: request, outputDirectory: "/out", ct: CancellationToken.None);
+        await ripper.RipAsync(request, "/out", CancellationToken.None);
 
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     "ffmpeg",
                     It.Is<string[]>(args => args.Contains("bluray:/dev/sr0/")),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -333,11 +333,11 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         RipRequest request = MakeVideoRequest(
@@ -348,10 +348,10 @@ public class DiscRipperTests
                 new(StreamIndex: 3, Include: false, Policy: SubtitlePolicy.Copy),
             ]
         );
-        await ripper.RipAsync(request: request, outputDirectory: "/out", ct: CancellationToken.None);
+        await ripper.RipAsync(request, "/out", CancellationToken.None);
 
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     "ffmpeg",
                     It.Is<string[]>(args =>
@@ -363,7 +363,7 @@ public class DiscRipperTests
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -375,7 +375,7 @@ public class DiscRipperTests
         Mock<IProcessRunner> runner = new();
         IReadOnlyDictionary<string, string>? capturedEnv = null;
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -390,8 +390,8 @@ public class DiscRipperTests
                 IReadOnlyDictionary<string, string>?,
                 string?,
                 CancellationToken
-            >(action: (_, _, env, _, _) => capturedEnv = env)
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero));
+            >((_, _, env, _, _) => capturedEnv = env)
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero));
 
         BluRayOptions bluRay = new()
         {
@@ -399,22 +399,22 @@ public class DiscRipperTests
             AacsKeysOverridePath = "/etc/nomercy/bdplus",
         };
         DiscRipper ripper = new(
-            options: MakeOptions(bluRay: bluRay),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(bluRay),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         await ripper.RipAsync(
-            request: MakeVideoRequest(drivePath: "bluray:/dev/sr0/", discType: OpticalDiscType.BluRay),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(drivePath: "bluray:/dev/sr0/", discType: OpticalDiscType.BluRay),
+            "/out",
+            CancellationToken.None
         );
 
         capturedEnv.Should().NotBeNull();
-        capturedEnv![key: "LIBAACS_KEY_DB"].Should().Be(expected: "/etc/nomercy/KEYDB.cfg");
-        capturedEnv[key: "LIBBDPLUS_DATABASE"].Should().Be(expected: "/etc/nomercy/bdplus");
+        capturedEnv!["LIBAACS_KEY_DB"].Should().Be("/etc/nomercy/KEYDB.cfg");
+        capturedEnv["LIBBDPLUS_DATABASE"].Should().Be("/etc/nomercy/bdplus");
     }
 
     [Fact]
@@ -423,22 +423,22 @@ public class DiscRipperTests
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         BluRayOptions bluRay = new() { KeyDbOverridePath = "/etc/nomercy/KEYDB.cfg" };
         DiscRipper ripper = new(
-            options: MakeOptions(bluRay: bluRay),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(bluRay),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         await ripper.RipAsync(
-            request: MakeVideoRequest(discType: OpticalDiscType.Dvd),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(discType: OpticalDiscType.Dvd),
+            "/out",
+            CancellationToken.None
         );
 
         // The 4-arg RunAsync overload (with env dict) must never be called for DVD.
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -446,7 +446,7 @@ public class DiscRipperTests
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -455,28 +455,28 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(bluRay: null),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(bluRay: null),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         await ripper.RipAsync(
-            request: MakeVideoRequest(discType: OpticalDiscType.BluRay),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(discType: OpticalDiscType.BluRay),
+            "/out",
+            CancellationToken.None
         );
 
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -487,7 +487,7 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -495,26 +495,26 @@ public class DiscRipperTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "generic failure", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", "generic failure", TimeSpan.Zero));
 
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         DiscRipResult[] results = await ripper.RipAsync(
-            request: MakeVideoRequest(),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(),
+            "/out",
+            CancellationToken.None
         );
 
         results.Should().ContainSingle();
         results[0].Success.Should().BeFalse();
-        results[0].Error.Should().Contain(expected: "1");
-        results[0].OutputSizeBytes.Should().Be(expected: 0);
+        results[0].Error.Should().Contain("1");
+        results[0].OutputSizeBytes.Should().Be(0);
     }
 
     [Fact]
@@ -522,7 +522,7 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -530,21 +530,21 @@ public class DiscRipperTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "aacs: no matching certificate", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", "aacs: no matching certificate", TimeSpan.Zero));
 
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         Func<Task> act = () =>
             ripper.RipAsync(
-                request: MakeVideoRequest(drivePath: "bluray:/dev/sr0/", discType: OpticalDiscType.BluRay),
-                outputDirectory: "/out",
-                ct: CancellationToken.None
+                MakeVideoRequest(drivePath: "bluray:/dev/sr0/", discType: OpticalDiscType.BluRay),
+                "/out",
+                CancellationToken.None
             );
 
         // DiscScanner.ClassifyBluRayStderr throws a structured
@@ -560,7 +560,7 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -568,22 +568,22 @@ public class DiscRipperTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "aacs: no matching certificate", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", "aacs: no matching certificate", TimeSpan.Zero));
 
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         // Same stderr text, but a DVD drive path never routes through
         // ClassifyBluRayStderr — the result degrades to a normal failure.
         DiscRipResult[] results = await ripper.RipAsync(
-            request: MakeVideoRequest(drivePath: "D:\\", discType: OpticalDiscType.Dvd),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(drivePath: "D:\\", discType: OpticalDiscType.Dvd),
+            "/out",
+            CancellationToken.None
         );
 
         results.Should().ContainSingle();
@@ -593,10 +593,10 @@ public class DiscRipperTests
     [Fact]
     public async Task RipAsync_LongStderr_TailIsTruncatedInLogButErrorMessageIntact()
     {
-        string longStderr = new(c: 'x', count: 2000);
+        string longStderr = new('x', 2000);
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -604,24 +604,24 @@ public class DiscRipperTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: longStderr, Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", longStderr, TimeSpan.Zero));
 
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         DiscRipResult[] results = await ripper.RipAsync(
-            request: MakeVideoRequest(),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(),
+            "/out",
+            CancellationToken.None
         );
 
         results[0].Success.Should().BeFalse();
-        results[0].Error.Should().Be(expected: "ffmpeg exited with code 1");
+        results[0].Error.Should().Be("ffmpeg exited with code 1");
     }
 
     // ── Multiple titles + logging on partial failure ────────────────────────
@@ -631,22 +631,22 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         DiscRipResult[] results = await ripper.RipAsync(
-            request: MakeVideoRequest(titles: [1, 2, 3]),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(titles: [1, 2, 3]),
+            "/out",
+            CancellationToken.None
         );
 
-        results.Should().HaveCount(expected: 3);
-        results.Select(selector: r => r.TitleIndex).Should().Equal(elements: [1, 2, 3]);
-        results.Should().OnlyContain(predicate: r => r.Success);
+        results.Should().HaveCount(3);
+        results.Select(r => r.TitleIndex).Should().Equal(1, 2, 3);
+        results.Should().OnlyContain(r => r.Success);
     }
 
     [Fact]
@@ -654,17 +654,17 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         using CancellationTokenSource cts = new();
         cts.Cancel();
 
-        Func<Task> act = () => ripper.RipAsync(request: MakeVideoRequest(titles: [1, 2]), outputDirectory: "/out", ct: cts.Token);
+        Func<Task> act = () => ripper.RipAsync(MakeVideoRequest(titles: [1, 2]), "/out", cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -672,8 +672,8 @@ public class DiscRipperTests
     // ── ResolveDiscType fallback (None → sniff drive-path prefix) ──────────
 
     [Theory]
-    [InlineData(data: ["bluray:/dev/sr0", "-playlist"])]
-    [InlineData(data: ["dvd:/dev/sr0", null])]
+    [InlineData("bluray:/dev/sr0", "-playlist")]
+    [InlineData("dvd:/dev/sr0", null)]
     public async Task RipAsync_DiscTypeNone_SniffsFromDrivePathPrefix(
         string drivePath,
         string? expectedFlag
@@ -681,30 +681,30 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         await ripper.RipAsync(
-            request: MakeVideoRequest(drivePath: drivePath, discType: OpticalDiscType.None),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(drivePath: drivePath, discType: OpticalDiscType.None),
+            "/out",
+            CancellationToken.None
         );
 
         if (expectedFlag is not null)
         {
             runner.Verify(
-                expression: r =>
+                r =>
                     r.RunAsync(
                         "ffmpeg",
                         It.Is<string[]>(args => args.Contains(expectedFlag)),
                         It.IsAny<string?>(),
                         It.IsAny<CancellationToken>()
                     ),
-                times: Times.Once
+                Times.Once
             );
         }
     }
@@ -714,31 +714,31 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         // "D:\" has no "bluray:"/"dvd:" prefix, so ResolveDiscType falls
         // all the way through to OpticalDiscType.None, and BuildInputUrl's
         // switch on that None value hits its own `_ => drivePath` arm.
         await ripper.RipAsync(
-            request: MakeVideoRequest(drivePath: "D:\\", discType: OpticalDiscType.None),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(drivePath: "D:\\", discType: OpticalDiscType.None),
+            "/out",
+            CancellationToken.None
         );
 
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     "ffmpeg",
                     It.Is<string[]>(args => args.Contains("D:\\")),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -752,7 +752,7 @@ public class DiscRipperTests
         // test above, this proves the fall-through continues normally.
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -760,25 +760,25 @@ public class DiscRipperTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "some unrelated ffmpeg warning", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", "some unrelated ffmpeg warning", TimeSpan.Zero));
 
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         DiscRipResult[] results = await ripper.RipAsync(
-            request: MakeVideoRequest(drivePath: "bluray:/dev/sr0/", discType: OpticalDiscType.BluRay),
-            outputDirectory: "/out",
-            ct: CancellationToken.None
+            MakeVideoRequest(drivePath: "bluray:/dev/sr0/", discType: OpticalDiscType.BluRay),
+            "/out",
+            CancellationToken.None
         );
 
         results.Should().ContainSingle();
         results[0].Success.Should().BeFalse();
-        results[0].Error.Should().Contain(expected: "1");
+        results[0].Error.Should().Contain("1");
     }
 
     [Fact]
@@ -793,34 +793,34 @@ public class DiscRipperTests
         // symmetry code silently unverified.
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         System.Reflection.MethodInfo method = typeof(DiscRipper).GetMethod(
-            name: "RipOneTitleAsync",
-            bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+            "RipOneTitleAsync",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
         )!;
 
         RipRequest request = MakeVideoRequest(drivePath: "/dev/sr0", discType: OpticalDiscType.Cd);
         Task<DiscRipResult> task =
             (Task<DiscRipResult>)
-                method.Invoke(obj: ripper, parameters: [request, 1, "/out", CancellationToken.None])!;
+                method.Invoke(ripper, [request, 1, "/out", CancellationToken.None])!;
         DiscRipResult result = await task;
 
         result.Success.Should().BeTrue();
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     "ffmpeg",
                     It.Is<string[]>(args => args.Contains("libcdio") && args.Contains("/dev/sr0")),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -831,11 +831,11 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         RipRequest request = MakeVideoRequest(
@@ -843,12 +843,12 @@ public class DiscRipperTests
             discType: OpticalDiscType.Cd,
             titles: [1, 2]
         );
-        DiscRipResult[] results = await ripper.RipAsync(request: request, outputDirectory: "/out", ct: CancellationToken.None);
+        DiscRipResult[] results = await ripper.RipAsync(request, "/out", CancellationToken.None);
 
-        results.Should().HaveCount(expected: 2);
-        results.Select(selector: r => r.TitleIndex).Should().Equal(elements: [1, 2]);
+        results.Should().HaveCount(2);
+        results.Select(r => r.TitleIndex).Should().Equal(1, 2);
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     "ffmpeg",
                     It.Is<string[]>(args =>
@@ -857,17 +857,17 @@ public class DiscRipperTests
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     "ffmpeg",
                     It.Is<string[]>(args => args.Contains("0:a:1")),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -878,19 +878,19 @@ public class DiscRipperTests
         Mock<IStorage> storage = MakeStorageMock();
         string? capturedOutputPath = null;
         storage
-            .Setup(expression: s => s.AcquireLocalPath(It.IsAny<string>()))
-            .Returns<string>(valueFunction: path =>
+            .Setup(s => s.AcquireLocalPath(It.IsAny<string>()))
+            .Returns<string>(path =>
             {
                 capturedOutputPath = path;
-                return new LocalPathLease(path: path);
+                return new LocalPathLease(path);
             });
 
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: storage.Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            storage.Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         RipRequest request = MakeVideoRequest(
@@ -898,9 +898,9 @@ public class DiscRipperTests
             discType: OpticalDiscType.Cd,
             titles: [3]
         );
-        await ripper.RipAsync(request: request, outputDirectory: "/out", ct: CancellationToken.None);
+        await ripper.RipAsync(request, "/out", CancellationToken.None);
 
-        capturedOutputPath.Should().Contain(expected: "03 - Track 03.flac");
+        capturedOutputPath.Should().Contain("03 - Track 03.flac");
     }
 
     [Fact]
@@ -908,7 +908,7 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -916,14 +916,14 @@ public class DiscRipperTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "read error", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", "read error", TimeSpan.Zero));
 
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         RipRequest request = MakeVideoRequest(
@@ -931,10 +931,10 @@ public class DiscRipperTests
             discType: OpticalDiscType.Cd,
             titles: [1]
         );
-        DiscRipResult[] results = await ripper.RipAsync(request: request, outputDirectory: "/out", ct: CancellationToken.None);
+        DiscRipResult[] results = await ripper.RipAsync(request, "/out", CancellationToken.None);
 
         results[0].Success.Should().BeFalse();
-        results[0].Error.Should().Contain(expected: "1");
+        results[0].Error.Should().Contain("1");
     }
 
     [Fact]
@@ -942,11 +942,11 @@ public class DiscRipperTests
     {
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         using CancellationTokenSource cts = new();
@@ -957,7 +957,7 @@ public class DiscRipperTests
             discType: OpticalDiscType.Cd,
             titles: [1, 2]
         );
-        Func<Task> act = () => ripper.RipAsync(request: request, outputDirectory: "/out", ct: cts.Token);
+        Func<Task> act = () => ripper.RipAsync(request, "/out", cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -971,11 +971,11 @@ public class DiscRipperTests
         // never throws building the sanitized output filename.
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         DiscRipper ripper = new(
-            options: MakeOptions(),
-            processRunner: runner.Object,
-            storage: MakeStorageMock().Object,
-            driveLockRegistry: new DriveLockRegistry(),
-            logger: NullLogger<DiscRipper>.Instance
+            MakeOptions(),
+            runner.Object,
+            MakeStorageMock().Object,
+            new DriveLockRegistry(),
+            NullLogger<DiscRipper>.Instance
         );
 
         RipRequest request = MakeVideoRequest(
@@ -983,7 +983,7 @@ public class DiscRipperTests
             discType: OpticalDiscType.Cd,
             titles: [1]
         );
-        Func<Task> act = () => ripper.RipAsync(request: request, outputDirectory: "/out", ct: CancellationToken.None);
+        Func<Task> act = () => ripper.RipAsync(request, "/out", CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }

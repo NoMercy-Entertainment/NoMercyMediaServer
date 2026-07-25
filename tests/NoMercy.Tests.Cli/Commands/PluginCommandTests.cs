@@ -25,54 +25,54 @@ namespace NoMercy.Tests.Cli.Commands;
 /// table — with a distinct message/exit code for each, never conflating "no
 /// plugins" with "couldn't connect".
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class PluginCommandTests
 {
     private static async Task<int> RunAsync(ICliClientFactory factory)
     {
-        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
-        RootCommand root = new(description: "test");
-        root.Options.Add(item: pipeOption);
-        root.Subcommands.Add(item: PluginCommand.Create(pipeOption: pipeOption, clientFactory: factory));
-        return await root.Parse(args: ["plugin", "list"]).InvokeAsync();
+        Option<string?> pipeOption = new("--pipe", "-p");
+        RootCommand root = new("test");
+        root.Options.Add(pipeOption);
+        root.Subcommands.Add(PluginCommand.Create(pipeOption, factory));
+        return await root.Parse(["plugin", "list"]).InvokeAsync();
     }
 
     private static Mock<ICliClientFactory> FactoryReturning(List<PluginResponse>? plugins)
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.GetAsync<List<PluginResponse>>(ApiRoutes.Plugins, It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: plugins);
+            .ReturnsAsync(plugins);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
+        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
         return factory;
     }
 
     [Fact]
     public async Task List_ServerUnreachable_PrintsError_AndReturnsServerError()
     {
-        Mock<ICliClientFactory> factory = FactoryReturning(plugins: null);
+        Mock<ICliClientFactory> factory = FactoryReturning(null);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory: factory.Object);
+        int exitCode = await RunAsync(factory.Object);
 
-        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
-        console.Error.Should().Contain(expected: "Could not connect to server.");
+        exitCode.Should().Be((int)ExitCode.ServerError);
+        console.Error.Should().Contain("Could not connect to server.");
     }
 
     [Fact]
     public async Task List_NoPlugins_PrintsEmptyMessage_AndReturnsSuccess()
     {
-        Mock<ICliClientFactory> factory = FactoryReturning(plugins: []);
+        Mock<ICliClientFactory> factory = FactoryReturning([]);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory: factory.Object);
+        int exitCode = await RunAsync(factory.Object);
 
-        exitCode.Should().Be(expected: (int)ExitCode.Success);
-        console.Out.Should().Contain(expected: "No plugins installed.");
+        exitCode.Should().Be((int)ExitCode.Success);
+        console.Out.Should().Contain("No plugins installed.");
     }
 
     [Fact]
@@ -90,15 +90,15 @@ public sealed class PluginCommandTests
             },
         ];
 
-        Mock<ICliClientFactory> factory = FactoryReturning(plugins: plugins);
+        Mock<ICliClientFactory> factory = FactoryReturning(plugins);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory: factory.Object);
+        int exitCode = await RunAsync(factory.Object);
 
-        exitCode.Should().Be(expected: (int)ExitCode.Success);
-        console.Out.Should().Contain(expected: "Echo Sample");
-        console.Out.Should().Contain(expected: "1.0.0");
-        console.Out.Should().Contain(expected: "enabled");
-        console.Out.Should().Contain(expected: "NoMercy");
+        exitCode.Should().Be((int)ExitCode.Success);
+        console.Out.Should().Contain("Echo Sample");
+        console.Out.Should().Contain("1.0.0");
+        console.Out.Should().Contain("enabled");
+        console.Out.Should().Contain("NoMercy");
     }
 }

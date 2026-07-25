@@ -95,12 +95,12 @@ public static partial class ServiceConfiguration
     {
         services
             .AddDataProtection()
-            .PersistKeysToFileSystem(directory: new(path: AppFiles.DataProtectionKeysDir))
-            .SetApplicationName(applicationName: "NoMercyMediaServer");
+            .PersistKeysToFileSystem(new(AppFiles.DataProtectionKeysDir))
+            .SetApplicationName("NoMercyMediaServer");
 
         // Setup state and services — singletons shared between middleware and setup flow
         services.AddSingleton<SetupState>();
-        services.AddSingleton<AuthManager>(implementationFactory: sp =>
+        services.AddSingleton<AuthManager>(sp =>
         {
             // AuthManager is a long-lived singleton that needs a persistent AppDbContext.
             // A dedicated scope is created here so the context lives for the server lifetime
@@ -110,7 +110,7 @@ public static partial class ServiceConfiguration
             AppDbContext authDbContext =
                 authScope.ServiceProvider.GetRequiredService<AppDbContext>();
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
-            return new(appContext: authDbContext, driver: storageDriver, authTokenStore: sp.GetRequiredService<IAuthTokenStore>());
+            return new(authDbContext, storageDriver, sp.GetRequiredService<IAuthTokenStore>());
         });
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();
@@ -119,16 +119,16 @@ public static partial class ServiceConfiguration
         // on the HTTPS restart and on port-conflict retry; a per-container singleton
         // would mean queue workers in the live host wait on a tracker that the static
         // MarkComplete callers (BootOrchestrator, Setup.Start) never reached.
-        services.AddSingleton<NmSystem.Lifecycle.IServerPhaseTracker>(implementationFactory: sp =>
+        services.AddSingleton<NmSystem.Lifecycle.IServerPhaseTracker>(sp =>
             NmSystem.Lifecycle.ServerPhaseTracker.Shared(
-                logger: sp.GetService<ILogger<NmSystem.Lifecycle.ServerPhaseTracker>>()
+                sp.GetService<ILogger<NmSystem.Lifecycle.ServerPhaseTracker>>()
             )
         );
 
         services.AddScoped<Encoder.Profiles.BuiltinPresetSeeder>();
 
         // Add Memory Cache with size limit to prevent unbounded growth
-        services.AddMemoryCache(setupAction: options =>
+        services.AddMemoryCache(options =>
         {
             options.SizeLimit = 1024;
             options.CompactionPercentage = 0.25;
@@ -138,11 +138,10 @@ public static partial class ServiceConfiguration
         // Register Event Bus with audit logging and event audit trail
         InMemoryEventBus innerBus = new();
         LoggingEventBusDecorator loggingBus = new(
-            inner: innerBus,
-            log: message => Logger.App(message: message, level: LogEventLevel.Verbose),
+            innerBus,
+            message => Logger.App(message, LogEventLevel.Verbose),
             // High-frequency progress events would otherwise spam the verbose
             // log every ~500ms during an encode without adding signal.
-            excludedEventTypes:
             [
                 "EncodingProgressBroadcastedEvent",
                 "EncodingProgressUpdatedEvent",
@@ -152,7 +151,7 @@ public static partial class ServiceConfiguration
             ]
         );
         EventAuditLog auditLog = new(
-            options: new()
+            new()
             {
                 Enabled = true,
                 MaxEntries = 10_000,
@@ -164,10 +163,10 @@ public static partial class ServiceConfiguration
                 ],
             }
         );
-        AuditingEventBusDecorator eventBus = new(inner: loggingBus, auditLog: auditLog);
-        services.AddSingleton<IEventBus>(implementationInstance: eventBus);
-        services.AddSingleton(implementationInstance: auditLog);
-        EventBusProvider.Configure(eventBus: eventBus);
+        AuditingEventBusDecorator eventBus = new(loggingBus, auditLog);
+        services.AddSingleton<IEventBus>(eventBus);
+        services.AddSingleton(auditLog);
+        EventBusProvider.Configure(eventBus);
 
         services.AddSingleton<IApiKeyStore, ApiKeyStore>();
         services.AddSingleton<IAniDbService, AniDbService>();
@@ -181,22 +180,22 @@ public static partial class ServiceConfiguration
 
         // Network discovery (replaces static Networking.Networking IP/address members)
         NetworkProbeConfig networkProbeConfig =
-            configuration.GetSection(key: "NetworkProbe").Get<NetworkProbeConfig>() ?? new();
+            configuration.GetSection("NetworkProbe").Get<NetworkProbeConfig>() ?? new();
         NetworkProbe.ProbeTargets = networkProbeConfig.ProbeTargets;
 
-        services.AddSingleton<INetworkDiscovery>(implementationFactory: sp =>
+        services.AddSingleton<INetworkDiscovery>(sp =>
         {
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
             NetworkDiscovery discovery = new(
-                logger: sp.GetRequiredService<ILogger<NetworkDiscovery>>(),
-                driver: storageDriver,
-                authTokenStore: sp.GetRequiredService<IAuthTokenStore>(),
-                connectivityStatus: sp.GetRequiredService<IConnectivityStatus>(),
-                networkProbeConfig: networkProbeConfig
+                sp.GetRequiredService<ILogger<NetworkDiscovery>>(),
+                storageDriver,
+                sp.GetRequiredService<IAuthTokenStore>(),
+                sp.GetRequiredService<IConnectivityStatus>(),
+                networkProbeConfig
             );
-            if (!string.IsNullOrEmpty(value: StartupOptions.OverrideInternalIp))
+            if (!string.IsNullOrEmpty(StartupOptions.OverrideInternalIp))
                 discovery.InternalIp = StartupOptions.OverrideInternalIp;
-            if (!string.IsNullOrEmpty(value: StartupOptions.OverrideExternalIp))
+            if (!string.IsNullOrEmpty(StartupOptions.OverrideExternalIp))
                 discovery.ExternalIp = StartupOptions.OverrideExternalIp;
             Start.NetworkDiscovery = discovery;
             // Register.Discovery = discovery;
@@ -204,30 +203,30 @@ public static partial class ServiceConfiguration
         });
 
         // Cast pipeline (instance service sharing the injected INetworkDiscovery)
-        services.AddSingleton<ChromeCastService>(implementationFactory: sp =>
+        services.AddSingleton<ChromeCastService>(sp =>
         {
             ChromeCastService chromeCast = new(
-                logger: sp.GetRequiredService<ILogger<ChromeCastService>>(),
-                networkDiscovery: sp.GetRequiredService<INetworkDiscovery>()
+                sp.GetRequiredService<ILogger<ChromeCastService>>(),
+                sp.GetRequiredService<INetworkDiscovery>()
             );
             Start.ChromeCast = chromeCast;
             return chromeCast;
         });
-        services.AddSingleton<IChromeCastService>(implementationFactory: sp => sp.GetRequiredService<ChromeCastService>());
+        services.AddSingleton<IChromeCastService>(sp => sp.GetRequiredService<ChromeCastService>());
 
         // Certificate service (instance singleton). Renewal uses the cert-renewal named
         // client whose primary handler resolves DNS via DnsClient.
         services
-            .AddHttpClient(name: "cert-renewal")
-            .ConfigurePrimaryHttpMessageHandler(configureHandler: () =>
+            .AddHttpClient("cert-renewal")
+            .ConfigurePrimaryHttpMessageHandler(() =>
                 NmSystem.Extensions.HttpClientExtensions.CreateDnsHandler()
             );
-        services.AddSingleton<ICertificateService>(implementationFactory: sp =>
+        services.AddSingleton<ICertificateService>(sp =>
         {
             CertificateService certificateService = new(
-                logger: sp.GetRequiredService<ILogger<CertificateService>>(),
-                httpClientFactory: sp.GetRequiredService<IHttpClientFactory>(),
-                networkDiscovery: sp.GetRequiredService<INetworkDiscovery>()
+                sp.GetRequiredService<ILogger<CertificateService>>(),
+                sp.GetRequiredService<IHttpClientFactory>(),
+                sp.GetRequiredService<INetworkDiscovery>()
             );
             Start.Certificate = certificateService;
             return certificateService;
@@ -240,29 +239,29 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IResourceMonitorService, ResourceMonitorService>();
 
         // Connectivity strategies (ordered by priority)
-        services.AddSingleton<IConnectivityStrategy>(implementationFactory: sp => new PortForwardStrategy(
-            networkDiscovery: (NetworkDiscovery)sp.GetRequiredService<INetworkDiscovery>(),
-            connectivityStatus: sp.GetRequiredService<IConnectivityStatus>(),
-            logger: sp.GetRequiredService<ILogger<PortForwardStrategy>>()
+        services.AddSingleton<IConnectivityStrategy>(sp => new PortForwardStrategy(
+            (NetworkDiscovery)sp.GetRequiredService<INetworkDiscovery>(),
+            sp.GetRequiredService<IConnectivityStatus>(),
+            sp.GetRequiredService<ILogger<PortForwardStrategy>>()
         ));
         services.AddSingleton<IConnectivityStrategy, StunHolePunchStrategy>();
-        services.AddSingleton<IConnectivityStrategy>(implementationFactory: sp => new CloudflareTunnelStrategy(
-            logger: sp.GetRequiredService<ILogger<CloudflareTunnelStrategy>>(),
-            connectivityStatus: sp.GetRequiredService<IConnectivityStatus>(),
-            checkTunnelAvailability: () => sp.GetRequiredService<IServerRegistrationService>().GetTunnelAvailability()
+        services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(
+            sp.GetRequiredService<ILogger<CloudflareTunnelStrategy>>(),
+            sp.GetRequiredService<IConnectivityStatus>(),
+            () => sp.GetRequiredService<IServerRegistrationService>().GetTunnelAvailability()
         ));
 
         // Add Auth services
         services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
 
         // Add Configuration POCOs
-        services.Configure<ExternalServicesConfig>(config: configuration.GetSection(key: "ExternalServices"));
-        services.Configure<ServerConfig>(config: configuration.GetSection(key: "Server"));
-        services.Configure<ConnectivityConfig>(config: configuration.GetSection(key: "Connectivity"));
-        services.Configure<NetworkProbeConfig>(config: configuration.GetSection(key: "NetworkProbe"));
-        services.Configure<WorkerConfig>(config: configuration.GetSection(key: "Workers"));
-        services.Configure<EncoderResourceConfig>(config: configuration.GetSection(key: "EncoderResources"));
-        services.Configure<ContentPolicy>(config: configuration.GetSection(key: "ContentPolicy"));
+        services.Configure<ExternalServicesConfig>(configuration.GetSection("ExternalServices"));
+        services.Configure<ServerConfig>(configuration.GetSection("Server"));
+        services.Configure<ConnectivityConfig>(configuration.GetSection("Connectivity"));
+        services.Configure<NetworkProbeConfig>(configuration.GetSection("NetworkProbe"));
+        services.Configure<WorkerConfig>(configuration.GetSection("Workers"));
+        services.Configure<EncoderResourceConfig>(configuration.GetSection("EncoderResources"));
+        services.Configure<ContentPolicy>(configuration.GetSection("ContentPolicy"));
 
         // Add runtime status singletons
         services.AddSingleton<IBootStatus, BootStatus>();
@@ -271,13 +270,13 @@ public static partial class ServiceConfiguration
 
         // Runtime server settings (DB-hydrated, dashboard-mutable). DI hands out
         // the same static Current instance the Config facade and boot path use.
-        services.AddSingleton(implementationFactory: _ => RuntimeServerSettings.Current);
+        services.AddSingleton(_ => RuntimeServerSettings.Current);
 
         services.AddSingleton<IImageService, ImageService>();
 
-        services.AddSingleton<IUserCache>(implementationInstance: UserCache.Current);
-        services.AddSingleton<IFfProbeService>(implementationInstance: FfProbeService.Current);
-        services.AddSingleton<IStartupManager>(implementationInstance: StartupManager.Current);
+        services.AddSingleton<IUserCache>(UserCache.Current);
+        services.AddSingleton<IFfProbeService>(FfProbeService.Current);
+        services.AddSingleton<IStartupManager>(StartupManager.Current);
         services.AddSingleton<IMediaAuthorizationPolicy, MediaAuthorizationPolicy>();
 
         // Server-users sync (invite/removal reconciliation) — used by the
@@ -291,19 +290,19 @@ public static partial class ServiceConfiguration
 
         // Connectivity manager (replaces ServerRegistrationService + CloudflareTunnelService)
         services.AddSingleton<IConnectivityManager, ConnectivityManager>();
-        services.AddHostedService(implementationFactory: sp =>
+        services.AddHostedService(sp =>
             (ConnectivityManager)sp.GetRequiredService<IConnectivityManager>()
         );
 
         // Network change monitor
         services.AddSingleton<NetworkChangeMonitor>();
-        services.AddHostedService(implementationFactory: sp => sp.GetRequiredService<NetworkChangeMonitor>());
+        services.AddHostedService(sp => sp.GetRequiredService<NetworkChangeMonitor>());
 
         // mDNS LAN device scanner
         services.AddSingleton<MdnsDeviceScanner>();
         services.AddHostedService<MdnsDeviceScannerHostedService>();
         services.AddSingleton<DeviceBusRegistry>();
-        services.AddSingleton<IDeviceListChangeNotifier>(implementationFactory: sp =>
+        services.AddSingleton<IDeviceListChangeNotifier>(sp =>
             sp.GetRequiredService<DeviceBusRegistry>()
         );
 
@@ -317,29 +316,29 @@ public static partial class ServiceConfiguration
 
         // Add DbContexts
         services.AddDbContext<AppDbContext>(
-            optionsAction: options => options.UseSqlite(connectionString: $"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;"),
+            options => options.UseSqlite($"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;"),
             optionsLifetime: ServiceLifetime.Singleton
         );
 
         // DbDriverFingerprintStore is a singleton — it needs the factory form so
         // each save/load gets a fresh disposable AppDbContext rather than sharing
         // a singleton-scoped tracker.
-        services.AddDbContextFactory<AppDbContext>(optionsAction: options =>
-            options.UseSqlite(connectionString: $"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;")
+        services.AddDbContextFactory<AppDbContext>(options =>
+            options.UseSqlite($"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;")
         );
 
         // optionsLifetime: Singleton so the Singleton IDbContextFactory<QueueContext>
         // can consume DbContextOptions without lifetime-validation errors. The
         // DbContext itself stays Scoped (default) for per-request use.
         Action<DbContextOptionsBuilder> configureQueueContext = optionsAction =>
-            optionsAction.UseSqlite(connectionString: $"Data Source={AppFiles.QueueDatabase}; Pooling=True;");
+            optionsAction.UseSqlite($"Data Source={AppFiles.QueueDatabase}; Pooling=True;");
 
         services.AddDbContext<QueueContext>(
-            optionsAction: configureQueueContext,
+            configureQueueContext,
             optionsLifetime: ServiceLifetime.Singleton
         );
 
-        services.AddDbContextFactory<QueueContext>(optionsAction: configureQueueContext);
+        services.AddDbContextFactory<QueueContext>(configureQueueContext);
 
         // optionsLifetime: Singleton so the Singleton IDbContextFactory below
         // can consume DbContextOptions without lifetime-validation errors.
@@ -349,16 +348,16 @@ public static partial class ServiceConfiguration
         // SqliteNormalizeSearchInterceptor on DI/factory-created contexts.
         Action<DbContextOptionsBuilder> configureMediaContext = optionsAction =>
             optionsAction.UseSqlite(
-                connectionString: $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True;",
-                sqliteOptionsAction: o =>
+                $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True;",
+                o =>
                 {
-                    o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery);
-                    o.ExecutionStrategy(getExecutionStrategy: deps => new SqliteRetryingExecutionStrategy(dependencies: deps));
+                    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    o.ExecutionStrategy(deps => new SqliteRetryingExecutionStrategy(deps));
                 }
             );
 
         services.AddDbContext<MediaContext>(
-            optionsAction: configureMediaContext,
+            configureMediaContext,
             optionsLifetime: ServiceLifetime.Singleton
         );
 
@@ -367,7 +366,7 @@ public static partial class ServiceConfiguration
         // ActivityLogger) can inject it. Options registered above as Singleton
         // so this resolves cleanly. CreateDbContextAsync() returns fresh
         // disposable contexts per call.
-        services.AddDbContextFactory<MediaContext>(optionsAction: configureMediaContext);
+        services.AddDbContextFactory<MediaContext>(configureMediaContext);
 
         services.AddSingleton<NoMercyQueue.Core.Interfaces.IJobDispatcher, JobDispatcher>();
 
@@ -530,16 +529,16 @@ public static partial class ServiceConfiguration
 
         services.AddMediaServerQueue();
         services.AddSingleton<JobDispatcher>();
-        services.AddSingleton<IJobDispatcher>(implementationFactory: sp => sp.GetRequiredService<JobDispatcher>());
+        services.AddSingleton<IJobDispatcher>(sp => sp.GetRequiredService<JobDispatcher>());
 
         // Storage driver resolvers — registered before AddNoMercyEncoder so
         // the TryAdd inside AddNoMercyStorage picks them up via GetService<>.
-        services.AddSingleton<IDriverConfigResolver>(implementationFactory: sp => new DriverConfigResolver(
-            contextFactory: sp.GetRequiredService<IDbContextFactory<MediaContext>>()
+        services.AddSingleton<IDriverConfigResolver>(sp => new DriverConfigResolver(
+            sp.GetRequiredService<IDbContextFactory<MediaContext>>()
         ));
         services.AddSingleton<ICredentialResolver, CredentialResolver>();
 
-        services.AddNoMercyEncoder(configure: opts =>
+        services.AddNoMercyEncoder(opts =>
         {
             opts.FfmpegPathOverride = AppFiles.FfmpegPath;
             opts.FfprobePathOverride = AppFiles.FfProbePath;
@@ -572,12 +571,12 @@ public static partial class ServiceConfiguration
         // HomeController uses this so it can pass scope-relative paths (Rule 1 of
         // the IStorage path contract) instead of Path.Combine(TranscodePath, ...).
         services.AddKeyedSingleton<IStorage>(
-            serviceKey: "transcode",
-            implementationFactory: (sp, _) =>
+            "transcode",
+            (sp, _) =>
             {
                 IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
-                Storage.Validation.StoragePathGuard guard = new(allowedRoots: [AppFiles.TranscodePath], driver: driver);
-                return new Storage.Drivers.Local.LocalStorage(driver: driver, guard: guard);
+                Storage.Validation.StoragePathGuard guard = new([AppFiles.TranscodePath], driver);
+                return new Storage.Drivers.Local.LocalStorage(driver, guard);
             }
         );
 
@@ -594,15 +593,15 @@ public static partial class ServiceConfiguration
         services.AddHostedService<PaletteBackfillStartupService>();
         services.AddHostedService<MusicQueryWarmupService>();
 
-        services.AddPluginSystem(pluginsPath: AppFiles.PluginsPath);
-        services.RegisterPluginServicesFromManifests(pluginsPath: AppFiles.PluginsPath);
+        services.AddPluginSystem(AppFiles.PluginsPath);
+        services.RegisterPluginServicesFromManifests(AppFiles.PluginsPath);
 
         services.AddVideoHubServices();
         services.AddMusicHubServices();
         services.AddLiveTranscodeHubServices();
         services.AddSingleton<IActivityHubBroadcaster, ActivityHubBroadcaster>();
         services.AddSingleton<IActivityLogger, ActivityLogger>();
-        services.AddSingleton<DatabaseActivity.IActivityLogger>(implementationFactory: sp =>
+        services.AddSingleton<DatabaseActivity.IActivityLogger>(sp =>
             sp.GetRequiredService<IActivityLogger>()
         );
         services.AddSignalREventHandlers();
@@ -615,7 +614,7 @@ public static partial class ServiceConfiguration
             Encoder.Subtitles.OpenSubtitlesAdapter
         >();
 
-        services.AddLocalization(setupAction: options => options.ResourcesPath = "Resources");
+        services.AddLocalization(options => options.ResourcesPath = "Resources");
         services.AddScoped<ILocalizer, Localizer>();
     }
 }

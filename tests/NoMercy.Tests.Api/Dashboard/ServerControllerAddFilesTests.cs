@@ -12,7 +12,6 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -35,7 +34,7 @@ namespace NoMercy.Tests.Api.Dashboard;
 /// asserted here by filtering on the unique per-test LibraryId embedded in every
 /// job payload.
 /// </summary>
-[Trait(name: "Category", value: "DashboardServer")]
+[Trait("Category", "DashboardServer")]
 public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, IAsyncLifetime
 {
     private readonly HttpClient _authed;
@@ -70,7 +69,7 @@ public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, I
             AutoEncodeOnScan = false,
         };
 
-        ctx.Libraries.AddRange(entities: [autoEncodeLibrary, manualLibrary]);
+        ctx.Libraries.AddRange([autoEncodeLibrary, manualLibrary]);
         await ctx.SaveChangesAsync();
     }
 
@@ -78,7 +77,7 @@ public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, I
     {
         await using MediaContext ctx = new();
         await ctx
-            .Libraries.Where(predicate: l => l.Id == _autoEncodeLibraryId || l.Id == _manualLibraryId)
+            .Libraries.Where(l => l.Id == _autoEncodeLibraryId || l.Id == _manualLibraryId)
             .ExecuteDeleteAsync();
     }
 
@@ -87,13 +86,13 @@ public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, I
         using QueueContext queueCtx = new();
         return queueCtx
             .QueueJobs.AsNoTracking()
-            .Where(predicate: j => j.Payload.Contains(marker))
-            .Select(selector: j => j.Payload)
+            .Where(j => j.Payload.Contains(marker))
+            .Select(j => j.Payload)
             .ToList();
     }
 
     private static StringContent JsonBody(object obj) =>
-        new(content: JsonSerializer.Serialize(value: obj), encoding: Encoding.UTF8, mediaType: "application/json");
+        new(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
 
     [Fact]
     public async Task AddFiles_ManualImport_AlwaysDispatchesVideoEncodeJobPerFile()
@@ -111,20 +110,20 @@ public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, I
         };
 
         HttpResponseMessage response = await _authed.PostAsync(
-            requestUri: "/api/v1/dashboard/server/addfiles",
-            content: JsonBody(obj: body)
+            "/api/v1/dashboard/server/addfiles",
+            JsonBody(body)
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        List<string> payloads = QueryPayloadsContaining(marker: _manualLibraryId.ToString());
+        List<string> payloads = QueryPayloadsContaining(_manualLibraryId.ToString());
 
-        payloads.Should().HaveCount(expected: 2, because: "one VideoEncodeJob per added file");
+        payloads.Should().HaveCount(2, "one VideoEncodeJob per added file");
         payloads
             .Should()
             .OnlyContain(
-                predicate: p => p.Contains("VideoEncodeJob"),
-                because: "manual add-files is a deliberate import that always encodes the explicit source "
+                p => p.Contains("VideoEncodeJob"),
+                "manual add-files is a deliberate import that always encodes the explicit source "
                          + "file — AutoEncodeOnScan gates only the automatic scan path, not this endpoint"
             );
     }
@@ -147,27 +146,27 @@ public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, I
         };
 
         HttpResponseMessage response = await _authed.PostAsync(
-            requestUri: "/api/v1/dashboard/server/addfiles",
-            content: JsonBody(obj: body)
+            "/api/v1/dashboard/server/addfiles",
+            JsonBody(body)
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        List<string> payloads = QueryPayloadsContaining(marker: _autoEncodeLibraryId.ToString());
+        List<string> payloads = QueryPayloadsContaining(_autoEncodeLibraryId.ToString());
 
-        payloads.Should().HaveCount(expected: 2, because: "one VideoEncodeJob per added file");
-        payloads.Should().OnlyContain(predicate: p => p.Contains("VideoEncodeJob"));
+        payloads.Should().HaveCount(2, "one VideoEncodeJob per added file");
+        payloads.Should().OnlyContain(p => p.Contains("VideoEncodeJob"));
         payloads
             .Should()
             .OnlyContain(
-                predicate: p => p.Contains(sourceDriverId.ToString()),
-                because: "SourceDriverId from the request must be preserved, same as the old call"
+                p => p.Contains(sourceDriverId.ToString()),
+                "SourceDriverId from the request must be preserved, same as the old call"
             );
         payloads
             .Should()
             .OnlyContain(
-                predicate: p => p.Contains(_presetId.ToString()),
-                because: "the library's EncodePresetId must be carried onto the dispatched job"
+                p => p.Contains(_presetId.ToString()),
+                "the library's EncodePresetId must be carried onto the dispatched job"
             );
     }
 }

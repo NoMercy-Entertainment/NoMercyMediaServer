@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbTvChanges
 {
-    [JsonProperty(propertyName: "key")]
+    [JsonProperty("key")]
     public string Key { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "items")]
+    [JsonProperty("items")]
     public TmdbTvChangeItem[] Items { get; set; } = [];
 }

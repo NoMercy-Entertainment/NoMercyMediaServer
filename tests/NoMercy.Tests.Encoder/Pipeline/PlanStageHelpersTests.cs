@@ -26,30 +26,30 @@ public class PlanStageHelpersTests
 {
     private static VideoOutput RefVideo() =>
         new(
-            Policy: StreamPolicy.Transcode,
-            Codec: VideoCodecType.H264,
-            Width: 1920,
-            Height: 1080,
-            RateControl: RateControlMode.Vbr,
-            Crf: 0,
-            BitrateKbps: 4000,
-            MaxBitrateKbps: null,
-            BufferSizeKbps: null,
-            Preset: "medium",
-            CodecProfile: CodecProfile.Main,
-            Level: "4.0",
-            Tune: null,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            KeyframeIntervalSeconds: 2,
-            ConvertHdrToSdr: false,
-            SegmentNameTemplate: "video/{w}x{h}",
-            PlaylistNameTemplate: "video/{w}x{h}/playlist"
+            StreamPolicy.Transcode,
+            VideoCodecType.H264,
+            1920,
+            1080,
+            RateControlMode.Vbr,
+            0,
+            4000,
+            null,
+            null,
+            "medium",
+            CodecProfile.Main,
+            "4.0",
+            null,
+            8,
+            "yuv420p",
+            2,
+            false,
+            "video/{w}x{h}",
+            "video/{w}x{h}/playlist"
         );
 
     private static EncodingProfile Profile(VideoOutput? video, LadderConfig? ladder) =>
         new(
-            Id: Ulid.NewUlid(),
+            Ulid.NewUlid(),
             Name: "test",
             Container: Container.HlsFmp4,
             Video: video,
@@ -63,63 +63,63 @@ public class PlanStageHelpersTests
     [Fact]
     public void EnumerateVideo_NoVideoNoLadder_ReturnsEmpty()
     {
-        EncodingProfile profile = Profile(video: null, ladder: null);
-        PlanStageHelpers.EnumerateVideo(profile: profile).Should().BeEmpty();
+        EncodingProfile profile = Profile(null, null);
+        PlanStageHelpers.EnumerateVideo(profile).Should().BeEmpty();
     }
 
     [Fact]
     public void EnumerateVideo_VideoNoLadder_ReturnsSingleEntry()
     {
-        EncodingProfile profile = Profile(video: RefVideo(), ladder: null);
-        VideoOutput[] result = PlanStageHelpers.EnumerateVideo(profile: profile);
+        EncodingProfile profile = Profile(RefVideo(), null);
+        VideoOutput[] result = PlanStageHelpers.EnumerateVideo(profile);
 
         result.Should().ContainSingle();
-        result[0].Width.Should().Be(expected: 1920);
+        result[0].Width.Should().Be(1920);
     }
 
     [Fact]
     public void EnumerateVideo_ManualLadder_MaterialisesEachRung()
     {
         EncodingProfile profile = Profile(
-            video: RefVideo(),
-            ladder: new()
+            RefVideo(),
+            new()
             {
                 Mode = LadderMode.Manual,
                 Rungs =
                 [
-                    new(Width: 854, Height: 480, Codec: VideoCodecType.H264, BitrateKbps: 800, MaxBitrateKbps: 1000, BufferSizeKbps: 2000, Framerate: 24),
-                    new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 2000, MaxBitrateKbps: 2400, BufferSizeKbps: 4000, Framerate: 24),
-                    new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 4000, MaxBitrateKbps: 4800, BufferSizeKbps: 8000, Framerate: 24),
+                    new(854, 480, VideoCodecType.H264, 800, 1000, 2000, 24),
+                    new(1280, 720, VideoCodecType.H264, 2000, 2400, 4000, 24),
+                    new(1920, 1080, VideoCodecType.H264, 4000, 4800, 8000, 24),
                 ],
             }
         );
-        VideoOutput[] result = PlanStageHelpers.EnumerateVideo(profile: profile);
+        VideoOutput[] result = PlanStageHelpers.EnumerateVideo(profile);
 
-        result.Should().HaveCount(expected: 3);
-        result[0].Width.Should().Be(expected: 854);
-        result[0].BitrateKbps.Should().Be(expected: 800);
-        result[1].Width.Should().Be(expected: 1280);
-        result[2].Width.Should().Be(expected: 1920);
+        result.Should().HaveCount(3);
+        result[0].Width.Should().Be(854);
+        result[0].BitrateKbps.Should().Be(800);
+        result[1].Width.Should().Be(1280);
+        result[2].Width.Should().Be(1920);
     }
 
     [Fact]
     public void EnumerateVideo_RungInheritsReferenceFields()
     {
         EncodingProfile profile = Profile(
-            video: RefVideo(),
-            ladder: new()
+            RefVideo(),
+            new()
             {
                 Mode = LadderMode.Manual,
-                Rungs = [new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 2000, MaxBitrateKbps: 0, BufferSizeKbps: 0, Framerate: 24)],
+                Rungs = [new(1280, 720, VideoCodecType.H264, 2000, 0, 0, 24)],
             }
         );
-        VideoOutput[] result = PlanStageHelpers.EnumerateVideo(profile: profile);
+        VideoOutput[] result = PlanStageHelpers.EnumerateVideo(profile);
 
         // Preset / pixel format / keyframe interval / tune all come from
         // the reference video, not the rung.
-        result[0].Preset.Should().Be(expected: "medium");
-        result[0].PixelFormat.Should().Be(expected: "yuv420p");
-        result[0].KeyframeIntervalSeconds.Should().Be(expected: 2);
+        result[0].Preset.Should().Be("medium");
+        result[0].PixelFormat.Should().Be("yuv420p");
+        result[0].KeyframeIntervalSeconds.Should().Be(2);
     }
 
     [Fact]
@@ -128,8 +128,8 @@ public class PlanStageHelpersTests
         // AutoLadder is expanded by PlanStage via IAbrLadderGenerator BEFORE
         // this helper runs — so when EnumerateVideo sees Auto mode, it just
         // returns the single Video reference (or empty if null).
-        EncodingProfile profile = Profile(video: RefVideo(), ladder: new() { Mode = LadderMode.Auto });
-        VideoOutput[] result = PlanStageHelpers.EnumerateVideo(profile: profile);
+        EncodingProfile profile = Profile(RefVideo(), new() { Mode = LadderMode.Auto });
+        VideoOutput[] result = PlanStageHelpers.EnumerateVideo(profile);
 
         result.Should().ContainSingle();
     }
@@ -138,40 +138,40 @@ public class PlanStageHelpersTests
     public void EnumerateVideo_ManualLadderNoReferenceVideo_SynthesisesFromRung()
     {
         EncodingProfile profile = Profile(
-            video: null,
-            ladder: new()
+            null,
+            new()
             {
                 Mode = LadderMode.Manual,
-                Rungs = [new(Width: 1920, Height: 1080, Codec: VideoCodecType.H265, BitrateKbps: 6000, MaxBitrateKbps: 7200, BufferSizeKbps: 12000, Framerate: 24)],
+                Rungs = [new(1920, 1080, VideoCodecType.H265, 6000, 7200, 12000, 24)],
             }
         );
-        VideoOutput[] result = PlanStageHelpers.EnumerateVideo(profile: profile);
+        VideoOutput[] result = PlanStageHelpers.EnumerateVideo(profile);
 
         result.Should().ContainSingle();
-        result[0].Codec.Should().Be(expected: VideoCodecType.H265);
-        result[0].Width.Should().Be(expected: 1920);
+        result[0].Codec.Should().Be(VideoCodecType.H265);
+        result[0].Width.Should().Be(1920);
         // Synthetic reference uses safe defaults — CRF mode + crf=23.
-        result[0].Crf.Should().Be(expected: 23);
+        result[0].Crf.Should().Be(23);
     }
 
     // ── ContainerToOutputFormat ─────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: [Container.HlsTs, OutputFormat.Hls])]
-    [InlineData(data: [Container.HlsFmp4, OutputFormat.Hls])]
-    [InlineData(data: [Container.AudioHlsTs, OutputFormat.AudioHls])]
-    [InlineData(data: [Container.AudioHlsFmp4, OutputFormat.AudioHls])]
-    [InlineData(data: [Container.Mkv, OutputFormat.Mkv])]
-    [InlineData(data: [Container.Mka, OutputFormat.Mkv])]
-    [InlineData(data: [Container.Mks, OutputFormat.Mkv])]
-    [InlineData(data: [Container.Mp4, OutputFormat.Mp4])]
-    [InlineData(data: [Container.Aac, OutputFormat.Mp4])]
-    [InlineData(data: [Container.Dash, OutputFormat.Dash])]
-    [InlineData(data: [Container.Mp3, OutputFormat.Mp3])]
-    [InlineData(data: [Container.Flac, OutputFormat.Flac])]
-    [InlineData(data: [Container.Ogg, OutputFormat.Ogg])]
+    [InlineData([Container.HlsTs, OutputFormat.Hls])]
+    [InlineData([Container.HlsFmp4, OutputFormat.Hls])]
+    [InlineData([Container.AudioHlsTs, OutputFormat.AudioHls])]
+    [InlineData([Container.AudioHlsFmp4, OutputFormat.AudioHls])]
+    [InlineData([Container.Mkv, OutputFormat.Mkv])]
+    [InlineData([Container.Mka, OutputFormat.Mkv])]
+    [InlineData([Container.Mks, OutputFormat.Mkv])]
+    [InlineData([Container.Mp4, OutputFormat.Mp4])]
+    [InlineData([Container.Aac, OutputFormat.Mp4])]
+    [InlineData([Container.Dash, OutputFormat.Dash])]
+    [InlineData([Container.Mp3, OutputFormat.Mp3])]
+    [InlineData([Container.Flac, OutputFormat.Flac])]
+    [InlineData([Container.Ogg, OutputFormat.Ogg])]
     public void ContainerToOutputFormat_KnownContainers(Container c, OutputFormat expected)
     {
-        PlanStageHelpers.ContainerToOutputFormat(container: c).Should().Be(expected: expected);
+        PlanStageHelpers.ContainerToOutputFormat(c).Should().Be(expected);
     }
 }

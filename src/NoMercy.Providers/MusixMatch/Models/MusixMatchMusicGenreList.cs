@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchMusicGenreList
 {
-    [JsonProperty(propertyName: "music_genre")]
+    [JsonProperty("music_genre")]
     public MusixMatchMusicGenre MusixMatchMusicGenre { get; set; } = new();
 }

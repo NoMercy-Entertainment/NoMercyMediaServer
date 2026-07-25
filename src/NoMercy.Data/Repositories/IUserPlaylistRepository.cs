@@ -158,13 +158,13 @@ public readonly record struct PlaylistItemRef
     }
 
     public static PlaylistItemRef ForMovie(int movieId) =>
-        new(kind: PlaylistItemKind.Movie, movieId: movieId);
+        new(PlaylistItemKind.Movie, movieId);
 
-    public static PlaylistItemRef ForTv(int tvId) => new(kind: PlaylistItemKind.Tv, tvId: tvId);
+    public static PlaylistItemRef ForTv(int tvId) => new(PlaylistItemKind.Tv, tvId: tvId);
 
     public static PlaylistItemRef ForEpisode(int episodeId) =>
-        new(kind: PlaylistItemKind.Episode, episodeId: episodeId);
+        new(PlaylistItemKind.Episode, episodeId: episodeId);
 
     public static PlaylistItemRef ForSpecial(Ulid specialId) =>
-        new(kind: PlaylistItemKind.Special, specialId: specialId);
+        new(PlaylistItemKind.Special, specialId: specialId);
 }

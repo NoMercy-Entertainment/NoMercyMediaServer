@@ -21,20 +21,20 @@ public class BuiltinPresetSeeder(MediaContext context)
     public async Task SeedAsync(CancellationToken ct = default)
     {
         EncodingProfile[] builtins = BuiltinPresets.All();
-        HashSet<Ulid> builtinIds = builtins.Select(selector: p => p.Id).ToHashSet();
+        HashSet<Ulid> builtinIds = builtins.Select(p => p.Id).ToHashSet();
 
         foreach (EncodingProfile profile in builtins)
         {
-            string profileJson = JsonConvert.SerializeObject(value: profile);
+            string profileJson = JsonConvert.SerializeObject(profile);
             EncodingPreset? existing = await context.EncodingPresets.FirstOrDefaultAsync(
-                predicate: p => p.Id == profile.Id,
-                cancellationToken: ct
+                p => p.Id == profile.Id,
+                ct
             );
 
             if (existing is null)
             {
                 context.EncodingPresets.Add(
-                    entity: new()
+                    new()
                     {
                         Id = profile.Id,
                         Name = profile.Name,
@@ -55,8 +55,8 @@ public class BuiltinPresetSeeder(MediaContext context)
             }
         }
 
-        await context.SaveChangesAsync(cancellationToken: ct);
-        await RetireUnshippedBuiltinsAsync(builtinIds: builtinIds, ct: ct);
+        await context.SaveChangesAsync(ct);
+        await RetireUnshippedBuiltinsAsync(builtinIds, ct);
     }
 
     /// <summary>
@@ -73,11 +73,11 @@ public class BuiltinPresetSeeder(MediaContext context)
     private async Task RetireUnshippedBuiltinsAsync(HashSet<Ulid> builtinIds, CancellationToken ct)
     {
         List<EncodingPreset> unshipped = await context
-            .EncodingPresets.Where(predicate: preset => preset.IsBuiltIn)
-            .ToListAsync(cancellationToken: ct);
+            .EncodingPresets.Where(preset => preset.IsBuiltIn)
+            .ToListAsync(ct);
 
         List<EncodingPreset> stale = unshipped
-            .Where(predicate: preset => !builtinIds.Contains(item: preset.Id))
+            .Where(preset => !builtinIds.Contains(preset.Id))
             .ToList();
 
         if (stale.Count == 0)
@@ -86,16 +86,16 @@ public class BuiltinPresetSeeder(MediaContext context)
         foreach (EncodingPreset preset in stale)
         {
             List<EncodingPresetFolder> links = await context
-                .EncodingPresetFolders.Where(predicate: link => link.PresetId == preset.Id)
-                .ToListAsync(cancellationToken: ct);
+                .EncodingPresetFolders.Where(link => link.PresetId == preset.Id)
+                .ToListAsync(ct);
 
             if (
-                BuiltinPresetRenames.IdRedirects.TryGetValue(key: preset.Id, value: out Ulid replacementId)
-                && builtinIds.Contains(item: replacementId)
+                BuiltinPresetRenames.IdRedirects.TryGetValue(preset.Id, out Ulid replacementId)
+                && builtinIds.Contains(replacementId)
             )
             {
-                await RedirectLinksAsync(links: links, replacementId: replacementId, ct: ct);
-                context.EncodingPresets.Remove(entity: preset);
+                await RedirectLinksAsync(links, replacementId, ct);
+                context.EncodingPresets.Remove(preset);
                 continue;
             }
 
@@ -108,10 +108,10 @@ public class BuiltinPresetSeeder(MediaContext context)
                 continue;
             }
 
-            context.EncodingPresets.Remove(entity: preset);
+            context.EncodingPresets.Remove(preset);
         }
 
-        await context.SaveChangesAsync(cancellationToken: ct);
+        await context.SaveChangesAsync(ct);
     }
 
     private async Task RedirectLinksAsync(
@@ -123,22 +123,22 @@ public class BuiltinPresetSeeder(MediaContext context)
         foreach (EncodingPresetFolder link in links)
         {
             bool replacementAlreadyLinked = await context.EncodingPresetFolders.AnyAsync(
-                predicate: existing =>
+                existing =>
                     existing.PresetId == replacementId && existing.FolderId == link.FolderId,
-                cancellationToken: ct
+                ct
             );
 
             // The composite key is (PresetId, FolderId): re-pointing onto a row
             // that already exists would collide, so drop the duplicate instead.
             if (replacementAlreadyLinked)
             {
-                context.EncodingPresetFolders.Remove(entity: link);
+                context.EncodingPresetFolders.Remove(link);
                 continue;
             }
 
-            context.EncodingPresetFolders.Remove(entity: link);
+            context.EncodingPresetFolders.Remove(link);
             context.EncodingPresetFolders.Add(
-                entity: new()
+                new()
                 {
                     PresetId = replacementId,
                     FolderId = link.FolderId,

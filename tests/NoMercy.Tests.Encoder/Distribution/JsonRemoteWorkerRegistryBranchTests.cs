@@ -19,7 +19,6 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
-using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.Distribution;
 
@@ -40,32 +39,32 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
     private readonly string _dir;
     private readonly string _path;
     private readonly byte[] _signingKey = Encoding.UTF8.GetBytes(
-        s: "test-signing-key-32-bytes-padded"
+        "test-signing-key-32-bytes-padded"
     );
     private readonly TaskSerializer _serializer = new();
 
     public JsonRemoteWorkerRegistryBranchTests()
     {
         _dir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nm-registry-branch-tests",
-            path3: Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nm-registry-branch-tests",
+            Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: _dir);
-        _path = Path.Combine(path1: _dir, path2: "workers.json");
+        Directory.CreateDirectory(_dir);
+        _path = Path.Combine(_dir, "workers.json");
     }
 
     public void Dispose()
     {
         try
         {
-            Directory.Delete(path: _dir, recursive: true);
+            Directory.Delete(_dir, true);
         }
         catch
         {
             // best-effort cleanup
         }
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 
     // ── Hydration: empty WorkerId / BaseUrl skipped ─────────────────────────
@@ -75,8 +74,7 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
     {
         // A corrupted persistence file could end up with empty WorkerId after
         // a partial write. Rehydration must skip such entries silently.
-        WritePersistedEntries(entries:
-            [
+        WritePersistedEntries([
                 new
                 {
                     WorkerId = "",
@@ -99,15 +97,15 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
         JsonRemoteWorkerRegistry sut = BuildRegistry();
 
         IReadOnlyList<IRemoteWorker> active = sut.GetActiveWorkers();
-        active.Should().HaveCount(expected: 1);
-        active[index: 0].WorkerId.Should().Be(expected: "valid-worker");
+        active.Should().HaveCount(1);
+        active[0].WorkerId.Should().Be("valid-worker");
     }
 
     [Fact]
     public void Entry_with_empty_BaseUrl_is_skipped_during_hydration()
     {
         WritePersistedEntries(
-            entries: new
+            new
             {
                 WorkerId = "no-url-worker",
                 BaseUrl = "",
@@ -125,7 +123,7 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
     public void Entry_with_whitespace_BaseUrl_is_skipped_during_hydration()
     {
         WritePersistedEntries(
-            entries: new
+            new
             {
                 WorkerId = "ws-url-worker",
                 BaseUrl = "   ",
@@ -146,8 +144,7 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
     {
         // BaseUrl is non-empty but not parseable as an absolute Uri —
         // Uri.TryCreate returns false and the entry is dropped.
-        WritePersistedEntries(entries:
-            [
+        WritePersistedEntries([
                 new
                 {
                     WorkerId = "bad-uri",
@@ -170,8 +167,8 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
         JsonRemoteWorkerRegistry sut = BuildRegistry();
         IReadOnlyList<IRemoteWorker> active = sut.GetActiveWorkers();
 
-        active.Should().HaveCount(expected: 1);
-        active[index: 0].WorkerId.Should().Be(expected: "good-uri");
+        active.Should().HaveCount(1);
+        active[0].WorkerId.Should().Be("good-uri");
     }
 
     [Fact]
@@ -179,7 +176,7 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
     {
         // Uri.TryCreate with UriKind.Absolute rejects relative URIs.
         WritePersistedEntries(
-            entries: new
+            new
             {
                 WorkerId = "relative",
                 BaseUrl = "/relative/path",
@@ -200,7 +197,7 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
     {
         // File exists but contains an empty array — HydrateFromDisk should
         // hit the early-return branch (entries.Count == 0) without iterating.
-        File.WriteAllText(path: _path, contents: "[]");
+        File.WriteAllText(_path, "[]");
 
         JsonRemoteWorkerRegistry sut = BuildRegistry();
         sut.GetActiveWorkers().Should().BeEmpty();
@@ -214,18 +211,18 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
         JsonRemoteWorkerRegistry sut = BuildRegistry();
 
         // Register one so the file is created with the known entry.
-        sut.Register(worker: MakeWorker(id: "alpha", baseUrl: "http://alpha.local/"));
-        File.Exists(path: _path).Should().BeTrue();
-        long sizeAfterRegister = new FileInfo(fileName: _path).Length;
+        sut.Register(MakeWorker("alpha", "http://alpha.local/"));
+        File.Exists(_path).Should().BeTrue();
+        long sizeAfterRegister = new FileInfo(_path).Length;
 
         // Unregister a workerId that doesn't exist.
-        bool removed = sut.Unregister(workerId: "unknown-worker");
+        bool removed = sut.Unregister("unknown-worker");
 
         removed.Should().BeFalse();
         // File still exists and still contains the original entry — no
         // mistaken flush that would erase the live worker.
-        File.Exists(path: _path).Should().BeTrue();
-        new FileInfo(fileName: _path).Length.Should().Be(expected: sizeAfterRegister);
+        File.Exists(_path).Should().BeTrue();
+        new FileInfo(_path).Length.Should().Be(sizeAfterRegister);
     }
 
     // ── Non-HttpRemoteWorker registration ───────────────────────────────────
@@ -239,55 +236,55 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
         JsonRemoteWorkerRegistry sut = BuildRegistry();
 
         // Inject a stub IRemoteWorker that isn't an HttpRemoteWorker.
-        StubRemoteWorker stub = new(workerId: "local-only");
-        sut.Register(worker: stub);
+        StubRemoteWorker stub = new("local-only");
+        sut.Register(stub);
 
         // Inner registry should know about it.
-        sut.GetActiveWorkers().Should().Contain(predicate: w => w.WorkerId == "local-only");
+        sut.GetActiveWorkers().Should().Contain(w => w.WorkerId == "local-only");
 
         // But the file must NOT have been touched.
-        File.Exists(path: _path).Should().BeFalse(because: "non-Http workers must not persist");
+        File.Exists(_path).Should().BeFalse("non-Http workers must not persist");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static IStorage MakeStorage() =>
         new LocalStorage(
-            driver: new LocalStorageDriver(),
-            guard: new(allowedRoots: [], driver: new LocalStorageDriver())
+            new LocalStorageDriver(),
+            new([], new LocalStorageDriver())
         );
 
     private JsonRemoteWorkerRegistry BuildRegistry() =>
         new(
-            inner: new(),
-            filePath: _path,
-            httpClientFactory: MakeHttpClientFactory(),
-            serializer: _serializer,
-            signingKey: _signingKey,
-            logger: NullLogger<JsonRemoteWorkerRegistry>.Instance,
-            storage: MakeStorage()
+            new(),
+            _path,
+            MakeHttpClientFactory(),
+            _serializer,
+            _signingKey,
+            NullLogger<JsonRemoteWorkerRegistry>.Instance,
+            MakeStorage()
         );
 
     private static IHttpClientFactory MakeHttpClientFactory()
     {
         Mock<IHttpClientFactory> factory = new();
         factory
-            .Setup(expression: f => f.CreateClient(It.IsAny<string>()))
-            .Returns(valueFunction: () =>
-                new(handler: new NoOpHandler()) { BaseAddress = new(uriString: "http://worker.test/") }
+            .Setup(f => f.CreateClient(It.IsAny<string>()))
+            .Returns(() =>
+                new(new NoOpHandler()) { BaseAddress = new("http://worker.test/") }
             );
         return factory.Object;
     }
 
     private HttpRemoteWorker MakeWorker(string id, string baseUrl) =>
         new(
-            workerId: id,
-            http: new(handler: new NoOpHandler()) { BaseAddress = new(uriString: baseUrl) },
-            serializer: _serializer,
-            signingKey: _signingKey,
-            initialCapabilities: new HardwareCapabilities(Gpus: [], CpuCores: 4),
-            initialBudget: new(AvailableGpuSlots: 0, AvailableCpuThreads: 4, GpuUtilization: 0),
-            logger: NullLogger<HttpRemoteWorker>.Instance
+            id,
+            new(new NoOpHandler()) { BaseAddress = new(baseUrl) },
+            _serializer,
+            _signingKey,
+            new HardwareCapabilities([], 4),
+            new(0, 4, 0),
+            NullLogger<HttpRemoteWorker>.Instance
         );
 
     private void WritePersistedEntries(params object[] entries)
@@ -298,7 +295,7 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
             WriteIndented = true,
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         };
-        File.WriteAllText(path: _path, contents: JsonSerializer.Serialize(value: entries, options: options));
+        File.WriteAllText(_path, JsonSerializer.Serialize(entries, options));
     }
 
     private sealed class NoOpHandler : HttpMessageHandler
@@ -306,7 +303,7 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken
-        ) => Task.FromResult(result: new HttpResponseMessage(statusCode: HttpStatusCode.OK));
+        ) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
     }
 
     private sealed class StubRemoteWorker(string workerId) : IRemoteWorker
@@ -314,17 +311,17 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
         public string WorkerId { get; } = workerId;
 
         public ResourceBudgetSnapshot GetAvailableBudget() =>
-            new(AvailableGpuSlots: 0, AvailableCpuThreads: 1, GpuUtilization: 0);
+            new(0, 1, 0);
 
-        public IHardwareCapabilities GetCapabilities() => new HardwareCapabilities(Gpus: [], CpuCores: 1);
+        public IHardwareCapabilities GetCapabilities() => new HardwareCapabilities([], 1);
 
         public Task<RemoteEncodingResult> ExecuteJobAsync(
             EncodingJob job,
             IProgress<NoMercy.Encoder.Progress.EncodingProgress> progress,
             CancellationToken ct
-        ) => throw new NotImplementedException(message: "Stub for branch test");
+        ) => throw new NotImplementedException("Stub for branch test");
 
         public Task<DispatchResult> ExecuteTaskAsync(EncodeTask task, CancellationToken ct) =>
-            Task.FromResult(result: new DispatchResult(TaskId: task.TaskId, Success: false, OutputPath: "", Duration: TimeSpan.Zero, Error: "stub"));
+            Task.FromResult(new DispatchResult(task.TaskId, false, "", TimeSpan.Zero, "stub"));
     }
 }

@@ -15,12 +15,12 @@ namespace NoMercy.MediaProcessing.Files;
 
 public record Streams
 {
-    [JsonProperty(propertyName: "video")]
+    [JsonProperty("video")]
     public IEnumerable<Video> Video { get; set; } = new List<Video>();
 
-    [JsonProperty(propertyName: "audio")]
+    [JsonProperty("audio")]
     public IEnumerable<Audio> Audio { get; set; } = new List<Audio>();
 
-    [JsonProperty(propertyName: "subtitle")]
+    [JsonProperty("subtitle")]
     public IEnumerable<Subtitle> Subtitle { get; set; } = new List<Subtitle>();
 }

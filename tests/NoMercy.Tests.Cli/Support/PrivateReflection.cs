@@ -26,10 +26,10 @@ internal static class PrivateReflection
     public static T? InvokeStatic<T>(Type type, string methodName, params object?[] args)
     {
         MethodInfo method =
-            type.GetMethod(name: methodName, bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new MissingMethodException(className: type.FullName, methodName: methodName);
+            type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new MissingMethodException(type.FullName, methodName);
 
-        return (T?)method.Invoke(obj: null, parameters: args);
+        return (T?)method.Invoke(null, args);
     }
 
     public static async Task<T?> InvokeStaticAsync<T>(
@@ -39,19 +39,19 @@ internal static class PrivateReflection
     )
     {
         MethodInfo method =
-            type.GetMethod(name: methodName, bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new MissingMethodException(className: type.FullName, methodName: methodName);
+            type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new MissingMethodException(type.FullName, methodName);
 
-        object? result = method.Invoke(obj: null, parameters: args);
+        object? result = method.Invoke(null, args);
         return result is Task<T> task ? await task : default;
     }
 
     public static void ResetStaticField(Type type, string fieldName, object? value)
     {
         FieldInfo field =
-            type.GetField(name: fieldName, bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new MissingFieldException(className: type.FullName, fieldName: fieldName);
+            type.GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new MissingFieldException(type.FullName, fieldName);
 
-        field.SetValue(obj: null, value: value);
+        field.SetValue(null, value);
     }
 }

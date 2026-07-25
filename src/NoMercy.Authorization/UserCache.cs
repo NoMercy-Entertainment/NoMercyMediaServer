@@ -44,7 +44,7 @@ public class UserCache : IUserCache
     public User? GetUser(Guid userId)
     {
         lock (_usersLock)
-            return _users.FirstOrDefault(predicate: u => u.Id == userId);
+            return _users.FirstOrDefault(u => u.Id == userId);
     }
 
     public void AddUser(User user)
@@ -56,13 +56,13 @@ public class UserCache : IUserCache
     public void RemoveUser(User user)
     {
         lock (_usersLock)
-            _users = _users.Where(predicate: u => u.Id != user.Id).ToList();
+            _users = _users.Where(u => u.Id != user.Id).ToList();
     }
 
     public void UpdateUser(User user)
     {
         lock (_usersLock)
-            _users = _users.Select(selector: u => u.Id == user.Id ? user : u).ToList();
+            _users = _users.Select(u => u.Id == user.Id ? user : u).ToList();
     }
 
     public void Reset()
@@ -79,7 +79,7 @@ public class UserCache : IUserCache
         List<User> users = await context.Users.AsNoTracking().ToListAsync();
         List<Ulid> folderIds = await context
             .Folders.AsNoTracking()
-            .Select(selector: x => x.Id)
+            .Select(x => x.Id)
             .ToListAsync();
 
         lock (_usersLock)
@@ -101,7 +101,7 @@ public class UserCache : IUserCache
     {
         List<Ulid> folderIds = await context
             .Folders.AsNoTracking()
-            .Select(selector: x => x.Id)
+            .Select(x => x.Id)
             .ToListAsync();
 
         lock (_folderIdsLock)

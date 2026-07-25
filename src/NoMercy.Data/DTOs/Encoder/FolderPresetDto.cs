@@ -25,19 +25,19 @@ namespace NoMercy.Data.DTOs.Encoder;
 /// </summary>
 public class FolderPresetDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "container")]
+    [JsonProperty("container")]
     public string Container { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "params")]
+    [JsonProperty("params")]
     public FolderPresetParamsDto Params { get; set; } = new();
 
-    [JsonProperty(propertyName: "encoder_profile_folder")]
+    [JsonProperty("encoder_profile_folder")]
     public List<object> EncoderProfileFolder { get; set; } = [];
 }
 
@@ -47,21 +47,21 @@ public class FolderPresetDto
 /// </summary>
 public class FolderPresetParamsDto
 {
-    [JsonProperty(propertyName: "width")]
+    [JsonProperty("width")]
     public int Width { get; set; }
 
-    [JsonProperty(propertyName: "crf")]
+    [JsonProperty("crf")]
     public int Crf { get; set; }
 
-    [JsonProperty(propertyName: "preset")]
+    [JsonProperty("preset")]
     public string Preset { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "profile")]
+    [JsonProperty("profile")]
     public string Profile { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "codec")]
+    [JsonProperty("codec")]
     public string Codec { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "audio")]
+    [JsonProperty("audio")]
     public string Audio { get; set; } = string.Empty;
 }

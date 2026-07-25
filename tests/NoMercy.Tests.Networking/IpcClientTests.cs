@@ -24,29 +24,29 @@ namespace NoMercy.Tests.Networking;
 /// listening on the far end and is itemized as not unit-testable — see the
 /// coverage report.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class IpcClientTests
 {
     [Fact]
     public void Constructor_DefaultPipeName_DoesNotThrow_AndDoesNotConnect()
     {
-        Exception? ex = Record.Exception(testCode: () =>
+        Exception? ex = Record.Exception(() =>
         {
             using IpcClient client = new();
         });
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
     public void Constructor_ExplicitPipeName_DoesNotThrow()
     {
-        Exception? ex = Record.Exception(testCode: () =>
+        Exception? ex = Record.Exception(() =>
         {
-            using IpcClient client = new(pipeNameOrSocketPath: "nomercy-test-pipe");
+            using IpcClient client = new("nomercy-test-pipe");
         });
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -54,12 +54,12 @@ public sealed class IpcClientTests
     {
         IpcClient client = new();
 
-        Exception? ex = Record.Exception(testCode: () =>
+        Exception? ex = Record.Exception(() =>
         {
             client.Dispose();
             client.Dispose();
         });
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 }

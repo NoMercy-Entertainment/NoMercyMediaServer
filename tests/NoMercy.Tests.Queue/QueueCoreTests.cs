@@ -18,7 +18,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Queue;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class QueueCoreTests
 {
     // =========================================================================
@@ -30,8 +30,8 @@ public class QueueCoreTests
     {
         TestJob job = new();
 
-        Assert.Equal(expected: "test-queue", actual: job.QueueName);
-        Assert.Equal(expected: 5, actual: job.Priority);
+        Assert.Equal("test-queue", job.QueueName);
+        Assert.Equal(5, job.Priority);
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public class QueueCoreTests
 
         await job.Handle();
 
-        Assert.True(condition: job.WasHandled);
+        Assert.True(job.WasHandled);
     }
 
     // =========================================================================
@@ -53,8 +53,8 @@ public class QueueCoreTests
     {
         TestCronExecutor executor = new();
 
-        Assert.Equal(expected: "0 * * * *", actual: executor.CronExpression);
-        Assert.Equal(expected: "test-cron", actual: executor.JobName);
+        Assert.Equal("0 * * * *", executor.CronExpression);
+        Assert.Equal("test-cron", executor.JobName);
     }
 
     [Fact]
@@ -62,9 +62,9 @@ public class QueueCoreTests
     {
         TestCronExecutor executor = new();
 
-        await executor.ExecuteAsync(parameters: "param1");
+        await executor.ExecuteAsync("param1");
 
-        Assert.Equal(expected: "param1", actual: executor.LastParameters);
+        Assert.Equal("param1", executor.LastParameters);
     }
 
     [Fact]
@@ -73,9 +73,9 @@ public class QueueCoreTests
         TestCronExecutor executor = new();
         using CancellationTokenSource cts = new();
 
-        await executor.ExecuteAsync(parameters: "test", cancellationToken: cts.Token);
+        await executor.ExecuteAsync("test", cts.Token);
 
-        Assert.Equal(expected: "test", actual: executor.LastParameters);
+        Assert.Equal("test", executor.LastParameters);
     }
 
     // =========================================================================
@@ -87,9 +87,9 @@ public class QueueCoreTests
     {
         TestSerializer serializer = new();
 
-        string result = serializer.Serialize(job: new { Name = "test" });
+        string result = serializer.Serialize(new { Name = "test" });
 
-        Assert.NotNull(@object: result);
+        Assert.NotNull(result);
     }
 
     [Fact]
@@ -98,11 +98,11 @@ public class QueueCoreTests
         TestSerializer serializer = new();
         SerializableData original = new() { Name = "hello", Value = 42 };
 
-        string serialized = serializer.Serialize(job: original);
-        SerializableData deserialized = serializer.Deserialize<SerializableData>(data: serialized);
+        string serialized = serializer.Serialize(original);
+        SerializableData deserialized = serializer.Deserialize<SerializableData>(serialized);
 
-        Assert.Equal(expected: original.Name, actual: deserialized.Name);
-        Assert.Equal(expected: original.Value, actual: deserialized.Value);
+        Assert.Equal(original.Name, deserialized.Name);
+        Assert.Equal(original.Value, deserialized.Value);
     }
 
     // =========================================================================
@@ -114,10 +114,10 @@ public class QueueCoreTests
     {
         TestConfigStore store = new();
 
-        store.SetValue(key: "key1", value: "value1");
+        store.SetValue("key1", "value1");
 
-        Assert.True(condition: store.HasKey(key: "key1"));
-        Assert.Equal(expected: "value1", actual: store.GetValue(key: "key1"));
+        Assert.True(store.HasKey("key1"));
+        Assert.Equal("value1", store.GetValue("key1"));
     }
 
     [Fact]
@@ -125,8 +125,8 @@ public class QueueCoreTests
     {
         TestConfigStore store = new();
 
-        Assert.False(condition: store.HasKey(key: "missing"));
-        Assert.Null(@object: store.GetValue(key: "missing"));
+        Assert.False(store.HasKey("missing"));
+        Assert.Null(store.GetValue("missing"));
     }
 
     // =========================================================================
@@ -138,13 +138,13 @@ public class QueueCoreTests
     {
         QueueJobModel job = new() { Payload = "test" };
 
-        Assert.Equal(expected: 0, actual: job.Id);
-        Assert.Equal(expected: 0, actual: job.Priority);
-        Assert.Equal(expected: "default", actual: job.Queue);
-        Assert.Equal(expected: "test", actual: job.Payload);
-        Assert.Equal(expected: (byte)0, actual: job.Attempts);
-        Assert.Null(value: job.ReservedAt);
-        Assert.True(condition: job.CreatedAt <= DateTime.UtcNow);
+        Assert.Equal(0, job.Id);
+        Assert.Equal(0, job.Priority);
+        Assert.Equal("default", job.Queue);
+        Assert.Equal("test", job.Payload);
+        Assert.Equal((byte)0, job.Attempts);
+        Assert.Null(job.ReservedAt);
+        Assert.True(job.CreatedAt <= DateTime.UtcNow);
     }
 
     [Fact]
@@ -163,14 +163,14 @@ public class QueueCoreTests
             CreatedAt = now,
         };
 
-        Assert.Equal(expected: 42, actual: job.Id);
-        Assert.Equal(expected: 10, actual: job.Priority);
-        Assert.Equal(expected: "encoder", actual: job.Queue);
-        Assert.Equal(expected: "{\"type\":\"encode\"}", actual: job.Payload);
-        Assert.Equal(expected: 2, actual: job.Attempts);
-        Assert.Equal(expected: now, actual: job.ReservedAt);
-        Assert.Equal(expected: now, actual: job.AvailableAt);
-        Assert.Equal(expected: now, actual: job.CreatedAt);
+        Assert.Equal(42, job.Id);
+        Assert.Equal(10, job.Priority);
+        Assert.Equal("encoder", job.Queue);
+        Assert.Equal("{\"type\":\"encode\"}", job.Payload);
+        Assert.Equal(2, job.Attempts);
+        Assert.Equal(now, job.ReservedAt);
+        Assert.Equal(now, job.AvailableAt);
+        Assert.Equal(now, job.CreatedAt);
     }
 
     // =========================================================================
@@ -187,10 +187,10 @@ public class QueueCoreTests
             Exception = "error",
         };
 
-        Assert.Equal(expected: 0, actual: job.Id);
-        Assert.Equal(expected: Guid.Empty, actual: job.Uuid);
-        Assert.Equal(expected: "default", actual: job.Connection);
-        Assert.True(condition: job.FailedAt <= DateTime.UtcNow);
+        Assert.Equal(0, job.Id);
+        Assert.Equal(Guid.Empty, job.Uuid);
+        Assert.Equal("default", job.Connection);
+        Assert.True(job.FailedAt <= DateTime.UtcNow);
     }
 
     [Fact]
@@ -210,13 +210,13 @@ public class QueueCoreTests
             FailedAt = now,
         };
 
-        Assert.Equal(expected: 99, actual: job.Id);
-        Assert.Equal(expected: uuid, actual: job.Uuid);
-        Assert.Equal(expected: "custom", actual: job.Connection);
-        Assert.Equal(expected: "encoder", actual: job.Queue);
-        Assert.Equal(expected: "{\"data\":1}", actual: job.Payload);
-        Assert.Equal(expected: "NullReferenceException", actual: job.Exception);
-        Assert.Equal(expected: now, actual: job.FailedAt);
+        Assert.Equal(99, job.Id);
+        Assert.Equal(uuid, job.Uuid);
+        Assert.Equal("custom", job.Connection);
+        Assert.Equal("encoder", job.Queue);
+        Assert.Equal("{\"data\":1}", job.Payload);
+        Assert.Equal("NullReferenceException", job.Exception);
+        Assert.Equal(now, job.FailedAt);
     }
 
     // =========================================================================
@@ -228,11 +228,11 @@ public class QueueCoreTests
     {
         CronJobModel cron = new();
 
-        Assert.Equal(expected: 0, actual: cron.Id);
-        Assert.True(condition: cron.IsEnabled);
-        Assert.Null(@object: cron.Parameters);
-        Assert.Null(value: cron.LastRun);
-        Assert.Null(value: cron.NextRun);
+        Assert.Equal(0, cron.Id);
+        Assert.True(cron.IsEnabled);
+        Assert.Null(cron.Parameters);
+        Assert.Null(cron.LastRun);
+        Assert.Null(cron.NextRun);
     }
 
     [Fact]
@@ -248,20 +248,20 @@ public class QueueCoreTests
             JobType = "CleanupJob",
             Parameters = "{\"days\":7}",
             IsEnabled = false,
-            LastRun = now.AddHours(value: -1),
-            NextRun = now.AddHours(value: 23),
+            LastRun = now.AddHours(-1),
+            NextRun = now.AddHours(23),
             CreatedAt = now,
             UpdatedAt = now,
         };
 
-        Assert.Equal(expected: 1, actual: cron.Id);
-        Assert.Equal(expected: "cleanup", actual: cron.Name);
-        Assert.Equal(expected: "0 0 * * *", actual: cron.CronExpression);
-        Assert.Equal(expected: "CleanupJob", actual: cron.JobType);
-        Assert.Equal(expected: "{\"days\":7}", actual: cron.Parameters);
-        Assert.False(condition: cron.IsEnabled);
-        Assert.Equal(expected: now.AddHours(value: -1), actual: cron.LastRun);
-        Assert.Equal(expected: now.AddHours(value: 23), actual: cron.NextRun);
+        Assert.Equal(1, cron.Id);
+        Assert.Equal("cleanup", cron.Name);
+        Assert.Equal("0 0 * * *", cron.CronExpression);
+        Assert.Equal("CleanupJob", cron.JobType);
+        Assert.Equal("{\"days\":7}", cron.Parameters);
+        Assert.False(cron.IsEnabled);
+        Assert.Equal(now.AddHours(-1), cron.LastRun);
+        Assert.Equal(now.AddHours(23), cron.NextRun);
     }
 
     // =========================================================================
@@ -273,9 +273,9 @@ public class QueueCoreTests
     {
         QueueConfiguration config = new();
 
-        Assert.Equal(expected: 3, actual: config.MaxAttempts);
-        Assert.Equal(expected: 1000, actual: config.PollingIntervalMs);
-        Assert.Empty(collection: config.WorkerCounts);
+        Assert.Equal(3, config.MaxAttempts);
+        Assert.Equal(1000, config.PollingIntervalMs);
+        Assert.Empty(config.WorkerCounts);
     }
 
     [Fact]
@@ -287,17 +287,17 @@ public class QueueCoreTests
             PollingIntervalMs = 500,
             WorkerCounts = new()
             {
-                [key: "import"] = 2,
-                [key: "extras"] = 6,
-                [key: "encoder"] = 4,
+                ["import"] = 2,
+                ["extras"] = 6,
+                ["encoder"] = 4,
             },
         };
 
-        Assert.Equal(expected: 5, actual: config.MaxAttempts);
-        Assert.Equal(expected: 500, actual: config.PollingIntervalMs);
-        Assert.Equal(expected: 2, actual: config.WorkerCounts[key: "import"]);
-        Assert.Equal(expected: 6, actual: config.WorkerCounts[key: "extras"]);
-        Assert.Equal(expected: 4, actual: config.WorkerCounts[key: "encoder"]);
+        Assert.Equal(5, config.MaxAttempts);
+        Assert.Equal(500, config.PollingIntervalMs);
+        Assert.Equal(2, config.WorkerCounts["import"]);
+        Assert.Equal(6, config.WorkerCounts["extras"]);
+        Assert.Equal(4, config.WorkerCounts["encoder"]);
     }
 
     [Fact]
@@ -306,7 +306,7 @@ public class QueueCoreTests
         QueueConfiguration config1 = new() { MaxAttempts = 5 };
         QueueConfiguration config2 = new() { MaxAttempts = 5 };
 
-        Assert.Equal(expected: config1.MaxAttempts, actual: config2.MaxAttempts);
+        Assert.Equal(config1.MaxAttempts, config2.MaxAttempts);
     }
 
     // =========================================================================
@@ -322,18 +322,18 @@ public class QueueCoreTests
         {
             WorkerCounts = new()
             {
-                [key: "queue"] = 2,
-                [key: "data"] = 5,
-                [key: "encoder"] = 3,
+                ["queue"] = 2,
+                ["data"] = 5,
+                ["encoder"] = 3,
             },
             MaxAttempts = 5,
         };
 
-        QueueRunner runner = new(queueContext: context, configuration: config, loggerFactory: NullLoggerFactory.Instance);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
 
-        Assert.NotNull(@object: runner);
-        Assert.NotNull(@object: runner.Dispatcher);
-        Assert.NotNull(@object: runner.GetActiveWorkerThreads());
+        Assert.NotNull(runner);
+        Assert.NotNull(runner.Dispatcher);
+        Assert.NotNull(runner.GetActiveWorkerThreads());
     }
 
     [Fact]
@@ -344,9 +344,9 @@ public class QueueCoreTests
         QueueConfiguration config = new();
         TestConfigStore store = new();
 
-        QueueRunner runner = new(queueContext: context, configuration: config, loggerFactory: NullLoggerFactory.Instance, configurationStore: store);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance, store);
 
-        Assert.NotNull(@object: runner);
+        Assert.NotNull(runner);
     }
 
     [Fact]
@@ -356,11 +356,11 @@ public class QueueCoreTests
         TestQueueContext context = new();
         QueueConfiguration config = new();
 
-        QueueRunner runner = new(queueContext: context, configuration: config, loggerFactory: NullLoggerFactory.Instance);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
 
         // Current may be overwritten by parallel tests constructing other QueueRunners,
         // so just verify the constructor sets it to a non-null value
-        Assert.NotNull(@object: QueueRunner.Current);
+        Assert.NotNull(QueueRunner.Current);
     }
 
     [Fact]
@@ -370,12 +370,12 @@ public class QueueCoreTests
         TestQueueContext context = new();
         QueueConfiguration config = new();
 
-        QueueRunner runner = new(queueContext: context, configuration: config, loggerFactory: NullLoggerFactory.Instance);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
 
         // Should have all 5 default worker types
         IReadOnlyDictionary<string, Thread> threads = runner.GetActiveWorkerThreads();
-        Assert.NotNull(@object: threads);
-        Assert.Empty(collection: threads); // No workers spawned until Initialize()
+        Assert.NotNull(threads);
+        Assert.Empty(threads); // No workers spawned until Initialize()
     }
 
     [Fact]
@@ -383,14 +383,14 @@ public class QueueCoreTests
     {
         // QDC-08: Verify SetWorkerCount persists via IConfigurationStore
         TestQueueContext context = new();
-        QueueConfiguration config = new() { WorkerCounts = new() { [key: "import"] = 1 } };
+        QueueConfiguration config = new() { WorkerCounts = new() { ["import"] = 1 } };
         TestConfigStore store = new();
 
-        QueueRunner runner = new(queueContext: context, configuration: config, loggerFactory: NullLoggerFactory.Instance);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
 
-        bool result = await runner.SetWorkerCount(name: "import", max: 4, userId: Guid.NewGuid());
+        bool result = await runner.SetWorkerCount("import", 4, Guid.NewGuid());
 
-        Assert.True(condition: result);
+        Assert.True(result);
     }
 
     [Fact]
@@ -400,11 +400,11 @@ public class QueueCoreTests
         TestQueueContext context = new();
         QueueConfiguration config = new();
 
-        QueueRunner runner = new(queueContext: context, configuration: config, loggerFactory: NullLoggerFactory.Instance);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
 
-        bool result = await runner.SetWorkerCount(name: "nonexistent", max: 4, userId: Guid.NewGuid());
+        bool result = await runner.SetWorkerCount("nonexistent", 4, Guid.NewGuid());
 
-        Assert.False(condition: result);
+        Assert.False(result);
     }
 
     // =========================================================================
@@ -417,10 +417,10 @@ public class QueueCoreTests
         using TestQueueContext context = new();
 
         QueueJobModel job = new() { Payload = "test" };
-        context.AddJob(job: job);
+        context.AddJob(job);
         context.SaveChanges();
 
-        Assert.True(condition: context.JobExists(payload: "test"));
+        Assert.True(context.JobExists("test"));
     }
 
     [Fact]
@@ -429,19 +429,19 @@ public class QueueCoreTests
         using TestQueueContext context = new();
 
         QueueJobModel job = new() { Payload = "lifecycle-test", Queue = "test" };
-        context.AddJob(job: job);
+        context.AddJob(job);
         context.SaveChanges();
 
-        Assert.True(condition: context.JobExists(payload: "lifecycle-test"));
+        Assert.True(context.JobExists("lifecycle-test"));
 
-        QueueJobModel? found = context.GetNextJob(queueName: "test", maxAttempts: 3, currentJobId: null, now: DateTime.UtcNow);
-        Assert.NotNull(@object: found);
-        Assert.Equal(expected: "lifecycle-test", actual: found.Payload);
+        QueueJobModel? found = context.GetNextJob("test", 3, null, DateTime.UtcNow);
+        Assert.NotNull(found);
+        Assert.Equal("lifecycle-test", found.Payload);
 
-        context.RemoveJob(job: found);
+        context.RemoveJob(found);
         context.SaveChanges();
 
-        Assert.False(condition: context.JobExists(payload: "lifecycle-test"));
+        Assert.False(context.JobExists("lifecycle-test"));
     }
 
     [Fact]
@@ -456,17 +456,17 @@ public class QueueCoreTests
             Payload = "failed-payload",
             Exception = "test error",
         };
-        context.AddFailedJob(failedJob: failed);
+        context.AddFailedJob(failed);
         context.SaveChanges();
 
         IReadOnlyList<FailedJobModel> allFailed = context.GetFailedJobs();
-        Assert.Single(collection: allFailed);
-        Assert.Equal(expected: "test error", actual: allFailed[index: 0].Exception);
+        Assert.Single(allFailed);
+        Assert.Equal("test error", allFailed[0].Exception);
 
-        context.RemoveFailedJob(failedJob: allFailed[index: 0]);
+        context.RemoveFailedJob(allFailed[0]);
         context.SaveChanges();
 
-        Assert.Empty(collection: context.GetFailedJobs());
+        Assert.Empty(context.GetFailedJobs());
     }
 
     [Fact]
@@ -481,15 +481,15 @@ public class QueueCoreTests
             JobType = "TestJob",
             IsEnabled = true,
         };
-        context.AddCronJob(cronJob: cron);
+        context.AddCronJob(cron);
         context.SaveChanges();
 
         IReadOnlyList<CronJobModel> enabled = context.GetEnabledCronJobs();
-        Assert.Single(collection: enabled);
+        Assert.Single(enabled);
 
-        CronJobModel? found = context.FindCronJobByName(name: "test-cron");
-        Assert.NotNull(@object: found);
-        Assert.Equal(expected: "0 * * * *", actual: found.CronExpression);
+        CronJobModel? found = context.FindCronJobByName("test-cron");
+        Assert.NotNull(found);
+        Assert.Equal("0 * * * *", found.CronExpression);
     }
 
     // =========================================================================
@@ -524,9 +524,9 @@ public class QueueCoreTests
 
     private sealed class TestSerializer : IJobSerializer
     {
-        public string Serialize(object job) => JsonSerializer.Serialize(value: job);
+        public string Serialize(object job) => JsonSerializer.Serialize(job);
 
-        public T Deserialize<T>(string data) => JsonSerializer.Deserialize<T>(json: data)!;
+        public T Deserialize<T>(string data) => JsonSerializer.Deserialize<T>(data)!;
     }
 
     private sealed class SerializableData
@@ -539,17 +539,17 @@ public class QueueCoreTests
     {
         private readonly Dictionary<string, string> _store = new();
 
-        public string? GetValue(string key) => _store.GetValueOrDefault(key: key);
+        public string? GetValue(string key) => _store.GetValueOrDefault(key);
 
-        public void SetValue(string key, string value) => _store[key: key] = value;
+        public void SetValue(string key, string value) => _store[key] = value;
 
         public Task SetValueAsync(string key, string value, Guid? modifiedBy = null)
         {
-            _store[key: key] = value;
+            _store[key] = value;
             return Task.CompletedTask;
         }
 
-        public bool HasKey(string key) => _store.ContainsKey(key: key);
+        public bool HasKey(string key) => _store.ContainsKey(key);
     }
 
     private sealed class TestQueueContext : IQueueContext
@@ -564,10 +564,10 @@ public class QueueCoreTests
         public void AddJob(QueueJobModel job)
         {
             job.Id = _nextJobId++;
-            _jobs.Add(item: job);
+            _jobs.Add(job);
         }
 
-        public void RemoveJob(QueueJobModel job) => _jobs.Remove(item: job);
+        public void RemoveJob(QueueJobModel job) => _jobs.Remove(job);
 
         public QueueJobModel? GetNextJob(
             string queueName,
@@ -575,22 +575,22 @@ public class QueueCoreTests
             long? currentJobId,
             DateTime now
         ) =>
-            _jobs.FirstOrDefault(predicate: j =>
+            _jobs.FirstOrDefault(j =>
                 j.Queue == queueName
                 && j.ReservedAt == null
                 && j.Attempts <= maxAttempts
                 && currentJobId == null
             );
 
-        public QueueJobModel? FindJob(int id) => _jobs.FirstOrDefault(predicate: j => j.Id == id);
+        public QueueJobModel? FindJob(int id) => _jobs.FirstOrDefault(j => j.Id == id);
 
-        public bool JobExists(string payload) => _jobs.Any(predicate: j => j.Payload == payload);
+        public bool JobExists(string payload) => _jobs.Any(j => j.Payload == payload);
 
         public void UpdateJob(QueueJobModel job) { }
 
         public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)
         {
-            QueueJobModel? job = _jobs.FirstOrDefault(predicate: j => j.Id == jobId);
+            QueueJobModel? job = _jobs.FirstOrDefault(j => j.Id == jobId);
             if (job is null)
                 return;
             job.Payload = newPayload;
@@ -605,47 +605,47 @@ public class QueueCoreTests
         }
 
         public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) =>
-            _jobs.Where(predicate: j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
+            _jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
 
         public void AddFailedJob(FailedJobModel failedJob)
         {
             failedJob.Id = _nextFailedId++;
-            _failedJobs.Add(item: failedJob);
+            _failedJobs.Add(failedJob);
         }
 
-        public void RemoveFailedJob(FailedJobModel failedJob) => _failedJobs.Remove(item: failedJob);
+        public void RemoveFailedJob(FailedJobModel failedJob) => _failedJobs.Remove(failedJob);
 
         public void AddFailedJobAndRemoveJob(FailedJobModel failedJob, QueueJobModel job)
         {
-            AddFailedJob(failedJob: failedJob);
-            RemoveJob(job: job);
+            AddFailedJob(failedJob);
+            RemoveJob(job);
         }
 
-        public FailedJobModel? FindFailedJob(int id) => _failedJobs.FirstOrDefault(predicate: j => j.Id == id);
+        public FailedJobModel? FindFailedJob(int id) => _failedJobs.FirstOrDefault(j => j.Id == id);
 
         public IReadOnlyList<FailedJobModel> GetFailedJobs(long? failedJobId = null) =>
-            (failedJobId.HasValue ? _failedJobs.Where(predicate: j => j.Id == failedJobId.Value) : _failedJobs)
+            (failedJobId.HasValue ? _failedJobs.Where(j => j.Id == failedJobId.Value) : _failedJobs)
                 .ToList()
                 .AsReadOnly();
 
         public IReadOnlyList<CronJobModel> GetEnabledCronJobs() =>
-            _cronJobs.Where(predicate: c => c.IsEnabled).ToList().AsReadOnly();
+            _cronJobs.Where(c => c.IsEnabled).ToList().AsReadOnly();
 
         public CronJobModel? FindCronJobByName(string name) =>
-            _cronJobs.FirstOrDefault(predicate: c => c.Name == name);
+            _cronJobs.FirstOrDefault(c => c.Name == name);
 
         public void AddCronJob(CronJobModel cronJob)
         {
             cronJob.Id = _nextCronId++;
-            _cronJobs.Add(item: cronJob);
+            _cronJobs.Add(cronJob);
         }
 
         public void UpdateCronJob(CronJobModel cronJob) { }
 
-        public void RemoveCronJob(CronJobModel cronJob) => _cronJobs.Remove(item: cronJob);
+        public void RemoveCronJob(CronJobModel cronJob) => _cronJobs.Remove(cronJob);
 
         public bool IsParentFailed(int parentJobId) =>
-            _failedJobs.Any(predicate: f => f.Payload.Contains(value: $"\"Id\":{parentJobId}"));
+            _failedJobs.Any(f => f.Payload.Contains($"\"Id\":{parentJobId}"));
 
         public void SaveChanges() { }
 

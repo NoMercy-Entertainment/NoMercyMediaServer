@@ -19,18 +19,18 @@ public class MediaInfoModelTests
     public void VideoStreamInfo_HdrDetection_Smpte2084_IsTrueHdr()
     {
         VideoStreamInfo stream = new(
-            Index: 0,
-            Codec: "hevc",
-            Width: 3840,
-            Height: 2160,
-            FrameRate: 23.976,
-            BitDepth: 10,
-            PixelFormat: "yuv420p10le",
-            ColorPrimaries: "bt2020",
-            ColorTransfer: "smpte2084",
-            ColorSpace: "bt2020nc",
-            IsDefault: true,
-            BitRateKbps: 40000
+            0,
+            "hevc",
+            3840,
+            2160,
+            23.976,
+            10,
+            "yuv420p10le",
+            "bt2020",
+            "smpte2084",
+            "bt2020nc",
+            true,
+            40000
         );
         stream.IsHdr.Should().BeTrue();
     }
@@ -39,18 +39,18 @@ public class MediaInfoModelTests
     public void VideoStreamInfo_HdrDetection_Bt709_IsNotHdr()
     {
         VideoStreamInfo stream = new(
-            Index: 0,
-            Codec: "h264",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: 24.0,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            ColorPrimaries: "bt709",
-            ColorTransfer: "bt709",
-            ColorSpace: "bt709",
-            IsDefault: true,
-            BitRateKbps: 8000
+            0,
+            "h264",
+            1920,
+            1080,
+            24.0,
+            8,
+            "yuv420p",
+            "bt709",
+            "bt709",
+            "bt709",
+            true,
+            8000
         );
         stream.IsHdr.Should().BeFalse();
     }
@@ -59,18 +59,18 @@ public class MediaInfoModelTests
     public void VideoStreamInfo_HdrDetection_Hlg_IsTrueHdr()
     {
         VideoStreamInfo stream = new(
-            Index: 0,
-            Codec: "hevc",
-            Width: 3840,
-            Height: 2160,
-            FrameRate: 50.0,
-            BitDepth: 10,
-            PixelFormat: "yuv420p10le",
-            ColorPrimaries: "bt2020",
-            ColorTransfer: "arib-std-b67",
-            ColorSpace: "bt2020nc",
-            IsDefault: true,
-            BitRateKbps: 30000
+            0,
+            "hevc",
+            3840,
+            2160,
+            50.0,
+            10,
+            "yuv420p10le",
+            "bt2020",
+            "arib-std-b67",
+            "bt2020nc",
+            true,
+            30000
         );
         stream.IsHdr.Should().BeTrue();
     }
@@ -79,25 +79,25 @@ public class MediaInfoModelTests
     public void SubtitleStreamInfo_TextType_ClassifiedCorrectly()
     {
         SubtitleStreamInfo srt = new(
-            Index: 0,
-            Codec: "srt",
-            Language: "eng",
-            IsDefault: true,
-            IsForced: false
+            0,
+            "srt",
+            "eng",
+            true,
+            false
         );
         SubtitleStreamInfo ass = new(
-            Index: 1,
-            Codec: "ass",
-            Language: "jpn",
-            IsDefault: false,
-            IsForced: false
+            1,
+            "ass",
+            "jpn",
+            false,
+            false
         );
         SubtitleStreamInfo vtt = new(
-            Index: 2,
-            Codec: "webvtt",
-            Language: "eng",
-            IsDefault: false,
-            IsForced: false
+            2,
+            "webvtt",
+            "eng",
+            false,
+            false
         );
         srt.IsTextBased.Should().BeTrue();
         ass.IsTextBased.Should().BeTrue();
@@ -108,18 +108,18 @@ public class MediaInfoModelTests
     public void SubtitleStreamInfo_BitmapType_ClassifiedCorrectly()
     {
         SubtitleStreamInfo pgs = new(
-            Index: 0,
-            Codec: "hdmv_pgs_subtitle",
-            Language: "eng",
-            IsDefault: true,
-            IsForced: false
+            0,
+            "hdmv_pgs_subtitle",
+            "eng",
+            true,
+            false
         );
         SubtitleStreamInfo dvd = new(
-            Index: 1,
-            Codec: "dvd_subtitle",
-            Language: "eng",
-            IsDefault: false,
-            IsForced: false
+            1,
+            "dvd_subtitle",
+            "eng",
+            false,
+            false
         );
         pgs.IsTextBased.Should().BeFalse();
         dvd.IsTextBased.Should().BeFalse();
@@ -133,25 +133,25 @@ public class MediaInfoModelTests
         List<SubtitleStreamInfo> subtitleStreams = [CreateSubtitleStream()];
         List<ChapterInfo> chapters =
         [
-            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 5), Title: "Intro"),
+            new(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Intro"),
         ];
 
         MediaInfo info = new(
-            FilePath: "/media/movie.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 2),
-            OverallBitRateKbps: 20000,
-            FileSizeBytes: 18_000_000_000L,
-            VideoStreams: videoStreams,
-            AudioStreams: audioStreams,
-            SubtitleStreams: subtitleStreams,
-            Chapters: chapters
+            "/media/movie.mkv",
+            "matroska",
+            TimeSpan.FromHours(2),
+            20000,
+            18_000_000_000L,
+            videoStreams,
+            audioStreams,
+            subtitleStreams,
+            chapters
         );
 
-        info.VideoStreams.Should().HaveCount(expected: 1);
-        info.AudioStreams.Should().HaveCount(expected: 1);
-        info.SubtitleStreams.Should().HaveCount(expected: 1);
-        info.Chapters.Should().HaveCount(expected: 1);
+        info.VideoStreams.Should().HaveCount(1);
+        info.AudioStreams.Should().HaveCount(1);
+        info.SubtitleStreams.Should().HaveCount(1);
+        info.Chapters.Should().HaveCount(1);
         info.HasVideo.Should().BeTrue();
         info.HasAudio.Should().BeTrue();
         info.HasSubtitles.Should().BeTrue();
@@ -161,15 +161,15 @@ public class MediaInfoModelTests
     public void MediaInfo_AudioOnly_HasVideoIsFalse()
     {
         MediaInfo info = new(
-            FilePath: "/media/song.flac",
-            Format: "flac",
-            Duration: TimeSpan.FromMinutes(minutes: 4),
-            OverallBitRateKbps: 1411,
-            FileSizeBytes: 42_000_000L,
-            VideoStreams: [],
-            AudioStreams: [CreateAudioStream()],
-            SubtitleStreams: [],
-            Chapters: []
+            "/media/song.flac",
+            "flac",
+            TimeSpan.FromMinutes(4),
+            1411,
+            42_000_000L,
+            [],
+            [CreateAudioStream()],
+            [],
+            []
         );
         info.HasVideo.Should().BeFalse();
         info.HasAudio.Should().BeTrue();
@@ -180,52 +180,52 @@ public class MediaInfoModelTests
     public void MediaInfo_IsVariableFrameRate_DetectedFromMismatch()
     {
         VideoStreamInfo vfrStream = new(
-            Index: 0,
-            Codec: "h264",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: 29.97,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            ColorPrimaries: "bt709",
-            ColorTransfer: "bt709",
-            ColorSpace: "bt709",
-            IsDefault: true,
-            BitRateKbps: 5000,
-            AverageFrameRate: 24.5,
-            RealFrameRate: 30.0
+            0,
+            "h264",
+            1920,
+            1080,
+            29.97,
+            8,
+            "yuv420p",
+            "bt709",
+            "bt709",
+            "bt709",
+            true,
+            5000,
+            24.5,
+            30.0
         );
         vfrStream.IsVariableFrameRate.Should().BeTrue();
     }
 
     private static VideoStreamInfo CreateVideoStream() =>
         new(
-            Index: 0,
-            Codec: "h264",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: 24.0,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            ColorPrimaries: "bt709",
-            ColorTransfer: "bt709",
-            ColorSpace: "bt709",
-            IsDefault: true,
-            BitRateKbps: 8000
+            0,
+            "h264",
+            1920,
+            1080,
+            24.0,
+            8,
+            "yuv420p",
+            "bt709",
+            "bt709",
+            "bt709",
+            true,
+            8000
         );
 
     private static AudioStreamInfo CreateAudioStream() =>
         new(
-            Index: 1,
-            Codec: "aac",
-            Channels: 2,
-            SampleRate: 48000,
-            BitRateKbps: 192,
-            Language: "eng",
-            IsDefault: true,
-            IsForced: false
+            1,
+            "aac",
+            2,
+            48000,
+            192,
+            "eng",
+            true,
+            false
         );
 
     private static SubtitleStreamInfo CreateSubtitleStream() =>
-        new(Index: 2, Codec: "srt", Language: "eng", IsDefault: true, IsForced: false);
+        new(2, "srt", "eng", true, false);
 }

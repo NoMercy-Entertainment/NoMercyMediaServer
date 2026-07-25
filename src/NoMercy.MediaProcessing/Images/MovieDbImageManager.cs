@@ -17,18 +17,18 @@ namespace NoMercy.MediaProcessing.Images;
 public class MovieDbImageManager : IMovieDbImageManager
 {
     private static readonly Size PaletteDecodeSize = new(
-        width: ColorQuantizer.MaxDimension,
-        height: ColorQuantizer.MaxDimension
+        ColorQuantizer.MaxDimension,
+        ColorQuantizer.MaxDimension
     );
 
     public static async Task<string> ColorPalette(string type, string? path, bool? download = true)
     {
         return await BaseImageManager.ColorPalette(
-            client: TmdbImageClient.Download,
-            type: type,
-            path: path,
-            download: download,
-            maxDecodeSize: PaletteDecodeSize
+            TmdbImageClient.Download,
+            type,
+            path,
+            download,
+            PaletteDecodeSize
         );
     }
 
@@ -38,10 +38,10 @@ public class MovieDbImageManager : IMovieDbImageManager
     )
     {
         return await BaseImageManager.MultiColorPalette(
-            client: TmdbImageClient.Download,
-            items: items,
-            download: download,
-            maxDecodeSize: PaletteDecodeSize
+            TmdbImageClient.Download,
+            items,
+            download,
+            PaletteDecodeSize
         );
     }
 }

@@ -13,16 +13,16 @@ namespace NoMercy.Plugins.Abstractions;
 
 public static class PluginAbi
 {
-    public static Version Current { get; } = new(major: 10, minor: 0);
+    public static Version Current { get; } = new(10, 0);
 
     public static bool IsCompatible(string? targetAbi)
     {
-        if (string.IsNullOrWhiteSpace(value: targetAbi))
+        if (string.IsNullOrWhiteSpace(targetAbi))
         {
             return true;
         }
 
-        if (!Version.TryParse(input: targetAbi, result: out Version? requested))
+        if (!Version.TryParse(targetAbi, out Version? requested))
         {
             return false;
         }

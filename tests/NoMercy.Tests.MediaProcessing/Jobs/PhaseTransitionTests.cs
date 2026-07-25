@@ -27,7 +27,7 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 ///   4. <c>HandleFinalizeAsync</c> does NOT call <c>ReEnqueueSelf</c> —
 ///      finalize is the terminal phase.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public partial class PhaseTransitionTests
 {
     private static string? _cachedSource;
@@ -41,26 +41,26 @@ public partial class PhaseTransitionTests
 
         while (dir is not null)
         {
-            string srcCandidate = Path.Combine(path1: dir, path2: "src");
-            if (Directory.Exists(path: srcCandidate))
+            string srcCandidate = Path.Combine(dir, "src");
+            if (Directory.Exists(srcCandidate))
             {
                 string[] files = Directory.GetFiles(
-                    path: srcCandidate,
-                    searchPattern: "VideoEncodeJob.cs",
-                    searchOption: SearchOption.AllDirectories
+                    srcCandidate,
+                    "VideoEncodeJob.cs",
+                    SearchOption.AllDirectories
                 );
 
                 if (files.Length > 0)
                 {
-                    _cachedSource = File.ReadAllText(path: files[0]);
+                    _cachedSource = File.ReadAllText(files[0]);
                     return _cachedSource;
                 }
             }
 
-            dir = Directory.GetParent(path: dir)?.FullName;
+            dir = Directory.GetParent(dir)?.FullName;
         }
 
-        throw new FileNotFoundException(message: "VideoEncodeJob.cs not found under any src/ ancestor");
+        throw new FileNotFoundException("VideoEncodeJob.cs not found under any src/ ancestor");
     }
 
     [Fact]
@@ -69,20 +69,20 @@ public partial class PhaseTransitionTests
         string source = LoadVideoEncodeJobSource();
 
         bool hasWaitPass1 =
-            source.Contains(value: "CoordinatorPhase.WaitPass1:", comparisonType: StringComparison.Ordinal)
-            || source.Contains(value: "case CoordinatorPhase.WaitPass1", comparisonType: StringComparison.Ordinal);
+            source.Contains("CoordinatorPhase.WaitPass1:", StringComparison.Ordinal)
+            || source.Contains("case CoordinatorPhase.WaitPass1", StringComparison.Ordinal);
 
         bool hasWaitChildren =
-            source.Contains(value: "CoordinatorPhase.WaitChildren:", comparisonType: StringComparison.Ordinal)
-            || source.Contains(value: "case CoordinatorPhase.WaitChildren", comparisonType: StringComparison.Ordinal);
+            source.Contains("CoordinatorPhase.WaitChildren:", StringComparison.Ordinal)
+            || source.Contains("case CoordinatorPhase.WaitChildren", StringComparison.Ordinal);
 
         bool hasFinalize =
-            source.Contains(value: "CoordinatorPhase.Finalize:", comparisonType: StringComparison.Ordinal)
-            || source.Contains(value: "case CoordinatorPhase.Finalize", comparisonType: StringComparison.Ordinal);
+            source.Contains("CoordinatorPhase.Finalize:", StringComparison.Ordinal)
+            || source.Contains("case CoordinatorPhase.Finalize", StringComparison.Ordinal);
 
-        hasWaitPass1.Should().BeTrue(because: "WaitPass1 phase must be handled in the switch");
-        hasWaitChildren.Should().BeTrue(because: "WaitChildren phase must be handled in the switch");
-        hasFinalize.Should().BeTrue(because: "Finalize phase must be handled in the switch");
+        hasWaitPass1.Should().BeTrue("WaitPass1 phase must be handled in the switch");
+        hasWaitChildren.Should().BeTrue("WaitChildren phase must be handled in the switch");
+        hasFinalize.Should().BeTrue("Finalize phase must be handled in the switch");
     }
 
     [Fact]
@@ -91,19 +91,19 @@ public partial class PhaseTransitionTests
         string source = LoadVideoEncodeJobSource();
 
         int methodStart = source.IndexOf(
-            value: "private async Task HandleWaitPass1Async",
-            comparisonType: StringComparison.Ordinal
+            "private async Task HandleWaitPass1Async",
+            StringComparison.Ordinal
         );
 
-        methodStart.Should().BeGreaterThan(expected: 0, because: "HandleWaitPass1Async must exist");
+        methodStart.Should().BeGreaterThan(0, "HandleWaitPass1Async must exist");
 
-        string window = ExtractMethodWindow(source: source, methodStart: methodStart);
+        string window = ExtractMethodWindow(source, methodStart);
 
         window
             .Should()
             .Contain(
-                expected: "ReEnqueueSelf",
-                because: "WaitPass1 must call ReEnqueueSelf — it is not a terminal phase"
+                "ReEnqueueSelf",
+                "WaitPass1 must call ReEnqueueSelf — it is not a terminal phase"
             );
     }
 
@@ -113,19 +113,19 @@ public partial class PhaseTransitionTests
         string source = LoadVideoEncodeJobSource();
 
         int methodStart = source.IndexOf(
-            value: "private async Task HandleWaitChildrenAsync",
-            comparisonType: StringComparison.Ordinal
+            "private async Task HandleWaitChildrenAsync",
+            StringComparison.Ordinal
         );
 
-        methodStart.Should().BeGreaterThan(expected: 0, because: "HandleWaitChildrenAsync must exist");
+        methodStart.Should().BeGreaterThan(0, "HandleWaitChildrenAsync must exist");
 
-        string window = ExtractMethodWindow(source: source, methodStart: methodStart, maxChars: 6000);
+        string window = ExtractMethodWindow(source, methodStart, 6000);
 
         window
             .Should()
             .Contain(
-                expected: "ReEnqueueSelf",
-                because: "WaitChildren must call ReEnqueueSelf — it is not a terminal phase"
+                "ReEnqueueSelf",
+                "WaitChildren must call ReEnqueueSelf — it is not a terminal phase"
             );
     }
 
@@ -135,19 +135,19 @@ public partial class PhaseTransitionTests
         string source = LoadVideoEncodeJobSource();
 
         int methodStart = source.IndexOf(
-            value: "private async Task HandleFinalizeAsync",
-            comparisonType: StringComparison.Ordinal
+            "private async Task HandleFinalizeAsync",
+            StringComparison.Ordinal
         );
 
-        methodStart.Should().BeGreaterThan(expected: 0, because: "HandleFinalizeAsync must exist");
+        methodStart.Should().BeGreaterThan(0, "HandleFinalizeAsync must exist");
 
-        string window = ExtractMethodWindow(source: source, methodStart: methodStart);
+        string window = ExtractMethodWindow(source, methodStart);
 
         window
             .Should()
             .NotContain(
-                unexpected: "ReEnqueueSelf",
-                because: "Finalize is the terminal phase — it must NOT re-enqueue the coordinator"
+                "ReEnqueueSelf",
+                "Finalize is the terminal phase — it must NOT re-enqueue the coordinator"
             );
     }
 
@@ -157,35 +157,35 @@ public partial class PhaseTransitionTests
         string source = LoadVideoEncodeJobSource();
 
         int methodStart = source.IndexOf(
-            value: "private async Task DispatchDecomposedAsync",
-            comparisonType: StringComparison.Ordinal
+            "private async Task DispatchDecomposedAsync",
+            StringComparison.Ordinal
         );
 
-        methodStart.Should().BeGreaterThan(expected: 0, because: "DispatchDecomposedAsync must exist");
+        methodStart.Should().BeGreaterThan(0, "DispatchDecomposedAsync must exist");
 
-        string window = ExtractMethodWindow(source: source, methodStart: methodStart, maxChars: 6000);
+        string window = ExtractMethodWindow(source, methodStart, 6000);
 
-        window.Should().Contain(expected: "hasTwoPass", because: "DispatchDecomposedAsync must detect two-pass runs");
+        window.Should().Contain("hasTwoPass", "DispatchDecomposedAsync must detect two-pass runs");
 
         window
             .Should()
             .Contain(
-                expected: "CoordinatorPhase.WaitPass1",
-                because: "two-pass decomposition must transition coordinator to WaitPass1, not WaitChildren"
+                "CoordinatorPhase.WaitPass1",
+                "two-pass decomposition must transition coordinator to WaitPass1, not WaitChildren"
             );
 
-        int waitPass1Index = window.IndexOf(value: "CoordinatorPhase.WaitPass1", comparisonType: StringComparison.Ordinal);
+        int waitPass1Index = window.IndexOf("CoordinatorPhase.WaitPass1", StringComparison.Ordinal);
 
         int waitChildrenIndex = window.IndexOf(
-            value: "CoordinatorPhase.WaitChildren",
-            comparisonType: StringComparison.Ordinal
+            "CoordinatorPhase.WaitChildren",
+            StringComparison.Ordinal
         );
 
         waitChildrenIndex
             .Should()
             .BeGreaterThan(
-                expected: 0,
-                because: "DispatchDecomposedAsync must also have a WaitChildren path for single-pass runs"
+                0,
+                "DispatchDecomposedAsync must also have a WaitChildren path for single-pass runs"
             );
     }
 
@@ -195,26 +195,26 @@ public partial class PhaseTransitionTests
         string source = LoadVideoEncodeJobSource();
 
         int methodStart = source.IndexOf(
-            value: "private async Task HandleWaitPass1Async",
-            comparisonType: StringComparison.Ordinal
+            "private async Task HandleWaitPass1Async",
+            StringComparison.Ordinal
         );
 
-        methodStart.Should().BeGreaterThan(expected: 0);
+        methodStart.Should().BeGreaterThan(0);
 
-        string window = ExtractMethodWindow(source: source, methodStart: methodStart, maxChars: 6000);
+        string window = ExtractMethodWindow(source, methodStart, 6000);
 
         window
             .Should()
             .Contain(
-                expected: "pass2TaskIds",
-                because: "HandleWaitPass1Async must dispatch Pass2 tasks when Pass1 is complete"
+                "pass2TaskIds",
+                "HandleWaitPass1Async must dispatch Pass2 tasks when Pass1 is complete"
             );
 
         window
             .Should()
             .Contain(
-                expected: "CoordinatorPhase.WaitChildren",
-                because: "HandleWaitPass1Async must transition to WaitChildren after dispatching Pass2"
+                "CoordinatorPhase.WaitChildren",
+                "HandleWaitPass1Async must transition to WaitChildren after dispatching Pass2"
             );
     }
 
@@ -224,31 +224,31 @@ public partial class PhaseTransitionTests
         string source = LoadVideoEncodeJobSource();
 
         int waitPass1Start = source.IndexOf(
-            value: "private async Task HandleWaitPass1Async",
-            comparisonType: StringComparison.Ordinal
+            "private async Task HandleWaitPass1Async",
+            StringComparison.Ordinal
         );
 
-        waitPass1Start.Should().BeGreaterThan(expected: 0);
+        waitPass1Start.Should().BeGreaterThan(0);
 
-        string window = ExtractMethodWindow(source: source, methodStart: waitPass1Start, maxChars: 6000);
+        string window = ExtractMethodWindow(source, waitPass1Start, 6000);
 
         bool transitionsToWaitChildren = window.Contains(
-            value: "CoordinatorPhase.WaitChildren",
-            comparisonType: StringComparison.Ordinal
+            "CoordinatorPhase.WaitChildren",
+            StringComparison.Ordinal
         );
 
         bool transitionsDirectlyToFinalize = window.Contains(
-            value: "CoordinatorPhase.Finalize",
-            comparisonType: StringComparison.Ordinal
+            "CoordinatorPhase.Finalize",
+            StringComparison.Ordinal
         );
 
         transitionsToWaitChildren
             .Should()
-            .BeTrue(because: "WaitPass1 must transition to WaitChildren, not skip straight to Finalize");
+            .BeTrue("WaitPass1 must transition to WaitChildren, not skip straight to Finalize");
 
         transitionsDirectlyToFinalize
             .Should()
-            .BeFalse(because: "WaitPass1 must not skip WaitChildren and jump directly to Finalize");
+            .BeFalse("WaitPass1 must not skip WaitChildren and jump directly to Finalize");
     }
 
     private static string ExtractMethodWindow(string source, int methodStart, int maxChars = 2000)
@@ -259,7 +259,7 @@ public partial class PhaseTransitionTests
 
         for (int charIndex = methodStart; charIndex < source.Length; charIndex++)
         {
-            char current = source[index: charIndex];
+            char current = source[charIndex];
 
             if (current == '{')
             {
@@ -277,10 +277,10 @@ public partial class PhaseTransitionTests
             }
         }
 
-        int length = Math.Min(val1: methodEnd - methodStart + 1, val2: maxChars);
-        return source.Substring(startIndex: methodStart, length: length);
+        int length = Math.Min(methodEnd - methodStart + 1, maxChars);
+        return source.Substring(methodStart, length);
     }
 
-    [GeneratedRegex(pattern: @"private\s+async\s+Task\s+Handle\w+Async")]
+    [GeneratedRegex(@"private\s+async\s+Task\s+Handle\w+Async")]
     private static partial Regex PhaseHandlerPattern();
 }

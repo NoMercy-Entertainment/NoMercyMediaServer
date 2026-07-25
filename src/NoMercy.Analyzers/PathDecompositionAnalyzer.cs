@@ -26,56 +26,56 @@ namespace NoMercy.Analyzers;
 /// <c>NoMercy.Storage.IStorage</c> or <c>IStorageDriver</c>. These methods interpret
 /// paths using OS conventions which break on storage-relative forward-slash paths on Windows.
 /// </summary>
-[DiagnosticAnalyzer(firstLanguage: LanguageNames.CSharp)]
-[SuppressMessage(category: "MicrosoftCodeAnalysisCorrectness", checkId: "RS1038")]
+[DiagnosticAnalyzer(LanguageNames.CSharp)]
+[SuppressMessage("MicrosoftCodeAnalysisCorrectness", "RS1038")]
 public sealed class PathDecompositionAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "NMS002";
 
     private static readonly ImmutableHashSet<string> FlaggedMethods = ImmutableHashSet.Create(
-        equalityComparer: StringComparer.Ordinal, items: ["GetDirectoryName", "GetFileName", "GetFileNameWithoutExtension", "GetFullPath"]
+        StringComparer.Ordinal, ["GetDirectoryName", "GetFileName", "GetFileNameWithoutExtension", "GetFullPath"]
     );
 
     private static readonly DiagnosticDescriptor Rule = new(
-        id: DiagnosticId,
-        title: "Avoid System.IO.Path decomposition methods on storage-relative paths",
-        messageFormat: "Path.{0} uses OS path conventions. On Windows this misinterprets forward-slash storage paths. Use string operations or expose a driver-aware equivalent via IStorage instead.",
-        category: "NoMercy.Storage",
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "Path.GetDirectoryName, GetFileName, GetFileNameWithoutExtension, and GetFullPath treat paths as OS-native, which on Windows means backslash delimiters. Storage-relative paths use forward slashes (IStorage Rule 2). Use #pragma warning disable NMS002 to suppress this for paths that are not storage-bound."
+        DiagnosticId,
+        "Avoid System.IO.Path decomposition methods on storage-relative paths",
+        "Path.{0} uses OS path conventions. On Windows this misinterprets forward-slash storage paths. Use string operations or expose a driver-aware equivalent via IStorage instead.",
+        "NoMercy.Storage",
+        DiagnosticSeverity.Warning,
+        true,
+        "Path.GetDirectoryName, GetFileName, GetFileNameWithoutExtension, and GetFullPath treat paths as OS-native, which on Windows means backslash delimiters. Storage-relative paths use forward slashes (IStorage Rule 2). Use #pragma warning disable NMS002 to suppress this for paths that are not storage-bound."
     );
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        ImmutableArray.Create(item: Rule);
+        ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {
-        context.ConfigureGeneratedCodeAnalysis(analysisMode: GeneratedCodeAnalysisFlags.None);
+        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
 
-        context.RegisterSyntaxNodeAction(action: AnalyzeInvocation, syntaxKinds: SyntaxKind.InvocationExpression);
+        context.RegisterSyntaxNodeAction(AnalyzeInvocation, SyntaxKind.InvocationExpression);
     }
 
     private static void AnalyzeInvocation(SyntaxNodeAnalysisContext context)
     {
         InvocationExpressionSyntax invocation = (InvocationExpressionSyntax)context.Node;
 
-        SimpleNameSyntax? invokedName = AnalyzerSyntaxHelpers.GetInvokedName(invocation: invocation);
+        SimpleNameSyntax? invokedName = AnalyzerSyntaxHelpers.GetInvokedName(invocation);
         if (invokedName is null)
         {
             return;
         }
 
         string methodName = invokedName.Identifier.Text;
-        if (!FlaggedMethods.Contains(item: methodName))
+        if (!FlaggedMethods.Contains(methodName))
         {
             return;
         }
 
-        SymbolInfo symbolInfo = context.SemanticModel.GetSymbolInfo(expression: invocation);
+        SymbolInfo symbolInfo = context.SemanticModel.GetSymbolInfo(invocation);
         ImmutableArray<ISymbol> candidates = symbolInfo.CandidateSymbols;
-        ISymbol? symbol = symbolInfo.Symbol ?? (candidates.Length > 0 ? candidates[index: 0] : null);
+        ISymbol? symbol = symbolInfo.Symbol ?? (candidates.Length > 0 ? candidates[0] : null);
 
         if (symbol is not IMethodSymbol method)
         {
@@ -88,15 +88,15 @@ public sealed class PathDecompositionAnalyzer : DiagnosticAnalyzer
         }
 
         // Exempt driver implementations.
-        INamedTypeSymbol? containingType = GetContainingType(node: context.Node, model: context.SemanticModel);
+        INamedTypeSymbol? containingType = GetContainingType(context.Node, context.SemanticModel);
         if (containingType is not null)
         {
             string typeNamespace =
                 containingType.ContainingNamespace?.ToDisplayString() ?? string.Empty;
             if (
                 AnalyzerSyntaxHelpers.IsNamespaceOrDescendant(
-                    candidate: typeNamespace,
-                    target: "NoMercy.Storage.Drivers"
+                    typeNamespace,
+                    "NoMercy.Storage.Drivers"
                 )
             )
             {
@@ -104,12 +104,12 @@ public sealed class PathDecompositionAnalyzer : DiagnosticAnalyzer
             }
         }
 
-        if (!FileReferencesStorage(context: context))
+        if (!FileReferencesStorage(context))
         {
             return;
         }
 
-        context.ReportDiagnostic(diagnostic: Diagnostic.Create(descriptor: Rule, location: invocation.GetLocation(), messageArgs: methodName));
+        context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.GetLocation(), methodName));
     }
 
     private static INamedTypeSymbol? GetContainingType(SyntaxNode node, SemanticModel model)
@@ -119,7 +119,7 @@ public sealed class PathDecompositionAnalyzer : DiagnosticAnalyzer
         {
             if (current is TypeDeclarationSyntax typeDecl)
             {
-                return model.GetDeclaredSymbol(declarationSyntax: typeDecl) as INamedTypeSymbol;
+                return model.GetDeclaredSymbol(typeDecl) as INamedTypeSymbol;
             }
 
             current = current.Parent;
@@ -130,14 +130,14 @@ public sealed class PathDecompositionAnalyzer : DiagnosticAnalyzer
 
     private static bool FileReferencesStorage(SyntaxNodeAnalysisContext context)
     {
-        SyntaxNode root = context.Node.SyntaxTree.GetRoot(cancellationToken: context.CancellationToken);
+        SyntaxNode root = context.Node.SyntaxTree.GetRoot(context.CancellationToken);
 
         foreach (SyntaxNode descendant in root.DescendantNodes())
         {
             if (descendant is UsingDirectiveSyntax usingDirective)
             {
                 string usingName = usingDirective.Name?.ToString() ?? string.Empty;
-                if (AnalyzerSyntaxHelpers.IsNamespaceOrDescendant(candidate: usingName, target: "NoMercy.Storage"))
+                if (AnalyzerSyntaxHelpers.IsNamespaceOrDescendant(usingName, "NoMercy.Storage"))
                 {
                     return true;
                 }
@@ -149,16 +149,16 @@ public sealed class PathDecompositionAnalyzer : DiagnosticAnalyzer
                 if (name == "IStorage" || name == "IStorageDriver" || name == "IStorageFactory")
                 {
                     SymbolInfo info = context.SemanticModel.GetSymbolInfo(
-                        expression: identifier,
-                        cancellationToken: context.CancellationToken
+                        identifier,
+                        context.CancellationToken
                     );
                     ImmutableArray<ISymbol> symCandidates = info.CandidateSymbols;
                     ISymbol? sym =
-                        info.Symbol ?? (symCandidates.Length > 0 ? symCandidates[index: 0] : null);
+                        info.Symbol ?? (symCandidates.Length > 0 ? symCandidates[0] : null);
                     if (sym is not null)
                     {
                         string ns = sym.ContainingNamespace?.ToDisplayString() ?? string.Empty;
-                        if (AnalyzerSyntaxHelpers.IsNamespaceOrDescendant(candidate: ns, target: "NoMercy.Storage"))
+                        if (AnalyzerSyntaxHelpers.IsNamespaceOrDescendant(ns, "NoMercy.Storage"))
                         {
                             return true;
                         }

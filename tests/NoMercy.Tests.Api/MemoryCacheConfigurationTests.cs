@@ -17,7 +17,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MemoryCacheConfigurationTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -34,8 +34,8 @@ public class MemoryCacheConfigurationTests : IClassFixture<NoMercyApiFactory>
             IOptions<MemoryCacheOptions>
         >();
 
-        Assert.NotNull(value: options.Value.SizeLimit);
-        Assert.Equal(expected: 1024, actual: options.Value.SizeLimit);
+        Assert.NotNull(options.Value.SizeLimit);
+        Assert.Equal(1024, options.Value.SizeLimit);
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class MemoryCacheConfigurationTests : IClassFixture<NoMercyApiFactory>
             IOptions<MemoryCacheOptions>
         >();
 
-        Assert.Equal(expected: 0.25, actual: options.Value.CompactionPercentage);
+        Assert.Equal(0.25, options.Value.CompactionPercentage);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class MemoryCacheConfigurationTests : IClassFixture<NoMercyApiFactory>
     {
         IMemoryCache cache = _factory.Services.GetRequiredService<IMemoryCache>();
 
-        Assert.NotNull(@object: cache);
+        Assert.NotNull(cache);
     }
 
     [Fact]
@@ -64,16 +64,16 @@ public class MemoryCacheConfigurationTests : IClassFixture<NoMercyApiFactory>
         string key = $"test-key-{Guid.NewGuid()}";
 
         // Entry must be disposed (committed) before it's visible in cache
-        using (ICacheEntry entry = cache.CreateEntry(key: key))
+        using (ICacheEntry entry = cache.CreateEntry(key))
         {
             entry.Value = "test-value";
             entry.Size = 1;
         }
 
-        Assert.True(condition: cache.TryGetValue(key: key, value: out object? value));
-        Assert.Equal(expected: "test-value", actual: value);
+        Assert.True(cache.TryGetValue(key, out object? value));
+        Assert.Equal("test-value", value);
 
         // Clean up
-        cache.Remove(key: key);
+        cache.Remove(key);
     }
 }

@@ -26,14 +26,14 @@ public class ComponentBuilder<T>
         if (when is not null)
             _component.Update.When = when;
         if (link is not null)
-            _component.Update.Link = new(uriString: link, uriKind: UriKind.Relative);
+            _component.Update.Link = new(link, UriKind.Relative);
         return this;
     }
 
     public ComponentBuilder<T> WithProps(Action<ComponentPropsBuilder<T>, Ulid> propsBuilder)
     {
-        ComponentPropsBuilder<T> builder = new(props: _component.Props);
-        propsBuilder(arg1: builder, arg2: _component.Id);
+        ComponentPropsBuilder<T> builder = new(_component.Props);
+        propsBuilder(builder, _component.Id);
         return this;
     }
 

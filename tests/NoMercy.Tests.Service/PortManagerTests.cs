@@ -15,7 +15,6 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Certificate;
 using NoMercy.Service.Hosting;
-using Xunit;
 
 namespace NoMercy.Tests.Service;
 
@@ -26,15 +25,15 @@ namespace NoMercy.Tests.Service;
 /// netstat/lsof PID parsers (tested directly so both OS formats are covered on
 /// every host, not just the one the tests happen to run on).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class PortManagerTests
 {
     private static PortManager BuildManager() =>
-        new(logger: NullLogger<PortManager>.Instance, certificateService: new StubCertificateService());
+        new(NullLogger<PortManager>.Instance, new StubCertificateService());
 
     private static int GetFreePort()
     {
-        TcpListener probe = new(localaddr: IPAddress.Loopback, port: 0);
+        TcpListener probe = new(IPAddress.Loopback, 0);
         probe.Start();
         int port = ((IPEndPoint)probe.LocalEndpoint).Port;
         probe.Stop();
@@ -46,24 +45,24 @@ public class PortManagerTests
     {
         PortManager manager = BuildManager();
 
-        bool available = manager.IsPortAvailable(port: GetFreePort());
+        bool available = manager.IsPortAvailable(GetFreePort());
 
-        Assert.True(condition: available);
+        Assert.True(available);
     }
 
     [Fact]
     public void IsPortAvailable_OccupiedPort_ReturnsFalse()
     {
         int port = GetFreePort();
-        TcpListener holder = new(localaddr: IPAddress.Any, port: port);
+        TcpListener holder = new(IPAddress.Any, port);
         holder.Start();
         try
         {
             PortManager manager = BuildManager();
 
-            bool available = manager.IsPortAvailable(port: port);
+            bool available = manager.IsPortAvailable(port);
 
-            Assert.False(condition: available);
+            Assert.False(available);
         }
         finally
         {
@@ -77,25 +76,25 @@ public class PortManagerTests
         int port = GetFreePort();
         PortManager manager = BuildManager();
 
-        int found = manager.FindNextAvailablePort(startPort: port);
+        int found = manager.FindNextAvailablePort(port);
 
-        Assert.Equal(expected: port, actual: found);
+        Assert.Equal(port, found);
     }
 
     [Fact]
     public void FindNextAvailablePort_StartOccupied_ReturnsHigherFreePort()
     {
         int port = GetFreePort();
-        TcpListener holder = new(localaddr: IPAddress.Any, port: port);
+        TcpListener holder = new(IPAddress.Any, port);
         holder.Start();
         try
         {
             PortManager manager = BuildManager();
 
-            int found = manager.FindNextAvailablePort(startPort: port);
+            int found = manager.FindNextAvailablePort(port);
 
-            Assert.True(condition: found > port, userMessage: $"expected a port past the occupied {port}, got {found}");
-            Assert.True(condition: manager.IsPortAvailable(port: found));
+            Assert.True(found > port, $"expected a port past the occupied {port}, got {found}");
+            Assert.True(manager.IsPortAvailable(found));
         }
         finally
         {
@@ -104,20 +103,20 @@ public class PortManagerTests
     }
 
     [Theory]
-    [InlineData(data: ["  TCP    0.0.0.0:7626    0.0.0.0:0    LISTENING    1234", 1234])]
-    [InlineData(data: ["TCP    [::]:7626    [::]:0    LISTENING    98765\r\n", 98765])]
+    [InlineData(["  TCP    0.0.0.0:7626    0.0.0.0:0    LISTENING    1234", 1234])]
+    [InlineData(["TCP    [::]:7626    [::]:0    LISTENING    98765\r\n", 98765])]
     public void ParsePidFromNetstat_ValidListeningRow_ReturnsPid(string netstat, int expected)
     {
-        Assert.Equal(expected: expected, actual: PortManager.ParsePidFromNetstat(processInfo: netstat));
+        Assert.Equal(expected, PortManager.ParsePidFromNetstat(netstat));
     }
 
     [Theory]
-    [InlineData(data: "")]
-    [InlineData(data: "   ")]
-    [InlineData(data: "TCP    0.0.0.0:7626    0.0.0.0:0    LISTENING    not-a-pid")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("TCP    0.0.0.0:7626    0.0.0.0:0    LISTENING    not-a-pid")]
     public void ParsePidFromNetstat_EmptyOrMalformed_ReturnsMinusOne(string netstat)
     {
-        Assert.Equal(expected: -1, actual: PortManager.ParsePidFromNetstat(processInfo: netstat));
+        Assert.Equal(-1, PortManager.ParsePidFromNetstat(netstat));
     }
 
     [Fact]
@@ -127,25 +126,25 @@ public class PortManagerTests
             "COMMAND   PID   USER   FD   TYPE   DEVICE   SIZE/OFF   NODE   NAME\n"
             + "NoMercyMe 4321  nomercy  10u  IPv4  0x0        0t0        TCP    *:7626 (LISTEN)\n";
 
-        Assert.Equal(expected: 4321, actual: PortManager.ParsePidFromLsof(processInfo: lsof));
+        Assert.Equal(4321, PortManager.ParsePidFromLsof(lsof));
     }
 
     [Theory]
-    [InlineData(data: "")]
-    [InlineData(data: "COMMAND   PID   USER   FD   TYPE   DEVICE   SIZE/OFF   NODE   NAME\n")]
+    [InlineData("")]
+    [InlineData("COMMAND   PID   USER   FD   TYPE   DEVICE   SIZE/OFF   NODE   NAME\n")]
     public void ParsePidFromLsof_EmptyOrHeaderOnly_ReturnsMinusOne(string lsof)
     {
-        Assert.Equal(expected: -1, actual: PortManager.ParsePidFromLsof(processInfo: lsof));
+        Assert.Equal(-1, PortManager.ParsePidFromLsof(lsof));
     }
 
     [Fact]
     public async Task EnsurePortAvailable_PortAlreadyFree_ReturnsImmediatelyWithoutConsultingCertService()
     {
         int port = GetFreePort();
-        Mock<ICertificateService> certificateService = new(behavior: MockBehavior.Strict);
-        PortManager manager = new(logger: NullLogger<PortManager>.Instance, certificateService: certificateService.Object);
+        Mock<ICertificateService> certificateService = new(MockBehavior.Strict);
+        PortManager manager = new(NullLogger<PortManager>.Instance, certificateService.Object);
 
-        await manager.EnsurePortAvailable(port: port);
+        await manager.EnsurePortAvailable(port);
 
         // Strict mock: any unexpected call (e.g. HasValidCertificate) would have
         // thrown above. Reaching here proves the early-return path never
@@ -157,23 +156,23 @@ public class PortManagerTests
     public async Task HandlePortInUse_InnerExceptionIsNotSocketException_ReturnsFalseWithoutRecovering()
     {
         PortManager manager = BuildManager();
-        IOException ex = new(message: "disk full", innerException: new InvalidOperationException(message: "not a socket error"));
+        IOException ex = new("disk full", new InvalidOperationException("not a socket error"));
 
-        bool shouldRetry = await manager.HandlePortInUse(port: 7626, ex: ex);
+        bool shouldRetry = await manager.HandlePortInUse(7626, ex);
 
-        Assert.False(condition: shouldRetry);
+        Assert.False(shouldRetry);
     }
 
     [Fact]
     public async Task HandlePortInUse_SocketErrorIsNotAddressInUse_ReturnsFalseWithoutRecovering()
     {
         PortManager manager = BuildManager();
-        SocketException socketEx = new(errorCode: (int)SocketError.ConnectionRefused);
-        IOException ex = new(message: "connection refused", innerException: socketEx);
+        SocketException socketEx = new((int)SocketError.ConnectionRefused);
+        IOException ex = new("connection refused", socketEx);
 
-        bool shouldRetry = await manager.HandlePortInUse(port: 7626, ex: ex);
+        bool shouldRetry = await manager.HandlePortInUse(7626, ex);
 
-        Assert.False(condition: shouldRetry);
+        Assert.False(shouldRetry);
     }
 
     [Fact]
@@ -185,12 +184,12 @@ public class PortManagerTests
         // the caller may safely retry.
         int port = GetFreePort();
         PortManager manager = BuildManager();
-        SocketException socketEx = new(errorCode: (int)SocketError.AddressAlreadyInUse);
-        IOException ex = new(message: "address already in use", innerException: socketEx);
+        SocketException socketEx = new((int)SocketError.AddressAlreadyInUse);
+        IOException ex = new("address already in use", socketEx);
 
-        bool shouldRetry = await manager.HandlePortInUse(port: port, ex: ex);
+        bool shouldRetry = await manager.HandlePortInUse(port, ex);
 
-        Assert.True(condition: shouldRetry);
+        Assert.True(shouldRetry);
     }
 
     private sealed class StubCertificateService : ICertificateService

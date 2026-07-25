@@ -28,7 +28,7 @@ namespace NoMercy.Tests.Queue;
 /// drive the real <see cref="JobQueue.ReserveJob"/> against the real
 /// <see cref="NoMercy.Queue.MediaServer.EfQueueContextAdapter"/>.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ReservationAvailabilityAndAttemptsBoundaryTests : IDisposable
 {
     private readonly QueueContext _context;
@@ -48,51 +48,51 @@ public class ReservationAvailabilityAndAttemptsBoundaryTests : IDisposable
     [Fact]
     public void ReserveJob_AvailableAtInFuture_IsNotReserved()
     {
-        JobQueue jobQueue = new(context: _adapter);
+        JobQueue jobQueue = new(_adapter);
         QueueJob job = new()
         {
             Queue = "delayed",
             Payload = "future payload",
-            AvailableAt = DateTime.UtcNow.AddMinutes(value: 10),
+            AvailableAt = DateTime.UtcNow.AddMinutes(10),
             Attempts = 0,
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
-        QueueJobModel? reserved = jobQueue.ReserveJob(name: "delayed", currentJobId: null);
+        QueueJobModel? reserved = jobQueue.ReserveJob("delayed", null);
 
-        Assert.Null(@object: reserved);
+        Assert.Null(reserved);
         QueueJob? untouched = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(@object: untouched);
-        Assert.Null(value: untouched.ReservedAt);
-        Assert.Equal(expected: 0, actual: untouched.Attempts);
+        Assert.NotNull(untouched);
+        Assert.Null(untouched.ReservedAt);
+        Assert.Equal(0, untouched.Attempts);
     }
 
     [Fact]
     public void ReserveJob_AvailableAtInPast_IsReserved()
     {
-        JobQueue jobQueue = new(context: _adapter);
+        JobQueue jobQueue = new(_adapter);
         QueueJob job = new()
         {
             Queue = "delayed",
             Payload = "past payload",
-            AvailableAt = DateTime.UtcNow.AddMinutes(value: -10),
+            AvailableAt = DateTime.UtcNow.AddMinutes(-10),
             Attempts = 0,
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
-        QueueJobModel? reserved = jobQueue.ReserveJob(name: "delayed", currentJobId: null);
+        QueueJobModel? reserved = jobQueue.ReserveJob("delayed", null);
 
-        Assert.NotNull(@object: reserved);
-        Assert.Equal(expected: "past payload", actual: reserved.Payload);
-        Assert.NotNull(value: reserved.ReservedAt);
+        Assert.NotNull(reserved);
+        Assert.Equal("past payload", reserved.Payload);
+        Assert.NotNull(reserved.ReservedAt);
     }
 
     [Fact]
     public void ReserveJob_BackoffRescheduledJob_NotReservedUntilAvailableAtElapses()
     {
-        JobQueue jobQueue = new(context: _adapter);
+        JobQueue jobQueue = new(_adapter);
         QueueJob job = new()
         {
             Queue = "backoff",
@@ -101,7 +101,7 @@ public class ReservationAvailabilityAndAttemptsBoundaryTests : IDisposable
             ReservedAt = DateTime.UtcNow,
             Attempts = 1,
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
         QueueJobModel jobModel = new()
@@ -111,21 +111,21 @@ public class ReservationAvailabilityAndAttemptsBoundaryTests : IDisposable
             Payload = "backoff payload",
             Attempts = 1,
         };
-        jobQueue.ReleaseReservation(job: jobModel, availableAfter: TimeSpan.FromMinutes(minutes: 10));
+        jobQueue.ReleaseReservation(jobModel, TimeSpan.FromMinutes(10));
 
-        QueueJobModel? reserved = jobQueue.ReserveJob(name: "backoff", currentJobId: null);
+        QueueJobModel? reserved = jobQueue.ReserveJob("backoff", null);
 
-        Assert.Null(@object: reserved);
+        Assert.Null(reserved);
         QueueJob? deferred = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(@object: deferred);
-        Assert.Null(value: deferred.ReservedAt);
-        Assert.True(condition: deferred.AvailableAt > DateTime.UtcNow.AddMinutes(value: 9));
+        Assert.NotNull(deferred);
+        Assert.Null(deferred.ReservedAt);
+        Assert.True(deferred.AvailableAt > DateTime.UtcNow.AddMinutes(9));
     }
 
     [Fact]
     public void ReserveJob_JobAtMaxAttempts_IsNotReservedAgain_NoZombieExecution()
     {
-        JobQueue jobQueue = new(context: _adapter, maxAttempts: 3);
+        JobQueue jobQueue = new(_adapter, 3);
         QueueJob job = new()
         {
             Queue = "boundary",
@@ -133,22 +133,22 @@ public class ReservationAvailabilityAndAttemptsBoundaryTests : IDisposable
             AvailableAt = DateTime.UtcNow,
             Attempts = 3,
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
-        QueueJobModel? reserved = jobQueue.ReserveJob(name: "boundary", currentJobId: null);
+        QueueJobModel? reserved = jobQueue.ReserveJob("boundary", null);
 
-        Assert.Null(@object: reserved);
+        Assert.Null(reserved);
         QueueJob? untouched = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(@object: untouched);
-        Assert.Null(value: untouched.ReservedAt);
-        Assert.Equal(expected: 3, actual: untouched.Attempts);
+        Assert.NotNull(untouched);
+        Assert.Null(untouched.ReservedAt);
+        Assert.Equal(3, untouched.Attempts);
     }
 
     [Fact]
     public void ReserveJob_JobOneUnderMaxAttempts_IsReservedForFinalAttempt()
     {
-        JobQueue jobQueue = new(context: _adapter, maxAttempts: 3);
+        JobQueue jobQueue = new(_adapter, 3);
         QueueJob job = new()
         {
             Queue = "boundary",
@@ -156,20 +156,20 @@ public class ReservationAvailabilityAndAttemptsBoundaryTests : IDisposable
             AvailableAt = DateTime.UtcNow,
             Attempts = 2,
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
-        QueueJobModel? reserved = jobQueue.ReserveJob(name: "boundary", currentJobId: null);
+        QueueJobModel? reserved = jobQueue.ReserveJob("boundary", null);
 
-        Assert.NotNull(@object: reserved);
-        Assert.Equal(expected: 3, actual: reserved.Attempts);
-        Assert.NotNull(value: reserved.ReservedAt);
+        Assert.NotNull(reserved);
+        Assert.Equal(3, reserved.Attempts);
+        Assert.NotNull(reserved.ReservedAt);
     }
 
     [Fact]
     public void ReserveJob_JobAtMaxAttemptsThenFailed_NeverExecutesBeyondBudget()
     {
-        JobQueue jobQueue = new(context: _adapter, maxAttempts: 2);
+        JobQueue jobQueue = new(_adapter, 2);
         QueueJob job = new()
         {
             Queue = "budget",
@@ -177,22 +177,22 @@ public class ReservationAvailabilityAndAttemptsBoundaryTests : IDisposable
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
-        QueueJobModel? attempt1 = jobQueue.ReserveJob(name: "budget", currentJobId: null);
-        Assert.NotNull(@object: attempt1);
-        jobQueue.FailJob(queueJob: attempt1, exception: new InvalidOperationException(message: "fail 1"));
+        QueueJobModel? attempt1 = jobQueue.ReserveJob("budget", null);
+        Assert.NotNull(attempt1);
+        jobQueue.FailJob(attempt1, new InvalidOperationException("fail 1"));
 
-        QueueJobModel? attempt2 = jobQueue.ReserveJob(name: "budget", currentJobId: null);
-        Assert.NotNull(@object: attempt2);
-        Assert.Equal(expected: 2, actual: attempt2.Attempts);
-        jobQueue.FailJob(queueJob: attempt2, exception: new InvalidOperationException(message: "fail 2"));
+        QueueJobModel? attempt2 = jobQueue.ReserveJob("budget", null);
+        Assert.NotNull(attempt2);
+        Assert.Equal(2, attempt2.Attempts);
+        jobQueue.FailJob(attempt2, new InvalidOperationException("fail 2"));
 
-        QueueJobModel? attempt3 = jobQueue.ReserveJob(name: "budget", currentJobId: null);
+        QueueJobModel? attempt3 = jobQueue.ReserveJob("budget", null);
 
-        Assert.Null(@object: attempt3);
-        Assert.Empty(collection: _context.QueueJobs);
-        Assert.Single(collection: _context.FailedJobs);
+        Assert.Null(attempt3);
+        Assert.Empty(_context.QueueJobs);
+        Assert.Single(_context.FailedJobs);
     }
 }

@@ -27,22 +27,22 @@ public class ActivityLogRetentionCronJobTests : IDisposable
 
     private IDbContextFactory<MediaContext> CreateFactory()
     {
-        SqliteConnection connection = new(connectionString: "DataSource=:memory:;Foreign Keys=False");
+        SqliteConnection connection = new("DataSource=:memory:;Foreign Keys=False");
         connection.Open();
-        _connections.Add(item: connection);
+        _connections.Add(connection);
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: connection)
+            .UseSqlite(connection)
             .Options;
 
-        using (MediaContext init = new(options: options))
+        using (MediaContext init = new(options))
         {
             init.Database.EnsureCreated();
         }
 
         Mock<IDbContextFactory<MediaContext>> mock = new();
-        mock.Setup(expression: x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(valueFunction: () => new(options: options));
+        mock.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new(options));
         return mock.Object;
     }
 
@@ -62,8 +62,7 @@ public class ActivityLogRetentionCronJobTests : IDisposable
         Guid freshUser = Guid.NewGuid();
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
-            seed.ActivityLogs.AddRange(entities:
-                [
+            seed.ActivityLogs.AddRange([
                     new ActivityLog
                     {
                         Category = ActivityCategory.Connection,
@@ -85,27 +84,27 @@ public class ActivityLogRetentionCronJobTests : IDisposable
             // CreatedAt is stamped by SQLite's CURRENT_TIMESTAMP on insert, so the
             // retention-relevant timestamps are set explicitly via a direct UPDATE.
             await seed
-                .ActivityLogs.Where(predicate: x => x.UserId == staleUser)
-                .ExecuteUpdateAsync(setPropertyCalls: s =>
-                    s.SetProperty(propertyExpression: x => x.CreatedAt, valueExpression: DateTime.UtcNow.AddDays(value: -31))
+                .ActivityLogs.Where(x => x.UserId == staleUser)
+                .ExecuteUpdateAsync(s =>
+                    s.SetProperty(x => x.CreatedAt, DateTime.UtcNow.AddDays(-31))
                 );
             await seed
-                .ActivityLogs.Where(predicate: x => x.UserId == freshUser)
-                .ExecuteUpdateAsync(setPropertyCalls: s =>
-                    s.SetProperty(propertyExpression: x => x.CreatedAt, valueExpression: DateTime.UtcNow.AddDays(value: -1))
+                .ActivityLogs.Where(x => x.UserId == freshUser)
+                .ExecuteUpdateAsync(s =>
+                    s.SetProperty(x => x.CreatedAt, DateTime.UtcNow.AddDays(-1))
                 );
         }
 
         ActivityLogRetentionCronJob job = new(
-            contextFactory: factory,
-            logger: NullLogger<ActivityLogRetentionCronJob>.Instance,
-            retentionDays: 30
+            factory,
+            NullLogger<ActivityLogRetentionCronJob>.Instance,
+            30
         );
-        await job.ExecuteAsync(parameters: string.Empty);
+        await job.ExecuteAsync(string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
-        ctx.ActivityLogs.Should().HaveCount(expected: 1);
-        ctx.ActivityLogs.Single().CreatedAt.Should().BeAfter(expected: DateTime.UtcNow.AddDays(value: -30));
+        ctx.ActivityLogs.Should().HaveCount(1);
+        ctx.ActivityLogs.Single().CreatedAt.Should().BeAfter(DateTime.UtcNow.AddDays(-30));
     }
 
     [Fact]
@@ -116,7 +115,7 @@ public class ActivityLogRetentionCronJobTests : IDisposable
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
             seed.ActivityLogs.Add(
-                entity: new()
+                new()
                 {
                     Category = ActivityCategory.Connection,
                     Time = DateTime.UtcNow,
@@ -129,18 +128,18 @@ public class ActivityLogRetentionCronJobTests : IDisposable
             // CreatedAt is stamped by SQLite's CURRENT_TIMESTAMP on insert, so the
             // retention-relevant timestamp is set explicitly via a direct UPDATE.
             await seed
-                .ActivityLogs.Where(predicate: x => x.UserId == user)
-                .ExecuteUpdateAsync(setPropertyCalls: s =>
-                    s.SetProperty(propertyExpression: x => x.CreatedAt, valueExpression: DateTime.UtcNow.AddDays(value: -8))
+                .ActivityLogs.Where(x => x.UserId == user)
+                .ExecuteUpdateAsync(s =>
+                    s.SetProperty(x => x.CreatedAt, DateTime.UtcNow.AddDays(-8))
                 );
         }
 
         ActivityLogRetentionCronJob job = new(
-            contextFactory: factory,
-            logger: NullLogger<ActivityLogRetentionCronJob>.Instance,
-            retentionDays: 7
+            factory,
+            NullLogger<ActivityLogRetentionCronJob>.Instance,
+            7
         );
-        await job.ExecuteAsync(parameters: string.Empty);
+        await job.ExecuteAsync(string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ctx.ActivityLogs.Should().BeEmpty();
@@ -150,11 +149,11 @@ public class ActivityLogRetentionCronJobTests : IDisposable
     public void CronExpression_IsDailyAt3Am_AndJobNameIsSet()
     {
         ActivityLogRetentionCronJob job = new(
-            contextFactory: CreateFactory(),
-            logger: NullLogger<ActivityLogRetentionCronJob>.Instance
+            CreateFactory(),
+            NullLogger<ActivityLogRetentionCronJob>.Instance
         );
 
-        job.CronExpression.Should().Be(expected: "0 3 * * *");
-        job.JobName.Should().Be(expected: "Activity Log Retention");
+        job.CronExpression.Should().Be("0 3 * * *");
+        job.JobName.Should().Be("Activity Log Retention");
     }
 }

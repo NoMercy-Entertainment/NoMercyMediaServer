@@ -36,7 +36,7 @@ public sealed record OutputArtifact(string Path, long SizeBytes, string Sha256, 
     /// </summary>
     public static string MimeFromPath(string path)
     {
-        string ext = System.IO.Path.GetExtension(path: path).ToLowerInvariant();
+        string ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
         return ext switch
         {
             ".m3u8" => "application/vnd.apple.mpegurl",

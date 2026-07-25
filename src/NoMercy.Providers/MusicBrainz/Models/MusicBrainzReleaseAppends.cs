@@ -19,18 +19,18 @@ public class MusicBrainzReleaseAppends : MusicBrainzRelease
     // [JsonProperty("annotation")] public object Annotation { get; set; }
 
     // [JsonProperty("asin")] public object Asin { get; set; }
-    [JsonProperty(propertyName: "collections")]
+    [JsonProperty("collections")]
     public Collection[] Collections { get; set; } = [];
 
-    [JsonProperty(propertyName: "cover-art-archive")]
+    [JsonProperty("cover-art-archive")]
     public CoverArtArchive CoverArtArchive { get; set; } = new();
 
-    [JsonProperty(propertyName: "label-info")]
+    [JsonProperty("label-info")]
     public LabelInfo[] LabelInfo { get; set; } = [];
 
-    [JsonProperty(propertyName: "relations")]
+    [JsonProperty("relations")]
     public MusicBrainzWorkRelation[] Relations { get; set; } = [];
 
-    [JsonProperty(propertyName: "tags")]
+    [JsonProperty("tags")]
     public MusicBrainzTag[] Tags { get; set; } = [];
 }

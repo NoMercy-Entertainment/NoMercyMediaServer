@@ -24,10 +24,10 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Api.Controllers.V1.Music;
 
 [ApiController]
-[ApiVersion(version: 1.0)]
-[Tags(tags: "Music Genres")]
+[ApiVersion(1.0)]
+[Tags("Music Genres")]
 [Authorize(Policy = "MediaAccess")]
-[Route(template: "api/v{version:apiVersion}/music/genres", Order = 4)]
+[Route("api/v{version:apiVersion}/music/genres", Order = 4)]
 public class GenresController : BaseController
 {
     private readonly IGenreRepository _genreRepository;
@@ -43,56 +43,56 @@ public class GenresController : BaseController
 
         Guid userId = User.UserId();
 
-        List<MusicGenreCardDto> genreCards = await _genreRepository.GetMusicGenreCardsAsync(userId: userId);
+        List<MusicGenreCardDto> genreCards = await _genreRepository.GetMusicGenreCardsAsync(userId);
         IEnumerable<NmGenreCardDto> allGenres = genreCards
-            .Select(selector: genre => new NmGenreCardDto(genre: genre))
-            .DistinctBy(keySelector: genre => genre.Title);
+            .Select(genre => new NmGenreCardDto(genre))
+            .DistinctBy(genre => genre.Title);
 
         bool isLolomo = string.Equals(
-            a: request.Version,
-            b: "lolomo",
-            comparisonType: StringComparison.OrdinalIgnoreCase
+            request.Version,
+            "lolomo",
+            StringComparison.OrdinalIgnoreCase
         );
 
         if (isLolomo)
         {
             List<IGrouping<string, NmGenreCardDto>> groups = allGenres
-                .GroupBy(keySelector: g => BucketLetter(name: g.Title))
-                .OrderBy(keySelector: g => g.Key == "#" ? "zz" : g.Key)
+                .GroupBy(g => BucketLetter(g.Title))
+                .OrderBy(g => g.Key == "#" ? "zz" : g.Key)
                 .ToList();
 
             List<ComponentEnvelope> items = [Component.Container()];
 
             for (int i = 0; i < groups.Count; i++)
             {
-                IGrouping<string, NmGenreCardDto> group = groups[index: i];
+                IGrouping<string, NmGenreCardDto> group = groups[i];
                 string id = $"genres-{group.Key.ToLowerInvariant()}";
-                string? prevId = i == 0 ? null : $"genres-{groups[index: i - 1].Key.ToLowerInvariant()}";
+                string? prevId = i == 0 ? null : $"genres-{groups[i - 1].Key.ToLowerInvariant()}";
                 string? nextId =
-                    i == groups.Count - 1 ? null : $"genres-{groups[index: i + 1].Key.ToLowerInvariant()}";
+                    i == groups.Count - 1 ? null : $"genres-{groups[i + 1].Key.ToLowerInvariant()}";
 
                 items.Add(
-                    item: Component
+                    Component
                         .Carousel()
-                        .WithId(id: id)
-                        .WithNavigation(previousId: prevId, nextId: nextId)
-                        .WithTitle(title: $"Genres: {group.Key}".Localize())
-                        .WithItems(builders: group.Select(selector: Component.GenreCard))
+                        .WithId(id)
+                        .WithNavigation(prevId, nextId)
+                        .WithTitle($"Genres: {group.Key}".Localize())
+                        .WithItems(group.Select(Component.GenreCard))
                 );
             }
 
-            return Ok(value: ComponentResponse.From(components: items));
+            return Ok(ComponentResponse.From(items));
         }
 
         ComponentEnvelope response = Component
             .Grid()
-            .WithItems(builders: allGenres.Select(selector: Component.GenreCard));
+            .WithItems(allGenres.Select(Component.GenreCard));
 
-        return Ok(value: ComponentResponse.From(component: response));
+        return Ok(ComponentResponse.From(response));
     }
 
     [HttpGet]
-    [Route(template: "letter/{letter}")]
+    [Route("letter/{letter}")]
     public async Task<IActionResult> LibraryByLetter(
         Ulid libraryId,
         string letter,
@@ -104,21 +104,21 @@ public class GenresController : BaseController
 
         List<MusicGenreCardDto> genreCards =
             await _genreRepository.GetPaginatedMusicGenreCardsAsync(
-                userId: userId,
-                letter: letter,
-                take: request.Take,
-                page: request.Page
+                userId,
+                letter,
+                request.Take,
+                request.Page
             );
         IEnumerable<NmGenreCardDto> genres = genreCards
-            .Select(selector: genre => new NmGenreCardDto(genre: genre))
-            .DistinctBy(keySelector: genre => genre.Title);
+            .Select(genre => new NmGenreCardDto(genre))
+            .DistinctBy(genre => genre.Title);
 
         string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
         bool isLolomo = string.Equals(
-            a: request.Version,
-            b: "lolomo",
-            comparisonType: StringComparison.OrdinalIgnoreCase
+            request.Version,
+            "lolomo",
+            StringComparison.OrdinalIgnoreCase
         );
 
         if (isLolomo)
@@ -128,44 +128,44 @@ public class GenresController : BaseController
                 Component.Container(),
                 Component
                     .Carousel()
-                    .WithId(id: $"genres-{letter}")
-                    .WithTitle(title: $"Genres: {displayLetter}".Localize())
-                    .WithItems(builders: genres.Select(selector: Component.GenreCard)),
+                    .WithId($"genres-{letter}")
+                    .WithTitle($"Genres: {displayLetter}".Localize())
+                    .WithItems(genres.Select(Component.GenreCard)),
             ];
 
-            return Ok(value: ComponentResponse.From(components: items));
+            return Ok(ComponentResponse.From(items));
         }
 
         ComponentEnvelope grid = Component
             .Grid()
-            .WithId(id: $"genres-{letter}")
-            .WithTitle(title: $"Genres: {displayLetter}".Localize())
-            .WithItems(builders: genres.Select(selector: Component.GenreCard));
+            .WithId($"genres-{letter}")
+            .WithTitle($"Genres: {displayLetter}".Localize())
+            .WithItems(genres.Select(Component.GenreCard));
 
-        return Ok(value: ComponentResponse.From(component: grid));
+        return Ok(ComponentResponse.From(grid));
     }
 
     private static string BucketLetter(string? name)
     {
-        if (string.IsNullOrEmpty(value: name))
+        if (string.IsNullOrEmpty(name))
             return "#";
-        char first = char.ToLowerInvariant(c: name[index: 0]);
+        char first = char.ToLowerInvariant(name[0]);
         return first is >= 'a' and <= 'z' ? first.ToString().ToUpperInvariant() : "#";
     }
 
     [HttpGet]
-    [Route(template: "{id:guid}")]
+    [Route("{id:guid}")]
     public async Task<IActionResult> Show(Guid id)
     {
         Guid userId = User.UserId();
 
         string language = Language();
 
-        MusicGenre? genre = await _genreRepository.GetMusicGenreAsync(userId: userId, genreId: id);
+        MusicGenre? genre = await _genreRepository.GetMusicGenreAsync(userId, id);
 
         if (genre is null)
-            return NotFoundResponse(detail: "Albums not found");
+            return NotFoundResponse("Albums not found");
 
-        return Ok(value: new GenreResponseDto { Data = new(genre: genre, country: language) });
+        return Ok(new GenreResponseDto { Data = new(genre, language) });
     }
 }

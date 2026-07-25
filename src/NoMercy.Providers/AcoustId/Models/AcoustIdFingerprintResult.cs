@@ -15,12 +15,12 @@ namespace NoMercy.Providers.AcoustId.Models;
 
 public class AcoustIdFingerprintResult
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "recordings")]
+    [JsonProperty("recordings")]
     public AcoustIdFingerprintRecording?[]? Recordings { get; set; }
 
-    [JsonProperty(propertyName: "score")]
+    [JsonProperty("score")]
     public double Score { get; set; }
 }

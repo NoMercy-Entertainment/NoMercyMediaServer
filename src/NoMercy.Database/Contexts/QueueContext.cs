@@ -17,7 +17,7 @@ namespace NoMercy.Database;
 public class QueueContext : DbContext
 {
     public QueueContext(DbContextOptions<QueueContext> options)
-        : base(options: options) { }
+        : base(options) { }
 
     public QueueContext() { }
 
@@ -26,36 +26,36 @@ public class QueueContext : DbContext
         if (!options.IsConfigured)
         {
             options.UseSqlite(
-                connectionString: $"Data Source={AppFiles.QueueDatabase}; Pooling=True; Foreign Keys=True;"
+                $"Data Source={AppFiles.QueueDatabase}; Pooling=True; Foreign Keys=True;"
             );
         }
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        base.ConfigureConventions(configurationBuilder: configurationBuilder);
+        base.ConfigureConventions(configurationBuilder);
 
-        configurationBuilder.Properties<string>().HaveMaxLength(maxLength: 256);
+        configurationBuilder.Properties<string>().HaveMaxLength(256);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
             .Model.GetEntityTypes()
-            .SelectMany(selector: t => t.GetProperties())
-            .Where(predicate: p => p.Name is "CreatedAt" or "UpdatedAt")
+            .SelectMany(t => t.GetProperties())
+            .Where(p => p.Name is "CreatedAt" or "UpdatedAt")
             .ToList()
-            .ForEach(action: p => p.SetDefaultValueSql(value: "CURRENT_TIMESTAMP"));
+            .ForEach(p => p.SetDefaultValueSql("CURRENT_TIMESTAMP"));
 
         modelBuilder
             .Model.GetEntityTypes()
-            .SelectMany(selector: t => t.GetForeignKeys())
+            .SelectMany(t => t.GetForeignKeys())
             .ToList()
-            .ForEach(action: p => p.DeleteBehavior = DeleteBehavior.Cascade);
+            .ForEach(p => p.DeleteBehavior = DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<QueueJob>().Property(propertyExpression: j => j.Payload).HasMaxLength(maxLength: 4096);
+        modelBuilder.Entity<QueueJob>().Property(j => j.Payload).HasMaxLength(4096);
 
-        base.OnModelCreating(modelBuilder: modelBuilder);
+        base.OnModelCreating(modelBuilder);
     }
 
     public virtual DbSet<QueueJob> QueueJobs { get; set; }

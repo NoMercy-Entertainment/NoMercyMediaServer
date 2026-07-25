@@ -21,7 +21,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Contracts;
 
-[Trait(name: "Category", value: "Contract")]
+[Trait("Category", "Contract")]
 public class ResponseEnvelopeContractTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -37,7 +37,7 @@ public class ResponseEnvelopeContractTests : IClassFixture<NoMercyApiFactory>
             .Value.SerializerSettings;
 
     private static string[] SortedPropertyNames(JObject obj) =>
-        obj.Properties().Select(selector: p => p.Name).OrderBy(keySelector: n => n, comparer: StringComparer.Ordinal).ToArray();
+        obj.Properties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal).ToArray();
 
     [Fact]
     public void StatusResponseDto_SerializesTheLockedEnvelopeFields()
@@ -50,11 +50,11 @@ public class ResponseEnvelopeContractTests : IClassFixture<NoMercyApiFactory>
             Args = [],
         };
 
-        string json = JsonConvert.SerializeObject(value: envelope, settings: AppSerializerSettings);
-        JObject parsed = JObject.Parse(json: json);
+        string json = JsonConvert.SerializeObject(envelope, AppSerializerSettings);
+        JObject parsed = JObject.Parse(json);
 
         string[] expected = ["args", "data", "message", "status"];
-        Assert.Equal(expected: expected, actual: SortedPropertyNames(obj: parsed));
+        Assert.Equal(expected, SortedPropertyNames(parsed));
     }
 
     [Fact]
@@ -62,11 +62,11 @@ public class ResponseEnvelopeContractTests : IClassFixture<NoMercyApiFactory>
     {
         DataResponseDto<object> envelope = new() { Data = new { sample = 1 } };
 
-        string json = JsonConvert.SerializeObject(value: envelope, settings: AppSerializerSettings);
-        JObject parsed = JObject.Parse(json: json);
+        string json = JsonConvert.SerializeObject(envelope, AppSerializerSettings);
+        JObject parsed = JObject.Parse(json);
 
         string[] expected = ["data"];
-        Assert.Equal(expected: expected, actual: SortedPropertyNames(obj: parsed));
+        Assert.Equal(expected, SortedPropertyNames(parsed));
     }
 
     [Fact]
@@ -79,31 +79,31 @@ public class ResponseEnvelopeContractTests : IClassFixture<NoMercyApiFactory>
             HasMore = true,
         };
 
-        string json = JsonConvert.SerializeObject(value: envelope, settings: AppSerializerSettings);
-        JObject parsed = JObject.Parse(json: json);
+        string json = JsonConvert.SerializeObject(envelope, AppSerializerSettings);
+        JObject parsed = JObject.Parse(json);
 
         string[] expected = ["data", "has_more", "next_page"];
-        Assert.Equal(expected: expected, actual: SortedPropertyNames(obj: parsed));
+        Assert.Equal(expected, SortedPropertyNames(parsed));
 
-        Assert.Equal(expected: 2, actual: parsed[propertyName: "next_page"]!.Value<int>());
-        Assert.True(condition: parsed[propertyName: "has_more"]!.Value<bool>());
+        Assert.Equal(2, parsed["next_page"]!.Value<int>());
+        Assert.True(parsed["has_more"]!.Value<bool>());
     }
 
     [Fact]
     public async Task SuccessEnvelope_OverRealHost_MatchesTheLockedStatusResponseShape()
     {
         HttpClient client = _factory.CreateClient().AsAuthenticated();
-        HttpResponseMessage response = await client.GetAsync(requestUri: "/api/v1/dashboard/devices");
+        HttpResponseMessage response = await client.GetAsync("/api/v1/dashboard/devices");
 
-        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         string body = await response.Content.ReadAsStringAsync();
-        JObject parsed = JObject.Parse(json: body);
+        JObject parsed = JObject.Parse(body);
 
         string[] expected = ["args", "data", "message", "status"];
-        Assert.Equal(expected: expected, actual: SortedPropertyNames(obj: parsed));
-        Assert.Equal(expected: "ok", actual: parsed[propertyName: "status"]!.Value<string>());
-        Assert.Equal(expected: JTokenType.Array, actual: parsed[propertyName: "data"]!.Type);
+        Assert.Equal(expected, SortedPropertyNames(parsed));
+        Assert.Equal("ok", parsed["status"]!.Value<string>());
+        Assert.Equal(JTokenType.Array, parsed["data"]!.Type);
     }
 
     [Fact]
@@ -111,21 +111,21 @@ public class ResponseEnvelopeContractTests : IClassFixture<NoMercyApiFactory>
     {
         HttpClient client = _factory.CreateClient().AsAuthenticated();
         HttpResponseMessage response = await client.DeleteAsync(
-            requestUri: $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}"
+            $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}"
         );
 
-        Assert.Equal(expected: HttpStatusCode.NotFound, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
         string body = await response.Content.ReadAsStringAsync();
-        JObject parsed = JObject.Parse(json: body);
+        JObject parsed = JObject.Parse(body);
 
         string[] requiredFields = ["detail", "instance", "status", "title", "type"];
-        string[] actualFields = SortedPropertyNames(obj: parsed);
+        string[] actualFields = SortedPropertyNames(parsed);
 
         foreach (string field in requiredFields)
-            Assert.Contains(expected: field, collection: actualFields);
+            Assert.Contains(field, actualFields);
 
-        Assert.Equal(expected: 404, actual: parsed[propertyName: "status"]!.Value<int>());
-        Assert.Equal(expected: "/docs/errors/not-found", actual: parsed[propertyName: "type"]!.Value<string>());
+        Assert.Equal(404, parsed["status"]!.Value<int>());
+        Assert.Equal("/docs/errors/not-found", parsed["type"]!.Value<string>());
     }
 }

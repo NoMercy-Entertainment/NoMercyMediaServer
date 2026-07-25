@@ -33,12 +33,12 @@ public class LyricsAggregator : ILyricsAggregator
     // HttpClient.Timeout / Queue retry chain keeps running in the background
     // so the provider's rate-limited slot is still released cleanly -- the
     // caller just stops waiting on it and the resolve treats it as an error.
-    private static readonly TimeSpan DefaultProviderTimeout = TimeSpan.FromSeconds(seconds: 8);
+    private static readonly TimeSpan DefaultProviderTimeout = TimeSpan.FromSeconds(8);
 
     private readonly TimeSpan _providerTimeout;
 
     public LyricsAggregator()
-        : this(providerTimeout: DefaultProviderTimeout) { }
+        : this(DefaultProviderTimeout) { }
 
     // Test-only seam (NoMercy.Tests.Providers has InternalsVisibleTo) so a
     // timeout test can shrink the budget instead of waiting out the real one.
@@ -60,14 +60,14 @@ public class LyricsAggregator : ILyricsAggregator
         using LrclibClient lrclibClient = new();
 
         string[] artists = track
-            .ArtistTrack.Select(selector: artistTrack => artistTrack.Artist.Name)
+            .ArtistTrack.Select(artistTrack => artistTrack.Artist.Name)
             .ToArray();
         string? albumName = track.AlbumTrack.FirstOrDefault()?.Album.Name;
         int parsedDuration = track.Duration.ToSeconds();
         int? durationSeconds = parsedDuration > 0 ? parsedDuration : null;
 
-        LyricQuery query = new(Title: track.Name, Artists: artists, Album: albumName, DurationSeconds: durationSeconds);
-        string label = $"{track.Name} - {string.Join(separator: ", ", value: artists)}";
+        LyricQuery query = new(track.Name, artists, albumName, durationSeconds);
+        string label = $"{track.Name} - {string.Join(", ", artists)}";
         Stopwatch total = Stopwatch.StartNew();
 
         // The /get endpoint is an exact artist+title+album+duration lookup.
@@ -75,11 +75,11 @@ public class LyricsAggregator : ILyricsAggregator
         // authoritative, so skip the broader /search + Musixmatch calls
         // entirely: one provider round trip instead of up to four.
         ProviderAttempt exact = await RunProvider(
-            provider: "Lrclib-get",
-            fetch: () => FromLrclibGet(client: lrclibClient, query: query, artists: artists)
+            "Lrclib-get",
+            () => FromLrclibGet(lrclibClient, query, artists)
         );
         if (exact.Candidate is { HasSyncedLyrics: true })
-            return Resolved(label: label, winner: exact, elapsedMs: total.ElapsedMilliseconds);
+            return Resolved(label, exact, total.ElapsedMilliseconds);
 
         // /get missed or only had plain lyrics: race the fuzzy Lrclib search
         // against Musixmatch instead of running every remaining call one after
@@ -88,39 +88,39 @@ public class LyricsAggregator : ILyricsAggregator
         // everything that came back (plus a lingering plain /get hit) and only
         // ever returns the best-scoring, still-valid candidate.
         Task<ProviderAttempt> searchTask = RunProvider(
-            provider: "Lrclib-search",
-            fetch: () => FromLrclibSearch(client: lrclibClient, query: query, artists: artists)
+            "Lrclib-search",
+            () => FromLrclibSearch(lrclibClient, query, artists)
         );
-        Task<ProviderAttempt> musixmatchTask = RunMusixmatch(client: musixmatchClient, query: query);
-        ProviderAttempt[] raced = await Task.WhenAll(tasks: new[]{searchTask, musixmatchTask});
+        Task<ProviderAttempt> musixmatchTask = RunMusixmatch(musixmatchClient, query);
+        ProviderAttempt[] raced = await Task.WhenAll(new[]{searchTask, musixmatchTask});
 
         ProviderAttempt[] attempts = [exact, raced[0], raced[1]];
         LyricCandidate? best = LyricMatcher.PickBest(
-            query: query,
-            candidates: attempts.Select(selector: attempt => attempt.Candidate).OfType<LyricCandidate>()
+            query,
+            attempts.Select(attempt => attempt.Candidate).OfType<LyricCandidate>()
         );
 
         total.Stop();
 
         if (best is not null)
         {
-            ProviderAttempt winner = attempts.First(predicate: attempt =>
-                ReferenceEquals(objA: attempt.Candidate, objB: best)
+            ProviderAttempt winner = attempts.First(attempt =>
+                ReferenceEquals(attempt.Candidate, best)
             );
-            return Resolved(label: label, winner: winner, elapsedMs: total.ElapsedMilliseconds);
+            return Resolved(label, winner, total.ElapsedMilliseconds);
         }
 
-        if (attempts.Any(predicate: attempt => attempt.Errored))
+        if (attempts.Any(attempt => attempt.Errored))
         {
             Logger.Lyrics(
-                message: $"lyrics NOT resolved for {label} after {total.ElapsedMilliseconds}ms: a provider call failed or timed out, treating as transient",
-                level: LogEventLevel.Warning
+                $"lyrics NOT resolved for {label} after {total.ElapsedMilliseconds}ms: a provider call failed or timed out, treating as transient",
+                LogEventLevel.Warning
             );
             return LyricsFetchResult.TransientFailure;
         }
 
         Logger.Lyrics(
-            message: $"lyrics NOT found for {label} after {total.ElapsedMilliseconds}ms, providers=[Lrclib-get, Lrclib-search, Musixmatch]"
+            $"lyrics NOT found for {label} after {total.ElapsedMilliseconds}ms, providers=[Lrclib-get, Lrclib-search, Musixmatch]"
         );
         return LyricsFetchResult.NotFound;
     }
@@ -129,9 +129,9 @@ public class LyricsAggregator : ILyricsAggregator
     {
         LyricCandidate candidate = winner.Candidate!;
         Logger.Lyrics(
-            message: $"lyrics resolved for {label} via {winner.Provider} in {elapsedMs}ms (synced={candidate.HasSyncedLyrics})"
+            $"lyrics resolved for {label} via {winner.Provider} in {elapsedMs}ms (synced={candidate.HasSyncedLyrics})"
         );
-        return LyricsFetchResult.Found(lines: candidate.Lines, winner: winner.Provider);
+        return LyricsFetchResult.Found(candidate.Lines, winner.Provider);
     }
 
     /// <summary>
@@ -148,32 +148,32 @@ public class LyricsAggregator : ILyricsAggregator
         Stopwatch stopwatch = Stopwatch.StartNew();
         try
         {
-            LyricCandidate? candidate = await fetch().WaitAsync(timeout: _providerTimeout);
+            LyricCandidate? candidate = await fetch().WaitAsync(_providerTimeout);
             stopwatch.Stop();
             string outcome =
                 candidate is null ? "miss"
                 : candidate.HasSyncedLyrics ? "hit-synced"
                 : "hit-plain";
-            Logger.Lyrics(message: $"{provider}: {outcome} in {stopwatch.ElapsedMilliseconds}ms");
-            return new(Provider: provider, Candidate: candidate, Errored: false);
+            Logger.Lyrics($"{provider}: {outcome} in {stopwatch.ElapsedMilliseconds}ms");
+            return new(provider, candidate, false);
         }
         catch (TimeoutException)
         {
             stopwatch.Stop();
             Logger.Lyrics(
-                message: $"{provider}: timed out after {stopwatch.ElapsedMilliseconds}ms (call keeps running in the background to release its rate-limit slot)",
-                level: LogEventLevel.Warning
+                $"{provider}: timed out after {stopwatch.ElapsedMilliseconds}ms (call keeps running in the background to release its rate-limit slot)",
+                LogEventLevel.Warning
             );
-            return new(Provider: provider, Candidate: null, Errored: true);
+            return new(provider, null, true);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
             Logger.Lyrics(
-                message: $"{provider}: error after {stopwatch.ElapsedMilliseconds}ms ({ex.GetType().Name}: {ex.Message})",
-                level: LogEventLevel.Warning
+                $"{provider}: error after {stopwatch.ElapsedMilliseconds}ms ({ex.GetType().Name}: {ex.Message})",
+                LogEventLevel.Warning
             );
-            return new(Provider: provider, Candidate: null, Errored: true);
+            return new(provider, null, true);
         }
     }
 
@@ -184,13 +184,13 @@ public class LyricsAggregator : ILyricsAggregator
         // since a struggling provider is unlikely to answer the second call
         // any faster and it only extends the wait.
         ProviderAttempt tight = await RunProvider(
-            provider: "Musixmatch-tight",
-            fetch: () => MusixmatchTight(client: client, query: query)
+            "Musixmatch-tight",
+            () => MusixmatchTight(client, query)
         );
         if (tight.Candidate is not null || tight.Errored)
             return tight;
 
-        return await RunProvider(provider: "Musixmatch-relaxed", fetch: () => MusixmatchRelaxed(client: client, query: query));
+        return await RunProvider("Musixmatch-relaxed", () => MusixmatchRelaxed(client, query));
     }
 
     private static async Task<LyricCandidate?> FromLrclibGet(
@@ -200,15 +200,15 @@ public class LyricsAggregator : ILyricsAggregator
     )
     {
         LrclibSongResult? exact = await client.Get(
-            artists: artists,
-            trackName: query.Title,
-            albumName: query.Album,
-            duration: query.DurationSeconds
+            artists,
+            query.Title,
+            query.Album,
+            query.DurationSeconds
         );
-        if (exact is null || LrclibClient.ToCandidate(result: exact) is not { } candidate)
+        if (exact is null || LrclibClient.ToCandidate(exact) is not { } candidate)
             return null;
 
-        return LyricMatcher.PickBest(query: query, candidates: [candidate]);
+        return LyricMatcher.PickBest(query, [candidate]);
     }
 
     private static async Task<LyricCandidate?> FromLrclibSearch(
@@ -217,16 +217,16 @@ public class LyricsAggregator : ILyricsAggregator
         string[] artists
     )
     {
-        LrclibSongResult[]? results = await client.Search(artists: artists, trackName: query.Title);
+        LrclibSongResult[]? results = await client.Search(artists, query.Title);
         if (results is null)
             return null;
 
         List<LyricCandidate> candidates = [];
         foreach (LrclibSongResult result in results)
-            if (LrclibClient.ToCandidate(result: result) is { } candidate)
-                candidates.Add(item: candidate);
+            if (LrclibClient.ToCandidate(result) is { } candidate)
+                candidates.Add(candidate);
 
-        return LyricMatcher.PickBest(query: query, candidates: candidates);
+        return LyricMatcher.PickBest(query, candidates);
     }
 
     private static async Task<LyricCandidate?> MusixmatchTight(
@@ -234,14 +234,14 @@ public class LyricsAggregator : ILyricsAggregator
         LyricQuery query
     )
     {
-        string artistNames = string.Join(separator: ",", values: query.Artists);
+        string artistNames = string.Join(",", query.Artists);
         string duration =
-            query.DurationSeconds?.ToString(provider: CultureInfo.InvariantCulture) ?? string.Empty;
+            query.DurationSeconds?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 
         return Validate(
-            query: query,
-            response: await client.SongSearch(
-                musixMatchTrackParameters: new()
+            query,
+            await client.SongSearch(
+                new()
                 {
                     Album = query.Album,
                     Artist = artistNames,
@@ -258,12 +258,12 @@ public class LyricsAggregator : ILyricsAggregator
         LyricQuery query
     )
     {
-        string artistNames = string.Join(separator: ",", values: query.Artists);
+        string artistNames = string.Join(",", query.Artists);
 
         return Validate(
-            query: query,
-            response: await client.SongSearch(
-                musixMatchTrackParameters: new()
+            query,
+            await client.SongSearch(
+                new()
                 {
                     Artist = artistNames,
                     Title = query.Title,
@@ -275,10 +275,10 @@ public class LyricsAggregator : ILyricsAggregator
 
     private static LyricCandidate? Validate(LyricQuery query, MusixMatchSubtitleGet? response)
     {
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
         if (candidate is null)
             return null;
-        return LyricMatcher.Score(query: query, candidate: candidate) >= 0 ? candidate : null;
+        return LyricMatcher.Score(query, candidate) >= 0 ? candidate : null;
     }
 
     private sealed record ProviderAttempt(string Provider, LyricCandidate? Candidate, bool Errored);

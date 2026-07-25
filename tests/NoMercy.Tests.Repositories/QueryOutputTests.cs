@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Repositories;
 /// Simple CRUD operations (Add/Update/Delete/Like/Upsert) are excluded.
 /// Compiled queries (EF.CompileAsyncQuery) are tested via interceptor execution.
 /// </summary>
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class QueryOutputTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -53,60 +53,60 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieAsync_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(contextFactory: _homeFactory, logger: NullLogger<MovieRepository>.Instance);
+        MovieRepository repository = new(_homeFactory, NullLogger<MovieRepository>.Instance);
         _interceptor.Clear();
 
-        await repository.GetMovieAsync(userId: SeedConstants.UserId, id: 129, language: "en", country: "US");
+        await repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Movies", actualString: sql);
-        Assert.Contains(expectedSubstring: "WHERE", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Movies", sql);
+        Assert.Contains("WHERE", sql);
+        Assert.Contains("LibraryUser", sql);
     }
 
     [Fact]
     public async Task MovieRepository_GetMovieAvailableAsync_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(contextFactory: _homeFactory, logger: NullLogger<MovieRepository>.Instance);
+        MovieRepository repository = new(_homeFactory, NullLogger<MovieRepository>.Instance);
         _interceptor.Clear();
 
-        await repository.GetMovieAvailableAsync(userId: SeedConstants.UserId, id: 129);
+        await repository.GetMovieAvailableAsync(SeedConstants.UserId, 129);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Movies", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "VideoFiles", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Movies", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("VideoFiles", sql);
     }
 
     [Fact]
     public async Task MovieRepository_GetMoviePlaylistAsync_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(contextFactory: _homeFactory, logger: NullLogger<MovieRepository>.Instance);
+        MovieRepository repository = new(_homeFactory, NullLogger<MovieRepository>.Instance);
         _interceptor.Clear();
 
-        await repository.GetMoviePlaylistAsync(userId: SeedConstants.UserId, id: 129, language: "en", country: "US");
+        await repository.GetMoviePlaylistAsync(SeedConstants.UserId, 129, "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Movies", actualString: sql);
-        Assert.Contains(expectedSubstring: "VideoFiles", actualString: sql);
-        Assert.Contains(expectedSubstring: "CertificationMovie", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Movies", sql);
+        Assert.Contains("VideoFiles", sql);
+        Assert.Contains("CertificationMovie", sql);
     }
 
     [Fact]
     public async Task MovieRepository_DeleteMovieAsync_GeneratesDeleteSql()
     {
-        MovieRepository repository = new(contextFactory: _homeFactory, logger: NullLogger<MovieRepository>.Instance);
+        MovieRepository repository = new(_homeFactory, NullLogger<MovieRepository>.Instance);
         _interceptor.Clear();
 
-        await repository.DeleteAsync(id: 999);
+        await repository.DeleteAsync(999);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "DELETE", actualString: sql);
-        Assert.Contains(expectedSubstring: "Movies", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("DELETE", sql);
+        Assert.Contains("Movies", sql);
     }
 
     #endregion
@@ -116,62 +116,62 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvAvailableAsync_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(contextFactory: _homeFactory);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetTvAvailableAsync(userId: SeedConstants.UserId, id: 1399);
+        await repository.GetTvAvailableAsync(SeedConstants.UserId, 1399);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Tvs", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "Episodes", actualString: sql);
-        Assert.Contains(expectedSubstring: "VideoFiles", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Tvs", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("Episodes", sql);
+        Assert.Contains("VideoFiles", sql);
     }
 
     [Fact]
     public async Task TvShowRepository_GetTvPlaylistAsync_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(contextFactory: _homeFactory);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetPlaylistAsync(userId: SeedConstants.UserId, id: 1399, language: "en", country: "US");
+        await repository.GetPlaylistAsync(SeedConstants.UserId, 1399, "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Tvs", actualString: sql);
-        Assert.Contains(expectedSubstring: "Seasons", actualString: sql);
-        Assert.Contains(expectedSubstring: "Episodes", actualString: sql);
-        Assert.Contains(expectedSubstring: "VideoFiles", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Tvs", sql);
+        Assert.Contains("Seasons", sql);
+        Assert.Contains("Episodes", sql);
+        Assert.Contains("VideoFiles", sql);
     }
 
     [Fact]
     public async Task TvShowRepository_DeleteTvAsync_GeneratesDeleteSql()
     {
-        TvShowRepository repository = new(contextFactory: _homeFactory);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.DeleteAsync(id: 999);
+        await repository.DeleteAsync(999);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "DELETE", actualString: sql);
-        Assert.Contains(expectedSubstring: "Tvs", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("DELETE", sql);
+        Assert.Contains("Tvs", sql);
     }
 
     [Fact]
     public async Task TvShowRepository_GetMissingLibraryShows_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(contextFactory: _homeFactory);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetMissingLibraryShows(userId: SeedConstants.UserId, id: 1399, language: "en");
+        await repository.GetMissingLibraryShows(SeedConstants.UserId, 1399, "en");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Tvs", actualString: sql);
-        Assert.Contains(expectedSubstring: "Episodes", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Tvs", sql);
+        Assert.Contains("Episodes", sql);
+        Assert.Contains("LibraryUser", sql);
     }
 
     #endregion
@@ -181,92 +181,92 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task GenreRepository_GetGenres_GeneratesExpectedSql()
     {
-        GenreRepository repository = new(context: _context);
+        GenreRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetGenres(userId: SeedConstants.UserId, language: "en", take: 10, page: 0);
+        await repository.GetGenres(SeedConstants.UserId, "en", 10, 0);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Genres", actualString: sql);
-        Assert.Contains(expectedSubstring: "GenreMovie", actualString: sql);
-        Assert.Contains(expectedSubstring: "GenreTv", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
-        Assert.Contains(expectedSubstring: "LIMIT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Genres", sql);
+        Assert.Contains("GenreMovie", sql);
+        Assert.Contains("GenreTv", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     [Fact]
     public async Task GenreRepository_GetGenreAsync_GeneratesExpectedSql()
     {
-        GenreRepository repository = new(context: _context);
+        GenreRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetGenreAsync(userId: SeedConstants.UserId, id: 18, language: "en", country: "US", take: 10, page: 0);
+        await repository.GetGenreAsync(SeedConstants.UserId, 18, "en", "US", 10, 0);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Genres", actualString: sql);
-        Assert.Contains(expectedSubstring: "GenreMovie", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "VideoFiles", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Genres", sql);
+        Assert.Contains("GenreMovie", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("VideoFiles", sql);
     }
 
     [Fact]
     public async Task GenreRepository_GetGenresWithCountsAsync_GeneratesProjectionSql()
     {
-        GenreRepository repository = new(context: _context);
+        GenreRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetGenresWithCountsAsync(userId: SeedConstants.UserId, language: "en", take: 10, page: 0);
+        await repository.GetGenresWithCountsAsync(SeedConstants.UserId, "en", 10, 0);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Genres", actualString: sql);
-        Assert.Contains(expectedSubstring: "GenreMovie", actualString: sql);
-        Assert.Contains(expectedSubstring: "GenreTv", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Genres", sql);
+        Assert.Contains("GenreMovie", sql);
+        Assert.Contains("GenreTv", sql);
+        Assert.Contains("ORDER BY", sql);
     }
 
     [Fact]
     public async Task GenreRepository_GetMusicGenresAsync_GeneratesExpectedSql()
     {
-        GenreRepository repository = new(context: _context);
+        GenreRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetMusicGenresAsync(userId: SeedConstants.UserId);
+        await repository.GetMusicGenresAsync(SeedConstants.UserId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "MusicGenres", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("MusicGenres", sql);
     }
 
     [Fact]
     public async Task GenreRepository_GetPaginatedMusicGenresAsync_GeneratesExpectedSql()
     {
-        GenreRepository repository = new(context: _context);
+        GenreRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetPaginatedMusicGenresAsync(userId: SeedConstants.UserId, letter: "R", take: 10, page: 0);
+        await repository.GetPaginatedMusicGenresAsync(SeedConstants.UserId, "R", 10, 0);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "MusicGenres", actualString: sql);
-        Assert.Contains(expectedSubstring: "LIMIT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("MusicGenres", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     [Fact]
     public async Task GenreRepository_GetMusicGenreAsync_GeneratesExpectedSql()
     {
-        GenreRepository repository = new(context: _context);
+        GenreRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetMusicGenreAsync(userId: SeedConstants.UserId, genreId: Guid.NewGuid());
+        await repository.GetMusicGenreAsync(SeedConstants.UserId, Guid.NewGuid());
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "MusicGenres", actualString: sql);
-        Assert.Contains(expectedSubstring: "MusicGenreTrack", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("MusicGenres", sql);
+        Assert.Contains("MusicGenreTrack", sql);
     }
 
     #endregion
@@ -276,128 +276,128 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task HomeRepository_GetHomeTvs_GeneratesExpectedSql()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetHomeTvs(tvIds: [1399], language: "en", country: "US");
+        await repository.GetHomeTvs([1399], "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Tvs", actualString: sql);
-        Assert.Contains(expectedSubstring: "Episodes", actualString: sql);
-        Assert.Contains(expectedSubstring: "VideoFiles", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Tvs", sql);
+        Assert.Contains("Episodes", sql);
+        Assert.Contains("VideoFiles", sql);
     }
 
     [Fact]
     public async Task HomeRepository_GetHomeMovies_GeneratesExpectedSql()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetHomeMovies(movieIds: [129, 680], language: "en", country: "US");
+        await repository.GetHomeMovies([129, 680], "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Movies", actualString: sql);
-        Assert.Contains(expectedSubstring: "VideoFiles", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Movies", sql);
+        Assert.Contains("VideoFiles", sql);
     }
 
     [Fact]
     public async Task HomeRepository_GetContinueWatchingAsync_GeneratesExpectedSql()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetContinueWatchingAsync(userId: SeedConstants.UserId, language: "en", country: "US");
+        await repository.GetContinueWatchingAsync(SeedConstants.UserId, "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "UserData", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("UserData", sql);
     }
 
     [Fact]
     public async Task HomeRepository_GetScreensaverImagesAsync_GeneratesExpectedSql()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetScreensaverImagesAsync(userId: SeedConstants.UserId);
+        await repository.GetScreensaverImagesAsync(SeedConstants.UserId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Images", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Images", sql);
+        Assert.Contains("LibraryUser", sql);
     }
 
     [Fact]
     public async Task HomeRepository_GetLibrariesAsync_GeneratesExpectedSql()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetLibrariesAsync(userId: SeedConstants.UserId);
+        await repository.GetLibrariesAsync(SeedConstants.UserId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Libraries", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Libraries", sql);
+        Assert.Contains("LibraryUser", sql);
     }
 
     [Fact]
     public async Task HomeRepository_GetMovieCountAsync_GeneratesCountSql()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetMovieCountAsync(userId: SeedConstants.UserId);
+        await repository.GetMovieCountAsync(SeedConstants.UserId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Movies", actualString: sql);
-        Assert.Contains(expectedSubstring: "COUNT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Movies", sql);
+        Assert.Contains("COUNT", sql);
     }
 
     [Fact]
     public async Task HomeRepository_GetTvCountAsync_GeneratesCountSql()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetTvCountAsync(userId: SeedConstants.UserId);
+        await repository.GetTvCountAsync(SeedConstants.UserId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Tvs", actualString: sql);
-        Assert.Contains(expectedSubstring: "COUNT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Tvs", sql);
+        Assert.Contains("COUNT", sql);
     }
 
     [Fact]
     public async Task HomeRepository_GetAnimeCountAsync_GeneratesCountSql()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetAnimeCountAsync(userId: SeedConstants.UserId);
+        await repository.GetAnimeCountAsync(SeedConstants.UserId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Tvs", actualString: sql);
-        Assert.Contains(expectedSubstring: "COUNT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Tvs", sql);
+        Assert.Contains("COUNT", sql);
     }
 
     [Fact]
     public async Task HomeRepository_GetHomeGenresAsync_GeneratesExpectedSql()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetHomeGenresAsync(userId: SeedConstants.UserId, language: "en", take: 10);
+        await repository.GetHomeGenresAsync(SeedConstants.UserId, "en", 10);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Genres", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
-        Assert.Contains(expectedSubstring: "LIMIT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Genres", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     #endregion
@@ -407,201 +407,201 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraries_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(contextFactory: _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetLibraries(userId: SeedConstants.UserId);
+        await repository.GetLibraries(SeedConstants.UserId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Libraries", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Libraries", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("ORDER BY", sql);
     }
 
     [Fact]
     public async Task LibraryRepository_GetLibraryByIdAsync_WithPagination_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(contextFactory: _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetLibraryByIdAsync(
-            libraryId: SeedConstants.MovieLibraryId,
-            userId: SeedConstants.UserId,
-            language: "en",
-            country: "US",
-            take: 10,
-            page: 0
+            SeedConstants.MovieLibraryId,
+            SeedConstants.UserId,
+            "en",
+            "US",
+            10,
+            0
         );
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Libraries", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryMovie", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Libraries", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("LibraryMovie", sql);
     }
 
     [Fact]
     public async Task LibraryRepository_GetLibraryMovieCardsAsync_GeneratesProjectionSql()
     {
-        LibraryRepository repository = new(contextFactory: _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetLibraryMovieCardsAsync(
-            userId: SeedConstants.UserId,
-            libraryId: SeedConstants.MovieLibraryId,
-            country: "US",
-            take: 10,
-            skip: 0
+            SeedConstants.UserId,
+            SeedConstants.MovieLibraryId,
+            "US",
+            10,
+            0
         );
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Movies", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "VideoFiles", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
-        Assert.Contains(expectedSubstring: "LIMIT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Movies", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("VideoFiles", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     [Fact]
     public async Task LibraryRepository_GetLibraryTvCardsAsync_GeneratesProjectionSql()
     {
-        LibraryRepository repository = new(contextFactory: _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetLibraryTvCardsAsync(
-            userId: SeedConstants.UserId,
-            libraryId: SeedConstants.TvLibraryId,
-            country: "US",
-            take: 10,
-            skip: 0
+            SeedConstants.UserId,
+            SeedConstants.TvLibraryId,
+            "US",
+            10,
+            0
         );
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Tvs", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "Episodes", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
-        Assert.Contains(expectedSubstring: "LIMIT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Tvs", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("Episodes", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     [Fact]
     public async Task LibraryRepository_GetPaginatedLibraryMovies_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(contextFactory: _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetPaginatedLibraryMovies(
-            userId: SeedConstants.UserId,
-            libraryId: SeedConstants.MovieLibraryId,
-            letter: "F",
-            language: "en",
-            country: "US",
-            take: 10,
-            page: 0
+            SeedConstants.UserId,
+            SeedConstants.MovieLibraryId,
+            "F",
+            "en",
+            "US",
+            10,
+            0
         );
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Movies", actualString: sql);
-        Assert.Contains(expectedSubstring: "VideoFiles", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
-        Assert.Contains(expectedSubstring: "LIMIT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Movies", sql);
+        Assert.Contains("VideoFiles", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     [Fact]
     public async Task LibraryRepository_GetPaginatedLibraryShows_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(contextFactory: _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetPaginatedLibraryShows(
-            userId: SeedConstants.UserId,
-            libraryId: SeedConstants.TvLibraryId,
-            letter: "B",
-            language: "en",
-            country: "US",
-            take: 10,
-            page: 0
+            SeedConstants.UserId,
+            SeedConstants.TvLibraryId,
+            "B",
+            "en",
+            "US",
+            10,
+            0
         );
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Tvs", actualString: sql);
-        Assert.Contains(expectedSubstring: "Episodes", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
-        Assert.Contains(expectedSubstring: "LIMIT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Tvs", sql);
+        Assert.Contains("Episodes", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     [Fact]
     public async Task LibraryRepository_GetLibraryByIdAsync_Simple_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(contextFactory: _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetLibraryByIdAsync(id: SeedConstants.MovieLibraryId);
+        await repository.GetLibraryByIdAsync(SeedConstants.MovieLibraryId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Libraries", actualString: sql);
-        Assert.Contains(expectedSubstring: "FolderLibrary", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Libraries", sql);
+        Assert.Contains("FolderLibrary", sql);
     }
 
     [Fact]
     public async Task LibraryRepository_GetAllLibrariesAsync_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(contextFactory: _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetAllLibrariesAsync();
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Libraries", actualString: sql);
-        Assert.Contains(expectedSubstring: "FolderLibrary", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Libraries", sql);
+        Assert.Contains("FolderLibrary", sql);
     }
 
     [Fact]
     public async Task LibraryRepository_GetFoldersAsync_GeneratesProjectionSql()
     {
-        LibraryRepository repository = new(contextFactory: _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetFoldersAsync();
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Folders", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Folders", sql);
     }
 
     [Fact]
     public async Task LibraryRepository_GetRandomTvShow_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(contextFactory: _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetRandomTvShow(userId: SeedConstants.UserId, language: "en");
+        await repository.GetRandomTvShow(SeedConstants.UserId, "en");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Tvs", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Tvs", sql);
+        Assert.Contains("LibraryUser", sql);
     }
 
     [Fact]
     public async Task LibraryRepository_GetRandomMovie_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(contextFactory: _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetRandomMovie(userId: SeedConstants.UserId, language: "en");
+        await repository.GetRandomMovie(SeedConstants.UserId, "en");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Movies", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Movies", sql);
+        Assert.Contains("LibraryUser", sql);
     }
 
     #endregion
@@ -611,97 +611,97 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task CollectionRepository_GetCollectionsAsync_GeneratesExpectedSql()
     {
-        CollectionRepository repository = new(contextFactory: _homeFactory);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetCollectionsAsync(userId: SeedConstants.UserId, language: "en", take: 10, page: 0);
+        await repository.GetCollectionsAsync(SeedConstants.UserId, "en", 10, 0);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Collections", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
-        Assert.Contains(expectedSubstring: "LIMIT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Collections", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     [Fact]
     public async Task CollectionRepository_GetCollectionsListAsync_GeneratesProjectionSql()
     {
-        CollectionRepository repository = new(contextFactory: _homeFactory);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetCollectionsListAsync(userId: SeedConstants.UserId, language: "en", country: "US", take: 10, page: 0);
+        await repository.GetCollectionsListAsync(SeedConstants.UserId, "en", "US", 10, 0);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Collections", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
-        Assert.Contains(expectedSubstring: "LIMIT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Collections", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     [Fact]
     public async Task CollectionRepository_GetCollectionAsync_GeneratesExpectedSql()
     {
-        CollectionRepository repository = new(contextFactory: _homeFactory);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetCollectionAsync(userId: SeedConstants.UserId, id: 1, language: "en", country: "US");
+        await repository.GetCollectionAsync(SeedConstants.UserId, 1, "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Collections", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Collections", sql);
+        Assert.Contains("LibraryUser", sql);
     }
 
     [Fact]
     public async Task CollectionRepository_GetCollectionItems_GeneratesExpectedSql()
     {
-        CollectionRepository repository = new(contextFactory: _homeFactory);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetCollectionItems(userId: SeedConstants.UserId, language: "en", country: "US", take: 10);
+        await repository.GetCollectionItems(SeedConstants.UserId, "en", "US", 10);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Collections", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "CollectionMovie", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Collections", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("CollectionMovie", sql);
+        Assert.Contains("ORDER BY", sql);
     }
 
     [Fact]
     public async Task CollectionRepository_GetAvailableCollectionAsync_GeneratesExpectedSql()
     {
-        CollectionRepository repository = new(contextFactory: _homeFactory);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetAvailableCollectionAsync(userId: SeedConstants.UserId, id: 1);
+        await repository.GetAvailableCollectionAsync(SeedConstants.UserId, 1);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Collections", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "CollectionMovie", actualString: sql);
-        Assert.Contains(expectedSubstring: "VideoFiles", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Collections", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("CollectionMovie", sql);
+        Assert.Contains("VideoFiles", sql);
     }
 
     [Fact]
     public async Task CollectionRepository_GetCollectionPlaylistAsync_GeneratesExpectedSql()
     {
-        CollectionRepository repository = new(contextFactory: _homeFactory);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetCollectionPlaylistAsync(userId: SeedConstants.UserId, id: 1, language: "en", country: "US");
+        await repository.GetCollectionPlaylistAsync(SeedConstants.UserId, 1, "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Collections", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Collections", sql);
+        Assert.Contains("LibraryUser", sql);
         // CollectionMovie and VideoFiles may appear in split queries
         Assert.True(
-            condition: _interceptor.CapturedSql.Count >= 1,
-            userMessage: "Expected at least one query for collection playlist"
+            _interceptor.CapturedSql.Count >= 1,
+            "Expected at least one query for collection playlist"
         );
     }
 
@@ -712,58 +712,58 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task SpecialRepository_GetSpecialsAsync_GeneratesExpectedSql()
     {
-        SpecialRepository repository = new(context: _context, contextFactory: _homeFactory);
+        SpecialRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetSpecialsAsync(userId: SeedConstants.UserId, language: "en", take: 10, page: 0);
+        await repository.GetSpecialsAsync(SeedConstants.UserId, "en", 10, 0);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Specials", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
-        Assert.Contains(expectedSubstring: "LIMIT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Specials", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     [Fact]
     public void SpecialRepository_GetSpecialAsync_GeneratesExpectedSql()
     {
-        SpecialRepository repository = new(context: _context, contextFactory: _homeFactory);
+        SpecialRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
         // GetSpecialAsync uses Task.FromResult wrapping a synchronous query
-        repository.GetSpecialAsync(userId: SeedConstants.UserId, id: Ulid.NewUlid());
+        repository.GetSpecialAsync(SeedConstants.UserId, Ulid.NewUlid());
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Specials", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Specials", sql);
     }
 
     [Fact]
     public async Task SpecialRepository_GetSpecialItems_GeneratesExpectedSql()
     {
-        SpecialRepository repository = new(context: _context, contextFactory: _homeFactory);
+        SpecialRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetSpecialItems(userId: SeedConstants.UserId, language: "en", country: "US", take: 10);
+        await repository.GetSpecialItems(SeedConstants.UserId, "en", "US", 10);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Specials", actualString: sql);
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: sql);
-        Assert.Contains(expectedSubstring: "LIMIT", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Specials", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     [Fact]
     public async Task SpecialRepository_GetSpecialPlaylistAsync_GeneratesExpectedSql()
     {
-        SpecialRepository repository = new(context: _context, contextFactory: _homeFactory);
+        SpecialRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetSpecialPlaylistAsync(userId: SeedConstants.UserId, id: Ulid.NewUlid(), language: "en", country: "US");
+        await repository.GetSpecialPlaylistAsync(SeedConstants.UserId, Ulid.NewUlid(), "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Specials", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Specials", sql);
     }
 
     #endregion
@@ -773,15 +773,15 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task DeviceRepository_GetDevices_GeneratesExpectedSql()
     {
-        DeviceRepository repository = new(context: _context);
+        DeviceRepository repository = new(_context);
         _interceptor.Clear();
 
         // Execute the query to capture all split queries
         await repository.GetDevices();
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Devices", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Devices", sql);
     }
 
     #endregion
@@ -791,68 +791,68 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task FolderRepository_GetFolderByIdAsync_GeneratesExpectedSql()
     {
-        FolderRepository repository = new(context: _context);
+        FolderRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetFolderByIdAsync(folderId: SeedConstants.MovieFolderId);
+        await repository.GetFolderByIdAsync(SeedConstants.MovieFolderId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Folders", actualString: sql);
-        Assert.Contains(expectedSubstring: "FolderLibrary", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Folders", sql);
+        Assert.Contains("FolderLibrary", sql);
     }
 
     [Fact]
     public async Task FolderRepository_GetFolderByPathAsync_GeneratesExpectedSql()
     {
-        FolderRepository repository = new(context: _context);
+        FolderRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetFolderByPathAsync(requestPath: "/media/movies");
+        await repository.GetFolderByPathAsync("/media/movies");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Folders", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Folders", sql);
     }
 
     [Fact]
     public async Task FolderRepository_GetFoldersByLibraryIdAsync_GeneratesExpectedSql()
     {
-        FolderRepository repository = new(context: _context);
+        FolderRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetFoldersByLibraryIdAsync(libraryId: SeedConstants.MovieLibraryId);
+        await repository.GetFoldersByLibraryIdAsync(SeedConstants.MovieLibraryId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "FolderLibrary", actualString: sql);
-        Assert.Contains(expectedSubstring: "Folders", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("FolderLibrary", sql);
+        Assert.Contains("Folders", sql);
     }
 
     [Fact]
     public async Task FolderRepository_GetFolderById_GeneratesExpectedSql()
     {
-        FolderRepository repository = new(context: _context);
+        FolderRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetFolderById(folderId: SeedConstants.MovieFolderId);
+        await repository.GetFolderById(SeedConstants.MovieFolderId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Folders", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Folders", sql);
     }
 
     [Fact]
     public async Task FolderRepository_GetFolderByPath_GeneratesExpectedSql()
     {
-        FolderRepository repository = new(context: _context);
+        FolderRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetFolderByPath(path: "/media/movies");
+        await repository.GetFolderByPath("/media/movies");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Folders", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Folders", sql);
     }
 
     #endregion
@@ -862,27 +862,27 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LanguageRepository_GetLanguagesAsync_GeneratesExpectedSql()
     {
-        LanguageRepository repository = new(context: _context);
+        LanguageRepository repository = new(_context);
         _interceptor.Clear();
 
         await repository.GetLanguagesAsync();
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Languages", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Languages", sql);
     }
 
     [Fact]
     public async Task LanguageRepository_GetLanguagesAsync_WithFilter_GeneratesExpectedSql()
     {
-        LanguageRepository repository = new(context: _context);
+        LanguageRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetLanguagesAsync(list: ["en", "fr"]);
+        await repository.GetLanguagesAsync(["en", "fr"]);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "LanguageLibrary", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("LanguageLibrary", sql);
     }
 
     #endregion
@@ -892,16 +892,16 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieDetailAsync_CompiledQuery_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(contextFactory: _homeFactory, logger: NullLogger<MovieRepository>.Instance);
+        MovieRepository repository = new(_homeFactory, NullLogger<MovieRepository>.Instance);
         _interceptor.Clear();
 
-        await repository.GetMovieDetailAsync(userId: SeedConstants.UserId, id: 129, language: "en", country: "US");
+        await repository.GetMovieDetailAsync(SeedConstants.UserId, 129, "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Movies", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "Casts", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Movies", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("Casts", sql);
     }
 
     #endregion
@@ -911,18 +911,18 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvAsync_SplitQuery_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(contextFactory: _homeFactory);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetTvAsync(userId: SeedConstants.UserId, id: 1399, language: "en", country: "US");
+        await repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "Tvs", actualString: sql);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql);
-        Assert.Contains(expectedSubstring: "Seasons", actualString: sql);
-        Assert.Contains(expectedSubstring: "Episodes", actualString: sql);
-        Assert.Contains(expectedSubstring: "Casts", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("Tvs", sql);
+        Assert.Contains("LibraryUser", sql);
+        Assert.Contains("Seasons", sql);
+        Assert.Contains("Episodes", sql);
+        Assert.Contains("Casts", sql);
     }
 
     #endregion
@@ -932,70 +932,70 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task HomeRepository_GetHomeTvs_UsesExistsNotCount()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetHomeTvs(tvIds: [1399], language: "en", country: "US");
+        await repository.GetHomeTvs([1399], "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "EXISTS", actualString: sql);
-        Assert.DoesNotContain(expectedSubstring: "COUNT(*) > 0", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("EXISTS", sql);
+        Assert.DoesNotContain("COUNT(*) > 0", sql);
     }
 
     [Fact]
     public async Task HomeRepository_GetHomeMovies_UsesExistsNotCount()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetHomeMovies(movieIds: [129, 680], language: "en", country: "US");
+        await repository.GetHomeMovies([129, 680], "en", "US");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "EXISTS", actualString: sql);
-        Assert.DoesNotContain(expectedSubstring: "COUNT(*) > 0", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("EXISTS", sql);
+        Assert.DoesNotContain("COUNT(*) > 0", sql);
     }
 
     [Fact]
     public async Task HomeRepository_GetHomeGenres_UsesExistsForVideoFileCheck()
     {
-        HomeRepository repository = new(context: _context, contextFactory: _homeFactory);
+        HomeRepository repository = new(_context, _homeFactory);
         _interceptor.Clear();
 
-        await repository.GetHomeGenresAsync(userId: SeedConstants.UserId, language: "en", take: 10);
+        await repository.GetHomeGenresAsync(SeedConstants.UserId, "en", 10);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "EXISTS", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("EXISTS", sql);
     }
 
     [Fact]
     public async Task GenreRepository_GetMusicGenresAsync_UsesExistsNotCount()
     {
-        GenreRepository repository = new(context: _context);
+        GenreRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetMusicGenresAsync(userId: SeedConstants.UserId);
+        await repository.GetMusicGenresAsync(SeedConstants.UserId);
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "EXISTS", actualString: sql);
-        Assert.DoesNotContain(expectedSubstring: "COUNT(*) > 0", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("EXISTS", sql);
+        Assert.DoesNotContain("COUNT(*) > 0", sql);
     }
 
     [Fact]
     public async Task TvShowRepository_GetMissingLibraryShows_UsesExistsForEmptyVideoFiles()
     {
-        TvShowRepository repository = new(contextFactory: _homeFactory);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
-        await repository.GetMissingLibraryShows(userId: SeedConstants.UserId, id: 1399, language: "en");
+        await repository.GetMissingLibraryShows(SeedConstants.UserId, 1399, "en");
 
-        Assert.NotEmpty(collection: _interceptor.CapturedSql);
-        string sql = string.Join(separator: " ", values: _interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "EXISTS", actualString: sql);
-        Assert.DoesNotContain(expectedSubstring: "COUNT(*) > 0", actualString: sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("EXISTS", sql);
+        Assert.DoesNotContain("COUNT(*) > 0", sql);
     }
 
     #endregion

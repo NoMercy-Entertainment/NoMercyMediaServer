@@ -30,22 +30,22 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     // the fixture rather than a detail: point these at a missing path and every test below
     // silently exercises the filename fallback instead of the chain it names.
     private readonly string _sourcePath = Path.Combine(
-        path1: Path.GetTempPath(),
-        path2: $"nomercy-subs-{Guid.NewGuid():N}.mkv"
+        Path.GetTempPath(),
+        $"nomercy-subs-{Guid.NewGuid():N}.mkv"
     );
 
     public SubtitleAcquisitionServiceTests()
     {
         byte[] content = new byte[256 * 1024];
-        Random.Shared.NextBytes(buffer: content);
-        File.WriteAllBytes(path: _sourcePath, bytes: content);
+        Random.Shared.NextBytes(content);
+        File.WriteAllBytes(_sourcePath, content);
     }
 
     public void Dispose()
     {
-        if (File.Exists(path: _sourcePath))
-            File.Delete(path: _sourcePath);
-        GC.SuppressFinalize(obj: this);
+        if (File.Exists(_sourcePath))
+            File.Delete(_sourcePath);
+        GC.SuppressFinalize(this);
     }
 
     private static SubtitleAcquisitionService BuildService(
@@ -55,7 +55,7 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     {
         adapter = new();
         storage = new();
-        return new(adapter: adapter.Object, storage: storage.Object, logger: NullLogger<SubtitleAcquisitionService>.Instance);
+        return new(adapter.Object, storage.Object, NullLogger<SubtitleAcquisitionService>.Instance);
     }
 
     private AcquisitionRequest MakeRequest(
@@ -65,14 +65,14 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     ) =>
         new(
             SourcePath: _sourcePath,
-            SourceFileSize: new FileInfo(fileName: _sourcePath).Length,
+            SourceFileSize: new FileInfo(_sourcePath).Length,
             SourceFilename: "movie.mkv",
             MediaTitle: "The Movie",
             Season: null,
             Episode: null,
             Year: 2024,
             SourceFps: sourceFps,
-            SourceDuration: TimeSpan.FromHours(hours: 2),
+            SourceDuration: TimeSpan.FromHours(2),
             LanguagesAlreadyInSource: languagesAlreadyInSource ?? [],
             Config: config ?? new SubtitleAcquisitionConfig { Enabled = true, Languages = ["eng"] }
         );
@@ -99,14 +99,14 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     public async Task AcquireAsync_Disabled_ReturnsEmpty()
     {
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out _
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out _
         );
-        AcquisitionRequest request = MakeRequest(config: new() { Enabled = false });
+        AcquisitionRequest request = MakeRequest(new() { Enabled = false });
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
         result.Should().BeEmpty();
@@ -117,14 +117,14 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     public async Task AcquireAsync_NoLanguages_ReturnsEmpty()
     {
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out _
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out _
         );
-        AcquisitionRequest request = MakeRequest(config: new() { Enabled = true, Languages = [] });
+        AcquisitionRequest request = MakeRequest(new() { Enabled = true, Languages = [] });
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
         result.Should().BeEmpty();
@@ -136,13 +136,13 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     {
         // Config asks for eng + fra; source already has eng — only fra survives.
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out Mock<IStorage> storage
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
         );
-        StubStorage(storage: storage);
+        StubStorage(storage);
 
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -152,12 +152,12 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value: [Candidate(language: "fra")]);
+            .ReturnsAsync([Candidate(language: "fra")]);
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: [1, 2, 3]);
+            .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
             config: new()
@@ -171,14 +171,14 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         );
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
         result.Should().ContainSingle();
-        result[index: 0].Language.Should().Be(expected: "fra");
+        result[0].Language.Should().Be("fra");
         adapter.Verify(
-            expression: a =>
+            a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -187,7 +187,7 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<CancellationToken>(),
                     It.IsAny<bool>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -197,11 +197,11 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         // Rate limiting is a known + expected condition. The service catches
         // the typed exception and returns empty so the encode keeps going.
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out _
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out _
         );
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -211,10 +211,10 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ThrowsAsync(exception: new OpenSubtitlesRateLimitException(message: "429 — too many calls"));
+            .ThrowsAsync(new OpenSubtitlesRateLimitException("429 — too many calls"));
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -223,8 +223,8 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         );
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
         result.Should().BeEmpty();
@@ -235,11 +235,11 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     {
         // Any other exception (network, JSON error, …) also lands as empty.
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out _
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out _
         );
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -249,10 +249,10 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ThrowsAsync(exception: new HttpRequestException(message: "DNS fail"));
+            .ThrowsAsync(new HttpRequestException("DNS fail"));
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -261,7 +261,7 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         );
 
         Func<Task<IReadOnlyList<AcquiredSubtitle>>> act = () =>
-            subject.AcquireAsync(request: request, ct: CancellationToken.None);
+            subject.AcquireAsync(request, CancellationToken.None);
 
         IReadOnlyList<AcquiredSubtitle> result = await act();
         result.Should().BeEmpty();
@@ -271,11 +271,11 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     public async Task AcquireAsync_CancellationToken_ReturnsEmpty()
     {
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out _
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out _
         );
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -285,10 +285,10 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ThrowsAsync(exception: new OperationCanceledException());
+            .ThrowsAsync(new OperationCanceledException());
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -297,8 +297,8 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         );
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
         result.Should().BeEmpty();
@@ -310,13 +310,13 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         // Strategy = HashThenFilename. Hash returns results → filename search
         // MUST NOT run (extra API call would waste a precious daily quota).
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out Mock<IStorage> storage
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
         );
-        StubStorage(storage: storage);
+        StubStorage(storage);
 
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -326,15 +326,15 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value: [Candidate()]);
+            .ReturnsAsync([Candidate()]);
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: [1, 2, 3]);
+            .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -342,10 +342,10 @@ public class SubtitleAcquisitionServiceTests : IDisposable
             }
         );
 
-        _ = await subject.AcquireAsync(request: request, ct: CancellationToken.None);
+        _ = await subject.AcquireAsync(request, CancellationToken.None);
 
         adapter.Verify(
-            expression: a =>
+            a =>
                 a.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -353,8 +353,8 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<CancellationToken>(),
                     It.IsAny<bool>()
                 ),
-            times: Times.Never,
-            failMessage: "filename search must not fire when hash already matched"
+            Times.Never,
+            "filename search must not fire when hash already matched"
         );
     }
 
@@ -365,13 +365,13 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         // hashing the file size instead produces a value that cannot match, spending a request per
         // item to guarantee a miss and still falling through.
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out Mock<IStorage> storage
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
         );
-        StubStorage(storage: storage);
+        StubStorage(storage);
 
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -380,15 +380,15 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value: [Candidate()]);
+            .ReturnsAsync([Candidate()]);
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: [1, 2, 3]);
+            .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -397,15 +397,15 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         ) with
         {
             SourcePath = Path.Combine(
-                path1: Path.GetTempPath(),
-                path2: $"nomercy-missing-{Guid.NewGuid():N}.mkv"
+                Path.GetTempPath(),
+                $"nomercy-missing-{Guid.NewGuid():N}.mkv"
             ),
         };
 
-        _ = await subject.AcquireAsync(request: request, ct: CancellationToken.None);
+        _ = await subject.AcquireAsync(request, CancellationToken.None);
 
         adapter.Verify(
-            expression: a =>
+            a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -414,8 +414,8 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<CancellationToken>(),
                     It.IsAny<bool>()
                 ),
-            times: Times.Never,
-            failMessage: "hash search must not fire when the source yields no moviehash"
+            Times.Never,
+            "hash search must not fire when the source yields no moviehash"
         );
     }
 
@@ -423,13 +423,13 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     public async Task AcquireAsync_UnreadableSource_StillAcquiresViaFilename()
     {
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out Mock<IStorage> storage
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
         );
-        StubStorage(storage: storage);
+        StubStorage(storage);
 
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -438,15 +438,15 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value: [Candidate()]);
+            .ReturnsAsync([Candidate()]);
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: [1, 2, 3]);
+            .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -455,32 +455,32 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         ) with
         {
             SourcePath = Path.Combine(
-                path1: Path.GetTempPath(),
-                path2: $"nomercy-missing-{Guid.NewGuid():N}.mkv"
+                Path.GetTempPath(),
+                $"nomercy-missing-{Guid.NewGuid():N}.mkv"
             ),
         };
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
-        Assert.Single(collection: result);
+        Assert.Single(result);
         // Never a hash match, so it can never be reported as an exact one.
-        Assert.False(condition: result[index: 0].IsExactMatch);
+        Assert.False(result[0].IsExactMatch);
     }
 
     [Fact]
     public async Task AcquireAsync_HashMisses_FallsThroughToFilename()
     {
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out Mock<IStorage> storage
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
         );
-        StubStorage(storage: storage);
+        StubStorage(storage);
 
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -490,9 +490,9 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -501,15 +501,15 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value: [Candidate()]);
+            .ReturnsAsync([Candidate()]);
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: [1, 2, 3]);
+            .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -518,13 +518,13 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         );
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
         result.Should().ContainSingle();
         adapter.Verify(
-            expression: a =>
+            a =>
                 a.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -532,7 +532,7 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<CancellationToken>(),
                     It.IsAny<bool>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -540,13 +540,13 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     public async Task AcquireAsync_TitleOnlyStrategy_SkipsHashAndFilename()
     {
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out Mock<IStorage> storage
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
         );
-        StubStorage(storage: storage);
+        StubStorage(storage);
 
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByTitleAsync(
                     It.IsAny<string>(),
                     It.IsAny<int?>(),
@@ -558,15 +558,15 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value: [Candidate()]);
+            .ReturnsAsync([Candidate()]);
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: [1, 2, 3]);
+            .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -574,10 +574,10 @@ public class SubtitleAcquisitionServiceTests : IDisposable
             }
         );
 
-        _ = await subject.AcquireAsync(request: request, ct: CancellationToken.None);
+        _ = await subject.AcquireAsync(request, CancellationToken.None);
 
         adapter.Verify(
-            expression: a =>
+            a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -586,10 +586,10 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<CancellationToken>(),
                     It.IsAny<bool>()
                 ),
-            times: Times.Never
+            Times.Never
         );
         adapter.Verify(
-            expression: a =>
+            a =>
                 a.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -597,7 +597,7 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<CancellationToken>(),
                     It.IsAny<bool>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -605,13 +605,13 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     public async Task AcquireAsync_FiltersOutBelowMinRating()
     {
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out Mock<IStorage> storage
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
         );
-        StubStorage(storage: storage);
+        StubStorage(storage);
 
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -621,19 +621,18 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value:
-            [
+            .ReturnsAsync([
                 Candidate(rating: 9.5),
                 Candidate(rating: 3.0), // below the floor — must be filtered
             ]);
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: [1, 2, 3]);
+            .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -644,25 +643,25 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         );
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
         result.Should().ContainSingle();
-        result[index: 0].Rating.Should().BeGreaterThan(expected: 5.0);
+        result[0].Rating.Should().BeGreaterThan(5.0);
     }
 
     [Fact]
     public async Task AcquireAsync_FpsMismatch_FiltersWhenRequireMatchingFps()
     {
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out Mock<IStorage> storage
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
         );
-        StubStorage(storage: storage);
+        StubStorage(storage);
 
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -672,16 +671,15 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value:
-            [
+            .ReturnsAsync([
                 Candidate(fps: 23.976), // matches source 24.0 within tolerance
                 Candidate(fps: 29.97), // mismatch — must be filtered
             ]);
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: [1, 2, 3]);
+            .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
             config: new()
@@ -696,24 +694,24 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         );
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
-        result.Should().ContainSingle(because: "only the 23.976 candidate passes the fps gate");
+        result.Should().ContainSingle("only the 23.976 candidate passes the fps gate");
     }
 
     [Fact]
     public async Task AcquireAsync_TrustedUploadersOnly_DropsUntrusted()
     {
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out Mock<IStorage> storage
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
         );
-        StubStorage(storage: storage);
+        StubStorage(storage);
 
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -723,15 +721,15 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value: [Candidate(trusted: true), Candidate(trusted: false)]);
+            .ReturnsAsync([Candidate(trusted: true), Candidate(trusted: false)]);
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: [1, 2, 3]);
+            .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -742,8 +740,8 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         );
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
         result.Should().ContainSingle();
@@ -755,13 +753,13 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         // Sort key = Rating * log10(downloads + 1) — must take the highest
         // composite score per language up to MaxPerLanguage.
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out Mock<IStorage> storage
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
         );
-        StubStorage(storage: storage);
+        StubStorage(storage);
 
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -771,20 +769,19 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value:
-            [
+            .ReturnsAsync([
                 Candidate(rating: 9.0, downloads: 10),
                 Candidate(rating: 9.5, downloads: 100_000),
                 Candidate(rating: 8.0, downloads: 50),
             ]);
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: [1, 2, 3]);
+            .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -794,14 +791,14 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         );
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
         result.Should().ContainSingle();
         // 9.5 × log10(100001) ≈ 47.5 — the dominant score.
-        result[index: 0].Rating.Should().Be(expected: 9.5);
-        result[index: 0].Downloads.Should().Be(expected: 100_000);
+        result[0].Rating.Should().Be(9.5);
+        result[0].Downloads.Should().Be(100_000);
     }
 
     [Fact]
@@ -809,16 +806,16 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     {
         // Download failure for one candidate must NOT abort the whole batch.
         SubtitleAcquisitionService subject = BuildService(
-            adapter: out Mock<IOpenSubtitlesAdapter> adapter,
-            storage: out Mock<IStorage> storage
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
         );
-        StubStorage(storage: storage);
+        StubStorage(storage);
 
         SubtitleCandidate good = Candidate(language: "eng");
         SubtitleCandidate bad = Candidate(language: "fra");
 
         adapter
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -828,16 +825,16 @@ public class SubtitleAcquisitionServiceTests : IDisposable
                     It.IsAny<bool>()
                 )
             )
-            .ReturnsAsync(value: [good, bad]);
+            .ReturnsAsync([good, bad]);
         adapter
-            .Setup(expression: a => a.DownloadAsync(good, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: [1, 2, 3]);
+            .Setup(a => a.DownloadAsync(good, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([1, 2, 3]);
         adapter
-            .Setup(expression: a => a.DownloadAsync(bad, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(exception: new HttpRequestException(message: "ECONNRESET"));
+            .Setup(a => a.DownloadAsync(bad, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("ECONNRESET"));
 
         AcquisitionRequest request = MakeRequest(
-            config: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["eng", "fra"],
@@ -847,12 +844,12 @@ public class SubtitleAcquisitionServiceTests : IDisposable
         );
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
-            request: request,
-            ct: CancellationToken.None
+            request,
+            CancellationToken.None
         );
 
         result.Should().ContainSingle();
-        result[index: 0].Language.Should().Be(expected: "eng");
+        result[0].Language.Should().Be("eng");
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────
@@ -860,14 +857,14 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     private static void StubStorage(Mock<IStorage> storage)
     {
         storage
-            .Setup(expression: s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>(valueFunction: (a, b) => $"{a}/{b}");
-        storage.Setup(expression: s => s.CreateDirectory(It.IsAny<string>()));
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<string, string>((a, b) => $"{a}/{b}");
+        storage.Setup(s => s.CreateDirectory(It.IsAny<string>()));
         storage
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.WriteAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<CancellationToken>())
             )
-            .Returns(value: Task.CompletedTask);
-        storage.Setup(expression: s => s.GetFullPath(It.IsAny<string>())).Returns<string>(valueFunction: p => $"/storage/{p}");
+            .Returns(Task.CompletedTask);
+        storage.Setup(s => s.GetFullPath(It.IsAny<string>())).Returns<string>(p => $"/storage/{p}");
     }
 }

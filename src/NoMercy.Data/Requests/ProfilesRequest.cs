@@ -15,6 +15,6 @@ namespace NoMercy.Data.Requests;
 
 public class ProfilesRequest
 {
-    [JsonProperty(propertyName: "profiles")]
+    [JsonProperty("profiles")]
     public string[] Profiles { get; set; } = [];
 }

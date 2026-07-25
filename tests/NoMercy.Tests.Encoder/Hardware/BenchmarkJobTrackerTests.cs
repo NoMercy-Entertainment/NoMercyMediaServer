@@ -22,7 +22,7 @@ public class BenchmarkJobTrackerTests
     private static IHostApplicationLifetime NeverStoppingLifetime()
     {
         Mock<IHostApplicationLifetime> lifetime = new();
-        lifetime.Setup(expression: l => l.ApplicationStopping).Returns(value: CancellationToken.None);
+        lifetime.Setup(l => l.ApplicationStopping).Returns(CancellationToken.None);
         return lifetime.Object;
     }
 
@@ -33,15 +33,15 @@ public class BenchmarkJobTrackerTests
     {
         IHardwareBenchmark bench =
             benchmark
-            ?? Mock.Of<IHardwareBenchmark>(predicate: b =>
+            ?? Mock.Of<IHardwareBenchmark>(b =>
                 b.CalibrateAsync(It.IsAny<CancellationToken>())
                 == Task.FromResult(new SpeedIndex(new()))
             );
 
         return new(
-            benchmark: bench,
-            logger: NullLogger<BenchmarkJobTracker>.Instance,
-            lifetime: lifetime ?? NeverStoppingLifetime()
+            bench,
+            NullLogger<BenchmarkJobTracker>.Instance,
+            lifetime ?? NeverStoppingLifetime()
         );
     }
 
@@ -52,10 +52,10 @@ public class BenchmarkJobTrackerTests
     {
         BenchmarkJobTracker tracker = MakeTracker();
 
-        BenchmarkJobStatus status = tracker.Start(codecs: [], resolutions: []);
+        BenchmarkJobStatus status = tracker.Start([], []);
 
         status.JobId.Should().NotBeNullOrWhiteSpace();
-        status.Status.Should().Be(expected: "running");
+        status.Status.Should().Be("running");
         status.CompletedAt.Should().BeNull();
         status.Error.Should().BeNull();
     }
@@ -67,10 +67,10 @@ public class BenchmarkJobTrackerTests
         IReadOnlyList<VideoCodecType> codecs = [VideoCodecType.H264, VideoCodecType.Av1];
         IReadOnlyList<int> resolutions = [1920, 1280];
 
-        BenchmarkJobStatus status = tracker.Start(codecs: codecs, resolutions: resolutions);
+        BenchmarkJobStatus status = tracker.Start(codecs, resolutions);
 
-        status.RequestedCodecs.Should().BeEquivalentTo(expectation: ["H264", "Av1"]);
-        status.RequestedResolutions.Should().BeEquivalentTo(expectation: [1920, 1280]);
+        status.RequestedCodecs.Should().BeEquivalentTo(["H264", "Av1"]);
+        status.RequestedResolutions.Should().BeEquivalentTo([1920, 1280]);
     }
 
     // ── Get ────────────────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ public class BenchmarkJobTrackerTests
     {
         BenchmarkJobTracker tracker = MakeTracker();
 
-        BenchmarkJobStatus? result = tracker.Get(jobId: "does-not-exist");
+        BenchmarkJobStatus? result = tracker.Get("does-not-exist");
 
         result.Should().BeNull();
     }
@@ -90,11 +90,11 @@ public class BenchmarkJobTrackerTests
     {
         BenchmarkJobTracker tracker = MakeTracker();
 
-        BenchmarkJobStatus started = tracker.Start(codecs: [], resolutions: []);
-        BenchmarkJobStatus? fetched = tracker.Get(jobId: started.JobId);
+        BenchmarkJobStatus started = tracker.Start([], []);
+        BenchmarkJobStatus? fetched = tracker.Get(started.JobId);
 
         fetched.Should().NotBeNull();
-        fetched!.JobId.Should().Be(expected: started.JobId);
+        fetched!.JobId.Should().Be(started.JobId);
     }
 
     // ── List ───────────────────────────────────────────────────────────────────
@@ -104,13 +104,13 @@ public class BenchmarkJobTrackerTests
     {
         BenchmarkJobTracker tracker = MakeTracker();
 
-        BenchmarkJobStatus a = tracker.Start(codecs: [], resolutions: []);
-        BenchmarkJobStatus b = tracker.Start(codecs: [VideoCodecType.H265], resolutions: []);
+        BenchmarkJobStatus a = tracker.Start([], []);
+        BenchmarkJobStatus b = tracker.Start([VideoCodecType.H265], []);
 
         IReadOnlyList<BenchmarkJobStatus> all = tracker.List();
 
-        all.Should().HaveCount(expected: 2);
-        all.Select(selector: j => j.JobId).Should().Contain(expected: [a.JobId, b.JobId]);
+        all.Should().HaveCount(2);
+        all.Select(j => j.JobId).Should().Contain([a.JobId, b.JobId]);
     }
 
     // ── Async lifecycle ────────────────────────────────────────────────────────
@@ -120,40 +120,40 @@ public class BenchmarkJobTrackerTests
     {
         Mock<IHardwareBenchmark> mock = new();
         TaskCompletionSource<SpeedIndex> tcs = new();
-        mock.Setup(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>())).Returns(value: tcs.Task);
+        mock.Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>())).Returns(tcs.Task);
 
-        BenchmarkJobTracker tracker = MakeTracker(benchmark: mock.Object);
+        BenchmarkJobTracker tracker = MakeTracker(mock.Object);
 
-        BenchmarkJobStatus job = tracker.Start(codecs: [], resolutions: []);
+        BenchmarkJobStatus job = tracker.Start([], []);
 
         // Resolve the task so the background work can complete.
-        tcs.SetResult(result: new(Measurements: new()));
+        tcs.SetResult(new(new()));
 
         // Allow the background Task.Run to finish.
-        await Task.Delay(millisecondsDelay: 200);
+        await Task.Delay(200);
 
-        mock.Verify(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()), times: Times.Once);
+        mock.Verify(b => b.CalibrateAsync(It.IsAny<CancellationToken>()), Times.Once);
 
-        BenchmarkJobStatus? updated = tracker.Get(jobId: job.JobId);
-        updated!.Status.Should().Be(expected: "completed");
+        BenchmarkJobStatus? updated = tracker.Get(job.JobId);
+        updated!.Status.Should().Be("completed");
     }
 
     [Fact]
     public async Task Failed_benchmark_marks_status_failed_with_error_message()
     {
         Mock<IHardwareBenchmark> mock = new();
-        mock.Setup(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(exception: new InvalidOperationException(message: "ffmpeg not found"));
+        mock.Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("ffmpeg not found"));
 
-        BenchmarkJobTracker tracker = MakeTracker(benchmark: mock.Object);
+        BenchmarkJobTracker tracker = MakeTracker(mock.Object);
 
-        BenchmarkJobStatus job = tracker.Start(codecs: [], resolutions: []);
+        BenchmarkJobStatus job = tracker.Start([], []);
 
-        await Task.Delay(millisecondsDelay: 300);
+        await Task.Delay(300);
 
-        BenchmarkJobStatus? updated = tracker.Get(jobId: job.JobId);
-        updated!.Status.Should().Be(expected: "failed");
-        updated.Error.Should().Contain(expected: "ffmpeg not found");
+        BenchmarkJobStatus? updated = tracker.Get(job.JobId);
+        updated!.Status.Should().Be("failed");
+        updated.Error.Should().Contain("ffmpeg not found");
         updated.CompletedAt.Should().NotBeNull();
     }
 
@@ -162,33 +162,33 @@ public class BenchmarkJobTrackerTests
     {
         Dictionary<SpeedKey, SpeedMeasurement> measurements = new()
         {
-            [key: new(Codec: VideoCodecType.H264, Encoder: "libx264", Width: 1920, DeviceName: null)] = new(
-                Fps: 120,
-                SpeedMultiplier: 4.0,
-                MeasuredAt: DateTime.UtcNow
+            [new(VideoCodecType.H264, "libx264", 1920, null)] = new(
+                120,
+                4.0,
+                DateTime.UtcNow
             ),
-            [key: new(Codec: VideoCodecType.H265, Encoder: "libx265", Width: 1920, DeviceName: null)] = new(
-                Fps: 60,
-                SpeedMultiplier: 2.0,
-                MeasuredAt: DateTime.UtcNow
+            [new(VideoCodecType.H265, "libx265", 1920, null)] = new(
+                60,
+                2.0,
+                DateTime.UtcNow
             ),
         };
 
         Mock<IHardwareBenchmark> mock = new();
-        mock.Setup(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: new SpeedIndex(Measurements: measurements));
+        mock.Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SpeedIndex(measurements));
 
-        BenchmarkJobTracker tracker = MakeTracker(benchmark: mock.Object);
+        BenchmarkJobTracker tracker = MakeTracker(mock.Object);
 
-        BenchmarkJobStatus initial = tracker.Start(codecs: [], resolutions: []);
-        initial.Status.Should().Be(expected: "running");
-        initial.MeasurementCount.Should().Be(expected: 0);
+        BenchmarkJobStatus initial = tracker.Start([], []);
+        initial.Status.Should().Be("running");
+        initial.MeasurementCount.Should().Be(0);
 
-        await Task.Delay(millisecondsDelay: 300);
+        await Task.Delay(300);
 
-        BenchmarkJobStatus? completed = tracker.Get(jobId: initial.JobId);
-        completed!.Status.Should().Be(expected: "completed");
-        completed.MeasurementCount.Should().Be(expected: 2);
+        BenchmarkJobStatus? completed = tracker.Get(initial.JobId);
+        completed!.Status.Should().Be("completed");
+        completed.MeasurementCount.Should().Be(2);
         completed.CompletedAt.Should().NotBeNull();
     }
 
@@ -207,37 +207,37 @@ public class BenchmarkJobTrackerTests
         object gate = new();
 
         Mock<IHardwareBenchmark> mock = new();
-        mock.Setup(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
-            .Returns(valueFunction: async () =>
+        mock.Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
+            .Returns(async () =>
             {
                 lock (gate)
                 {
                     concurrentCount++;
-                    maxObservedConcurrency = Math.Max(val1: maxObservedConcurrency, val2: concurrentCount);
+                    maxObservedConcurrency = Math.Max(maxObservedConcurrency, concurrentCount);
                 }
 
-                await Task.Delay(millisecondsDelay: 75);
+                await Task.Delay(75);
 
                 lock (gate)
                 {
                     concurrentCount--;
                 }
 
-                return new(Measurements: new());
+                return new(new());
             });
 
-        BenchmarkJobTracker tracker = MakeTracker(benchmark: mock.Object);
+        BenchmarkJobTracker tracker = MakeTracker(mock.Object);
 
-        BenchmarkJobStatus jobA = tracker.Start(codecs: [], resolutions: []);
-        BenchmarkJobStatus jobB = tracker.Start(codecs: [], resolutions: []);
-        BenchmarkJobStatus jobC = tracker.Start(codecs: [], resolutions: []);
+        BenchmarkJobStatus jobA = tracker.Start([], []);
+        BenchmarkJobStatus jobB = tracker.Start([], []);
+        BenchmarkJobStatus jobC = tracker.Start([], []);
 
-        await Task.Delay(millisecondsDelay: 700);
+        await Task.Delay(700);
 
-        maxObservedConcurrency.Should().Be(expected: 1);
-        tracker.Get(jobId: jobA.JobId)!.Status.Should().Be(expected: "completed");
-        tracker.Get(jobId: jobB.JobId)!.Status.Should().Be(expected: "completed");
-        tracker.Get(jobId: jobC.JobId)!.Status.Should().Be(expected: "completed");
+        maxObservedConcurrency.Should().Be(1);
+        tracker.Get(jobA.JobId)!.Status.Should().Be("completed");
+        tracker.Get(jobB.JobId)!.Status.Should().Be("completed");
+        tracker.Get(jobC.JobId)!.Status.Should().Be("completed");
     }
 
     // ── Host shutdown token ──────────────────────────────────────────────────
@@ -250,69 +250,69 @@ public class BenchmarkJobTrackerTests
     {
         using CancellationTokenSource shutdownCts = new();
         Mock<IHostApplicationLifetime> lifetime = new();
-        lifetime.Setup(expression: l => l.ApplicationStopping).Returns(value: shutdownCts.Token);
+        lifetime.Setup(l => l.ApplicationStopping).Returns(shutdownCts.Token);
 
         CancellationToken? observedToken = null;
         Mock<IHardwareBenchmark> mock = new();
-        mock.Setup(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
+        mock.Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
             .Returns(
-                valueFunction: (CancellationToken ct) =>
+                (CancellationToken ct) =>
                 {
                     observedToken = ct;
-                    return Task.FromResult(result: new SpeedIndex(Measurements: new()));
+                    return Task.FromResult(new SpeedIndex(new()));
                 }
             );
 
-        BenchmarkJobTracker tracker = MakeTracker(benchmark: mock.Object, lifetime: lifetime.Object);
+        BenchmarkJobTracker tracker = MakeTracker(mock.Object, lifetime.Object);
 
-        tracker.Start(codecs: [], resolutions: []);
-        await Task.Delay(millisecondsDelay: 200);
+        tracker.Start([], []);
+        await Task.Delay(200);
 
-        observedToken.Should().Be(expected: shutdownCts.Token);
+        observedToken.Should().Be(shutdownCts.Token);
     }
 
     [Fact]
     public async Task RunAsync_ShutdownWhileQueuedBehindGate_CancelsWithoutCallingCalibrateAsync()
     {
         TaskCompletionSource firstJobStarted = new(
-            creationOptions: TaskCreationOptions.RunContinuationsAsynchronously
+            TaskCreationOptions.RunContinuationsAsynchronously
         );
         TaskCompletionSource<SpeedIndex> firstJobRelease = new(
-            creationOptions: TaskCreationOptions.RunContinuationsAsynchronously
+            TaskCreationOptions.RunContinuationsAsynchronously
         );
         int calibrateCallCount = 0;
 
         Mock<IHardwareBenchmark> mock = new();
-        mock.Setup(expression: b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
-            .Returns(valueFunction: async () =>
+        mock.Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
+            .Returns(async () =>
             {
-                Interlocked.Increment(location: ref calibrateCallCount);
+                Interlocked.Increment(ref calibrateCallCount);
                 firstJobStarted.TrySetResult();
                 return await firstJobRelease.Task;
             });
 
         using CancellationTokenSource shutdownCts = new();
         Mock<IHostApplicationLifetime> lifetime = new();
-        lifetime.Setup(expression: l => l.ApplicationStopping).Returns(value: shutdownCts.Token);
+        lifetime.Setup(l => l.ApplicationStopping).Returns(shutdownCts.Token);
 
-        BenchmarkJobTracker tracker = MakeTracker(benchmark: mock.Object, lifetime: lifetime.Object);
+        BenchmarkJobTracker tracker = MakeTracker(mock.Object, lifetime.Object);
 
-        BenchmarkJobStatus first = tracker.Start(codecs: [], resolutions: []);
+        BenchmarkJobStatus first = tracker.Start([], []);
         await firstJobStarted.Task; // first job now holds the gate, blocked inside CalibrateAsync
 
-        BenchmarkJobStatus second = tracker.Start(codecs: [], resolutions: []);
-        await Task.Delay(millisecondsDelay: 150); // let the second job queue behind _calibrationGate
+        BenchmarkJobStatus second = tracker.Start([], []);
+        await Task.Delay(150); // let the second job queue behind _calibrationGate
 
         await shutdownCts.CancelAsync();
-        await Task.Delay(millisecondsDelay: 150);
+        await Task.Delay(150);
 
-        tracker.Get(jobId: second.JobId)!.Status.Should().Be(expected: "cancelled");
-        tracker.Get(jobId: first.JobId)!.Status.Should().Be(expected: "running");
+        tracker.Get(second.JobId)!.Status.Should().Be("cancelled");
+        tracker.Get(first.JobId)!.Status.Should().Be("running");
 
         // Release the first job so the test doesn't leak a running task.
-        firstJobRelease.TrySetResult(result: new(Measurements: new()));
-        await Task.Delay(millisecondsDelay: 150);
+        firstJobRelease.TrySetResult(new(new()));
+        await Task.Delay(150);
 
-        calibrateCallCount.Should().Be(expected: 1); // second job's CalibrateAsync was never invoked
+        calibrateCallCount.Should().Be(1); // second job's CalibrateAsync was never invoked
     }
 }

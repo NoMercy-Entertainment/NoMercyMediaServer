@@ -23,13 +23,13 @@ public class DriveMonitorEventHandler : IDisposable
     public DriveMonitorEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
     {
         _clientMessenger = clientMessenger;
-        _subscriptions.Add(item: eventBus.Subscribe<DriveStateChangedEvent>(handler: OnDriveStateChanged));
+        _subscriptions.Add(eventBus.Subscribe<DriveStateChangedEvent>(OnDriveStateChanged));
     }
 
     internal async Task OnDriveStateChanged(DriveStateChangedEvent @event, CancellationToken ct)
     {
-        await _clientMessenger.SendToAll(name: "DriveState", endpoint: "ripperHub", data: @event.DriveStateData);
-        await _clientMessenger.SendToAll(name: "DriveState", endpoint: "drivesHub", data: @event.DriveStateData);
+        await _clientMessenger.SendToAll("DriveState", "ripperHub", @event.DriveStateData);
+        await _clientMessenger.SendToAll("DriveState", "drivesHub", @event.DriveStateData);
     }
 
     public void Dispose()

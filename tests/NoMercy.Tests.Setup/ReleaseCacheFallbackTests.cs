@@ -26,29 +26,29 @@ namespace NoMercy.Tests.Setup;
 /// serve cached metadata instead of returning empty (which previously left ffmpeg
 /// permanently un-installable), and must never block on GitHub's hourly reset window.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ReleaseCacheFallbackTests
 {
     private static GithubReleaseResponse BuildRelease(string tagName = "v1.2.3") =>
         new()
         {
             TagName = tagName,
-            PublishedAt = DateTimeOffset.UtcNow.AddDays(days: -1),
+            PublishedAt = DateTimeOffset.UtcNow.AddDays(-1),
             Assets =
             [
                 new()
                 {
                     Name = "asset.zip",
-                    BrowserDownloadUrl = new(uriString: "https://example.com/asset.zip"),
+                    BrowserDownloadUrl = new("https://example.com/asset.zip"),
                     Size = 42,
                 },
             ],
         };
 
     private static HttpResponseMessage SuccessResponse(GithubReleaseResponse release) =>
-        new(statusCode: HttpStatusCode.OK)
+        new(HttpStatusCode.OK)
         {
-            Content = new StringContent(content: JsonConvert.SerializeObject(value: release)),
+            Content = new StringContent(JsonConvert.SerializeObject(release)),
         };
 
     // A reset far in the future — larger than the 2-minute wait cap — so the very
@@ -56,22 +56,22 @@ public class ReleaseCacheFallbackTests
     // instead of sleeping. This is exactly the shape of GitHub's real hourly reset.
     private static HttpResponseMessage RateLimitedResponse()
     {
-        HttpResponseMessage response = new(statusCode: HttpStatusCode.Forbidden)
+        HttpResponseMessage response = new(HttpStatusCode.Forbidden)
         {
-            Content = new StringContent(content: "rate limit exceeded"),
+            Content = new StringContent("rate limit exceeded"),
         };
-        long resetUnix = DateTimeOffset.UtcNow.AddHours(hours: 1).ToUnixTimeSeconds();
-        response.Headers.Add(name: "X-RateLimit-Reset", value: resetUnix.ToString());
+        long resetUnix = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
+        response.Headers.Add("X-RateLimit-Reset", resetUnix.ToString());
         return response;
     }
 
     private static Binaries BuildBinaries(SequencedHttpHandler handler)
     {
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new(allowedRoots: [], driver: driver);
-        LocalStorage storage = new(driver: driver, guard: guard);
-        HttpClient http = new(handler: handler);
-        return new(driver: driver, storage: storage, httpClient: http);
+        StoragePathGuard guard = new([], driver);
+        LocalStorage storage = new(driver, guard);
+        HttpClient http = new(handler);
+        return new(driver, storage, http);
     }
 
     [Fact]
@@ -81,10 +81,10 @@ public class ReleaseCacheFallbackTests
             $"https://api.github.com/repos/nomercy-test/{Guid.NewGuid():N}/releases/latest";
 
         SequencedHttpHandler handler = new();
-        handler.Enqueue(factory: RateLimitedResponse);
-        Binaries binaries = BuildBinaries(handler: handler);
+        handler.Enqueue(RateLimitedResponse);
+        Binaries binaries = BuildBinaries(handler);
 
-        GithubReleaseResponse result = await binaries.GetLatestReleaseInfo(apiUrl: apiUrl);
+        GithubReleaseResponse result = await binaries.GetLatestReleaseInfo(apiUrl);
 
         result.Assets.Should().BeEmpty();
     }
@@ -94,26 +94,26 @@ public class ReleaseCacheFallbackTests
     {
         string apiUrl =
             $"https://api.github.com/repos/nomercy-test/{Guid.NewGuid():N}/releases/latest";
-        GithubReleaseResponse release = BuildRelease(tagName: "v9.9.9");
+        GithubReleaseResponse release = BuildRelease("v9.9.9");
 
         SequencedHttpHandler successHandler = new();
-        successHandler.Enqueue(factory: () => SuccessResponse(release: release));
-        Binaries successBinaries = BuildBinaries(handler: successHandler);
+        successHandler.Enqueue(() => SuccessResponse(release));
+        Binaries successBinaries = BuildBinaries(successHandler);
 
-        GithubReleaseResponse firstResult = await successBinaries.GetLatestReleaseInfo(apiUrl: apiUrl);
-        firstResult.Assets.Should().NotBeEmpty(because: "the live fetch succeeded and must be returned");
+        GithubReleaseResponse firstResult = await successBinaries.GetLatestReleaseInfo(apiUrl);
+        firstResult.Assets.Should().NotBeEmpty("the live fetch succeeded and must be returned");
 
         // A second, independent Binaries instance (fresh HttpClient) rate-limited on
         // the same apiUrl must read the cache the first instance wrote to disk —
         // proving the cache survives across instances/boots, not just in-process state.
         SequencedHttpHandler rateLimitedHandler = new();
-        rateLimitedHandler.Enqueue(factory: RateLimitedResponse);
-        Binaries rateLimitedBinaries = BuildBinaries(handler: rateLimitedHandler);
+        rateLimitedHandler.Enqueue(RateLimitedResponse);
+        Binaries rateLimitedBinaries = BuildBinaries(rateLimitedHandler);
 
-        GithubReleaseResponse cachedResult = await rateLimitedBinaries.GetLatestReleaseInfo(apiUrl: apiUrl);
+        GithubReleaseResponse cachedResult = await rateLimitedBinaries.GetLatestReleaseInfo(apiUrl);
 
         cachedResult.Assets.Should().NotBeEmpty();
-        cachedResult.TagName.Should().Be(expected: "v9.9.9");
+        cachedResult.TagName.Should().Be("v9.9.9");
     }
 
     [Fact]
@@ -121,25 +121,25 @@ public class ReleaseCacheFallbackTests
     {
         string apiUrl =
             $"https://api.github.com/repos/nomercy-test/{Guid.NewGuid():N}/releases/latest";
-        GithubReleaseResponse release = BuildRelease(tagName: "v4.5.6");
+        GithubReleaseResponse release = BuildRelease("v4.5.6");
 
         SequencedHttpHandler seedHandler = new();
-        seedHandler.Enqueue(factory: () => SuccessResponse(release: release));
-        await BuildBinaries(handler: seedHandler).GetLatestReleaseInfo(apiUrl: apiUrl);
+        seedHandler.Enqueue(() => SuccessResponse(release));
+        await BuildBinaries(seedHandler).GetLatestReleaseInfo(apiUrl);
 
         SequencedHttpHandler rateLimitedHandler = new();
-        rateLimitedHandler.Enqueue(factory: RateLimitedResponse);
-        Binaries binaries = BuildBinaries(handler: rateLimitedHandler);
+        rateLimitedHandler.Enqueue(RateLimitedResponse);
+        Binaries binaries = BuildBinaries(rateLimitedHandler);
 
         Stopwatch stopwatch = Stopwatch.StartNew();
-        GithubReleaseResponse result = await binaries.GetLatestReleaseInfo(apiUrl: apiUrl);
+        GithubReleaseResponse result = await binaries.GetLatestReleaseInfo(apiUrl);
         stopwatch.Stop();
 
         result.Assets.Should().NotBeEmpty();
         // The reset in RateLimitedResponse is an hour out — a broken bound would
         // sleep for that entire window (or the full backoff schedule). A few
         // seconds proves the cache short-circuited the wait instead.
-        stopwatch.Elapsed.Should().BeLessThan(expected: TimeSpan.FromSeconds(seconds: 10));
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
     }
 }
 
@@ -153,7 +153,7 @@ internal sealed class SequencedHttpHandler : HttpMessageHandler
 {
     private readonly Queue<Func<HttpResponseMessage>> _responses = new();
 
-    public void Enqueue(Func<HttpResponseMessage> factory) => _responses.Enqueue(item: factory);
+    public void Enqueue(Func<HttpResponseMessage> factory) => _responses.Enqueue(factory);
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
@@ -162,9 +162,9 @@ internal sealed class SequencedHttpHandler : HttpMessageHandler
     {
         if (_responses.Count == 0)
             throw new InvalidOperationException(
-                message: $"SequencedHttpHandler received an unexpected request to {request.RequestUri}"
+                $"SequencedHttpHandler received an unexpected request to {request.RequestUri}"
             );
 
-        return Task.FromResult(result: _responses.Dequeue()());
+        return Task.FromResult(_responses.Dequeue()());
     }
 }

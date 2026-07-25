@@ -30,7 +30,7 @@ public class SeasonExtrasJob : AbstractShowExtraDataJob<TmdbSeasonAppends, strin
     public SeasonExtrasJob() { }
 
     public SeasonExtrasJob(ILoggerFactory loggerFactory)
-        : base(loggerFactory: loggerFactory) { }
+        : base(loggerFactory) { }
 
     public override string QueueName => "extras";
     public override int Priority => 1;
@@ -40,21 +40,21 @@ public class SeasonExtrasJob : AbstractShowExtraDataJob<TmdbSeasonAppends, strin
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        SeasonRepository seasonRepository = new(context: context);
+        SeasonRepository seasonRepository = new(context);
         SeasonManager seasonManager = new(
-            seasonRepository: seasonRepository,
-            jobDispatcher: jobDispatcher,
-            logger: LoggerFactory.CreateLogger<SeasonManager>()
+            seasonRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<SeasonManager>()
         );
 
         PersonRepository personRepository = new(
-            context: context,
-            logger: LoggerFactory.CreateLogger<PersonRepository>()
+            context,
+            LoggerFactory.CreateLogger<PersonRepository>()
         );
         PersonManager personManager = new(
-            personRepository: personRepository,
-            jobDispatcher: jobDispatcher,
-            logger: LoggerFactory.CreateLogger<PersonManager>()
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
         );
 
         foreach (TmdbSeasonAppends season in Storage)
@@ -62,15 +62,15 @@ public class SeasonExtrasJob : AbstractShowExtraDataJob<TmdbSeasonAppends, strin
             // Bounded so a stalled TMDB/NFS call fails this season's pass
             // instead of hanging the whole job — see
             // JobOperationTimeoutExtensions.
-            await personManager.Store(season: season).WithTimeout(operationName: nameof(PersonManager.Store));
+            await personManager.Store(season).WithTimeout(nameof(PersonManager.Store));
             await seasonManager
-                .StoreImages(showName: Name, season: season)
-                .WithTimeout(operationName: nameof(SeasonManager.StoreImages));
+                .StoreImages(Name, season)
+                .WithTimeout(nameof(SeasonManager.StoreImages));
             await seasonManager
-                .StoreTranslations(showName: Name, season: season)
-                .WithTimeout(operationName: nameof(SeasonManager.StoreTranslations));
+                .StoreTranslations(Name, season)
+                .WithTimeout(nameof(SeasonManager.StoreTranslations));
         }
 
-        Log.LogTrace(message: "Show {Name}: Seasons: Images and Translations stored", args: Name);
+        Log.LogTrace("Show {Name}: Seasons: Images and Translations stored", Name);
     }
 }

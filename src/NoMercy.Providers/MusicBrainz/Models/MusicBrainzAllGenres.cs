@@ -15,12 +15,12 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzAllGenres
 {
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public MusicBrainzGenre[] Genres { get; set; } = [];
 
-    [JsonProperty(propertyName: "genre-offset")]
+    [JsonProperty("genre-offset")]
     public long GenreOffset { get; set; }
 
-    [JsonProperty(propertyName: "genre-count")]
+    [JsonProperty("genre-count")]
     public long GenreCount { get; set; }
 }

@@ -53,37 +53,37 @@ public static class ExtractionCommandBuilder
         List<string> args = ["-y", "-hide_banner"];
 
         if (attachments.Count > 0)
-            AddAttachmentDumpArgs(args: args, outputDirectory: outputDirectory, attachments: attachments, fontExtractor: fontExtractor, storage: storage);
+            AddAttachmentDumpArgs(args, outputDirectory, attachments, fontExtractor, storage);
 
         List<(string OutputPath, int SourceIndex)> bitmapOutputs = ResolveBitmapSubtitleOutputs(
-            plan: plan,
-            mediaInfo: mediaInfo,
-            outputDirectory: outputDirectory,
-            mediaTitle: mediaTitle,
-            subtitleExtractor: subtitleExtractor,
-            storage: storage
+            plan,
+            mediaInfo,
+            outputDirectory,
+            mediaTitle,
+            subtitleExtractor,
+            storage
         );
 
         if (attachments.Count == 0 && bitmapOutputs.Count == 0)
             return null;
 
-        args.Add(item: "-i");
-        args.Add(item: inputPath);
+        args.Add("-i");
+        args.Add(inputPath);
 
         if (bitmapOutputs.Count == 0)
         {
             // Attachments only — no real stream output, so ffmpeg needs a
             // sink to write to. Matches the previous font-only extraction.
-            args.Add(item: "-f");
-            args.Add(item: "null");
-            args.Add(item: "-");
+            args.Add("-f");
+            args.Add("null");
+            args.Add("-");
         }
         else
         {
-            AddBitmapSubtitleOutputArgs(args: args, bitmapOutputs: bitmapOutputs);
+            AddBitmapSubtitleOutputArgs(args, bitmapOutputs);
         }
 
-        return new(Executable: ffmpegPath, Arguments: args.ToArray(), WorkingDirectory: outputDirectory);
+        return new(ffmpegPath, args.ToArray(), outputDirectory);
     }
 
     // -dump_attachment is a pre-input flag, so these must be added before
@@ -101,15 +101,15 @@ public static class ExtractionCommandBuilder
         IStorage storage
     )
     {
-        string fontDir = storage.CombinePath(parent: outputDirectory, child: "fonts");
-        storage.CreateDirectory(path: fontDir);
+        string fontDir = storage.CombinePath(outputDirectory, "fonts");
+        storage.CreateDirectory(fontDir);
 
         foreach (
-            AttachmentDumpTarget target in fontExtractor.ResolveAttachmentDumpTargets(attachments: attachments)
+            AttachmentDumpTarget target in fontExtractor.ResolveAttachmentDumpTargets(attachments)
         )
         {
-            args.Add(item: $"-dump_attachment:{target.Index}");
-            args.Add(item: target.RelativePath);
+            args.Add($"-dump_attachment:{target.Index}");
+            args.Add(target.RelativePath);
         }
     }
 
@@ -120,14 +120,14 @@ public static class ExtractionCommandBuilder
     {
         foreach ((string outputPath, int sourceIndex) in bitmapOutputs)
         {
-            args.Add(item: "-map");
-            args.Add(item: $"0:s:{sourceIndex}");
-            args.Add(item: "-c:s");
-            args.Add(item: "copy");
+            args.Add("-map");
+            args.Add($"0:s:{sourceIndex}");
+            args.Add("-c:s");
+            args.Add("copy");
             // Must specify -f matroska explicitly — FFmpeg doesn't auto-detect .mks.
-            args.Add(item: "-f");
-            args.Add(item: "matroska");
-            args.Add(item: outputPath);
+            args.Add("-f");
+            args.Add("matroska");
+            args.Add(outputPath);
         }
     }
 
@@ -156,7 +156,7 @@ public static class ExtractionCommandBuilder
             if (subPlan.SourceIndex >= mediaInfo.SubtitleStreams.Count)
                 continue;
 
-            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[index: subPlan.SourceIndex];
+            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[subPlan.SourceIndex];
 
             // Text subtitles are muxed into the main command via
             // AddTextSubtitleOutputs — only bitmap subs are handled here.
@@ -164,21 +164,21 @@ public static class ExtractionCommandBuilder
                 continue;
 
             SubtitleOutputInfo info = subtitleExtractor.ResolveOutput(
-                plan: subPlan,
-                stream: stream,
-                outputDirectory: outputDirectory,
-                mediaTitle: mediaTitle
+                subPlan,
+                stream,
+                outputDirectory,
+                mediaTitle
             );
 
             // Ensure subtitle directory exists (storage-relative parent of OutputPath).
-            string? parentDir = storage.GetParent(path: info.OutputPath);
+            string? parentDir = storage.GetParent(info.OutputPath);
             if (parentDir is not null)
-                storage.CreateDirectory(path: storage.CombinePath(parent: outputDirectory, child: parentDir));
+                storage.CreateDirectory(storage.CombinePath(outputDirectory, parentDir));
 
             // Use MKS (Matroska) container for bitmap subs.
-            string outputPath = Path.ChangeExtension(path: info.OutputPath, extension: ".mks");
+            string outputPath = Path.ChangeExtension(info.OutputPath, ".mks");
 
-            outputs.Add(item: (outputPath, info.SourceIndex));
+            outputs.Add((outputPath, info.SourceIndex));
         }
 
         return outputs;

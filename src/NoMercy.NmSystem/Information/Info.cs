@@ -23,7 +23,7 @@ public static class Info
     // Eager on purpose: captures the moment the type is first touched (~app start).
     public static readonly DateTime StartTime = DateTime.UtcNow;
 
-    private static readonly Lazy<Guid> LazyDeviceId = new(valueFactory: Software.GetDeviceId);
+    private static readonly Lazy<Guid> LazyDeviceId = new(Software.GetDeviceId);
     private static Guid? _resolvedDeviceId;
 
     // Prefers the persisted/resolved server identity set by
@@ -39,41 +39,41 @@ public static class Info
         _resolvedDeviceId = id;
     }
 
-    private static readonly Lazy<string> LazyOs = new(valueFactory: () => RuntimeInformation.OSDescription);
+    private static readonly Lazy<string> LazyOs = new(() => RuntimeInformation.OSDescription);
     public static string Os => LazyOs.Value;
 
-    private static readonly Lazy<string> LazyPlatform = new(valueFactory: Software.GetPlatform);
+    private static readonly Lazy<string> LazyPlatform = new(Software.GetPlatform);
     public static string Platform => LazyPlatform.Value;
 
-    private static readonly Lazy<string> LazyArchitecture = new(valueFactory: () =>
+    private static readonly Lazy<string> LazyArchitecture = new(() =>
         RuntimeInformation.ProcessArchitecture.ToString()
     );
     public static string Architecture => LazyArchitecture.Value;
 
-    private static readonly Lazy<List<string>> LazyCpuVendors = new(valueFactory: Cpu.Vendors);
+    private static readonly Lazy<List<string>> LazyCpuVendors = new(Cpu.Vendors);
     public static List<string> CpuVendors => LazyCpuVendors.Value;
 
-    private static readonly Lazy<List<string>> LazyCpuNames = new(valueFactory: Cpu.Names);
+    private static readonly Lazy<List<string>> LazyCpuNames = new(Cpu.Names);
     public static List<string> CpuNames => LazyCpuNames.Value;
 
-    private static readonly Lazy<List<string>> LazyGpuVendors = new(valueFactory: Gpu.Vendors);
+    private static readonly Lazy<List<string>> LazyGpuVendors = new(Gpu.Vendors);
     public static List<string> GpuVendors => LazyGpuVendors.Value;
 
-    private static readonly Lazy<List<string>> LazyGpuNames = new(valueFactory: Gpu.Names);
+    private static readonly Lazy<List<string>> LazyGpuNames = new(Gpu.Names);
     public static List<string> GpuNames => LazyGpuNames.Value;
 
-    private static readonly Lazy<string?> LazyOsVersion = new(valueFactory: Software.GetSystemVersion);
+    private static readonly Lazy<string?> LazyOsVersion = new(Software.GetSystemVersion);
     public static string? OsVersion => LazyOsVersion.Value;
 
-    private static readonly Lazy<DateTime> LazyBootTime = new(valueFactory: Software.GetBootTime);
+    private static readonly Lazy<DateTime> LazyBootTime = new(Software.GetBootTime);
     public static DateTime BootTime => LazyBootTime.Value;
 
-    private static readonly Lazy<string> LazyExecSuffix = new(valueFactory: () =>
+    private static readonly Lazy<string> LazyExecSuffix = new(() =>
         Platform == "windows" ? ".exe" : ""
     );
     public static string ExecSuffix => LazyExecSuffix.Value;
 
-    private static readonly Lazy<string> LazyIconSuffix = new(valueFactory: () =>
+    private static readonly Lazy<string> LazyIconSuffix = new(() =>
         Platform == "windows" ? ".ico"
         : Platform == "macos" ? ".icns"
         : ".png"

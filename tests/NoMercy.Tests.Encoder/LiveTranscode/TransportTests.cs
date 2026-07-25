@@ -29,19 +29,19 @@ public class TransportTests
 {
     private static LiveQuality MakeQuality(string id = "720p") =>
         new(
-            Id: id,
-            Label: id,
-            Width: 1280,
-            Height: 720,
-            Codec: VideoCodecType.H264,
-            BitrateKbps: 3000,
-            Encoder: "libx264",
-            IsHardwareAccelerated: false,
-            ExpectedSpeed: 2.0,
-            CanRealtime: true
+            id,
+            id,
+            1280,
+            720,
+            VideoCodecType.H264,
+            3000,
+            "libx264",
+            false,
+            2.0,
+            true
         );
 
-    private static LiveSession MakeSession(string id = "sess-001") => new(sessionId: id, quality: MakeQuality());
+    private static LiveSession MakeSession(string id = "sess-001") => new(id, MakeQuality());
 
     // ──────────────────────────────────────────────────────────────────────────
     // NoOp transport
@@ -53,7 +53,7 @@ public class TransportTests
         NoOpLiveSessionTransport transport = new();
 
         Func<Task> act = () =>
-            transport.SendToClientAsync(sessionId: "s1", message: new HeartbeatMessage(), ct: CancellationToken.None);
+            transport.SendToClientAsync("s1", new HeartbeatMessage(), CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }
@@ -68,32 +68,32 @@ public class TransportTests
         CapturingTransport transport = new();
         NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         LiveStreamingService service = new(
-            logger: NullLogger<LiveStreamingService>.Instance,
-            storage: storage,
-            segmentInventory: TestStorageFactory.CreateSegmentInventory(storage: storage),
-            transport: transport
+            NullLogger<LiveStreamingService>.Instance,
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage),
+            transport
         );
 
-        LiveSession session = MakeSession(id: "drain-test");
-        service.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 6));
+        LiveSession session = MakeSession("drain-test");
+        service.Register(session, TimeSpan.FromSeconds(6));
 
-        Segment seg = new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 6), FilePath: "/tmp/seg.ts", SizeBytes: 512);
-        session.PushSegment(segment: seg);
+        Segment seg = new(0, TimeSpan.Zero, TimeSpan.FromSeconds(6), "/tmp/seg.ts", 512);
+        session.PushSegment(seg);
         session.Complete();
 
-        await WaitForConditionAsync(condition: () =>
+        await WaitForConditionAsync(() =>
         {
-            return service.TryGetRuntime(sessionId: session.SessionId, runtime: out LiveRuntimeSession r)
+            return service.TryGetRuntime(session.SessionId, out LiveRuntimeSession r)
                 && r.SnapshotSegments().Count >= 1
                 && transport.Sent.Count >= 1;
         });
 
-        transport.Sent.Should().ContainSingle(predicate: m => m is SegmentReadyMessage);
-        SegmentReadyMessage sent = (SegmentReadyMessage)transport.Sent[index: 0];
-        sent.Index.Should().Be(expected: 0);
-        sent.DurationSeconds.Should().BeApproximately(expectedValue: 6.0, precision: 0.001);
-        sent.SizeBytes.Should().Be(expected: 512);
-        sent.RelativeUrl.Should().Contain(expected: "drain-test");
+        transport.Sent.Should().ContainSingle(m => m is SegmentReadyMessage);
+        SegmentReadyMessage sent = (SegmentReadyMessage)transport.Sent[0];
+        sent.Index.Should().Be(0);
+        sent.DurationSeconds.Should().BeApproximately(6.0, 0.001);
+        sent.SizeBytes.Should().Be(512);
+        sent.RelativeUrl.Should().Contain("drain-test");
     }
 
     [Fact]
@@ -101,26 +101,26 @@ public class TransportTests
     {
         NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         LiveStreamingService service = new(
-            logger: NullLogger<LiveStreamingService>.Instance,
-            storage: storage,
-            segmentInventory: TestStorageFactory.CreateSegmentInventory(storage: storage)
+            NullLogger<LiveStreamingService>.Instance,
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage)
         );
 
-        LiveSession session = MakeSession(id: "noop-test");
-        service.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 6));
+        LiveSession session = MakeSession("noop-test");
+        service.Register(session, TimeSpan.FromSeconds(6));
 
-        Segment seg = new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 6), FilePath: "/tmp/seg.ts", SizeBytes: 100);
-        session.PushSegment(segment: seg);
+        Segment seg = new(0, TimeSpan.Zero, TimeSpan.FromSeconds(6), "/tmp/seg.ts", 100);
+        session.PushSegment(seg);
         session.Complete();
 
-        await WaitForConditionAsync(condition: () =>
+        await WaitForConditionAsync(() =>
         {
-            return service.TryGetRuntime(sessionId: session.SessionId, runtime: out LiveRuntimeSession r)
+            return service.TryGetRuntime(session.SessionId, out LiveRuntimeSession r)
                 && r.SnapshotSegments().Count >= 1;
         });
 
-        service.TryGetRuntime(sessionId: session.SessionId, runtime: out LiveRuntimeSession runtime).Should().BeTrue();
-        runtime.TryGetSegment(index: 0, segment: out _).Should().BeTrue();
+        service.TryGetRuntime(session.SessionId, out LiveRuntimeSession runtime).Should().BeTrue();
+        runtime.TryGetSegment(0, out _).Should().BeTrue();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -133,31 +133,31 @@ public class TransportTests
         CapturingTransport transport = new();
         NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         LiveStreamingService service = new(
-            logger: NullLogger<LiveStreamingService>.Instance,
-            storage: storage,
-            segmentInventory: TestStorageFactory.CreateSegmentInventory(storage: storage),
-            transport: transport
+            NullLogger<LiveStreamingService>.Instance,
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage),
+            transport
         );
 
-        LiveSession session = MakeSession(id: "reaper-test");
-        service.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = MakeSession("reaper-test");
+        service.Register(session, TimeSpan.FromSeconds(4));
 
-        BackdateLastAccess(service: service, sessionId: session.SessionId, age: TimeSpan.FromMinutes(minutes: 10));
+        BackdateLastAccess(service, session.SessionId, TimeSpan.FromMinutes(10));
 
         Mock<ISessionManager> managerMock = new();
         LiveSessionIdleReaper reaper = new(
-            streamingService: service,
-            sessionManager: managerMock.Object,
-            limits: new() { IdleTimeoutMinutes = 5 },
-            logger: NullLogger<LiveSessionIdleReaper>.Instance,
-            transport: transport
+            service,
+            managerMock.Object,
+            new() { IdleTimeoutMinutes = 5 },
+            NullLogger<LiveSessionIdleReaper>.Instance,
+            transport
         );
 
         await reaper.SweepAsync();
 
-        transport.Sent.Should().ContainSingle(predicate: m => m is SessionEndedMessage);
-        SessionEndedMessage ended = (SessionEndedMessage)transport.Sent[index: 0];
-        ended.Reason.Should().Be(expected: SessionEndReason.ClientDisconnected);
+        transport.Sent.Should().ContainSingle(m => m is SessionEndedMessage);
+        SessionEndedMessage ended = (SessionEndedMessage)transport.Sent[0];
+        ended.Reason.Should().Be(SessionEndReason.ClientDisconnected);
     }
 
     [Fact]
@@ -165,28 +165,28 @@ public class TransportTests
     {
         NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         LiveStreamingService service = new(
-            logger: NullLogger<LiveStreamingService>.Instance,
-            storage: storage,
-            segmentInventory: TestStorageFactory.CreateSegmentInventory(storage: storage)
+            NullLogger<LiveStreamingService>.Instance,
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage)
         );
 
-        LiveSession session = MakeSession(id: "reaper-null");
-        service.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        LiveSession session = MakeSession("reaper-null");
+        service.Register(session, TimeSpan.FromSeconds(4));
 
-        BackdateLastAccess(service: service, sessionId: session.SessionId, age: TimeSpan.FromMinutes(minutes: 10));
+        BackdateLastAccess(service, session.SessionId, TimeSpan.FromMinutes(10));
 
         Mock<ISessionManager> managerMock = new();
         LiveSessionIdleReaper reaper = new(
-            streamingService: service,
-            sessionManager: managerMock.Object,
-            limits: new() { IdleTimeoutMinutes = 5 },
-            logger: NullLogger<LiveSessionIdleReaper>.Instance
+            service,
+            managerMock.Object,
+            new() { IdleTimeoutMinutes = 5 },
+            NullLogger<LiveSessionIdleReaper>.Instance
         );
 
         await reaper.SweepAsync();
 
-        service.ActiveSessionIds.Should().NotContain(unexpected: session.SessionId);
-        managerMock.Verify(expression: m => m.RemoveSession(session.SessionId), times: Times.Once);
+        service.ActiveSessionIds.Should().NotContain(session.SessionId);
+        managerMock.Verify(m => m.RemoveSession(session.SessionId), Times.Once);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -197,43 +197,43 @@ public class TransportTests
     public async Task BufferAdaptiveService_PushesQualityChangedMessage_WithAutoAdaptiveReason()
     {
         CapturingTransport transport = new();
-        LiveQuality newQuality = MakeQuality(id: "480p");
+        LiveQuality newQuality = MakeQuality("480p");
 
         transport.Sent.Should().BeEmpty();
 
         await transport.SendToClientAsync(
-            sessionId: "adaptive-test",
-            message: new QualityChangedMessage(
-                NewQuality: newQuality,
-                Reason: QualityChangeReason.AutoAdaptive
+            "adaptive-test",
+            new QualityChangedMessage(
+                newQuality,
+                QualityChangeReason.AutoAdaptive
             ),
-            ct: CancellationToken.None
+            CancellationToken.None
         );
 
-        transport.Sent.Should().ContainSingle(predicate: m => m is QualityChangedMessage);
-        QualityChangedMessage msg = (QualityChangedMessage)transport.Sent[index: 0];
-        msg.Reason.Should().Be(expected: QualityChangeReason.AutoAdaptive);
-        msg.NewQuality.Id.Should().Be(expected: "480p");
+        transport.Sent.Should().ContainSingle(m => m is QualityChangedMessage);
+        QualityChangedMessage msg = (QualityChangedMessage)transport.Sent[0];
+        msg.Reason.Should().Be(QualityChangeReason.AutoAdaptive);
+        msg.NewQuality.Id.Should().Be("480p");
     }
 
     [Fact]
     public async Task BufferAdaptiveService_UserRequestedQuality_HasCorrectReason()
     {
         CapturingTransport transport = new();
-        LiveQuality newQuality = MakeQuality(id: "1080p");
+        LiveQuality newQuality = MakeQuality("1080p");
 
         await transport.SendToClientAsync(
-            sessionId: "user-test",
-            message: new QualityChangedMessage(
-                NewQuality: newQuality,
-                Reason: QualityChangeReason.UserRequested
+            "user-test",
+            new QualityChangedMessage(
+                newQuality,
+                QualityChangeReason.UserRequested
             ),
-            ct: CancellationToken.None
+            CancellationToken.None
         );
 
-        transport.Sent.Should().ContainSingle(predicate: m => m is QualityChangedMessage);
-        QualityChangedMessage msg = (QualityChangedMessage)transport.Sent[index: 0];
-        msg.Reason.Should().Be(expected: QualityChangeReason.UserRequested);
+        transport.Sent.Should().ContainSingle(m => m is QualityChangedMessage);
+        QualityChangedMessage msg = (QualityChangedMessage)transport.Sent[0];
+        msg.Reason.Should().Be(QualityChangeReason.UserRequested);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -246,16 +246,16 @@ public class TransportTests
         CapturingTransport transport = new();
 
         TranscodeErrorMessage message = new(
-            Kind: EncodingErrorKind.ProcessCrashed,
-            Message: "FFmpeg exited with code 1",
-            Recoverable: false
+            EncodingErrorKind.ProcessCrashed,
+            "FFmpeg exited with code 1",
+            false
         );
 
-        await transport.SendToClientAsync(sessionId: "error-test", message: message, ct: CancellationToken.None);
+        await transport.SendToClientAsync("error-test", message, CancellationToken.None);
 
-        transport.Sent.Should().ContainSingle(predicate: m => m is TranscodeErrorMessage);
-        TranscodeErrorMessage received = (TranscodeErrorMessage)transport.Sent[index: 0];
-        received.Kind.Should().Be(expected: EncodingErrorKind.ProcessCrashed);
+        transport.Sent.Should().ContainSingle(m => m is TranscodeErrorMessage);
+        TranscodeErrorMessage received = (TranscodeErrorMessage)transport.Sent[0];
+        received.Kind.Should().Be(EncodingErrorKind.ProcessCrashed);
         received.Recoverable.Should().BeFalse();
     }
 
@@ -268,14 +268,14 @@ public class TransportTests
     {
         CapturingTransport transport = new();
 
-        SeekCompletedMessage message = new(NewPositionSeconds: 120.0, FirstSegmentIndex: 20);
+        SeekCompletedMessage message = new(120.0, 20);
 
-        await transport.SendToClientAsync(sessionId: "seek-test", message: message, ct: CancellationToken.None);
+        await transport.SendToClientAsync("seek-test", message, CancellationToken.None);
 
-        transport.Sent.Should().ContainSingle(predicate: m => m is SeekCompletedMessage);
-        SeekCompletedMessage received = (SeekCompletedMessage)transport.Sent[index: 0];
-        received.NewPositionSeconds.Should().Be(expected: 120.0);
-        received.FirstSegmentIndex.Should().Be(expected: 20);
+        transport.Sent.Should().ContainSingle(m => m is SeekCompletedMessage);
+        SeekCompletedMessage received = (SeekCompletedMessage)transport.Sent[0];
+        received.NewPositionSeconds.Should().Be(120.0);
+        received.FirstSegmentIndex.Should().Be(20);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -283,10 +283,10 @@ public class TransportTests
     // ──────────────────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: SessionEndReason.ClientDisconnected)]
-    [InlineData(data: SessionEndReason.Completed)]
-    [InlineData(data: SessionEndReason.Error)]
-    [InlineData(data: SessionEndReason.ServerShutdown)]
+    [InlineData(SessionEndReason.ClientDisconnected)]
+    [InlineData(SessionEndReason.Completed)]
+    [InlineData(SessionEndReason.Error)]
+    [InlineData(SessionEndReason.ServerShutdown)]
     public async Task SessionEndedMessage_AllReasons_RoundTripThroughTransport(
         SessionEndReason reason
     )
@@ -294,14 +294,14 @@ public class TransportTests
         CapturingTransport transport = new();
 
         await transport.SendToClientAsync(
-            sessionId: "session-end",
-            message: new SessionEndedMessage(Reason: reason),
-            ct: CancellationToken.None
+            "session-end",
+            new SessionEndedMessage(reason),
+            CancellationToken.None
         );
 
-        transport.Sent.Should().ContainSingle(predicate: m => m is SessionEndedMessage);
-        SessionEndedMessage received = (SessionEndedMessage)transport.Sent[index: 0];
-        received.Reason.Should().Be(expected: reason);
+        transport.Sent.Should().ContainSingle(m => m is SessionEndedMessage);
+        SessionEndedMessage received = (SessionEndedMessage)transport.Sent[0];
+        received.Reason.Should().Be(reason);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -314,31 +314,31 @@ public class TransportTests
         TimeSpan age
     )
     {
-        if (!service.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
+        if (!service.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
             return;
 
         FieldInfo? field = typeof(LiveRuntimeSession).GetField(
-            name: "_lastAccessTicks",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "_lastAccessTicks",
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
         if (field is null)
             return;
 
         long backdatedTicks = (DateTime.UtcNow - age).Ticks;
-        field.SetValue(obj: runtime, value: backdatedTicks);
+        field.SetValue(runtime, backdatedTicks);
     }
 
     private static async Task WaitForConditionAsync(Func<bool> condition, int timeoutMs = 3000)
     {
-        DateTime deadline = DateTime.UtcNow.AddMilliseconds(value: timeoutMs);
+        DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
         while (DateTime.UtcNow < deadline)
         {
             if (condition())
                 return;
-            await Task.Delay(millisecondsDelay: 10);
+            await Task.Delay(10);
         }
-        condition().Should().BeTrue(because: "the condition should have been met within the timeout");
+        condition().Should().BeTrue("the condition should have been met within the timeout");
     }
 }
 
@@ -353,7 +353,7 @@ public sealed class CapturingTransport : ILiveSessionTransport
 
     public Task SendToClientAsync(string sessionId, object message, CancellationToken ct)
     {
-        _sent.Add(item: message);
+        _sent.Add(message);
         return Task.CompletedTask;
     }
 }

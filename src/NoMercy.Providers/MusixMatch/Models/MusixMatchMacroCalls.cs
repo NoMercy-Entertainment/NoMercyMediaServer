@@ -15,18 +15,18 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchMacroCalls
 {
-    [JsonProperty(propertyName: "track.lyrics.get")]
+    [JsonProperty("track.lyrics.get")]
     public MusixMatchTrackLyricsGet? TrackLyricsGet { get; set; }
 
-    [JsonProperty(propertyName: "track.snippet.get")]
+    [JsonProperty("track.snippet.get")]
     public MusixMatchTrackSnippetGet? TrackSnippetGet { get; set; }
 
-    [JsonProperty(propertyName: "track.subtitles.get")]
+    [JsonProperty("track.subtitles.get")]
     public MusixMatchTrackSubtitlesGet? TrackSubtitlesGet { get; set; }
 
-    [JsonProperty(propertyName: "userblob.get")]
+    [JsonProperty("userblob.get")]
     public MusixMatchUserBlobGet? UserBlobGet { get; set; }
 
-    [JsonProperty(propertyName: "matcher.track.get")]
+    [JsonProperty("matcher.track.get")]
     public MusixMatchMatcherTrackGet? MatcherTrackGet { get; set; }
 }

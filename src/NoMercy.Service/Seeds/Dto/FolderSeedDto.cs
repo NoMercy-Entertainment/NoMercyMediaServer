@@ -15,6 +15,6 @@ namespace NoMercy.Service.Seeds.Dto;
 
 public class FolderSeedDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Ulid Id { get; set; }
 }

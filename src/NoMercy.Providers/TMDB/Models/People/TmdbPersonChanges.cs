@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonChanges
 {
-    [JsonProperty(propertyName: "changes")]
+    [JsonProperty("changes")]
     public TmdbPersonChange[] Changes { get; set; } = [];
 }

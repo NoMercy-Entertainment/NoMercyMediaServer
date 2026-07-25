@@ -36,8 +36,8 @@ public record DiscInfo(
     /// </summary>
     public int MainTitleDurationSec =>
         (
-            Titles.FirstOrDefault(predicate: t => t.IsMainFeature)
-            ?? Titles.OrderByDescending(keySelector: t => t.Duration).FirstOrDefault()
+            Titles.FirstOrDefault(t => t.IsMainFeature)
+            ?? Titles.OrderByDescending(t => t.Duration).FirstOrDefault()
         )
             ?.Duration
             .TotalSeconds

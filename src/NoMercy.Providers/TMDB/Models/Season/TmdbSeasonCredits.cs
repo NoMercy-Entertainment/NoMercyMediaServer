@@ -16,9 +16,9 @@ namespace NoMercy.Providers.TMDB.Models.Season;
 
 public class TmdbSeasonCredits
 {
-    [JsonProperty(propertyName: "cast")]
+    [JsonProperty("cast")]
     public TmdbCast[] Cast { get; set; } = [];
 
-    [JsonProperty(propertyName: "crew")]
+    [JsonProperty("crew")]
     public TmdbCrew[] Crew { get; set; } = [];
 }

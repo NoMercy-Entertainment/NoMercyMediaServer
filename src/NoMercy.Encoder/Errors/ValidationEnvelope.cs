@@ -23,7 +23,7 @@ public sealed record ValidationEnvelope(
 )
 {
     /// <summary>Empty success envelope — no rules, no errors, no warnings.</summary>
-    public static ValidationEnvelope Ok() => new(Valid: true, Errors: [], Warnings: []);
+    public static ValidationEnvelope Ok() => new(true, [], []);
 
     /// <summary>
     /// Bucket a flat list of rules into errors + warnings + info,
@@ -39,11 +39,11 @@ public sealed record ValidationEnvelope(
         foreach (EncoderRule rule in rules)
         {
             if (rule.Severity == EncoderRuleSeverity.Error)
-                errors.Add(item: rule);
+                errors.Add(rule);
             else
-                warnings.Add(item: rule);
+                warnings.Add(rule);
         }
 
-        return new(Valid: errors.Count == 0, Errors: errors, Warnings: warnings);
+        return new(errors.Count == 0, errors, warnings);
     }
 }

@@ -61,7 +61,7 @@ public class BuildStage(
         CancellationToken ct
     )
     {
-        logger.LogInformation(message: "[{CorrelationId}] Building FFmpeg commands", args: context.CorrelationId);
+        logger.LogInformation("[{CorrelationId}] Building FFmpeg commands", context.CorrelationId);
 
         try
         {
@@ -69,22 +69,22 @@ public class BuildStage(
             // available; fall back to the DI-injected singleton for default installs.
             IStorage effectiveStorage = context.DestinationStorage ?? storage;
 
-            input = await ApplyDrmPreparationAsync(input: input, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+            input = await ApplyDrmPreparationAsync(input, ct).ConfigureAwait(false);
             // Pass 1 of a 2-pass encode: video-only analysis to the stats file,
             // no audio / subtitles / sprite / font-extraction outputs. The
             // Pass1VariantIndex selects which variant to analyze — the strategy
             // loops 0..N-1 for multi-variant profiles.
             if (input.Pass == EncodingPass.One)
             {
-                if (string.IsNullOrWhiteSpace(value: input.StatsFilePath))
+                if (string.IsNullOrWhiteSpace(input.StatsFilePath))
                 {
                     return new StageFailure(
-                        Error: new(
-                            Kind: EncodingErrorKind.Unknown,
-                            Message: "Pass 1 requires StatsFilePath to be set.",
-                            FfmpegStderr: null,
-                            StageName: Name,
-                            Recoverable: false
+                        new(
+                            EncodingErrorKind.Unknown,
+                            "Pass 1 requires StatsFilePath to be set.",
+                            null,
+                            Name,
+                            false
                         )
                     );
                 }
@@ -92,12 +92,12 @@ public class BuildStage(
                 if (input.Plan.OutputPlan.VideoOutputs.Length == 0)
                 {
                     return new StageFailure(
-                        Error: new(
-                            Kind: EncodingErrorKind.Unknown,
-                            Message: "2-pass requires at least one video output.",
-                            FfmpegStderr: null,
-                            StageName: Name,
-                            Recoverable: false
+                        new(
+                            EncodingErrorKind.Unknown,
+                            "2-pass requires at least one video output.",
+                            null,
+                            Name,
+                            false
                         )
                     );
                 }
@@ -108,32 +108,32 @@ public class BuildStage(
                 )
                 {
                     return new StageFailure(
-                        Error: new(
-                            Kind: EncodingErrorKind.Unknown,
-                            Message: $"Pass1VariantIndex {input.Pass1VariantIndex} is out of range for "
+                        new(
+                            EncodingErrorKind.Unknown,
+                            $"Pass1VariantIndex {input.Pass1VariantIndex} is out of range for "
                                      + $"profile with {input.Plan.OutputPlan.VideoOutputs.Length} variants.",
-                            FfmpegStderr: null,
-                            StageName: Name,
-                            Recoverable: false
+                            null,
+                            Name,
+                            false
                         )
                     );
                 }
 
                 string variantStats = TwoPassCommandBuilder.VariantStatsPath(
-                    basePath: input.StatsFilePath!,
-                    variantIndex: input.Pass1VariantIndex
+                    input.StatsFilePath!,
+                    input.Pass1VariantIndex
                 );
 
                 FfmpegCommand pass1 = TwoPassCommandBuilder.BuildPass1Command(
-                    plan: input.Plan.OutputPlan,
-                    mediaInfo: context.MediaInfo,
-                    inputPath: input.InputPath,
-                    outputDirectory: input.OutputDirectory,
-                    statsFilePath: variantStats,
-                    ffmpegPath: options.FfmpegPath,
-                    variantIndex: input.Pass1VariantIndex
+                    input.Plan.OutputPlan,
+                    context.MediaInfo,
+                    input.InputPath,
+                    input.OutputDirectory,
+                    variantStats,
+                    options.FfmpegPath,
+                    input.Pass1VariantIndex
                 );
-                return new StageSuccess<FfmpegCommand[]>(Value: [pass1]);
+                return new StageSuccess<FfmpegCommand[]>([pass1]);
             }
 
             // Chapter-still extraction: one single-frame WebP per chapter at
@@ -148,31 +148,31 @@ public class BuildStage(
                 if (chapterIndex < 0 || chapterIndex >= input.Plan.OutputPlan.Chapters.Count)
                 {
                     return new StageFailure(
-                        Error: new(
-                            Kind: EncodingErrorKind.Unknown,
-                            Message: $"Chapter index {chapterIndex} is out of range "
+                        new(
+                            EncodingErrorKind.Unknown,
+                            $"Chapter index {chapterIndex} is out of range "
                                      + $"(plan has {input.Plan.OutputPlan.Chapters.Count} chapters).",
-                            FfmpegStderr: null,
-                            StageName: Name,
-                            Recoverable: false
+                            null,
+                            Name,
+                            false
                         )
                     );
                 }
 
-                effectiveStorage.CreateDirectory(path: input.OutputDirectory);
+                effectiveStorage.CreateDirectory(input.OutputDirectory);
                 effectiveStorage.CreateDirectory(
-                    path: effectiveStorage.CombinePath(parent: input.OutputDirectory, child: "chapters")
+                    effectiveStorage.CombinePath(input.OutputDirectory, "chapters")
                 );
 
-                ChapterInfo chapter = input.Plan.OutputPlan.Chapters[index: chapterIndex];
+                ChapterInfo chapter = input.Plan.OutputPlan.Chapters[chapterIndex];
                 FfmpegCommand chapterCmd = BuildChapterStillCommand(
-                    ffmpegPath: options.FfmpegPath,
-                    inputPath: input.InputPath,
-                    outputDirectory: input.OutputDirectory,
-                    chapterIndex: chapterIndex,
-                    timestamp: chapter.Start
+                    options.FfmpegPath,
+                    input.InputPath,
+                    input.OutputDirectory,
+                    chapterIndex,
+                    chapter.Start
                 );
-                return new StageSuccess<FfmpegCommand[]>(Value: [chapterCmd]);
+                return new StageSuccess<FfmpegCommand[]>([chapterCmd]);
             }
 
             // Per-task slicing: when a DecomposedTask is supplied, prune the
@@ -210,23 +210,23 @@ public class BuildStage(
             {
                 DecomposedTask taskFilter = input.TaskFilter!;
                 OutputPlan sliced = BuildStageSlicing.SliceForTask(
-                    plan: input.Plan.OutputPlan,
-                    task: taskFilter
+                    input.Plan.OutputPlan,
+                    taskFilter
                 );
                 input = input with { Plan = input.Plan with { OutputPlan = sliced } };
                 logger.LogInformation(
-                    message: "[{CorrelationId}] Sliced plan for {Kind} task #{Idx}: {V} video / {A} audio / {S} sub / thumbs={T}", args: [context.CorrelationId, taskFilter.Kind, taskFilter.OutputIndex, sliced.VideoOutputs.Length, sliced.AudioOutputs.Length, sliced.SubtitleOutputs.Length, sliced.Thumbnails is not null]
+                    "[{CorrelationId}] Sliced plan for {Kind} task #{Idx}: {V} video / {A} audio / {S} sub / thumbs={T}", [context.CorrelationId, taskFilter.Kind, taskFilter.OutputIndex, sliced.VideoOutputs.Length, sliced.AudioOutputs.Length, sliced.SubtitleOutputs.Length, sliced.Thumbnails is not null]
                 );
             }
 
-            IOutputStrategy strategy = outputStrategyFactory.Resolve(format: input.Plan.OutputPlan.Format);
+            IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.OutputPlan.Format);
 
             // Ensure output subdirectories exist before FFmpeg runs
-            effectiveStorage.CreateDirectory(path: input.OutputDirectory);
-            foreach (string subDir in strategy.GetOutputSubdirectories(plan: input.Plan.OutputPlan))
+            effectiveStorage.CreateDirectory(input.OutputDirectory);
+            foreach (string subDir in strategy.GetOutputSubdirectories(input.Plan.OutputPlan))
             {
                 effectiveStorage.CreateDirectory(
-                    path: effectiveStorage.CombinePath(parent: input.OutputDirectory, child: subDir)
+                    effectiveStorage.CombinePath(input.OutputDirectory, subDir)
                 );
             }
 
@@ -234,24 +234,24 @@ public class BuildStage(
             if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0)
             {
                 effectiveStorage.CreateDirectory(
-                    path: effectiveStorage.CombinePath(parent: input.OutputDirectory, child: "subtitles")
+                    effectiveStorage.CombinePath(input.OutputDirectory, "subtitles")
                 );
             }
 
             FfmpegCommandBuilder builder = new();
-            builder.WithGlobalExtraFlags(flags: input.Plan.OutputPlan.GlobalExtraFlags);
+            builder.WithGlobalExtraFlags(input.Plan.OutputPlan.GlobalExtraFlags);
 
-            TimeSpan? resumeSeek = ResolveResumeSeek(resumeFromMs: input.ResumeFromMs);
-            bool useGpuResident = FilterGraphAssembler.UsesGpuResidentPath(plan: input.Plan.OutputPlan);
+            TimeSpan? resumeSeek = ResolveResumeSeek(input.ResumeFromMs);
+            bool useGpuResident = FilterGraphAssembler.UsesGpuResidentPath(input.Plan.OutputPlan);
             builder.AddInput(
-                input: new(
-                    FilePath: input.InputPath,
-                    SeekTo: resumeSeek,
-                    Duration: input.DurationLimit,
-                    HwAccelDevice: useGpuResident
+                new(
+                    input.InputPath,
+                    resumeSeek,
+                    input.DurationLimit,
+                    useGpuResident
                         ? input.Plan.OutputPlan.GpuAccel!.HwAccelDevice
                         : null,
-                    HwAccelOutputFormat: useGpuResident
+                    useGpuResident
                         ? input.Plan.OutputPlan.GpuAccel!.HwAccelOutputFormat
                         : null
                 )
@@ -267,8 +267,8 @@ public class BuildStage(
             {
                 if (!sub.IsExactMatch)
                     continue;
-                builder.AddInput(input: new(FilePath: sub.LocalPath));
-                exactMatchSubs.Add(item: (acquiredInputIndex, sub));
+                builder.AddInput(new(sub.LocalPath));
+                exactMatchSubs.Add((acquiredInputIndex, sub));
                 acquiredInputIndex++;
             }
 
@@ -276,18 +276,18 @@ public class BuildStage(
             // entry and choose between the ASS filter path and the PGS
             // overlay path before building the filter graph.
             SubtitleOutputPlan? burnInPlan = input.Plan.OutputPlan.SubtitleOutputs.FirstOrDefault(
-                predicate: s => s.Policy == SubtitlePolicy.BurnIn
+                s => s.Policy == SubtitlePolicy.BurnIn
             );
 
             if (burnInPlan is not null)
             {
                 context.DecisionsOrNoOp.Add(
-                    entry: new(
-                        Stage: Name,
-                        Key: EncoderRuleId.SubtitlesBurnInPermanent,
-                        Message: "Subtitle stream will be burned permanently into video frames. "
+                    new(
+                        Name,
+                        EncoderRuleId.SubtitlesBurnInPermanent,
+                        "Subtitle stream will be burned permanently into video frames. "
                             + "The resulting output cannot be toggled off by the client.",
-                        Data: new { burnInPlan.SourceIndex }
+                        new { burnInPlan.SourceIndex }
                     )
                 );
             }
@@ -300,7 +300,7 @@ public class BuildStage(
                 && context.MediaInfo is not null
                 && pgsBurnInFilterBuilder is not null
                 && burnInPlan.SourceIndex < context.MediaInfo.SubtitleStreams.Count
-                && !context.MediaInfo.SubtitleStreams[index: burnInPlan.SourceIndex].IsTextBased;
+                && !context.MediaInfo.SubtitleStreams[burnInPlan.SourceIndex].IsTextBased;
 
             string? filterGraph;
 
@@ -312,53 +312,53 @@ public class BuildStage(
                 // ffmpeg aborts on a pad mapped more than once.
                 bool pgsIncludesThumbnails = input.Plan.OutputPlan.Thumbnails is not null;
                 PgsBurnInFilterChain chain = pgsBurnInFilterBuilder!.Build(
-                    videoStreamIndex: 0,
-                    subtitleStreamIndex: burnInPlan!.SourceIndex,
-                    videoOutputCount: input.Plan.OutputPlan.VideoOutputs.Length,
-                    includeThumbnails: pgsIncludesThumbnails
+                    0,
+                    burnInPlan!.SourceIndex,
+                    input.Plan.OutputPlan.VideoOutputs.Length,
+                    pgsIncludesThumbnails
                 );
                 filterGraph = chain.FilterComplex;
                 pgsThumbnailLabel = chain.ThumbnailLabel;
                 // Give each video output its own split pad.
                 OutputPlan pgsRemapped = FilterGraphAssembler.RemapVideoToBurnedLabels(
-                    plan: input.Plan.OutputPlan,
-                    burnedLabels: chain.VideoLabels
+                    input.Plan.OutputPlan,
+                    chain.VideoLabels
                 );
                 input = input with { Plan = input.Plan with { OutputPlan = pgsRemapped } };
             }
             else
             {
                 filterGraph = FilterGraphAssembler.BuildFilterGraph(
-                    plan: input.Plan.OutputPlan,
-                    mediaInfo: context.MediaInfo,
-                    inputPath: input.InputPath,
-                    assBurnInFilterBuilder: assBurnInFilterBuilder
+                    input.Plan.OutputPlan,
+                    context.MediaInfo,
+                    input.InputPath,
+                    assBurnInFilterBuilder
                 );
             }
 
             if (filterGraph is not null)
-                builder.WithFilterComplex(filterGraph: filterGraph);
+                builder.WithFilterComplex(filterGraph);
 
             // Pass 2 of a 2-pass encode: inject -pass 2 + -passlogfile into each video
             // output's ExtraFlags before the output strategy emits them.
             OutputPlan effectivePlan = input.Plan.OutputPlan;
-            if (input.Pass == EncodingPass.Two && !string.IsNullOrEmpty(value: input.StatsFilePath))
+            if (input.Pass == EncodingPass.Two && !string.IsNullOrEmpty(input.StatsFilePath))
             {
                 effectivePlan = TwoPassCommandBuilder.InjectPass2Flags(
-                    plan: effectivePlan,
-                    statsFilePath: input.StatsFilePath
+                    effectivePlan,
+                    input.StatsFilePath
                 );
             }
 
             // Video + audio outputs via the output strategy (HLS, MKV, etc.)
-            strategy.ConfigureOutput(builder: builder, plan: effectivePlan, outputDirectory: input.OutputDirectory);
+            strategy.ConfigureOutput(builder, effectivePlan, input.OutputDirectory);
 
             // Acquired subtitle outputs: copy each exact-match sub to the subtitles dir.
             foreach ((int idx, AcquiredSubtitle sub) in exactMatchSubs)
             {
                 string subFile = $"subtitles/{sub.Language}.acquired.{sub.Format}";
                 builder.AddOutput(
-                    output: new(FilePath: subFile, SubtitleCodec: "copy", MapStreams: [$"{idx}:s:0"])
+                    new(subFile, SubtitleCodec: "copy", MapStreams: [$"{idx}:s:0"])
                 );
             }
 
@@ -369,7 +369,7 @@ public class BuildStage(
             {
                 ThumbnailOutputPlan thumbs = input.Plan.OutputPlan.Thumbnails;
 
-                if (!HasFiltergraphVideoOutput(plan: input.Plan.OutputPlan))
+                if (!HasFiltergraphVideoOutput(input.Plan.OutputPlan))
                 {
                     // Nothing on the main builder defines a [thumbs] pad unless a
                     // video output is running through the filtergraph. That is the
@@ -392,34 +392,34 @@ public class BuildStage(
                     // for an SDR source.
                     bool sourceIsHdr =
                         context.MediaInfo.VideoStreams.Count > 0
-                        && context.MediaInfo.VideoStreams[index: 0].IsHdr;
+                        && context.MediaInfo.VideoStreams[0].IsHdr;
                     string? thumbnailTonemapChain = input
-                        .Plan.OutputPlan.VideoOutputs.Select(selector: v => v.TonemapFilterChain)
-                        .FirstOrDefault(predicate: c => !string.IsNullOrEmpty(value: c));
+                        .Plan.OutputPlan.VideoOutputs.Select(v => v.TonemapFilterChain)
+                        .FirstOrDefault(c => !string.IsNullOrEmpty(c));
 
                     spriteCommands.Add(
-                        item: new FfmpegCommandBuilder()
-                            .WithGlobalOptions(options: new(ProgressPipe: false, Overwrite: true))
-                            .AddInput(input: new(FilePath: input.InputPath))
+                        new FfmpegCommandBuilder()
+                            .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
+                            .AddInput(new(input.InputPath))
                             .AddOutput(
-                                output: new(
-                                    FilePath: $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
+                                new(
+                                    $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
                                     MapStreams: ["0:v:0"],
                                     ExtraFlags: new()
                                     {
-                                        [key: "-vf"] = ThumbnailFilterResolver.Resolve(
-                                            intervalSeconds: thumbs.IntervalSeconds,
-                                            width: thumbs.Width,
-                                            sourceIsHdr: sourceIsHdr,
-                                            tonemapChain: thumbnailTonemapChain
+                                        ["-vf"] = ThumbnailFilterResolver.Resolve(
+                                            thumbs.IntervalSeconds,
+                                            thumbs.Width,
+                                            sourceIsHdr,
+                                            thumbnailTonemapChain
                                         ),
-                                        [key: "-f"] = "spritevtt",
-                                        [key: "-vtt_filename"] =
+                                        ["-f"] = "spritevtt",
+                                        ["-vtt_filename"] =
                                             $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",
                                     }
                                 )
                             )
-                            .Build(ffmpegPath: options.FfmpegPath, workingDirectory: input.OutputDirectory)
+                            .Build(options.FfmpegPath, input.OutputDirectory)
                     );
                 }
                 else
@@ -431,13 +431,13 @@ public class BuildStage(
                     string thumbnailMapLabel = pgsThumbnailLabel ?? "[thumbs]";
 
                     builder.AddOutput(
-                        output: new(
-                            FilePath: $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
+                        new(
+                            $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
                             MapStreams: [thumbnailMapLabel],
                             ExtraFlags: new()
                             {
-                                [key: "-f"] = "spritevtt",
-                                [key: "-vtt_filename"] = $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",
+                                ["-f"] = "spritevtt",
+                                ["-vtt_filename"] = $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",
                             }
                         )
                     );
@@ -450,13 +450,13 @@ public class BuildStage(
             if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0 && context.MediaInfo is not null)
             {
                 SubtitleCommandBuilder.AddTextSubtitleOutputs(
-                    builder: builder,
-                    plan: input.Plan.OutputPlan,
-                    mediaInfo: context.MediaInfo,
-                    outputDirectory: input.OutputDirectory,
-                    mediaTitle: input.MediaTitle,
-                    subtitleExtractor: subtitleExtractor,
-                    storage: effectiveStorage
+                    builder,
+                    input.Plan.OutputPlan,
+                    context.MediaInfo,
+                    input.OutputDirectory,
+                    input.MediaTitle,
+                    subtitleExtractor,
+                    effectiveStorage
                 );
             }
 
@@ -472,35 +472,35 @@ public class BuildStage(
             if (builder.HasOutputs)
             {
                 FfmpegCommand mainCommand = builder.Build(
-                    ffmpegPath: options.FfmpegPath,
-                    workingDirectory: input.OutputDirectory
+                    options.FfmpegPath,
+                    input.OutputDirectory
                 );
-                bool copyMode = IsCopyMode(plan: input.Plan.OutputPlan);
+                bool copyMode = IsCopyMode(input.Plan.OutputPlan);
                 mainCommand = MetadataInjectionBuilder.InjectMetadataArgs(
-                    metadataInjector: metadataInjector,
-                    metadataMerger: metadataMerger,
-                    command: mainCommand,
-                    mediaItem: context.MediaItem,
-                    context: context,
-                    isCopyMode: copyMode,
-                    enableInjection: context.EnableMetadataInjection
+                    metadataInjector,
+                    metadataMerger,
+                    mainCommand,
+                    context.MediaItem,
+                    context,
+                    copyMode,
+                    context.EnableMetadataInjection
                 );
 
                 logger.LogInformation(
-                    message: "[{CorrelationId}] FFmpeg command: {Executable} {Args}", args: [context.CorrelationId, mainCommand.Executable, string.Join(separator: " ", value: mainCommand.Arguments)]
+                    "[{CorrelationId}] FFmpeg command: {Executable} {Args}", [context.CorrelationId, mainCommand.Executable, string.Join(" ", mainCommand.Arguments)]
                 );
 
-                allCommands.Add(item: mainCommand);
+                allCommands.Add(mainCommand);
             }
             else
             {
                 logger.LogInformation(
-                    message: "[{CorrelationId}] No encoded output in this bundle; running only its auxiliary commands.",
-                    args: context.CorrelationId
+                    "[{CorrelationId}] No encoded output in this bundle; running only its auxiliary commands.",
+                    context.CorrelationId
                 );
             }
 
-            allCommands.AddRange(collection: spriteCommands);
+            allCommands.AddRange(spriteCommands);
 
             // Run-once semantics: when tasks are decomposed, fonts are extracted by
             // EXACTLY ONE task to keep the on-disk fonts/ dir stable. We gate on the
@@ -542,33 +542,33 @@ public class BuildStage(
             )
             {
                 FfmpegCommand? extractionCommand = ExtractionCommandBuilder.BuildCommand(
-                    ffmpegPath: options.FfmpegPath,
-                    inputPath: input.InputPath,
-                    outputDirectory: input.OutputDirectory,
-                    plan: input.Plan.OutputPlan,
-                    mediaInfo: context.MediaInfo,
-                    mediaTitle: input.MediaTitle,
-                    subtitleExtractor: subtitleExtractor,
-                    fontExtractor: fontExtractor,
-                    storage: effectiveStorage,
-                    attachments: attachmentsToExtract
+                    options.FfmpegPath,
+                    input.InputPath,
+                    input.OutputDirectory,
+                    input.Plan.OutputPlan,
+                    context.MediaInfo,
+                    input.MediaTitle,
+                    subtitleExtractor,
+                    fontExtractor,
+                    effectiveStorage,
+                    attachmentsToExtract
                 );
 
                 if (extractionCommand is not null)
-                    allCommands.Add(item: extractionCommand);
+                    allCommands.Add(extractionCommand);
             }
 
-            return new StageSuccess<FfmpegCommand[]>(Value: allCommands.ToArray());
+            return new StageSuccess<FfmpegCommand[]>(allCommands.ToArray());
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new StageFailure(
-                Error: new(
-                    Kind: EncodingErrorKind.Unknown,
-                    Message: $"Command build failed: {ex.Message}",
-                    FfmpegStderr: null,
-                    StageName: Name,
-                    Recoverable: false
+                new(
+                    EncodingErrorKind.Unknown,
+                    $"Command build failed: {ex.Message}",
+                    null,
+                    Name,
+                    false
                 )
             );
         }
@@ -587,28 +587,28 @@ public class BuildStage(
         if (drm is null || drm.Method == DrmMethod.None)
             return input;
 
-        IDrmProcessor? processor = drmProcessors.FirstOrDefault(predicate: p => p.Method == drm.Method);
+        IDrmProcessor? processor = drmProcessors.FirstOrDefault(p => p.Method == drm.Method);
         if (processor is null)
         {
             // DRM was explicitly requested by the profile — proceeding without
             // it would ship an unencrypted output while reporting success.
             // Fail the encode instead of silently downgrading to plaintext.
             throw new InvalidOperationException(
-                message: $"DRM was requested ({drm.Method}) but no matching processor is registered — "
+                $"DRM was requested ({drm.Method}) but no matching processor is registered — "
                          + "refusing to ship an unencrypted encode."
             );
         }
 
         DrmArtifact artifact = await processor
-            .PrepareAsync(outputDirectory: input.OutputDirectory, config: drm, ct: ct)
-            .ConfigureAwait(continueOnCapturedContext: false);
+            .PrepareAsync(input.OutputDirectory, drm, ct)
+            .ConfigureAwait(false);
 
         VideoOutputPlan[] encryptedVideos = input
-            .Plan.OutputPlan.VideoOutputs.Select(selector: v =>
+            .Plan.OutputPlan.VideoOutputs.Select(v =>
             {
-                Dictionary<string, string> extra = new(dictionary: v.ExtraFlags)
+                Dictionary<string, string> extra = new(v.ExtraFlags)
                 {
-                    [key: "-hls_key_info_file"] = artifact.KeyInfoFilePath,
+                    ["-hls_key_info_file"] = artifact.KeyInfoFilePath,
                 };
                 return v with { ExtraFlags = extra };
             })
@@ -628,7 +628,7 @@ public class BuildStage(
     {
         foreach (VideoOutputPlan v in plan.VideoOutputs)
         {
-            if (string.Equals(a: v.EncoderName, b: "copy", comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(v.EncoderName, "copy", StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 
@@ -655,8 +655,8 @@ public class BuildStage(
     /// </summary>
     internal static bool AllVideoOutputsAreCopy(OutputPlan plan) =>
         plan.VideoOutputs.Length > 0
-        && plan.VideoOutputs.All(predicate: v =>
-            string.Equals(a: v.EncoderName, b: "copy", comparisonType: StringComparison.OrdinalIgnoreCase)
+        && plan.VideoOutputs.All(v =>
+            string.Equals(v.EncoderName, "copy", StringComparison.OrdinalIgnoreCase)
         );
 
     /// <summary>
@@ -668,7 +668,7 @@ public class BuildStage(
     /// is false; ffmpeg rejects the whole command with exit -22.
     /// </summary>
     internal static bool HasFiltergraphVideoOutput(OutputPlan plan) =>
-        plan.VideoOutputs.Length > 0 && !AllVideoOutputsAreCopy(plan: plan);
+        plan.VideoOutputs.Length > 0 && !AllVideoOutputsAreCopy(plan);
 
     /// <summary>
     /// Converts a crash-checkpoint progress position into an input seek
@@ -682,8 +682,8 @@ public class BuildStage(
             return null;
 
         const long keyframeBackoffMs = 4000;
-        long seekMs = Math.Max(val1: 0, val2: resumeFromMs.Value - keyframeBackoffMs);
-        return TimeSpan.FromMilliseconds(milliseconds: seekMs);
+        long seekMs = Math.Max(0, resumeFromMs.Value - keyframeBackoffMs);
+        return TimeSpan.FromMilliseconds(seekMs);
     }
 
     /// <summary>
@@ -707,15 +707,15 @@ public class BuildStage(
         string outputFile = $"chapters/{chapterIndex:D2}.webp";
 
         return new FfmpegCommandBuilder()
-            .WithGlobalOptions(options: new(ProgressPipe: false, Overwrite: true))
-            .AddInput(input: new(FilePath: inputPath, SeekTo: timestamp))
+            .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
+            .AddInput(new(inputPath, timestamp))
             .AddOutput(
-                output: new(
-                    FilePath: outputFile,
+                new(
+                    outputFile,
                     VideoCodec: "libwebp",
-                    ExtraFlags: new() { [key: "-frames:v"] = "1", [key: "-vf"] = "scale=240:-2" }
+                    ExtraFlags: new() { ["-frames:v"] = "1", ["-vf"] = "scale=240:-2" }
                 )
             )
-            .Build(ffmpegPath: ffmpegPath, workingDirectory: outputDirectory);
+            .Build(ffmpegPath, outputDirectory);
     }
 }

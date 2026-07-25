@@ -15,15 +15,15 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzPaginatedResponse<T>
 {
-    [JsonProperty(propertyName: "page")]
+    [JsonProperty("page")]
     public int Page { get; set; }
 
-    [JsonProperty(propertyName: "results")]
+    [JsonProperty("results")]
     public T[] Results { get; set; } = [];
 
-    [JsonProperty(propertyName: "total_pages")]
+    [JsonProperty("total_pages")]
     public int TotalPages { get; set; }
 
-    [JsonProperty(propertyName: "total_results")]
+    [JsonProperty("total_results")]
     public int TotalResults { get; set; }
 }

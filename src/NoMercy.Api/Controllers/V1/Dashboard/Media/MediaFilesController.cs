@@ -27,13 +27,13 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 /// dashboard list anywhere that displays those IDs natively.
 /// </summary>
 [ApiController]
-[Tags(tags: "Dashboard Server Media Files")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Server Media Files")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "Moderator")]
-[Route(template: "api/v{version:apiVersion}/dashboard/media/files", Order = 10)]
+[Route("api/v{version:apiVersion}/dashboard/media/files", Order = 10)]
 public class MediaFilesController(IFileRepository fileRepository) : BaseController
 {
-    [HttpGet(template: "search")]
+    [HttpGet("search")]
     public async Task<IActionResult> Search(
         [FromQuery] string? q,
         [FromQuery] int limit = 50,
@@ -43,7 +43,7 @@ public class MediaFilesController(IFileRepository fileRepository) : BaseControll
 
         // Hard ceiling on `limit` — clients shouldn't be able to pull the whole
         // catalogue through this picker endpoint.
-        int safeLimit = Math.Clamp(value: limit, min: 1, max: 200);
+        int safeLimit = Math.Clamp(limit, 1, 200);
         string normalized = (q ?? string.Empty).Trim();
 
         // BLOCKER: IFileRepository.SearchVideoFilesAsync does not exist yet.
@@ -51,14 +51,14 @@ public class MediaFilesController(IFileRepository fileRepository) : BaseControll
         //   Task<List<VideoFile>> SearchVideoFilesAsync(string? query, int limit, CancellationToken ct = default)
         // See MediaFilesController for the exact EF query it must run.
         List<VideoFile> rows = await fileRepository.SearchVideoFilesAsync(
-            query: normalized,
-            limit: safeLimit,
-            ct: ct
+            normalized,
+            safeLimit,
+            ct
         );
 
-        VideoFileSearchDto[] results = rows.Select(selector: BuildDto).ToArray();
+        VideoFileSearchDto[] results = rows.Select(BuildDto).ToArray();
 
-        return Ok(value: new { data = results });
+        return Ok(new { data = results });
     }
 
     private static VideoFileSearchDto BuildDto(VideoFile file)
@@ -111,24 +111,24 @@ public class MediaFilesController(IFileRepository fileRepository) : BaseControll
 
 public class VideoFileSearchDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "label")]
+    [JsonProperty("label")]
     public string Label { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "parent_label")]
+    [JsonProperty("parent_label")]
     public string ParentLabel { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "filename")]
+    [JsonProperty("filename")]
     public string Filename { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "quality")]
+    [JsonProperty("quality")]
     public string Quality { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public string? Duration { get; set; }
 }

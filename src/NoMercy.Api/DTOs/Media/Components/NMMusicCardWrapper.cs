@@ -19,34 +19,34 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record NMMusicCardWrapper
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "next_id")]
+    [JsonProperty("next_id")]
     public string? NextId { get; set; }
 
-    [JsonProperty(propertyName: "previous_id")]
+    [JsonProperty("previous_id")]
     public string? PreviousId { get; set; }
 
-    [JsonProperty(propertyName: "more_link")]
+    [JsonProperty("more_link")]
     public string? MoreLink { get; set; }
 
-    [JsonProperty(propertyName: "more_link_text")]
+    [JsonProperty("more_link_text")]
     public string? MoreLinkText { get; set; }
 
-    [JsonProperty(propertyName: "watch")]
+    [JsonProperty("watch")]
     public bool Watch { get; set; }
 
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public MusicCardData Data { get; set; } = null!;
 
-    [JsonProperty(propertyName: "context_menu_items")]
+    [JsonProperty("context_menu_items")]
     public IEnumerable<ContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public string? Url { get; set; }
 
-    [JsonProperty(propertyName: "properties")]
+    [JsonProperty("properties")]
     public Dictionary<string, string>? Properties { get; set; }
 
     public NMMusicCardWrapper() { }

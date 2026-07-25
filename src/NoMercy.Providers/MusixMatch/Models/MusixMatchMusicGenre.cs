@@ -15,18 +15,18 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchMusicGenre
 {
-    [JsonProperty(propertyName: "music_genre_id")]
+    [JsonProperty("music_genre_id")]
     public long MusicGenreId { get; set; }
 
-    [JsonProperty(propertyName: "music_genre_parent_id")]
+    [JsonProperty("music_genre_parent_id")]
     public long MusicGenreParentId { get; set; }
 
-    [JsonProperty(propertyName: "music_genre_name")]
+    [JsonProperty("music_genre_name")]
     public string MusicGenreName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "music_genre_name_extended")]
+    [JsonProperty("music_genre_name_extended")]
     public string MusicGenreNameExtended { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "music_genre_vanity")]
+    [JsonProperty("music_genre_vanity")]
     public string MusicGenreVanity { get; set; } = string.Empty;
 }

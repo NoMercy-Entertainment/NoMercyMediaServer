@@ -43,41 +43,41 @@ public sealed class LiveDiscSession(
         CancellationToken ct
     )
     {
-        string inputPath = BuildInputPath(drive: drive, titleIndex: titleIndex);
+        string inputPath = BuildInputPath(drive, titleIndex);
         logger.LogInformation(
-            message: "Live disc session for {Drive} title {Title} → {InputPath}", args: [drive.Path, titleIndex, inputPath]
+            "Live disc session for {Drive} title {Title} → {InputPath}", [drive.Path, titleIndex, inputPath]
         );
 
         // Probe the disc input the same way the encoder probes any other
         // source. The analyzer wraps ffprobe + parses streams + chapters
         // into a MediaInfo the live runner consumes verbatim.
-        MediaInfo info = await mediaAnalyzer.AnalyzeAsync(filePath: inputPath, ct: ct);
+        MediaInfo info = await mediaAnalyzer.AnalyzeAsync(inputPath, ct);
 
         // ClientCapabilities defaults — the runner only needs format + codec
         // hints, the streaming service refines per-client when it stamps
         // the runtime context. Caller can override later via the existing
         // /streaming/live/sessions/* endpoints.
         ClientCapabilities client = new(
-            SupportedVideoCodecs: [VideoCodecType.H264, VideoCodecType.H265],
-            SupportedAudioCodecs: [AudioCodecType.Aac, AudioCodecType.Eac3],
-            SupportedContainers: ["hls", "mp4"],
-            MaxWidth: 1920,
-            MaxHeight: 1080,
-            SupportsHdr: false,
-            Supports10Bit: false,
-            MaxBitrateKbps: 8000,
-            MaxAudioChannels: 2
+            [VideoCodecType.H264, VideoCodecType.H265],
+            [AudioCodecType.Aac, AudioCodecType.Eac3],
+            ["hls", "mp4"],
+            1920,
+            1080,
+            false,
+            false,
+            8000,
+            2
         );
 
         LiveEncodeRequest request = new(
-            InputPath: inputPath,
-            CachedInfo: info,
-            Client: client,
-            StartPosition: startPosition,
-            PreferredQuality: preferredQuality
+            inputPath,
+            info,
+            client,
+            startPosition,
+            preferredQuality
         );
 
-        return await liveEncoder.StartAsync(request: request, ct: ct);
+        return await liveEncoder.StartAsync(request, ct);
     }
 
     /// <summary>
@@ -90,11 +90,11 @@ public sealed class LiveDiscSession(
     /// </summary>
     private static string BuildInputPath(DiscDrive drive, int titleIndex)
     {
-        string trimmed = drive.Path.TrimEnd(trimChars: ['\\', '/']);
+        string trimmed = drive.Path.TrimEnd(['\\', '/']);
         return drive.DiscType switch
         {
             OpticalDiscType.BluRay =>
-                $"bluray:{trimmed}/?playlist={titleIndex.ToString(provider: CultureInfo.InvariantCulture)}",
+                $"bluray:{trimmed}/?playlist={titleIndex.ToString(CultureInfo.InvariantCulture)}",
             OpticalDiscType.Dvd => $"{trimmed}/",
             OpticalDiscType.Cd => drive.Path,
             _ => trimmed,

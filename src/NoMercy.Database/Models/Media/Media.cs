@@ -15,61 +15,61 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Media;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(TvId), additionalPropertyNames: nameof(Src), IsUnique = true)]
-[Index(propertyName: nameof(SeasonId), additionalPropertyNames: nameof(Src), IsUnique = true)]
-[Index(propertyName: nameof(EpisodeId), additionalPropertyNames: nameof(Src), IsUnique = true)]
-[Index(propertyName: nameof(MovieId), additionalPropertyNames: nameof(Src), IsUnique = true)]
-[Index(propertyName: nameof(PersonId), additionalPropertyNames: nameof(Src), IsUnique = true)]
-[Index(propertyName: nameof(VideoFileId), additionalPropertyNames: nameof(Src), IsUnique = true)]
-[Index(propertyName: nameof(Type))]
-[Index(propertyName: nameof(Site))]
-[Index(propertyName: nameof(Name))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(TvId), nameof(Src), IsUnique = true)]
+[Index(nameof(SeasonId), nameof(Src), IsUnique = true)]
+[Index(nameof(EpisodeId), nameof(Src), IsUnique = true)]
+[Index(nameof(MovieId), nameof(Src), IsUnique = true)]
+[Index(nameof(PersonId), nameof(Src), IsUnique = true)]
+[Index(nameof(VideoFileId), nameof(Src), IsUnique = true)]
+[Index(nameof(Type))]
+[Index(nameof(Site))]
+[Index(nameof(Name))]
 public class Media : ColorPaletteTimeStamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty(propertyName: "iso_639_1")]
+    [JsonProperty("iso_639_1")]
     public string? Iso6391 { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
-    [JsonProperty(propertyName: "site")]
+    [JsonProperty("site")]
     public string? Site { get; set; }
 
-    [JsonProperty(propertyName: "size")]
+    [JsonProperty("size")]
     public int Size { get; set; }
 
-    [JsonProperty(propertyName: "src")]
+    [JsonProperty("src")]
     public string Src { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "tv_id")]
+    [JsonProperty("tv_id")]
     public int? TvId { get; set; }
     public Tv? Tv { get; set; }
 
-    [JsonProperty(propertyName: "season_id")]
+    [JsonProperty("season_id")]
     public int? SeasonId { get; set; }
     public Season? Season { get; set; }
 
-    [JsonProperty(propertyName: "episode_id")]
+    [JsonProperty("episode_id")]
     public int? EpisodeId { get; set; }
     public Episode? Episode { get; set; }
 
-    [JsonProperty(propertyName: "movie_id")]
+    [JsonProperty("movie_id")]
     public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
-    [JsonProperty(propertyName: "person_id")]
+    [JsonProperty("person_id")]
     public int? PersonId { get; set; }
     public Person? Person { get; set; }
 
-    [JsonProperty(propertyName: "video_file_id")]
+    [JsonProperty("video_file_id")]
     public Ulid? VideoFileId { get; set; }
     public VideoFile? VideoFile { get; set; }
 }

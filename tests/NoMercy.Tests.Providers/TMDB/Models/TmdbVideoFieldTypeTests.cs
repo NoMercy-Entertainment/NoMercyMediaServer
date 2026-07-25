@@ -17,7 +17,7 @@ using NoMercy.Providers.TMDB.Models.Shared;
 
 namespace NoMercy.Tests.Providers.TMDB.Models;
 
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class TmdbVideoFieldTypeTests
 {
     // --- TmdbMovie ---
@@ -25,25 +25,25 @@ public class TmdbVideoFieldTypeTests
     [Fact]
     public void TmdbMovie_Video_PropertyType_IsBoolNullable()
     {
-        PropertyInfo? prop = typeof(TmdbMovie).GetProperty(name: "Video");
+        PropertyInfo? prop = typeof(TmdbMovie).GetProperty("Video");
         prop.Should().NotBeNull();
-        prop!.PropertyType.Should().Be(expected: typeof(bool?));
+        prop!.PropertyType.Should().Be(typeof(bool?));
     }
 
     [Fact]
     public void TmdbMovie_Video_HasJsonPropertyAttribute()
     {
-        PropertyInfo? prop = typeof(TmdbMovie).GetProperty(name: "Video");
+        PropertyInfo? prop = typeof(TmdbMovie).GetProperty("Video");
         JsonPropertyAttribute? attr = prop!.GetCustomAttribute<JsonPropertyAttribute>();
         attr.Should().NotBeNull();
-        attr!.PropertyName.Should().Be(expected: "video");
+        attr!.PropertyName.Should().Be("video");
     }
 
     [Fact]
     public void TmdbMovie_Video_DeserializesTrue()
     {
         string json = """{"video": true}""";
-        TmdbMovie? movie = JsonConvert.DeserializeObject<TmdbMovie>(value: json);
+        TmdbMovie? movie = JsonConvert.DeserializeObject<TmdbMovie>(json);
         movie.Should().NotBeNull();
         movie!.Video.Should().BeTrue();
     }
@@ -52,7 +52,7 @@ public class TmdbVideoFieldTypeTests
     public void TmdbMovie_Video_DeserializesFalse()
     {
         string json = """{"video": false}""";
-        TmdbMovie? movie = JsonConvert.DeserializeObject<TmdbMovie>(value: json);
+        TmdbMovie? movie = JsonConvert.DeserializeObject<TmdbMovie>(json);
         movie.Should().NotBeNull();
         movie!.Video.Should().BeFalse();
     }
@@ -61,7 +61,7 @@ public class TmdbVideoFieldTypeTests
     public void TmdbMovie_Video_DeserializesNull()
     {
         string json = """{"video": null}""";
-        TmdbMovie? movie = JsonConvert.DeserializeObject<TmdbMovie>(value: json);
+        TmdbMovie? movie = JsonConvert.DeserializeObject<TmdbMovie>(json);
         movie.Should().NotBeNull();
         movie!.Video.Should().BeNull();
     }
@@ -77,9 +77,9 @@ public class TmdbVideoFieldTypeTests
     public void TmdbMovie_Video_RoundTrip()
     {
         TmdbMovie original = new() { Video = true };
-        string json = JsonConvert.SerializeObject(value: original);
-        TmdbMovie? deserialized = JsonConvert.DeserializeObject<TmdbMovie>(value: json);
-        deserialized!.Video.Should().Be(expected: original.Video);
+        string json = JsonConvert.SerializeObject(original);
+        TmdbMovie? deserialized = JsonConvert.DeserializeObject<TmdbMovie>(json);
+        deserialized!.Video.Should().Be(original.Video);
     }
 
     // --- TmdbCollectionPart ---
@@ -87,25 +87,25 @@ public class TmdbVideoFieldTypeTests
     [Fact]
     public void TmdbCollectionPart_Video_PropertyType_IsBoolNullable()
     {
-        PropertyInfo? prop = typeof(TmdbCollectionPart).GetProperty(name: "Video");
+        PropertyInfo? prop = typeof(TmdbCollectionPart).GetProperty("Video");
         prop.Should().NotBeNull();
-        prop!.PropertyType.Should().Be(expected: typeof(bool?));
+        prop!.PropertyType.Should().Be(typeof(bool?));
     }
 
     [Fact]
     public void TmdbCollectionPart_Video_HasJsonPropertyAttribute()
     {
-        PropertyInfo? prop = typeof(TmdbCollectionPart).GetProperty(name: "Video");
+        PropertyInfo? prop = typeof(TmdbCollectionPart).GetProperty("Video");
         JsonPropertyAttribute? attr = prop!.GetCustomAttribute<JsonPropertyAttribute>();
         attr.Should().NotBeNull();
-        attr!.PropertyName.Should().Be(expected: "video");
+        attr!.PropertyName.Should().Be("video");
     }
 
     [Fact]
     public void TmdbCollectionPart_Video_DeserializesTrue()
     {
         string json = """{"video": true}""";
-        TmdbCollectionPart? part = JsonConvert.DeserializeObject<TmdbCollectionPart>(value: json);
+        TmdbCollectionPart? part = JsonConvert.DeserializeObject<TmdbCollectionPart>(json);
         part.Should().NotBeNull();
         part!.Video.Should().BeTrue();
     }
@@ -114,7 +114,7 @@ public class TmdbVideoFieldTypeTests
     public void TmdbCollectionPart_Video_DeserializesFalse()
     {
         string json = """{"video": false}""";
-        TmdbCollectionPart? part = JsonConvert.DeserializeObject<TmdbCollectionPart>(value: json);
+        TmdbCollectionPart? part = JsonConvert.DeserializeObject<TmdbCollectionPart>(json);
         part.Should().NotBeNull();
         part!.Video.Should().BeFalse();
     }
@@ -123,7 +123,7 @@ public class TmdbVideoFieldTypeTests
     public void TmdbCollectionPart_Video_DeserializesNull()
     {
         string json = """{"video": null}""";
-        TmdbCollectionPart? part = JsonConvert.DeserializeObject<TmdbCollectionPart>(value: json);
+        TmdbCollectionPart? part = JsonConvert.DeserializeObject<TmdbCollectionPart>(json);
         part.Should().NotBeNull();
         part!.Video.Should().BeNull();
     }
@@ -132,9 +132,9 @@ public class TmdbVideoFieldTypeTests
     public void TmdbCollectionPart_Video_RoundTrip()
     {
         TmdbCollectionPart original = new() { Video = false };
-        string json = JsonConvert.SerializeObject(value: original);
-        TmdbCollectionPart? deserialized = JsonConvert.DeserializeObject<TmdbCollectionPart>(value: json);
-        deserialized!.Video.Should().Be(expected: original.Video);
+        string json = JsonConvert.SerializeObject(original);
+        TmdbCollectionPart? deserialized = JsonConvert.DeserializeObject<TmdbCollectionPart>(json);
+        deserialized!.Video.Should().Be(original.Video);
     }
 
     // --- TmdbShowOrMovie ---
@@ -142,33 +142,33 @@ public class TmdbVideoFieldTypeTests
     [Fact]
     public void TmdbShowOrMovie_Video_PropertyType_IsBoolNullable()
     {
-        PropertyInfo? prop = typeof(TmdbShowOrMovie).GetProperty(name: "Video");
+        PropertyInfo? prop = typeof(TmdbShowOrMovie).GetProperty("Video");
         prop.Should().NotBeNull();
-        prop!.PropertyType.Should().Be(expected: typeof(bool?));
+        prop!.PropertyType.Should().Be(typeof(bool?));
     }
 
     [Fact]
     public void TmdbShowOrMovie_Video_HasJsonPropertyAttribute()
     {
-        PropertyInfo? prop = typeof(TmdbShowOrMovie).GetProperty(name: "Video");
+        PropertyInfo? prop = typeof(TmdbShowOrMovie).GetProperty("Video");
         JsonPropertyAttribute? attr = prop!.GetCustomAttribute<JsonPropertyAttribute>();
         attr.Should().NotBeNull();
-        attr!.PropertyName.Should().Be(expected: "video");
+        attr!.PropertyName.Should().Be("video");
     }
 
     [Fact]
     public void TmdbShowOrMovie_Video_CopiedFromTmdbMovie()
     {
         TmdbMovie movie = new() { Video = true };
-        TmdbShowOrMovie showOrMovie = new(movie: movie);
-        showOrMovie.Video.Should().Be(expected: movie.Video);
+        TmdbShowOrMovie showOrMovie = new(movie);
+        showOrMovie.Video.Should().Be(movie.Video);
     }
 
     [Fact]
     public void TmdbShowOrMovie_Video_CopiedFromTmdbMovie_False()
     {
         TmdbMovie movie = new() { Video = false };
-        TmdbShowOrMovie showOrMovie = new(movie: movie);
+        TmdbShowOrMovie showOrMovie = new(movie);
         showOrMovie.Video.Should().BeFalse();
     }
 
@@ -176,7 +176,7 @@ public class TmdbVideoFieldTypeTests
     public void TmdbShowOrMovie_Video_CopiedFromTmdbMovie_Null()
     {
         TmdbMovie movie = new() { Video = null };
-        TmdbShowOrMovie showOrMovie = new(movie: movie);
+        TmdbShowOrMovie showOrMovie = new(movie);
         showOrMovie.Video.Should().BeNull();
     }
 
@@ -202,11 +202,11 @@ public class TmdbVideoFieldTypeTests
                 "vote_count": 32000
             }
             """;
-        TmdbMovie? movie = JsonConvert.DeserializeObject<TmdbMovie>(value: json);
+        TmdbMovie? movie = JsonConvert.DeserializeObject<TmdbMovie>(json);
         movie.Should().NotBeNull();
         movie!.Video.Should().BeFalse();
-        movie.Id.Should().Be(expected: 155);
-        movie.Title.Should().Be(expected: "The Dark Knight");
+        movie.Id.Should().Be(155);
+        movie.Title.Should().Be("The Dark Knight");
     }
 
     [Fact]
@@ -230,10 +230,10 @@ public class TmdbVideoFieldTypeTests
                 "vote_count": 32000
             }
             """;
-        TmdbCollectionPart? part = JsonConvert.DeserializeObject<TmdbCollectionPart>(value: json);
+        TmdbCollectionPart? part = JsonConvert.DeserializeObject<TmdbCollectionPart>(json);
         part.Should().NotBeNull();
         part!.Video.Should().BeFalse();
-        part.Id.Should().Be(expected: 155);
+        part.Id.Should().Be(155);
     }
 
     [Fact]
@@ -255,9 +255,9 @@ public class TmdbVideoFieldTypeTests
                 "vote_count": 32000
             }
             """;
-        TmdbMovie? movie = JsonConvert.DeserializeObject<TmdbMovie>(value: json);
+        TmdbMovie? movie = JsonConvert.DeserializeObject<TmdbMovie>(json);
         movie.Should().NotBeNull();
-        TmdbShowOrMovie showOrMovie = new(movie: movie!);
+        TmdbShowOrMovie showOrMovie = new(movie!);
         showOrMovie.Video.Should().BeFalse();
     }
 }

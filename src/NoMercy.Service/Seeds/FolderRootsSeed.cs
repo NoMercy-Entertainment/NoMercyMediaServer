@@ -11,9 +11,9 @@
 
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Middleware;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.Authorization;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -30,28 +30,28 @@ public static class FolderRootsSeed
         IStorageDriver storageDriver
     )
     {
-        if (!storage.Exists(path: AppFiles.FolderRootsSeedFile))
+        if (!storage.Exists(AppFiles.FolderRootsSeedFile))
             return;
 
-        Logger.Setup(message: "Adding Folder Roots", level: LogEventLevel.Verbose);
+        Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
 
         Folder[] folders =
             storage
-                .ReadAllTextAsync(path: AppFiles.FolderRootsSeedFile, ct: CancellationToken.None)
+                .ReadAllTextAsync(AppFiles.FolderRootsSeedFile, CancellationToken.None)
                 .Result.FromJson<Folder[]>()
             ?? [];
 
         try
         {
             await dbContext
-                .Folders.UpsertRange(entities: folders)
-                .On(match: v => new { v.Id })
-                .WhenMatched(updater: (vs, vi) => new() { Id = vi.Id, Path = vi.Path })
+                .Folders.UpsertRange(folders)
+                .On(v => new { v.Id })
+                .WhenMatched((vs, vi) => new() { Id = vi.Id, Path = vi.Path })
                 .RunAsync();
         }
         catch (Exception e)
         {
-            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
+            Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
         // Register seeded folders with the middleware so they can serve files
@@ -63,7 +63,7 @@ public static class FolderRootsSeed
         {
             try
             {
-                DynamicStaticFilesMiddleware.AddFolder(folderId: folder.Id, driverId: folder.DriverId, subPath: folder.Path);
+                DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
             }
             catch (Exception ex)
                 when (ex
@@ -74,12 +74,12 @@ public static class FolderRootsSeed
                 )
             {
                 Logger.Setup(
-                    message: $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
-                    level: LogEventLevel.Warning
+                    $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
+                    LogEventLevel.Warning
                 );
             }
         }
 
-        await UserCache.Current.RefreshFolderIdsAsync(context: dbContext);
+        await UserCache.Current.RefreshFolderIdsAsync(dbContext);
     }
 }

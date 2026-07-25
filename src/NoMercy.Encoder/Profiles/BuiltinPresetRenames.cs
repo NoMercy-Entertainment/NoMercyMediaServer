@@ -42,5 +42,5 @@ public static class BuiltinPresetRenames
     public static readonly IReadOnlyDictionary<string, string> SlugRenames = new Dictionary<
         string,
         string
-    >(comparer: StringComparer.Ordinal);
+    >(StringComparer.Ordinal);
 }

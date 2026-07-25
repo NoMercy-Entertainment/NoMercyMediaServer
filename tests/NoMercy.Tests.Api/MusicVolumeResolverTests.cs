@@ -24,41 +24,41 @@ namespace NoMercy.Tests.Api;
 /// the real decision logic the hub methods call — the hub methods themselves are
 /// thin wiring around these two entry points.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MusicVolumeResolverTests
 {
     [Theory]
-    [InlineData(data: [-10, 0])]
-    [InlineData(data: [0, 0])]
-    [InlineData(data: [55, 55])]
-    [InlineData(data: [150, 100])]
+    [InlineData([-10, 0])]
+    [InlineData([0, 0])]
+    [InlineData([55, 55])]
+    [InlineData([150, 100])]
     public void Clamp_ClampsToZeroHundred(int input, int expected)
     {
-        MusicVolumeResolver.Clamp(volume: input).Should().Be(expected: expected);
+        MusicVolumeResolver.Clamp(input).Should().Be(expected);
     }
 
     [Fact]
     public void IsTargetActive_True_WhenTargetIsTheActiveDevice()
     {
-        MusicVolumeResolver.IsTargetActive(targetDeviceId: "tv-1", activeDeviceId: "tv-1").Should().BeTrue();
+        MusicVolumeResolver.IsTargetActive("tv-1", "tv-1").Should().BeTrue();
     }
 
     [Fact]
     public void IsTargetActive_IsCaseInsensitive()
     {
-        MusicVolumeResolver.IsTargetActive(targetDeviceId: "TV-1", activeDeviceId: "tv-1").Should().BeTrue();
+        MusicVolumeResolver.IsTargetActive("TV-1", "tv-1").Should().BeTrue();
     }
 
     [Fact]
     public void IsTargetActive_False_WhenTargetIsAnotherDevice()
     {
-        MusicVolumeResolver.IsTargetActive(targetDeviceId: "phone-1", activeDeviceId: "tv-1").Should().BeFalse();
+        MusicVolumeResolver.IsTargetActive("phone-1", "tv-1").Should().BeFalse();
     }
 
     [Fact]
     public void IsTargetActive_False_WhenThereIsNoActiveDeviceYet()
     {
-        MusicVolumeResolver.IsTargetActive(targetDeviceId: "phone-1", activeDeviceId: null).Should().BeFalse();
+        MusicVolumeResolver.IsTargetActive("phone-1", null).Should().BeFalse();
     }
 
     [Fact]
@@ -69,14 +69,14 @@ public class MusicVolumeResolverTests
         MusicPlayerState state = new() { DeviceId = "tv-1", VolumePercentage = 20 };
 
         MusicVolumeResolver.ApplyDeviceVolume(
-            state: state,
-            targetDeviceId: "tv-1",
-            activeDeviceId: "tv-1",
-            clampedVolume: 80
+            state,
+            "tv-1",
+            "tv-1",
+            80
         );
 
-        state.VolumePercentage.Should().Be(expected: 80);
-        state.DeviceVolumes[key: "tv-1"].Should().Be(expected: 80);
+        state.VolumePercentage.Should().Be(80);
+        state.DeviceVolumes["tv-1"].Should().Be(80);
     }
 
     [Fact]
@@ -87,17 +87,17 @@ public class MusicVolumeResolverTests
         MusicPlayerState state = new() { DeviceId = "tv-1", VolumePercentage = 20 };
 
         MusicVolumeResolver.ApplyDeviceVolume(
-            state: state,
-            targetDeviceId: "phone-1",
-            activeDeviceId: "tv-1",
-            clampedVolume: 80
+            state,
+            "phone-1",
+            "tv-1",
+            80
         );
 
-        state.VolumePercentage.Should().Be(expected: 20, because: "the active device's mirrored volume is untouched");
+        state.VolumePercentage.Should().Be(20, "the active device's mirrored volume is untouched");
         state
-            .DeviceVolumes[key: "phone-1"]
+            .DeviceVolumes["phone-1"]
             .Should()
-            .Be(expected: 80, because: "the passive device's own remembered level still updates");
+            .Be(80, "the passive device's own remembered level still updates");
     }
 
     [Fact]
@@ -105,26 +105,26 @@ public class MusicVolumeResolverTests
     {
         MusicPlayerState state = new() { DeviceId = "tv-1" };
 
-        MusicVolumeResolver.ApplyDeviceVolume(state: state, targetDeviceId: "tv-1", activeDeviceId: "tv-1", clampedVolume: 10);
-        MusicVolumeResolver.ApplyDeviceVolume(state: state, targetDeviceId: "phone-1", activeDeviceId: "tv-1", clampedVolume: 90);
+        MusicVolumeResolver.ApplyDeviceVolume(state, "tv-1", "tv-1", 10);
+        MusicVolumeResolver.ApplyDeviceVolume(state, "phone-1", "tv-1", 90);
 
-        state.DeviceVolumes.Should().ContainKey(expected: "tv-1").WhoseValue.Should().Be(expected: 10);
-        state.DeviceVolumes.Should().ContainKey(expected: "phone-1").WhoseValue.Should().Be(expected: 90);
+        state.DeviceVolumes.Should().ContainKey("tv-1").WhoseValue.Should().Be(10);
+        state.DeviceVolumes.Should().ContainKey("phone-1").WhoseValue.Should().Be(90);
     }
 
     [Fact]
     public void ResolveTransferVolume_PrefersARememberedDeviceVolume()
     {
         MusicPlayerState state = new() { VolumePercentage = 5 };
-        state.DeviceVolumes[key: "phone-1"] = 65;
+        state.DeviceVolumes["phone-1"] = 65;
 
         int resolved = MusicVolumeResolver.ResolveTransferVolume(
-            state: state,
-            targetDeviceId: "phone-1",
-            targetPersistedVolume: 30
+            state,
+            "phone-1",
+            30
         );
 
-        resolved.Should().Be(expected: 65);
+        resolved.Should().Be(65);
     }
 
     [Fact]
@@ -133,12 +133,12 @@ public class MusicVolumeResolverTests
         MusicPlayerState state = new() { VolumePercentage = 5 };
 
         int resolved = MusicVolumeResolver.ResolveTransferVolume(
-            state: state,
-            targetDeviceId: "phone-1",
-            targetPersistedVolume: 30
+            state,
+            "phone-1",
+            30
         );
 
-        resolved.Should().Be(expected: 30);
+        resolved.Should().Be(30);
     }
 
     [Fact]
@@ -147,12 +147,12 @@ public class MusicVolumeResolverTests
         MusicPlayerState state = new() { VolumePercentage = 5 };
 
         int resolved = MusicVolumeResolver.ResolveTransferVolume(
-            state: state,
-            targetDeviceId: "phone-1",
-            targetPersistedVolume: null
+            state,
+            "phone-1",
+            null
         );
 
-        resolved.Should().Be(expected: Device.DefaultVolumePercent);
+        resolved.Should().Be(Device.DefaultVolumePercent);
     }
 
     [Fact]
@@ -164,12 +164,12 @@ public class MusicVolumeResolverTests
         MusicPlayerState state = new() { DeviceId = "tv-1", VolumePercentage = 95 };
 
         int resolved = MusicVolumeResolver.ResolveTransferVolume(
-            state: state,
-            targetDeviceId: "phone-1",
-            targetPersistedVolume: null
+            state,
+            "phone-1",
+            null
         );
 
-        resolved.Should().Be(expected: Device.DefaultVolumePercent);
-        resolved.Should().NotBe(unexpected: 95);
+        resolved.Should().Be(Device.DefaultVolumePercent);
+        resolved.Should().NotBe(95);
     }
 }

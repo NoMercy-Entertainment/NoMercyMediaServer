@@ -15,22 +15,22 @@ namespace NoMercy.Database;
 
 public class ColorPalette
 {
-    [JsonProperty(propertyName: "poster", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("poster", NullValueHandling = NullValueHandling.Ignore)]
     public PaletteColors? Poster { get; set; }
 
-    [JsonProperty(propertyName: "backdrop", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("backdrop", NullValueHandling = NullValueHandling.Ignore)]
     public PaletteColors? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "still", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("still", NullValueHandling = NullValueHandling.Ignore)]
     public PaletteColors? Still { get; set; }
 
-    [JsonProperty(propertyName: "profile", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("profile", NullValueHandling = NullValueHandling.Ignore)]
     public PaletteColors? Profile { get; set; }
 
-    [JsonProperty(propertyName: "image", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("image", NullValueHandling = NullValueHandling.Ignore)]
     public PaletteColors? Image { get; set; }
 
-    [JsonProperty(propertyName: "cover", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("cover", NullValueHandling = NullValueHandling.Ignore)]
     public PaletteColors? Cover { get; set; }
 
     /// <summary>
@@ -41,11 +41,11 @@ public class ColorPalette
     /// </summary>
     public static ColorPalette? FromJsonOrNull(string? json)
     {
-        if (string.IsNullOrEmpty(value: json))
+        if (string.IsNullOrEmpty(json))
             return null;
         try
         {
-            return JsonConvert.DeserializeObject<ColorPalette>(value: json);
+            return JsonConvert.DeserializeObject<ColorPalette>(json);
         }
         catch (JsonException)
         {

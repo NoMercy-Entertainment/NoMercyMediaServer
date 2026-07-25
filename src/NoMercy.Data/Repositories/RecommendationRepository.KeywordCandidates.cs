@@ -11,8 +11,6 @@
 
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 
@@ -29,13 +27,13 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         if (movieKeywordMap.Count == 0)
             return [];
 
         HashSet<int> ownedMovieKeywordIds = movieKeywordMap
-            .Values.SelectMany(selector: kws => kws)
+            .Values.SelectMany(kws => kws)
             .ToHashSet();
 
         if (ownedMovieKeywordIds.Count == 0)
@@ -45,15 +43,15 @@ public partial class RecommendationRepository
         HashSet<int> commonKeywordIds = (
             await context
                 .KeywordTv.AsNoTracking()
-                .Where(predicate: kt => ownedMovieKeywordIds.Contains(kt.KeywordId))
-                .GroupBy(keySelector: kt => kt.KeywordId)
-                .Where(predicate: g => g.Count() > maxKeywordFrequency)
-                .Select(selector: g => g.Key)
-                .ToListAsync(cancellationToken: ct)
+                .Where(kt => ownedMovieKeywordIds.Contains(kt.KeywordId))
+                .GroupBy(kt => kt.KeywordId)
+                .Where(g => g.Count() > maxKeywordFrequency)
+                .Select(g => g.Key)
+                .ToListAsync(ct)
         ).ToHashSet();
 
         HashSet<int> specificKeywordIds = ownedMovieKeywordIds
-            .Where(predicate: id => !commonKeywordIds.Contains(item: id))
+            .Where(id => !commonKeywordIds.Contains(id))
             .ToHashSet();
 
         if (specificKeywordIds.Count == 0)
@@ -62,36 +60,36 @@ public partial class RecommendationRepository
         // Step 1: Flat server-side query — find KeywordTv rows matching specific movie keywords on unowned TV shows (excluding anime)
         var keywordTvRows = await context
             .KeywordTv.AsNoTracking()
-            .Where(predicate: kt => specificKeywordIds.Contains(kt.KeywordId))
-            .Where(predicate: kt =>
+            .Where(kt => specificKeywordIds.Contains(kt.KeywordId))
+            .Where(kt =>
                 context.Tvs.Any(t => t.Id == kt.TvId && t.MediaType != MediaTypes.AnimeMediaType)
             )
-            .Where(predicate: kt =>
+            .Where(kt =>
                 !context.Tvs.Any(t =>
                     t.Id == kt.TvId && t.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Select(selector: kt => new { kt.TvId, kt.KeywordId })
-            .ToListAsync(cancellationToken: ct);
+            .Select(kt => new { kt.TvId, kt.KeywordId })
+            .ToListAsync(ct);
 
         // Step 2: Client-side grouping — filter by minimum shared keyword count
         var tvKeywordGroups = keywordTvRows
-            .GroupBy(keySelector: r => r.TvId)
-            .Where(predicate: g => g.Count() >= minSharedKeywords)
-            .OrderByDescending(keySelector: g => g.Count())
-            .Take(count: maxCandidates)
+            .GroupBy(r => r.TvId)
+            .Where(g => g.Count() >= minSharedKeywords)
+            .OrderByDescending(g => g.Count())
+            .Take(maxCandidates)
             .ToList();
 
         if (tvKeywordGroups.Count == 0)
             return [];
 
         // Step 3: Fetch TV metadata for qualifying shows
-        List<int> qualifyingTvIds = tvKeywordGroups.Select(selector: g => g.Key).ToList();
+        List<int> qualifyingTvIds = tvKeywordGroups.Select(g => g.Key).ToList();
 
         var tvMetadata = await context
             .Tvs.AsNoTracking()
-            .Where(predicate: t => qualifyingTvIds.Contains(t.Id))
-            .Select(selector: t => new
+            .Where(t => qualifyingTvIds.Contains(t.Id))
+            .Select(t => new
             {
                 t.Id,
                 t.Title,
@@ -101,7 +99,7 @@ public partial class RecommendationRepository
                 t.Backdrop,
                 t._colorPalette,
             })
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         Dictionary<
             int,
@@ -114,14 +112,14 @@ public partial class RecommendationRepository
                 string? Palette
             )
         > metaMap = tvMetadata.ToDictionary(
-            keySelector: t => t.Id,
-            elementSelector: t => (t.Title, t.TitleSort, t.Overview, t.Poster, t.Backdrop, t._colorPalette)
+            t => t.Id,
+            t => (t.Title, t.TitleSort, t.Overview, t.Poster, t.Backdrop, t._colorPalette)
         );
 
         // Step 4: Build candidates with reverse-mapped source IDs
         return tvKeywordGroups
-            .Where(predicate: g => metaMap.ContainsKey(key: g.Key))
-            .Select(selector: g =>
+            .Where(g => metaMap.ContainsKey(g.Key))
+            .Select(g =>
             {
                 (
                     string Title,
@@ -130,11 +128,11 @@ public partial class RecommendationRepository
                     string? Poster,
                     string? Backdrop,
                     string? Palette
-                ) meta = metaMap[key: g.Key];
-                HashSet<int> sharedKeywordIds = g.Select(selector: r => r.KeywordId).ToHashSet();
+                ) meta = metaMap[g.Key];
+                HashSet<int> sharedKeywordIds = g.Select(r => r.KeywordId).ToHashSet();
                 List<int> sourceMovieIds = movieKeywordMap
-                    .Where(predicate: kv => kv.Value.Any(predicate: kw => sharedKeywordIds.Contains(item: kw)))
-                    .Select(selector: kv => kv.Key)
+                    .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
+                    .Select(kv => kv.Key)
                     .Distinct()
                     .ToList();
 
@@ -165,13 +163,13 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         if (movieKeywordMap.Count == 0)
             return [];
 
         HashSet<int> ownedMovieKeywordIds = movieKeywordMap
-            .Values.SelectMany(selector: kws => kws)
+            .Values.SelectMany(kws => kws)
             .ToHashSet();
 
         if (ownedMovieKeywordIds.Count == 0)
@@ -180,15 +178,15 @@ public partial class RecommendationRepository
         HashSet<int> commonKeywordIds = (
             await context
                 .KeywordTv.AsNoTracking()
-                .Where(predicate: kt => ownedMovieKeywordIds.Contains(kt.KeywordId))
-                .GroupBy(keySelector: kt => kt.KeywordId)
-                .Where(predicate: g => g.Count() > maxKeywordFrequency)
-                .Select(selector: g => g.Key)
-                .ToListAsync(cancellationToken: ct)
+                .Where(kt => ownedMovieKeywordIds.Contains(kt.KeywordId))
+                .GroupBy(kt => kt.KeywordId)
+                .Where(g => g.Count() > maxKeywordFrequency)
+                .Select(g => g.Key)
+                .ToListAsync(ct)
         ).ToHashSet();
 
         HashSet<int> specificKeywordIds = ownedMovieKeywordIds
-            .Where(predicate: id => !commonKeywordIds.Contains(item: id))
+            .Where(id => !commonKeywordIds.Contains(id))
             .ToHashSet();
 
         if (specificKeywordIds.Count == 0)
@@ -196,34 +194,34 @@ public partial class RecommendationRepository
 
         var keywordTvRows = await context
             .KeywordTv.AsNoTracking()
-            .Where(predicate: kt => specificKeywordIds.Contains(kt.KeywordId))
-            .Where(predicate: kt =>
+            .Where(kt => specificKeywordIds.Contains(kt.KeywordId))
+            .Where(kt =>
                 context.Tvs.Any(t => t.Id == kt.TvId && t.MediaType == MediaTypes.AnimeMediaType)
             )
-            .Where(predicate: kt =>
+            .Where(kt =>
                 !context.Tvs.Any(t =>
                     t.Id == kt.TvId && t.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Select(selector: kt => new { kt.TvId, kt.KeywordId })
-            .ToListAsync(cancellationToken: ct);
+            .Select(kt => new { kt.TvId, kt.KeywordId })
+            .ToListAsync(ct);
 
         var tvKeywordGroups = keywordTvRows
-            .GroupBy(keySelector: r => r.TvId)
-            .Where(predicate: g => g.Count() >= minSharedKeywords)
-            .OrderByDescending(keySelector: g => g.Count())
-            .Take(count: maxCandidates)
+            .GroupBy(r => r.TvId)
+            .Where(g => g.Count() >= minSharedKeywords)
+            .OrderByDescending(g => g.Count())
+            .Take(maxCandidates)
             .ToList();
 
         if (tvKeywordGroups.Count == 0)
             return [];
 
-        List<int> qualifyingTvIds = tvKeywordGroups.Select(selector: g => g.Key).ToList();
+        List<int> qualifyingTvIds = tvKeywordGroups.Select(g => g.Key).ToList();
 
         var tvMetadata = await context
             .Tvs.AsNoTracking()
-            .Where(predicate: t => qualifyingTvIds.Contains(t.Id))
-            .Select(selector: t => new
+            .Where(t => qualifyingTvIds.Contains(t.Id))
+            .Select(t => new
             {
                 t.Id,
                 t.Title,
@@ -233,7 +231,7 @@ public partial class RecommendationRepository
                 t.Backdrop,
                 t._colorPalette,
             })
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         Dictionary<
             int,
@@ -246,13 +244,13 @@ public partial class RecommendationRepository
                 string? Palette
             )
         > metaMap = tvMetadata.ToDictionary(
-            keySelector: t => t.Id,
-            elementSelector: t => (t.Title, t.TitleSort, t.Overview, t.Poster, t.Backdrop, t._colorPalette)
+            t => t.Id,
+            t => (t.Title, t.TitleSort, t.Overview, t.Poster, t.Backdrop, t._colorPalette)
         );
 
         return tvKeywordGroups
-            .Where(predicate: g => metaMap.ContainsKey(key: g.Key))
-            .Select(selector: g =>
+            .Where(g => metaMap.ContainsKey(g.Key))
+            .Select(g =>
             {
                 (
                     string Title,
@@ -261,11 +259,11 @@ public partial class RecommendationRepository
                     string? Poster,
                     string? Backdrop,
                     string? Palette
-                ) meta = metaMap[key: g.Key];
-                HashSet<int> sharedKeywordIds = g.Select(selector: r => r.KeywordId).ToHashSet();
+                ) meta = metaMap[g.Key];
+                HashSet<int> sharedKeywordIds = g.Select(r => r.KeywordId).ToHashSet();
                 List<int> sourceMovieIds = movieKeywordMap
-                    .Where(predicate: kv => kv.Value.Any(predicate: kw => sharedKeywordIds.Contains(item: kw)))
-                    .Select(selector: kv => kv.Key)
+                    .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
+                    .Select(kv => kv.Key)
                     .Distinct()
                     .ToList();
 
@@ -296,12 +294,12 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         if (tvKeywordMap.Count == 0)
             return [];
 
-        HashSet<int> ownedTvKeywordIds = tvKeywordMap.Values.SelectMany(selector: kws => kws).ToHashSet();
+        HashSet<int> ownedTvKeywordIds = tvKeywordMap.Values.SelectMany(kws => kws).ToHashSet();
 
         if (ownedTvKeywordIds.Count == 0)
             return [];
@@ -310,15 +308,15 @@ public partial class RecommendationRepository
         HashSet<int> commonKeywordIds = (
             await context
                 .KeywordMovie.AsNoTracking()
-                .Where(predicate: km => ownedTvKeywordIds.Contains(km.KeywordId))
-                .GroupBy(keySelector: km => km.KeywordId)
-                .Where(predicate: g => g.Count() > maxKeywordFrequency)
-                .Select(selector: g => g.Key)
-                .ToListAsync(cancellationToken: ct)
+                .Where(km => ownedTvKeywordIds.Contains(km.KeywordId))
+                .GroupBy(km => km.KeywordId)
+                .Where(g => g.Count() > maxKeywordFrequency)
+                .Select(g => g.Key)
+                .ToListAsync(ct)
         ).ToHashSet();
 
         HashSet<int> specificKeywordIds = ownedTvKeywordIds
-            .Where(predicate: id => !commonKeywordIds.Contains(item: id))
+            .Where(id => !commonKeywordIds.Contains(id))
             .ToHashSet();
 
         if (specificKeywordIds.Count == 0)
@@ -327,33 +325,33 @@ public partial class RecommendationRepository
         // Step 1: Flat server-side query — find KeywordMovie rows matching specific TV keywords on unowned movies
         var keywordMovieRows = await context
             .KeywordMovie.AsNoTracking()
-            .Where(predicate: km => specificKeywordIds.Contains(km.KeywordId))
-            .Where(predicate: km =>
+            .Where(km => specificKeywordIds.Contains(km.KeywordId))
+            .Where(km =>
                 !context.Movies.Any(m =>
                     m.Id == km.MovieId && m.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Select(selector: km => new { km.MovieId, km.KeywordId })
-            .ToListAsync(cancellationToken: ct);
+            .Select(km => new { km.MovieId, km.KeywordId })
+            .ToListAsync(ct);
 
         // Step 2: Client-side grouping — filter by minimum shared keyword count
         var movieKeywordGroups = keywordMovieRows
-            .GroupBy(keySelector: r => r.MovieId)
-            .Where(predicate: g => g.Count() >= minSharedKeywords)
-            .OrderByDescending(keySelector: g => g.Count())
-            .Take(count: maxCandidates)
+            .GroupBy(r => r.MovieId)
+            .Where(g => g.Count() >= minSharedKeywords)
+            .OrderByDescending(g => g.Count())
+            .Take(maxCandidates)
             .ToList();
 
         if (movieKeywordGroups.Count == 0)
             return [];
 
         // Step 3: Fetch movie metadata for qualifying movies
-        List<int> qualifyingMovieIds = movieKeywordGroups.Select(selector: g => g.Key).ToList();
+        List<int> qualifyingMovieIds = movieKeywordGroups.Select(g => g.Key).ToList();
 
         var movieMetadata = await context
             .Movies.AsNoTracking()
-            .Where(predicate: m => qualifyingMovieIds.Contains(m.Id))
-            .Select(selector: m => new
+            .Where(m => qualifyingMovieIds.Contains(m.Id))
+            .Select(m => new
             {
                 m.Id,
                 m.Title,
@@ -363,7 +361,7 @@ public partial class RecommendationRepository
                 m.Backdrop,
                 m._colorPalette,
             })
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         Dictionary<
             int,
@@ -376,14 +374,14 @@ public partial class RecommendationRepository
                 string? Palette
             )
         > metaMap = movieMetadata.ToDictionary(
-            keySelector: m => m.Id,
-            elementSelector: m => (m.Title, m.TitleSort, m.Overview, m.Poster, m.Backdrop, m._colorPalette)
+            m => m.Id,
+            m => (m.Title, m.TitleSort, m.Overview, m.Poster, m.Backdrop, m._colorPalette)
         );
 
         // Step 4: Build candidates with reverse-mapped source IDs
         return movieKeywordGroups
-            .Where(predicate: g => metaMap.ContainsKey(key: g.Key))
-            .Select(selector: g =>
+            .Where(g => metaMap.ContainsKey(g.Key))
+            .Select(g =>
             {
                 (
                     string Title,
@@ -392,11 +390,11 @@ public partial class RecommendationRepository
                     string? Poster,
                     string? Backdrop,
                     string? Palette
-                ) meta = metaMap[key: g.Key];
-                HashSet<int> sharedKeywordIds = g.Select(selector: r => r.KeywordId).ToHashSet();
+                ) meta = metaMap[g.Key];
+                HashSet<int> sharedKeywordIds = g.Select(r => r.KeywordId).ToHashSet();
                 List<int> sourceTvIds = tvKeywordMap
-                    .Where(predicate: kv => kv.Value.Any(predicate: kw => sharedKeywordIds.Contains(item: kw)))
-                    .Select(selector: kv => kv.Key)
+                    .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
+                    .Select(kv => kv.Key)
                     .Distinct()
                     .ToList();
 

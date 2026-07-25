@@ -41,7 +41,7 @@ public class AudioHlsOutputStrategy : IOutputStrategy
 
         string audioCodec =
             audio?.Action == StreamAction.Copy ? "copy"
-            : !string.IsNullOrEmpty(value: audio?.EncoderName) ? audio.EncoderName
+            : !string.IsNullOrEmpty(audio?.EncoderName) ? audio.EncoderName
             : DefaultAudioCodec;
 
         string playlistPath = "audio.m3u8";
@@ -49,11 +49,11 @@ public class AudioHlsOutputStrategy : IOutputStrategy
 
         Dictionary<string, string> extraFlags = new()
         {
-            [key: "-f"] = "hls",
-            [key: "-hls_time"] = segmentDuration.ToString(),
-            [key: "-hls_playlist_type"] = "vod",
-            [key: "-hls_flags"] = "independent_segments",
-            [key: "-hls_segment_filename"] = segmentPattern,
+            ["-f"] = "hls",
+            ["-hls_time"] = segmentDuration.ToString(),
+            ["-hls_playlist_type"] = "vod",
+            ["-hls_flags"] = "independent_segments",
+            ["-hls_segment_filename"] = segmentPattern,
         };
 
         // Force AAC LC profile for broadest HLS compatibility when transcoding to
@@ -61,21 +61,21 @@ public class AudioHlsOutputStrategy : IOutputStrategy
         // reject "aac_low" and refuse to start, so it must only be set for an AAC
         // encoder — a valid MP3/E-AC-3 HLS profile would otherwise fail to encode.
         bool isAac =
-            audioCodec.Contains(value: "aac", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || audioCodec.Equals(value: "libfdk_aac", comparisonType: StringComparison.OrdinalIgnoreCase);
+            audioCodec.Contains("aac", StringComparison.OrdinalIgnoreCase)
+            || audioCodec.Equals("libfdk_aac", StringComparison.OrdinalIgnoreCase);
         if (audioCodec != "copy" && isAac)
-            extraFlags[key: "-profile:a"] = DefaultAacProfile;
+            extraFlags["-profile:a"] = DefaultAacProfile;
 
-        if (audio is { Action: StreamAction.Transcode } && !string.IsNullOrEmpty(value: audio.AudioFilter))
-            extraFlags[key: "-af"] = audio.AudioFilter;
+        if (audio is { Action: StreamAction.Transcode } && !string.IsNullOrEmpty(audio.AudioFilter))
+            extraFlags["-af"] = audio.AudioFilter;
 
         List<string> mapStreams = [];
         if (audio is not null)
-            mapStreams.Add(item: audio.MapLabel);
+            mapStreams.Add(audio.MapLabel);
 
         builder.AddOutput(
-            output: new(
-                FilePath: playlistPath,
+            new(
+                playlistPath,
                 AudioCodec: audioCodec,
                 AudioBitrateKbps: audio?.Action == StreamAction.Transcode
                     ? (audio.BitrateKbps > 0 ? audio.BitrateKbps : 128)

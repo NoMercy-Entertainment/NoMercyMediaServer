@@ -17,52 +17,52 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record GenreTrackDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "path")]
+    [JsonProperty("path")]
     public string Path { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "date")]
+    [JsonProperty("date")]
     public DateTime? Date { get; set; }
 
-    [JsonProperty(propertyName: "disc")]
+    [JsonProperty("disc")]
     public int? Disc { get; set; }
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public string? Duration { get; set; }
 
-    [JsonProperty(propertyName: "favorite")]
+    [JsonProperty("favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty(propertyName: "quality")]
+    [JsonProperty("quality")]
     public int? Quality { get; set; }
 
-    [JsonProperty(propertyName: "track")]
+    [JsonProperty("track")]
     public int? Track { get; set; }
 
-    [JsonProperty(propertyName: "lyrics")]
+    [JsonProperty("lyrics")]
     public Lyric[]? Lyrics { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
-    [JsonProperty(propertyName: "artist_track")]
+    [JsonProperty("artist_track")]
     public IEnumerable<ArtistDto> Artists { get; set; } = [];
 
-    [JsonProperty(propertyName: "album_track")]
+    [JsonProperty("album_track")]
     public IEnumerable<AlbumDto> Albums { get; set; } = [];
 
     public GenreTrackDto(MusicGenreTrack genreTrack, string country)
@@ -70,11 +70,11 @@ public record GenreTrackDto
         Id = genreTrack.Track.Id;
         Name = genreTrack.Track.Name;
         Cover = genreTrack.Track.Cover is not null
-            ? new Uri(uriString: $"/images/music{genreTrack.Track.Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{genreTrack.Track.Cover}", UriKind.Relative).ToString()
             : null;
         Path = new Uri(
-            uriString: $"/{genreTrack.Track.FolderId}{genreTrack.Track.Folder}{genreTrack.Track.Filename}",
-            uriKind: UriKind.Relative
+            $"/{genreTrack.Track.FolderId}{genreTrack.Track.Folder}{genreTrack.Track.Filename}",
+            UriKind.Relative
         ).ToString();
         Type = "track";
         ColorPalette = genreTrack.Track.ColorPalette;
@@ -85,17 +85,17 @@ public record GenreTrackDto
         Quality = genreTrack.Track.Quality;
         Track = genreTrack.Track.TrackNumber;
         Lyrics = genreTrack.Track.Lyrics;
-        Link = new(uriString: $"/music/tracks/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/tracks/{Id}", UriKind.Relative);
 
-        Artists = genreTrack.Track.ArtistTrack.Select(selector: artistTrack => new ArtistDto(
-            artistTrack: artistTrack,
-            country: country
+        Artists = genreTrack.Track.ArtistTrack.Select(artistTrack => new ArtistDto(
+            artistTrack,
+            country
         ));
 
         Albums = genreTrack
-            .Track.AlbumTrack.Select(selector: album => new AlbumDto(album: album.Album, country: country!))
-            .GroupBy(keySelector: album => album.Id)
-            .Select(selector: album => album.First())
-            .OrderBy(keySelector: artistTrack => artistTrack.Year);
+            .Track.AlbumTrack.Select(album => new AlbumDto(album.Album, country!))
+            .GroupBy(album => album.Id)
+            .Select(album => album.First())
+            .OrderBy(artistTrack => artistTrack.Year);
     }
 }

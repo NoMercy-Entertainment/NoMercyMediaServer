@@ -18,12 +18,10 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
-using LadderConfig = NoMercy.Encoder.Profiles.LadderConfig;
 using LadderMode = NoMercy.Encoder.Profiles.LadderMode;
 using LadderRung = NoMercy.Encoder.Profiles.LadderRung;
 
@@ -53,37 +51,37 @@ public class PlanStageHardwareVendorGateTests
     private static async Task<OutputPlan> RunPlan(bool nvidiaGpuPresent)
     {
         CodecRegistry registry = new();
-        CodecResolver codecResolver = new(registry: registry);
+        CodecResolver codecResolver = new(registry);
         HardwarePreferenceResolver hardwarePreferenceResolver = new();
         BitDepthPolicyResolver bitDepthPolicyResolver = new();
 
         GpuDevice nvidiaGpu = new(
-            Vendor: GpuVendor.Nvidia,
-            Name: "NVIDIA GeForce GTX 1060 3GB",
-            VramMb: 3072,
-            MaxEncoderSessions: 3,
-            SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
+            GpuVendor.Nvidia,
+            "NVIDIA GeForce GTX 1060 3GB",
+            3072,
+            3,
+            [VideoCodecType.H264, VideoCodecType.H265]
         );
 
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(expression: h => h.HasGpu).Returns(value: nvidiaGpuPresent);
-        hardware.Setup(expression: h => h.CpuCores).Returns(value: 16);
-        hardware.Setup(expression: h => h.Gpus).Returns(value: nvidiaGpuPresent ? [nvidiaGpu] : []);
+        hardware.Setup(h => h.HasGpu).Returns(nvidiaGpuPresent);
+        hardware.Setup(h => h.CpuCores).Returns(16);
+        hardware.Setup(h => h.Gpus).Returns(nvidiaGpuPresent ? [nvidiaGpu] : []);
         hardware
-            .Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>()))
-            .Returns(value: nvidiaGpuPresent);
+            .Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>()))
+            .Returns(nvidiaGpuPresent);
         hardware
-            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns(value: nvidiaGpuPresent ? nvidiaGpu : null);
+            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(nvidiaGpuPresent ? nvidiaGpu : null);
         // The authoritative gate: only encoders that survived the real
         // hardware-encoder init probe (HardwareEncoderProbe) are selectable.
         // A physically detected NVIDIA GPU only makes h264_nvenc/hevc_nvenc
         // probe-usable — h264_amf/h264_qsv are never usable on this host
         // regardless of what ffmpeg's compiled-in encoder list advertises.
         hardware
-            .Setup(expression: h => h.UsableHardwareEncoders)
+            .Setup(h => h.UsableHardwareEncoders)
             .Returns(
-                value: nvidiaGpuPresent
+                nvidiaGpuPresent
                     ? new HashSet<string> { "h264_nvenc", "hevc_nvenc" }
                     : new HashSet<string>()
             );
@@ -105,20 +103,20 @@ public class PlanStageHardwareVendorGateTests
         ];
 
         Mock<IFfmpegCapabilities> ffmpegCapabilities = new();
-        ffmpegCapabilities.Setup(expression: c => c.AvailableEncoders).Returns(value: encoders);
-        ffmpegCapabilities.Setup(expression: c => c.AvailableFilters).Returns(value: new HashSet<string>());
+        ffmpegCapabilities.Setup(c => c.AvailableEncoders).Returns(encoders);
+        ffmpegCapabilities.Setup(c => c.AvailableFilters).Returns(new HashSet<string>());
         ffmpegCapabilities
-            .Setup(expression: c => c.HasEncoder(It.IsAny<string>()))
-            .Returns(valueFunction: (string encoderName) => encoders.Contains(item: encoderName));
-        ffmpegCapabilities.Setup(expression: c => c.HasFilter(It.IsAny<string>())).Returns(value: false);
+            .Setup(c => c.HasEncoder(It.IsAny<string>()))
+            .Returns((string encoderName) => encoders.Contains(encoderName));
+        ffmpegCapabilities.Setup(c => c.HasFilter(It.IsAny<string>())).Returns(false);
 
         // Empty SpeedIndex — no encoder has ever been benchmarked on this
         // host. This is the "unmeasured" branch: the resolver falls through
         // to picking a codec-matching name straight out of availableEncoders.
-        SpeedIndex speedIndex = new(Measurements: new());
+        SpeedIndex speedIndex = new(new());
 
         PlanStage stage = new(
-            graphBuilder: new(),
+            new(),
             groupingStrategy: new(),
             costEstimator: new(),
             codecResolver: codecResolver,
@@ -134,7 +132,7 @@ public class PlanStageHardwareVendorGateTests
         );
 
         EncodingProfile profile = new(
-            Id: Ulid.NewUlid(),
+            Ulid.NewUlid(),
             Name: "Test 1080p H264",
             Container: Container.HlsTs,
             Video: null,
@@ -146,82 +144,81 @@ public class PlanStageHardwareVendorGateTests
                 Rungs =
                 [
                     new LadderRung(
-                        Width: 1920,
-                        Height: 1080,
-                        Codec: VideoCodecType.H264,
-                        BitrateKbps: 4000,
-                        MaxBitrateKbps: 6000,
-                        BufferSizeKbps: 8000,
-                        Framerate: 24.0,
-                        Preset: "medium",
-                        CodecProfile: CodecProfile.High,
-                        BitDepth: 8,
-                        PixelFormat: "yuv420p"
+                        1920,
+                        1080,
+                        VideoCodecType.H264,
+                        4000,
+                        6000,
+                        8000,
+                        24.0,
+                        "medium",
+                        CodecProfile.High,
+                        8,
+                        "yuv420p"
                     ),
                 ],
             }
         );
 
         MediaInfo media = new(
-            FilePath: "/movies/test/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 110),
-            OverallBitRateKbps: 12000,
-            FileSizeBytes: 9_000_000_000,
-            VideoStreams:
+            "/movies/test/test.mkv",
+            "matroska",
+            TimeSpan.FromMinutes(110),
+            12000,
+            9_000_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: "bt709",
-                    ColorTransfer: "bt709",
-                    ColorSpace: "bt709",
-                    IsDefault: true,
+                    0,
+                    "h264",
+                    1920,
+                    1080,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    "bt709",
+                    "bt709",
+                    "bt709",
+                    true,
                     // Below the ladder rung's 4000 kbps target so
                     // PlanStage.ApplySmartCopyDowngrade never fires here — this
                     // suite exists to pin hardware-encoder SELECTION, which
                     // smart-copy would bypass entirely (Policy becomes Copy
                     // before any codec/hardware resolution runs).
-                    BitRateKbps: 3000
+                    3000
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
-        ValidateInput input = new(Media: media, Profile: profile);
+        ValidateInput input = new(media, profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input, context, CancellationToken.None);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
         return success.Value.OutputPlan;
     }
 
     [Fact]
     public async Task NvidiaOnlyHost_NeverResolvesAmfOrQsv()
     {
-        OutputPlan plan = await RunPlan(nvidiaGpuPresent: true);
+        OutputPlan plan = await RunPlan(true);
 
-        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
 
-        video.EncoderName.Should().Be(expected: "h264_nvenc");
-        video.EncoderName.Should().NotBe(unexpected: "h264_amf");
-        video.EncoderName.Should().NotBe(unexpected: "h264_qsv");
+        video.EncoderName.Should().Be("h264_nvenc");
+        video.EncoderName.Should().NotBe("h264_amf");
+        video.EncoderName.Should().NotBe("h264_qsv");
     }
 
     [Fact]
     public async Task NoGpuAtAllHost_FallsBackToSoftware()
     {
-        OutputPlan plan = await RunPlan(nvidiaGpuPresent: false);
+        OutputPlan plan = await RunPlan(false);
 
-        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
 
-        video.EncoderName.Should().Be(expected: "libx264");
+        video.EncoderName.Should().Be("libx264");
     }
 }

@@ -16,7 +16,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Music;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ArtistDtoTests
 {
     private static AlbumArtist BuildAlbumArtist(
@@ -37,9 +37,9 @@ public class ArtistDtoTests
             Cover = cover,
         };
         foreach (Translation translation in translations ?? [])
-            artist.Translations.Add(item: translation);
+            artist.Translations.Add(translation);
         foreach (Image image in images ?? [])
-            artist.Images.Add(item: image);
+            artist.Images.Add(image);
 
         Album album = new()
         {
@@ -74,9 +74,9 @@ public class ArtistDtoTests
             Cover = cover,
         };
         foreach (Translation translation in translations ?? [])
-            artist.Translations.Add(item: translation);
+            artist.Translations.Add(translation);
         foreach (Image image in images ?? [])
-            artist.Images.Add(item: image);
+            artist.Images.Add(image);
 
         Track track = new()
         {
@@ -110,10 +110,10 @@ public class ArtistDtoTests
             albumDescription: "A completely different album blurb"
         );
 
-        ArtistDto dto = new(albumArtist: albumArtist, country: "NL");
+        ArtistDto dto = new(albumArtist, "NL");
 
-        dto.Description.Should().Be(expected: "The artist's own bio");
-        dto.Description.Should().NotBe(unexpected: "A completely different album blurb");
+        dto.Description.Should().Be("The artist's own bio");
+        dto.Description.Should().NotBe("A completely different album blurb");
     }
 
     [Fact]
@@ -125,9 +125,9 @@ public class ArtistDtoTests
             translations: [new() { Iso31661 = "NL", Description = "Vertaalde artiest bio" }]
         );
 
-        ArtistDto dto = new(albumArtist: albumArtist, country: "NL");
+        ArtistDto dto = new(albumArtist, "NL");
 
-        dto.Description.Should().Be(expected: "Vertaalde artiest bio");
+        dto.Description.Should().Be("Vertaalde artiest bio");
     }
 
     [Fact]
@@ -139,9 +139,9 @@ public class ArtistDtoTests
             translations: [new() { Iso31661 = "DE", Description = "Deutsche Bio" }]
         );
 
-        ArtistDto dto = new(albumArtist: albumArtist, country: "NL");
+        ArtistDto dto = new(albumArtist, "NL");
 
-        dto.Description.Should().Be(expected: "English artist bio");
+        dto.Description.Should().Be("English artist bio");
     }
 
     // =========================================================================
@@ -154,13 +154,13 @@ public class ArtistDtoTests
         AlbumArtist albumArtist = BuildAlbumArtist();
         Guid artistId = albumArtist.ArtistId;
 
-        ArtistDto dto = new(albumArtist: albumArtist, country: "US");
+        ArtistDto dto = new(albumArtist, "US");
 
-        dto.Id.Should().Be(expected: artistId);
-        dto.Name.Should().Be(expected: "Test Artist");
-        dto.Disambiguation.Should().Be(expected: "The Band");
-        dto.Type.Should().Be(expected: "artist");
-        dto.Link.ToString().Should().Be(expected: $"/music/artists/{artistId}");
+        dto.Id.Should().Be(artistId);
+        dto.Name.Should().Be("Test Artist");
+        dto.Disambiguation.Should().Be("The Band");
+        dto.Type.Should().Be("artist");
+        dto.Link.ToString().Should().Be($"/music/artists/{artistId}");
     }
 
     [Fact]
@@ -168,9 +168,9 @@ public class ArtistDtoTests
     {
         AlbumArtist albumArtist = BuildAlbumArtist(cover: "/artist-cover.jpg");
 
-        ArtistDto dto = new(albumArtist: albumArtist, country: "US");
+        ArtistDto dto = new(albumArtist, "US");
 
-        dto.Cover.Should().Be(expected: "/images/music/artist-cover.jpg");
+        dto.Cover.Should().Be("/images/music/artist-cover.jpg");
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public class ArtistDtoTests
     {
         AlbumArtist albumArtist = BuildAlbumArtist(cover: null);
 
-        ArtistDto dto = new(albumArtist: albumArtist, country: "US");
+        ArtistDto dto = new(albumArtist, "US");
 
         dto.Cover.Should().BeNull();
     }
@@ -190,9 +190,9 @@ public class ArtistDtoTests
             images: [new() { Type = "background", FilePath = "/bg.jpg" }]
         );
 
-        ArtistDto dto = new(albumArtist: albumArtist, country: "US");
+        ArtistDto dto = new(albumArtist, "US");
 
-        dto.Backdrop.Should().Be(expected: "/images/music/bg.jpg");
+        dto.Backdrop.Should().Be("/images/music/bg.jpg");
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class ArtistDtoTests
             images: [new() { Type = "thumb", FilePath = "/thumb.jpg" }]
         );
 
-        ArtistDto dto = new(albumArtist: albumArtist, country: "US");
+        ArtistDto dto = new(albumArtist, "US");
 
         dto.Backdrop.Should().BeNull();
     }
@@ -216,9 +216,9 @@ public class ArtistDtoTests
     {
         ArtistTrack artistTrack = BuildArtistTrack(artistDescription: "Track-side artist bio");
 
-        ArtistDto dto = new(artistTrack: artistTrack, country: "NL");
+        ArtistDto dto = new(artistTrack, "NL");
 
-        dto.Description.Should().Be(expected: "Track-side artist bio");
+        dto.Description.Should().Be("Track-side artist bio");
     }
 
     [Fact]
@@ -227,12 +227,12 @@ public class ArtistDtoTests
         ArtistTrack artistTrack = BuildArtistTrack();
         Guid artistId = artistTrack.ArtistId;
 
-        ArtistDto dto = new(artistTrack: artistTrack, country: "US");
+        ArtistDto dto = new(artistTrack, "US");
 
-        dto.Id.Should().Be(expected: artistId);
-        dto.Name.Should().Be(expected: "Test Artist");
-        dto.Type.Should().Be(expected: "artist");
-        dto.Link.ToString().Should().Be(expected: $"/music/artists/{artistId}");
+        dto.Id.Should().Be(artistId);
+        dto.Name.Should().Be("Test Artist");
+        dto.Type.Should().Be("artist");
+        dto.Link.ToString().Should().Be($"/music/artists/{artistId}");
     }
 
     // =========================================================================
@@ -244,15 +244,15 @@ public class ArtistDtoTests
     public void ForBroadcastQueueEntry_NullsDescriptionAndColorPalette_LeavesSourceUntouched()
     {
         AlbumArtist albumArtist = BuildAlbumArtist(artistDescription: "Full bio");
-        ArtistDto original = new(albumArtist: albumArtist, country: "US");
+        ArtistDto original = new(albumArtist, "US");
 
         ArtistDto broadcastCopy = original.ForBroadcastQueueEntry();
 
         broadcastCopy.Description.Should().BeNull();
         broadcastCopy.ColorPalette.Should().BeNull();
-        broadcastCopy.Id.Should().Be(expected: original.Id);
-        broadcastCopy.Name.Should().Be(expected: original.Name);
+        broadcastCopy.Id.Should().Be(original.Id);
+        broadcastCopy.Name.Should().Be(original.Name);
 
-        original.Description.Should().Be(expected: "Full bio");
+        original.Description.Should().Be("Full bio");
     }
 }

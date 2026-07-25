@@ -40,16 +40,16 @@ public static class UsersSeed
             if (hasUsers)
                 return;
 
-            Logger.Setup(message: "Adding Users", level: LogEventLevel.Verbose);
+            Logger.Setup("Adding Users", LogEventLevel.Verbose);
 
             IServerUserSyncService service =
-                syncService ?? new ServerUserSyncService(apiClient: new ServerUserApiClient());
+                syncService ?? new ServerUserSyncService(new ServerUserApiClient());
 
-            await service.SyncAsync(dbContext: dbContext, storage: storage, accessToken: accessToken);
+            await service.SyncAsync(dbContext, storage, accessToken);
         }
         catch (Exception e)
         {
-            Logger.Setup(message: $"Users seed failed: {e.Message}", level: LogEventLevel.Warning);
+            Logger.Setup($"Users seed failed: {e.Message}", LogEventLevel.Warning);
         }
     }
 }

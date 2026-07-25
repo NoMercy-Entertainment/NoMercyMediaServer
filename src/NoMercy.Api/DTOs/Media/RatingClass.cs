@@ -15,18 +15,18 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record RatingClass
 {
-    [JsonProperty(propertyName: "rating")]
+    [JsonProperty("rating")]
     public string? Rating { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "meaning")]
+    [JsonProperty("meaning")]
     public string Meaning { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "order")]
+    [JsonProperty("order")]
     public long Order { get; set; }
 
-    [JsonProperty(propertyName: "iso_3166_1")]
+    [JsonProperty("iso_3166_1")]
     public string? Iso31661 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "image")]
+    [JsonProperty("image")]
     public string Image { get; set; } = string.Empty;
 }

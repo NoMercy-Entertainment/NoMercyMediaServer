@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Configuration;
 
 public class TmdbJob
 {
-    [JsonProperty(propertyName: "department")]
+    [JsonProperty("department")]
     public string Department { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "jobs")]
+    [JsonProperty("jobs")]
     public string[] Jobs { get; set; } = [];
 }

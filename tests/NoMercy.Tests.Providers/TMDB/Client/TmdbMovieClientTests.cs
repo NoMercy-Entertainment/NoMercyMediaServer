@@ -19,7 +19,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Unit tests for TmdbMovieClient class
 /// Tests all methods with both valid and invalid data scenarios
 /// </summary>
-[Collection(name: "TmdbApi")]
+[Collection("TmdbApi")]
 public class TmdbMovieClientTests : TmdbTestBase
 {
     [Fact]
@@ -29,10 +29,10 @@ public class TmdbMovieClientTests : TmdbTestBase
         const int expectedId = 155;
 
         // Act
-        using TmdbMovieClient client = new(id: expectedId);
+        using TmdbMovieClient client = new(expectedId);
 
         // Assert
-        client.Id.Should().Be(expected: expectedId);
+        client.Id.Should().Be(expectedId);
     }
 
     [Fact]
@@ -42,22 +42,22 @@ public class TmdbMovieClientTests : TmdbTestBase
         using TmdbMovieClient client = new();
 
         // Assert
-        client.Id.Should().Be(expected: 0);
+        client.Id.Should().Be(0);
     }
 
     [Theory]
-    [InlineData(data: "en-US")]
-    [InlineData(data: "fr-FR")]
-    [InlineData(data: "es-ES")]
-    [InlineData(data: "de-DE")]
+    [InlineData("en-US")]
+    [InlineData("fr-FR")]
+    [InlineData("es-ES")]
+    [InlineData("de-DE")]
     public void Constructor_WithDifferentLanguages_CreatesClientSuccessfully(string language)
     {
         // Arrange & Act
-        using TmdbMovieClient client = new(id: ValidMovieId, language: language);
+        using TmdbMovieClient client = new(ValidMovieId, language: language);
 
         // Assert
         client.Should().NotBeNull();
-        client.Id.Should().Be(expected: ValidMovieId);
+        client.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class TmdbMovieClientTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidMovieId);
+        result!.Id.Should().Be(ValidMovieId);
         result.Title.Should().NotBeNullOrEmpty();
         result.OriginalTitle.Should().NotBeNullOrEmpty();
     }
@@ -83,11 +83,11 @@ public class TmdbMovieClientTests : TmdbTestBase
         using TmdbMovieClient client = CreateMockMovieClient();
 
         // Act
-        TmdbMovieDetails? result = await client.Details(priority: true);
+        TmdbMovieDetails? result = await client.Details(true);
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidMovieId);
+        result!.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -97,11 +97,11 @@ public class TmdbMovieClientTests : TmdbTestBase
         using TmdbMovieClient client = CreateMockMovieClient();
 
         // Act
-        TmdbMovieDetails? result = await client.Details(priority: false);
+        TmdbMovieDetails? result = await client.Details(false);
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidMovieId);
+        result!.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class TmdbMovieClientTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: 1771); // Mock data provider returns ID 1771, not 155
+        result!.Id.Should().Be(1771); // Mock data provider returns ID 1771, not 155
         result.Title.Should().NotBeNullOrEmpty();
         result.OriginalTitle.Should().NotBeNullOrEmpty();
 
@@ -131,11 +131,11 @@ public class TmdbMovieClientTests : TmdbTestBase
         using TmdbMovieClient client = CreateMockMovieClient();
 
         // Act
-        TmdbMovieAppends? result = await client.WithAllAppends(priority: true);
+        TmdbMovieAppends? result = await client.WithAllAppends(true);
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: 1771); // Mock data provider returns ID 1771, not 155
+        result!.Id.Should().Be(1771); // Mock data provider returns ID 1771, not 155
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public class TmdbMovieClientTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidMovieId);
+        result!.Id.Should().Be(ValidMovieId);
         result.Cast.Should().NotBeNull();
         result.Crew.Should().NotBeNull();
     }
@@ -161,11 +161,11 @@ public class TmdbMovieClientTests : TmdbTestBase
         using TmdbMovieClient client = CreateMockMovieClient();
 
         // Act
-        TmdbMovieCredits? result = await client.Credits(priority: true);
+        TmdbMovieCredits? result = await client.Credits(true);
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidMovieId);
+        result!.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public class TmdbMovieClientTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidMovieId);
+        result!.Id.Should().Be(ValidMovieId);
         result.ImdbId.Should().NotBeNullOrEmpty();
     }
 
@@ -190,11 +190,11 @@ public class TmdbMovieClientTests : TmdbTestBase
         using TmdbMovieClient client = CreateMockMovieClient();
 
         // Act
-        TmdbMovieExternalIds? result = await client.ExternalIds(priority: true);
+        TmdbMovieExternalIds? result = await client.ExternalIds(true);
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidMovieId);
+        result!.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -219,7 +219,7 @@ public class TmdbMovieClientTests : TmdbTestBase
         using TmdbMovieClient client = CreateMockMovieClient();
 
         // Act
-        TmdbImages? result = await client.Images(priority: true);
+        TmdbImages? result = await client.Images(true);
 
         // Assert
         result.Should().NotBeNull();
@@ -238,7 +238,7 @@ public class TmdbMovieClientTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidMovieId);
+        result!.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -248,11 +248,11 @@ public class TmdbMovieClientTests : TmdbTestBase
         using TmdbMovieClient client = CreateMockMovieClient();
 
         // Act
-        TmdbMovieKeywords? result = await client.Keywords(priority: true);
+        TmdbMovieKeywords? result = await client.Keywords(true);
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidMovieId);
+        result!.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -266,7 +266,7 @@ public class TmdbMovieClientTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidMovieId);
+        result!.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -276,11 +276,11 @@ public class TmdbMovieClientTests : TmdbTestBase
         using TmdbMovieClient client = CreateMockMovieClient();
 
         // Act
-        TmdbMovieLists? result = await client.Lists(priority: true);
+        TmdbMovieLists? result = await client.Lists(true);
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: ValidMovieId);
+        result!.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -292,7 +292,7 @@ public class TmdbMovieClientTests : TmdbTestBase
         const string endDate = "2023-12-31";
 
         // Act
-        TmdbMovieChanges? result = await client.Changes(startDate: startDate, endDate: endDate);
+        TmdbMovieChanges? result = await client.Changes(startDate, endDate);
 
         // Assert
         // Changes endpoint may return null even for valid requests due to TMDB API limitations
@@ -303,9 +303,9 @@ public class TmdbMovieClientTests : TmdbTestBase
     }
 
     [Theory]
-    [InlineData(data: ["", "2023-12-31"])]
-    [InlineData(data: ["2023-01-01", ""])]
-    [InlineData(data: ["", ""])]
+    [InlineData(["", "2023-12-31"])]
+    [InlineData(["2023-01-01", ""])]
+    [InlineData(["", ""])]
     public async Task Changes_WithEmptyDateParameters_HandlesGracefully(
         string startDate,
         string endDate
@@ -315,7 +315,7 @@ public class TmdbMovieClientTests : TmdbTestBase
         using TmdbMovieClient client = CreateMockMovieClient();
 
         // Act & Assert
-        Func<Task<TmdbMovieChanges?>> act = async () => await client.Changes(startDate: startDate, endDate: endDate);
+        Func<Task<TmdbMovieChanges?>> act = async () => await client.Changes(startDate, endDate);
         await act.Should().NotThrowAsync();
     }
 
@@ -347,9 +347,9 @@ public class TmdbMovieClientTests : TmdbTestBase
         credits.Should().NotBeNull();
         externalIds.Should().NotBeNull();
 
-        details!.Id.Should().Be(expected: ValidMovieId);
-        credits!.Id.Should().Be(expected: ValidMovieId);
-        externalIds!.Id.Should().Be(expected: ValidMovieId);
+        details!.Id.Should().Be(ValidMovieId);
+        credits!.Id.Should().Be(ValidMovieId);
+        externalIds!.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -372,8 +372,8 @@ public class TmdbMovieClientTests : TmdbTestBase
         credits.Should().NotBeNull();
         externalIds.Should().NotBeNull();
 
-        details!.Id.Should().Be(expected: ValidMovieId);
-        credits!.Id.Should().Be(expected: ValidMovieId);
-        externalIds!.Id.Should().Be(expected: ValidMovieId);
+        details!.Id.Should().Be(ValidMovieId);
+        credits!.Id.Should().Be(ValidMovieId);
+        externalIds!.Id.Should().Be(ValidMovieId);
     }
 }

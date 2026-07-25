@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NoMercy.Api.Controllers.V1.Encoder;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Startup;
@@ -29,7 +28,7 @@ namespace NoMercy.Tests.Api.Media;
 /// controller is constructed directly with Moq doubles rather than through
 /// NoMercyApiFactory.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class EncoderHardwareControllerTests
 {
     private readonly Mock<IBenchmarkJobTracker> _tracker = new();
@@ -39,10 +38,10 @@ public class EncoderHardwareControllerTests
     private readonly Mock<IFfmpegCapabilityProbe> _probe = new();
 
     private EncoderHardwareController CreateController() =>
-        new(tracker: _tracker.Object, monitor: _monitor.Object, registry: _registry.Object, hardware: _hardware.Object, probe: _probe.Object);
+        new(_tracker.Object, _monitor.Object, _registry.Object, _hardware.Object, _probe.Object);
 
     private static BenchmarkJobStatus MakeJob(string jobId, string status = "queued") =>
-        new(JobId: jobId, Status: status, StartedAt: DateTime.UtcNow, CompletedAt: null, MeasurementCount: 0, RequestedCodecs: [], RequestedResolutions: [], Error: null);
+        new(jobId, status, DateTime.UtcNow, null, 0, [], [], null);
 
     // =========================================================================
     // StartBenchmark
@@ -51,23 +50,23 @@ public class EncoderHardwareControllerTests
     [Fact]
     public void StartBenchmark_NullRequest_StartsWithEmptyCodecsAndResolutions()
     {
-        BenchmarkJobStatus job = MakeJob(jobId: "job-1");
+        BenchmarkJobStatus job = MakeJob("job-1");
         _tracker
-            .Setup(expression: t =>
+            .Setup(t =>
                 t.Start(It.Is<List<VideoCodecType>>(c => c.Count == 0), It.IsAny<List<int>>())
             )
-            .Returns(value: job);
+            .Returns(job);
 
-        IActionResult result = CreateController().StartBenchmark(request: null);
+        IActionResult result = CreateController().StartBenchmark(null);
 
-        AcceptedResult accepted = Assert.IsType<AcceptedResult>(@object: result);
+        AcceptedResult accepted = Assert.IsType<AcceptedResult>(result);
         _tracker.Verify(
-            expression: t =>
+            t =>
                 t.Start(
                     It.Is<List<VideoCodecType>>(c => c.Count == 0),
                     It.Is<List<int>>(r => r.Count == 0)
                 ),
-            times: Times.Once
+            Times.Once
         );
         accepted.Value.Should().NotBeNull();
     }
@@ -75,93 +74,93 @@ public class EncoderHardwareControllerTests
     [Fact]
     public void StartBenchmark_EmptyCodecsArray_StartsWithEmptyCodecs()
     {
-        BenchmarkJobStatus job = MakeJob(jobId: "job-2");
+        BenchmarkJobStatus job = MakeJob("job-2");
         _tracker
-            .Setup(expression: t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()))
-            .Returns(value: job);
+            .Setup(t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()))
+            .Returns(job);
 
         IActionResult result = CreateController()
-            .StartBenchmark(request: new(Codecs: [], Resolutions: null));
+            .StartBenchmark(new([], null));
 
-        Assert.IsType<AcceptedResult>(@object: result);
+        Assert.IsType<AcceptedResult>(result);
         _tracker.Verify(
-            expression: t => t.Start(It.Is<List<VideoCodecType>>(c => c.Count == 0), It.IsAny<List<int>>()),
-            times: Times.Once
+            t => t.Start(It.Is<List<VideoCodecType>>(c => c.Count == 0), It.IsAny<List<int>>()),
+            Times.Once
         );
     }
 
     [Fact]
     public void StartBenchmark_ValidCodecNames_ParsesAndStartsWithThoseCodecs()
     {
-        BenchmarkJobStatus job = MakeJob(jobId: "job-3");
+        BenchmarkJobStatus job = MakeJob("job-3");
         List<VideoCodecType>? captured = null;
         _tracker
-            .Setup(expression: t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()))
+            .Setup(t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()))
             .Callback<IReadOnlyList<VideoCodecType>, IReadOnlyList<int>>(
-                action: (codecs, _) => captured = codecs.ToList()
+                (codecs, _) => captured = codecs.ToList()
             )
-            .Returns(value: job);
+            .Returns(job);
 
         IActionResult result = CreateController()
-            .StartBenchmark(request: new(Codecs: ["H264", "Av1"], Resolutions: null));
+            .StartBenchmark(new(["H264", "Av1"], null));
 
-        Assert.IsType<AcceptedResult>(@object: result);
-        captured.Should().Equal(elements: [VideoCodecType.H264, VideoCodecType.Av1]);
+        Assert.IsType<AcceptedResult>(result);
+        captured.Should().Equal([VideoCodecType.H264, VideoCodecType.Av1]);
     }
 
     [Fact]
     public void StartBenchmark_CaseInsensitiveCodecNames_StillParse()
     {
-        BenchmarkJobStatus job = MakeJob(jobId: "job-4");
+        BenchmarkJobStatus job = MakeJob("job-4");
         List<VideoCodecType>? captured = null;
         _tracker
-            .Setup(expression: t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()))
+            .Setup(t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()))
             .Callback<IReadOnlyList<VideoCodecType>, IReadOnlyList<int>>(
-                action: (codecs, _) => captured = codecs.ToList()
+                (codecs, _) => captured = codecs.ToList()
             )
-            .Returns(value: job);
+            .Returns(job);
 
         IActionResult result = CreateController()
-            .StartBenchmark(request: new(Codecs: ["h265"], Resolutions: null));
+            .StartBenchmark(new(["h265"], null));
 
-        Assert.IsType<AcceptedResult>(@object: result);
-        captured.Should().Equal(elements: VideoCodecType.H265);
+        Assert.IsType<AcceptedResult>(result);
+        captured.Should().Equal(VideoCodecType.H265);
     }
 
     [Fact]
     public void StartBenchmark_WithResolutions_PassesResolutionsToTracker()
     {
-        BenchmarkJobStatus job = MakeJob(jobId: "job-5");
+        BenchmarkJobStatus job = MakeJob("job-5");
         List<int>? captured = null;
         _tracker
-            .Setup(expression: t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()))
+            .Setup(t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()))
             .Callback<IReadOnlyList<VideoCodecType>, IReadOnlyList<int>>(
-                action: (_, resolutions) => captured = resolutions.ToList()
+                (_, resolutions) => captured = resolutions.ToList()
             )
-            .Returns(value: job);
+            .Returns(job);
 
         IActionResult result = CreateController()
-            .StartBenchmark(request: new(Codecs: null, Resolutions: [1080, 2160]));
+            .StartBenchmark(new(null, [1080, 2160]));
 
-        Assert.IsType<AcceptedResult>(@object: result);
-        captured.Should().Equal(elements: [1080, 2160]);
+        Assert.IsType<AcceptedResult>(result);
+        captured.Should().Equal([1080, 2160]);
     }
 
     [Fact]
     public void StartBenchmark_UnknownCodecName_Returns422WithSuggestion()
     {
         IActionResult result = CreateController()
-            .StartBenchmark(request: new(Codecs: ["not-a-real-codec"], Resolutions: null));
+            .StartBenchmark(new(["not-a-real-codec"], null));
 
         UnprocessableEntityObjectResult unprocessable =
-            Assert.IsType<UnprocessableEntityObjectResult>(@object: result);
+            Assert.IsType<UnprocessableEntityObjectResult>(result);
         _tracker.Verify(
-            expression: t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()),
-            times: Times.Never
+            t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()),
+            Times.Never
         );
-        string json = Newtonsoft.Json.JsonConvert.SerializeObject(value: unprocessable.Value);
-        json.Should().Contain(expected: "not-a-real-codec");
-        json.Should().Contain(expected: "H264");
+        string json = Newtonsoft.Json.JsonConvert.SerializeObject(unprocessable.Value);
+        json.Should().Contain("not-a-real-codec");
+        json.Should().Contain("H264");
     }
 
     [Fact]
@@ -170,25 +169,25 @@ public class EncoderHardwareControllerTests
         // Two invalid entries — only the FIRST must be reported and the loop
         // must stop there rather than continuing to validate the rest.
         IActionResult result = CreateController()
-            .StartBenchmark(request: new(Codecs: ["totally-bogus", "also-bogus"], Resolutions: null));
+            .StartBenchmark(new(["totally-bogus", "also-bogus"], null));
 
         UnprocessableEntityObjectResult unprocessable =
-            Assert.IsType<UnprocessableEntityObjectResult>(@object: result);
-        string json = Newtonsoft.Json.JsonConvert.SerializeObject(value: unprocessable.Value);
-        json.Should().Contain(expected: "totally-bogus");
-        json.Should().NotContain(unexpected: "also-bogus");
+            Assert.IsType<UnprocessableEntityObjectResult>(result);
+        string json = Newtonsoft.Json.JsonConvert.SerializeObject(unprocessable.Value);
+        json.Should().Contain("totally-bogus");
+        json.Should().NotContain("also-bogus");
     }
 
     [Fact]
     public void StartBenchmark_ValidThenInvalidCodec_Returns422_NeverStartsJob()
     {
         IActionResult result = CreateController()
-            .StartBenchmark(request: new(Codecs: ["H264", "not-a-real-codec"], Resolutions: null));
+            .StartBenchmark(new(["H264", "not-a-real-codec"], null));
 
-        Assert.IsType<UnprocessableEntityObjectResult>(@object: result);
+        Assert.IsType<UnprocessableEntityObjectResult>(result);
         _tracker.Verify(
-            expression: t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()),
-            times: Times.Never
+            t => t.Start(It.IsAny<List<VideoCodecType>>(), It.IsAny<List<int>>()),
+            Times.Never
         );
     }
 
@@ -199,24 +198,24 @@ public class EncoderHardwareControllerTests
     [Fact]
     public void GetBenchmark_UnknownJobId_Returns404()
     {
-        _tracker.Setup(expression: t => t.Get("missing-job")).Returns(value: (BenchmarkJobStatus?)null);
+        _tracker.Setup(t => t.Get("missing-job")).Returns((BenchmarkJobStatus?)null);
 
-        IActionResult result = CreateController().GetBenchmark(jobId: "missing-job");
+        IActionResult result = CreateController().GetBenchmark("missing-job");
 
-        ObjectResult objectResult = Assert.IsAssignableFrom<ObjectResult>(@object: result);
-        objectResult.StatusCode.Should().Be(expected: 404);
+        ObjectResult objectResult = Assert.IsAssignableFrom<ObjectResult>(result);
+        objectResult.StatusCode.Should().Be(404);
     }
 
     [Fact]
     public void GetBenchmark_KnownJobId_ReturnsJobStatus()
     {
-        BenchmarkJobStatus job = MakeJob(jobId: "job-known", status: "completed");
-        _tracker.Setup(expression: t => t.Get("job-known")).Returns(value: job);
+        BenchmarkJobStatus job = MakeJob("job-known", "completed");
+        _tracker.Setup(t => t.Get("job-known")).Returns(job);
 
-        IActionResult result = CreateController().GetBenchmark(jobId: "job-known");
+        IActionResult result = CreateController().GetBenchmark("job-known");
 
-        OkObjectResult ok = Assert.IsType<OkObjectResult>(@object: result);
-        ok.Value.Should().Be(expected: job);
+        OkObjectResult ok = Assert.IsType<OkObjectResult>(result);
+        ok.Value.Should().Be(job);
     }
 
     // =========================================================================
@@ -226,12 +225,12 @@ public class EncoderHardwareControllerTests
     [Fact]
     public void ListBenchmarks_ReturnsAllTrackedJobs()
     {
-        List<BenchmarkJobStatus> jobs = [MakeJob(jobId: "a"), MakeJob(jobId: "b", status: "completed")];
-        _tracker.Setup(expression: t => t.List()).Returns(value: jobs);
+        List<BenchmarkJobStatus> jobs = [MakeJob("a"), MakeJob("b", "completed")];
+        _tracker.Setup(t => t.List()).Returns(jobs);
 
         IActionResult result = CreateController().ListBenchmarks();
 
-        OkObjectResult ok = Assert.IsType<OkObjectResult>(@object: result);
+        OkObjectResult ok = Assert.IsType<OkObjectResult>(result);
         ok.Value.Should().NotBeNull();
     }
 
@@ -242,28 +241,28 @@ public class EncoderHardwareControllerTests
     [Fact]
     public async Task GetUtilization_CombinesAllFourCollaboratorsIntoOneSnapshot()
     {
-        _monitor.Setup(expression: m => m.GetCpuUsagePercent()).Returns(value: 42.5);
-        _monitor.Setup(expression: m => m.GetAvailableMemoryMb()).Returns(value: 8192L);
-        List<GpuProcessSample> gpuSamples = [new(Pid: 1234, GpuIndex: 0, EncoderUtilizationPercent: 55, EncoderMemoryBytes: 512_000_000)];
+        _monitor.Setup(m => m.GetCpuUsagePercent()).Returns(42.5);
+        _monitor.Setup(m => m.GetAvailableMemoryMb()).Returns(8192L);
+        List<GpuProcessSample> gpuSamples = [new(1234, 0, 55, 512_000_000)];
         _monitor
-            .Setup(expression: m => m.SampleGpuAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: gpuSamples);
-        _registry.Setup(expression: r => r.CountConcurrentNvencSessions()).Returns(value: 2);
+            .Setup(m => m.SampleGpuAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gpuSamples);
+        _registry.Setup(r => r.CountConcurrentNvencSessions()).Returns(2);
         List<GpuDevice> gpus =
         [
-            new(Vendor: GpuVendor.Nvidia, Name: "RTX 4070", VramMb: 12_000, MaxEncoderSessions: 3, SupportedCodecs: [VideoCodecType.H264]),
+            new(GpuVendor.Nvidia, "RTX 4070", 12_000, 3, [VideoCodecType.H264]),
         ];
-        _hardware.Setup(expression: h => h.Gpus).Returns(value: gpus);
+        _hardware.Setup(h => h.Gpus).Returns(gpus);
 
         IActionResult result = await CreateController().GetUtilization();
 
-        OkObjectResult ok = Assert.IsType<OkObjectResult>(@object: result);
-        UtilizationSnapshot snapshot = Assert.IsType<UtilizationSnapshot>(@object: ok.Value);
-        snapshot.CpuUsagePercent.Should().Be(expected: 42.5);
-        snapshot.AvailableMemoryMb.Should().Be(expected: 8192L);
-        snapshot.GpuSamples.Should().BeEquivalentTo(expectation: gpuSamples);
-        snapshot.ConcurrentNvencSessions.Should().Be(expected: 2);
-        snapshot.Gpus.Should().BeEquivalentTo(expectation: gpus);
+        OkObjectResult ok = Assert.IsType<OkObjectResult>(result);
+        UtilizationSnapshot snapshot = Assert.IsType<UtilizationSnapshot>(ok.Value);
+        snapshot.CpuUsagePercent.Should().Be(42.5);
+        snapshot.AvailableMemoryMb.Should().Be(8192L);
+        snapshot.GpuSamples.Should().BeEquivalentTo(gpuSamples);
+        snapshot.ConcurrentNvencSessions.Should().Be(2);
+        snapshot.Gpus.Should().BeEquivalentTo(gpus);
     }
 
     // =========================================================================
@@ -273,35 +272,35 @@ public class EncoderHardwareControllerTests
     [Fact]
     public void GetCapabilities_ProbeNotYetCompleted_ReturnsProbePendingStatus()
     {
-        _probe.Setup(expression: p => p.GetCachedReport()).Returns(value: (CapabilityReport?)null);
+        _probe.Setup(p => p.GetCachedReport()).Returns((CapabilityReport?)null);
 
         IActionResult result = CreateController().GetCapabilities();
 
-        OkObjectResult ok = Assert.IsType<OkObjectResult>(@object: result);
-        string json = Newtonsoft.Json.JsonConvert.SerializeObject(value: ok.Value);
-        json.Should().Contain(expected: "probe_pending");
+        OkObjectResult ok = Assert.IsType<OkObjectResult>(result);
+        string json = Newtonsoft.Json.JsonConvert.SerializeObject(ok.Value);
+        json.Should().Contain("probe_pending");
     }
 
     [Fact]
     public void GetCapabilities_CachedReportAvailable_ReturnsTheReport()
     {
         CapabilityReport report = new(
-            BluRayProtocol: true,
-            DvdReadProtocol: false,
-            AvailableEncoders: ["libx264", "h264_nvenc"],
-            MissingFilters: [],
-            MissingMuxers: [],
-            FpcalcPresent: true,
-            WhisperModelPresent: false,
-            TesseractEngTraineddataPresent: true,
-            TesseractModelsDirectory: "/models",
-            Issues: []
+            true,
+            false,
+            ["libx264", "h264_nvenc"],
+            [],
+            [],
+            true,
+            false,
+            true,
+            "/models",
+            []
         );
-        _probe.Setup(expression: p => p.GetCachedReport()).Returns(value: report);
+        _probe.Setup(p => p.GetCachedReport()).Returns(report);
 
         IActionResult result = CreateController().GetCapabilities();
 
-        OkObjectResult ok = Assert.IsType<OkObjectResult>(@object: result);
-        ok.Value.Should().Be(expected: report);
+        OkObjectResult ok = Assert.IsType<OkObjectResult>(result);
+        ok.Value.Should().Be(report);
     }
 }

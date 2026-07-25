@@ -30,31 +30,31 @@ public class ConfigPluginConsentStoreTests : IDisposable
     public ConfigPluginConsentStoreTests()
     {
         _tempDir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nomercy-consent-store-tests-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nomercy-consent-store-tests-" + Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: _tempDir);
+        Directory.CreateDirectory(_tempDir);
     }
 
     public void Dispose()
     {
         try
         {
-            if (Directory.Exists(path: _tempDir))
-                Directory.Delete(path: _tempDir, recursive: true);
+            if (Directory.Exists(_tempDir))
+                Directory.Delete(_tempDir, true);
         }
         catch (IOException) { }
     }
 
     private ConfigPluginConsentStore MakeStore() =>
-        new(configuration: new PluginConfiguration(dataFolderPath: _tempDir, storage: TestStorageHelper.CreateStorage(rootPath: _tempDir)));
+        new(new PluginConfiguration(_tempDir, TestStorageHelper.CreateStorage(_tempDir)));
 
     [Fact]
     public void Contains_NoConfigFileYet_ReturnsFalse()
     {
         ConfigPluginConsentStore store = MakeStore();
 
-        store.Contains(pluginId: Guid.NewGuid()).Should().BeFalse();
+        store.Contains(Guid.NewGuid()).Should().BeFalse();
     }
 
     [Fact]
@@ -63,9 +63,9 @@ public class ConfigPluginConsentStoreTests : IDisposable
         ConfigPluginConsentStore store = MakeStore();
         Guid id = Guid.NewGuid();
 
-        store.Add(pluginId: id);
+        store.Add(id);
 
-        store.Contains(pluginId: id).Should().BeTrue();
+        store.Contains(id).Should().BeTrue();
     }
 
     [Fact]
@@ -75,11 +75,11 @@ public class ConfigPluginConsentStoreTests : IDisposable
         // a second store instance reading the SAME config file must observe
         // the grant a completely different store instance made.
         Guid id = Guid.NewGuid();
-        MakeStore().Add(pluginId: id);
+        MakeStore().Add(id);
 
         ConfigPluginConsentStore secondInstance = MakeStore();
 
-        secondInstance.Contains(pluginId: id).Should().BeTrue();
+        secondInstance.Contains(id).Should().BeTrue();
     }
 
     [Fact]
@@ -88,11 +88,11 @@ public class ConfigPluginConsentStoreTests : IDisposable
         ConfigPluginConsentStore store = MakeStore();
         Guid id = Guid.NewGuid();
 
-        store.Add(pluginId: id);
-        Action act = () => store.Add(pluginId: id);
+        store.Add(id);
+        Action act = () => store.Add(id);
 
         act.Should().NotThrow();
-        store.Contains(pluginId: id).Should().BeTrue();
+        store.Contains(id).Should().BeTrue();
     }
 
     [Fact]
@@ -102,11 +102,11 @@ public class ConfigPluginConsentStoreTests : IDisposable
         Guid first = Guid.NewGuid();
         Guid second = Guid.NewGuid();
 
-        store.Add(pluginId: first);
-        store.Add(pluginId: second);
+        store.Add(first);
+        store.Add(second);
 
-        store.Contains(pluginId: first).Should().BeTrue();
-        store.Contains(pluginId: second).Should().BeTrue();
+        store.Contains(first).Should().BeTrue();
+        store.Contains(second).Should().BeTrue();
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class ConfigPluginConsentStoreTests : IDisposable
     {
         ConfigPluginConsentStore store = MakeStore();
 
-        Action act = () => store.Remove(pluginId: Guid.NewGuid());
+        Action act = () => store.Remove(Guid.NewGuid());
 
         act.Should().NotThrow();
     }
@@ -124,12 +124,12 @@ public class ConfigPluginConsentStoreTests : IDisposable
     {
         ConfigPluginConsentStore store = MakeStore();
         Guid granted = Guid.NewGuid();
-        store.Add(pluginId: granted);
+        store.Add(granted);
 
-        Action act = () => store.Remove(pluginId: Guid.NewGuid());
+        Action act = () => store.Remove(Guid.NewGuid());
 
         act.Should().NotThrow();
-        store.Contains(pluginId: granted).Should().BeTrue();
+        store.Contains(granted).Should().BeTrue();
     }
 
     [Fact]
@@ -137,11 +137,11 @@ public class ConfigPluginConsentStoreTests : IDisposable
     {
         ConfigPluginConsentStore store = MakeStore();
         Guid id = Guid.NewGuid();
-        store.Add(pluginId: id);
+        store.Add(id);
 
-        store.Remove(pluginId: id);
+        store.Remove(id);
 
-        store.Contains(pluginId: id).Should().BeFalse();
+        store.Contains(id).Should().BeFalse();
     }
 
     [Fact]
@@ -149,11 +149,11 @@ public class ConfigPluginConsentStoreTests : IDisposable
     {
         Guid id = Guid.NewGuid();
         ConfigPluginConsentStore first = MakeStore();
-        first.Add(pluginId: id);
-        first.Remove(pluginId: id);
+        first.Add(id);
+        first.Remove(id);
 
         ConfigPluginConsentStore second = MakeStore();
 
-        second.Contains(pluginId: id).Should().BeFalse();
+        second.Contains(id).Should().BeFalse();
     }
 }

@@ -27,15 +27,15 @@ public class NfsDriverConfigParsingTests
     [Fact]
     public void Parse_missing_server_throws()
     {
-        Action act = () => NfsDriverConfig.Parse(json: """{"export":"/data"}""", folderId: Ulid.NewUlid());
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*server*");
+        Action act = () => NfsDriverConfig.Parse("""{"export":"/data"}""", Ulid.NewUlid());
+        act.Should().Throw<ArgumentException>().WithMessage("*server*");
     }
 
     [Fact]
     public void Parse_missing_export_throws()
     {
-        Action act = () => NfsDriverConfig.Parse(json: """{"server":"192.168.1.1"}""", folderId: Ulid.NewUlid());
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*export*");
+        Action act = () => NfsDriverConfig.Parse("""{"server":"192.168.1.1"}""", Ulid.NewUlid());
+        act.Should().Throw<ArgumentException>().WithMessage("*export*");
     }
 
     [Fact]
@@ -43,23 +43,23 @@ public class NfsDriverConfigParsingTests
     {
         Action act = () =>
             NfsDriverConfig.Parse(
-                json: """{"server":"192.168.1.1","export":"/data","version":2}""",
-                folderId: Ulid.NewUlid()
+                """{"server":"192.168.1.1","export":"/data","version":2}""",
+                Ulid.NewUlid()
             );
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*version*");
+        act.Should().Throw<ArgumentException>().WithMessage("*version*");
     }
 
     [Fact]
     public void Parse_null_config_throws()
     {
-        Action act = () => NfsDriverConfig.Parse(json: null!, folderId: Ulid.NewUlid());
+        Action act = () => NfsDriverConfig.Parse(null!, Ulid.NewUlid());
         act.Should().Throw<Exception>();
     }
 
     [Fact]
     public void Parse_malformed_json_throws_ArgumentException()
     {
-        Action act = () => NfsDriverConfig.Parse(json: "{{bad json", folderId: Ulid.NewUlid());
+        Action act = () => NfsDriverConfig.Parse("{{bad json", Ulid.NewUlid());
         act.Should().Throw<ArgumentException>();
     }
 
@@ -67,77 +67,77 @@ public class NfsDriverConfigParsingTests
     public void Parse_defaults_version_to_3()
     {
         NfsDriverConfig config = NfsDriverConfig.Parse(
-            json: """{"server":"nas.local","export":"/media"}""",
-            folderId: Ulid.NewUlid()
+            """{"server":"nas.local","export":"/media"}""",
+            Ulid.NewUlid()
         );
-        config.Version.Should().Be(expected: 3);
+        config.Version.Should().Be(3);
     }
 
     [Fact]
     public void Parse_defaults_port_to_2049()
     {
         NfsDriverConfig config = NfsDriverConfig.Parse(
-            json: """{"server":"nas.local","export":"/media"}""",
-            folderId: Ulid.NewUlid()
+            """{"server":"nas.local","export":"/media"}""",
+            Ulid.NewUlid()
         );
-        config.Port.Should().Be(expected: 2049);
+        config.Port.Should().Be(2049);
     }
 
     [Fact]
     public void Parse_accepts_version_4()
     {
         NfsDriverConfig config = NfsDriverConfig.Parse(
-            json: """{"server":"nas.local","export":"/media","version":4}""",
-            folderId: Ulid.NewUlid()
+            """{"server":"nas.local","export":"/media","version":4}""",
+            Ulid.NewUlid()
         );
-        config.Version.Should().Be(expected: 4);
+        config.Version.Should().Be(4);
     }
 
     [Fact]
     public void Parse_accepts_uid_gid()
     {
         NfsDriverConfig config = NfsDriverConfig.Parse(
-            json: """{"server":"nas.local","export":"/media","uid":1000,"gid":1000}""",
-            folderId: Ulid.NewUlid()
+            """{"server":"nas.local","export":"/media","uid":1000,"gid":1000}""",
+            Ulid.NewUlid()
         );
-        config.Uid.Should().Be(expected: 1000);
-        config.Gid.Should().Be(expected: 1000);
+        config.Uid.Should().Be(1000);
+        config.Gid.Should().Be(1000);
     }
 
     [Fact]
     public void Parse_normalizes_export_leading_slash()
     {
         NfsDriverConfig config = NfsDriverConfig.Parse(
-            json: """{"server":"nas.local","export":"media/files"}""",
-            folderId: Ulid.NewUlid()
+            """{"server":"nas.local","export":"media/files"}""",
+            Ulid.NewUlid()
         );
-        config.Export.Should().StartWith(expected: "/");
+        config.Export.Should().StartWith("/");
     }
 
     [Fact]
     public void Parse_trims_trailing_slash_from_export()
     {
         NfsDriverConfig config = NfsDriverConfig.Parse(
-            json: """{"server":"nas.local","export":"/media/"}""",
-            folderId: Ulid.NewUlid()
+            """{"server":"nas.local","export":"/media/"}""",
+            Ulid.NewUlid()
         );
-        config.Export.Should().Be(expected: "/media");
+        config.Export.Should().Be("/media");
     }
 
     private static StorageFactory FactoryWithConfig(string type, string? config)
     {
         Mock<IDriverConfigResolver> resolver = new();
-        resolver.Setup(expression: r => r.Resolve(It.IsAny<Ulid>())).Returns(value: (type, config));
-        return new(driver: new LocalStorageDriver(), logger: NullLogger<StorageFactory>.Instance, driverConfigResolver: resolver.Object);
+        resolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
+        return new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance, resolver.Object);
     }
 
     [Fact]
     public void StorageFactory_nfs_without_config_throws()
     {
-        StorageFactory factory = FactoryWithConfig(type: "nfs", config: null);
+        StorageFactory factory = FactoryWithConfig("nfs", null);
         Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().Throw<ArgumentException>();
     }
@@ -145,23 +145,23 @@ public class NfsDriverConfigParsingTests
     [Fact]
     public void StorageFactory_nfs_without_server_throws()
     {
-        StorageFactory factory = FactoryWithConfig(type: "nfs", config: """{"export":"/data"}""");
+        StorageFactory factory = FactoryWithConfig("nfs", """{"export":"/data"}""");
         Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*server*");
+        act.Should().Throw<ArgumentException>().WithMessage("*server*");
     }
 
     [Fact]
     public void StorageFactory_nfs_without_export_throws()
     {
-        StorageFactory factory = FactoryWithConfig(type: "nfs", config: """{"server":"nas.local"}""");
+        StorageFactory factory = FactoryWithConfig("nfs", """{"server":"nas.local"}""");
         Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*export*");
+        act.Should().Throw<ArgumentException>().WithMessage("*export*");
     }
 }
 
@@ -171,7 +171,7 @@ public class NfsDriverConfigParsingTests
 // StorageBackends collection fixture and torn down after the last test.
 // ============================================================================
 
-[Collection(name: "StorageBackends")]
+[Collection("StorageBackends")]
 public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
 {
     private string SkipReason =>
@@ -186,7 +186,7 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
     private NfsStorageDriver RequireBackend()
     {
         NfsStorageDriver? backend = fix.TryBuildNfsDriver();
-        Skip.If(condition: backend is null, reason: SkipReason);
+        Skip.If(backend is null, SkipReason);
         return backend!;
     }
 
@@ -197,16 +197,16 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string path = $"/roundtrip-{Ulid.NewUlid()}.txt";
         byte[] data = "hello nfs"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(path: path, overwrite: true))
-            await w.WriteAsync(buffer: data);
+        await using (Stream w = backend.OpenWrite(path, true))
+            await w.WriteAsync(data);
 
-        await using Stream r = backend.OpenRead(path: path);
+        await using Stream r = backend.OpenRead(path);
         using MemoryStream ms = new();
-        await r.CopyToAsync(destination: ms);
-        ms.ToArray().Should().Equal(elements: data);
+        await r.CopyToAsync(ms);
+        ms.ToArray().Should().Equal(data);
 
-        backend.DeleteFile(path: path);
-        backend.FileExists(path: path).Should().BeFalse();
+        backend.DeleteFile(path);
+        backend.FileExists(path).Should().BeFalse();
     }
 
     [SkippableFact]
@@ -216,19 +216,19 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string path = $"/large-{Ulid.NewUlid()}.bin";
 
         byte[] data = new byte[11 * 1024 * 1024]; // 11 MB
-        new Random(Seed: 99).NextBytes(buffer: data);
+        new Random(99).NextBytes(data);
 
-        await using (Stream w = backend.OpenWrite(path: path, overwrite: true))
-            await w.WriteAsync(buffer: data);
+        await using (Stream w = backend.OpenWrite(path, true))
+            await w.WriteAsync(data);
 
-        backend.GetFileSize(path: path).Should().Be(expected: data.Length);
+        backend.GetFileSize(path).Should().Be(data.Length);
 
-        await using Stream r = backend.OpenRead(path: path);
+        await using Stream r = backend.OpenRead(path);
         using MemoryStream ms = new();
-        await r.CopyToAsync(destination: ms);
-        ms.ToArray().Should().HaveCount(expected: data.Length);
+        await r.CopyToAsync(ms);
+        ms.ToArray().Should().HaveCount(data.Length);
 
-        backend.DeleteFile(path: path);
+        backend.DeleteFile(path);
     }
 
     [SkippableFact]
@@ -236,30 +236,30 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
     {
         using NfsStorageDriver backend = RequireBackend();
         string dir = $"/enum-{Ulid.NewUlid()}";
-        backend.CreateDirectory(path: dir);
+        backend.CreateDirectory(dir);
 
         string fileA = dir + "/a.txt";
         string fileB = dir + "/b.txt";
         string fileC = dir + "/c.bin";
         byte[] bytes = "x"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(path: fileA, overwrite: true))
-            await w.WriteAsync(buffer: bytes);
-        await using (Stream w = backend.OpenWrite(path: fileB, overwrite: true))
-            await w.WriteAsync(buffer: bytes);
-        await using (Stream w = backend.OpenWrite(path: fileC, overwrite: true))
-            await w.WriteAsync(buffer: bytes);
+        await using (Stream w = backend.OpenWrite(fileA, true))
+            await w.WriteAsync(bytes);
+        await using (Stream w = backend.OpenWrite(fileB, true))
+            await w.WriteAsync(bytes);
+        await using (Stream w = backend.OpenWrite(fileC, true))
+            await w.WriteAsync(bytes);
 
         IEnumerable<string> txtFiles = backend.EnumerateFileSystemEntries(
-            directory: dir,
-            searchPattern: "*.txt",
-            option: SearchOption.AllDirectories
+            dir,
+            "*.txt",
+            SearchOption.AllDirectories
         );
 
-        txtFiles.Should().HaveCount(expected: 2);
+        txtFiles.Should().HaveCount(2);
 
-        backend.DeleteDirectory(path: dir, recursive: true);
-        backend.DirectoryExists(path: dir).Should().BeFalse();
+        backend.DeleteDirectory(dir, true);
+        backend.DirectoryExists(dir).Should().BeFalse();
     }
 
     [SkippableFact]
@@ -270,15 +270,15 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string dst = $"/move-dst-{Ulid.NewUlid()}.txt";
         byte[] data = "move me"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(path: src, overwrite: true))
-            await w.WriteAsync(buffer: data);
+        await using (Stream w = backend.OpenWrite(src, true))
+            await w.WriteAsync(data);
 
-        backend.MoveFile(source: src, destination: dst);
+        backend.MoveFile(src, dst);
 
-        backend.FileExists(path: src).Should().BeFalse();
-        backend.FileExists(path: dst).Should().BeTrue();
+        backend.FileExists(src).Should().BeFalse();
+        backend.FileExists(dst).Should().BeTrue();
 
-        backend.DeleteFile(path: dst);
+        backend.DeleteFile(dst);
     }
 
     [SkippableFact]
@@ -289,16 +289,16 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string dst = $"/copy-dst-{Ulid.NewUlid()}.txt";
         byte[] data = "copy me"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(path: src, overwrite: true))
-            await w.WriteAsync(buffer: data);
+        await using (Stream w = backend.OpenWrite(src, true))
+            await w.WriteAsync(data);
 
-        backend.CopyFile(source: src, destination: dst, overwrite: true);
+        backend.CopyFile(src, dst, true);
 
-        backend.FileExists(path: src).Should().BeTrue();
-        backend.FileExists(path: dst).Should().BeTrue();
+        backend.FileExists(src).Should().BeTrue();
+        backend.FileExists(dst).Should().BeTrue();
 
-        backend.DeleteFile(path: src);
-        backend.DeleteFile(path: dst);
+        backend.DeleteFile(src);
+        backend.DeleteFile(dst);
     }
 
     [SkippableFact]
@@ -307,11 +307,11 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         using NfsStorageDriver backend = RequireBackend();
         string dir = $"/mkdir-test-{Ulid.NewUlid()}";
 
-        backend.CreateDirectory(path: dir);
-        backend.DirectoryExists(path: dir).Should().BeTrue();
+        backend.CreateDirectory(dir);
+        backend.DirectoryExists(dir).Should().BeTrue();
 
-        backend.DeleteDirectory(path: dir, recursive: false);
-        backend.DirectoryExists(path: dir).Should().BeFalse();
+        backend.DeleteDirectory(dir, false);
+        backend.DirectoryExists(dir).Should().BeFalse();
     }
 
     [SkippableFact]
@@ -320,11 +320,11 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         using NfsStorageDriver backend = RequireBackend();
         string nested = $"/mkdir-{Ulid.NewUlid()}/sub/deep";
 
-        backend.CreateDirectory(path: nested);
-        backend.DirectoryExists(path: nested).Should().BeTrue();
+        backend.CreateDirectory(nested);
+        backend.DirectoryExists(nested).Should().BeTrue();
 
-        string top = nested.Split(separator: '/')[1];
-        backend.DeleteDirectory(path: "/" + top, recursive: true);
+        string top = nested.Split('/')[1];
+        backend.DeleteDirectory("/" + top, true);
     }
 
     [SkippableFact]
@@ -333,13 +333,13 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         using NfsStorageDriver backend = RequireBackend();
         string path = $"/nooverwrite-{Ulid.NewUlid()}.txt";
 
-        await using (Stream w = backend.OpenWrite(path: path, overwrite: true))
-            await w.WriteAsync(buffer: "original"u8.ToArray());
+        await using (Stream w = backend.OpenWrite(path, true))
+            await w.WriteAsync("original"u8.ToArray());
 
-        Action act = () => backend.OpenWrite(path: path, overwrite: false);
-        act.Should().Throw<IOException>().WithMessage(expectedWildcardPattern: "*overwrite*");
+        Action act = () => backend.OpenWrite(path, false);
+        act.Should().Throw<IOException>().WithMessage("*overwrite*");
 
-        backend.DeleteFile(path: path);
+        backend.DeleteFile(path);
     }
 
     [SkippableFact]
@@ -347,55 +347,55 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
     {
         using NfsStorageDriver backend = RequireBackend();
         string path = $"/meta-{Ulid.NewUlid()}.txt";
-        byte[] data = Encoding.UTF8.GetBytes(s: "metadata test");
+        byte[] data = Encoding.UTF8.GetBytes("metadata test");
 
-        await using (Stream w = backend.OpenWrite(path: path, overwrite: true))
-            await w.WriteAsync(buffer: data);
+        await using (Stream w = backend.OpenWrite(path, true))
+            await w.WriteAsync(data);
 
-        backend.GetFileSize(path: path).Should().Be(expected: data.Length);
+        backend.GetFileSize(path).Should().Be(data.Length);
 
-        DateTime mtime = backend.GetLastWriteTimeUtc(path: path);
-        mtime.Should().BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromMinutes(minutes: 2));
+        DateTime mtime = backend.GetLastWriteTimeUtc(path);
+        mtime.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(2));
 
-        backend.DeleteFile(path: path);
+        backend.DeleteFile(path);
     }
 
     [SkippableFact]
     public void IsHidden_dotfiles_are_hidden()
     {
         using NfsStorageDriver backend = RequireBackend();
-        backend.IsHidden(path: ".hidden").Should().BeTrue();
-        backend.IsHidden(path: "visible.txt").Should().BeFalse();
-        backend.IsHidden(path: ".").Should().BeFalse();
+        backend.IsHidden(".hidden").Should().BeTrue();
+        backend.IsHidden("visible.txt").Should().BeFalse();
+        backend.IsHidden(".").Should().BeFalse();
     }
 
     [SkippableFact]
     public void Auth_with_uid_gid_connects_successfully()
     {
-        Skip.If(condition: !fix.Available, reason: SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
         // The shared container exports NFSv4 at "/" with all_squash — everyone
         // maps to root, so uid/gid specifics don't apply. Connect with the
         // fixture defaults and assert the mount is visible.
         NfsDriverConfig config = NfsDriverConfig.For(
-            server: StorageBackendsFixture.NfsHost,
-            export: StorageBackendsFixture.NfsExport,
-            version: 4
+            StorageBackendsFixture.NfsHost,
+            StorageBackendsFixture.NfsExport,
+            4
         );
 
         NfsStorageDriver? backend;
         try
         {
-            backend = new(config: config);
+            backend = new(config);
         }
         catch (DllNotFoundException)
         {
-            Skip.If(condition: true, reason: SkipReason);
+            Skip.If(true, SkipReason);
             return;
         }
 
         using NfsStorageDriver b = backend;
-        b.DirectoryExists(path: "/").Should().BeTrue();
+        b.DirectoryExists("/").Should().BeTrue();
     }
 
     /// <summary>
@@ -415,10 +415,10 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         // 2 MB payload — large enough to span many 32 KB libnfs read chunks
         // per reader so the contexts heavily interleave under the lock.
         byte[] data = new byte[2 * 1024 * 1024];
-        new Random(Seed: 42).NextBytes(buffer: data);
+        new Random(42).NextBytes(data);
 
-        await using (Stream w = backend.OpenWrite(path: path, overwrite: true))
-            await w.WriteAsync(buffer: data);
+        await using (Stream w = backend.OpenWrite(path, true))
+            await w.WriteAsync(data);
 
         try
         {
@@ -426,22 +426,22 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
             Task<byte[]>[] readers = new Task<byte[]>[readerCount];
             for (int i = 0; i < readerCount; i++)
             {
-                readers[i] = Task.Run(function: () =>
+                readers[i] = Task.Run(() =>
                 {
-                    using Stream r = backend.OpenRead(path: path);
+                    using Stream r = backend.OpenRead(path);
                     using MemoryStream ms = new();
-                    r.CopyTo(destination: ms);
+                    r.CopyTo(ms);
                     return ms.ToArray();
                 });
             }
 
-            byte[][] results = await Task.WhenAll(tasks: readers);
+            byte[][] results = await Task.WhenAll(readers);
             foreach (byte[] result in results)
-                result.Should().Equal(elements: data);
+                result.Should().Equal(data);
         }
         finally
         {
-            backend.DeleteFile(path: path);
+            backend.DeleteFile(path);
         }
     }
 }

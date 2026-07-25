@@ -30,27 +30,27 @@ internal static class LiveFfmpegArgumentBuilder
     // live transcoding must keep up with real-time playback, so it needs a
     // fast preset even at the cost of some compression efficiency.
     private static readonly Dictionary<string, string> LivePresetByEncoder = new(
-        comparer: StringComparer.OrdinalIgnoreCase
+        StringComparer.OrdinalIgnoreCase
     )
     {
-        [key: "libx264"] = "veryfast",
-        [key: "libx265"] = "veryfast",
-        [key: "h264_nvenc"] = "p4",
-        [key: "hevc_nvenc"] = "p4",
-        [key: "h264_amf"] = "speed",
-        [key: "hevc_amf"] = "speed",
-        [key: "h264_qsv"] = "veryfast",
-        [key: "hevc_qsv"] = "veryfast",
+        ["libx264"] = "veryfast",
+        ["libx265"] = "veryfast",
+        ["h264_nvenc"] = "p4",
+        ["hevc_nvenc"] = "p4",
+        ["h264_amf"] = "speed",
+        ["hevc_amf"] = "speed",
+        ["h264_qsv"] = "veryfast",
+        ["hevc_qsv"] = "veryfast",
     };
 
     private static readonly CodecRegistry Registry = new();
 
     public static string[] Build(LiveRunInput input)
     {
-        string playlist = Path.Combine(path1: input.OutputDirectory, path2: LiveFfmpegRunner.PlaylistFileName);
+        string playlist = Path.Combine(input.OutputDirectory, LiveFfmpegRunner.PlaylistFileName);
         string segmentPattern = Path.Combine(
-            path1: input.OutputDirectory,
-            path2: $"{LiveFfmpegRunner.SegmentPrefix}%05d.ts"
+            input.OutputDirectory,
+            $"{LiveFfmpegRunner.SegmentPrefix}%05d.ts"
         );
 
         List<string> args = ["-hide_banner", "-nostats", "-loglevel", "error"];
@@ -58,7 +58,7 @@ internal static class LiveFfmpegArgumentBuilder
         // Input options (e.g. the "-headers" auth line for an HTTP self-ingest URL)
         // must precede "-i" to bind to the input that follows.
         if (input.ExtraInputArgs is { Length: > 0 })
-            args.AddRange(collection: input.ExtraInputArgs);
+            args.AddRange(input.ExtraInputArgs);
 
         // Absolute segment indexing. The playlist the client sees lists every
         // segment for the whole runtime up front, so segment N must always mean
@@ -68,15 +68,15 @@ internal static class LiveFfmpegArgumentBuilder
         // -start_number) so a runner spawned by a seek produces seg_N that maps
         // 1:1 to the index hls.js requests. Any sub-segment offset the user
         // actually seeked to is resolved by hls.js seeking within the segment.
-        int startIndex = StartSegmentIndex(input: input);
+        int startIndex = StartSegmentIndex(input);
         if (startIndex > 0)
         {
-            args.Add(item: "-ss");
-            args.Add(item: FormatSeconds(seconds: (double)startIndex * input.SegmentDurationSeconds));
+            args.Add("-ss");
+            args.Add(FormatSeconds((double)startIndex * input.SegmentDurationSeconds));
         }
 
-        args.Add(item: "-i");
-        args.Add(item: input.InputPath);
+        args.Add("-i");
+        args.Add(input.InputPath);
 
         // An audio-only rendition run drops video entirely and transcodes just the
         // one selected language to AAC. It shares the seek / absolute-index / HLS
@@ -85,26 +85,26 @@ internal static class LiveFfmpegArgumentBuilder
         // differs — so it branches here and skips the whole video block.
         if (input.AudioRenditionOnly)
         {
-            args.Add(item: "-vn");
-            AppendAudioRendition(args: args, input: input);
+            args.Add("-vn");
+            AppendAudioRendition(args, input);
         }
         else
         {
             bool hasVideo = input.SourceInfo is null || input.SourceInfo.HasVideo;
-            PlaybackAction action = DetermineAction(input: input, hasVideo: hasVideo);
+            PlaybackAction action = DetermineAction(input, hasVideo);
 
             if (hasVideo)
-                AppendVideo(args: args, input: input, action: action);
+                AppendVideo(args, input, action);
             else
-                args.Add(item: "-vn");
+                args.Add("-vn");
 
             // A source that ships its own browser-ready HLS audio renditions is
             // transcoded video-only; the master playlist points the player at those
             // renditions, so muxing audio here would be wasted work.
             if (input.VideoOnly)
-                args.Add(item: "-an");
+                args.Add("-an");
             else
-                AppendAudio(args: args, input: input, action: action);
+                AppendAudio(args, input, action);
         }
 
         // Stop where already-transcoded content resumes (see LiveGapPlanner).
@@ -119,8 +119,8 @@ internal static class LiveFfmpegArgumentBuilder
 
             if (durationSeconds > 0)
             {
-                args.Add(item: "-t");
-                args.Add(item: FormatSeconds(seconds: durationSeconds));
+                args.Add("-t");
+                args.Add(FormatSeconds(durationSeconds));
             }
         }
 
@@ -135,19 +135,19 @@ internal static class LiveFfmpegArgumentBuilder
         // start-at-zero runner, so the common case is unchanged.
         if (startIndex > 0)
         {
-            args.Add(item: "-output_ts_offset");
-            args.Add(item: FormatSeconds(seconds: (double)startIndex * input.SegmentDurationSeconds));
+            args.Add("-output_ts_offset");
+            args.Add(FormatSeconds((double)startIndex * input.SegmentDurationSeconds));
         }
 
-        AppendHls(args: args, input: input, segmentPattern: segmentPattern, startIndex: startIndex);
+        AppendHls(args, input, segmentPattern, startIndex);
 
         if (input.CustomArguments is { Count: > 0 })
-            AppendCustomArguments(args: args, customArguments: input.CustomArguments);
+            AppendCustomArguments(args, input.CustomArguments);
 
-        args.Add(item: playlist);
+        args.Add(playlist);
 
-        args.Add(item: "-progress");
-        args.Add(item: "pipe:1");
+        args.Add("-progress");
+        args.Add("pipe:1");
 
         return [.. args];
     }
@@ -169,8 +169,8 @@ internal static class LiveFfmpegArgumentBuilder
             return PlaybackAction.TranscodeVideo;
 
         PlaybackDecision decision = new PlaybackDecisionEngine().Decide(
-            media: input.SourceInfo,
-            client: input.Client
+            input.SourceInfo,
+            input.Client
         );
 
         // DirectPlay never reaches the live encoder in practice — LiveTranscodeService
@@ -184,8 +184,8 @@ internal static class LiveFfmpegArgumentBuilder
 
     private static void AppendVideo(List<string> args, LiveRunInput input, PlaybackAction action)
     {
-        args.Add(item: "-map");
-        args.Add(item: "0:v:0");
+        args.Add("-map");
+        args.Add("0:v:0");
 
         // Remux and TranscodeAudio both mean the video codec is already
         // client-compatible — only the container or the audio track needs to
@@ -194,39 +194,39 @@ internal static class LiveFfmpegArgumentBuilder
         // fMP4/TS" case.
         if (action is PlaybackAction.Remux or PlaybackAction.TranscodeAudio)
         {
-            args.Add(item: "-c:v");
-            args.Add(item: "copy");
+            args.Add("-c:v");
+            args.Add("copy");
             return;
         }
 
         LiveQuality quality = input.Quality;
 
-        args.Add(item: "-c:v");
-        args.Add(item: quality.Encoder);
+        args.Add("-c:v");
+        args.Add(quality.Encoder);
 
-        args.Add(item: "-b:v");
-        args.Add(item: $"{quality.BitrateKbps}k");
+        args.Add("-b:v");
+        args.Add($"{quality.BitrateKbps}k");
 
-        string? preset = ResolveLivePreset(encoderName: quality.Encoder);
+        string? preset = ResolveLivePreset(quality.Encoder);
         if (preset is not null)
         {
-            args.Add(item: "-preset");
-            args.Add(item: preset);
+            args.Add("-preset");
+            args.Add(preset);
         }
 
         // VBV cap around the ABR target so segment sizes stay predictable for
         // HLS clients instead of ballooning on complex scenes.
-        int maxrateKbps = (int)Math.Round(a: quality.BitrateKbps * 1.5);
+        int maxrateKbps = (int)Math.Round(quality.BitrateKbps * 1.5);
         int bufsizeKbps = quality.BitrateKbps * 2;
-        args.Add(item: "-maxrate");
-        args.Add(item: $"{maxrateKbps}k");
-        args.Add(item: "-bufsize");
-        args.Add(item: $"{bufsizeKbps}k");
+        args.Add("-maxrate");
+        args.Add($"{maxrateKbps}k");
+        args.Add("-bufsize");
+        args.Add($"{bufsizeKbps}k");
 
-        args.Add(item: "-vf");
-        args.Add(item: BuildVideoFilterChain(input: input));
+        args.Add("-vf");
+        args.Add(BuildVideoFilterChain(input));
 
-        AppendGop(args: args, input: input);
+        AppendGop(args, input);
     }
 
     /// <summary>
@@ -238,11 +238,11 @@ internal static class LiveFfmpegArgumentBuilder
     /// </summary>
     private static string? ResolveLivePreset(string encoderName)
     {
-        string? requested = LivePresetByEncoder.GetValueOrDefault(key: encoderName);
-        EncoderInfo? encoderInfo = Registry.GetVideoEncoderByName(ffmpegName: encoderName);
+        string? requested = LivePresetByEncoder.GetValueOrDefault(encoderName);
+        EncoderInfo? encoderInfo = Registry.GetVideoEncoderByName(encoderName);
 
         return encoderInfo is not null
-            ? EncoderArgumentResolver.ResolvePreset(profilePreset: requested, encoder: encoderInfo)
+            ? EncoderArgumentResolver.ResolvePreset(requested, encoderInfo)
             : requested;
     }
 
@@ -280,18 +280,18 @@ internal static class LiveFfmpegArgumentBuilder
     {
         double frameRate =
             input.SourceInfo?.VideoStreams.Count > 0
-                ? input.SourceInfo.VideoStreams[index: 0].FrameRate
+                ? input.SourceInfo.VideoStreams[0].FrameRate
                 : 24;
         int segmentDuration = input.SegmentDurationSeconds;
 
-        args.Add(item: "-force_key_frames");
-        args.Add(item: $"expr:gte(t,n_forced*{segmentDuration})");
-        args.Add(item: "-forced-idr");
-        args.Add(item: "1");
+        args.Add("-force_key_frames");
+        args.Add($"expr:gte(t,n_forced*{segmentDuration})");
+        args.Add("-forced-idr");
+        args.Add("1");
 
-        int gopCeiling = (int)Math.Ceiling(a: frameRate * segmentDuration * 2);
-        args.Add(item: "-g");
-        args.Add(item: gopCeiling.ToString(provider: CultureInfo.InvariantCulture));
+        int gopCeiling = (int)Math.Ceiling(frameRate * segmentDuration * 2);
+        args.Add("-g");
+        args.Add(gopCeiling.ToString(CultureInfo.InvariantCulture));
     }
 
     private static void AppendAudio(List<string> args, LiveRunInput input, PlaybackAction action)
@@ -299,29 +299,29 @@ internal static class LiveFfmpegArgumentBuilder
         // Map the viewer's chosen audio track (resolved from the library language
         // preference, or switched at runtime). Trailing '?' keeps a video-only
         // source from failing when the index has no matching stream.
-        args.Add(item: "-map");
-        args.Add(item: $"0:a:{input.AudioStreamIndex.ToString(provider: CultureInfo.InvariantCulture)}?");
+        args.Add("-map");
+        args.Add($"0:a:{input.AudioStreamIndex.ToString(CultureInfo.InvariantCulture)}?");
 
         if (action == PlaybackAction.Remux)
         {
-            args.Add(item: "-c:a");
-            args.Add(item: "copy");
+            args.Add("-c:a");
+            args.Add("copy");
             return;
         }
 
         // Clamp audio channel count to what the client supports. Read the channel
         // count off the SELECTED stream (a 5.1 English track next to a stereo
         // commentary must downmix from its own layout, not the first stream's).
-        int sourceChannels = SelectedAudioChannels(input: input);
+        int sourceChannels = SelectedAudioChannels(input);
         int clientMax = input.Client?.MaxAudioChannels is > 0 ? input.Client.MaxAudioChannels : 2;
-        int outputChannels = Math.Min(val1: sourceChannels, val2: clientMax);
+        int outputChannels = Math.Min(sourceChannels, clientMax);
 
-        args.Add(item: "-c:a");
-        args.Add(item: "aac");
-        args.Add(item: "-b:a");
-        args.Add(item: "128k");
-        args.Add(item: "-ac");
-        args.Add(item: outputChannels.ToString(provider: CultureInfo.InvariantCulture));
+        args.Add("-c:a");
+        args.Add("aac");
+        args.Add("-b:a");
+        args.Add("128k");
+        args.Add("-ac");
+        args.Add(outputChannels.ToString(CultureInfo.InvariantCulture));
     }
 
     // Audio-only rendition for one source language. Always transcodes to AAC (the
@@ -331,19 +331,19 @@ internal static class LiveFfmpegArgumentBuilder
     // render object audio and rarely decode 7.1 anyway.
     private static void AppendAudioRendition(List<string> args, LiveRunInput input)
     {
-        args.Add(item: "-map");
-        args.Add(item: $"0:a:{input.AudioStreamIndex.ToString(provider: CultureInfo.InvariantCulture)}?");
+        args.Add("-map");
+        args.Add($"0:a:{input.AudioStreamIndex.ToString(CultureInfo.InvariantCulture)}?");
 
-        int sourceChannels = SelectedAudioChannels(input: input);
+        int sourceChannels = SelectedAudioChannels(input);
         int clientMax = input.Client?.MaxAudioChannels is > 0 ? input.Client.MaxAudioChannels : 2;
-        int outputChannels = Math.Min(val1: sourceChannels, val2: clientMax);
+        int outputChannels = Math.Min(sourceChannels, clientMax);
 
-        args.Add(item: "-c:a");
-        args.Add(item: "aac");
-        args.Add(item: "-b:a");
-        args.Add(item: "128k");
-        args.Add(item: "-ac");
-        args.Add(item: outputChannels.ToString(provider: CultureInfo.InvariantCulture));
+        args.Add("-c:a");
+        args.Add("aac");
+        args.Add("-b:a");
+        args.Add("128k");
+        args.Add("-ac");
+        args.Add(outputChannels.ToString(CultureInfo.InvariantCulture));
     }
 
     private static void AppendHls(
@@ -353,23 +353,23 @@ internal static class LiveFfmpegArgumentBuilder
         int startIndex
     )
     {
-        args.Add(item: "-f");
-        args.Add(item: "hls");
-        args.Add(item: "-hls_time");
-        args.Add(item: input.SegmentDurationSeconds.ToString(provider: CultureInfo.InvariantCulture));
-        args.Add(item: "-hls_list_size");
-        args.Add(item: "0");
+        args.Add("-f");
+        args.Add("hls");
+        args.Add("-hls_time");
+        args.Add(input.SegmentDurationSeconds.ToString(CultureInfo.InvariantCulture));
+        args.Add("-hls_list_size");
+        args.Add("0");
         // Number the first output segment with its absolute index so a runner
         // spawned at a seek position writes seg_{startIndex}.ts onward, matching
         // the whole-runtime playlist the client already holds.
-        args.Add(item: "-start_number");
-        args.Add(item: startIndex.ToString(provider: CultureInfo.InvariantCulture));
-        args.Add(item: "-hls_playlist_type");
-        args.Add(item: "event");
-        args.Add(item: "-hls_flags");
-        args.Add(item: "independent_segments+temp_file");
-        args.Add(item: "-hls_segment_filename");
-        args.Add(item: segmentPattern);
+        args.Add("-start_number");
+        args.Add(startIndex.ToString(CultureInfo.InvariantCulture));
+        args.Add("-hls_playlist_type");
+        args.Add("event");
+        args.Add("-hls_flags");
+        args.Add("independent_segments+temp_file");
+        args.Add("-hls_segment_filename");
+        args.Add(segmentPattern);
     }
 
     /// <summary>
@@ -391,7 +391,7 @@ internal static class LiveFfmpegArgumentBuilder
                 ? input.AudioStreamIndex
                 : 0;
 
-        return streams[index: index].Channels;
+        return streams[index].Channels;
     }
 
     private static int StartSegmentIndex(LiveRunInput input)
@@ -413,16 +413,16 @@ internal static class LiveFfmpegArgumentBuilder
     {
         foreach ((string key, string value) in customArguments)
         {
-            string normalizedKey = key.StartsWith(value: '-') ? key : $"-{key}";
-            if (ProfileRuleValidator.ReservedFlags.Contains(item: normalizedKey))
+            string normalizedKey = key.StartsWith('-') ? key : $"-{key}";
+            if (ProfileRuleValidator.ReservedFlags.Contains(normalizedKey))
                 continue;
 
-            args.Add(item: normalizedKey);
+            args.Add(normalizedKey);
             if (value.Length > 0)
-                args.Add(item: value);
+                args.Add(value);
         }
     }
 
     private static string FormatSeconds(double seconds) =>
-        seconds.ToString(format: "F3", provider: CultureInfo.InvariantCulture);
+        seconds.ToString("F3", CultureInfo.InvariantCulture);
 }

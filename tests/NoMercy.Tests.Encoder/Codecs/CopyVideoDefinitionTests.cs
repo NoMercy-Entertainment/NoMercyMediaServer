@@ -27,14 +27,14 @@ public class CopyVideoDefinitionTests
     [Fact]
     public void CodecType_ReturnsCopy()
     {
-        _definition.CodecType.Should().Be(expected: VideoCodecType.Copy);
+        _definition.CodecType.Should().Be(VideoCodecType.Copy);
     }
 
     [Fact]
     public void Encoders_SingleEntry_NamedCopy()
     {
         _definition.Encoders.Should().ContainSingle();
-        _definition.Encoders[0].FfmpegName.Should().Be(expected: "copy");
+        _definition.Encoders[0].FfmpegName.Should().Be("copy");
     }
 
     [Fact]
@@ -59,9 +59,9 @@ public class CopyVideoDefinitionTests
         // Sentinel range — any caller accidentally reaching for Default sees
         // zeros and falls into a no-op rather than emitting CRF flags.
         QualityRange range = _definition.Encoders[0].QualityRange;
-        range.Min.Should().Be(expected: 0);
-        range.Max.Should().Be(expected: 0);
-        range.Default.Should().Be(expected: 0);
+        range.Min.Should().Be(0);
+        range.Max.Should().Be(0);
+        range.Default.Should().Be(0);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class CopyVideoDefinitionTests
     [Fact]
     public void Encoders_NoSessionLimit()
     {
-        _definition.Encoders[0].MaxConcurrentSessions.Should().Be(expected: int.MaxValue);
+        _definition.Encoders[0].MaxConcurrentSessions.Should().Be(int.MaxValue);
     }
 
     [Fact]

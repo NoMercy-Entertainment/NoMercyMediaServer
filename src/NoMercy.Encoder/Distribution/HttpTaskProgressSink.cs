@@ -33,7 +33,7 @@ public class HttpTaskProgressSink(
     ILogger<HttpTaskProgressSink> logger
 ) : ITaskProgressSink
 {
-    private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(seconds: 2);
+    private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(2);
 
     private readonly ConcurrentDictionary<string, DateTime> _lastPushUtc = new();
 
@@ -41,24 +41,24 @@ public class HttpTaskProgressSink(
     {
         // No coordinator configured (standalone worker / coordinator) → nothing
         // to push.
-        if (string.IsNullOrWhiteSpace(value: options.CoordinatorUrl))
+        if (string.IsNullOrWhiteSpace(options.CoordinatorUrl))
             return;
 
         DateTime now = DateTime.UtcNow;
-        if (_lastPushUtc.TryGetValue(key: taskId, value: out DateTime last) && now - last < PushInterval)
+        if (_lastPushUtc.TryGetValue(taskId, out DateTime last) && now - last < PushInterval)
             return;
 
-        _lastPushUtc[key: taskId] = now;
-        _ = PushAsync(taskId: taskId, progress: progress);
+        _lastPushUtc[taskId] = now;
+        _ = PushAsync(taskId, progress);
     }
 
     private async Task PushAsync(string taskId, EncodingProgress progress)
     {
         try
         {
-            HttpClient http = httpClientFactory.CreateClient(name: "worker-progress-push");
-            http.BaseAddress = new(uriString: options.CoordinatorUrl!);
-            http.Timeout = TimeSpan.FromSeconds(seconds: 5);
+            HttpClient http = httpClientFactory.CreateClient("worker-progress-push");
+            http.BaseAddress = new(options.CoordinatorUrl!);
+            http.Timeout = TimeSpan.FromSeconds(5);
 
             object payload = new
             {
@@ -76,14 +76,14 @@ public class HttpTaskProgressSink(
             };
 
             using HttpResponseMessage response = await http.PostAsJsonAsync(
-                requestUri: $"api/v1/distribution/workers/{options.WorkerId}/tasks/{taskId}/progress",
-                value: payload
+                $"api/v1/distribution/workers/{options.WorkerId}/tasks/{taskId}/progress",
+                payload
             );
 
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogDebug(
-                    message: "Coordinator returned {Status} for progress push (task {TaskId})", args: [(int)response.StatusCode, taskId]
+                    "Coordinator returned {Status} for progress push (task {TaskId})", [(int)response.StatusCode, taskId]
                 );
             }
         }
@@ -91,7 +91,7 @@ public class HttpTaskProgressSink(
         {
             // Progress pushes are best-effort. Swallow everything so the
             // encode doesn't fail on a transient network issue.
-            logger.LogDebug(exception: ex, message: "Progress push failed for task {TaskId}", args: taskId);
+            logger.LogDebug(ex, "Progress push failed for task {TaskId}", taskId);
         }
     }
 }

@@ -38,7 +38,7 @@ public static class LiveGapPlanner
     )
     {
         int segmentDuration = segmentDurationSeconds > 0 ? segmentDurationSeconds : 6;
-        int desired = Math.Max(val1: 0, val2: desiredIndex);
+        int desired = Math.Max(0, desiredIndex);
 
         if (lastIndex is int fileEnd && desired > fileEnd)
             return null;
@@ -51,7 +51,7 @@ public static class LiveGapPlanner
         int scanBound = lastIndex ?? maxExisting;
 
         int firstMissing = desired;
-        while (firstMissing <= scanBound && existing.Contains(item: firstMissing))
+        while (firstMissing <= scanBound && existing.Contains(firstMissing))
             firstMissing++;
 
         if (lastIndex is int coveredThrough && firstMissing > coveredThrough)
@@ -60,18 +60,18 @@ public static class LiveGapPlanner
         int? stopAtIndex = null;
         for (int candidate = firstMissing + 1; candidate <= scanBound; candidate++)
         {
-            if (!existing.Contains(item: candidate))
+            if (!existing.Contains(candidate))
                 continue;
 
             stopAtIndex = candidate;
             break;
         }
 
-        TimeSpan start = TimeSpan.FromSeconds(value: (double)firstMissing * segmentDuration);
+        TimeSpan start = TimeSpan.FromSeconds((double)firstMissing * segmentDuration);
         TimeSpan? stopAt = stopAtIndex is int stop
-            ? TimeSpan.FromSeconds(value: (double)stop * segmentDuration)
+            ? TimeSpan.FromSeconds((double)stop * segmentDuration)
             : null;
 
-        return new LiveGapPlan(Start: start, StopAt: stopAt);
+        return new LiveGapPlan(start, stopAt);
     }
 }

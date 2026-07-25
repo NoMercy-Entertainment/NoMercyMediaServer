@@ -23,8 +23,8 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Unit tests for TmdbSearchClient
 /// Tests all search functionality including movies, TV shows, people, multi-search, collections, networks, and keywords
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
-[Collection(name: "TmdbApi")]
+[Trait("Category", "Unit")]
+[Collection("TmdbApi")]
 public class TmdbSearchClientTests : TmdbTestBase
 {
     #region Constructor Tests
@@ -51,27 +51,27 @@ public class TmdbSearchClientTests : TmdbTestBase
         const string query = "The Dark Knight";
 
         // Act
-        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query: query);
+        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query);
 
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
         result
             .Results.Should()
-            .Contain(predicate: m => m.Title!.Contains("Dark Knight", StringComparison.OrdinalIgnoreCase));
+            .Contain(m => m.Title!.Contains("Dark Knight", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
-    [InlineData(data: ["Inception", "2010"])]
-    [InlineData(data: ["The Matrix", "1999"])]
-    [InlineData(data: ["Pulp Fiction", "1994"])]
+    [InlineData(["Inception", "2010"])]
+    [InlineData(["The Matrix", "1999"])]
+    [InlineData(["Pulp Fiction", "1994"])]
     public async Task Movie_WithQueryAndYear_ReturnsFilteredResults(string query, string year)
     {
         // Arrange
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query: query, year: year);
+        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query, year);
 
         // Assert
         result.Should().NotBeNull();
@@ -86,7 +86,7 @@ public class TmdbSearchClientTests : TmdbTestBase
         const string query = "Avatar";
 
         // Act
-        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query: query, priority: true);
+        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query, priority: true);
 
         // Assert
         result.Should().NotBeNull();
@@ -100,7 +100,7 @@ public class TmdbSearchClientTests : TmdbTestBase
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query: "");
+        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie("");
 
         // Assert
         result.Should().NotBeNull();
@@ -119,27 +119,27 @@ public class TmdbSearchClientTests : TmdbTestBase
         const string query = "Breaking Bad";
 
         // Act
-        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(query: query);
+        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(query);
 
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
         result
             .Results.Should()
-            .Contain(predicate: tv => tv.Name!.Contains("Breaking Bad", StringComparison.OrdinalIgnoreCase));
+            .Contain(tv => tv.Name!.Contains("Breaking Bad", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
-    [InlineData(data: ["Game of Thrones", "2011"])]
-    [InlineData(data: ["Friends", "1994"])]
-    [InlineData(data: ["The Office", "2005"])]
+    [InlineData(["Game of Thrones", "2011"])]
+    [InlineData(["Friends", "1994"])]
+    [InlineData(["The Office", "2005"])]
     public async Task TvShow_WithQueryAndYear_ReturnsFilteredResults(string query, string year)
     {
         // Arrange
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(query: query, year: year);
+        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(query, year);
 
         // Assert
         result.Should().NotBeNull();
@@ -154,7 +154,7 @@ public class TmdbSearchClientTests : TmdbTestBase
         const string query = "Stranger Things";
 
         // Act
-        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(query: query, priority: true);
+        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(query, priority: true);
 
         // Assert
         result.Should().NotBeNull();
@@ -173,27 +173,27 @@ public class TmdbSearchClientTests : TmdbTestBase
         const string query = "Leonardo DiCaprio";
 
         // Act
-        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person(query: query);
+        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person(query);
 
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
         result
             .Results.Should()
-            .Contain(predicate: p => p.Name!.Contains("Leonardo", StringComparison.OrdinalIgnoreCase));
+            .Contain(p => p.Name!.Contains("Leonardo", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
-    [InlineData(data: "Tom Hanks")]
-    [InlineData(data: "Meryl Streep")]
-    [InlineData(data: "Robert Downey")]
+    [InlineData("Tom Hanks")]
+    [InlineData("Meryl Streep")]
+    [InlineData("Robert Downey")]
     public async Task Person_WithDifferentActors_ReturnsResults(string actorName)
     {
         // Arrange
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person(query: actorName);
+        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person(actorName);
 
         // Assert
         result.Should().NotBeNull();
@@ -212,7 +212,7 @@ public class TmdbSearchClientTests : TmdbTestBase
         const string query = "Marvel";
 
         // Act
-        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi(query: query);
+        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi(query);
 
         // Assert
         result.Should().NotBeNull();
@@ -221,16 +221,16 @@ public class TmdbSearchClientTests : TmdbTestBase
     }
 
     [Theory]
-    [InlineData(data: "Batman")]
-    [InlineData(data: "Star Wars")]
-    [InlineData(data: "Disney")]
+    [InlineData("Batman")]
+    [InlineData("Star Wars")]
+    [InlineData("Disney")]
     public async Task Multi_WithPopularTerms_ReturnsVariedResults(string query)
     {
         // Arrange
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi(query: query);
+        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi(query);
 
         // Assert
         result.Should().NotBeNull();
@@ -249,7 +249,7 @@ public class TmdbSearchClientTests : TmdbTestBase
         const string query = "Marvel Cinematic Universe";
 
         // Act
-        TmdbPaginatedResponse<TmdbCollection>? result = await client.Collection(query: query);
+        TmdbPaginatedResponse<TmdbCollection>? result = await client.Collection(query);
 
         // Assert
         result.Should().NotBeNull();
@@ -257,16 +257,16 @@ public class TmdbSearchClientTests : TmdbTestBase
     }
 
     [Theory]
-    [InlineData(data: "Harry Potter")]
-    [InlineData(data: "Lord of the Rings")]
-    [InlineData(data: "Fast and Furious")]
+    [InlineData("Harry Potter")]
+    [InlineData("Lord of the Rings")]
+    [InlineData("Fast and Furious")]
     public async Task Collection_WithFranchiseNames_ReturnsResults(string franchiseName)
     {
         // Arrange
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbCollection>? result = await client.Collection(query: franchiseName);
+        TmdbPaginatedResponse<TmdbCollection>? result = await client.Collection(franchiseName);
 
         // Assert
         result.Should().NotBeNull();
@@ -284,23 +284,23 @@ public class TmdbSearchClientTests : TmdbTestBase
         const string query = "superhero";
 
         // Act
-        TmdbPaginatedResponse<TmdbKeyword>? result = await client.Keyword(query: query);
+        TmdbPaginatedResponse<TmdbKeyword>? result = await client.Keyword(query);
 
         // Assert
         result.Should().NotBeNull();
     }
 
     [Theory]
-    [InlineData(data: "action")]
-    [InlineData(data: "comedy")]
-    [InlineData(data: "drama")]
+    [InlineData("action")]
+    [InlineData("comedy")]
+    [InlineData("drama")]
     public async Task Keyword_WithGenreTerms_ReturnsResults(string genreTerm)
     {
         // Arrange
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbKeyword>? result = await client.Keyword(query: genreTerm);
+        TmdbPaginatedResponse<TmdbKeyword>? result = await client.Keyword(genreTerm);
 
         // Assert
         result.Should().NotBeNull();
@@ -317,9 +317,9 @@ public class TmdbSearchClientTests : TmdbTestBase
         using TmdbSearchClient client = new();
 
         // Act & Assert
-        Func<Task<TmdbPaginatedResponse<TmdbMovie>?>> act = async () => await client.Movie(query: null!);
+        Func<Task<TmdbPaginatedResponse<TmdbMovie>?>> act = async () => await client.Movie(null!);
         await act.Should()
-            .NotThrowAsync(because: "because the client should handle null queries gracefully");
+            .NotThrowAsync("because the client should handle null queries gracefully");
     }
 
     [Fact]
@@ -330,7 +330,7 @@ public class TmdbSearchClientTests : TmdbTestBase
         const string query = "C++ Programming & Development";
 
         // Act
-        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(query: query);
+        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(query);
 
         // Assert
         result.Should().NotBeNull();
@@ -341,10 +341,10 @@ public class TmdbSearchClientTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = new();
-        string longQuery = new(c: 'a', count: 1000);
+        string longQuery = new('a', 1000);
 
         // Act
-        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person(query: longQuery);
+        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person(longQuery);
 
         // Assert
         // Very long queries may be rejected by TMDB API (400 Bad Request), returning null
@@ -366,11 +366,11 @@ public class TmdbSearchClientTests : TmdbTestBase
         using TmdbSearchClient client = new();
 
         // Act
-        Task<TmdbPaginatedResponse<TmdbMovie>?> movieTask = client.Movie(query: "Inception");
-        Task<TmdbPaginatedResponse<TmdbTvShow>?> tvTask = client.TvShow(query: "Breaking Bad");
-        Task<TmdbPaginatedResponse<TmdbPerson>?> personTask = client.Person(query: "Leonardo DiCaprio");
+        Task<TmdbPaginatedResponse<TmdbMovie>?> movieTask = client.Movie("Inception");
+        Task<TmdbPaginatedResponse<TmdbTvShow>?> tvTask = client.TvShow("Breaking Bad");
+        Task<TmdbPaginatedResponse<TmdbPerson>?> personTask = client.Person("Leonardo DiCaprio");
 
-        await Task.WhenAll(tasks: [movieTask, tvTask, personTask]);
+        await Task.WhenAll([movieTask, tvTask, personTask]);
 
         // Assert
         (await movieTask)
@@ -389,15 +389,15 @@ public class TmdbSearchClientTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = new();
-        TimeSpan timeout = TimeSpan.FromSeconds(seconds: 10);
+        TimeSpan timeout = TimeSpan.FromSeconds(10);
 
         // Act & Assert
-        using CancellationTokenSource cts = new(delay: timeout);
+        using CancellationTokenSource cts = new(timeout);
 
-        Task<TmdbPaginatedResponse<TmdbMovie>?> movieTask = client.Movie(query: "Avatar");
-        Task<TmdbPaginatedResponse<TmdbTvShow>?> tvTask = client.TvShow(query: "Game of Thrones");
+        Task<TmdbPaginatedResponse<TmdbMovie>?> movieTask = client.Movie("Avatar");
+        Task<TmdbPaginatedResponse<TmdbTvShow>?> tvTask = client.TvShow("Game of Thrones");
 
-        await Task.WhenAll(tasks: [movieTask, tvTask]).WaitAsync(cancellationToken: cts.Token);
+        await Task.WhenAll([movieTask, tvTask]).WaitAsync(cts.Token);
 
         (await movieTask).Should().NotBeNull();
         (await tvTask).Should().NotBeNull();

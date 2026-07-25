@@ -31,58 +31,58 @@ public class CodecRegistryBranchTests
     // ── IsHardware vendor-suffix table ──────────────────────────────────────
 
     [Theory]
-    [InlineData(data: "h264_nvenc")]
-    [InlineData(data: "hevc_nvenc")]
-    [InlineData(data: "av1_nvenc")]
-    [InlineData(data: "h264_qsv")]
-    [InlineData(data: "hevc_qsv")]
-    [InlineData(data: "av1_qsv")]
-    [InlineData(data: "vp9_qsv")]
-    [InlineData(data: "h264_amf")]
-    [InlineData(data: "hevc_amf")]
-    [InlineData(data: "av1_amf")]
-    [InlineData(data: "h264_videotoolbox")]
-    [InlineData(data: "hevc_videotoolbox")]
-    [InlineData(data: "h264_vaapi")]
-    [InlineData(data: "hevc_vaapi")]
-    [InlineData(data: "vp9_vaapi")]
+    [InlineData("h264_nvenc")]
+    [InlineData("hevc_nvenc")]
+    [InlineData("av1_nvenc")]
+    [InlineData("h264_qsv")]
+    [InlineData("hevc_qsv")]
+    [InlineData("av1_qsv")]
+    [InlineData("vp9_qsv")]
+    [InlineData("h264_amf")]
+    [InlineData("hevc_amf")]
+    [InlineData("av1_amf")]
+    [InlineData("h264_videotoolbox")]
+    [InlineData("hevc_videotoolbox")]
+    [InlineData("h264_vaapi")]
+    [InlineData("hevc_vaapi")]
+    [InlineData("vp9_vaapi")]
     public void IsHardware_returns_true_for_each_vendor_suffix(string encoder)
     {
-        CodecRegistry.IsHardware(ffmpegEncoderName: encoder).Should().BeTrue();
+        CodecRegistry.IsHardware(encoder).Should().BeTrue();
     }
 
     [Theory]
-    [InlineData(data: "libx264")]
-    [InlineData(data: "libx265")]
-    [InlineData(data: "libsvtav1")]
-    [InlineData(data: "libvpx-vp9")]
-    [InlineData(data: "libaom-av1")]
-    [InlineData(data: "copy")]
+    [InlineData("libx264")]
+    [InlineData("libx265")]
+    [InlineData("libsvtav1")]
+    [InlineData("libvpx-vp9")]
+    [InlineData("libaom-av1")]
+    [InlineData("copy")]
     public void IsHardware_returns_false_for_software_encoders(string encoder)
     {
-        CodecRegistry.IsHardware(ffmpegEncoderName: encoder).Should().BeFalse();
+        CodecRegistry.IsHardware(encoder).Should().BeFalse();
     }
 
     [Theory]
-    [InlineData(data: "H264_NVENC")]
-    [InlineData(data: "HEVC_QSV")]
-    [InlineData(data: "Av1_Amf")]
-    [InlineData(data: "h264_VAAPI")]
+    [InlineData("H264_NVENC")]
+    [InlineData("HEVC_QSV")]
+    [InlineData("Av1_Amf")]
+    [InlineData("h264_VAAPI")]
     public void IsHardware_match_is_case_insensitive(string encoder)
     {
-        CodecRegistry.IsHardware(ffmpegEncoderName: encoder).Should().BeTrue();
+        CodecRegistry.IsHardware(encoder).Should().BeTrue();
     }
 
     [Fact]
     public void IsHardware_empty_string_returns_false()
     {
-        CodecRegistry.IsHardware(ffmpegEncoderName: string.Empty).Should().BeFalse();
+        CodecRegistry.IsHardware(string.Empty).Should().BeFalse();
     }
 
     [Fact]
     public void IsHardware_arbitrary_string_returns_false()
     {
-        CodecRegistry.IsHardware(ffmpegEncoderName: "some_random_name").Should().BeFalse();
+        CodecRegistry.IsHardware("some_random_name").Should().BeFalse();
     }
 
     // ── EnumerateVideoEncoders excludes Copy ────────────────────────────────
@@ -95,7 +95,7 @@ public class CodecRegistryBranchTests
         IEnumerable<(VideoCodecType CodecType, EncoderInfo Encoder)> all =
             _registry.EnumerateVideoEncoders();
 
-        all.Should().NotContain(predicate: e => e.CodecType == VideoCodecType.Copy);
+        all.Should().NotContain(e => e.CodecType == VideoCodecType.Copy);
     }
 
     [Fact]
@@ -104,35 +104,35 @@ public class CodecRegistryBranchTests
         IEnumerable<(VideoCodecType CodecType, EncoderInfo Encoder)> all =
             _registry.EnumerateVideoEncoders();
 
-        IEnumerable<VideoCodecType> codecs = all.Select(selector: e => e.CodecType).Distinct();
+        IEnumerable<VideoCodecType> codecs = all.Select(e => e.CodecType).Distinct();
         codecs
             .Should()
-            .Contain(expected: VideoCodecType.H264)
-            .And.Contain(expected: VideoCodecType.H265)
-            .And.Contain(expected: VideoCodecType.Av1)
-            .And.Contain(expected: VideoCodecType.Vp9);
+            .Contain(VideoCodecType.H264)
+            .And.Contain(VideoCodecType.H265)
+            .And.Contain(VideoCodecType.Av1)
+            .And.Contain(VideoCodecType.Vp9);
     }
 
     // ── GetAudioEncoder delegates to definitions table ──────────────────────
 
     [Theory]
-    [InlineData(data: [AudioCodecType.Aac, "libfdk_aac"])]
-    [InlineData(data: [AudioCodecType.Flac, "flac"])]
-    [InlineData(data: [AudioCodecType.Opus, "libopus"])]
-    [InlineData(data: [AudioCodecType.Ac3, "ac3"])]
-    [InlineData(data: [AudioCodecType.Eac3, "eac3"])]
-    [InlineData(data: [AudioCodecType.Mp3, "libmp3lame"])]
-    [InlineData(data: [AudioCodecType.Vorbis, "libvorbis"])]
-    [InlineData(data: [AudioCodecType.TrueHd, "truehd"])]
-    [InlineData(data: [AudioCodecType.Dts, "dca"])]
-    [InlineData(data: [AudioCodecType.Copy, "copy"])]
+    [InlineData([AudioCodecType.Aac, "libfdk_aac"])]
+    [InlineData([AudioCodecType.Flac, "flac"])]
+    [InlineData([AudioCodecType.Opus, "libopus"])]
+    [InlineData([AudioCodecType.Ac3, "ac3"])]
+    [InlineData([AudioCodecType.Eac3, "eac3"])]
+    [InlineData([AudioCodecType.Mp3, "libmp3lame"])]
+    [InlineData([AudioCodecType.Vorbis, "libvorbis"])]
+    [InlineData([AudioCodecType.TrueHd, "truehd"])]
+    [InlineData([AudioCodecType.Dts, "dca"])]
+    [InlineData([AudioCodecType.Copy, "copy"])]
     public void GetAudioEncoder_returns_canonical_ffmpeg_name_per_codec(
         AudioCodecType codec,
         string expectedFfmpegName
     )
     {
-        AudioEncoderInfo info = _registry.GetAudioEncoder(codecType: codec);
-        info.FfmpegName.Should().Be(expected: expectedFfmpegName);
+        AudioEncoderInfo info = _registry.GetAudioEncoder(codec);
+        info.FfmpegName.Should().Be(expectedFfmpegName);
     }
 
     // ── GetVideoEncoderByName behavior ──────────────────────────────────────
@@ -140,9 +140,9 @@ public class CodecRegistryBranchTests
     [Fact]
     public void GetVideoEncoderByName_returns_encoder_for_known_name()
     {
-        EncoderInfo? info = _registry.GetVideoEncoderByName(ffmpegName: "libx264");
+        EncoderInfo? info = _registry.GetVideoEncoderByName("libx264");
         info.Should().NotBeNull();
-        info!.FfmpegName.Should().Be(expected: "libx264");
+        info!.FfmpegName.Should().Be("libx264");
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class CodecRegistryBranchTests
         // Dictionary lookup uses default StringComparer (ordinal) — uppercase
         // wouldn't match. Pinned so a future change to OrdinalIgnoreCase is
         // intentional.
-        EncoderInfo? info = _registry.GetVideoEncoderByName(ffmpegName: "LIBX264");
+        EncoderInfo? info = _registry.GetVideoEncoderByName("LIBX264");
         info.Should().BeNull();
     }
 
@@ -162,9 +162,9 @@ public class CodecRegistryBranchTests
         // be retrievable by name through GetVideoEncoderByName.
         foreach ((VideoCodecType _, EncoderInfo encoder) in _registry.EnumerateVideoEncoders())
         {
-            EncoderInfo? lookup = _registry.GetVideoEncoderByName(ffmpegName: encoder.FfmpegName);
+            EncoderInfo? lookup = _registry.GetVideoEncoderByName(encoder.FfmpegName);
             lookup.Should().NotBeNull();
-            lookup!.FfmpegName.Should().Be(expected: encoder.FfmpegName);
+            lookup!.FfmpegName.Should().Be(encoder.FfmpegName);
         }
     }
 }

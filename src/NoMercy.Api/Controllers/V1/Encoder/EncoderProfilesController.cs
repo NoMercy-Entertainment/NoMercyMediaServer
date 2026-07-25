@@ -39,10 +39,10 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 /// <c>[Obsolete]</c> markers.
 /// </summary>
 [ApiController]
-[Tags(tags: "Encoder Profiles")]
-[ApiVersion(version: 1.0)]
+[Tags("Encoder Profiles")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "Moderator")]
-[Route(template: "api/v{version:apiVersion}/encoder/profiles")]
+[Route("api/v{version:apiVersion}/encoder/profiles")]
 public class EncoderProfilesController(
     IProfileValidator profileValidator,
     IProfileSignatureVerifier signatureVerifier,
@@ -62,15 +62,15 @@ public class EncoderProfilesController(
         [FromQuery] string? tag = null
     )
     {
-        pageSize = Math.Clamp(value: pageSize, min: 1, max: 500);
+        pageSize = Math.Clamp(pageSize, 1, 500);
         if (pageIndex < 0)
             pageIndex = 0;
 
-        List<EncodingPreset> presets = await presetRepository.ListAsync(pageSize: pageSize, pageIndex: pageIndex, tagFilter: tag);
+        List<EncodingPreset> presets = await presetRepository.ListAsync(pageSize, pageIndex, tag);
         int total = await presetRepository.GetTotalCountAsync();
 
         return Ok(
-            value: new
+            new
             {
                 data = presets,
                 meta = new
@@ -78,7 +78,7 @@ public class EncoderProfilesController(
                     total,
                     pageSize,
                     pageIndex,
-                    totalPages = (int)Math.Ceiling(a: (double)total / pageSize),
+                    totalPages = (int)Math.Ceiling((double)total / pageSize),
                 },
             }
         );
@@ -87,17 +87,17 @@ public class EncoderProfilesController(
     /// <summary>
     /// Returns the sparse DB row for a single encoding preset by its <see cref="Ulid"/> id.
     /// </summary>
-    [HttpGet(template: "{id:ulid}")]
+    [HttpGet("{id:ulid}")]
     public async Task<IActionResult> Get(Ulid id, CancellationToken ct)
     {
         EncodingPreset? preset = await mediaContext
             .EncodingPresets.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: p => p.Id == id, cancellationToken: ct);
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
         if (preset is null)
-            return NotFoundResponse(detail: "Preset not found.");
+            return NotFoundResponse("Preset not found.");
 
         return Ok(
-            value: new EncoderProfileDto
+            new EncoderProfileDto
             {
                 Id = preset.Id,
                 Name = preset.Name,
@@ -115,25 +115,25 @@ public class EncoderProfilesController(
     /// Resolves a preset by walking its parent chain and merging all layers,
     /// returning the fully-effective <see cref="V2EncodingProfile"/>.
     /// </summary>
-    [HttpGet(template: "{id:ulid}/resolved")]
+    [HttpGet("{id:ulid}/resolved")]
     public IActionResult GetResolved(Ulid id)
     {
-        DbPresetLookup lookup = new(context: mediaContext);
+        DbPresetLookup lookup = new(mediaContext);
         V2EncodingProfile resolved;
         try
         {
-            resolved = V2PresetResolver.Resolve(presetId: id, lookup: lookup);
+            resolved = V2PresetResolver.Resolve(id, lookup);
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequestResponse(detail: ex.Message);
+            return BadRequestResponse(ex.Message);
         }
 
-        V2ProfileValidationResult validation = V2ProfileValidator.Validate(profile: resolved);
+        V2ProfileValidationResult validation = V2ProfileValidator.Validate(resolved);
         if (!validation.IsValid)
-            return UnprocessableEntityResponse(detail: string.Join(separator: "; ", values: validation.Errors));
+            return UnprocessableEntityResponse(string.Join("; ", validation.Errors));
 
-        return Ok(value: resolved);
+        return Ok(resolved);
     }
 
     /// <summary>
@@ -144,33 +144,33 @@ public class EncoderProfilesController(
     public async Task<IActionResult> Create([FromBody] CreateEncoderProfileRequest request)
     {
         EncoderProfileService.CreateResult result = await encoderProfileService.CreateAsync(
-            name: request.Name,
-            profileJson: request.ProfileJson,
-            description: request.Description,
-            author: request.Author,
-            tags: request.Tags,
-            parentPresetId: request.ParentPresetId,
-            userId: User.UserId()
+            request.Name,
+            request.ProfileJson,
+            request.Description,
+            request.Author,
+            request.Tags,
+            request.ParentPresetId,
+            User.UserId()
         );
 
         if (result.IsValidation)
-            return BadRequestResponse(detail: result.ErrorMessage!);
+            return BadRequestResponse(result.ErrorMessage!);
 
         if (result.IsConflict)
-            return ConflictResponse(detail: result.ErrorMessage!);
+            return ConflictResponse(result.ErrorMessage!);
 
-        return Ok(value: result.Saved);
+        return Ok(result.Saved);
     }
 
     /// <summary>
     /// Returns the distinct set of tags in use across all profiles, sorted
     /// alphabetically. Tags are stored as comma-separated values on each row.
     /// </summary>
-    [HttpGet(template: "tags")]
+    [HttpGet("tags")]
     public async Task<IActionResult> Tags()
     {
         IReadOnlyList<string> tags = await presetRepository.GetAllTagsAsync();
-        return Ok(value: new { data = tags });
+        return Ok(new { data = tags });
     }
 
     /// <summary>
@@ -180,40 +180,40 @@ public class EncoderProfilesController(
     /// <c>GET /{id:ulid}/resolved</c> which uses the V2 resolver and validates
     /// the merged result before returning.
     /// </summary>
-    [Obsolete(message: "Use GET /{id:ulid}/resolved — V2 resolver with post-merge validation.")]
-    [HttpGet(template: "{id}/resolve")]
+    [Obsolete("Use GET /{id:ulid}/resolved — V2 resolver with post-merge validation.")]
+    [HttpGet("{id}/resolve")]
     public async Task<IActionResult> Resolve(
         string id,
         [FromServices] INamePresetResolver presetResolver
     )
     {
-        if (!Ulid.TryParse(base32: id, ulid: out Ulid presetId))
-            return BadRequestResponse(detail: "Invalid profile id");
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid profile id");
 
-        EncodingPreset? leaf = await presetRepository.GetByIdAsync(id: presetId);
+        EncodingPreset? leaf = await presetRepository.GetByIdAsync(presetId);
         if (leaf is null)
-            return NotFoundResponse(detail: "Profile not found");
+            return NotFoundResponse("Profile not found");
 
         string? parentName = null;
         if (leaf.ParentPresetId is Ulid parentId)
         {
-            EncodingPreset? parent = await presetRepository.GetByIdAsync(id: parentId);
+            EncodingPreset? parent = await presetRepository.GetByIdAsync(parentId);
             parentName = parent?.Name;
         }
 
-        PresetResolveRequest resolveRequest = new(Name: leaf.Name, ProfileJson: leaf.ProfileJson, ParentName: parentName);
+        PresetResolveRequest resolveRequest = new(leaf.Name, leaf.ProfileJson, parentName);
 
         try
         {
             EncodingProfile resolved = presetResolver.Resolve(
-                request: resolveRequest,
-                lookup: new EncoderProfilesPresetLookup(repository: presetRepository)
+                resolveRequest,
+                new EncoderProfilesPresetLookup(presetRepository)
             );
-            return Ok(value: resolved);
+            return Ok(resolved);
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequestResponse(detail: $"Profile could not be resolved: {ex.Message}");
+            return BadRequestResponse($"Profile could not be resolved: {ex.Message}");
         }
     }
 
@@ -222,29 +222,29 @@ public class EncoderProfilesController(
     /// preset is built-in or when other presets inherit from it — callers must
     /// reparent or delete children first.
     /// </summary>
-    [HttpDelete(template: "{id:ulid}")]
+    [HttpDelete("{id:ulid}")]
     public async Task<IActionResult> Delete(Ulid id, CancellationToken ct)
     {
         EncodingPreset? row = await mediaContext.EncodingPresets.FirstOrDefaultAsync(
-            predicate: p => p.Id == id,
-            cancellationToken: ct
+            p => p.Id == id,
+            ct
         );
         if (row is null)
-            return NotFoundResponse(detail: "Preset not found.");
+            return NotFoundResponse("Preset not found.");
         if (row.IsBuiltIn)
-            return BadRequestResponse(detail: "Built-in presets cannot be deleted.");
+            return BadRequestResponse("Built-in presets cannot be deleted.");
 
         bool hasChildren = await mediaContext.EncodingPresets.AnyAsync(
-            predicate: p => p.ParentPresetId == id,
-            cancellationToken: ct
+            p => p.ParentPresetId == id,
+            ct
         );
         if (hasChildren)
             return BadRequestResponse(
-                detail: "Preset has children that inherit from it; reparent or delete them first."
+                "Preset has children that inherit from it; reparent or delete them first."
             );
 
-        mediaContext.EncodingPresets.Remove(entity: row);
-        await mediaContext.SaveChangesAsync(cancellationToken: ct);
+        mediaContext.EncodingPresets.Remove(row);
+        await mediaContext.SaveChangesAsync(ct);
         return NoContent();
     }
 
@@ -259,61 +259,58 @@ public class EncoderProfilesController(
     /// stored via <c>PUT /{id:ulid}</c> are validated by
     /// <see cref="V2ProfileValidator"/> inside <c>GET /{id:ulid}/resolved</c>.
     /// </summary>
-    [HttpPost(template: "validate")]
+    [HttpPost("validate")]
     public IActionResult Validate([FromBody] ValidateEncoderProfileRequest request)
     {
-        if (string.IsNullOrWhiteSpace(value: request.ProfileJson))
+        if (string.IsNullOrWhiteSpace(request.ProfileJson))
         {
-            ValidationEnvelope empty = ValidationEnvelope.FromRules(rules:
-            [
+            ValidationEnvelope empty = ValidationEnvelope.FromRules([
                 new(
-                    Id: EncoderRuleId.ProfileNameMissing,
-                    Severity: EncoderRuleSeverity.Error,
-                    Field: "profile_json",
-                    Message: "profile_json is required",
-                    Fix: "Supply the full profile JSON in the profile_json field."
+                    EncoderRuleId.ProfileNameMissing,
+                    EncoderRuleSeverity.Error,
+                    "profile_json",
+                    "profile_json is required",
+                    "Supply the full profile JSON in the profile_json field."
                 ),
             ]);
-            return Ok(value: empty);
+            return Ok(empty);
         }
 
         EncodingProfile? profile;
         try
         {
-            profile = JsonConvert.DeserializeObject<EncodingProfile>(value: request.ProfileJson);
+            profile = JsonConvert.DeserializeObject<EncodingProfile>(request.ProfileJson);
         }
         catch (JsonException ex)
         {
-            ValidationEnvelope parseError = ValidationEnvelope.FromRules(rules:
-            [
+            ValidationEnvelope parseError = ValidationEnvelope.FromRules([
                 new(
-                    Id: EncoderRuleId.ProfileNameMissing,
-                    Severity: EncoderRuleSeverity.Error,
-                    Field: "profile_json",
-                    Message: $"Profile JSON is malformed: {ex.Message}",
-                    Fix: "Fix the JSON syntax error and resubmit."
+                    EncoderRuleId.ProfileNameMissing,
+                    EncoderRuleSeverity.Error,
+                    "profile_json",
+                    $"Profile JSON is malformed: {ex.Message}",
+                    "Fix the JSON syntax error and resubmit."
                 ),
             ]);
-            return Ok(value: parseError);
+            return Ok(parseError);
         }
 
         if (profile is null)
         {
-            ValidationEnvelope nullError = ValidationEnvelope.FromRules(rules:
-            [
+            ValidationEnvelope nullError = ValidationEnvelope.FromRules([
                 new(
-                    Id: EncoderRuleId.ProfileNameMissing,
-                    Severity: EncoderRuleSeverity.Error,
-                    Field: "profile_json",
-                    Message: "Profile JSON deserialized to null — check the outer object is present",
-                    Fix: "Ensure the JSON root is an object, not null or an array."
+                    EncoderRuleId.ProfileNameMissing,
+                    EncoderRuleSeverity.Error,
+                    "profile_json",
+                    "Profile JSON deserialized to null — check the outer object is present",
+                    "Ensure the JSON root is an object, not null or an array."
                 ),
             ]);
-            return Ok(value: nullError);
+            return Ok(nullError);
         }
 
-        ValidationEnvelope envelope = profileValidator.ValidateAsEnvelope(profile: profile);
-        return Ok(value: envelope);
+        ValidationEnvelope envelope = profileValidator.ValidateAsEnvelope(profile);
+        return Ok(envelope);
     }
 
     /// <summary>
@@ -325,7 +322,7 @@ public class EncoderProfilesController(
     /// <para>Returns 404 when the source file cannot be read (via
     /// <see cref="RuntimeErrors.SourceNotAccessible"/>).</para>
     /// </summary>
-    [HttpPost(template: "{id}/preview")]
+    [HttpPost("{id}/preview")]
     public async Task<IActionResult> Preview(
         string id,
         [FromBody] PreviewEncoderProfileRequest request,
@@ -334,16 +331,16 @@ public class EncoderProfilesController(
     {
         EncoderProfileService.PreviewParseResult parseResult =
             encoderProfileService.ParseProfileForPreview(
-                id: id,
-                profileJson: request.ProfileJson,
-                sourcePath: request.SourcePath
+                id,
+                request.ProfileJson,
+                request.SourcePath
             );
 
         if (parseResult.EarlyResponse is not null)
-            return Ok(value: parseResult.EarlyResponse);
+            return Ok(parseResult.EarlyResponse);
 
         // PreviewEngine was removed in V2 migration — V2 preview not yet implemented.
-        return NotImplementedResponse(detail: "Encode preview not yet implemented for V2 profiles.");
+        return NotImplementedResponse("Encode preview not yet implemented for V2 profiles.");
     }
 
     /// <summary>
@@ -352,7 +349,7 @@ public class EncoderProfilesController(
     /// resolved parent rather than the full profile — keeping the inheritance
     /// chain intact and compact.
     /// </summary>
-    [HttpPut(template: "{id:ulid}")]
+    [HttpPut("{id:ulid}")]
     public async Task<IActionResult> Update(
         Ulid id,
         [FromBody] V2EncodingProfile incoming,
@@ -360,32 +357,32 @@ public class EncoderProfilesController(
     )
     {
         EncodingPreset? row = await mediaContext.EncodingPresets.FirstOrDefaultAsync(
-            predicate: p => p.Id == id,
-            cancellationToken: ct
+            p => p.Id == id,
+            ct
         );
         if (row is null)
-            return NotFoundResponse(detail: "Preset not found.");
+            return NotFoundResponse("Preset not found.");
         if (row.IsBuiltIn)
-            return BadRequestResponse(detail: "Built-in presets are read-only.");
+            return BadRequestResponse("Built-in presets are read-only.");
 
         Newtonsoft.Json.Linq.JObject sparseJson;
         if (row.ParentPresetId.HasValue)
         {
-            DbPresetLookup lookup = new(context: mediaContext);
+            DbPresetLookup lookup = new(mediaContext);
             V2EncodingProfile resolvedParent = V2PresetResolver.Resolve(
-                presetId: row.ParentPresetId.Value,
-                lookup: lookup
+                row.ParentPresetId.Value,
+                lookup
             );
-            sparseJson = V2ProfileDiffer.Diff(child: incoming, resolvedParent: resolvedParent);
+            sparseJson = V2ProfileDiffer.Diff(incoming, resolvedParent);
         }
         else
         {
-            sparseJson = Newtonsoft.Json.Linq.JObject.FromObject(o: incoming);
+            sparseJson = Newtonsoft.Json.Linq.JObject.FromObject(incoming);
         }
 
-        row.ProfileJson = sparseJson.ToString(formatting: Formatting.None);
+        row.ProfileJson = sparseJson.ToString(Formatting.None);
         row.UpdatedAt = DateTime.UtcNow;
-        await mediaContext.SaveChangesAsync(cancellationToken: ct);
+        await mediaContext.SaveChangesAsync(ct);
 
         return NoContent();
     }
@@ -396,7 +393,7 @@ public class EncoderProfilesController(
     /// effective values flow from the parent chain — so only intentional
     /// overrides need to be set via PUT.
     /// </summary>
-    [HttpPost(template: "{parentId:ulid}/clone")]
+    [HttpPost("{parentId:ulid}/clone")]
     public async Task<IActionResult> Clone(
         Ulid parentId,
         [FromBody] CloneRequest request,
@@ -405,11 +402,11 @@ public class EncoderProfilesController(
     {
         EncodingPreset? parent = await mediaContext
             .EncodingPresets.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: p => p.Id == parentId, cancellationToken: ct);
+            .FirstOrDefaultAsync(p => p.Id == parentId, ct);
         if (parent is null)
-            return NotFoundResponse(detail: "Parent preset not found.");
-        if (string.IsNullOrWhiteSpace(value: request.Name))
-            return BadRequestResponse(detail: "Name required.");
+            return NotFoundResponse("Parent preset not found.");
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return BadRequestResponse("Name required.");
 
         EncodingPreset clone = new()
         {
@@ -421,10 +418,10 @@ public class EncoderProfilesController(
             IsBuiltIn = false,
             Source = "db",
         };
-        mediaContext.EncodingPresets.Add(entity: clone);
-        await mediaContext.SaveChangesAsync(cancellationToken: ct);
+        mediaContext.EncodingPresets.Add(clone);
+        await mediaContext.SaveChangesAsync(ct);
 
-        return CreatedAtAction(actionName: nameof(Get), routeValues: new { id = clone.Id }, value: new { id = clone.Id });
+        return CreatedAtAction(nameof(Get), new { id = clone.Id }, new { id = clone.Id });
     }
 
     /// <summary>
@@ -438,7 +435,7 @@ public class EncoderProfilesController(
     /// supplied — this is an explicit opt-in so administrators cannot accidentally
     /// import tampered community profiles.</para>
     /// </summary>
-    [HttpPost(template: "import")]
+    [HttpPost("import")]
     public async Task<IActionResult> Import(
         [FromBody] ImportProfileRequest request,
         [FromQuery] bool trust_unsigned = false,
@@ -446,21 +443,21 @@ public class EncoderProfilesController(
     )
     {
         EncoderProfileService.ImportResult result = await encoderProfileService.ImportAsync(
-            inlineProfileJson: request.ProfileJson,
-            url: request.Url,
-            trustUnsigned: trust_unsigned,
-            signatureVerifier: signatureVerifier,
-            userId: User.UserId(),
-            ct: ct
+            request.ProfileJson,
+            request.Url,
+            trust_unsigned,
+            signatureVerifier,
+            User.UserId(),
+            ct
         );
 
         if (result.ValidationError is not null)
-            return UnprocessableEntity(error: result.ValidationError);
+            return UnprocessableEntity(result.ValidationError);
 
         return CreatedAtAction(
-            actionName: nameof(Import),
-            routeValues: new { id = result.Saved!.Id.ToString() },
-            value: new
+            nameof(Import),
+            new { id = result.Saved!.Id.ToString() },
+            new
             {
                 id = result.Saved.Id,
                 name = result.Saved.Name,
@@ -475,61 +472,61 @@ public class EncoderProfilesController(
     /// present on the stored profile. Signing is the publisher's responsibility
     /// — this endpoint does not add a signature.
     /// </summary>
-    [HttpGet(template: "{id}/export")]
+    [HttpGet("{id}/export")]
     public async Task<IActionResult> Export(string id)
     {
-        if (!Ulid.TryParse(base32: id, ulid: out Ulid presetId))
-            return BadRequestResponse(detail: "Invalid profile id");
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid profile id");
 
-        EncodingPreset? preset = await presetRepository.GetByIdAsync(id: presetId);
+        EncodingPreset? preset = await presetRepository.GetByIdAsync(presetId);
         if (preset is null)
-            return NotFoundResponse(detail: "Profile not found");
+            return NotFoundResponse("Profile not found");
 
-        string fileName = preset.Name.Replace(oldValue: " ", newValue: "_").Replace(oldValue: "/", newValue: "-") + ".json";
+        string fileName = preset.Name.Replace(" ", "_").Replace("/", "-") + ".json";
 
-        Response.Headers[key: "Content-Disposition"] = $"attachment; filename=\"{fileName}\"";
+        Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fileName}\"";
 
-        return Content(content: preset.ProfileJson, contentType: "application/json");
+        return Content(preset.ProfileJson, "application/json");
     }
 }
 
 public class CloneRequest
 {
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public required string Name { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 }
 
 public record CreateEncoderProfileRequest(
-    [property: JsonProperty(propertyName: "name")] string Name,
-    [property: JsonProperty(propertyName: "profile_json")] string ProfileJson,
-    [property: JsonProperty(propertyName: "description")] string? Description = null,
-    [property: JsonProperty(propertyName: "author")] string? Author = null,
-    [property: JsonProperty(propertyName: "tags")] string? Tags = null,
-    [property: JsonProperty(propertyName: "parent_preset_id")] Ulid? ParentPresetId = null
+    [property: JsonProperty("name")] string Name,
+    [property: JsonProperty("profile_json")] string ProfileJson,
+    [property: JsonProperty("description")] string? Description = null,
+    [property: JsonProperty("author")] string? Author = null,
+    [property: JsonProperty("tags")] string? Tags = null,
+    [property: JsonProperty("parent_preset_id")] Ulid? ParentPresetId = null
 );
 
 public record ValidateEncoderProfileRequest(
-    [property: JsonProperty(propertyName: "profile_json")] string ProfileJson
+    [property: JsonProperty("profile_json")] string ProfileJson
 );
 
 public record PreviewEncoderProfileRequest(
-    [property: JsonProperty(propertyName: "profile_json")] string ProfileJson,
-    [property: JsonProperty(propertyName: "source_path")] string? SourcePath
+    [property: JsonProperty("profile_json")] string ProfileJson,
+    [property: JsonProperty("source_path")] string? SourcePath
 );
 
-[Obsolete(message: "Replaced by V2EncodingProfile body on PUT /{id:ulid}. Kept for reference only.")]
+[Obsolete("Replaced by V2EncodingProfile body on PUT /{id:ulid}. Kept for reference only.")]
 public record UpdateEncoderProfileRequest(
-    [property: JsonProperty(propertyName: "name")] string? Name = null,
-    [property: JsonProperty(propertyName: "description")] string? Description = null,
-    [property: JsonProperty(propertyName: "profile_json")] string? ProfileJson = null
+    [property: JsonProperty("name")] string? Name = null,
+    [property: JsonProperty("description")] string? Description = null,
+    [property: JsonProperty("profile_json")] string? ProfileJson = null
 );
 
 public record ImportProfileRequest(
-    [property: JsonProperty(propertyName: "profile_json")] string? ProfileJson,
-    [property: JsonProperty(propertyName: "url")] string? Url
+    [property: JsonProperty("profile_json")] string? ProfileJson,
+    [property: JsonProperty("url")] string? Url
 );
 
 /// <summary>
@@ -543,15 +540,15 @@ internal sealed class EncoderProfilesPresetLookup(IEncodingPresetRepository repo
 {
     public PresetResolveRequest? FindByName(string name)
     {
-        EncodingPreset? preset = repository.GetByNameAsync(name: name).GetAwaiter().GetResult();
+        EncodingPreset? preset = repository.GetByNameAsync(name).GetAwaiter().GetResult();
         if (preset is null)
             return null;
 
         string? parentName = preset.ParentPresetId is Ulid parentId
-            ? repository.GetByIdAsync(id: parentId).GetAwaiter().GetResult()?.Name
+            ? repository.GetByIdAsync(parentId).GetAwaiter().GetResult()?.Name
             : null;
 
-        return new(Name: preset.Name, ProfileJson: preset.ProfileJson, ParentName: parentName);
+        return new(preset.Name, preset.ProfileJson, parentName);
     }
 }
 
@@ -568,7 +565,7 @@ internal sealed class DbPresetLookup(MediaContext context) : IPresetLookup
     {
         EncodingPreset? row = context
             .EncodingPresets.AsNoTracking()
-            .FirstOrDefault(predicate: p => p.Id == presetId);
+            .FirstOrDefault(p => p.Id == presetId);
         return row is null ? null : (row.ProfileJson, row.ParentPresetId);
     }
 }

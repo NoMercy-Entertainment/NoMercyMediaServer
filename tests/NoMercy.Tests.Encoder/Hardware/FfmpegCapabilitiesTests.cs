@@ -32,29 +32,29 @@ public class FfmpegCapabilitiesTests
              A..... aac                  AAC (Advanced Audio Coding) (codec aac)
              A..... libopus              libopus Opus (codec opus)
             """;
-        SetupResponse(flag: "-encoders", output: encoderOutput);
-        SetupResponse(flag: "-decoders", output: "");
-        SetupResponse(flag: "-demuxers", output: "");
-        SetupResponse(flag: "-filters", output: "");
-        SetupResponse(flag: "-protocols", output: "");
+        SetupResponse("-encoders", encoderOutput);
+        SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
+        SetupResponse("-filters", "");
+        SetupResponse("-protocols", "");
 
-        FfmpegCapabilities caps = new(processRunner: _processRunner.Object);
+        FfmpegCapabilities caps = new(_processRunner.Object);
         await caps.ProbeAsync();
 
-        caps.HasEncoder(name: "libx264").Should().BeTrue();
-        caps.HasEncoder(name: "h264_nvenc").Should().BeTrue();
-        caps.HasEncoder(name: "libsvtav1").Should().BeTrue();
-        caps.HasEncoder(name: "aac").Should().BeTrue();
-        caps.HasEncoder(name: "vp9_nvenc").Should().BeFalse();
+        caps.HasEncoder("libx264").Should().BeTrue();
+        caps.HasEncoder("h264_nvenc").Should().BeTrue();
+        caps.HasEncoder("libsvtav1").Should().BeTrue();
+        caps.HasEncoder("aac").Should().BeTrue();
+        caps.HasEncoder("vp9_nvenc").Should().BeFalse();
     }
 
     [Fact]
     public async Task ProbeFilters_ParsesCorrectly()
     {
-        SetupResponse(flag: "-encoders", output: "");
-        SetupResponse(flag: "-decoders", output: "");
-        SetupResponse(flag: "-demuxers", output: "");
-        SetupResponse(flag: "-protocols", output: "");
+        SetupResponse("-encoders", "");
+        SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
+        SetupResponse("-protocols", "");
         string filterOutput = """
             Filters:
              ... scale            V->V       Scale the input video size and/or convert the image format.
@@ -62,15 +62,15 @@ public class FfmpegCapabilitiesTests
              ... libplacebo       V->V       GPU-accelerated video processing via libplacebo.
              ... zscale           V->V       Scale the input video using z.lib
             """;
-        SetupResponse(flag: "-filters", output: filterOutput);
+        SetupResponse("-filters", filterOutput);
 
-        FfmpegCapabilities caps = new(processRunner: _processRunner.Object);
+        FfmpegCapabilities caps = new(_processRunner.Object);
         await caps.ProbeAsync();
 
-        caps.HasFilter(name: "libplacebo").Should().BeTrue();
-        caps.HasFilter(name: "tonemap").Should().BeTrue();
-        caps.HasFilter(name: "zscale").Should().BeTrue();
-        caps.HasFilter(name: "nonexistent").Should().BeFalse();
+        caps.HasFilter("libplacebo").Should().BeTrue();
+        caps.HasFilter("tonemap").Should().BeTrue();
+        caps.HasFilter("zscale").Should().BeTrue();
+        caps.HasFilter("nonexistent").Should().BeFalse();
     }
 
     [Fact]
@@ -80,25 +80,25 @@ public class FfmpegCapabilitiesTests
             Encoders:
              V..... libx264              libx264 H.264
             """;
-        SetupResponse(flag: "-encoders", output: encoderOutput);
-        SetupResponse(flag: "-decoders", output: "");
-        SetupResponse(flag: "-demuxers", output: "");
-        SetupResponse(flag: "-filters", output: "");
-        SetupResponse(flag: "-protocols", output: "");
+        SetupResponse("-encoders", encoderOutput);
+        SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
+        SetupResponse("-filters", "");
+        SetupResponse("-protocols", "");
 
-        FfmpegCapabilities caps = new(processRunner: _processRunner.Object);
+        FfmpegCapabilities caps = new(_processRunner.Object);
         await caps.ProbeAsync();
 
-        caps.AvailableEncoders.Should().Contain(expected: "libx264");
+        caps.AvailableEncoders.Should().Contain("libx264");
     }
 
     [Fact]
     public async Task ProbeDemuxers_ParsesCorrectly()
     {
-        SetupResponse(flag: "-encoders", output: "");
-        SetupResponse(flag: "-decoders", output: "");
-        SetupResponse(flag: "-filters", output: "");
-        SetupResponse(flag: "-protocols", output: "");
+        SetupResponse("-encoders", "");
+        SetupResponse("-decoders", "");
+        SetupResponse("-filters", "");
+        SetupResponse("-protocols", "");
         // The demuxer regex only captures single-name demuxers — multi-name
         // entries like "matroska,webm" or "mov,mp4,m4a,3gp" fail the pattern
         // because the comma isn't whitespace, so the name lookup intentionally
@@ -110,24 +110,24 @@ public class FfmpegCapabilitiesTests
              D   flv                FLV (Flash Video)
              D   image2             image2 sequence
             """;
-        SetupResponse(flag: "-demuxers", output: demuxerOutput);
+        SetupResponse("-demuxers", demuxerOutput);
 
-        FfmpegCapabilities caps = new(processRunner: _processRunner.Object);
+        FfmpegCapabilities caps = new(_processRunner.Object);
         await caps.ProbeAsync();
 
-        caps.HasDemuxer(name: "3dostr").Should().BeTrue();
-        caps.HasDemuxer(name: "flv").Should().BeTrue();
-        caps.HasDemuxer(name: "image2").Should().BeTrue();
-        caps.HasDemuxer(name: "nonexistent").Should().BeFalse();
+        caps.HasDemuxer("3dostr").Should().BeTrue();
+        caps.HasDemuxer("flv").Should().BeTrue();
+        caps.HasDemuxer("image2").Should().BeTrue();
+        caps.HasDemuxer("nonexistent").Should().BeFalse();
     }
 
     [Fact]
     public async Task ProbeProtocols_ParsesCorrectly()
     {
-        SetupResponse(flag: "-encoders", output: "");
-        SetupResponse(flag: "-decoders", output: "");
-        SetupResponse(flag: "-demuxers", output: "");
-        SetupResponse(flag: "-filters", output: "");
+        SetupResponse("-encoders", "");
+        SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
+        SetupResponse("-filters", "");
         string protocolOutput = """
             Supported file protocols:
             Input:
@@ -140,15 +140,15 @@ public class FfmpegCapabilitiesTests
             http
             tcp
             """;
-        SetupResponse(flag: "-protocols", output: protocolOutput);
+        SetupResponse("-protocols", protocolOutput);
 
-        FfmpegCapabilities caps = new(processRunner: _processRunner.Object);
+        FfmpegCapabilities caps = new(_processRunner.Object);
         await caps.ProbeAsync();
 
-        caps.HasProtocol(name: "file").Should().BeTrue();
-        caps.HasProtocol(name: "http").Should().BeTrue();
-        caps.HasProtocol(name: "https").Should().BeTrue();
-        caps.HasProtocol(name: "rtmp").Should().BeFalse();
+        caps.HasProtocol("file").Should().BeTrue();
+        caps.HasProtocol("http").Should().BeTrue();
+        caps.HasProtocol("https").Should().BeTrue();
+        caps.HasProtocol("rtmp").Should().BeFalse();
     }
 
     [Fact]
@@ -162,25 +162,25 @@ public class FfmpegCapabilitiesTests
              V..... av1                  Alliance for Open Media AV1
              A..... aac                  AAC (Advanced Audio Coding)
             """;
-        SetupResponse(flag: "-encoders", output: "");
-        SetupResponse(flag: "-demuxers", output: "");
-        SetupResponse(flag: "-filters", output: "");
-        SetupResponse(flag: "-protocols", output: "");
-        SetupResponse(flag: "-decoders", output: decoderOutput);
+        SetupResponse("-encoders", "");
+        SetupResponse("-demuxers", "");
+        SetupResponse("-filters", "");
+        SetupResponse("-protocols", "");
+        SetupResponse("-decoders", decoderOutput);
 
-        FfmpegCapabilities caps = new(processRunner: _processRunner.Object);
+        FfmpegCapabilities caps = new(_processRunner.Object);
         await caps.ProbeAsync();
 
-        caps.AvailableDecoders.Should().Contain(expected: "h264");
-        caps.AvailableDecoders.Should().Contain(expected: "hevc");
-        caps.AvailableDecoders.Should().Contain(expected: "av1");
-        caps.AvailableDecoders.Should().Contain(expected: "aac");
+        caps.AvailableDecoders.Should().Contain("h264");
+        caps.AvailableDecoders.Should().Contain("hevc");
+        caps.AvailableDecoders.Should().Contain("av1");
+        caps.AvailableDecoders.Should().Contain("aac");
     }
 
     [Fact]
     public async Task ProbeAsync_AllListsBeforeProbe_AreEmpty()
     {
-        FfmpegCapabilities caps = new(processRunner: _processRunner.Object);
+        FfmpegCapabilities caps = new(_processRunner.Object);
 
         caps.AvailableEncoders.Should().BeEmpty();
         caps.AvailableDecoders.Should().BeEmpty();
@@ -192,13 +192,13 @@ public class FfmpegCapabilitiesTests
     [Fact]
     public async Task ProbeAsync_EmptyOutput_LeavesListsEmpty()
     {
-        SetupResponse(flag: "-encoders", output: "");
-        SetupResponse(flag: "-decoders", output: "");
-        SetupResponse(flag: "-demuxers", output: "");
-        SetupResponse(flag: "-filters", output: "");
-        SetupResponse(flag: "-protocols", output: "");
+        SetupResponse("-encoders", "");
+        SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
+        SetupResponse("-filters", "");
+        SetupResponse("-protocols", "");
 
-        FfmpegCapabilities caps = new(processRunner: _processRunner.Object);
+        FfmpegCapabilities caps = new(_processRunner.Object);
         await caps.ProbeAsync();
 
         caps.AvailableEncoders.Should().BeEmpty();
@@ -211,10 +211,10 @@ public class FfmpegCapabilitiesTests
         // ffmpeg's -filters list includes a small legend ("T.. = Timeline support")
         // above the actual filter rows. The regex requires the "type->type"
         // signature to exclude legend lines.
-        SetupResponse(flag: "-encoders", output: "");
-        SetupResponse(flag: "-decoders", output: "");
-        SetupResponse(flag: "-demuxers", output: "");
-        SetupResponse(flag: "-protocols", output: "");
+        SetupResponse("-encoders", "");
+        SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
+        SetupResponse("-protocols", "");
         string filterOutput = """
             Filters:
               T.. = Timeline support
@@ -222,21 +222,21 @@ public class FfmpegCapabilitiesTests
               ..C = Command support
               ... scale            V->V       Scale the input video
             """;
-        SetupResponse(flag: "-filters", output: filterOutput);
+        SetupResponse("-filters", filterOutput);
 
-        FfmpegCapabilities caps = new(processRunner: _processRunner.Object);
+        FfmpegCapabilities caps = new(_processRunner.Object);
         await caps.ProbeAsync();
 
-        caps.HasFilter(name: "scale").Should().BeTrue();
+        caps.HasFilter("scale").Should().BeTrue();
         // Legend descriptors must NOT register as filters.
-        caps.HasFilter(name: "=").Should().BeFalse();
-        caps.HasFilter(name: "Timeline").Should().BeFalse();
+        caps.HasFilter("=").Should().BeFalse();
+        caps.HasFilter("Timeline").Should().BeFalse();
     }
 
     private void SetupResponse(string flag, string output)
     {
         _processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.Is<string[]>(args => args.Length == 1 && args[0] == flag),
@@ -244,6 +244,6 @@ public class FfmpegCapabilitiesTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: output, StdErr: "", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, output, "", TimeSpan.Zero));
     }
 }

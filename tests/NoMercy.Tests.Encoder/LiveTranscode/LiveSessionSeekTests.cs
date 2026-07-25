@@ -21,16 +21,16 @@ public class LiveSessionSeekTests
 {
     private static LiveQuality MakeQuality() =>
         new(
-            Id: "1080p",
-            Label: "1080p",
-            Width: 1920,
-            Height: 1080,
-            Codec: VideoCodecType.H264,
-            BitrateKbps: 8000,
-            Encoder: "libx264",
-            IsHardwareAccelerated: false,
-            ExpectedSpeed: 2.0,
-            CanRealtime: true
+            "1080p",
+            "1080p",
+            1920,
+            1080,
+            VideoCodecType.H264,
+            8000,
+            "libx264",
+            false,
+            2.0,
+            true
         );
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -40,64 +40,64 @@ public class LiveSessionSeekTests
     [Fact]
     public async Task SeekAsync_WithFactory_SpawnsNewRunner()
     {
-        LiveSession session = new(sessionId: "seek-001", quality: MakeQuality());
+        LiveSession session = new("seek-001", MakeQuality());
         int spawnCount = 0;
-        SemaphoreSlim spawned = new(initialCount: 0, maxCount: int.MaxValue);
+        SemaphoreSlim spawned = new(0, int.MaxValue);
 
         session.AttachRunnerFactory(
-            factory: (_, _) =>
+            (_, _) =>
             {
-                Interlocked.Increment(location: ref spawnCount);
+                Interlocked.Increment(ref spawnCount);
                 spawned.Release();
                 return Task.CompletedTask;
             }
         );
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 30), ct: CancellationToken.None);
+        await session.SeekAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
 
         // Spawn happens via Task.Run inside SeekAsync — wait for it.
-        (await spawned.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2)))
+        (await spawned.WaitAsync(TimeSpan.FromSeconds(2)))
             .Should()
             .BeTrue();
-        spawnCount.Should().Be(expected: 1);
+        spawnCount.Should().Be(1);
     }
 
     [Fact]
     public async Task SeekAsync_Twice_SpawnsRunnerTwice()
     {
-        LiveSession session = new(sessionId: "seek-002", quality: MakeQuality());
+        LiveSession session = new("seek-002", MakeQuality());
         int spawnCount = 0;
-        SemaphoreSlim spawned = new(initialCount: 0, maxCount: int.MaxValue);
+        SemaphoreSlim spawned = new(0, int.MaxValue);
 
         session.AttachRunnerFactory(
-            factory: (_, _) =>
+            (_, _) =>
             {
-                Interlocked.Increment(location: ref spawnCount);
+                Interlocked.Increment(ref spawnCount);
                 spawned.Release();
                 return Task.CompletedTask;
             }
         );
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 10), ct: CancellationToken.None);
-        (await spawned.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2))).Should().BeTrue();
+        await session.SeekAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
+        (await spawned.WaitAsync(TimeSpan.FromSeconds(2))).Should().BeTrue();
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 60), ct: CancellationToken.None);
-        (await spawned.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2))).Should().BeTrue();
+        await session.SeekAsync(TimeSpan.FromSeconds(60), CancellationToken.None);
+        (await spawned.WaitAsync(TimeSpan.FromSeconds(2))).Should().BeTrue();
 
-        spawnCount.Should().Be(expected: 2);
+        spawnCount.Should().Be(2);
     }
 
     [Fact]
     public async Task SeekAsync_CancelsOldRunnerToken()
     {
-        LiveSession session = new(sessionId: "seek-003", quality: MakeQuality());
+        LiveSession session = new("seek-003", MakeQuality());
 
         // Capture the first token before seeking.
         CancellationToken firstToken = session.RunnerCancellation;
 
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 10), ct: CancellationToken.None);
+        await session.SeekAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
 
         // After seek the old token must be cancelled.
         firstToken.IsCancellationRequested.Should().BeTrue();
@@ -106,35 +106,35 @@ public class LiveSessionSeekTests
     [Fact]
     public async Task SeekAsync_UpdatesTranscodedPosition()
     {
-        LiveSession session = new(sessionId: "seek-004", quality: MakeQuality());
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        LiveSession session = new("seek-004", MakeQuality());
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 120), ct: CancellationToken.None);
+        await session.SeekAsync(TimeSpan.FromSeconds(120), CancellationToken.None);
 
-        session.TranscodedPosition.Should().Be(expected: TimeSpan.FromSeconds(seconds: 120));
+        session.TranscodedPosition.Should().Be(TimeSpan.FromSeconds(120));
     }
 
     [Fact]
     public async Task SeekAsync_SetsTranscodingState_WhenFactoryAttached()
     {
-        LiveSession session = new(sessionId: "seek-005", quality: MakeQuality());
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        LiveSession session = new("seek-005", MakeQuality());
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 30), ct: CancellationToken.None);
+        await session.SeekAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
 
-        session.State.Should().Be(expected: LiveSessionState.Transcoding);
+        session.State.Should().Be(LiveSessionState.Transcoding);
     }
 
     [Fact]
     public async Task SeekAsync_SetsSeekingState_WhenNoFactoryAttached()
     {
-        LiveSession session = new(sessionId: "seek-006", quality: MakeQuality());
+        LiveSession session = new("seek-006", MakeQuality());
         // No factory attached — falls into "seeking only" path.
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 30), ct: CancellationToken.None);
+        await session.SeekAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
 
         // Without a factory the state stays Seeking because no runner flips it back.
-        session.State.Should().Be(expected: LiveSessionState.Seeking);
+        session.State.Should().Be(LiveSessionState.Seeking);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -144,27 +144,27 @@ public class LiveSessionSeekTests
     [Fact]
     public async Task SeekAsync_PassesCorrectPositionToFactory()
     {
-        LiveSession session = new(sessionId: "seek-007", quality: MakeQuality());
+        LiveSession session = new("seek-007", MakeQuality());
         TaskCompletionSource<TimeSpan> factoryCalled = new(
-            creationOptions: TaskCreationOptions.RunContinuationsAsynchronously
+            TaskCreationOptions.RunContinuationsAsynchronously
         );
 
         session.AttachRunnerFactory(
-            factory: (pos, _) =>
+            (pos, _) =>
             {
-                factoryCalled.TrySetResult(result: pos);
+                factoryCalled.TrySetResult(pos);
                 return Task.CompletedTask;
             }
         );
 
-        TimeSpan targetPosition = TimeSpan.FromSeconds(seconds: 75);
-        await session.SeekAsync(position: targetPosition, ct: CancellationToken.None);
+        TimeSpan targetPosition = TimeSpan.FromSeconds(75);
+        await session.SeekAsync(targetPosition, CancellationToken.None);
 
         // The factory task is fire-and-forget — wait on the TCS deterministically
         // instead of guessing how long the runtime needs to schedule it.
-        TimeSpan capturedPosition = await factoryCalled.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2));
+        TimeSpan capturedPosition = await factoryCalled.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
-        capturedPosition.Should().Be(expected: targetPosition);
+        capturedPosition.Should().Be(targetPosition);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -174,12 +174,12 @@ public class LiveSessionSeekTests
     [Fact]
     public async Task SeekAsync_IssuesNewRunnerToken()
     {
-        LiveSession session = new(sessionId: "seek-008", quality: MakeQuality());
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        LiveSession session = new("seek-008", MakeQuality());
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
         CancellationToken tokenBefore = session.RunnerCancellation;
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 10), ct: CancellationToken.None);
+        await session.SeekAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
 
         CancellationToken tokenAfter = session.RunnerCancellation;
 
@@ -197,12 +197,12 @@ public class LiveSessionSeekTests
     [Fact]
     public async Task SeekAsync_DoesNotInvokeBufferResetCallback()
     {
-        LiveSession session = new(sessionId: "seek-009", quality: MakeQuality());
+        LiveSession session = new("seek-009", MakeQuality());
         bool resetCalled = false;
-        session.AttachBufferResetCallback(callback: () => resetCalled = true);
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        session.AttachBufferResetCallback(() => resetCalled = true);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 45), ct: CancellationToken.None);
+        await session.SeekAsync(TimeSpan.FromSeconds(45), CancellationToken.None);
 
         resetCalled.Should().BeFalse();
     }
@@ -210,14 +210,14 @@ public class LiveSessionSeekTests
     [Fact]
     public async Task ChangeQualityAsync_InvokesBufferResetCallback()
     {
-        LiveSession session = new(sessionId: "seek-010", quality: MakeQuality());
+        LiveSession session = new("seek-010", MakeQuality());
         bool resetCalled = false;
-        session.AttachBufferResetCallback(callback: () => resetCalled = true);
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        session.AttachBufferResetCallback(() => resetCalled = true);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
         LiveQuality newQuality = MakeQuality() with { Id = "720p", Label = "720p" };
 
-        await session.ChangeQualityAsync(qualityId: "720p", newQuality: newQuality, ct: CancellationToken.None);
+        await session.ChangeQualityAsync("720p", newQuality, CancellationToken.None);
 
         resetCalled.Should().BeTrue();
     }

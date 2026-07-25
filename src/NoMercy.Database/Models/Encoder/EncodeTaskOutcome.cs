@@ -20,35 +20,35 @@ namespace NoMercy.Database.Models.Encoder;
 /// coordinator can poll this table on restart rather than relying on the
 /// in-memory subscription that evaporates with the process.
 /// </summary>
-[PrimaryKey(propertyName: nameof(TaskId))]
-[Index(propertyName: nameof(ParentJobId))]
-[Index(propertyName: nameof(GroupTag))]
+[PrimaryKey(nameof(TaskId))]
+[Index(nameof(ParentJobId))]
+[Index(nameof(GroupTag))]
 public class EncodeTaskOutcome
 {
     /// <summary>Unique task identifier matching <c>DecomposedTask.TaskId</c>.</summary>
-    [MaxLength(length: 256)]
+    [MaxLength(256)]
     public required string TaskId { get; set; }
 
     /// <summary>Queue-job ID of the coordinator that owns this task.</summary>
     public required int ParentJobId { get; set; }
 
     /// <summary>Shared run tag — all tasks from one coordinator run share this.</summary>
-    [MaxLength(length: 256)]
+    [MaxLength(256)]
     public required string GroupTag { get; set; }
 
     /// <summary>True when the task completed without errors.</summary>
     public required bool Success { get; set; }
 
     /// <summary>Human-readable error description, null on success.</summary>
-    [MaxLength(length: 4096)]
+    [MaxLength(4096)]
     public string? ErrorMessage { get; set; }
 
     /// <summary>Kind of work serialized as text (EncodeTaskKind enum name).</summary>
-    [MaxLength(length: 64)]
+    [MaxLength(64)]
     public required string Kind { get; set; }
 
     /// <summary>Newline-joined artifact paths produced by this task, or null when none.</summary>
-    [MaxLength(length: int.MaxValue)]
+    [MaxLength(int.MaxValue)]
     public string? OutputArtifactsJson { get; set; }
 
     /// <summary>UTC timestamp of completion.</summary>

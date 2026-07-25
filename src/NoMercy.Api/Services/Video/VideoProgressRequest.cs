@@ -15,39 +15,39 @@ namespace NoMercy.Api.Services.Video;
 
 public class VideoProgressRequest
 {
-    [JsonProperty(propertyName: "app")]
+    [JsonProperty("app")]
     public int AppId { get; set; }
 
-    [JsonProperty(propertyName: "video_id")]
+    [JsonProperty("video_id")]
     public Ulid VideoId { get; set; }
 
-    [JsonProperty(propertyName: "tmdb_id")]
+    [JsonProperty("tmdb_id")]
     public int TmdbId { get; set; }
 
-    [JsonProperty(propertyName: "playlist_type")]
+    [JsonProperty("playlist_type")]
     public string PlaylistType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "video_type")]
+    [JsonProperty("video_type")]
     public string VideoType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "time")]
+    [JsonProperty("time")]
     public int Time { get; set; }
 
-    [JsonProperty(propertyName: "audio")]
+    [JsonProperty("audio")]
     public string Audio { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "subtitle")]
+    [JsonProperty("subtitle")]
     public string Subtitle { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "subtitle_type")]
+    [JsonProperty("subtitle_type")]
     public string SubtitleType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "special_id")]
+    [JsonProperty("special_id")]
     public Ulid? SpecialId { get; set; }
 
-    [JsonProperty(propertyName: "collection_id")]
+    [JsonProperty("collection_id")]
     public int? CollectionId { get; set; }
 
-    [JsonProperty(propertyName: "playlist_id")]
+    [JsonProperty("playlist_id")]
     public dynamic PlaylistId { get; set; } = null!;
 }

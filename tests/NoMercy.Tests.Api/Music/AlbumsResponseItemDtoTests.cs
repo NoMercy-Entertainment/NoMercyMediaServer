@@ -18,7 +18,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Music;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class AlbumsResponseItemDtoTests
 {
     private static Album BuildAlbum(
@@ -40,13 +40,13 @@ public class AlbumsResponseItemDtoTests
             Folder = "/music/test-album",
         };
         foreach (Translation translation in translations ?? [])
-            album.Translations.Add(item: translation);
+            album.Translations.Add(translation);
         foreach (Image image in images ?? [])
-            album.Images.Add(item: image);
+            album.Images.Add(image);
         if (colorPalette is not null)
             album.ColorPalette = colorPalette;
         foreach (AlbumTrack albumTrack in albumTracks ?? [])
-            album.AlbumTrack.Add(item: albumTrack);
+            album.AlbumTrack.Add(albumTrack);
 
         return album;
     }
@@ -70,9 +70,9 @@ public class AlbumsResponseItemDtoTests
             description: "English description"
         );
 
-        AlbumsResponseItemDto dto = new(album: album, country: "NL");
+        AlbumsResponseItemDto dto = new(album, "NL");
 
-        dto.Description.Should().Be(expected: "Nederlandse beschrijving");
+        dto.Description.Should().Be("Nederlandse beschrijving");
     }
 
     [Fact]
@@ -83,9 +83,9 @@ public class AlbumsResponseItemDtoTests
             description: "English description"
         );
 
-        AlbumsResponseItemDto dto = new(album: album, country: "NL");
+        AlbumsResponseItemDto dto = new(album, "NL");
 
-        dto.Description.Should().Be(expected: "English description");
+        dto.Description.Should().Be("English description");
     }
 
     [Fact]
@@ -96,9 +96,9 @@ public class AlbumsResponseItemDtoTests
             description: "English description"
         );
 
-        AlbumsResponseItemDto dto = new(album: album, country: "NL");
+        AlbumsResponseItemDto dto = new(album, "NL");
 
-        dto.Description.Should().Be(expected: "English description");
+        dto.Description.Should().Be("English description");
     }
 
     [Fact]
@@ -106,9 +106,9 @@ public class AlbumsResponseItemDtoTests
     {
         Album album = BuildAlbum(images: [new() { Type = "background", FilePath = "/bg.jpg" }]);
 
-        AlbumsResponseItemDto dto = new(album: album);
+        AlbumsResponseItemDto dto = new(album);
 
-        dto.Backdrop.Should().Be(expected: "/images/music/bg.jpg");
+        dto.Backdrop.Should().Be("/images/music/bg.jpg");
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class AlbumsResponseItemDtoTests
     {
         Album album = BuildAlbum(images: [new() { Type = "poster", FilePath = "/poster.jpg" }]);
 
-        AlbumsResponseItemDto dto = new(album: album);
+        AlbumsResponseItemDto dto = new(album);
 
         dto.Backdrop.Should().BeNull();
     }
@@ -126,9 +126,9 @@ public class AlbumsResponseItemDtoTests
     {
         Album album = BuildAlbum(cover: "/cover.jpg");
 
-        AlbumsResponseItemDto dto = new(album: album);
+        AlbumsResponseItemDto dto = new(album);
 
-        dto.Cover.Should().Be(expected: "/images/music/cover.jpg");
+        dto.Cover.Should().Be("/images/music/cover.jpg");
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public class AlbumsResponseItemDtoTests
     {
         Album album = BuildAlbum(cover: null);
 
-        AlbumsResponseItemDto dto = new(album: album);
+        AlbumsResponseItemDto dto = new(album);
 
         dto.Cover.Should().BeNull();
     }
@@ -155,11 +155,11 @@ public class AlbumsResponseItemDtoTests
             colorPalette: new() { Cover = new() { Dominant = "#abcdef" } }
         );
 
-        AlbumsResponseItemDto dto = new(album: album);
+        AlbumsResponseItemDto dto = new(album);
 
         dto.ColorPalette.Should().NotBeNull();
         dto.ColorPalette!.Backdrop.Should().NotBeNull();
-        dto.ColorPalette.Backdrop!.Dominant.Should().Be(expected: "#123456");
+        dto.ColorPalette.Backdrop!.Dominant.Should().Be("#123456");
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class AlbumsResponseItemDtoTests
     {
         Album album = BuildAlbum(colorPalette: null);
 
-        AlbumsResponseItemDto dto = new(album: album);
+        AlbumsResponseItemDto dto = new(album);
 
         dto.ColorPalette.Should().BeNull();
     }
@@ -176,14 +176,14 @@ public class AlbumsResponseItemDtoTests
     public void Ctor_TracksCount_OnlyCountsTracksWithNonNullDuration()
     {
         Guid albumId = Guid.NewGuid();
-        AlbumTrack withDuration = BuildAlbumTrack(albumId: albumId, duration: "180");
-        AlbumTrack withoutDuration = BuildAlbumTrack(albumId: albumId, duration: null);
+        AlbumTrack withDuration = BuildAlbumTrack(albumId, "180");
+        AlbumTrack withoutDuration = BuildAlbumTrack(albumId, null);
         Album album = BuildAlbum(albumTracks: [withDuration, withoutDuration]);
         album.Id = albumId;
 
-        AlbumsResponseItemDto dto = new(album: album);
+        AlbumsResponseItemDto dto = new(album);
 
-        dto.Tracks.Should().Be(expected: 1);
+        dto.Tracks.Should().Be(1);
     }
 
     [Fact]
@@ -192,14 +192,14 @@ public class AlbumsResponseItemDtoTests
         Album album = BuildAlbum();
         Guid albumId = album.Id;
 
-        AlbumsResponseItemDto dto = new(album: album);
+        AlbumsResponseItemDto dto = new(album);
 
-        dto.Id.Should().Be(expected: albumId);
-        dto.Name.Should().Be(expected: "Test Album");
-        dto.Type.Should().Be(expected: "album");
-        dto.Link.ToString().Should().Be(expected: $"/music/albums/{albumId}");
-        dto.Disambiguation.Should().Be(expected: "Deluxe Edition");
-        dto.Folder.Should().Be(expected: "/music/test-album");
+        dto.Id.Should().Be(albumId);
+        dto.Name.Should().Be("Test Album");
+        dto.Type.Should().Be("album");
+        dto.Link.ToString().Should().Be($"/music/albums/{albumId}");
+        dto.Disambiguation.Should().Be("Deluxe Edition");
+        dto.Folder.Should().Be("/music/test-album");
     }
 
     private static AlbumCardDto BuildCard(
@@ -237,9 +237,9 @@ public class AlbumsResponseItemDtoTests
             description: "Original description"
         );
 
-        AlbumsResponseItemDto dto = new(album: card);
+        AlbumsResponseItemDto dto = new(card);
 
-        dto.Description.Should().Be(expected: "Vertaalde beschrijving");
+        dto.Description.Should().Be("Vertaalde beschrijving");
     }
 
     [Fact]
@@ -250,9 +250,9 @@ public class AlbumsResponseItemDtoTests
             description: "Original description"
         );
 
-        AlbumsResponseItemDto dto = new(album: card);
+        AlbumsResponseItemDto dto = new(card);
 
-        dto.Description.Should().Be(expected: "Original description");
+        dto.Description.Should().Be("Original description");
     }
 
     [Fact]
@@ -260,9 +260,9 @@ public class AlbumsResponseItemDtoTests
     {
         AlbumCardDto card = BuildCard(backgroundImagePath: "/bg-card.jpg");
 
-        AlbumsResponseItemDto dto = new(album: card);
+        AlbumsResponseItemDto dto = new(card);
 
-        dto.Backdrop.Should().Be(expected: "/images/music/bg-card.jpg");
+        dto.Backdrop.Should().Be("/images/music/bg-card.jpg");
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public class AlbumsResponseItemDtoTests
     {
         AlbumCardDto card = BuildCard(backgroundImagePath: null);
 
-        AlbumsResponseItemDto dto = new(album: card);
+        AlbumsResponseItemDto dto = new(card);
 
         dto.Backdrop.Should().BeNull();
     }
@@ -280,9 +280,9 @@ public class AlbumsResponseItemDtoTests
     {
         AlbumCardDto card = BuildCard(cover: "/card-cover.jpg");
 
-        AlbumsResponseItemDto dto = new(album: card);
+        AlbumsResponseItemDto dto = new(card);
 
-        dto.Cover.Should().Be(expected: "/images/music/card-cover.jpg");
+        dto.Cover.Should().Be("/images/music/card-cover.jpg");
     }
 
     [Fact]
@@ -290,7 +290,7 @@ public class AlbumsResponseItemDtoTests
     {
         AlbumCardDto card = BuildCard(cover: null);
 
-        AlbumsResponseItemDto dto = new(album: card);
+        AlbumsResponseItemDto dto = new(card);
 
         dto.Cover.Should().BeNull();
     }
@@ -303,11 +303,11 @@ public class AlbumsResponseItemDtoTests
             backgroundImageColorPaletteJson: """{"image":{"dominant":"#00ff00"}}"""
         );
 
-        AlbumsResponseItemDto dto = new(album: card);
+        AlbumsResponseItemDto dto = new(card);
 
         dto.ColorPalette.Should().NotBeNull();
         dto.ColorPalette!.Backdrop.Should().NotBeNull();
-        dto.ColorPalette.Backdrop!.Dominant.Should().Be(expected: "#00ff00");
+        dto.ColorPalette.Backdrop!.Dominant.Should().Be("#00ff00");
     }
 
     [Fact]
@@ -315,7 +315,7 @@ public class AlbumsResponseItemDtoTests
     {
         AlbumCardDto card = BuildCard(colorPaletteJson: null);
 
-        AlbumsResponseItemDto dto = new(album: card);
+        AlbumsResponseItemDto dto = new(card);
 
         dto.ColorPalette.Should().BeNull();
     }
@@ -325,9 +325,9 @@ public class AlbumsResponseItemDtoTests
     {
         AlbumCardDto card = BuildCard();
 
-        AlbumsResponseItemDto dto = new(album: card);
+        AlbumsResponseItemDto dto = new(card);
 
-        dto.Tracks.Should().Be(expected: 11);
+        dto.Tracks.Should().Be(11);
     }
 
     [Fact]
@@ -336,13 +336,13 @@ public class AlbumsResponseItemDtoTests
         AlbumCardDto card = BuildCard();
         Guid cardId = card.Id;
 
-        AlbumsResponseItemDto dto = new(album: card);
+        AlbumsResponseItemDto dto = new(card);
 
-        dto.Id.Should().Be(expected: cardId);
-        dto.Name.Should().Be(expected: "Card Album");
-        dto.Type.Should().Be(expected: "album");
-        dto.Link.ToString().Should().Be(expected: $"/music/albums/{cardId}");
-        dto.Disambiguation.Should().Be(expected: "Special Edition");
-        dto.Folder.Should().Be(expected: "/music/card-album");
+        dto.Id.Should().Be(cardId);
+        dto.Name.Should().Be("Card Album");
+        dto.Type.Should().Be("album");
+        dto.Link.ToString().Should().Be($"/music/albums/{cardId}");
+        dto.Disambiguation.Should().Be("Special Edition");
+        dto.Folder.Should().Be("/music/card-album");
     }
 }

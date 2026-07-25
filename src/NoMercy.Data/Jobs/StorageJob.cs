@@ -44,20 +44,20 @@ public class StorageJob : IShouldQueue
         await using MediaContext context = new();
 
         List<Library> libraries = await context
-            .Libraries.Include(navigationPropertyPath: library => library.FolderLibraries)
-                .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Folder)
-            .Include(navigationPropertyPath: library => library.LibraryTvs)
-                .ThenInclude(navigationPropertyPath: folder => folder.Tv)
-                    .ThenInclude(navigationPropertyPath: tv => tv.Episodes)
-                        .ThenInclude(navigationPropertyPath: episode => episode.VideoFiles)
-                            .ThenInclude(navigationPropertyPath: file => file.Metadata)
-            .Include(navigationPropertyPath: folder => folder.LibraryMovies)
-                .ThenInclude(navigationPropertyPath: folder => folder.Movie)
-                    .ThenInclude(navigationPropertyPath: movie => movie.VideoFiles)
-                        .ThenInclude(navigationPropertyPath: file => file.Metadata)
-            .Include(navigationPropertyPath: folder => folder.AlbumLibraries)
-                .ThenInclude(navigationPropertyPath: folder => folder.Album)
-                    .ThenInclude(navigationPropertyPath: file => file.Metadata)
+            .Libraries.Include(library => library.FolderLibraries)
+                .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .Include(library => library.LibraryTvs)
+                .ThenInclude(folder => folder.Tv)
+                    .ThenInclude(tv => tv.Episodes)
+                        .ThenInclude(episode => episode.VideoFiles)
+                            .ThenInclude(file => file.Metadata)
+            .Include(folder => folder.LibraryMovies)
+                .ThenInclude(folder => folder.Movie)
+                    .ThenInclude(movie => movie.VideoFiles)
+                        .ThenInclude(file => file.Metadata)
+            .Include(folder => folder.AlbumLibraries)
+                .ThenInclude(folder => folder.Album)
+                    .ThenInclude(file => file.Metadata)
             .ToListAsync();
 
         // Deltas are summed into a thread-safe map first (plain long addition —
@@ -69,47 +69,47 @@ public class StorageJob : IShouldQueue
         ConcurrentDictionary<string, StorageUsageDelta> deltas = new();
 
         await Parallel.ForEachAsync(
-            source: libraries,
-            parallelOptions: SystemParallelism.Options,
-            body: (library, _) =>
+            libraries,
+            SystemParallelism.Options,
+            (library, _) =>
             {
                 List<Metadata?> movieMetaData = library
-                    .LibraryMovies.Select(selector: l => l.Movie)
-                    .SelectMany(selector: m => m.VideoFiles)
-                    .Where(predicate: m => m.Metadata is not null)
-                    .Select(selector: vf => vf.Metadata)
+                    .LibraryMovies.Select(l => l.Movie)
+                    .SelectMany(m => m.VideoFiles)
+                    .Where(m => m.Metadata is not null)
+                    .Select(vf => vf.Metadata)
                     .ToList();
 
                 List<Metadata?> tvMetaData = library
-                    .LibraryTvs.Select(selector: l => l.Tv)
-                    .SelectMany(selector: t => t.Episodes)
-                    .SelectMany(selector: e => e.VideoFiles)
-                    .Where(predicate: m => m.Metadata is not null)
-                    .Select(selector: vf => vf.Metadata)
+                    .LibraryTvs.Select(l => l.Tv)
+                    .SelectMany(t => t.Episodes)
+                    .SelectMany(e => e.VideoFiles)
+                    .Where(m => m.Metadata is not null)
+                    .Select(vf => vf.Metadata)
                     .ToList();
 
                 List<Metadata?> albumMetaData = library
-                    .AlbumLibraries.Select(selector: l => l.Album)
-                    .Where(predicate: m => m.Metadata is not null)
-                    .Select(selector: vf => vf.Metadata)
+                    .AlbumLibraries.Select(l => l.Album)
+                    .Where(m => m.Metadata is not null)
+                    .Select(vf => vf.Metadata)
                     .ToList();
 
                 foreach (FolderLibrary folderLibraries in library.FolderLibraries)
                 {
                     string path = folderLibraries.Folder.Path;
-                    StorageDto? storage = Storage.Find(match: s => s.Path == path);
+                    StorageDto? storage = Storage.Find(s => s.Path == path);
 
                     if (storage?.Data is null)
                         return default;
 
                     StorageUsageDelta delta = ComputeFolderUsageDelta(
-                        folderPath: path,
-                        movieMetaData: movieMetaData,
-                        tvMetaData: tvMetaData,
-                        albumMetaData: albumMetaData
+                        path,
+                        movieMetaData,
+                        tvMetaData,
+                        albumMetaData
                     );
 
-                    deltas.AddOrUpdate(key: path, addValue: delta, updateValueFactory: (_, existing) => existing.Add(other: delta));
+                    deltas.AddOrUpdate(path, delta, (_, existing) => existing.Add(delta));
                 }
 
                 return default;
@@ -118,7 +118,7 @@ public class StorageJob : IShouldQueue
 
         foreach ((string path, StorageUsageDelta delta) in deltas)
         {
-            StorageDto? storage = Storage.Find(match: s => s.Path == path);
+            StorageDto? storage = Storage.Find(s => s.Path == path);
 
             if (storage?.Data is null)
                 continue;
@@ -143,7 +143,7 @@ public class StorageJob : IShouldQueue
         List<Metadata?> albumMetaData
     )
     {
-        string normalizedPath = folderPath.Replace(oldValue: "\\", newValue: "/");
+        string normalizedPath = folderPath.Replace("\\", "/");
 
         long moviesDelta = 0;
         long showsDelta = 0;
@@ -153,8 +153,8 @@ public class StorageJob : IShouldQueue
 
         if (movieMetaData.Count > 0)
             foreach (
-                Metadata? metadata in movieMetaData.Where(predicate: metadata =>
-                    metadata?.HostFolder.StartsWith(value: normalizedPath) ?? false
+                Metadata? metadata in movieMetaData.Where(metadata =>
+                    metadata?.HostFolder.StartsWith(normalizedPath) ?? false
                 )
             )
             {
@@ -165,8 +165,8 @@ public class StorageJob : IShouldQueue
 
         if (tvMetaData.Count > 0)
             foreach (
-                Metadata? metadata in tvMetaData.Where(predicate: metadata =>
-                    metadata?.HostFolder.StartsWith(value: normalizedPath) ?? false
+                Metadata? metadata in tvMetaData.Where(metadata =>
+                    metadata?.HostFolder.StartsWith(normalizedPath) ?? false
                 )
             )
             {
@@ -177,8 +177,8 @@ public class StorageJob : IShouldQueue
 
         if (albumMetaData.Count > 0)
             foreach (
-                Metadata? metadata in albumMetaData.Where(predicate: metadata =>
-                    metadata?.HostFolder.StartsWith(value: normalizedPath) ?? false
+                Metadata? metadata in albumMetaData.Where(metadata =>
+                    metadata?.HostFolder.StartsWith(normalizedPath) ?? false
                 )
             )
             {
@@ -187,7 +187,7 @@ public class StorageJob : IShouldQueue
                 usedDelta += metadata?.FolderSize ?? 0;
             }
 
-        return new(Movies: moviesDelta, Shows: showsDelta, Music: musicDelta, Other: otherDelta, Used: usedDelta);
+        return new(moviesDelta, showsDelta, musicDelta, otherDelta, usedDelta);
     }
 
     private static long GetDirectorySize(DirectoryInfo directoryInfo)
@@ -195,9 +195,9 @@ public class StorageJob : IShouldQueue
         if (!directoryInfo.Exists)
             return 0;
 
-        FileInfo[] dirs = directoryInfo.GetFiles(searchPattern: "*", searchOption: SearchOption.AllDirectories);
+        FileInfo[] dirs = directoryInfo.GetFiles("*", SearchOption.AllDirectories);
 
-        long totalSize = dirs.Sum(selector: file => file.Length);
+        long totalSize = dirs.Sum(file => file.Length);
 
         return totalSize;
     }
@@ -205,11 +205,11 @@ public class StorageJob : IShouldQueue
     private static async Task CountFolder(List<string> folders, string library, StorageDto storage)
     {
         await Parallel.ForEachAsync(
-            source: folders,
-            parallelOptions: SystemParallelism.Options,
-            body: (folder, _) =>
+            folders,
+            SystemParallelism.Options,
+            (folder, _) =>
             {
-                long size = GetDirectorySize(directoryInfo: new(path: folder));
+                long size = GetDirectorySize(new(folder));
 
                 switch (library)
                 {
@@ -248,10 +248,10 @@ internal readonly record struct StorageUsageDelta(
 {
     public StorageUsageDelta Add(StorageUsageDelta other) =>
         new(
-            Movies: Movies + other.Movies,
-            Shows: Shows + other.Shows,
-            Music: Music + other.Music,
-            Other: Other + other.Other,
-            Used: Used + other.Used
+            Movies + other.Movies,
+            Shows + other.Shows,
+            Music + other.Music,
+            Other + other.Other,
+            Used + other.Used
         );
 }

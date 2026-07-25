@@ -23,10 +23,10 @@ using NoMercy.NmSystem.Networking;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
 [ApiController]
-[Tags(tags: "Dashboard Encoding Presets")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Encoding Presets")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/dashboard/encoding/presets")]
+[Route("api/v{version:apiVersion}/dashboard/encoding/presets")]
 public class EncodingPresetsController(
     IEncodingPresetRepository presetRepository,
     INamePresetResolver presetResolver,
@@ -34,7 +34,7 @@ public class EncodingPresetsController(
     IHttpClientFactory httpClientFactory
 ) : BaseController
 {
-    [Obsolete(message: "Use GET /api/v1/encoder/profiles")]
+    [Obsolete("Use GET /api/v1/encoder/profiles")]
     [HttpGet]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> List(
@@ -43,15 +43,15 @@ public class EncodingPresetsController(
         [FromQuery] string? tag = null
     )
     {
-        pageSize = Math.Clamp(value: pageSize, min: 1, max: 500);
+        pageSize = Math.Clamp(pageSize, 1, 500);
         if (pageIndex < 0)
             pageIndex = 0;
 
-        List<EncodingPreset> presets = await presetRepository.ListAsync(pageSize: pageSize, pageIndex: pageIndex, tagFilter: tag);
+        List<EncodingPreset> presets = await presetRepository.ListAsync(pageSize, pageIndex, tag);
         int total = await presetRepository.GetTotalCountAsync();
 
         return Ok(
-            value: new
+            new
             {
                 data = presets,
                 meta = new
@@ -59,40 +59,40 @@ public class EncodingPresetsController(
                     total,
                     pageSize,
                     pageIndex,
-                    totalPages = (int)Math.Ceiling(a: (double)total / pageSize),
+                    totalPages = (int)Math.Ceiling((double)total / pageSize),
                 },
             }
         );
     }
 
-    [Obsolete(message: "Use GET /api/v1/encoder/profiles/{id}")]
-    [HttpGet(template: "{id}")]
+    [Obsolete("Use GET /api/v1/encoder/profiles/{id}")]
+    [HttpGet("{id}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Get(string id)
     {
-        if (!Ulid.TryParse(base32: id, ulid: out Ulid presetId))
-            return BadRequestResponse(detail: "Invalid preset id");
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid preset id");
 
-        EncodingPreset? preset = await presetRepository.GetByIdAsync(id: presetId);
+        EncodingPreset? preset = await presetRepository.GetByIdAsync(presetId);
         if (preset is null)
-            return NotFoundResponse(detail: "Preset not found");
+            return NotFoundResponse("Preset not found");
 
-        return Ok(value: preset);
+        return Ok(preset);
     }
 
-    [Obsolete(message: "Use POST /api/v1/encoder/profiles")]
+    [Obsolete("Use POST /api/v1/encoder/profiles")]
     [HttpPost]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Create([FromBody] CreatePresetRequest request)
     {
-        if (string.IsNullOrWhiteSpace(value: request.Name))
-            return BadRequestResponse(detail: "name is required");
-        if (string.IsNullOrWhiteSpace(value: request.ProfileJson))
-            return BadRequestResponse(detail: "profile_json is required");
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return BadRequestResponse("name is required");
+        if (string.IsNullOrWhiteSpace(request.ProfileJson))
+            return BadRequestResponse("profile_json is required");
 
-        EncodingPreset? existing = await presetRepository.GetByNameAsync(name: request.Name);
+        EncodingPreset? existing = await presetRepository.GetByNameAsync(request.Name);
         if (existing is not null)
-            return ConflictResponse(detail: $"A preset named '{request.Name}' already exists");
+            return ConflictResponse($"A preset named '{request.Name}' already exists");
 
         EncodingPreset preset = new()
         {
@@ -105,45 +105,44 @@ public class EncodingPresetsController(
             IsBuiltIn = false,
         };
 
-        EncodingPreset saved = await presetRepository.CreateAsync(preset: preset);
-        return Ok(value: saved);
+        EncodingPreset saved = await presetRepository.CreateAsync(preset);
+        return Ok(saved);
     }
 
-    [Obsolete(message: "Use PUT /api/v1/encoder/profiles/{id}")]
-    [HttpPut(template: "{id}")]
+    [Obsolete("Use PUT /api/v1/encoder/profiles/{id}")]
+    [HttpPut("{id}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Update(string id, [FromBody] UpdatePresetRequest request)
     {
-        if (!Ulid.TryParse(base32: id, ulid: out Ulid presetId))
-            return BadRequestResponse(detail: "Invalid preset id");
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid preset id");
 
         // Guard: load the row first so we can return a structured 422 for
         // built-in presets instead of the generic ConflictResponse the repo
         // would otherwise produce via InvalidOperationException.
-        EncodingPreset? existing = await presetRepository.GetByIdAsync(id: presetId);
+        EncodingPreset? existing = await presetRepository.GetByIdAsync(presetId);
         if (existing is null)
-            return NotFoundResponse(detail: "Preset not found");
+            return NotFoundResponse("Preset not found");
 
         if (existing.IsBuiltIn)
         {
-            ValidationEnvelope envelope = ValidationEnvelope.FromRules(rules:
-            [
+            ValidationEnvelope envelope = ValidationEnvelope.FromRules([
                 new(
-                    Id: EncoderRuleId.ProfileBuiltinReadonly,
-                    Severity: EncoderRuleSeverity.Error,
-                    Field: "id",
-                    Message: "Built-in presets are read-only — clone the preset to edit it.",
-                    Fix: $"POST /api/v1/dashboard/encoding/presets/{id}/clone to make an editable copy."
+                    EncoderRuleId.ProfileBuiltinReadonly,
+                    EncoderRuleSeverity.Error,
+                    "id",
+                    "Built-in presets are read-only — clone the preset to edit it.",
+                    $"POST /api/v1/dashboard/encoding/presets/{id}/clone to make an editable copy."
                 ),
             ]);
-            return UnprocessableEntity(error: envelope);
+            return UnprocessableEntity(envelope);
         }
 
         try
         {
             EncodingPreset? updated = await presetRepository.UpdateAsync(
-                id: presetId,
-                apply: preset =>
+                presetId,
+                preset =>
                 {
                     if (request.Name is not null)
                         preset.Name = request.Name;
@@ -161,43 +160,43 @@ public class EncodingPresetsController(
             );
 
             if (updated is null)
-                return NotFoundResponse(detail: "Preset not found");
+                return NotFoundResponse("Preset not found");
 
-            return Ok(value: updated);
+            return Ok(updated);
         }
         catch (InvalidOperationException ex)
         {
-            return ConflictResponse(detail: ex.Message);
+            return ConflictResponse(ex.Message);
         }
     }
 
-    [Obsolete(message: "Use GET /api/v1/encoder/profiles/tags")]
-    [HttpGet(template: "tags")]
+    [Obsolete("Use GET /api/v1/encoder/profiles/tags")]
+    [HttpGet("tags")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ListAllTags()
     {
         IReadOnlyList<string> tags = await presetRepository.GetAllTagsAsync();
-        return Ok(value: new { data = tags });
+        return Ok(new { data = tags });
     }
 
-    [Obsolete(message: "Use POST /api/v1/encoder/profiles/{id}/clone")]
-    [HttpPost(template: "{id}/clone")]
+    [Obsolete("Use POST /api/v1/encoder/profiles/{id}/clone")]
+    [HttpPost("{id}/clone")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Clone(string id, [FromBody] ClonePresetRequest request)
     {
-        if (!Ulid.TryParse(base32: id, ulid: out Ulid presetId))
-            return BadRequestResponse(detail: "Invalid preset id");
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid preset id");
 
-        EncodingPreset? source = await presetRepository.GetByIdAsync(id: presetId);
+        EncodingPreset? source = await presetRepository.GetByIdAsync(presetId);
         if (source is null)
-            return NotFoundResponse(detail: "Preset not found");
+            return NotFoundResponse("Preset not found");
 
-        string name = string.IsNullOrWhiteSpace(value: request.Name)
-            ? await FindUnusedCloneNameAsync(sourceName: source.Name)
+        string name = string.IsNullOrWhiteSpace(request.Name)
+            ? await FindUnusedCloneNameAsync(source.Name)
             : request.Name;
 
-        if (await presetRepository.GetByNameAsync(name: name) is not null)
-            return ConflictResponse(detail: $"A preset named '{name}' already exists");
+        if (await presetRepository.GetByNameAsync(name) is not null)
+            return ConflictResponse($"A preset named '{name}' already exists");
 
         EncodingPreset clone = new()
         {
@@ -213,15 +212,15 @@ public class EncodingPresetsController(
             IsBuiltIn = false,
         };
 
-        EncodingPreset saved = await presetRepository.CreateAsync(preset: clone);
-        return Ok(value: saved);
+        EncodingPreset saved = await presetRepository.CreateAsync(clone);
+        return Ok(saved);
     }
 
     private async Task<string> FindUnusedCloneNameAsync(string sourceName)
     {
         string candidate = $"{sourceName} (copy)";
         int suffix = 1;
-        while (await presetRepository.GetByNameAsync(name: candidate) is not null)
+        while (await presetRepository.GetByNameAsync(candidate) is not null)
         {
             suffix++;
             candidate = $"{sourceName} (copy {suffix})";
@@ -229,74 +228,74 @@ public class EncodingPresetsController(
         return candidate;
     }
 
-    [Obsolete(message: "Use GET /api/v1/encoder/profiles/{id}/resolve")]
-    [HttpGet(template: "{id}/resolve")]
+    [Obsolete("Use GET /api/v1/encoder/profiles/{id}/resolve")]
+    [HttpGet("{id}/resolve")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Resolve(string id)
     {
-        if (!Ulid.TryParse(base32: id, ulid: out Ulid presetId))
-            return BadRequestResponse(detail: "Invalid preset id");
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid preset id");
 
-        EncodingPreset? leaf = await presetRepository.GetByIdAsync(id: presetId);
+        EncodingPreset? leaf = await presetRepository.GetByIdAsync(presetId);
         if (leaf is null)
-            return NotFoundResponse(detail: "Preset not found");
+            return NotFoundResponse("Preset not found");
 
-        string? parentName = await ResolveParentNameAsync(parentId: leaf.ParentPresetId);
-        PresetResolveRequest request = new(Name: leaf.Name, ProfileJson: leaf.ProfileJson, ParentName: parentName);
+        string? parentName = await ResolveParentNameAsync(leaf.ParentPresetId);
+        PresetResolveRequest request = new(leaf.Name, leaf.ProfileJson, parentName);
 
         try
         {
             EncodingProfile resolved = presetResolver.Resolve(
-                request: request,
-                lookup: new RepositoryPresetLookup(repository: presetRepository)
+                request,
+                new RepositoryPresetLookup(presetRepository)
             );
-            return Ok(value: resolved);
+            return Ok(resolved);
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequestResponse(detail: $"Preset could not be resolved: {ex.Message}");
+            return BadRequestResponse($"Preset could not be resolved: {ex.Message}");
         }
     }
 
-    [Obsolete(message: "Use GET /api/v1/encoder/profiles/{id}/export")]
-    [HttpGet(template: "{id}/export")]
+    [Obsolete("Use GET /api/v1/encoder/profiles/{id}/export")]
+    [HttpGet("{id}/export")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Export(string id)
     {
-        if (!Ulid.TryParse(base32: id, ulid: out Ulid presetId))
-            return BadRequestResponse(detail: "Invalid preset id");
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid preset id");
 
-        EncodingPreset? preset = await presetRepository.GetByIdAsync(id: presetId);
+        EncodingPreset? preset = await presetRepository.GetByIdAsync(presetId);
         if (preset is null)
-            return NotFoundResponse(detail: "Preset not found");
+            return NotFoundResponse("Preset not found");
 
         PresetExport export = new(
-            Name: preset.Name,
+            preset.Name,
             Description: preset.Description,
             Author: preset.Author,
             Tags: preset.Tags,
             ProfileJson: preset.ProfileJson
         );
 
-        return Ok(value: export);
+        return Ok(export);
     }
 
-    [Obsolete(message: "Use POST /api/v1/encoder/profiles/import")]
-    [HttpPost(template: "import")]
+    [Obsolete("Use POST /api/v1/encoder/profiles/import")]
+    [HttpPost("import")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Import([FromBody] PresetExport import)
     {
-        if (string.IsNullOrWhiteSpace(value: import.Name))
-            return BadRequestResponse(detail: "name is required");
-        if (string.IsNullOrWhiteSpace(value: import.ProfileJson))
-            return BadRequestResponse(detail: "profile_json is required");
+        if (string.IsNullOrWhiteSpace(import.Name))
+            return BadRequestResponse("name is required");
+        if (string.IsNullOrWhiteSpace(import.ProfileJson))
+            return BadRequestResponse("profile_json is required");
 
         // Collision rename: append "(imported N)" until we find an unused name.
         // Users can rename afterwards — we'd rather keep both copies than
         // silently overwrite an existing preset.
         string finalName = import.Name;
         int suffix = 1;
-        while (await presetRepository.GetByNameAsync(name: finalName) is not null)
+        while (await presetRepository.GetByNameAsync(finalName) is not null)
         {
             finalName = $"{import.Name} (imported {suffix++})";
         }
@@ -311,42 +310,42 @@ public class EncodingPresetsController(
             IsBuiltIn = false,
         };
 
-        EncodingPreset saved = await presetRepository.CreateAsync(preset: preset);
-        return Ok(value: saved);
+        EncodingPreset saved = await presetRepository.CreateAsync(preset);
+        return Ok(saved);
     }
 
-    [Obsolete(message: "Use POST /api/v1/encoder/profiles/import")]
-    [HttpPost(template: "import-url")]
+    [Obsolete("Use POST /api/v1/encoder/profiles/import")]
+    [HttpPost("import-url")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ImportFromUrl(
         [FromBody] ImportFromUrlRequest request,
         CancellationToken ct
     )
     {
-        if (string.IsNullOrWhiteSpace(value: request.Url))
-            return BadRequestResponse(detail: "url is required");
+        if (string.IsNullOrWhiteSpace(request.Url))
+            return BadRequestResponse("url is required");
 
-        if (!Uri.TryCreate(uriString: request.Url, uriKind: UriKind.Absolute, result: out Uri? parsed))
-            return BadRequestResponse(detail: "url is not a valid absolute URL");
+        if (!Uri.TryCreate(request.Url, UriKind.Absolute, out Uri? parsed))
+            return BadRequestResponse("url is not a valid absolute URL");
 
         // Only allow HTTPS for community presets — HTTP means a MITM attacker
         // can inject arbitrary encoding profiles onto the server. HTTPS shifts
         // trust to certificate validation, which is what we want.
         if (parsed.Scheme != Uri.UriSchemeHttps)
-            return BadRequestResponse(detail: "Only https:// URLs are supported for preset imports");
+            return BadRequestResponse("Only https:// URLs are supported for preset imports");
 
         // Even over https, don't let a Moderator make the server fetch an internal
         // host (LAN / loopback / cloud link-local metadata) — reject non-public hosts.
-        if (!await ServerSideRequestGuard.IsSafePublicHttpUrlAsync(url: request.Url, cancellationToken: ct))
-            return BadRequestResponse(detail: "Preset URL must resolve to a publicly routable host");
+        if (!await ServerSideRequestGuard.IsSafePublicHttpUrlAsync(request.Url, ct))
+            return BadRequestResponse("Preset URL must resolve to a publicly routable host");
 
         PresetExport? export;
         try
         {
-            HttpClient client = httpClientFactory.CreateClient(name: "preset-import");
-            client.Timeout = TimeSpan.FromSeconds(seconds: 15);
-            string body = await client.GetStringAsync(requestUri: parsed, cancellationToken: ct);
-            export = JsonConvert.DeserializeObject<PresetExport>(value: body);
+            HttpClient client = httpClientFactory.CreateClient("preset-import");
+            client.Timeout = TimeSpan.FromSeconds(15);
+            string body = await client.GetStringAsync(parsed, ct);
+            export = JsonConvert.DeserializeObject<PresetExport>(body);
         }
         catch (TaskCanceledException) when (ct.IsCancellationRequested)
         {
@@ -354,13 +353,13 @@ public class EncodingPresetsController(
         }
         catch (Exception ex)
         {
-            return BadRequestResponse(detail: $"Could not fetch or parse preset from URL: {ex.Message}");
+            return BadRequestResponse($"Could not fetch or parse preset from URL: {ex.Message}");
         }
 
-        if (export is null || string.IsNullOrWhiteSpace(value: export.Name))
-            return BadRequestResponse(detail: "URL response did not contain a valid preset payload");
+        if (export is null || string.IsNullOrWhiteSpace(export.Name))
+            return BadRequestResponse("URL response did not contain a valid preset payload");
 
-        return await Import(import: export);
+        return await Import(export);
     }
 
     private async Task<string?> ResolveParentNameAsync(Ulid? parentId)
@@ -368,7 +367,7 @@ public class EncodingPresetsController(
         if (parentId is null)
             return null;
 
-        EncodingPreset? parent = await presetRepository.GetByIdAsync(id: parentId.Value);
+        EncodingPreset? parent = await presetRepository.GetByIdAsync(parentId.Value);
         return parent?.Name;
     }
 
@@ -397,23 +396,23 @@ public class EncodingPresetsController(
     /// Deprecated: Use POST /api/v1/encoder/profiles/validate for the richer
     /// <see cref="NoMercy.Encoder.Errors.ValidationEnvelope"/> shape with stable rule IDs and fix hints.
     /// </remarks>
-    [Obsolete(message: "Use POST /api/v1/encoder/profiles/validate")]
-    [HttpPost(template: "validate")]
+    [Obsolete("Use POST /api/v1/encoder/profiles/validate")]
+    [HttpPost("validate")]
     [Authorize(Policy = "Moderator")]
     public IActionResult Validate([FromBody] ValidatePresetRequest request)
     {
-        if (string.IsNullOrWhiteSpace(value: request.ProfileJson))
-            return BadRequestResponse(detail: "profile_json is required");
+        if (string.IsNullOrWhiteSpace(request.ProfileJson))
+            return BadRequestResponse("profile_json is required");
 
         EncodingProfile? profile;
         try
         {
-            profile = JsonConvert.DeserializeObject<EncodingProfile>(value: request.ProfileJson);
+            profile = JsonConvert.DeserializeObject<EncodingProfile>(request.ProfileJson);
         }
         catch (JsonException ex)
         {
             return Ok(
-                value: new
+                new
                 {
                     valid = false,
                     errors = new[]
@@ -432,7 +431,7 @@ public class EncodingPresetsController(
         if (profile is null)
         {
             return Ok(
-                value: new
+                new
                 {
                     valid = false,
                     errors = new[]
@@ -451,17 +450,17 @@ public class EncodingPresetsController(
         // Forward to the new envelope-producing path, then project back to the
         // legacy (IsValid, ValidationError[]) shape so existing dashboard
         // clients keep working without modification.
-        ValidationEnvelope envelope = profileValidator.ValidateAsEnvelope(profile: profile);
+        ValidationEnvelope envelope = profileValidator.ValidateAsEnvelope(profile);
 
         object[] errors = envelope
-            .Errors.Select(selector: e => (object)new { field = e.Field, message = e.Message })
+            .Errors.Select(e => (object)new { field = e.Field, message = e.Message })
             .ToArray();
         object[] warnings = envelope
-            .Warnings.Select(selector: e => (object)new { field = e.Field, message = e.Message })
+            .Warnings.Select(e => (object)new { field = e.Field, message = e.Message })
             .ToArray();
 
         return Ok(
-            value: new
+            new
             {
                 valid = envelope.Valid,
                 errors,
@@ -481,14 +480,14 @@ public class EncodingPresetsController(
     /// combinations that aren't in our output set still work, we just
     /// transcode them automatically.
     /// </summary>
-    [Obsolete(message: "Use POST /api/v1/encoder/profiles/{id}/preview")]
-    [HttpPost(template: "preview")]
+    [Obsolete("Use POST /api/v1/encoder/profiles/{id}/preview")]
+    [HttpPost("preview")]
     public Task<IActionResult> Preview([FromBody] PreviewRequest request, CancellationToken ct)
     {
         return Task.FromResult<IActionResult>(
-            result: StatusCode(
-                statusCode: 501,
-                value: new
+            StatusCode(
+                501,
+                new
                 {
                     error = "This endpoint has been superseded by POST /api/v1/encoder/profiles/{id}/preview",
                 }
@@ -496,25 +495,25 @@ public class EncodingPresetsController(
         );
     }
 
-    [Obsolete(message: "Use DELETE /api/v1/encoder/profiles/{id}")]
-    [HttpDelete(template: "{id}")]
+    [Obsolete("Use DELETE /api/v1/encoder/profiles/{id}")]
+    [HttpDelete("{id}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!Ulid.TryParse(base32: id, ulid: out Ulid presetId))
-            return BadRequestResponse(detail: "Invalid preset id");
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid preset id");
 
         try
         {
-            bool removed = await presetRepository.DeleteAsync(id: presetId);
+            bool removed = await presetRepository.DeleteAsync(presetId);
             if (!removed)
-                return NotFoundResponse(detail: "Preset not found");
+                return NotFoundResponse("Preset not found");
 
             return NoContent();
         }
         catch (InvalidOperationException ex)
         {
-            return ConflictResponse(detail: ex.Message);
+            return ConflictResponse(ex.Message);
         }
     }
 }
@@ -540,15 +539,15 @@ internal sealed class RepositoryPresetLookup(IEncodingPresetRepository repositor
 {
     public PresetResolveRequest? FindByName(string name)
     {
-        EncodingPreset? preset = repository.GetByNameAsync(name: name).GetAwaiter().GetResult();
+        EncodingPreset? preset = repository.GetByNameAsync(name).GetAwaiter().GetResult();
         if (preset is null)
             return null;
 
         string? parentName = preset.ParentPresetId is Ulid parentId
-            ? repository.GetByIdAsync(id: parentId).GetAwaiter().GetResult()?.Name
+            ? repository.GetByIdAsync(parentId).GetAwaiter().GetResult()?.Name
             : null;
 
-        return new(Name: preset.Name, ProfileJson: preset.ProfileJson, ParentName: parentName);
+        return new(preset.Name, preset.ProfileJson, parentName);
     }
 }
 
@@ -567,8 +566,8 @@ public record ClonePresetRequest(string? Name = null, string? Author = null);
 public record ValidatePresetRequest(string ProfileJson);
 
 public record PreviewRequest(
-    [property: JsonProperty(propertyName: "profile_json")] string ProfileJson,
-    [property: JsonProperty(propertyName: "video_file_id")] string VideoFileId
+    [property: JsonProperty("profile_json")] string ProfileJson,
+    [property: JsonProperty("video_file_id")] string VideoFileId
 );
 
 public record UpdatePresetRequest(

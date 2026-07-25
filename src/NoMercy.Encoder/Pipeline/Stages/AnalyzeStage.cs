@@ -30,44 +30,44 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
     )
     {
         logger.LogInformation(
-            message: "[{CorrelationId}] Analyzing: {Path}", args: [context.CorrelationId, inputPath]
+            "[{CorrelationId}] Analyzing: {Path}", [context.CorrelationId, inputPath]
         );
 
         // Use the per-folder source storage from the job context when available;
         // fall back to the DI-injected singleton for app-state / default installs.
         IStorage effectiveStorage = context.SourceStorage ?? storage;
 
-        if (!effectiveStorage.Exists(path: inputPath))
+        if (!effectiveStorage.Exists(inputPath))
         {
             return new StageFailure(
-                Error: new(
-                    Kind: EncodingErrorKind.InputNotFound,
-                    Message: $"Input file not found: {inputPath}",
-                    FfmpegStderr: null,
-                    StageName: Name,
-                    Recoverable: false
+                new(
+                    EncodingErrorKind.InputNotFound,
+                    $"Input file not found: {inputPath}",
+                    null,
+                    Name,
+                    false
                 )
             );
         }
 
         try
         {
-            MediaInfo info = await analyzer.AnalyzeAsync(filePath: inputPath, sourceStorage: effectiveStorage, ct: ct);
+            MediaInfo info = await analyzer.AnalyzeAsync(inputPath, effectiveStorage, ct);
             logger.LogInformation(
-                message: "[{CorrelationId}] Analysis complete: {Video}v {Audio}a {Sub}s {Duration}", args: [context.CorrelationId, info.VideoStreams.Count, info.AudioStreams.Count, info.SubtitleStreams.Count, info.Duration]
+                "[{CorrelationId}] Analysis complete: {Video}v {Audio}a {Sub}s {Duration}", [context.CorrelationId, info.VideoStreams.Count, info.AudioStreams.Count, info.SubtitleStreams.Count, info.Duration]
             );
-            EmitSourceQuirkDecisions(info: info, context: context);
-            return new StageSuccess<MediaInfo>(Value: info);
+            EmitSourceQuirkDecisions(info, context);
+            return new StageSuccess<MediaInfo>(info);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new StageFailure(
-                Error: new(
-                    Kind: EncodingErrorKind.InputCorrupt,
-                    Message: $"Failed to analyze: {ex.Message}",
-                    FfmpegStderr: null,
-                    StageName: Name,
-                    Recoverable: false
+                new(
+                    EncodingErrorKind.InputCorrupt,
+                    $"Failed to analyze: {ex.Message}",
+                    null,
+                    Name,
+                    false
                 )
             );
         }
@@ -87,11 +87,11 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
         if (info.DolbyVision is not null)
         {
             sink.Add(
-                entry: new(
-                    Stage: "analyze",
-                    Key: "analyze.dv_present",
-                    Message: $"Dolby Vision profile {info.DolbyVision.Profile} level {info.DolbyVision.Level} detected.",
-                    Data: info.DolbyVision
+                new(
+                    "analyze",
+                    "analyze.dv_present",
+                    $"Dolby Vision profile {info.DolbyVision.Profile} level {info.DolbyVision.Level} detected.",
+                    info.DolbyVision
                 )
             );
         }
@@ -103,13 +103,13 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
                 // Message rides the DecisionLog the dashboard reads over the API —
                 // keep it period-decimal regardless of host locale.
                 sink.Add(
-                    entry: new(
-                        Stage: "analyze",
-                        Key: "analyze.vfr_detected",
-                        Message: $"Stream {v.Index} reports variable frame rate "
-                                 + $"(real {v.RealFrameRate!.Value.ToString(format: "F3", provider: CultureInfo.InvariantCulture)} "
-                                 + $"vs avg {v.AverageFrameRate!.Value.ToString(format: "F3", provider: CultureInfo.InvariantCulture)}).",
-                        Data: new
+                    new(
+                        "analyze",
+                        "analyze.vfr_detected",
+                        $"Stream {v.Index} reports variable frame rate "
+                                 + $"(real {v.RealFrameRate!.Value.ToString("F3", CultureInfo.InvariantCulture)} "
+                                 + $"vs avg {v.AverageFrameRate!.Value.ToString("F3", CultureInfo.InvariantCulture)}).",
+                        new
                         {
                             v.Index,
                             v.RealFrameRate,
@@ -120,15 +120,15 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
             }
         }
 
-        int fontAttachments = info.Attachments.Count(predicate: a => IsFontMimeType(mime: a.MimeType));
+        int fontAttachments = info.Attachments.Count(a => IsFontMimeType(a.MimeType));
         if (fontAttachments > 0)
         {
             sink.Add(
-                entry: new(
-                    Stage: "analyze",
-                    Key: "analyze.attached_fonts",
-                    Message: $"{fontAttachments} font attachment(s) present — will be extracted next to subtitles.",
-                    Data: new { Count = fontAttachments }
+                new(
+                    "analyze",
+                    "analyze.attached_fonts",
+                    $"{fontAttachments} font attachment(s) present — will be extracted next to subtitles.",
+                    new { Count = fontAttachments }
                 )
             );
         }
@@ -136,11 +136,11 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
         if (info.Chapters.Count > 0)
         {
             sink.Add(
-                entry: new(
-                    Stage: "analyze",
-                    Key: "analyze.chapter_count",
-                    Message: $"{info.Chapters.Count} chapter(s) detected.",
-                    Data: new { info.Chapters.Count }
+                new(
+                    "analyze",
+                    "analyze.chapter_count",
+                    $"{info.Chapters.Count} chapter(s) detected.",
+                    new { info.Chapters.Count }
                 )
             );
         }
@@ -149,8 +149,8 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
     private static bool IsFontMimeType(string? mime) =>
         mime is not null
         && (
-            mime.Contains(value: "font", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || mime.Contains(value: "truetype", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || mime.Contains(value: "opentype", comparisonType: StringComparison.OrdinalIgnoreCase)
+            mime.Contains("font", StringComparison.OrdinalIgnoreCase)
+            || mime.Contains("truetype", StringComparison.OrdinalIgnoreCase)
+            || mime.Contains("opentype", StringComparison.OrdinalIgnoreCase)
         );
 }

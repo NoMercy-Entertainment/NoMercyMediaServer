@@ -15,15 +15,15 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbPaginatedResponse<T>
 {
-    [JsonProperty(propertyName: "page")]
+    [JsonProperty("page")]
     public int Page { get; set; }
 
-    [JsonProperty(propertyName: "results")]
+    [JsonProperty("results")]
     public List<T> Results { get; set; } = [];
 
-    [JsonProperty(propertyName: "total_pages")]
+    [JsonProperty("total_pages")]
     public int TotalPages { get; set; }
 
-    [JsonProperty(propertyName: "total_results")]
+    [JsonProperty("total_results")]
     public int TotalResults { get; set; }
 }

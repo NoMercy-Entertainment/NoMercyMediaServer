@@ -38,7 +38,7 @@ public class DefaultEncodingPresetLinkerTests : IDisposable
 
     public DefaultEncodingPresetLinkerTests()
     {
-        _connection = new(connectionString: "DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
 
         using (SqliteCommand pragma = _connection.CreateCommand())
@@ -48,10 +48,10 @@ public class DefaultEncodingPresetLinkerTests : IDisposable
         }
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: _connection)
+            .UseSqlite(_connection)
             .Options;
 
-        _context = new(options: options);
+        _context = new(options);
         _context.Database.EnsureCreated();
     }
 
@@ -81,7 +81,7 @@ public class DefaultEncodingPresetLinkerTests : IDisposable
             ProfileJson = "{}",
             IsBuiltIn = true,
         };
-        _context.EncodingPresets.Add(entity: preset);
+        _context.EncodingPresets.Add(preset);
         _context.SaveChanges();
         return preset;
     }
@@ -90,26 +90,26 @@ public class DefaultEncodingPresetLinkerTests : IDisposable
     public async Task AttachDefaultIfMissingAsync_NewFolder_AttachesAbrStandardAsDefault()
     {
         EncodingPreset abrStandard = SeedAbrStandardPreset();
-        Folder folder = NewFolder(driverId: Ulid.NewUlid());
-        _context.Folders.Add(entity: folder);
+        Folder folder = NewFolder(Ulid.NewUlid());
+        _context.Folders.Add(folder);
         await _context.SaveChangesAsync();
 
         DefaultEncodingPresetLinker linker = new(
-            context: _context,
-            logger: NullLogger<DefaultEncodingPresetLinker>.Instance
+            _context,
+            NullLogger<DefaultEncodingPresetLinker>.Instance
         );
 
-        bool attached = await linker.AttachDefaultIfMissingAsync(folderId: folder.Id);
+        bool attached = await linker.AttachDefaultIfMissingAsync(folder.Id);
 
-        attached.Should().BeTrue(because: "a brand-new folder with no link must get the default attached");
+        attached.Should().BeTrue("a brand-new folder with no link must get the default attached");
 
         List<EncodingPresetFolder> links = await _context
-            .EncodingPresetFolders.Where(predicate: l => l.FolderId == folder.Id)
+            .EncodingPresetFolders.Where(l => l.FolderId == folder.Id)
             .ToListAsync();
 
-        links.Should().HaveCount(expected: 1);
-        links[index: 0].PresetId.Should().Be(expected: abrStandard.Id);
-        links[index: 0].IsDefault.Should().BeTrue();
+        links.Should().HaveCount(1);
+        links[0].PresetId.Should().Be(abrStandard.Id);
+        links[0].IsDefault.Should().BeTrue();
     }
 
     [Fact]
@@ -126,12 +126,12 @@ public class DefaultEncodingPresetLinkerTests : IDisposable
             ProfileJson = "{}",
             IsBuiltIn = false,
         };
-        _context.EncodingPresets.Add(entity: userPreset);
+        _context.EncodingPresets.Add(userPreset);
 
-        Folder folder = NewFolder(driverId: Ulid.NewUlid());
-        _context.Folders.Add(entity: folder);
+        Folder folder = NewFolder(Ulid.NewUlid());
+        _context.Folders.Add(folder);
         _context.EncodingPresetFolders.Add(
-            entity: new()
+            new()
             {
                 FolderId = folder.Id,
                 PresetId = userPreset.Id,
@@ -141,48 +141,48 @@ public class DefaultEncodingPresetLinkerTests : IDisposable
         await _context.SaveChangesAsync();
 
         DefaultEncodingPresetLinker linker = new(
-            context: _context,
-            logger: NullLogger<DefaultEncodingPresetLinker>.Instance
+            _context,
+            NullLogger<DefaultEncodingPresetLinker>.Instance
         );
 
-        bool attached = await linker.AttachDefaultIfMissingAsync(folderId: folder.Id);
+        bool attached = await linker.AttachDefaultIfMissingAsync(folder.Id);
 
-        attached.Should().BeFalse(because: "a folder that already has a link must be left untouched");
+        attached.Should().BeFalse("a folder that already has a link must be left untouched");
 
         List<EncodingPresetFolder> links = await _context
-            .EncodingPresetFolders.Where(predicate: l => l.FolderId == folder.Id)
+            .EncodingPresetFolders.Where(l => l.FolderId == folder.Id)
             .ToListAsync();
 
-        links.Should().HaveCount(expected: 1, because: "no duplicate link must be created");
-        links[index: 0]
+        links.Should().HaveCount(1, "no duplicate link must be created");
+        links[0]
             .PresetId.Should()
-            .Be(expected: userPreset.Id, because: "the existing user pick must survive untouched");
+            .Be(userPreset.Id, "the existing user pick must survive untouched");
     }
 
     [Fact]
     public async Task AttachDefaultIfMissingAsync_CalledTwiceOnSameNewFolder_LinksOnlyOnce()
     {
         SeedAbrStandardPreset();
-        Folder folder = NewFolder(driverId: Ulid.NewUlid());
-        _context.Folders.Add(entity: folder);
+        Folder folder = NewFolder(Ulid.NewUlid());
+        _context.Folders.Add(folder);
         await _context.SaveChangesAsync();
 
         DefaultEncodingPresetLinker linker = new(
-            context: _context,
-            logger: NullLogger<DefaultEncodingPresetLinker>.Instance
+            _context,
+            NullLogger<DefaultEncodingPresetLinker>.Instance
         );
 
-        bool first = await linker.AttachDefaultIfMissingAsync(folderId: folder.Id);
-        bool second = await linker.AttachDefaultIfMissingAsync(folderId: folder.Id);
+        bool first = await linker.AttachDefaultIfMissingAsync(folder.Id);
+        bool second = await linker.AttachDefaultIfMissingAsync(folder.Id);
 
         first.Should().BeTrue();
-        second.Should().BeFalse(because: "re-invoking on an already-linked folder must be a no-op");
+        second.Should().BeFalse("re-invoking on an already-linked folder must be a no-op");
 
         List<EncodingPresetFolder> links = await _context
-            .EncodingPresetFolders.Where(predicate: l => l.FolderId == folder.Id)
+            .EncodingPresetFolders.Where(l => l.FolderId == folder.Id)
             .ToListAsync();
 
-        links.Should().HaveCount(expected: 1, because: "creating/re-adding must never duplicate the link");
+        links.Should().HaveCount(1, "creating/re-adding must never duplicate the link");
     }
 
     [Fact]
@@ -198,12 +198,12 @@ public class DefaultEncodingPresetLinkerTests : IDisposable
             ProfileJson = "{}",
             IsBuiltIn = true,
         };
-        _context.EncodingPresets.Add(entity: fallbackPreset);
+        _context.EncodingPresets.Add(fallbackPreset);
 
-        Folder otherFolder = NewFolder(driverId: Ulid.NewUlid());
-        _context.Folders.Add(entity: otherFolder);
+        Folder otherFolder = NewFolder(Ulid.NewUlid());
+        _context.Folders.Add(otherFolder);
         _context.EncodingPresetFolders.Add(
-            entity: new()
+            new()
             {
                 FolderId = otherFolder.Id,
                 PresetId = fallbackPreset.Id,
@@ -211,45 +211,45 @@ public class DefaultEncodingPresetLinkerTests : IDisposable
             }
         );
 
-        Folder newFolder = NewFolder(driverId: Ulid.NewUlid());
-        _context.Folders.Add(entity: newFolder);
+        Folder newFolder = NewFolder(Ulid.NewUlid());
+        _context.Folders.Add(newFolder);
         await _context.SaveChangesAsync();
 
         DefaultEncodingPresetLinker linker = new(
-            context: _context,
-            logger: NullLogger<DefaultEncodingPresetLinker>.Instance
+            _context,
+            NullLogger<DefaultEncodingPresetLinker>.Instance
         );
 
-        bool attached = await linker.AttachDefaultIfMissingAsync(folderId: newFolder.Id);
+        bool attached = await linker.AttachDefaultIfMissingAsync(newFolder.Id);
 
         attached.Should().BeTrue();
 
-        EncodingPresetFolder link = await _context.EncodingPresetFolders.SingleAsync(predicate: l =>
+        EncodingPresetFolder link = await _context.EncodingPresetFolders.SingleAsync(l =>
             l.FolderId == newFolder.Id
         );
-        link.PresetId.Should().Be(expected: fallbackPreset.Id);
+        link.PresetId.Should().Be(fallbackPreset.Id);
         link.IsDefault.Should().BeTrue();
     }
 
     [Fact]
     public async Task AttachDefaultIfMissingAsync_NoPresetAvailableAtAll_ReturnsFalseAndCreatesNoLink()
     {
-        Folder folder = NewFolder(driverId: Ulid.NewUlid());
-        _context.Folders.Add(entity: folder);
+        Folder folder = NewFolder(Ulid.NewUlid());
+        _context.Folders.Add(folder);
         await _context.SaveChangesAsync();
 
         DefaultEncodingPresetLinker linker = new(
-            context: _context,
-            logger: NullLogger<DefaultEncodingPresetLinker>.Instance
+            _context,
+            NullLogger<DefaultEncodingPresetLinker>.Instance
         );
 
-        bool attached = await linker.AttachDefaultIfMissingAsync(folderId: folder.Id);
+        bool attached = await linker.AttachDefaultIfMissingAsync(folder.Id);
 
         attached
             .Should()
-            .BeFalse(because: "with no builtin and no existing default link there is nothing to attach");
+            .BeFalse("with no builtin and no existing default link there is nothing to attach");
 
-        bool anyLink = await _context.EncodingPresetFolders.AnyAsync(predicate: l => l.FolderId == folder.Id);
+        bool anyLink = await _context.EncodingPresetFolders.AnyAsync(l => l.FolderId == folder.Id);
         anyLink.Should().BeFalse();
     }
 }

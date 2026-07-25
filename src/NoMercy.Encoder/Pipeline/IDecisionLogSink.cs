@@ -42,9 +42,9 @@ public sealed class ScopedDecisionLog : IDecisionLogSink
 
     public void Add(DecisionLog entry)
     {
-        ArgumentNullException.ThrowIfNull(argument: entry);
+        ArgumentNullException.ThrowIfNull(entry);
         lock (_gate)
-            _entries.Add(item: entry);
+            _entries.Add(entry);
     }
 
     public IReadOnlyList<DecisionLog> Snapshot()

@@ -33,23 +33,23 @@ public class FfmpegExecutorCultureTests
 
     public FfmpegExecutorCultureTests()
     {
-        _executor = new(processRunner: _processRunner.Object, logger: NullLogger<FfmpegExecutor>.Instance);
+        _executor = new(_processRunner.Object, NullLogger<FfmpegExecutor>.Instance);
     }
 
     [Theory]
-    [InlineData(data: "de-DE")]
-    [InlineData(data: "nl-NL")]
-    [InlineData(data: "fr-FR")]
+    [InlineData("de-DE")]
+    [InlineData("nl-NL")]
+    [InlineData("fr-FR")]
     public async Task Progress_BitrateString_StaysPeriodDecimalUnderCommaCulture(string culture)
     {
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(name: culture);
+            Thread.CurrentThread.CurrentCulture = new(culture);
 
             EncodingProgress? lastProgress = null;
             _processRunner
-                .Setup(expression: r =>
+                .Setup(r =>
                     r.RunAsync(
                         It.IsAny<string>(),
                         It.IsAny<string[]>(),
@@ -71,26 +71,26 @@ public class FfmpegExecutorCultureTests
                     CancellationToken,
                     Action<int>?
                 >(
-                    action: (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
+                    (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
                     {
-                        onStdOut?.Invoke(obj: "frame=100");
-                        onStdOut?.Invoke(obj: "fps=30.0");
-                        onStdOut?.Invoke(obj: "out_time_us=10000000");
-                        onStdOut?.Invoke(obj: "bitrate=1234.5kbits/s");
-                        onStdOut?.Invoke(obj: "speed=1.0x");
-                        onStdOut?.Invoke(obj: "progress=end");
+                        onStdOut?.Invoke("frame=100");
+                        onStdOut?.Invoke("fps=30.0");
+                        onStdOut?.Invoke("out_time_us=10000000");
+                        onStdOut?.Invoke("bitrate=1234.5kbits/s");
+                        onStdOut?.Invoke("speed=1.0x");
+                        onStdOut?.Invoke("progress=end");
                     }
                 )
-                .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+                .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
 
             await _executor.ExecuteAsync(
-                command: BuildSimpleCommand(),
-                inputDuration: TimeSpan.FromMinutes(minutes: 1),
-                onProgress: p => lastProgress = p
+                BuildSimpleCommand(),
+                TimeSpan.FromMinutes(1),
+                p => lastProgress = p
             );
 
-            lastProgress!.Bitrate.Should().Be(expected: "1234.5kbits/s");
-            lastProgress.Bitrate.Should().NotContain(unexpected: ",");
+            lastProgress!.Bitrate.Should().Be("1234.5kbits/s");
+            lastProgress.Bitrate.Should().NotContain(",");
         }
         finally
         {
@@ -99,5 +99,5 @@ public class FfmpegExecutorCultureTests
     }
 
     private static FfmpegCommand BuildSimpleCommand() =>
-        new(Executable: "ffmpeg", Arguments: ["-i", "/input.mkv", "/output.mp4"], WorkingDirectory: null);
+        new("ffmpeg", ["-i", "/input.mkv", "/output.mp4"], null);
 }

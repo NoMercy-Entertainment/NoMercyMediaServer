@@ -18,11 +18,11 @@ namespace NoMercy.Providers.TVDB.Client;
 public class TvdbSeriesClient : TvdbBaseClient
 {
     public TvdbSeriesClient(int id = 0, string language = "eng")
-        : base(id: id, language: language) { }
+        : base(id, language) { }
 
     public Task<TvdbSeriesResponse?> Details(bool? priority = false)
     {
-        return Get<TvdbSeriesResponse>(url: "series/" + Id, priority: priority);
+        return Get<TvdbSeriesResponse>("series/" + Id, priority: priority);
     }
 
     public Task<TvdbSeriesExtendedResponse?> Extended(
@@ -32,16 +32,16 @@ public class TvdbSeriesClient : TvdbBaseClient
     )
     {
         Dictionary<string, string?> query = new();
-        if (!string.IsNullOrEmpty(value: meta))
-            query[key: "meta"] = meta;
+        if (!string.IsNullOrEmpty(meta))
+            query["meta"] = meta;
         if (shortMeta)
-            query[key: "short"] = "true";
-        return Get<TvdbSeriesExtendedResponse>(url: "series/" + Id + "/extended", query: query, priority: priority);
+            query["short"] = "true";
+        return Get<TvdbSeriesExtendedResponse>("series/" + Id + "/extended", query, priority);
     }
 
     public Task<TvdbSeriesExtendedResponse?> WithAllAppends(bool? priority = false)
     {
-        return Extended(meta: "translations,episodes", shortMeta: false, priority: priority);
+        return Extended("translations,episodes", false, priority);
     }
 
     public Task<TvdbSeriesEpisodesResponse?> Episodes(
@@ -50,11 +50,11 @@ public class TvdbSeriesClient : TvdbBaseClient
         bool? priority = false
     )
     {
-        Dictionary<string, string?> query = new() { [key: "page"] = page.ToString() };
+        Dictionary<string, string?> query = new() { ["page"] = page.ToString() };
         return Get<TvdbSeriesEpisodesResponse>(
-            url: $"series/{Id}/episodes/{seasonType}",
-            query: query,
-            priority: priority
+            $"series/{Id}/episodes/{seasonType}",
+            query,
+            priority
         );
     }
 
@@ -65,18 +65,18 @@ public class TvdbSeriesClient : TvdbBaseClient
         bool? priority = false
     )
     {
-        Dictionary<string, string?> query = new() { [key: "page"] = page.ToString() };
+        Dictionary<string, string?> query = new() { ["page"] = page.ToString() };
         return Get<TvdbSeriesEpisodesResponse>(
-            url: $"series/{Id}/episodes/{seasonType}/{language}",
-            query: query,
-            priority: priority
+            $"series/{Id}/episodes/{seasonType}/{language}",
+            query,
+            priority
         );
     }
 
     public Task<TvdbSeriesTranslationResponse?> Translation(string language, bool? priority = false)
     {
         return Get<TvdbSeriesTranslationResponse>(
-            url: $"series/{Id}/translations/{language}",
+            $"series/{Id}/translations/{language}",
             priority: priority
         );
     }
@@ -89,31 +89,31 @@ public class TvdbSeriesClient : TvdbBaseClient
     {
         Dictionary<string, string?> query = new();
         if (type is not null)
-            query[key: "type"] = type.Value.ToString();
-        if (!string.IsNullOrEmpty(value: language))
-            query[key: "lang"] = language;
-        return Get<TvdbResponse<TvdbArtwork[]>>(url: "series/" + Id + "/artworks", query: query, priority: priority);
+            query["type"] = type.Value.ToString();
+        if (!string.IsNullOrEmpty(language))
+            query["lang"] = language;
+        return Get<TvdbResponse<TvdbArtwork[]>>("series/" + Id + "/artworks", query, priority);
     }
 
     public Task<TvdbNextAiredResponse?> NextAired(bool? priority = false)
     {
-        return Get<TvdbNextAiredResponse>(url: "series/" + Id + "/nextAired", priority: priority);
+        return Get<TvdbNextAiredResponse>("series/" + Id + "/nextAired", priority: priority);
     }
 
     public Task<TvdbResponse<TvdbSeries>?> BySlug(string slug, bool? priority = false)
     {
-        return Get<TvdbResponse<TvdbSeries>>(url: "series/slug/" + slug, priority: priority);
+        return Get<TvdbResponse<TvdbSeries>>("series/slug/" + slug, priority: priority);
     }
 
     public Task<TvdbSeriesStatusesResponse?> Statuses(bool? priority = false)
     {
-        return Get<TvdbSeriesStatusesResponse>(url: "series/statuses", priority: priority);
+        return Get<TvdbSeriesStatusesResponse>("series/statuses", priority: priority);
     }
 
     public Task<TvdbPaginatedResponse<TvdbSeries>?> All(int page = 0, bool? priority = false)
     {
-        Dictionary<string, string?> query = new() { [key: "page"] = page.ToString() };
-        return Get<TvdbPaginatedResponse<TvdbSeries>>(url: "series", query: query, priority: priority);
+        Dictionary<string, string?> query = new() { ["page"] = page.ToString() };
+        return Get<TvdbPaginatedResponse<TvdbSeries>>("series", query, priority);
     }
 
     public Task<TvdbPaginatedResponse<TvdbSeries>?> Filter(
@@ -122,7 +122,7 @@ public class TvdbSeriesClient : TvdbBaseClient
     )
     {
         Dictionary<string, string?> query = filter.ToQuery();
-        return Get<TvdbPaginatedResponse<TvdbSeries>>(url: "series/filter", query: query, priority: priority);
+        return Get<TvdbPaginatedResponse<TvdbSeries>>("series/filter", query, priority);
     }
 }
 
@@ -144,24 +144,24 @@ public class TvdbSeriesFilter
     {
         Dictionary<string, string?> q = new();
         if (Country is not null)
-            q[key: "country"] = Country;
+            q["country"] = Country;
         if (Language is not null)
-            q[key: "lang"] = Language;
+            q["lang"] = Language;
         if (CompanyId is not null)
-            q[key: "company"] = CompanyId.Value.ToString();
+            q["company"] = CompanyId.Value.ToString();
         if (ContentRatingId is not null)
-            q[key: "contentRating"] = ContentRatingId.Value.ToString();
-        if (!string.IsNullOrEmpty(value: GenreIds))
-            q[key: "genre"] = GenreIds;
+            q["contentRating"] = ContentRatingId.Value.ToString();
+        if (!string.IsNullOrEmpty(GenreIds))
+            q["genre"] = GenreIds;
         if (SortBy is not null)
-            q[key: "sort"] = SortBy.Value.ToString();
-        if (!string.IsNullOrEmpty(value: SortType))
-            q[key: "sortType"] = SortType;
+            q["sort"] = SortBy.Value.ToString();
+        if (!string.IsNullOrEmpty(SortType))
+            q["sortType"] = SortType;
         if (Status is not null)
-            q[key: "status"] = Status.Value.ToString();
+            q["status"] = Status.Value.ToString();
         if (Year is not null)
-            q[key: "year"] = Year.Value.ToString();
-        q[key: "page"] = Page.ToString();
+            q["year"] = Year.Value.ToString();
+        q["page"] = Page.ToString();
         return q;
     }
 }

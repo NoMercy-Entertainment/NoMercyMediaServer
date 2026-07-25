@@ -34,44 +34,44 @@ public class WorkerSelfRegistrationServiceLicenseTests
     public async Task Heartbeat_WhenTokenNearExpiry_RefreshesToken()
     {
         // Token expires in 30s — below the 60s lead time threshold.
-        ClusterToken expiring = new(Secret: "old-secret", ExpiresAt: DateTime.UtcNow.AddSeconds(value: 30), Scopes: []);
+        ClusterToken expiring = new("old-secret", DateTime.UtcNow.AddSeconds(30), []);
         ClusterTokenHolder holder = new();
-        holder.Update(token: expiring);
+        holder.Update(expiring);
 
         // Fresh token that the fake client will return.
-        ClusterToken fresh = new(Secret: "new-secret", ExpiresAt: DateTime.UtcNow.AddHours(value: 1), Scopes: []);
+        ClusterToken fresh = new("new-secret", DateTime.UtcNow.AddHours(1), []);
         TaskCompletionSource refreshCalled = new(
-            creationOptions: TaskCreationOptions.RunContinuationsAsynchronously
+            TaskCreationOptions.RunContinuationsAsynchronously
         );
 
-        FakeLicenseTokenClient licenseClient = new(onRequest: () =>
+        FakeLicenseTokenClient licenseClient = new(() =>
         {
             refreshCalled.TrySetResult();
-            return new(Token: fresh, Failure: null, Message: null);
+            return new(fresh, null, null);
         });
 
         RecordingHandler http = new();
         WorkerSelfRegistrationService sut = MakeService(
-            httpHandler: http,
-            configure: opts =>
+            http,
+            opts =>
             {
                 opts.DistributedEncodingSigningKey = "key";
                 opts.CoordinatorUrl = "http://coordinator.test";
                 opts.WorkerSelfBaseUrl = "http://worker.test";
                 opts.WorkerId = "tw";
-                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(milliseconds: 30);
+                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(30);
             },
-            holder: holder,
-            licenseClient: licenseClient
+            holder,
+            licenseClient
         );
 
         using CancellationTokenSource cts = new();
-        await sut.StartAsync(cancellationToken: cts.Token);
-        await refreshCalled.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
+        await sut.StartAsync(cts.Token);
+        await refreshCalled.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await cts.CancelAsync();
-        await sut.StopAsync(cancellationToken: CancellationToken.None);
+        await sut.StopAsync(CancellationToken.None);
 
-        holder.Current!.Secret.Should().Be(expected: "new-secret");
+        holder.Current!.Secret.Should().Be("new-secret");
     }
 
     // ── 403 triggers shutdown ────────────────────────────────────────────────
@@ -80,45 +80,45 @@ public class WorkerSelfRegistrationServiceLicenseTests
     public async Task TokenRequest_403_SetsRevokedAndStopsLoop()
     {
         ClusterTokenHolder holder = new();
-        FakeLicenseTokenClient licenseClient = new(onRequest: () =>
-            new(Token: null, Failure: LicenseFailureKind.EntitlementRevoked, Message: "403 from coordinator")
+        FakeLicenseTokenClient licenseClient = new(() =>
+            new(null, LicenseFailureKind.EntitlementRevoked, "403 from coordinator")
         );
 
-        TaskCompletionSource stopObserved = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
-        RecordingHandler http = new(respond: req =>
+        TaskCompletionSource stopObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingHandler http = new(req =>
         {
             // We should never reach a heartbeat — service should stop.
-            if (req.RequestUri!.ToString().Contains(value: "heartbeat"))
+            if (req.RequestUri!.ToString().Contains("heartbeat"))
                 stopObserved.TrySetResult();
-            return new(statusCode: HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         });
 
         WorkerSelfRegistrationService sut = MakeService(
-            httpHandler: http,
-            configure: opts =>
+            http,
+            opts =>
             {
                 opts.DistributedEncodingSigningKey = "key";
                 opts.CoordinatorUrl = "http://coordinator.test";
                 opts.WorkerSelfBaseUrl = "http://worker.test";
                 opts.WorkerId = "tw";
-                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(milliseconds: 30);
+                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(30);
             },
-            holder: holder,
-            licenseClient: licenseClient
+            holder,
+            licenseClient
         );
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 3));
-        await sut.StartAsync(cancellationToken: cts.Token);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(3));
+        await sut.StartAsync(cts.Token);
 
         // Give service time to reach the 403 path and exit.
-        await Task.Delay(millisecondsDelay: 200);
-        await sut.StopAsync(cancellationToken: CancellationToken.None);
+        await Task.Delay(200);
+        await sut.StopAsync(CancellationToken.None);
 
         holder.IsRevoked.Should().BeTrue();
         // Heartbeat must NOT have been reached — service exited before the loop.
         stopObserved
             .Task.IsCompleted.Should()
-            .BeFalse(because: "heartbeat must never fire when license is revoked on initial token fetch");
+            .BeFalse("heartbeat must never fire when license is revoked on initial token fetch");
     }
 
     // ── Backoff sequence on repeated 401s ────────────────────────────────────
@@ -132,60 +132,60 @@ public class WorkerSelfRegistrationServiceLicenseTests
         List<DateTime> callTimes = [];
         object callLock = new();
         int maxCalls = 4;
-        TaskCompletionSource doneTcs = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource doneTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        FakeLicenseTokenClient licenseClient = new(onRequest: () =>
+        FakeLicenseTokenClient licenseClient = new(() =>
         {
             DateTime now = DateTime.UtcNow;
             lock (callLock)
             {
-                callTimes.Add(item: now);
+                callTimes.Add(now);
                 if (callTimes.Count >= maxCalls)
                     doneTcs.TrySetResult();
             }
-            return new(Token: null, Failure: LicenseFailureKind.Unauthenticated, Message: "401");
+            return new(null, LicenseFailureKind.Unauthenticated, "401");
         });
 
         ClusterTokenHolder holder = new();
         // Ensure the token is always "near expiry" so every heartbeat tick
         // attempts a refresh.
-        holder.Update(token: new(Secret: "seed", ExpiresAt: DateTime.UtcNow.AddSeconds(value: 30), Scopes: []));
+        holder.Update(new("seed", DateTime.UtcNow.AddSeconds(30), []));
 
         RecordingHandler http = new();
         WorkerSelfRegistrationService sut = MakeService(
-            httpHandler: http,
-            configure: opts =>
+            http,
+            opts =>
             {
                 opts.DistributedEncodingSigningKey = "key";
                 opts.CoordinatorUrl = "http://coordinator.test";
                 opts.WorkerSelfBaseUrl = "http://worker.test";
                 opts.WorkerId = "tw";
                 // Very short heartbeat so the test doesn't take forever.
-                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(milliseconds: 10);
+                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(10);
             },
-            holder: holder,
-            licenseClient: licenseClient
+            holder,
+            licenseClient
         );
 
         using CancellationTokenSource cts = new();
-        await sut.StartAsync(cancellationToken: cts.Token);
-        await doneTcs.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 15));
+        await sut.StartAsync(cts.Token);
+        await doneTcs.Task.WaitAsync(TimeSpan.FromSeconds(15));
         await cts.CancelAsync();
-        await sut.StopAsync(cancellationToken: CancellationToken.None);
+        await sut.StopAsync(CancellationToken.None);
 
         // The gaps between successive calls should be non-decreasing
         // (backoff grows).  We compare gap[1] > gap[0] as a minimal proof.
-        callTimes.Count.Should().BeGreaterThanOrEqualTo(expected: 3);
-        TimeSpan firstGap = callTimes[index: 1] - callTimes[index: 0];
-        TimeSpan secondGap = callTimes[index: 2] - callTimes[index: 1];
+        callTimes.Count.Should().BeGreaterThanOrEqualTo(3);
+        TimeSpan firstGap = callTimes[1] - callTimes[0];
+        TimeSpan secondGap = callTimes[2] - callTimes[1];
 
         // The second gap should be at least as large as the first, because
         // the backoff delay doubles from 1s → 2s.
         secondGap
             .Should()
             .BeGreaterThanOrEqualTo(
-                expected: firstGap,
-                because: "backoff must not decrease between consecutive 401 failures"
+                firstGap,
+                "backoff must not decrease between consecutive 401 failures"
             );
     }
 
@@ -199,26 +199,26 @@ public class WorkerSelfRegistrationServiceLicenseTests
     )
     {
         EncoderOptions opts = new();
-        configure(obj: opts);
+        configure(opts);
 
         ServiceCollection services = new();
-        services.AddSingleton(implementationInstance: opts);
-        services.AddSingleton<IHardwareCapabilities>(implementationInstance: new HardwareCapabilities(Gpus: [], CpuCores: 4));
+        services.AddSingleton(opts);
+        services.AddSingleton<IHardwareCapabilities>(new HardwareCapabilities([], 4));
         services
             .AddHttpClient()
-            .ConfigureHttpClientDefaults(configure: b =>
-                b.ConfigurePrimaryHttpMessageHandler(configureHandler: () => httpHandler)
+            .ConfigureHttpClientDefaults(b =>
+                b.ConfigurePrimaryHttpMessageHandler(() => httpHandler)
             );
 
         ServiceProvider provider = services.BuildServiceProvider();
 
         return new(
-            capabilities: provider.GetRequiredService<IHardwareCapabilities>(),
-            options: opts,
-            httpClientFactory: provider.GetRequiredService<IHttpClientFactory>(),
-            logger: NullLogger<WorkerSelfRegistrationService>.Instance,
-            tokenHolder: holder,
-            licenseTokenClient: licenseClient
+            provider.GetRequiredService<IHardwareCapabilities>(),
+            opts,
+            provider.GetRequiredService<IHttpClientFactory>(),
+            NullLogger<WorkerSelfRegistrationService>.Instance,
+            holder,
+            licenseClient
         );
     }
 
@@ -228,10 +228,10 @@ public class WorkerSelfRegistrationServiceLicenseTests
         : ILicenseTokenClient
     {
         public Task<ClusterTokenResult> RequestAsync(CancellationToken ct) =>
-            Task.FromResult(result: onRequest());
+            Task.FromResult(onRequest());
 
         public Task<IntrospectResult> IntrospectAsync(string token, CancellationToken ct) =>
-            Task.FromResult(result: new IntrospectResult(Active: true, Scopes: [], Message: null));
+            Task.FromResult(new IntrospectResult(true, [], null));
     }
 
     private sealed class RecordingHandler : HttpMessageHandler
@@ -240,7 +240,7 @@ public class WorkerSelfRegistrationServiceLicenseTests
 
         public RecordingHandler(Func<HttpRequestMessage, HttpResponseMessage>? respond = null)
         {
-            _respond = respond ?? (_ => new(statusCode: HttpStatusCode.OK));
+            _respond = respond ?? (_ => new(HttpStatusCode.OK));
         }
 
         protected override Task<HttpResponseMessage> SendAsync(
@@ -249,7 +249,7 @@ public class WorkerSelfRegistrationServiceLicenseTests
         )
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(result: _respond(arg: request));
+            return Task.FromResult(_respond(request));
         }
     }
 }

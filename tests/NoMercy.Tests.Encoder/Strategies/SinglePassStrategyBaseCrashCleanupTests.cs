@@ -39,8 +39,8 @@ public class SinglePassStrategyBaseCrashCleanupTests : IDisposable
 
     public SinglePassStrategyBaseCrashCleanupTests()
     {
-        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-strategy-crash-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempDir);
+        _tempDir = Path.Combine(Path.GetTempPath(), $"nm-strategy-crash-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
         _storage = TestStorageFactory.CreateLocal();
     }
 
@@ -48,7 +48,7 @@ public class SinglePassStrategyBaseCrashCleanupTests : IDisposable
     {
         try
         {
-            Directory.Delete(path: _tempDir, recursive: true);
+            Directory.Delete(_tempDir, recursive: true);
         }
         catch
         {
@@ -85,32 +85,32 @@ public class SinglePassStrategyBaseCrashCleanupTests : IDisposable
     {
         Mock<IEncoder> encoder = new();
         encoder
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: result);
+            .ReturnsAsync(result);
 
-        return new(encoder: encoder.Object, logger: NullLogger<HlsSinglePassStrategy>.Instance, storage: _storage);
+        return new(encoder.Object, NullLogger<HlsSinglePassStrategy>.Instance, _storage);
     }
 
     private HlsSinglePassStrategy MakeStrategyThatThrows(Exception exception)
     {
         Mock<IEncoder> encoder = new();
         encoder
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(exception: exception);
+            .ThrowsAsync(exception);
 
-        return new(encoder: encoder.Object, logger: NullLogger<HlsSinglePassStrategy>.Instance, storage: _storage);
+        return new(encoder.Object, NullLogger<HlsSinglePassStrategy>.Instance, _storage);
     }
 
     private static readonly EncodingResult FailedResult = new(
@@ -124,31 +124,31 @@ public class SinglePassStrategyBaseCrashCleanupTests : IDisposable
     [Fact]
     public async Task EncodeAsync_FailureOnPerTaskRun_LeavesSiblingOutputFileIntact()
     {
-        string siblingFile = Path.Combine(path1: _tempDir, path2: "sibling_video.m3u8");
-        File.WriteAllText(path: siblingFile, contents: "sibling data");
+        string siblingFile = Path.Combine(_tempDir, "sibling_video.m3u8");
+        File.WriteAllText(siblingFile, "sibling data");
 
-        HlsSinglePassStrategy strategy = MakeStrategy(result: FailedResult);
-        EncodingRequest request = BuildRequest(outputDir: _tempDir, taskFilter: PerTaskFilter(kind: EncodeTaskKind.Audio));
+        HlsSinglePassStrategy strategy = MakeStrategy(FailedResult);
+        EncodingRequest request = BuildRequest(_tempDir, PerTaskFilter(EncodeTaskKind.Audio));
 
-        await strategy.EncodeAsync(request: request, progress: null, ct: CancellationToken.None);
+        await strategy.EncodeAsync(request, progress: null, ct: CancellationToken.None);
 
-        File.Exists(path: siblingFile).Should().BeTrue();
+        File.Exists(siblingFile).Should().BeTrue();
     }
 
     [Fact]
     public async Task EncodeAsync_CancelledOnPerTaskRun_LeavesSiblingOutputFileIntact()
     {
-        string siblingFile = Path.Combine(path1: _tempDir, path2: "sibling_video.m3u8");
-        File.WriteAllText(path: siblingFile, contents: "sibling data");
+        string siblingFile = Path.Combine(_tempDir, "sibling_video.m3u8");
+        File.WriteAllText(siblingFile, "sibling data");
 
-        HlsSinglePassStrategy strategy = MakeStrategyThatThrows(exception: new OperationCanceledException());
-        EncodingRequest request = BuildRequest(outputDir: _tempDir, taskFilter: PerTaskFilter(kind: EncodeTaskKind.Video));
+        HlsSinglePassStrategy strategy = MakeStrategyThatThrows(new OperationCanceledException());
+        EncodingRequest request = BuildRequest(_tempDir, PerTaskFilter(EncodeTaskKind.Video));
 
         Func<Task> act = () =>
-            strategy.EncodeAsync(request: request, progress: null, ct: CancellationToken.None);
+            strategy.EncodeAsync(request, progress: null, ct: CancellationToken.None);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
-        File.Exists(path: siblingFile).Should().BeTrue();
+        File.Exists(siblingFile).Should().BeTrue();
     }
 
     [Fact]
@@ -156,15 +156,15 @@ public class SinglePassStrategyBaseCrashCleanupTests : IDisposable
     {
         // No TaskFilter at all — a plain (non-decomposed) strategy run must
         // keep the existing crash-cleanup behavior.
-        string partialFile = Path.Combine(path1: _tempDir, path2: "partial.ts");
-        File.WriteAllText(path: partialFile, contents: "partial data");
+        string partialFile = Path.Combine(_tempDir, "partial.ts");
+        File.WriteAllText(partialFile, "partial data");
 
-        HlsSinglePassStrategy strategy = MakeStrategy(result: FailedResult);
-        EncodingRequest request = BuildRequest(outputDir: _tempDir, taskFilter: null);
+        HlsSinglePassStrategy strategy = MakeStrategy(FailedResult);
+        EncodingRequest request = BuildRequest(_tempDir, taskFilter: null);
 
-        await strategy.EncodeAsync(request: request, progress: null, ct: CancellationToken.None);
+        await strategy.EncodeAsync(request, progress: null, ct: CancellationToken.None);
 
-        File.Exists(path: partialFile).Should().BeFalse();
+        File.Exists(partialFile).Should().BeFalse();
     }
 
     [Fact]
@@ -174,40 +174,40 @@ public class SinglePassStrategyBaseCrashCleanupTests : IDisposable
         // though TaskFilter is set — it IS the only execution for its group,
         // so it must clean up like a plain Whole run, not defer to a
         // coordinator sweep that will never happen for it.
-        string partialFile = Path.Combine(path1: _tempDir, path2: "partial.ts");
-        File.WriteAllText(path: partialFile, contents: "partial data");
+        string partialFile = Path.Combine(_tempDir, "partial.ts");
+        File.WriteAllText(partialFile, "partial data");
 
-        HlsSinglePassStrategy strategy = MakeStrategy(result: FailedResult);
-        EncodingRequest request = BuildRequest(outputDir: _tempDir, taskFilter: PerTaskFilter(kind: EncodeTaskKind.Whole));
+        HlsSinglePassStrategy strategy = MakeStrategy(FailedResult);
+        EncodingRequest request = BuildRequest(_tempDir, PerTaskFilter(EncodeTaskKind.Whole));
 
-        await strategy.EncodeAsync(request: request, progress: null, ct: CancellationToken.None);
+        await strategy.EncodeAsync(request, progress: null, ct: CancellationToken.None);
 
-        File.Exists(path: partialFile).Should().BeFalse();
+        File.Exists(partialFile).Should().BeFalse();
     }
 
     [Fact]
     public async Task EncodeAsync_SuccessOnPerTaskRun_DoesNotTouchOutputDirectory()
     {
-        string siblingFile = Path.Combine(path1: _tempDir, path2: "sibling_video.m3u8");
-        File.WriteAllText(path: siblingFile, contents: "sibling data");
+        string siblingFile = Path.Combine(_tempDir, "sibling_video.m3u8");
+        File.WriteAllText(siblingFile, "sibling data");
 
         EncodingResult successResult = new(
             Success: true,
             OutputPath: _tempDir,
-            Duration: TimeSpan.FromSeconds(seconds: 1),
+            Duration: TimeSpan.FromSeconds(1),
             Error: null,
-            Metrics: new(OutputSizeBytes: 1024, AverageSpeed: 2.0, AverageFps: 24.0, EncoderUsed: "aac", GpuUsed: null)
+            Metrics: new(1024, 2.0, 24.0, "aac", null)
         );
-        HlsSinglePassStrategy strategy = MakeStrategy(result: successResult);
-        EncodingRequest request = BuildRequest(outputDir: _tempDir, taskFilter: PerTaskFilter(kind: EncodeTaskKind.Audio));
+        HlsSinglePassStrategy strategy = MakeStrategy(successResult);
+        EncodingRequest request = BuildRequest(_tempDir, PerTaskFilter(EncodeTaskKind.Audio));
 
         EncodingResult result = await strategy.EncodeAsync(
-            request: request,
+            request,
             progress: null,
             ct: CancellationToken.None
         );
 
         result.Success.Should().BeTrue();
-        File.Exists(path: siblingFile).Should().BeTrue();
+        File.Exists(siblingFile).Should().BeTrue();
     }
 }

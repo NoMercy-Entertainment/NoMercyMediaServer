@@ -61,32 +61,32 @@ public class BundleSlugRenamer(
         // meaningless value. Slugs come from BuiltinPresets which never
         // emits empty strings, but a faulty override map must NOT corrupt
         // a library's blueprints.
-        Dictionary<string, string> validPairs = new(comparer: StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> validPairs = new(StringComparer.OrdinalIgnoreCase);
         foreach (KeyValuePair<string, string> pair in slugMap)
         {
-            if (string.IsNullOrWhiteSpace(value: pair.Key) || string.IsNullOrWhiteSpace(value: pair.Value))
+            if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(pair.Value))
             {
                 logger.LogWarning(
-                    message: "BundleSlugRenamer: skipping empty slug pair '{Key}' → '{Value}'", args: [pair.Key, pair.Value]
+                    "BundleSlugRenamer: skipping empty slug pair '{Key}' → '{Value}'", [pair.Key, pair.Value]
                 );
                 continue;
             }
 
-            validPairs[key: pair.Key] = pair.Value;
+            validPairs[pair.Key] = pair.Value;
         }
 
         if (validPairs.Count == 0)
             return;
 
         List<Folder> folders = await context
-            .Folders.Include(navigationPropertyPath: f => f.Driver)
+            .Folders.Include(f => f.Driver)
             .AsNoTracking()
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         foreach (Folder folder in folders)
         {
-            IStorage storage = storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: folder.Path);
-            await RewriteFolderAsync(storage: storage, folderPath: folder.Path, validPairs: validPairs, ct: ct);
+            IStorage storage = storageFactory.For(folder.Id, folder.DriverId, folder.Path);
+            await RewriteFolderAsync(storage, folder.Path, validPairs, ct);
         }
     }
 
@@ -100,12 +100,12 @@ public class BundleSlugRenamer(
         IReadOnlyList<StorageEntry> allFiles;
         try
         {
-            allFiles = storage.List(path: string.Empty, pattern: null, recursive: true);
+            allFiles = storage.List(string.Empty, null, true);
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                message: "BundleSlugRenamer: failed to list '{FolderPath}': {Message}", args: [folderPath, ex.Message]
+                "BundleSlugRenamer: failed to list '{FolderPath}': {Message}", [folderPath, ex.Message]
             );
             return;
         }
@@ -116,14 +116,14 @@ public class BundleSlugRenamer(
                 continue;
             if (
                 !string.Equals(
-                    a: storage.GetName(path: entry.Path),
-                    b: MediaBlueprintWriter.FileName,
-                    comparisonType: StringComparison.OrdinalIgnoreCase
+                    storage.GetName(entry.Path),
+                    MediaBlueprintWriter.FileName,
+                    StringComparison.OrdinalIgnoreCase
                 )
             )
                 continue;
 
-            await RewriteBlueprintAsync(storage: storage, blueprintPath: entry.Path, folderPath: folderPath, validPairs: validPairs, ct: ct);
+            await RewriteBlueprintAsync(storage, entry.Path, folderPath, validPairs, ct);
         }
     }
 
@@ -137,39 +137,39 @@ public class BundleSlugRenamer(
     {
         try
         {
-            string json = await storage.ReadAllTextAsync(path: blueprintPath, ct: ct);
-            JObject? blueprint = JsonConvert.DeserializeObject<JObject>(value: json);
-            if (blueprint?[propertyName: "encodes"] is not JArray encodes)
+            string json = await storage.ReadAllTextAsync(blueprintPath, ct);
+            JObject? blueprint = JsonConvert.DeserializeObject<JObject>(json);
+            if (blueprint?["encodes"] is not JArray encodes)
                 return;
 
             bool changed = false;
             foreach (JToken encode in encodes)
             {
-                string? currentSlug = encode[key: "preset_slug"]?.Value<string>();
+                string? currentSlug = encode["preset_slug"]?.Value<string>();
                 if (
-                    string.IsNullOrWhiteSpace(value: currentSlug)
-                    || !validPairs.TryGetValue(key: currentSlug, value: out string? newSlug)
+                    string.IsNullOrWhiteSpace(currentSlug)
+                    || !validPairs.TryGetValue(currentSlug, out string? newSlug)
                 )
                     continue;
 
-                encode[key: "preset_slug"] = newSlug;
+                encode["preset_slug"] = newSlug;
                 changed = true;
             }
 
             if (!changed)
                 return;
 
-            string updated = JsonConvert.SerializeObject(value: blueprint, formatting: Formatting.Indented);
-            await storage.WriteAsync(path: blueprintPath, bytes: Encoding.UTF8.GetBytes(s: updated), ct: ct);
+            string updated = JsonConvert.SerializeObject(blueprint, Formatting.Indented);
+            await storage.WriteAsync(blueprintPath, Encoding.UTF8.GetBytes(updated), ct);
 
             logger.LogInformation(
-                message: "BundleSlugRenamer: rewrote preset_slug in '{Path}' ('{FolderPath}')", args: [blueprintPath, folderPath]
+                "BundleSlugRenamer: rewrote preset_slug in '{Path}' ('{FolderPath}')", [blueprintPath, folderPath]
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                message: "BundleSlugRenamer: failed to rewrite blueprint '{Path}' in '{FolderPath}': {Message}", args: [blueprintPath, folderPath, ex.Message]
+                "BundleSlugRenamer: failed to rewrite blueprint '{Path}' in '{FolderPath}': {Message}", [blueprintPath, folderPath, ex.Message]
             );
         }
     }

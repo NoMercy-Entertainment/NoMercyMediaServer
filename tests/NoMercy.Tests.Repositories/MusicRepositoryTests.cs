@@ -21,7 +21,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MusicRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -29,20 +29,20 @@ public class MusicRepositoryTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly MusicRepository _repository;
 
-    private static readonly Guid ArtistId1 = Guid.Parse(input: "a0000001-0000-0000-0000-000000000001");
-    private static readonly Guid ArtistId2 = Guid.Parse(input: "a0000002-0000-0000-0000-000000000002");
-    private static readonly Guid AlbumId1 = Guid.Parse(input: "b0000001-0000-0000-0000-000000000001");
-    private static readonly Guid AlbumId2 = Guid.Parse(input: "b0000002-0000-0000-0000-000000000002");
-    private static readonly Guid TrackId1 = Guid.Parse(input: "c0000001-0000-0000-0000-000000000001");
-    private static readonly Guid TrackId2 = Guid.Parse(input: "c0000002-0000-0000-0000-000000000002");
-    private static readonly Guid TrackId3 = Guid.Parse(input: "c0000003-0000-0000-0000-000000000003");
+    private static readonly Guid ArtistId1 = Guid.Parse("a0000001-0000-0000-0000-000000000001");
+    private static readonly Guid ArtistId2 = Guid.Parse("a0000002-0000-0000-0000-000000000002");
+    private static readonly Guid AlbumId1 = Guid.Parse("b0000001-0000-0000-0000-000000000001");
+    private static readonly Guid AlbumId2 = Guid.Parse("b0000002-0000-0000-0000-000000000002");
+    private static readonly Guid TrackId1 = Guid.Parse("c0000001-0000-0000-0000-000000000001");
+    private static readonly Guid TrackId2 = Guid.Parse("c0000002-0000-0000-0000-000000000002");
+    private static readonly Guid TrackId3 = Guid.Parse("c0000003-0000-0000-0000-000000000003");
 
     public MusicRepositoryTests()
     {
         (_factory, _connection) = TestMediaContextFactory.CreateFactory();
         _context = _factory.CreateDbContext();
-        SeedMusicData(context: _context);
-        _repository = new(contextFactory: _factory);
+        SeedMusicData(_context);
+        _repository = new(_factory);
     }
 
     private static void SeedMusicData(MediaContext context)
@@ -57,7 +57,7 @@ public class MusicRepositoryTests : IDisposable
             Allowed = true,
             Manage = true,
         };
-        context.Users.Add(entity: testUser);
+        context.Users.Add(testUser);
 
         Library musicLibrary = new()
         {
@@ -66,7 +66,7 @@ public class MusicRepositoryTests : IDisposable
             Type = "music",
             Order = 3,
         };
-        context.Libraries.Add(entity: musicLibrary);
+        context.Libraries.Add(musicLibrary);
 
         Driver systemLocalDriver = new()
         {
@@ -77,7 +77,7 @@ public class MusicRepositoryTests : IDisposable
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
-        context.Drivers.Add(entity: systemLocalDriver);
+        context.Drivers.Add(systemLocalDriver);
 
         Folder musicFolder = new()
         {
@@ -85,16 +85,16 @@ public class MusicRepositoryTests : IDisposable
             Path = "/media/music",
             DriverId = Driver.SystemLocalDriverId,
         };
-        context.Folders.Add(entity: musicFolder);
+        context.Folders.Add(musicFolder);
 
         MusicGenre genre = new() { Id = Guid.NewGuid(), Name = "Rock" };
-        context.MusicGenres.Add(entity: genre);
+        context.MusicGenres.Add(genre);
 
         context.SaveChanges();
 
         // Phase 2: Entities with FKs to phase 1
-        context.LibraryUser.Add(entity: new(libraryId: SeedConstants.MusicLibraryId, userId: SeedConstants.UserId));
-        context.FolderLibrary.Add(entity: new(folderId: SeedConstants.MusicFolderId, libraryId: SeedConstants.MusicLibraryId));
+        context.LibraryUser.Add(new(SeedConstants.MusicLibraryId, SeedConstants.UserId));
+        context.FolderLibrary.Add(new(SeedConstants.MusicFolderId, SeedConstants.MusicLibraryId));
 
         Track track1 = new()
         {
@@ -123,7 +123,7 @@ public class MusicRepositoryTests : IDisposable
             FolderId = SeedConstants.MusicFolderId,
             LibraryFolder = musicFolder,
         };
-        context.Tracks.AddRange(entities: [track1, track2, track3]);
+        context.Tracks.AddRange([track1, track2, track3]);
 
         Artist artist1 = new()
         {
@@ -147,7 +147,7 @@ public class MusicRepositoryTests : IDisposable
             Library = musicLibrary,
             LibraryFolder = musicFolder,
         };
-        context.Artists.AddRange(entities: [artist1, artist2]);
+        context.Artists.AddRange([artist1, artist2]);
 
         Album album1 = new()
         {
@@ -173,28 +173,28 @@ public class MusicRepositoryTests : IDisposable
             Library = musicLibrary,
             LibraryFolder = musicFolder,
         };
-        context.Albums.AddRange(entities: [album1, album2]);
+        context.Albums.AddRange([album1, album2]);
 
         context.SaveChanges();
 
         // Phase 3: Join tables and play history
-        context.AlbumTrack.AddRange(entities: [new AlbumTrack(albumId: AlbumId1, trackId: TrackId1), new AlbumTrack(albumId: AlbumId1, trackId: TrackId2), new AlbumTrack(albumId: AlbumId2, trackId: TrackId3)]
+        context.AlbumTrack.AddRange([new AlbumTrack(AlbumId1, TrackId1), new AlbumTrack(AlbumId1, TrackId2), new AlbumTrack(AlbumId2, TrackId3)]
         );
 
-        context.ArtistTrack.AddRange(entities: [new ArtistTrack(artistId: ArtistId1, trackId: TrackId1), new ArtistTrack(artistId: ArtistId1, trackId: TrackId2), new ArtistTrack(artistId: ArtistId2, trackId: TrackId3)]
+        context.ArtistTrack.AddRange([new ArtistTrack(ArtistId1, TrackId1), new ArtistTrack(ArtistId1, TrackId2), new ArtistTrack(ArtistId2, TrackId3)]
         );
 
-        context.AlbumArtist.AddRange(entities: [new AlbumArtist(albumId: AlbumId1, artistId: ArtistId1), new AlbumArtist(albumId: AlbumId2, artistId: ArtistId2)]
+        context.AlbumArtist.AddRange([new AlbumArtist(AlbumId1, ArtistId1), new AlbumArtist(AlbumId2, ArtistId2)]
         );
 
-        context.ArtistUser.Add(entity: new(artistId: ArtistId1, userId: SeedConstants.UserId));
-        context.AlbumUser.Add(entity: new(albumId: AlbumId1, userId: SeedConstants.UserId));
-        context.TrackUser.Add(entity: new(trackId: TrackId1, userId: SeedConstants.UserId));
+        context.ArtistUser.Add(new(ArtistId1, SeedConstants.UserId));
+        context.AlbumUser.Add(new(AlbumId1, SeedConstants.UserId));
+        context.TrackUser.Add(new(TrackId1, SeedConstants.UserId));
 
-        context.MusicPlays.AddRange(entities: [new MusicPlay(userId: SeedConstants.UserId, trackId: TrackId1), new MusicPlay(userId: SeedConstants.UserId, trackId: TrackId1), new MusicPlay(userId: SeedConstants.UserId, trackId: TrackId1), new MusicPlay(userId: SeedConstants.UserId, trackId: TrackId3)]
+        context.MusicPlays.AddRange([new MusicPlay(SeedConstants.UserId, TrackId1), new MusicPlay(SeedConstants.UserId, TrackId1), new MusicPlay(SeedConstants.UserId, TrackId1), new MusicPlay(SeedConstants.UserId, TrackId3)]
         );
 
-        context.MusicGenreTrack.AddRange(entities: [new MusicGenreTrack(genreId: genre.Id, trackId: TrackId1), new MusicGenreTrack(genreId: genre.Id, trackId: TrackId2), new MusicGenreTrack(genreId: genre.Id, trackId: TrackId3)]
+        context.MusicGenreTrack.AddRange([new MusicGenreTrack(genre.Id, TrackId1), new MusicGenreTrack(genre.Id, TrackId2), new MusicGenreTrack(genre.Id, TrackId3)]
         );
 
         context.SaveChanges();
@@ -205,97 +205,97 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetArtists_ReturnsList_ThatCanBePaginated()
     {
-        List<Artist> result = (await _repository.GetArtists(userId: SeedConstants.UserId, letter: "A"))
-            .Take(count: 1)
+        List<Artist> result = (await _repository.GetArtists(SeedConstants.UserId, "A"))
+            .Take(1)
             .ToList();
 
-        Assert.Single(collection: result);
-        Assert.Equal(expected: "Arctic Monkeys", actual: result[index: 0].Name);
+        Assert.Single(result);
+        Assert.Equal("Arctic Monkeys", result[0].Name);
     }
 
     [Fact]
     public async Task GetArtists_ReturnsList_ThatCanBeFullyEnumerated()
     {
-        List<Artist> result = await _repository.GetArtists(userId: SeedConstants.UserId, letter: "R");
+        List<Artist> result = await _repository.GetArtists(SeedConstants.UserId, "R");
 
-        Assert.Single(collection: result);
-        Assert.Equal(expected: "Radiohead", actual: result[index: 0].Name);
+        Assert.Single(result);
+        Assert.Equal("Radiohead", result[0].Name);
     }
 
     [Fact]
     public async Task GetAlbums_ReturnsList_ThatCanBePaginated()
     {
-        List<Album> result = (await _repository.GetAlbums(userId: SeedConstants.UserId, letter: "A"))
-            .Take(count: 1)
+        List<Album> result = (await _repository.GetAlbums(SeedConstants.UserId, "A"))
+            .Take(1)
             .ToList();
 
-        Assert.Single(collection: result);
-        Assert.Equal(expected: "AM", actual: result[index: 0].Name);
+        Assert.Single(result);
+        Assert.Equal("AM", result[0].Name);
     }
 
     [Fact]
     public async Task GetTracks_ReturnsList_ForUserFavorites()
     {
-        List<TrackUser> result = await _repository.GetTracks(userId: SeedConstants.UserId);
+        List<TrackUser> result = await _repository.GetTracks(SeedConstants.UserId);
 
-        Assert.Single(collection: result);
-        Assert.Equal(expected: TrackId1, actual: result[index: 0].TrackId);
+        Assert.Single(result);
+        Assert.Equal(TrackId1, result[0].TrackId);
     }
 
     [Fact]
     public async Task GetLatestAlbums_ReturnsList_ThatCanBePaginated()
     {
-        List<Album> result = (await _repository.GetLatestAlbums()).Take(count: 1).ToList();
+        List<Album> result = (await _repository.GetLatestAlbums()).Take(1).ToList();
 
-        Assert.Single(collection: result);
+        Assert.Single(result);
     }
 
     [Fact]
     public async Task GetLatestArtists_ReturnsList_ThatCanBePaginated()
     {
-        List<Artist> result = (await _repository.GetLatestArtists()).Take(count: 1).ToList();
+        List<Artist> result = (await _repository.GetLatestArtists()).Take(1).ToList();
 
-        Assert.Single(collection: result);
+        Assert.Single(result);
     }
 
     [Fact]
     public async Task GetLatestGenres_ReturnsList_OrderedByTrackCount()
     {
-        List<MusicGenre> result = (await _repository.GetLatestGenres()).Take(count: 10).ToList();
+        List<MusicGenre> result = (await _repository.GetLatestGenres()).Take(10).ToList();
 
-        Assert.Single(collection: result);
-        Assert.Equal(expected: "Rock", actual: result[index: 0].Name);
+        Assert.Single(result);
+        Assert.Equal("Rock", result[0].Name);
     }
 
     [Fact]
     public async Task GetFavoriteArtists_ReturnsList_ThatCanBePaginated()
     {
-        List<ArtistUser> result = (await _repository.GetFavoriteArtists(userId: SeedConstants.UserId))
-            .Take(count: 36)
+        List<ArtistUser> result = (await _repository.GetFavoriteArtists(SeedConstants.UserId))
+            .Take(36)
             .ToList();
 
-        Assert.Single(collection: result);
-        Assert.Equal(expected: ArtistId1, actual: result[index: 0].ArtistId);
+        Assert.Single(result);
+        Assert.Equal(ArtistId1, result[0].ArtistId);
     }
 
     [Fact]
     public async Task GetFavoriteAlbums_ReturnsList_ThatCanBePaginated()
     {
-        List<AlbumUser> result = (await _repository.GetFavoriteAlbums(userId: SeedConstants.UserId))
-            .Take(count: 36)
+        List<AlbumUser> result = (await _repository.GetFavoriteAlbums(SeedConstants.UserId))
+            .Take(36)
             .ToList();
 
-        Assert.Single(collection: result);
-        Assert.Equal(expected: AlbumId1, actual: result[index: 0].AlbumId);
+        Assert.Single(result);
+        Assert.Equal(AlbumId1, result[0].AlbumId);
     }
 
     [Fact]
     public async Task GetFavoriteTracks_ReturnsList_ForUserFavorites()
     {
-        List<TrackUser> result = await _repository.GetFavoriteTracks(userId: SeedConstants.UserId);
+        List<TrackUser> result = await _repository.GetFavoriteTracks(SeedConstants.UserId);
 
-        Assert.Single(collection: result);
-        Assert.Equal(expected: TrackId1, actual: result[index: 0].TrackId);
+        Assert.Single(result);
+        Assert.Equal(TrackId1, result[0].TrackId);
     }
 
     #endregion
@@ -305,62 +305,62 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetFavoriteArtistAsync_ReturnsMaterializedList()
     {
-        List<ArtistTrack> result = await _repository.GetFavoriteArtistAsync(userId: SeedConstants.UserId);
+        List<ArtistTrack> result = await _repository.GetFavoriteArtistAsync(SeedConstants.UserId);
 
-        Assert.NotEmpty(collection: result);
-        Assert.Contains(collection: result, filter: at => at.ArtistId == ArtistId1);
+        Assert.NotEmpty(result);
+        Assert.Contains(result, at => at.ArtistId == ArtistId1);
     }
 
     [Fact]
     public async Task GetFavoriteArtistAsync_CanBeGroupedClientSide()
     {
-        List<ArtistTrack> result = await _repository.GetFavoriteArtistAsync(userId: SeedConstants.UserId);
+        List<ArtistTrack> result = await _repository.GetFavoriteArtistAsync(SeedConstants.UserId);
 
         IGrouping<Guid, ArtistTrack>? topArtist = result
-            .GroupBy(keySelector: at => at.ArtistId)
-            .MaxBy(keySelector: g => g.Count());
+            .GroupBy(at => at.ArtistId)
+            .MaxBy(g => g.Count());
 
-        Assert.NotNull(@object: topArtist);
-        Assert.Equal(expected: ArtistId1, actual: topArtist.Key);
+        Assert.NotNull(topArtist);
+        Assert.Equal(ArtistId1, topArtist.Key);
     }
 
     [Fact]
     public async Task GetFavoriteAlbumAsync_ReturnsMaterializedList()
     {
-        List<AlbumTrack> result = await _repository.GetFavoriteAlbumAsync(userId: SeedConstants.UserId);
+        List<AlbumTrack> result = await _repository.GetFavoriteAlbumAsync(SeedConstants.UserId);
 
-        Assert.NotEmpty(collection: result);
-        Assert.Contains(collection: result, filter: at => at.AlbumId == AlbumId1);
+        Assert.NotEmpty(result);
+        Assert.Contains(result, at => at.AlbumId == AlbumId1);
     }
 
     [Fact]
     public async Task GetFavoritePlaylistAsync_ReturnsMaterializedList()
     {
         List<PlaylistTrack> result = await _repository.GetFavoritePlaylistAsync(
-            userId: SeedConstants.UserId
+            SeedConstants.UserId
         );
 
-        Assert.NotNull(@object: result);
+        Assert.NotNull(result);
     }
 
     [Fact]
     public async Task GetFavoriteArtistAsync_ReturnsEmptyForUnknownUser()
     {
         List<ArtistTrack> result = await _repository.GetFavoriteArtistAsync(
-            userId: SeedConstants.OtherUserId
+            SeedConstants.OtherUserId
         );
 
-        Assert.Empty(collection: result);
+        Assert.Empty(result);
     }
 
     [Fact]
     public async Task GetFavoriteAlbumAsync_ReturnsEmptyForUnknownUser()
     {
         List<AlbumTrack> result = await _repository.GetFavoriteAlbumAsync(
-            userId: SeedConstants.OtherUserId
+            SeedConstants.OtherUserId
         );
 
-        Assert.Empty(collection: result);
+        Assert.Empty(result);
     }
 
     #endregion
@@ -370,13 +370,13 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task BrowsableQueries_DoNotThrowDisposedContextException()
     {
-        List<Artist> artists = await _repository.GetArtists(userId: SeedConstants.UserId, letter: "_");
-        List<Album> albums = await _repository.GetAlbums(userId: SeedConstants.UserId, letter: "_");
-        List<TrackUser> tracks = await _repository.GetTracks(userId: SeedConstants.UserId);
+        List<Artist> artists = await _repository.GetArtists(SeedConstants.UserId, "_");
+        List<Album> albums = await _repository.GetAlbums(SeedConstants.UserId, "_");
+        List<TrackUser> tracks = await _repository.GetTracks(SeedConstants.UserId);
 
-        Assert.NotNull(@object: artists);
-        Assert.NotNull(@object: albums);
-        Assert.NotNull(@object: tracks);
+        Assert.NotNull(artists);
+        Assert.NotNull(albums);
+        Assert.NotNull(tracks);
     }
 
     #endregion

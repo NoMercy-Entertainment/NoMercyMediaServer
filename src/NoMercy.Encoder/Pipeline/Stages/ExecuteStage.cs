@@ -40,7 +40,7 @@ public class ExecuteStage(
     )
     {
         logger.LogInformation(
-            message: "[{CorrelationId}] Executing {Count} command(s)", args: [context.CorrelationId, input.Commands.Length]
+            "[{CorrelationId}] Executing {Count} command(s)", [context.CorrelationId, input.Commands.Length]
         );
 
         List<ExecutionResult> results = [];
@@ -60,7 +60,7 @@ public class ExecuteStage(
                     onProgress = progress =>
                     {
                         lastProgressMs = (long)(progress.CurrentTimeSeconds * 1000);
-                        input.Progress.OnProgress(progress: progress);
+                        input.Progress.OnProgress(progress);
                     };
                 }
                 else if (i == 0)
@@ -72,14 +72,14 @@ public class ExecuteStage(
                 }
 
                 ExecutionResult result = await executor.ExecuteAsync(
-                    command: cmd,
-                    inputDuration: input.InputDuration,
-                    onProgress: onProgress,
-                    correlationId: context.CorrelationId,
-                    ct: ct
+                    cmd,
+                    input.InputDuration,
+                    onProgress,
+                    context.CorrelationId,
+                    ct
                 );
 
-                results.Add(item: result);
+                results.Add(result);
 
                 if (!result.Success)
                 {
@@ -91,29 +91,29 @@ public class ExecuteStage(
                         EncodingError error =
                             result.Error
                             ?? new EncodingError(
-                                Kind: EncodingErrorKind.ProcessCrashed,
-                                Message: "FFmpeg exited with non-zero code",
-                                FfmpegStderr: result.StdErr,
-                                StageName: Name,
-                                Recoverable: true
+                                EncodingErrorKind.ProcessCrashed,
+                                "FFmpeg exited with non-zero code",
+                                result.StdErr,
+                                Name,
+                                true
                             );
 
-                        await WriteCrashCheckpointAsync(context: context, lastProgressMs: lastProgressMs, stderrTail: result.StdErr, ct: ct);
+                        await WriteCrashCheckpointAsync(context, lastProgressMs, result.StdErr, ct);
 
-                        return new StageFailure(Error: error);
+                        return new StageFailure(error);
                     }
 
                     logger.LogWarning(
-                        message: "[{CorrelationId}] Post-process command {Index} failed (non-fatal): exit={ExitCode}", args: [context.CorrelationId, i, result.ExitCode]
+                        "[{CorrelationId}] Post-process command {Index} failed (non-fatal): exit={ExitCode}", [context.CorrelationId, i, result.ExitCode]
                     );
                 }
             }
 
-            return new StageSuccess<ExecutionResult[]>(Value: results.ToArray());
+            return new StageSuccess<ExecutionResult[]>(results.ToArray());
         }
         finally
         {
-            CleanupDrmKeyArtifacts(commands: input.Commands, correlationId: context.CorrelationId);
+            CleanupDrmKeyArtifacts(input.Commands, context.CorrelationId);
         }
     }
 
@@ -129,30 +129,30 @@ public class ExecuteStage(
     {
         foreach (FfmpegCommand cmd in commands)
         {
-            int idx = Array.IndexOf(array: cmd.Arguments, value: "-hls_key_info_file");
+            int idx = Array.IndexOf(cmd.Arguments, "-hls_key_info_file");
             if (idx < 0 || idx + 1 >= cmd.Arguments.Length)
                 continue;
 
             string keyInfoPath = cmd.Arguments[idx + 1];
-            string? tempDir = Path.GetDirectoryName(path: keyInfoPath);
-            if (string.IsNullOrEmpty(value: tempDir))
+            string? tempDir = Path.GetDirectoryName(keyInfoPath);
+            if (string.IsNullOrEmpty(tempDir))
                 continue;
 
-            string fullTempDir = Path.GetFullPath(path: tempDir);
-            string fullTempRoot = Path.GetFullPath(path: StoragePaths.TempRoot);
-            if (!fullTempDir.StartsWith(value: fullTempRoot, comparisonType: StringComparison.OrdinalIgnoreCase))
+            string fullTempDir = Path.GetFullPath(tempDir);
+            string fullTempRoot = Path.GetFullPath(StoragePaths.TempRoot);
+            if (!fullTempDir.StartsWith(fullTempRoot, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             try
             {
-                if (Directory.Exists(path: fullTempDir))
-                    Directory.Delete(path: fullTempDir, recursive: true);
+                if (Directory.Exists(fullTempDir))
+                    Directory.Delete(fullTempDir, true);
             }
             catch (Exception ex)
             {
                 logger.LogWarning(
-                    exception: ex,
-                    message: "[{CorrelationId}] Failed to delete DRM key temp directory {Directory}", args: [correlationId, fullTempDir]
+                    ex,
+                    "[{CorrelationId}] Failed to delete DRM key temp directory {Directory}", [correlationId, fullTempDir]
                 );
             }
         }
@@ -165,34 +165,34 @@ public class ExecuteStage(
         CancellationToken ct
     )
     {
-        if (string.IsNullOrEmpty(value: context.OutputDirectory))
+        if (string.IsNullOrEmpty(context.OutputDirectory))
             return;
 
         try
         {
             JobCheckpoint checkpoint = new(
-                JobId: context.CorrelationId,
+                context.CorrelationId,
                 InputPath: context.InputPath ?? string.Empty,
                 OutputDirectory: context.OutputDirectory,
                 CompletedGroupIndices: [],
                 LastUpdated: DateTime.UtcNow,
                 LastProgressMs: lastProgressMs,
-                LastFfmpegStderrTail: TailStderr(stderr: stderrTail),
+                LastFfmpegStderrTail: TailStderr(stderrTail),
                 FailedAt: DateTime.UtcNow
             );
 
-            await checkpointStore.SaveAsync(checkpoint: checkpoint, ct: ct);
+            await checkpointStore.SaveAsync(checkpoint, ct);
 
             logger.LogWarning(
-                message: "[{CorrelationId}] Crash checkpoint saved at {OutputDirectory} — LastProgressMs={Ms}", args: [context.CorrelationId, context.OutputDirectory, lastProgressMs]
+                "[{CorrelationId}] Crash checkpoint saved at {OutputDirectory} — LastProgressMs={Ms}", [context.CorrelationId, context.OutputDirectory, lastProgressMs]
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "[{CorrelationId}] Failed to save crash checkpoint",
-                args: context.CorrelationId
+                ex,
+                "[{CorrelationId}] Failed to save crash checkpoint",
+                context.CorrelationId
             );
         }
     }
@@ -200,7 +200,7 @@ public class ExecuteStage(
     private static string TailStderr(string stderr)
     {
         const int maxBytes = 16 * 1024;
-        if (string.IsNullOrEmpty(value: stderr) || stderr.Length <= maxBytes)
+        if (string.IsNullOrEmpty(stderr) || stderr.Length <= maxBytes)
             return stderr;
 
         return stderr[^maxBytes..];

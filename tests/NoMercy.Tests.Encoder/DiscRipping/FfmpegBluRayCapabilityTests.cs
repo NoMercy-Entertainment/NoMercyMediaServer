@@ -20,7 +20,6 @@ using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.OpticalMedia.Sources.Bluray;
 using NoMercy.Storage.Drivers.Local;
-using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.DiscRipping;
 
@@ -43,7 +42,7 @@ public class FfmpegBluRayCapabilityTests
 
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -52,13 +51,13 @@ public class FfmpegBluRayCapabilityTests
                 )
             )
             .ReturnsAsync(
-                value: new ProcessResult(ExitCode: 0, StdOut: "bluray\nhls\nrtmp", StdErr: "", Duration: TimeSpan.FromMilliseconds(milliseconds: 10))
+                new ProcessResult(0, "bluray\nhls\nrtmp", "", TimeSpan.FromMilliseconds(10))
             );
 
         FfmpegBluRayCapability cap = new(
-            options: options,
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            options,
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await cap.ProbeAsync();
@@ -77,7 +76,7 @@ public class FfmpegBluRayCapabilityTests
 
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -86,13 +85,13 @@ public class FfmpegBluRayCapabilityTests
                 )
             )
             .ReturnsAsync(
-                value: new ProcessResult(ExitCode: 0, StdOut: "hls\nrtmp\nfile", StdErr: "", Duration: TimeSpan.FromMilliseconds(milliseconds: 10))
+                new ProcessResult(0, "hls\nrtmp\nfile", "", TimeSpan.FromMilliseconds(10))
             );
 
         FfmpegBluRayCapability cap = new(
-            options: options,
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            options,
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await cap.ProbeAsync();
@@ -112,7 +111,7 @@ public class FfmpegBluRayCapabilityTests
 
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -120,17 +119,17 @@ public class FfmpegBluRayCapabilityTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "bluray", StdErr: "", Duration: TimeSpan.FromMilliseconds(milliseconds: 10)));
+            .ReturnsAsync(new ProcessResult(0, "bluray", "", TimeSpan.FromMilliseconds(10)));
 
         FfmpegBluRayCapability cap = new(
-            options: options,
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            options,
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await cap.ProbeAsync();
 
-        cap.ActiveKeyDbPath.Should().Contain(expected: "/home/user/KEYDB.cfg");
+        cap.ActiveKeyDbPath.Should().Contain("/home/user/KEYDB.cfg");
     }
 
     [Fact]
@@ -144,7 +143,7 @@ public class FfmpegBluRayCapabilityTests
 
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -152,17 +151,17 @@ public class FfmpegBluRayCapabilityTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "bluray", StdErr: "", Duration: TimeSpan.FromMilliseconds(milliseconds: 10)));
+            .ReturnsAsync(new ProcessResult(0, "bluray", "", TimeSpan.FromMilliseconds(10)));
 
         FfmpegBluRayCapability cap = new(
-            options: options,
-            processRunner: runner.Object,
-            logger: NullLogger<FfmpegBluRayCapability>.Instance
+            options,
+            runner.Object,
+            NullLogger<FfmpegBluRayCapability>.Instance
         );
 
         await cap.ProbeAsync();
 
-        cap.ActiveKeyDbPath.Should().Contain(expected: "bundled");
+        cap.ActiveKeyDbPath.Should().Contain("bundled");
     }
 
     // ── DiscScanner.ClassifyBluRayStderr — each stderr pattern ────────────
@@ -173,13 +172,13 @@ public class FfmpegBluRayCapabilityTests
         const string stderr =
             "aacs: no matching certificate for volume AABBCCDD11223344AABBCCDD11223344\n";
 
-        EncoderRuntimeException ex = Assert.Throws<EncoderRuntimeException>(testCode: () =>
-            DiscScanner.ClassifyBluRayStderr(drivePath: "bluray:/dev/sr0", stderr: stderr)
+        EncoderRuntimeException ex = Assert.Throws<EncoderRuntimeException>(() =>
+            DiscScanner.ClassifyBluRayStderr("bluray:/dev/sr0", stderr)
         );
 
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.DiscAacsCertMissing);
-        ex.Shape.Message.Should().Contain(expected: "AABBCCDD11223344AABBCCDD11223344");
-        ex.Shape.Suggestion.Should().Contain(expected: "KEYDB.cfg");
+        ex.Shape.Id.Should().Be(EncoderRuleId.DiscAacsCertMissing);
+        ex.Shape.Message.Should().Contain("AABBCCDD11223344AABBCCDD11223344");
+        ex.Shape.Suggestion.Should().Contain("KEYDB.cfg");
     }
 
     [Fact]
@@ -187,11 +186,11 @@ public class FfmpegBluRayCapabilityTests
     {
         const string stderr = "bdplus: no matching converter for this disc\n";
 
-        EncoderRuntimeException ex = Assert.Throws<EncoderRuntimeException>(testCode: () =>
-            DiscScanner.ClassifyBluRayStderr(drivePath: "bluray:/dev/sr0", stderr: stderr)
+        EncoderRuntimeException ex = Assert.Throws<EncoderRuntimeException>(() =>
+            DiscScanner.ClassifyBluRayStderr("bluray:/dev/sr0", stderr)
         );
 
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.DiscBdplusConverterMissing);
+        ex.Shape.Id.Should().Be(EncoderRuleId.DiscBdplusConverterMissing);
     }
 
     [Fact]
@@ -199,18 +198,18 @@ public class FfmpegBluRayCapabilityTests
     {
         const string stderr = "Protocol not found\n";
 
-        EncoderRuntimeException ex = Assert.Throws<EncoderRuntimeException>(testCode: () =>
-            DiscScanner.ClassifyBluRayStderr(drivePath: "bluray:/dev/sr0", stderr: stderr)
+        EncoderRuntimeException ex = Assert.Throws<EncoderRuntimeException>(() =>
+            DiscScanner.ClassifyBluRayStderr("bluray:/dev/sr0", stderr)
         );
 
-        ex.Shape.Id.Should().Be(expected: EncoderRuleId.DiscReadError);
+        ex.Shape.Id.Should().Be(EncoderRuleId.DiscReadError);
     }
 
     [Fact]
     public void ClassifyBluRayStderr_EmptyStderr_DoesNotThrow()
     {
         // Empty stderr is a no-op — probe timed out or disc responded fine.
-        Action act = () => DiscScanner.ClassifyBluRayStderr(drivePath: "bluray:/dev/sr0", stderr: "");
+        Action act = () => DiscScanner.ClassifyBluRayStderr("bluray:/dev/sr0", "");
 
         act.Should().NotThrow();
     }
@@ -220,7 +219,7 @@ public class FfmpegBluRayCapabilityTests
     {
         // Unknown stderr is not classified — the caller falls through to generic handling.
         Action act = () =>
-            DiscScanner.ClassifyBluRayStderr(drivePath: "bluray:/dev/sr0", stderr: "some random ffprobe output\n");
+            DiscScanner.ClassifyBluRayStderr("bluray:/dev/sr0", "some random ffprobe output\n");
 
         act.Should().NotThrow();
     }
@@ -242,7 +241,7 @@ public class FfmpegBluRayCapabilityTests
 
         // Capture calls via the extraEnv overload.
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -257,12 +256,12 @@ public class FfmpegBluRayCapabilityTests
                 IReadOnlyDictionary<string, string>?,
                 string?,
                 CancellationToken
-            >(action: (_, _, env, _, _) => capturedEnv = env)
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            >((_, _, env, _, _) => capturedEnv = env)
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
 
         // Also stub the standard overload (used when no env overrides).
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -270,44 +269,44 @@ public class FfmpegBluRayCapabilityTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
 
-        string outputDir = Path.Combine(path1: Path.GetTempPath(), path2: $"Rip_{Guid.NewGuid():N}");
+        string outputDir = Path.Combine(Path.GetTempPath(), $"Rip_{Guid.NewGuid():N}");
         try
         {
             LocalStorageDriver driver = new();
-            LocalStorage storage = new(driver: driver, guard: new(allowedRoots: [], driver: driver));
+            LocalStorage storage = new(driver, new([], driver));
             DriveLockRegistry lockRegistry = new();
             DiscRipper ripper = new(
-                options: options,
-                processRunner: runner.Object,
-                storage: storage,
-                driveLockRegistry: lockRegistry,
-                logger: NullLogger<DiscRipper>.Instance
+                options,
+                runner.Object,
+                storage,
+                lockRegistry,
+                NullLogger<DiscRipper>.Instance
             );
 
             RipRequest request = new(
-                DrivePath: "bluray:/dev/sr0",
-                SelectedTitleIndices: [0],
-                MetadataId: null,
-                Custom: null,
-                LibraryId: Ulid.NewUlid(),
-                FolderId: Ulid.NewUlid(),
-                EncodingProfileId: null,
-                AudioTracks: [new(StreamIndex: 0, Include: true)],
-                Subtitles: []
+                "bluray:/dev/sr0",
+                [0],
+                null,
+                null,
+                Ulid.NewUlid(),
+                Ulid.NewUlid(),
+                null,
+                [new(0, true)],
+                []
             );
 
-            await ripper.RipAsync(request: request, outputDirectory: outputDir, ct: CancellationToken.None);
+            await ripper.RipAsync(request, outputDir, CancellationToken.None);
 
             capturedEnv.Should().NotBeNull();
-            capturedEnv!.Should().ContainKey(expected: "LIBAACS_KEY_DB");
-            capturedEnv[key: "LIBAACS_KEY_DB"].Should().Be(expected: "/mnt/keys/KEYDB.cfg");
+            capturedEnv!.Should().ContainKey("LIBAACS_KEY_DB");
+            capturedEnv["LIBAACS_KEY_DB"].Should().Be("/mnt/keys/KEYDB.cfg");
         }
         finally
         {
-            if (Directory.Exists(path: outputDir))
-                Directory.Delete(path: outputDir, recursive: true);
+            if (Directory.Exists(outputDir))
+                Directory.Delete(outputDir, true);
         }
     }
 
@@ -325,7 +324,7 @@ public class FfmpegBluRayCapabilityTests
         Mock<IProcessRunner> runner = new();
 
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -340,11 +339,11 @@ public class FfmpegBluRayCapabilityTests
                 IReadOnlyDictionary<string, string>?,
                 string?,
                 CancellationToken
-            >(action: (_, _, env, _, _) => capturedEnv = env)
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            >((_, _, env, _, _) => capturedEnv = env)
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
 
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -352,44 +351,44 @@ public class FfmpegBluRayCapabilityTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
 
-        string outputDir = Path.Combine(path1: Path.GetTempPath(), path2: $"Rip_{Guid.NewGuid():N}");
+        string outputDir = Path.Combine(Path.GetTempPath(), $"Rip_{Guid.NewGuid():N}");
         try
         {
             LocalStorageDriver driver = new();
-            LocalStorage storage = new(driver: driver, guard: new(allowedRoots: [], driver: driver));
+            LocalStorage storage = new(driver, new([], driver));
             DriveLockRegistry lockRegistry = new();
             DiscRipper ripper = new(
-                options: options,
-                processRunner: runner.Object,
-                storage: storage,
-                driveLockRegistry: lockRegistry,
-                logger: NullLogger<DiscRipper>.Instance
+                options,
+                runner.Object,
+                storage,
+                lockRegistry,
+                NullLogger<DiscRipper>.Instance
             );
 
             RipRequest request = new(
-                DrivePath: "bluray:/dev/sr0",
-                SelectedTitleIndices: [0],
-                MetadataId: null,
-                Custom: null,
-                LibraryId: Ulid.NewUlid(),
-                FolderId: Ulid.NewUlid(),
-                EncodingProfileId: null,
-                AudioTracks: [new(StreamIndex: 0, Include: true)],
-                Subtitles: []
+                "bluray:/dev/sr0",
+                [0],
+                null,
+                null,
+                Ulid.NewUlid(),
+                Ulid.NewUlid(),
+                null,
+                [new(0, true)],
+                []
             );
 
-            await ripper.RipAsync(request: request, outputDirectory: outputDir, ct: CancellationToken.None);
+            await ripper.RipAsync(request, outputDir, CancellationToken.None);
 
             capturedEnv.Should().NotBeNull();
-            capturedEnv!.Should().ContainKey(expected: "LIBBDPLUS_DATABASE");
-            capturedEnv[key: "LIBBDPLUS_DATABASE"].Should().Be(expected: "/mnt/keys/bdplus/");
+            capturedEnv!.Should().ContainKey("LIBBDPLUS_DATABASE");
+            capturedEnv["LIBBDPLUS_DATABASE"].Should().Be("/mnt/keys/bdplus/");
         }
         finally
         {
-            if (Directory.Exists(path: outputDir))
-                Directory.Delete(path: outputDir, recursive: true);
+            if (Directory.Exists(outputDir))
+                Directory.Delete(outputDir, true);
         }
     }
 
@@ -407,7 +406,7 @@ public class FfmpegBluRayCapabilityTests
         Mock<IProcessRunner> runner = new();
 
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -416,44 +415,44 @@ public class FfmpegBluRayCapabilityTests
                 )
             )
             .Callback<string, string[], string?, CancellationToken>(
-                action: (_, _, _, _) => standardOverloadCalled = true
+                (_, _, _, _) => standardOverloadCalled = true
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
 
-        string outputDir = Path.Combine(path1: Path.GetTempPath(), path2: $"Rip_{Guid.NewGuid():N}");
+        string outputDir = Path.Combine(Path.GetTempPath(), $"Rip_{Guid.NewGuid():N}");
         try
         {
             LocalStorageDriver driver = new();
-            LocalStorage storage = new(driver: driver, guard: new(allowedRoots: [], driver: driver));
+            LocalStorage storage = new(driver, new([], driver));
             DriveLockRegistry lockRegistry = new();
             DiscRipper ripper = new(
-                options: options,
-                processRunner: runner.Object,
-                storage: storage,
-                driveLockRegistry: lockRegistry,
-                logger: NullLogger<DiscRipper>.Instance
+                options,
+                runner.Object,
+                storage,
+                lockRegistry,
+                NullLogger<DiscRipper>.Instance
             );
 
             RipRequest request = new(
-                DrivePath: "bluray:/dev/sr0",
-                SelectedTitleIndices: [0],
-                MetadataId: null,
-                Custom: null,
-                LibraryId: Ulid.NewUlid(),
-                FolderId: Ulid.NewUlid(),
-                EncodingProfileId: null,
-                AudioTracks: [new(StreamIndex: 0, Include: true)],
-                Subtitles: []
+                "bluray:/dev/sr0",
+                [0],
+                null,
+                null,
+                Ulid.NewUlid(),
+                Ulid.NewUlid(),
+                null,
+                [new(0, true)],
+                []
             );
 
-            await ripper.RipAsync(request: request, outputDirectory: outputDir, ct: CancellationToken.None);
+            await ripper.RipAsync(request, outputDir, CancellationToken.None);
 
             standardOverloadCalled.Should().BeTrue();
         }
         finally
         {
-            if (Directory.Exists(path: outputDir))
-                Directory.Delete(path: outputDir, recursive: true);
+            if (Directory.Exists(outputDir))
+                Directory.Delete(outputDir, true);
         }
     }
 }

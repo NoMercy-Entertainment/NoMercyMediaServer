@@ -65,8 +65,8 @@ public static class ServiceCollectionExtensions
     {
         // Configuration
         EncoderOptions opts = new();
-        configure?.Invoke(obj: opts);
-        services.AddSingleton(implementationInstance: opts);
+        configure?.Invoke(opts);
+        services.AddSingleton(opts);
 
         // IHttpClientFactory is needed by the self-registration service and
         // by HttpRemoteWorker callers. Safe to call multiple times — the
@@ -109,7 +109,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDriverFingerprintStore, DbDriverFingerprintStore>();
         services.AddSingleton<IDriverChangeDetector, DriverChangeDetector>();
         services.AddSingleton<FfmpegCapabilities>();
-        services.AddSingleton<IFfmpegCapabilities>(implementationFactory: sp =>
+        services.AddSingleton<IFfmpegCapabilities>(sp =>
             sp.GetRequiredService<FfmpegCapabilities>()
         );
 
@@ -170,21 +170,21 @@ public static class ServiceCollectionExtensions
         // the encoder never backed off and could saturate a machine the user is
         // actively using. TODO: surface CpuHeadroomPercent as a dashboard setting so a
         // dedicated-encode-box operator can raise it toward 100 (max throughput).
-        services.TryAddSingleton(instance: new ResourceBudgetOptions());
+        services.TryAddSingleton(new ResourceBudgetOptions());
 
-        services.AddSingleton<IResourceBudget>(implementationFactory: sp =>
+        services.AddSingleton<IResourceBudget>(sp =>
         {
             IHardwareCapabilities hw = sp.GetRequiredService<IHardwareCapabilities>();
             IResourceMonitor monitor = sp.GetRequiredService<IResourceMonitor>();
             ResourceBudgetOptions options =
                 sp.GetService<ResourceBudgetOptions>() ?? ResourceBudgetOptions.Disabled;
             ILogger<ResourceBudget> logger = sp.GetRequiredService<ILogger<ResourceBudget>>();
-            return new ResourceBudget(hardware: hw, monitor: monitor, options: options, logger: logger);
+            return new ResourceBudget(hw, monitor, options, logger);
         });
 
         // Startup — register concrete first so IHostedService resolves same instance
         services.AddSingleton<HardwareInitializationService>();
-        services.AddHostedService(implementationFactory: sp => sp.GetRequiredService<HardwareInitializationService>());
+        services.AddHostedService(sp => sp.GetRequiredService<HardwareInitializationService>());
 
         // Hardware benchmark runs lazily — defers past ApplicationStarted, then
         // waits for the encoder to be idle (no active streams/jobs) before
@@ -234,7 +234,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ProgressParser>();
         // ProcessThrottle holds the set of suspended pids; must be Singleton so
         // suspend/resume operations across different callers see the same state.
-        if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             services.AddSingleton<IProcessSuspender, WindowsProcessSuspender>();
         else
             services.AddSingleton<IProcessSuspender, UnixProcessSuspender>();
@@ -245,7 +245,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ICheckpointStore, JsonCheckpointStore>();
 
         // Content intelligence (OCR / Whisper / crop detection)
-        services.TryAddSingleton(implementationFactory: sp =>
+        services.TryAddSingleton(sp =>
         {
             HttpClient client = new();
             client.WithNoMercyUserAgent();
@@ -323,18 +323,18 @@ public static class ServiceCollectionExtensions
         // named role interface so strategies can resolve by role without
         // coupling to the concrete class.
         services.AddTransient<AnalyzeStage>();
-        services.AddTransient<IAnalysisStage>(implementationFactory: sp => sp.GetRequiredService<AnalyzeStage>());
+        services.AddTransient<IAnalysisStage>(sp => sp.GetRequiredService<AnalyzeStage>());
         services.AddTransient<ValidateStage>();
-        services.AddTransient<IValidationStage>(implementationFactory: sp => sp.GetRequiredService<ValidateStage>());
+        services.AddTransient<IValidationStage>(sp => sp.GetRequiredService<ValidateStage>());
         services.AddTransient<PlanStage>();
-        services.AddTransient<IPlanStage>(implementationFactory: sp => sp.GetRequiredService<PlanStage>());
+        services.AddTransient<IPlanStage>(sp => sp.GetRequiredService<PlanStage>());
         services.AddTransient<BuildStage>();
-        services.AddTransient<IBuildStage>(implementationFactory: sp => sp.GetRequiredService<BuildStage>());
+        services.AddTransient<IBuildStage>(sp => sp.GetRequiredService<BuildStage>());
         services.AddSingleton<IPlanResultProjector, PlanResultProjector>();
         services.AddTransient<ExecuteStage>();
-        services.AddTransient<IExecutionStage>(implementationFactory: sp => sp.GetRequiredService<ExecuteStage>());
+        services.AddTransient<IExecutionStage>(sp => sp.GetRequiredService<ExecuteStage>());
         services.AddTransient<FinalizeStage>();
-        services.AddTransient<IFinalizeStage>(implementationFactory: sp => sp.GetRequiredService<FinalizeStage>());
+        services.AddTransient<IFinalizeStage>(sp => sp.GetRequiredService<FinalizeStage>());
 
         // Optimizer
         services.AddTransient<ExecutionGraphBuilder>();
@@ -373,8 +373,8 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPlaybackDecisionEngine, PlaybackDecisionEngine>();
         services.AddSingleton<LiveSessionLimits>();
-        services.AddSingleton<ISessionManager>(implementationFactory: sp => new SessionManager(
-            limits: sp.GetRequiredService<LiveSessionLimits>()
+        services.AddSingleton<ISessionManager>(sp => new SessionManager(
+            sp.GetRequiredService<LiveSessionLimits>()
         ));
 
         // Ties a session's lifetime to the SignalR connection watching it so a
@@ -388,7 +388,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IBenchmarkJobTracker, BenchmarkJobTracker>();
 
         // Lazy-load cached SpeedIndex from disk (empty when no benchmark has run yet).
-        services.AddSingleton<SpeedIndex>(implementationFactory: sp =>
+        services.AddSingleton<SpeedIndex>(sp =>
             sp.GetRequiredService<IHardwareBenchmark>().GetCachedIndex()
         );
         services.AddTransient<ILiveFfmpegRunner, LiveFfmpegRunner>();
@@ -425,7 +425,7 @@ public static class ServiceCollectionExtensions
         // worker identities survive a coordinator restart. Worker mode and
         // standalone installs use the in-memory registry directly.
         services.AddSingleton<InMemoryRemoteWorkerRegistry>();
-        services.AddSingleton<IRemoteWorkerRegistry>(implementationFactory: sp =>
+        services.AddSingleton<IRemoteWorkerRegistry>(sp =>
         {
             EncoderOptions encoderOpts = sp.GetRequiredService<EncoderOptions>();
 
@@ -433,13 +433,13 @@ public static class ServiceCollectionExtensions
             {
                 string persistPath = encoderOpts.WorkerRegistryPath;
                 return new JsonRemoteWorkerRegistry(
-                    inner: sp.GetRequiredService<InMemoryRemoteWorkerRegistry>(),
-                    filePath: persistPath,
-                    httpClientFactory: sp.GetRequiredService<IHttpClientFactory>(),
-                    serializer: sp.GetRequiredService<ITaskSerializer>(),
-                    signingKey: encoderOpts.GetDistributedEncodingSigningKey(),
-                    logger: sp.GetRequiredService<ILogger<JsonRemoteWorkerRegistry>>(),
-                    storage: sp.GetRequiredService<IStorage>()
+                    sp.GetRequiredService<InMemoryRemoteWorkerRegistry>(),
+                    persistPath,
+                    sp.GetRequiredService<IHttpClientFactory>(),
+                    sp.GetRequiredService<ITaskSerializer>(),
+                    encoderOpts.GetDistributedEncodingSigningKey(),
+                    sp.GetRequiredService<ILogger<JsonRemoteWorkerRegistry>>(),
+                    sp.GetRequiredService<IStorage>()
                 );
             }
 
@@ -465,7 +465,7 @@ public static class ServiceCollectionExtensions
         // is set). Coordinator-side InMemoryTaskProgressStore holds the
         // latest snapshot per task so the dashboard can read live progress.
         services.AddSingleton<InMemoryTaskProgressStore>();
-        services.AddSingleton<ITaskProgressStore>(implementationFactory: sp =>
+        services.AddSingleton<ITaskProgressStore>(sp =>
             sp.GetRequiredService<InMemoryTaskProgressStore>()
         );
         services.AddTransient<ITaskProgressSink, HttpTaskProgressSink>();
@@ -479,8 +479,8 @@ public static class ServiceCollectionExtensions
         // IServerPhaseTracker. TryAdd a default so the encoder module is
         // self-contained; the Service host registers the process-wide shared
         // tracker (same instance) and wins last in production.
-        services.TryAddSingleton<IServerPhaseTracker>(implementationFactory: sp =>
-            ServerPhaseTracker.Shared(logger: sp.GetService<ILogger<ServerPhaseTracker>>())
+        services.TryAddSingleton<IServerPhaseTracker>(sp =>
+            ServerPhaseTracker.Shared(sp.GetService<ILogger<ServerPhaseTracker>>())
         );
         services.AddHostedService<FfmpegCapabilityProbeBackgroundService>();
 
@@ -494,11 +494,11 @@ public static class ServiceCollectionExtensions
         // The remote dispatcher is the public face — it transparently falls
         // back to the local dispatcher when no remote workers are registered,
         // which is the default behavior today.
-        services.AddTransient<IWorkerDispatcher>(implementationFactory: sp => new RemoteWorkerDispatcher(
-            registry: sp.GetRequiredService<IRemoteWorkerRegistry>(),
-            assigner: sp.GetRequiredService<IWorkerAssigner>(),
-            localFallback: sp.GetRequiredService<LocalWorkerDispatcher>(),
-            logger: sp.GetRequiredService<ILogger<RemoteWorkerDispatcher>>()
+        services.AddTransient<IWorkerDispatcher>(sp => new RemoteWorkerDispatcher(
+            sp.GetRequiredService<IRemoteWorkerRegistry>(),
+            sp.GetRequiredService<IWorkerAssigner>(),
+            sp.GetRequiredService<LocalWorkerDispatcher>(),
+            sp.GetRequiredService<ILogger<RemoteWorkerDispatcher>>()
         ));
 
         // Disc ripping registrations moved to NoMercy.OpticalMedia/Composition/

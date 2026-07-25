@@ -30,7 +30,7 @@ namespace NoMercy.Tests.Api;
 // unguarded forwards straight to IChromeCastService — no user/moderator check
 // happens in the hub itself. IChromeCastService is fully mocked here, so no
 // real Chromecast is ever discovered, connected to, or commanded.
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class CastHubChromecastPassthroughTests
 {
     private static CastHub CreateHub(
@@ -42,103 +42,103 @@ public class CastHubChromecastPassthroughTests
         authTokenStore = new Mock<IAuthTokenStore>();
 
         return new CastHub(
-            logger: NullLogger<CastHub>.Instance,
-            httpContextAccessor: Mock.Of<IHttpContextAccessor>(),
-            contextFactory: Mock.Of<IDbContextFactory<MediaContext>>(),
-            connectedClients: new ConnectedClients(),
-            clientMessenger: Mock.Of<IClientMessenger>(),
-            activityLogger: Mock.Of<IActivityLogger>(),
-            authTokenStore: authTokenStore.Object,
-            chromeCast: chromeCast.Object
+            NullLogger<CastHub>.Instance,
+            Mock.Of<IHttpContextAccessor>(),
+            Mock.Of<IDbContextFactory<MediaContext>>(),
+            new ConnectedClients(),
+            Mock.Of<IClientMessenger>(),
+            Mock.Of<IActivityLogger>(),
+            authTokenStore.Object,
+            chromeCast.Object
         );
     }
 
     [Fact]
     public void GetChromeCasts_ReturnsDiscoveredReceiverNames_FromChromeCastService()
     {
-        CastHub hub = CreateHub(chromeCast: out Mock<IChromeCastService> chromeCast, authTokenStore: out _);
-        chromeCast.Setup(expression: c => c.GetChromeCasts()).Returns(value: ["Living Room", "Bedroom"]);
+        CastHub hub = CreateHub(out Mock<IChromeCastService> chromeCast, out _);
+        chromeCast.Setup(c => c.GetChromeCasts()).Returns(["Living Room", "Bedroom"]);
 
         string[] result = hub.GetChromeCasts();
 
-        result.Should().Equal(expected: ["Living Room", "Bedroom"]);
+        result.Should().Equal(["Living Room", "Bedroom"]);
     }
 
     [Fact]
     public async Task SelectChromecast_ForwardsReceiverName_ToChromeCastService()
     {
-        CastHub hub = CreateHub(chromeCast: out Mock<IChromeCastService> chromeCast, authTokenStore: out _);
+        CastHub hub = CreateHub(out Mock<IChromeCastService> chromeCast, out _);
 
-        await hub.SelectChromecast(name: "Living Room");
+        await hub.SelectChromecast("Living Room");
 
-        chromeCast.Verify(expression: c => c.SelectChromecast("Living Room"), times: Times.Once);
+        chromeCast.Verify(c => c.SelectChromecast("Living Room"), Times.Once);
     }
 
     [Fact]
     public async Task Launch_InvokesChromeCastServiceLaunch_WithNoReceiverNameOverride()
     {
-        CastHub hub = CreateHub(chromeCast: out Mock<IChromeCastService> chromeCast, authTokenStore: out _);
+        CastHub hub = CreateHub(out Mock<IChromeCastService> chromeCast, out _);
 
         await hub.Launch();
 
-        chromeCast.Verify(expression: c => c.Launch(null), times: Times.Once);
+        chromeCast.Verify(c => c.Launch(null), Times.Once);
     }
 
     [Fact]
     public async Task CastPlaylist_ForwardsPlaylistValue_AndCurrentAccessToken()
     {
         CastHub hub = CreateHub(
-            chromeCast: out Mock<IChromeCastService> chromeCast,
-            authTokenStore: out Mock<IAuthTokenStore> authTokenStore
+            out Mock<IChromeCastService> chromeCast,
+            out Mock<IAuthTokenStore> authTokenStore
         );
-        authTokenStore.Setup(expression: a => a.AccessToken).Returns(value: "token-123");
+        authTokenStore.Setup(a => a.AccessToken).Returns("token-123");
 
-        await hub.CastPlaylist(value: "playlist-payload");
+        await hub.CastPlaylist("playlist-payload");
 
-        chromeCast.Verify(expression: c => c.CastPlaylist("playlist-payload", null, "token-123"), times: Times.Once);
+        chromeCast.Verify(c => c.CastPlaylist("playlist-payload", null, "token-123"), Times.Once);
     }
 
     [Fact]
     public void GetChromecastStatus_ReturnsWhateverChromeCastServiceReports()
     {
-        CastHub hub = CreateHub(chromeCast: out Mock<IChromeCastService> chromeCast, authTokenStore: out _);
-        chromeCast.Setup(expression: c => c.GetChromecastStatus(null)).Returns(value: (ChromecastStatus?)null);
+        CastHub hub = CreateHub(out Mock<IChromeCastService> chromeCast, out _);
+        chromeCast.Setup(c => c.GetChromecastStatus(null)).Returns((ChromecastStatus?)null);
 
         ChromecastStatus? result = hub.GetChromecastStatus();
 
         result.Should().BeNull();
-        chromeCast.Verify(expression: c => c.GetChromecastStatus(null), times: Times.Once);
+        chromeCast.Verify(c => c.GetChromecastStatus(null), Times.Once);
     }
 
     [Fact]
     public void GetMediaStatus_ReturnsWhateverChromeCastServiceReports()
     {
-        CastHub hub = CreateHub(chromeCast: out Mock<IChromeCastService> chromeCast, authTokenStore: out _);
-        chromeCast.Setup(expression: c => c.GetMediaStatus(null)).Returns(value: (MediaStatus?)null);
+        CastHub hub = CreateHub(out Mock<IChromeCastService> chromeCast, out _);
+        chromeCast.Setup(c => c.GetMediaStatus(null)).Returns((MediaStatus?)null);
 
         MediaStatus? result = hub.GetMediaStatus();
 
         result.Should().BeNull();
-        chromeCast.Verify(expression: c => c.GetMediaStatus(null), times: Times.Once);
+        chromeCast.Verify(c => c.GetMediaStatus(null), Times.Once);
     }
 
     [Fact]
     public async Task Stop_InvokesChromeCastServiceStop_WithNoReceiverNameOverride()
     {
-        CastHub hub = CreateHub(chromeCast: out Mock<IChromeCastService> chromeCast, authTokenStore: out _);
+        CastHub hub = CreateHub(out Mock<IChromeCastService> chromeCast, out _);
 
         await hub.Stop();
 
-        chromeCast.Verify(expression: c => c.Stop(null), times: Times.Once);
+        chromeCast.Verify(c => c.Stop(null), Times.Once);
     }
 
     [Fact]
     public async Task Disconnect_InvokesChromeCastServiceDisconnect_WithNoReceiverNameOverride()
     {
-        CastHub hub = CreateHub(chromeCast: out Mock<IChromeCastService> chromeCast, authTokenStore: out _);
+        CastHub hub = CreateHub(out Mock<IChromeCastService> chromeCast, out _);
 
         await hub.Disconnect();
 
-        chromeCast.Verify(expression: c => c.Disconnect(null), times: Times.Once);
+        chromeCast.Verify(c => c.Disconnect(null), Times.Once);
     }
 }

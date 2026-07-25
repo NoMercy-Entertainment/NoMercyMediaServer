@@ -29,32 +29,32 @@ public class ByNamePresetResolverTests
     public void Resolve_NoParent_ReturnsRootProfile()
     {
         PresetResolveRequest root = new(
-            Name: "root",
-            ProfileJson: BaseProfileJson(name: "root", bitrateKbps: 8000),
-            ParentName: null
+            "root",
+            BaseProfileJson("root", 8000),
+            null
         );
         FakeLookup lookup = new();
 
-        EncodingProfile profile = _resolver.Resolve(request: root, lookup: lookup);
+        EncodingProfile profile = _resolver.Resolve(root, lookup);
 
-        profile.Name.Should().Be(expected: "root");
-        profile.Video!.BitrateKbps.Should().Be(expected: 8000);
+        profile.Name.Should().Be("root");
+        profile.Video!.BitrateKbps.Should().Be(8000);
     }
 
     [Fact]
     public void Resolve_ChildOverridesParentBitrate()
     {
         PresetResolveRequest child = new(
-            Name: "child",
-            ProfileJson: BaseProfileJson(name: "child", bitrateKbps: 6000),
-            ParentName: "parent"
+            "child",
+            BaseProfileJson("child", 6000),
+            "parent"
         );
-        FakeLookup lookup = new() { [key: "parent"] = new(Name: "parent", ProfileJson: BaseProfileJson(name: "parent", bitrateKbps: 12000)) };
+        FakeLookup lookup = new() { ["parent"] = new("parent", BaseProfileJson("parent", 12000)) };
 
-        EncodingProfile profile = _resolver.Resolve(request: child, lookup: lookup);
+        EncodingProfile profile = _resolver.Resolve(child, lookup);
 
         // Child's bitrate (6000) wins over parent's (12000).
-        profile.Video!.BitrateKbps.Should().Be(expected: 6000);
+        profile.Video!.BitrateKbps.Should().Be(6000);
     }
 
     [Fact]
@@ -63,17 +63,17 @@ public class ByNamePresetResolverTests
         // Child profile only specifies the name + nothing else — populating an
         // EncodingProfile with that JSON should leave parent fields intact.
         PresetResolveRequest child = new(
-            Name: "child",
-            ProfileJson: "{\"Name\":\"child\"}",
-            ParentName: "parent"
+            "child",
+            "{\"Name\":\"child\"}",
+            "parent"
         );
-        FakeLookup lookup = new() { [key: "parent"] = new(Name: "parent", ProfileJson: BaseProfileJson(name: "parent", bitrateKbps: 9000)) };
+        FakeLookup lookup = new() { ["parent"] = new("parent", BaseProfileJson("parent", 9000)) };
 
-        EncodingProfile profile = _resolver.Resolve(request: child, lookup: lookup);
+        EncodingProfile profile = _resolver.Resolve(child, lookup);
 
-        profile.Name.Should().Be(expected: "child");
+        profile.Name.Should().Be("child");
         // Inherited from parent.
-        profile.Video!.BitrateKbps.Should().Be(expected: 9000);
+        profile.Video!.BitrateKbps.Should().Be(9000);
     }
 
     // ── Chain walking ───────────────────────────────────────────────────────
@@ -83,24 +83,24 @@ public class ByNamePresetResolverTests
     {
         FakeLookup lookup = new()
         {
-            [key: "grandparent"] = new(Name: "grandparent", ProfileJson: BaseProfileJson(name: "grandparent", bitrateKbps: 4000)),
-            [key: "parent"] = new(
-                Name: "parent",
-                ProfileJson: "{\"Video\":{\"BitrateKbps\":8000}}",
-                ParentName: "grandparent"
+            ["grandparent"] = new("grandparent", BaseProfileJson("grandparent", 4000)),
+            ["parent"] = new(
+                "parent",
+                "{\"Video\":{\"BitrateKbps\":8000}}",
+                "grandparent"
             ),
         };
         PresetResolveRequest child = new(
-            Name: "child",
-            ProfileJson: "{\"Name\":\"child\"}",
-            ParentName: "parent"
+            "child",
+            "{\"Name\":\"child\"}",
+            "parent"
         );
 
-        EncodingProfile profile = _resolver.Resolve(request: child, lookup: lookup);
+        EncodingProfile profile = _resolver.Resolve(child, lookup);
 
-        profile.Name.Should().Be(expected: "child");
+        profile.Name.Should().Be("child");
         // Parent overrode grandparent's bitrate from 4000 → 8000.
-        profile.Video!.BitrateKbps.Should().Be(expected: 8000);
+        profile.Video!.BitrateKbps.Should().Be(8000);
     }
 
     // ── Error paths ─────────────────────────────────────────────────────────
@@ -109,15 +109,15 @@ public class ByNamePresetResolverTests
     public void Resolve_MissingParent_Throws()
     {
         PresetResolveRequest leaf = new(
-            Name: "child",
-            ProfileJson: BaseProfileJson(name: "child", bitrateKbps: 5000),
-            ParentName: "vanished_parent"
+            "child",
+            BaseProfileJson("child", 5000),
+            "vanished_parent"
         );
         FakeLookup lookup = new();
 
-        Action act = () => _resolver.Resolve(request: leaf, lookup: lookup);
+        Action act = () => _resolver.Resolve(leaf, lookup);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*vanished_parent*not found*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*vanished_parent*not found*");
     }
 
     [Fact]
@@ -126,14 +126,14 @@ public class ByNamePresetResolverTests
         // A → B → A
         FakeLookup lookup = new()
         {
-            [key: "A"] = new(Name: "A", ProfileJson: BaseProfileJson(name: "A", bitrateKbps: 1000), ParentName: "B"),
-            [key: "B"] = new(Name: "B", ProfileJson: BaseProfileJson(name: "B", bitrateKbps: 2000), ParentName: "A"),
+            ["A"] = new("A", BaseProfileJson("A", 1000), "B"),
+            ["B"] = new("B", BaseProfileJson("B", 2000), "A"),
         };
-        PresetResolveRequest start = lookup[key: "A"];
+        PresetResolveRequest start = lookup["A"];
 
-        Action act = () => _resolver.Resolve(request: start, lookup: lookup);
+        Action act = () => _resolver.Resolve(start, lookup);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*cycle detected*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*cycle detected*");
     }
 
     [Fact]
@@ -145,24 +145,24 @@ public class ByNamePresetResolverTests
         {
             string name = $"P{i}";
             string? parent = i < 11 ? $"P{i + 1}" : null;
-            lookup[key: name] = new(Name: name, ProfileJson: BaseProfileJson(name: name, bitrateKbps: 1000 + i), ParentName: parent);
+            lookup[name] = new(name, BaseProfileJson(name, 1000 + i), parent);
         }
-        PresetResolveRequest leaf = lookup[key: "P0"];
+        PresetResolveRequest leaf = lookup["P0"];
 
-        Action act = () => _resolver.Resolve(request: leaf, lookup: lookup);
+        Action act = () => _resolver.Resolve(leaf, lookup);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*exceeds*levels*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*exceeds*levels*");
     }
 
     [Fact]
     public void Resolve_EmptyProfileJson_Throws()
     {
-        PresetResolveRequest leaf = new(Name: "broken", ProfileJson: "null");
+        PresetResolveRequest leaf = new("broken", "null");
         FakeLookup lookup = new();
 
-        Action act = () => _resolver.Resolve(request: leaf, lookup: lookup);
+        Action act = () => _resolver.Resolve(leaf, lookup);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*broken*invalid*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*broken*invalid*");
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
@@ -170,42 +170,42 @@ public class ByNamePresetResolverTests
     private static string BaseProfileJson(string name, int bitrateKbps)
     {
         EncodingProfile profile = new(
-            Id: Ulid.NewUlid(),
-            Name: name,
-            Container: Container.HlsFmp4,
-            Video: new(
-                Policy: StreamPolicy.Transcode,
-                Codec: NoMercy.Encoder.Codecs.VideoCodecType.H264,
-                Width: 1920,
-                Height: 1080,
-                RateControl: RateControlMode.Vbr,
-                Crf: 0,
-                BitrateKbps: bitrateKbps,
-                MaxBitrateKbps: null,
-                BufferSizeKbps: null,
-                Preset: null,
-                CodecProfile: CodecProfile.Auto,
-                Level: null,
-                Tune: null,
-                BitDepth: 8,
-                PixelFormat: null,
-                KeyframeIntervalSeconds: 2,
-                ConvertHdrToSdr: false,
-                SegmentNameTemplate: "v",
-                PlaylistNameTemplate: "p"
+            Ulid.NewUlid(),
+            name,
+            Container.HlsFmp4,
+            new(
+                StreamPolicy.Transcode,
+                NoMercy.Encoder.Codecs.VideoCodecType.H264,
+                1920,
+                1080,
+                RateControlMode.Vbr,
+                0,
+                bitrateKbps,
+                null,
+                null,
+                null,
+                CodecProfile.Auto,
+                null,
+                null,
+                8,
+                null,
+                2,
+                false,
+                "v",
+                "p"
             ),
-            Audio: [],
-            Subtitles: []
+            [],
+            []
         );
-        return JsonConvert.SerializeObject(value: profile);
+        return JsonConvert.SerializeObject(profile);
     }
 
     private sealed class FakeLookup : Dictionary<string, PresetResolveRequest>, INamePresetLookup
     {
         public FakeLookup()
-            : base(comparer: StringComparer.OrdinalIgnoreCase) { }
+            : base(StringComparer.OrdinalIgnoreCase) { }
 
         public PresetResolveRequest? FindByName(string name) =>
-            TryGetValue(key: name, value: out PresetResolveRequest? entry) ? entry : null;
+            TryGetValue(name, out PresetResolveRequest? entry) ? entry : null;
     }
 }

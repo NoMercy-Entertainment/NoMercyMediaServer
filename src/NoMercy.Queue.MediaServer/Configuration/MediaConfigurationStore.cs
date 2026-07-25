@@ -22,21 +22,21 @@ public class MediaConfigurationStore(IDbContextFactory<AppDbContext> contextFact
     public string? GetValue(string key)
     {
         using AppDbContext context = contextFactory.CreateDbContext();
-        DbConfiguration? config = context.Configuration.FirstOrDefault(predicate: c => c.Key == key);
+        DbConfiguration? config = context.Configuration.FirstOrDefault(c => c.Key == key);
         return config?.Value;
     }
 
     public void SetValue(string key, string value)
     {
         using AppDbContext context = contextFactory.CreateDbContext();
-        DbConfiguration? existing = context.Configuration.FirstOrDefault(predicate: c => c.Key == key);
+        DbConfiguration? existing = context.Configuration.FirstOrDefault(c => c.Key == key);
         if (existing is not null)
         {
             existing.Value = value;
         }
         else
         {
-            context.Configuration.Add(entity: new() { Key = key, Value = value });
+            context.Configuration.Add(new() { Key = key, Value = value });
         }
         context.SaveChanges();
     }
@@ -44,7 +44,7 @@ public class MediaConfigurationStore(IDbContextFactory<AppDbContext> contextFact
     public async Task SetValueAsync(string key, string value, Guid? modifiedBy = null)
     {
         await using AppDbContext context = await contextFactory.CreateDbContextAsync();
-        DbConfiguration? existing = await context.Configuration.FirstOrDefaultAsync(predicate: c =>
+        DbConfiguration? existing = await context.Configuration.FirstOrDefaultAsync(c =>
             c.Key == key
         );
         if (existing is not null)
@@ -55,7 +55,7 @@ public class MediaConfigurationStore(IDbContextFactory<AppDbContext> contextFact
         else
         {
             context.Configuration.Add(
-                entity: new()
+                new()
                 {
                     Key = key,
                     Value = value,
@@ -69,6 +69,6 @@ public class MediaConfigurationStore(IDbContextFactory<AppDbContext> contextFact
     public bool HasKey(string key)
     {
         using AppDbContext context = contextFactory.CreateDbContext();
-        return context.Configuration.Any(predicate: c => c.Key == key);
+        return context.Configuration.Any(c => c.Key == key);
     }
 }

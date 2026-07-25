@@ -32,15 +32,15 @@ public sealed partial class FfmpegChromaprintFingerprinter(
     ILogger<FfmpegChromaprintFingerprinter> logger
 ) : IAudioFingerprinter
 {
-    [GeneratedRegex(pattern: @"DURATION=([0-9]+(?:\.[0-9]+)?)", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"DURATION=([0-9]+(?:\.[0-9]+)?)", RegexOptions.IgnoreCase)]
     private static partial Regex DurationRegex();
 
-    [GeneratedRegex(pattern: @"FINGERPRINT=([A-Za-z0-9_-]+)", options: RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"FINGERPRINT=([A-Za-z0-9_-]+)", RegexOptions.IgnoreCase)]
     private static partial Regex FingerprintRegex();
 
     public async Task<AudioFingerprint?> FingerprintAsync(string filePath, CancellationToken ct)
     {
-        await using LocalPathLease inputLease = storage.AcquireLocalPath(path: filePath);
+        await using LocalPathLease inputLease = storage.AcquireLocalPath(filePath);
 
         string[] arguments =
         [
@@ -64,44 +64,44 @@ public sealed partial class FfmpegChromaprintFingerprinter(
         ];
 
         ProcessResult result = await processRunner.RunAsync(
-            executable: options.FfmpegPath,
-            arguments: arguments,
-            workingDirectory: null,
-            cancellationToken: ct
+            options.FfmpegPath,
+            arguments,
+            null,
+            ct
         );
 
         if (!result.IsSuccess)
         {
             logger.LogWarning(
-                message: "chromaprint fingerprinting failed for {Path} (exit {Exit}): {Stderr}", args: [filePath, result.ExitCode, result.StdErr]
+                "chromaprint fingerprinting failed for {Path} (exit {Exit}): {Stderr}", [filePath, result.ExitCode, result.StdErr]
             );
             return null;
         }
 
         string output = result.StdOut;
-        Match fingerprintMatch = FingerprintRegex().Match(input: output);
+        Match fingerprintMatch = FingerprintRegex().Match(output);
         if (!fingerprintMatch.Success)
         {
             logger.LogWarning(
-                message: "chromaprint produced no FINGERPRINT for {Path}; output: {Output}", args: [filePath, Truncate(value: output, max: 200)]
+                "chromaprint produced no FINGERPRINT for {Path}; output: {Output}", [filePath, Truncate(output, 200)]
             );
             return null;
         }
 
         int durationSeconds = 0;
-        Match durationMatch = DurationRegex().Match(input: output);
+        Match durationMatch = DurationRegex().Match(output);
         if (
             durationMatch.Success
             && double.TryParse(
-                s: durationMatch.Groups[groupnum: 1].Value,
-                style: NumberStyles.Float,
-                provider: CultureInfo.InvariantCulture,
-                result: out double parsedDuration
+                durationMatch.Groups[1].Value,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double parsedDuration
             )
         )
-            durationSeconds = (int)Math.Round(a: parsedDuration);
+            durationSeconds = (int)Math.Round(parsedDuration);
 
-        return new(Fingerprint: fingerprintMatch.Groups[groupnum: 1].Value, DurationSeconds: durationSeconds);
+        return new(fingerprintMatch.Groups[1].Value, durationSeconds);
     }
 
     private static string Truncate(string value, int max) =>

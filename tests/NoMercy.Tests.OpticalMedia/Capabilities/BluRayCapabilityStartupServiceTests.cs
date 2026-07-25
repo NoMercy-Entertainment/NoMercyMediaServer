@@ -28,29 +28,29 @@ namespace NoMercy.Tests.OpticalMedia.Capabilities;
 /// probing, and a probe failure (including cooperative cancellation) must be
 /// swallowed rather than propagated.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class BluRayCapabilityStartupServiceTests
 {
     private static IServerPhaseTracker CompletedPhaseTracker()
     {
         Mock<IServerPhaseTracker> tracker = new();
         tracker
-            .Setup(expression: t => t.WhenReachedAsync(It.IsAny<BootStage>(), It.IsAny<CancellationToken>()))
-            .Returns(value: Task.CompletedTask);
+            .Setup(t => t.WhenReachedAsync(It.IsAny<BootStage>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
         return tracker.Object;
     }
 
     private static FfmpegBluRayCapability MakeCapability(Mock<IProcessRunner> runner)
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
-        return new(options: options, processRunner: runner.Object, logger: NullLogger<FfmpegBluRayCapability>.Instance);
+        return new(options, runner.Object, NullLogger<FfmpegBluRayCapability>.Instance);
     }
 
     private static Mock<IProcessRunner> MakeSucceedingRunner()
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -58,12 +58,12 @@ public class BluRayCapabilityStartupServiceTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "bluray", StdErr: "", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, "bluray", "", TimeSpan.Zero));
         return runner;
     }
 
     private static Task StartExecuteAsync(BackgroundService service, CancellationToken ct) =>
-        service.StartAsync(cancellationToken: ct);
+        service.StartAsync(ct);
 
     [Fact]
     public async Task ExecuteAsync_CancelledBeforeApplicationStarted_NeverProbes()
@@ -71,28 +71,28 @@ public class BluRayCapabilityStartupServiceTests
         TestLifetime lifetime = new();
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         BluRayCapabilityStartupService service = new(
-            capability: MakeCapability(runner: runner),
-            lifetime: lifetime,
-            logger: NullLogger<BluRayCapabilityStartupService>.Instance,
-            phaseTracker: CompletedPhaseTracker()
+            MakeCapability(runner),
+            lifetime,
+            NullLogger<BluRayCapabilityStartupService>.Instance,
+            CompletedPhaseTracker()
         );
 
         using CancellationTokenSource cts = new();
-        Task executeTask = StartExecuteAsync(service: service, ct: cts.Token);
-        await Task.Delay(millisecondsDelay: 30);
+        Task executeTask = StartExecuteAsync(service, cts.Token);
+        await Task.Delay(30);
         await cts.CancelAsync();
 
-        await executeTask.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2));
+        await executeTask.WaitAsync(TimeSpan.FromSeconds(2));
 
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -104,41 +104,41 @@ public class BluRayCapabilityStartupServiceTests
 
         // Phase tracker never resolves until cancellation fires.
         Mock<IServerPhaseTracker> tracker = new();
-        TaskCompletionSource waitStarted = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource waitStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         tracker
-            .Setup(expression: t => t.WhenReachedAsync(It.IsAny<BootStage>(), It.IsAny<CancellationToken>()))
+            .Setup(t => t.WhenReachedAsync(It.IsAny<BootStage>(), It.IsAny<CancellationToken>()))
             .Returns<BootStage, CancellationToken>(
-                valueFunction: (_, ct) =>
+                (_, ct) =>
                 {
                     waitStarted.TrySetResult();
-                    return Task.Delay(millisecondsDelay: Timeout.Infinite, cancellationToken: ct);
+                    return Task.Delay(Timeout.Infinite, ct);
                 }
             );
 
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         BluRayCapabilityStartupService service = new(
-            capability: MakeCapability(runner: runner),
-            lifetime: lifetime,
-            logger: NullLogger<BluRayCapabilityStartupService>.Instance,
-            phaseTracker: tracker.Object
+            MakeCapability(runner),
+            lifetime,
+            NullLogger<BluRayCapabilityStartupService>.Instance,
+            tracker.Object
         );
 
         using CancellationTokenSource cts = new();
-        Task executeTask = StartExecuteAsync(service: service, ct: cts.Token);
-        await waitStarted.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2));
+        Task executeTask = StartExecuteAsync(service, cts.Token);
+        await waitStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
         await cts.CancelAsync();
 
-        await executeTask.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2));
+        await executeTask.WaitAsync(TimeSpan.FromSeconds(2));
 
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -150,12 +150,12 @@ public class BluRayCapabilityStartupServiceTests
         TestLifetime lifetime = new();
         lifetime.SignalStarted();
 
-        TaskCompletionSource phaseReached = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource phaseReached = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Mock<IServerPhaseTracker> tracker = new();
         tracker
-            .Setup(expression: t => t.WhenReachedAsync(It.IsAny<BootStage>(), It.IsAny<CancellationToken>()))
+            .Setup(t => t.WhenReachedAsync(It.IsAny<BootStage>(), It.IsAny<CancellationToken>()))
             .Returns<BootStage, CancellationToken>(
-                valueFunction: (_, _) =>
+                (_, _) =>
                 {
                     phaseReached.TrySetResult();
                     return Task.CompletedTask;
@@ -164,16 +164,16 @@ public class BluRayCapabilityStartupServiceTests
 
         Mock<IProcessRunner> runner = MakeSucceedingRunner();
         BluRayCapabilityStartupService service = new(
-            capability: MakeCapability(runner: runner),
-            lifetime: lifetime,
-            logger: NullLogger<BluRayCapabilityStartupService>.Instance,
-            phaseTracker: tracker.Object
+            MakeCapability(runner),
+            lifetime,
+            NullLogger<BluRayCapabilityStartupService>.Instance,
+            tracker.Object
         );
 
         using CancellationTokenSource cts = new();
-        _ = StartExecuteAsync(service: service, ct: cts.Token);
+        _ = StartExecuteAsync(service, cts.Token);
 
-        await phaseReached.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2));
+        await phaseReached.Task.WaitAsync(TimeSpan.FromSeconds(2));
     }
 
     [Fact]
@@ -182,10 +182,10 @@ public class BluRayCapabilityStartupServiceTests
         TestLifetime lifetime = new();
         lifetime.SignalStarted();
 
-        TaskCompletionSource probeCalled = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource probeCalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -194,18 +194,18 @@ public class BluRayCapabilityStartupServiceTests
                 )
             )
             .Returns<string, string[], string?, CancellationToken>(
-                valueFunction: (_, _, _, _) =>
+                (_, _, _, _) =>
                 {
                     probeCalled.TrySetResult();
-                    throw new InvalidOperationException(message: "ffmpeg missing");
+                    throw new InvalidOperationException("ffmpeg missing");
                 }
             );
 
         BluRayCapabilityStartupService service = new(
-            capability: MakeCapability(runner: runner),
-            lifetime: lifetime,
-            logger: NullLogger<BluRayCapabilityStartupService>.Instance,
-            phaseTracker: CompletedPhaseTracker()
+            MakeCapability(runner),
+            lifetime,
+            NullLogger<BluRayCapabilityStartupService>.Instance,
+            CompletedPhaseTracker()
         );
 
         // Real 5-second grace applies here (no injectable override) — this is
@@ -214,24 +214,24 @@ public class BluRayCapabilityStartupServiceTests
         // BackgroundService.StartAsync returns once ExecuteAsync yields (not
         // when it completes), so the assertion waits on the probe-call TCS
         // rather than on StartAsync's returned task.
-        Exception? startupException = await Record.ExceptionAsync(testCode: () =>
-            StartExecuteAsync(service: service, ct: CancellationToken.None)
+        Exception? startupException = await Record.ExceptionAsync(() =>
+            StartExecuteAsync(service, CancellationToken.None)
         );
         startupException
             .Should()
-            .BeNull(because: "BackgroundService.StartAsync must not surface probe failures");
+            .BeNull("BackgroundService.StartAsync must not surface probe failures");
 
-        await probeCalled.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 10));
+        await probeCalled.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         runner.Verify(
-            expression: r =>
+            r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -241,10 +241,10 @@ public class BluRayCapabilityStartupServiceTests
         TestLifetime lifetime = new();
         lifetime.SignalStarted();
 
-        TaskCompletionSource probeCalled = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource probeCalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -253,29 +253,29 @@ public class BluRayCapabilityStartupServiceTests
                 )
             )
             .Returns<string, string[], string?, CancellationToken>(
-                valueFunction: (_, _, _, _) =>
+                (_, _, _, _) =>
                 {
                     probeCalled.TrySetResult();
-                    throw new OperationCanceledException(message: "shutting down");
+                    throw new OperationCanceledException("shutting down");
                 }
             );
 
         BluRayCapabilityStartupService service = new(
-            capability: MakeCapability(runner: runner),
-            lifetime: lifetime,
-            logger: NullLogger<BluRayCapabilityStartupService>.Instance,
-            phaseTracker: CompletedPhaseTracker()
+            MakeCapability(runner),
+            lifetime,
+            NullLogger<BluRayCapabilityStartupService>.Instance,
+            CompletedPhaseTracker()
         );
 
         // Same real 5-second grace as the sibling test above — this proves
         // the OperationCanceledException-specific catch clause (distinct
         // from the generic Exception catch) also swallows cleanly.
-        Exception? startupException = await Record.ExceptionAsync(testCode: () =>
-            StartExecuteAsync(service: service, ct: CancellationToken.None)
+        Exception? startupException = await Record.ExceptionAsync(() =>
+            StartExecuteAsync(service, CancellationToken.None)
         );
         startupException.Should().BeNull();
 
-        await probeCalled.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 10));
+        await probeCalled.Task.WaitAsync(TimeSpan.FromSeconds(10));
     }
 
     [Fact]
@@ -288,10 +288,10 @@ public class BluRayCapabilityStartupServiceTests
         TestLifetime lifetime = new();
         lifetime.SignalStarted();
 
-        TaskCompletionSource probeCalled = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource probeCalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -300,26 +300,26 @@ public class BluRayCapabilityStartupServiceTests
                 )
             )
             .Returns<string, string[], string?, CancellationToken>(
-                valueFunction: (_, _, _, _) =>
+                (_, _, _, _) =>
                 {
                     probeCalled.TrySetResult();
-                    return Task.FromResult(result: new ProcessResult(ExitCode: 0, StdOut: "bluray", StdErr: "", Duration: TimeSpan.Zero));
+                    return Task.FromResult(new ProcessResult(0, "bluray", "", TimeSpan.Zero));
                 }
             );
 
         BluRayCapabilityStartupService service = new(
-            capability: MakeCapability(runner: runner),
-            lifetime: lifetime,
-            logger: NullLogger<BluRayCapabilityStartupService>.Instance,
-            phaseTracker: CompletedPhaseTracker()
+            MakeCapability(runner),
+            lifetime,
+            NullLogger<BluRayCapabilityStartupService>.Instance,
+            CompletedPhaseTracker()
         );
 
-        Exception? startupException = await Record.ExceptionAsync(testCode: () =>
-            StartExecuteAsync(service: service, ct: CancellationToken.None)
+        Exception? startupException = await Record.ExceptionAsync(() =>
+            StartExecuteAsync(service, CancellationToken.None)
         );
         startupException.Should().BeNull();
 
-        await probeCalled.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 10));
+        await probeCalled.Task.WaitAsync(TimeSpan.FromSeconds(10));
     }
 
     private sealed class TestLifetime : IHostApplicationLifetime

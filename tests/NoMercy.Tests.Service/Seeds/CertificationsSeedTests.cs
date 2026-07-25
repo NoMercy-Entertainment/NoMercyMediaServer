@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Service.Seeds;
 /// in-memory <see cref="MediaContext"/> rather than a mock of the type under
 /// test.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class CertificationsSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -34,16 +34,16 @@ public sealed class CertificationsSeedTests : IDisposable
 
     public CertificationsSeedTests()
     {
-        _connection = new(connectionString: "DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection: _connection,
-                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
+                _connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(options: _options);
+        using MediaContext ctx = new(_options);
         ctx.Database.EnsureCreated();
     }
 
@@ -52,9 +52,9 @@ public sealed class CertificationsSeedTests : IDisposable
     [Fact]
     public async Task Init_CertificationsAlreadySeeded_ReturnsWithoutCallingNetwork()
     {
-        await using MediaContext seedContext = new(options: _options);
+        await using MediaContext seedContext = new(_options);
         seedContext.Certifications.Add(
-            entity: new()
+            new()
             {
                 Iso31661 = "US",
                 Rating = "PG-13",
@@ -64,16 +64,16 @@ public sealed class CertificationsSeedTests : IDisposable
         );
         await seedContext.SaveChangesAsync();
 
-        await using MediaContext context = new(options: _options);
+        await using MediaContext context = new(_options);
 
         // No network access is configured in this test process; if Init()
         // attempted the TMDB fetch here it would throw or hang instead of
         // returning promptly. Called via the declaring type (not extension
         // syntax) — NoMercy.Service.Seeds declares several other MediaContext
         // "Init" extensions that would otherwise make `context.Init()` ambiguous.
-        await CertificationsSeed.Init(dbContext: context);
+        await CertificationsSeed.Init(context);
 
         int count = await context.Certifications.CountAsync();
-        Assert.Equal(expected: 1, actual: count);
+        Assert.Equal(1, count);
     }
 }

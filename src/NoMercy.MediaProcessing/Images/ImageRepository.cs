@@ -24,10 +24,10 @@ public class ImageRepository(MediaContext context) : IImageRepository
     )
     {
         return await context
-            .Images.UpsertRange(entities: images)
-            .On(match: v => new { v.FilePath, v.ArtistId })
+            .Images.UpsertRange(images)
+            .On(v => new { v.FilePath, v.ArtistId })
             .WhenMatched(
-                updater: (s, i) =>
+                (s, i) =>
                     new()
                     {
                         AspectRatio = i.AspectRatio,
@@ -46,10 +46,10 @@ public class ImageRepository(MediaContext context) : IImageRepository
     public async Task<ICollection<Image>> StoreReleaseImages(IEnumerable<Image> images)
     {
         return await context
-            .Images.UpsertRange(entities: images)
-            .On(match: v => new { v.FilePath, v.AlbumId })
+            .Images.UpsertRange(images)
+            .On(v => new { v.FilePath, v.AlbumId })
             .WhenMatched(
-                updater: (s, i) =>
+                (s, i) =>
                     new()
                     {
                         AspectRatio = i.AspectRatio,
@@ -69,9 +69,9 @@ public class ImageRepository(MediaContext context) : IImageRepository
     public Task<ReleaseGroup> GetReleaseImages(Guid id)
     {
         return context
-            .ReleaseGroups.Include(navigationPropertyPath: a => a.AlbumReleaseGroup)
-                .ThenInclude(navigationPropertyPath: a => a.Album)
-            .FirstAsync(predicate: a => a.Id == id);
+            .ReleaseGroups.Include(a => a.AlbumReleaseGroup)
+                .ThenInclude(a => a.Album)
+            .FirstAsync(a => a.Id == id);
     }
 
     public Task CommitReleaseChanges()

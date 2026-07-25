@@ -11,11 +11,11 @@
 
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.TvShows;
-using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.People;
 
 public class PersonRepository(MediaContext context, ILogger<PersonRepository> logger) : IPersonRepository
@@ -23,10 +23,10 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
     public Task Store(IEnumerable<Person> people)
     {
         return context
-            .People.UpsertRange(entities: people.ToArray())
-            .On(match: p => new { p.Id })
+            .People.UpsertRange(people.ToArray())
+            .On(p => new { p.Id })
             .WhenMatched(
-                updater: (ps, pi) =>
+                (ps, pi) =>
                     new()
                     {
                         Id = pi.Id,
@@ -53,15 +53,15 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
     public Task StoreTranslationsAsync(IEnumerable<Translation> translations)
     {
         return context
-            .Translations.UpsertRange(entities: translations.ToArray())
-            .On(match: t => new
+            .Translations.UpsertRange(translations.ToArray())
+            .On(t => new
             {
                 t.Iso31661,
                 t.Iso6391,
                 t.PersonId,
             })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         Iso31661 = ti.Iso31661,
@@ -86,10 +86,10 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
     public Task StoreImagesAsync(IEnumerable<Image> images)
     {
         return context
-            .Images.UpsertRange(entities: images.ToArray())
-            .On(match: v => new { v.FilePath, v.PersonId })
+            .Images.UpsertRange(images.ToArray())
+            .On(v => new { v.FilePath, v.PersonId })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         AspectRatio = ti.AspectRatio,
@@ -114,13 +114,13 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
         if (type == Type.Episode)
         {
             int[] episodeIds = context
-                .Episodes.Select(selector: e => e.Id)
+                .Episodes.Select(e => e.Id)
                 .ToArray()
-                .Where(predicate: e => castArray.Any(predicate: c => c.EpisodeId == e))
+                .Where(e => castArray.Any(c => c.EpisodeId == e))
                 .ToArray();
 
             castArray = castArray
-                .Where(predicate: c => c.EpisodeId is not null && episodeIds.Contains(value: c.EpisodeId.Value))
+                .Where(c => c.EpisodeId is not null && episodeIds.Contains(c.EpisodeId.Value))
                 .ToArray();
 
             if (castArray.Length == 0)
@@ -128,13 +128,13 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
         }
 
         Role[] roles = context
-            .Roles.Where(predicate: role => castArray.Select(r => r.CreditId).Contains(role.CreditId))
+            .Roles.Where(role => castArray.Select(r => r.CreditId).Contains(role.CreditId))
             .ToArray();
 
         castArray = castArray
-            .Select(selector: c =>
+            .Select(c =>
             {
-                c.RoleId = roles.First(predicate: r => r.CreditId == c.CreditId).Id;
+                c.RoleId = roles.First(r => r.CreditId == c.CreditId).Id;
                 return c;
             })
             .ToArray();
@@ -142,32 +142,32 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
         UpsertCommandBuilder<Cast> query = type switch
         {
             Type.Movie => context
-                .Casts.UpsertRange(entities: castArray)
-                .On(match: c2 => new
+                .Casts.UpsertRange(castArray)
+                .On(c2 => new
                 {
                     c2.CreditId,
                     c2.MovieId,
                     c2.RoleId,
                 }),
             Type.TvShow => context
-                .Casts.UpsertRange(entities: castArray)
-                .On(match: c2 => new
+                .Casts.UpsertRange(castArray)
+                .On(c2 => new
                 {
                     c2.CreditId,
                     c2.TvId,
                     c2.RoleId,
                 }),
             Type.Season => context
-                .Casts.UpsertRange(entities: castArray)
-                .On(match: c2 => new
+                .Casts.UpsertRange(castArray)
+                .On(c2 => new
                 {
                     c2.CreditId,
                     c2.SeasonId,
                     c2.RoleId,
                 }),
             Type.Episode => context
-                .Casts.UpsertRange(entities: castArray)
-                .On(match: c2 => new
+                .Casts.UpsertRange(castArray)
+                .On(c2 => new
                 {
                     c2.CreditId,
                     c2.EpisodeId,
@@ -178,7 +178,7 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
 
         return query
             .WhenMatched(
-                updater: (cs, ci) =>
+                (cs, ci) =>
                     new()
                     {
                         CreditId = ci.CreditId,
@@ -200,13 +200,13 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
         if (type == Type.Episode)
         {
             int[] episodeIds = context
-                .Episodes.Select(selector: e => e.Id)
+                .Episodes.Select(e => e.Id)
                 .ToArray()
-                .Where(predicate: e => crewArray.Any(predicate: c => c.EpisodeId == e))
+                .Where(e => crewArray.Any(c => c.EpisodeId == e))
                 .ToArray();
 
             crewArray = crewArray
-                .Where(predicate: c => c.EpisodeId is not null && episodeIds.Contains(value: c.EpisodeId.Value))
+                .Where(c => c.EpisodeId is not null && episodeIds.Contains(c.EpisodeId.Value))
                 .ToArray();
 
             if (crewArray.Length == 0)
@@ -214,13 +214,13 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
         }
 
         Job[] jobs = context
-            .Jobs.Where(predicate: job => crewArray.Select(c => c.CreditId).Contains(job.CreditId))
+            .Jobs.Where(job => crewArray.Select(c => c.CreditId).Contains(job.CreditId))
             .ToArray();
 
         crewArray = crewArray
-            .Select(selector: c =>
+            .Select(c =>
             {
-                c.JobId = jobs.First(predicate: j => j.CreditId == c.CreditId).Id;
+                c.JobId = jobs.First(j => j.CreditId == c.CreditId).Id;
                 return c;
             })
             .ToArray();
@@ -230,32 +230,32 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
             UpsertCommandBuilder<Crew> query = type switch
             {
                 Type.Movie => context
-                    .Crews.UpsertRange(entities: crewArray)
-                    .On(match: c2 => new
+                    .Crews.UpsertRange(crewArray)
+                    .On(c2 => new
                     {
                         c2.CreditId,
                         c2.MovieId,
                         c2.JobId,
                     }),
                 Type.TvShow => context
-                    .Crews.UpsertRange(entities: crewArray)
-                    .On(match: c2 => new
+                    .Crews.UpsertRange(crewArray)
+                    .On(c2 => new
                     {
                         c2.CreditId,
                         c2.TvId,
                         c2.JobId,
                     }),
                 Type.Season => context
-                    .Crews.UpsertRange(entities: crewArray)
-                    .On(match: c2 => new
+                    .Crews.UpsertRange(crewArray)
+                    .On(c2 => new
                     {
                         c2.CreditId,
                         c2.SeasonId,
                         c2.JobId,
                     }),
                 Type.Episode => context
-                    .Crews.UpsertRange(entities: crewArray)
-                    .On(match: c2 => new
+                    .Crews.UpsertRange(crewArray)
+                    .On(c2 => new
                     {
                         c2.CreditId,
                         c2.EpisodeId,
@@ -265,8 +265,7 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
             };
 
             await query
-                .WhenMatched(
-                    updater: (cs, ci) =>
+                .WhenMatched((cs, ci) =>
                         new()
                         {
                             CreditId = ci.CreditId,
@@ -282,26 +281,26 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
+            logger.LogError(e.Message);
         }
     }
 
     public Task StoreCreatorAsync(Creator creator)
     {
         return context
-            .Creators.Upsert(entity: creator)
-            .On(match: c => new { c.TvId, c.PersonId })
-            .WhenMatched(updater: (cs, ci) => new() { TvId = ci.TvId, PersonId = ci.PersonId })
+            .Creators.Upsert(creator)
+            .On(c => new { c.TvId, c.PersonId })
+            .WhenMatched((cs, ci) => new() { TvId = ci.TvId, PersonId = ci.PersonId })
             .RunAsync();
     }
 
     public Task StoreGuestStarsAsync(IEnumerable<GuestStar> guestStars)
     {
         return context
-            .GuestStars.UpsertRange(entities: guestStars.ToArray())
-            .On(match: c => new { c.CreditId, c.EpisodeId })
+            .GuestStars.UpsertRange(guestStars.ToArray())
+            .On(c => new { c.CreditId, c.EpisodeId })
             .WhenMatched(
-                updater: (cs, ci) =>
+                (cs, ci) =>
                     new()
                     {
                         Id = ci.Id,
@@ -316,10 +315,10 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
     public Task StoreRoles(IEnumerable<Role> roles)
     {
         return context
-            .Roles.UpsertRange(entities: roles.ToArray())
-            .On(match: p => new { p.CreditId })
+            .Roles.UpsertRange(roles.ToArray())
+            .On(p => new { p.CreditId })
             .WhenMatched(
-                updater: (rs, ri) =>
+                (rs, ri) =>
                     new()
                     {
                         EpisodeCount = ri.EpisodeCount,
@@ -334,10 +333,10 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
     public Task StoreJobs(IEnumerable<Job> jobs)
     {
         return context
-            .Jobs.UpsertRange(entities: jobs.ToArray())
-            .On(match: p => new { p.CreditId })
+            .Jobs.UpsertRange(jobs.ToArray())
+            .On(p => new { p.CreditId })
             .WhenMatched(
-                updater: (js, ji) =>
+                (js, ji) =>
                     new()
                     {
                         Task = ji.Task,
@@ -355,30 +354,30 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
         Type type
     )
     {
-        await StoreAggregateCastAsync(cast: cast, type: type);
-        await StoreAggregateCrewAsync(crew: crew, type: type);
+        await StoreAggregateCastAsync(cast, type);
+        await StoreAggregateCrewAsync(crew, type);
     }
 
     public Task StoreAggregateCastAsync(IEnumerable<Cast> cast, Type type)
     {
-        return StoreCast(cast: cast, type: type);
+        return StoreCast(cast, type);
     }
 
     public Task StoreAggregateCrewAsync(IEnumerable<Crew> crew, Type type)
     {
-        return StoreCrew(crew: crew, type: type);
+        return StoreCrew(crew, type);
     }
 
     public async Task RemoveAggregateCreditsAsync(int tvId)
     {
         // Remove only this show's cast/crew association rows; shared Person
         // records are preserved for other titles that reference them.
-        await context.Casts.Where(predicate: cast => cast.TvId == tvId).ExecuteDeleteAsync();
-        await context.Crews.Where(predicate: crew => crew.TvId == tvId).ExecuteDeleteAsync();
+        await context.Casts.Where(cast => cast.TvId == tvId).ExecuteDeleteAsync();
+        await context.Crews.Where(crew => crew.TvId == tvId).ExecuteDeleteAsync();
     }
 
     public List<int> GetIds()
     {
-        return context.People.Select(selector: p => p.Id).ToList();
+        return context.People.Select(p => p.Id).ToList();
     }
 }

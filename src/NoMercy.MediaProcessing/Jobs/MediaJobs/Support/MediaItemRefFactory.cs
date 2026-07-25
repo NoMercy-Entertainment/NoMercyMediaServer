@@ -13,7 +13,6 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Naming;
-using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 
@@ -30,26 +29,26 @@ public static class MediaItemRefFactory
     {
         if (movie is not null)
             return new MovieMediaRef(
-                Type: MediaType.Movie,
-                Id: movie.Id,
-                Title: movie.Title,
-                Year: movie.ReleaseDate?.Year,
-                Description: movie.Overview
+                MediaType.Movie,
+                movie.Id,
+                movie.Title,
+                movie.ReleaseDate?.Year,
+                movie.Overview
             );
 
         return new EpisodeMediaRef(
-            Type: MediaType.Episode,
-            Id: episode!.Id,
-            Title: episode.Title ?? episode.CreateTitle(),
-            Year: episode.AirDate?.Year,
-            ShowTitle: episode.Tv.Title,
-            SeasonNumber: episode.SeasonNumber,
-            EpisodeNumber: episode.EpisodeNumber,
+            MediaType.Episode,
+            episode!.Id,
+            episode.Title ?? episode.CreateTitle(),
+            episode.AirDate?.Year,
+            episode.Tv.Title,
+            episode.SeasonNumber,
+            episode.EpisodeNumber,
             // Episode.TvId is the show's own TMDB id (Tv.Id uses the same
             // DatabaseGeneratedOption.None-from-TMDB convention as Episode.Id
             // and Movie.Id), so no extra navigation load is needed here.
-            ShowTmdbId: episode.TvId,
-            Description: episode.Overview
+            episode.TvId,
+            episode.Overview
         );
     }
 }

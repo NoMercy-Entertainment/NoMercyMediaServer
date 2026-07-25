@@ -86,18 +86,18 @@ public static class BundleCapResolver
     )
     {
         SpeedIndex? speed = benchmark?.GetCachedIndex();
-        GpuDevice? gpu = hardware is { HasGpu: true, Gpus.Count: > 0 } ? hardware.Gpus[index: 0] : null;
+        GpuDevice? gpu = hardware is { HasGpu: true, Gpus.Count: > 0 } ? hardware.Gpus[0] : null;
 
-        int gpuCap = ResolveGpuCap(rungs: rungs, speed: speed, gpu: gpu);
-        int cpuCap = ResolveCpuCap(rungs: rungs, speed: speed);
+        int gpuCap = ResolveGpuCap(rungs, speed, gpu);
+        int cpuCap = ResolveCpuCap(rungs, speed);
 
         // Driver-enforced ceiling — never propose more concurrent NVENC
         // sessions than the silicon/driver allows even if benchmark
         // suggests otherwise.
         if (gpu is { MaxEncoderSessions: > 0 and not int.MaxValue })
-            gpuCap = Math.Min(val1: gpuCap, val2: gpu.MaxEncoderSessions);
+            gpuCap = Math.Min(gpuCap, gpu.MaxEncoderSessions);
 
-        return (Math.Max(val1: 1, val2: gpuCap), Math.Max(val1: 1, val2: cpuCap));
+        return (Math.Max(1, gpuCap), Math.Max(1, cpuCap));
     }
 
     private static int ResolveGpuCap(
@@ -120,10 +120,10 @@ public static class BundleCapResolver
                 continue;
 
             SpeedMeasurement? measurement = speed.GetSpeed(
-                codec: rung.Codec,
-                encoder: rung.EncoderName,
-                width: rung.Width,
-                deviceName: gpu.Name
+                rung.Codec,
+                rung.EncoderName,
+                rung.Width,
+                gpu.Name
             );
             if (measurement is null)
                 continue;
@@ -136,7 +136,7 @@ public static class BundleCapResolver
         if (!foundAny)
             return UnknownGpuCapFallback;
 
-        return Math.Max(val1: 1, val2: (int)Math.Floor(d: slowest / TargetRealtimeMultiplier));
+        return Math.Max(1, (int)Math.Floor(slowest / TargetRealtimeMultiplier));
     }
 
     private static int ResolveCpuCap(IReadOnlyList<PlannedRung> rungs, SpeedIndex? speed)
@@ -153,10 +153,10 @@ public static class BundleCapResolver
 
             // Software encoders have a null device key in SpeedIndex.
             SpeedMeasurement? measurement = speed.GetSpeed(
-                codec: rung.Codec,
-                encoder: rung.EncoderName,
-                width: rung.Width,
-                deviceName: null
+                rung.Codec,
+                rung.EncoderName,
+                rung.Width,
+                null
             );
             if (measurement is null)
                 continue;
@@ -169,6 +169,6 @@ public static class BundleCapResolver
         if (!foundAny)
             return UnknownCpuCapFallback;
 
-        return Math.Max(val1: 1, val2: (int)Math.Floor(d: slowest / TargetRealtimeMultiplier));
+        return Math.Max(1, (int)Math.Floor(slowest / TargetRealtimeMultiplier));
     }
 }

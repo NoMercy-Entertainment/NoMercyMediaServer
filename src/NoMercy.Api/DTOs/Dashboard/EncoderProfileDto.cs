@@ -15,27 +15,27 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public class EncoderProfileDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public required string Name { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "tags")]
+    [JsonProperty("tags")]
     public string? Tags { get; set; }
 
-    [JsonProperty(propertyName: "parent_preset_id")]
+    [JsonProperty("parent_preset_id")]
     public Ulid? ParentPresetId { get; set; }
 
-    [JsonProperty(propertyName: "is_built_in")]
+    [JsonProperty("is_built_in")]
     public bool IsBuiltIn { get; set; }
 
-    [JsonProperty(propertyName: "source")]
+    [JsonProperty("source")]
     public string Source { get; set; } = "db";
 
-    [JsonProperty(propertyName: "profile_json")]
+    [JsonProperty("profile_json")]
     public required string ProfileJson { get; set; }
 }

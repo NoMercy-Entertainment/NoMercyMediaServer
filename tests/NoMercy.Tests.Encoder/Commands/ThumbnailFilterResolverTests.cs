@@ -23,29 +23,29 @@ public class ThumbnailFilterResolverTests
     public void Resolve_SdrSource_NoTonemap()
     {
         string filter = ThumbnailFilterResolver.Resolve(
-            intervalSeconds: 10,
-            width: 320,
-            sourceIsHdr: false,
-            tonemapChain: Tonemap
+            10,
+            320,
+            false,
+            Tonemap
         );
 
-        filter.Should().Be(expected: "format=yuvj420p,fps=1/10,scale=320:-2");
-        filter.Should().NotContain(unexpected: "tonemap");
+        filter.Should().Be("format=yuvj420p,fps=1/10,scale=320:-2");
+        filter.Should().NotContain("tonemap");
     }
 
     [Fact]
     public void Resolve_HdrSource_PrependsTonemap()
     {
         string filter = ThumbnailFilterResolver.Resolve(
-            intervalSeconds: 10,
-            width: 320,
-            sourceIsHdr: true,
-            tonemapChain: Tonemap
+            10,
+            320,
+            true,
+            Tonemap
         );
 
-        filter.Should().StartWith(expected: Tonemap + ",");
-        filter.Should().EndWith(expected: "fps=1/10,scale=320:-2");
-        filter.Should().Contain(expected: "tonemap=hable", because: "HDR sprites must be tonemapped to SDR");
+        filter.Should().StartWith(Tonemap + ",");
+        filter.Should().EndWith("fps=1/10,scale=320:-2");
+        filter.Should().Contain("tonemap=hable", "HDR sprites must be tonemapped to SDR");
     }
 
     [Fact]
@@ -54,13 +54,13 @@ public class ThumbnailFilterResolverTests
         // No video branch supplied a chain (e.g. all-HDR-preserve ladder) but the
         // sprite still must be SDR — use the built-in hable chain.
         string filter = ThumbnailFilterResolver.Resolve(
-            intervalSeconds: 5,
-            width: 240,
-            sourceIsHdr: true,
-            tonemapChain: null
+            5,
+            240,
+            true,
+            null
         );
 
-        filter.Should().Contain(expected: "tonemap=hable");
-        filter.Should().EndWith(expected: "fps=1/5,scale=240:-2");
+        filter.Should().Contain("tonemap=hable");
+        filter.Should().EndWith("fps=1/5,scale=240:-2");
     }
 }

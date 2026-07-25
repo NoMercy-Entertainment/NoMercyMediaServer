@@ -15,26 +15,26 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Common;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(Iso31661), additionalPropertyNames: nameof(Rating), IsUnique = true)]
-[Index(propertyName: nameof(Rating))]
-[Index(propertyName: nameof(Order))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(Iso31661), nameof(Rating), IsUnique = true)]
+[Index(nameof(Rating))]
+[Index(nameof(Order))]
 public class Certification
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "iso_3166_1")]
+    [JsonProperty("iso_3166_1")]
     public string? Iso31661 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "rating")]
+    [JsonProperty("rating")]
     public string? Rating { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "meaning")]
+    [JsonProperty("meaning")]
     public string Meaning { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "order")]
+    [JsonProperty("order")]
     public int Order { get; set; }
 
     // public Certification(string? country, TmdbTvShowCertification certification)

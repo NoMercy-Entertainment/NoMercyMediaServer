@@ -29,19 +29,19 @@ internal static class JobPayloadTypeReader
     {
         try
         {
-            using JsonDocument document = JsonDocument.Parse(json: payload);
+            using JsonDocument document = JsonDocument.Parse(payload);
             if (
-                !document.RootElement.TryGetProperty(propertyName: "$type", value: out JsonElement typeElement)
+                !document.RootElement.TryGetProperty("$type", out JsonElement typeElement)
                 || typeElement.ValueKind != JsonValueKind.String
             )
                 return UnknownTypeName;
 
             string? rawTypeName = typeElement.GetString();
-            if (string.IsNullOrEmpty(value: rawTypeName))
+            if (string.IsNullOrEmpty(rawTypeName))
                 return UnknownTypeName;
 
-            string withoutAssembly = rawTypeName.Split(separator: ',')[0];
-            int lastDot = withoutAssembly.LastIndexOf(value: '.');
+            string withoutAssembly = rawTypeName.Split(',')[0];
+            int lastDot = withoutAssembly.LastIndexOf('.');
             return lastDot >= 0 ? withoutAssembly[(lastDot + 1)..] : withoutAssembly;
         }
         catch (JsonException)

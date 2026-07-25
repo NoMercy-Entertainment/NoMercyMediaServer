@@ -46,21 +46,21 @@ public class HardwarePreferenceResolverBranchTests
         Dictionary<SpeedKey, SpeedMeasurement> dict = new();
         foreach ((VideoCodecType codec, string encoder, double fps) in entries)
         {
-            SpeedKey key = new(Codec: codec, Encoder: encoder, Width: 1920, DeviceName: null);
-            dict[key: key] = new(Fps: fps, SpeedMultiplier: 1.0, MeasuredAt: DateTime.UtcNow);
+            SpeedKey key = new(codec, encoder, 1920, null);
+            dict[key] = new(fps, 1.0, DateTime.UtcNow);
         }
-        return new(Measurements: dict);
+        return new(dict);
     }
 
-    private static SpeedIndex EmptyIndex() => new(Measurements: new());
+    private static SpeedIndex EmptyIndex() => new(new());
 
     // ── Copy short-circuit ───────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: HardwarePreference.ForceSoftware)]
-    [InlineData(data: HardwarePreference.PreferQuality)]
-    [InlineData(data: HardwarePreference.PreferHardware)]
-    [InlineData(data: HardwarePreference.ForceHardware)]
+    [InlineData(HardwarePreference.ForceSoftware)]
+    [InlineData(HardwarePreference.PreferQuality)]
+    [InlineData(HardwarePreference.PreferHardware)]
+    [InlineData(HardwarePreference.ForceHardware)]
     public void Copy_codec_returns_copy_handle_regardless_of_preference(HardwarePreference pref)
     {
         // Stream copy never consults the encoder table. Same answer for all
@@ -68,15 +68,15 @@ public class HardwarePreferenceResolverBranchTests
         ScopedDecisionLog log = new();
 
         HardwareResolutionResult result = _resolver.Resolve(
-            codec: VideoCodecType.Copy,
-            preference: pref,
-            availableEncoders: ["libx264", "h264_nvenc"],
-            speedIndex: MakeSpeedIndex(entries: (VideoCodecType.H264, "h264_nvenc", 600)),
-            decisions: log
+            VideoCodecType.Copy,
+            pref,
+            ["libx264", "h264_nvenc"],
+            MakeSpeedIndex((VideoCodecType.H264, "h264_nvenc", 600)),
+            log
         );
 
         result.Failure.Should().BeNull();
-        result.EncoderHandle.Should().Be(expected: "copy");
+        result.EncoderHandle.Should().Be("copy");
     }
 
     [Fact]
@@ -89,16 +89,16 @@ public class HardwarePreferenceResolverBranchTests
         ScopedDecisionLog log = new();
 
         _resolver.Resolve(
-            codec: VideoCodecType.Copy,
-            preference: HardwarePreference.PreferHardware,
-            availableEncoders: ["libx264"],
-            speedIndex: EmptyIndex(),
-            decisions: log
+            VideoCodecType.Copy,
+            HardwarePreference.PreferHardware,
+            ["libx264"],
+            EmptyIndex(),
+            log
         );
 
         log.Snapshot().Should().ContainSingle();
-        log.Snapshot()[index: 0].Stage.Should().Be(expected: "encoder.select");
-        log.Snapshot()[index: 0].Key.Should().Be(expected: "encoder.select.copy");
+        log.Snapshot()[0].Stage.Should().Be("encoder.select");
+        log.Snapshot()[0].Key.Should().Be("encoder.select.copy");
     }
 
     // ── PreferQuality with HW available vs not ──────────────────────────────
@@ -111,15 +111,15 @@ public class HardwarePreferenceResolverBranchTests
         ScopedDecisionLog log = new();
 
         _resolver.Resolve(
-            codec: VideoCodecType.H264,
-            preference: HardwarePreference.PreferQuality,
-            availableEncoders: ["libx264", "h264_nvenc"],
-            speedIndex: EmptyIndex(),
-            decisions: log
+            VideoCodecType.H264,
+            HardwarePreference.PreferQuality,
+            ["libx264", "h264_nvenc"],
+            EmptyIndex(),
+            log
         );
 
         log.Snapshot().Should().ContainSingle();
-        log.Snapshot()[index: 0].Message.Should().Contain(expected: "HW available").And.Contain(expected: "libx264");
+        log.Snapshot()[0].Message.Should().Contain("HW available").And.Contain("libx264");
     }
 
     [Fact]
@@ -129,15 +129,15 @@ public class HardwarePreferenceResolverBranchTests
         ScopedDecisionLog log = new();
 
         _resolver.Resolve(
-            codec: VideoCodecType.H264,
-            preference: HardwarePreference.PreferQuality,
-            availableEncoders: ["libx264", "libx265"],
-            speedIndex: EmptyIndex(),
-            decisions: log
+            VideoCodecType.H264,
+            HardwarePreference.PreferQuality,
+            ["libx264", "libx265"],
+            EmptyIndex(),
+            log
         );
 
         log.Snapshot().Should().ContainSingle();
-        log.Snapshot()[index: 0].Message.Should().NotContain(unexpected: "HW available");
+        log.Snapshot()[0].Message.Should().NotContain("HW available");
     }
 
     // ── PreferHardware with empty index but available HW ────────────────────
@@ -152,15 +152,15 @@ public class HardwarePreferenceResolverBranchTests
         ScopedDecisionLog log = new();
 
         HardwareResolutionResult result = _resolver.Resolve(
-            codec: VideoCodecType.H265,
-            preference: HardwarePreference.PreferHardware,
-            availableEncoders: ["libx264", "libx265", "hevc_nvenc"],
-            speedIndex: EmptyIndex(),
-            decisions: log
+            VideoCodecType.H265,
+            HardwarePreference.PreferHardware,
+            ["libx264", "libx265", "hevc_nvenc"],
+            EmptyIndex(),
+            log
         );
 
-        result.EncoderHandle.Should().Be(expected: "hevc_nvenc");
-        log.Snapshot()[index: 0].Message.Should().Contain(expected: "no benchmark yet");
+        result.EncoderHandle.Should().Be("hevc_nvenc");
+        log.Snapshot()[0].Message.Should().Contain("no benchmark yet");
     }
 
     [Fact]
@@ -171,15 +171,15 @@ public class HardwarePreferenceResolverBranchTests
         ScopedDecisionLog log = new();
 
         HardwareResolutionResult result = _resolver.Resolve(
-            codec: VideoCodecType.H264,
-            preference: HardwarePreference.PreferHardware,
-            availableEncoders: ["libx264", "libx265"],
-            speedIndex: EmptyIndex(),
-            decisions: log
+            VideoCodecType.H264,
+            HardwarePreference.PreferHardware,
+            ["libx264", "libx265"],
+            EmptyIndex(),
+            log
         );
 
-        result.EncoderHandle.Should().Be(expected: "libx264");
-        log.Snapshot()[index: 0].Message.Should().Contain(expected: "no HW encoder available");
+        result.EncoderHandle.Should().Be("libx264");
+        log.Snapshot()[0].Message.Should().Contain("no HW encoder available");
     }
 
     [Fact]
@@ -190,15 +190,15 @@ public class HardwarePreferenceResolverBranchTests
         ScopedDecisionLog log = new();
 
         HardwareResolutionResult result = _resolver.Resolve(
-            codec: VideoCodecType.H264,
-            preference: HardwarePreference.PreferHardware,
-            availableEncoders: ["libx264", "hevc_nvenc"], // wrong codec for H264
-            speedIndex: EmptyIndex(),
-            decisions: log
+            VideoCodecType.H264,
+            HardwarePreference.PreferHardware,
+            ["libx264", "hevc_nvenc"], // wrong codec for H264
+            EmptyIndex(),
+            log
         );
 
-        result.EncoderHandle.Should().Be(expected: "libx264");
-        log.Snapshot()[index: 0].Message.Should().Contain(expected: "no HW encoder available");
+        result.EncoderHandle.Should().Be("libx264");
+        log.Snapshot()[0].Message.Should().Contain("no HW encoder available");
     }
 
     // ── PreferHardware ratio formatting when no SW benchmark ───────────────
@@ -207,18 +207,18 @@ public class HardwarePreferenceResolverBranchTests
     public void PreferHardware_ratio_falls_back_to_unknown_when_no_software_benchmark()
     {
         // HW measured but SW not — ratio shows "?×" instead of dividing by 0.
-        SpeedIndex index = MakeSpeedIndex(entries: (VideoCodecType.H264, "h264_nvenc", 480));
+        SpeedIndex index = MakeSpeedIndex((VideoCodecType.H264, "h264_nvenc", 480));
         ScopedDecisionLog log = new();
 
         _resolver.Resolve(
-            codec: VideoCodecType.H264,
-            preference: HardwarePreference.PreferHardware,
-            availableEncoders: ["libx264", "h264_nvenc"],
-            speedIndex: index,
-            decisions: log
+            VideoCodecType.H264,
+            HardwarePreference.PreferHardware,
+            ["libx264", "h264_nvenc"],
+            index,
+            log
         );
 
-        log.Snapshot()[index: 0].Message.Should().Contain(expected: "?×");
+        log.Snapshot()[0].Message.Should().Contain("?×");
     }
 
     // ── CanonicalSoftwareHandle fallback for unknown codec ──────────────────
@@ -239,14 +239,14 @@ public class HardwarePreferenceResolverBranchTests
         ScopedDecisionLog log = new();
 
         HardwareResolutionResult result = _resolver.Resolve(
-            codec: VideoCodecType.Vp9,
-            preference: HardwarePreference.ForceSoftware,
-            availableEncoders: ["libvpx-vp9"],
-            speedIndex: EmptyIndex(),
-            decisions: log
+            VideoCodecType.Vp9,
+            HardwarePreference.ForceSoftware,
+            ["libvpx-vp9"],
+            EmptyIndex(),
+            log
         );
 
-        result.EncoderHandle.Should().Be(expected: "libvpx-vp9");
+        result.EncoderHandle.Should().Be("libvpx-vp9");
     }
 
     // ── ForceHardware with no match returns Failure ─────────────────────────
@@ -260,11 +260,11 @@ public class HardwarePreferenceResolverBranchTests
         ScopedDecisionLog log = new();
 
         HardwareResolutionResult result = _resolver.Resolve(
-            codec: VideoCodecType.H264,
-            preference: HardwarePreference.ForceHardware,
-            availableEncoders: ["libx264", "libx265"], // no HW
-            speedIndex: EmptyIndex(),
-            decisions: log
+            VideoCodecType.H264,
+            HardwarePreference.ForceHardware,
+            ["libx264", "libx265"], // no HW
+            EmptyIndex(),
+            log
         );
 
         result.Failure.Should().NotBeNull();
@@ -278,19 +278,19 @@ public class HardwarePreferenceResolverBranchTests
     {
         // A future preference value not yet in the switch — must NOT throw,
         // must NOT silently force software. Defaults to PreferHardware behavior.
-        SpeedIndex index = MakeSpeedIndex(entries: [(VideoCodecType.H264, "libx264", 100), (VideoCodecType.H264, "h264_nvenc", 500)]
+        SpeedIndex index = MakeSpeedIndex([(VideoCodecType.H264, "libx264", 100), (VideoCodecType.H264, "h264_nvenc", 500)]
         );
         ScopedDecisionLog log = new();
 
         HardwareResolutionResult result = _resolver.Resolve(
-            codec: VideoCodecType.H264,
-            preference: (HardwarePreference)99, // bogus enum value
-            availableEncoders: ["libx264", "h264_nvenc"],
-            speedIndex: index,
-            decisions: log
+            VideoCodecType.H264,
+            (HardwarePreference)99, // bogus enum value
+            ["libx264", "h264_nvenc"],
+            index,
+            log
         );
 
         result.Failure.Should().BeNull();
-        result.EncoderHandle.Should().Be(expected: "h264_nvenc");
+        result.EncoderHandle.Should().Be("h264_nvenc");
     }
 }

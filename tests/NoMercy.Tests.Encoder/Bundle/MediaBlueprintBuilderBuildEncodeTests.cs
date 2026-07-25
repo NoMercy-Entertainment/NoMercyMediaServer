@@ -37,72 +37,68 @@ public class MediaBlueprintBuilderBuildEncodeTests
 
     private static MediaInfo MakeSource() =>
         new(
-            FilePath: "Download/complete/Show/Show.S01E01.mkv",
-            Format: "matroska,webm",
-            Duration: TimeSpan.FromSeconds(seconds: 1440),
-            OverallBitRateKbps: 8_000,
-            FileSizeBytes: 1_500_000_000L,
-            VideoStreams:
+            "Download/complete/Show/Show.S01E01.mkv",
+            "matroska,webm",
+            TimeSpan.FromSeconds(1440),
+            8_000,
+            1_500_000_000L,
             [
                 new(
-                    Index: VideoIndex,
-                    Codec: "hevc",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 23.976,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: "bt709",
-                    ColorTransfer: "bt709",
-                    ColorSpace: "bt709",
-                    IsDefault: true,
-                    BitRateKbps: 6_000
+                    VideoIndex,
+                    "hevc",
+                    1920,
+                    1080,
+                    23.976,
+                    8,
+                    "yuv420p",
+                    "bt709",
+                    "bt709",
+                    "bt709",
+                    true,
+                    6_000
                 ),
             ],
-            AudioStreams:
             [
                 new(
-                    Index: TranscodedAudioIndex,
-                    Codec: "flac",
-                    Channels: 2,
-                    SampleRate: 48_000,
-                    BitRateKbps: 0,
-                    Language: "jpn",
-                    IsDefault: true,
-                    IsForced: false
+                    TranscodedAudioIndex,
+                    "flac",
+                    2,
+                    48_000,
+                    0,
+                    "jpn",
+                    true,
+                    false
                 ),
                 new(
-                    Index: DroppedAudioIndex,
-                    Codec: "aac",
-                    Channels: 2,
-                    SampleRate: 48_000,
-                    BitRateKbps: 192,
-                    Language: "eng",
-                    IsDefault: false,
-                    IsForced: false
+                    DroppedAudioIndex,
+                    "aac",
+                    2,
+                    48_000,
+                    192,
+                    "eng",
+                    false,
+                    false
                 ),
             ],
-            SubtitleStreams:
             [
                 new(
-                    Index: SubtitleIndex,
-                    Codec: "hdmv_pgs_subtitle",
-                    Language: "eng",
-                    IsDefault: false,
-                    IsForced: false
+                    SubtitleIndex,
+                    "hdmv_pgs_subtitle",
+                    "eng",
+                    false,
+                    false
                 ),
             ],
-            Chapters: [],
-            Attachments: []
+            [],
+            []
         );
 
     private static OutputPlan MakePlan() =>
         new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920,
+                    1920,
                     Height: 1080,
                     EncoderName: "copy",
                     Crf: 0,
@@ -117,10 +113,9 @@ public class MediaBlueprintBuilderBuildEncodeTests
                     SourceStreamIndex: VideoIndex
                 ),
             ],
-            AudioOutputs:
             [
                 new(
-                    EncoderName: "opus",
+                    "opus",
                     BitrateKbps: 128,
                     Channels: 2,
                     SampleRate: 48_000,
@@ -132,10 +127,9 @@ public class MediaBlueprintBuilderBuildEncodeTests
                 // No output carries DroppedAudioIndex — that stream must
                 // still surface as its own "dropped" track, never vanish.
             ],
-            SubtitleOutputs:
             [
                 new(
-                    OutputCodec: SubtitleCodecType.Copy,
+                    SubtitleCodecType.Copy,
                     Action: StreamAction.Extract,
                     Language: "eng",
                     SourceIndex: SubtitleIndex,
@@ -144,22 +138,22 @@ public class MediaBlueprintBuilderBuildEncodeTests
                     Variant: "full"
                 ),
             ],
-            Thumbnails: null
+            null
         );
 
     private static BundleLayout MakeLayout() =>
         new(
-            MediaKey: "abc123",
-            PresetSlug: "anime-1080p",
-            IsSingleFile: false,
-            BundleDirectory: "encodes/anime-1080p",
-            MasterPlaylistName: "abc123_master.m3u8",
-            ManifestPath: "encodes/anime-1080p/manifest.json",
-            ReconstructionPath: "encodes/anime-1080p/reconstruction.json",
-            SingleFileName: string.Empty,
-            PresetId: "01HZPRESET",
-            PresetName: "Anime 1080p",
-            ContainerString: "hls-fmp4"
+            "abc123",
+            "anime-1080p",
+            false,
+            "encodes/anime-1080p",
+            "abc123_master.m3u8",
+            "encodes/anime-1080p/manifest.json",
+            "encodes/anime-1080p/reconstruction.json",
+            string.Empty,
+            "01HZPRESET",
+            "Anime 1080p",
+            "hls-fmp4"
         );
 
     // Real on-disk listing, relative to the media folder root — mirrors what
@@ -179,15 +173,15 @@ public class MediaBlueprintBuilderBuildEncodeTests
 
     private BlueprintEncode BuildEncode() =>
         _builder.BuildEncode(
-            source: MakeSource(),
-            plan: MakePlan(),
-            layout: MakeLayout(),
-            outputFiles: MakeOutputFiles(),
-            outputLocation: "Anime/Show/Season 01/Show S01E01",
-            encoderVersion: "1.2.3",
-            profileFingerprint: "fingerprint-abc",
-            createdAt: new DateTime(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc),
-            completedAt: new DateTime(year: 2026, month: 1, day: 1, hour: 0, minute: 10, second: 0, kind: DateTimeKind.Utc)
+            MakeSource(),
+            MakePlan(),
+            MakeLayout(),
+            MakeOutputFiles(),
+            "Anime/Show/Season 01/Show S01E01",
+            "1.2.3",
+            "fingerprint-abc",
+            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 1, 1, 0, 10, 0, DateTimeKind.Utc)
         );
 
     [Fact]
@@ -195,11 +189,11 @@ public class MediaBlueprintBuilderBuildEncodeTests
     {
         BlueprintEncode encode = BuildEncode();
 
-        encode.Tracks.Should().HaveCount(expected: 4);
+        encode.Tracks.Should().HaveCount(4);
         encode
-            .Tracks.Select(selector: t => t.SourceStreamIndex)
+            .Tracks.Select(t => t.SourceStreamIndex)
             .Should()
-            .BeEquivalentTo(expectation: [VideoIndex, TranscodedAudioIndex, DroppedAudioIndex, SubtitleIndex]);
+            .BeEquivalentTo([VideoIndex, TranscodedAudioIndex, DroppedAudioIndex, SubtitleIndex]);
     }
 
     [Fact]
@@ -207,14 +201,14 @@ public class MediaBlueprintBuilderBuildEncodeTests
     {
         BlueprintEncode encode = BuildEncode();
 
-        BlueprintTrack video = encode.Tracks.Single(predicate: t => t.SourceStreamIndex == VideoIndex);
-        video.Kind.Should().Be(expected: "video");
-        video.Policy.Should().Be(expected: "copy");
-        video.Fidelity.Should().Be(expected: "lossless");
+        BlueprintTrack video = encode.Tracks.Single(t => t.SourceStreamIndex == VideoIndex);
+        video.Kind.Should().Be("video");
+        video.Policy.Should().Be("copy");
+        video.Fidelity.Should().Be("lossless");
         video.Reconstructable.Should().BeTrue();
         video.OriginalParams.Should().BeNull();
         video.Files.Should().NotBeEmpty();
-        video.Files.Should().OnlyContain(predicate: f => f.StartsWith("video_1920x1080_SDR/"));
+        video.Files.Should().OnlyContain(f => f.StartsWith("video_1920x1080_SDR/"));
     }
 
     [Fact]
@@ -222,18 +216,18 @@ public class MediaBlueprintBuilderBuildEncodeTests
     {
         BlueprintEncode encode = BuildEncode();
 
-        BlueprintTrack audio = encode.Tracks.Single(predicate: t =>
+        BlueprintTrack audio = encode.Tracks.Single(t =>
             t.SourceStreamIndex == TranscodedAudioIndex
         );
-        audio.Kind.Should().Be(expected: "audio");
-        audio.Policy.Should().Be(expected: "transcode");
-        audio.Fidelity.Should().Be(expected: "lossy");
+        audio.Kind.Should().Be("audio");
+        audio.Policy.Should().Be("transcode");
+        audio.Fidelity.Should().Be("lossy");
         audio.Reconstructable.Should().BeFalse();
         audio.OriginalParams.Should().NotBeNull();
-        ((string?)audio.OriginalParams![propertyName: "codec"]).Should().Be(expected: "flac");
-        ((int?)audio.OriginalParams![propertyName: "channels"]).Should().Be(expected: 2);
-        ((int?)audio.OriginalParams![propertyName: "sample_rate"]).Should().Be(expected: 48_000);
-        audio.Files.Should().OnlyContain(predicate: f => f.StartsWith("audio_jpn_opus/"));
+        ((string?)audio.OriginalParams!["codec"]).Should().Be("flac");
+        ((int?)audio.OriginalParams!["channels"]).Should().Be(2);
+        ((int?)audio.OriginalParams!["sample_rate"]).Should().Be(48_000);
+        audio.Files.Should().OnlyContain(f => f.StartsWith("audio_jpn_opus/"));
     }
 
     [Fact]
@@ -241,13 +235,13 @@ public class MediaBlueprintBuilderBuildEncodeTests
     {
         BlueprintEncode encode = BuildEncode();
 
-        BlueprintTrack dropped = encode.Tracks.Single(predicate: t =>
+        BlueprintTrack dropped = encode.Tracks.Single(t =>
             t.SourceStreamIndex == DroppedAudioIndex
         );
-        dropped.Kind.Should().Be(expected: "audio");
-        dropped.SourceCodec.Should().Be(expected: "aac");
-        dropped.Policy.Should().Be(expected: "dropped");
-        dropped.Fidelity.Should().Be(expected: "lost");
+        dropped.Kind.Should().Be("audio");
+        dropped.SourceCodec.Should().Be("aac");
+        dropped.Policy.Should().Be("dropped");
+        dropped.Fidelity.Should().Be("lost");
         dropped.Reconstructable.Should().BeFalse();
         dropped.Files.Should().BeEmpty();
     }
@@ -257,15 +251,15 @@ public class MediaBlueprintBuilderBuildEncodeTests
     {
         BlueprintEncode encode = BuildEncode();
 
-        BlueprintTrack subtitle = encode.Tracks.Single(predicate: t => t.SourceStreamIndex == SubtitleIndex);
-        subtitle.Kind.Should().Be(expected: "subtitle");
-        subtitle.Policy.Should().Be(expected: "extract");
-        subtitle.Fidelity.Should().Be(expected: "lossless");
+        BlueprintTrack subtitle = encode.Tracks.Single(t => t.SourceStreamIndex == SubtitleIndex);
+        subtitle.Kind.Should().Be("subtitle");
+        subtitle.Policy.Should().Be("extract");
+        subtitle.Fidelity.Should().Be("lossless");
         subtitle.Reconstructable.Should().BeTrue();
-        subtitle.Container.Should().Be(expected: "mks");
+        subtitle.Container.Should().Be("mks");
         subtitle.Files.Should().ContainSingle();
-        subtitle.Files[index: 0].Should().EndWith(expected: ".mks");
-        subtitle.Files.Should().NotContain(predicate: f => f.EndsWith(".vtt"));
+        subtitle.Files[0].Should().EndWith(".mks");
+        subtitle.Files.Should().NotContain(f => f.EndsWith(".vtt"));
     }
 
     [Fact]
@@ -275,9 +269,9 @@ public class MediaBlueprintBuilderBuildEncodeTests
 
         // Transcoded audio + dropped audio are lossy/lost. Copy video and
         // extracted subtitle are lossless and must NOT produce a warning.
-        encode.LossyWarnings.Should().HaveCount(expected: 2);
-        encode.LossyWarnings.Should().Contain(predicate: w => w.StartsWith($"audio[{TranscodedAudioIndex}]"));
-        encode.LossyWarnings.Should().Contain(predicate: w => w.StartsWith($"audio[{DroppedAudioIndex}]"));
+        encode.LossyWarnings.Should().HaveCount(2);
+        encode.LossyWarnings.Should().Contain(w => w.StartsWith($"audio[{TranscodedAudioIndex}]"));
+        encode.LossyWarnings.Should().Contain(w => w.StartsWith($"audio[{DroppedAudioIndex}]"));
     }
 
     [Fact]
@@ -286,16 +280,16 @@ public class MediaBlueprintBuilderBuildEncodeTests
         BlueprintEncode encode = BuildEncode();
 
         encode.ReconstructionCommandTemplate.Should().NotBeNullOrWhiteSpace();
-        encode.ReconstructionCommandTemplate.Should().StartWith(expected: "ffmpeg ");
+        encode.ReconstructionCommandTemplate.Should().StartWith("ffmpeg ");
         // One -i per track that actually retained a file — the dropped audio
         // stream contributed no file and must not appear as an input.
-        encode.ReconstructionCommandTemplate.Should().Contain(expected: "-i \"video_1920x1080_SDR/");
-        encode.ReconstructionCommandTemplate.Should().Contain(expected: "-i \"audio_jpn_opus/");
-        encode.ReconstructionCommandTemplate.Should().Contain(expected: "-i \"subtitles/");
+        encode.ReconstructionCommandTemplate.Should().Contain("-i \"video_1920x1080_SDR/");
+        encode.ReconstructionCommandTemplate.Should().Contain("-i \"audio_jpn_opus/");
+        encode.ReconstructionCommandTemplate.Should().Contain("-i \"subtitles/");
         // "matroska" (the mapped source container) has "mkv" as its real
         // reconstruction file extension — mirrors OutputNamingResolver's own
         // Container -> extension mapping for the single-file MKV case.
-        encode.ReconstructionCommandTemplate.Should().Contain(expected: "reconstructed.mkv");
+        encode.ReconstructionCommandTemplate.Should().Contain("reconstructed.mkv");
     }
 
     [Fact]
@@ -304,7 +298,7 @@ public class MediaBlueprintBuilderBuildEncodeTests
         BlueprintEncode encode = BuildEncode();
 
         // Source format_name is "matroska,webm" — never the HLS/fMP4 output.
-        encode.TargetContainer.Should().Be(expected: "matroska");
+        encode.TargetContainer.Should().Be("matroska");
     }
 
     [Fact]
@@ -312,10 +306,10 @@ public class MediaBlueprintBuilderBuildEncodeTests
     {
         BlueprintEncode encode = BuildEncode();
 
-        encode.PresetSlug.Should().Be(expected: "anime-1080p");
-        encode.PresetId.Should().Be(expected: "01HZPRESET");
-        encode.ProfileFingerprint.Should().Be(expected: "fingerprint-abc");
-        encode.EncoderVersion.Should().Be(expected: "1.2.3");
-        encode.OutputLocation.Should().Be(expected: "Anime/Show/Season 01/Show S01E01");
+        encode.PresetSlug.Should().Be("anime-1080p");
+        encode.PresetId.Should().Be("01HZPRESET");
+        encode.ProfileFingerprint.Should().Be("fingerprint-abc");
+        encode.EncoderVersion.Should().Be("1.2.3");
+        encode.OutputLocation.Should().Be("Anime/Show/Season 01/Show S01E01");
     }
 }

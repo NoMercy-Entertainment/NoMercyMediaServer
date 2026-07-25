@@ -37,17 +37,17 @@ using NoMercy.Storage;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags(tags: "Media")]
-[ApiVersion(version: 1.0)]
+[Tags("Media")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}")]
+[Route("api/v{version:apiVersion}")]
 public partial class HomeController : BaseController
 {
     // YouTube video ids are exactly 11 chars of [A-Za-z0-9_-]. trailerId flows
     // into shell command strings (yt-dlp/ffmpeg) and filesystem paths, so a
     // strict match is the trust boundary that blocks command injection and
     // path traversal before the value reaches Shell.Exec* or Path.Combine.
-    [GeneratedRegex(pattern: "^[A-Za-z0-9_-]{11}$")]
+    [GeneratedRegex("^[A-Za-z0-9_-]{11}$")]
     private static partial Regex TrailerIdRegex();
 
     private readonly HomeService _homeService;
@@ -60,7 +60,7 @@ public partial class HomeController : BaseController
         ILogger<HomeController> logger,
         HomeService homeService,
         IDbContextFactory<MediaContext> contextFactory,
-        [FromKeyedServices(key: "transcode")] IStorage transcodeStorage
+        [FromKeyedServices("transcode")] IStorage transcodeStorage
     )
     {
         _logger = logger;
@@ -81,16 +81,16 @@ public partial class HomeController : BaseController
         string country = Country();
 
         List<GenreRowDto<GenreRowItemDto>> result = await _homeService.GetHomePageContent(
-            userId: userId,
-            language: language,
-            country: country,
-            request: request
+            userId,
+            language,
+            country,
+            request
         );
 
         List<GenreRowDto<GenreRowItemDto>> newData = result.ToList();
         bool hasMore = newData.Count >= request.Take;
 
-        newData = newData.Take(count: request.Take).ToList();
+        newData = newData.Take(request.Take).ToList();
 
         PaginatedResponse<GenreRowDto<GenreRowItemDto>> response = new()
         {
@@ -100,57 +100,57 @@ public partial class HomeController : BaseController
         };
 
         if (request.Page != 0)
-            return Ok(value: response);
+            return Ok(response);
 
         // "Latest in {library}" carousels belong to the non-lolomo home only;
         // the lolomo (mobile/TV) variant lays those library rows out itself.
         if (request.Version == "lolomo")
-            return Ok(value: response);
+            return Ok(response);
 
-        LibraryRepository libraryRepository = new(contextFactory: _contextFactory);
-        List<Library> libraries = await libraryRepository.GetLibrariesLite(userId: userId, ct: ct);
+        LibraryRepository libraryRepository = new(_contextFactory);
+        List<Library> libraries = await libraryRepository.GetLibrariesLite(userId, ct);
 
         // Fetch all library data in parallel - each task needs its own MediaContext for thread safety
         Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks = libraries
-            .Select(selector: async library =>
+            .Select(async library =>
             {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(cancellationToken: ct);
+                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
                 List<Movie> libraryMovies = [];
                 await foreach (
                     Movie movie in libraryRepository
                         .GetLibraryMovies(
-                            mediaContext: context,
-                            userId: userId,
-                            libraryId: library.Id,
-                            language: language,
-                            take: UiLimits.MaximumCardsInCarousel,
-                            skip: request.Page,
-                            orderByExpression: m => m.CreatedAt,
-                            direction: "desc"
+                            context,
+                            userId,
+                            library.Id,
+                            language,
+                            UiLimits.MaximumCardsInCarousel,
+                            request.Page,
+                            m => m.CreatedAt,
+                            "desc"
                         )
-                        .WithCancellation(cancellationToken: ct)
+                        .WithCancellation(ct)
                 )
                 {
-                    libraryMovies.Add(item: movie);
+                    libraryMovies.Add(movie);
                 }
 
                 List<Tv> libraryShows = [];
                 await foreach (
                     Tv tv in libraryRepository
                         .GetLibraryShows(
-                            mediaContext: context,
-                            userId: userId,
-                            libraryId: library.Id,
-                            language: language,
-                            take: UiLimits.MaximumCardsInCarousel,
-                            skip: request.Page,
-                            orderByExpression: m => m.CreatedAt,
-                            direction: "desc"
+                            context,
+                            userId,
+                            library.Id,
+                            language,
+                            UiLimits.MaximumCardsInCarousel,
+                            request.Page,
+                            m => m.CreatedAt,
+                            "desc"
                         )
-                        .WithCancellation(cancellationToken: ct)
+                        .WithCancellation(ct)
                 )
                 {
-                    libraryShows.Add(item: tv);
+                    libraryShows.Add(tv);
                 }
 
                 return (library, libraryMovies, libraryShows);
@@ -158,46 +158,46 @@ public partial class HomeController : BaseController
             .ToArray();
 
         (Library library, List<Movie> movies, List<Tv> shows)[] libraryDataResults =
-            await Task.WhenAll(tasks: libraryDataTasks);
+            await Task.WhenAll(libraryDataTasks);
 
         foreach (
             (
                 Library library,
                 List<Movie> libraryMovies,
                 List<Tv> libraryShows
-            ) in libraryDataResults.OrderByDescending(keySelector: r => r.library.Order)
+            ) in libraryDataResults.OrderByDescending(r => r.library.Order)
         )
         {
             response.Data = response.Data.Prepend(
-                element: new()
+                new()
                 {
                     Title = "Latest in " + library.Title,
-                    MoreLink = new(uriString: $"/libraries/{library.Id}", uriKind: UriKind.Relative),
+                    MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
                     Items = libraryMovies
-                        .Select(selector: movie => new GenreRowItemDto(movie: movie, country: country))
-                        .Concat(second: libraryShows.Select(selector: tv => new GenreRowItemDto(tv: tv, country: country))),
+                        .Select(movie => new GenreRowItemDto(movie, country))
+                        .Concat(libraryShows.Select(tv => new GenreRowItemDto(tv, country))),
                 }
             );
         }
 
-        return Ok(value: response);
+        return Ok(response);
     }
 
-    [HttpGet(template: "home")]
+    [HttpGet("home")]
     [ResponseCache(NoStore = true)]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Home(CancellationToken ct = default)
     {
         ComponentResponse result = await _homeService.GetHomeData(
-            userId: User.UserId(),
-            language: Language(),
-            country: Country()
+            User.UserId(),
+            Language(),
+            Country()
         );
 
-        return Ok(value: result);
+        return Ok(result);
     }
 
-    [HttpPost(template: "home/card")]
+    [HttpPost("home/card")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> HomeCard(
         [FromBody] CardRequestDto request,
@@ -205,29 +205,29 @@ public partial class HomeController : BaseController
     )
     {
         ComponentResponse result = await _homeService.GetHomeCard(
-            userId: User.UserId(),
-            language: Language(),
-            country: Country(),
-            replaceId: request.ReplaceId
+            User.UserId(),
+            Language(),
+            Country(),
+            request.ReplaceId
         );
 
-        return Ok(value: result);
+        return Ok(result);
     }
 
-    [HttpGet(template: "home/tv")]
+    [HttpGet("home/tv")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> HomeTv(CancellationToken ct = default)
     {
         ComponentResponse result = await _homeService.GetHomeTvContent(
-            userId: User.UserId(),
-            language: Language(),
-            country: Country()
+            User.UserId(),
+            Language(),
+            Country()
         );
 
-        return Ok(value: result);
+        return Ok(result);
     }
 
-    [HttpPost(template: "home/continue")]
+    [HttpPost("home/continue")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> HomeContinue(
         [FromBody] CardRequestDto request,
@@ -235,17 +235,17 @@ public partial class HomeController : BaseController
     )
     {
         ComponentResponse result = await _homeService.GetHomeContinueContent(
-            userId: User.UserId(),
-            language: Language(),
-            country: Country(),
-            replaceId: request.ReplaceId
+            User.UserId(),
+            Language(),
+            Country(),
+            request.ReplaceId
         );
 
-        return Ok(value: result);
+        return Ok(result);
     }
 
     [HttpHead]
-    [Route(template: "trailer/{trailerId}")]
+    [Route("trailer/{trailerId}")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> HasTrailer(
         int id,
@@ -253,43 +253,43 @@ public partial class HomeController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!TrailerIdRegex().IsMatch(input: trailerId))
-            return NotFoundResponse(detail: "Trailer not found");
+        if (!TrailerIdRegex().IsMatch(trailerId))
+            return NotFoundResponse("Trailer not found");
 
-        string infoJsonPath = _transcodeStorage.CombinePath(parent: trailerId, child: "info.json");
+        string infoJsonPath = _transcodeStorage.CombinePath(trailerId, "info.json");
 
-        if (await _transcodeStorage.ExistsAsync(path: infoJsonPath, ct: ct))
+        if (await _transcodeStorage.ExistsAsync(infoJsonPath, ct))
         {
-            string text = await _transcodeStorage.ReadAllTextAsync(path: infoJsonPath, ct: ct);
+            string text = await _transcodeStorage.ReadAllTextAsync(infoJsonPath, ct);
             TrailerInfo? trailerInfo = text.FromJson<TrailerInfo>();
             if (trailerInfo is not null)
             {
                 return Ok(
-                    value: new StatusResponseDto<string> { Status = "ok", Message = "Trailer found" }
+                    new StatusResponseDto<string> { Status = "ok", Message = "Trailer found" }
                 );
             }
         }
 
         string arg =
             $"-f bestvideo+bestaudio -j https://youtube.com/watch?v={trailerId} --extractor-args \"youtube:player_client=default\" ";
-        Shell.ExecResult result = await Shell.ExecAsync(executable: AppFiles.YtdlpPath, arguments: arg);
+        Shell.ExecResult result = await Shell.ExecAsync(AppFiles.YtdlpPath, arg);
 
-        if (!result.Success || string.IsNullOrEmpty(value: result.StandardOutput))
+        if (!result.Success || string.IsNullOrEmpty(result.StandardOutput))
         {
-            _logger.LogError(message: result.StandardError);
-            return NotFoundResponse(detail: "Trailer not found");
+            _logger.LogError(result.StandardError);
+            return NotFoundResponse("Trailer not found");
         }
 
-        if (!await _transcodeStorage.ExistsAsync(path: trailerId, ct: ct))
-            await _transcodeStorage.CreateDirectoryAsync(path: trailerId, ct: ct);
+        if (!await _transcodeStorage.ExistsAsync(trailerId, ct))
+            await _transcodeStorage.CreateDirectoryAsync(trailerId, ct);
 
-        await _transcodeStorage.WriteAllTextAsync(path: infoJsonPath, contents: result.StandardOutput, ct: ct);
+        await _transcodeStorage.WriteAllTextAsync(infoJsonPath, result.StandardOutput, ct);
 
-        return Ok(value: new StatusResponseDto<string> { Status = "ok", Message = "Trailer found" });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Trailer found" });
     }
 
     [HttpGet]
-    [Route(template: "trailer/{trailerId}")]
+    [Route("trailer/{trailerId}")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Trailer(
         int id,
@@ -297,29 +297,29 @@ public partial class HomeController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!TrailerIdRegex().IsMatch(input: trailerId))
-            return NotFoundResponse(detail: "Trailer not found");
+        if (!TrailerIdRegex().IsMatch(trailerId))
+            return NotFoundResponse("Trailer not found");
 
         string language = Language();
 
-        if (!await _transcodeStorage.ExistsAsync(path: trailerId, ct: ct))
-            await _transcodeStorage.CreateDirectoryAsync(path: trailerId, ct: ct);
+        if (!await _transcodeStorage.ExistsAsync(trailerId, ct))
+            await _transcodeStorage.CreateDirectoryAsync(trailerId, ct);
 
-        string infoJsonPath = _transcodeStorage.CombinePath(parent: trailerId, child: "info.json");
-        string text = await _transcodeStorage.ReadAllTextAsync(path: infoJsonPath, ct: ct);
+        string infoJsonPath = _transcodeStorage.CombinePath(trailerId, "info.json");
+        string text = await _transcodeStorage.ReadAllTextAsync(infoJsonPath, ct);
         TrailerInfo? trailerInfo = text.FromJson<TrailerInfo>();
 
         if (trailerInfo is null)
         {
-            _logger.LogError(message: "Trailer info is null");
-            return NotFoundResponse(detail: "Trailer not found");
+            _logger.LogError("Trailer info is null");
+            return NotFoundResponse("Trailer not found");
         }
 
-        string firstSegmentPath = _transcodeStorage.CombinePath(parent: trailerId, child: "video_00002.ts");
-        if (await _transcodeStorage.ExistsAsync(path: firstSegmentPath, ct: ct))
+        string firstSegmentPath = _transcodeStorage.CombinePath(trailerId, "video_00002.ts");
+        if (await _transcodeStorage.ExistsAsync(firstSegmentPath, ct))
         {
             return Ok(
-                value: new VideoPlaylistResponseDto
+                new VideoPlaylistResponseDto
                 {
                     Id = 0,
                     Title = trailerInfo.Title,
@@ -330,10 +330,10 @@ public partial class HomeController : BaseController
                     Origin = Info.DeviceId,
                     PlaylistId = trailerInfo.Id!,
                     Tracks = trailerInfo
-                        .Subtitles.Where(predicate: t => t.Value.Any(predicate: s => s.Ext == "vtt"))
-                        .Select(selector: t => new VideoTrack
+                        .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
+                        .Select(t => new VideoTrack
                         {
-                            Label = t.Value.First(predicate: s => s.Ext == "vtt").Name,
+                            Label = t.Value.First(s => s.Ext == "vtt").Name,
                             File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
                             Language = t.Key,
                             Kind = "subtitles",
@@ -352,60 +352,60 @@ public partial class HomeController : BaseController
             );
         }
 
-        string trailerWorkDir = Path.Combine(path1: AppFiles.TranscodePath, path2: trailerId);
+        string trailerWorkDir = Path.Combine(AppFiles.TranscodePath, trailerId);
 
         _ = Task.Run(
-            action: () =>
+            () =>
             {
                 try
                 {
                     string command = TrailerCommandBuilder.Build(
-                        ytdlpPath: AppFiles.YtdlpPath,
-                        ffmpegPath: AppFiles.FfmpegPath,
-                        trailerId: trailerId,
-                        language: language
+                        AppFiles.YtdlpPath,
+                        AppFiles.FfmpegPath,
+                        trailerId,
+                        language
                     );
 
                     if (Software.IsWindows)
                     {
-                        _logger.LogDebug(message: "cmd -c \"{Command}\"", args: command);
+                        _logger.LogDebug("cmd -c \"{Command}\"", command);
                         Shell.ExecSync(
-                            executable: "cmd",
-                            arguments: $"/c \"{command}\"",
-                            options: new() { WorkingDirectory = trailerWorkDir }
+                            "cmd",
+                            $"/c \"{command}\"",
+                            new() { WorkingDirectory = trailerWorkDir }
                         );
                     }
                     else
                     {
-                        _logger.LogDebug(message: "/bin/bash -c \"{Command}\"", args: command);
+                        _logger.LogDebug("/bin/bash -c \"{Command}\"", command);
                         Shell.ExecSync(
-                            executable: "/bin/bash",
-                            arguments: $"-c \"{command}\"",
-                            options: new() { WorkingDirectory = trailerWorkDir }
+                            "/bin/bash",
+                            $"-c \"{command}\"",
+                            new() { WorkingDirectory = trailerWorkDir }
                         );
                     }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(
-                        message: "Trailer download failed for {TrailerId}: {Message}", args: [trailerId, ex.Message]
+                        "Trailer download failed for {TrailerId}: {Message}", [trailerId, ex.Message]
                     );
                 }
             },
-            cancellationToken: ct
+            ct
         );
 
         using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(
-            token: HttpContext.RequestAborted
+            HttpContext.RequestAborted
         );
-        timeoutCts.CancelAfter(delay: TimeSpan.FromSeconds(seconds: 30));
-        while (!await _transcodeStorage.ExistsAsync(path: firstSegmentPath, ct: ct))
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
+        while (!await _transcodeStorage.ExistsAsync(firstSegmentPath, ct))
         {
-            await Task.Delay(millisecondsDelay: 1000, cancellationToken: timeoutCts.Token);
+            await Task.Delay(1000, timeoutCts.Token);
         }
 
         return Ok(
-            value: new VideoPlaylistResponseDto
+            new VideoPlaylistResponseDto
             {
                 Id = 0,
                 Title = trailerInfo.Title,
@@ -416,10 +416,10 @@ public partial class HomeController : BaseController
                 Origin = Info.DeviceId,
                 PlaylistId = trailerInfo.Id!,
                 Tracks = trailerInfo
-                    .Subtitles.Where(predicate: t => t.Value.Any(predicate: s => s.Ext == "vtt"))
-                    .Select(selector: t => new VideoTrack
+                    .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
+                    .Select(t => new VideoTrack
                     {
-                        Label = t.Value.First(predicate: s => s.Ext == "vtt").Name,
+                        Label = t.Value.First(s => s.Ext == "vtt").Name,
                         File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
                         Language = t.Key,
                         Kind = "subtitles",
@@ -439,7 +439,7 @@ public partial class HomeController : BaseController
     }
 
     [HttpDelete]
-    [Route(template: "trailer/{trailerId}")]
+    [Route("trailer/{trailerId}")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> RemoveTrailer(
         int id,
@@ -447,27 +447,27 @@ public partial class HomeController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!TrailerIdRegex().IsMatch(input: trailerId))
-            return NotFoundResponse(detail: "Trailer not found");
+        if (!TrailerIdRegex().IsMatch(trailerId))
+            return NotFoundResponse("Trailer not found");
 
-        if (!await _transcodeStorage.ExistsAsync(path: trailerId, ct: ct))
-            return Ok(value: new StatusResponseDto<string> { Status = "ok", Message = "Trailer removed" });
+        if (!await _transcodeStorage.ExistsAsync(trailerId, ct))
+            return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Trailer removed" });
 
-        string trailerAbsPath = Path.Combine(path1: AppFiles.TranscodePath, path2: trailerId);
+        string trailerAbsPath = Path.Combine(AppFiles.TranscodePath, trailerId);
 
         try
         {
-            await _transcodeStorage.DeleteDirectoryAsync(path: trailerId, recursive: true, ct: ct);
-            _logger.LogInformation(message: "Trailer folder deleted: {TrailerAbsPath}", args: trailerAbsPath);
+            await _transcodeStorage.DeleteDirectoryAsync(trailerId, true, ct);
+            _logger.LogInformation("Trailer folder deleted: {TrailerAbsPath}", trailerAbsPath);
         }
         catch (Exception ex)
         {
             _logger.LogError(
-                message: "Failed to delete trailer folder {TrailerAbsPath}: {Message}", args: [trailerAbsPath, ex.Message]
+                "Failed to delete trailer folder {TrailerAbsPath}: {Message}", [trailerAbsPath, ex.Message]
             );
-            return InternalServerErrorResponse(detail: "Failed to remove trailer");
+            return InternalServerErrorResponse("Failed to remove trailer");
         }
 
-        return Ok(value: new StatusResponseDto<string> { Status = "ok", Message = "Trailer removed" });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Trailer removed" });
     }
 }

@@ -15,6 +15,6 @@ namespace NoMercy.Networking.Dto;
 
 public class RefreshLibraryDto
 {
-    [JsonProperty(propertyName: "queryKey")]
+    [JsonProperty("queryKey")]
     public dynamic?[] QueryKey { get; set; } = [];
 }

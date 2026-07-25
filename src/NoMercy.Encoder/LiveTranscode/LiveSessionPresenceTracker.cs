@@ -34,25 +34,25 @@ public sealed class LiveSessionPresenceTracker(
     // window. A reconnect cancels it; an elapsed window removes it and disposes.
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _pendingDisposal = new();
 
-    private TimeSpan GraceWindow => TimeSpan.FromSeconds(seconds: limits.DisconnectGraceSeconds);
+    private TimeSpan GraceWindow => TimeSpan.FromSeconds(limits.DisconnectGraceSeconds);
 
     public void OnSubscribed(string connectionId, string sessionId)
     {
         ConcurrentDictionary<string, byte> watched = _byConnection.GetOrAdd(
-            key: connectionId,
-            valueFactory: _ => new ConcurrentDictionary<string, byte>()
+            connectionId,
+            _ => new ConcurrentDictionary<string, byte>()
         );
-        watched[key: sessionId] = 0;
+        watched[sessionId] = 0;
 
         // The client is present again — cancel a grace-window disposal a previous
         // connection drop may have scheduled for this session.
-        if (_pendingDisposal.TryRemove(key: sessionId, value: out CancellationTokenSource? cts))
+        if (_pendingDisposal.TryRemove(sessionId, out CancellationTokenSource? cts))
         {
             cts.Cancel();
             cts.Dispose();
             logger.LogDebug(
-                message: "Live session {SessionId} kept alive: client re-subscribed within grace window",
-                args: sessionId
+                "Live session {SessionId} kept alive: client re-subscribed within grace window",
+                sessionId
             );
         }
     }
@@ -60,18 +60,18 @@ public sealed class LiveSessionPresenceTracker(
     public void OnUnsubscribed(string connectionId, string sessionId)
     {
         if (
-            _byConnection.TryGetValue(key: connectionId, value: out ConcurrentDictionary<string, byte>? watched)
+            _byConnection.TryGetValue(connectionId, out ConcurrentDictionary<string, byte>? watched)
         )
-            watched.TryRemove(key: sessionId, value: out _);
+            watched.TryRemove(sessionId, out _);
     }
 
     public void OnConnectionClosed(string connectionId)
     {
-        if (!_byConnection.TryRemove(key: connectionId, value: out ConcurrentDictionary<string, byte>? watched))
+        if (!_byConnection.TryRemove(connectionId, out ConcurrentDictionary<string, byte>? watched))
             return;
 
         foreach (string sessionId in watched.Keys)
-            ScheduleGraceDisposal(sessionId: sessionId);
+            ScheduleGraceDisposal(sessionId);
     }
 
     private void ScheduleGraceDisposal(string sessionId)
@@ -80,20 +80,20 @@ public sealed class LiveSessionPresenceTracker(
 
         // Another connection watching the same session already dropped and armed
         // the timer — leave the earlier one running rather than resetting it.
-        if (!_pendingDisposal.TryAdd(key: sessionId, value: cts))
+        if (!_pendingDisposal.TryAdd(sessionId, cts))
         {
             cts.Dispose();
             return;
         }
 
-        _ = RunGraceDisposalAsync(sessionId: sessionId, ct: cts.Token);
+        _ = RunGraceDisposalAsync(sessionId, cts.Token);
     }
 
     private async Task RunGraceDisposalAsync(string sessionId, CancellationToken ct)
     {
         try
         {
-            await Task.Delay(delay: GraceWindow, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+            await Task.Delay(GraceWindow, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -102,24 +102,24 @@ public sealed class LiveSessionPresenceTracker(
         }
 
         // Window elapsed without a reconnect. Drop the timer entry, then tear down.
-        if (_pendingDisposal.TryRemove(key: sessionId, value: out CancellationTokenSource? cts))
+        if (_pendingDisposal.TryRemove(sessionId, out CancellationTokenSource? cts))
             cts.Dispose();
 
         try
         {
-            await PushSessionEndedAsync(sessionId: sessionId).ConfigureAwait(continueOnCapturedContext: false);
-            await streamingService.RemoveAsync(sessionId: sessionId).ConfigureAwait(continueOnCapturedContext: false);
+            await PushSessionEndedAsync(sessionId).ConfigureAwait(false);
+            await streamingService.RemoveAsync(sessionId).ConfigureAwait(false);
             logger.LogInformation(
-                message: "Live session {SessionId} disposed after client tapped out (grace window elapsed)",
-                args: sessionId
+                "Live session {SessionId} disposed after client tapped out (grace window elapsed)",
+                sessionId
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "Failed to dispose live session {SessionId} after client disconnect",
-                args: sessionId
+                ex,
+                "Failed to dispose live session {SessionId} after client disconnect",
+                sessionId
             );
         }
     }
@@ -133,18 +133,18 @@ public sealed class LiveSessionPresenceTracker(
         {
             await transport
                 .SendToClientAsync(
-                    sessionId: sessionId,
-                    message: new SessionEndedMessage(Reason: SessionEndReason.ClientDisconnected),
-                    ct: CancellationToken.None
+                    sessionId,
+                    new SessionEndedMessage(SessionEndReason.ClientDisconnected),
+                    CancellationToken.None
                 )
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             logger.LogDebug(
-                exception: ex,
-                message: "Transport push failed for SessionEnded on session {SessionId}",
-                args: sessionId
+                ex,
+                "Transport push failed for SessionEnded on session {SessionId}",
+                sessionId
             );
         }
     }

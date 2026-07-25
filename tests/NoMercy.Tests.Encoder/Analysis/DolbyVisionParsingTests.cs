@@ -49,14 +49,14 @@ public class DolbyVisionParsingTests
             }
             """;
 
-        DolbyVisionInfo? dv = ExtractDv(json: json);
+        DolbyVisionInfo? dv = ExtractDv(json);
 
         dv.Should().NotBeNull();
-        dv!.Profile.Should().Be(expected: 8);
-        dv.Level.Should().Be(expected: 6);
+        dv!.Profile.Should().Be(8);
+        dv.Level.Should().Be(6);
         dv.HasRpu.Should().BeTrue();
         dv.HasEl.Should().BeFalse();
-        dv.BlCompat.Should().Be(expected: DvBlCompatibility.Hdr10);
+        dv.BlCompat.Should().Be(DvBlCompatibility.Hdr10);
     }
 
     [Fact]
@@ -83,12 +83,12 @@ public class DolbyVisionParsingTests
             }
             """;
 
-        DolbyVisionInfo? dv = ExtractDv(json: json);
+        DolbyVisionInfo? dv = ExtractDv(json);
 
         dv.Should().NotBeNull();
-        dv!.Profile.Should().Be(expected: 7);
+        dv!.Profile.Should().Be(7);
         dv.HasEl.Should().BeTrue();
-        dv.BlCompat.Should().Be(expected: DvBlCompatibility.None);
+        dv.BlCompat.Should().Be(DvBlCompatibility.None);
     }
 
     [Fact]
@@ -113,9 +113,9 @@ public class DolbyVisionParsingTests
             }
             """;
 
-        DolbyVisionInfo? dv = ExtractDv(json: json);
+        DolbyVisionInfo? dv = ExtractDv(json);
 
-        dv!.BlCompat.Should().Be(expected: DvBlCompatibility.Sdr);
+        dv!.BlCompat.Should().Be(DvBlCompatibility.Sdr);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class DolbyVisionParsingTests
             }
             """;
 
-        ExtractDv(json: json).Should().BeNull();
+        ExtractDv(json).Should().BeNull();
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public class DolbyVisionParsingTests
             }
             """;
 
-        ExtractDv(json: json).Should().BeNull();
+        ExtractDv(json).Should().BeNull();
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public class DolbyVisionParsingTests
 
         // DV only comes from video streams — an audio stream carrying this
         // (nonsense in practice) shouldn't trigger detection.
-        ExtractDv(json: json).Should().BeNull();
+        ExtractDv(json).Should().BeNull();
     }
 
     [Fact]
@@ -207,16 +207,16 @@ public class DolbyVisionParsingTests
             }
             """;
 
-        MediaInfo media = MediaAnalyzer.ParseFfprobeJson(json: json, filePath: "/media/movie.mkv");
+        MediaInfo media = MediaAnalyzer.ParseFfprobeJson(json, "/media/movie.mkv");
 
         media.DolbyVision.Should().NotBeNull();
-        media.DolbyVision!.Profile.Should().Be(expected: 8);
-        media.DolbyVision.BlCompat.Should().Be(expected: DvBlCompatibility.Hdr10);
+        media.DolbyVision!.Profile.Should().Be(8);
+        media.DolbyVision.BlCompat.Should().Be(DvBlCompatibility.Hdr10);
     }
 
     private static DolbyVisionInfo? ExtractDv(string json)
     {
-        JArray streams = (JArray)JObject.Parse(json: json)[propertyName: "streams"]!;
-        return MediaAnalyzer.ParseDolbyVision(streams: streams);
+        JArray streams = (JArray)JObject.Parse(json)["streams"]!;
+        return MediaAnalyzer.ParseDolbyVision(streams);
     }
 }

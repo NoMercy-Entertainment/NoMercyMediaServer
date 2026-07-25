@@ -17,8 +17,8 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Unit tests for TmdbConfigClient
 /// Tests TMDB configuration, image settings, and available regions
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
-[Collection(name: "TmdbApi")]
+[Trait("Category", "Unit")]
+[Collection("TmdbApi")]
 public class TmdbConfigClientTests : TmdbTestBase
 {
     #region Constructor Tests

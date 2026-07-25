@@ -65,12 +65,12 @@ internal sealed class S3WriteStream : Stream
         int partSize = DefaultPartSize
     )
     {
-        _bucket = bucket ?? throw new ArgumentNullException(paramName: nameof(bucket));
-        _key = key ?? throw new ArgumentNullException(paramName: nameof(key));
-        _endpoint = endpoint ?? throw new ArgumentNullException(paramName: nameof(endpoint));
-        _region = region ?? throw new ArgumentNullException(paramName: nameof(region));
-        _accessKey = accessKey ?? throw new ArgumentNullException(paramName: nameof(accessKey));
-        _secretKey = secretKey ?? throw new ArgumentNullException(paramName: nameof(secretKey));
+        _bucket = bucket ?? throw new ArgumentNullException(nameof(bucket));
+        _key = key ?? throw new ArgumentNullException(nameof(key));
+        _endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
+        _region = region ?? throw new ArgumentNullException(nameof(region));
+        _accessKey = accessKey ?? throw new ArgumentNullException(nameof(accessKey));
+        _secretKey = secretKey ?? throw new ArgumentNullException(nameof(secretKey));
         _http = httpClient ?? SharedHttpClient;
         _partSize = partSize;
     }
@@ -87,13 +87,13 @@ internal sealed class S3WriteStream : Stream
     }
 
     public override void Write(byte[] buffer, int offset, int count) =>
-        Write(buffer: buffer.AsSpan(start: offset, length: count));
+        Write(buffer.AsSpan(offset, count));
 
     public override void Write(ReadOnlySpan<byte> buffer)
     {
-        _part.Write(buffer: buffer);
+        _part.Write(buffer);
         if (_part.Length >= _partSize)
-            DrainFullPartsAsync(ct: CancellationToken.None).GetAwaiter().GetResult();
+            DrainFullPartsAsync(CancellationToken.None).GetAwaiter().GetResult();
     }
 
     public override Task WriteAsync(
@@ -101,16 +101,16 @@ internal sealed class S3WriteStream : Stream
         int offset,
         int count,
         CancellationToken cancellationToken
-    ) => WriteAsync(buffer: buffer.AsMemory(start: offset, length: count), cancellationToken: cancellationToken).AsTask();
+    ) => WriteAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
 
     public override async ValueTask WriteAsync(
         ReadOnlyMemory<byte> buffer,
         CancellationToken cancellationToken = default
     )
     {
-        await _part.WriteAsync(buffer: buffer, cancellationToken: cancellationToken);
+        await _part.WriteAsync(buffer, cancellationToken);
         if (_part.Length >= _partSize)
-            await DrainFullPartsAsync(ct: cancellationToken);
+            await DrainFullPartsAsync(cancellationToken);
     }
 
     public override void Flush() { }
@@ -131,10 +131,10 @@ internal sealed class S3WriteStream : Stream
         _disposed = true;
         if (disposing)
         {
-            FinishAsync(ct: CancellationToken.None).GetAwaiter().GetResult();
+            FinishAsync(CancellationToken.None).GetAwaiter().GetResult();
             _part.Dispose();
         }
-        base.Dispose(disposing: disposing);
+        base.Dispose(disposing);
     }
 
     public override async ValueTask DisposeAsync()
@@ -142,7 +142,7 @@ internal sealed class S3WriteStream : Stream
         if (_disposed)
             return;
         _disposed = true;
-        await FinishAsync(ct: CancellationToken.None);
+        await FinishAsync(CancellationToken.None);
         _part.Dispose();
         await base.DisposeAsync();
     }
@@ -156,20 +156,20 @@ internal sealed class S3WriteStream : Stream
         while (_part.Length >= _partSize)
         {
             byte[] all = _part.ToArray();
-            await UploadOnePartAsync(data: all[.._partSize], ct: ct);
+            await UploadOnePartAsync(all[.._partSize], ct);
 
-            _part.SetLength(value: 0);
+            _part.SetLength(0);
             _part.Position = 0;
             if (all.Length > _partSize)
-                _part.Write(buffer: all, offset: _partSize, count: all.Length - _partSize);
+                _part.Write(all, _partSize, all.Length - _partSize);
         }
     }
 
     private async Task UploadOnePartAsync(byte[] data, CancellationToken ct)
     {
-        _uploadId ??= await CreateMultipartUploadAsync(ct: ct);
+        _uploadId ??= await CreateMultipartUploadAsync(ct);
         _partNumber++;
-        _etags.Add(item: await UploadPartAsync(partNumber: _partNumber, data: data, ct: ct));
+        _etags.Add(await UploadPartAsync(_partNumber, data, ct));
     }
 
     private async Task FinishAsync(CancellationToken ct)
@@ -178,7 +178,7 @@ internal sealed class S3WriteStream : Stream
         // multipart round-trip and sidesteps the 5 MB minimum-part rule.
         if (_uploadId is null)
         {
-            await SinglePutAsync(payload: _part.ToArray(), ct: ct);
+            await SinglePutAsync(_part.ToArray(), ct);
             return;
         }
 
@@ -186,9 +186,9 @@ internal sealed class S3WriteStream : Stream
         {
             // The final part is the only one allowed to be under 5 MB.
             if (_part.Length > 0)
-                await UploadOnePartAsync(data: _part.ToArray(), ct: ct);
+                await UploadOnePartAsync(_part.ToArray(), ct);
 
-            await CompleteMultipartUploadAsync(ct: ct);
+            await CompleteMultipartUploadAsync(ct);
         }
         catch
         {
@@ -204,24 +204,24 @@ internal sealed class S3WriteStream : Stream
     private async Task<string> CreateMultipartUploadAsync(CancellationToken ct)
     {
         using HttpResponseMessage res = await SendSignedAsync(
-            method: HttpMethod.Post,
-            canonicalQueryString: "uploads=",
-            payload: [],
-            contentType: null,
-            ct: ct
+            HttpMethod.Post,
+            "uploads=",
+            [],
+            null,
+            ct
         );
-        string body = await res.Content.ReadAsStringAsync(cancellationToken: ct);
-        EnsureSuccess(res: res, op: "CreateMultipartUpload", body: body);
+        string body = await res.Content.ReadAsStringAsync(ct);
+        EnsureSuccess(res, "CreateMultipartUpload", body);
 
         string? uploadId = XDocument
-            .Parse(text: body)
+            .Parse(body)
             .Descendants()
-            .FirstOrDefault(predicate: e => e.Name.LocalName == "UploadId")
+            .FirstOrDefault(e => e.Name.LocalName == "UploadId")
             ?.Value;
 
-        if (string.IsNullOrEmpty(value: uploadId))
+        if (string.IsNullOrEmpty(uploadId))
             throw new IOException(
-                message: $"S3 CreateMultipartUpload for '{_bucket}/{_key}' returned no UploadId. Body: {body}"
+                $"S3 CreateMultipartUpload for '{_bucket}/{_key}' returned no UploadId. Body: {body}"
             );
 
         return uploadId;
@@ -229,18 +229,18 @@ internal sealed class S3WriteStream : Stream
 
     private async Task<string> UploadPartAsync(int partNumber, byte[] data, CancellationToken ct)
     {
-        string qs = $"partNumber={partNumber}&uploadId={Uri.EscapeDataString(stringToEscape: _uploadId!)}";
-        using HttpResponseMessage res = await SendSignedAsync(method: HttpMethod.Put, canonicalQueryString: qs, payload: data, contentType: null, ct: ct);
+        string qs = $"partNumber={partNumber}&uploadId={Uri.EscapeDataString(_uploadId!)}";
+        using HttpResponseMessage res = await SendSignedAsync(HttpMethod.Put, qs, data, null, ct);
         if (!res.IsSuccessStatusCode)
         {
-            string body = await res.Content.ReadAsStringAsync(cancellationToken: ct);
-            EnsureSuccess(res: res, op: $"UploadPart {partNumber}", body: body);
+            string body = await res.Content.ReadAsStringAsync(ct);
+            EnsureSuccess(res, $"UploadPart {partNumber}", body);
         }
 
-        string? etag = res.Headers.ETag?.Tag ?? FirstHeader(res: res, name: "ETag");
-        if (string.IsNullOrEmpty(value: etag))
+        string? etag = res.Headers.ETag?.Tag ?? FirstHeader(res, "ETag");
+        if (string.IsNullOrEmpty(etag))
             throw new IOException(
-                message: $"S3 UploadPart {partNumber} for '{_bucket}/{_key}' returned no ETag."
+                $"S3 UploadPart {partNumber} for '{_bucket}/{_key}' returned no ETag."
             );
 
         return etag;
@@ -249,33 +249,33 @@ internal sealed class S3WriteStream : Stream
     private async Task CompleteMultipartUploadAsync(CancellationToken ct)
     {
         StringBuilder xml = new();
-        xml.Append(value: "<CompleteMultipartUpload>");
+        xml.Append("<CompleteMultipartUpload>");
         for (int i = 0; i < _etags.Count; i++)
         {
-            xml.Append(value: "<Part><PartNumber>")
-                .Append(value: i + 1)
-                .Append(value: "</PartNumber><ETag>")
-                .Append(value: _etags[index: i])
-                .Append(value: "</ETag></Part>");
+            xml.Append("<Part><PartNumber>")
+                .Append(i + 1)
+                .Append("</PartNumber><ETag>")
+                .Append(_etags[i])
+                .Append("</ETag></Part>");
         }
-        xml.Append(value: "</CompleteMultipartUpload>");
+        xml.Append("</CompleteMultipartUpload>");
 
-        byte[] payload = Encoding.UTF8.GetBytes(s: xml.ToString());
-        string qs = $"uploadId={Uri.EscapeDataString(stringToEscape: _uploadId!)}";
+        byte[] payload = Encoding.UTF8.GetBytes(xml.ToString());
+        string qs = $"uploadId={Uri.EscapeDataString(_uploadId!)}";
         using HttpResponseMessage res = await SendSignedAsync(
-            method: HttpMethod.Post,
-            canonicalQueryString: qs,
-            payload: payload,
-            contentType: "application/xml",
-            ct: ct
+            HttpMethod.Post,
+            qs,
+            payload,
+            "application/xml",
+            ct
         );
-        string body = await res.Content.ReadAsStringAsync(cancellationToken: ct);
-        EnsureSuccess(res: res, op: "CompleteMultipartUpload", body: body);
+        string body = await res.Content.ReadAsStringAsync(ct);
+        EnsureSuccess(res, "CompleteMultipartUpload", body);
 
         // S3 can return HTTP 200 with an <Error> body when completion fails.
-        if (body.Contains(value: "<Error>", comparisonType: StringComparison.Ordinal))
+        if (body.Contains("<Error>", StringComparison.Ordinal))
             throw new IOException(
-                message: $"S3 CompleteMultipartUpload for '{_bucket}/{_key}' failed. Body: {body}"
+                $"S3 CompleteMultipartUpload for '{_bucket}/{_key}' failed. Body: {body}"
             );
     }
 
@@ -285,13 +285,13 @@ internal sealed class S3WriteStream : Stream
             return;
         try
         {
-            string qs = $"uploadId={Uri.EscapeDataString(stringToEscape: _uploadId)}";
+            string qs = $"uploadId={Uri.EscapeDataString(_uploadId)}";
             using HttpResponseMessage _ = await SendSignedAsync(
-                method: HttpMethod.Delete,
-                canonicalQueryString: qs,
-                payload: [],
-                contentType: null,
-                ct: CancellationToken.None
+                HttpMethod.Delete,
+                qs,
+                [],
+                null,
+                CancellationToken.None
             );
         }
         catch
@@ -303,16 +303,16 @@ internal sealed class S3WriteStream : Stream
     private async Task SinglePutAsync(byte[] payload, CancellationToken ct)
     {
         using HttpResponseMessage res = await SendSignedAsync(
-            method: HttpMethod.Put,
-            canonicalQueryString: string.Empty,
-            payload: payload,
-            contentType: null,
-            ct: ct
+            HttpMethod.Put,
+            string.Empty,
+            payload,
+            null,
+            ct
         );
         if (!res.IsSuccessStatusCode)
         {
-            string body = await res.Content.ReadAsStringAsync(cancellationToken: ct);
-            EnsureSuccess(res: res, op: "PUT", body: body);
+            string body = await res.Content.ReadAsStringAsync(ct);
+            EnsureSuccess(res, "PUT", body);
         }
     }
 
@@ -329,36 +329,35 @@ internal sealed class S3WriteStream : Stream
         CancellationToken ct
     )
     {
-        string payloadHash = Convert.ToHexString(inArray: SHA256.HashData(source: payload)).ToLowerInvariant();
+        string payloadHash = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
 
-        Uri endpointUri = new(uriString: _endpoint.TrimEnd(trimChar: '/'));
+        Uri endpointUri = new(_endpoint.TrimEnd('/'));
         string host = endpointUri.Host + (endpointUri.IsDefaultPort ? "" : $":{endpointUri.Port}");
-        string canonicalUri = "/" + Uri.EscapeDataString(stringToEscape: _bucket) + "/" + S3SigV4.EscapeKey(key: _key);
+        string canonicalUri = "/" + Uri.EscapeDataString(_bucket) + "/" + S3SigV4.EscapeKey(_key);
 
         DateTime now = DateTime.UtcNow;
-        string amzDate = now.ToString(format: "yyyyMMddTHHmmssZ");
-        string dateStamp = now.ToString(format: "yyyyMMdd");
+        string amzDate = now.ToString("yyyyMMddTHHmmssZ");
+        string dateStamp = now.ToString("yyyyMMdd");
 
         string canonicalHeaders =
             $"content-length:{payload.Length}\nhost:{host}\nx-amz-content-sha256:{payloadHash}\nx-amz-date:{amzDate}\n";
         const string signedHeaders = "content-length;host;x-amz-content-sha256;x-amz-date";
 
         string canonicalRequest = string.Join(
-            separator: "\n", value: [method.Method, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaders, payloadHash]
+            "\n", [method.Method, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaders, payloadHash]
         );
 
         string credentialScope = $"{dateStamp}/{_region}/s3/aws4_request";
         string stringToSign = string.Join(
-            separator: "\n", value:
-            ["AWS4-HMAC-SHA256", amzDate, credentialScope, Convert
-                .ToHexString(inArray: SHA256.HashData(source: Encoding.UTF8.GetBytes(s: canonicalRequest)))
+            "\n", ["AWS4-HMAC-SHA256", amzDate, credentialScope, Convert
+                .ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalRequest)))
                 .ToLowerInvariant()
             ]
         );
 
-        byte[] signingKey = S3SigV4.DeriveSigningKey(secret: _secretKey, dateStamp: dateStamp, region: _region);
+        byte[] signingKey = S3SigV4.DeriveSigningKey(_secretKey, dateStamp, _region);
         string signature = Convert
-            .ToHexString(inArray: S3SigV4.HmacSha256(key: signingKey, data: stringToSign))
+            .ToHexString(S3SigV4.HmacSha256(signingKey, stringToSign))
             .ToLowerInvariant();
 
         string authHeader =
@@ -366,26 +365,26 @@ internal sealed class S3WriteStream : Stream
             + $"SignedHeaders={signedHeaders}, Signature={signature}";
 
         string url =
-            _endpoint.TrimEnd(trimChar: '/')
+            _endpoint.TrimEnd('/')
             + canonicalUri
             + (canonicalQueryString.Length > 0 ? "?" + canonicalQueryString : string.Empty);
 
-        using HttpRequestMessage req = new(method: method, requestUri: url);
-        ByteArrayContent content = new(content: payload);
+        using HttpRequestMessage req = new(method, url);
+        ByteArrayContent content = new(payload);
         content.Headers.ContentLength = payload.Length;
         if (contentType is not null)
-            content.Headers.TryAddWithoutValidation(name: "Content-Type", value: contentType);
+            content.Headers.TryAddWithoutValidation("Content-Type", contentType);
         req.Content = content;
-        req.Headers.TryAddWithoutValidation(name: "Authorization", value: authHeader);
-        req.Headers.TryAddWithoutValidation(name: "x-amz-content-sha256", value: payloadHash);
-        req.Headers.TryAddWithoutValidation(name: "x-amz-date", value: amzDate);
+        req.Headers.TryAddWithoutValidation("Authorization", authHeader);
+        req.Headers.TryAddWithoutValidation("x-amz-content-sha256", payloadHash);
+        req.Headers.TryAddWithoutValidation("x-amz-date", amzDate);
         req.Headers.Host = host;
 
-        return await _http.SendAsync(request: req, cancellationToken: ct);
+        return await _http.SendAsync(req, ct);
     }
 
     private static string? FirstHeader(HttpResponseMessage res, string name) =>
-        res.Headers.TryGetValues(name: name, values: out IEnumerable<string>? values)
+        res.Headers.TryGetValues(name, out IEnumerable<string>? values)
             ? values.FirstOrDefault()
             : null;
 
@@ -393,7 +392,7 @@ internal sealed class S3WriteStream : Stream
     {
         if (!res.IsSuccessStatusCode)
             throw new IOException(
-                message: $"S3 {op} failed: HTTP {(int)res.StatusCode} {res.ReasonPhrase}; body: {body}"
+                $"S3 {op} failed: HTTP {(int)res.StatusCode} {res.ReasonPhrase}; body: {body}"
             );
     }
 }

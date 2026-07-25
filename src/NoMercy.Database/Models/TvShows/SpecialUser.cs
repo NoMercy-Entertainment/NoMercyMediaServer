@@ -14,14 +14,14 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.TvShows;
 
-[PrimaryKey(propertyName: nameof(SpecialId), additionalPropertyNames: nameof(UserId))]
+[PrimaryKey(nameof(SpecialId), nameof(UserId))]
 public class SpecialUser
 {
-    [JsonProperty(propertyName: "special_id")]
+    [JsonProperty("special_id")]
     public Ulid SpecialId { get; set; }
     public Special Special { get; set; } = null!;
 
-    [JsonProperty(propertyName: "user_id")]
+    [JsonProperty("user_id")]
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 

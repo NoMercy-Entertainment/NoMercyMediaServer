@@ -16,28 +16,28 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record UserPermissionRequest
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "manage")]
+    [JsonProperty("manage")]
     public bool Manage { get; set; }
 
-    [JsonProperty(propertyName: "owner")]
+    [JsonProperty("owner")]
     public bool Owner { get; set; }
 
-    [JsonProperty(propertyName: "allowed")]
+    [JsonProperty("allowed")]
     public bool Allowed { get; set; }
 
-    [JsonProperty(propertyName: "audio_transcoding")]
+    [JsonProperty("audio_transcoding")]
     public bool AudioTranscoding { get; set; }
 
-    [JsonProperty(propertyName: "video_transcoding")]
+    [JsonProperty("video_transcoding")]
     public bool VideoTranscoding { get; set; }
 
-    [JsonProperty(propertyName: "no_transcoding")]
+    [JsonProperty("no_transcoding")]
     public bool NoTranscoding { get; set; }
 
-    [JsonProperty(propertyName: "libraries")]
+    [JsonProperty("libraries")]
     public Ulid[] Libraries { get; set; } = [];
 
     public UserPermissionRequest()
@@ -55,6 +55,6 @@ public record UserPermissionRequest
         VideoTranscoding = user.VideoTranscoding;
         NoTranscoding = user.NoTranscoding;
 
-        Libraries = user.LibraryUser.Select(selector: libraryUser => libraryUser.LibraryId).ToArray();
+        Libraries = user.LibraryUser.Select(libraryUser => libraryUser.LibraryId).ToArray();
     }
 }

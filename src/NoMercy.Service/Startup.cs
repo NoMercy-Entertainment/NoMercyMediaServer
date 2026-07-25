@@ -29,13 +29,13 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
-        ServiceConfiguration.ConfigureServices(services: services, configuration: _configuration);
+        ServiceConfiguration.ConfigureServices(services, _configuration);
 
-        services.AddSingleton(implementationInstance: _options);
+        services.AddSingleton(_options);
     }
 
     public void Configure(IApplicationBuilder app)
     {
-        ApplicationConfiguration.ConfigureApp(app: app, provider: _provider);
+        ApplicationConfiguration.ConfigureApp(app, _provider);
     }
 }

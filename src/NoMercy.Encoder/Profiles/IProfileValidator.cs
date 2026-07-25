@@ -28,7 +28,7 @@ public interface IProfileValidator
 /// <summary>Legacy result — kept as a compat shim. Do not extend.</summary>
 public record ValidationResult(bool IsValid, ValidationError[] Errors)
 {
-    public static ValidationResult Success() => new(IsValid: true, Errors: []);
+    public static ValidationResult Success() => new(true, []);
 }
 
 /// <summary>Legacy error — kept as a compat shim. Do not extend.</summary>

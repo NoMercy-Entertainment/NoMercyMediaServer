@@ -28,21 +28,21 @@ public class CoreTests
     {
         Core core = new();
 
-        core.Index.Should().Be(expected: 0, because: "an unset core sample must not report a fabricated index");
-        core.Utilization.Should().Be(expected: 0.0, because: "an unset core sample must not report fabricated load");
+        core.Index.Should().Be(0, "an unset core sample must not report a fabricated index");
+        core.Utilization.Should().Be(0.0, "an unset core sample must not report fabricated load");
     }
 
     [Theory]
-    [InlineData(data: [0, 0.0])]
-    [InlineData(data: [1, 55.5])]
-    [InlineData(data: [15, 100.0])]
-    [InlineData(data: [3, 0.1])]
+    [InlineData([0, 0.0])]
+    [InlineData([1, 55.5])]
+    [InlineData([15, 100.0])]
+    [InlineData([3, 0.1])]
     public void Core_IndexAndUtilization_RoundTripIndependently(int index, double utilization)
     {
         Core core = new() { Index = index, Utilization = utilization };
 
-        core.Index.Should().Be(expected: index);
-        core.Utilization.Should().Be(expected: utilization);
+        core.Index.Should().Be(index);
+        core.Utilization.Should().Be(utilization);
     }
 
     [Fact]
@@ -53,11 +53,11 @@ public class CoreTests
 
         coreZero.Utilization = 20.0;
 
-        coreZero.Index.Should().Be(expected: 0);
-        coreZero.Utilization.Should().Be(expected: 20.0);
-        coreOne.Index.Should().Be(expected: 1, because: "mutating one core sample must never move another's index");
+        coreZero.Index.Should().Be(0);
+        coreZero.Utilization.Should().Be(20.0);
+        coreOne.Index.Should().Be(1, "mutating one core sample must never move another's index");
         coreOne
             .Utilization.Should()
-            .Be(expected: 90.0, because: "mutating one core sample must never move another's reading");
+            .Be(90.0, "mutating one core sample must never move another's reading");
     }
 }

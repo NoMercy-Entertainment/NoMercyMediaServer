@@ -56,40 +56,40 @@ public partial class SubtitleOcrEngine(
 
         // Pull the language model before invoking FFmpeg so the OCR filter
         // actually has training data when it runs.
-        string modelPath = await modelManager.EnsureLanguageModelAsync(language: language, ct: ct);
+        string modelPath = await modelManager.EnsureLanguageModelAsync(language, ct);
         string modelDirectory =
-            Path.GetDirectoryName(path: modelPath)
-            ?? throw new InvalidOperationException(message: "Tesseract model has no parent directory");
+            Path.GetDirectoryName(modelPath)
+            ?? throw new InvalidOperationException("Tesseract model has no parent directory");
 
         // OCR dumps its metadata to a file so we never have to parse FFmpeg's
         // interleaved stdout. Write it to a unique temp file per run so
         // concurrent OCR jobs can't collide.
-        string tempDirectory = Path.Combine(path1: Path.GetTempPath(), path2: "nm-ocr");
-        storage.CreateDirectory(path: tempDirectory);
+        string tempDirectory = Path.Combine(Path.GetTempPath(), "nm-ocr");
+        storage.CreateDirectory(tempDirectory);
         // The metadata filter's file= value is a bare name written into the
         // process working directory, never an absolute path: a Windows drive
         // colon inside a filtergraph value is unescapable and aborts the whole
         // ocr filter parse (the recurring "bitmap subs never became vtt" bug).
         string ocrFileName = $"ocr-{Guid.NewGuid():N}.txt";
-        string ocrOutput = Path.Combine(path1: tempDirectory, path2: ocrFileName);
+        string ocrOutput = Path.Combine(tempDirectory, ocrFileName);
 
-        string jobId = Guid.NewGuid().ToString(format: "N");
+        string jobId = Guid.NewGuid().ToString("N");
         IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
-        observer.Report(jobId: jobId, type: "ocr", percent: 0, stage: $"starting ocr ({language})");
+        observer.Report(jobId, "ocr", 0, $"starting ocr ({language})");
 
         string extension = outputFormat == SubtitleCodecType.Srt ? ".srt" : ".vtt";
-        string outputPath = ResolveOutputPath(inputPath: inputPath, sidecar: sidecar, language: language, extension: extension);
+        string outputPath = ResolveOutputPath(inputPath, sidecar, language, extension);
 
         try
         {
             // Lease the input so future remote drivers can stage it locally and
             // clean up on dispose. The input is a plain -i argument (not part of
             // the filtergraph), so its absolute Windows path is fine.
-            await using LocalPathLease inputLease = inputStorage.AcquireLocalPath(path: inputPath);
+            await using LocalPathLease inputLease = inputStorage.AcquireLocalPath(inputPath);
 
-            string? outputParentDirectory = Path.GetDirectoryName(path: outputPath);
-            if (!string.IsNullOrEmpty(value: outputParentDirectory))
-                sidecarStorage.CreateDirectory(path: outputParentDirectory);
+            string? outputParentDirectory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputParentDirectory))
+                sidecarStorage.CreateDirectory(outputParentDirectory);
 
             // Tesseract's data directory rides in on TESSDATA_PREFIX instead of the
             // filter's datapath= option: a datapath with a drive colon cannot be
@@ -110,52 +110,52 @@ public partial class SubtitleOcrEngine(
             ];
 
             ProcessResult result = await processRunner.RunAsync(
-                executable: options.FfmpegPath,
-                arguments: args,
-                extraEnv: new Dictionary<string, string> { [key: "TESSDATA_PREFIX"] = modelDirectory },
-                workingDirectory: tempDirectory,
-                cancellationToken: ct
+                options.FfmpegPath,
+                args,
+                new Dictionary<string, string> { ["TESSDATA_PREFIX"] = modelDirectory },
+                tempDirectory,
+                ct
             );
 
             if (!result.IsSuccess)
             {
                 throw new InvalidOperationException(
-                    message: $"OCR ffmpeg exited with code {result.ExitCode}: {TrimErr(stdErr: result.StdErr)}"
+                    $"OCR ffmpeg exited with code {result.ExitCode}: {TrimErr(result.StdErr)}"
                 );
             }
 
-            if (!storage.Exists(path: ocrOutput))
+            if (!storage.Exists(ocrOutput))
             {
                 throw new InvalidOperationException(
-                    message: "OCR produced no output file — check the subtitle stream index and language model."
+                    "OCR produced no output file — check the subtitle stream index and language model."
                 );
             }
 
-            byte[] ocrBytes = await storage.ReadAsync(path: ocrOutput, ct: ct);
-            List<SubtitleCue> cues = ParseOcrOutput(content: Encoding.UTF8.GetString(bytes: ocrBytes));
+            byte[] ocrBytes = await storage.ReadAsync(ocrOutput, ct);
+            List<SubtitleCue> cues = ParseOcrOutput(Encoding.UTF8.GetString(ocrBytes));
 
             if (outputFormat == SubtitleCodecType.Srt)
-                await WriteSrtAsync(sidecarStorage: sidecarStorage, path: outputPath, cues: cues, ct: ct);
+                await WriteSrtAsync(sidecarStorage, outputPath, cues, ct);
             else
-                await WriteWebVttAsync(sidecarStorage: sidecarStorage, path: outputPath, cues: cues, ct: ct);
+                await WriteWebVttAsync(sidecarStorage, outputPath, cues, ct);
 
             logger.LogInformation(
-                message: "OCR produced {CueCount} cues for {Language} → {Path}", args: [cues.Count, language, outputPath]
+                "OCR produced {CueCount} cues for {Language} → {Path}", [cues.Count, language, outputPath]
             );
 
-            observer.Report(jobId: jobId, type: "ocr", percent: 100, stage: "done");
+            observer.Report(jobId, "ocr", 100, "done");
 
-            return new(FilePath: outputPath, Language: language, Format: outputFormat, CueCount: cues.Count);
+            return new(outputPath, language, outputFormat, cues.Count);
         }
         finally
         {
             try
             {
-                storage.Delete(path: ocrOutput);
+                storage.Delete(ocrOutput);
             }
             catch (IOException ex)
             {
-                logger.LogWarning(exception: ex, message: "Could not delete OCR temp file {Path}", args: ocrOutput);
+                logger.LogWarning(ex, "Could not delete OCR temp file {Path}", ocrOutput);
             }
         }
     }
@@ -177,13 +177,13 @@ public partial class SubtitleOcrEngine(
         double currentLastSeen = 0;
         double latestPts = 0;
 
-        foreach (string rawLine in content.Split(separator: '\n'))
+        foreach (string rawLine in content.Split('\n'))
         {
-            string line = rawLine.TrimEnd(trimChars: ['\r', ' ', '\t']);
-            if (string.IsNullOrEmpty(value: line))
+            string line = rawLine.TrimEnd(['\r', ' ', '\t']);
+            if (string.IsNullOrEmpty(line))
                 continue;
 
-            Match ptsMatch = PtsTimeRegex().Match(input: line);
+            Match ptsMatch = PtsTimeRegex().Match(line);
             if (ptsMatch.Success)
             {
                 // FFmpeg lavfi.ocr output occasionally emits non-numeric PTS
@@ -192,26 +192,26 @@ public partial class SubtitleOcrEngine(
                 // the whole subtitle pass down with FormatException.
                 if (
                     double.TryParse(
-                        s: ptsMatch.Groups[groupname: "pts"].Value,
-                        style: NumberStyles.Float,
-                        provider: CultureInfo.InvariantCulture,
-                        result: out double parsedPts
+                        ptsMatch.Groups["pts"].Value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out double parsedPts
                     )
                 )
                     latestPts = parsedPts;
                 continue;
             }
 
-            if (!line.StartsWith(value: "lavfi.ocr.text=", comparisonType: StringComparison.Ordinal))
+            if (!line.StartsWith("lavfi.ocr.text=", StringComparison.Ordinal))
                 continue;
 
             string text = line["lavfi.ocr.text=".Length..].Trim();
 
-            if (string.IsNullOrEmpty(value: text))
+            if (string.IsNullOrEmpty(text))
             {
                 if (currentText is not null)
                 {
-                    cues.Add(item: new(StartSeconds: currentStart, EndSeconds: currentLastSeen, Text: currentText));
+                    cues.Add(new(currentStart, currentLastSeen, currentText));
                     currentText = null;
                 }
                 continue;
@@ -223,9 +223,9 @@ public partial class SubtitleOcrEngine(
                 currentStart = latestPts;
                 currentLastSeen = latestPts;
             }
-            else if (!string.Equals(a: currentText, b: text, comparisonType: StringComparison.Ordinal))
+            else if (!string.Equals(currentText, text, StringComparison.Ordinal))
             {
-                cues.Add(item: new(StartSeconds: currentStart, EndSeconds: currentLastSeen, Text: currentText));
+                cues.Add(new(currentStart, currentLastSeen, currentText));
                 currentText = text;
                 currentStart = latestPts;
                 currentLastSeen = latestPts;
@@ -238,7 +238,7 @@ public partial class SubtitleOcrEngine(
         }
 
         if (currentText is not null)
-            cues.Add(item: new(StartSeconds: currentStart, EndSeconds: currentLastSeen, Text: currentText));
+            cues.Add(new(currentStart, currentLastSeen, currentText));
 
         return cues;
     }
@@ -264,8 +264,8 @@ public partial class SubtitleOcrEngine(
         if (sidecar is null)
         {
             return Path.ChangeExtension(
-                path: Path.Combine(path1: Path.GetDirectoryName(path: inputPath)!, path2: $"{language}_ocr"),
-                extension: extension
+                Path.Combine(Path.GetDirectoryName(inputPath)!, $"{language}_ocr"),
+                extension
             );
         }
 
@@ -273,7 +273,7 @@ public partial class SubtitleOcrEngine(
         // (BuiltinPresets), which is what makes this the .mks/.sup's sibling and
         // therefore a track the library scan pairs and the player lists.
         // Forward slashes: this is a storage key, not a local path.
-        return $"{sidecar.OutputDirectory.TrimEnd(trimChar: '/')}/subtitles/"
+        return $"{sidecar.OutputDirectory.TrimEnd('/')}/subtitles/"
             + $"{sidecar.MediaTitle}.{language}.{sidecar.Variant}{extension}";
     }
 
@@ -285,20 +285,20 @@ public partial class SubtitleOcrEngine(
     )
     {
         StringBuilder sb = new();
-        sb.AppendLine(value: "WEBVTT");
+        sb.AppendLine("WEBVTT");
         sb.AppendLine();
 
         int index = 1;
         foreach (SubtitleCue cue in cues)
         {
-            sb.AppendLine(value: index.ToString(provider: CultureInfo.InvariantCulture));
-            sb.AppendLine(handler: $"{FormatVttTime(seconds: cue.StartSeconds)} --> {FormatVttTime(seconds: cue.EndSeconds)}");
-            sb.AppendLine(value: cue.Text);
+            sb.AppendLine(index.ToString(CultureInfo.InvariantCulture));
+            sb.AppendLine($"{FormatVttTime(cue.StartSeconds)} --> {FormatVttTime(cue.EndSeconds)}");
+            sb.AppendLine(cue.Text);
             sb.AppendLine();
             index++;
         }
 
-        await sidecarStorage.WriteAsync(path: path, bytes: Encoding.UTF8.GetBytes(s: sb.ToString()), ct: ct);
+        await sidecarStorage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
     }
 
     private static async Task WriteSrtAsync(
@@ -312,43 +312,43 @@ public partial class SubtitleOcrEngine(
         int index = 1;
         foreach (SubtitleCue cue in cues)
         {
-            sb.AppendLine(value: index.ToString(provider: CultureInfo.InvariantCulture));
-            sb.AppendLine(handler: $"{FormatSrtTime(seconds: cue.StartSeconds)} --> {FormatSrtTime(seconds: cue.EndSeconds)}");
-            sb.AppendLine(value: cue.Text);
+            sb.AppendLine(index.ToString(CultureInfo.InvariantCulture));
+            sb.AppendLine($"{FormatSrtTime(cue.StartSeconds)} --> {FormatSrtTime(cue.EndSeconds)}");
+            sb.AppendLine(cue.Text);
             sb.AppendLine();
             index++;
         }
 
-        await sidecarStorage.WriteAsync(path: path, bytes: Encoding.UTF8.GetBytes(s: sb.ToString()), ct: ct);
+        await sidecarStorage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
     }
 
     private static string FormatVttTime(double seconds)
     {
-        TimeSpan ts = TimeSpan.FromSeconds(value: seconds);
+        TimeSpan ts = TimeSpan.FromSeconds(seconds);
         return string.Format(
-            provider: CultureInfo.InvariantCulture,
-            format: "{0:00}:{1:00}:{2:00}.{3:000}", args: [(int)ts.TotalHours, ts.Minutes, ts.Seconds, ts.Milliseconds]
+            CultureInfo.InvariantCulture,
+            "{0:00}:{1:00}:{2:00}.{3:000}", [(int)ts.TotalHours, ts.Minutes, ts.Seconds, ts.Milliseconds]
         );
     }
 
     private static string FormatSrtTime(double seconds)
     {
-        TimeSpan ts = TimeSpan.FromSeconds(value: seconds);
+        TimeSpan ts = TimeSpan.FromSeconds(seconds);
         return string.Format(
-            provider: CultureInfo.InvariantCulture,
-            format: "{0:00}:{1:00}:{2:00},{3:000}", args: [(int)ts.TotalHours, ts.Minutes, ts.Seconds, ts.Milliseconds]
+            CultureInfo.InvariantCulture,
+            "{0:00}:{1:00}:{2:00},{3:000}", [(int)ts.TotalHours, ts.Minutes, ts.Seconds, ts.Milliseconds]
         );
     }
 
     private static string TrimErr(string stdErr)
     {
-        if (string.IsNullOrEmpty(value: stdErr))
+        if (string.IsNullOrEmpty(stdErr))
             return "(no stderr)";
-        string[] lines = stdErr.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries);
-        return lines.Length <= 5 ? stdErr : string.Join(separator: '\n', value: lines[^5..]);
+        string[] lines = stdErr.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        return lines.Length <= 5 ? stdErr : string.Join('\n', lines[^5..]);
     }
 
-    [GeneratedRegex(pattern: @"pts_time:(?<pts>\d+(?:\.\d+)?)")]
+    [GeneratedRegex(@"pts_time:(?<pts>\d+(?:\.\d+)?)")]
     private static partial Regex PtsTimeRegex();
 
     public record SubtitleCue(double StartSeconds, double EndSeconds, string Text);

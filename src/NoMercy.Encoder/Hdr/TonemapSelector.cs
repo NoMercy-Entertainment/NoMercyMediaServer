@@ -20,7 +20,7 @@ namespace NoMercy.Encoder.Hdr;
 
 public class TonemapSelector : ITonemapSelector
 {
-    private static readonly HashSet<string> KnownAlgorithms = new(comparer: StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> KnownAlgorithms = new(StringComparer.OrdinalIgnoreCase)
     {
         "hable",
         "mobius",
@@ -35,24 +35,24 @@ public class TonemapSelector : ITonemapSelector
     )
     {
         // Priority: libplacebo (Vulkan GPU) → tonemap_opencl (OpenCL) → zscale+tonemap (CPU)
-        if (ffmpeg is not null && ffmpeg.HasFilter(name: "libplacebo"))
+        if (ffmpeg is not null && ffmpeg.HasFilter("libplacebo"))
             return new(
-                Method: TonemapMethod.Libplacebo,
-                FfmpegFilterChain: "libplacebo=tonemapping=hable:color_primaries=bt709:color_trc=bt709:colorspace=bt709:format=yuv420p",
-                IsGpuAccelerated: true
+                TonemapMethod.Libplacebo,
+                "libplacebo=tonemapping=hable:color_primaries=bt709:color_trc=bt709:colorspace=bt709:format=yuv420p",
+                true
             );
 
-        if (ffmpeg is not null && ffmpeg.HasFilter(name: "tonemap_opencl"))
+        if (ffmpeg is not null && ffmpeg.HasFilter("tonemap_opencl"))
             return new(
-                Method: TonemapMethod.TonemapOpencl,
-                FfmpegFilterChain: "tonemap_opencl=tonemap=hable:desat=0:format=nv12",
-                IsGpuAccelerated: true
+                TonemapMethod.TonemapOpencl,
+                "tonemap_opencl=tonemap=hable:desat=0:format=nv12",
+                true
             );
 
         return new(
-            Method: TonemapMethod.ZscaleTonemap,
-            FfmpegFilterChain: "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p",
-            IsGpuAccelerated: false
+            TonemapMethod.ZscaleTonemap,
+            "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p",
+            false
         );
     }
 
@@ -69,18 +69,18 @@ public class TonemapSelector : ITonemapSelector
         string rawAlgorithm = options?.Algorithm ?? profileTonemapAlgorithm ?? "hable";
 
         string algorithm;
-        if (KnownAlgorithms.Contains(item: rawAlgorithm))
+        if (KnownAlgorithms.Contains(rawAlgorithm))
         {
             algorithm = rawAlgorithm.ToLowerInvariant();
         }
         else
         {
             decisions.Add(
-                entry: new(
-                    Stage: "plan",
-                    Key: "plan.tonemap_unknown_algorithm_defaulted",
-                    Message: $"Unknown tonemap algorithm '{rawAlgorithm}' — falling back to hable",
-                    Data: new { requested = rawAlgorithm, fallback = "hable" }
+                new(
+                    "plan",
+                    "plan.tonemap_unknown_algorithm_defaulted",
+                    $"Unknown tonemap algorithm '{rawAlgorithm}' — falling back to hable",
+                    new { requested = rawAlgorithm, fallback = "hable" }
                 )
             );
             algorithm = "hable";
@@ -99,17 +99,17 @@ public class TonemapSelector : ITonemapSelector
             try
             {
                 await using LocalPathLease lease = await storage
-                    .AcquireLocalPathAsync(path: lutPath, ct: cancellationToken)
-                    .ConfigureAwait(continueOnCapturedContext: false);
+                    .AcquireLocalPathAsync(lutPath, cancellationToken)
+                    .ConfigureAwait(false);
 
-                string lutFilter = $"lut3d={FilterGraphPathEscaper.Escape(path: lutPath)}";
+                string lutFilter = $"lut3d={FilterGraphPathEscaper.Escape(lutPath)}";
 
                 decisions.Add(
-                    entry: new(
-                        Stage: "plan",
-                        Key: "plan.tonemap_resolved",
-                        Message: $"Tonemap resolved: LUT path '{lutPath}' (algorithm={algorithm}, nits={peakNits}, lut=true)",
-                        Data: new
+                    new(
+                        "plan",
+                        "plan.tonemap_resolved",
+                        $"Tonemap resolved: LUT path '{lutPath}' (algorithm={algorithm}, nits={peakNits}, lut=true)",
+                        new
                         {
                             algorithm,
                             peakNits,
@@ -120,20 +120,20 @@ public class TonemapSelector : ITonemapSelector
                 );
 
                 return new(
-                    Algorithm: algorithm,
-                    PeakNits: peakNits,
-                    LutFilterChain: lutFilter,
-                    FilterStringFragment: lutFilter
+                    algorithm,
+                    peakNits,
+                    lutFilter,
+                    lutFilter
                 );
             }
             catch (StoragePathNotAllowedException ex)
             {
                 decisions.Add(
-                    entry: new(
-                        Stage: "plan",
-                        Key: "plan.tonemap_lut_path_rejected",
-                        Message: $"LUT path '{lutPath}' rejected ({ex.Message}) — falling back to algorithm '{algorithm}'",
-                        Data: new
+                    new(
+                        "plan",
+                        "plan.tonemap_lut_path_rejected",
+                        $"LUT path '{lutPath}' rejected ({ex.Message}) — falling back to algorithm '{algorithm}'",
+                        new
                         {
                             lutPath,
                             reason = ex.Message,
@@ -150,11 +150,11 @@ public class TonemapSelector : ITonemapSelector
             $"zscale=t=linear:npl={peakNits},format=gbrpf32le,zscale=p=bt709,tonemap=tonemap={algorithm}:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p";
 
         decisions.Add(
-            entry: new(
-                Stage: "plan",
-                Key: "plan.tonemap_resolved",
-                Message: $"Tonemap resolved: algorithm={algorithm}, nits={peakNits}, lut=false",
-                Data: new
+            new(
+                "plan",
+                "plan.tonemap_resolved",
+                $"Tonemap resolved: algorithm={algorithm}, nits={peakNits}, lut=false",
+                new
                 {
                     algorithm,
                     peakNits,
@@ -164,10 +164,10 @@ public class TonemapSelector : ITonemapSelector
         );
 
         return new(
-            Algorithm: algorithm,
-            PeakNits: peakNits,
-            LutFilterChain: null,
-            FilterStringFragment: fragment
+            algorithm,
+            peakNits,
+            null,
+            fragment
         );
     }
 }

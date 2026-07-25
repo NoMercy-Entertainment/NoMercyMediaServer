@@ -19,18 +19,18 @@ using NoMercy.Encoder.Hardware;
 namespace NoMercy.Encoder.Distribution;
 
 internal sealed record RegisterPayload(
-    [property: JsonPropertyName(name: "worker_id")] string WorkerId,
-    [property: JsonPropertyName(name: "base_url")] string? BaseUrl,
-    [property: JsonPropertyName(name: "cpu_cores")] int CpuCores,
-    [property: JsonPropertyName(name: "available_cpu_threads")] int AvailableCpuThreads,
-    [property: JsonPropertyName(name: "available_gpu_slots")] int AvailableGpuSlots,
-    [property: JsonPropertyName(name: "gpus")] IReadOnlyList<GpuDevice> Gpus
+    [property: JsonPropertyName("worker_id")] string WorkerId,
+    [property: JsonPropertyName("base_url")] string? BaseUrl,
+    [property: JsonPropertyName("cpu_cores")] int CpuCores,
+    [property: JsonPropertyName("available_cpu_threads")] int AvailableCpuThreads,
+    [property: JsonPropertyName("available_gpu_slots")] int AvailableGpuSlots,
+    [property: JsonPropertyName("gpus")] IReadOnlyList<GpuDevice> Gpus
 );
 
 internal sealed record HeartbeatPayload(
-    [property: JsonPropertyName(name: "available_cpu_threads")] int AvailableCpuThreads,
-    [property: JsonPropertyName(name: "available_gpu_slots")] int AvailableGpuSlots,
-    [property: JsonPropertyName(name: "gpu_utilization")] double GpuUtilization
+    [property: JsonPropertyName("available_cpu_threads")] int AvailableCpuThreads,
+    [property: JsonPropertyName("available_gpu_slots")] int AvailableGpuSlots,
+    [property: JsonPropertyName("gpu_utilization")] double GpuUtilization
 );
 
 /// <summary>
@@ -71,18 +71,18 @@ public class WorkerSelfRegistrationService(
 ) : BackgroundService
 {
     // Token is considered "near expiry" when it has less than this left.
-    private static readonly TimeSpan TokenRefreshLeadTime = TimeSpan.FromSeconds(seconds: 60);
+    private static readonly TimeSpan TokenRefreshLeadTime = TimeSpan.FromSeconds(60);
 
     // Backoff sequence for repeated 401s (doubles each step, capped at 60 s).
     private static readonly TimeSpan[] BackoffSequence =
     [
-        TimeSpan.FromSeconds(seconds: 1),
-        TimeSpan.FromSeconds(seconds: 2),
-        TimeSpan.FromSeconds(seconds: 4),
-        TimeSpan.FromSeconds(seconds: 8),
-        TimeSpan.FromSeconds(seconds: 16),
-        TimeSpan.FromSeconds(seconds: 32),
-        TimeSpan.FromSeconds(seconds: 60),
+        TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(4),
+        TimeSpan.FromSeconds(8),
+        TimeSpan.FromSeconds(16),
+        TimeSpan.FromSeconds(32),
+        TimeSpan.FromSeconds(60),
     ];
 
     // Tracks consecutive 401 failures for backoff index.
@@ -93,24 +93,24 @@ public class WorkerSelfRegistrationService(
         if (!ShouldRun())
         {
             logger.LogInformation(
-                message: "Worker self-registration disabled (CoordinatorUrl and WorkerSelfBaseUrl both required)"
+                "Worker self-registration disabled (CoordinatorUrl and WorkerSelfBaseUrl both required)"
             );
             return;
         }
 
-        HttpClient http = httpClientFactory.CreateClient(name: "worker-self-registration");
-        http.BaseAddress = new(uriString: options.CoordinatorUrl!);
-        http.Timeout = TimeSpan.FromSeconds(seconds: 10);
+        HttpClient http = httpClientFactory.CreateClient("worker-self-registration");
+        http.BaseAddress = new(options.CoordinatorUrl!);
+        http.Timeout = TimeSpan.FromSeconds(10);
 
         // Perform initial token fetch before registering so heartbeats
         // carry the live cluster secret from the first request onward.
-        await TryRefreshTokenAsync(ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+        await TryRefreshTokenAsync(stoppingToken).ConfigureAwait(false);
 
-        if (!await TryRegisterAsync(http: http, ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false))
+        if (!await TryRegisterAsync(http, stoppingToken).ConfigureAwait(false))
         {
             logger.LogWarning(
-                message: "Initial registration with {CoordinatorUrl} failed — will retry on heartbeat loop",
-                args: options.CoordinatorUrl
+                "Initial registration with {CoordinatorUrl} failed — will retry on heartbeat loop",
+                options.CoordinatorUrl
             );
         }
 
@@ -120,14 +120,14 @@ public class WorkerSelfRegistrationService(
             // heartbeat after a 403 is observed during the initial token fetch.
             if (tokenHolder?.IsRevoked == true)
             {
-                logger.LogInformation(message: "License revoked — worker self-registration stopped");
+                logger.LogInformation("License revoked — worker self-registration stopped");
                 return;
             }
 
             try
             {
-                await Task.Delay(delay: options.WorkerHeartbeatInterval, cancellationToken: stoppingToken)
-                    .ConfigureAwait(continueOnCapturedContext: false);
+                await Task.Delay(options.WorkerHeartbeatInterval, stoppingToken)
+                    .ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -135,31 +135,31 @@ public class WorkerSelfRegistrationService(
             }
 
             // Rotate cluster token if it is near expiry.
-            await MaybeRefreshTokenAsync(ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+            await MaybeRefreshTokenAsync(stoppingToken).ConfigureAwait(false);
 
             // Stop after revocation that was detected during token refresh.
             if (tokenHolder?.IsRevoked == true)
             {
-                logger.LogInformation(message: "License revoked — worker self-registration stopped");
+                logger.LogInformation("License revoked — worker self-registration stopped");
                 return;
             }
 
-            bool alive = await TryHeartbeatAsync(http: http, ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+            bool alive = await TryHeartbeatAsync(http, stoppingToken).ConfigureAwait(false);
             if (alive)
                 continue;
             // Heartbeat bounced — coordinator doesn't know us. Could be
             // coordinator restart or our eviction after a long outage.
             // Re-register rather than spamming a 404 heartbeat loop.
-            logger.LogInformation(message: "Heartbeat rejected by coordinator — attempting re-registration");
-            await TryRegisterAsync(http: http, ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+            logger.LogInformation("Heartbeat rejected by coordinator — attempting re-registration");
+            await TryRegisterAsync(http, stoppingToken).ConfigureAwait(false);
         }
 
-        await TryUnregisterAsync(http: http).ConfigureAwait(continueOnCapturedContext: false);
+        await TryUnregisterAsync(http).ConfigureAwait(false);
     }
 
     private bool ShouldRun() =>
-        !string.IsNullOrWhiteSpace(value: options.CoordinatorUrl)
-        && !string.IsNullOrWhiteSpace(value: options.WorkerSelfBaseUrl)
+        !string.IsNullOrWhiteSpace(options.CoordinatorUrl)
+        && !string.IsNullOrWhiteSpace(options.WorkerSelfBaseUrl)
         && options.IsDistributedEncodingEnabled;
 
     // ── Token rotation ────────────────────────────────────────────────────────
@@ -169,20 +169,20 @@ public class WorkerSelfRegistrationService(
         if (licenseTokenClient is null || tokenHolder is null)
             return;
 
-        ClusterTokenResult result = await licenseTokenClient.RequestAsync(ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+        ClusterTokenResult result = await licenseTokenClient.RequestAsync(ct).ConfigureAwait(false);
 
         if (result.Token is not null)
         {
-            tokenHolder.Update(token: result.Token);
+            tokenHolder.Update(result.Token);
             _consecutiveAuthFailures = 0;
             logger.LogDebug(
-                message: "Cluster token refreshed, expires {ExpiresAt:O}",
-                args: result.Token.ExpiresAt
+                "Cluster token refreshed, expires {ExpiresAt:O}",
+                result.Token.ExpiresAt
             );
             return;
         }
 
-        await HandleTokenFailureAsync(result: result, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+        await HandleTokenFailureAsync(result, ct).ConfigureAwait(false);
     }
 
     private async Task MaybeRefreshTokenAsync(CancellationToken ct)
@@ -197,7 +197,7 @@ public class WorkerSelfRegistrationService(
         if (!nearExpiry)
             return;
 
-        await TryRefreshTokenAsync(ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+        await TryRefreshTokenAsync(ct).ConfigureAwait(false);
     }
 
     private async Task HandleTokenFailureAsync(ClusterTokenResult result, CancellationToken ct)
@@ -213,13 +213,13 @@ public class WorkerSelfRegistrationService(
                 if (!options.IsDistributedEncodingEnabled)
                 {
                     logger.LogInformation(
-                        message: "Free-tier install received 403 from token endpoint — distributed encoding not available"
+                        "Free-tier install received 403 from token endpoint — distributed encoding not available"
                     );
                 }
                 else
                 {
                     logger.LogWarning(
-                        message: "Distributed encoding license revoked (403 from coordinator) — worker will stop re-registering. Resolve the license issue and restart."
+                        "Distributed encoding license revoked (403 from coordinator) — worker will stop re-registering. Resolve the license issue and restart."
                     );
                     tokenHolder.IsRevoked = true;
                 }
@@ -229,16 +229,16 @@ public class WorkerSelfRegistrationService(
             case LicenseFailureKind.Unauthenticated:
                 _consecutiveAuthFailures++;
                 int backoffIndex = Math.Min(
-                    val1: _consecutiveAuthFailures - 1,
-                    val2: BackoffSequence.Length - 1
+                    _consecutiveAuthFailures - 1,
+                    BackoffSequence.Length - 1
                 );
                 TimeSpan delay = BackoffSequence[backoffIndex];
                 logger.LogWarning(
-                    message: "Token request returned 401 (failure #{Count}) — backing off {Delay} before next attempt", args: [_consecutiveAuthFailures, delay]
+                    "Token request returned 401 (failure #{Count}) — backing off {Delay} before next attempt", [_consecutiveAuthFailures, delay]
                 );
                 try
                 {
-                    await Task.Delay(delay: delay, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+                    await Task.Delay(delay, ct).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -249,7 +249,7 @@ public class WorkerSelfRegistrationService(
 
             default:
                 logger.LogDebug(
-                    message: "Token request failed ({Failure}): {Message}", args: [result.Failure, result.Message]
+                    "Token request failed ({Failure}): {Message}", [result.Failure, result.Message]
                 );
                 return;
         }
@@ -262,38 +262,38 @@ public class WorkerSelfRegistrationService(
         try
         {
             RegisterPayload payload = new(
-                WorkerId: options.WorkerId,
-                BaseUrl: options.WorkerSelfBaseUrl,
-                CpuCores: capabilities.CpuCores,
-                AvailableCpuThreads: capabilities.CpuCores,
-                AvailableGpuSlots: capabilities.Gpus.Sum(selector: g => g.MaxEncoderSessions),
-                Gpus: capabilities.Gpus
+                options.WorkerId,
+                options.WorkerSelfBaseUrl,
+                capabilities.CpuCores,
+                capabilities.CpuCores,
+                capabilities.Gpus.Sum(g => g.MaxEncoderSessions),
+                capabilities.Gpus
             );
 
             using HttpResponseMessage response = await http.PostAsJsonAsync(
-                    requestUri: "api/v1/distribution/workers/register",
-                    value: payload,
-                    cancellationToken: ct
+                    "api/v1/distribution/workers/register",
+                    payload,
+                    ct
                 )
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
                 logger.LogInformation(
-                    message: "Registered as worker {WorkerId} at {CoordinatorUrl}", args: [options.WorkerId, options.CoordinatorUrl]
+                    "Registered as worker {WorkerId} at {CoordinatorUrl}", [options.WorkerId, options.CoordinatorUrl]
                 );
                 return true;
             }
 
             logger.LogWarning(
-                message: "Coordinator returned {StatusCode} on register — distribution disabled on coordinator side?",
-                args: (int)response.StatusCode
+                "Coordinator returned {StatusCode} on register — distribution disabled on coordinator side?",
+                (int)response.StatusCode
             );
             return false;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(exception: ex, message: "Self-registration request failed");
+            logger.LogWarning(ex, "Self-registration request failed");
             return false;
         }
     }
@@ -303,23 +303,23 @@ public class WorkerSelfRegistrationService(
         try
         {
             HeartbeatPayload payload = new(
-                AvailableCpuThreads: capabilities.CpuCores,
-                AvailableGpuSlots: capabilities.Gpus.Sum(selector: g => g.MaxEncoderSessions),
-                GpuUtilization: 0.0
+                capabilities.CpuCores,
+                capabilities.Gpus.Sum(g => g.MaxEncoderSessions),
+                0.0
             );
 
             using HttpResponseMessage response = await http.PostAsJsonAsync(
-                    requestUri: $"api/v1/distribution/workers/{options.WorkerId}/heartbeat",
-                    value: payload,
-                    cancellationToken: ct
+                    $"api/v1/distribution/workers/{options.WorkerId}/heartbeat",
+                    payload,
+                    ct
                 )
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .ConfigureAwait(false);
 
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogDebug(exception: ex, message: "Heartbeat failed");
+            logger.LogDebug(ex, "Heartbeat failed");
             return false;
         }
     }
@@ -328,16 +328,16 @@ public class WorkerSelfRegistrationService(
     {
         try
         {
-            using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
-            await http.DeleteAsync(requestUri: $"api/v1/distribution/workers/{options.WorkerId}", cancellationToken: cts.Token)
-                .ConfigureAwait(continueOnCapturedContext: false);
-            logger.LogInformation(message: "Unregistered worker {WorkerId} on shutdown", args: options.WorkerId);
+            using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+            await http.DeleteAsync($"api/v1/distribution/workers/{options.WorkerId}", cts.Token)
+                .ConfigureAwait(false);
+            logger.LogInformation("Unregistered worker {WorkerId} on shutdown", options.WorkerId);
         }
         catch (Exception ex)
         {
             // Shutdown path — log and move on. Coordinator's stale eviction
             // will clean us up within 60s if we can't confirm.
-            logger.LogDebug(exception: ex, message: "Unregister on shutdown failed (coordinator will evict stale)");
+            logger.LogDebug(ex, "Unregister on shutdown failed (coordinator will evict stale)");
         }
     }
 }

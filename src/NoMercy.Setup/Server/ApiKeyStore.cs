@@ -59,18 +59,40 @@ public class ApiKeyStore : IApiKeyStore
     {
         string[] quotes =
         [
-            "NoMercy is the best media server",
-            "NoMercy is the future of media servers",
-            "NoMercy is the most advanced media server",
-            "NoMercy is the most powerful media server",
-            "NoMercy is the most reliable media server",
-            "NoMercy is the most secure media server",
-            "NoMercy is the most stable media server",
-            "NoMercy is the most user-friendly media server",
-            "NoMercy is the most versatile media server",
-            "NoMercy is the only media server you'll ever need",
+			"An unexamined life is not worth living. - Socrates",
+			"Be present above all else. - Naval Ravikant",
+			"Do what you can, with what you have, where you are. - Theodore Roosevelt",
+			"Happiness is not something readymade. It comes from your own actions. - Dalai Lama",
+			"He who is contented is rich. - Laozi",
+			"I have not failed. I\"ve just found 10,000 ways that won\"t work. - Thomas Edison",
+			"It is never too late to be what you might have been. - George Eliot",
+			"It is not the man who has too little, but the man who craves more, that is poor. - Seneca",
+			"It is quality rather than quantity that matters. - Lucius Annaeus Seneca",
+			"Live as if you were to die tomorrow. Learn as if you were to live forever. - Mahatma Gandhi",
+			"No surplus words or unnecessary actions. - Marcus Aurelius",
+			"Nothing worth having comes easy. - Theodore Roosevelt",
+			"Order your soul. Reduce your wants. - Augustine",
+			"People find pleasure in different ways. I find it in keeping my mind clear. - Marcus Aurelius",
+			"Simplicity is an acquired taste. - Katharine Gerould",
+			"Simplicity is the consequence of refined emotions. - Jean D\"Alembert",
+			"Simplicity is the essence of happiness. - Cedric Bledsoe",
+			"Simplicity is the ultimate sophistication. - Leonardo da Vinci",
+			"Smile, breathe, and go slowly. - Thich Nhat Hanh",
+			"The only way to do great work is to love what you do. - Steve Jobs",
+			"The whole future lies in uncertainty: live immediately. - Seneca",
+			"Very little is needed to make a happy life. - Marcus Aurelius",
+			"Waste no more time arguing what a good man should be, be one. - Marcus Aurelius",
+			"Well begun is half done. - Aristotle",
+			"When there is no desire, all things are at peace. - Laozi",
+			"Walk as if you are kissing the Earth with your feet. - Thich Nhat Hanh",
+			"Because you are alive, everything is possible. - Thich Nhat Hanh",
+			"Breathing in, I calm body and mind. Breathing out, I smile. - Thich Nhat Hanh",
+			"Life is available only in the present moment. - Thich Nhat Hanh",
+			"The biggest battle is the war against ignorance. - Mustafa Kemal Atatürk",
+			"Always remember that you are absolutely unique. Just like everyone else. - Margaret Mead",
+			"You must be the change you wish to see in the world. - Mahatma Gandhi",
         ];
 
-        return quotes[new Random().Next(maxValue: quotes.Length)];
+        return quotes[new Random().Next(quotes.Length)];
     }
 }

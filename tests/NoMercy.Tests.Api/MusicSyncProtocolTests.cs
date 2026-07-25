@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Api;
 /// and the atomicity of a track change: item + Time + PositionCapturedAtMs must
 /// land in the same synchronous mutation and travel on exactly one broadcast.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MusicSyncProtocolTests
 {
     private static PlaylistTrackDto MakeTrack()
@@ -41,7 +41,7 @@ public class MusicSyncProtocolTests
             Folder = "/music/",
             FolderId = Ulid.NewUlid(),
         };
-        return new(track: track, country: "US");
+        return new(track, "US");
     }
 
     private static (
@@ -55,7 +55,7 @@ public class MusicSyncProtocolTests
         MusicActiveDeviceRegistry registry = new();
         Mock<IClientMessenger> messenger = new();
         messenger
-            .Setup(expression: m =>
+            .Setup(m =>
                 m.SendTo(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
@@ -63,13 +63,13 @@ public class MusicSyncProtocolTests
                     It.IsAny<object?>()
                 )
             )
-            .Returns(value: Task.CompletedTask);
+            .Returns(Task.CompletedTask);
 
         MusicPlaybackService service = new(
-            stateManager: stateManager,
-            serviceProvider: Mock.Of<IServiceProvider>(),
-            clientMessenger: messenger.Object,
-            activeDeviceRegistry: registry
+            stateManager,
+            Mock.Of<IServiceProvider>(),
+            messenger.Object,
+            registry
         );
 
         return (service, stateManager, registry, messenger);
@@ -82,14 +82,14 @@ public class MusicSyncProtocolTests
     {
         (MusicPlaybackService service, _, _, _) = MakeService();
         User user = new() { Id = Guid.NewGuid(), Name = "Test User" };
-        MusicPlayerState state = new() { CurrentList = new(uriString: "", uriKind: UriKind.Relative) };
+        MusicPlayerState state = new() { CurrentList = new("", UriKind.Relative) };
 
         long before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        await service.UpdatePlaybackState(user: user, state: state);
+        await service.UpdatePlaybackState(user, state);
 
-        state.ServerTimeMs.Should().BeGreaterThanOrEqualTo(expected: before);
+        state.ServerTimeMs.Should().BeGreaterThanOrEqualTo(before);
         // Same instant backs both fields on a given emit.
-        state.ServerTimeMs.Should().Be(expected: state.Timestamp);
+        state.ServerTimeMs.Should().Be(state.Timestamp);
     }
 
     [Fact]
@@ -97,16 +97,16 @@ public class MusicSyncProtocolTests
     {
         (MusicPlaybackService service, _, _, _) = MakeService();
         User user = new() { Id = Guid.NewGuid(), Name = "Test User" };
-        MusicPlayerState state = new() { CurrentList = new(uriString: "", uriKind: UriKind.Relative) };
+        MusicPlayerState state = new() { CurrentList = new("", UriKind.Relative) };
 
-        await service.UpdatePlaybackState(user: user, state: state);
+        await service.UpdatePlaybackState(user, state);
         long first = state.ServerTimeMs;
 
-        await Task.Delay(millisecondsDelay: 5);
-        await service.UpdatePlaybackState(user: user, state: state);
+        await Task.Delay(5);
+        await service.UpdatePlaybackState(user, state);
         long second = state.ServerTimeMs;
 
-        second.Should().BeGreaterThanOrEqualTo(expected: first);
+        second.Should().BeGreaterThanOrEqualTo(first);
     }
 
     // ── PositionCapturedAtMs (SetPosition — the single choke point) ──────────
@@ -114,28 +114,28 @@ public class MusicSyncProtocolTests
     [Fact]
     public void SetPosition_SetsTimeAndStampsPositionCapturedAtMs()
     {
-        MusicPlayerState state = new() { CurrentList = new(uriString: "", uriKind: UriKind.Relative) };
+        MusicPlayerState state = new() { CurrentList = new("", UriKind.Relative) };
         long before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        state.SetPosition(positionMs: 12_345);
+        state.SetPosition(12_345);
 
-        state.Time.Should().Be(expected: 12_345);
-        state.PositionCapturedAtMs.Should().BeGreaterThanOrEqualTo(expected: before);
+        state.Time.Should().Be(12_345);
+        state.PositionCapturedAtMs.Should().BeGreaterThanOrEqualTo(before);
     }
 
     [Fact]
     public void SetPosition_RefreshesPositionCapturedAtMs_OnEachCall()
     {
-        MusicPlayerState state = new() { CurrentList = new(uriString: "", uriKind: UriKind.Relative) };
+        MusicPlayerState state = new() { CurrentList = new("", UriKind.Relative) };
 
-        state.SetPosition(positionMs: 1_000);
+        state.SetPosition(1_000);
         long firstCapture = state.PositionCapturedAtMs;
 
-        Thread.Sleep(millisecondsTimeout: 5);
-        state.SetPosition(positionMs: 2_000);
+        Thread.Sleep(5);
+        state.SetPosition(2_000);
 
-        state.Time.Should().Be(expected: 2_000);
-        state.PositionCapturedAtMs.Should().BeGreaterThanOrEqualTo(expected: firstCapture);
+        state.Time.Should().Be(2_000);
+        state.PositionCapturedAtMs.Should().BeGreaterThanOrEqualTo(firstCapture);
     }
 
     // ── IsReportForCurrentItem (stale-tagged report guard) ───────────────────
@@ -146,10 +146,10 @@ public class MusicSyncProtocolTests
         MusicPlayerState state = new()
         {
             CurrentItem = MakeTrack(),
-            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
+            CurrentList = new("", UriKind.Relative),
         };
 
-        MusicPlaybackService.IsReportForCurrentItem(state: state, itemId: null).Should().BeTrue();
+        MusicPlaybackService.IsReportForCurrentItem(state, null).Should().BeTrue();
     }
 
     [Fact]
@@ -159,10 +159,10 @@ public class MusicSyncProtocolTests
         MusicPlayerState state = new()
         {
             CurrentItem = track,
-            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
+            CurrentList = new("", UriKind.Relative),
         };
 
-        MusicPlaybackService.IsReportForCurrentItem(state: state, itemId: track.Id.ToString()).Should().BeTrue();
+        MusicPlaybackService.IsReportForCurrentItem(state, track.Id.ToString()).Should().BeTrue();
     }
 
     [Fact]
@@ -172,11 +172,11 @@ public class MusicSyncProtocolTests
         MusicPlayerState state = new()
         {
             CurrentItem = track,
-            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
+            CurrentList = new("", UriKind.Relative),
         };
 
         MusicPlaybackService
-            .IsReportForCurrentItem(state: state, itemId: track.Id.ToString().ToUpperInvariant())
+            .IsReportForCurrentItem(state, track.Id.ToString().ToUpperInvariant())
             .Should()
             .BeTrue();
     }
@@ -187,11 +187,11 @@ public class MusicSyncProtocolTests
         MusicPlayerState state = new()
         {
             CurrentItem = MakeTrack(),
-            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
+            CurrentList = new("", UriKind.Relative),
         };
 
         MusicPlaybackService
-            .IsReportForCurrentItem(state: state, itemId: Guid.NewGuid().ToString())
+            .IsReportForCurrentItem(state, Guid.NewGuid().ToString())
             .Should()
             .BeFalse();
     }
@@ -202,11 +202,11 @@ public class MusicSyncProtocolTests
         MusicPlayerState state = new()
         {
             CurrentItem = null,
-            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
+            CurrentList = new("", UriKind.Relative),
         };
 
         MusicPlaybackService
-            .IsReportForCurrentItem(state: state, itemId: Guid.NewGuid().ToString())
+            .IsReportForCurrentItem(state, Guid.NewGuid().ToString())
             .Should()
             .BeFalse();
     }
@@ -217,10 +217,10 @@ public class MusicSyncProtocolTests
         MusicPlayerState state = new()
         {
             CurrentItem = MakeTrack(),
-            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
+            CurrentList = new("", UriKind.Relative),
         };
 
-        MusicPlaybackService.IsReportForCurrentItem(state: state, itemId: "not-a-guid").Should().BeFalse();
+        MusicPlaybackService.IsReportForCurrentItem(state, "not-a-guid").Should().BeFalse();
     }
 
     // ── Atomic track change: item + Time + PositionCapturedAtMs together, one broadcast ──
@@ -239,7 +239,7 @@ public class MusicSyncProtocolTests
             PlayState = true,
             CurrentItem = trackA,
             Playlist = [trackB],
-            CurrentList = new(uriString: "/music/albums/test", uriKind: UriKind.Relative),
+            CurrentList = new("/music/albums/test", UriKind.Relative),
             Time = 42_000,
             // HandleCommand's "next" branch reads Actions.Disallows.Next before
             // dispatching — Actions.Disallows has no property initializer
@@ -247,18 +247,18 @@ public class MusicSyncProtocolTests
             Actions = new() { Disallows = new() },
         };
 
-        MusicPlaybackCommandHandler handler = new(musicPlaybackService: service);
+        MusicPlaybackCommandHandler handler = new(service);
         long before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        handler.HandleCommand(user: user, command: "next", data: null, state: state);
+        handler.HandleCommand(user, "next", null, state);
 
         // All three land together, synchronously, before any broadcast fires —
         // a concurrent reader can never observe the new item with stale Time
         // (or vice versa).
-        state.CurrentItem.Should().Be(expected: trackB);
-        state.Time.Should().Be(expected: 0);
-        state.PositionCapturedAtMs.Should().BeGreaterThanOrEqualTo(expected: before);
-        state.Backlog.Should().Contain(expected: trackA);
+        state.CurrentItem.Should().Be(trackB);
+        state.Time.Should().Be(0);
+        state.PositionCapturedAtMs.Should().BeGreaterThanOrEqualTo(before);
+        state.Backlog.Should().Contain(trackA);
     }
 
     [Fact]
@@ -275,16 +275,16 @@ public class MusicSyncProtocolTests
         // the first broadcast and await it with a generous timeout instead.
         int broadcasts = 0;
         TaskCompletionSource firstBroadcast = new(
-            creationOptions: TaskCreationOptions.RunContinuationsAsynchronously
+            TaskCreationOptions.RunContinuationsAsynchronously
         );
         messenger
-            .Setup(expression: m => m.SendTo("MusicPlayerState", "musicHub", userId, It.IsAny<object?>()))
-            .Callback(action: () =>
+            .Setup(m => m.SendTo("MusicPlayerState", "musicHub", userId, It.IsAny<object?>()))
+            .Callback(() =>
             {
-                if (Interlocked.Increment(location: ref broadcasts) == 1)
+                if (Interlocked.Increment(ref broadcasts) == 1)
                     firstBroadcast.TrySetResult();
             })
-            .Returns(value: Task.CompletedTask);
+            .Returns(Task.CompletedTask);
 
         PlaylistTrackDto trackA = MakeTrack();
         PlaylistTrackDto trackB = MakeTrack();
@@ -294,7 +294,7 @@ public class MusicSyncProtocolTests
             PlayState = true,
             CurrentItem = trackA,
             Playlist = [trackB],
-            CurrentList = new(uriString: "/music/albums/test", uriKind: UriKind.Relative),
+            CurrentList = new("/music/albums/test", UriKind.Relative),
             Time = 42_000,
             // HandleCommand's "next" branch reads Actions.Disallows.Next before
             // dispatching — Actions.Disallows has no property initializer
@@ -302,27 +302,27 @@ public class MusicSyncProtocolTests
             Actions = new() { Disallows = new() },
         };
 
-        MusicPlaybackCommandHandler handler = new(musicPlaybackService: service);
-        handler.HandleCommand(user: user, command: "next", data: null, state: state);
+        MusicPlaybackCommandHandler handler = new(service);
+        handler.HandleCommand(user, "next", null, state);
 
         // The command handler may have (re)armed the real playback timer —
         // stop it so it can't sneak in extra ticks/broadcasts during the wait.
-        service.RemoveTimer(userId: userId);
+        service.RemoveTimer(userId);
 
         // Mirrors MusicHub.PlaybackCommand's skip-command path.
-        service.DebouncedUpdatePlaybackState(user: user, state: state);
+        service.DebouncedUpdatePlaybackState(user, state);
 
         // Absorb thread-pool starvation: a missing broadcast throws TimeoutException.
-        await firstBroadcast.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
+        await firstBroadcast.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // An erroneous second broadcast would arrive within another debounce
         // window (150ms); settle briefly, then confirm the debounce coalesced.
-        await Task.Delay(millisecondsDelay: 200);
-        broadcasts.Should().Be(expected: 1);
+        await Task.Delay(200);
+        broadcasts.Should().Be(1);
 
         // The single broadcast payload carries the state object as-is — item
         // and position never travel separately.
-        state.CurrentItem.Should().Be(expected: trackB);
-        state.Time.Should().Be(expected: 0);
+        state.CurrentItem.Should().Be(trackB);
+        state.Time.Should().Be(0);
     }
 }

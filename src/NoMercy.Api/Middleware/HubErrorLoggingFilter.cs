@@ -34,31 +34,31 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
         string methodName = invocationContext.HubMethodName;
         string connectionId = invocationContext.Context.ConnectionId;
 
-        string? guid = invocationContext.Context.User?.FindFirstValue(claimType: ClaimTypes.NameIdentifier);
+        string? guid = invocationContext.Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         if (guid == null)
         {
             logger.LogInformation(
-                message: "[Unknown User]: [{HubName}] No user identifier found in claims.",
-                args: hubName
+                "[Unknown User]: [{HubName}] No user identifier found in claims.",
+                hubName
             );
-            return await next(arg: invocationContext);
+            return await next(invocationContext);
         }
 
-        if (!Guid.TryParse(input: guid, result: out Guid userId))
+        if (!Guid.TryParse(guid, out Guid userId))
         {
             logger.LogInformation(
-                message: "[{HubName}] Malformed user GUID claim '{Guid}' on connection {ConnectionId}", args: [hubName, guid, connectionId]
+                "[{HubName}] Malformed user GUID claim '{Guid}' on connection {ConnectionId}", [hubName, guid, connectionId]
             );
-            return await next(arg: invocationContext);
+            return await next(invocationContext);
         }
-        User? user = UserCache.Current.Users.FirstOrDefault(predicate: x => x.Id.Equals(g: userId));
+        User? user = UserCache.Current.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user == null)
         {
             logger.LogInformation(
-                message: "[Unknown User]: [{HubName}] User with ID {UserId} not found.", args: [hubName, userId]
+                "[Unknown User]: [{HubName}] User with ID {UserId} not found.", [hubName, userId]
             );
-            return await next(arg: invocationContext);
+            return await next(invocationContext);
         }
 
         try
@@ -66,34 +66,34 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
             // Execute the hub method with SQLite retry protection.
             // FlexLabs.Upsert (used in VideoHub.SetTime etc.) calls ExecuteSqlRawAsync
             // which bypasses the EF Core execution strategy's retry pipeline.
-            return await SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(operation: async () =>
-                await next(arg: invocationContext)
+            return await SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(async () =>
+                await next(invocationContext)
             );
         }
         catch (HubException hubEx)
         {
             // HubException is thrown intentionally to send error messages to clients
             logger.LogInformation(
-                message: "{Name}: [{HubName}.{MethodName}] Hub exception: {Message}", args: [user.Name, hubName, methodName, hubEx.Message]
+                "{Name}: [{HubName}.{MethodName}] Hub exception: {Message}", [user.Name, hubName, methodName, hubEx.Message]
             );
             throw; // Re-throw to send to client
         }
         catch (InvalidOperationException invalidOpEx)
-            when (invalidOpEx.Message.Contains(value: "does not exist"))
+            when (invalidOpEx.Message.Contains("does not exist"))
         {
             // This catches when a client calls a method that doesn't exist
             logger.LogInformation(
-                message: "{Name}: [{HubName}] ERROR: Method '{MethodName}' does not exist!", args: [user.Name, hubName, methodName]
+                "{Name}: [{HubName}] ERROR: Method '{MethodName}' does not exist!", [user.Name, hubName, methodName]
             );
             logger.LogInformation(
-                message: "{Name}: [{HubName}] Connection: {ConnectionId}", args: [user.Name, hubName, connectionId]
+                "{Name}: [{HubName}] Connection: {ConnectionId}", [user.Name, hubName, connectionId]
             );
             logger.LogInformation(
-                message: "{Name}: [{HubName}] Available methods should match public Task methods in the hub class", args: [user.Name, hubName]
+                "{Name}: [{HubName}] Available methods should match public Task methods in the hub class", [user.Name, hubName]
             );
 
             throw new HubException(
-                message: Config.IsDev
+                Config.IsDev
                     ? $"Method '{methodName}' does not exist on hub '{hubName}'"
                     : "An internal error occurred"
             );
@@ -102,33 +102,33 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
         {
             // This catches parameter binding errors (wrong types, missing required params, etc.)
             logger.LogInformation(
-                message: "{Name}: [{HubName}.{MethodName}] ERROR: Invalid arguments", args: [user.Name, hubName, methodName]
+                "{Name}: [{HubName}.{MethodName}] ERROR: Invalid arguments", [user.Name, hubName, methodName]
             );
             logger.LogInformation(
-                message: "{Name}: [{HubName}.{MethodName}] Details: {Message}", args: [user.Name, hubName, methodName, argEx.Message]
+                "{Name}: [{HubName}.{MethodName}] Details: {Message}", [user.Name, hubName, methodName, argEx.Message]
             );
 
             if (invocationContext.HubMethodArguments.Count > 0)
             {
                 string argsInfo = string.Join(
-                    separator: ", ",
-                    values: invocationContext.HubMethodArguments.Select(
-                        selector: (arg, index) => $"arg{index}: {arg?.GetType().Name ?? "null"}"
+                    ", ",
+                    invocationContext.HubMethodArguments.Select(
+                        (arg, index) => $"arg{index}: {arg?.GetType().Name ?? "null"}"
                     )
                 );
                 logger.LogInformation(
-                    message: "{Name}: [{HubName}.{MethodName}] Provided arguments: {ArgsInfo}", args: [user.Name, hubName, methodName, argsInfo]
+                    "{Name}: [{HubName}.{MethodName}] Provided arguments: {ArgsInfo}", [user.Name, hubName, methodName, argsInfo]
                 );
             }
             else
             {
                 logger.LogInformation(
-                    message: "{Name}: [{HubName}.{MethodName}] No arguments provided", args: [user.Name, hubName, methodName]
+                    "{Name}: [{HubName}.{MethodName}] No arguments provided", [user.Name, hubName, methodName]
                 );
             }
 
             throw new HubException(
-                message: Config.IsDev
+                Config.IsDev
                     ? $"Invalid arguments for method '{methodName}': {argEx.Message}"
                     : "An internal error occurred"
             );
@@ -137,33 +137,33 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
         {
             // Catch all other exceptions during method execution
             logger.LogInformation(
-                message: "{Name}: [{HubName}.{MethodName}] ERROR: Unhandled exception", args: [user.Name, hubName, methodName]
+                "{Name}: [{HubName}.{MethodName}] ERROR: Unhandled exception", [user.Name, hubName, methodName]
             );
             logger.LogInformation(
-                message: "{Name}: [{HubName}.{MethodName}] Exception type: {Name2}", args: [user.Name, hubName, methodName, ex.GetType().Name]
+                "{Name}: [{HubName}.{MethodName}] Exception type: {Name2}", [user.Name, hubName, methodName, ex.GetType().Name]
             );
             logger.LogInformation(
-                message: "{Name}: [{HubName}.{MethodName}] Message: {Message}", args: [user.Name, hubName, methodName, ex.Message]
+                "{Name}: [{HubName}.{MethodName}] Message: {Message}", [user.Name, hubName, methodName, ex.Message]
             );
             logger.LogInformation(
-                message: "{Name}: [{HubName}.{MethodName}] Stack trace: {StackTrace}", args: [user.Name, hubName, methodName, ex.StackTrace]
+                "{Name}: [{HubName}.{MethodName}] Stack trace: {StackTrace}", [user.Name, hubName, methodName, ex.StackTrace]
             );
 
             if (invocationContext.HubMethodArguments.Count > 0)
             {
                 string argsInfo = string.Join(
-                    separator: ", ",
-                    values: invocationContext.HubMethodArguments.Select(
-                        selector: (arg, index) => $"arg{index}: {arg?.GetType().Name ?? "null"}"
+                    ", ",
+                    invocationContext.HubMethodArguments.Select(
+                        (arg, index) => $"arg{index}: {arg?.GetType().Name ?? "null"}"
                     )
                 );
                 logger.LogInformation(
-                    message: "{Name}: [{HubName}.{MethodName}] Arguments: {ArgsInfo}", args: [user.Name, hubName, methodName, argsInfo]
+                    "{Name}: [{HubName}.{MethodName}] Arguments: {ArgsInfo}", [user.Name, hubName, methodName, argsInfo]
                 );
             }
 
             throw new HubException(
-                message: Config.IsDev
+                Config.IsDev
                     ? $"An error occurred calling '{methodName}': {ex.Message}"
                     : "An internal error occurred"
             );

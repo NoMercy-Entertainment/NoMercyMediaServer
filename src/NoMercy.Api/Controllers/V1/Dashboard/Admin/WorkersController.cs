@@ -31,15 +31,15 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 /// set — single-machine installs return 503 and the registry stays empty.
 /// </summary>
 [ApiController]
-[Tags(tags: "Distribution Workers")]
-[ApiVersion(version: 1.0)]
+[Tags("Distribution Workers")]
+[ApiVersion(1.0)]
 [Authorize]
 // Primary route per the encoder spec.
-[Route(template: "api/v{version:apiVersion}/distribution/workers")]
+[Route("api/v{version:apiVersion}/distribution/workers")]
 // Legacy alias — kept for backwards compatibility with self-hosted users on
 // older builds. Drop after a deprecation window.
-[Obsolete(message: "Use /api/v{version}/distribution/workers — kept for backwards compatibility")]
-[Route(template: "api/v{version:apiVersion}/dashboard/workers")]
+[Obsolete("Use /api/v{version}/distribution/workers — kept for backwards compatibility")]
+[Route("api/v{version:apiVersion}/dashboard/workers")]
 public class WorkersController(
     InMemoryRemoteWorkerRegistry registry,
     ITaskSerializer serializer,
@@ -61,13 +61,13 @@ public class WorkersController(
         IReadOnlyList<WorkerHealthSnapshot> snapshots = registry.GetAllWorkersWithHealth();
 
         return Ok(
-            value: new
+            new
             {
                 distribution_enabled = encoderOptions.IsDistributedEncodingEnabled,
                 count = snapshots.Count,
-                active_count = snapshots.Count(predicate: s => s.CooldownUntilUtc is null),
+                active_count = snapshots.Count(s => s.CooldownUntilUtc is null),
                 data = snapshots
-                    .Select(selector: s =>
+                    .Select(s =>
                     {
                         ResourceBudgetSnapshot budget = s.Worker.GetAvailableBudget();
                         IHardwareCapabilities caps = s.Worker.GetCapabilities();
@@ -90,78 +90,78 @@ public class WorkersController(
         );
     }
 
-    [HttpPost(template: "register")]
+    [HttpPost("register")]
     public IActionResult Register([FromBody] RegisterWorkerRequest request)
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
             return ServiceUnavailableResponse(
-                detail: "Distributed encoding is not enabled on this server. "
+                "Distributed encoding is not enabled on this server. "
                         + "Set DistributedEncodingSigningKey in EncoderOptions and restart."
             );
 
-        if (!AuthPolicy.IsOwner(principal: User))
-            return UnauthorizedResponse(detail: "Only the server owner can register workers");
+        if (!AuthPolicy.IsOwner(User))
+            return UnauthorizedResponse("Only the server owner can register workers");
 
-        if (string.IsNullOrWhiteSpace(value: request.WorkerId))
-            return BadRequestResponse(detail: "worker_id is required");
+        if (string.IsNullOrWhiteSpace(request.WorkerId))
+            return BadRequestResponse("worker_id is required");
 
         if (
-            string.IsNullOrWhiteSpace(value: request.BaseUrl)
-            || !Uri.TryCreate(uriString: request.BaseUrl, uriKind: UriKind.Absolute, result: out Uri? baseUri)
+            string.IsNullOrWhiteSpace(request.BaseUrl)
+            || !Uri.TryCreate(request.BaseUrl, UriKind.Absolute, out Uri? baseUri)
         )
-            return BadRequestResponse(detail: "base_url must be an absolute URL");
+            return BadRequestResponse("base_url must be an absolute URL");
 
         // Only HTTPS in production paths; local dev can still use HTTP via
         // loopback / localhost, but anything else must be TLS.
         bool isLoopback = baseUri.IsLoopback;
         if (!isLoopback && baseUri.Scheme != Uri.UriSchemeHttps)
             return BadRequestResponse(
-                detail: "base_url must use https:// (plain http is allowed only on loopback)"
+                "base_url must use https:// (plain http is allowed only on loopback)"
             );
 
-        HttpClient httpClient = httpClientFactory.CreateClient(name: "remote-worker");
+        HttpClient httpClient = httpClientFactory.CreateClient("remote-worker");
         httpClient.BaseAddress = baseUri;
-        httpClient.Timeout = TimeSpan.FromMinutes(minutes: 10); // Task encodes take minutes.
+        httpClient.Timeout = TimeSpan.FromMinutes(10); // Task encodes take minutes.
 
         HttpRemoteWorker worker = new(
-            workerId: request.WorkerId,
-            http: httpClient,
-            serializer: serializer,
-            signingKey: encoderOptions.GetDistributedEncodingSigningKey(),
-            initialCapabilities: new HardwareCapabilities(
-                Gpus: request.Gpus ?? [],
-                CpuCores: request.CpuCores
+            request.WorkerId,
+            httpClient,
+            serializer,
+            encoderOptions.GetDistributedEncodingSigningKey(),
+            new HardwareCapabilities(
+                request.Gpus ?? [],
+                request.CpuCores
             ),
-            initialBudget: new(
-                AvailableGpuSlots: request.AvailableGpuSlots,
-                AvailableCpuThreads: request.AvailableCpuThreads,
-                GpuUtilization: 0
+            new(
+                request.AvailableGpuSlots,
+                request.AvailableCpuThreads,
+                0
             ),
-            logger: workerLogger
+            workerLogger
         );
 
-        registry.Register(worker: worker);
+        registry.Register(worker);
         logger.LogInformation(
-            message: "Registered remote worker {WorkerId} at {BaseUrl}", args: [request.WorkerId, baseUri]
+            "Registered remote worker {WorkerId} at {BaseUrl}", [request.WorkerId, baseUri]
         );
 
-        return Ok(value: new { worker_id = request.WorkerId, registered = true });
+        return Ok(new { worker_id = request.WorkerId, registered = true });
     }
 
-    [HttpPost(template: "{workerId}/heartbeat")]
+    [HttpPost("{workerId}/heartbeat")]
     public IActionResult Heartbeat(string workerId, [FromBody] HeartbeatRequest? request)
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
             return ServiceUnavailableResponse(
-                detail: "Distributed encoding is not enabled on this server."
+                "Distributed encoding is not enabled on this server."
             );
 
-        if (!AuthPolicy.IsOwner(principal: User))
-            return UnauthorizedResponse(detail: "Only the server owner can send heartbeats");
+        if (!AuthPolicy.IsOwner(User))
+            return UnauthorizedResponse("Only the server owner can send heartbeats");
 
-        bool accepted = registry.Heartbeat(workerId: workerId);
+        bool accepted = registry.Heartbeat(workerId);
         if (!accepted)
-            return NotFoundResponse(detail: $"Worker '{workerId}' is not registered; re-register first");
+            return NotFoundResponse($"Worker '{workerId}' is not registered; re-register first");
 
         // If the heartbeat carries a fresh budget, push it into the worker
         // so the dispatcher sees current values. Capabilities rarely change
@@ -170,21 +170,21 @@ public class WorkersController(
         {
             IRemoteWorker? existing = registry
                 .GetActiveWorkers()
-                .FirstOrDefault(predicate: w => w.WorkerId == workerId);
+                .FirstOrDefault(w => w.WorkerId == workerId);
             if (existing is HttpRemoteWorker http)
             {
                 http.UpdateSnapshot(
-                    capabilities: http.GetCapabilities(),
-                    budget: new(
-                        AvailableGpuSlots: gpu,
-                        AvailableCpuThreads: cpu,
-                        GpuUtilization: request.GpuUtilization ?? 0
+                    http.GetCapabilities(),
+                    new(
+                        gpu,
+                        cpu,
+                        request.GpuUtilization ?? 0
                     )
                 );
             }
         }
 
-        return Ok(value: new { worker_id = workerId, accepted = true });
+        return Ok(new { worker_id = workerId, accepted = true });
     }
 
     /// <summary>
@@ -200,7 +200,7 @@ public class WorkersController(
     /// because progress payloads contain no secrets; the worst a hostile
     /// caller can do is spoof a fake progress bar.
     /// </summary>
-    [HttpPost(template: "{workerId}/tasks/{taskId}/progress")]
+    [HttpPost("{workerId}/tasks/{taskId}/progress")]
     [AllowAnonymous]
     public IActionResult ReceiveProgress(
         string workerId,
@@ -210,23 +210,23 @@ public class WorkersController(
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
             return ServiceUnavailableResponse(
-                detail: "Distributed encoding is not enabled on this server."
+                "Distributed encoding is not enabled on this server."
             );
 
         progressStore.Update(
-            taskId: taskId,
-            snapshot: new(
-                TaskId: taskId,
-                WorkerId: workerId,
-                PercentComplete: update.PercentComplete,
-                CurrentFps: update.CurrentFps,
-                CurrentSpeed: update.CurrentSpeed,
-                CurrentStage: update.CurrentStage,
-                ElapsedSeconds: update.ElapsedSeconds,
-                EstimatedRemainingSeconds: update.EstimatedRemainingSeconds,
-                CurrentTimeSeconds: update.CurrentTimeSeconds,
-                DurationSeconds: update.DurationSeconds,
-                ReceivedAtUtc: DateTime.UtcNow
+            taskId,
+            new(
+                taskId,
+                workerId,
+                update.PercentComplete,
+                update.CurrentFps,
+                update.CurrentSpeed,
+                update.CurrentStage,
+                update.ElapsedSeconds,
+                update.EstimatedRemainingSeconds,
+                update.CurrentTimeSeconds,
+                update.DurationSeconds,
+                DateTime.UtcNow
             )
         );
 
@@ -237,18 +237,18 @@ public class WorkersController(
     /// Dashboard-facing list of currently-running remote tasks with their
     /// latest progress snapshot. Empty when no remote tasks are running.
     /// </summary>
-    [HttpGet(template: "tasks/progress")]
+    [HttpGet("tasks/progress")]
     [Authorize(Policy = "Owner")]
     public IActionResult ListActiveTaskProgress()
     {
         IReadOnlyList<TaskProgressSnapshot> snapshots = progressStore.GetAll();
 
         return Ok(
-            value: new
+            new
             {
                 count = snapshots.Count,
                 data = snapshots
-                    .Select(selector: s => new
+                    .Select(s => new
                     {
                         task_id = s.TaskId,
                         worker_id = s.WorkerId,
@@ -267,44 +267,44 @@ public class WorkersController(
         );
     }
 
-    [HttpDelete(template: "{workerId}")]
+    [HttpDelete("{workerId}")]
     [Authorize(Policy = "Owner")]
     public IActionResult Unregister(string workerId)
     {
-        bool removed = registry.Unregister(workerId: workerId);
+        bool removed = registry.Unregister(workerId);
         if (!removed)
-            return NotFoundResponse(detail: $"Worker '{workerId}' is not registered");
+            return NotFoundResponse($"Worker '{workerId}' is not registered");
 
-        logger.LogInformation(message: "Unregistered remote worker {WorkerId}", args: workerId);
+        logger.LogInformation("Unregistered remote worker {WorkerId}", workerId);
         return NoContent();
     }
 }
 
 public record RegisterWorkerRequest(
-    [property: JsonProperty(propertyName: "worker_id")] string WorkerId,
-    [property: JsonProperty(propertyName: "base_url")] string BaseUrl,
-    [property: JsonProperty(propertyName: "cpu_cores")] int CpuCores,
-    [property: JsonProperty(propertyName: "available_cpu_threads")] int AvailableCpuThreads,
-    [property: JsonProperty(propertyName: "available_gpu_slots")] int AvailableGpuSlots,
-    [property: JsonProperty(propertyName: "gpus")] List<GpuDevice>? Gpus = null
+    [property: JsonProperty("worker_id")] string WorkerId,
+    [property: JsonProperty("base_url")] string BaseUrl,
+    [property: JsonProperty("cpu_cores")] int CpuCores,
+    [property: JsonProperty("available_cpu_threads")] int AvailableCpuThreads,
+    [property: JsonProperty("available_gpu_slots")] int AvailableGpuSlots,
+    [property: JsonProperty("gpus")] List<GpuDevice>? Gpus = null
 );
 
 public record HeartbeatRequest(
-    [property: JsonProperty(propertyName: "available_cpu_threads")] int AvailableCpuThreads,
-    [property: JsonProperty(propertyName: "available_gpu_slots")] int AvailableGpuSlots,
-    [property: JsonProperty(propertyName: "gpu_utilization")] double? GpuUtilization = null
+    [property: JsonProperty("available_cpu_threads")] int AvailableCpuThreads,
+    [property: JsonProperty("available_gpu_slots")] int AvailableGpuSlots,
+    [property: JsonProperty("gpu_utilization")] double? GpuUtilization = null
 );
 
 public record ProgressUpdateRequest(
-    [property: JsonProperty(propertyName: "percent_complete")] double PercentComplete,
-    [property: JsonProperty(propertyName: "elapsed_seconds")] double ElapsedSeconds,
-    [property: JsonProperty(propertyName: "current_time_seconds")] double CurrentTimeSeconds,
-    [property: JsonProperty(propertyName: "duration_seconds")] double DurationSeconds,
-    [property: JsonProperty(propertyName: "current_fps")] double? CurrentFps = null,
-    [property: JsonProperty(propertyName: "current_speed")] double? CurrentSpeed = null,
-    [property: JsonProperty(propertyName: "current_stage")] string? CurrentStage = null,
-    [property: JsonProperty(propertyName: "current_operation")] string? CurrentOperation = null,
-    [property: JsonProperty(propertyName: "estimated_remaining_seconds")]
+    [property: JsonProperty("percent_complete")] double PercentComplete,
+    [property: JsonProperty("elapsed_seconds")] double ElapsedSeconds,
+    [property: JsonProperty("current_time_seconds")] double CurrentTimeSeconds,
+    [property: JsonProperty("duration_seconds")] double DurationSeconds,
+    [property: JsonProperty("current_fps")] double? CurrentFps = null,
+    [property: JsonProperty("current_speed")] double? CurrentSpeed = null,
+    [property: JsonProperty("current_stage")] string? CurrentStage = null,
+    [property: JsonProperty("current_operation")] string? CurrentOperation = null,
+    [property: JsonProperty("estimated_remaining_seconds")]
         double? EstimatedRemainingSeconds = null,
-    [property: JsonProperty(propertyName: "bitrate_kbps")] int? BitrateKbps = null
+    [property: JsonProperty("bitrate_kbps")] int? BitrateKbps = null
 );

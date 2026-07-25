@@ -11,7 +11,6 @@
 
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Service.Workers;
-using Xunit;
 
 namespace NoMercy.Tests.Service.Workers;
 
@@ -27,7 +26,7 @@ namespace NoMercy.Tests.Service.Workers;
 /// (the interval is a private <c>static readonly</c> constant, not injectable)
 /// — see the coverage report for that residue.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class PeriodicUpdateCheckServiceTests
 {
     private sealed class CountingUpdateChecker : IUpdateChecker
@@ -37,7 +36,7 @@ public sealed class PeriodicUpdateCheckServiceTests
         public Task<bool> IsUpdateAvailableAsync()
         {
             CallCount++;
-            return Task.FromResult(result: false);
+            return Task.FromResult(false);
         }
     }
 
@@ -45,17 +44,17 @@ public sealed class PeriodicUpdateCheckServiceTests
     public async Task ExecuteAsync_CancelledDuringInitialDelay_NeverCallsCheckerAndExitsCleanly()
     {
         CountingUpdateChecker checker = new();
-        PeriodicUpdateCheckService service = new(updateChecker: checker);
+        PeriodicUpdateCheckService service = new(checker);
         using CancellationTokenSource cts = new();
-        cts.CancelAfter(delay: TimeSpan.FromMilliseconds(milliseconds: 20));
+        cts.CancelAfter(TimeSpan.FromMilliseconds(20));
 
-        Exception? thrown = await Record.ExceptionAsync(testCode: async () =>
+        Exception? thrown = await Record.ExceptionAsync(async () =>
         {
-            await service.StartAsync(cancellationToken: cts.Token);
-            await Task.Delay(millisecondsDelay: 100);
+            await service.StartAsync(cts.Token);
+            await Task.Delay(100);
         });
 
-        Assert.Null(@object: thrown);
-        Assert.Equal(expected: 0, actual: checker.CallCount);
+        Assert.Null(thrown);
+        Assert.Equal(0, checker.CallCount);
     }
 }

@@ -15,6 +15,6 @@ namespace NoMercy.Api.Controllers.V1.Music;
 
 public class PlaceholderResponse
 {
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public dynamic[] Data { get; set; } = [];
 }

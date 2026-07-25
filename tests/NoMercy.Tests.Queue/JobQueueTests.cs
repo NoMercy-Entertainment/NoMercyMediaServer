@@ -28,7 +28,7 @@ public class JobQueueTests : IDisposable
     public JobQueueTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(context: _adapter);
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
@@ -50,14 +50,14 @@ public class JobQueueTests : IDisposable
         };
 
         // Act
-        _jobQueue.Enqueue(queueJob: queueJob);
+        _jobQueue.Enqueue(queueJob);
 
         // Assert
         QueueJob? job = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(@object: job);
-        Assert.Equal(expected: "test", actual: job.Queue);
-        Assert.Equal(expected: "test payload", actual: job.Payload);
-        Assert.Equal(expected: 1, actual: job.Priority);
+        Assert.NotNull(job);
+        Assert.Equal("test", job.Queue);
+        Assert.Equal("test payload", job.Payload);
+        Assert.Equal(1, job.Priority);
     }
 
     [Fact]
@@ -79,12 +79,12 @@ public class JobQueueTests : IDisposable
         };
 
         // Act
-        _jobQueue.Enqueue(queueJob: job1);
-        _jobQueue.Enqueue(queueJob: job2);
+        _jobQueue.Enqueue(job1);
+        _jobQueue.Enqueue(job2);
 
         // Assert
         int jobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 1, actual: jobCount);
+        Assert.Equal(1, jobCount);
     }
 
     [Fact]
@@ -104,18 +104,18 @@ public class JobQueueTests : IDisposable
             AvailableAt = DateTime.UtcNow,
         };
 
-        _jobQueue.Enqueue(queueJob: job1);
-        _jobQueue.Enqueue(queueJob: job2);
+        _jobQueue.Enqueue(job1);
+        _jobQueue.Enqueue(job2);
 
         // Act
         QueueJobModel? dequeuedJob = _jobQueue.Dequeue();
 
         // Assert
-        Assert.NotNull(@object: dequeuedJob);
-        Assert.Equal(expected: "payload1", actual: dequeuedJob.Payload);
+        Assert.NotNull(dequeuedJob);
+        Assert.Equal("payload1", dequeuedJob.Payload);
 
         int remainingJobs = _context.QueueJobs.Count();
-        Assert.Equal(expected: 1, actual: remainingJobs);
+        Assert.Equal(1, remainingJobs);
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class JobQueueTests : IDisposable
         QueueJobModel? dequeuedJob = _jobQueue.Dequeue();
 
         // Assert
-        Assert.Null(@object: dequeuedJob);
+        Assert.Null(dequeuedJob);
     }
 
     [Fact]
@@ -140,27 +140,27 @@ public class JobQueueTests : IDisposable
             Priority = 1,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
         // Act
-        QueueJobModel? reservedJob = _jobQueue.ReserveJob(name: "test-queue", currentJobId: null);
+        QueueJobModel? reservedJob = _jobQueue.ReserveJob("test-queue", null);
 
         // Assert
-        Assert.NotNull(@object: reservedJob);
-        Assert.NotNull(value: reservedJob.ReservedAt);
-        Assert.Equal(expected: 1, actual: reservedJob.Attempts);
-        Assert.Equal(expected: "test payload", actual: reservedJob.Payload);
+        Assert.NotNull(reservedJob);
+        Assert.NotNull(reservedJob.ReservedAt);
+        Assert.Equal(1, reservedJob.Attempts);
+        Assert.Equal("test payload", reservedJob.Payload);
     }
 
     [Fact]
     public void ReserveJob_NoAvailableJobs_ReturnsNull()
     {
         // Act
-        QueueJobModel? reservedJob = _jobQueue.ReserveJob(name: "nonexistent-queue", currentJobId: null);
+        QueueJobModel? reservedJob = _jobQueue.ReserveJob("nonexistent-queue", null);
 
         // Assert
-        Assert.Null(@object: reservedJob);
+        Assert.Null(reservedJob);
     }
 
     [Fact]
@@ -175,21 +175,21 @@ public class JobQueueTests : IDisposable
             ReservedAt = DateTime.UtcNow, // Already reserved
             Attempts = 1,
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
         // Act
-        QueueJobModel? reservedJob = _jobQueue.ReserveJob(name: "test-queue", currentJobId: null);
+        QueueJobModel? reservedJob = _jobQueue.ReserveJob("test-queue", null);
 
         // Assert
-        Assert.Null(@object: reservedJob);
+        Assert.Null(reservedJob);
     }
 
     [Fact]
     public void ReserveJob_JobExceedsMaxAttempts_DoesNotReserve()
     {
         // Arrange
-        JobQueue jobQueue = new(context: _adapter, maxAttempts: 2);
+        JobQueue jobQueue = new(_adapter, 2);
         QueueJob job = new()
         {
             Queue = "test-queue",
@@ -197,14 +197,14 @@ public class JobQueueTests : IDisposable
             AvailableAt = DateTime.UtcNow,
             Attempts = 3, // Exceeds max attempts
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
         // Act
-        QueueJobModel? reservedJob = jobQueue.ReserveJob(name: "test-queue", currentJobId: null);
+        QueueJobModel? reservedJob = jobQueue.ReserveJob("test-queue", null);
 
         // Assert
-        Assert.Null(@object: reservedJob);
+        Assert.Null(reservedJob);
     }
 
     [Fact]
@@ -228,16 +228,16 @@ public class JobQueueTests : IDisposable
             Attempts = 0,
         };
 
-        _context.QueueJobs.AddRange(entities: [lowPriorityJob, highPriorityJob]);
+        _context.QueueJobs.AddRange([lowPriorityJob, highPriorityJob]);
         _context.SaveChanges();
 
         // Act
-        QueueJobModel? reservedJob = _jobQueue.ReserveJob(name: "test-queue", currentJobId: null);
+        QueueJobModel? reservedJob = _jobQueue.ReserveJob("test-queue", null);
 
         // Assert
-        Assert.NotNull(@object: reservedJob);
-        Assert.Equal(expected: "high priority", actual: reservedJob.Payload);
-        Assert.Equal(expected: 5, actual: reservedJob.Priority);
+        Assert.NotNull(reservedJob);
+        Assert.Equal("high priority", reservedJob.Payload);
+        Assert.Equal(5, reservedJob.Priority);
     }
 
     [Fact]
@@ -252,10 +252,10 @@ public class JobQueueTests : IDisposable
             ReservedAt = DateTime.UtcNow,
             Attempts = 1,
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
-        InvalidOperationException exception = new(message: "Test exception");
+        InvalidOperationException exception = new("Test exception");
 
         QueueJobModel jobModel = new()
         {
@@ -268,23 +268,23 @@ public class JobQueueTests : IDisposable
         };
 
         // Act
-        _jobQueue.FailJob(queueJob: jobModel, exception: exception);
+        _jobQueue.FailJob(jobModel, exception);
 
         // Assert
         QueueJob? updatedJob = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(@object: updatedJob);
-        Assert.Null(value: updatedJob.ReservedAt);
+        Assert.NotNull(updatedJob);
+        Assert.Null(updatedJob.ReservedAt);
 
         // Should not create failed job record yet
         int failedJobCount = _context.FailedJobs.Count();
-        Assert.Equal(expected: 0, actual: failedJobCount);
+        Assert.Equal(0, failedJobCount);
     }
 
     [Fact]
     public void FailJob_ExceedsMaxAttempts_MovesToFailedJobs()
     {
         // Arrange
-        JobQueue jobQueue = new(context: _adapter, maxAttempts: 2);
+        JobQueue jobQueue = new(_adapter, 2);
         QueueJob job = new()
         {
             Queue = "test-queue",
@@ -293,10 +293,10 @@ public class JobQueueTests : IDisposable
             ReservedAt = DateTime.UtcNow,
             Attempts = 2, // Equals max attempts
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
-        InvalidOperationException exception = new(message: "Test exception");
+        InvalidOperationException exception = new("Test exception");
 
         QueueJobModel jobModel = new()
         {
@@ -309,17 +309,17 @@ public class JobQueueTests : IDisposable
         };
 
         // Act
-        jobQueue.FailJob(queueJob: jobModel, exception: exception);
+        jobQueue.FailJob(jobModel, exception);
 
         // Assert
         int queueJobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 0, actual: queueJobCount);
+        Assert.Equal(0, queueJobCount);
 
         FailedJob? failedJob = _context.FailedJobs.FirstOrDefault();
-        Assert.NotNull(@object: failedJob);
-        Assert.Equal(expected: "test-queue", actual: failedJob.Queue);
-        Assert.Equal(expected: "test payload", actual: failedJob.Payload);
-        Assert.Contains(expectedSubstring: "Test exception", actualString: failedJob.Exception);
+        Assert.NotNull(failedJob);
+        Assert.Equal("test-queue", failedJob.Queue);
+        Assert.Equal("test payload", failedJob.Payload);
+        Assert.Contains("Test exception", failedJob.Exception);
     }
 
     [Fact]
@@ -332,7 +332,7 @@ public class JobQueueTests : IDisposable
             Payload = "test payload",
             AvailableAt = DateTime.UtcNow,
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
         QueueJobModel jobModel = new()
@@ -344,11 +344,11 @@ public class JobQueueTests : IDisposable
         };
 
         // Act
-        _jobQueue.DeleteJob(queueJob: jobModel);
+        _jobQueue.DeleteJob(jobModel);
 
         // Assert
         int jobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 0, actual: jobCount);
+        Assert.Equal(0, jobCount);
     }
 
     [Fact]
@@ -364,38 +364,38 @@ public class JobQueueTests : IDisposable
             Exception = "Test exception",
             FailedAt = DateTime.UtcNow,
         };
-        _context.FailedJobs.Add(entity: failedJob);
+        _context.FailedJobs.Add(failedJob);
         _context.SaveChanges();
 
         FailedJob? savedFailedJob = _context.FailedJobs.FirstOrDefault();
-        Assert.NotNull(@object: savedFailedJob);
+        Assert.NotNull(savedFailedJob);
 
         // Act
-        _jobQueue.RequeueFailedJob(failedJobId: (int)savedFailedJob.Id);
+        _jobQueue.RequeueFailedJob((int)savedFailedJob.Id);
 
         // Assert - The failed job should be removed and a new queue job created
         int failedJobCount = _context.FailedJobs.Count();
-        Assert.Equal(expected: 0, actual: failedJobCount);
+        Assert.Equal(0, failedJobCount);
 
         int queueJobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 1, actual: queueJobCount);
+        Assert.Equal(1, queueJobCount);
 
         QueueJob? requeuedJob = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(@object: requeuedJob);
-        Assert.Equal(expected: "test-queue", actual: requeuedJob.Queue);
-        Assert.Equal(expected: "test payload", actual: requeuedJob.Payload);
-        Assert.Equal(expected: 0, actual: requeuedJob.Attempts);
+        Assert.NotNull(requeuedJob);
+        Assert.Equal("test-queue", requeuedJob.Queue);
+        Assert.Equal("test payload", requeuedJob.Payload);
+        Assert.Equal(0, requeuedJob.Attempts);
     }
 
     [Fact]
     public void RequeueFailedJob_NonexistentJob_DoesNothing()
     {
         // Act
-        _jobQueue.RequeueFailedJob(failedJobId: 999);
+        _jobQueue.RequeueFailedJob(999);
 
         // Assert - Should not throw exception
         int queueJobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 0, actual: queueJobCount);
+        Assert.Equal(0, queueJobCount);
     }
 
     [Fact]
@@ -421,7 +421,7 @@ public class JobQueueTests : IDisposable
             FailedAt = DateTime.UtcNow,
         };
 
-        _context.FailedJobs.AddRange(entities: [failedJob1, failedJob2]);
+        _context.FailedJobs.AddRange([failedJob1, failedJob2]);
         _context.SaveChanges();
 
         // Act
@@ -429,14 +429,14 @@ public class JobQueueTests : IDisposable
 
         // Assert
         int failedJobCount = _context.FailedJobs.Count();
-        Assert.Equal(expected: 0, actual: failedJobCount);
+        Assert.Equal(0, failedJobCount);
 
         int queueJobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 2, actual: queueJobCount);
+        Assert.Equal(2, queueJobCount);
 
         List<QueueJob> queueJobs = _context.QueueJobs.ToList();
-        Assert.Contains(collection: queueJobs, filter: j => j is { Queue: "queue1", Payload: "payload1" });
-        Assert.Contains(collection: queueJobs, filter: j => j is { Queue: "queue2", Payload: "payload2" });
+        Assert.Contains(queueJobs, j => j is { Queue: "queue1", Payload: "payload1" });
+        Assert.Contains(queueJobs, j => j is { Queue: "queue2", Payload: "payload2" });
     }
 
     [Fact]
@@ -462,23 +462,23 @@ public class JobQueueTests : IDisposable
             FailedAt = DateTime.UtcNow,
         };
 
-        _context.FailedJobs.AddRange(entities: [failedJob1, failedJob2]);
+        _context.FailedJobs.AddRange([failedJob1, failedJob2]);
         _context.SaveChanges();
 
         // Act
-        _jobQueue.RetryFailedJobs(failedJobId: failedJob1.Id);
+        _jobQueue.RetryFailedJobs(failedJob1.Id);
 
         // Assert
         int failedJobCount = _context.FailedJobs.Count();
-        Assert.Equal(expected: 1, actual: failedJobCount); // Only one should remain
+        Assert.Equal(1, failedJobCount); // Only one should remain
 
         FailedJob? remainingFailedJob = _context.FailedJobs.FirstOrDefault();
-        Assert.NotNull(@object: remainingFailedJob);
-        Assert.Equal(expected: "queue2", actual: remainingFailedJob.Queue);
+        Assert.NotNull(remainingFailedJob);
+        Assert.Equal("queue2", remainingFailedJob.Queue);
 
         QueueJob? queueJob = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(@object: queueJob);
-        Assert.Equal(expected: "queue1", actual: queueJob.Queue);
-        Assert.Equal(expected: "payload1", actual: queueJob.Payload);
+        Assert.NotNull(queueJob);
+        Assert.Equal("queue1", queueJob.Queue);
+        Assert.Equal("payload1", queueJob.Payload);
     }
 }

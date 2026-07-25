@@ -39,7 +39,7 @@ namespace NoMercy.Tests.Networking;
 /// ever return the CALLING user's OWN devices on THIS hub endpoint, never
 /// another user's or another hub's connections.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class ConnectionHubTests : IDisposable
 {
     private sealed class TestableConnectionHub : ConnectionHub
@@ -50,7 +50,7 @@ public sealed class ConnectionHubTests : IDisposable
             ConnectedClients connectedClients,
             IActivityLogger activityLogger
         )
-            : base(httpContextAccessor: httpContextAccessor, contextFactory: contextFactory, connectedClients: connectedClients, activityLogger: activityLogger) { }
+            : base(httpContextAccessor, contextFactory, connectedClients, activityLogger) { }
 
         public IUserCache ExposedUserCacheService => UserCacheService;
         public IMediaAuthorizationPolicy ExposedAuthPolicy => AuthPolicy;
@@ -65,7 +65,7 @@ public sealed class ConnectionHubTests : IDisposable
     {
         _contextFactory = _disposableContextFactory;
         _activityLogger
-            .Setup(expression: l =>
+            .Setup(l =>
                 l.LogConnectionAsync(
                     It.IsAny<string>(),
                     It.IsAny<Guid>(),
@@ -73,7 +73,7 @@ public sealed class ConnectionHubTests : IDisposable
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(value: Task.CompletedTask);
+            .Returns(Task.CompletedTask);
     }
 
     public void Dispose() => _disposableContextFactory.Dispose();
@@ -89,40 +89,40 @@ public sealed class ConnectionHubTests : IDisposable
     {
         UserCache userCache = new();
         if (cachedUser is not null)
-            userCache.AddUser(user: cachedUser);
+            userCache.AddUser(cachedUser);
 
         ServiceCollection services = new();
-        services.AddSingleton<IUserCache>(implementationInstance: userCache);
+        services.AddSingleton<IUserCache>(userCache);
         ServiceProvider provider = services.BuildServiceProvider();
 
         DefaultHttpContext httpContext = new() { RequestServices = provider };
         httpContext.Request.Path = path;
         if (query is not null)
             httpContext.Request.Query = query;
-        httpContext.Connection.RemoteIpAddress = System.Net.IPAddress.Parse(ipString: "10.0.0.7");
+        httpContext.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("10.0.0.7");
 
         TestableConnectionHub hub = new(
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: _contextFactory,
-            connectedClients: _connectedClients,
-            activityLogger: _activityLogger.Object
+            new HttpContextAccessorStub(httpContext),
+            _contextFactory,
+            _connectedClients,
+            _activityLogger.Object
         );
 
         Guid userId = connectingUserId ?? cachedUser?.Id ?? Guid.NewGuid();
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: userId.ToString())], authenticationType: "TestAuth")
+            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, userId.ToString())], "TestAuth")
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(expression: c => c.User).Returns(value: principal);
-        context.Setup(expression: c => c.ConnectionId).Returns(value: Guid.NewGuid().ToString());
-        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
+        context.Setup(c => c.User).Returns(principal);
+        context.Setup(c => c.ConnectionId).Returns(Guid.NewGuid().ToString());
+        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
 
         callerProxy = new();
         userProxy = new();
         Mock<IHubCallerClients> clients = new();
-        clients.Setup(expression: c => c.Caller).Returns(value: callerProxy.Object);
-        clients.Setup(expression: c => c.User(It.IsAny<string>())).Returns(value: userProxy.Object);
+        clients.Setup(c => c.Caller).Returns(callerProxy.Object);
+        clients.Setup(c => c.User(It.IsAny<string>())).Returns(userProxy.Object);
 
         hub.Context = context.Object;
         hub.Clients = clients.Object;
@@ -135,14 +135,14 @@ public sealed class ConnectionHubTests : IDisposable
     {
         TestableConnectionHub hub = BuildHub(
             cachedUser: null,
-            callerProxy: out _,
-            userProxy: out _,
+            out _,
+            out _,
             connectingUserId: Guid.NewGuid()
         );
 
         await hub.OnConnectedAsync();
 
-        Assert.Empty(collection: _connectedClients.Clients);
+        Assert.Empty(_connectedClients.Clients);
     }
 
     [Fact]
@@ -155,24 +155,24 @@ public sealed class ConnectionHubTests : IDisposable
             Name = "Test",
         };
         QueryCollection query = new(
-            store: new Dictionary<string, StringValues>
+            new Dictionary<string, StringValues>
             {
-                [key: "client_id"] = "device-abc",
-                [key: "client_name"] = "Living Room TV",
-                [key: "client_type"] = "tv",
+                ["client_id"] = "device-abc",
+                ["client_name"] = "Living Room TV",
+                ["client_type"] = "tv",
             }
         );
 
-        TestableConnectionHub hub = BuildHub(cachedUser: user, callerProxy: out _, userProxy: out _, query: query);
+        TestableConnectionHub hub = BuildHub(user, out _, out _, query: query);
 
         await hub.OnConnectedAsync();
 
-        Assert.Single(collection: _connectedClients.Clients);
+        Assert.Single(_connectedClients.Clients);
         Client stored = _connectedClients.Clients.Values.Single();
-        Assert.Equal(expected: user.Id, actual: stored.Sub);
-        Assert.Equal(expected: "device-abc", actual: stored.DeviceId);
-        Assert.Equal(expected: "Living Room TV", actual: stored.Name);
-        Assert.True(condition: stored.IsActive);
+        Assert.Equal(user.Id, stored.Sub);
+        Assert.Equal("device-abc", stored.DeviceId);
+        Assert.Equal("Living Room TV", stored.Name);
+        Assert.True(stored.IsActive);
     }
 
     [Fact]
@@ -185,22 +185,22 @@ public sealed class ConnectionHubTests : IDisposable
             Name = "Test",
         };
         QueryCollection query = new(
-            store: new Dictionary<string, StringValues>
+            new Dictionary<string, StringValues>
             {
-                [key: "client_id"] = "device-upsert-test",
-                [key: "client_type"] = "tv",
+                ["client_id"] = "device-upsert-test",
+                ["client_type"] = "tv",
             }
         );
-        TestableConnectionHub hub = BuildHub(cachedUser: user, callerProxy: out _, userProxy: out _, query: query);
+        TestableConnectionHub hub = BuildHub(user, out _, out _, query: query);
 
         await hub.OnConnectedAsync();
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        Device? device = await ctx.Devices.FirstOrDefaultAsync(predicate: d =>
+        Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
             d.DeviceId == "device-upsert-test"
         );
-        Assert.NotNull(@object: device);
-        Assert.True(condition: device!.IsActive);
+        Assert.NotNull(device);
+        Assert.True(device!.IsActive);
     }
 
     [Fact]
@@ -212,13 +212,13 @@ public sealed class ConnectionHubTests : IDisposable
             Email = "test@nomercy.tv",
             Name = "Test",
         };
-        TestableConnectionHub hub = BuildHub(cachedUser: user, callerProxy: out _, userProxy: out _);
+        TestableConnectionHub hub = BuildHub(user, out _, out _);
 
         await hub.OnConnectedAsync();
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        Assert.Equal(expected: 0, actual: await ctx.Devices.CountAsync());
-        Assert.Single(collection: _connectedClients.Clients);
+        Assert.Equal(0, await ctx.Devices.CountAsync());
+        Assert.Single(_connectedClients.Clients);
     }
 
     [Fact]
@@ -234,7 +234,7 @@ public sealed class ConnectionHubTests : IDisposable
         await using (MediaContext seed = await _contextFactory.CreateDbContextAsync())
         {
             seed.Devices.Add(
-                entity: new()
+                new()
                 {
                     DeviceId = "device-reconnect",
                     Type = "tv",
@@ -246,20 +246,20 @@ public sealed class ConnectionHubTests : IDisposable
         }
 
         QueryCollection query = new(
-            store: new Dictionary<string, StringValues>
+            new Dictionary<string, StringValues>
             {
-                [key: "client_id"] = "device-reconnect",
-                [key: "client_type"] = "tv",
-                [key: "client_volume"] = "77", // must NOT clobber the persisted 42
+                ["client_id"] = "device-reconnect",
+                ["client_type"] = "tv",
+                ["client_volume"] = "77", // must NOT clobber the persisted 42
             }
         );
-        TestableConnectionHub hub = BuildHub(cachedUser: user, callerProxy: out _, userProxy: out _, query: query);
+        TestableConnectionHub hub = BuildHub(user, out _, out _, query: query);
 
         await hub.OnConnectedAsync();
 
         Client stored = _connectedClients.Clients.Values.Single();
-        Assert.Equal(expected: "Bedroom TV", actual: stored.CustomName);
-        Assert.Equal(expected: 42, actual: stored.VolumePercent);
+        Assert.Equal("Bedroom TV", stored.CustomName);
+        Assert.Equal(42, stored.VolumePercent);
     }
 
     [Fact]
@@ -274,7 +274,7 @@ public sealed class ConnectionHubTests : IDisposable
         await using (MediaContext seed = await _contextFactory.CreateDbContextAsync())
         {
             seed.Devices.Add(
-                entity: new()
+                new()
                 {
                     DeviceId = "device-rename",
                     Type = "tv",
@@ -285,20 +285,20 @@ public sealed class ConnectionHubTests : IDisposable
         }
 
         QueryCollection query = new(
-            store: new Dictionary<string, StringValues>
+            new Dictionary<string, StringValues>
             {
-                [key: "client_id"] = "device-rename",
-                [key: "client_type"] = "tv",
-                [key: "custom_name"] = "New Name",
+                ["client_id"] = "device-rename",
+                ["client_type"] = "tv",
+                ["custom_name"] = "New Name",
             }
         );
-        TestableConnectionHub hub = BuildHub(cachedUser: user, callerProxy: out _, userProxy: out _, query: query);
+        TestableConnectionHub hub = BuildHub(user, out _, out _, query: query);
 
         await hub.OnConnectedAsync();
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        Device device = await ctx.Devices.SingleAsync(predicate: d => d.DeviceId == "device-rename");
-        Assert.Equal(expected: "New Name", actual: device.CustomName);
+        Device device = await ctx.Devices.SingleAsync(d => d.DeviceId == "device-rename");
+        Assert.Equal("New Name", device.CustomName);
     }
 
     [Fact]
@@ -311,14 +311,14 @@ public sealed class ConnectionHubTests : IDisposable
             Name = "Test",
         };
         QueryCollection query = new(
-            store: new Dictionary<string, StringValues>
+            new Dictionary<string, StringValues>
             {
-                [key: "client_id"] = "device-clamp",
-                [key: "client_type"] = "tv",
-                [key: "client_volume"] = "150",
+                ["client_id"] = "device-clamp",
+                ["client_type"] = "tv",
+                ["client_volume"] = "150",
             }
         );
-        TestableConnectionHub hub = BuildHub(cachedUser: user, callerProxy: out _, userProxy: out _, query: query);
+        TestableConnectionHub hub = BuildHub(user, out _, out _, query: query);
 
         await hub.OnConnectedAsync();
 
@@ -327,7 +327,7 @@ public sealed class ConnectionHubTests : IDisposable
         // client, so the clamped value legitimately lands in the DB and
         // AlignClientWithPersistedDevice reads it straight back.
         Client stored = _connectedClients.Clients.Values.Single();
-        Assert.Equal(expected: 100, actual: stored.VolumePercent);
+        Assert.Equal(100, stored.VolumePercent);
     }
 
     [Fact]
@@ -340,19 +340,19 @@ public sealed class ConnectionHubTests : IDisposable
             Name = "Test",
         };
         QueryCollection query = new(
-            store: new Dictionary<string, StringValues>
+            new Dictionary<string, StringValues>
             {
-                [key: "client_id"] = "device-clamp-negative",
-                [key: "client_type"] = "tv",
-                [key: "client_volume"] = "-20",
+                ["client_id"] = "device-clamp-negative",
+                ["client_type"] = "tv",
+                ["client_volume"] = "-20",
             }
         );
-        TestableConnectionHub hub = BuildHub(cachedUser: user, callerProxy: out _, userProxy: out _, query: query);
+        TestableConnectionHub hub = BuildHub(user, out _, out _, query: query);
 
         await hub.OnConnectedAsync();
 
         Client stored = _connectedClients.Clients.Values.Single();
-        Assert.Equal(expected: 0, actual: stored.VolumePercent);
+        Assert.Equal(0, stored.VolumePercent);
     }
 
     [Fact]
@@ -365,42 +365,42 @@ public sealed class ConnectionHubTests : IDisposable
             Name = "Test",
         };
         TestableConnectionHub hub = BuildHub(
-            cachedUser: user,
-            callerProxy: out Mock<ISingleClientProxy> callerProxy,
-            userProxy: out Mock<ISingleClientProxy> userProxy
+            user,
+            out Mock<ISingleClientProxy> callerProxy,
+            out Mock<ISingleClientProxy> userProxy
         );
 
         await hub.OnConnectedAsync();
 
         userProxy.Verify(
-            expression: p =>
+            p =>
                 p.SendCoreAsync(
                     "ConnectedDevicesState",
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
         callerProxy.Verify(
-            expression: p =>
+            p =>
                 p.SendCoreAsync(
                     "ConnectedDevicesState",
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
     [Fact]
     public async Task OnDisconnectedAsync_UntrackedConnection_DoesNotThrow()
     {
-        TestableConnectionHub hub = BuildHub(cachedUser: null, callerProxy: out _, userProxy: out _);
+        TestableConnectionHub hub = BuildHub(cachedUser: null, out _, out _);
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => hub.OnDisconnectedAsync(exception: null));
+        Exception? ex = await Record.ExceptionAsync(() => hub.OnDisconnectedAsync(null));
 
-        Assert.Null(@object: ex);
-        Assert.Empty(collection: _connectedClients.Clients);
+        Assert.Null(ex);
+        Assert.Empty(_connectedClients.Clients);
     }
 
     [Fact]
@@ -413,22 +413,22 @@ public sealed class ConnectionHubTests : IDisposable
             Name = "Test",
         };
         QueryCollection query = new(
-            store: new Dictionary<string, StringValues>
+            new Dictionary<string, StringValues>
             {
-                [key: "client_id"] = "device-disconnect",
-                [key: "client_type"] = "tv",
+                ["client_id"] = "device-disconnect",
+                ["client_type"] = "tv",
             }
         );
-        TestableConnectionHub hub = BuildHub(cachedUser: user, callerProxy: out _, userProxy: out _, query: query);
+        TestableConnectionHub hub = BuildHub(user, out _, out _, query: query);
         await hub.OnConnectedAsync();
-        Assert.Single(collection: _connectedClients.Clients);
+        Assert.Single(_connectedClients.Clients);
 
-        await hub.OnDisconnectedAsync(exception: null);
+        await hub.OnDisconnectedAsync(null);
 
-        Assert.Empty(collection: _connectedClients.Clients);
+        Assert.Empty(_connectedClients.Clients);
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        Device device = await ctx.Devices.SingleAsync(predicate: d => d.DeviceId == "device-disconnect");
-        Assert.False(condition: device.IsActive);
+        Device device = await ctx.Devices.SingleAsync(d => d.DeviceId == "device-disconnect");
+        Assert.False(device.IsActive);
     }
 
     [Fact]
@@ -436,14 +436,14 @@ public sealed class ConnectionHubTests : IDisposable
     {
         TestableConnectionHub hub = BuildHub(
             cachedUser: null,
-            callerProxy: out _,
-            userProxy: out _,
+            out _,
+            out _,
             connectingUserId: Guid.NewGuid()
         );
 
         List<Device> devices = hub.Devices();
 
-        Assert.Empty(collection: devices);
+        Assert.Empty(devices);
     }
 
     [Fact]
@@ -464,8 +464,8 @@ public sealed class ConnectionHubTests : IDisposable
 
         // Simulate userB already connected on the same endpoint.
         _connectedClients.Clients.TryAdd(
-            key: "other-connection",
-            value: new()
+            "other-connection",
+            new()
             {
                 Sub = userB.Id,
                 Endpoint = "/videoHub",
@@ -474,12 +474,12 @@ public sealed class ConnectionHubTests : IDisposable
             }
         );
 
-        TestableConnectionHub hub = BuildHub(cachedUser: userA, callerProxy: out _, userProxy: out _, path: "/videoHub");
+        TestableConnectionHub hub = BuildHub(userA, out _, out _, path: "/videoHub");
         await hub.OnConnectedAsync();
 
         List<Device> devices = hub.Devices();
 
-        Assert.DoesNotContain(collection: devices, filter: d => d.DeviceId == "device-b");
+        Assert.DoesNotContain(devices, d => d.DeviceId == "device-b");
     }
 
     [Fact]
@@ -493,8 +493,8 @@ public sealed class ConnectionHubTests : IDisposable
         };
 
         _connectedClients.Clients.TryAdd(
-            key: "music-hub-connection",
-            value: new()
+            "music-hub-connection",
+            new()
             {
                 Sub = user.Id,
                 Endpoint = "/musicHub",
@@ -503,22 +503,22 @@ public sealed class ConnectionHubTests : IDisposable
             }
         );
 
-        TestableConnectionHub hub = BuildHub(cachedUser: user, callerProxy: out _, userProxy: out _, path: "/videoHub");
+        TestableConnectionHub hub = BuildHub(user, out _, out _, path: "/videoHub");
         await hub.OnConnectedAsync();
 
         List<Device> devices = hub.Devices();
 
-        Assert.DoesNotContain(collection: devices, filter: d => d.DeviceId == "device-music");
+        Assert.DoesNotContain(devices, d => d.DeviceId == "device-music");
     }
 
     [Fact]
     public void GetCountryFromContext_NoHeader_DefaultsToUs()
     {
-        TestableConnectionHub hub = BuildHub(cachedUser: null, callerProxy: out _, userProxy: out _);
+        TestableConnectionHub hub = BuildHub(cachedUser: null, out _, out _);
 
         string country = hub.GetCountryFromContext();
 
-        Assert.Equal(expected: "US", actual: country);
+        Assert.Equal("US", country);
     }
 
     [Fact]
@@ -526,24 +526,24 @@ public sealed class ConnectionHubTests : IDisposable
     {
         UserCache userCache = new();
         ServiceCollection services = new();
-        services.AddSingleton<IUserCache>(implementationInstance: userCache);
+        services.AddSingleton<IUserCache>(userCache);
         DefaultHttpContext httpContext = new()
         {
             RequestServices = services.BuildServiceProvider(),
         };
         httpContext.Request.Path = "/videoHub";
-        httpContext.Request.Headers[key: "country"] = "NL";
+        httpContext.Request.Headers["country"] = "NL";
 
         TestableConnectionHub hub = new(
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: _contextFactory,
-            connectedClients: _connectedClients,
-            activityLogger: _activityLogger.Object
+            new HttpContextAccessorStub(httpContext),
+            _contextFactory,
+            _connectedClients,
+            _activityLogger.Object
         );
 
         string country = hub.GetCountryFromContext();
 
-        Assert.Equal(expected: "NL", actual: country);
+        Assert.Equal("NL", country);
     }
 
     [Fact]
@@ -551,7 +551,7 @@ public sealed class ConnectionHubTests : IDisposable
     {
         UserCache userCache = new();
         ServiceCollection services = new();
-        services.AddSingleton<IUserCache>(implementationInstance: userCache);
+        services.AddSingleton<IUserCache>(userCache);
         DefaultHttpContext httpContext = new()
         {
             RequestServices = services.BuildServiceProvider(),
@@ -560,25 +560,25 @@ public sealed class ConnectionHubTests : IDisposable
         httpContext.Request.Headers.AcceptLanguage = "nl_NL";
 
         TestableConnectionHub hub = new(
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: _contextFactory,
-            connectedClients: _connectedClients,
-            activityLogger: _activityLogger.Object
+            new HttpContextAccessorStub(httpContext),
+            _contextFactory,
+            _connectedClients,
+            _activityLogger.Object
         );
 
         string? language = hub.GetLanguageFromContext();
 
-        Assert.Equal(expected: "nl", actual: language);
+        Assert.Equal("nl", language);
     }
 
     [Fact]
     public void GetLanguageFromContext_NoHeader_FallsBackToGlobalLocalizerTargetLanguage()
     {
-        TestableConnectionHub hub = BuildHub(cachedUser: null, callerProxy: out _, userProxy: out _);
+        TestableConnectionHub hub = BuildHub(cachedUser: null, out _, out _);
 
         string? language = hub.GetLanguageFromContext();
 
-        Assert.NotNull(@object: language);
+        Assert.NotNull(language);
     }
 
     [Fact]
@@ -590,21 +590,21 @@ public sealed class ConnectionHubTests : IDisposable
             Email = "test@nomercy.tv",
             Name = "Test",
         };
-        TestableConnectionHub hub = BuildHub(cachedUser: user, callerProxy: out _, userProxy: out _);
+        TestableConnectionHub hub = BuildHub(user, out _, out _);
 
         IUserCache resolved = hub.ExposedUserCacheService;
 
-        Assert.NotNull(@object: resolved.GetUser(userId: user.Id));
+        Assert.NotNull(resolved.GetUser(user.Id));
     }
 
     [Fact]
     public void AuthPolicy_WhenRequestServicesResolvesNoPolicy_FallsBackToDefault()
     {
-        TestableConnectionHub hub = BuildHub(cachedUser: null, callerProxy: out _, userProxy: out _);
+        TestableConnectionHub hub = BuildHub(cachedUser: null, out _, out _);
 
         IMediaAuthorizationPolicy policy = hub.ExposedAuthPolicy;
 
-        Assert.NotNull(@object: policy);
+        Assert.NotNull(policy);
     }
 
     // -- HttpContext entirely absent (e.g. a hub method invoked outside a
@@ -613,8 +613,8 @@ public sealed class ConnectionHubTests : IDisposable
 
     private TestableConnectionHub BuildHubWithNullHttpContext()
     {
-        HttpContextAccessorStub accessor = new(httpContext: null!);
-        return new(httpContextAccessor: accessor, contextFactory: _contextFactory, connectedClients: _connectedClients, activityLogger: _activityLogger.Object);
+        HttpContextAccessorStub accessor = new(null!);
+        return new(accessor, _contextFactory, _connectedClients, _activityLogger.Object);
     }
 
     [Fact]
@@ -624,7 +624,7 @@ public sealed class ConnectionHubTests : IDisposable
 
         string country = hub.GetCountryFromContext();
 
-        Assert.Equal(expected: "US", actual: country);
+        Assert.Equal("US", country);
     }
 
     [Fact]
@@ -634,7 +634,7 @@ public sealed class ConnectionHubTests : IDisposable
 
         string? language = hub.GetLanguageFromContext();
 
-        Assert.NotNull(@object: language);
+        Assert.NotNull(language);
     }
 
     [Fact]
@@ -644,7 +644,7 @@ public sealed class ConnectionHubTests : IDisposable
 
         IUserCache resolved = hub.ExposedUserCacheService;
 
-        Assert.Same(expected: UserCache.Current, actual: resolved);
+        Assert.Same(UserCache.Current, resolved);
     }
 
     [Fact]
@@ -654,7 +654,7 @@ public sealed class ConnectionHubTests : IDisposable
 
         IMediaAuthorizationPolicy policy = hub.ExposedAuthPolicy;
 
-        Assert.NotNull(@object: policy);
+        Assert.NotNull(policy);
     }
 
     [Fact]
@@ -663,15 +663,15 @@ public sealed class ConnectionHubTests : IDisposable
         DefaultHttpContext httpContext = new() { RequestServices = null! };
         httpContext.Request.Path = "/videoHub";
         TestableConnectionHub hub = new(
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: _contextFactory,
-            connectedClients: _connectedClients,
-            activityLogger: _activityLogger.Object
+            new HttpContextAccessorStub(httpContext),
+            _contextFactory,
+            _connectedClients,
+            _activityLogger.Object
         );
 
         IUserCache resolved = hub.ExposedUserCacheService;
 
-        Assert.Same(expected: UserCache.Current, actual: resolved);
+        Assert.Same(UserCache.Current, resolved);
     }
 
     [Fact]
@@ -680,15 +680,15 @@ public sealed class ConnectionHubTests : IDisposable
         DefaultHttpContext httpContext = new() { RequestServices = null! };
         httpContext.Request.Path = "/videoHub";
         TestableConnectionHub hub = new(
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: _contextFactory,
-            connectedClients: _connectedClients,
-            activityLogger: _activityLogger.Object
+            new HttpContextAccessorStub(httpContext),
+            _contextFactory,
+            _connectedClients,
+            _activityLogger.Object
         );
 
         IMediaAuthorizationPolicy policy = hub.ExposedAuthPolicy;
 
-        Assert.NotNull(@object: policy);
+        Assert.NotNull(policy);
     }
 
     [Fact]
@@ -701,45 +701,45 @@ public sealed class ConnectionHubTests : IDisposable
             Name = "Test",
         };
         UserCache userCache = new();
-        userCache.AddUser(user: user);
+        userCache.AddUser(user);
 
-        HttpContextAccessorStub accessor = new(httpContext: null!);
+        HttpContextAccessorStub accessor = new(null!);
         TestableConnectionHub hub = new(
-            httpContextAccessor: accessor,
-            contextFactory: _contextFactory,
-            connectedClients: _connectedClients,
-            activityLogger: _activityLogger.Object
+            accessor,
+            _contextFactory,
+            _connectedClients,
+            _activityLogger.Object
         );
 
         Mock<HubCallerContext> context = new();
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: user.Id.ToString())], authenticationType: "TestAuth")
+            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, user.Id.ToString())], "TestAuth")
         );
-        context.Setup(expression: c => c.User).Returns(value: principal);
-        context.Setup(expression: c => c.ConnectionId).Returns(value: Guid.NewGuid().ToString());
-        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
+        context.Setup(c => c.User).Returns(principal);
+        context.Setup(c => c.ConnectionId).Returns(Guid.NewGuid().ToString());
+        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
         hub.Context = context.Object;
 
         Mock<IHubCallerClients> clients = new();
-        clients.Setup(expression: c => c.Caller).Returns(value: Mock.Of<ISingleClientProxy>());
-        clients.Setup(expression: c => c.User(It.IsAny<string>())).Returns(value: Mock.Of<ISingleClientProxy>());
+        clients.Setup(c => c.Caller).Returns(Mock.Of<ISingleClientProxy>());
+        clients.Setup(c => c.User(It.IsAny<string>())).Returns(Mock.Of<ISingleClientProxy>());
         hub.Clients = clients.Object;
 
         // UserCacheService falls back to the shared UserCache.Current when
         // HttpContext is null, so this test seeds the calling user there
         // instead of a per-test DI container. Reset afterward to keep this
         // static, process-wide cache from leaking into other tests.
-        UserCache.Current.AddUser(user: user);
+        UserCache.Current.AddUser(user);
         try
         {
             await hub.OnConnectedAsync();
         }
         finally
         {
-            UserCache.Current.RemoveUser(user: user);
+            UserCache.Current.RemoveUser(user);
         }
 
         Client stored = _connectedClients.Clients.Values.Single();
-        Assert.Equal(expected: "Unknown", actual: stored.Endpoint);
+        Assert.Equal("Unknown", stored.Endpoint);
     }
 }

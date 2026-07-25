@@ -34,13 +34,13 @@ public class EncoderProcessRegistry : IEncoderProcessRegistry
 
         lock (_lock)
         {
-            if (!_processes.TryGetValue(key: jobId, value: out HashSet<int>? set))
+            if (!_processes.TryGetValue(jobId, out HashSet<int>? set))
             {
                 set = [];
-                _processes[key: jobId] = set;
+                _processes[jobId] = set;
             }
 
-            set.Add(item: processId);
+            set.Add(processId);
         }
     }
 
@@ -49,22 +49,22 @@ public class EncoderProcessRegistry : IEncoderProcessRegistry
         if (processId <= 0)
             return;
 
-        Register(jobId: jobId, processId: processId);
-        _argvByPid[key: processId] = argv;
+        Register(jobId, processId);
+        _argvByPid[processId] = argv;
     }
 
     public void Unregister(int jobId, int processId)
     {
         lock (_lock)
         {
-            if (!_processes.TryGetValue(key: jobId, value: out HashSet<int>? set))
+            if (!_processes.TryGetValue(jobId, out HashSet<int>? set))
                 return;
 
-            set.Remove(item: processId);
-            _argvByPid.TryRemove(key: processId, value: out _);
+            set.Remove(processId);
+            _argvByPid.TryRemove(processId, out _);
 
             if (set.Count == 0)
-                _processes.TryRemove(key: jobId, value: out _);
+                _processes.TryRemove(jobId, out _);
         }
     }
 
@@ -72,10 +72,10 @@ public class EncoderProcessRegistry : IEncoderProcessRegistry
     {
         lock (_lock)
         {
-            if (_processes.TryRemove(key: jobId, value: out HashSet<int>? pids))
+            if (_processes.TryRemove(jobId, out HashSet<int>? pids))
             {
                 foreach (int pid in pids)
-                    _argvByPid.TryRemove(key: pid, value: out _);
+                    _argvByPid.TryRemove(pid, out _);
             }
         }
     }
@@ -95,8 +95,8 @@ public class EncoderProcessRegistry : IEncoderProcessRegistry
                 foreach (string arg in argv)
                 {
                     if (
-                        string.Equals(a: arg, b: flag, comparisonType: StringComparison.OrdinalIgnoreCase)
-                        || arg.Contains(value: flag, comparisonType: StringComparison.OrdinalIgnoreCase)
+                        string.Equals(arg, flag, StringComparison.OrdinalIgnoreCase)
+                        || arg.Contains(flag, StringComparison.OrdinalIgnoreCase)
                     )
                     {
                         found = true;
@@ -119,7 +119,7 @@ public class EncoderProcessRegistry : IEncoderProcessRegistry
     {
         lock (_lock)
         {
-            if (!_processes.TryGetValue(key: jobId, value: out HashSet<int>? set))
+            if (!_processes.TryGetValue(jobId, out HashSet<int>? set))
                 return [];
             return set.ToArray();
         }

@@ -23,8 +23,8 @@ namespace NoMercy.Api.Controllers.Devices;
 
 [ApiController]
 [Authorize]
-[ApiVersion(version: 1.0)]
-[Route(template: "api/v{version:apiVersion}/devices/{deviceId}/forget")]
+[ApiVersion(1.0)]
+[Route("api/v{version:apiVersion}/devices/{deviceId}/forget")]
 public sealed class ForgetDeviceController : BaseController
 {
     private readonly IDbContextFactory<MediaContext> _contextFactory;
@@ -44,27 +44,27 @@ public sealed class ForgetDeviceController : BaseController
     {
         User? user = HttpContext
             .RequestServices.GetRequiredService<IUserCache>()
-            .GetUser(userId: HttpContext.User.UserId());
+            .GetUser(HttpContext.User.UserId());
         if (user is null)
-            return UnauthenticatedResponse(detail: "Authentication required.");
-        if (!Ulid.TryParse(base32: deviceId, ulid: out Ulid id))
-            return BadRequestResponse(detail: "Invalid device id.");
+            return UnauthenticatedResponse("Authentication required.");
+        if (!Ulid.TryParse(deviceId, out Ulid id))
+            return BadRequestResponse("Invalid device id.");
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        Device? device = await ctx.Devices.FindAsync(keyValues: id);
+        Device? device = await ctx.Devices.FindAsync(id);
         if (device is null || device.OwnerUserId != user.Id)
-            return NotFoundResponse(detail: "Device not found.");
+            return NotFoundResponse("Device not found.");
 
         Guid ownerUserId = device.OwnerUserId!.Value;
 
-        ctx.Devices.Remove(entity: device);
+        ctx.Devices.Remove(device);
         await ctx.SaveChangesAsync();
 
         // Force-close the WS if still alive (best-effort); device is already gone from DB.
-        _registry.ForceClose(deviceId: id);
+        _registry.ForceClose(id);
 
         // Broadcast updated device list to all the user's other clients.
-        await _registry.BroadcastChange(ownerUserId: ownerUserId);
+        await _registry.BroadcastChange(ownerUserId);
 
         return NoContent();
     }

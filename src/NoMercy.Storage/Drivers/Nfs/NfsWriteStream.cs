@@ -38,7 +38,7 @@ internal sealed class NfsWriteStream : Stream
     private bool _disposed;
 
     internal NfsWriteStream(IntPtr nfs, IntPtr fh, SemaphoreSlim driverLock)
-        : this(nfs: nfs, fh: fh, driverLock: driverLock, libNfs: LibNfsPInvoke.Instance) { }
+        : this(nfs, fh, driverLock, LibNfsPInvoke.Instance) { }
 
     internal NfsWriteStream(
         IntPtr nfs,
@@ -67,16 +67,16 @@ internal sealed class NfsWriteStream : Stream
 
     public override void Write(byte[] buffer, int offset, int count)
     {
-        ObjectDisposedException.ThrowIf(condition: _disposed, instance: this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         int written = 0;
         while (written < count)
         {
-            int chunk = Math.Min(val1: _chunkSize, val2: count - written);
-            IntPtr pinned = Marshal.AllocHGlobal(cb: chunk);
+            int chunk = Math.Min(_chunkSize, count - written);
+            IntPtr pinned = Marshal.AllocHGlobal(chunk);
             try
             {
-                Marshal.Copy(source: buffer, startIndex: offset + written, destination: pinned, length: chunk);
+                Marshal.Copy(buffer, offset + written, pinned, chunk);
 
                 int n;
                 string? err = null;
@@ -85,9 +85,9 @@ internal sealed class NfsWriteStream : Stream
                     _lock.Wait();
                     try
                     {
-                        n = _libNfs.Write(nfs: _nfs, fh: _fh, buf: pinned, count: chunk);
+                        n = _libNfs.Write(_nfs, _fh, pinned, chunk);
                         if (n < 0)
-                            err = _libNfs.GetError(nfs: _nfs);
+                            err = _libNfs.GetError(_nfs);
                     }
                     finally
                     {
@@ -96,16 +96,16 @@ internal sealed class NfsWriteStream : Stream
                 }
                 catch (ObjectDisposedException)
                 {
-                    throw new IOException(message: "NFS driver disposed during write");
+                    throw new IOException("NFS driver disposed during write");
                 }
 
                 if (n < 0)
-                    throw new IOException(message: $"NFS write failed: {err}");
+                    throw new IOException($"NFS write failed: {err}");
                 written += n;
             }
             finally
             {
-                Marshal.FreeHGlobal(hglobal: pinned);
+                Marshal.FreeHGlobal(pinned);
             }
         }
     }
@@ -113,7 +113,7 @@ internal sealed class NfsWriteStream : Stream
     public override void Write(ReadOnlySpan<byte> buffer)
     {
         byte[] tmp = buffer.ToArray();
-        Write(buffer: tmp, offset: 0, count: tmp.Length);
+        Write(tmp, 0, tmp.Length);
     }
 
     public override Task WriteAsync(
@@ -123,7 +123,7 @@ internal sealed class NfsWriteStream : Stream
         CancellationToken cancellationToken
     )
     {
-        Write(buffer: buffer, offset: offset, count: count);
+        Write(buffer, offset, count);
         return Task.CompletedTask;
     }
 
@@ -132,7 +132,7 @@ internal sealed class NfsWriteStream : Stream
         CancellationToken cancellationToken = default
     )
     {
-        Write(buffer: buffer.Span);
+        Write(buffer.Span);
         return ValueTask.CompletedTask;
     }
 
@@ -158,7 +158,7 @@ internal sealed class NfsWriteStream : Stream
             _lock.Wait();
             try
             {
-                _libNfs.Close(nfs: _nfs, fh: _fh);
+                _libNfs.Close(_nfs, _fh);
             }
             finally
             {
@@ -171,6 +171,6 @@ internal sealed class NfsWriteStream : Stream
             // context, so the fh is already gone. Nothing to do.
         }
 
-        base.Dispose(disposing: disposing);
+        base.Dispose(disposing);
     }
 }

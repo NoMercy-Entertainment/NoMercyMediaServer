@@ -23,10 +23,10 @@ using NoMercy.Storage.Drivers.Nfs;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 [ApiController]
-[Tags(tags: "Dashboard Storage Browser")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Storage Browser")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "Moderator")]
-[Route(template: "api/v{version:apiVersion}/dashboard/storage", Order = 10)]
+[Route("api/v{version:apiVersion}/dashboard/storage", Order = 10)]
 public class StorageBrowserController(
     ILogger<StorageBrowserController> logger,
     IDriverRepository driverRepository,
@@ -47,27 +47,27 @@ public class StorageBrowserController(
     // -----------------------------------------------------------------------
 
     [HttpPost]
-    [Route(template: "probe")]
+    [Route("probe")]
     public async Task<IActionResult> Probe([FromBody] StorageProbeRequest request)
     {
 
-        if (string.IsNullOrWhiteSpace(value: request.Type))
-            return BadRequestResponse(detail: "type is required.");
+        if (string.IsNullOrWhiteSpace(request.Type))
+            return BadRequestResponse("type is required.");
 
         string normalizedType = request.Type.Trim().ToLowerInvariant();
-        if (!AllowedTypes.Contains(value: normalizedType))
+        if (!AllowedTypes.Contains(normalizedType))
             return BadRequestResponse(
-                detail: $"Unknown type '{request.Type}'. Allowed: {string.Join(separator: ", ", value: AllowedTypes)}."
+                $"Unknown type '{request.Type}'. Allowed: {string.Join(", ", AllowedTypes)}."
             );
 
         if (request.Config is null)
-            return BadRequestResponse(detail: "config is required.");
+            return BadRequestResponse("config is required.");
 
         if (normalizedType != "nfs")
-            return Ok(value: new StorageProbeResponse { Ok = true, Exports = [] });
+            return Ok(new StorageProbeResponse { Ok = true, Exports = [] });
 
-        if (string.IsNullOrWhiteSpace(value: request.Config.Server))
-            return BadRequestResponse(detail: "config.server is required for NFS probe.");
+        if (string.IsNullOrWhiteSpace(request.Config.Server))
+            return BadRequestResponse("config.server is required for NFS probe.");
 
         // Two probe modes:
         //   1. Enumerate exports — body has only `server`. Returns the
@@ -77,43 +77,43 @@ public class StorageBrowserController(
         //   2. Test-mount — body has `server` + `export`. Actually mounts
         //      the configured export to verify connectivity. This is what
         //      the StorageModal pre-validate needs.
-        bool isMountTest = !string.IsNullOrWhiteSpace(value: request.Config.Export);
+        bool isMountTest = !string.IsNullOrWhiteSpace(request.Config.Export);
 
         try
         {
             if (isMountTest)
             {
                 NfsDriverConfig nfsConfig = NfsDriverConfig.For(
-                    server: request.Config.Server.Trim(),
-                    export: request.Config.Export!.Trim(),
-                    version: request.Config.Version ?? 3,
-                    uid: request.Config.Uid,
-                    gid: request.Config.Gid
+                    request.Config.Server.Trim(),
+                    request.Config.Export!.Trim(),
+                    request.Config.Version ?? 3,
+                    request.Config.Uid,
+                    request.Config.Gid
                 );
 
-                using NfsStorageDriver driver = new(config: nfsConfig);
+                using NfsStorageDriver driver = new(nfsConfig);
                 // Constructor throws on mount failure; reaching here = success.
-                return Ok(value: new StorageProbeResponse { Ok = true, Exports = [] });
+                return Ok(new StorageProbeResponse { Ok = true, Exports = [] });
             }
 
             List<string>? exports = await NfsStorageDriver.GetExportsAsync(
-                server: request.Config.Server.Trim(),
+                request.Config.Server.Trim(),
                 logger: logger
             );
 
             // Empty / null is NOT an error — server may not expose a
             // browsable namespace. Return ok with an empty list and let
             // the Browse modal render a manual-entry fallback.
-            return Ok(value: new StorageProbeResponse { Ok = true, Exports = exports ?? [] });
+            return Ok(new StorageProbeResponse { Ok = true, Exports = exports ?? [] });
         }
         catch (IOException ex)
         {
             // NFS mount failure (test-mount path)
-            return Ok(value: new StorageProbeResponse { Ok = false, Error = ex.Message });
+            return Ok(new StorageProbeResponse { Ok = false, Error = ex.Message });
         }
         catch (Exception ex)
         {
-            return Ok(value: new StorageProbeResponse { Ok = false, Error = ex.Message });
+            return Ok(new StorageProbeResponse { Ok = false, Error = ex.Message });
         }
     }
 
@@ -126,57 +126,57 @@ public class StorageBrowserController(
     // -----------------------------------------------------------------------
 
     [HttpPost]
-    [Route(template: "list")]
+    [Route("list")]
     public async Task<IActionResult> List([FromBody] StorageListRequest request)
     {
 
-        if (string.IsNullOrWhiteSpace(value: request.DriverId))
-            return BadRequestResponse(detail: "driver_id is required.");
+        if (string.IsNullOrWhiteSpace(request.DriverId))
+            return BadRequestResponse("driver_id is required.");
 
-        if (!Ulid.TryParse(base32: request.DriverId, ulid: out Ulid driverId))
-            return BadRequestResponse(detail: "driver_id is not a valid ULID.");
+        if (!Ulid.TryParse(request.DriverId, out Ulid driverId))
+            return BadRequestResponse("driver_id is not a valid ULID.");
 
-        Driver? driver = await driverRepository.GetDriverByIdAsync(id: driverId);
+        Driver? driver = await driverRepository.GetDriverByIdAsync(driverId);
         if (driver is null)
-            return NotFoundResponse(detail: $"Driver '{request.DriverId}' not found.");
+            return NotFoundResponse($"Driver '{request.DriverId}' not found.");
 
-        string subPath = (request.Path ?? string.Empty).Replace(oldChar: '\\', newChar: '/').TrimStart(trimChar: '/');
+        string subPath = (request.Path ?? string.Empty).Replace('\\', '/').TrimStart('/');
 
         try
         {
             IStorage storage = storageFactory.For(
-                folderId: SyntheticBrowseFolderId(driverId: driverId),
-                driverId: driverId,
-                subPath: string.Empty
+                SyntheticBrowseFolderId(driverId),
+                driverId,
+                string.Empty
             );
 
             IReadOnlyList<StorageEntry> entries = storage.List(
-                path: subPath,
-                pattern: null,
-                recursive: false
+                subPath,
+                null,
+                false
             );
 
             List<StorageEntryDto> dtos =
             [
                 .. entries
-                    .Select(selector: e =>
+                    .Select(e =>
                     {
                         string name = e.Path;
                         // Storage drivers return either bare names or full
                         // paths — normalise to bare name so the client
                         // breadcrumb logic works the same regardless.
-                        int slash = name.LastIndexOfAny(anyOf: ['/', '\\']);
+                        int slash = name.LastIndexOfAny(['/', '\\']);
                         if (slash >= 0)
                             name = name[(slash + 1)..];
                         return new StorageEntryDto { Name = name, IsDirectory = e.IsDirectory };
                     })
-                    .Where(predicate: e => !string.IsNullOrEmpty(value: e.Name) && e.Name != "." && e.Name != "..")
-                    .OrderByDescending(keySelector: e => e.IsDirectory)
-                    .ThenBy(keySelector: e => e.Name, comparer: StringComparer.OrdinalIgnoreCase),
+                    .Where(e => !string.IsNullOrEmpty(e.Name) && e.Name != "." && e.Name != "..")
+                    .OrderByDescending(e => e.IsDirectory)
+                    .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase),
             ];
 
             return Ok(
-                value: new StorageListResponse
+                new StorageListResponse
                 {
                     Ok = true,
                     Path = subPath,
@@ -187,10 +187,10 @@ public class StorageBrowserController(
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "Storage list failed: driver={DriverId} type={Type} path={Path}", args: [driverId, driver.Type, subPath]
+                ex,
+                "Storage list failed: driver={DriverId} type={Type} path={Path}", [driverId, driver.Type, subPath]
             );
-            return Ok(value: new StorageListResponse { Ok = false, Error = ex.Message });
+            return Ok(new StorageListResponse { Ok = false, Error = ex.Message });
         }
     }
 
@@ -202,44 +202,44 @@ public class StorageBrowserController(
     // -----------------------------------------------------------------------
 
     [HttpPost]
-    [Route(template: "mkdir")]
+    [Route("mkdir")]
     public async Task<IActionResult> Mkdir([FromBody] StorageMkdirRequest request)
     {
 
-        if (string.IsNullOrWhiteSpace(value: request.DriverId))
-            return BadRequestResponse(detail: "driver_id is required.");
+        if (string.IsNullOrWhiteSpace(request.DriverId))
+            return BadRequestResponse("driver_id is required.");
 
-        if (!Ulid.TryParse(base32: request.DriverId, ulid: out Ulid driverId))
-            return BadRequestResponse(detail: "driver_id is not a valid ULID.");
+        if (!Ulid.TryParse(request.DriverId, out Ulid driverId))
+            return BadRequestResponse("driver_id is not a valid ULID.");
 
-        if (string.IsNullOrWhiteSpace(value: request.Path))
-            return BadRequestResponse(detail: "path is required.");
+        if (string.IsNullOrWhiteSpace(request.Path))
+            return BadRequestResponse("path is required.");
 
-        Driver? driver = await driverRepository.GetDriverByIdAsync(id: driverId);
+        Driver? driver = await driverRepository.GetDriverByIdAsync(driverId);
         if (driver is null)
-            return NotFoundResponse(detail: $"Driver '{request.DriverId}' not found.");
+            return NotFoundResponse($"Driver '{request.DriverId}' not found.");
 
-        string subPath = request.Path.Replace(oldChar: '\\', newChar: '/').TrimStart(trimChar: '/').TrimEnd(trimChar: '/');
+        string subPath = request.Path.Replace('\\', '/').TrimStart('/').TrimEnd('/');
 
         try
         {
             IStorage storage = storageFactory.For(
-                folderId: SyntheticBrowseFolderId(driverId: driverId),
-                driverId: driverId,
-                subPath: string.Empty
+                SyntheticBrowseFolderId(driverId),
+                driverId,
+                string.Empty
             );
 
-            await storage.CreateDirectoryAsync(path: subPath, ct: HttpContext.RequestAborted);
+            await storage.CreateDirectoryAsync(subPath, HttpContext.RequestAborted);
 
-            return Ok(value: new StorageMkdirResponse { Ok = true, Path = subPath });
+            return Ok(new StorageMkdirResponse { Ok = true, Path = subPath });
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "Storage mkdir failed: driver={DriverId} type={Type} path={Path}", args: [driverId, driver.Type, subPath]
+                ex,
+                "Storage mkdir failed: driver={DriverId} type={Type} path={Path}", [driverId, driver.Type, subPath]
             );
-            return Ok(value: new StorageMkdirResponse { Ok = false, Error = ex.Message });
+            return Ok(new StorageMkdirResponse { Ok = false, Error = ex.Message });
         }
     }
 }

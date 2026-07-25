@@ -15,45 +15,45 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class RecordingRelation : MusicBrainzLifeSpan
 {
-    [JsonProperty(propertyName: "attribute-ids")]
+    [JsonProperty("attribute-ids")]
     public Dictionary<string, Guid> AttributeIds { get; set; } = new();
 
-    [JsonProperty(propertyName: "attribute-values")]
+    [JsonProperty("attribute-values")]
     public MusicBrainzAttributeValues MusicBrainzAttributeValues { get; set; } = new();
 
-    [JsonProperty(propertyName: "attributes")]
+    [JsonProperty("attributes")]
     public string[] Attributes { get; set; } = [];
 
-    [JsonProperty(propertyName: "source-credit")]
+    [JsonProperty("source-credit")]
     public string SourceCredit { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "target-credit")]
+    [JsonProperty("target-credit")]
     public string TargetCredit { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "target-type")]
+    [JsonProperty("target-type")]
     public string TargetType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "direction")]
+    [JsonProperty("direction")]
     public string Direction { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type-id")]
+    [JsonProperty("type-id")]
     public Guid? TypeId { get; set; }
 
-    [JsonProperty(propertyName: "artist")]
+    [JsonProperty("artist")]
     public PurpleArtist Artist { get; set; } = new();
 
-    [JsonProperty(propertyName: "attribute-credits")]
+    [JsonProperty("attribute-credits")]
     public AttributeCredits AttributeCredits { get; set; } = new();
 
-    [JsonProperty(propertyName: "label")]
+    [JsonProperty("label")]
     public PurpleArtist Label { get; set; } = new();
 
-    [JsonProperty(propertyName: "work")]
+    [JsonProperty("work")]
     public MusicBrainzWork MusicBrainzWork { get; set; } = new();
 
-    [JsonProperty(propertyName: "recording")]
+    [JsonProperty("recording")]
     public RelationRecording Recording { get; set; } = new();
 }

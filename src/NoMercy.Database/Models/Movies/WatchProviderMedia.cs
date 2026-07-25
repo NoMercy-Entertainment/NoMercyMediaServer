@@ -15,41 +15,41 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Movies;
 
-[PrimaryKey(propertyName: nameof(Id))]
+[PrimaryKey(nameof(Id))]
 [Index(
-    propertyName: nameof(WatchProviderId), additionalPropertyNames: [nameof(CountryCode), nameof(ProviderType), nameof(MovieId), nameof(TvId)],
+    nameof(WatchProviderId), [nameof(CountryCode), nameof(ProviderType), nameof(MovieId), nameof(TvId)],
     IsUnique = true
 )]
 public class WatchProviderMedia : Timestamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "provider_id")]
+    [JsonProperty("provider_id")]
     public int WatchProviderId { get; set; }
 
-    [JsonProperty(propertyName: "country_code")]
+    [JsonProperty("country_code")]
     public string CountryCode { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string ProviderType { get; set; } = string.Empty; // "flatrate", "buy", "rent", "ads", "free"
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public string? Link { get; set; }
 
-    [JsonProperty(propertyName: "watch_provider")]
+    [JsonProperty("watch_provider")]
     public WatchProvider WatchProvider { get; set; } = null!;
 
-    [JsonProperty(propertyName: "movie_id")]
+    [JsonProperty("movie_id")]
     public int? MovieId { get; set; }
 
-    [JsonProperty(propertyName: "movie")]
+    [JsonProperty("movie")]
     public Movie? Movie { get; set; }
 
-    [JsonProperty(propertyName: "tv_id")]
+    [JsonProperty("tv_id")]
     public int? TvId { get; set; }
 
-    [JsonProperty(propertyName: "tv")]
+    [JsonProperty("tv")]
     public Tv? Tv { get; set; }
 }

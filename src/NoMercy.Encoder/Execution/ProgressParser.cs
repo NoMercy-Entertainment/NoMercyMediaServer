@@ -37,10 +37,10 @@ public class ProgressParser
     /// Returns null for intermediate key=value lines.
     public FfmpegProgressSnapshot? FeedLine(string line)
     {
-        if (string.IsNullOrWhiteSpace(value: line))
+        if (string.IsNullOrWhiteSpace(line))
             return null;
 
-        int eqIdx = line.IndexOf(value: '=');
+        int eqIdx = line.IndexOf('=');
         if (eqIdx < 0)
             return null;
 
@@ -50,36 +50,36 @@ public class ProgressParser
         switch (key)
         {
             case "frame":
-                int.TryParse(s: value, result: out _frame);
+                int.TryParse(value, out _frame);
                 break;
             case "fps":
-                double.TryParse(s: value, provider: CultureInfo.InvariantCulture, result: out _fps);
+                double.TryParse(value, CultureInfo.InvariantCulture, out _fps);
                 break;
             case "bitrate":
                 // Format: "8234.5kbits/s" or "N/A"
-                _bitrateKbps = ParseBitrate(value: value);
+                _bitrateKbps = ParseBitrate(value);
                 break;
             case "total_size":
-                long.TryParse(s: value, result: out _totalSizeBytes);
+                long.TryParse(value, out _totalSizeBytes);
                 break;
             case "out_time_us":
-                if (long.TryParse(s: value, result: out long us))
-                    _outTime = TimeSpan.FromMicroseconds(microseconds: us);
+                if (long.TryParse(value, out long us))
+                    _outTime = TimeSpan.FromMicroseconds(us);
                 break;
             case "speed":
                 // Format: "2.50x" or "N/A"
-                _speed = ParseSpeed(value: value);
+                _speed = ParseSpeed(value);
                 break;
             case "progress":
                 bool isEnd = value == "end";
                 FfmpegProgressSnapshot snapshot = new(
-                    Frame: _frame,
-                    Fps: _fps,
-                    BitrateKbps: _bitrateKbps,
-                    TotalSizeBytes: _totalSizeBytes,
-                    OutTime: _outTime,
-                    Speed: _speed,
-                    IsEnd: isEnd
+                    _frame,
+                    _fps,
+                    _bitrateKbps,
+                    _totalSizeBytes,
+                    _outTime,
+                    _speed,
+                    isEnd
                 );
                 return snapshot;
         }
@@ -93,8 +93,8 @@ public class ProgressParser
             return null;
 
         // "8234.5kbits/s"
-        string numPart = value.Replace(oldValue: "kbits/s", newValue: "").Trim();
-        return double.TryParse(s: numPart, provider: CultureInfo.InvariantCulture, result: out double result)
+        string numPart = value.Replace("kbits/s", "").Trim();
+        return double.TryParse(numPart, CultureInfo.InvariantCulture, out double result)
             ? result
             : null;
     }
@@ -105,8 +105,8 @@ public class ProgressParser
             return 0;
 
         // "2.50x"
-        string numPart = value.Replace(oldValue: "x", newValue: "").Trim();
-        return double.TryParse(s: numPart, provider: CultureInfo.InvariantCulture, result: out double result)
+        string numPart = value.Replace("x", "").Trim();
+        return double.TryParse(numPart, CultureInfo.InvariantCulture, out double result)
             ? result
             : 0;
     }

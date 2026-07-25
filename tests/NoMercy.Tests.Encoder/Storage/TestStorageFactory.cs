@@ -13,7 +13,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
-using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.Storage;
 
@@ -26,7 +25,7 @@ internal static class TestStorageFactory
     public static LocalStorage CreateLocal()
     {
         LocalStorageDriver driver = new();
-        return new(driver: driver, guard: new(allowedRoots: [], driver: driver));
+        return new(driver, new([], driver));
     }
 
     /// <summary>
@@ -36,5 +35,5 @@ internal static class TestStorageFactory
     /// each call site.
     /// </summary>
     public static ILiveSegmentInventory CreateSegmentInventory(IStorage storage) =>
-        new LiveSegmentInventory(storage: storage, logger: NullLogger<LiveSegmentInventory>.Instance);
+        new LiveSegmentInventory(storage, NullLogger<LiveSegmentInventory>.Instance);
 }

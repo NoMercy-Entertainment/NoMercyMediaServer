@@ -15,7 +15,7 @@ namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 public class BufferManagerTests
 {
-    private readonly BufferManager _manager = new(limits: new());
+    private readonly BufferManager _manager = new(new());
 
     // ──────────────────────────────────────────────────────────────────────────
     // Suspend
@@ -24,17 +24,17 @@ public class BufferManagerTests
     [Fact]
     public void Buffer35s_NotSuspended_ReturnsSuspend()
     {
-        BufferAction action = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 35), isSuspended: false);
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(35), false);
 
-        action.Should().Be(expected: BufferAction.Suspend);
+        action.Should().Be(BufferAction.Suspend);
     }
 
     [Fact]
     public void Buffer35s_AlreadySuspended_ReturnsNone()
     {
-        BufferAction action = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 35), isSuspended: true);
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(35), true);
 
-        action.Should().Be(expected: BufferAction.None);
+        action.Should().Be(BufferAction.None);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -44,17 +44,17 @@ public class BufferManagerTests
     [Fact]
     public void Buffer10s_Suspended_ReturnsResume()
     {
-        BufferAction action = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 10), isSuspended: true);
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(10), true);
 
-        action.Should().Be(expected: BufferAction.Resume);
+        action.Should().Be(BufferAction.Resume);
     }
 
     [Fact]
     public void Buffer10s_NotSuspended_ReturnsNone()
     {
-        BufferAction action = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 10), isSuspended: false);
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(10), false);
 
-        action.Should().Be(expected: BufferAction.None);
+        action.Should().Be(BufferAction.None);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -64,39 +64,39 @@ public class BufferManagerTests
     [Fact]
     public void Buffer4s_ReturnsDropQuality()
     {
-        BufferAction action = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 4), isSuspended: false);
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(4), false);
 
-        action.Should().Be(expected: BufferAction.DropQuality);
+        action.Should().Be(BufferAction.DropQuality);
     }
 
     [Fact]
     public void Buffer2s_ReturnsEmergencyDropQuality()
     {
-        BufferAction action = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 2), isSuspended: false);
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(2), false);
 
-        action.Should().Be(expected: BufferAction.EmergencyDropQuality);
+        action.Should().Be(BufferAction.EmergencyDropQuality);
     }
 
     [Fact]
     public void Buffer5s_Boundary_ReturnsDropQuality()
     {
         // < 5 triggers DropQuality, exactly 5 should not
-        BufferAction below = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(value: 4.9), isSuspended: false);
-        BufferAction boundary = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 5), isSuspended: false);
+        BufferAction below = _manager.Evaluate(TimeSpan.FromSeconds(4.9), false);
+        BufferAction boundary = _manager.Evaluate(TimeSpan.FromSeconds(5), false);
 
-        below.Should().Be(expected: BufferAction.DropQuality);
-        boundary.Should().Be(expected: BufferAction.None);
+        below.Should().Be(BufferAction.DropQuality);
+        boundary.Should().Be(BufferAction.None);
     }
 
     [Fact]
     public void Buffer3s_Boundary_ReturnsEmergencyDropQuality()
     {
         // < 3 triggers Emergency, exactly 3 should be DropQuality
-        BufferAction below = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(value: 2.9), isSuspended: false);
-        BufferAction boundary = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 3), isSuspended: false);
+        BufferAction below = _manager.Evaluate(TimeSpan.FromSeconds(2.9), false);
+        BufferAction boundary = _manager.Evaluate(TimeSpan.FromSeconds(3), false);
 
-        below.Should().Be(expected: BufferAction.EmergencyDropQuality);
-        boundary.Should().Be(expected: BufferAction.DropQuality);
+        below.Should().Be(BufferAction.EmergencyDropQuality);
+        boundary.Should().Be(BufferAction.DropQuality);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -106,20 +106,20 @@ public class BufferManagerTests
     [Fact]
     public void Buffer20s_NotSuspended_ReturnsNone()
     {
-        BufferAction action = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 20), isSuspended: false);
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(20), false);
 
-        action.Should().Be(expected: BufferAction.None);
+        action.Should().Be(BufferAction.None);
     }
 
     [Fact]
     public void Buffer30s_Boundary_Suspend()
     {
         // > 30 triggers suspend, exactly 30 should not
-        BufferAction above = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(value: 30.1), isSuspended: false);
-        BufferAction boundary = _manager.Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 30), isSuspended: false);
+        BufferAction above = _manager.Evaluate(TimeSpan.FromSeconds(30.1), false);
+        BufferAction boundary = _manager.Evaluate(TimeSpan.FromSeconds(30), false);
 
-        above.Should().Be(expected: BufferAction.Suspend);
-        boundary.Should().Be(expected: BufferAction.None);
+        above.Should().Be(BufferAction.Suspend);
+        boundary.Should().Be(BufferAction.None);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -131,16 +131,16 @@ public class BufferManagerTests
     {
         // Operator wants a tighter suspend point — e.g. low-storage hosts.
         LiveSessionLimits limits = new() { Buffer = new() { SuspendAboveSeconds = 10 } };
-        BufferManager manager = new(limits: limits);
+        BufferManager manager = new(limits);
 
         manager
-            .Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 11), isSuspended: false)
+            .Evaluate(TimeSpan.FromSeconds(11), false)
             .Should()
-            .Be(expected: BufferAction.Suspend);
+            .Be(BufferAction.Suspend);
         manager
-            .Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 9), isSuspended: false)
+            .Evaluate(TimeSpan.FromSeconds(9), false)
             .Should()
-            .Be(expected: BufferAction.None);
+            .Be(BufferAction.None);
     }
 
     [Fact]
@@ -151,16 +151,16 @@ public class BufferManagerTests
         {
             Buffer = new() { DropQualityBelowSeconds = 10, EmergencyDropBelowSeconds = 6 },
         };
-        BufferManager manager = new(limits: limits);
+        BufferManager manager = new(limits);
 
         manager
-            .Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 9), isSuspended: false)
+            .Evaluate(TimeSpan.FromSeconds(9), false)
             .Should()
-            .Be(expected: BufferAction.DropQuality);
+            .Be(BufferAction.DropQuality);
         manager
-            .Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 5), isSuspended: false)
+            .Evaluate(TimeSpan.FromSeconds(5), false)
             .Should()
-            .Be(expected: BufferAction.EmergencyDropQuality);
+            .Be(BufferAction.EmergencyDropQuality);
     }
 
     [Fact]
@@ -171,15 +171,15 @@ public class BufferManagerTests
         {
             Buffer = new() { SuspendAboveSeconds = 30, ResumeBelowSeconds = 25 },
         };
-        BufferManager manager = new(limits: limits);
+        BufferManager manager = new(limits);
 
         manager
-            .Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 24), isSuspended: true)
+            .Evaluate(TimeSpan.FromSeconds(24), true)
             .Should()
-            .Be(expected: BufferAction.Resume);
+            .Be(BufferAction.Resume);
         manager
-            .Evaluate(bufferAhead: TimeSpan.FromSeconds(seconds: 26), isSuspended: true)
+            .Evaluate(TimeSpan.FromSeconds(26), true)
             .Should()
-            .Be(expected: BufferAction.None);
+            .Be(BufferAction.None);
     }
 }

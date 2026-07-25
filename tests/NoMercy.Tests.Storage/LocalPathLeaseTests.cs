@@ -23,15 +23,15 @@ public class LocalPathLeaseTests
     [Fact]
     public void Constructor_StoresPath()
     {
-        LocalPathLease lease = new(path: "/tmp/some-staged-file.mkv");
-        lease.Path.Should().Be(expected: "/tmp/some-staged-file.mkv");
+        LocalPathLease lease = new("/tmp/some-staged-file.mkv");
+        lease.Path.Should().Be("/tmp/some-staged-file.mkv");
     }
 
     [Fact]
     public void Constructor_NullPath_Throws()
     {
-        Action act = () => new LocalPathLease(path: null!);
-        act.Should().Throw<ArgumentNullException>().WithParameterName(paramName: "path");
+        Action act = () => new LocalPathLease(null!);
+        act.Should().Throw<ArgumentNullException>().WithParameterName("path");
     }
 
     [Fact]
@@ -41,8 +41,8 @@ public class LocalPathLeaseTests
         // stage. It MUST fire on first dispose.
         int callCount = 0;
         LocalPathLease lease = new(
-            path: "/tmp/remote-staged.mkv",
-            onDispose: () =>
+            "/tmp/remote-staged.mkv",
+            () =>
             {
                 callCount++;
                 return ValueTask.CompletedTask;
@@ -51,7 +51,7 @@ public class LocalPathLeaseTests
 
         await lease.DisposeAsync();
 
-        callCount.Should().Be(expected: 1);
+        callCount.Should().Be(1);
     }
 
     [Fact]
@@ -62,8 +62,8 @@ public class LocalPathLeaseTests
         // avoid double-unlinking the temp file.
         int callCount = 0;
         LocalPathLease lease = new(
-            path: "/tmp/remote-staged.mkv",
-            onDispose: () =>
+            "/tmp/remote-staged.mkv",
+            () =>
             {
                 callCount++;
                 return ValueTask.CompletedTask;
@@ -74,14 +74,14 @@ public class LocalPathLeaseTests
         await lease.DisposeAsync();
         await lease.DisposeAsync();
 
-        callCount.Should().Be(expected: 1);
+        callCount.Should().Be(1);
     }
 
     [Fact]
     public async Task DisposeAsync_NullOnDispose_DoesNotThrow()
     {
         // LocalStorage hands out leases with null callbacks (no-op dispose).
-        LocalPathLease lease = new(path: "/tmp/local.mkv");
+        LocalPathLease lease = new("/tmp/local.mkv");
 
         Func<Task> act = async () => await lease.DisposeAsync();
 
@@ -95,12 +95,12 @@ public class LocalPathLeaseTests
         // failing to unlink should surface to the caller, not silently
         // leak stage files.
         LocalPathLease lease = new(
-            path: "/tmp/remote.mkv",
-            onDispose: () => throw new InvalidOperationException(message: "unlink failed")
+            "/tmp/remote.mkv",
+            () => throw new InvalidOperationException("unlink failed")
         );
 
         Func<Task> act = async () => await lease.DisposeAsync();
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage(expectedWildcardPattern: "unlink failed");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("unlink failed");
     }
 }

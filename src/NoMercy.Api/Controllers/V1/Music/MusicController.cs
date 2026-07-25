@@ -25,10 +25,10 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Api.Controllers.V1.Music;
 
 [ApiController]
-[ApiVersion(version: 1.0)]
-[Tags(tags: "Music")]
+[ApiVersion(1.0)]
+[Tags("Music")]
 [Authorize(Policy = "MediaAccess")]
-[Route(template: "api/v{version:apiVersion}/music")]
+[Route("api/v{version:apiVersion}/music")]
 public class MusicController : BaseController
 {
     private readonly IMusicRepository _musicRepository;
@@ -39,14 +39,14 @@ public class MusicController : BaseController
     }
 
     [HttpGet]
-    [Route(template: "")]
-    [Route(template: "start")]
+    [Route("")]
+    [Route("start")]
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
 
         // Run 3 groups of 3 queries in parallel using separate DbContext instances
-        MusicStartPageData data = await _musicRepository.GetMusicStartPageAsync(userId: userId);
+        MusicStartPageData data = await _musicRepository.GetMusicStartPageAsync(userId);
 
         List<ComponentEnvelope> items = [];
         List<ComponentEnvelope> items2 = [];
@@ -54,229 +54,229 @@ public class MusicController : BaseController
         // Add favorite home cards
         if (data.TopArtist is not null && request.Version != "lolomo")
         {
-            TopMusicDto favoriteArtist = new(item: data.TopArtist);
+            TopMusicDto favoriteArtist = new(data.TopArtist);
             items2.Add(
-                item: Component
-                    .MusicHomeCard(data: new(topMusic: favoriteArtist))
-                    .WithId(id: "favorite-artist")
-                    .WithTitle(title: "Most listened artist".Localize())
+                Component
+                    .MusicHomeCard(new(favoriteArtist))
+                    .WithId("favorite-artist")
+                    .WithTitle("Most listened artist".Localize())
             );
         }
 
         if (data.TopAlbum is not null && request.Version != "lolomo")
         {
-            TopMusicDto favoriteAlbum = new(item: data.TopAlbum);
+            TopMusicDto favoriteAlbum = new(data.TopAlbum);
             items2.Add(
-                item: Component
-                    .MusicHomeCard(data: new(topMusic: favoriteAlbum))
-                    .WithId(id: "favorite-album")
-                    .WithTitle(title: "Most listened album".Localize())
+                Component
+                    .MusicHomeCard(new(favoriteAlbum))
+                    .WithId("favorite-album")
+                    .WithTitle("Most listened album".Localize())
             );
         }
 
         if (data.TopPlaylist is not null && request.Version != "lolomo")
         {
-            TopMusicDto favoritePlaylist = new(item: data.TopPlaylist);
+            TopMusicDto favoritePlaylist = new(data.TopPlaylist);
             items2.Add(
-                item: Component
-                    .MusicHomeCard(data: new(topMusic: favoritePlaylist))
-                    .WithId(id: "favorite-playlist")
-                    .WithTitle(title: "Most listened playlist".Localize())
+                Component
+                    .MusicHomeCard(new(favoritePlaylist))
+                    .WithId("favorite-playlist")
+                    .WithTitle("Most listened playlist".Localize())
             );
         }
 
-        items.Add(item: Component.Container().WithItems(items: items2));
+        items.Add(Component.Container().WithItems(items2));
 
         // Add carousels
         items.Add(
-            item: Component
+            Component
                 .Carousel()
-                .WithId(id: "favorite-artists")
-                .WithTitle(title: "Favorite Artists".Localize())
-                .WithNavigation(previousId: "", nextId: "favorite-albums")
+                .WithId("favorite-artists")
+                .WithTitle("Favorite Artists".Localize())
+                .WithNavigation("", "favorite-albums")
                 .WithItems(
-                    items: data.FavoriteArtists.Select(selector: item =>
-                        Component.MusicCard(data: new MusicCardData(artist: item))
+                    data.FavoriteArtists.Select(item =>
+                        Component.MusicCard(new MusicCardData(item))
                     )
                 )
         );
 
         items.Add(
-            item: Component
+            Component
                 .Carousel()
-                .WithId(id: "favorite-albums")
-                .WithTitle(title: "Favorite Albums".Localize())
-                .WithNavigation(previousId: "favorite-artists", nextId: "playlists")
+                .WithId("favorite-albums")
+                .WithTitle("Favorite Albums".Localize())
+                .WithNavigation("favorite-artists", "playlists")
                 .WithItems(
-                    items: data.FavoriteAlbums.Select(selector: item => Component.MusicCard(data: new MusicCardData(album: item)))
+                    data.FavoriteAlbums.Select(item => Component.MusicCard(new MusicCardData(item)))
                 )
         );
 
         items.Add(
-            item: Component
+            Component
                 .Carousel()
-                .WithId(id: "playlists")
-                .WithTitle(title: "Playlists".Localize())
-                .WithMoreLink(moreLink: "/music/playlists")
-                .WithNavigation(previousId: "favorite-albums", nextId: "artists")
+                .WithId("playlists")
+                .WithTitle("Playlists".Localize())
+                .WithMoreLink("/music/playlists")
+                .WithNavigation("favorite-albums", "artists")
                 .WithItems(
-                    items: data.Playlists.Select(selector: item => Component.MusicCard(data: new MusicCardData(playlist: item)))
+                    data.Playlists.Select(item => Component.MusicCard(new MusicCardData(item)))
                 )
         );
 
         items.Add(
-            item: Component
+            Component
                 .Carousel()
-                .WithId(id: "artists")
-                .WithTitle(title: "Artists".Localize())
-                .WithMoreLink(moreLink: "/music/artists/letter/_")
-                .WithNavigation(previousId: "playlists", nextId: "albums")
+                .WithId("artists")
+                .WithTitle("Artists".Localize())
+                .WithMoreLink("/music/artists/letter/_")
+                .WithNavigation("playlists", "albums")
                 .WithItems(
-                    items: data.LatestArtists.Select(selector: item => Component.MusicCard(data: new MusicCardData(artist: item)))
+                    data.LatestArtists.Select(item => Component.MusicCard(new MusicCardData(item)))
                 )
         );
 
         items.Add(
-            item: Component
+            Component
                 .Carousel()
-                .WithId(id: "albums")
-                .WithTitle(title: "Albums".Localize())
-                .WithMoreLink(moreLink: "/music/albums/letter/_")
-                .WithNavigation(previousId: "artists", nextId: "genres")
+                .WithId("albums")
+                .WithTitle("Albums".Localize())
+                .WithMoreLink("/music/albums/letter/_")
+                .WithNavigation("artists", "genres")
                 .WithItems(
-                    items: data.LatestAlbums.Select(selector: item => Component.MusicCard(data: new MusicCardData(album: item)))
+                    data.LatestAlbums.Select(item => Component.MusicCard(new MusicCardData(item)))
                 )
         );
 
         items.Add(
-            item: Component
+            Component
                 .Carousel()
-                .WithId(id: "genres")
-                .WithTitle(title: "Genres".Localize())
-                .WithMoreLink(moreLink: "/music/genres/letter/_")
-                .WithNavigation(previousId: "albums")
+                .WithId("genres")
+                .WithTitle("Genres".Localize())
+                .WithMoreLink("/music/genres/letter/_")
+                .WithNavigation("albums")
                 .WithItems(
-                    items: data.LatestGenres.Select(selector: item => Component.MusicCard(data: new MusicCardData(genre: item)))
+                    data.LatestGenres.Select(item => Component.MusicCard(new MusicCardData(item)))
                 )
         );
 
-        return Ok(value: ComponentResponse.From(components: items));
+        return Ok(ComponentResponse.From(items));
     }
 
     [HttpPost]
-    [Route(template: "start/favorites")]
+    [Route("start/favorites")]
     public async Task<IActionResult> Favorites()
     {
         Guid userId = User.UserId();
 
-        TopMusicItemDto? topArtist = await _musicRepository.GetTopArtistAsync(userId: userId);
-        TopMusicItemDto? topAlbum = await _musicRepository.GetTopAlbumAsync(userId: userId);
-        TopMusicItemDto? topPlaylist = await _musicRepository.GetTopPlaylistAsync(userId: userId);
+        TopMusicItemDto? topArtist = await _musicRepository.GetTopArtistAsync(userId);
+        TopMusicItemDto? topAlbum = await _musicRepository.GetTopAlbumAsync(userId);
+        TopMusicItemDto? topPlaylist = await _musicRepository.GetTopPlaylistAsync(userId);
 
         List<ComponentEnvelope> favoriteItems = [];
         if (topArtist is not null)
             favoriteItems.Add(
-                item: Component
-                    .MusicHomeCard(data: new(topMusic: new TopMusicDto(item: topArtist)))
-                    .WithTitle(title: "Most listened artist".Localize())
+                Component
+                    .MusicHomeCard(new(new TopMusicDto(topArtist)))
+                    .WithTitle("Most listened artist".Localize())
             );
         if (topAlbum is not null)
             favoriteItems.Add(
-                item: Component
-                    .MusicHomeCard(data: new(topMusic: new TopMusicDto(item: topAlbum)))
-                    .WithTitle(title: "Most listened album".Localize())
+                Component
+                    .MusicHomeCard(new(new TopMusicDto(topAlbum)))
+                    .WithTitle("Most listened album".Localize())
             );
         if (topPlaylist is not null)
             favoriteItems.Add(
-                item: Component
-                    .MusicHomeCard(data: new(topMusic: new TopMusicDto(item: topPlaylist)))
-                    .WithTitle(title: "Most listened playlist".Localize())
+                Component
+                    .MusicHomeCard(new(new TopMusicDto(topPlaylist)))
+                    .WithTitle("Most listened playlist".Localize())
             );
 
         return Ok(
-            value: ComponentResponse.From(
-                component: Component
+            ComponentResponse.From(
+                Component
                     .Container()
-                    .WithId(id: "favorites")
-                    .WithNavigation(previousId: "favorites", nextId: "favorite-artists")
-                    .WithUpdate(when: "pageLoad", link: "/music/start/favorites")
-                    .WithItems(items: favoriteItems)
+                    .WithId("favorites")
+                    .WithNavigation("favorites", "favorite-artists")
+                    .WithUpdate("pageLoad", "/music/start/favorites")
+                    .WithItems(favoriteItems)
             )
         );
     }
 
     [HttpPost]
-    [Route(template: "start/favorite-artists")]
+    [Route("start/favorite-artists")]
     public async Task<IActionResult> FavoriteArtists([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
 
         List<ArtistCardDto> favoriteArtists = await _musicRepository.GetFavoriteArtistCardsAsync(
-            userId: userId
+            userId
         );
 
         return Ok(
-            value: ComponentResponse.From(
-                component: Component
+            ComponentResponse.From(
+                Component
                     .Carousel()
-                    .WithId(id: "favorite-artists")
-                    .WithNavigation(previousId: "favorite-albums", nextId: "favorite-albums")
-                    .WithTitle(title: "Favorite Artists".Localize())
-                    .WithUpdate(when: "pageLoad", link: "/music/start/favorite-artists")
-                    .WithReplacing(replacingId: request.ReplaceId)
+                    .WithId("favorite-artists")
+                    .WithNavigation("favorite-albums", "favorite-albums")
+                    .WithTitle("Favorite Artists".Localize())
+                    .WithUpdate("pageLoad", "/music/start/favorite-artists")
+                    .WithReplacing(request.ReplaceId)
                     .WithItems(
-                        items: favoriteArtists.Select(selector: item => Component.MusicCard(data: new MusicCardData(artist: item)))
+                        favoriteArtists.Select(item => Component.MusicCard(new MusicCardData(item)))
                     )
             )
         );
     }
 
     [HttpPost]
-    [Route(template: "start/favorite-albums")]
+    [Route("start/favorite-albums")]
     public async Task<IActionResult> FavoriteAlbums([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
 
         List<AlbumCardDto> favoriteAlbums = await _musicRepository.GetFavoriteAlbumCardsAsync(
-            userId: userId
+            userId
         );
 
         return Ok(
-            value: ComponentResponse.From(
-                component: Component
+            ComponentResponse.From(
+                Component
                     .Carousel()
-                    .WithId(id: "favorite-albums")
-                    .WithNavigation(previousId: "favorite-artists", nextId: "playlists")
-                    .WithTitle(title: "Favorite Albums".Localize())
-                    .WithUpdate(when: "pageLoad", link: "/music/start/favorite-albums")
-                    .WithReplacing(replacingId: request.ReplaceId)
+                    .WithId("favorite-albums")
+                    .WithNavigation("favorite-artists", "playlists")
+                    .WithTitle("Favorite Albums".Localize())
+                    .WithUpdate("pageLoad", "/music/start/favorite-albums")
+                    .WithReplacing(request.ReplaceId)
                     .WithItems(
-                        items: favoriteAlbums.Select(selector: item => Component.MusicCard(data: new MusicCardData(album: item)))
+                        favoriteAlbums.Select(item => Component.MusicCard(new MusicCardData(item)))
                     )
             )
         );
     }
 
     [HttpPost]
-    [Route(template: "start/playlists")]
+    [Route("start/playlists")]
     public async Task<IActionResult> Playlists([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
 
-        List<PlaylistCardDto> playlists = await _musicRepository.GetPlaylistCardsAsync(userId: userId);
+        List<PlaylistCardDto> playlists = await _musicRepository.GetPlaylistCardsAsync(userId);
 
         return Ok(
-            value: ComponentResponse.From(
-                component: Component
+            ComponentResponse.From(
+                Component
                     .Carousel()
-                    .WithId(id: "playlists")
-                    .WithNavigation(previousId: "favorite-albums", nextId: "artists")
-                    .WithTitle(title: "Playlists".Localize())
-                    .WithMoreLink(moreLink: new Uri(uriString: "/music/start/playlists", uriKind: UriKind.Relative))
-                    .WithUpdate(when: "pageLoad", link: "/music/start/playlists")
-                    .WithReplacing(replacingId: request.ReplaceId)
+                    .WithId("playlists")
+                    .WithNavigation("favorite-albums", "artists")
+                    .WithTitle("Playlists".Localize())
+                    .WithMoreLink(new Uri("/music/start/playlists", UriKind.Relative))
+                    .WithUpdate("pageLoad", "/music/start/playlists")
+                    .WithReplacing(request.ReplaceId)
                     .WithItems(
-                        items: playlists.Select(selector: item => Component.MusicCard(data: new MusicCardData(playlist: item)))
+                        playlists.Select(item => Component.MusicCard(new MusicCardData(item)))
                     )
             )
         );
@@ -285,15 +285,15 @@ public class MusicController : BaseController
     [NotMapped]
     public class SearchQueryRequest
     {
-        [JsonProperty(propertyName: "query")]
+        [JsonProperty("query")]
         public string Query { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "type")]
+        [JsonProperty("type")]
         public string? Type { get; set; }
     }
 
     [HttpGet]
-    [Route(template: "search")]
+    [Route("search")]
     public async Task<IActionResult> Search([FromQuery] SearchQueryRequest request)
     {
         Guid userId = User.UserId();
@@ -307,68 +307,68 @@ public class MusicController : BaseController
         const int resultCap = UiLimits.SearchResultsPerCategory;
 
         // Step 1: Get IDs using search methods
-        List<Guid> artistIds = (await _musicRepository.SearchArtistIdsAsync(normalizedQuery: normalizedQuery))
-            .Take(count: resultCap)
+        List<Guid> artistIds = (await _musicRepository.SearchArtistIdsAsync(normalizedQuery))
+            .Take(resultCap)
             .ToList();
-        List<Guid> albumIds = (await _musicRepository.SearchAlbumIdsAsync(normalizedQuery: normalizedQuery))
-            .Take(count: resultCap)
+        List<Guid> albumIds = (await _musicRepository.SearchAlbumIdsAsync(normalizedQuery))
+            .Take(resultCap)
             .ToList();
-        List<Guid> playlistIds = (await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery: normalizedQuery))
-            .Take(count: resultCap)
+        List<Guid> playlistIds = (await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery))
+            .Take(resultCap)
             .ToList();
-        List<Guid> trackIds = (await _musicRepository.SearchTrackIdsAsync(normalizedQuery: normalizedQuery))
-            .Take(count: resultCap)
+        List<Guid> trackIds = (await _musicRepository.SearchTrackIdsAsync(normalizedQuery))
+            .Take(resultCap)
             .ToList();
 
         // Step 2: Cross-reference to find additional artists/albums
         List<Guid> additionalArtistIds = [];
         if (albumIds.Count > 0)
             additionalArtistIds.AddRange(
-                collection: await _musicRepository.GetArtistIdsFromAlbumsAsync(albumIds: albumIds)
+                await _musicRepository.GetArtistIdsFromAlbumsAsync(albumIds)
             );
         if (playlistIds.Count > 0)
             additionalArtistIds.AddRange(
-                collection: await _musicRepository.GetArtistIdsFromPlaylistTracksAsync(playlistIds: playlistIds)
+                await _musicRepository.GetArtistIdsFromPlaylistTracksAsync(playlistIds)
             );
         if (trackIds.Count > 0)
             additionalArtistIds.AddRange(
-                collection: await _musicRepository.GetArtistIdsFromTracksAsync(trackIds: trackIds)
+                await _musicRepository.GetArtistIdsFromTracksAsync(trackIds)
             );
 
         List<Guid> allArtistIds = artistIds
-            .Union(second: additionalArtistIds)
+            .Union(additionalArtistIds)
             .Distinct()
-            .Take(count: resultCap)
+            .Take(resultCap)
             .ToList();
 
         List<Guid> additionalAlbumIds = [];
         if (trackIds.Count > 0)
             additionalAlbumIds.AddRange(
-                collection: await _musicRepository.GetAlbumIdsFromTracksAsync(trackIds: trackIds)
+                await _musicRepository.GetAlbumIdsFromTracksAsync(trackIds)
             );
 
         List<Guid> allAlbumIds = albumIds
-            .Union(second: additionalAlbumIds)
+            .Union(additionalAlbumIds)
             .Distinct()
-            .Take(count: resultCap)
+            .Take(resultCap)
             .ToList();
 
         // Step 3: Get projection data
         List<ArtistCardDto> artists =
             allArtistIds.Count > 0
-                ? await _musicRepository.GetArtistCardsByIdsAsync(artistIds: allArtistIds)
+                ? await _musicRepository.GetArtistCardsByIdsAsync(allArtistIds)
                 : [];
         List<AlbumCardDto> albums =
             allAlbumIds.Count > 0
-                ? await _musicRepository.GetAlbumCardsByIdsAsync(albumIds: allAlbumIds)
+                ? await _musicRepository.GetAlbumCardsByIdsAsync(allAlbumIds)
                 : [];
         List<PlaylistCardDto> playlistCards =
             playlistIds.Count > 0
-                ? await _musicRepository.GetPlaylistCardsByIdsAsync(playlistIds: playlistIds)
+                ? await _musicRepository.GetPlaylistCardsByIdsAsync(playlistIds)
                 : [];
         List<SearchTrackCardDto> tracks =
             trackIds.Count > 0
-                ? await _musicRepository.SearchTrackCardsAsync(trackIds: trackIds, userId: userId, country: country)
+                ? await _musicRepository.SearchTrackCardsAsync(trackIds, userId, country)
                 : [];
 
         if (
@@ -377,7 +377,7 @@ public class MusicController : BaseController
             && playlistCards.Count == 0
             && tracks.Count == 0
         )
-            return NotFoundResponse(detail: "No results found");
+            return NotFoundResponse("No results found");
 
         SearchTrackCardDto? topTrack = tracks.FirstOrDefault();
         ArtistCardDto? topArtist = artists.FirstOrDefault();
@@ -385,36 +385,34 @@ public class MusicController : BaseController
 
         // Build TopResultCardData from the first match
         TopResultCardData? topResultData =
-            topTrack != null ? new(track: topTrack)
-            : topArtist != null ? new(artist: topArtist)
-            : topAlbum != null ? new TopResultCardData(album: topAlbum)
+            topTrack != null ? new(topTrack)
+            : topArtist != null ? new(topArtist)
+            : topAlbum != null ? new TopResultCardData(topAlbum)
             : null;
 
         List<TrackRowData> songResults = tracks
-            .Take(count: 6)
-            .Select(selector: track => new TrackRowData(track: track))
+            .Take(6)
+            .Select(track => new TrackRowData(track))
             .ToList();
 
         return Ok(
-            value: ComponentResponse.From(components:
-                [
+            ComponentResponse.From([
                     Component
                         .Container()
-                        .WithId(id: "search-results")
-                        .WithItems(items:
-                            [
+                        .WithId("search-results")
+                        .WithItems([
                                 Component
-                                    .TopResultCard(data: topResultData!)
-                                    .WithId(id: "top-result")
-                                    .WithTitle(title: "Top Result".Localize())
+                                    .TopResultCard(topResultData!)
+                                    .WithId("top-result")
+                                    .WithTitle("Top Result".Localize())
                                     .Build(),
                                 Component
                                     .List()
-                                    .WithId(id: "tracks")
-                                    .WithTitle(title: "Tracks".Localize())
+                                    .WithId("tracks")
+                                    .WithTitle("Tracks".Localize())
                                     .WithItems(
-                                        builders: songResults.Select(selector: track =>
-                                            Component.TrackRow(data: track).WithDisplayList(displayList: songResults)
+                                        songResults.Select(track =>
+                                            Component.TrackRow(track).WithDisplayList(songResults)
                                         )
                                     )
                             ]
@@ -422,22 +420,22 @@ public class MusicController : BaseController
                         .Build(),
                     Component
                         .Carousel()
-                        .WithId(id: "artists")
-                        .WithTitle(title: "Artist".Localize())
-                        .WithItems(items: artists.Select(selector: item => Component.MusicCard(data: new MusicCardData(artist: item))))
+                        .WithId("artists")
+                        .WithTitle("Artist".Localize())
+                        .WithItems(artists.Select(item => Component.MusicCard(new MusicCardData(item))))
                         .Build(),
                     Component
                         .Carousel()
-                        .WithId(id: "albums")
-                        .WithTitle(title: "Albums".Localize())
-                        .WithItems(items: albums.Select(selector: item => Component.MusicCard(data: new MusicCardData(album: item))))
+                        .WithId("albums")
+                        .WithTitle("Albums".Localize())
+                        .WithItems(albums.Select(item => Component.MusicCard(new MusicCardData(item))))
                         .Build(),
                     Component
                         .Carousel()
-                        .WithId(id: "playlists")
-                        .WithTitle(title: "Playlists".Localize())
+                        .WithId("playlists")
+                        .WithTitle("Playlists".Localize())
                         .WithItems(
-                            items: playlistCards.Select(selector: item => Component.MusicCard(data: new MusicCardData(playlist: item)))
+                            playlistCards.Select(item => Component.MusicCard(new MusicCardData(item)))
                         )
                 ]
             )
@@ -445,9 +443,9 @@ public class MusicController : BaseController
     }
 
     [HttpPost]
-    [Route(template: "search/{query}/{Type}")]
+    [Route("search/{query}/{Type}")]
     public IActionResult TypeSearch(string query, string type)
     {
-        return Ok(value: new PlaceholderResponse { Data = [] });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 }

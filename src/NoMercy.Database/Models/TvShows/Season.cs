@@ -16,55 +16,55 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.TvShows;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(TvId))]
-[Index(propertyName: nameof(Title))]
-[Index(propertyName: nameof(SeasonNumber))]
-[Index(propertyName: nameof(AirDate))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(TvId))]
+[Index(nameof(Title))]
+[Index(nameof(SeasonNumber))]
+[Index(nameof(AirDate))]
 public class Season : ColorPaletteTimeStamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "air_date")]
+    [JsonProperty("air_date")]
     public DateTime? AirDate { get; set; }
 
-    [JsonProperty(propertyName: "episode_count")]
+    [JsonProperty("episode_count")]
     public int EpisodeCount { get; set; }
 
-    [MaxLength(length: 4096)]
-    [JsonProperty(propertyName: "overview")]
+    [MaxLength(4096)]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "poster_path")]
+    [JsonProperty("poster_path")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "season_number")]
+    [JsonProperty("season_number")]
     public int SeasonNumber { get; set; }
 
-    [JsonProperty(propertyName: "tv_id")]
+    [JsonProperty("tv_id")]
     public int TvId { get; set; }
     public Tv Tv { get; set; } = null!;
 
-    [JsonProperty(propertyName: "episodes")]
+    [JsonProperty("episodes")]
     public ICollection<Episode> Episodes { get; set; } = [];
 
-    [JsonProperty(propertyName: "casts")]
+    [JsonProperty("casts")]
     public ICollection<Cast> Cast { get; set; } = [];
 
-    [JsonProperty(propertyName: "crews")]
+    [JsonProperty("crews")]
     public ICollection<Crew> Crew { get; set; } = [];
 
-    [JsonProperty(propertyName: "medias")]
+    [JsonProperty("medias")]
     public ICollection<Media.Media> Medias { get; set; } = [];
 
-    [JsonProperty(propertyName: "images")]
+    [JsonProperty("images")]
     public ICollection<Image> Images { get; set; } = [];
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public ICollection<Translation> Translations { get; set; } = [];
 }

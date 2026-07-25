@@ -22,14 +22,14 @@ namespace NoMercy.Tests.Storage;
 /// already dropped) does not prevent the others from running — this test
 /// demands that guarantee holds even when every underlying call fails.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class SmbSessionTests
 {
     [Fact]
     public void Dispose_disconnects_the_store_logs_off_and_disconnects_the_client()
     {
         Mock<ISMBFileStore> store = new();
-        store.Setup(expression: s => s.Disconnect()).Returns(value: NTStatus.STATUS_SUCCESS);
+        store.Setup(s => s.Disconnect()).Returns(NTStatus.STATUS_SUCCESS);
         // A real, never-connected SMB2Client: Logoff()/Disconnect() on it are
         // exercised for real (no mock) — SmbSession's job is to tolerate
         // whatever they do, not to control them.
@@ -37,21 +37,21 @@ public sealed class SmbSessionTests
 
         session.Dispose();
 
-        store.Verify(expression: s => s.Disconnect(), times: Times.Once);
+        store.Verify(s => s.Disconnect(), Times.Once);
     }
 
     [Fact]
     public void Dispose_swallows_exceptions_from_store_disconnect()
     {
         Mock<ISMBFileStore> store = new();
-        store.Setup(expression: s => s.Disconnect()).Throws<InvalidOperationException>();
+        store.Setup(s => s.Disconnect()).Throws<InvalidOperationException>();
         SmbSession session = new() { Client = new SMB2Client(), Store = store.Object };
 
         Action act = () => session.Dispose();
 
         act.Should()
             .NotThrow(
-                because: "a failure tearing down the tree connection must not prevent client logoff/disconnect from running"
+                "a failure tearing down the tree connection must not prevent client logoff/disconnect from running"
             );
     }
 
@@ -64,6 +64,6 @@ public sealed class SmbSessionTests
         Action act = () => session.Dispose();
 
         act.Should()
-            .NotThrow(because: "Logoff/Disconnect on a never-connected client must not crash Dispose");
+            .NotThrow("Logoff/Disconnect on a never-connected client must not crash Dispose");
     }
 }

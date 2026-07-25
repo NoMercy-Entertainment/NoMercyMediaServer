@@ -45,12 +45,12 @@ public sealed class AssBurnInFilterBuilder
     /// </returns>
     public string Build(string assFilePath, string? fontDirectory = null)
     {
-        string escaped = FilterGraphPathEscaper.Escape(path: assFilePath);
+        string escaped = FilterGraphPathEscaper.Escape(assFilePath);
         string filter = $"ass={escaped}";
 
-        if (!string.IsNullOrWhiteSpace(value: fontDirectory))
+        if (!string.IsNullOrWhiteSpace(fontDirectory))
         {
-            string escapedFontDir = FilterGraphPathEscaper.Escape(path: fontDirectory);
+            string escapedFontDir = FilterGraphPathEscaper.Escape(fontDirectory);
             filter += $":fontsdir={escapedFontDir}";
         }
 

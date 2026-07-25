@@ -31,23 +31,23 @@ public class TaskProgressTests
     public void Store_Update_And_Get_RoundTrips()
     {
         InMemoryTaskProgressStore store = new();
-        TaskProgressSnapshot snap = MakeSnapshot(id: "t1", percent: 42);
+        TaskProgressSnapshot snap = MakeSnapshot("t1", 42);
 
-        store.Update(taskId: "t1", snapshot: snap);
+        store.Update("t1", snap);
 
-        TaskProgressSnapshot? got = store.Get(taskId: "t1");
+        TaskProgressSnapshot? got = store.Get("t1");
         got.Should().NotBeNull();
-        got!.PercentComplete.Should().Be(expected: 42);
+        got!.PercentComplete.Should().Be(42);
     }
 
     [Fact]
     public void Store_LatestUpdateWins()
     {
         InMemoryTaskProgressStore store = new();
-        store.Update(taskId: "t1", snapshot: MakeSnapshot(id: "t1", percent: 10));
-        store.Update(taskId: "t1", snapshot: MakeSnapshot(id: "t1", percent: 80));
+        store.Update("t1", MakeSnapshot("t1", 10));
+        store.Update("t1", MakeSnapshot("t1", 80));
 
-        store.Get(taskId: "t1")!.PercentComplete.Should().Be(expected: 80);
+        store.Get("t1")!.PercentComplete.Should().Be(80);
     }
 
     [Fact]
@@ -55,17 +55,17 @@ public class TaskProgressTests
     {
         InMemoryTaskProgressStore store = new();
         // Back-date one snapshot past the 15-minute stale window.
-        TaskProgressSnapshot stale = MakeSnapshot(id: "old", percent: 50) with
+        TaskProgressSnapshot stale = MakeSnapshot("old", 50) with
         {
-            ReceivedAtUtc = DateTime.UtcNow.AddMinutes(value: -30),
+            ReceivedAtUtc = DateTime.UtcNow.AddMinutes(-30),
         };
-        store.Update(taskId: "old", snapshot: stale);
-        store.Update(taskId: "fresh", snapshot: MakeSnapshot(id: "fresh", percent: 20));
+        store.Update("old", stale);
+        store.Update("fresh", MakeSnapshot("fresh", 20));
 
         IReadOnlyList<TaskProgressSnapshot> all = store.GetAll();
 
-        all.Should().ContainSingle(predicate: s => s.TaskId == "fresh");
-        all.Should().NotContain(predicate: s => s.TaskId == "old");
+        all.Should().ContainSingle(s => s.TaskId == "fresh");
+        all.Should().NotContain(s => s.TaskId == "old");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -80,16 +80,16 @@ public class TaskProgressTests
         EncoderOptions options = new();
         FakeHandler handler = new();
         HttpTaskProgressSink sink = new(
-            httpClientFactory: MakeFactory(handler: handler),
-            options: options,
-            logger: NullLogger<HttpTaskProgressSink>.Instance
+            MakeFactory(handler),
+            options,
+            NullLogger<HttpTaskProgressSink>.Instance
         );
 
-        sink.Report(taskId: "t0", progress: MakeProgress());
+        sink.Report("t0", MakeProgress());
 
         // Allow any fire-and-forget task to run.
-        Thread.Sleep(millisecondsTimeout: 50);
-        handler.RequestCount.Should().Be(expected: 0);
+        Thread.Sleep(50);
+        handler.RequestCount.Should().Be(0);
     }
 
     [Fact]
@@ -104,18 +104,18 @@ public class TaskProgressTests
         };
         FakeHandler handler = new();
         HttpTaskProgressSink sink = new(
-            httpClientFactory: MakeFactory(handler: handler),
-            options: options,
-            logger: NullLogger<HttpTaskProgressSink>.Instance
+            MakeFactory(handler),
+            options,
+            NullLogger<HttpTaskProgressSink>.Instance
         );
 
         for (int i = 0; i < 10; i++)
-            sink.Report(taskId: "t0", progress: MakeProgress(percent: i * 10));
+            sink.Report("t0", MakeProgress(i * 10));
 
         // Wait for any in-flight fire-and-forget task to complete.
-        await Task.Delay(millisecondsDelay: 100);
+        await Task.Delay(100);
 
-        handler.RequestCount.Should().Be(expected: 1);
+        handler.RequestCount.Should().Be(1);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -128,7 +128,7 @@ public class TaskProgressTests
         CapturingSink sink = new();
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -138,7 +138,7 @@ public class TaskProgressTests
                 )
             )
             .Returns(
-                valueFunction: (
+                (
                     FfmpegCommand _,
                     TimeSpan _,
                     Action<EncodingProgress>? onProgress,
@@ -146,39 +146,39 @@ public class TaskProgressTests
                     CancellationToken _
                 ) =>
                 {
-                    onProgress?.Invoke(obj: MakeProgress(percent: 25));
-                    onProgress?.Invoke(obj: MakeProgress(percent: 75));
+                    onProgress?.Invoke(MakeProgress(25));
+                    onProgress?.Invoke(MakeProgress(75));
                     return Task.FromResult(
-                        result: new ExecutionResult(
-                            Success: true,
-                            ExitCode: 0,
-                            StdErr: "",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
-                            Error: null
+                        new ExecutionResult(
+                            true,
+                            0,
+                            "",
+                            TimeSpan.FromSeconds(1),
+                            null
                         )
                     );
                 }
             );
 
         LocalWorkerDispatcher dispatcher = new(
-            executor: executor.Object,
-            progressSink: sink,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            sink,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         EncodeTask task = new(
-            TaskId: "progress-task",
-            Command: new(Executable: "ffmpeg", Arguments: [], WorkingDirectory: null),
-            OutputPath: "/out",
-            Type: EncodeTaskType.QualityVariant
+            "progress-task",
+            new("ffmpeg", [], null),
+            "/out",
+            EncodeTaskType.QualityVariant
         );
 
-        await dispatcher.DispatchAsync(tasks: [task], ct: CancellationToken.None);
+        await dispatcher.DispatchAsync([task], CancellationToken.None);
 
-        sink.Reports.Should().HaveCount(expected: 2);
-        sink.Reports[index: 0].TaskId.Should().Be(expected: "progress-task");
-        sink.Reports[index: 0].Progress.PercentComplete.Should().Be(expected: 25);
-        sink.Reports[index: 1].Progress.PercentComplete.Should().Be(expected: 75);
+        sink.Reports.Should().HaveCount(2);
+        sink.Reports[0].TaskId.Should().Be("progress-task");
+        sink.Reports[0].Progress.PercentComplete.Should().Be(25);
+        sink.Reports[1].Progress.PercentComplete.Should().Be(75);
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public class TaskProgressTests
         ThrowingSink sink = new();
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -198,7 +198,7 @@ public class TaskProgressTests
                 )
             )
             .Returns(
-                valueFunction: (
+                (
                     FfmpegCommand _,
                     TimeSpan _,
                     Action<EncodingProgress>? onProgress,
@@ -206,35 +206,35 @@ public class TaskProgressTests
                     CancellationToken _
                 ) =>
                 {
-                    onProgress?.Invoke(obj: MakeProgress());
+                    onProgress?.Invoke(MakeProgress());
                     return Task.FromResult(
-                        result: new ExecutionResult(
-                            Success: true,
-                            ExitCode: 0,
-                            StdErr: "",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
-                            Error: null
+                        new ExecutionResult(
+                            true,
+                            0,
+                            "",
+                            TimeSpan.FromSeconds(1),
+                            null
                         )
                     );
                 }
             );
 
         LocalWorkerDispatcher dispatcher = new(
-            executor: executor.Object,
-            progressSink: sink,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            sink,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         EncodeTask task = new(
-            TaskId: "survivor",
-            Command: new(Executable: "ffmpeg", Arguments: [], WorkingDirectory: null),
-            OutputPath: "/out",
-            Type: EncodeTaskType.QualityVariant
+            "survivor",
+            new("ffmpeg", [], null),
+            "/out",
+            EncodeTaskType.QualityVariant
         );
 
-        DispatchResult[] results = await dispatcher.DispatchAsync(tasks: [task], ct: CancellationToken.None);
+        DispatchResult[] results = await dispatcher.DispatchAsync([task], CancellationToken.None);
 
-        results[0].Success.Should().BeTrue(because: "sink failure must never fail the encode");
+        results[0].Success.Should().BeTrue("sink failure must never fail the encode");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -243,29 +243,29 @@ public class TaskProgressTests
 
     private static TaskProgressSnapshot MakeSnapshot(string id, double percent) =>
         new(
-            TaskId: id,
-            WorkerId: "w1",
-            PercentComplete: percent,
-            CurrentFps: 60,
-            CurrentSpeed: 1.5,
-            CurrentStage: "encode",
-            ElapsedSeconds: 10,
-            EstimatedRemainingSeconds: 20,
-            CurrentTimeSeconds: 5,
-            DurationSeconds: 30,
-            ReceivedAtUtc: DateTime.UtcNow
+            id,
+            "w1",
+            percent,
+            60,
+            1.5,
+            "encode",
+            10,
+            20,
+            5,
+            30,
+            DateTime.UtcNow
         );
 
     private static EncodingProgress MakeProgress(double percent = 50) =>
         new(
-            CorrelationId: "corr",
-            PercentComplete: percent,
-            Elapsed: TimeSpan.FromSeconds(seconds: 5),
-            EstimatedRemaining: TimeSpan.FromSeconds(seconds: 5),
-            CurrentFps: 30,
-            CurrentSpeed: 1.0,
-            CurrentStage: "stage",
-            CurrentOperation: "op"
+            "corr",
+            percent,
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(5),
+            30,
+            1.0,
+            "stage",
+            "op"
         );
 
     private static IHttpClientFactory MakeFactory(HttpMessageHandler handler)
@@ -273,7 +273,7 @@ public class TaskProgressTests
         ServiceCollection services = new();
         services
             .AddHttpClient()
-            .ConfigureHttpClientDefaults(configure: b => b.ConfigurePrimaryHttpMessageHandler(configureHandler: () => handler));
+            .ConfigureHttpClientDefaults(b => b.ConfigurePrimaryHttpMessageHandler(() => handler));
         return services.BuildServiceProvider().GetRequiredService<IHttpClientFactory>();
     }
 
@@ -281,15 +281,15 @@ public class TaskProgressTests
     {
         private int _requests;
 
-        public int RequestCount => Volatile.Read(location: ref _requests);
+        public int RequestCount => Volatile.Read(ref _requests);
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken
         )
         {
-            Interlocked.Increment(location: ref _requests);
-            return Task.FromResult(result: new HttpResponseMessage(statusCode: HttpStatusCode.NoContent));
+            Interlocked.Increment(ref _requests);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
         }
     }
 
@@ -309,13 +309,13 @@ public class TaskProgressTests
         public void Report(string taskId, EncodingProgress progress)
         {
             lock (_reports)
-                _reports.Add(item: (taskId, progress));
+                _reports.Add((taskId, progress));
         }
     }
 
     private sealed class ThrowingSink : ITaskProgressSink
     {
         public void Report(string taskId, EncodingProgress progress) =>
-            throw new InvalidOperationException(message: "sink blew up");
+            throw new InvalidOperationException("sink blew up");
     }
 }

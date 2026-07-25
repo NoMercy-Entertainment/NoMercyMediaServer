@@ -15,7 +15,7 @@ using NoMercy.MediaProcessing.Images.Palettes;
 
 namespace NoMercy.Tests.MediaProcessing.Palettes;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class PaletteBackfillStateTests : IDisposable
 {
     private readonly AppDbContext _db;
@@ -23,9 +23,9 @@ public class PaletteBackfillStateTests : IDisposable
     public PaletteBackfillStateTests()
     {
         DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _db = new(options: options);
+        _db = new(options);
     }
 
     public void Dispose()
@@ -36,15 +36,15 @@ public class PaletteBackfillStateTests : IDisposable
     [Fact]
     public async Task IsComplete_returns_false_when_flag_not_set()
     {
-        bool complete = await PaletteBackfillState.IsCompleteAsync(db: _db, ct: CancellationToken.None);
+        bool complete = await PaletteBackfillState.IsCompleteAsync(_db, CancellationToken.None);
         complete.Should().BeFalse();
     }
 
     [Fact]
     public async Task SetComplete_then_IsComplete_returns_true()
     {
-        await PaletteBackfillState.SetCompleteAsync(db: _db, ct: CancellationToken.None);
-        bool complete = await PaletteBackfillState.IsCompleteAsync(db: _db, ct: CancellationToken.None);
+        await PaletteBackfillState.SetCompleteAsync(_db, CancellationToken.None);
+        bool complete = await PaletteBackfillState.IsCompleteAsync(_db, CancellationToken.None);
         complete.Should().BeTrue();
     }
 
@@ -52,52 +52,52 @@ public class PaletteBackfillStateTests : IDisposable
     public async Task GetCursor_defaults_to_zero_when_not_set()
     {
         long cursor = await PaletteBackfillState.GetCursorAsync(
-            db: _db,
-            entityType: "movie",
-            ct: CancellationToken.None
+            _db,
+            "movie",
+            CancellationToken.None
         );
-        cursor.Should().Be(expected: 0L);
+        cursor.Should().Be(0L);
     }
 
     [Fact]
     public async Task SetCursor_then_GetCursor_round_trips()
     {
-        await PaletteBackfillState.SetCursorAsync(db: _db, entityType: "movie", cursor: 42L, ct: CancellationToken.None);
+        await PaletteBackfillState.SetCursorAsync(_db, "movie", 42L, CancellationToken.None);
         long cursor = await PaletteBackfillState.GetCursorAsync(
-            db: _db,
-            entityType: "movie",
-            ct: CancellationToken.None
+            _db,
+            "movie",
+            CancellationToken.None
         );
-        cursor.Should().Be(expected: 42L);
+        cursor.Should().Be(42L);
     }
 
     [Fact]
     public async Task SetCursor_overwrites_previous_value()
     {
-        await PaletteBackfillState.SetCursorAsync(db: _db, entityType: "tv", cursor: 10L, ct: CancellationToken.None);
-        await PaletteBackfillState.SetCursorAsync(db: _db, entityType: "tv", cursor: 99L, ct: CancellationToken.None);
-        long cursor = await PaletteBackfillState.GetCursorAsync(db: _db, entityType: "tv", ct: CancellationToken.None);
-        cursor.Should().Be(expected: 99L);
+        await PaletteBackfillState.SetCursorAsync(_db, "tv", 10L, CancellationToken.None);
+        await PaletteBackfillState.SetCursorAsync(_db, "tv", 99L, CancellationToken.None);
+        long cursor = await PaletteBackfillState.GetCursorAsync(_db, "tv", CancellationToken.None);
+        cursor.Should().Be(99L);
     }
 
     [Fact]
     public async Task Cursors_for_different_entity_types_are_independent()
     {
-        await PaletteBackfillState.SetCursorAsync(db: _db, entityType: "movie", cursor: 100L, ct: CancellationToken.None);
-        await PaletteBackfillState.SetCursorAsync(db: _db, entityType: "tv", cursor: 200L, ct: CancellationToken.None);
+        await PaletteBackfillState.SetCursorAsync(_db, "movie", 100L, CancellationToken.None);
+        await PaletteBackfillState.SetCursorAsync(_db, "tv", 200L, CancellationToken.None);
 
         long movieCursor = await PaletteBackfillState.GetCursorAsync(
-            db: _db,
-            entityType: "movie",
-            ct: CancellationToken.None
+            _db,
+            "movie",
+            CancellationToken.None
         );
         long tvCursor = await PaletteBackfillState.GetCursorAsync(
-            db: _db,
-            entityType: "tv",
-            ct: CancellationToken.None
+            _db,
+            "tv",
+            CancellationToken.None
         );
 
-        movieCursor.Should().Be(expected: 100L);
-        tvCursor.Should().Be(expected: 200L);
+        movieCursor.Should().Be(100L);
+        tvCursor.Should().Be(200L);
     }
 }

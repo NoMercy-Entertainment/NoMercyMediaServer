@@ -20,16 +20,16 @@ public static class HostLifecycleHooks
     public static void Register(WebApplication app, Stopwatch stopWatch)
     {
         app.Services.GetService<IHostApplicationLifetime>()
-            ?.ApplicationStarted.Register(callback: () =>
+            ?.ApplicationStarted.Register(() =>
             {
                 app.Services.GetRequiredService<IBootStatus>().MarkStarted();
                 stopWatch.Stop();
             });
 
         app.Services.GetService<IHostApplicationLifetime>()
-            ?.ApplicationStopping.Register(callback: () =>
+            ?.ApplicationStopping.Register(() =>
             {
-                Logger.App(message: "Application is shutting down...");
+                Logger.App("Application is shutting down...");
             });
     }
 }

@@ -10,10 +10,10 @@
 // -----------------------------------------------------------------------------
 
 using System.IdentityModel.Tokens.Jwt;
-using NoMercy.NmSystem.Auth;
 using Newtonsoft.Json;
-using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Dto;
@@ -55,32 +55,32 @@ public class CastSessionTokenService(AuthManager authManager, IAuthTokenStore au
         string clientLocale = "en-US"
     )
     {
-        if (string.IsNullOrEmpty(value: authTokenStore.AccessToken))
+        if (string.IsNullOrEmpty(authTokenStore.AccessToken))
         {
             Logger.Auth(
-                message: "CastSessionTokenService: server access token not available — cannot mint cast bundle",
-                level: LogEventLevel.Warning
+                "CastSessionTokenService: server access token not available — cannot mint cast bundle",
+                LogEventLevel.Warning
             );
             return null;
         }
 
         await authManager.RefreshAsync();
 
-        if (string.IsNullOrEmpty(value: authTokenStore.AccessToken))
+        if (string.IsNullOrEmpty(authTokenStore.AccessToken))
         {
             Logger.Auth(
-                message: "CastSessionTokenService: refresh dropped the access token — cannot mint cast bundle",
-                level: LogEventLevel.Warning
+                "CastSessionTokenService: refresh dropped the access token — cannot mint cast bundle",
+                LogEventLevel.Warning
             );
             return null;
         }
 
-        AuthResponse? exchanged = await RequestTokenExchangeAsync(userId: userId);
-        if (exchanged?.AccessToken is null || string.IsNullOrEmpty(value: exchanged.RefreshToken))
+        AuthResponse? exchanged = await RequestTokenExchangeAsync(userId);
+        if (exchanged?.AccessToken is null || string.IsNullOrEmpty(exchanged.RefreshToken))
         {
             Logger.Auth(
-                message: "CastSessionTokenService: token-exchange returned no usable tokens",
-                level: LogEventLevel.Warning
+                "CastSessionTokenService: token-exchange returned no usable tokens",
+                LogEventLevel.Warning
             );
             return null;
         }
@@ -105,26 +105,26 @@ public class CastSessionTokenService(AuthManager authManager, IAuthTokenStore au
     private async Task<AuthResponse?> RequestTokenExchangeAsync(Guid userId)
     {
         string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
-        string requestingClientId = ResolveRequestingClientId(accessToken: authTokenStore.AccessToken!);
+        string requestingClientId = ResolveRequestingClientId(authTokenStore.AccessToken!);
 
-        if (!IssuerMatchesConfiguredRealm(accessToken: authTokenStore.AccessToken!))
+        if (!IssuerMatchesConfiguredRealm(authTokenStore.AccessToken!))
         {
             Logger.Auth(
-                message: $"CastSessionTokenService: subject token issuer doesn't match configured realm {ExternalServicesConfig.Current.AuthBaseUrl} — re-auth required against the active realm before cast tokens can be minted",
-                level: LogEventLevel.Warning
+                $"CastSessionTokenService: subject token issuer doesn't match configured realm {ExternalServicesConfig.Current.AuthBaseUrl} — re-auth required against the active realm before cast tokens can be minted",
+                LogEventLevel.Warning
             );
             return null;
         }
 
         List<KeyValuePair<string, string>> body =
         [
-            new(key: "grant_type", value: TokenExchangeGrantType),
-            new(key: "client_id", value: requestingClientId),
-            new(key: "subject_token", value: authTokenStore.AccessToken!),
-            new(key: "subject_token_type", value: AccessTokenType),
-            new(key: "audience", value: CastReceiverClientId),
-            new(key: "requested_token_type", value: RefreshTokenType),
-            new(key: "scope", value: "openid"),
+            new("grant_type", TokenExchangeGrantType),
+            new("client_id", requestingClientId),
+            new("subject_token", authTokenStore.AccessToken!),
+            new("subject_token_type", AccessTokenType),
+            new("audience", CastReceiverClientId),
+            new("requested_token_type", RefreshTokenType),
+            new("scope", "openid"),
         ];
 
         try
@@ -133,27 +133,27 @@ public class CastSessionTokenService(AuthManager authManager, IAuthTokenStore au
             httpClient.WithNoMercyUserAgent();
 
             using HttpResponseMessage response = await httpClient.PostAsync(
-                requestUri: tokenEndpoint,
-                content: new FormUrlEncodedContent(nameValueCollection: body)
+                tokenEndpoint,
+                new FormUrlEncodedContent(body)
             );
 
             string content = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
-                string subjectInfo = DescribeSubjectToken(accessToken: authTokenStore.AccessToken!);
+                string subjectInfo = DescribeSubjectToken(authTokenStore.AccessToken!);
                 Logger.Auth(
-                    message: $"Cast token-exchange failed ({(int)response.StatusCode}): {content} | endpoint: {tokenEndpoint} | subject: {subjectInfo} | requesting_client: {requestingClientId} target_audience: {CastReceiverClientId}",
-                    level: LogEventLevel.Warning
+                    $"Cast token-exchange failed ({(int)response.StatusCode}): {content} | endpoint: {tokenEndpoint} | subject: {subjectInfo} | requesting_client: {requestingClientId} target_audience: {CastReceiverClientId}",
+                    LogEventLevel.Warning
                 );
                 return null;
             }
 
-            return JsonConvert.DeserializeObject<AuthResponse>(value: content);
+            return JsonConvert.DeserializeObject<AuthResponse>(content);
         }
         catch (Exception ex)
         {
-            Logger.Auth(message: $"Cast token-exchange exception: {ex.Message}", level: LogEventLevel.Warning);
+            Logger.Auth($"Cast token-exchange exception: {ex.Message}", LogEventLevel.Warning);
             return null;
         }
     }
@@ -163,11 +163,11 @@ public class CastSessionTokenService(AuthManager authManager, IAuthTokenStore au
         try
         {
             JwtSecurityTokenHandler handler = new();
-            JwtSecurityToken jwt = handler.ReadJwtToken(token: accessToken);
+            JwtSecurityToken jwt = handler.ReadJwtToken(accessToken);
             if (
-                jwt.Payload.TryGetValue(key: "azp", value: out object? azp)
+                jwt.Payload.TryGetValue("azp", out object? azp)
                 && azp is string s
-                && !string.IsNullOrEmpty(value: s)
+                && !string.IsNullOrEmpty(s)
             )
                 return s;
         }
@@ -183,10 +183,10 @@ public class CastSessionTokenService(AuthManager authManager, IAuthTokenStore au
         try
         {
             JwtSecurityTokenHandler handler = new();
-            JwtSecurityToken jwt = handler.ReadJwtToken(token: accessToken);
+            JwtSecurityToken jwt = handler.ReadJwtToken(accessToken);
             string issuer = jwt.Issuer ?? string.Empty;
-            string configured = ExternalServicesConfig.Current.AuthBaseUrl.TrimEnd(trimChar: '/');
-            return issuer.TrimEnd(trimChar: '/').Equals(value: configured, comparisonType: StringComparison.OrdinalIgnoreCase);
+            string configured = ExternalServicesConfig.Current.AuthBaseUrl.TrimEnd('/');
+            return issuer.TrimEnd('/').Equals(configured, StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
@@ -199,8 +199,8 @@ public class CastSessionTokenService(AuthManager authManager, IAuthTokenStore au
         try
         {
             JwtSecurityTokenHandler handler = new();
-            JwtSecurityToken jwt = handler.ReadJwtToken(token: accessToken);
-            return jwt.ValidTo <= DateTime.UtcNow.AddSeconds(value: 60);
+            JwtSecurityToken jwt = handler.ReadJwtToken(accessToken);
+            return jwt.ValidTo <= DateTime.UtcNow.AddSeconds(60);
         }
         catch
         {
@@ -213,10 +213,10 @@ public class CastSessionTokenService(AuthManager authManager, IAuthTokenStore au
         try
         {
             JwtSecurityTokenHandler handler = new();
-            JwtSecurityToken jwt = handler.ReadJwtToken(token: accessToken);
+            JwtSecurityToken jwt = handler.ReadJwtToken(accessToken);
             string issuer = jwt.Issuer ?? "?";
-            string azp = jwt.Payload.TryGetValue(key: "azp", value: out object? a) ? a?.ToString() ?? "?" : "?";
-            string aud = string.Join(separator: ",", values: jwt.Audiences);
+            string azp = jwt.Payload.TryGetValue("azp", out object? a) ? a?.ToString() ?? "?" : "?";
+            string aud = string.Join(",", jwt.Audiences);
             string sub = jwt.Subject ?? "?";
             DateTime exp = jwt.ValidTo;
             TimeSpan remaining = exp - DateTime.UtcNow;

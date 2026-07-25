@@ -28,7 +28,7 @@ public static partial class SubtitleFormatConverter
     // U+FEFF byte-order mark — some OpenSubtitles-hosted SRT payloads start with one.
     private const char ByteOrderMark = '﻿';
 
-    [GeneratedRegex(pattern: @"(\d{2}:\d{2}:\d{2}),(\d{3})")]
+    [GeneratedRegex(@"(\d{2}:\d{2}:\d{2}),(\d{3})")]
     private static partial Regex SrtTimestampCommaRegex();
 
     /// <summary>
@@ -38,13 +38,13 @@ public static partial class SubtitleFormatConverter
     /// </summary>
     public static string SrtToVtt(string srtContent)
     {
-        ArgumentNullException.ThrowIfNull(argument: srtContent);
+        ArgumentNullException.ThrowIfNull(srtContent);
 
-        string normalized = srtContent.TrimStart(trimChar: ByteOrderMark).ReplaceLineEndings(replacementText: "\n").Trim();
-        string body = SrtTimestampCommaRegex().Replace(input: normalized, replacement: "$1.$2");
+        string normalized = srtContent.TrimStart(ByteOrderMark).ReplaceLineEndings("\n").Trim();
+        string body = SrtTimestampCommaRegex().Replace(normalized, "$1.$2");
 
         StringBuilder sb = new();
-        sb.Append(value: "WEBVTT").Append(value: '\n').Append(value: '\n').Append(value: body).Append(value: '\n');
+        sb.Append("WEBVTT").Append('\n').Append('\n').Append(body).Append('\n');
         return sb.ToString();
     }
 }

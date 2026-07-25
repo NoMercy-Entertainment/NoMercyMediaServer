@@ -31,22 +31,22 @@ public class SignalREncodingEventHandler : IDisposable
     {
         _logger = logger;
         _clientMessenger = clientMessenger;
-        _subscriptions.Add(item: eventBus.Subscribe<EncodingStartedEvent>(handler: OnEncodingStarted));
-        _subscriptions.Add(item: eventBus.Subscribe<EncodingProgressUpdatedEvent>(handler: OnEncodingProgress));
-        _subscriptions.Add(item: eventBus.Subscribe<EncodingCompletedEvent>(handler: OnEncodingCompleted));
-        _subscriptions.Add(item: eventBus.Subscribe<EncodingFailedEvent>(handler: OnEncodingFailed));
-        _subscriptions.Add(item: eventBus.Subscribe<EncodingStageChangedEvent>(handler: OnEncodingStageChanged));
+        _subscriptions.Add(eventBus.Subscribe<EncodingStartedEvent>(OnEncodingStarted));
+        _subscriptions.Add(eventBus.Subscribe<EncodingProgressUpdatedEvent>(OnEncodingProgress));
+        _subscriptions.Add(eventBus.Subscribe<EncodingCompletedEvent>(OnEncodingCompleted));
+        _subscriptions.Add(eventBus.Subscribe<EncodingFailedEvent>(OnEncodingFailed));
+        _subscriptions.Add(eventBus.Subscribe<EncodingStageChangedEvent>(OnEncodingStageChanged));
         _subscriptions.Add(
-            item: eventBus.Subscribe<EncodingProgressBroadcastedEvent>(handler: OnEncoderProgressBroadcast)
+            eventBus.Subscribe<EncodingProgressBroadcastedEvent>(OnEncoderProgressBroadcast)
         );
     }
 
     internal async Task OnEncodingStarted(EncodingStartedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            name: "EncodingStarted",
-            endpoint: "dashboardHub",
-            data: new EncodingStartedDto
+            "EncodingStarted",
+            "dashboardHub",
+            new EncodingStartedDto
             {
                 Id = @event.JobId,
                 InputPath = @event.InputPath,
@@ -56,7 +56,7 @@ public class SignalREncodingEventHandler : IDisposable
             }
         );
         _logger.LogInformation(
-            message: "Encoding started: Job={JobId}, Profile={ProfileName}", args: [@event.JobId, @event.ProfileName]
+            "Encoding started: Job={JobId}, Profile={ProfileName}", [@event.JobId, @event.ProfileName]
         );
     }
 
@@ -66,9 +66,9 @@ public class SignalREncodingEventHandler : IDisposable
     )
     {
         await _clientMessenger.SendToAll(
-            name: "EncodingProgress",
-            endpoint: "dashboardHub",
-            data: new EncodingProgressDto
+            "EncodingProgress",
+            "dashboardHub",
+            new EncodingProgressDto
             {
                 Id = @event.JobId,
                 Percentage = @event.Percentage,
@@ -84,9 +84,9 @@ public class SignalREncodingEventHandler : IDisposable
     internal async Task OnEncodingCompleted(EncodingCompletedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            name: "EncodingCompleted",
-            endpoint: "dashboardHub",
-            data: new EncodingCompletedDto
+            "EncodingCompleted",
+            "dashboardHub",
+            new EncodingCompletedDto
             {
                 Id = @event.JobId,
                 OutputPath = @event.OutputPath,
@@ -94,15 +94,15 @@ public class SignalREncodingEventHandler : IDisposable
                 Timestamp = @event.Timestamp,
             }
         );
-        _logger.LogInformation(message: "Encoding completed: Job={JobId}", args: @event.JobId);
+        _logger.LogInformation("Encoding completed: Job={JobId}", @event.JobId);
     }
 
     internal async Task OnEncodingFailed(EncodingFailedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            name: "EncodingFailed",
-            endpoint: "dashboardHub",
-            data: new EncodingFailedDto
+            "EncodingFailed",
+            "dashboardHub",
+            new EncodingFailedDto
             {
                 Id = @event.JobId,
                 InputPath = @event.InputPath,
@@ -112,7 +112,7 @@ public class SignalREncodingEventHandler : IDisposable
             }
         );
         _logger.LogInformation(
-            message: "Encoding failed: Job={JobId}, Error={ErrorMessage}", args: [@event.JobId, @event.ErrorMessage]
+            "Encoding failed: Job={JobId}, Error={ErrorMessage}", [@event.JobId, @event.ErrorMessage]
         );
     }
 
@@ -122,9 +122,9 @@ public class SignalREncodingEventHandler : IDisposable
     )
     {
         await _clientMessenger.SendToAll(
-            name: "encoder-progress",
-            endpoint: "dashboardHub",
-            data: new EncodingStageChangedDto
+            "encoder-progress",
+            "dashboardHub",
+            new EncodingStageChangedDto
             {
                 Id = @event.JobId,
                 Status = @event.Status,
@@ -146,7 +146,7 @@ public class SignalREncodingEventHandler : IDisposable
         CancellationToken ct
     )
     {
-        await _clientMessenger.SendToAll(name: "encoder-progress", endpoint: "dashboardHub", data: @event.ProgressData);
+        await _clientMessenger.SendToAll("encoder-progress", "dashboardHub", @event.ProgressData);
     }
 
     public void Dispose()

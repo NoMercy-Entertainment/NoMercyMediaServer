@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Networks;
 
 public class TmdbTmdbNetworkDetails : TmdbNetwork
 {
-    [JsonProperty(propertyName: "headquarters")]
+    [JsonProperty("headquarters")]
     public string Headquarters { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "homepage")]
+    [JsonProperty("homepage")]
     public Uri? Homepage { get; set; }
 }

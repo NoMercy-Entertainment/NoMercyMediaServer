@@ -14,19 +14,19 @@ using System.Runtime.Versioning;
 
 namespace NoMercy.NmSystem.Wallpaper;
 
-[SupportedOSPlatform(platformName: "macos")]
+[SupportedOSPlatform("macos")]
 public class MacWallpaperService : IWallpaperService
 {
     public bool IsSupported => true;
 
     public void Set(string imagePath, WallpaperStyle style, string hexColor)
     {
-        ApplyWallpaper(imagePath: imagePath);
+        ApplyWallpaper(imagePath);
     }
 
     public void SetSilent(string imagePath, WallpaperStyle style, string hexColor)
     {
-        Set(imagePath: imagePath, style: style, hexColor: hexColor);
+        Set(imagePath, style, hexColor);
     }
 
     public void Restore()
@@ -41,12 +41,12 @@ public class MacWallpaperService : IWallpaperService
         string script =
             $"tell application \"System Events\" to tell every desktop to set picture to \"{imagePath}\"";
 
-        if (!RunOsascript(script: script))
+        if (!RunOsascript(script))
         {
             // Fallback for older macOS versions
             string fallbackScript =
                 $"tell application \"Finder\" to set desktop picture to POSIX file \"{imagePath}\"";
-            RunOsascript(script: fallbackScript);
+            RunOsascript(fallbackScript);
         }
     }
 
@@ -66,7 +66,7 @@ public class MacWallpaperService : IWallpaperService
             };
 
             process.Start();
-            process.WaitForExit(milliseconds: 5000);
+            process.WaitForExit(5000);
             return process.ExitCode == 0;
         }
         catch

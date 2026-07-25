@@ -17,10 +17,10 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record Render
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public IEnumerable<object> Data { get; set; } = [];
 }
 
@@ -29,34 +29,34 @@ public record ComponentDto<T>
     public ComponentDto()
     {
         Id = Ulid.NewUlid();
-        Update = new(ulid: Id) { When = null };
+        Update = new(Id) { When = null };
     }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty(propertyName: "component")]
+    [JsonProperty("component")]
     public string Component { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "props")]
+    [JsonProperty("props")]
     public RenderProps<T> Props { get; set; } = new();
 
-    [JsonProperty(propertyName: "update")]
+    [JsonProperty("update")]
     public Update Update { get; set; }
 
-    [JsonProperty(propertyName: "replacing")]
+    [JsonProperty("replacing")]
     public Ulid Replacing { get; set; }
 }
 
 public record Update
 {
-    [JsonProperty(propertyName: "when")]
+    [JsonProperty("when")]
     public string? When { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; } = default!;
 
-    [JsonProperty(propertyName: "body")]
+    [JsonProperty("body")]
     public object Body { get; set; } = new();
 
     public Update(Ulid ulid)
@@ -67,42 +67,42 @@ public record Update
 
 public record RenderProps<T>
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public dynamic Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "next_id")]
+    [JsonProperty("next_id")]
     public dynamic NextId { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "previous_id")]
+    [JsonProperty("previous_id")]
     public dynamic PreviousId { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "more_link")]
+    [JsonProperty("more_link")]
     public Uri? MoreLink { get; set; }
 
-    [JsonProperty(propertyName: "more_link_text")]
+    [JsonProperty("more_link_text")]
     public string? MoreText => MoreLink is not null ? "See all".Localize() : null;
 
-    [JsonProperty(propertyName: "items")]
+    [JsonProperty("items")]
     public IEnumerable<ComponentDto<T>>? Items { get; set; } = [];
 
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public T? Data { get; set; }
 
-    [JsonProperty(propertyName: "watch")]
+    [JsonProperty("watch")]
     public bool Watch { get; set; }
 
-    [JsonProperty(propertyName: "context_menu_items")]
+    [JsonProperty("context_menu_items")]
     public Dictionary<string, object>[]? ContextMenuItems { get; set; } = [];
 
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri? Url { get; set; }
 
-    [JsonProperty(propertyName: "displayList")]
+    [JsonProperty("displayList")]
     public IEnumerable<ArtistTrackDto>? DisplayList { get; set; } = [];
 
-    [JsonProperty(propertyName: "properties")]
+    [JsonProperty("properties")]
     public Dictionary<string, dynamic> Properties { get; set; } = new();
 }

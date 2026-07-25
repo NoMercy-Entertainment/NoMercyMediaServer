@@ -30,8 +30,8 @@ public static class TestEnvironmentSetup
         EnsureIsolatedAppData();
 
         string testPath = AppFiles.AppPath;
-        if (!Directory.Exists(path: testPath))
-            Directory.CreateDirectory(path: testPath);
+        if (!Directory.Exists(testPath))
+            Directory.CreateDirectory(testPath);
     }
 
     /// <summary>
@@ -44,13 +44,13 @@ public static class TestEnvironmentSetup
     /// </summary>
     public static void EnsureIsolatedAppData()
     {
-        if (!string.IsNullOrEmpty(value: Environment.GetEnvironmentVariable(variable: "NOMERCY_APP_PATH")))
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NOMERCY_APP_PATH")))
             return;
 
         string root = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: $"nomercy-test-{Environment.ProcessId}-{Guid.NewGuid():N}");
-        Environment.SetEnvironmentVariable(variable: "NOMERCY_APP_PATH", value: root);
-        Directory.CreateDirectory(path: root);
+            Path.GetTempPath(),
+            $"nomercy-test-{Environment.ProcessId}-{Guid.NewGuid():N}");
+        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", root);
+        Directory.CreateDirectory(root);
     }
 }

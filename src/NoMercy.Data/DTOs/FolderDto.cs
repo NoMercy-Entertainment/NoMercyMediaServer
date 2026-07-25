@@ -17,19 +17,19 @@ namespace NoMercy.Data.DTOs;
 
 public class FolderDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty(propertyName: "path")]
+    [JsonProperty("path")]
     public string Path { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "driver_id")]
+    [JsonProperty("driver_id")]
     public Ulid DriverId { get; set; }
 
-    [JsonProperty(propertyName: "driver_name")]
+    [JsonProperty("driver_name")]
     public string DriverName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "encoder_profiles")]
+    [JsonProperty("encoder_profiles")]
     public FolderPresetDto[] EncoderProfiles { get; set; } = [];
 
     public FolderDto() { }
@@ -41,8 +41,8 @@ public class FolderDto
         DriverId = folder.DriverId;
         DriverName = folder.Driver?.Name ?? string.Empty;
         EncoderProfiles = folder
-            .EncodingPresetFolders.Where(predicate: link => link.Preset is not null)
-            .Select(selector: link => new FolderPresetDto
+            .EncodingPresetFolders.Where(link => link.Preset is not null)
+            .Select(link => new FolderPresetDto
             {
                 Id = link.Preset!.Id,
                 Name = link.Preset!.Name,

@@ -39,7 +39,7 @@ public class TmdbChangesCronJob : ICronJobExecutor
     // 08:10 UTC — a few minutes after TMDB publishes its daily data export. Cron schedules
     // are evaluated in UTC (see CronWorker), so this lands on TMDB's window on every host.
     public string CronExpression =>
-        new CronExpressionBuilder().Daily(hour: TmdbExportHourUtc, minute: PostExportBufferMinutes);
+        new CronExpressionBuilder().Daily(TmdbExportHourUtc, PostExportBufferMinutes);
 
     public string JobName => "TMDB Daily Changes Sync";
 
@@ -51,36 +51,36 @@ public class TmdbChangesCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        string startDate = DateTime.UtcNow.AddDays(value: -LookbackDays).ToString(format: "yyyy-MM-dd");
-        string endDate = DateTime.UtcNow.ToString(format: "yyyy-MM-dd");
+        string startDate = DateTime.UtcNow.AddDays(-LookbackDays).ToString("yyyy-MM-dd");
+        string endDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
 
         using TmdbChangesClient changesClient = new();
         JobDispatcher jobDispatcher = new();
 
         int movies = await SyncMovies(
-            changesClient: changesClient,
-            jobDispatcher: jobDispatcher,
-            startDate: startDate,
-            endDate: endDate,
-            cancellationToken: cancellationToken
+            changesClient,
+            jobDispatcher,
+            startDate,
+            endDate,
+            cancellationToken
         );
         int shows = await SyncShows(
-            changesClient: changesClient,
-            jobDispatcher: jobDispatcher,
-            startDate: startDate,
-            endDate: endDate,
-            cancellationToken: cancellationToken
+            changesClient,
+            jobDispatcher,
+            startDate,
+            endDate,
+            cancellationToken
         );
         int people = await SyncPeople(
-            changesClient: changesClient,
-            jobDispatcher: jobDispatcher,
-            startDate: startDate,
-            endDate: endDate,
-            cancellationToken: cancellationToken
+            changesClient,
+            jobDispatcher,
+            startDate,
+            endDate,
+            cancellationToken
         );
 
         _logger.LogInformation(
-            message: "TMDB changes sync queued refreshes — movies: {Movies}, shows: {Shows}, people: {People}", args: [movies, shows, people]
+            "TMDB changes sync queued refreshes — movies: {Movies}, shows: {Shows}, people: {People}", [movies, shows, people]
         );
     }
 
@@ -93,20 +93,20 @@ public class TmdbChangesCronJob : ICronJobExecutor
     )
     {
         HashSet<int> changedIds = (
-            await changesClient.MovieChanges(startDate: startDate, endDate: endDate, limit: MaxChangePages) ?? []
+            await changesClient.MovieChanges(startDate, endDate, MaxChangePages) ?? []
         )
-            .Select(selector: change => change.Id)
+            .Select(change => change.Id)
             .ToHashSet();
 
         if (changedIds.Count == 0)
             return 0;
 
-        List<LibraryMovie> matches = (await _context.LibraryMovie.ToListAsync(cancellationToken: cancellationToken))
-            .Where(predicate: link => changedIds.Contains(item: link.MovieId))
+        List<LibraryMovie> matches = (await _context.LibraryMovie.ToListAsync(cancellationToken))
+            .Where(link => changedIds.Contains(link.MovieId))
             .ToList();
 
         foreach (LibraryMovie link in matches)
-            jobDispatcher.DispatchJob<MovieImportJob>(id: link.MovieId, libraryId: link.LibraryId);
+            jobDispatcher.DispatchJob<MovieImportJob>(link.MovieId, link.LibraryId);
 
         return matches.Count;
     }
@@ -120,20 +120,20 @@ public class TmdbChangesCronJob : ICronJobExecutor
     )
     {
         HashSet<int> changedIds = (
-            await changesClient.TvChanges(startDate: startDate, endDate: endDate, limit: MaxChangePages) ?? []
+            await changesClient.TvChanges(startDate, endDate, MaxChangePages) ?? []
         )
-            .Select(selector: change => change.Id)
+            .Select(change => change.Id)
             .ToHashSet();
 
         if (changedIds.Count == 0)
             return 0;
 
-        List<LibraryTv> matches = (await _context.LibraryTv.ToListAsync(cancellationToken: cancellationToken))
-            .Where(predicate: link => changedIds.Contains(item: link.TvId))
+        List<LibraryTv> matches = (await _context.LibraryTv.ToListAsync(cancellationToken))
+            .Where(link => changedIds.Contains(link.TvId))
             .ToList();
 
         foreach (LibraryTv link in matches)
-            jobDispatcher.DispatchJob<ShowImportJob>(id: link.TvId, libraryId: link.LibraryId);
+            jobDispatcher.DispatchJob<ShowImportJob>(link.TvId, link.LibraryId);
 
         return matches.Count;
     }
@@ -147,22 +147,22 @@ public class TmdbChangesCronJob : ICronJobExecutor
     )
     {
         HashSet<int> changedIds = (
-            await changesClient.PersonChanges(startDate: startDate, endDate: endDate, limit: MaxChangePages) ?? []
+            await changesClient.PersonChanges(startDate, endDate, MaxChangePages) ?? []
         )
-            .Select(selector: change => change.Id)
+            .Select(change => change.Id)
             .ToHashSet();
 
         if (changedIds.Count == 0)
             return 0;
 
         List<int> matches = (
-            await _context.People.Select(selector: person => person.Id).ToListAsync(cancellationToken: cancellationToken)
+            await _context.People.Select(person => person.Id).ToListAsync(cancellationToken)
         )
-            .Where(predicate: changedIds.Contains)
+            .Where(changedIds.Contains)
             .ToList();
 
         foreach (int personId in matches)
-            jobDispatcher.DispatchJob<PersonRefreshJob>(id: personId, libraryId: Ulid.Empty);
+            jobDispatcher.DispatchJob<PersonRefreshJob>(personId, Ulid.Empty);
 
         return matches.Count;
     }

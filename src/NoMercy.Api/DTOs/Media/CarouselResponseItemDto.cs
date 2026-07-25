@@ -18,43 +18,43 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record CarouselResponseItemDto
 {
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "favorite")]
+    [JsonProperty("favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty(propertyName: "folder")]
+    [JsonProperty("folder")]
     public string? Folder { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; }
 
-    [JsonProperty(propertyName: "library_id")]
+    [JsonProperty("library_id")]
     public Ulid? LibraryId { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    [JsonProperty(propertyName: "track_id")]
+    [JsonProperty("track_id")]
     public string? TrackId { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public int Tracks { get; set; }
 
     public CarouselResponseItemDto(Artist artist)
@@ -62,7 +62,7 @@ public record CarouselResponseItemDto
         ColorPalette = artist.ColorPalette;
         Cover = artist.Cover;
         Cover = Cover is not null
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = artist.Disambiguation;
         Description = artist.Description;
@@ -71,11 +71,11 @@ public record CarouselResponseItemDto
         LibraryId = artist.LibraryId;
         Name = artist.Name;
         Type = "artist";
-        Link = new(uriString: $"/music/artists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
         Tracks = artist
-            .ArtistTrack.Where(predicate: artistTrack => artistTrack.Track.Duration != null)
-            .DistinctBy(keySelector: artistTrack => artistTrack.Track.Name.ToLower())
+            .ArtistTrack.Where(artistTrack => artistTrack.Track.Duration != null)
+            .DistinctBy(artistTrack => artistTrack.Track.Name.ToLower())
             .Count();
     }
 
@@ -84,7 +84,7 @@ public record CarouselResponseItemDto
         ColorPalette = album.ColorPalette;
         Cover = album.Cover;
         Cover = Cover is not null
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = album.Disambiguation;
         Description = album.Description;
@@ -93,11 +93,11 @@ public record CarouselResponseItemDto
         LibraryId = album.LibraryId;
         Name = album.Name;
         Type = "album";
-        Link = new(uriString: $"/music/albums/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
 
         Tracks = album
-            .AlbumTrack.Where(predicate: albumTrack => albumTrack.Track.Duration != null)
-            .DistinctBy(keySelector: albumTrack => albumTrack.Track.Name.ToLower())
+            .AlbumTrack.Where(albumTrack => albumTrack.Track.Duration != null)
+            .DistinctBy(albumTrack => albumTrack.Track.Name.ToLower())
             .Count();
     }
 
@@ -106,7 +106,7 @@ public record CarouselResponseItemDto
         ColorPalette = artistUser.Artist.ColorPalette;
         Cover = artistUser.Artist.Cover ?? artistUser.Artist.Images.FirstOrDefault()?.FilePath;
         Cover = Cover is not null
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = artistUser.Artist.Disambiguation;
         Description = artistUser.Artist.Description;
@@ -115,11 +115,11 @@ public record CarouselResponseItemDto
         LibraryId = artistUser.Artist.LibraryId;
         Name = artistUser.Artist.Name;
         Type = "artist";
-        Link = new(uriString: $"/music/artists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
         Tracks = artistUser
-            .Artist.ArtistTrack.Where(predicate: artistTrack => artistTrack.Track.Duration != null)
-            .DistinctBy(keySelector: artistTrack => artistTrack.Track.Name.ToLower())
+            .Artist.ArtistTrack.Where(artistTrack => artistTrack.Track.Duration != null)
+            .DistinctBy(artistTrack => artistTrack.Track.Name.ToLower())
             .Count();
     }
 
@@ -128,7 +128,7 @@ public record CarouselResponseItemDto
         ColorPalette = playlist.Album.ColorPalette;
         Cover = playlist.Album.Cover;
         Cover = Cover is not null
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = playlist.Album.Disambiguation;
         Description = playlist.Album.Description;
@@ -137,11 +137,11 @@ public record CarouselResponseItemDto
         LibraryId = playlist.Album.LibraryId;
         Name = playlist.Album.Name;
         Type = "album";
-        Link = new(uriString: $"/music/albums/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
 
         Tracks = playlist
-            .Album.AlbumTrack.Where(predicate: albumTrack => albumTrack.Track.Duration != null)
-            .DistinctBy(keySelector: albumTrack => albumTrack.Track.Name.ToLower())
+            .Album.AlbumTrack.Where(albumTrack => albumTrack.Track.Duration != null)
+            .DistinctBy(albumTrack => albumTrack.Track.Name.ToLower())
             .Count();
     }
 
@@ -150,17 +150,17 @@ public record CarouselResponseItemDto
         ColorPalette = playlist.ColorPalette;
         Cover = playlist.Cover;
         Cover = Cover is not null
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Description = playlist.Description;
         Id = playlist.Id.ToString();
         Name = playlist.Name;
         Type = "playlist";
-        Link = new(uriString: $"/music/playlists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/playlists/{Id}", UriKind.Relative);
 
         Tracks = playlist
-            .Tracks.Where(predicate: playlistTrack => playlistTrack.Track.Duration != null)
-            .DistinctBy(keySelector: playlistTrack => playlistTrack.Track.Name.ToLower())
+            .Tracks.Where(playlistTrack => playlistTrack.Track.Duration != null)
+            .DistinctBy(playlistTrack => playlistTrack.Track.Name.ToLower())
             .Count();
     }
 
@@ -169,12 +169,12 @@ public record CarouselResponseItemDto
         ColorPalette = track.ColorPalette;
         Cover = track.Cover;
         Cover = Cover is not null
-            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Folder = track.Folder.OrEmpty();
         Id = track.Id.ToString();
         Name = track.Name;
         Type = "track";
-        Link = new(uriString: $"/music/tracks/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/tracks/{Id}", UriKind.Relative);
     }
 }

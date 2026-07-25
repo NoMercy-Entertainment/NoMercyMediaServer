@@ -25,13 +25,13 @@ public class AcoustIdBaseClient : ExternalApiClient
     protected AcoustIdBaseClient() { }
 
     protected AcoustIdBaseClient(Guid id)
-        : base(id: id) { }
+        : base(id) { }
 
     protected override string HttpClientName => HttpClientNames.AcoustId;
-    protected override Uri BaseUrl => new(uriString: "https://api.acoustid.org/v2/");
+    protected override Uri BaseUrl => new("https://api.acoustid.org/v2/");
     protected override int ConcurrentRequests => 3;
 
-    protected override void LogRequest(string url) => Logger.AcoustId(message: url, level: LogEventLevel.Verbose);
+    protected override void LogRequest(string url) => Logger.AcoustId(url, LogEventLevel.Verbose);
 
     // AcoustId-specific fetch: only returns a fingerprint that actually carries
     // recordings (a 200 with no recordings counts as "no result"). This needs
@@ -45,24 +45,24 @@ public class AcoustIdBaseClient : ExternalApiClient
         where T : AcoustIdFingerprint
     {
         query ??= new();
-        string newUrl = QueryHelpers.AddQueryString(uri: url, queryString: query);
+        string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        (bool found, T? cached) = await CacheController.ReadAsync<T>(url: newUrl);
-        if (found && HasRecordings(data: cached))
+        (bool found, T? cached) = await CacheController.ReadAsync<T>(newUrl);
+        if (found && HasRecordings(cached))
             return cached;
 
-        LogRequest(url: BaseUrl + newUrl);
+        LogRequest(BaseUrl + newUrl);
 
         try
         {
             string response = await RequestQueue.Enqueue(
-                task: () => Client.GetStringAsync(requestUri: newUrl),
-                url: newUrl,
-                priority: priority
+                () => Client.GetStringAsync(newUrl),
+                newUrl,
+                priority
             );
-            await CacheController.Write(url: newUrl, data: response);
+            await CacheController.Write(newUrl, response);
             T? data = response.FromJson<T>();
-            return HasRecordings(data: data) ? data : null;
+            return HasRecordings(data) ? data : null;
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -74,9 +74,9 @@ public class AcoustIdBaseClient : ExternalApiClient
         where T : AcoustIdFingerprint
     {
         return data?.Results.Length > 0
-            && data.Results.Any(predicate: fpResult =>
+            && data.Results.Any(fpResult =>
                 fpResult.Recordings is not null
-                && fpResult.Recordings.Any(predicate: recording => recording?.Title != null)
+                && fpResult.Recordings.Any(recording => recording?.Title != null)
             );
     }
 }

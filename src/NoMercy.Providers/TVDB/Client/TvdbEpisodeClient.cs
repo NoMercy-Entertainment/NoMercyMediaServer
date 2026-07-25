@@ -16,24 +16,24 @@ namespace NoMercy.Providers.TVDB.Client;
 public class TvdbEpisodeClient : TvdbBaseClient
 {
     public TvdbEpisodeClient(int id = 0, string language = "eng")
-        : base(id: id, language: language) { }
+        : base(id, language) { }
 
     public Task<TvdbEpisodeResponse?> Details(bool? priority = false)
     {
-        return Get<TvdbEpisodeResponse>(url: "episodes/" + Id, priority: priority);
+        return Get<TvdbEpisodeResponse>("episodes/" + Id, priority: priority);
     }
 
     public Task<TvdbEpisodeExtendedResponse?> Extended(string? meta = null, bool? priority = false)
     {
         Dictionary<string, string?> query = new();
-        if (!string.IsNullOrEmpty(value: meta))
-            query[key: "meta"] = meta;
-        return Get<TvdbEpisodeExtendedResponse>(url: "episodes/" + Id + "/extended", query: query, priority: priority);
+        if (!string.IsNullOrEmpty(meta))
+            query["meta"] = meta;
+        return Get<TvdbEpisodeExtendedResponse>("episodes/" + Id + "/extended", query, priority);
     }
 
     public Task<TvdbEpisodeExtendedResponse?> WithAllAppends(bool? priority = false)
     {
-        return Extended(meta: "translations", priority: priority);
+        return Extended("translations", priority);
     }
 
     public Task<TvdbEpisodeTranslationResponse?> Translation(
@@ -42,7 +42,7 @@ public class TvdbEpisodeClient : TvdbBaseClient
     )
     {
         return Get<TvdbEpisodeTranslationResponse>(
-            url: $"episodes/{Id}/translations/{language}",
+            $"episodes/{Id}/translations/{language}",
             priority: priority
         );
     }

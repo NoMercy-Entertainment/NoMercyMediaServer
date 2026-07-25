@@ -14,11 +14,11 @@ using NoMercy.Setup.Server;
 
 namespace NoMercy.Tests.Setup;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class BinariesAgeGateTests
 {
-    private static readonly DateTimeOffset Now = new(year: 2026, month: 07, day: 08, hour: 0, minute: 0, second: 0, offset: TimeSpan.Zero);
-    private static readonly DateTimeOffset Cutoff = Now - TimeSpan.FromDays(days: 14);
+    private static readonly DateTimeOffset Now = new(2026, 07, 08, 0, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset Cutoff = Now - TimeSpan.FromDays(14);
 
     private static GithubReleaseResponse Release(
         int daysOld,
@@ -27,7 +27,7 @@ public class BinariesAgeGateTests
     ) =>
         new()
         {
-            PublishedAt = Now - TimeSpan.FromDays(days: daysOld),
+            PublishedAt = Now - TimeSpan.FromDays(daysOld),
             Draft = draft,
             Prerelease = prerelease,
         };
@@ -37,23 +37,23 @@ public class BinariesAgeGateTests
     {
         GithubReleaseResponse[] releases =
         [
-            Release(daysOld: 2), // too new — inside the 14-day gate
-            Release(daysOld: 20), // eligible, newest of the eligible set
-            Release(daysOld: 40), // eligible but older
+            Release(2), // too new — inside the 14-day gate
+            Release(20), // eligible, newest of the eligible set
+            Release(40), // eligible but older
         ];
 
-        GithubReleaseResponse? picked = Binaries.SelectNewestPublishedBefore(releases: releases, cutoff: Cutoff);
+        GithubReleaseResponse? picked = Binaries.SelectNewestPublishedBefore(releases, Cutoff);
 
         picked.Should().NotBeNull();
-        picked!.PublishedAt.Should().Be(expected: Now - TimeSpan.FromDays(days: 20));
+        picked!.PublishedAt.Should().Be(Now - TimeSpan.FromDays(20));
     }
 
     [Fact]
     public void SelectNewestPublishedBefore_AllTooNew_ReturnsNull()
     {
-        GithubReleaseResponse[] releases = [Release(daysOld: 1), Release(daysOld: 5), Release(daysOld: 13)];
+        GithubReleaseResponse[] releases = [Release(1), Release(5), Release(13)];
 
-        Binaries.SelectNewestPublishedBefore(releases: releases, cutoff: Cutoff).Should().BeNull();
+        Binaries.SelectNewestPublishedBefore(releases, Cutoff).Should().BeNull();
     }
 
     [Fact]
@@ -61,15 +61,15 @@ public class BinariesAgeGateTests
     {
         GithubReleaseResponse[] releases =
         [
-            Release(daysOld: 20, draft: true),
-            Release(daysOld: 25, prerelease: true),
-            Release(daysOld: 30), // the only eligible stable release
+            Release(20, true),
+            Release(25, prerelease: true),
+            Release(30), // the only eligible stable release
         ];
 
-        GithubReleaseResponse? picked = Binaries.SelectNewestPublishedBefore(releases: releases, cutoff: Cutoff);
+        GithubReleaseResponse? picked = Binaries.SelectNewestPublishedBefore(releases, Cutoff);
 
         picked.Should().NotBeNull();
-        picked!.PublishedAt.Should().Be(expected: Now - TimeSpan.FromDays(days: 30));
+        picked!.PublishedAt.Should().Be(Now - TimeSpan.FromDays(30));
     }
 
     [Fact]
@@ -78,12 +78,12 @@ public class BinariesAgeGateTests
         GithubReleaseResponse[] releases =
         [
             new() { PublishedAt = DateTimeOffset.MinValue },
-            Release(daysOld: 30),
+            Release(30),
         ];
 
-        GithubReleaseResponse? picked = Binaries.SelectNewestPublishedBefore(releases: releases, cutoff: Cutoff);
+        GithubReleaseResponse? picked = Binaries.SelectNewestPublishedBefore(releases, Cutoff);
 
         picked.Should().NotBeNull();
-        picked!.PublishedAt.Should().Be(expected: Now - TimeSpan.FromDays(days: 30));
+        picked!.PublishedAt.Should().Be(Now - TimeSpan.FromDays(30));
     }
 }

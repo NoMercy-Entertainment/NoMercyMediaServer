@@ -29,17 +29,17 @@ public static class Helper
                 CreateNoWindow = true,
             };
 
-            using Process? process = Process.Start(startInfo: psi);
+            using Process? process = Process.Start(psi);
             if (process != null)
             {
                 string output = process.StandardOutput.ReadToEnd().Trim();
                 process.WaitForExit();
-                return string.IsNullOrEmpty(value: output) ? "Unknown" : output;
+                return string.IsNullOrEmpty(output) ? "Unknown" : output;
             }
         }
         catch (Exception ex)
         {
-            Logger.Error(message: $"Error running command: {ex.Message}");
+            Logger.Error($"Error running command: {ex.Message}");
         }
 
         return "Unknown";

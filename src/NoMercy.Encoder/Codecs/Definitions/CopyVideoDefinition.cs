@@ -28,24 +28,24 @@ public class CopyVideoDefinition : ICodecDefinition
     public EncoderInfo[] Encoders =>
         [
             new(
-                FfmpegName: "copy",
-                RequiredVendor: null,
-                Presets: [],
-                Profiles: [],
-                Levels: [],
+                "copy",
+                null,
+                [],
+                [],
+                [],
                 // QualityRange is meaningless for stream copy — no quality
                 // dial is ever applied. Use a sentinel range so any caller
                 // accidentally reaching for QualityRange.Default sees zeros
                 // and falls into a no-op rather than emitting CRF flags.
-                QualityRange: new(Min: 0, Max: 0, Default: 0),
-                SupportedRateControl: [],
+                new(0, 0, 0),
+                [],
                 // Source bytes flow through unchanged, so 10-bit, HDR, and
                 // every other source-side property are preserved verbatim.
-                Supports10Bit: true,
-                SupportsHdr: true,
-                MaxConcurrentSessions: int.MaxValue,
-                PixelFormat10Bit: string.Empty,
-                VendorSpecificFlags: new()
+                true,
+                true,
+                int.MaxValue,
+                string.Empty,
+                new()
             ),
         ];
 }

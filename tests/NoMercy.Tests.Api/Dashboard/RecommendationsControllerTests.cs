@@ -11,7 +11,6 @@
 
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -28,7 +27,7 @@ namespace NoMercy.Tests.Api.Dashboard;
 /// reach the network. Those mocks always resolve null, so the detail route's
 /// only network-free, deterministic outcome to assert is the 404 "not found" path.
 /// </summary>
-[Trait(name: "Category", value: "DashboardRecommendations")]
+[Trait("Category", "DashboardRecommendations")]
 public class RecommendationsControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -47,22 +46,22 @@ public class RecommendationsControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Theory]
-    [InlineData(data: "movies")]
-    [InlineData(data: "tv")]
-    [InlineData(data: "anime")]
+    [InlineData("movies")]
+    [InlineData("tv")]
+    [InlineData("anime")]
     public async Task GetRecommendations_ReturnsUnauthorized_WhenAnonymous(string segment)
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            requestUri: $"/api/v1/dashboard/recommendations/{segment}"
+            $"/api/v1/dashboard/recommendations/{segment}"
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Theory]
-    [InlineData(data: ["movies", "recommendations-movies", "Recommended Movies"])]
-    [InlineData(data: ["tv", "recommendations-tv", "Recommended TV Shows"])]
-    [InlineData(data: ["anime", "recommendations-anime", "Recommended Anime"])]
+    [InlineData(["movies", "recommendations-movies", "Recommended Movies"])]
+    [InlineData(["tv", "recommendations-tv", "Recommended TV Shows"])]
+    [InlineData(["anime", "recommendations-anime", "Recommended Anime"])]
     public async Task GetRecommendations_ReturnsGridComponentEnvelope_WhenAuthenticated(
         string segment,
         string expectedComponentId,
@@ -70,36 +69,36 @@ public class RecommendationsControllerTests : IClassFixture<NoMercyApiFactory>
     )
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: $"/api/v1/dashboard/recommendations/{segment}"
+            $"/api/v1/dashboard/recommendations/{segment}"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
         JsonElement root = doc.RootElement;
 
-        root.TryGetProperty(propertyName: "data", value: out JsonElement data).Should().BeTrue();
-        data.ValueKind.Should().Be(expected: JsonValueKind.Array);
-        data.GetArrayLength().Should().Be(expected: 1, because: "each recommendations route wraps a single grid");
+        root.TryGetProperty("data", out JsonElement data).Should().BeTrue();
+        data.ValueKind.Should().Be(JsonValueKind.Array);
+        data.GetArrayLength().Should().Be(1, "each recommendations route wraps a single grid");
 
-        JsonElement envelope = data[index: 0];
-        envelope.GetProperty(propertyName: "component").GetString().Should().Be(expected: "NMGrid");
+        JsonElement envelope = data[0];
+        envelope.GetProperty("component").GetString().Should().Be("NMGrid");
 
-        JsonElement props = envelope.GetProperty(propertyName: "props");
-        props.GetProperty(propertyName: "id").GetString().Should().Be(expected: expectedComponentId);
-        props.GetProperty(propertyName: "title").GetString().Should().Be(expected: expectedTitle);
-        props.GetProperty(propertyName: "items").ValueKind.Should().Be(expected: JsonValueKind.Array);
+        JsonElement props = envelope.GetProperty("props");
+        props.GetProperty("id").GetString().Should().Be(expectedComponentId);
+        props.GetProperty("title").GetString().Should().Be(expectedTitle);
+        props.GetProperty("items").ValueKind.Should().Be(JsonValueKind.Array);
     }
 
     [Fact]
     public async Task GetDiagnostics_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            requestUri: "/api/v1/dashboard/recommendations/diagnostics"
+            "/api/v1/dashboard/recommendations/diagnostics"
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -108,60 +107,60 @@ public class RecommendationsControllerTests : IClassFixture<NoMercyApiFactory>
         // TestAuthHandler.SecondaryUserId is seeded Allowed=true, Owner=false, Manage=false —
         // it passes MediaAccess but must fail the stricter Moderator policy this route requires.
         HttpResponseMessage response = await _secondaryUser.GetAsync(
-            requestUri: "/api/v1/dashboard/recommendations/diagnostics"
+            "/api/v1/dashboard/recommendations/diagnostics"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task GetDiagnostics_ReturnsDiagnosticsFields_WhenModerator()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: "/api/v1/dashboard/recommendations/diagnostics"
+            "/api/v1/dashboard/recommendations/diagnostics"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
         JsonElement root = doc.RootElement;
 
-        root.TryGetProperty(propertyName: "libraries", value: out _).Should().BeTrue();
-        root.TryGetProperty(propertyName: "animeByLibraryType", value: out _).Should().BeTrue();
-        root.TryGetProperty(propertyName: "animeByMediaType", value: out _).Should().BeTrue();
-        root.TryGetProperty(propertyName: "totalRecsWithTv", value: out _).Should().BeTrue();
-        root.TryGetProperty(propertyName: "animeRecsByMediaType", value: out _).Should().BeTrue();
-        root.TryGetProperty(propertyName: "totalSimWithTv", value: out _).Should().BeTrue();
-        root.TryGetProperty(propertyName: "animeSimByMediaType", value: out _).Should().BeTrue();
-        root.TryGetProperty(propertyName: "sampleAnimeIds", value: out _).Should().BeTrue();
-        root.TryGetProperty(propertyName: "sampleRecsCount", value: out _).Should().BeTrue();
+        root.TryGetProperty("libraries", out _).Should().BeTrue();
+        root.TryGetProperty("animeByLibraryType", out _).Should().BeTrue();
+        root.TryGetProperty("animeByMediaType", out _).Should().BeTrue();
+        root.TryGetProperty("totalRecsWithTv", out _).Should().BeTrue();
+        root.TryGetProperty("animeRecsByMediaType", out _).Should().BeTrue();
+        root.TryGetProperty("totalSimWithTv", out _).Should().BeTrue();
+        root.TryGetProperty("animeSimByMediaType", out _).Should().BeTrue();
+        root.TryGetProperty("sampleAnimeIds", out _).Should().BeTrue();
+        root.TryGetProperty("sampleRecsCount", out _).Should().BeTrue();
     }
 
     [Fact]
     public async Task GetRecommendationDetail_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            requestUri: $"/api/v1/dashboard/recommendations/movie/{SeededMovieId}"
+            $"/api/v1/dashboard/recommendations/movie/{SeededMovieId}"
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetRecommendationDetail_InvalidType_Returns400()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: $"/api/v1/dashboard/recommendations/show/{SeededMovieId}"
+            $"/api/v1/dashboard/recommendations/show/{SeededMovieId}"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Theory]
-    [InlineData(data: ["movie", SeededMovieId])]
-    [InlineData(data: ["tv", SeededTvId])]
-    [InlineData(data: ["anime", SeededTvId])]
+    [InlineData(["movie", SeededMovieId])]
+    [InlineData(["tv", SeededTvId])]
+    [InlineData(["anime", SeededTvId])]
     public async Task GetRecommendationDetail_ValidTypeProviderReturnsNull_Returns404(
         string type,
         int id
@@ -173,9 +172,9 @@ public class RecommendationsControllerTests : IClassFixture<NoMercyApiFactory>
         // layer correctly and that a null TMDB lookup surfaces as 404, without ever
         // dialing out to the real TMDB API.
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: $"/api/v1/dashboard/recommendations/{type}/{id}"
+            $"/api/v1/dashboard/recommendations/{type}/{id}"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }

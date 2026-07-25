@@ -24,14 +24,14 @@ public class ProtocolMessageTests
     // ──────────────────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: LiveSessionState.Starting)]
-    [InlineData(data: LiveSessionState.Transcoding)]
-    [InlineData(data: LiveSessionState.Buffering)]
-    [InlineData(data: LiveSessionState.Buffered)]
-    [InlineData(data: LiveSessionState.Seeking)]
-    [InlineData(data: LiveSessionState.ChangingQuality)]
-    [InlineData(data: LiveSessionState.Error)]
-    [InlineData(data: LiveSessionState.Ended)]
+    [InlineData(LiveSessionState.Starting)]
+    [InlineData(LiveSessionState.Transcoding)]
+    [InlineData(LiveSessionState.Buffering)]
+    [InlineData(LiveSessionState.Buffered)]
+    [InlineData(LiveSessionState.Seeking)]
+    [InlineData(LiveSessionState.ChangingQuality)]
+    [InlineData(LiveSessionState.Error)]
+    [InlineData(LiveSessionState.Ended)]
     public void LiveSessionState_AllEightValues_Exist(LiveSessionState state)
     {
         state.Should().BeDefined();
@@ -40,7 +40,7 @@ public class ProtocolMessageTests
     [Fact]
     public void LiveSessionState_HasExactlyEightValues()
     {
-        Enum.GetValues<LiveSessionState>().Length.Should().Be(expected: 8);
+        Enum.GetValues<LiveSessionState>().Length.Should().Be(8);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -51,36 +51,36 @@ public class ProtocolMessageTests
     public void LiveQuality_Constructs_AndJsonRoundTrips()
     {
         LiveQuality quality = new(
-            Id: "1080p",
-            Label: "1080p HD",
-            Width: 1920,
-            Height: 1080,
-            Codec: VideoCodecType.H264,
-            BitrateKbps: 4000,
-            Encoder: "h264_nvenc",
-            IsHardwareAccelerated: true,
-            ExpectedSpeed: 1.8,
-            CanRealtime: true
+            "1080p",
+            "1080p HD",
+            1920,
+            1080,
+            VideoCodecType.H264,
+            4000,
+            "h264_nvenc",
+            true,
+            1.8,
+            true
         );
 
-        quality.Id.Should().Be(expected: "1080p");
-        quality.Label.Should().Be(expected: "1080p HD");
-        quality.Width.Should().Be(expected: 1920);
-        quality.Height.Should().Be(expected: 1080);
-        quality.Codec.Should().Be(expected: VideoCodecType.H264);
-        quality.BitrateKbps.Should().Be(expected: 4000);
-        quality.Encoder.Should().Be(expected: "h264_nvenc");
+        quality.Id.Should().Be("1080p");
+        quality.Label.Should().Be("1080p HD");
+        quality.Width.Should().Be(1920);
+        quality.Height.Should().Be(1080);
+        quality.Codec.Should().Be(VideoCodecType.H264);
+        quality.BitrateKbps.Should().Be(4000);
+        quality.Encoder.Should().Be("h264_nvenc");
         quality.IsHardwareAccelerated.Should().BeTrue();
-        quality.ExpectedSpeed.Should().Be(expected: 1.8);
+        quality.ExpectedSpeed.Should().Be(1.8);
         quality.CanRealtime.Should().BeTrue();
 
-        string json = JsonConvert.SerializeObject(value: quality);
-        LiveQuality? deserialized = JsonConvert.DeserializeObject<LiveQuality>(value: json);
+        string json = JsonConvert.SerializeObject(quality);
+        LiveQuality? deserialized = JsonConvert.DeserializeObject<LiveQuality>(json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.Id.Should().Be(expected: quality.Id);
-        deserialized.Codec.Should().Be(expected: quality.Codec);
-        deserialized.IsHardwareAccelerated.Should().Be(expected: quality.IsHardwareAccelerated);
+        deserialized!.Id.Should().Be(quality.Id);
+        deserialized.Codec.Should().Be(quality.Codec);
+        deserialized.IsHardwareAccelerated.Should().Be(quality.IsHardwareAccelerated);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -91,45 +91,45 @@ public class ProtocolMessageTests
     public void SessionCreatedMessage_Constructs_AndJsonRoundTrips()
     {
         LiveQuality selected = new(
-            Id: "720p",
-            Label: "720p",
-            Width: 1280,
-            Height: 720,
-            Codec: VideoCodecType.H264,
-            BitrateKbps: 2500,
-            Encoder: "libx264",
-            IsHardwareAccelerated: false,
-            ExpectedSpeed: 2.5,
-            CanRealtime: true
+            "720p",
+            "720p",
+            1280,
+            720,
+            VideoCodecType.H264,
+            2500,
+            "libx264",
+            false,
+            2.5,
+            true
         );
 
         LiveQuality[] qualities = [selected];
 
         SessionCreatedMessage message = new(
-            SessionId: "sess-abc123",
-            DurationSeconds: 5400.0,
-            AvailableQualities: qualities,
-            SelectedQuality: selected,
-            FirstSegmentUrl: "/segments/0.ts"
+            "sess-abc123",
+            5400.0,
+            qualities,
+            selected,
+            "/segments/0.ts"
         );
 
-        message.SessionId.Should().Be(expected: "sess-abc123");
-        message.DurationSeconds.Should().Be(expected: 5400.0);
-        message.AvailableQualities.Should().HaveCount(expected: 1);
-        message.SelectedQuality.Id.Should().Be(expected: "720p");
-        message.FirstSegmentUrl.Should().Be(expected: "/segments/0.ts");
+        message.SessionId.Should().Be("sess-abc123");
+        message.DurationSeconds.Should().Be(5400.0);
+        message.AvailableQualities.Should().HaveCount(1);
+        message.SelectedQuality.Id.Should().Be("720p");
+        message.FirstSegmentUrl.Should().Be("/segments/0.ts");
 
-        string json = JsonConvert.SerializeObject(value: message);
+        string json = JsonConvert.SerializeObject(message);
         SessionCreatedMessage? deserialized = JsonConvert.DeserializeObject<SessionCreatedMessage>(
-            value: json
+            json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.SessionId.Should().Be(expected: "sess-abc123");
-        deserialized.DurationSeconds.Should().Be(expected: 5400.0);
-        deserialized.AvailableQualities.Should().HaveCount(expected: 1);
-        deserialized.SelectedQuality.Id.Should().Be(expected: "720p");
-        deserialized.FirstSegmentUrl.Should().Be(expected: "/segments/0.ts");
+        deserialized!.SessionId.Should().Be("sess-abc123");
+        deserialized.DurationSeconds.Should().Be(5400.0);
+        deserialized.AvailableQualities.Should().HaveCount(1);
+        deserialized.SelectedQuality.Id.Should().Be("720p");
+        deserialized.FirstSegmentUrl.Should().Be("/segments/0.ts");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -140,30 +140,30 @@ public class ProtocolMessageTests
     public void SegmentReadyMessage_Constructs_AndJsonRoundTrips()
     {
         SegmentReadyMessage message = new(
-            Index: 3,
-            StartTimeSeconds: 18.0,
-            DurationSeconds: 6.0,
-            RelativeUrl: "/segments/3.ts",
-            SizeBytes: 204800L
+            3,
+            18.0,
+            6.0,
+            "/segments/3.ts",
+            204800L
         );
 
-        message.Index.Should().Be(expected: 3);
-        message.StartTimeSeconds.Should().Be(expected: 18.0);
-        message.DurationSeconds.Should().Be(expected: 6.0);
-        message.RelativeUrl.Should().Be(expected: "/segments/3.ts");
-        message.SizeBytes.Should().Be(expected: 204800L);
+        message.Index.Should().Be(3);
+        message.StartTimeSeconds.Should().Be(18.0);
+        message.DurationSeconds.Should().Be(6.0);
+        message.RelativeUrl.Should().Be("/segments/3.ts");
+        message.SizeBytes.Should().Be(204800L);
 
-        string json = JsonConvert.SerializeObject(value: message);
+        string json = JsonConvert.SerializeObject(message);
         SegmentReadyMessage? deserialized = JsonConvert.DeserializeObject<SegmentReadyMessage>(
-            value: json
+            json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.Index.Should().Be(expected: 3);
-        deserialized.StartTimeSeconds.Should().Be(expected: 18.0);
-        deserialized.DurationSeconds.Should().Be(expected: 6.0);
-        deserialized.RelativeUrl.Should().Be(expected: "/segments/3.ts");
-        deserialized.SizeBytes.Should().Be(expected: 204800L);
+        deserialized!.Index.Should().Be(3);
+        deserialized.StartTimeSeconds.Should().Be(18.0);
+        deserialized.DurationSeconds.Should().Be(6.0);
+        deserialized.RelativeUrl.Should().Be("/segments/3.ts");
+        deserialized.SizeBytes.Should().Be(204800L);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -173,19 +173,19 @@ public class ProtocolMessageTests
     [Fact]
     public void SeekCompletedMessage_Constructs_AndJsonRoundTrips()
     {
-        SeekCompletedMessage message = new(NewPositionSeconds: 120.5, FirstSegmentIndex: 20);
+        SeekCompletedMessage message = new(120.5, 20);
 
-        message.NewPositionSeconds.Should().Be(expected: 120.5);
-        message.FirstSegmentIndex.Should().Be(expected: 20);
+        message.NewPositionSeconds.Should().Be(120.5);
+        message.FirstSegmentIndex.Should().Be(20);
 
-        string json = JsonConvert.SerializeObject(value: message);
+        string json = JsonConvert.SerializeObject(message);
         SeekCompletedMessage? deserialized = JsonConvert.DeserializeObject<SeekCompletedMessage>(
-            value: json
+            json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.NewPositionSeconds.Should().Be(expected: 120.5);
-        deserialized.FirstSegmentIndex.Should().Be(expected: 20);
+        deserialized!.NewPositionSeconds.Should().Be(120.5);
+        deserialized.FirstSegmentIndex.Should().Be(20);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -193,10 +193,10 @@ public class ProtocolMessageTests
     // ──────────────────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: QualityChangeReason.UserRequested)]
-    [InlineData(data: QualityChangeReason.AutoAdaptive)]
-    [InlineData(data: QualityChangeReason.HardwareLimited)]
-    [InlineData(data: QualityChangeReason.GpuFallbackToCpu)]
+    [InlineData(QualityChangeReason.UserRequested)]
+    [InlineData(QualityChangeReason.AutoAdaptive)]
+    [InlineData(QualityChangeReason.HardwareLimited)]
+    [InlineData(QualityChangeReason.GpuFallbackToCpu)]
     public void QualityChangeReason_AllValues_Exist(QualityChangeReason reason)
     {
         reason.Should().BeDefined();
@@ -206,34 +206,34 @@ public class ProtocolMessageTests
     public void QualityChangedMessage_Constructs_AndJsonRoundTrips()
     {
         LiveQuality newQuality = new(
-            Id: "480p",
-            Label: "480p",
-            Width: 854,
-            Height: 480,
-            Codec: VideoCodecType.H265,
-            BitrateKbps: 1200,
-            Encoder: "libx265",
-            IsHardwareAccelerated: false,
-            ExpectedSpeed: 3.1,
-            CanRealtime: true
+            "480p",
+            "480p",
+            854,
+            480,
+            VideoCodecType.H265,
+            1200,
+            "libx265",
+            false,
+            3.1,
+            true
         );
 
         QualityChangedMessage message = new(
-            NewQuality: newQuality,
-            Reason: QualityChangeReason.AutoAdaptive
+            newQuality,
+            QualityChangeReason.AutoAdaptive
         );
 
-        message.NewQuality.Id.Should().Be(expected: "480p");
-        message.Reason.Should().Be(expected: QualityChangeReason.AutoAdaptive);
+        message.NewQuality.Id.Should().Be("480p");
+        message.Reason.Should().Be(QualityChangeReason.AutoAdaptive);
 
-        string json = JsonConvert.SerializeObject(value: message);
+        string json = JsonConvert.SerializeObject(message);
         QualityChangedMessage? deserialized = JsonConvert.DeserializeObject<QualityChangedMessage>(
-            value: json
+            json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.NewQuality.Id.Should().Be(expected: "480p");
-        deserialized.Reason.Should().Be(expected: QualityChangeReason.AutoAdaptive);
+        deserialized!.NewQuality.Id.Should().Be("480p");
+        deserialized.Reason.Should().Be(QualityChangeReason.AutoAdaptive);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -244,24 +244,24 @@ public class ProtocolMessageTests
     public void TranscodeStateMessage_Constructs_AndJsonRoundTrips()
     {
         TranscodeStateMessage message = new(
-            Speed: 1.4,
-            BufferAheadSeconds: 30.0,
-            State: LiveSessionState.Transcoding
+            1.4,
+            30.0,
+            LiveSessionState.Transcoding
         );
 
-        message.Speed.Should().Be(expected: 1.4);
-        message.BufferAheadSeconds.Should().Be(expected: 30.0);
-        message.State.Should().Be(expected: LiveSessionState.Transcoding);
+        message.Speed.Should().Be(1.4);
+        message.BufferAheadSeconds.Should().Be(30.0);
+        message.State.Should().Be(LiveSessionState.Transcoding);
 
-        string json = JsonConvert.SerializeObject(value: message);
+        string json = JsonConvert.SerializeObject(message);
         TranscodeStateMessage? deserialized = JsonConvert.DeserializeObject<TranscodeStateMessage>(
-            value: json
+            json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.Speed.Should().Be(expected: 1.4);
-        deserialized.BufferAheadSeconds.Should().Be(expected: 30.0);
-        deserialized.State.Should().Be(expected: LiveSessionState.Transcoding);
+        deserialized!.Speed.Should().Be(1.4);
+        deserialized.BufferAheadSeconds.Should().Be(30.0);
+        deserialized.State.Should().Be(LiveSessionState.Transcoding);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -272,23 +272,23 @@ public class ProtocolMessageTests
     public void TranscodeErrorMessage_Constructs_AndJsonRoundTrips()
     {
         TranscodeErrorMessage message = new(
-            Kind: EncodingErrorKind.HardwareFailure,
-            Message: "NVENC session failed",
-            Recoverable: true
+            EncodingErrorKind.HardwareFailure,
+            "NVENC session failed",
+            true
         );
 
-        message.Kind.Should().Be(expected: EncodingErrorKind.HardwareFailure);
-        message.Message.Should().Be(expected: "NVENC session failed");
+        message.Kind.Should().Be(EncodingErrorKind.HardwareFailure);
+        message.Message.Should().Be("NVENC session failed");
         message.Recoverable.Should().BeTrue();
 
-        string json = JsonConvert.SerializeObject(value: message);
+        string json = JsonConvert.SerializeObject(message);
         TranscodeErrorMessage? deserialized = JsonConvert.DeserializeObject<TranscodeErrorMessage>(
-            value: json
+            json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.Kind.Should().Be(expected: EncodingErrorKind.HardwareFailure);
-        deserialized.Message.Should().Be(expected: "NVENC session failed");
+        deserialized!.Kind.Should().Be(EncodingErrorKind.HardwareFailure);
+        deserialized.Message.Should().Be("NVENC session failed");
         deserialized.Recoverable.Should().BeTrue();
     }
 
@@ -297,10 +297,10 @@ public class ProtocolMessageTests
     // ──────────────────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: SessionEndReason.ClientDisconnected)]
-    [InlineData(data: SessionEndReason.Completed)]
-    [InlineData(data: SessionEndReason.Error)]
-    [InlineData(data: SessionEndReason.ServerShutdown)]
+    [InlineData(SessionEndReason.ClientDisconnected)]
+    [InlineData(SessionEndReason.Completed)]
+    [InlineData(SessionEndReason.Error)]
+    [InlineData(SessionEndReason.ServerShutdown)]
     public void SessionEndReason_AllValues_Exist(SessionEndReason reason)
     {
         reason.Should().BeDefined();
@@ -309,17 +309,17 @@ public class ProtocolMessageTests
     [Fact]
     public void SessionEndedMessage_Constructs_AndJsonRoundTrips()
     {
-        SessionEndedMessage message = new(Reason: SessionEndReason.Completed);
+        SessionEndedMessage message = new(SessionEndReason.Completed);
 
-        message.Reason.Should().Be(expected: SessionEndReason.Completed);
+        message.Reason.Should().Be(SessionEndReason.Completed);
 
-        string json = JsonConvert.SerializeObject(value: message);
+        string json = JsonConvert.SerializeObject(message);
         SessionEndedMessage? deserialized = JsonConvert.DeserializeObject<SessionEndedMessage>(
-            value: json
+            json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.Reason.Should().Be(expected: SessionEndReason.Completed);
+        deserialized!.Reason.Should().Be(SessionEndReason.Completed);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -329,43 +329,43 @@ public class ProtocolMessageTests
     [Fact]
     public void RequestSeekMessage_Constructs_AndJsonRoundTrips()
     {
-        RequestSeekMessage message = new(PositionSeconds: 247.5);
+        RequestSeekMessage message = new(247.5);
 
-        message.PositionSeconds.Should().Be(expected: 247.5);
+        message.PositionSeconds.Should().Be(247.5);
 
-        string json = JsonConvert.SerializeObject(value: message);
-        RequestSeekMessage? deserialized = JsonConvert.DeserializeObject<RequestSeekMessage>(value: json);
+        string json = JsonConvert.SerializeObject(message);
+        RequestSeekMessage? deserialized = JsonConvert.DeserializeObject<RequestSeekMessage>(json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.PositionSeconds.Should().Be(expected: 247.5);
+        deserialized!.PositionSeconds.Should().Be(247.5);
     }
 
     [Fact]
     public void RequestQualityMessage_WithId_JsonRoundTrips()
     {
-        RequestQualityMessage message = new(QualityId: "1080p");
+        RequestQualityMessage message = new("1080p");
 
-        message.QualityId.Should().Be(expected: "1080p");
+        message.QualityId.Should().Be("1080p");
 
-        string json = JsonConvert.SerializeObject(value: message);
+        string json = JsonConvert.SerializeObject(message);
         RequestQualityMessage? deserialized = JsonConvert.DeserializeObject<RequestQualityMessage>(
-            value: json
+            json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.QualityId.Should().Be(expected: "1080p");
+        deserialized!.QualityId.Should().Be("1080p");
     }
 
     [Fact]
     public void RequestQualityMessage_WithNull_JsonRoundTrips()
     {
-        RequestQualityMessage message = new(QualityId: null);
+        RequestQualityMessage message = new(null);
 
         message.QualityId.Should().BeNull();
 
-        string json = JsonConvert.SerializeObject(value: message);
+        string json = JsonConvert.SerializeObject(message);
         RequestQualityMessage? deserialized = JsonConvert.DeserializeObject<RequestQualityMessage>(
-            value: json
+            json
         );
 
         deserialized.Should().NotBeNull();
@@ -375,16 +375,16 @@ public class ProtocolMessageTests
     [Fact]
     public void ReportPositionMessage_Constructs_AndJsonRoundTrips()
     {
-        ReportPositionMessage message = new(CurrentTimeSeconds: 83.25);
+        ReportPositionMessage message = new(83.25);
 
-        message.CurrentTimeSeconds.Should().Be(expected: 83.25);
+        message.CurrentTimeSeconds.Should().Be(83.25);
 
-        string json = JsonConvert.SerializeObject(value: message);
+        string json = JsonConvert.SerializeObject(message);
         ReportPositionMessage? deserialized = JsonConvert.DeserializeObject<ReportPositionMessage>(
-            value: json
+            json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.CurrentTimeSeconds.Should().Be(expected: 83.25);
+        deserialized!.CurrentTimeSeconds.Should().Be(83.25);
     }
 }

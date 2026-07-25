@@ -22,7 +22,7 @@ namespace NoMercy.Tests.Providers.FanArt.Client;
 /// when the key IS empty and skipped it when populated — inverted logic.
 /// The fix: `if (!string.IsNullOrEmpty(ApiInfo.FanArtClientKey))`
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class FanArtBaseClientTests : IDisposable
 {
     private readonly string _originalClientKey;
@@ -40,13 +40,13 @@ public class FanArtBaseClientTests : IDisposable
     private static HttpClient GetHttpClient(FanArtBaseClient client)
     {
         FieldInfo? field = typeof(ExternalApiClient).GetField(
-            name: "Client",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "Client",
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(@object: field);
-        HttpClient httpClient = (HttpClient)field.GetValue(obj: client)!;
-        Assert.NotNull(@object: httpClient);
+        Assert.NotNull(field);
+        HttpClient httpClient = (HttpClient)field.GetValue(client)!;
+        Assert.NotNull(httpClient);
         return httpClient;
     }
 
@@ -57,23 +57,23 @@ public class FanArtBaseClientTests : IDisposable
 
         using FanArtBaseClient client = (FanArtBaseClient)
             Activator.CreateInstance(
-                type: typeof(FanArtBaseClient),
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
-                binder: null,
-                args: Array.Empty<object>(),
-                culture: null
+                typeof(FanArtBaseClient),
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                Array.Empty<object>(),
+                null
             )!;
 
-        HttpClient httpClient = GetHttpClient(client: client);
-        bool hasHeader = httpClient.DefaultRequestHeaders.Contains(name: "client-key");
+        HttpClient httpClient = GetHttpClient(client);
+        bool hasHeader = httpClient.DefaultRequestHeaders.Contains("client-key");
 
         Assert.True(
-            condition: hasHeader,
-            userMessage: "PROV-CRIT-04 regression: client-key header should be present when FanArtClientKey is populated"
+            hasHeader,
+            "PROV-CRIT-04 regression: client-key header should be present when FanArtClientKey is populated"
         );
 
-        IEnumerable<string> values = httpClient.DefaultRequestHeaders.GetValues(name: "client-key");
-        Assert.Equal(expected: "test-client-key-123", actual: values.First());
+        IEnumerable<string> values = httpClient.DefaultRequestHeaders.GetValues("client-key");
+        Assert.Equal("test-client-key-123", values.First());
     }
 
     [Fact]
@@ -83,19 +83,19 @@ public class FanArtBaseClientTests : IDisposable
 
         using FanArtBaseClient client = (FanArtBaseClient)
             Activator.CreateInstance(
-                type: typeof(FanArtBaseClient),
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
-                binder: null,
-                args: Array.Empty<object>(),
-                culture: null
+                typeof(FanArtBaseClient),
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                Array.Empty<object>(),
+                null
             )!;
 
-        HttpClient httpClient = GetHttpClient(client: client);
-        bool hasHeader = httpClient.DefaultRequestHeaders.Contains(name: "client-key");
+        HttpClient httpClient = GetHttpClient(client);
+        bool hasHeader = httpClient.DefaultRequestHeaders.Contains("client-key");
 
         Assert.False(
-            condition: hasHeader,
-            userMessage: "PROV-CRIT-04 regression: client-key header should NOT be present when FanArtClientKey is empty"
+            hasHeader,
+            "PROV-CRIT-04 regression: client-key header should NOT be present when FanArtClientKey is empty"
         );
     }
 
@@ -106,19 +106,19 @@ public class FanArtBaseClientTests : IDisposable
 
         using FanArtBaseClient client = (FanArtBaseClient)
             Activator.CreateInstance(
-                type: typeof(FanArtBaseClient),
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
-                binder: null,
-                args: Array.Empty<object>(),
-                culture: null
+                typeof(FanArtBaseClient),
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                Array.Empty<object>(),
+                null
             )!;
 
-        HttpClient httpClient = GetHttpClient(client: client);
-        bool hasHeader = httpClient.DefaultRequestHeaders.Contains(name: "client-key");
+        HttpClient httpClient = GetHttpClient(client);
+        bool hasHeader = httpClient.DefaultRequestHeaders.Contains("client-key");
 
         Assert.False(
-            condition: hasHeader,
-            userMessage: "PROV-CRIT-04 regression: client-key header should NOT be present when FanArtClientKey is null"
+            hasHeader,
+            "PROV-CRIT-04 regression: client-key header should NOT be present when FanArtClientKey is null"
         );
     }
 
@@ -130,23 +130,23 @@ public class FanArtBaseClientTests : IDisposable
 
         using FanArtBaseClient client = (FanArtBaseClient)
             Activator.CreateInstance(
-                type: typeof(FanArtBaseClient),
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
-                binder: null,
-                args: new object[] { testId },
-                culture: null
+                typeof(FanArtBaseClient),
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                new object[] { testId },
+                null
             )!;
 
-        HttpClient httpClient = GetHttpClient(client: client);
-        bool hasHeader = httpClient.DefaultRequestHeaders.Contains(name: "client-key");
+        HttpClient httpClient = GetHttpClient(client);
+        bool hasHeader = httpClient.DefaultRequestHeaders.Contains("client-key");
 
         Assert.True(
-            condition: hasHeader,
-            userMessage: "PROV-CRIT-04 regression: client-key header should be present when FanArtClientKey is populated (Guid constructor)"
+            hasHeader,
+            "PROV-CRIT-04 regression: client-key header should be present when FanArtClientKey is populated (Guid constructor)"
         );
 
-        IEnumerable<string> values = httpClient.DefaultRequestHeaders.GetValues(name: "client-key");
-        Assert.Equal(expected: "test-client-key-456", actual: values.First());
+        IEnumerable<string> values = httpClient.DefaultRequestHeaders.GetValues("client-key");
+        Assert.Equal("test-client-key-456", values.First());
     }
 
     [Fact]
@@ -157,19 +157,19 @@ public class FanArtBaseClientTests : IDisposable
 
         using FanArtBaseClient client = (FanArtBaseClient)
             Activator.CreateInstance(
-                type: typeof(FanArtBaseClient),
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
-                binder: null,
-                args: new object[] { testId },
-                culture: null
+                typeof(FanArtBaseClient),
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                new object[] { testId },
+                null
             )!;
 
-        HttpClient httpClient = GetHttpClient(client: client);
-        bool hasHeader = httpClient.DefaultRequestHeaders.Contains(name: "client-key");
+        HttpClient httpClient = GetHttpClient(client);
+        bool hasHeader = httpClient.DefaultRequestHeaders.Contains("client-key");
 
         Assert.False(
-            condition: hasHeader,
-            userMessage: "PROV-CRIT-04 regression: client-key header should NOT be present when FanArtClientKey is empty (Guid constructor)"
+            hasHeader,
+            "PROV-CRIT-04 regression: client-key header should NOT be present when FanArtClientKey is empty (Guid constructor)"
         );
     }
 
@@ -181,21 +181,21 @@ public class FanArtBaseClientTests : IDisposable
 
         using FanArtBaseClient client = (FanArtBaseClient)
             Activator.CreateInstance(
-                type: typeof(FanArtBaseClient),
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
-                binder: null,
-                args: new object[] { testId },
-                culture: null
+                typeof(FanArtBaseClient),
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                new object[] { testId },
+                null
             )!;
 
         PropertyInfo? idProp = typeof(FanArtBaseClient).GetProperty(
-            name: "Id",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "Id",
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(@object: idProp);
-        Guid actualId = (Guid)idProp.GetValue(obj: client)!;
-        Assert.Equal(expected: testId, actual: actualId);
+        Assert.NotNull(idProp);
+        Guid actualId = (Guid)idProp.GetValue(client)!;
+        Assert.Equal(testId, actualId);
     }
 
     [Fact]
@@ -205,16 +205,16 @@ public class FanArtBaseClientTests : IDisposable
 
         using FanArtBaseClient client = (FanArtBaseClient)
             Activator.CreateInstance(
-                type: typeof(FanArtBaseClient),
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
-                binder: null,
-                args: Array.Empty<object>(),
-                culture: null
+                typeof(FanArtBaseClient),
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                Array.Empty<object>(),
+                null
             )!;
 
-        HttpClient httpClient = GetHttpClient(client: client);
-        bool hasApiKey = httpClient.DefaultRequestHeaders.Contains(name: "api-key");
+        HttpClient httpClient = GetHttpClient(client);
+        bool hasApiKey = httpClient.DefaultRequestHeaders.Contains("api-key");
 
-        Assert.True(condition: hasApiKey, userMessage: "api-key header should always be present regardless of client key");
+        Assert.True(hasApiKey, "api-key header should always be present regardless of client key");
     }
 }

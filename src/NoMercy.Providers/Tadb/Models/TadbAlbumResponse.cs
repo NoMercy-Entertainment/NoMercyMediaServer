@@ -15,6 +15,6 @@ namespace NoMercy.Providers.Tadb.Models;
 
 public class TadbAlbumResponse
 {
-    [JsonProperty(propertyName: "album")]
+    [JsonProperty("album")]
     public TadbAlbum[] Albums { get; set; } = [];
 }

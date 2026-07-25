@@ -15,15 +15,15 @@ namespace NoMercy.Providers.TMDB.Models.Networks;
 
 public class TmdbNetwork
 {
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "logo_path")]
+    [JsonProperty("logo_path")]
     public string LogoPath { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "origin_country")]
+    [JsonProperty("origin_country")]
     public string OriginCountry { get; set; } = string.Empty;
 }

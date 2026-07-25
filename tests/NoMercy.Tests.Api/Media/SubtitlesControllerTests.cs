@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Api.Media;
 /// the raw XML-RPC <see cref="IOpenSubtitlesProvider"/> is mocked, so these tests prove the
 /// controller + adapter wiring, not a stand-in for it.
 /// </summary>
-[Trait(name: "Category", value: "MediaSubtitles")]
+[Trait("Category", "MediaSubtitles")]
 public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -46,12 +46,12 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
     private HttpClient BuildClient(Mock<IOpenSubtitlesProvider> providerMock)
     {
         return _factory
-            .WithWebHostBuilder(configuration: builder =>
+            .WithWebHostBuilder(builder =>
             {
-                builder.ConfigureTestServices(servicesConfiguration: services =>
+                builder.ConfigureTestServices(services =>
                 {
                     services.RemoveAll<IOpenSubtitlesProvider>();
-                    services.AddSingleton(implementationInstance: providerMock.Object);
+                    services.AddSingleton(providerMock.Object);
                 });
             })
             .CreateClient()
@@ -61,7 +61,7 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
     private static Mock<IOpenSubtitlesProvider> MakeProviderMock()
     {
         Mock<IOpenSubtitlesProvider> provider = new();
-        provider.Setup(expression: p => p.IsRateLimited).Returns(value: false);
+        provider.Setup(p => p.IsRateLimited).Returns(false);
         return provider;
     }
 
@@ -75,10 +75,10 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
         HttpClient client = _factory.CreateClient().AsUnauthenticated();
 
         HttpResponseMessage response = await client.GetAsync(
-            requestUri: $"/api/v1/subtitles/search?type=movie&id={SeededMovieId}"
+            $"/api/v1/subtitles/search?type=movie&id={SeededMovieId}"
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     // =========================================================================
@@ -90,71 +90,70 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<IOpenSubtitlesProvider> providerMock = MakeProviderMock();
         providerMock
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    priority: true
+                    true
                 )
             )
-            .ReturnsAsync(value:
-            [
+            .ReturnsAsync([
                 new(
-                    Language: "eng",
-                    SubRating: "9.0",
-                    SubDownloadsCnt: "4321",
-                    SubFromTrusted: "1",
-                    MovieFPS: "23.976",
-                    SubDownloadLink: "https://dl.example.com/spirited-away.srt",
-                    SubFormat: "srt",
-                    MatchedBy: "tag",
-                    SubFileName: "Spirited.Away.2001.1080p.srt",
-                    MovieReleaseName: "Spirited.Away.2001.1080p.BluRay",
-                    SubHearingImpaired: "0",
-                    UserNickName: "SubUploader"
+                    "eng",
+                    "9.0",
+                    "4321",
+                    "1",
+                    "23.976",
+                    "https://dl.example.com/spirited-away.srt",
+                    "srt",
+                    "tag",
+                    "Spirited.Away.2001.1080p.srt",
+                    "Spirited.Away.2001.1080p.BluRay",
+                    "0",
+                    "SubUploader"
                 ),
             ]);
 
-        HttpClient client = BuildClient(providerMock: providerMock);
+        HttpClient client = BuildClient(providerMock);
 
         HttpResponseMessage response = await client.GetAsync(
-            requestUri: $"/api/v1/subtitles/search?type=movie&id={SeededMovieId}&language=eng"
+            $"/api/v1/subtitles/search?type=movie&id={SeededMovieId}&language=eng"
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
-        data.GetArrayLength().Should().Be(expected: 1);
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
+        data.GetArrayLength().Should().Be(1);
 
-        JsonElement first = data[index: 0];
-        first.GetProperty(propertyName: "language").GetString().Should().Be(expected: "eng");
+        JsonElement first = data[0];
+        first.GetProperty("language").GetString().Should().Be("eng");
         first
-            .GetProperty(propertyName: "download_url")
+            .GetProperty("download_url")
             .GetString()
             .Should()
-            .Be(expected: "https://dl.example.com/spirited-away.srt");
-        first.GetProperty(propertyName: "id").GetString().Should().Be(expected: "https://dl.example.com/spirited-away.srt");
-        first.GetProperty(propertyName: "downloads").GetInt32().Should().Be(expected: 4321);
-        first.GetProperty(propertyName: "rating").GetDouble().Should().BeApproximately(expectedValue: 9.0, precision: 0.001);
-        first.GetProperty(propertyName: "format").GetString().Should().Be(expected: "srt");
-        first.GetProperty(propertyName: "trusted").GetBoolean().Should().BeTrue();
-        first.GetProperty(propertyName: "hearing_impaired").GetBoolean().Should().BeFalse();
+            .Be("https://dl.example.com/spirited-away.srt");
+        first.GetProperty("id").GetString().Should().Be("https://dl.example.com/spirited-away.srt");
+        first.GetProperty("downloads").GetInt32().Should().Be(4321);
+        first.GetProperty("rating").GetDouble().Should().BeApproximately(9.0, 0.001);
+        first.GetProperty("format").GetString().Should().Be("srt");
+        first.GetProperty("trusted").GetBoolean().Should().BeTrue();
+        first.GetProperty("hearing_impaired").GetBoolean().Should().BeFalse();
         first
-            .GetProperty(propertyName: "release_name")
+            .GetProperty("release_name")
             .GetString()
             .Should()
-            .Be(expected: "Spirited.Away.2001.1080p.BluRay");
-        first.GetProperty(propertyName: "uploader").GetString().Should().Be(expected: "SubUploader");
+            .Be("Spirited.Away.2001.1080p.BluRay");
+        first.GetProperty("uploader").GetString().Should().Be("SubUploader");
 
         // Hash search must have been skipped — the seeded VideoFile path is not on disk.
         // Matched on any priority, not just the priority lane: the assertion is that
         // no hash search happened at all, so a call on the background lane must fail
         // this too.
         providerMock.Verify(
-            expression: p =>
+            p =>
                 p.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
@@ -162,7 +161,7 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<CancellationToken>(),
                     It.IsAny<bool>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -175,18 +174,18 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<IOpenSubtitlesProvider> providerMock = MakeProviderMock();
         providerMock
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    priority: true
+                    true
                 )
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
 
         providerMock
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchByTitleAsync(
                     It.IsAny<string>(),
                     It.IsAny<int?>(),
@@ -194,46 +193,45 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    priority: true
+                    true
                 )
             )
-            .ReturnsAsync(value:
-            [
+            .ReturnsAsync([
                 new(
-                    Language: "eng",
-                    SubRating: "7.5",
-                    SubDownloadsCnt: "10",
-                    SubFromTrusted: "0",
-                    MovieFPS: null,
-                    SubDownloadLink: "https://dl.example.com/breaking-bad-s01e01.srt",
-                    SubFormat: "srt",
-                    MatchedBy: "title"
+                    "eng",
+                    "7.5",
+                    "10",
+                    "0",
+                    null,
+                    "https://dl.example.com/breaking-bad-s01e01.srt",
+                    "srt",
+                    "title"
                 ),
             ]);
 
-        HttpClient client = BuildClient(providerMock: providerMock);
+        HttpClient client = BuildClient(providerMock);
 
         HttpResponseMessage response = await client.GetAsync(
-            requestUri: $"/api/v1/subtitles/search?type=tv&id={SeededTvShowId}&language=eng"
+            $"/api/v1/subtitles/search?type=tv&id={SeededTvShowId}&language=eng"
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
-        data.GetArrayLength().Should().Be(expected: 1);
-        data[index: 0]
-            .GetProperty(propertyName: "download_url")
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
+        data.GetArrayLength().Should().Be(1);
+        data[0]
+            .GetProperty("download_url")
             .GetString()
             .Should()
-            .Be(expected: "https://dl.example.com/breaking-bad-s01e01.srt");
+            .Be("https://dl.example.com/breaking-bad-s01e01.srt");
 
         // Title search must have been reached with the resolved season/episode —
         // proving the hash-unavailable -> empty-filename -> title chain completed
         // without throwing.
         providerMock.Verify(
-            expression: p =>
+            p =>
                 p.SearchByTitleAsync(
                     It.IsAny<string>(),
                     1,
@@ -241,9 +239,9 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    priority: true
+                    true
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -256,22 +254,22 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<IOpenSubtitlesProvider> providerMock = new();
         bool rateLimited = false;
-        providerMock.Setup(expression: p => p.IsRateLimited).Returns(valueFunction: () => rateLimited);
+        providerMock.Setup(p => p.IsRateLimited).Returns(() => rateLimited);
 
         providerMock
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    priority: true
+                    true
                 )
             )
-            .Callback(action: () => rateLimited = true)
-            .ThrowsAsync(exception: new OpenSubtitlesRateLimitException());
+            .Callback(() => rateLimited = true)
+            .ThrowsAsync(new OpenSubtitlesRateLimitException());
 
         providerMock
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchByTitleAsync(
                     It.IsAny<string>(),
                     It.IsAny<int?>(),
@@ -279,20 +277,20 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    priority: true
+                    true
                 )
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
 
-        HttpClient client = BuildClient(providerMock: providerMock);
+        HttpClient client = BuildClient(providerMock);
 
         HttpResponseMessage response = await client.GetAsync(
-            requestUri: $"/api/v1/subtitles/search?type=movie&id={SeededMovieId}&language=eng"
+            $"/api/v1/subtitles/search?type=movie&id={SeededMovieId}&language=eng"
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(expected: HttpStatusCode.TooManyRequests, because: body);
-        response.StatusCode.Should().NotBe(unexpected: HttpStatusCode.InternalServerError);
+        response.StatusCode.Should().Be(HttpStatusCode.TooManyRequests, body);
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError);
     }
 
     // =========================================================================
@@ -303,12 +301,12 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task Search_InvalidType_ReturnsBadRequest()
     {
         Mock<IOpenSubtitlesProvider> providerMock = MakeProviderMock();
-        HttpClient client = BuildClient(providerMock: providerMock);
+        HttpClient client = BuildClient(providerMock);
 
         HttpResponseMessage response = await client.GetAsync(
-            requestUri: $"/api/v1/subtitles/search?type=album&id={SeededMovieId}"
+            $"/api/v1/subtitles/search?type=album&id={SeededMovieId}"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

@@ -30,7 +30,7 @@ public static class EncoderArgumentResolver
         if (encoder.Presets.Length == 0)
             return null; // Encoder has no preset concept (e.g. VAAPI)
 
-        if (profilePreset is not null && encoder.Presets.Contains(value: profilePreset))
+        if (profilePreset is not null && encoder.Presets.Contains(profilePreset))
             return profilePreset;
 
         // Default to middle preset (balanced speed/quality)
@@ -78,9 +78,9 @@ public static class EncoderArgumentResolver
         // 10-bit target is whatever THIS encoder advertises (libx264 -> "high10",
         // libx265 -> "main10"), never a fixed name — H.264 has no "main10". A
         // request that is already 10-bit-capable is left untouched.
-        if (finalBitDepth >= 10 && IsH26xProfileVocabulary(encoder: encoder) && Is8BitOnlyTier(profileValue: profileValue))
+        if (finalBitDepth >= 10 && IsH26xProfileVocabulary(encoder) && Is8BitOnlyTier(profileValue))
         {
-            string? tenBit = encoder.Profiles.FirstOrDefault(predicate: IsTenBitProfile);
+            string? tenBit = encoder.Profiles.FirstOrDefault(IsTenBitProfile);
             if (tenBit is not null)
                 return tenBit;
         }
@@ -88,9 +88,9 @@ public static class EncoderArgumentResolver
         string? effectiveProfile = profileValue;
 
         if (effectiveProfile is null)
-            return TenBitAwareFallback(encoder: encoder, finalBitDepth: finalBitDepth);
+            return TenBitAwareFallback(encoder, finalBitDepth);
 
-        if (encoder.Profiles.Contains(value: effectiveProfile))
+        if (encoder.Profiles.Contains(effectiveProfile))
             return effectiveProfile;
 
         // The H.264-tier aliases (baseline/main/high -> numeric idc) only make
@@ -99,20 +99,20 @@ public static class EncoderArgumentResolver
         // but mean chroma/bit-depth, NOT an H.264 tier — cross-mapping "main" to
         // VP9 "1" (4:2:2) would be wrong. Only alias-map for H26x-vocabulary
         // encoders; everything else falls back to the safe first profile.
-        if (IsH26xProfileVocabulary(encoder: encoder))
+        if (IsH26xProfileVocabulary(encoder))
         {
-            string[] aliases = ProfileAliases(profileValue: effectiveProfile);
+            string[] aliases = ProfileAliases(effectiveProfile);
             foreach (string alias in aliases)
             {
-                string? match = encoder.Profiles.FirstOrDefault(predicate: p =>
-                    string.Equals(a: p, b: alias, comparisonType: StringComparison.OrdinalIgnoreCase)
+                string? match = encoder.Profiles.FirstOrDefault(p =>
+                    string.Equals(p, alias, StringComparison.OrdinalIgnoreCase)
                 );
                 if (match is not null)
                     return match;
             }
         }
 
-        return TenBitAwareFallback(encoder: encoder, finalBitDepth: finalBitDepth);
+        return TenBitAwareFallback(encoder, finalBitDepth);
     }
 
     /// <summary>
@@ -121,7 +121,7 @@ public static class EncoderArgumentResolver
     /// form so a 10-bit output never gets an 8-bit-only profile string.
     /// </summary>
     public static string? ResolveProfile(string? profileValue, EncoderInfo encoder) =>
-        ResolveProfile(profileValue: profileValue, encoder: encoder, finalBitDepth: 8);
+        ResolveProfile(profileValue, encoder, 8);
 
     /// <summary>
     /// True when the requested profile names an 8-bit-only H.264/HEVC tier that
@@ -146,7 +146,7 @@ public static class EncoderArgumentResolver
     {
         if (finalBitDepth >= 10)
         {
-            string? tenBit = encoder.Profiles.FirstOrDefault(predicate: IsTenBitProfile);
+            string? tenBit = encoder.Profiles.FirstOrDefault(IsTenBitProfile);
             if (tenBit is not null)
                 return tenBit;
         }
@@ -162,7 +162,7 @@ public static class EncoderArgumentResolver
     private static bool IsTenBitProfile(string profile)
     {
         string p = profile.ToLowerInvariant();
-        return p.Contains(value: "10") || p.Contains(value: "12");
+        return p.Contains("10") || p.Contains("12");
     }
 
     /// <summary>
@@ -175,14 +175,14 @@ public static class EncoderArgumentResolver
     private static bool IsH26xProfileVocabulary(EncoderInfo encoder)
     {
         string name = encoder.FfmpegName.ToLowerInvariant();
-        if (name.Contains(value: "vp9") || name.Contains(value: "vpx") || name.Contains(value: "av1"))
+        if (name.Contains("vp9") || name.Contains("vpx") || name.Contains("av1"))
             return false;
-        return name.Contains(value: "264")
-            || name.Contains(value: "h264")
-            || name.Contains(value: "hevc")
-            || name.Contains(value: "265")
-            || name.Contains(value: "x264")
-            || name.Contains(value: "x265");
+        return name.Contains("264")
+            || name.Contains("h264")
+            || name.Contains("hevc")
+            || name.Contains("265")
+            || name.Contains("x264")
+            || name.Contains("x265");
     }
 
     /// <summary>
@@ -225,7 +225,7 @@ public static class EncoderArgumentResolver
         if (resolved.FfmpegEncoderName == "copy")
             return 0;
 
-        bool supportsCrf = resolved.EncoderInfo.SupportedRateControl.Contains(value: RateControlMode.Crf);
+        bool supportsCrf = resolved.EncoderInfo.SupportedRateControl.Contains(RateControlMode.Crf);
         if (supportsCrf)
             return profileCrf; // Software encoder — use -crf as-is
 
@@ -234,28 +234,28 @@ public static class EncoderArgumentResolver
         // Without this, a profile written in libsvtav1 terms (Crf=35 on a 0-63 scale)
         // would reach av1_amf as "-qp 35" on its 0-255 scale (near-lossless) —
         // same CRF number, wildly different output size.
-        int scaledQuality = ScaleQualityToEncoder(profileCrf: profileCrf, encoder: resolved.EncoderInfo);
+        int scaledQuality = ScaleQualityToEncoder(profileCrf, resolved.EncoderInfo);
         string qualityString = scaledQuality.ToString();
 
         switch (resolved.DefaultRateControl)
         {
             case RateControlMode.Cq:
                 // NVENC: -rc vbr -cq VALUE
-                extraFlags[key: "-rc"] = "vbr";
-                extraFlags[key: "-cq"] = qualityString;
+                extraFlags["-rc"] = "vbr";
+                extraFlags["-cq"] = qualityString;
                 break;
             case RateControlMode.Icq:
                 // Intel QSV: -global_quality VALUE
-                extraFlags[key: "-global_quality"] = qualityString;
+                extraFlags["-global_quality"] = qualityString;
                 break;
             case RateControlMode.QualityLevel:
                 // VideoToolbox: -q:v VALUE
-                extraFlags[key: "-q:v"] = qualityString;
+                extraFlags["-q:v"] = qualityString;
                 break;
             default:
                 // AMF/VAAPI: -rc cqp -qp VALUE
-                extraFlags[key: "-rc"] = "cqp";
-                extraFlags[key: "-qp"] = qualityString;
+                extraFlags["-rc"] = "cqp";
+                extraFlags["-qp"] = qualityString;
                 break;
         }
         return 0; // Don't emit -crf
@@ -276,13 +276,13 @@ public static class EncoderArgumentResolver
         // Reference ranges — the "software encoder" scale the profile was written in.
         // If the target encoder shares the same max, pass through to avoid
         // floating-point drift for the common case.
-        int referenceMax = InferReferenceMax(encoder: encoder);
+        int referenceMax = InferReferenceMax(encoder);
         if (range.Max == referenceMax)
-            return Math.Clamp(value: profileCrf, min: range.Min, max: range.Max);
+            return Math.Clamp(profileCrf, range.Min, range.Max);
 
         double ratio = (double)profileCrf / referenceMax;
-        int scaled = (int)Math.Round(a: ratio * range.Max);
-        return Math.Clamp(value: scaled, min: Math.Max(val1: 1, val2: range.Min), max: range.Max);
+        int scaled = (int)Math.Round(ratio * range.Max);
+        return Math.Clamp(scaled, Math.Max(1, range.Min), range.Max);
     }
 
     /// <summary>
@@ -296,9 +296,9 @@ public static class EncoderArgumentResolver
         // Heuristic based on encoder name — the codec family determines the
         // reference scale. Avoids taking a CodecRegistry dependency here.
         string name = encoder.FfmpegName.ToLowerInvariant();
-        if (name.Contains(value: "av1") || name.StartsWith(value: "libsvtav1") || name.StartsWith(value: "libaom"))
+        if (name.Contains("av1") || name.StartsWith("libsvtav1") || name.StartsWith("libaom"))
             return 63;
-        if (name.Contains(value: "vp9") || name.Contains(value: "libvpx"))
+        if (name.Contains("vp9") || name.Contains("libvpx"))
             return 63;
         // H264, HEVC, and anything else — 0-51 reference.
         return 51;
@@ -327,7 +327,7 @@ public static class EncoderArgumentResolver
         // nullable — means "keep source width": never rescale the width axis.
         // Only a positive width clamps against the source to prevent upscaling.
         int outputWidth = profile.Width is int w and > 0
-            ? Math.Min(val1: w, val2: effectiveSourceWidth)
+            ? Math.Min(w, effectiveSourceWidth)
             : effectiveSourceWidth;
 
         // Height <= 0 means "derive from source AR" just like null: ladder rungs
@@ -336,7 +336,7 @@ public static class EncoderArgumentResolver
         // which players skip. An explicit height is clamped to the source so a
         // profile can never request an upscale ffmpeg would happily honor.
         int outputHeight = profile.Height is int explicitHeight and > 0
-            ? Math.Min(val1: explicitHeight, val2: effectiveSourceHeight)
+            ? Math.Min(explicitHeight, effectiveSourceHeight)
             : outputWidth * effectiveSourceHeight / effectiveSourceWidth;
 
         // Encoders require even luma dimensions on the common 4:2:0 pixel

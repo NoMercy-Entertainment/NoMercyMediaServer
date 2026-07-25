@@ -24,7 +24,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// count must be adjusted before being passed in or the last page is silently
 /// dropped from every popular/discover listing.
 /// </summary>
-[Collection(name: "HttpClientProvider")]
+[Collection("HttpClientProvider")]
 public class TmdbBaseClientPaginationTests : IDisposable
 {
     private ServiceProvider? _serviceProvider;
@@ -33,12 +33,12 @@ public class TmdbBaseClientPaginationTests : IDisposable
     {
         HttpClientProvider.Reset();
         _serviceProvider?.Dispose();
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 
     private sealed class FakeItem
     {
-        [JsonProperty(propertyName: "id")]
+        [JsonProperty("id")]
         public int Id { get; set; }
     }
 
@@ -47,7 +47,7 @@ public class TmdbBaseClientPaginationTests : IDisposable
         public new Task<List<T>?> Paginated<T>(string url, int limit)
             where T : class
         {
-            return base.Paginated<T>(url: url, limit: limit);
+            return base.Paginated<T>(url, limit);
         }
     }
 
@@ -60,7 +60,7 @@ public class TmdbBaseClientPaginationTests : IDisposable
     /// </summary>
     private sealed class TotalPagesHandler(int totalPages) : HttpMessageHandler
     {
-        private readonly HttpMessageInvoker _passthrough = new(handler: new HttpClientHandler());
+        private readonly HttpMessageInvoker _passthrough = new(new HttpClientHandler());
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -69,19 +69,19 @@ public class TmdbBaseClientPaginationTests : IDisposable
         {
             if (
                 request.RequestUri is null
-                || !request.RequestUri.AbsolutePath.Contains(value: "test/paginated")
+                || !request.RequestUri.AbsolutePath.Contains("test/paginated")
             )
-                return _passthrough.SendAsync(request: request, cancellationToken: cancellationToken);
+                return _passthrough.SendAsync(request, cancellationToken);
 
-            int page = ExtractPage(uri: request.RequestUri);
+            int page = ExtractPage(request.RequestUri);
             string json = $$"""
                 {"page": {{page}}, "total_pages": {{totalPages}}, "total_results": {{totalPages}}, "results": [{"id": {{page}}}]}
                 """;
 
             return Task.FromResult(
-                result: new HttpResponseMessage(statusCode: HttpStatusCode.OK)
+                new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new StringContent(content: json, encoding: Encoding.UTF8, mediaType: "application/json"),
+                    Content = new StringContent(json, Encoding.UTF8, "application/json"),
                 }
             );
         }
@@ -91,7 +91,7 @@ public class TmdbBaseClientPaginationTests : IDisposable
             if (disposing)
                 _passthrough.Dispose();
 
-            base.Dispose(disposing: disposing);
+            base.Dispose(disposing);
         }
 
         private static int ExtractPage(Uri? uri)
@@ -101,12 +101,12 @@ public class TmdbBaseClientPaginationTests : IDisposable
 
             foreach (
                 string pair in uri
-                    .Query.TrimStart(trimChar: '?')
-                    .Split(separator: '&', options: StringSplitOptions.RemoveEmptyEntries)
+                    .Query.TrimStart('?')
+                    .Split('&', StringSplitOptions.RemoveEmptyEntries)
             )
             {
-                string[] parts = pair.Split(separator: '=', count: 2);
-                if (parts[0] == "page" && parts.Length == 2 && int.TryParse(s: parts[1], result: out int page))
+                string[] parts = pair.Split('=', 2);
+                if (parts[0] == "page" && parts.Length == 2 && int.TryParse(parts[1], out int page))
                     return page;
             }
 
@@ -121,13 +121,13 @@ public class TmdbBaseClientPaginationTests : IDisposable
         ServiceCollection services = new();
         services
             .AddHttpClient(
-                name: HttpClientNames.Tmdb,
-                configureClient: client => client.BaseAddress = new(uriString: "https://api.themoviedb.org/3/")
+                HttpClientNames.Tmdb,
+                client => client.BaseAddress = new("https://api.themoviedb.org/3/")
             )
-            .ConfigurePrimaryHttpMessageHandler(configureHandler: () => new TotalPagesHandler(totalPages: totalPages));
+            .ConfigurePrimaryHttpMessageHandler(() => new TotalPagesHandler(totalPages));
 
         _serviceProvider = services.BuildServiceProvider();
-        HttpClientProvider.Initialize(factory: _serviceProvider.GetRequiredService<IHttpClientFactory>());
+        HttpClientProvider.Initialize(_serviceProvider.GetRequiredService<IHttpClientFactory>());
 
         return new();
     }
@@ -141,22 +141,22 @@ public class TmdbBaseClientPaginationTests : IDisposable
     [Fact]
     public async Task Paginated_WhenLimitExceedsTotalPages_FetchesEveryPage()
     {
-        using TestableBaseClient client = CreateClient(totalPages: 3);
+        using TestableBaseClient client = CreateClient(3);
 
-        List<FakeItem>? results = await client.Paginated<FakeItem>(url: UniquePaginatedUrl(), limit: 10);
+        List<FakeItem>? results = await client.Paginated<FakeItem>(UniquePaginatedUrl(), 10);
 
         results.Should().NotBeNull();
-        results!.Select(selector: item => item.Id).Should().BeEquivalentTo(expectation: [1, 2, 3]);
+        results!.Select(item => item.Id).Should().BeEquivalentTo([1, 2, 3]);
     }
 
     [Fact]
     public async Task Paginated_LimitBelowTotalPages_FetchesUpToLimit()
     {
-        using TestableBaseClient client = CreateClient(totalPages: 500);
+        using TestableBaseClient client = CreateClient(500);
 
-        List<FakeItem>? results = await client.Paginated<FakeItem>(url: UniquePaginatedUrl(), limit: 4);
+        List<FakeItem>? results = await client.Paginated<FakeItem>(UniquePaginatedUrl(), 4);
 
         results.Should().NotBeNull();
-        results!.Select(selector: item => item.Id).Should().BeEquivalentTo(expectation: [1, 2, 3, 4]);
+        results!.Select(item => item.Id).Should().BeEquivalentTo([1, 2, 3, 4]);
     }
 }

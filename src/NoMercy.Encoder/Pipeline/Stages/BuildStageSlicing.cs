@@ -34,13 +34,13 @@ internal static class BuildStageSlicing
     public static OutputPlan SliceForTask(OutputPlan plan, DecomposedTask task)
     {
         if (task.Kind == EncodeTaskKind.Whole)
-            return SliceForBundle(plan: plan, task: task);
+            return SliceForBundle(plan, task);
 
         VideoOutputPlan[] videoSlice =
-            task.Kind == EncodeTaskKind.Video ? PickMany(source: plan.VideoOutputs, task: task) : [];
+            task.Kind == EncodeTaskKind.Video ? PickMany(plan.VideoOutputs, task) : [];
 
         AudioOutputPlan[] audioSlice =
-            task.Kind == EncodeTaskKind.Audio ? PickMany(source: plan.AudioOutputs, task: task) : [];
+            task.Kind == EncodeTaskKind.Audio ? PickMany(plan.AudioOutputs, task) : [];
 
         // Burn-in subtitles are rendered into the video frames by the filter
         // graph, not extracted as a standalone output. The Video task needs
@@ -51,10 +51,10 @@ internal static class BuildStageSlicing
         SubtitleOutputPlan[] subtitleSlice = task.Kind switch
         {
             EncodeTaskKind.Video => plan
-                .SubtitleOutputs.Where(predicate: s => s.Policy == SubtitlePolicy.BurnIn)
+                .SubtitleOutputs.Where(s => s.Policy == SubtitlePolicy.BurnIn)
                 .ToArray(),
-            EncodeTaskKind.Subtitle => PickMany(source: plan.SubtitleOutputs, task: task)
-                .Where(predicate: s => s.Policy != SubtitlePolicy.BurnIn)
+            EncodeTaskKind.Subtitle => PickMany(plan.SubtitleOutputs, task)
+                .Where(s => s.Policy != SubtitlePolicy.BurnIn)
                 .ToArray(),
             _ => [],
         };
@@ -85,15 +85,15 @@ internal static class BuildStageSlicing
     public static OutputPlan SliceForBundle(OutputPlan plan, DecomposedTask task)
     {
         VideoOutputPlan[] videoSlice = task.VideoSliceIndexes is { } videoIndexes
-            ? PickIndexes(source: plan.VideoOutputs, indexes: videoIndexes)
+            ? PickIndexes(plan.VideoOutputs, videoIndexes)
             : plan.VideoOutputs;
 
         AudioOutputPlan[] audioSlice = task.AudioSliceIndexes is { } audioIndexes
-            ? PickIndexes(source: plan.AudioOutputs, indexes: audioIndexes)
+            ? PickIndexes(plan.AudioOutputs, audioIndexes)
             : plan.AudioOutputs;
 
         SubtitleOutputPlan[] subtitleSlice = task.SubtitleSliceIndexes is { } subIndexes
-            ? PickIndexes(source: plan.SubtitleOutputs, indexes: subIndexes)
+            ? PickIndexes(plan.SubtitleOutputs, subIndexes)
             : plan.SubtitleOutputs;
 
         ThumbnailOutputPlan? thumbsSlice = task.IncludeThumbnails switch
@@ -118,9 +118,9 @@ internal static class BuildStageSlicing
     private static T[] PickMany<T>(T[] source, DecomposedTask task)
     {
         if (task.SourceIndexes is { Length: > 0 } indexes)
-            return PickIndexes(source: source, indexes: indexes);
+            return PickIndexes(source, indexes);
 
-        return OneOrEmpty(source: source, index: task.OutputIndex);
+        return OneOrEmpty(source, task.OutputIndex);
     }
 
     private static T[] PickIndexes<T>(T[] source, int[] indexes)
@@ -128,11 +128,11 @@ internal static class BuildStageSlicing
         if (indexes.Length == 0)
             return [];
 
-        List<T> picked = new(capacity: indexes.Length);
+        List<T> picked = new(indexes.Length);
         foreach (int index in indexes)
         {
             if (index >= 0 && index < source.Length)
-                picked.Add(item: source[index]);
+                picked.Add(source[index]);
         }
         return picked.ToArray();
     }

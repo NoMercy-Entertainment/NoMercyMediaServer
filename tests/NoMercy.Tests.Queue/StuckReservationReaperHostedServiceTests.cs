@@ -44,7 +44,7 @@ public class StuckReservationReaperHostedServiceTests
     private const string EncoderQueue = "encoder";
     private const string EncoderGpuQueue = "encoder-gpu";
 
-    private static readonly TimeSpan TestCutoff = TimeSpan.FromMinutes(minutes: 20);
+    private static readonly TimeSpan TestCutoff = TimeSpan.FromMinutes(20);
 
     private static (
         StuckReservationReaperHostedService Service,
@@ -53,13 +53,13 @@ public class StuckReservationReaperHostedServiceTests
     {
         TestQueueContextAdapter context = new();
         ServiceCollection services = new();
-        services.AddSingleton<IQueueContext>(implementationInstance: context);
+        services.AddSingleton<IQueueContext>(context);
         ServiceProvider provider = services.BuildServiceProvider();
         StuckReservationReaperHostedService service = new(
-            scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(),
-            logger: NullLogger<StuckReservationReaperHostedService>.Instance,
-            interval: TimeSpan.FromMinutes(minutes: 3),
-            cutoff: TestCutoff
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<StuckReservationReaperHostedService>.Instance,
+            TimeSpan.FromMinutes(3),
+            TestCutoff
         );
         return (service, context);
     }
@@ -79,21 +79,21 @@ public class StuckReservationReaperHostedServiceTests
                 "{\"$type\":\"NoMercy.MediaProcessing.Jobs.MediaJobs.ShowExtrasJob, NoMercy.MediaProcessing\"}",
             Priority = 1,
             Attempts = 1,
-            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(minutes: 5),
-            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(5),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
-        context.AddJob(job: stuck);
+        context.AddJob(stuck);
 
-        await service.ReapOnceAsync(cancellationToken: CancellationToken.None);
+        await service.ReapOnceAsync(CancellationToken.None);
 
-        QueueJobModel survivor = Assert.Single(collection: context.Jobs);
-        Assert.Null(value: survivor.ReservedAt);
-        Assert.Empty(collection: context.FailedJobs);
+        QueueJobModel survivor = Assert.Single(context.Jobs);
+        Assert.Null(survivor.ReservedAt);
+        Assert.Empty(context.FailedJobs);
     }
 
     [Theory]
-    [InlineData(data: LibraryQueue)]
-    [InlineData(data: ImportQueue)]
+    [InlineData(LibraryQueue)]
+    [InlineData(ImportQueue)]
     public async Task ReapOnceAsync_LibraryOrImportJobReservedLongerThanCutoff_NotReclaimed(
         string queue
     )
@@ -109,17 +109,17 @@ public class StuckReservationReaperHostedServiceTests
             Payload = "{\"Id\":\"job-1\"}",
             Priority = 1,
             Attempts = 1,
-            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(minutes: 30),
-            AvailableAt = DateTime.UtcNow.AddHours(value: -2),
+            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(30),
+            AvailableAt = DateTime.UtcNow.AddHours(-2),
         };
-        context.AddJob(job: longRunningScan);
+        context.AddJob(longRunningScan);
 
-        await service.ReapOnceAsync(cancellationToken: CancellationToken.None);
+        await service.ReapOnceAsync(CancellationToken.None);
 
-        QueueJobModel survivor = Assert.Single(collection: context.Jobs);
-        Assert.NotNull(value: survivor.ReservedAt);
-        Assert.Equal(expected: 1, actual: survivor.Attempts);
-        Assert.Empty(collection: context.FailedJobs);
+        QueueJobModel survivor = Assert.Single(context.Jobs);
+        Assert.NotNull(survivor.ReservedAt);
+        Assert.Equal(1, survivor.Attempts);
+        Assert.Empty(context.FailedJobs);
     }
 
     [Fact]
@@ -136,17 +136,17 @@ public class StuckReservationReaperHostedServiceTests
             Attempts = 1,
             // Reserved far longer than the allow-listed cutoff — a genuine
             // multi-hour encode, not a hang. Must survive the periodic pass.
-            ReservedAt = DateTime.UtcNow.AddHours(value: -6),
-            AvailableAt = DateTime.UtcNow.AddHours(value: -7),
+            ReservedAt = DateTime.UtcNow.AddHours(-6),
+            AvailableAt = DateTime.UtcNow.AddHours(-7),
         };
-        context.AddJob(job: longRunningEncode);
+        context.AddJob(longRunningEncode);
 
-        await service.ReapOnceAsync(cancellationToken: CancellationToken.None);
+        await service.ReapOnceAsync(CancellationToken.None);
 
-        QueueJobModel survivor = Assert.Single(collection: context.Jobs);
-        Assert.NotNull(value: survivor.ReservedAt);
-        Assert.Equal(expected: 1, actual: survivor.Attempts);
-        Assert.Empty(collection: context.FailedJobs);
+        QueueJobModel survivor = Assert.Single(context.Jobs);
+        Assert.NotNull(survivor.ReservedAt);
+        Assert.Equal(1, survivor.Attempts);
+        Assert.Empty(context.FailedJobs);
     }
 
     [Fact]
@@ -161,15 +161,15 @@ public class StuckReservationReaperHostedServiceTests
             Payload = "{\"OutputDirectory\":\"/media/output\"}",
             Priority = 5,
             Attempts = 2,
-            ReservedAt = DateTime.UtcNow.AddHours(value: -3),
-            AvailableAt = DateTime.UtcNow.AddHours(value: -4),
+            ReservedAt = DateTime.UtcNow.AddHours(-3),
+            AvailableAt = DateTime.UtcNow.AddHours(-4),
         };
-        context.AddJob(job: longRunningEncode);
+        context.AddJob(longRunningEncode);
 
-        await service.ReapOnceAsync(cancellationToken: CancellationToken.None);
+        await service.ReapOnceAsync(CancellationToken.None);
 
-        Assert.Single(collection: context.Jobs);
-        Assert.Empty(collection: context.FailedJobs);
+        Assert.Single(context.Jobs);
+        Assert.Empty(context.FailedJobs);
     }
 
     // ── Attempt-budget convergence (no refund on the periodic path) ────────
@@ -188,37 +188,37 @@ public class StuckReservationReaperHostedServiceTests
             Payload = "{\"Id\":\"job-hangs\"}",
             Priority = 1,
             Attempts = 1,
-            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(minutes: 1),
-            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(1),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
-        context.AddJob(job: stuck);
+        context.AddJob(stuck);
 
         // First reclaim: requeued WITHOUT a refund (Attempts stays 1) —
         // otherwise this job would sit at Attempts=1 forever and never cross
         // the dead-letter threshold.
-        await service.ReapOnceAsync(cancellationToken: CancellationToken.None);
-        QueueJobModel afterFirstReclaim = Assert.Single(collection: context.Jobs);
-        Assert.Null(value: afterFirstReclaim.ReservedAt);
-        Assert.Equal(expected: 1, actual: afterFirstReclaim.Attempts);
-        Assert.Empty(collection: context.FailedJobs);
+        await service.ReapOnceAsync(CancellationToken.None);
+        QueueJobModel afterFirstReclaim = Assert.Single(context.Jobs);
+        Assert.Null(afterFirstReclaim.ReservedAt);
+        Assert.Equal(1, afterFirstReclaim.Attempts);
+        Assert.Empty(context.FailedJobs);
 
         // The job gets picked up again (ReserveJob's normal increment) and
         // hangs a second time.
         afterFirstReclaim.Attempts++;
-        afterFirstReclaim.ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(minutes: 1);
+        afterFirstReclaim.ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(1);
 
         // Second reclaim: Attempts is now 2 (> 1) — dead-letters instead of
         // requeuing again, so the job cannot loop forever.
-        await service.ReapOnceAsync(cancellationToken: CancellationToken.None);
+        await service.ReapOnceAsync(CancellationToken.None);
 
-        Assert.Empty(collection: context.Jobs);
-        FailedJobModel failed = Assert.Single(collection: context.FailedJobs);
-        Assert.Equal(expected: ExtrasQueue, actual: failed.Queue);
-        Assert.Contains(expectedSubstring: "reclaimed_stuck_repeatedly", actualString: failed.Exception);
+        Assert.Empty(context.Jobs);
+        FailedJobModel failed = Assert.Single(context.FailedJobs);
+        Assert.Equal(ExtrasQueue, failed.Queue);
+        Assert.Contains("reclaimed_stuck_repeatedly", failed.Exception);
 
         // A third pass must not re-fail or duplicate — the job is gone.
-        await service.ReapOnceAsync(cancellationToken: CancellationToken.None);
-        Assert.Single(collection: context.FailedJobs);
+        await service.ReapOnceAsync(CancellationToken.None);
+        Assert.Single(context.FailedJobs);
     }
 
     [Fact]
@@ -236,16 +236,16 @@ public class StuckReservationReaperHostedServiceTests
             Payload = "{\"Id\":\"job-2\"}",
             Priority = 1,
             Attempts = 2,
-            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(minutes: 1),
-            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(1),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
-        context.AddJob(job: repeatOffender);
+        context.AddJob(repeatOffender);
 
-        await service.ReapOnceAsync(cancellationToken: CancellationToken.None);
+        await service.ReapOnceAsync(CancellationToken.None);
 
-        Assert.Empty(collection: context.Jobs);
-        FailedJobModel failed = Assert.Single(collection: context.FailedJobs);
-        Assert.Contains(expectedSubstring: "reclaimed_stuck_repeatedly", actualString: failed.Exception);
+        Assert.Empty(context.Jobs);
+        FailedJobModel failed = Assert.Single(context.FailedJobs);
+        Assert.Contains("reclaimed_stuck_repeatedly", failed.Exception);
     }
 
     [Fact]
@@ -260,16 +260,16 @@ public class StuckReservationReaperHostedServiceTests
             Payload = "{\"Id\":\"job-3\"}",
             Priority = 1,
             Attempts = 1,
-            ReservedAt = DateTime.UtcNow.AddMinutes(value: -2),
-            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            ReservedAt = DateTime.UtcNow.AddMinutes(-2),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
-        context.AddJob(job: active);
+        context.AddJob(active);
 
-        await service.ReapOnceAsync(cancellationToken: CancellationToken.None);
+        await service.ReapOnceAsync(CancellationToken.None);
 
-        QueueJobModel survivor = Assert.Single(collection: context.Jobs);
-        Assert.NotNull(value: survivor.ReservedAt);
-        Assert.Empty(collection: context.FailedJobs);
+        QueueJobModel survivor = Assert.Single(context.Jobs);
+        Assert.NotNull(survivor.ReservedAt);
+        Assert.Empty(context.FailedJobs);
     }
 
     // ── ExecuteAsync: the periodic timer actually fires the reap pass ──────
@@ -287,13 +287,13 @@ public class StuckReservationReaperHostedServiceTests
     {
         TestQueueContextAdapter context = new();
         ServiceCollection services = new();
-        services.AddSingleton<IQueueContext>(implementationInstance: context);
+        services.AddSingleton<IQueueContext>(context);
         ServiceProvider provider = services.BuildServiceProvider();
         StuckReservationReaperHostedService service = new(
-            scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(),
-            logger: NullLogger<StuckReservationReaperHostedService>.Instance,
-            interval: TimeSpan.FromMilliseconds(milliseconds: 30),
-            cutoff: TestCutoff
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<StuckReservationReaperHostedService>.Instance,
+            TimeSpan.FromMilliseconds(30),
+            TestCutoff
         );
 
         QueueJobModel stuck = new()
@@ -302,26 +302,26 @@ public class StuckReservationReaperHostedServiceTests
             Payload = "{\"Id\":\"periodic-tick\"}",
             Priority = 1,
             Attempts = 1,
-            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(minutes: 5),
-            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(5),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
-        context.AddJob(job: stuck);
+        context.AddJob(stuck);
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
-        Task executeTask = service.StartAsync(cancellationToken: cts.Token);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        Task executeTask = service.StartAsync(cts.Token);
 
-        using CancellationTokenSource waitCts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        using CancellationTokenSource waitCts = new(TimeSpan.FromSeconds(5));
         while (!waitCts.IsCancellationRequested)
         {
-            if (context.Jobs.Any(predicate: j => j.Payload == stuck.Payload && j.ReservedAt == null))
+            if (context.Jobs.Any(j => j.Payload == stuck.Payload && j.ReservedAt == null))
                 break;
-            await Task.Delay(millisecondsDelay: 10);
+            await Task.Delay(10);
         }
 
-        QueueJobModel survivor = Assert.Single(collection: context.Jobs);
-        Assert.Null(value: survivor.ReservedAt);
+        QueueJobModel survivor = Assert.Single(context.Jobs);
+        Assert.Null(survivor.ReservedAt);
 
-        await service.StopAsync(cancellationToken: cts.Token);
+        await service.StopAsync(cts.Token);
         cts.Cancel();
     }
 
@@ -338,13 +338,13 @@ public class StuckReservationReaperHostedServiceTests
             Priority = 1,
             Attempts = 0,
             ReservedAt = null,
-            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
-        context.AddJob(job: pending);
+        context.AddJob(pending);
 
-        await service.ReapOnceAsync(cancellationToken: CancellationToken.None);
+        await service.ReapOnceAsync(CancellationToken.None);
 
-        Assert.Single(collection: context.Jobs);
-        Assert.Empty(collection: context.FailedJobs);
+        Assert.Single(context.Jobs);
+        Assert.Empty(context.FailedJobs);
     }
 }

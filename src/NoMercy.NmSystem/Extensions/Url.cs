@@ -17,7 +17,7 @@ public static partial class Url
 {
     public static Uri ToHttps(this Uri url)
     {
-        UriBuilder uriBuilder = new(uri: url)
+        UriBuilder uriBuilder = new(url)
         {
             Scheme = Uri.UriSchemeHttps,
             Port = -1, // default port for scheme
@@ -28,12 +28,12 @@ public static partial class Url
 
     public static string FileName(this Uri url)
     {
-        return Path.GetFileName(path: url.LocalPath);
+        return Path.GetFileName(url.LocalPath);
     }
 
     public static string BasePath(this Uri url)
     {
-        return url.ToString().Replace(oldValue: "/" + url.FileName(), newValue: "");
+        return url.ToString().Replace("/" + url.FileName(), "");
     }
 
     public static bool HasSuccessStatus(this Uri url, string? contentType = null)
@@ -42,14 +42,14 @@ public static partial class Url
         {
             HttpClient httpClient = new();
             httpClient.DefaultRequestHeaders.Add(
-                name: "User-Agent",
-                value: "NoMercy wMediaServer/0.1.0 ( admin@nomercy.tv )"
+                "User-Agent",
+                "NoMercy wMediaServer/0.1.0 ( admin@nomercy.tv )"
             );
 
             if (contentType is not null)
-                httpClient.DefaultRequestHeaders.Add(name: "Accept", value: contentType);
+                httpClient.DefaultRequestHeaders.Add("Accept", contentType);
 
-            using HttpResponseMessage res = httpClient.SendAsync(request: new(method: HttpMethod.Head, requestUri: url)).Result;
+            using HttpResponseMessage res = httpClient.SendAsync(new(HttpMethod.Head, url)).Result;
             return res.IsSuccessStatusCode;
         }
         catch (Exception)
@@ -60,14 +60,14 @@ public static partial class Url
 
     public static string SafeHost(this string url)
     {
-        url = ReplaceIpV4().Replace(input: url, replacement: "-");
-        url = ReplaceIpV6().Replace(input: url, replacement: "-");
+        url = ReplaceIpV4().Replace(url, "-");
+        url = ReplaceIpV6().Replace(url, "-");
         return url;
     }
 
-    [GeneratedRegex(pattern: ":")]
+    [GeneratedRegex(":")]
     private static partial Regex ReplaceIpV6();
 
-    [GeneratedRegex(pattern: "\\.")]
+    [GeneratedRegex("\\.")]
     private static partial Regex ReplaceIpV4();
 }

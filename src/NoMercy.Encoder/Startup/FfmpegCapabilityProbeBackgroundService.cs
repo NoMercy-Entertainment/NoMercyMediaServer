@@ -23,7 +23,7 @@ namespace NoMercy.Encoder.Startup;
 /// </summary>
 public sealed class FfmpegCapabilityProbeBackgroundService : BackgroundService
 {
-    internal static readonly TimeSpan DefaultInitialGrace = TimeSpan.FromSeconds(seconds: 5);
+    internal static readonly TimeSpan DefaultInitialGrace = TimeSpan.FromSeconds(5);
 
     private readonly IFfmpegCapabilityProbe _probe;
     private readonly IHostApplicationLifetime _lifetime;
@@ -37,7 +37,7 @@ public sealed class FfmpegCapabilityProbeBackgroundService : BackgroundService
         ILogger<FfmpegCapabilityProbeBackgroundService> logger,
         IServerPhaseTracker phaseTracker
     )
-        : this(probe: probe, lifetime: lifetime, logger: logger, phaseTracker: phaseTracker, initialGrace: DefaultInitialGrace) { }
+        : this(probe, lifetime, logger, phaseTracker, DefaultInitialGrace) { }
 
     internal FfmpegCapabilityProbeBackgroundService(
         IFfmpegCapabilityProbe probe,
@@ -56,14 +56,14 @@ public sealed class FfmpegCapabilityProbeBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await WaitForApplicationStartedAsync(ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+        await WaitForApplicationStartedAsync(stoppingToken).ConfigureAwait(false);
         if (stoppingToken.IsCancellationRequested)
             return;
 
         try
         {
-            await _phaseTracker.WhenReachedAsync(stage: BootStage.All, ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
-            await Task.Delay(delay: _initialGrace, cancellationToken: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+            await _phaseTracker.WhenReachedAsync(BootStage.All, stoppingToken).ConfigureAwait(false);
+            await Task.Delay(_initialGrace, stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -72,17 +72,17 @@ public sealed class FfmpegCapabilityProbeBackgroundService : BackgroundService
 
         try
         {
-            await _probe.ProbeAsync(ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+            await _probe.ProbeAsync(stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation(message: "FFmpeg capability probe cancelled during shutdown");
+            _logger.LogInformation("FFmpeg capability probe cancelled during shutdown");
         }
         catch (Exception ex)
         {
             _logger.LogError(
-                exception: ex,
-                message: "FFmpeg capability probe failed — capabilities endpoint will return probe_pending"
+                ex,
+                "FFmpeg capability probe failed — capabilities endpoint will return probe_pending"
             );
         }
     }
@@ -92,10 +92,10 @@ public sealed class FfmpegCapabilityProbeBackgroundService : BackgroundService
         if (_lifetime.ApplicationStarted.IsCancellationRequested)
             return;
 
-        TaskCompletionSource tcs = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using CancellationTokenRegistration startedReg =
-            _lifetime.ApplicationStarted.Register(callback: () => tcs.TrySetResult());
-        await using CancellationTokenRegistration cancelReg = ct.Register(callback: () => tcs.TrySetResult());
-        await tcs.Task.ConfigureAwait(continueOnCapturedContext: false);
+            _lifetime.ApplicationStarted.Register(() => tcs.TrySetResult());
+        await using CancellationTokenRegistration cancelReg = ct.Register(() => tcs.TrySetResult());
+        await tcs.Task.ConfigureAwait(false);
     }
 }

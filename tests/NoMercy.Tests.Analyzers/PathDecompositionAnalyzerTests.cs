@@ -88,10 +88,10 @@ public sealed class PathDecompositionAnalyzerTests
     // -------------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: "GetDirectoryName")]
-    [InlineData(data: "GetFileName")]
-    [InlineData(data: "GetFileNameWithoutExtension")]
-    [InlineData(data: "GetFullPath")]
+    [InlineData("GetDirectoryName")]
+    [InlineData("GetFileName")]
+    [InlineData("GetFileNameWithoutExtension")]
+    [InlineData("GetFullPath")]
     public async Task NMS002_Fires_ForEachFlaggedMethod_WhenFileHasStorageUsing(string methodName)
     {
         string source = $$"""
@@ -111,13 +111,13 @@ public sealed class PathDecompositionAnalyzerTests
 
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
         test.ExpectedDiagnostics.Add(
-            item: new DiagnosticResult(id: PathDecompositionAnalyzer.DiagnosticId, severity: DiagnosticSeverity.Warning)
-                .WithLocation(markupKey: 0)
-                .WithArguments(arguments: methodName)
+            new DiagnosticResult(PathDecompositionAnalyzer.DiagnosticId, DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments(methodName)
         );
 
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -145,13 +145,13 @@ public sealed class PathDecompositionAnalyzerTests
 
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
         test.ExpectedDiagnostics.Add(
-            item: new DiagnosticResult(id: PathDecompositionAnalyzer.DiagnosticId, severity: DiagnosticSeverity.Warning)
-                .WithLocation(markupKey: 0)
-                .WithArguments(arguments: "GetFileName")
+            new DiagnosticResult(PathDecompositionAnalyzer.DiagnosticId, DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("GetFileName")
         );
 
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -180,8 +180,8 @@ public sealed class PathDecompositionAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -253,8 +253,8 @@ public sealed class PathDecompositionAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(file: ("LocalStorageDriver.cs", driver));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("LocalStorageDriver.cs", driver));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -284,8 +284,8 @@ public sealed class PathDecompositionAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -319,8 +319,8 @@ public sealed class PathDecompositionAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -351,13 +351,13 @@ public sealed class PathDecompositionAnalyzerTests
 
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
         test.ExpectedDiagnostics.Add(
-            item: new DiagnosticResult(id: PathDecompositionAnalyzer.DiagnosticId, severity: DiagnosticSeverity.Warning)
-                .WithLocation(markupKey: 0)
-                .WithArguments(arguments: "GetFileName")
+            new DiagnosticResult(PathDecompositionAnalyzer.DiagnosticId, DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("GetFileName")
         );
 
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -390,8 +390,8 @@ public sealed class PathDecompositionAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -423,8 +423,8 @@ public sealed class PathDecompositionAnalyzerTests
         // Deliberately erroneous: "UndefinedHelper" does not exist. This exercises the
         // analyzer's symbol-resolution fallback (Symbol null, CandidateSymbols empty).
         test.CompilerDiagnostics = CompilerDiagnostics.None;
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -462,8 +462,8 @@ public sealed class PathDecompositionAnalyzerTests
         // Deliberately erroneous: "Other.GetFileName" is private and inaccessible from
         // "SomeService" (CS0122).
         test.CompilerDiagnostics = CompilerDiagnostics.None;
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -488,13 +488,13 @@ public sealed class PathDecompositionAnalyzerTests
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
         test.TestState.OutputKind = OutputKind.ConsoleApplication;
         test.ExpectedDiagnostics.Add(
-            item: new DiagnosticResult(id: PathDecompositionAnalyzer.DiagnosticId, severity: DiagnosticSeverity.Warning)
-                .WithLocation(markupKey: 0)
-                .WithArguments(arguments: "GetFileName")
+            new DiagnosticResult(PathDecompositionAnalyzer.DiagnosticId, DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("GetFileName")
         );
 
-        test.TestState.Sources.Add(file: ("Program.cs", source));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("Program.cs", source));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -525,13 +525,13 @@ public sealed class PathDecompositionAnalyzerTests
 
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
         test.ExpectedDiagnostics.Add(
-            item: new DiagnosticResult(id: PathDecompositionAnalyzer.DiagnosticId, severity: DiagnosticSeverity.Warning)
-                .WithLocation(markupKey: 0)
-                .WithArguments(arguments: "GetFileName")
+            new DiagnosticResult(PathDecompositionAnalyzer.DiagnosticId, DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("GetFileName")
         );
 
-        test.TestState.Sources.Add(file: ("LegacyPathReader.cs", source));
-        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(("LegacyPathReader.cs", source));
+        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -568,8 +568,8 @@ public sealed class PathDecompositionAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("Marker.cs", marker));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("Marker.cs", marker));
 
         await test.RunAsync();
     }
@@ -606,8 +606,8 @@ public sealed class PathDecompositionAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathDecompositionAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("Marker.cs", marker));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("Marker.cs", marker));
 
         await test.RunAsync();
     }
@@ -659,8 +659,8 @@ public sealed class PathDecompositionAnalyzerTests
         // neither using directive matches the using-directive check either, so the
         // outcome is deterministic regardless of tie-break order between candidates.
         test.CompilerDiagnostics = CompilerDiagnostics.None;
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
-        test.TestState.Sources.Add(file: ("Markers.cs", markers));
+        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(("Markers.cs", markers));
 
         await test.RunAsync();
     }
@@ -692,7 +692,7 @@ public sealed class PathDecompositionAnalyzerTests
         // Deliberately erroneous: "IStorage" does not exist anywhere in this compilation
         // (CS0246).
         test.CompilerDiagnostics = CompilerDiagnostics.None;
-        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(("Consumer.cs", source));
 
         await test.RunAsync();
     }

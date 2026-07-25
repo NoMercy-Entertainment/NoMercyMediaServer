@@ -15,18 +15,18 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbSharedTranslation
 {
-    [JsonProperty(propertyName: "iso_3166_1")]
+    [JsonProperty("iso_3166_1")]
     public string Iso31661 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "iso_639_1")]
+    [JsonProperty("iso_639_1")]
     public string Iso6391 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "english_name")]
+    [JsonProperty("english_name")]
     public string EnglishName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public TmdbSharedTranslationData Data { get; set; } = new();
 }

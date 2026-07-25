@@ -15,78 +15,78 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonCredit
 {
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty(propertyName: "backdrop_path")]
+    [JsonProperty("backdrop_path")]
     public string BackdropPath { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "character")]
+    [JsonProperty("character")]
     public string? Character { get; set; }
 
-    [JsonProperty(propertyName: "credit_id")]
+    [JsonProperty("credit_id")]
     public string CreditId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "department")]
+    [JsonProperty("department")]
     public string Department { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "episode_count")]
+    [JsonProperty("episode_count")]
     public int EpisodeCount { get; set; }
 
-    [JsonProperty(propertyName: "first_air_date")]
+    [JsonProperty("first_air_date")]
     public DateTime? FirstAirDate { get; set; }
 
-    [JsonProperty(propertyName: "genre_ids")]
+    [JsonProperty("genre_ids")]
     public int[] GenreIds { get; set; } = [];
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "job")]
+    [JsonProperty("job")]
     public string? Job { get; set; }
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string MediaType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
-    [JsonProperty(propertyName: "order")]
+    [JsonProperty("order")]
     public int Order { get; set; }
 
-    [JsonProperty(propertyName: "origin_country")]
+    [JsonProperty("origin_country")]
     public string[] OriginCountry { get; set; } = [];
 
-    [JsonProperty(propertyName: "original_language")]
+    [JsonProperty("original_language")]
     public string OriginalLanguage { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "original_name")]
+    [JsonProperty("original_name")]
     public string OriginalName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "original_title")]
+    [JsonProperty("original_title")]
     public string OriginalTitle { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string Overview { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "popularity")]
+    [JsonProperty("popularity")]
     public double Popularity { get; set; }
 
-    [JsonProperty(propertyName: "poster_path")]
+    [JsonProperty("poster_path")]
     public string PosterPath { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "release_date")]
+    [JsonProperty("release_date")]
     public DateTime? ReleaseDate { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "video")]
+    [JsonProperty("video")]
     public bool Video { get; set; }
 
-    [JsonProperty(propertyName: "vote_average")]
+    [JsonProperty("vote_average")]
     public double VoteAverage { get; set; }
 
-    [JsonProperty(propertyName: "vote_count")]
+    [JsonProperty("vote_count")]
     public int VoteCount { get; set; }
 }

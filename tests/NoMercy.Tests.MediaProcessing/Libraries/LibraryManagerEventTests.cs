@@ -36,22 +36,22 @@ public class LibraryManagerEventTests : IDisposable
     public LibraryManagerEventTests()
     {
         string dbName = Guid.NewGuid().ToString();
-        _connection = new(connectionString: $"DataSource={dbName};Mode=Memory;Cache=Shared");
+        _connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         _connection.Open();
         _connection.CreateFunction(
-            name: "normalize_search",
-            function: (string? input) => input?.NormalizeSearch() ?? string.Empty
+            "normalize_search",
+            (string? input) => input?.NormalizeSearch() ?? string.Empty
         );
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection: _connection,
-                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
+                _connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(interceptors: new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
 
-        _context = new(options: options);
+        _context = new(options);
         _context.Database.EnsureCreated();
     }
 
@@ -68,38 +68,38 @@ public class LibraryManagerEventTests : IDisposable
         List<IEvent> received = [];
 
         bus.Subscribe<LibraryScanStartedEvent>(
-            handler: (e, _) =>
+            (e, _) =>
             {
-                received.Add(item: e);
+                received.Add(e);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<LibraryScanCompletedEvent>(
-            handler: (e, _) =>
+            (e, _) =>
             {
-                received.Add(item: e);
+                received.Add(e);
                 return Task.CompletedTask;
             }
         );
 
         IStorageDriver driver = new LocalStorageDriver();
-        StorageFactory storageFactory = new(driver: driver, logger: NullLogger<StorageFactory>.Instance);
-        LibraryRepository repo = new(context: _context, storageDriver: driver);
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
         LibraryManager manager = new(
-            libraryRepository: repo,
-            jobDispatcher: dispatcher,
-            mediaContext: _context,
-            storageDriver: driver,
-            storageFactory: storageFactory,
-            mediaAnalyzer: MediaAnalyzer,
-            logger: NullLogger<LibraryManager>.Instance,
-            eventBus: bus
+            repo,
+            dispatcher,
+            _context,
+            driver,
+            storageFactory,
+            MediaAnalyzer,
+            NullLogger<LibraryManager>.Instance,
+            bus
         );
 
-        await manager.ProcessLibrary(id: Ulid.NewUlid());
+        await manager.ProcessLibrary(Ulid.NewUlid());
 
-        Assert.Empty(collection: received);
+        Assert.Empty(received);
     }
 
     [Fact]
@@ -109,23 +109,23 @@ public class LibraryManagerEventTests : IDisposable
         List<IEvent> received = [];
 
         bus.Subscribe<LibraryScanStartedEvent>(
-            handler: (e, _) =>
+            (e, _) =>
             {
-                received.Add(item: e);
+                received.Add(e);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<LibraryScanCompletedEvent>(
-            handler: (e, _) =>
+            (e, _) =>
             {
-                received.Add(item: e);
+                received.Add(e);
                 return Task.CompletedTask;
             }
         );
 
         Ulid libraryId = Ulid.NewUlid();
         _context.Libraries.Add(
-            entity: new()
+            new()
             {
                 Id = libraryId,
                 Title = "Test Movies",
@@ -135,33 +135,33 @@ public class LibraryManagerEventTests : IDisposable
         await _context.SaveChangesAsync();
 
         IStorageDriver driver = new LocalStorageDriver();
-        StorageFactory storageFactory = new(driver: driver, logger: NullLogger<StorageFactory>.Instance);
-        LibraryRepository repo = new(context: _context, storageDriver: driver);
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
         LibraryManager manager = new(
-            libraryRepository: repo,
-            jobDispatcher: dispatcher,
-            mediaContext: _context,
-            storageDriver: driver,
-            storageFactory: storageFactory,
-            mediaAnalyzer: MediaAnalyzer,
-            logger: NullLogger<LibraryManager>.Instance,
-            eventBus: bus
+            repo,
+            dispatcher,
+            _context,
+            driver,
+            storageFactory,
+            MediaAnalyzer,
+            NullLogger<LibraryManager>.Instance,
+            bus
         );
 
-        await manager.ProcessLibrary(id: libraryId);
+        await manager.ProcessLibrary(libraryId);
 
-        Assert.Equal(expected: 2, actual: received.Count);
+        Assert.Equal(2, received.Count);
 
-        LibraryScanStartedEvent started = Assert.IsType<LibraryScanStartedEvent>(@object: received[index: 0]);
-        Assert.Equal(expected: libraryId, actual: started.LibraryId);
-        Assert.Equal(expected: "Test Movies", actual: started.LibraryName);
+        LibraryScanStartedEvent started = Assert.IsType<LibraryScanStartedEvent>(received[0]);
+        Assert.Equal(libraryId, started.LibraryId);
+        Assert.Equal("Test Movies", started.LibraryName);
 
-        LibraryScanCompletedEvent completed = Assert.IsType<LibraryScanCompletedEvent>(@object: received[index: 1]);
-        Assert.Equal(expected: libraryId, actual: completed.LibraryId);
-        Assert.Equal(expected: "Test Movies", actual: completed.LibraryName);
-        Assert.Equal(expected: 0, actual: completed.ItemsFound);
-        Assert.True(condition: completed.Duration >= TimeSpan.Zero);
+        LibraryScanCompletedEvent completed = Assert.IsType<LibraryScanCompletedEvent>(received[1]);
+        Assert.Equal(libraryId, completed.LibraryId);
+        Assert.Equal("Test Movies", completed.LibraryName);
+        Assert.Equal(0, completed.ItemsFound);
+        Assert.True(completed.Duration >= TimeSpan.Zero);
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public class LibraryManagerEventTests : IDisposable
     {
         Ulid libraryId = Ulid.NewUlid();
         _context.Libraries.Add(
-            entity: new()
+            new()
             {
                 Id = libraryId,
                 Title = "No Events Library",
@@ -179,20 +179,20 @@ public class LibraryManagerEventTests : IDisposable
         await _context.SaveChangesAsync();
 
         IStorageDriver driver = new LocalStorageDriver();
-        StorageFactory storageFactory = new(driver: driver, logger: NullLogger<StorageFactory>.Instance);
-        LibraryRepository repo = new(context: _context, storageDriver: driver);
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
         LibraryManager manager = new(
-            libraryRepository: repo,
-            jobDispatcher: dispatcher,
-            mediaContext: _context,
-            storageDriver: driver,
-            storageFactory: storageFactory,
-            mediaAnalyzer: MediaAnalyzer,
-            logger: NullLogger<LibraryManager>.Instance
+            repo,
+            dispatcher,
+            _context,
+            driver,
+            storageFactory,
+            MediaAnalyzer,
+            NullLogger<LibraryManager>.Instance
         );
 
-        await manager.ProcessLibrary(id: libraryId);
+        await manager.ProcessLibrary(libraryId);
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class LibraryManagerEventTests : IDisposable
         LibraryScanCompletedEvent? completedEvent = null;
 
         bus.Subscribe<LibraryScanCompletedEvent>(
-            handler: (e, _) =>
+            (e, _) =>
             {
                 completedEvent = e;
                 return Task.CompletedTask;
@@ -211,7 +211,7 @@ public class LibraryManagerEventTests : IDisposable
 
         Ulid libraryId = Ulid.NewUlid();
         _context.Libraries.Add(
-            entity: new()
+            new()
             {
                 Id = libraryId,
                 Title = "Duration Test",
@@ -221,25 +221,25 @@ public class LibraryManagerEventTests : IDisposable
         await _context.SaveChangesAsync();
 
         IStorageDriver driver = new LocalStorageDriver();
-        StorageFactory storageFactory = new(driver: driver, logger: NullLogger<StorageFactory>.Instance);
-        LibraryRepository repo = new(context: _context, storageDriver: driver);
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
         LibraryManager manager = new(
-            libraryRepository: repo,
-            jobDispatcher: dispatcher,
-            mediaContext: _context,
-            storageDriver: driver,
-            storageFactory: storageFactory,
-            mediaAnalyzer: MediaAnalyzer,
-            logger: NullLogger<LibraryManager>.Instance,
-            eventBus: bus
+            repo,
+            dispatcher,
+            _context,
+            driver,
+            storageFactory,
+            MediaAnalyzer,
+            NullLogger<LibraryManager>.Instance,
+            bus
         );
 
-        await manager.ProcessLibrary(id: libraryId);
+        await manager.ProcessLibrary(libraryId);
 
-        Assert.NotNull(@object: completedEvent);
-        Assert.True(condition: completedEvent.Duration >= TimeSpan.Zero);
-        Assert.True(condition: completedEvent.Duration < TimeSpan.FromSeconds(seconds: 10));
+        Assert.NotNull(completedEvent);
+        Assert.True(completedEvent.Duration >= TimeSpan.Zero);
+        Assert.True(completedEvent.Duration < TimeSpan.FromSeconds(10));
     }
 
     [Fact]
@@ -249,7 +249,7 @@ public class LibraryManagerEventTests : IDisposable
         LibraryScanStartedEvent? startedEvent = null;
 
         bus.Subscribe<LibraryScanStartedEvent>(
-            handler: (e, _) =>
+            (e, _) =>
             {
                 startedEvent = e;
                 return Task.CompletedTask;
@@ -258,7 +258,7 @@ public class LibraryManagerEventTests : IDisposable
 
         Ulid libraryId = Ulid.NewUlid();
         _context.Libraries.Add(
-            entity: new()
+            new()
             {
                 Id = libraryId,
                 Title = "Metadata Test",
@@ -268,25 +268,25 @@ public class LibraryManagerEventTests : IDisposable
         await _context.SaveChangesAsync();
 
         IStorageDriver driver = new LocalStorageDriver();
-        StorageFactory storageFactory = new(driver: driver, logger: NullLogger<StorageFactory>.Instance);
-        LibraryRepository repo = new(context: _context, storageDriver: driver);
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
         LibraryManager manager = new(
-            libraryRepository: repo,
-            jobDispatcher: dispatcher,
-            mediaContext: _context,
-            storageDriver: driver,
-            storageFactory: storageFactory,
-            mediaAnalyzer: MediaAnalyzer,
-            logger: NullLogger<LibraryManager>.Instance,
-            eventBus: bus
+            repo,
+            dispatcher,
+            _context,
+            driver,
+            storageFactory,
+            MediaAnalyzer,
+            NullLogger<LibraryManager>.Instance,
+            bus
         );
 
-        await manager.ProcessLibrary(id: libraryId);
+        await manager.ProcessLibrary(libraryId);
 
-        Assert.NotNull(@object: startedEvent);
-        Assert.NotEqual(expected: Guid.Empty, actual: startedEvent.EventId);
-        Assert.True(condition: startedEvent.Timestamp <= DateTime.UtcNow);
-        Assert.Equal(expected: "LibraryScanner", actual: startedEvent.Source);
+        Assert.NotNull(startedEvent);
+        Assert.NotEqual(Guid.Empty, startedEvent.EventId);
+        Assert.True(startedEvent.Timestamp <= DateTime.UtcNow);
+        Assert.Equal("LibraryScanner", startedEvent.Source);
     }
 }

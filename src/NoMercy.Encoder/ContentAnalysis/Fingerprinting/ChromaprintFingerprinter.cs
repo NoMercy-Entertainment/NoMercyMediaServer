@@ -51,10 +51,10 @@ public class ChromaprintFingerprinter(
     // chromaprint advances one fingerprint frame every 2048 samples at
     // 11025 Hz = ~0.18576 seconds per frame.
     private static readonly TimeSpan ChromaprintFrameDuration = TimeSpan.FromSeconds(
-        value: 2048.0 / 11025.0
+        2048.0 / 11025.0
     );
 
-    private static readonly TimeSpan MaxIdleWait = TimeSpan.FromMinutes(minutes: 5);
+    private static readonly TimeSpan MaxIdleWait = TimeSpan.FromMinutes(5);
 
     public async Task<AudioFingerprint> FingerprintAsync(
         string filePath,
@@ -62,15 +62,15 @@ public class ChromaprintFingerprinter(
         CancellationToken ct
     )
     {
-        string jobId = Guid.NewGuid().ToString(format: "N");
+        string jobId = Guid.NewGuid().ToString("N");
         IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
-        observer.Report(jobId: jobId, type: "fingerprint", percent: 0, stage: "fingerprinting");
+        observer.Report(jobId, "fingerprint", 0, "fingerprinting");
 
         // Defer to active playback (never longer than MaxIdleWait) before
         // reading from the source file — see MediaActivityMonitor.
-        await activityMonitor.WaitForIdleAsync(maxWait: MaxIdleWait, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+        await activityMonitor.WaitForIdleAsync(MaxIdleWait, ct).ConfigureAwait(false);
 
-        await using LocalPathLease inputLease = storage.AcquireLocalPath(path: filePath);
+        await using LocalPathLease inputLease = storage.AcquireLocalPath(filePath);
         List<string> args = ["-v", "error", "-nostdin"];
 
         if (window is not null)
@@ -83,22 +83,21 @@ public class ChromaprintFingerprinter(
             // negative value ffmpeg subtracts from the input duration.
             if (startSeconds < 0)
             {
-                args.Add(item: "-sseof");
-                args.Add(item: startSeconds.ToString(format: "F3", provider: CultureInfo.InvariantCulture));
+                args.Add("-sseof");
+                args.Add(startSeconds.ToString("F3", CultureInfo.InvariantCulture));
             }
             else
             {
-                args.Add(item: "-ss");
-                args.Add(item: startSeconds.ToString(format: "F3", provider: CultureInfo.InvariantCulture));
+                args.Add("-ss");
+                args.Add(startSeconds.ToString("F3", CultureInfo.InvariantCulture));
             }
 
-            args.Add(item: "-t");
-            args.Add(item: window.Duration.TotalSeconds.ToString(format: "F3", provider: CultureInfo.InvariantCulture));
+            args.Add("-t");
+            args.Add(window.Duration.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture));
         }
 
         // Drop video, downmix to mono at chromaprint's preferred sample rate.
-        args.AddRange(collection:
-        [
+        args.AddRange([
             "-i",
             inputLease.Path,
             "-vn",
@@ -116,26 +115,26 @@ public class ChromaprintFingerprinter(
         ]);
 
         ProcessResult result = await processRunner.RunAsync(
-            executable: options.FfmpegPath,
-            arguments: args.ToArray(),
-            workingDirectory: null,
-            cancellationToken: ct
+            options.FfmpegPath,
+            args.ToArray(),
+            null,
+            ct
         );
 
         if (!result.IsSuccess)
         {
             logger.LogWarning(
-                message: "chromaprint fingerprinting failed for {Path} (exit {Exit}): {Stderr}", args: [filePath, result.ExitCode, result.StdErr]
+                "chromaprint fingerprinting failed for {Path} (exit {Exit}): {Stderr}", [filePath, result.ExitCode, result.StdErr]
             );
-            observer.Report(jobId: jobId, type: "fingerprint", percent: 100, stage: "failed");
-            return Empty(window: window);
+            observer.Report(jobId, "fingerprint", 100, "failed");
+            return Empty(window);
         }
 
-        uint[] hashes = ParseRawOutput(stdout: result.StdOut);
+        uint[] hashes = ParseRawOutput(result.StdOut);
         TimeSpan startTime = window?.Start ?? TimeSpan.Zero;
 
-        observer.Report(jobId: jobId, type: "fingerprint", percent: 100, stage: "done");
-        return new(Hashes: hashes, FrameDuration: ChromaprintFrameDuration, StartTime: startTime);
+        observer.Report(jobId, "fingerprint", 100, "done");
+        return new(hashes, ChromaprintFrameDuration, startTime);
     }
 
     /// <summary>
@@ -146,11 +145,11 @@ public class ChromaprintFingerprinter(
     /// </summary>
     internal static uint[] ParseRawOutput(string stdout)
     {
-        if (string.IsNullOrWhiteSpace(value: stdout))
+        if (string.IsNullOrWhiteSpace(stdout))
             return [];
 
         // Some ffmpeg builds prefix the line with a label like "CHROMAPRINT=".
-        int eq = stdout.IndexOf(value: '=');
+        int eq = stdout.IndexOf('=');
         string payload = eq >= 0 ? stdout[(eq + 1)..] : stdout;
 
         List<uint> hashes = [];
@@ -158,21 +157,21 @@ public class ChromaprintFingerprinter(
 
         foreach (char c in payload)
         {
-            if (char.IsDigit(c: c) || c == '-')
+            if (char.IsDigit(c) || c == '-')
             {
-                token.Append(value: c);
+                token.Append(c);
                 continue;
             }
 
             if (token.Length > 0)
             {
-                AppendToken(token: token, hashes: hashes);
+                AppendToken(token, hashes);
                 token.Clear();
             }
         }
 
         if (token.Length > 0)
-            AppendToken(token: token, hashes: hashes);
+            AppendToken(token, hashes);
 
         return hashes.ToArray();
     }
@@ -180,12 +179,12 @@ public class ChromaprintFingerprinter(
     private static void AppendToken(StringBuilder token, List<uint> hashes)
     {
         string s = token.ToString();
-        if (int.TryParse(s: s, style: NumberStyles.Integer, provider: CultureInfo.InvariantCulture, result: out int signed))
+        if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int signed))
         {
-            hashes.Add(item: unchecked((uint)signed));
+            hashes.Add(unchecked((uint)signed));
         }
     }
 
     private static AudioFingerprint Empty(FingerprintWindow? window) =>
-        new(Hashes: [], FrameDuration: ChromaprintFrameDuration, StartTime: window?.Start ?? TimeSpan.Zero);
+        new([], ChromaprintFrameDuration, window?.Start ?? TimeSpan.Zero);
 }

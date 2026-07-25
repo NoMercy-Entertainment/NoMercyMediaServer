@@ -24,6 +24,6 @@ public sealed class MovieDetectorAdapter : IFilenameParseAdapter
     public MovieFile? TryParse(ParseContext context)
     {
         MovieDetector detector = new();
-        return detector.GetInfo(filePath: context.Title);
+        return detector.GetInfo(context.Title);
     }
 }

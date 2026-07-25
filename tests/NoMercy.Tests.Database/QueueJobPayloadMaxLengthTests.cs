@@ -24,125 +24,125 @@ using NoMercy.Database.Models.TvShows;
 
 namespace NoMercy.Tests.Database;
 
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class QueueJobPayloadMaxLengthTests
 {
     [Fact]
     public void QueueJob_Payload_HasMaxLengthAttribute()
     {
-        PropertyInfo? prop = typeof(QueueJob).GetProperty(name: "Payload");
-        Assert.NotNull(@object: prop);
+        PropertyInfo? prop = typeof(QueueJob).GetProperty("Payload");
+        Assert.NotNull(prop);
         MaxLengthAttribute? attr = prop.GetCustomAttribute<MaxLengthAttribute>();
-        Assert.NotNull(@object: attr);
+        Assert.NotNull(attr);
     }
 
     [Fact]
     public void QueueJob_Payload_MaxLengthIs4096()
     {
-        PropertyInfo? prop = typeof(QueueJob).GetProperty(name: "Payload");
-        Assert.NotNull(@object: prop);
+        PropertyInfo? prop = typeof(QueueJob).GetProperty("Payload");
+        Assert.NotNull(prop);
         MaxLengthAttribute? attr = prop.GetCustomAttribute<MaxLengthAttribute>();
-        Assert.NotNull(@object: attr);
-        Assert.Equal(expected: 4096, actual: attr.Length);
+        Assert.NotNull(attr);
+        Assert.Equal(4096, attr.Length);
     }
 
     [Fact]
     public void QueueJob_Payload_MaxLengthIsNotDefault256()
     {
-        PropertyInfo? prop = typeof(QueueJob).GetProperty(name: "Payload");
-        Assert.NotNull(@object: prop);
+        PropertyInfo? prop = typeof(QueueJob).GetProperty("Payload");
+        Assert.NotNull(prop);
         MaxLengthAttribute? attr = prop.GetCustomAttribute<MaxLengthAttribute>();
-        Assert.NotNull(@object: attr);
-        Assert.NotEqual(expected: 256, actual: attr.Length);
+        Assert.NotNull(attr);
+        Assert.NotEqual(256, attr.Length);
     }
 
     [Fact]
     public void QueueJob_Payload_ExceedsDefaultConvention()
     {
         MaxLengthAttribute? queueAttr = typeof(QueueJob)
-            .GetProperty(name: "Payload")!
+            .GetProperty("Payload")!
             .GetCustomAttribute<MaxLengthAttribute>();
 
-        Assert.NotNull(@object: queueAttr);
+        Assert.NotNull(queueAttr);
         Assert.True(
-            condition: queueAttr.Length > 256,
-            userMessage: $"QueueJob.Payload MaxLength ({queueAttr.Length}) must exceed the 256-char convention"
+            queueAttr.Length > 256,
+            $"QueueJob.Payload MaxLength ({queueAttr.Length}) must exceed the 256-char convention"
         );
     }
 
     [Theory]
-    [InlineData(data: [typeof(Movie), "Overview"])]
-    [InlineData(data: [typeof(Episode), "Overview"])]
-    [InlineData(data: [typeof(Tv), "Overview"])]
-    [InlineData(data: [typeof(Season), "Overview"])]
-    [InlineData(data: [typeof(Collection), "Overview"])]
-    [InlineData(data: [typeof(Similar), "Overview"])]
-    [InlineData(data: [typeof(Recommendation), "Overview"])]
-    [InlineData(data: [typeof(Special), "Overview"])]
-    [InlineData(data: [typeof(Translation), "Overview"])]
-    [InlineData(data: [typeof(Translation), "Description"])]
-    [InlineData(data: [typeof(Translation), "Biography"])]
-    [InlineData(data: [typeof(Person), "Biography"])]
-    [InlineData(data: [typeof(Network), "Description"])]
-    [InlineData(data: [typeof(Company), "Description"])]
-    [InlineData(data: [typeof(Artist), "Description"])]
-    [InlineData(data: [typeof(Album), "Description"])]
-    [InlineData(data: [typeof(ReleaseGroup), "Description"])]
-    [InlineData(data: [typeof(Playlist), "Description"])]
+    [InlineData([typeof(Movie), "Overview"])]
+    [InlineData([typeof(Episode), "Overview"])]
+    [InlineData([typeof(Tv), "Overview"])]
+    [InlineData([typeof(Season), "Overview"])]
+    [InlineData([typeof(Collection), "Overview"])]
+    [InlineData([typeof(Similar), "Overview"])]
+    [InlineData([typeof(Recommendation), "Overview"])]
+    [InlineData([typeof(Special), "Overview"])]
+    [InlineData([typeof(Translation), "Overview"])]
+    [InlineData([typeof(Translation), "Description"])]
+    [InlineData([typeof(Translation), "Biography"])]
+    [InlineData([typeof(Person), "Biography"])]
+    [InlineData([typeof(Network), "Description"])]
+    [InlineData([typeof(Company), "Description"])]
+    [InlineData([typeof(Artist), "Description"])]
+    [InlineData([typeof(Album), "Description"])]
+    [InlineData([typeof(ReleaseGroup), "Description"])]
+    [InlineData([typeof(Playlist), "Description"])]
     public void LargeTextField_HasMaxLength4096(Type modelType, string propertyName)
     {
-        PropertyInfo? prop = modelType.GetProperty(name: propertyName);
-        Assert.NotNull(@object: prop);
+        PropertyInfo? prop = modelType.GetProperty(propertyName);
+        Assert.NotNull(prop);
         MaxLengthAttribute? attr = prop.GetCustomAttribute<MaxLengthAttribute>();
-        Assert.NotNull(@object: attr);
-        Assert.Equal(expected: 4096, actual: attr.Length);
+        Assert.NotNull(attr);
+        Assert.Equal(4096, attr.Length);
     }
 
     [Fact]
     public void QueueContext_ConfiguresMaxLength256_AsConvention()
     {
         DbContextOptionsBuilder<QueueContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
-        using QueueContext context = new(options: optionsBuilder.Options);
+        optionsBuilder.UseSqlite("Data Source=:memory:");
+        using QueueContext context = new(optionsBuilder.Options);
         context.Database.EnsureCreated();
 
-        IEntityType? entityType = context.Model.FindEntityType(type: typeof(QueueJob));
-        Assert.NotNull(@object: entityType);
+        IEntityType? entityType = context.Model.FindEntityType(typeof(QueueJob));
+        Assert.NotNull(entityType);
 
-        IProperty? payloadProp = entityType.FindProperty(name: "Payload");
-        Assert.NotNull(@object: payloadProp);
-        Assert.Equal(expected: 4096, actual: payloadProp.GetMaxLength());
+        IProperty? payloadProp = entityType.FindProperty("Payload");
+        Assert.NotNull(payloadProp);
+        Assert.Equal(4096, payloadProp.GetMaxLength());
     }
 
     [Fact]
     public void QueueContext_QueueName_StillHas256MaxLength()
     {
         DbContextOptionsBuilder<QueueContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
-        using QueueContext context = new(options: optionsBuilder.Options);
+        optionsBuilder.UseSqlite("Data Source=:memory:");
+        using QueueContext context = new(optionsBuilder.Options);
         context.Database.EnsureCreated();
 
-        IEntityType? entityType = context.Model.FindEntityType(type: typeof(QueueJob));
-        Assert.NotNull(@object: entityType);
+        IEntityType? entityType = context.Model.FindEntityType(typeof(QueueJob));
+        Assert.NotNull(entityType);
 
-        IProperty? queueProp = entityType.FindProperty(name: "Queue");
-        Assert.NotNull(@object: queueProp);
-        Assert.Equal(expected: 256, actual: queueProp.GetMaxLength());
+        IProperty? queueProp = entityType.FindProperty("Queue");
+        Assert.NotNull(queueProp);
+        Assert.Equal(256, queueProp.GetMaxLength());
     }
 
     [Fact]
     public void QueueJob_Payload_CanStoreMoreThan256Characters()
     {
-        string longPayload = new(c: 'x', count: 1000);
+        string longPayload = new('x', 1000);
         QueueJob job = new() { Payload = longPayload };
-        Assert.Equal(expected: 1000, actual: job.Payload.Length);
+        Assert.Equal(1000, job.Payload.Length);
     }
 
     [Fact]
     public void QueueJob_Payload_CanStore4096Characters()
     {
-        string maxPayload = new(c: 'x', count: 4096);
+        string maxPayload = new('x', 4096);
         QueueJob job = new() { Payload = maxPayload };
-        Assert.Equal(expected: 4096, actual: job.Payload.Length);
+        Assert.Equal(4096, job.Payload.Length);
     }
 }

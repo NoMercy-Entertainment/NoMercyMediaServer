@@ -21,7 +21,7 @@ public static class ConcurrentBag
     {
         if (self is ConcurrentBag<T> concurrentBag)
             return concurrentBag;
-        return new(collection: self);
+        return new(self);
     }
 
     public static ConcurrentBag<MediaFile> FilterConcurrentBag(
@@ -29,7 +29,7 @@ public static class ConcurrentBag
         string[] filterFiles
     )
     {
-        self = self.Where(predicate: f => filterFiles.Any(predicate: s => f.Name == s || f.Path.Contains(value: s)))
+        self = self.Where(f => filterFiles.Any(s => f.Name == s || f.Path.Contains(s)))
             .ToConcurrentBag();
         return self;
     }

@@ -31,41 +31,41 @@ internal static class ReflectionHelpers
     public static object? InvokeStatic(Type type, string methodName, params object?[] args)
     {
         MethodInfo method =
-            type.GetMethod(name: methodName, bindingAttr: PrivateStatic)
-            ?? throw new MissingMethodException(className: type.FullName, methodName: methodName);
-        return method.Invoke(obj: null, parameters: args);
+            type.GetMethod(methodName, PrivateStatic)
+            ?? throw new MissingMethodException(type.FullName, methodName);
+        return method.Invoke(null, args);
     }
 
     public static object? InvokeInstance(object instance, string methodName, params object?[] args)
     {
         MethodInfo method =
-            instance.GetType().GetMethod(name: methodName, bindingAttr: PrivateInstance)
-            ?? throw new MissingMethodException(className: instance.GetType().FullName, methodName: methodName);
-        return method.Invoke(obj: instance, parameters: args);
+            instance.GetType().GetMethod(methodName, PrivateInstance)
+            ?? throw new MissingMethodException(instance.GetType().FullName, methodName);
+        return method.Invoke(instance, args);
     }
 
     public static void SetField(object instance, string fieldName, object? value)
     {
         FieldInfo field =
-            instance.GetType().GetField(name: fieldName, bindingAttr: PrivateInstance)
-            ?? throw new MissingFieldException(className: instance.GetType().FullName, fieldName: fieldName);
-        field.SetValue(obj: instance, value: value);
+            instance.GetType().GetField(fieldName, PrivateInstance)
+            ?? throw new MissingFieldException(instance.GetType().FullName, fieldName);
+        field.SetValue(instance, value);
     }
 
     public static T GetField<T>(object instance, string fieldName)
     {
         FieldInfo field =
-            instance.GetType().GetField(name: fieldName, bindingAttr: PrivateInstance)
-            ?? throw new MissingFieldException(className: instance.GetType().FullName, fieldName: fieldName);
-        return (T)field.GetValue(obj: instance)!;
+            instance.GetType().GetField(fieldName, PrivateInstance)
+            ?? throw new MissingFieldException(instance.GetType().FullName, fieldName);
+        return (T)field.GetValue(instance)!;
     }
 
     public static T GetField<T>(Type type, string fieldName)
     {
         FieldInfo field =
-            type.GetField(name: fieldName, bindingAttr: PrivateStatic)
-            ?? throw new MissingFieldException(className: type.FullName, fieldName: fieldName);
-        return (T)field.GetValue(obj: null)!;
+            type.GetField(fieldName, PrivateStatic)
+            ?? throw new MissingFieldException(type.FullName, fieldName);
+        return (T)field.GetValue(null)!;
     }
 
     /// <summary>
@@ -76,17 +76,17 @@ internal static class ReflectionHelpers
     public static object CreateNested(Type outerType, string nestedTypeName, params object?[] args)
     {
         Type nestedType =
-            outerType.GetNestedType(name: nestedTypeName, bindingAttr: BindingFlags.NonPublic)
-            ?? throw new MissingMemberException(className: outerType.FullName, memberName: nestedTypeName);
+            outerType.GetNestedType(nestedTypeName, BindingFlags.NonPublic)
+            ?? throw new MissingMemberException(outerType.FullName, nestedTypeName);
 
         ConstructorInfo constructor =
             nestedType
                 .GetConstructors(
-                    bindingAttr: BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
                 )
-                .First(predicate: c => c.GetParameters().Length == args.Length)
-            ?? throw new MissingMethodException(className: nestedType.FullName, methodName: ".ctor");
+                .First(c => c.GetParameters().Length == args.Length)
+            ?? throw new MissingMethodException(nestedType.FullName, ".ctor");
 
-        return constructor.Invoke(parameters: args);
+        return constructor.Invoke(args);
     }
 }

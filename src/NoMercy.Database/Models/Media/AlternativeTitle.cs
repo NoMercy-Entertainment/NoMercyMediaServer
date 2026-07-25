@@ -15,26 +15,26 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Media;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(Title), additionalPropertyNames: nameof(TvId), IsUnique = true)]
-[Index(propertyName: nameof(Title), additionalPropertyNames: nameof(MovieId), IsUnique = true)]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(Title), nameof(TvId), IsUnique = true)]
+[Index(nameof(Title), nameof(MovieId), IsUnique = true)]
 public class AlternativeTitle
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "iso_3166_1")]
+    [JsonProperty("iso_3166_1")]
     public string? Iso31661 { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "movie_id")]
+    [JsonProperty("movie_id")]
     public int? MovieId { get; set; }
     public Movie Movie { get; set; } = null!;
 
-    [JsonProperty(propertyName: "tv_id")]
+    [JsonProperty("tv_id")]
     public int? TvId { get; set; }
     public Tv Tv { get; set; } = null!;
 }

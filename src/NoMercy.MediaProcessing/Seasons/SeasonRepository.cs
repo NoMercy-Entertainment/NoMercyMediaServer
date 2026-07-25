@@ -21,10 +21,10 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
     public Task StoreAsync(IEnumerable<Season> seasons)
     {
         return context
-            .Seasons.UpsertRange(entities: seasons.ToArray())
-            .On(match: s => new { s.Id })
+            .Seasons.UpsertRange(seasons.ToArray())
+            .On(s => new { s.Id })
             .WhenMatched(
-                updater: (ss, si) =>
+                (ss, si) =>
                     new()
                     {
                         Id = si.Id,
@@ -45,30 +45,30 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
         // Refresh an existing season's metadata in place. TvId is intentionally
         // excluded so the foreign-key link to its show is never altered.
         return context
-            .Seasons.Where(predicate: s => s.Id == season.Id)
-            .ExecuteUpdateAsync(setPropertyCalls: setters =>
+            .Seasons.Where(s => s.Id == season.Id)
+            .ExecuteUpdateAsync(setters =>
                 setters
-                    .SetProperty(propertyExpression: s => s.Title, valueExpression: season.Title)
-                    .SetProperty(propertyExpression: s => s.AirDate, valueExpression: season.AirDate)
-                    .SetProperty(propertyExpression: s => s.EpisodeCount, valueExpression: season.EpisodeCount)
-                    .SetProperty(propertyExpression: s => s.Overview, valueExpression: season.Overview)
-                    .SetProperty(propertyExpression: s => s.Poster, valueExpression: season.Poster)
-                    .SetProperty(propertyExpression: s => s.SeasonNumber, valueExpression: season.SeasonNumber)
+                    .SetProperty(s => s.Title, season.Title)
+                    .SetProperty(s => s.AirDate, season.AirDate)
+                    .SetProperty(s => s.EpisodeCount, season.EpisodeCount)
+                    .SetProperty(s => s.Overview, season.Overview)
+                    .SetProperty(s => s.Poster, season.Poster)
+                    .SetProperty(s => s.SeasonNumber, season.SeasonNumber)
             );
     }
 
     public Task StoreTranslationsAsync(IEnumerable<Translation> translations)
     {
         return context
-            .Translations.UpsertRange(entities: translations.ToArray())
-            .On(match: t => new
+            .Translations.UpsertRange(translations.ToArray())
+            .On(t => new
             {
                 t.Iso31661,
                 t.Iso6391,
                 t.SeasonId,
             })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         Iso31661 = ti.Iso31661,
@@ -93,10 +93,10 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
     public Task StoreImagesAsync(IEnumerable<Image> images)
     {
         return context
-            .Images.UpsertRange(entities: images.ToArray())
-            .On(match: v => new { v.FilePath, v.SeasonId })
+            .Images.UpsertRange(images.ToArray())
+            .On(v => new { v.FilePath, v.SeasonId })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         AspectRatio = ti.AspectRatio,
@@ -116,12 +116,12 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
 
     public async Task<bool> RemoveSeasonAsync(int seasonId)
     {
-        Season? season = await context.Seasons.FirstOrDefaultAsync(predicate: s => s.Id == seasonId);
+        Season? season = await context.Seasons.FirstOrDefaultAsync(s => s.Id == seasonId);
 
         if (season is null)
             return false;
 
-        context.Seasons.Remove(entity: season);
+        context.Seasons.Remove(season);
         await context.SaveChangesAsync();
 
         return true;

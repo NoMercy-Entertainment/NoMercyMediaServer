@@ -18,126 +18,126 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 /// removed from the codebase. GC.Collect() causes stop-the-world pauses that freeze
 /// all threads, causing playback stuttering during library scans.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public partial class GcCollectAuditTests
 {
     [Fact]
     public void Source_NoGcCollectCalls()
     {
         string srcDir = FindSrcDirectory();
-        string[] csFiles = Directory.GetFiles(path: srcDir, searchPattern: "*.cs", searchOption: SearchOption.AllDirectories);
+        string[] csFiles = Directory.GetFiles(srcDir, "*.cs", SearchOption.AllDirectories);
 
         List<string> violations = [];
 
         foreach (string file in csFiles)
         {
-            string content = File.ReadAllText(path: file);
-            string[] lines = content.Split(separator: '\n');
+            string content = File.ReadAllText(file);
+            string[] lines = content.Split('\n');
 
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith(value: "//") || trimmed.StartsWith(value: "*"))
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
                     continue;
 
-                if (GcCollectPattern().IsMatch(input: trimmed))
+                if (GcCollectPattern().IsMatch(trimmed))
                 {
-                    string relative = Path.GetRelativePath(relativeTo: srcDir, path: file);
-                    violations.Add(item: $"{relative}:{i + 1} — {trimmed}");
+                    string relative = Path.GetRelativePath(srcDir, file);
+                    violations.Add($"{relative}:{i + 1} — {trimmed}");
                 }
             }
         }
 
-        Assert.Empty(collection: violations);
+        Assert.Empty(violations);
     }
 
     [Fact]
     public void Source_NoGcWaitForFullGCComplete()
     {
         string srcDir = FindSrcDirectory();
-        string[] csFiles = Directory.GetFiles(path: srcDir, searchPattern: "*.cs", searchOption: SearchOption.AllDirectories);
+        string[] csFiles = Directory.GetFiles(srcDir, "*.cs", SearchOption.AllDirectories);
 
         List<string> violations = [];
 
         foreach (string file in csFiles)
         {
-            string content = File.ReadAllText(path: file);
-            string[] lines = content.Split(separator: '\n');
+            string content = File.ReadAllText(file);
+            string[] lines = content.Split('\n');
 
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith(value: "//") || trimmed.StartsWith(value: "*"))
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
                     continue;
 
-                if (GcWaitForFullGcPattern().IsMatch(input: trimmed))
+                if (GcWaitForFullGcPattern().IsMatch(trimmed))
                 {
-                    string relative = Path.GetRelativePath(relativeTo: srcDir, path: file);
-                    violations.Add(item: $"{relative}:{i + 1} — {trimmed}");
+                    string relative = Path.GetRelativePath(srcDir, file);
+                    violations.Add($"{relative}:{i + 1} — {trimmed}");
                 }
             }
         }
 
-        Assert.Empty(collection: violations);
+        Assert.Empty(violations);
     }
 
     [Fact]
     public void Source_NoGcWaitForPendingFinalizers()
     {
         string srcDir = FindSrcDirectory();
-        string[] csFiles = Directory.GetFiles(path: srcDir, searchPattern: "*.cs", searchOption: SearchOption.AllDirectories);
+        string[] csFiles = Directory.GetFiles(srcDir, "*.cs", SearchOption.AllDirectories);
 
         List<string> violations = [];
 
         foreach (string file in csFiles)
         {
-            string content = File.ReadAllText(path: file);
-            string[] lines = content.Split(separator: '\n');
+            string content = File.ReadAllText(file);
+            string[] lines = content.Split('\n');
 
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith(value: "//") || trimmed.StartsWith(value: "*"))
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
                     continue;
 
-                if (GcWaitForPendingFinalizersPattern().IsMatch(input: trimmed))
+                if (GcWaitForPendingFinalizersPattern().IsMatch(trimmed))
                 {
-                    string relative = Path.GetRelativePath(relativeTo: srcDir, path: file);
-                    violations.Add(item: $"{relative}:{i + 1} — {trimmed}");
+                    string relative = Path.GetRelativePath(srcDir, file);
+                    violations.Add($"{relative}:{i + 1} — {trimmed}");
                 }
             }
         }
 
-        Assert.Empty(collection: violations);
+        Assert.Empty(violations);
     }
 
     [Fact]
     public void Source_NoFinalizersCallingDispose()
     {
         string srcDir = FindSrcDirectory();
-        string[] csFiles = Directory.GetFiles(path: srcDir, searchPattern: "*.cs", searchOption: SearchOption.AllDirectories);
+        string[] csFiles = Directory.GetFiles(srcDir, "*.cs", SearchOption.AllDirectories);
 
         List<string> violations = [];
 
         foreach (string file in csFiles)
         {
-            string content = File.ReadAllText(path: file);
-            string[] lines = content.Split(separator: '\n');
+            string content = File.ReadAllText(file);
+            string[] lines = content.Split('\n');
 
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
 
-                if (FinalizerPattern().IsMatch(input: trimmed))
+                if (FinalizerPattern().IsMatch(trimmed))
                 {
                     // Check if the next non-empty lines contain Dispose()
-                    for (int j = i + 1; j < Math.Min(val1: i + 5, val2: lines.Length); j++)
+                    for (int j = i + 1; j < Math.Min(i + 5, lines.Length); j++)
                     {
                         string next = lines[j].Trim();
-                        if (next.Contains(value: "Dispose()"))
+                        if (next.Contains("Dispose()"))
                         {
-                            string relative = Path.GetRelativePath(relativeTo: srcDir, path: file);
-                            violations.Add(item: $"{relative}:{i + 1} — finalizer calls Dispose()");
+                            string relative = Path.GetRelativePath(srcDir, file);
+                            violations.Add($"{relative}:{i + 1} — finalizer calls Dispose()");
                             break;
                         }
                     }
@@ -145,7 +145,7 @@ public partial class GcCollectAuditTests
             }
         }
 
-        Assert.Empty(collection: violations);
+        Assert.Empty(violations);
     }
 
     private static string FindSrcDirectory()
@@ -153,29 +153,29 @@ public partial class GcCollectAuditTests
         string? dir = AppDomain.CurrentDomain.BaseDirectory;
         while (dir != null)
         {
-            string candidate = Path.Combine(path1: dir, path2: "src");
-            if (Directory.Exists(path: candidate))
+            string candidate = Path.Combine(dir, "src");
+            if (Directory.Exists(candidate))
                 return candidate;
 
-            dir = Directory.GetParent(path: dir)?.FullName;
+            dir = Directory.GetParent(dir)?.FullName;
         }
 
         string fallback = "/workspaces/NoMercyMediaServer/src";
-        if (Directory.Exists(path: fallback))
+        if (Directory.Exists(fallback))
             return fallback;
 
-        throw new DirectoryNotFoundException(message: "Could not find src/ directory");
+        throw new DirectoryNotFoundException("Could not find src/ directory");
     }
 
-    [GeneratedRegex(pattern: @"GC\.Collect\s*\(")]
+    [GeneratedRegex(@"GC\.Collect\s*\(")]
     private static partial Regex GcCollectPattern();
 
-    [GeneratedRegex(pattern: @"GC\.WaitForFullGCComplete\s*\(")]
+    [GeneratedRegex(@"GC\.WaitForFullGCComplete\s*\(")]
     private static partial Regex GcWaitForFullGcPattern();
 
-    [GeneratedRegex(pattern: @"GC\.WaitForPendingFinalizers\s*\(")]
+    [GeneratedRegex(@"GC\.WaitForPendingFinalizers\s*\(")]
     private static partial Regex GcWaitForPendingFinalizersPattern();
 
-    [GeneratedRegex(pattern: @"~\w+\s*\(\)")]
+    [GeneratedRegex(@"~\w+\s*\(\)")]
     private static partial Regex FinalizerPattern();
 }

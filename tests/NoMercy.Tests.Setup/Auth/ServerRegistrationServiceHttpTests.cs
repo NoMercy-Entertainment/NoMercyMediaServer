@@ -40,7 +40,7 @@ namespace NoMercy.Tests.Setup.Auth;
 /// since the real backoff schedule (2s/5s/15s/30s/60s) uses genuine <see cref="Task.Delay"/>
 /// with no injectable clock.
 /// </remarks>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class ServerRegistrationServiceHttpTests : IDisposable
 {
     private readonly List<SqliteConnection> _connections = [];
@@ -53,21 +53,21 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
 
     private Microsoft.EntityFrameworkCore.IDbContextFactory<AppDbContext> CreateFactory()
     {
-        SqliteConnection connection = new(connectionString: "DataSource=:memory:;Foreign Keys=False");
+        SqliteConnection connection = new("DataSource=:memory:;Foreign Keys=False");
         connection.Open();
-        _connections.Add(item: connection);
+        _connections.Add(connection);
 
         DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection: connection)
+            .UseSqlite(connection)
             .Options;
 
-        using (AppDbContext init = new(options: options))
+        using (AppDbContext init = new(options))
             init.Database.EnsureCreated();
 
         Mock<Microsoft.EntityFrameworkCore.IDbContextFactory<AppDbContext>> mock = new();
-        mock.Setup(expression: x => x.CreateDbContext()).Returns(valueFunction: () => new(options: options));
-        mock.Setup(expression: x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(valueFunction: () => new(options: options));
+        mock.Setup(x => x.CreateDbContext()).Returns(() => new(options));
+        mock.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new(options));
         return mock.Object;
     }
 
@@ -81,22 +81,22 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
     {
         Mock<ICertificateService> certMock = new();
         certMock
-            .Setup(expression: c => c.RenewSslCertificate(It.IsAny<string?>(), It.IsAny<int>()))
-            .Returns(value: Task.CompletedTask);
+            .Setup(c => c.RenewSslCertificate(It.IsAny<string?>(), It.IsAny<int>()))
+            .Returns(Task.CompletedTask);
 
         return new(
-            authTokenStore: new AuthTokenStore(),
-            appDbContextFactory: factory,
-            userProvisioningService: provisioning ?? Mock.Of<IUserProvisioningService>(),
-            connectivityStatus: connectivity ?? new ConnectivityStatus(),
-            certificateService: certificate ?? certMock.Object,
-            networkDiscovery: networkDiscovery
+            new AuthTokenStore(),
+            factory,
+            provisioning ?? Mock.Of<IUserProvisioningService>(),
+            connectivity ?? new ConnectivityStatus(),
+            certificate ?? certMock.Object,
+            networkDiscovery
         );
     }
 
     private static string ServerRegisterResponseJson(string status = "ok") =>
         JsonConvert.SerializeObject(
-            value: new ServerRegisterResponse
+            new ServerRegisterResponse
             {
                 Data = new()
                 {
@@ -117,22 +117,22 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
     public async Task AssignServerWithRetry_Success_ProvisionsOwnerOnce()
     {
         Mock<IUserProvisioningService> provisioning = new();
-        provisioning.Setup(expression: p => p.ProvisionOwner(It.IsAny<User>())).Returns(value: Task.CompletedTask);
+        provisioning.Setup(p => p.ProvisionOwner(It.IsAny<User>())).Returns(Task.CompletedTask);
 
         using LoopbackHttpServer server = new();
         server.Handler = req =>
-            req.Path.EndsWith(value: "/assign") ? new(StatusCode: 200, Body: ServerRegisterResponseJson()) : new(StatusCode: 404, Body: "");
+            req.Path.EndsWith("/assign") ? new(200, ServerRegisterResponseJson()) : new(404, "");
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: server.BaseUrl);
 
-        ServerRegistrationService service = Build(factory: CreateFactory(), provisioning: provisioning.Object);
+        ServerRegistrationService service = Build(CreateFactory(), provisioning.Object);
 
         // Init() runs RegisterServer -> AssignServerWithRetry -> RenewSslCertificate.
         // The register call also hits /register on the same server; make it succeed too.
-        server.Handler = req => new(StatusCode: 200, Body: ServerRegisterResponseJson());
+        server.Handler = req => new(200, ServerRegisterResponseJson());
 
         await service.Init(maxRetries: 1);
 
-        provisioning.Verify(expression: p => p.ProvisionOwner(It.IsAny<User>()), times: Times.Once);
+        provisioning.Verify(p => p.ProvisionOwner(It.IsAny<User>()), Times.Once);
     }
 
     [Fact]
@@ -140,17 +140,17 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
     {
         using LoopbackHttpServer server = new();
         server.Handler = req =>
-            req.Path.EndsWith(value: "/register")
-                ? new(StatusCode: 200, Body: ServerRegisterResponseJson())
-                : new(StatusCode: 200, Body: ServerRegisterResponseJson(status: "error"));
+            req.Path.EndsWith("/register")
+                ? new(200, ServerRegisterResponseJson())
+                : new(200, ServerRegisterResponseJson(status: "error"));
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: server.BaseUrl);
 
-        ServerRegistrationService service = Build(factory: CreateFactory());
+        ServerRegistrationService service = Build(CreateFactory());
 
         // AssignServer's `throw new("Failed to assign Server")` is a plain Exception
         // (no explicit type before the target-typed `new`) — not InvalidOperationException.
-        Exception ex = await Assert.ThrowsAsync<Exception>(testCode: () => service.Init(maxRetries: 1));
-        Assert.Equal(expected: "Failed to assign Server", actual: ex.Message);
+        Exception ex = await Assert.ThrowsAsync<Exception>(() => service.Init(maxRetries: 1));
+        Assert.Equal("Failed to assign Server", ex.Message);
     }
 
     [Fact]
@@ -160,21 +160,21 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
         using LoopbackHttpServer server = new();
         server.Handler = req =>
         {
-            if (req.Path.EndsWith(value: "/register"))
-                return new(StatusCode: 200, Body: ServerRegisterResponseJson());
-            Interlocked.Increment(location: ref assignAttempts);
-            return new(StatusCode: 401, Body: "unauthorized");
+            if (req.Path.EndsWith("/register"))
+                return new(200, ServerRegisterResponseJson());
+            Interlocked.Increment(ref assignAttempts);
+            return new(401, "unauthorized");
         };
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: server.BaseUrl);
 
-        ServerRegistrationService service = Build(factory: CreateFactory());
+        ServerRegistrationService service = Build(CreateFactory());
 
         // maxRetries: 3 would otherwise sleep through the real 2s/5s backoff between
         // attempts; the 401 short-circuit means only ONE assign attempt should ever
         // fire regardless of the retry budget, so this proves the break — not the loop.
         await service.Init(maxRetries: 3);
 
-        Assert.Equal(expected: 1, actual: assignAttempts);
+        Assert.Equal(1, assignAttempts);
     }
 
     // ── RegisterServer 401 short-circuit ─────────────────────────────────────
@@ -186,13 +186,13 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
         using LoopbackHttpServer server = new();
         server.Handler = req =>
         {
-            if (req.Path.EndsWith(value: "/register"))
-                Interlocked.Increment(location: ref registerAttempts);
-            return new(StatusCode: 401, Body: "unauthorized");
+            if (req.Path.EndsWith("/register"))
+                Interlocked.Increment(ref registerAttempts);
+            return new(401, "unauthorized");
         };
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: server.BaseUrl);
 
-        ServerRegistrationService service = Build(factory: CreateFactory());
+        ServerRegistrationService service = Build(CreateFactory());
 
         // RegisterServer's 401 handling is a silent `break` (log + return), not a
         // throw — the SAME 401 also short-circuits AssignServerWithRetry immediately
@@ -202,22 +202,22 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
         // propagates uncaught instead (covered by RegisterServer_SingleAttemptFailure_PropagatesException).
         await service.Init(maxRetries: 3);
 
-        Assert.Equal(expected: 1, actual: registerAttempts);
+        Assert.Equal(1, registerAttempts);
     }
 
     [Fact]
     public async Task RegisterServer_SingleAttemptFailure_PropagatesException()
     {
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(StatusCode: 400, Body: "bad request");
+        server.Handler = _ => new(400, "bad request");
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: server.BaseUrl);
 
-        ServerRegistrationService service = Build(factory: CreateFactory());
+        ServerRegistrationService service = Build(CreateFactory());
 
         // maxRetries: 1 means the `when (attempt < maxRetries)` catch filter never
         // matches on the only attempt, so the underlying HTTP exception propagates
         // out of RegisterServer -> RunRegistrationAsync -> Init unchanged.
-        await Assert.ThrowsAsync<HttpRequestException>(testCode: () => service.Init(maxRetries: 1));
+        await Assert.ThrowsAsync<HttpRequestException>(() => service.Init(maxRetries: 1));
     }
 
     // ── Retry-then-succeed (accepts one real ~2s backoff wait) ───────────────
@@ -229,24 +229,24 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
         using LoopbackHttpServer server = new();
         server.Handler = req =>
         {
-            if (!req.Path.EndsWith(value: "/register"))
-                return new(StatusCode: 200, Body: ServerRegisterResponseJson());
+            if (!req.Path.EndsWith("/register"))
+                return new(200, ServerRegisterResponseJson());
 
-            int thisAttempt = Interlocked.Increment(location: ref attempt);
+            int thisAttempt = Interlocked.Increment(ref attempt);
             // 400 (not 500/429/408): GenericHttpClient's own Polly policy retries
             // transient 5xx/408/429 internally with its own 2s/4s/8s backoff, which
             // would stack on top of ServerRegistrationService's outer retry and make
             // this test needlessly slow. A 400 fails the inner client immediately,
             // isolating the OUTER retry-then-succeed behavior this test targets.
-            return thisAttempt == 1 ? new(StatusCode: 400, Body: "bad request") : new(StatusCode: 200, Body: "{}");
+            return thisAttempt == 1 ? new(400, "bad request") : new(200, "{}");
         };
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: server.BaseUrl);
 
-        ServerRegistrationService service = Build(factory: CreateFactory());
+        ServerRegistrationService service = Build(CreateFactory());
 
         await service.Init(maxRetries: 2);
 
-        Assert.Equal(expected: 2, actual: attempt);
+        Assert.Equal(2, attempt);
     }
 
     // ── Cooldown after failure ──────────────────────────────────────────────
@@ -255,22 +255,22 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
     public async Task Init_AfterRecentFailure_ThrowsCooldownWithoutCallingNetwork()
     {
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(StatusCode: 400, Body: "bad request");
+        server.Handler = _ => new(400, "bad request");
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: server.BaseUrl);
 
-        ServerRegistrationService service = Build(factory: CreateFactory());
+        ServerRegistrationService service = Build(CreateFactory());
 
         // First call fails (single attempt, no retry) and starts the cooldown. The
         // underlying HTTP failure propagates unchanged (see the SingleAttemptFailure
         // test above) — what this test locks is the SECOND call's behavior.
-        await Assert.ThrowsAsync<HttpRequestException>(testCode: () => service.Init(maxRetries: 1));
+        await Assert.ThrowsAsync<HttpRequestException>(() => service.Init(maxRetries: 1));
 
         int requestsAfterFirstFailure = server.RequestCount;
 
         // Immediately calling again must hit the cooldown guard, not the network.
-        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () => service.Init(maxRetries: 1));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.Init(maxRetries: 1));
 
-        Assert.Equal(expected: requestsAfterFirstFailure, actual: server.RequestCount);
+        Assert.Equal(requestsAfterFirstFailure, server.RequestCount);
     }
 
     // ── Concurrent callers share the in-flight attempt ──────────────────────
@@ -283,19 +283,19 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
         {
             // Slow enough that both callers are guaranteed to observe the same
             // in-flight Task rather than racing to completion before either checks.
-            Thread.Sleep(millisecondsTimeout: 100);
-            return new LoopbackResponse(StatusCode: 200, Body: ServerRegisterResponseJson());
+            Thread.Sleep(100);
+            return new LoopbackResponse(200, ServerRegisterResponseJson());
         };
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: server.BaseUrl);
 
-        ServerRegistrationService service = Build(factory: CreateFactory());
+        ServerRegistrationService service = Build(CreateFactory());
 
         Task first = service.Init(maxRetries: 1);
         Task second = service.Init(maxRetries: 1);
 
-        await Task.WhenAll(tasks: [first, second]);
+        await Task.WhenAll(first, second);
 
-        Assert.Same(expected: first, actual: second);
+        Assert.Same(first, second);
     }
 
     // ── GetTunnelAvailability ────────────────────────────────────────────────
@@ -306,9 +306,9 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
         using LoopbackHttpServer server = new();
         server.Handler = _ =>
             new(
-                StatusCode: 200,
-                Body: JsonConvert.SerializeObject(
-                    value: new ServerTunnelAvailabilityResponse
+                200,
+                JsonConvert.SerializeObject(
+                    new ServerTunnelAvailabilityResponse
                     {
                         Allowed = true,
                         Token = "tunnel-token-1",
@@ -318,11 +318,11 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: server.BaseUrl);
 
         ConnectivityStatus status = new();
-        ServerRegistrationService service = Build(factory: CreateFactory(), connectivity: status);
+        ServerRegistrationService service = Build(CreateFactory(), connectivity: status);
 
         await service.GetTunnelAvailability();
 
-        Assert.Equal(expected: "tunnel-token-1", actual: status.CloudflareTunnelToken);
+        Assert.Equal("tunnel-token-1", status.CloudflareTunnelToken);
     }
 
     [Fact]
@@ -331,19 +331,19 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
         using LoopbackHttpServer server = new();
         server.Handler = _ =>
             new(
-                StatusCode: 200,
-                Body: JsonConvert.SerializeObject(
-                    value: new ServerTunnelAvailabilityResponse { Allowed = false, Token = null }
+                200,
+                JsonConvert.SerializeObject(
+                    new ServerTunnelAvailabilityResponse { Allowed = false, Token = null }
                 )
             );
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: server.BaseUrl);
 
         ConnectivityStatus status = new();
-        ServerRegistrationService service = Build(factory: CreateFactory(), connectivity: status);
+        ServerRegistrationService service = Build(CreateFactory(), connectivity: status);
 
         await service.GetTunnelAvailability();
 
-        Assert.Null(@object: status.CloudflareTunnelToken);
+        Assert.Null(status.CloudflareTunnelToken);
     }
 
     [Fact]
@@ -352,12 +352,12 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: "http://127.0.0.1:1/");
 
         ConnectivityStatus status = new();
-        ServerRegistrationService service = Build(factory: CreateFactory(), connectivity: status);
+        ServerRegistrationService service = Build(CreateFactory(), connectivity: status);
 
         // GetTunnelAvailability wraps every failure — must never throw or crash the caller.
         await service.GetTunnelAvailability();
 
-        Assert.Null(@object: status.CloudflareTunnelToken);
+        Assert.Null(status.CloudflareTunnelToken);
     }
 
     // ── GetDeviceName ────────────────────────────────────────────────────────
@@ -368,7 +368,7 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
         Microsoft.EntityFrameworkCore.IDbContextFactory<AppDbContext> factory = CreateFactory();
         await using (AppDbContext seed = await factory.CreateDbContextAsync())
         {
-            seed.Configuration.Add(entity: new() { Key = "serverName", Value = "My Custom Server Name" });
+            seed.Configuration.Add(new() { Key = "serverName", Value = "My Custom Server Name" });
             await seed.SaveChangesAsync();
         }
 
@@ -376,16 +376,16 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
         LoopbackRequest? captured = null;
         server.Handler = req =>
         {
-            if (req.Path.EndsWith(value: "/register"))
+            if (req.Path.EndsWith("/register"))
                 captured = req;
-            return new(StatusCode: 200, Body: ServerRegisterResponseJson());
+            return new(200, ServerRegisterResponseJson());
         };
         using ExternalServicesConfigScope scope = new(apiServerBaseUrl: server.BaseUrl);
 
-        ServerRegistrationService service = Build(factory: factory);
+        ServerRegistrationService service = Build(factory);
         await service.Init(maxRetries: 1);
 
-        Assert.NotNull(@object: captured);
-        Assert.Contains(expectedSubstring: "My+Custom+Server+Name", actualString: captured!.Body);
+        Assert.NotNull(captured);
+        Assert.Contains("My+Custom+Server+Name", captured!.Body);
     }
 }

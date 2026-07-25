@@ -77,19 +77,19 @@ public static class GpuEncoderTokens
     /// </summary>
     public static GpuVendor? VendorForEncoderName(string ffmpegEncoderName)
     {
-        if (NvencNames.Contains(value: ffmpegEncoderName, comparer: StringComparer.OrdinalIgnoreCase))
+        if (NvencNames.Contains(ffmpegEncoderName, StringComparer.OrdinalIgnoreCase))
             return GpuVendor.Nvidia;
 
-        if (AmfNames.Contains(value: ffmpegEncoderName, comparer: StringComparer.OrdinalIgnoreCase))
+        if (AmfNames.Contains(ffmpegEncoderName, StringComparer.OrdinalIgnoreCase))
             return GpuVendor.Amd;
 
         if (
-            QsvNames.Contains(value: ffmpegEncoderName, comparer: StringComparer.OrdinalIgnoreCase)
-            || VaapiNames.Contains(value: ffmpegEncoderName, comparer: StringComparer.OrdinalIgnoreCase)
+            QsvNames.Contains(ffmpegEncoderName, StringComparer.OrdinalIgnoreCase)
+            || VaapiNames.Contains(ffmpegEncoderName, StringComparer.OrdinalIgnoreCase)
         )
             return GpuVendor.Intel;
 
-        if (VideotoolboxNames.Contains(value: ffmpegEncoderName, comparer: StringComparer.OrdinalIgnoreCase))
+        if (VideotoolboxNames.Contains(ffmpegEncoderName, StringComparer.OrdinalIgnoreCase))
             return GpuVendor.Apple;
 
         return null;

@@ -30,24 +30,24 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddNoMercyOpticalMedia(this IServiceCollection services)
     {
-        services.TryAddSingleton<IDriveBackend>(implementationFactory: sp =>
+        services.TryAddSingleton<IDriveBackend>(sp =>
         {
-            if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 try
                 {
                     return new WindowsDriveBackend(
-                        logger: sp.GetRequiredService<ILogger<WindowsDriveBackend>>()
+                        sp.GetRequiredService<ILogger<WindowsDriveBackend>>()
                     );
                 }
                 catch
                 {
                     return new PollingDriveBackend(
-                        logger: sp.GetRequiredService<ILogger<PollingDriveBackend>>()
+                        sp.GetRequiredService<ILogger<PollingDriveBackend>>()
                     );
                 }
             }
-            return new PollingDriveBackend(logger: sp.GetRequiredService<ILogger<PollingDriveBackend>>());
+            return new PollingDriveBackend(sp.GetRequiredService<ILogger<PollingDriveBackend>>());
         });
 
         services.TryAddSingleton<IDriveMonitor, DriveMonitor>();

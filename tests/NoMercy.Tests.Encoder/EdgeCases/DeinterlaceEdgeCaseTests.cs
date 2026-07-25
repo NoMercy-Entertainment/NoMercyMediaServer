@@ -38,41 +38,41 @@ public class DeinterlaceEdgeCaseTests
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
         _stage = new(
-            options: options,
-            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
-            subtitleExtractor: new SubtitleExtractor(),
-            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
-            drmProcessors: [],
-            logger: NullLogger<BuildStage>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            options,
+            new FontExtractor(TestStorageFactory.CreateLocal()),
+            new SubtitleExtractor(),
+            OutputStrategyFactoryTestHelper.Create(),
+            [],
+            NullLogger<BuildStage>.Instance,
+            TestStorageFactory.CreateLocal()
         );
     }
 
     [Fact]
     public async Task InterlacedSource_ScaledOutput_EmitsDeinterlaceBeforeScale()
     {
-        string filter = await BuildFilterGraph(media: BuildMediaInfo(width: 1920, height: 1080, fieldOrder: "tt"), outWidth: 1280, outHeight: 720);
+        string filter = await BuildFilterGraph(BuildMediaInfo(1920, 1080, "tt"), 1280, 720);
 
         filter
             .Should()
-            .Contain(expected: "yadif", because: "interlaced source scaled to progressive must deinterlace");
-        int deintIdx = filter.IndexOf(value: "yadif", comparisonType: StringComparison.Ordinal);
-        int scaleIdx = filter.IndexOf(value: "scale=", comparisonType: StringComparison.Ordinal);
+            .Contain("yadif", "interlaced source scaled to progressive must deinterlace");
+        int deintIdx = filter.IndexOf("yadif", StringComparison.Ordinal);
+        int scaleIdx = filter.IndexOf("scale=", StringComparison.Ordinal);
         deintIdx
             .Should()
-            .BeLessThan(expected: scaleIdx, because: "deinterlace reconstructs full frames before scaling");
+            .BeLessThan(scaleIdx, "deinterlace reconstructs full frames before scaling");
     }
 
     [Fact]
     public async Task ProgressiveSource_NoDeinterlaceFilter()
     {
         string filter = await BuildFilterGraph(
-            media: BuildMediaInfo(width: 1920, height: 1080, fieldOrder: "progressive"),
-            outWidth: 1280,
-            outHeight: 720
+            BuildMediaInfo(1920, 1080, "progressive"),
+            1280,
+            720
         );
 
-        filter.Should().NotContain(unexpected: "yadif", because: "a progressive source must never be deinterlaced");
+        filter.Should().NotContain("yadif", "a progressive source must never be deinterlaced");
     }
 
     [Fact]
@@ -80,92 +80,90 @@ public class DeinterlaceEdgeCaseTests
     {
         // Absent field_order (null) is treated as progressive — do not deinterlace.
         string filter = await BuildFilterGraph(
-            media: BuildMediaInfo(width: 1920, height: 1080, fieldOrder: null),
-            outWidth: 1280,
-            outHeight: 720
+            BuildMediaInfo(1920, 1080, null),
+            1280,
+            720
         );
 
-        filter.Should().NotContain(unexpected: "yadif");
+        filter.Should().NotContain("yadif");
     }
 
     private async Task<string> BuildFilterGraph(MediaInfo media, int outWidth, int outHeight)
     {
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [BuildVideoOutput(width: outWidth, height: outHeight, mapLabel: "[v0]")],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [BuildVideoOutput(outWidth, outHeight, "[v0]")],
+            [BuildAudioOutput()],
+            [],
+            null
         );
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
-        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: media);
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, media);
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
-        int idx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
-        idx.Should().BeGreaterThan(expected: -1, because: "a scaled output must build a filter graph");
+        int idx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
+        idx.Should().BeGreaterThan(-1, "a scaled output must build a filter graph");
         return commands[0].Arguments[idx + 1];
     }
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
         new(
-            Groups:
             [
                 new(
-                    GroupId: "group_0",
-                    Nodes: [new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new())],
-                    DeviceId: null,
-                    GpuSlotsRequired: 0,
-                    CpuThreadsRequired: 4,
-                    RequiresGpu: false,
-                    Priority: 1
+                    "group_0",
+                    [new("decode_0", OperationType.Decode, [], new())],
+                    null,
+                    0,
+                    4,
+                    false,
+                    1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
-            OutputPlan: outputPlan
+            TimeSpan.FromMinutes(90),
+            outputPlan
         );
 
     private static VideoOutputPlan BuildVideoOutput(int width, int height, string mapLabel) =>
         new(
-            Width: width,
-            Height: height,
-            EncoderName: "libx264",
-            Crf: 23,
-            BitrateKbps: 4000,
-            Preset: "medium",
-            Profile: "high",
-            Level: "4.1",
-            TenBit: false,
-            PixelFormat: "yuv420p",
-            MapLabel: mapLabel,
-            ExtraFlags: new()
+            width,
+            height,
+            "libx264",
+            23,
+            4000,
+            "medium",
+            "high",
+            "4.1",
+            false,
+            "yuv420p",
+            mapLabel,
+            new()
         );
 
     private static AudioOutputPlan BuildAudioOutput() =>
         new(
-            EncoderName: "aac",
-            BitrateKbps: 192,
-            Channels: 2,
-            SampleRate: 48000,
-            Action: StreamAction.Transcode,
-            Language: "en",
-            MapLabel: "0:a:0"
+            "aac",
+            192,
+            2,
+            48000,
+            StreamAction.Transcode,
+            "en",
+            "0:a:0"
         );
 
     private static MediaInfo BuildMediaInfo(int width, int height, string? fieldOrder) =>
         new(
-            FilePath: "/movies/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 2),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 7_200_000_000,
-            VideoStreams:
+            "/movies/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(2),
+            8000,
+            7_200_000_000,
             [
                 new(
-                    Index: 0,
+                    0,
                     Codec: "h264",
                     Width: width,
                     Height: height,
@@ -180,8 +178,8 @@ public class DeinterlaceEdgeCaseTests
                     FieldOrder: fieldOrder
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 }

@@ -26,14 +26,14 @@ namespace NoMercy.Encoder.Codecs;
 /// </summary>
 public sealed class NvencQualityScaler : IQualityScaler
 {
-    private static readonly HashSet<string> _handles = new(comparer: StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> _handles = new(StringComparer.OrdinalIgnoreCase)
     {
         "h264_nvenc",
         "hevc_nvenc",
         "av1_nvenc",
     };
 
-    public bool Supports(string encoderHandle) => _handles.Contains(item: encoderHandle);
+    public bool Supports(string encoderHandle) => _handles.Contains(encoderHandle);
 
     public int Translate(int sourceCrf, int sourceMax, int targetMax, CodecHint hint)
     {
@@ -43,9 +43,9 @@ public sealed class NvencQualityScaler : IQualityScaler
         int nvencMax = 51;
 
         if (sourceMax == nvencMax)
-            return Math.Clamp(value: sourceCrf, min: 0, max: nvencMax);
+            return Math.Clamp(sourceCrf, 0, nvencMax);
 
-        int scaled = (int)Math.Round(a: (double)sourceCrf / sourceMax * nvencMax);
-        return Math.Clamp(value: scaled, min: 0, max: nvencMax);
+        int scaled = (int)Math.Round((double)sourceCrf / sourceMax * nvencMax);
+        return Math.Clamp(scaled, 0, nvencMax);
     }
 }

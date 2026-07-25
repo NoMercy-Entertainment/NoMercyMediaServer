@@ -26,19 +26,19 @@ public class PluginDiIntegrationTests : IDisposable
     public PluginDiIntegrationTests()
     {
         _tempPluginsDir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nomercy-di-tests-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nomercy-di-tests-" + Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: _tempPluginsDir);
+        Directory.CreateDirectory(_tempPluginsDir);
     }
 
     public void Dispose()
     {
         try
         {
-            if (Directory.Exists(path: _tempPluginsDir))
+            if (Directory.Exists(_tempPluginsDir))
             {
-                Directory.Delete(path: _tempPluginsDir, recursive: true);
+                Directory.Delete(_tempPluginsDir, true);
             }
         }
         catch (IOException) { }
@@ -50,16 +50,16 @@ public class PluginDiIntegrationTests : IDisposable
         ServiceCollection services = new();
         services.AddSingleton<IEventBus, InMemoryEventBus>();
         services.AddLogging();
-        services.AddSingleton(implementationInstance: TestStorageHelper.CreateBackend());
+        services.AddSingleton(TestStorageHelper.CreateBackend());
 
-        services.AddPluginSystem(pluginsPath: _tempPluginsDir);
+        services.AddPluginSystem(_tempPluginsDir);
 
         ServiceProvider provider = services.BuildServiceProvider();
         IPluginManager manager1 = provider.GetRequiredService<IPluginManager>();
         IPluginManager manager2 = provider.GetRequiredService<IPluginManager>();
 
         manager1.Should().NotBeNull();
-        manager1.Should().BeSameAs(expected: manager2);
+        manager1.Should().BeSameAs(manager2);
         manager1.Should().BeOfType<PluginManager>();
 
         (manager1 as IDisposable)?.Dispose();
@@ -70,7 +70,7 @@ public class PluginDiIntegrationTests : IDisposable
     {
         IServiceCollection? services = null;
 
-        Action act = () => services!.AddPluginSystem(pluginsPath: "/tmp");
+        Action act = () => services!.AddPluginSystem("/tmp");
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -80,7 +80,7 @@ public class PluginDiIntegrationTests : IDisposable
     {
         ServiceCollection services = new();
 
-        Action act = () => services.AddPluginSystem(pluginsPath: null!);
+        Action act = () => services.AddPluginSystem(null!);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -90,7 +90,7 @@ public class PluginDiIntegrationTests : IDisposable
     {
         ServiceCollection services = new();
 
-        Action act = () => services.AddPluginSystem(pluginsPath: "");
+        Action act = () => services.AddPluginSystem("");
 
         act.Should().Throw<ArgumentException>();
     }
@@ -101,15 +101,15 @@ public class PluginDiIntegrationTests : IDisposable
         IServiceCollection? services = null;
         InMemoryEventBus bus = new();
         PluginManager manager = new(
-            eventBus: bus,
-            serviceProvider: new MinimalServiceProvider(),
-            logger: NullLogger<PluginManager>.Instance,
-            pluginsPath: _tempPluginsDir,
-            storage: TestStorageHelper.CreateStorage(rootPath: _tempPluginsDir),
-            driver: TestStorageHelper.CreateBackend()
+            bus,
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            TestStorageHelper.CreateBackend()
         );
 
-        Action act = () => services!.RegisterPluginServices(pluginManager: manager);
+        Action act = () => services!.RegisterPluginServices(manager);
 
         act.Should().Throw<ArgumentNullException>();
         manager.Dispose();
@@ -120,7 +120,7 @@ public class PluginDiIntegrationTests : IDisposable
     {
         ServiceCollection services = new();
 
-        Action act = () => services.RegisterPluginServices(pluginManager: null!);
+        Action act = () => services.RegisterPluginServices(null!);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -131,15 +131,15 @@ public class PluginDiIntegrationTests : IDisposable
         ServiceCollection services = new();
         InMemoryEventBus bus = new();
         PluginManager manager = new(
-            eventBus: bus,
-            serviceProvider: new MinimalServiceProvider(),
-            logger: NullLogger<PluginManager>.Instance,
-            pluginsPath: _tempPluginsDir,
-            storage: TestStorageHelper.CreateStorage(rootPath: _tempPluginsDir),
-            driver: TestStorageHelper.CreateBackend()
+            bus,
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            TestStorageHelper.CreateBackend()
         );
 
-        services.RegisterPluginServices(pluginManager: manager);
+        services.RegisterPluginServices(manager);
 
         services.Should().BeEmpty();
         manager.Dispose();
@@ -150,12 +150,12 @@ public class PluginDiIntegrationTests : IDisposable
     {
         InMemoryEventBus bus = new();
         PluginManager manager = new(
-            eventBus: bus,
-            serviceProvider: new MinimalServiceProvider(),
-            logger: NullLogger<PluginManager>.Instance,
-            pluginsPath: _tempPluginsDir,
-            storage: TestStorageHelper.CreateStorage(rootPath: _tempPluginsDir),
-            driver: TestStorageHelper.CreateBackend()
+            bus,
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            TestStorageHelper.CreateBackend()
         );
 
         IEnumerable<IPluginServiceRegistrator> registrators = manager.GetServiceRegistrators();
@@ -171,9 +171,9 @@ public class PluginDiIntegrationTests : IDisposable
         services.AddSingleton<IEventBus, InMemoryEventBus>();
         services.AddLogging();
 
-        IServiceCollection result = services.AddPluginSystem(pluginsPath: _tempPluginsDir);
+        IServiceCollection result = services.AddPluginSystem(_tempPluginsDir);
 
-        result.Should().BeSameAs(expected: services);
+        result.Should().BeSameAs(services);
     }
 
     [Fact]
@@ -181,11 +181,11 @@ public class PluginDiIntegrationTests : IDisposable
     {
         ServiceCollection services = new();
         InMemoryEventBus bus = new();
-        services.AddSingleton<IEventBus>(implementationInstance: bus);
+        services.AddSingleton<IEventBus>(bus);
         services.AddLogging();
-        services.AddSingleton(implementationInstance: TestStorageHelper.CreateBackend());
+        services.AddSingleton(TestStorageHelper.CreateBackend());
 
-        services.AddPluginSystem(pluginsPath: _tempPluginsDir);
+        services.AddPluginSystem(_tempPluginsDir);
 
         ServiceProvider provider = services.BuildServiceProvider();
         IPluginManager manager = provider.GetRequiredService<IPluginManager>();
@@ -202,7 +202,7 @@ public class PluginDiIntegrationTests : IDisposable
         TestServiceRegistrator registrator = new();
         ServiceCollection services = new();
 
-        registrator.RegisterServices(services: services);
+        registrator.RegisterServices(services);
 
         services.Should().ContainSingle();
         ServiceProvider provider = services.BuildServiceProvider();

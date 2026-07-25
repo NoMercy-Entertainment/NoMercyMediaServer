@@ -19,7 +19,7 @@ internal class DefaultSunsetPolicyManager : ISunsetPolicyManager
     public bool TryGetPolicy(
         string? name,
         ApiVersion? apiVersion,
-        [MaybeNullWhen(returnValue: false)] out SunsetPolicy sunsetPolicy
+        [MaybeNullWhen(false)] out SunsetPolicy sunsetPolicy
     )
     {
         sunsetPolicy = new();

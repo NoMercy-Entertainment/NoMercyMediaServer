@@ -11,7 +11,6 @@
 
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Database.Models.People;
-using NoMercy.Database.Models.TvShows;
 using Xunit;
 
 namespace NoMercy.Tests.Api.Media;
@@ -22,7 +21,7 @@ namespace NoMercy.Tests.Api.Media;
 /// null (<c>null != 0</c>), so a cast/crew credit with no Movie must not be
 /// misreported as having files.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class KnownForDtoTests
 {
     [Fact]
@@ -48,9 +47,9 @@ public class KnownForDtoTests
             },
         };
 
-        KnownForDto dto = new(cast: cast);
+        KnownForDto dto = new(cast);
 
         dto.HasItem.Should().BeFalse();
-        dto.HaveItems.Should().Be(expected: 0);
+        dto.HaveItems.Should().Be(0);
     }
 }

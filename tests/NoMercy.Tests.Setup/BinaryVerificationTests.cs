@@ -21,21 +21,21 @@ using Org.BouncyCastle.Security;
 
 namespace NoMercy.Tests.Setup;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class BinaryVerificationTests : IDisposable
 {
     private readonly string _tempDir;
 
     public BinaryVerificationTests()
     {
-        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"nomercy-bv-tests-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempDir);
+        _tempDir = Path.Combine(Path.GetTempPath(), $"nomercy-bv-tests-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempDir))
-            Directory.Delete(path: _tempDir, recursive: true);
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
     }
 
     // -------------------------------------------------------------------------
@@ -45,13 +45,13 @@ public class BinaryVerificationTests : IDisposable
     [Fact]
     public async Task VerifyFileSha256_CorrectHash_ReturnsTrue()
     {
-        byte[] content = Encoding.UTF8.GetBytes(s: "hello nomercy");
-        string filePath = Path.Combine(path1: _tempDir, path2: "test.bin");
-        await File.WriteAllBytesAsync(path: filePath, bytes: content);
+        byte[] content = Encoding.UTF8.GetBytes("hello nomercy");
+        string filePath = Path.Combine(_tempDir, "test.bin");
+        await File.WriteAllBytesAsync(filePath, content);
 
-        string expected = Convert.ToHexString(inArray: SHA256.HashData(source: content));
+        string expected = Convert.ToHexString(SHA256.HashData(content));
 
-        bool result = await BinaryVerification.VerifyFileSha256Async(filePath: filePath, expectedHex: expected);
+        bool result = await BinaryVerification.VerifyFileSha256Async(filePath, expected);
 
         result.Should().BeTrue();
     }
@@ -59,13 +59,13 @@ public class BinaryVerificationTests : IDisposable
     [Fact]
     public async Task VerifyFileSha256_WrongHash_ReturnsFalse()
     {
-        byte[] content = Encoding.UTF8.GetBytes(s: "hello nomercy");
-        string filePath = Path.Combine(path1: _tempDir, path2: "test.bin");
-        await File.WriteAllBytesAsync(path: filePath, bytes: content);
+        byte[] content = Encoding.UTF8.GetBytes("hello nomercy");
+        string filePath = Path.Combine(_tempDir, "test.bin");
+        await File.WriteAllBytesAsync(filePath, content);
 
-        string wrong = new(c: '0', count: 64);
+        string wrong = new('0', 64);
 
-        bool result = await BinaryVerification.VerifyFileSha256Async(filePath: filePath, expectedHex: wrong);
+        bool result = await BinaryVerification.VerifyFileSha256Async(filePath, wrong);
 
         result.Should().BeFalse();
     }
@@ -73,15 +73,15 @@ public class BinaryVerificationTests : IDisposable
     [Fact]
     public async Task VerifyFileSha256_HashCaseInsensitive_ReturnsTrue()
     {
-        byte[] content = Encoding.UTF8.GetBytes(s: "case test");
-        string filePath = Path.Combine(path1: _tempDir, path2: "case.bin");
-        await File.WriteAllBytesAsync(path: filePath, bytes: content);
+        byte[] content = Encoding.UTF8.GetBytes("case test");
+        string filePath = Path.Combine(_tempDir, "case.bin");
+        await File.WriteAllBytesAsync(filePath, content);
 
-        string expectedUpper = Convert.ToHexString(inArray: SHA256.HashData(source: content));
+        string expectedUpper = Convert.ToHexString(SHA256.HashData(content));
         string expectedLower = expectedUpper.ToLowerInvariant();
 
-        bool upper = await BinaryVerification.VerifyFileSha256Async(filePath: filePath, expectedHex: expectedUpper);
-        bool lower = await BinaryVerification.VerifyFileSha256Async(filePath: filePath, expectedHex: expectedLower);
+        bool upper = await BinaryVerification.VerifyFileSha256Async(filePath, expectedUpper);
+        bool lower = await BinaryVerification.VerifyFileSha256Async(filePath, expectedLower);
 
         upper.Should().BeTrue();
         lower.Should().BeTrue();
@@ -92,22 +92,22 @@ public class BinaryVerificationTests : IDisposable
     // -------------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: ["sha256:ABC123", "ABC123"])]
-    [InlineData(data: ["SHA256:deadbeef", "deadbeef"])]
+    [InlineData(["sha256:ABC123", "ABC123"])]
+    [InlineData(["SHA256:deadbeef", "deadbeef"])]
     public void ExtractSha256FromDigest_ValidPrefix_ReturnsHex(string digest, string expected)
     {
-        BinaryVerification.ExtractSha256FromDigest(digest: digest).Should().Be(expected: expected);
+        BinaryVerification.ExtractSha256FromDigest(digest).Should().Be(expected);
     }
 
     [Theory]
-    [InlineData(data: null)]
-    [InlineData(data: "")]
-    [InlineData(data: "   ")]
-    [InlineData(data: "sha512:abcdef")]
-    [InlineData(data: "abcdef")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("sha512:abcdef")]
+    [InlineData("abcdef")]
     public void ExtractSha256FromDigest_MissingOrUnsupported_ReturnsNull(string? digest)
     {
-        BinaryVerification.ExtractSha256FromDigest(digest: digest).Should().BeNull();
+        BinaryVerification.ExtractSha256FromDigest(digest).Should().BeNull();
     }
 
     // -------------------------------------------------------------------------
@@ -119,7 +119,7 @@ public class BinaryVerificationTests : IDisposable
     {
         string sums = "aaa111  yt-dlp\nbbb222  yt-dlp_linux\nccc333  yt-dlp.exe\n";
 
-        BinaryVerification.ParseSha256Sums(sumsContent: sums, targetFileName: "yt-dlp_linux").Should().Be(expected: "bbb222");
+        BinaryVerification.ParseSha256Sums(sums, "yt-dlp_linux").Should().Be("bbb222");
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public class BinaryVerificationTests : IDisposable
     {
         string sums = "\n   \ndeadbeef *yt-dlp_macos\n";
 
-        BinaryVerification.ParseSha256Sums(sumsContent: sums, targetFileName: "yt-dlp_macos").Should().Be(expected: "deadbeef");
+        BinaryVerification.ParseSha256Sums(sums, "yt-dlp_macos").Should().Be("deadbeef");
     }
 
     [Fact]
@@ -135,13 +135,13 @@ public class BinaryVerificationTests : IDisposable
     {
         string sums = "aaa111  yt-dlp\nbbb222  yt-dlp_linux\n";
 
-        BinaryVerification.ParseSha256Sums(sumsContent: sums, targetFileName: "yt-dlp_win.exe").Should().BeNull();
+        BinaryVerification.ParseSha256Sums(sums, "yt-dlp_win.exe").Should().BeNull();
     }
 
     [Fact]
     public void ParseSha256Sums_Empty_ReturnsNull()
     {
-        BinaryVerification.ParseSha256Sums(sumsContent: string.Empty, targetFileName: "anything").Should().BeNull();
+        BinaryVerification.ParseSha256Sums(string.Empty, "anything").Should().BeNull();
     }
 
     // -------------------------------------------------------------------------
@@ -162,15 +162,15 @@ public class BinaryVerificationTests : IDisposable
             }
             """;
 
-        ReleaseManifest? manifest = JsonConvert.DeserializeObject<ReleaseManifest>(value: json);
+        ReleaseManifest? manifest = JsonConvert.DeserializeObject<ReleaseManifest>(json);
 
         manifest.Should().NotBeNull();
-        manifest!.Version.Should().Be(expected: "1.2.3");
-        manifest.CommitSha.Should().Be(expected: "abc1234");
-        manifest.Assets.Should().HaveCount(expected: 1);
-        manifest.Assets[0].Name.Should().Be(expected: "nomercy-linux-x64");
-        manifest.Assets[0].Sha256.Should().Be(expected: "deadbeef");
-        manifest.Assets[0].Size.Should().Be(expected: 42);
+        manifest!.Version.Should().Be("1.2.3");
+        manifest.CommitSha.Should().Be("abc1234");
+        manifest.Assets.Should().HaveCount(1);
+        manifest.Assets[0].Name.Should().Be("nomercy-linux-x64");
+        manifest.Assets[0].Sha256.Should().Be("deadbeef");
+        manifest.Assets[0].Size.Should().Be(42);
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public class BinaryVerificationTests : IDisposable
     {
         string json = """{"version":"0.1","commit_sha":"x","build_timestamp":"t","assets":[]}""";
 
-        ReleaseManifest? manifest = JsonConvert.DeserializeObject<ReleaseManifest>(value: json);
+        ReleaseManifest? manifest = JsonConvert.DeserializeObject<ReleaseManifest>(json);
 
         manifest.Should().NotBeNull();
         manifest!.Assets.Should().BeEmpty();
@@ -194,8 +194,8 @@ public class BinaryVerificationTests : IDisposable
         // The public overload uses the real embedded org key. A malformed detached
         // signature must be rejected cleanly (false), never throw.
         bool result = BinaryVerification.VerifyManifestSignature(
-            manifestJson: """{"version":"1.0"}""",
-            armoredSignature: "-----BEGIN PGP SIGNATURE-----\nfake\n-----END PGP SIGNATURE-----"
+            """{"version":"1.0"}""",
+            "-----BEGIN PGP SIGNATURE-----\nfake\n-----END PGP SIGNATURE-----"
         );
 
         result.Should().BeFalse();
@@ -205,11 +205,11 @@ public class BinaryVerificationTests : IDisposable
     public void VerifyManifestSignature_ForeignSignatureAgainstEmbeddedKey_ReturnsFalse()
     {
         string manifest = """{"version":"1.0","assets":[]}""";
-        (_, string foreignSignature) = GenerateSignedManifest(manifest: manifest);
+        (_, string foreignSignature) = GenerateSignedManifest(manifest);
 
         // A valid signature from a key that is NOT the embedded org key must not
         // verify — the embedded overload looks the signer up by key id and misses.
-        bool result = BinaryVerification.VerifyManifestSignature(manifestJson: manifest, armoredSignature: foreignSignature);
+        bool result = BinaryVerification.VerifyManifestSignature(manifest, foreignSignature);
 
         result.Should().BeFalse();
     }
@@ -220,16 +220,16 @@ public class BinaryVerificationTests : IDisposable
         // Regression guard: the shipped assembly must embed the real org public key,
         // not the placeholder that silently disabled all signature verification.
         using Stream? stream = typeof(BinaryVerification).Assembly.GetManifestResourceStream(
-            name: "NoMercy.Setup.Resources.nomercy-public-key.asc"
+            "NoMercy.Setup.Resources.nomercy-public-key.asc"
         );
 
-        stream.Should().NotBeNull(because: "the org public key must be embedded for manifest verification");
+        stream.Should().NotBeNull("the org public key must be embedded for manifest verification");
 
-        using StreamReader reader = new(stream: stream!);
+        using StreamReader reader = new(stream!);
         string content = reader.ReadToEnd();
 
-        content.Should().Contain(expected: "BEGIN PGP PUBLIC KEY BLOCK");
-        content.Should().NotContain(unexpected: "PLACEHOLDER");
+        content.Should().Contain("BEGIN PGP PUBLIC KEY BLOCK");
+        content.Should().NotContain("PLACEHOLDER");
     }
 
     [Fact]
@@ -237,12 +237,12 @@ public class BinaryVerificationTests : IDisposable
     {
         string manifest = """{"version":"1.0","assets":[]}""";
 
-        (string armoredPublicKey, string armoredSignature) = GenerateSignedManifest(manifest: manifest);
+        (string armoredPublicKey, string armoredSignature) = GenerateSignedManifest(manifest);
 
         bool result = BinaryVerification.VerifyManifestSignature(
-            manifestJson: manifest,
-            armoredSignature: armoredSignature,
-            armoredPublicKey: armoredPublicKey
+            manifest,
+            armoredSignature,
+            armoredPublicKey
         );
 
         result.Should().BeTrue();
@@ -255,13 +255,13 @@ public class BinaryVerificationTests : IDisposable
         string tamperedManifest = """{"version":"9.9","assets":[]}""";
 
         (string armoredPublicKey, string armoredSignature) = GenerateSignedManifest(
-            manifest: originalManifest
+            originalManifest
         );
 
         bool result = BinaryVerification.VerifyManifestSignature(
-            manifestJson: tamperedManifest,
-            armoredSignature: armoredSignature,
-            armoredPublicKey: armoredPublicKey
+            tamperedManifest,
+            armoredSignature,
+            armoredPublicKey
         );
 
         result.Should().BeFalse();
@@ -272,13 +272,13 @@ public class BinaryVerificationTests : IDisposable
     {
         string manifest = """{"version":"1.0","assets":[]}""";
 
-        (_, string armoredSignature) = GenerateSignedManifest(manifest: manifest);
-        (string differentPublicKey, _) = GenerateSignedManifest(manifest: manifest);
+        (_, string armoredSignature) = GenerateSignedManifest(manifest);
+        (string differentPublicKey, _) = GenerateSignedManifest(manifest);
 
         bool result = BinaryVerification.VerifyManifestSignature(
-            manifestJson: manifest,
-            armoredSignature: armoredSignature,
-            armoredPublicKey: differentPublicKey
+            manifest,
+            armoredSignature,
+            differentPublicKey
         );
 
         result.Should().BeFalse();
@@ -288,12 +288,12 @@ public class BinaryVerificationTests : IDisposable
     public void VerifyManifestSignature_GarbageSignature_ReturnsFalse()
     {
         string manifest = """{"version":"1.0","assets":[]}""";
-        (string armoredPublicKey, _) = GenerateSignedManifest(manifest: manifest);
+        (string armoredPublicKey, _) = GenerateSignedManifest(manifest);
 
         bool result = BinaryVerification.VerifyManifestSignature(
-            manifestJson: manifest,
-            armoredSignature: "this is not a valid pgp signature",
-            armoredPublicKey: armoredPublicKey
+            manifest,
+            "this is not a valid pgp signature",
+            armoredPublicKey
         );
 
         result.Should().BeFalse();
@@ -311,52 +311,52 @@ public class BinaryVerificationTests : IDisposable
         string manifest
     )
     {
-        IAsymmetricCipherKeyPairGenerator keyGen = GeneratorUtilities.GetKeyPairGenerator(algorithm: "RSA");
+        IAsymmetricCipherKeyPairGenerator keyGen = GeneratorUtilities.GetKeyPairGenerator("RSA");
         keyGen.Init(
-            parameters: new RsaKeyGenerationParameters(
-                publicExponent: Org.BouncyCastle.Math.BigInteger.ValueOf(value: 0x10001),
-                random: new(),
-                strength: 2048,
-                certainty: 12
+            new RsaKeyGenerationParameters(
+                Org.BouncyCastle.Math.BigInteger.ValueOf(0x10001),
+                new(),
+                2048,
+                12
             )
         );
         AsymmetricCipherKeyPair keyPair = keyGen.GenerateKeyPair();
 
-        PgpKeyPair pgpKeyPair = new(algorithm: PublicKeyAlgorithmTag.RsaGeneral, keyPair: keyPair, time: DateTime.UtcNow);
+        PgpKeyPair pgpKeyPair = new(PublicKeyAlgorithmTag.RsaGeneral, keyPair, DateTime.UtcNow);
 
         // Export armored public key
         string armoredPublicKey;
         using (MemoryStream pubOut = new())
         {
-            using ArmoredOutputStream armoredPub = new(outStream: pubOut);
-            pgpKeyPair.PublicKey.Encode(outStr: armoredPub);
+            using ArmoredOutputStream armoredPub = new(pubOut);
+            pgpKeyPair.PublicKey.Encode(armoredPub);
             armoredPub.Close();
-            armoredPublicKey = Encoding.ASCII.GetString(bytes: pubOut.ToArray());
+            armoredPublicKey = Encoding.ASCII.GetString(pubOut.ToArray());
         }
 
         // Wrap public key in a ring so VerifyManifestSignature can look up by key ID
-        PgpPublicKeyRing publicKeyRing = new(encoding: pgpKeyPair.PublicKey.GetEncoded());
+        PgpPublicKeyRing publicKeyRing = new(pgpKeyPair.PublicKey.GetEncoded());
         _ = publicKeyRing; // validated by VerifyManifestSignature via key-ID lookup
 
         // Create detached signature
         PgpSignatureGenerator sigGen = new(
-            keyAlgorithm: PublicKeyAlgorithmTag.RsaGeneral,
-            hashAlgorithm: HashAlgorithmTag.Sha256
+            PublicKeyAlgorithmTag.RsaGeneral,
+            HashAlgorithmTag.Sha256
         );
-        sigGen.InitSign(sigType: PgpSignature.BinaryDocument, privKey: pgpKeyPair.PrivateKey);
+        sigGen.InitSign(PgpSignature.BinaryDocument, pgpKeyPair.PrivateKey);
 
-        byte[] data = Encoding.UTF8.GetBytes(s: manifest);
-        sigGen.Update(b: data, off: 0, len: data.Length);
+        byte[] data = Encoding.UTF8.GetBytes(manifest);
+        sigGen.Update(data, 0, data.Length);
 
         PgpSignature sig = sigGen.Generate();
 
         string armoredSignature;
         using (MemoryStream sigOut = new())
         {
-            using ArmoredOutputStream armoredSig = new(outStream: sigOut);
-            sig.Encode(outStream: armoredSig);
+            using ArmoredOutputStream armoredSig = new(sigOut);
+            sig.Encode(armoredSig);
             armoredSig.Close();
-            armoredSignature = Encoding.ASCII.GetString(bytes: sigOut.ToArray());
+            armoredSignature = Encoding.ASCII.GetString(sigOut.ToArray());
         }
 
         return (armoredPublicKey, armoredSignature);

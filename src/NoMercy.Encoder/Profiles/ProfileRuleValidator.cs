@@ -38,37 +38,37 @@ public static class ProfileRuleValidator
     {
         List<EncoderRule> rules = [];
 
-        EmitProfileNameMissing(profile: profile, rules: rules);
-        EmitProfileNoOutputs(profile: profile, rules: rules);
-        EmitVideoWidthInvalid(profile: profile, rules: rules);
-        EmitVideoHeightInvalid(profile: profile, rules: rules);
-        EmitVideoRateControlMissing(profile: profile, rules: rules);
-        EmitVideoRateControlConflict(profile: profile, rules: rules);
-        EmitCodecContainerMismatch(profile: profile, rules: rules);
-        EmitAudioCodecContainerMismatch(profile: profile, rules: rules);
-        EmitAudioBitrateMissing(profile: profile, rules: rules);
-        EmitHlsFmp4CodecMismatch(profile: profile, rules: rules);
-        EmitLadderDuplicateVariant(profile: profile, rules: rules);
-        EmitLadderManualEmpty(profile: profile, rules: rules);
-        EmitLadderManualUnsorted(profile: profile, rules: rules);
-        EmitProfileLevelResolutionMismatch(profile: profile, rules: rules);
-        EmitLevelInvalid(profile: profile, rules: rules);
-        EmitBitrateTooLowForResolution(profile: profile, rules: rules);
-        EmitCrfOutOfTypicalRange(profile: profile, rules: rules);
-        EmitHlsKeyframeSegmentMisalignment(profile: profile, rules: rules);
-        EmitLadderInverted(profile: profile, rules: rules);
-        EmitAudioAc3OffLadderBitrate(profile: profile, rules: rules);
-        EmitSubtitlesContainerIncompatible(profile: profile, rules: rules);
-        EmitSubtitlesBurnInPermanent(profile: profile, rules: rules);
-        EmitSubtitlesAssNeedsCapableClient(profile: profile, rules: rules);
-        EmitHdrInverseTonemapUnsupported(profile: profile, rules: rules);
-        EmitBitDepthVp9ProfileMismatch(profile: profile, rules: rules);
-        EmitBitDepthH26xProfilePromoted(profile: profile, rules: rules);
-        EmitCustomArgsReservedFlag(profile: profile, rules: rules);
-        EmitDrmHttpNotHttps(profile: profile, rules: rules);
-        EmitDrmKeyMissing(profile: profile, rules: rules);
+        EmitProfileNameMissing(profile, rules);
+        EmitProfileNoOutputs(profile, rules);
+        EmitVideoWidthInvalid(profile, rules);
+        EmitVideoHeightInvalid(profile, rules);
+        EmitVideoRateControlMissing(profile, rules);
+        EmitVideoRateControlConflict(profile, rules);
+        EmitCodecContainerMismatch(profile, rules);
+        EmitAudioCodecContainerMismatch(profile, rules);
+        EmitAudioBitrateMissing(profile, rules);
+        EmitHlsFmp4CodecMismatch(profile, rules);
+        EmitLadderDuplicateVariant(profile, rules);
+        EmitLadderManualEmpty(profile, rules);
+        EmitLadderManualUnsorted(profile, rules);
+        EmitProfileLevelResolutionMismatch(profile, rules);
+        EmitLevelInvalid(profile, rules);
+        EmitBitrateTooLowForResolution(profile, rules);
+        EmitCrfOutOfTypicalRange(profile, rules);
+        EmitHlsKeyframeSegmentMisalignment(profile, rules);
+        EmitLadderInverted(profile, rules);
+        EmitAudioAc3OffLadderBitrate(profile, rules);
+        EmitSubtitlesContainerIncompatible(profile, rules);
+        EmitSubtitlesBurnInPermanent(profile, rules);
+        EmitSubtitlesAssNeedsCapableClient(profile, rules);
+        EmitHdrInverseTonemapUnsupported(profile, rules);
+        EmitBitDepthVp9ProfileMismatch(profile, rules);
+        EmitBitDepthH26xProfilePromoted(profile, rules);
+        EmitCustomArgsReservedFlag(profile, rules);
+        EmitDrmHttpNotHttps(profile, rules);
+        EmitDrmKeyMissing(profile, rules);
 
-        return ValidationEnvelope.FromRules(rules: rules);
+        return ValidationEnvelope.FromRules(rules);
     }
 
     /// <summary>
@@ -79,7 +79,7 @@ public static class ProfileRuleValidator
     ///     §"reserved flags".
     /// </summary>
     public static readonly IReadOnlySet<string> ReservedFlags = new HashSet<string>(
-        comparer: StringComparer.OrdinalIgnoreCase
+        StringComparer.OrdinalIgnoreCase
     )
     {
         // Codec selection — driven by VideoOutput.Codec / AudioOutput.Codec / SubtitleOutput.Codec
@@ -154,18 +154,18 @@ public static class ProfileRuleValidator
     /// </summary>
     public static ValidationEnvelope ValidateWithSource(EncodingProfile profile, MediaInfo source)
     {
-        ValidationEnvelope baseEnvelope = Validate(profile: profile);
+        ValidationEnvelope baseEnvelope = Validate(profile);
         List<EncoderRule> sourceRules = [];
 
-        EmitLevelFrameRateCapExceeded(profile: profile, source: source, rules: sourceRules);
-        EmitSourceVariableFrameRate(profile: profile, source: source, rules: sourceRules);
-        EmitSourceDolbyVisionWillBeStripped(profile: profile, source: source, rules: sourceRules);
-        EmitSourceUpscalingDetected(profile: profile, source: source, rules: sourceRules);
-        EmitStereoscopicSourceUnsupported(profile: profile, source: source, rules: sourceRules);
-        EmitSphericalMetadataWillBeStripped(profile: profile, source: source, rules: sourceRules);
+        EmitLevelFrameRateCapExceeded(profile, source, sourceRules);
+        EmitSourceVariableFrameRate(profile, source, sourceRules);
+        EmitSourceDolbyVisionWillBeStripped(profile, source, sourceRules);
+        EmitSourceUpscalingDetected(profile, source, sourceRules);
+        EmitStereoscopicSourceUnsupported(profile, source, sourceRules);
+        EmitSphericalMetadataWillBeStripped(profile, source, sourceRules);
 
         return ValidationEnvelope.FromRules(
-            rules: baseEnvelope.Errors.Concat(second: baseEnvelope.Warnings).Concat(second: sourceRules)
+            baseEnvelope.Errors.Concat(baseEnvelope.Warnings).Concat(sourceRules)
         );
     }
 
@@ -175,16 +175,16 @@ public static class ProfileRuleValidator
 
     private static void EmitProfileNameMissing(EncodingProfile profile, List<EncoderRule> rules)
     {
-        if (!string.IsNullOrWhiteSpace(value: profile.Name))
+        if (!string.IsNullOrWhiteSpace(profile.Name))
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.ProfileNameMissing,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "name",
-                Message: "Profile name is required so operators can identify the preset in the dashboard.",
-                Fix: "Set a non-empty profile.name (e.g. \"General 1080p Fast\")."
+            new(
+                EncoderRuleId.ProfileNameMissing,
+                EncoderRuleSeverity.Error,
+                "name",
+                "Profile name is required so operators can identify the preset in the dashboard.",
+                "Set a non-empty profile.name (e.g. \"General 1080p Fast\")."
             )
         );
     }
@@ -195,20 +195,20 @@ public static class ProfileRuleValidator
         // Audio/Subtitles may be null when Newtonsoft.Json deserialises a positional record whose
         // JSON omits those fields — guard so we emit the rule rather than throw.
         bool hasVideo = profile.Video is { Policy: not StreamPolicy.Omit };
-        bool hasAudio = (profile.Audio ?? []).Any(predicate: a => a.Policy != StreamPolicy.Omit);
-        bool hasSubtitles = (profile.Subtitles ?? []).Any(predicate: s => s.Policy != SubtitlePolicy.Omit);
+        bool hasAudio = (profile.Audio ?? []).Any(a => a.Policy != StreamPolicy.Omit);
+        bool hasSubtitles = (profile.Subtitles ?? []).Any(s => s.Policy != SubtitlePolicy.Omit);
 
         if (hasVideo || hasAudio || hasSubtitles)
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.ProfileNoOutputs,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "outputs",
-                Message: "Profile declares no video, audio, or subtitle outputs; an encode run "
+            new(
+                EncoderRuleId.ProfileNoOutputs,
+                EncoderRuleSeverity.Error,
+                "outputs",
+                "Profile declares no video, audio, or subtitle outputs; an encode run "
                     + "would produce no streams.",
-                Fix: "Add at least one VideoOutput, AudioOutput, or SubtitleOutput with policy != Skip / Omit."
+                "Add at least one VideoOutput, AudioOutput, or SubtitleOutput with policy != Skip / Omit."
             )
         );
     }
@@ -225,13 +225,13 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.VideoWidthInvalid,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "video.width",
-                Message: $"Video width must be null (keep source) or a positive integer "
+            new(
+                EncoderRuleId.VideoWidthInvalid,
+                EncoderRuleSeverity.Error,
+                "video.width",
+                $"Video width must be null (keep source) or a positive integer "
                     + $"(got {video.Width}); the encoder cannot produce a 0-pixel-wide output.",
-                Fix: "Set video.width to a positive value (typical values: 854, 1280, 1920, "
+                "Set video.width to a positive value (typical values: 854, 1280, 1920, "
                     + "2560, 3840), or leave it null to keep the source width."
             )
         );
@@ -246,13 +246,13 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.VideoHeightInvalid,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "video.height",
-                Message: $"Video height must be positive when set (got {video.Height}); "
+            new(
+                EncoderRuleId.VideoHeightInvalid,
+                EncoderRuleSeverity.Error,
+                "video.height",
+                $"Video height must be positive when set (got {video.Height}); "
                     + "leave it null to derive from source aspect ratio.",
-                Fix: "Set video.height to a positive integer or null."
+                "Set video.height to a positive integer or null."
             )
         );
     }
@@ -283,13 +283,13 @@ public static class ProfileRuleValidator
         string mode = isCrfMode ? "Crf" : video.RateControl.ToString();
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.VideoRateControlMissing,
-                Severity: EncoderRuleSeverity.Error,
-                Field: field,
-                Message: $"Rate control is {mode} but {field} is unset; the encoder has no quality "
+            new(
+                EncoderRuleId.VideoRateControlMissing,
+                EncoderRuleSeverity.Error,
+                field,
+                $"Rate control is {mode} but {field} is unset; the encoder has no quality "
                     + "target and would emit a stream nobody asked for.",
-                Fix: isCrfMode
+                isCrfMode
                     ? "Set video.crf to a value in 17..28 (23 is the typical default)."
                     : "Set video.bitrate_kbps to a positive value matched to the resolution."
             )
@@ -313,13 +313,13 @@ public static class ProfileRuleValidator
         if (isBitrateMode && hasCrf && !hasBitrate)
         {
             rules.Add(
-                item: new(
-                    Id: EncoderRuleId.VideoRateControlConflict,
-                    Severity: EncoderRuleSeverity.Error,
-                    Field: "video.rate_control",
-                    Message: $"Rate control is {video.RateControl} (bitrate-targeted) but bitrate_kbps "
+                new(
+                    EncoderRuleId.VideoRateControlConflict,
+                    EncoderRuleSeverity.Error,
+                    "video.rate_control",
+                    $"Rate control is {video.RateControl} (bitrate-targeted) but bitrate_kbps "
                         + $"is unset and crf is {video.Crf}; the encoder cannot decide which value to honour.",
-                    Fix: "Either set bitrate_kbps and keep rate_control at VBR/CBR, "
+                    "Either set bitrate_kbps and keep rate_control at VBR/CBR, "
                         + "or change rate_control to Crf and clear bitrate_kbps."
                 )
             );
@@ -331,17 +331,17 @@ public static class ProfileRuleValidator
         if (profile.Video is not { Policy: StreamPolicy.Transcode } video)
             return;
 
-        if (ContainerCompatibility.SupportsVideo(container: profile.Container, codec: video.Codec))
+        if (ContainerCompatibility.SupportsVideo(profile.Container, video.Codec))
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.CodecContainerMismatch,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "video.codec",
-                Message: $"Container {profile.Container} does not support video codec {video.Codec}; "
+            new(
+                EncoderRuleId.CodecContainerMismatch,
+                EncoderRuleSeverity.Error,
+                "video.codec",
+                $"Container {profile.Container} does not support video codec {video.Codec}; "
                     + "the muxer will refuse the stream.",
-                Fix: $"Change video.codec or pick a container that supports {video.Codec} "
+                $"Change video.codec or pick a container that supports {video.Codec} "
                     + "(see the codec/container matrix in The Effortless Encoder part 02)."
             )
         );
@@ -353,21 +353,21 @@ public static class ProfileRuleValidator
     )
     {
         foreach (
-            AudioOutput audio in (profile.Audio ?? []).Where(predicate: a =>
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
                 a.Policy == StreamPolicy.Transcode
             )
         )
         {
-            if (ContainerCompatibility.SupportsAudio(container: profile.Container, codec: audio.Codec))
+            if (ContainerCompatibility.SupportsAudio(profile.Container, audio.Codec))
                 continue;
 
             rules.Add(
-                item: new(
-                    Id: EncoderRuleId.AudioCodecContainerMismatch,
-                    Severity: EncoderRuleSeverity.Error,
-                    Field: "audio.codec",
-                    Message: $"Container {profile.Container} does not support audio codec {audio.Codec}.",
-                    Fix: $"Change audio.codec or pick a container that supports {audio.Codec}."
+                new(
+                    EncoderRuleId.AudioCodecContainerMismatch,
+                    EncoderRuleSeverity.Error,
+                    "audio.codec",
+                    $"Container {profile.Container} does not support audio codec {audio.Codec}.",
+                    $"Change audio.codec or pick a container that supports {audio.Codec}."
                 )
             );
         }
@@ -378,7 +378,7 @@ public static class ProfileRuleValidator
         // Lossy audio encoders need a target bitrate. FLAC and TrueHD are lossless and
         // ignore -b:a — leave those alone. Copy-mode audio is a passthrough.
         foreach (
-            AudioOutput audio in (profile.Audio ?? []).Where(predicate: a =>
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
                 a.Policy == StreamPolicy.Transcode
             )
         )
@@ -389,13 +389,13 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                item: new(
-                    Id: EncoderRuleId.AudioBitrateMissing,
-                    Severity: EncoderRuleSeverity.Error,
-                    Field: "audio.bitrate_kbps",
-                    Message: $"Audio output for codec {audio.Codec} has bitrate_kbps={audio.BitrateKbps}; "
+                new(
+                    EncoderRuleId.AudioBitrateMissing,
+                    EncoderRuleSeverity.Error,
+                    "audio.bitrate_kbps",
+                    $"Audio output for codec {audio.Codec} has bitrate_kbps={audio.BitrateKbps}; "
                         + "lossy encoders require a positive target bitrate.",
-                    Fix: $"Set audio.bitrate_kbps to a positive value (typical: "
+                    $"Set audio.bitrate_kbps to a positive value (typical: "
                         + $"{(audio.Codec is AudioCodecType.Aac ? "128–256" : "192–448")} kbps)."
                 )
             );
@@ -410,12 +410,12 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.LadderManualEmpty,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "ladder.rungs",
-                Message: "Manual ladder mode requires at least one rung; rungs[] is empty.",
-                Fix: "Add at least one LadderRung entry, or switch to LadderMode.Auto."
+            new(
+                EncoderRuleId.LadderManualEmpty,
+                EncoderRuleSeverity.Error,
+                "ladder.rungs",
+                "Manual ladder mode requires at least one rung; rungs[] is empty.",
+                "Add at least one LadderRung entry, or switch to LadderMode.Auto."
             )
         );
     }
@@ -433,14 +433,14 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                item: new(
-                    Id: EncoderRuleId.LadderManualUnsorted,
-                    Severity: EncoderRuleSeverity.Error,
-                    Field: "ladder.rungs",
-                    Message: $"Manual ladder rungs must be sorted ascending by bitrate; "
+                new(
+                    EncoderRuleId.LadderManualUnsorted,
+                    EncoderRuleSeverity.Error,
+                    "ladder.rungs",
+                    $"Manual ladder rungs must be sorted ascending by bitrate; "
                         + $"rung[{i}] ({rungs[i].BitrateKbps} kbps) <= rung[{i - 1}] "
                         + $"({rungs[i - 1].BitrateKbps} kbps).",
-                    Fix: "Reorder rungs by increasing bitrate_kbps so HLS variant negotiation "
+                    "Reorder rungs by increasing bitrate_kbps so HLS variant negotiation "
                         + "selects the right rung at each bandwidth."
                 )
             );
@@ -461,13 +461,13 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.HlsFmp4CodecMismatch,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "container",
-                Message: $"HLS MPEG-TS only carries H.264 (Apple HLS Authoring §1.5); "
+            new(
+                EncoderRuleId.HlsFmp4CodecMismatch,
+                EncoderRuleSeverity.Error,
+                "container",
+                $"HLS MPEG-TS only carries H.264 (Apple HLS Authoring §1.5); "
                     + $"video.codec is {video.Codec}.",
-                Fix: "Switch container to HlsFmp4 for HEVC / AV1, or change video.codec to H264."
+                "Switch container to HlsFmp4 for HEVC / AV1, or change video.codec to H264."
             )
         );
     }
@@ -482,18 +482,18 @@ public static class ProfileRuleValidator
         {
             string key =
                 $"{rungs[i].Codec}|{rungs[i].Width}x{rungs[i].Height}|{rungs[i].BitrateKbps}";
-            if (seen.Add(item: key))
+            if (seen.Add(key))
                 continue;
 
             rules.Add(
-                item: new(
-                    Id: EncoderRuleId.LadderDuplicateVariant,
-                    Severity: EncoderRuleSeverity.Warning,
-                    Field: $"ladder.rungs[{i}]",
-                    Message: $"Ladder rung {i} duplicates an earlier rung ({rungs[i].Codec} "
+                new(
+                    EncoderRuleId.LadderDuplicateVariant,
+                    EncoderRuleSeverity.Warning,
+                    $"ladder.rungs[{i}]",
+                    $"Ladder rung {i} duplicates an earlier rung ({rungs[i].Codec} "
                         + $"{rungs[i].Width}x{rungs[i].Height} @ {rungs[i].BitrateKbps} kbps); "
                         + "the second copy is wasted CPU.",
-                    Fix: $"Remove or differentiate rung {i} (change bitrate, resolution, or codec)."
+                    $"Remove or differentiate rung {i} (change bitrate, resolution, or codec)."
                 )
             );
             return;
@@ -517,7 +517,7 @@ public static class ProfileRuleValidator
                 or Container.Dash;
 
         foreach (
-            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(predicate: s =>
+            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(s =>
                 s is { Codec: SubtitleCodecType.Ass, Policy: SubtitlePolicy.Extract }
             )
         )
@@ -526,14 +526,14 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                item: new(
-                    Id: EncoderRuleId.SubtitlesAssNeedsCapableClient,
-                    Severity: EncoderRuleSeverity.Info,
-                    Field: "subtitles.codec",
-                    Message: $"ASS subtitle extracted to {profile.Container} is rendered with typesetting "
+                new(
+                    EncoderRuleId.SubtitlesAssNeedsCapableClient,
+                    EncoderRuleSeverity.Info,
+                    "subtitles.codec",
+                    $"ASS subtitle extracted to {profile.Container} is rendered with typesetting "
                         + "only on players that bundle a libass-compatible engine; most browsers fall "
                         + "back to plain text without positioning, fonts, or effects.",
-                    Fix: "Use the SubtitlesOctopus plugin in the web player, ship ASS rendering at the client, "
+                    "Use the SubtitlesOctopus plugin in the web player, ship ASS rendering at the client, "
                         + "or set subtitles.policy to BurnIn for guaranteed-fidelity playback."
                 )
             );
@@ -555,31 +555,31 @@ public static class ProfileRuleValidator
 
         if (profile.Drm.Parameters is null || profile.Drm.Parameters.Count == 0)
         {
-            rules.Add(item: BuildDrmKeyMissingRule(scheme: scheme, field: "drm.parameters"));
+            rules.Add(BuildDrmKeyMissingRule(scheme, "drm.parameters"));
             return;
         }
 
         // Accept conventional key field names — schemes vary.
-        bool hasKeyUri = profile.Drm.Parameters.Keys.Any(predicate: k =>
-            k.Equals(value: "key_uri", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || k.Equals(value: "key_url", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || k.Equals(value: "license_url", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || k.Equals(value: "keyfile", comparisonType: StringComparison.OrdinalIgnoreCase)
-            || k.Equals(value: "key_file", comparisonType: StringComparison.OrdinalIgnoreCase)
+        bool hasKeyUri = profile.Drm.Parameters.Keys.Any(k =>
+            k.Equals("key_uri", StringComparison.OrdinalIgnoreCase)
+            || k.Equals("key_url", StringComparison.OrdinalIgnoreCase)
+            || k.Equals("license_url", StringComparison.OrdinalIgnoreCase)
+            || k.Equals("keyfile", StringComparison.OrdinalIgnoreCase)
+            || k.Equals("key_file", StringComparison.OrdinalIgnoreCase)
         );
 
         if (!hasKeyUri)
-            rules.Add(item: BuildDrmKeyMissingRule(scheme: scheme, field: "drm.parameters"));
+            rules.Add(BuildDrmKeyMissingRule(scheme, "drm.parameters"));
     }
 
     private static EncoderRule BuildDrmKeyMissingRule(string scheme, string field) =>
         new(
-            Id: EncoderRuleId.DrmKeyMissing,
-            Severity: EncoderRuleSeverity.Error,
-            Field: field,
-            Message: $"DRM scheme '{scheme}' is enabled but no key delivery URI is configured; "
+            EncoderRuleId.DrmKeyMissing,
+            EncoderRuleSeverity.Error,
+            field,
+            $"DRM scheme '{scheme}' is enabled but no key delivery URI is configured; "
                 + "packaging will fail at encode time.",
-            Fix: "Add a key_uri / license_url entry to drm.parameters pointing to "
+            "Add a key_uri / license_url entry to drm.parameters pointing to "
                 + "the key server, or set drm.scheme to 'none' to disable DRM."
         );
 
@@ -595,21 +595,21 @@ public static class ProfileRuleValidator
             string normalisedKey = key.ToLowerInvariant();
             bool looksLikeKeyUri =
                 normalisedKey is "key_uri" or "key_url" or "keyuri" or "license_url";
-            if (!looksLikeKeyUri || string.IsNullOrWhiteSpace(value: value))
+            if (!looksLikeKeyUri || string.IsNullOrWhiteSpace(value))
                 continue;
 
-            if (value.StartsWith(value: "https://", comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 continue;
-            if (value.StartsWith(value: "http://", comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
             {
                 rules.Add(
-                    item: new(
-                        Id: EncoderRuleId.DrmHttpNotHttps,
-                        Severity: EncoderRuleSeverity.Error,
-                        Field: $"drm.parameters[{key}]",
-                        Message: $"DRM key URI uses plain HTTP ({value}); the decryption key would "
+                    new(
+                        EncoderRuleId.DrmHttpNotHttps,
+                        EncoderRuleSeverity.Error,
+                        $"drm.parameters[{key}]",
+                        $"DRM key URI uses plain HTTP ({value}); the decryption key would "
                             + "travel in cleartext to every on-path observer.",
-                        Fix: "Switch the key URI scheme to https:// or terminate TLS at a "
+                        "Switch the key URI scheme to https:// or terminate TLS at a "
                             + "reverse proxy in front of the key endpoint."
                     )
                 );
@@ -633,13 +633,13 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.SourceVariableFrameRate,
-                Severity: EncoderRuleSeverity.Warning,
-                Field: "source.frame_rate",
-                Message: "Source is variable frame rate (VFR); the encoder will resample to a "
+            new(
+                EncoderRuleId.SourceVariableFrameRate,
+                EncoderRuleSeverity.Warning,
+                "source.frame_rate",
+                "Source is variable frame rate (VFR); the encoder will resample to a "
                     + "constant frame rate. Long-duration content can drift up to ~1 second per hour.",
-                Fix: "If drift is unacceptable, set video.policy to Copy to preserve the source "
+                "If drift is unacceptable, set video.policy to Copy to preserve the source "
                     + "frame-rate timing, or convert via -fps_mode passthrough manually."
             )
         );
@@ -666,18 +666,18 @@ public static class ProfileRuleValidator
         if (source.VideoStreams.Count == 0)
             return;
 
-        VideoStreamInfo primary = source.VideoStreams[index: 0];
+        VideoStreamInfo primary = source.VideoStreams[0];
         if (primary.Width <= 0 || width <= primary.Width)
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.SourceUpscalingDetected,
-                Severity: EncoderRuleSeverity.Warning,
-                Field: "video.width",
-                Message: $"Target width {width} exceeds source width {primary.Width}; "
+            new(
+                EncoderRuleId.SourceUpscalingDetected,
+                EncoderRuleSeverity.Warning,
+                "video.width",
+                $"Target width {width} exceeds source width {primary.Width}; "
                     + "the encoder will upscale, adding bytes without adding detail.",
-                Fix: $"Lower video.width to {primary.Width} (or below) to avoid wasted bitrate, "
+                $"Lower video.width to {primary.Width} (or below) to avoid wasted bitrate, "
                     + "or accept the upscale if the larger frame is needed for player compatibility."
             )
         );
@@ -697,13 +697,13 @@ public static class ProfileRuleValidator
         // Dolby Vision RPU survives only when the encoder + container combo preserves it. Without
         // a DV-capable path the RPU is stripped and the output becomes HDR10 (BL only).
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.SourceDolbyVisionWillBeStripped,
-                Severity: EncoderRuleSeverity.Warning,
-                Field: "source.dolby_vision",
-                Message: "Source contains Dolby Vision metadata (RPU). The encoder strips the RPU "
+            new(
+                EncoderRuleId.SourceDolbyVisionWillBeStripped,
+                EncoderRuleSeverity.Warning,
+                "source.dolby_vision",
+                "Source contains Dolby Vision metadata (RPU). The encoder strips the RPU "
                     + "on re-encode; the output retains HDR10 base layer only.",
-                Fix: "Set video.policy to Copy to preserve the Dolby Vision stream end-to-end."
+                "Set video.policy to Copy to preserve the Dolby Vision stream end-to-end."
             )
         );
     }
@@ -720,13 +720,13 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.StereoscopicSourceUnsupported,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "source.stereo_mode",
-                Message: $"3D source detected (stereo_mode={source.StereoMode}). NoMercy does not "
+            new(
+                EncoderRuleId.StereoscopicSourceUnsupported,
+                EncoderRuleSeverity.Error,
+                "source.stereo_mode",
+                $"3D source detected (stereo_mode={source.StereoMode}). NoMercy does not "
                     + "support 3D re-encode; the stereo frame layout would be flattened.",
-                Fix: "Switch video.policy to Copy to preserve the 3D stream."
+                "Switch video.policy to Copy to preserve the 3D stream."
             )
         );
     }
@@ -743,13 +743,13 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.SphericalMetadataWillBeStripped,
-                Severity: EncoderRuleSeverity.Warning,
-                Field: "source.spherical_projection",
-                Message: $"VR projection metadata ({source.SphericalProjection}) will be stripped "
+            new(
+                EncoderRuleId.SphericalMetadataWillBeStripped,
+                EncoderRuleSeverity.Warning,
+                "source.spherical_projection",
+                $"VR projection metadata ({source.SphericalProjection}) will be stripped "
                     + "on re-encode; the output plays as a flat panoramic stretch.",
-                Fix: "Use a Copy video policy to preserve the spherical metadata box."
+                "Use a Copy video policy to preserve the spherical metadata box."
             )
         );
     }
@@ -762,19 +762,19 @@ public static class ProfileRuleValidator
         // BurnIn writes subtitles into video pixels permanently. Worth flagging once so users
         // who pick the policy by accident see what they signed up for.
         foreach (
-            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(predicate: s =>
+            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(s =>
                 s.Policy == SubtitlePolicy.BurnIn
             )
         )
         {
             rules.Add(
-                item: new(
-                    Id: EncoderRuleId.SubtitlesBurnInPermanent,
-                    Severity: EncoderRuleSeverity.Info,
-                    Field: "subtitles.policy",
-                    Message: $"Subtitle policy BurnIn writes {subtitle.Codec} into video pixels permanently; "
+                new(
+                    EncoderRuleId.SubtitlesBurnInPermanent,
+                    EncoderRuleSeverity.Info,
+                    "subtitles.policy",
+                    $"Subtitle policy BurnIn writes {subtitle.Codec} into video pixels permanently; "
                         + "viewers cannot turn this off.",
-                    Fix: "Switch subtitles.policy to Extract or Copy to keep the track toggleable."
+                    "Switch subtitles.policy to Extract or Copy to keep the track toggleable."
                 )
             );
             return;
@@ -798,7 +798,7 @@ public static class ProfileRuleValidator
         // and must skip rather than false-flag.
         if (
             profile.Video is not { Policy: StreamPolicy.Transcode } video
-            || string.IsNullOrEmpty(value: video.Level)
+            || string.IsNullOrEmpty(video.Level)
             || video.Width is not int width
             || width <= 0
         )
@@ -808,30 +808,30 @@ public static class ProfileRuleValidator
         const double assumedFps = 30.0;
         long lumaSamplesPerSec = (long)(width * height * assumedFps);
 
-        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(codec: video.Codec, level: video.Level);
+        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(video.Codec, video.Level);
         if (cap is null || lumaSamplesPerSec <= cap.MaxLumaSamplesPerSec)
             return;
 
         CodecLevelFpsCaps.LevelCap? nextFit = CodecLevelFpsCaps.FindNextFit(
-            codec: video.Codec,
-            requiredSamplesPerSec: lumaSamplesPerSec
+            video.Codec,
+            lumaSamplesPerSec
         );
 
         string fix = nextFit is not null
             ? $"Raise video.level to {nextFit.Level} (supports up to "
-                + $"{nextFit.MaxLumaSamplesPerSec.ToString(format: "N0", provider: CultureInfo.InvariantCulture)} luma samples/sec)."
+                + $"{nextFit.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec)."
             : "No standard level supports this resolution at 30 fps.";
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.LevelResolutionMismatch,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "video.level",
-                Message: $"Level {video.Level} cannot sustain {width}x{height} at 30 fps "
-                    + $"({lumaSamplesPerSec.ToString(format: "N0", provider: CultureInfo.InvariantCulture)} luma samples/sec required, "
+            new(
+                EncoderRuleId.LevelResolutionMismatch,
+                EncoderRuleSeverity.Error,
+                "video.level",
+                $"Level {video.Level} cannot sustain {width}x{height} at 30 fps "
+                    + $"({lumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec required, "
                     + $"level {video.Level} allows "
-                    + $"{cap.MaxLumaSamplesPerSec.ToString(format: "N0", provider: CultureInfo.InvariantCulture)}).",
-                Fix: fix
+                    + $"{cap.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)}).",
+                fix
             )
         );
     }
@@ -847,22 +847,22 @@ public static class ProfileRuleValidator
         // so a codec with no table (e.g. AV1) is never false-flagged.
         if (
             profile.Video is not { Policy: StreamPolicy.Transcode } video
-            || string.IsNullOrEmpty(value: video.Level)
-            || !CodecLevelFpsCaps.HasLevelTable(codec: video.Codec)
+            || string.IsNullOrEmpty(video.Level)
+            || !CodecLevelFpsCaps.HasLevelTable(video.Codec)
         )
             return;
 
-        if (CodecLevelFpsCaps.Lookup(codec: video.Codec, level: video.Level) is not null)
+        if (CodecLevelFpsCaps.Lookup(video.Codec, video.Level) is not null)
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.LevelInvalid,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "video.level",
-                Message: $"Level '{video.Level}' is not a valid {video.Codec} level; "
+            new(
+                EncoderRuleId.LevelInvalid,
+                EncoderRuleSeverity.Error,
+                "video.level",
+                $"Level '{video.Level}' is not a valid {video.Codec} level; "
                     + "ffmpeg would reject it and the encode would fail to start.",
-                Fix: "Set video.level to a level the codec defines (e.g. \"4.0\", \"5.1\"), "
+                "Set video.level to a level the codec defines (e.g. \"4.0\", \"5.1\"), "
                     + "or leave it unset to let the encoder pick."
             )
         );
@@ -887,18 +887,18 @@ public static class ProfileRuleValidator
         )
             return;
 
-        int minBitrate = MinimumBitrateKbpsFor(width: width);
+        int minBitrate = MinimumBitrateKbpsFor(width);
         if (video.BitrateKbps >= minBitrate)
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.BitrateTooLowForResolution,
-                Severity: EncoderRuleSeverity.Warning,
-                Field: "video.bitrate_kbps",
-                Message: $"Bitrate {video.BitrateKbps} kbps is below the conservative minimum "
+            new(
+                EncoderRuleId.BitrateTooLowForResolution,
+                EncoderRuleSeverity.Warning,
+                "video.bitrate_kbps",
+                $"Bitrate {video.BitrateKbps} kbps is below the conservative minimum "
                     + $"({minBitrate} kbps) for {width}-wide output; visible artefacts likely.",
-                Fix: $"Raise video.bitrate_kbps to at least {minBitrate}, "
+                $"Raise video.bitrate_kbps to at least {minBitrate}, "
                     + "or switch rate_control to CRF for quality-targeted encoding."
             )
         );
@@ -940,13 +940,13 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.CrfOutOfTypicalRange,
-                Severity: EncoderRuleSeverity.Warning,
-                Field: "video.crf",
-                Message: $"CRF {video.Crf} is outside the typical 17..28 range for {video.Codec}; "
+            new(
+                EncoderRuleId.CrfOutOfTypicalRange,
+                EncoderRuleSeverity.Warning,
+                "video.crf",
+                $"CRF {video.Crf} is outside the typical 17..28 range for {video.Codec}; "
                     + (video.Crf < 17 ? "expect very large output." : "expect heavy artefacts."),
-                Fix: "Set video.crf to 23 for transparent quality, "
+                "Set video.crf to 23 for transparent quality, "
                     + "20 for archival, or 26 for size-constrained delivery."
             )
         );
@@ -982,14 +982,14 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.HlsKeyframeSegmentMisalignment,
-                Severity: EncoderRuleSeverity.Warning,
-                Field: "video.keyframe_interval_seconds",
-                Message: $"Keyframe interval {video.KeyframeIntervalSeconds}s does not divide segment "
+            new(
+                EncoderRuleId.HlsKeyframeSegmentMisalignment,
+                EncoderRuleSeverity.Warning,
+                "video.keyframe_interval_seconds",
+                $"Keyframe interval {video.KeyframeIntervalSeconds}s does not divide segment "
                     + $"duration {profile.SegmentDurationSeconds}s; segments may end mid-GOP and "
                     + "seek precision will suffer.",
-                Fix: $"Set video.keyframe_interval_seconds to a divisor of {profile.SegmentDurationSeconds} "
+                $"Set video.keyframe_interval_seconds to a divisor of {profile.SegmentDurationSeconds} "
                     + "(typically 2 for 6s segments)."
             )
         );
@@ -1011,14 +1011,14 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                item: new(
-                    Id: EncoderRuleId.LadderInverted,
-                    Severity: EncoderRuleSeverity.Error,
-                    Field: $"ladder.rungs[{i}]",
-                    Message: $"Ladder rung {i} ({higher.Width}x{higher.Height}, {higher.BitrateKbps} kbps) has "
+                new(
+                    EncoderRuleId.LadderInverted,
+                    EncoderRuleSeverity.Error,
+                    $"ladder.rungs[{i}]",
+                    $"Ladder rung {i} ({higher.Width}x{higher.Height}, {higher.BitrateKbps} kbps) has "
                         + $"a wider resolution but a lower bitrate than rung {i - 1} "
                         + $"({lower.Width}x{lower.Height}, {lower.BitrateKbps} kbps).",
-                    Fix: $"Raise rung {i} bitrate above rung {i - 1}, or reorder so wider resolutions come last."
+                    $"Raise rung {i} bitrate above rung {i - 1}, or reorder so wider resolutions come last."
                 )
             );
             return;
@@ -1034,7 +1034,7 @@ public static class ProfileRuleValidator
         // bitrate outside this set silently picks the nearest supported value in libavcodec —
         // surprises the user when the encode output doesn't match the request.
         foreach (
-            AudioOutput audio in (profile.Audio ?? []).Where(predicate: a =>
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
                 a.Policy == StreamPolicy.Transcode
             )
         )
@@ -1047,20 +1047,20 @@ public static class ProfileRuleValidator
             };
             if (ladder is null || audio.BitrateKbps <= 0)
                 continue;
-            if (Array.IndexOf(array: ladder, value: audio.BitrateKbps) >= 0)
+            if (Array.IndexOf(ladder, audio.BitrateKbps) >= 0)
                 continue;
 
-            int nearest = ladder.OrderBy(keySelector: b => Math.Abs(value: b - audio.BitrateKbps)).First();
+            int nearest = ladder.OrderBy(b => Math.Abs(b - audio.BitrateKbps)).First();
             rules.Add(
-                item: new(
-                    Id: audio.Codec == AudioCodecType.Ac3
+                new(
+                    audio.Codec == AudioCodecType.Ac3
                         ? EncoderRuleId.AudioAc3OffLadderBitrate
                         : EncoderRuleId.AudioEac3OffLadderBitrate,
-                    Severity: EncoderRuleSeverity.Warning,
-                    Field: "audio.bitrate_kbps",
-                    Message: $"{audio.Codec} only supports a fixed bitrate ladder; {audio.BitrateKbps} kbps "
+                    EncoderRuleSeverity.Warning,
+                    "audio.bitrate_kbps",
+                    $"{audio.Codec} only supports a fixed bitrate ladder; {audio.BitrateKbps} kbps "
                         + "will be coerced by the encoder to the nearest supported value.",
-                    Fix: $"Set audio.bitrate_kbps to {nearest} (nearest supported value)."
+                    $"Set audio.bitrate_kbps to {nearest} (nearest supported value)."
                 )
             );
         }
@@ -1167,22 +1167,22 @@ public static class ProfileRuleValidator
         // pixels — no track in the container — and Omit drops the track entirely. Validate only
         // the two policies that need container compatibility.
         foreach (
-            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(predicate: s =>
+            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(s =>
                 s.Policy is SubtitlePolicy.Extract or SubtitlePolicy.Copy
             )
         )
         {
-            if (ContainerCompatibility.SupportsSubtitle(container: profile.Container, codec: subtitle.Codec))
+            if (ContainerCompatibility.SupportsSubtitle(profile.Container, subtitle.Codec))
                 continue;
 
             rules.Add(
-                item: new(
-                    Id: EncoderRuleId.SubtitlesContainerIncompatible,
-                    Severity: EncoderRuleSeverity.Error,
-                    Field: "subtitles.codec",
-                    Message: $"Container {profile.Container} does not support subtitle codec "
+                new(
+                    EncoderRuleId.SubtitlesContainerIncompatible,
+                    EncoderRuleSeverity.Error,
+                    "subtitles.codec",
+                    $"Container {profile.Container} does not support subtitle codec "
                         + $"{subtitle.Codec}; the muxer will drop the track.",
-                    Fix: $"Pick a container that supports {subtitle.Codec}, switch the subtitle "
+                    $"Pick a container that supports {subtitle.Codec}, switch the subtitle "
                         + "codec to a compatible one, or change subtitles.policy to BurnIn."
                 )
             );
@@ -1207,13 +1207,13 @@ public static class ProfileRuleValidator
             return; // request is consistent — preserve HDR from a 10-bit source.
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.HdrInverseTonemapUnsupported,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "hdr_policy",
-                Message: "HdrPolicy.AlwaysPreserve with an 8-bit video output asks the encoder to "
+            new(
+                EncoderRuleId.HdrInverseTonemapUnsupported,
+                EncoderRuleSeverity.Error,
+                "hdr_policy",
+                "HdrPolicy.AlwaysPreserve with an 8-bit video output asks the encoder to "
                     + "synthesise HDR from an SDR-shaped pipeline; no inverse-tonemap is provided.",
-                Fix: "Either raise video.bit_depth to 10+ on an HDR-capable codec (H.265 / AV1 / VP9), "
+                "Either raise video.bit_depth to 10+ on an HDR-capable codec (H.265 / AV1 / VP9), "
                     + "or change hdr_policy to PassthroughWhenPossible / AlwaysTonemap."
             )
         );
@@ -1252,14 +1252,14 @@ public static class ProfileRuleValidator
             : $"Either set video.bit_depth to 8 (matching the 8-bit profile), or change video.codec_profile to Main10 or High10 (VP9 profile2/3 for 10-bit).";
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.BitDepthVp9ProfileMismatch,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "video.codec_profile",
-                Message: $"VP9 codec_profile {video.CodecProfile} implies {impliedDepth} but "
+            new(
+                EncoderRuleId.BitDepthVp9ProfileMismatch,
+                EncoderRuleSeverity.Error,
+                "video.codec_profile",
+                $"VP9 codec_profile {video.CodecProfile} implies {impliedDepth} but "
                     + $"video.bit_depth is {video.BitDepth} ({requestedDepth}); "
                     + "libvpx-vp9 ties the profile number to both chroma subsampling and bit depth.",
-                Fix: fix
+                fix
             )
         );
     }
@@ -1291,14 +1291,14 @@ public static class ProfileRuleValidator
         string promoted = video.CodecProfile == CodecProfile.High ? "High10" : "Main10";
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.BitDepthH26xProfilePromoted,
-                Severity: EncoderRuleSeverity.Warning,
-                Field: "video.codec_profile",
-                Message: $"{video.Codec} codec_profile {video.CodecProfile} is 8-bit only but "
+            new(
+                EncoderRuleId.BitDepthH26xProfilePromoted,
+                EncoderRuleSeverity.Warning,
+                "video.codec_profile",
+                $"{video.Codec} codec_profile {video.CodecProfile} is 8-bit only but "
                     + $"video.bit_depth is {video.BitDepth}; the profile will be promoted to "
                     + $"{promoted} so the encoder accepts the 10-bit pixel format.",
-                Fix: $"Set video.codec_profile to {promoted} (10-bit) explicitly, or lower "
+                $"Set video.codec_profile to {promoted} (10-bit) explicitly, or lower "
                     + "video.bit_depth to 8 to keep the 8-bit profile."
             )
         );
@@ -1312,19 +1312,19 @@ public static class ProfileRuleValidator
         // profile.CustomArguments left every per-output override completely
         // unchecked — a video-level -rc / -maxrate / -profile:v silently clobbered
         // a resolver-owned flag with no error. Scan all four sources.
-        ScanCustomArgs(fieldPrefix: "custom_arguments", customArgs: profile.CustomArguments, rules: rules);
+        ScanCustomArgs("custom_arguments", profile.CustomArguments, rules);
 
         if (profile.Video is not null)
-            ScanCustomArgs(fieldPrefix: "video.custom_arguments", customArgs: profile.Video.CustomArguments, rules: rules);
+            ScanCustomArgs("video.custom_arguments", profile.Video.CustomArguments, rules);
 
         for (int i = 0; i < profile.Audio.Length; i++)
-            ScanCustomArgs(fieldPrefix: $"audio[{i}].custom_arguments", customArgs: profile.Audio[i].CustomArguments, rules: rules);
+            ScanCustomArgs($"audio[{i}].custom_arguments", profile.Audio[i].CustomArguments, rules);
 
         for (int i = 0; i < profile.Subtitles.Length; i++)
             ScanCustomArgs(
-                fieldPrefix: $"subtitles[{i}].custom_arguments",
-                customArgs: profile.Subtitles[i].CustomArguments,
-                rules: rules
+                $"subtitles[{i}].custom_arguments",
+                profile.Subtitles[i].CustomArguments,
+                rules
             );
     }
 
@@ -1340,19 +1340,19 @@ public static class ProfileRuleValidator
         foreach (string key in customArgs.Keys)
         {
             // Normalize: callers may store keys with or without the leading dash.
-            string normalized = key.StartsWith(value: '-') ? key : $"-{key}";
-            if (!ReservedFlags.Contains(item: normalized))
+            string normalized = key.StartsWith('-') ? key : $"-{key}";
+            if (!ReservedFlags.Contains(normalized))
                 continue;
 
             rules.Add(
-                item: new(
-                    Id: EncoderRuleId.CustomArgsReservedFlag,
-                    Severity: EncoderRuleSeverity.Error,
-                    Field: $"{fieldPrefix}[{key}]",
-                    Message: $"CustomArgument '{key}' overrides a flag the encoder derives from typed "
+                new(
+                    EncoderRuleId.CustomArgsReservedFlag,
+                    EncoderRuleSeverity.Error,
+                    $"{fieldPrefix}[{key}]",
+                    $"CustomArgument '{key}' overrides a flag the encoder derives from typed "
                         + "profile fields. The profile's declared values would be ignored and the "
                         + "validator can no longer guarantee the output matches the profile.",
-                    Fix: $"Remove the '{key}' override and set the matching typed field "
+                    $"Remove the '{key}' override and set the matching typed field "
                         + "(codec / container / preset / rate control / hardware preference / ladder) instead."
                 )
             );
@@ -1371,12 +1371,12 @@ public static class ProfileRuleValidator
     {
         if (
             profile.Video is not { Policy: StreamPolicy.Transcode } video
-            || string.IsNullOrEmpty(value: video.Level)
+            || string.IsNullOrEmpty(video.Level)
             || source.VideoStreams.Count == 0
         )
             return;
 
-        VideoStreamInfo primaryVideo = source.VideoStreams[index: 0];
+        VideoStreamInfo primaryVideo = source.VideoStreams[0];
         double fps = primaryVideo.AverageFrameRate ?? primaryVideo.FrameRate;
         if (fps <= 0)
             return;
@@ -1387,31 +1387,31 @@ public static class ProfileRuleValidator
         int effectiveHeight = video.Height ?? primaryVideo.Height;
         long lumaSamplesPerSec = (long)(effectiveWidth * effectiveHeight * fps);
 
-        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(codec: video.Codec, level: video.Level);
+        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(video.Codec, video.Level);
         if (cap is null || lumaSamplesPerSec <= cap.MaxLumaSamplesPerSec)
             return;
 
         CodecLevelFpsCaps.LevelCap? nextFit = CodecLevelFpsCaps.FindNextFit(
-            codec: video.Codec,
-            requiredSamplesPerSec: lumaSamplesPerSec
+            video.Codec,
+            lumaSamplesPerSec
         );
 
         string fix = nextFit is not null
             ? $"Raise video.level to {nextFit.Level} (supports up to "
-                + $"{nextFit.MaxLumaSamplesPerSec.ToString(format: "N0", provider: CultureInfo.InvariantCulture)} luma samples/sec)."
+                + $"{nextFit.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec)."
             : "No standard level supports this resolution × frame rate.";
 
         rules.Add(
-            item: new(
-                Id: EncoderRuleId.LevelFrameRateCapExceeded,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "video.level",
-                Message: $"Source {fps.ToString(format: "F2", provider: CultureInfo.InvariantCulture)} fps × "
+            new(
+                EncoderRuleId.LevelFrameRateCapExceeded,
+                EncoderRuleSeverity.Error,
+                "video.level",
+                $"Source {fps.ToString("F2", CultureInfo.InvariantCulture)} fps × "
                     + $"{effectiveWidth}x{effectiveHeight} requires "
-                    + $"{lumaSamplesPerSec.ToString(format: "N0", provider: CultureInfo.InvariantCulture)} luma samples/sec; level "
+                    + $"{lumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec; level "
                     + $"{video.Level} allows "
-                    + $"{cap.MaxLumaSamplesPerSec.ToString(format: "N0", provider: CultureInfo.InvariantCulture)}.",
-                Fix: fix
+                    + $"{cap.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)}.",
+                fix
             )
         );
     }

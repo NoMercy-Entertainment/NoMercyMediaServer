@@ -18,7 +18,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Media;
 
-[Trait(name: "Category", value: "Collections")]
+[Trait("Category", "Collections")]
 public class CollectionMovieDtoTests
 {
     private static Movie BuildMovieWithImages(params Image[] images)
@@ -32,7 +32,7 @@ public class CollectionMovieDtoTests
         };
 
         foreach (Image image in images)
-            movie.Images.Add(item: image);
+            movie.Images.Add(image);
 
         return movie;
     }
@@ -40,8 +40,7 @@ public class CollectionMovieDtoTests
     [Fact]
     public void Ctor_MovieWithLogoImage_SetsLogoFromBestVotedLogo()
     {
-        Movie movie = BuildMovieWithImages(images:
-            [
+        Movie movie = BuildMovieWithImages([
                 new Image
                 {
                     Type = "logo",
@@ -57,16 +56,16 @@ public class CollectionMovieDtoTests
             ]
         );
 
-        CollectionMovieDto dto = new(movie: movie);
+        CollectionMovieDto dto = new(movie);
 
-        Assert.Equal(expected: "/logo-low.png", actual: dto.Logo);
+        Assert.Equal("/logo-low.png", dto.Logo);
     }
 
     [Fact]
     public void Ctor_MovieWithoutLogoImage_LeavesLogoNull()
     {
         Movie movie = BuildMovieWithImages(
-            images: new Image
+            new Image
             {
                 Type = "backdrop",
                 FilePath = "/backdrop.jpg",
@@ -74,16 +73,16 @@ public class CollectionMovieDtoTests
             }
         );
 
-        CollectionMovieDto dto = new(movie: movie);
+        CollectionMovieDto dto = new(movie);
 
-        Assert.Null(@object: dto.Logo);
+        Assert.Null(dto.Logo);
     }
 
     [Fact]
     public void Serialized_CollectionMember_EmitsLowercaseLogoKey()
     {
         Movie movie = BuildMovieWithImages(
-            images: new Image
+            new Image
             {
                 Type = "logo",
                 FilePath = "/logo.png",
@@ -91,11 +90,11 @@ public class CollectionMovieDtoTests
             }
         );
 
-        CollectionMovieDto dto = new(movie: movie);
+        CollectionMovieDto dto = new(movie);
 
-        JObject json = JObject.Parse(json: JsonConvert.SerializeObject(value: dto));
+        JObject json = JObject.Parse(JsonConvert.SerializeObject(dto));
 
-        Assert.True(condition: json.ContainsKey(propertyName: "logo"));
-        Assert.Equal(expected: "/logo.png", actual: json[propertyName: "logo"]!.Value<string>());
+        Assert.True(json.ContainsKey("logo"));
+        Assert.Equal("/logo.png", json["logo"]!.Value<string>());
     }
 }

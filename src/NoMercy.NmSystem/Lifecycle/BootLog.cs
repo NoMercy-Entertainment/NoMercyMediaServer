@@ -42,7 +42,7 @@ public static class BootLog
     /// </summary>
     public static PhaseScope Phase(string name)
     {
-        return new(name: name);
+        return new(name);
     }
 
     /// <summary>
@@ -63,14 +63,14 @@ public static class BootLog
         if (timings.Length == 0)
             return;
 
-        double totalSeconds = timings.Sum(selector: t => t.Elapsed.TotalSeconds);
+        double totalSeconds = timings.Sum(t => t.Elapsed.TotalSeconds);
         string phases = string.Join(
-            separator: " · ",
-            values: timings.Select(selector: t => $"{t.Name}: {t.Elapsed.TotalSeconds:F1}s")
+            " · ",
+            timings.Select(t => $"{t.Name}: {t.Elapsed.TotalSeconds:F1}s")
         );
 
-        Logger.App(message: $"Boot complete in {totalSeconds:F1}s");
-        Logger.App(message: $"  {phases}");
+        Logger.App($"Boot complete in {totalSeconds:F1}s");
+        Logger.App($"  {phases}");
     }
 
     public sealed class PhaseScope : IDisposable
@@ -84,7 +84,7 @@ public static class BootLog
         {
             _name = name;
             _sw = Stopwatch.StartNew();
-            Logger.Setup(message: $"▸ {name}");
+            Logger.Setup($"▸ {name}");
         }
 
         /// <summary>
@@ -106,16 +106,16 @@ public static class BootLog
 
             if (_failureReason is null)
             {
-                Logger.Setup(message: $"  ✓ {_name} ready ({_sw.Elapsed.TotalSeconds:F1}s)");
+                Logger.Setup($"  ✓ {_name} ready ({_sw.Elapsed.TotalSeconds:F1}s)");
             }
             else
             {
-                Logger.Setup(message: $"  ✗ {_name} {_failureReason} ({_sw.Elapsed.TotalSeconds:F1}s)");
+                Logger.Setup($"  ✗ {_name} {_failureReason} ({_sw.Elapsed.TotalSeconds:F1}s)");
             }
 
             lock (_lock)
             {
-                _phaseTimings.Add(item: (_name, _sw.Elapsed));
+                _phaseTimings.Add((_name, _sw.Elapsed));
             }
         }
     }

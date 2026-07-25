@@ -19,17 +19,17 @@ using Xunit;
 
 namespace NoMercy.Tests.Networking;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class ConnectivityManagerStateTests
 {
     private static NetworkDiscovery BuildNetworkDiscovery()
     {
         NetworkDiscovery d = new(
-            logger: NullLogger<NetworkDiscovery>.Instance,
-            driver: new LocalStorageDriver(),
-            authTokenStore: new AuthTokenStore(),
-            connectivityStatus: new ConnectivityStatus(),
-            networkProbeConfig: new()
+            NullLogger<NetworkDiscovery>.Instance,
+            new LocalStorageDriver(),
+            new AuthTokenStore(),
+            new ConnectivityStatus(),
+            new()
         );
         d.ExternalIp = "1.2.3.4";
         return d;
@@ -50,7 +50,7 @@ public sealed class ConnectivityManagerStateTests
         public Task<bool> TryEstablishAsync(CancellationToken ct)
         {
             WasAttempted = true;
-            return Task.FromResult(result: succeeds);
+            return Task.FromResult(succeeds);
         }
 
         public Task TeardownAsync() => Task.CompletedTask;
@@ -59,41 +59,41 @@ public sealed class ConnectivityManagerStateTests
     private static ConnectivityManager BuildManager(params IConnectivityStrategy[] strategies)
     {
         AuthTokenStore tokenStore = new();
-        tokenStore.SetAccessToken(token: "test-token");
+        tokenStore.SetAccessToken("test-token");
         BootStatus boot = new();
         boot.MarkStarted();
 
         return new(
-            logger: NullLogger<ConnectivityManager>.Instance,
-            authTokenStore: tokenStore,
-            networkDiscovery: BuildNetworkDiscovery(),
-            strategies: strategies,
-            bootStatus: boot
+            NullLogger<ConnectivityManager>.Instance,
+            tokenStore,
+            BuildNetworkDiscovery(),
+            strategies,
+            boot
         );
     }
 
     [Fact]
     public async Task EvaluateAsync_WhenFirstStrategySucceeds_SetsDirectAccessState()
     {
-        StubStrategy winning = new(name: "PortForward", priority: 1, type: ConnectivityType.PortForward, succeeds: true);
-        StubStrategy skipped = new(name: "Stun", priority: 2, type: ConnectivityType.StunHolePunch, succeeds: true);
-        ConnectivityManager manager = BuildManager(strategies: [winning, skipped]);
+        StubStrategy winning = new("PortForward", 1, ConnectivityType.PortForward, true);
+        StubStrategy skipped = new("Stun", 2, ConnectivityType.StunHolePunch, true);
+        ConnectivityManager manager = BuildManager([winning, skipped]);
 
-        await manager.EvaluateAsync(ct: CancellationToken.None);
+        await manager.EvaluateAsync(CancellationToken.None);
 
-        Assert.Equal(expected: ConnectivityState.DirectAccess, actual: manager.CurrentState);
+        Assert.Equal(ConnectivityState.DirectAccess, manager.CurrentState);
     }
 
     [Fact]
     public async Task EvaluateAsync_WhenAllStrategiesFail_SetsLocalOnlyState()
     {
-        StubStrategy a = new(name: "PortForward", priority: 1, type: ConnectivityType.PortForward, succeeds: false);
-        StubStrategy b = new(name: "Stun", priority: 2, type: ConnectivityType.StunHolePunch, succeeds: false);
-        ConnectivityManager manager = BuildManager(strategies: [a, b]);
+        StubStrategy a = new("PortForward", 1, ConnectivityType.PortForward, false);
+        StubStrategy b = new("Stun", 2, ConnectivityType.StunHolePunch, false);
+        ConnectivityManager manager = BuildManager([a, b]);
 
-        await manager.EvaluateAsync(ct: CancellationToken.None);
+        await manager.EvaluateAsync(CancellationToken.None);
 
-        Assert.Equal(expected: ConnectivityState.LocalOnly, actual: manager.CurrentState);
+        Assert.Equal(ConnectivityState.LocalOnly, manager.CurrentState);
     }
 
     [Fact]
@@ -101,76 +101,76 @@ public sealed class ConnectivityManagerStateTests
     {
         ConnectivityManager manager = BuildManager();
 
-        await manager.EvaluateAsync(ct: CancellationToken.None);
+        await manager.EvaluateAsync(CancellationToken.None);
 
-        Assert.Equal(expected: ConnectivityState.LocalOnly, actual: manager.CurrentState);
+        Assert.Equal(ConnectivityState.LocalOnly, manager.CurrentState);
     }
 
     [Fact]
     public async Task EvaluateAsync_FirstStrategyFails_SecondSucceeds_SetsHolePunchedState()
     {
-        StubStrategy fail = new(name: "PortForward", priority: 1, type: ConnectivityType.PortForward, succeeds: false);
-        StubStrategy win = new(name: "Stun", priority: 2, type: ConnectivityType.StunHolePunch, succeeds: true);
-        ConnectivityManager manager = BuildManager(strategies: [fail, win]);
+        StubStrategy fail = new("PortForward", 1, ConnectivityType.PortForward, false);
+        StubStrategy win = new("Stun", 2, ConnectivityType.StunHolePunch, true);
+        ConnectivityManager manager = BuildManager([fail, win]);
 
-        await manager.EvaluateAsync(ct: CancellationToken.None);
+        await manager.EvaluateAsync(CancellationToken.None);
 
-        Assert.Equal(expected: ConnectivityState.HolePunched, actual: manager.CurrentState);
-        Assert.True(condition: fail.WasAttempted);
-        Assert.True(condition: win.WasAttempted);
+        Assert.Equal(ConnectivityState.HolePunched, manager.CurrentState);
+        Assert.True(fail.WasAttempted);
+        Assert.True(win.WasAttempted);
     }
 
     [Fact]
     public async Task EvaluateAsync_CloudflareTunnelSucceeds_SetsTunneledState()
     {
         StubStrategy cf = new(
-            name: "CloudflareTunnel",
-            priority: 3,
-            type: ConnectivityType.CloudflareTunnel,
-            succeeds: true
+            "CloudflareTunnel",
+            3,
+            ConnectivityType.CloudflareTunnel,
+            true
         );
-        ConnectivityManager manager = BuildManager(strategies: cf);
+        ConnectivityManager manager = BuildManager(cf);
 
-        await manager.EvaluateAsync(ct: CancellationToken.None);
+        await manager.EvaluateAsync(CancellationToken.None);
 
-        Assert.Equal(expected: ConnectivityState.Tunneled, actual: manager.CurrentState);
+        Assert.Equal(ConnectivityState.Tunneled, manager.CurrentState);
     }
 
     [Fact]
     public async Task EvaluateAsync_FirstSuccessWins_LaterStrategyNotAttempted()
     {
-        StubStrategy first = new(name: "PortForward", priority: 1, type: ConnectivityType.PortForward, succeeds: true);
-        StubStrategy second = new(name: "Stun", priority: 2, type: ConnectivityType.StunHolePunch, succeeds: true);
-        ConnectivityManager manager = BuildManager(strategies: [first, second]);
+        StubStrategy first = new("PortForward", 1, ConnectivityType.PortForward, true);
+        StubStrategy second = new("Stun", 2, ConnectivityType.StunHolePunch, true);
+        ConnectivityManager manager = BuildManager([first, second]);
 
-        await manager.EvaluateAsync(ct: CancellationToken.None);
+        await manager.EvaluateAsync(CancellationToken.None);
 
-        Assert.True(condition: first.WasAttempted);
-        Assert.False(condition: second.WasAttempted);
+        Assert.True(first.WasAttempted);
+        Assert.False(second.WasAttempted);
     }
 
     [Fact]
     public async Task EvaluateAsync_StateChangedEvent_FiresWithCorrectState()
     {
-        StubStrategy strategy = new(name: "PortForward", priority: 1, type: ConnectivityType.PortForward, succeeds: true);
-        ConnectivityManager manager = BuildManager(strategies: strategy);
+        StubStrategy strategy = new("PortForward", 1, ConnectivityType.PortForward, true);
+        ConnectivityManager manager = BuildManager(strategy);
         List<ConnectivityState> observed = [];
-        manager.StateChanged += s => observed.Add(item: s);
+        manager.StateChanged += s => observed.Add(s);
 
-        await manager.EvaluateAsync(ct: CancellationToken.None);
+        await manager.EvaluateAsync(CancellationToken.None);
 
-        Assert.Contains(expected: ConnectivityState.DirectAccess, collection: observed);
+        Assert.Contains(ConnectivityState.DirectAccess, observed);
     }
 
     [Fact]
     public async Task EvaluateAsync_AllFail_ActiveStrategyIsLocalOnly()
     {
-        StubStrategy fail = new(name: "PortForward", priority: 1, type: ConnectivityType.PortForward, succeeds: false);
-        ConnectivityManager manager = BuildManager(strategies: fail);
+        StubStrategy fail = new("PortForward", 1, ConnectivityType.PortForward, false);
+        ConnectivityManager manager = BuildManager(fail);
 
-        await manager.EvaluateAsync(ct: CancellationToken.None);
+        await manager.EvaluateAsync(CancellationToken.None);
 
-        Assert.Equal(expected: ConnectivityType.LocalOnly, actual: manager.ActiveStrategy);
+        Assert.Equal(ConnectivityType.LocalOnly, manager.ActiveStrategy);
     }
 
     [Fact]
@@ -178,15 +178,15 @@ public sealed class ConnectivityManagerStateTests
     {
         List<string> attemptOrder = [];
 
-        OrderTrackingStrategy low = new(name: "Low", priority: 1, type: ConnectivityType.PortForward, log: attemptOrder);
-        OrderTrackingStrategy high = new(name: "High", priority: 2, type: ConnectivityType.StunHolePunch, log: attemptOrder);
+        OrderTrackingStrategy low = new("Low", 1, ConnectivityType.PortForward, attemptOrder);
+        OrderTrackingStrategy high = new("High", 2, ConnectivityType.StunHolePunch, attemptOrder);
 
-        ConnectivityManager manager = BuildManager(strategies: [high, low]);
+        ConnectivityManager manager = BuildManager([high, low]);
 
-        await manager.EvaluateAsync(ct: CancellationToken.None);
+        await manager.EvaluateAsync(CancellationToken.None);
 
-        Assert.Equal(expected: "Low", actual: attemptOrder[index: 0]);
-        Assert.Equal(expected: "High", actual: attemptOrder[index: 1]);
+        Assert.Equal("Low", attemptOrder[0]);
+        Assert.Equal("High", attemptOrder[1]);
     }
 
     private sealed class OrderTrackingStrategy(
@@ -202,8 +202,8 @@ public sealed class ConnectivityManagerStateTests
 
         public Task<bool> TryEstablishAsync(CancellationToken ct)
         {
-            log.Add(item: name);
-            return Task.FromResult(result: false);
+            log.Add(name);
+            return Task.FromResult(false);
         }
 
         public Task TeardownAsync() => Task.CompletedTask;

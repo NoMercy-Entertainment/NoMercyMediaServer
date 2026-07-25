@@ -17,16 +17,16 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record ScreensaverDataDto
 {
-    [JsonProperty(propertyName: "aspectRatio")]
+    [JsonProperty("aspectRatio")]
     public double AspectRatio { get; set; }
 
-    [JsonProperty(propertyName: "src")]
+    [JsonProperty("src")]
     public string? Src { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "meta")]
+    [JsonProperty("meta")]
     public MetaDto? Meta { get; set; }
 
     public ScreensaverDataDto(Image image, Image? logo)

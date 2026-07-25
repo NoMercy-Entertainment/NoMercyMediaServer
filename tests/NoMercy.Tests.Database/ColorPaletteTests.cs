@@ -19,21 +19,21 @@ namespace NoMercy.Tests.Database;
 public class ColorPaletteTests
 {
     [Theory]
-    [InlineData(data: null)]
-    [InlineData(data: "")]
+    [InlineData(null)]
+    [InlineData("")]
     public void FromJsonOrNull_NullOrEmptyInput_ReturnsNull(string? json)
     {
-        ColorPalette? result = ColorPalette.FromJsonOrNull(json: json);
+        ColorPalette? result = ColorPalette.FromJsonOrNull(json);
 
-        Assert.Null(@object: result);
+        Assert.Null(result);
     }
 
     [Fact]
     public void FromJsonOrNull_MalformedJson_ReturnsNullInsteadOfThrowing()
     {
-        ColorPalette? result = ColorPalette.FromJsonOrNull(json: "{not valid json");
+        ColorPalette? result = ColorPalette.FromJsonOrNull("{not valid json");
 
-        Assert.Null(@object: result);
+        Assert.Null(result);
     }
 
     [Fact]
@@ -50,16 +50,16 @@ public class ColorPaletteTests
             }
             """;
 
-        ColorPalette? result = ColorPalette.FromJsonOrNull(json: json);
+        ColorPalette? result = ColorPalette.FromJsonOrNull(json);
 
-        Assert.NotNull(@object: result);
-        Assert.Equal(expected: "#111111", actual: result!.Poster!.Dominant);
-        Assert.Equal(expected: "#222222", actual: result.Poster.Primary);
-        Assert.Equal(expected: "#333333", actual: result.Backdrop!.Dominant);
-        Assert.Equal(expected: "#444444", actual: result.Still!.Dominant);
-        Assert.Equal(expected: "#555555", actual: result.Profile!.Dominant);
-        Assert.Equal(expected: "#666666", actual: result.Image!.Dominant);
-        Assert.Equal(expected: "#777777", actual: result.Cover!.Dominant);
+        Assert.NotNull(result);
+        Assert.Equal("#111111", result!.Poster!.Dominant);
+        Assert.Equal("#222222", result.Poster.Primary);
+        Assert.Equal("#333333", result.Backdrop!.Dominant);
+        Assert.Equal("#444444", result.Still!.Dominant);
+        Assert.Equal("#555555", result.Profile!.Dominant);
+        Assert.Equal("#666666", result.Image!.Dominant);
+        Assert.Equal("#777777", result.Cover!.Dominant);
     }
 
     [Fact]
@@ -67,10 +67,10 @@ public class ColorPaletteTests
     {
         const string json = """{ "poster": { "dominant": "#111111" } }""";
 
-        ColorPalette? result = ColorPalette.FromJsonOrNull(json: json);
+        ColorPalette? result = ColorPalette.FromJsonOrNull(json);
 
-        Assert.NotNull(@object: result);
-        Assert.NotNull(@object: result!.Poster);
-        Assert.Null(@object: result.Backdrop);
+        Assert.NotNull(result);
+        Assert.NotNull(result!.Poster);
+        Assert.Null(result.Backdrop);
     }
 }

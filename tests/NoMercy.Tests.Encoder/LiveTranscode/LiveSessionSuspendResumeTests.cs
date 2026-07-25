@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Reflection;
-using System.Threading;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.LiveTranscode;
 
@@ -25,16 +24,16 @@ public class LiveSessionSuspendResumeTests
 {
     private static LiveQuality MakeQuality() =>
         new(
-            Id: "1080p",
-            Label: "1080p",
-            Width: 1920,
-            Height: 1080,
-            Codec: VideoCodecType.H264,
-            BitrateKbps: 8000,
-            Encoder: "libx264",
-            IsHardwareAccelerated: false,
-            ExpectedSpeed: 2.0,
-            CanRealtime: true
+            "1080p",
+            "1080p",
+            1920,
+            1080,
+            VideoCodecType.H264,
+            8000,
+            "libx264",
+            false,
+            2.0,
+            true
         );
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -44,8 +43,8 @@ public class LiveSessionSuspendResumeTests
     [Fact]
     public void Suspend_WhenTranscoding_CancelsRunnerCancellationToken()
     {
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Transcoding);
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
 
         CancellationToken runnerToken = session.RunnerCancellation;
 
@@ -62,12 +61,12 @@ public class LiveSessionSuspendResumeTests
     [Fact]
     public void Suspend_WhenAlreadyBuffered_DoesNotChangeState()
     {
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Buffered);
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Buffered);
 
         session.Suspend();
 
-        session.State.Should().Be(expected: LiveSessionState.Buffered);
+        session.State.Should().Be(LiveSessionState.Buffered);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -77,15 +76,15 @@ public class LiveSessionSuspendResumeTests
     [Fact]
     public async Task Resume_AfterSuspend_SpawnsNewRunner()
     {
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Transcoding);
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
 
-        TimeSpan reportedPosition = TimeSpan.FromSeconds(seconds: 42);
-        session.ReportPlaybackPosition(position: reportedPosition, authoritative: true);
+        TimeSpan reportedPosition = TimeSpan.FromSeconds(42);
+        session.ReportPlaybackPosition(reportedPosition, true);
 
         TimeSpan? spawnedPosition = null;
         session.AttachRunnerFactory(
-            factory: (pos, _) =>
+            (pos, _) =>
             {
                 spawnedPosition = pos;
                 return Task.CompletedTask;
@@ -96,10 +95,10 @@ public class LiveSessionSuspendResumeTests
         session.Resume();
 
         // Give the fire-and-forget Task a moment to execute
-        await Task.Delay(millisecondsDelay: 50);
+        await Task.Delay(50);
 
         spawnedPosition.Should().NotBeNull();
-        spawnedPosition!.Value.Should().Be(expected: reportedPosition);
+        spawnedPosition!.Value.Should().Be(reportedPosition);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -109,13 +108,13 @@ public class LiveSessionSuspendResumeTests
     [Fact]
     public void Resume_NoFactory_FlipsStateWithoutThrowing()
     {
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Buffered);
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Buffered);
 
         Action act = () => session.Resume();
 
         act.Should().NotThrow();
-        session.State.Should().Be(expected: LiveSessionState.Transcoding);
+        session.State.Should().Be(LiveSessionState.Transcoding);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -125,12 +124,12 @@ public class LiveSessionSuspendResumeTests
     [Fact]
     public async Task Resume_WhenAlreadyTranscoding_DoesNotSpawnSecondRunner()
     {
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Transcoding);
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
 
         int spawnCount = 0;
         session.AttachRunnerFactory(
-            factory: (_, _) =>
+            (_, _) =>
             {
                 spawnCount++;
                 return Task.CompletedTask;
@@ -139,9 +138,9 @@ public class LiveSessionSuspendResumeTests
 
         session.Resume();
 
-        await Task.Delay(millisecondsDelay: 50);
+        await Task.Delay(50);
 
-        spawnCount.Should().Be(expected: 0);
+        spawnCount.Should().Be(0);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -151,9 +150,9 @@ public class LiveSessionSuspendResumeTests
     [Fact]
     public async Task Resume_AfterSuspend_RunnerTokenIsNotCancelled()
     {
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Transcoding);
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
         session.Suspend();
 
@@ -162,7 +161,7 @@ public class LiveSessionSuspendResumeTests
 
         session.Resume();
 
-        await Task.Delay(millisecondsDelay: 50);
+        await Task.Delay(50);
 
         // After resume, a fresh CTS is installed — new token must not be cancelled
         session.RunnerCancellation.IsCancellationRequested.Should().BeFalse();
@@ -179,10 +178,10 @@ public class LiveSessionSuspendResumeTests
     private static CancellationTokenSource GetRunnerCts(LiveSession session)
     {
         FieldInfo field = typeof(LiveSession).GetField(
-            name: "_runnerCts",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "_runnerCts",
+            BindingFlags.NonPublic | BindingFlags.Instance
         )!;
-        return (CancellationTokenSource)field.GetValue(obj: session)!;
+        return (CancellationTokenSource)field.GetValue(session)!;
     }
 
     [Fact]
@@ -191,19 +190,19 @@ public class LiveSessionSuspendResumeTests
         // The CTS Suspend() cancels is not disposed by Suspend() itself (it
         // may still be the session's live CTS if Resume() is never called).
         // Resume() replacing it must dispose it instead of leaking it.
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Transcoding);
-        session.AttachRunnerFactory(factory: (_, _) => Task.CompletedTask);
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
 
         session.Suspend();
-        CancellationTokenSource suspendedCts = GetRunnerCts(session: session);
+        CancellationTokenSource suspendedCts = GetRunnerCts(session);
 
         session.Resume();
 
         Action act = () => _ = suspendedCts.Token;
         act.Should()
             .Throw<ObjectDisposedException>(
-                because: "Resume() must dispose the CTS Suspend() cancelled instead of leaking it"
+                "Resume() must dispose the CTS Suspend() cancelled instead of leaking it"
             );
     }
 
@@ -221,31 +220,31 @@ public class LiveSessionSuspendResumeTests
     [Fact]
     public async Task Suspend_ConcurrentWithSeek_WaitsForSeekToReleaseTheLock()
     {
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Transcoding);
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
 
-        using ManualResetEventSlim seekIsHoldingLock = new(initialState: false);
-        using ManualResetEventSlim releaseSeek = new(initialState: false);
-        session.RunnerCancellation.Register(callback: () =>
+        using ManualResetEventSlim seekIsHoldingLock = new(false);
+        using ManualResetEventSlim releaseSeek = new(false);
+        session.RunnerCancellation.Register(() =>
         {
             seekIsHoldingLock.Set();
-            releaseSeek.Wait(timeout: TimeSpan.FromSeconds(seconds: 5));
+            releaseSeek.Wait(TimeSpan.FromSeconds(5));
         });
 
-        Task seekTask = Task.Run(function: () =>
-            session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 5), ct: CancellationToken.None)
+        Task seekTask = Task.Run(() =>
+            session.SeekAsync(TimeSpan.FromSeconds(5), CancellationToken.None)
         );
 
-        seekIsHoldingLock.Wait(timeout: TimeSpan.FromSeconds(seconds: 5)).Should().BeTrue();
+        seekIsHoldingLock.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
 
-        Task suspendTask = Task.Run(action: () => session.Suspend());
-        await Task.Delay(millisecondsDelay: 150);
+        Task suspendTask = Task.Run(() => session.Suspend());
+        await Task.Delay(150);
         suspendTask
             .IsCompleted.Should()
-            .BeFalse(because: "Suspend must wait for the in-progress Seek to release _seekLock");
+            .BeFalse("Suspend must wait for the in-progress Seek to release _seekLock");
 
         releaseSeek.Set();
-        await Task.WhenAll(tasks: [seekTask, suspendTask]).WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
+        await Task.WhenAll([seekTask, suspendTask]).WaitAsync(TimeSpan.FromSeconds(5));
 
         suspendTask.IsCompletedSuccessfully.Should().BeTrue();
     }
@@ -253,31 +252,31 @@ public class LiveSessionSuspendResumeTests
     [Fact]
     public async Task Resume_ConcurrentWithSeek_WaitsForSeekToReleaseTheLock()
     {
-        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
-        session.SetState(state: LiveSessionState.Buffered);
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Buffered);
 
-        using ManualResetEventSlim seekIsHoldingLock = new(initialState: false);
-        using ManualResetEventSlim releaseSeek = new(initialState: false);
-        session.RunnerCancellation.Register(callback: () =>
+        using ManualResetEventSlim seekIsHoldingLock = new(false);
+        using ManualResetEventSlim releaseSeek = new(false);
+        session.RunnerCancellation.Register(() =>
         {
             seekIsHoldingLock.Set();
-            releaseSeek.Wait(timeout: TimeSpan.FromSeconds(seconds: 5));
+            releaseSeek.Wait(TimeSpan.FromSeconds(5));
         });
 
-        Task seekTask = Task.Run(function: () =>
-            session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 5), ct: CancellationToken.None)
+        Task seekTask = Task.Run(() =>
+            session.SeekAsync(TimeSpan.FromSeconds(5), CancellationToken.None)
         );
 
-        seekIsHoldingLock.Wait(timeout: TimeSpan.FromSeconds(seconds: 5)).Should().BeTrue();
+        seekIsHoldingLock.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
 
-        Task resumeTask = Task.Run(action: () => session.Resume());
-        await Task.Delay(millisecondsDelay: 150);
+        Task resumeTask = Task.Run(() => session.Resume());
+        await Task.Delay(150);
         resumeTask
             .IsCompleted.Should()
-            .BeFalse(because: "Resume must wait for the in-progress Seek to release _seekLock");
+            .BeFalse("Resume must wait for the in-progress Seek to release _seekLock");
 
         releaseSeek.Set();
-        await Task.WhenAll(tasks: [seekTask, resumeTask]).WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
+        await Task.WhenAll([seekTask, resumeTask]).WaitAsync(TimeSpan.FromSeconds(5));
 
         resumeTask.IsCompletedSuccessfully.Should().BeTrue();
     }

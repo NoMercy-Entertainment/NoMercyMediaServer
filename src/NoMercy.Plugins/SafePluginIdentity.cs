@@ -27,7 +27,7 @@ internal readonly record struct SafePluginIdentity(
     Version Version
 )
 {
-    private static readonly Version UnknownVersion = new(major: 0, minor: 0, build: 0);
+    private static readonly Version UnknownVersion = new(0, 0, 0);
 
     internal static SafePluginIdentity Read(IPlugin? instance, Type pluginType)
     {
@@ -35,7 +35,7 @@ internal readonly record struct SafePluginIdentity(
 
         if (instance is null)
         {
-            return new(Id: Guid.Empty, Name: name, Description: string.Empty, Version: UnknownVersion);
+            return new(Guid.Empty, name, string.Empty, UnknownVersion);
         }
 
         Guid id = Guid.Empty;
@@ -51,7 +51,7 @@ internal readonly record struct SafePluginIdentity(
         try
         {
             string candidate = instance.Name;
-            if (!string.IsNullOrWhiteSpace(value: candidate))
+            if (!string.IsNullOrWhiteSpace(candidate))
             {
                 name = candidate;
             }
@@ -81,6 +81,6 @@ internal readonly record struct SafePluginIdentity(
             // Faulty Version getter — fall back to 0.0.0.
         }
 
-        return new(Id: id, Name: name, Description: description, Version: version);
+        return new(id, name, description, version);
     }
 }

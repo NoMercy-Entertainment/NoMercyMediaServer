@@ -27,55 +27,55 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 // show.SxxExx / movie.(year) token. These pin that the anchor matches the
 // on-disk path where the drift-prone full name does not.
 // ---------------------------------------------------------------------------
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class DeriveScanFilterTests
 {
     [Fact]
     public void EpisodePath_ReturnsFolderLeaf_NotReconstructedFileName()
     {
         string filter = VideoEncodeJob.DeriveScanFilter(
-            outputPath: "Helstrom.(2020)/Helstrom.S01E01",
-            fallbackFileName: "Helstrom.S01E01.Mother.s.Little.Helpers.NoMercy"
+            "Helstrom.(2020)/Helstrom.S01E01",
+            "Helstrom.S01E01.Mother.s.Little.Helpers.NoMercy"
         );
 
-        filter.Should().Be(expected: "Helstrom.S01E01");
+        filter.Should().Be("Helstrom.S01E01");
     }
 
     [Fact]
     public void MoviePath_ReturnsFolderLeaf()
     {
         string filter = VideoEncodeJob.DeriveScanFilter(
-            outputPath: "Jolt.(2021)",
-            fallbackFileName: "Jolt.(2021).NoMercy"
+            "Jolt.(2021)",
+            "Jolt.(2021).NoMercy"
         );
 
-        filter.Should().Be(expected: "Jolt.(2021)");
+        filter.Should().Be("Jolt.(2021)");
     }
 
     [Theory]
-    [InlineData(data: null)]
-    [InlineData(data: "")]
-    [InlineData(data: "   ")]
-    [InlineData(data: "/")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("/")]
     public void EmptyOutputPath_FallsBackToFileName(string? outputPath)
     {
         string filter = VideoEncodeJob.DeriveScanFilter(
-            outputPath: outputPath,
-            fallbackFileName: "Some.Movie.(2021).NoMercy"
+            outputPath,
+            "Some.Movie.(2021).NoMercy"
         );
 
-        filter.Should().Be(expected: "Some.Movie.(2021).NoMercy");
+        filter.Should().Be("Some.Movie.(2021).NoMercy");
     }
 
     [Fact]
     public void BackslashSeparators_AreHandled()
     {
         string filter = VideoEncodeJob.DeriveScanFilter(
-            outputPath: @"Helstrom.(2020)\Helstrom.S01E01",
-            fallbackFileName: "ignored"
+            @"Helstrom.(2020)\Helstrom.S01E01",
+            "ignored"
         );
 
-        filter.Should().Be(expected: "Helstrom.S01E01");
+        filter.Should().Be("Helstrom.S01E01");
     }
 
     // The regression itself: the encoder wrote the file with the apostrophe
@@ -94,11 +94,11 @@ public sealed class DeriveScanFilterTests
 
         // Old behaviour: MediaScan filtered by the reconstructed file name and
         // dropped the real file, so nothing registered.
-        onDiskFile.Contains(value: driftedFileNameFilter).Should().BeFalse();
+        onDiskFile.Contains(driftedFileNameFilter).Should().BeFalse();
 
         // New behaviour: the folder-anchored filter is a substring of the real
         // path, so MediaScan keeps the file and registration succeeds.
-        string anchor = VideoEncodeJob.DeriveScanFilter(outputPath: outputPath, fallbackFileName: driftedFileNameFilter);
-        onDiskFile.Contains(value: anchor).Should().BeTrue();
+        string anchor = VideoEncodeJob.DeriveScanFilter(outputPath, driftedFileNameFilter);
+        onDiskFile.Contains(anchor).Should().BeTrue();
     }
 }

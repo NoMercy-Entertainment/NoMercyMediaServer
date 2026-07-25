@@ -15,21 +15,21 @@ namespace NoMercy.Providers.TMDB.Models.Collections;
 
 public class TmdbDetails
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "poster_path")]
+    [JsonProperty("poster_path")]
     public object? PosterPath { get; set; }
 
-    [JsonProperty(propertyName: "backdrop_path")]
+    [JsonProperty("backdrop_path")]
     public string? BackdropPath { get; set; }
 
-    [JsonProperty(propertyName: "parts")]
+    [JsonProperty("parts")]
     public TmdbCollectionPart[] Parts { get; set; } = [];
 }

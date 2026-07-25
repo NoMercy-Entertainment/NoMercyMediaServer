@@ -15,36 +15,36 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbGuestStar
 {
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty(propertyName: "character_name")]
+    [JsonProperty("character_name")]
     public string? CharacterName { get; set; }
 
-    [JsonProperty(propertyName: "credit_id")]
+    [JsonProperty("credit_id")]
     public string? CreditId { get; set; }
 
-    [JsonProperty(propertyName: "gender")]
+    [JsonProperty("gender")]
     public int Gender { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "known_for_department")]
+    [JsonProperty("known_for_department")]
     public string? KnownForDepartment { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
-    [JsonProperty(propertyName: "order")]
+    [JsonProperty("order")]
     public int? Order { get; set; } = 0;
 
-    [JsonProperty(propertyName: "original_name")]
+    [JsonProperty("original_name")]
     public string? OriginalName { get; set; }
 
-    [JsonProperty(propertyName: "popularity")]
+    [JsonProperty("popularity")]
     public float Popularity { get; set; }
 
-    [JsonProperty(propertyName: "profile_path")]
+    [JsonProperty("profile_path")]
     public string? ProfilePath { get; set; }
 }

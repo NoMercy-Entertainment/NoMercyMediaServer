@@ -27,24 +27,24 @@ public class Mp4ChapterTests : IDisposable
 
     public Mp4ChapterTests()
     {
-        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"Mp4ChapterTests_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempDir);
+        _tempDir = Path.Combine(Path.GetTempPath(), $"Mp4ChapterTests_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
 
         // Write a dummy "output.mp4" so the rename in FinalizeAsync succeeds
-        File.WriteAllText(path: Path.Combine(path1: _tempDir, path2: "output.mp4"), contents: "dummy");
+        File.WriteAllText(Path.Combine(_tempDir, "output.mp4"), "dummy");
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempDir))
-            Directory.Delete(path: _tempDir, recursive: true);
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
     }
 
     private static readonly IReadOnlyList<ChapterInfo> ThreeChapters =
     [
-        new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 10), Title: "Opening"),
-        new(Start: TimeSpan.FromMinutes(minutes: 10), End: TimeSpan.FromMinutes(minutes: 50), Title: "Act One"),
-        new(Start: TimeSpan.FromMinutes(minutes: 50), End: TimeSpan.FromMinutes(minutes: 90), Title: "Finale"),
+        new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "Opening"),
+        new(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(50), "Act One"),
+        new(TimeSpan.FromMinutes(50), TimeSpan.FromMinutes(90), "Finale"),
     ];
 
     // ------------------------------------------------------------------
@@ -55,15 +55,15 @@ public class Mp4ChapterTests : IDisposable
     public async Task FinalizeAsync_WithChapters_WritesFfmetaFile()
     {
         Mock<IFfmpegExecutor> executorMock = BuildExecutorMock();
-        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal(), ffmpegExecutor: executorMock.Object);
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal(), executorMock.Object);
 
-        await strategy.FinalizeAsync(outputDirectory: _tempDir, plan: CreatePlanWithChapters(), mediaTitle: "Movie", ct: default);
+        await strategy.FinalizeAsync(_tempDir, CreatePlanWithChapters(), "Movie", default);
 
         // ffmeta is deleted after re-mux; but the executor was called — verified below.
         // The content test uses a second run where we intercept the WriteAsync call.
         // Here we simply verify executor was called (i.e., the flow ran).
         executorMock.Verify(
-            expression: e =>
+            e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -71,7 +71,7 @@ public class Mp4ChapterTests : IDisposable
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -82,7 +82,7 @@ public class Mp4ChapterTests : IDisposable
 
         Mock<IFfmpegExecutor> executorMock = new();
         executorMock
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -98,27 +98,27 @@ public class Mp4ChapterTests : IDisposable
                 string?,
                 CancellationToken
             >(
-                action: (cmd, _, _, _, _) =>
+                (cmd, _, _, _, _) =>
                 {
                     // Read the ffmeta file before executor returns (it gets deleted after)
-                    string ffmetaPath = Path.Combine(path1: _tempDir, path2: ".chapters.ffmeta");
-                    if (File.Exists(path: ffmetaPath))
-                        capturedFfmetaContent = File.ReadAllText(path: ffmetaPath);
+                    string ffmetaPath = Path.Combine(_tempDir, ".chapters.ffmeta");
+                    if (File.Exists(ffmetaPath))
+                        capturedFfmetaContent = File.ReadAllText(ffmetaPath);
                 }
             )
-            .ReturnsAsync(value: new ExecutionResult(Success: true, ExitCode: 0, StdErr: string.Empty, Duration: TimeSpan.Zero, Error: null));
+            .ReturnsAsync(new ExecutionResult(true, 0, string.Empty, TimeSpan.Zero, null));
 
-        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal(), ffmpegExecutor: executorMock.Object);
-        await strategy.FinalizeAsync(outputDirectory: _tempDir, plan: CreatePlanWithChapters(), mediaTitle: "Movie", ct: default);
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal(), executorMock.Object);
+        await strategy.FinalizeAsync(_tempDir, CreatePlanWithChapters(), "Movie", default);
 
         capturedFfmetaContent.Should().NotBeNull();
-        capturedFfmetaContent!.Should().StartWith(expected: ";FFMETADATA1");
-        capturedFfmetaContent.Should().Contain(expected: "[CHAPTER]");
-        capturedFfmetaContent.Should().Contain(expected: "TIMEBASE=1/1000");
-        capturedFfmetaContent.Should().Contain(expected: "START=0");
-        capturedFfmetaContent.Should().Contain(expected: "title=Opening");
-        capturedFfmetaContent.Should().Contain(expected: "title=Act One");
-        capturedFfmetaContent.Should().Contain(expected: "title=Finale");
+        capturedFfmetaContent!.Should().StartWith(";FFMETADATA1");
+        capturedFfmetaContent.Should().Contain("[CHAPTER]");
+        capturedFfmetaContent.Should().Contain("TIMEBASE=1/1000");
+        capturedFfmetaContent.Should().Contain("START=0");
+        capturedFfmetaContent.Should().Contain("title=Opening");
+        capturedFfmetaContent.Should().Contain("title=Act One");
+        capturedFfmetaContent.Should().Contain("title=Finale");
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public class Mp4ChapterTests : IDisposable
 
         Mock<IFfmpegExecutor> executorMock = new();
         executorMock
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -143,29 +143,29 @@ public class Mp4ChapterTests : IDisposable
                 Action<EncodingProgress>?,
                 string?,
                 CancellationToken
-            >(action: (cmd, _, _, _, _) => capturedCommand = cmd)
-            .ReturnsAsync(value: new ExecutionResult(Success: true, ExitCode: 0, StdErr: string.Empty, Duration: TimeSpan.Zero, Error: null));
+            >((cmd, _, _, _, _) => capturedCommand = cmd)
+            .ReturnsAsync(new ExecutionResult(true, 0, string.Empty, TimeSpan.Zero, null));
 
-        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal(), ffmpegExecutor: executorMock.Object);
-        await strategy.FinalizeAsync(outputDirectory: _tempDir, plan: CreatePlanWithChapters(), mediaTitle: "Movie", ct: default);
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal(), executorMock.Object);
+        await strategy.FinalizeAsync(_tempDir, CreatePlanWithChapters(), "Movie", default);
 
         capturedCommand.Should().NotBeNull();
-        string args = string.Join(separator: " ", value: capturedCommand!.Arguments);
-        args.Should().Contain(expected: "-map_metadata 1");
-        args.Should().Contain(expected: "-metadata_header_padding 1024");
-        args.Should().Contain(expected: "-c copy");
+        string args = string.Join(" ", capturedCommand!.Arguments);
+        args.Should().Contain("-map_metadata 1");
+        args.Should().Contain("-metadata_header_padding 1024");
+        args.Should().Contain("-c copy");
     }
 
     [Fact]
     public async Task FinalizeAsync_WithoutChapters_ExecutorNotCalled()
     {
         Mock<IFfmpegExecutor> executorMock = BuildExecutorMock();
-        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal(), ffmpegExecutor: executorMock.Object);
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal(), executorMock.Object);
 
-        await strategy.FinalizeAsync(outputDirectory: _tempDir, plan: CreatePlanWithoutChapters(), mediaTitle: "Movie", ct: default);
+        await strategy.FinalizeAsync(_tempDir, CreatePlanWithoutChapters(), "Movie", default);
 
         executorMock.Verify(
-            expression: e =>
+            e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -173,7 +173,7 @@ public class Mp4ChapterTests : IDisposable
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -184,7 +184,7 @@ public class Mp4ChapterTests : IDisposable
 
         Mock<IFfmpegExecutor> executorMock = new();
         executorMock
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -200,22 +200,22 @@ public class Mp4ChapterTests : IDisposable
                 string?,
                 CancellationToken
             >(
-                action: (cmd, _, _, _, _) =>
+                (cmd, _, _, _, _) =>
                 {
-                    string ffmetaPath = Path.Combine(path1: _tempDir, path2: ".chapters.ffmeta");
-                    if (File.Exists(path: ffmetaPath))
-                        capturedFfmetaContent = File.ReadAllText(path: ffmetaPath);
+                    string ffmetaPath = Path.Combine(_tempDir, ".chapters.ffmeta");
+                    if (File.Exists(ffmetaPath))
+                        capturedFfmetaContent = File.ReadAllText(ffmetaPath);
                 }
             )
-            .ReturnsAsync(value: new ExecutionResult(Success: true, ExitCode: 0, StdErr: string.Empty, Duration: TimeSpan.Zero, Error: null));
+            .ReturnsAsync(new ExecutionResult(true, 0, string.Empty, TimeSpan.Zero, null));
 
-        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal(), ffmpegExecutor: executorMock.Object);
-        await strategy.FinalizeAsync(outputDirectory: _tempDir, plan: CreatePlanWithChapters(), mediaTitle: "Movie", ct: default);
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal(), executorMock.Object);
+        await strategy.FinalizeAsync(_tempDir, CreatePlanWithChapters(), "Movie", default);
 
         // Chapter 2 starts at 10 minutes = 600000 ms
-        capturedFfmetaContent!.Should().Contain(expected: "START=600000");
+        capturedFfmetaContent!.Should().Contain("START=600000");
         // Chapter 3 starts at 50 minutes = 3000000 ms
-        capturedFfmetaContent.Should().Contain(expected: "START=3000000");
+        capturedFfmetaContent.Should().Contain("START=3000000");
     }
 
     // ------------------------------------------------------------------
@@ -225,7 +225,7 @@ public class Mp4ChapterTests : IDisposable
     private static Mock<IFfmpegExecutor> BuildExecutorMock()
     {
         Mock<IFfmpegExecutor> mock = new();
-        mock.Setup(expression: e =>
+        mock.Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -234,31 +234,31 @@ public class Mp4ChapterTests : IDisposable
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ExecutionResult(Success: true, ExitCode: 0, StdErr: string.Empty, Duration: TimeSpan.Zero, Error: null));
+            .ReturnsAsync(new ExecutionResult(true, 0, string.Empty, TimeSpan.Zero, null));
         return mock;
     }
 
     private static OutputPlan CreatePlanWithChapters() =>
         new(
-            Format: OutputFormat.Mp4,
+            OutputFormat.Mp4,
             VideoOutputs:
             [
                 new(
-                    Width: 1920,
-                    Height: 1080,
-                    EncoderName: "libx264",
-                    Crf: 23,
-                    BitrateKbps: 0,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.0",
-                    TenBit: false,
-                    PixelFormat: "yuv420p",
-                    MapLabel: "[v0]",
-                    ExtraFlags: new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    0,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs: [new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0")],
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null,
             Chapters: ThreeChapters
@@ -266,26 +266,25 @@ public class Mp4ChapterTests : IDisposable
 
     private static OutputPlan CreatePlanWithoutChapters() =>
         new(
-            Format: OutputFormat.Mp4,
-            VideoOutputs:
+            OutputFormat.Mp4,
             [
                 new(
-                    Width: 1920,
-                    Height: 1080,
-                    EncoderName: "libx264",
-                    Crf: 23,
-                    BitrateKbps: 0,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.0",
-                    TenBit: false,
-                    PixelFormat: "yuv420p",
-                    MapLabel: "[v0]",
-                    ExtraFlags: new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    0,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs: [new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0")],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            [],
+            null
         );
 }

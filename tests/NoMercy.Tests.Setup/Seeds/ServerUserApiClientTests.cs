@@ -22,26 +22,26 @@ namespace NoMercy.Tests.Setup.Seeds;
 /// is the exact boundary that regression sits on — these tests exercise the
 /// parsing rule directly, without a live HTTP round trip.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ServerUserApiClientTests
 {
     [Fact]
     public void ParseResponse_EmptyBody_Throws()
     {
-        Assert.Throws<InvalidOperationException>(testCode: () => ServerUserApiClient.ParseResponse(response: ""));
+        Assert.Throws<InvalidOperationException>(() => ServerUserApiClient.ParseResponse(""));
     }
 
     [Fact]
     public void ParseResponse_WhitespaceOnlyBody_Throws()
     {
-        Assert.Throws<InvalidOperationException>(testCode: () => ServerUserApiClient.ParseResponse(response: "   "));
+        Assert.Throws<InvalidOperationException>(() => ServerUserApiClient.ParseResponse("   "));
     }
 
     [Fact]
     public void ParseResponse_MalformedJson_Throws()
     {
-        Assert.Throws<InvalidOperationException>(testCode: () =>
-            ServerUserApiClient.ParseResponse(response: "{not valid json")
+        Assert.Throws<InvalidOperationException>(() =>
+            ServerUserApiClient.ParseResponse("{not valid json")
         );
     }
 
@@ -51,11 +51,11 @@ public class ServerUserApiClientTests
         string json =
             "{\"data\":[{\"user_id\":\"11111111-1111-1111-1111-111111111111\",\"name\":\"Owner\",\"email\":\"owner@example.com\",\"enabled\":true,\"is_owner\":true}]}";
 
-        ServerUserDtoData[] result = ServerUserApiClient.ParseResponse(response: json);
+        ServerUserDtoData[] result = ServerUserApiClient.ParseResponse(json);
 
-        Assert.Single(collection: result);
-        Assert.Equal(expected: "11111111-1111-1111-1111-111111111111", actual: result[0].UserId);
-        Assert.True(condition: result[0].IsOwner);
+        Assert.Single(result);
+        Assert.Equal("11111111-1111-1111-1111-111111111111", result[0].UserId);
+        Assert.True(result[0].IsOwner);
     }
 
     [Fact]
@@ -65,8 +65,8 @@ public class ServerUserApiClientTests
         // parses successfully into a ServerUserDto with its default empty Data —
         // this is NOT a parse failure, so it must not throw here. It is instead
         // the exact case ServerUserSyncService's self-floor check must catch.
-        ServerUserDtoData[] result = ServerUserApiClient.ParseResponse(response: "{}");
+        ServerUserDtoData[] result = ServerUserApiClient.ParseResponse("{}");
 
-        Assert.Empty(collection: result);
+        Assert.Empty(result);
     }
 }

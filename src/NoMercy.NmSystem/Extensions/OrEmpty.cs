@@ -39,5 +39,5 @@ public static class NullableExtensions
     /// Inspired by Kotlin's String?.takeIf { it.isNotBlank() }
     /// </summary>
     public static string? OrNull(this string? value) =>
-        string.IsNullOrWhiteSpace(value: value) ? null : value;
+        string.IsNullOrWhiteSpace(value) ? null : value;
 }

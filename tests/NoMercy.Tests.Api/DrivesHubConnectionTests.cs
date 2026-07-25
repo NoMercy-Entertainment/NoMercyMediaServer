@@ -32,7 +32,7 @@ namespace NoMercy.Tests.Api;
 // a real DrivesHub against the app's actual DI-configured MediaContext/UserCache
 // (via NoMercyApiFactory), mocking only the SignalR plumbing (HubCallerContext,
 // IHubCallerClients) a live connection would normally supply.
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class DrivesHubConnectionTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -58,29 +58,29 @@ public class DrivesHubConnectionTests : IClassFixture<NoMercyApiFactory>
         httpContext.Request.Path = "/drivesHub";
 
         DrivesHub hub = new(
-            logger: NullLogger<DrivesHub>.Instance,
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: contextFactory,
-            connectedClients: connectedClients,
-            activityLogger: Mock.Of<IActivityLogger>()
+            NullLogger<DrivesHub>.Instance,
+            new HttpContextAccessorStub(httpContext),
+            contextFactory,
+            connectedClients,
+            Mock.Of<IActivityLogger>()
         );
 
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(
-                claims: [new(type: ClaimTypes.NameIdentifier, value: TestAuthHandler.DefaultUserId.ToString())],
-                authenticationType: "TestAuth"
+            new ClaimsIdentity(
+                [new(ClaimTypes.NameIdentifier, TestAuthHandler.DefaultUserId.ToString())],
+                "TestAuth"
             )
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(expression: c => c.User).Returns(value: principal);
-        context.Setup(expression: c => c.ConnectionId).Returns(value: Guid.NewGuid().ToString());
-        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
+        context.Setup(c => c.User).Returns(principal);
+        context.Setup(c => c.ConnectionId).Returns(Guid.NewGuid().ToString());
+        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
 
         userProxy = new Mock<ISingleClientProxy>();
         Mock<IHubCallerClients> clients = new();
-        clients.Setup(expression: c => c.User(It.IsAny<string>())).Returns(value: userProxy.Object);
-        clients.Setup(expression: c => c.Caller).Returns(value: Mock.Of<ISingleClientProxy>());
+        clients.Setup(c => c.User(It.IsAny<string>())).Returns(userProxy.Object);
+        clients.Setup(c => c.Caller).Returns(Mock.Of<ISingleClientProxy>());
 
         hub.Context = context.Object;
         hub.Clients = clients.Object;
@@ -92,33 +92,33 @@ public class DrivesHubConnectionTests : IClassFixture<NoMercyApiFactory>
     public async Task OnConnectedAsync_RegistersCallerConnection_ForCachedUser()
     {
         ConnectedClients connectedClients = new();
-        DrivesHub hub = CreateHub(connectedClients: connectedClients, userProxy: out _);
+        DrivesHub hub = CreateHub(connectedClients, out _);
 
         await hub.OnConnectedAsync();
 
-        connectedClients.Clients.Should().ContainKey(expected: hub.Context.ConnectionId);
+        connectedClients.Clients.Should().ContainKey(hub.Context.ConnectionId);
         connectedClients
-            .Clients[key: hub.Context.ConnectionId]
+            .Clients[hub.Context.ConnectionId]
             .Sub.Should()
-            .Be(expected: TestAuthHandler.DefaultUserId);
+            .Be(TestAuthHandler.DefaultUserId);
     }
 
     [Fact]
     public async Task OnConnectedAsync_BroadcastsConnectedDevicesState_ToCallerUserGroup()
     {
         ConnectedClients connectedClients = new();
-        DrivesHub hub = CreateHub(connectedClients: connectedClients, userProxy: out Mock<ISingleClientProxy> userProxy);
+        DrivesHub hub = CreateHub(connectedClients, out Mock<ISingleClientProxy> userProxy);
 
         await hub.OnConnectedAsync();
 
         userProxy.Verify(
-            expression: p =>
+            p =>
                 p.SendCoreAsync(
                     "ConnectedDevicesState",
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -126,33 +126,33 @@ public class DrivesHubConnectionTests : IClassFixture<NoMercyApiFactory>
     public async Task OnDisconnectedAsync_RemovesCallerConnection_AfterConnect()
     {
         ConnectedClients connectedClients = new();
-        DrivesHub hub = CreateHub(connectedClients: connectedClients, userProxy: out _);
+        DrivesHub hub = CreateHub(connectedClients, out _);
         await hub.OnConnectedAsync();
         string connectionId = hub.Context.ConnectionId;
-        connectedClients.Clients.Should().ContainKey(expected: connectionId);
+        connectedClients.Clients.Should().ContainKey(connectionId);
 
-        await hub.OnDisconnectedAsync(exception: null);
+        await hub.OnDisconnectedAsync(null);
 
-        connectedClients.Clients.Should().NotContainKey(unexpected: connectionId);
+        connectedClients.Clients.Should().NotContainKey(connectionId);
     }
 
     [Fact]
     public async Task OnDisconnectedAsync_IsNoOp_WhenConnectionWasNeverRegistered()
     {
         ConnectedClients connectedClients = new();
-        DrivesHub hub = CreateHub(connectedClients: connectedClients, userProxy: out Mock<ISingleClientProxy> userProxy);
+        DrivesHub hub = CreateHub(connectedClients, out Mock<ISingleClientProxy> userProxy);
 
-        await hub.OnDisconnectedAsync(exception: null);
+        await hub.OnDisconnectedAsync(null);
 
         connectedClients.Clients.Should().BeEmpty();
         userProxy.Verify(
-            expression: p =>
+            p =>
                 p.SendCoreAsync(
                     "ConnectedDevicesState",
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 

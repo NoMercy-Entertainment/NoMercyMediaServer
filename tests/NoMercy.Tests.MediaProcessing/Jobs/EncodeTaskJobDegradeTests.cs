@@ -34,12 +34,12 @@ public class EncodeTaskJobDegradeTests
             InputFile = "/movies/test/test.mkv",
             PresetId = Ulid.NewUlid(),
             Task = new DecomposedTask(
-                TaskId: "task-1",
-                ParentJobId: 1,
-                GroupTag: "group-1",
-                Kind: EncodeTaskKind.Video,
-                OutputIndex: 0,
-                Resources: resources
+                "task-1",
+                1,
+                "group-1",
+                EncodeTaskKind.Video,
+                0,
+                resources
             ),
         };
 
@@ -47,42 +47,42 @@ public class EncodeTaskJobDegradeTests
     public void DegradeToSoftware_GpuPinnedTask_DropsGpuKeyAndReroutesToEncoderCpu()
     {
         EncodeTaskJob job = BuildJob(
-            resources: new ResourceRequirement(GpuDeviceKey: "h264_amf", GpuSlots: 1, CpuThreads: 2)
+            new ResourceRequirement("h264_amf", 1, 2)
         );
 
-        Assert.Equal(expected: QueueNames.EncoderGpu, actual: job.QueueName);
+        Assert.Equal(QueueNames.EncoderGpu, job.QueueName);
 
         IShouldQueue? degraded = job.DegradeToSoftware();
 
-        Assert.NotNull(@object: degraded);
-        Assert.Same(expected: job, actual: degraded);
-        Assert.Null(@object: job.Task.Resources!.GpuDeviceKey);
-        Assert.Equal(expected: 0, actual: job.Task.Resources.GpuSlots);
-        Assert.Equal(expected: 2, actual: job.Task.Resources.CpuThreads);
-        Assert.Equal(expected: QueueNames.EncoderCpu, actual: job.QueueName);
-        Assert.Equal(expected: QueueNames.EncoderCpu, actual: degraded.QueueName);
+        Assert.NotNull(degraded);
+        Assert.Same(job, degraded);
+        Assert.Null(job.Task.Resources!.GpuDeviceKey);
+        Assert.Equal(0, job.Task.Resources.GpuSlots);
+        Assert.Equal(2, job.Task.Resources.CpuThreads);
+        Assert.Equal(QueueNames.EncoderCpu, job.QueueName);
+        Assert.Equal(QueueNames.EncoderCpu, degraded.QueueName);
     }
 
     [Fact]
     public void DegradeToSoftware_AlreadyCpuOnlyTask_ReturnsNull()
     {
         EncodeTaskJob job = BuildJob(
-            resources: new ResourceRequirement(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 4)
+            new ResourceRequirement(null, 0, 4)
         );
 
         IShouldQueue? degraded = job.DegradeToSoftware();
 
-        Assert.Null(@object: degraded);
-        Assert.Equal(expected: QueueNames.EncoderCpu, actual: job.QueueName);
+        Assert.Null(degraded);
+        Assert.Equal(QueueNames.EncoderCpu, job.QueueName);
     }
 
     [Fact]
     public void DegradeToSoftware_NoResourceRequirementAtAll_ReturnsNull()
     {
-        EncodeTaskJob job = BuildJob(resources: null);
+        EncodeTaskJob job = BuildJob(null);
 
         IShouldQueue? degraded = job.DegradeToSoftware();
 
-        Assert.Null(@object: degraded);
+        Assert.Null(degraded);
     }
 }

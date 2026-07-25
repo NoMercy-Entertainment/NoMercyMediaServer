@@ -14,15 +14,15 @@ namespace NoMercy.Api.DTOs.Encoding;
 
 public record EncodingCompletedDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "output_path")]
+    [JsonProperty("output_path")]
     public string OutputPath { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public double Duration { get; set; }
 
-    [JsonProperty(propertyName: "timestamp")]
+    [JsonProperty("timestamp")]
     public DateTime Timestamp { get; set; }
 }

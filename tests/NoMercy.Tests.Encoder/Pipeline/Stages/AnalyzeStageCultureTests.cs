@@ -35,37 +35,37 @@ public class AnalyzeStageCultureTests
 
     public AnalyzeStageCultureTests()
     {
-        _stage = new(analyzer: _analyzer.Object, storage: _storage.Object, logger: NullLogger<AnalyzeStage>.Instance);
-        _context = new(CorrelationId: "test-correlation", Decisions: _log);
-        _storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: true);
+        _stage = new(_analyzer.Object, _storage.Object, NullLogger<AnalyzeStage>.Instance);
+        _context = new("test-correlation", Decisions: _log);
+        _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
     }
 
     [Theory]
-    [InlineData(data: "de-DE")]
-    [InlineData(data: "nl-NL")]
-    [InlineData(data: "fr-FR")]
+    [InlineData("de-DE")]
+    [InlineData("nl-NL")]
+    [InlineData("fr-FR")]
     public async Task VfrDecisionMessage_StaysPeriodDecimalUnderCommaCulture(string culture)
     {
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(name: culture);
+            Thread.CurrentThread.CurrentCulture = new(culture);
 
             _analyzer
-                .Setup(expression: a =>
+                .Setup(a =>
                     a.AnalyzeAsync(
                         It.IsAny<string>(),
                         It.IsAny<IStorage>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(value: BuildMediaInfo(realFps: 30.0, avgFps: 24.0));
+                .ReturnsAsync(BuildMediaInfo(30.0, 24.0));
 
-            await _stage.ExecuteAsync(inputPath: "/movies/x.mkv", context: _context, ct: default);
+            await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
 
-            string message = _log.Snapshot().Single(predicate: d => d.Key == "analyze.vfr_detected").Message;
-            message.Should().Contain(expected: "30.000").And.Contain(expected: "24.000");
-            message.Should().NotContain(unexpected: "30,000").And.NotContain(unexpected: "24,000");
+            string message = _log.Snapshot().Single(d => d.Key == "analyze.vfr_detected").Message;
+            message.Should().Contain("30.000").And.Contain("24.000");
+            message.Should().NotContain("30,000").And.NotContain("24,000");
         }
         finally
         {
@@ -75,34 +75,33 @@ public class AnalyzeStageCultureTests
 
     private static MediaInfo BuildMediaInfo(double? realFps = null, double? avgFps = null) =>
         new(
-            FilePath: "/movies/x.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 90),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 7_200_000_000,
-            VideoStreams:
+            "/movies/x.mkv",
+            "matroska",
+            TimeSpan.FromMinutes(90),
+            8000,
+            7_200_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: null,
-                    ColorTransfer: null,
-                    ColorSpace: null,
-                    IsDefault: true,
-                    BitRateKbps: 6000,
-                    AverageFrameRate: avgFps,
-                    RealFrameRate: realFps
+                    0,
+                    "h264",
+                    1920,
+                    1080,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    null,
+                    null,
+                    null,
+                    true,
+                    6000,
+                    avgFps,
+                    realFps
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: [],
-            Attachments: [],
-            DolbyVision: null
+            [],
+            [],
+            [],
+            [],
+            null
         );
 }

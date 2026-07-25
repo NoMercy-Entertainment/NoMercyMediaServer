@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TMDB.Models.Search;
 
 public class TmdbCompanySearchResult
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "logo_path")]
+    [JsonProperty("logo_path")]
     public string? LogoPath { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 }

@@ -16,6 +16,6 @@ public static class Mutators
     public static IEnumerable<T> Randomize<T>(this IEnumerable<T> source)
     {
         Random rnd = new();
-        return source.OrderBy(keySelector: _ => rnd.Next());
+        return source.OrderBy(_ => rnd.Next());
     }
 }

@@ -19,7 +19,7 @@ namespace NoMercy.Tests.Encoder.LiveTranscode;
 public class LiveSegmentInventoryTests
 {
     private static LiveSegmentInventory MakeInventory(IStorage storage) =>
-        new(storage: storage, logger: NullLogger<LiveSegmentInventory>.Instance);
+        new(storage, NullLogger<LiveSegmentInventory>.Instance);
 
     [Fact]
     public void Snapshot_ParsesIndicesFromSegmentFilenames()
@@ -28,17 +28,17 @@ public class LiveSegmentInventoryTests
         string dir = MakeScratchDir();
         try
         {
-            storage.Write(path: storage.CombinePath(parent: dir, child: "seg_00000.ts"), bytes: [1]);
-            storage.Write(path: storage.CombinePath(parent: dir, child: "seg_00005.ts"), bytes: [1]);
-            storage.Write(path: storage.CombinePath(parent: dir, child: "seg_00012.ts"), bytes: [1]);
+            storage.Write(storage.CombinePath(dir, "seg_00000.ts"), [1]);
+            storage.Write(storage.CombinePath(dir, "seg_00005.ts"), [1]);
+            storage.Write(storage.CombinePath(dir, "seg_00012.ts"), [1]);
 
-            IReadOnlySet<int> indices = MakeInventory(storage: storage).Snapshot(scratchDirectory: dir);
+            IReadOnlySet<int> indices = MakeInventory(storage).Snapshot(dir);
 
-            indices.Should().BeEquivalentTo(expectation: [0, 5, 12]);
+            indices.Should().BeEquivalentTo([0, 5, 12]);
         }
         finally
         {
-            CleanUp(dir: dir);
+            CleanUp(dir);
         }
     }
 
@@ -49,17 +49,17 @@ public class LiveSegmentInventoryTests
         string dir = MakeScratchDir();
         try
         {
-            storage.Write(path: storage.CombinePath(parent: dir, child: "seg_00000.ts"), bytes: [1]);
-            storage.Write(path: storage.CombinePath(parent: dir, child: "index.m3u8"), bytes: [1]);
-            storage.Write(path: storage.CombinePath(parent: dir, child: "notasegment.txt"), bytes: [1]);
+            storage.Write(storage.CombinePath(dir, "seg_00000.ts"), [1]);
+            storage.Write(storage.CombinePath(dir, "index.m3u8"), [1]);
+            storage.Write(storage.CombinePath(dir, "notasegment.txt"), [1]);
 
-            IReadOnlySet<int> indices = MakeInventory(storage: storage).Snapshot(scratchDirectory: dir);
+            IReadOnlySet<int> indices = MakeInventory(storage).Snapshot(dir);
 
-            indices.Should().BeEquivalentTo(expectation: [0]);
+            indices.Should().BeEquivalentTo([0]);
         }
         finally
         {
-            CleanUp(dir: dir);
+            CleanUp(dir);
         }
     }
 
@@ -67,9 +67,9 @@ public class LiveSegmentInventoryTests
     public void Snapshot_MissingDirectory_ReturnsEmptySet()
     {
         IStorage storage = TestStorageFactory.CreateLocal();
-        string dir = Path.Combine(path1: Path.GetTempPath(), path2: $"live-inventory-missing-{Guid.NewGuid():N}");
+        string dir = Path.Combine(Path.GetTempPath(), $"live-inventory-missing-{Guid.NewGuid():N}");
 
-        IReadOnlySet<int> indices = MakeInventory(storage: storage).Snapshot(scratchDirectory: dir);
+        IReadOnlySet<int> indices = MakeInventory(storage).Snapshot(dir);
 
         indices.Should().BeEmpty();
     }
@@ -81,19 +81,19 @@ public class LiveSegmentInventoryTests
         string dir = MakeScratchDir();
         try
         {
-            string seg0 = storage.CombinePath(parent: dir, child: "seg_00000.ts");
-            string seg1 = storage.CombinePath(parent: dir, child: "seg_00001.ts");
-            storage.Write(path: seg0, bytes: [1]);
-            storage.Write(path: seg1, bytes: [1]);
+            string seg0 = storage.CombinePath(dir, "seg_00000.ts");
+            string seg1 = storage.CombinePath(dir, "seg_00001.ts");
+            storage.Write(seg0, [1]);
+            storage.Write(seg1, [1]);
 
-            MakeInventory(storage: storage).Purge(scratchDirectory: dir);
+            MakeInventory(storage).Purge(dir);
 
-            storage.Exists(path: seg0).Should().BeFalse();
-            storage.Exists(path: seg1).Should().BeFalse();
+            storage.Exists(seg0).Should().BeFalse();
+            storage.Exists(seg1).Should().BeFalse();
         }
         finally
         {
-            CleanUp(dir: dir);
+            CleanUp(dir);
         }
     }
 
@@ -104,39 +104,39 @@ public class LiveSegmentInventoryTests
         string dir = MakeScratchDir();
         try
         {
-            string locked = storage.CombinePath(parent: dir, child: "seg_00000.ts");
-            string removable = storage.CombinePath(parent: dir, child: "seg_00001.ts");
-            storage.Write(path: locked, bytes: [1]);
-            storage.Write(path: removable, bytes: [1]);
+            string locked = storage.CombinePath(dir, "seg_00000.ts");
+            string removable = storage.CombinePath(dir, "seg_00001.ts");
+            storage.Write(locked, [1]);
+            storage.Write(removable, [1]);
 
             using FileStream handle = new(
-                path: Path.Combine(path1: dir, path2: "seg_00000.ts"),
-                mode: FileMode.Open,
-                access: FileAccess.Read,
-                share: FileShare.Read
+                Path.Combine(dir, "seg_00000.ts"),
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read
             );
 
-            Action act = () => MakeInventory(storage: storage).Purge(scratchDirectory: dir);
+            Action act = () => MakeInventory(storage).Purge(dir);
 
             act.Should().NotThrow();
-            storage.Exists(path: removable).Should().BeFalse();
+            storage.Exists(removable).Should().BeFalse();
         }
         finally
         {
-            CleanUp(dir: dir);
+            CleanUp(dir);
         }
     }
 
     private static string MakeScratchDir()
     {
-        string dir = Path.Combine(path1: Path.GetTempPath(), path2: $"live-inventory-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: dir);
+        string dir = Path.Combine(Path.GetTempPath(), $"live-inventory-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
         return dir;
     }
 
     private static void CleanUp(string dir)
     {
-        if (Directory.Exists(path: dir))
-            Directory.Delete(path: dir, recursive: true);
+        if (Directory.Exists(dir))
+            Directory.Delete(dir, true);
     }
 }

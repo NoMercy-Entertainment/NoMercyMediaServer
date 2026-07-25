@@ -41,10 +41,10 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 /// which are expensive and potentially long-running.
 /// </summary>
 [ApiController]
-[Tags(tags: "Encoder Content Analysis")]
-[ApiVersion(version: 1.0)]
+[Tags("Encoder Content Analysis")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "Owner")]
-[Route(template: "api/v{version:apiVersion}/encoder/content-analysis")]
+[Route("api/v{version:apiVersion}/encoder/content-analysis")]
 public class EncoderContentAnalysisController(
     ICropDetector cropDetector,
     ISubtitleOcrEngine? ocrEngine,
@@ -63,34 +63,34 @@ public class EncoderContentAnalysisController(
     /// rectangle. Returns <c>should_crop=false</c> when no letterbox is found.
     /// Ffmpeg-bound — can take up to 60 s on large sources.
     /// </summary>
-    [HttpPost(template: "crop/{videoFileId}")]
+    [HttpPost("crop/{videoFileId}")]
     public async Task<IActionResult> DetectCrop(string videoFileId, CancellationToken ct)
     {
-        if (!Ulid.TryParse(base32: videoFileId, ulid: out Ulid fileId))
-            return BadRequestResponse(detail: "Invalid video file id");
+        if (!Ulid.TryParse(videoFileId, out Ulid fileId))
+            return BadRequestResponse("Invalid video file id");
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
-        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(predicate: v => v.Id == fileId, cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(v => v.Id == fileId, ct);
 
         if (file is null)
-            return NotFoundResponse(detail: "Video file not found");
+            return NotFoundResponse("Video file not found");
 
-        string path = storageDriver.CombinePath(parent: file.HostFolder, child: file.Filename);
-        if (!storageDriver.FileExists(path: path))
-            return NotFoundResponse(detail: $"Source file missing on disk: {path}");
+        string path = storageDriver.CombinePath(file.HostFolder, file.Filename);
+        if (!storageDriver.FileExists(path))
+            return NotFoundResponse($"Source file missing on disk: {path}");
 
-        Guid sourceVideoFileId = new(b: fileId.ToByteArray());
+        Guid sourceVideoFileId = new(fileId.ToByteArray());
 
         try
         {
             CropResult result = await cropDetector.DetectAsync(
-                inputPath: path,
-                sourceVideoFileId: sourceVideoFileId,
-                sourceIsHdr: null,
-                ct: ct
+                path,
+                sourceVideoFileId,
+                null,
+                ct
             );
             return Ok(
-                value: new
+                new
                 {
                     source_video_file_id = result.SourceVideoFileId,
                     should_crop = result.ShouldCrop,
@@ -105,7 +105,7 @@ public class EncoderContentAnalysisController(
         }
         catch (Exception ex)
         {
-            return InternalServerErrorResponse(detail: $"Crop detection failed: {ex.Message}");
+            return InternalServerErrorResponse($"Crop detection failed: {ex.Message}");
         }
     }
 
@@ -117,26 +117,26 @@ public class EncoderContentAnalysisController(
     /// persisted to the <c>ContentSegments</c> table (source="auto") unless
     /// a manual row of the same type already exists for that episode.
     /// </summary>
-    [HttpPost(template: "intro/{seasonId:int}")]
+    [HttpPost("intro/{seasonId:int}")]
     public async Task<IActionResult> DetectIntroForSeason(int seasonId, CancellationToken ct)
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         List<Episode> episodes = await context
             .Episodes.AsNoTracking()
-            .Include(navigationPropertyPath: e => e.VideoFiles)
-            .Where(predicate: e => e.SeasonId == seasonId && e.VideoFiles.Count > 0)
-            .OrderBy(keySelector: e => e.EpisodeNumber)
-            .ToListAsync(cancellationToken: ct);
+            .Include(e => e.VideoFiles)
+            .Where(e => e.SeasonId == seasonId && e.VideoFiles.Count > 0)
+            .OrderBy(e => e.EpisodeNumber)
+            .ToListAsync(ct);
 
         int showId = await context
             .Seasons.AsNoTracking()
-            .Where(predicate: s => s.Id == seasonId)
-            .Select(selector: s => s.TvId)
-            .FirstOrDefaultAsync(cancellationToken: ct);
+            .Where(s => s.Id == seasonId)
+            .Select(s => s.TvId)
+            .FirstOrDefaultAsync(ct);
 
         if (episodes.Count < 2)
             return BadRequestResponse(
-                detail: $"Need at least 2 encoded episodes, season has {episodes.Count}"
+                $"Need at least 2 encoded episodes, season has {episodes.Count}"
             );
 
         // ── Fingerprinting pass ──────────────────────────────────────────────
@@ -149,75 +149,75 @@ public class EncoderContentAnalysisController(
             if (source is null)
                 continue;
 
-            string path = storageDriver.CombinePath(parent: source.HostFolder, child: source.Filename);
-            if (!storageDriver.FileExists(path: path))
+            string path = storageDriver.CombinePath(source.HostFolder, source.Filename);
+            if (!storageDriver.FileExists(path))
                 continue;
 
             try
             {
                 AudioFingerprint introPrint = await fingerprinter.FingerprintAsync(
-                    filePath: path,
-                    window: new(Start: TimeSpan.Zero, Duration: TimeSpan.FromMinutes(minutes: 3)),
-                    ct: ct
+                    path,
+                    new(TimeSpan.Zero, TimeSpan.FromMinutes(3)),
+                    ct
                 );
 
-                TimeSpan duration = TimeSpan.TryParse(s: source.Duration, result: out TimeSpan parsed)
+                TimeSpan duration = TimeSpan.TryParse(source.Duration, out TimeSpan parsed)
                     ? parsed
                     : TimeSpan.Zero;
                 TimeSpan outroStart =
-                    duration > TimeSpan.FromMinutes(minutes: 3)
-                        ? duration - TimeSpan.FromMinutes(minutes: 3)
+                    duration > TimeSpan.FromMinutes(3)
+                        ? duration - TimeSpan.FromMinutes(3)
                         : TimeSpan.Zero;
 
                 AudioFingerprint outroPrint = await fingerprinter.FingerprintAsync(
-                    filePath: path,
-                    window: new(Start: outroStart, Duration: TimeSpan.FromMinutes(minutes: 3)),
-                    ct: ct
+                    path,
+                    new(outroStart, TimeSpan.FromMinutes(3)),
+                    ct
                 );
 
-                prints.Add(item: (ep, introPrint, outroPrint));
+                prints.Add((ep, introPrint, outroPrint));
             }
             catch (Exception ex)
             {
                 return InternalServerErrorResponse(
-                    detail: $"Fingerprinting failed for episode {ep.Id}: {ex.Message}"
+                    $"Fingerprinting failed for episode {ep.Id}: {ex.Message}"
                 );
             }
         }
 
         if (prints.Count < 2)
-            return BadRequestResponse(detail: "Not enough successful fingerprints to compare");
+            return BadRequestResponse("Not enough successful fingerprints to compare");
 
-        List<AudioFingerprint> introFingerprints = prints.Select(selector: t => t.Intro).ToList();
-        List<AudioFingerprint> outroFingerprints = prints.Select(selector: t => t.Outro).ToList();
+        List<AudioFingerprint> introFingerprints = prints.Select(t => t.Intro).ToList();
+        List<AudioFingerprint> outroFingerprints = prints.Select(t => t.Outro).ToList();
 
-        IntroMarker? introMarker = introDetector.DetectIntro(episodeFingerprints: introFingerprints);
-        IntroMarker? outroMarker = introDetector.DetectOutro(episodeFingerprints: outroFingerprints);
+        IntroMarker? introMarker = introDetector.DetectIntro(introFingerprints);
+        IntroMarker? outroMarker = introDetector.DetectOutro(outroFingerprints);
 
         // ── Persist detected segments ────────────────────────────────────────
         // Load existing manual rows once so the per-episode check is O(1).
-        List<int> episodeIds = prints.Select(selector: t => t.Episode.Id).ToList();
+        List<int> episodeIds = prints.Select(t => t.Episode.Id).ToList();
 
         List<ContentSegment> existingManual = await context
-            .ContentSegments.Where(predicate: cs =>
+            .ContentSegments.Where(cs =>
                 cs.EpisodeId != null
                 && episodeIds.Contains(cs.EpisodeId.Value)
                 && cs.Source == "manual"
             )
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         HashSet<(int EpisodeId, ContentSegmentType Type)> manualKeys = existingManual
-            .Select(selector: cs => (cs.EpisodeId!.Value, cs.SegmentType))
+            .Select(cs => (cs.EpisodeId!.Value, cs.SegmentType))
             .ToHashSet();
 
         List<ContentSegment> toUpsert = [];
 
         foreach ((Episode ep, _, _) in prints)
         {
-            if (introMarker is not null && !manualKeys.Contains(item: (ep.Id, ContentSegmentType.Intro)))
+            if (introMarker is not null && !manualKeys.Contains((ep.Id, ContentSegmentType.Intro)))
             {
                 toUpsert.Add(
-                    item: new()
+                    new()
                     {
                         EpisodeId = ep.Id,
                         SegmentType = ContentSegmentType.Intro,
@@ -229,10 +229,10 @@ public class EncoderContentAnalysisController(
                 );
             }
 
-            if (outroMarker is not null && !manualKeys.Contains(item: (ep.Id, ContentSegmentType.Outro)))
+            if (outroMarker is not null && !manualKeys.Contains((ep.Id, ContentSegmentType.Outro)))
             {
                 toUpsert.Add(
-                    item: new()
+                    new()
                     {
                         EpisodeId = ep.Id,
                         SegmentType = ContentSegmentType.Outro,
@@ -249,27 +249,27 @@ public class EncoderContentAnalysisController(
         {
             // Remove stale auto rows before inserting fresh ones.
             List<ContentSegment> staleAuto = await context
-                .ContentSegments.Where(predicate: cs =>
+                .ContentSegments.Where(cs =>
                     cs.EpisodeId != null
                     && episodeIds.Contains(cs.EpisodeId.Value)
                     && cs.Source == "auto"
                 )
-                .ToListAsync(cancellationToken: ct);
+                .ToListAsync(ct);
 
-            context.ContentSegments.RemoveRange(entities: staleAuto);
-            await context.ContentSegments.AddRangeAsync(entities: toUpsert, cancellationToken: ct);
-            await context.SaveChangesAsync(cancellationToken: ct);
+            context.ContentSegments.RemoveRange(staleAuto);
+            await context.ContentSegments.AddRangeAsync(toUpsert, ct);
+            await context.SaveChangesAsync(ct);
         }
 
         // ── Build response ───────────────────────────────────────────────────
-        string? introHash = introMarker is not null ? FingerprintHash(prints: introFingerprints) : null;
-        string? outroHash = outroMarker is not null ? FingerprintHash(prints: outroFingerprints) : null;
+        string? introHash = introMarker is not null ? FingerprintHash(introFingerprints) : null;
+        string? outroHash = outroMarker is not null ? FingerprintHash(outroFingerprints) : null;
 
         List<object> contentSegments = [];
 
         if (introMarker is not null)
             contentSegments.Add(
-                item: new
+                new
                 {
                     show_id = showId,
                     season_id = seasonId,
@@ -284,7 +284,7 @@ public class EncoderContentAnalysisController(
 
         if (outroMarker is not null)
             contentSegments.Add(
-                item: new
+                new
                 {
                     show_id = showId,
                     season_id = seasonId,
@@ -298,7 +298,7 @@ public class EncoderContentAnalysisController(
             );
 
         return Ok(
-            value: new
+            new
             {
                 show_id = showId,
                 season_id = seasonId,
@@ -314,7 +314,7 @@ public class EncoderContentAnalysisController(
     /// Runs subtitle OCR on a bitmap subtitle stream (PGS / VobSub / DVB)
     /// inside the requested VideoFile.
     /// </summary>
-    [HttpPost(template: "ocr/{videoFileId}")]
+    [HttpPost("ocr/{videoFileId}")]
     public async Task<IActionResult> OcrBitmapSubtitle(
         string videoFileId,
         [FromBody] OcrRequest body,
@@ -322,37 +322,37 @@ public class EncoderContentAnalysisController(
     )
     {
         if (ocrEngine is null)
-            return NotImplementedResponse(detail: "Subtitle OCR engine is not registered on this build");
+            return NotImplementedResponse("Subtitle OCR engine is not registered on this build");
 
-        if (!Ulid.TryParse(base32: videoFileId, ulid: out Ulid fileId))
-            return BadRequestResponse(detail: "Invalid video file id");
+        if (!Ulid.TryParse(videoFileId, out Ulid fileId))
+            return BadRequestResponse("Invalid video file id");
 
-        if (string.IsNullOrWhiteSpace(value: body.Language))
-            return BadRequestResponse(detail: "language is required");
+        if (string.IsNullOrWhiteSpace(body.Language))
+            return BadRequestResponse("language is required");
 
-        SubtitleCodecType format = ParseTargetFormat(raw: body.TargetFormat);
+        SubtitleCodecType format = ParseTargetFormat(body.TargetFormat);
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
-        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(predicate: v => v.Id == fileId, cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(v => v.Id == fileId, ct);
 
         if (file is null)
-            return NotFoundResponse(detail: "Video file not found");
+            return NotFoundResponse("Video file not found");
 
-        string path = storageDriver.CombinePath(parent: file.HostFolder, child: file.Filename);
-        if (!storageDriver.FileExists(path: path))
-            return NotFoundResponse(detail: $"Source file missing on disk: {path}");
+        string path = storageDriver.CombinePath(file.HostFolder, file.Filename);
+        if (!storageDriver.FileExists(path))
+            return NotFoundResponse($"Source file missing on disk: {path}");
 
         try
         {
             SubtitleTrack track = await ocrEngine.OcrAsync(
-                inputPath: path,
-                streamIndex: body.StreamIndex,
-                language: body.Language,
-                outputFormat: format,
-                ct: ct
+                path,
+                body.StreamIndex,
+                body.Language,
+                format,
+                ct
             );
             return Ok(
-                value: new
+                new
                 {
                     language = track.Language,
                     stream_index = body.StreamIndex,
@@ -364,7 +364,7 @@ public class EncoderContentAnalysisController(
         }
         catch (Exception ex)
         {
-            return InternalServerErrorResponse(detail: $"OCR failed: {ex.Message}");
+            return InternalServerErrorResponse($"OCR failed: {ex.Message}");
         }
     }
 
@@ -375,7 +375,7 @@ public class EncoderContentAnalysisController(
     /// Progress is broadcast via <c>ContentAnalysisHub</c> (event
     /// <c>WhisperProgress</c>). Heavy — owner-only.
     /// </summary>
-    [HttpPost(template: "whisper/{videoFileId}")]
+    [HttpPost("whisper/{videoFileId}")]
     public async Task<IActionResult> Whisper(
         string videoFileId,
         [FromBody] WhisperRequest body,
@@ -383,55 +383,55 @@ public class EncoderContentAnalysisController(
     )
     {
         if (whisperTranscriber is null)
-            return NotImplementedResponse(detail: "Whisper transcriber is not registered on this build");
+            return NotImplementedResponse("Whisper transcriber is not registered on this build");
 
-        if (!Ulid.TryParse(base32: videoFileId, ulid: out Ulid fileId))
-            return BadRequestResponse(detail: "Invalid video file id");
+        if (!Ulid.TryParse(videoFileId, out Ulid fileId))
+            return BadRequestResponse("Invalid video file id");
 
-        if (string.IsNullOrWhiteSpace(value: body.Language))
-            return BadRequestResponse(detail: "language is required");
+        if (string.IsNullOrWhiteSpace(body.Language))
+            return BadRequestResponse("language is required");
 
         if (
             !Enum.TryParse(
-                value: body.Model ?? "LargeV3",
-                ignoreCase: true,
-                result: out WhisperModelSize modelSize
+                body.Model ?? "LargeV3",
+                true,
+                out WhisperModelSize modelSize
             )
         )
             return BadRequestResponse(
-                detail: $"Unknown model '{body.Model}'. Valid values: {string.Join(separator: ", ", value: Enum.GetNames<WhisperModelSize>())}"
+                $"Unknown model '{body.Model}'. Valid values: {string.Join(", ", Enum.GetNames<WhisperModelSize>())}"
             );
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
-        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(predicate: v => v.Id == fileId, cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(v => v.Id == fileId, ct);
 
         if (file is null)
-            return NotFoundResponse(detail: "Video file not found");
+            return NotFoundResponse("Video file not found");
 
-        string path = storageDriver.CombinePath(parent: file.HostFolder, child: file.Filename);
-        if (!storageDriver.FileExists(path: path))
-            return NotFoundResponse(detail: $"Source file missing on disk: {path}");
+        string path = storageDriver.CombinePath(file.HostFolder, file.Filename);
+        if (!storageDriver.FileExists(path))
+            return NotFoundResponse($"Source file missing on disk: {path}");
 
         WhisperOptions options = new(
-            ModelPath: string.Empty,
-            ModelSize: modelSize,
-            TranslateToEnglish: body.TranslateToEnglish
+            string.Empty,
+            modelSize,
+            body.TranslateToEnglish
         );
 
-        SignalRProgressObserver observer = new(hub: hubContext, videoFileId: videoFileId);
+        SignalRProgressObserver observer = new(hubContext, videoFileId);
 
         try
         {
             SubtitleTrack track = await whisperTranscriber.TranscribeAsync(
-                inputPath: path,
-                audioStreamIndex: body.AudioStreamIndex,
-                language: body.Language,
-                options: options,
-                progress: observer,
-                ct: ct
+                path,
+                body.AudioStreamIndex,
+                body.Language,
+                options,
+                observer,
+                ct
             );
             return Ok(
-                value: new
+                new
                 {
                     language = body.Language,
                     audio_stream_index = body.AudioStreamIndex,
@@ -444,7 +444,7 @@ public class EncoderContentAnalysisController(
         }
         catch (Exception ex)
         {
-            return InternalServerErrorResponse(detail: $"Transcription failed: {ex.Message}");
+            return InternalServerErrorResponse($"Transcription failed: {ex.Message}");
         }
     }
 
@@ -455,34 +455,34 @@ public class EncoderContentAnalysisController(
     /// edited (<c>source="manual"</c>). The auto-detector will skip episodes
     /// that already have a manual row of the same segment type.
     /// </summary>
-    [HttpPut(template: "segments/{segmentId}")]
+    [HttpPut("segments/{segmentId}")]
     public async Task<IActionResult> EditSegment(
         string segmentId,
         [FromBody] EditSegmentRequest body,
         CancellationToken ct
     )
     {
-        if (!Ulid.TryParse(base32: segmentId, ulid: out Ulid id))
-            return BadRequestResponse(detail: "Invalid segment id");
+        if (!Ulid.TryParse(segmentId, out Ulid id))
+            return BadRequestResponse("Invalid segment id");
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         ContentSegment? segment = await context.ContentSegments.FirstOrDefaultAsync(
-            predicate: cs => cs.Id == id,
-            cancellationToken: ct
+            cs => cs.Id == id,
+            ct
         );
 
         if (segment is null)
-            return NotFoundResponse(detail: "Content segment not found");
+            return NotFoundResponse("Content segment not found");
 
         segment.StartSeconds = body.StartSeconds;
         segment.EndSeconds = body.EndSeconds;
         segment.Source = "manual";
         segment.UpdatedAt = DateTime.UtcNow;
 
-        await context.SaveChangesAsync(cancellationToken: ct);
+        await context.SaveChangesAsync(ct);
 
         return Ok(
-            value: new
+            new
             {
                 id = segment.Id,
                 episode_id = segment.EpisodeId,
@@ -514,41 +514,41 @@ public class EncoderContentAnalysisController(
     /// </summary>
     private static string FingerprintHash(IReadOnlyList<AudioFingerprint> prints)
     {
-        uint[] combined = prints[index: 0].Hashes.ToArray();
+        uint[] combined = prints[0].Hashes.ToArray();
         for (int i = 1; i < prints.Count; i++)
         {
-            uint[] h = prints[index: i].Hashes;
-            int len = Math.Min(val1: combined.Length, val2: h.Length);
+            uint[] h = prints[i].Hashes;
+            int len = Math.Min(combined.Length, h.Length);
             for (int j = 0; j < len; j++)
                 combined[j] ^= h[j];
         }
 
         byte[] bytes = new byte[combined.Length * 4];
-        Buffer.BlockCopy(src: combined, srcOffset: 0, dst: bytes, dstOffset: 0, count: bytes.Length);
+        Buffer.BlockCopy(combined, 0, bytes, 0, bytes.Length);
 
-        byte[] hash = MD5.HashData(source: bytes);
-        return Convert.ToHexString(inArray: hash).ToLowerInvariant();
+        byte[] hash = MD5.HashData(bytes);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }
 
 // ─── Request / response DTOs ─────────────────────────────────────────────────
 
 public record OcrRequest(
-    [property: JsonProperty(propertyName: "stream_index")] int StreamIndex,
-    [property: JsonProperty(propertyName: "language")] string Language,
-    [property: JsonProperty(propertyName: "target_format")] string? TargetFormat
+    [property: JsonProperty("stream_index")] int StreamIndex,
+    [property: JsonProperty("language")] string Language,
+    [property: JsonProperty("target_format")] string? TargetFormat
 );
 
 public record WhisperRequest(
-    [property: JsonProperty(propertyName: "audio_stream_index")] int AudioStreamIndex,
-    [property: JsonProperty(propertyName: "language")] string Language,
-    [property: JsonProperty(propertyName: "translate_to_english")] bool TranslateToEnglish,
-    [property: JsonProperty(propertyName: "model")] string? Model
+    [property: JsonProperty("audio_stream_index")] int AudioStreamIndex,
+    [property: JsonProperty("language")] string Language,
+    [property: JsonProperty("translate_to_english")] bool TranslateToEnglish,
+    [property: JsonProperty("model")] string? Model
 );
 
 public record EditSegmentRequest(
-    [property: JsonProperty(propertyName: "start_seconds")] double StartSeconds,
-    [property: JsonProperty(propertyName: "end_seconds")] double EndSeconds
+    [property: JsonProperty("start_seconds")] double StartSeconds,
+    [property: JsonProperty("end_seconds")] double EndSeconds
 );
 
 // ─── SignalR progress adapter ─────────────────────────────────────────────────
@@ -567,8 +567,8 @@ internal sealed class SignalRProgressObserver(
     {
         // Fire-and-forget — we are inside a synchronous callback.
         _ = hub.Clients.All.SendAsync(
-            method: "WhisperProgress",
-            arg1: new { video_file_id = videoFileId, percent_done = progress.PercentComplete }
+            "WhisperProgress",
+            new { video_file_id = videoFileId, percent_done = progress.PercentComplete }
         );
     }
 

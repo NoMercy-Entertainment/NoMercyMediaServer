@@ -59,58 +59,58 @@ public class TrayIconManager
     {
         NativeMenu menu = new();
 
-        _statusItem = new(header: "Server: Disconnected") { IsEnabled = false };
+        _statusItem = new("Server: Disconnected") { IsEnabled = false };
 
-        _versionItem = new(header: "Version: --") { IsEnabled = false };
+        _versionItem = new("Version: --") { IsEnabled = false };
 
-        _uptimeItem = new(header: "Uptime: --") { IsEnabled = false };
+        _uptimeItem = new("Uptime: --") { IsEnabled = false };
 
         NativeMenuItemSeparator separator1 = new();
 
-        NativeMenuItem openAppItem = new(header: "Open App");
+        NativeMenuItem openAppItem = new("Open App");
         openAppItem.Click += OnOpenApp;
 
-        NativeMenuItem openDashboardItem = new(header: "Open Dashboard");
+        NativeMenuItem openDashboardItem = new("Open Dashboard");
         openDashboardItem.Click += OnOpenDashboard;
 
-        NativeMenuItem serverControlItem = new(header: "Server Control");
+        NativeMenuItem serverControlItem = new("Server Control");
         serverControlItem.Click += OnServerControl;
 
-        NativeMenuItem viewLogsItem = new(header: "View Logs");
+        NativeMenuItem viewLogsItem = new("View Logs");
         viewLogsItem.Click += OnViewLogs;
 
         NativeMenuItemSeparator separator2 = new();
 
-        _startServerItem = new(header: "Start Server");
+        _startServerItem = new("Start Server");
         _startServerItem.Click += OnStartServer;
 
-        _stopServerItem = new(header: "Stop Server") { IsEnabled = false };
+        _stopServerItem = new("Stop Server") { IsEnabled = false };
         _stopServerItem.Click += OnStopServer;
 
         NativeMenuItemSeparator separator3 = new();
 
-        _showOnStartupItem = new(header: _showOnStartup ? "Show on Startup: On" : "Show on Startup: Off");
+        _showOnStartupItem = new(_showOnStartup ? "Show on Startup: On" : "Show on Startup: Off");
         _showOnStartupItem.Click += OnToggleShowOnStartup;
 
-        NativeMenuItem quitItem = new(header: "Quit");
+        NativeMenuItem quitItem = new("Quit");
         quitItem.Click += OnQuit;
 
-        menu.Items.Add(item: _statusItem);
-        menu.Items.Add(item: _versionItem);
-        menu.Items.Add(item: _uptimeItem);
-        menu.Items.Add(item: separator1);
-        menu.Items.Add(item: openAppItem);
-        menu.Items.Add(item: openDashboardItem);
-        menu.Items.Add(item: serverControlItem);
-        menu.Items.Add(item: viewLogsItem);
-        menu.Items.Add(item: separator2);
-        menu.Items.Add(item: _startServerItem);
-        menu.Items.Add(item: _stopServerItem);
-        menu.Items.Add(item: separator3);
-        menu.Items.Add(item: _showOnStartupItem);
-        menu.Items.Add(item: quitItem);
+        menu.Items.Add(_statusItem);
+        menu.Items.Add(_versionItem);
+        menu.Items.Add(_uptimeItem);
+        menu.Items.Add(separator1);
+        menu.Items.Add(openAppItem);
+        menu.Items.Add(openDashboardItem);
+        menu.Items.Add(serverControlItem);
+        menu.Items.Add(viewLogsItem);
+        menu.Items.Add(separator2);
+        menu.Items.Add(_startServerItem);
+        menu.Items.Add(_stopServerItem);
+        menu.Items.Add(separator3);
+        menu.Items.Add(_showOnStartupItem);
+        menu.Items.Add(quitItem);
 
-        WindowIcon initialIcon = TrayIconFactory.CreateIcon(state: ServerState.Disconnected);
+        WindowIcon initialIcon = TrayIconFactory.CreateIcon(ServerState.Disconnected);
 
         _trayIcon = new()
         {
@@ -138,14 +138,14 @@ public class TrayIconManager
                 _ => 10,
             };
 
-            await Task.Delay(delay: TimeSpan.FromSeconds(seconds: delaySeconds));
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
         }
     }
 
     private async Task UpdateStatusAsync()
     {
         ServerStatusResponse? status = await _serverConnection.GetAsync<ServerStatusResponse>(
-            path: "/manage/status"
+            "/manage/status"
         );
 
         if (status is null)
@@ -158,19 +158,19 @@ public class TrayIconManager
                 {
                     _autoStartAttempted = true;
                     string extraArgs = LauncherSettings.Load().StartupArguments;
-                    await _processLauncher.StartServerAsync(extraArguments: extraArgs);
+                    await _processLauncher.StartServerAsync(extraArgs);
                 }
 
-                SetState(state: ServerState.Disconnected, statusText: "Disconnected", version: null, uptime: null, setupPhase: null);
+                SetState(ServerState.Disconnected, "Disconnected", null, null, null);
                 return;
             }
 
-            status = await _serverConnection.GetAsync<ServerStatusResponse>(path: "/manage/status");
+            status = await _serverConnection.GetAsync<ServerStatusResponse>("/manage/status");
         }
 
         if (status is null)
         {
-            SetState(state: ServerState.Disconnected, statusText: "Disconnected", version: null, uptime: null, setupPhase: null);
+            SetState(ServerState.Disconnected, "Disconnected", null, null, null);
             return;
         }
 
@@ -185,13 +185,13 @@ public class TrayIconManager
         if (_showOnStartup && !_startupWindowOpened)
         {
             _startupWindowOpened = true;
-            OpenMainWindow(selectedTab: state == ServerState.Starting ? 1 : 0);
+            OpenMainWindow(state == ServerState.Starting ? 1 : 0);
         }
 
         // Auto-launch the App when setup is in progress so the user sees the setup UI
         if (
             !_appAutoLaunched
-            && !string.IsNullOrEmpty(value: status.SetupPhase)
+            && !string.IsNullOrEmpty(status.SetupPhase)
             && status.SetupPhase != "Complete"
         )
         {
@@ -200,10 +200,10 @@ public class TrayIconManager
 
         _dashboardUrl = status.InternalAddress;
 
-        string uptimeText = FormatUptime(totalSeconds: status.UptimeSeconds);
-        string versionText = string.IsNullOrEmpty(value: status.Version) ? null! : status.Version;
+        string uptimeText = FormatUptime(status.UptimeSeconds);
+        string versionText = string.IsNullOrEmpty(status.Version) ? null! : status.Version;
 
-        SetState(state: state, statusText: status.Status, version: versionText, uptime: uptimeText, setupPhase: status.SetupPhase);
+        SetState(state, status.Status, versionText, uptimeText, status.SetupPhase);
     }
 
     private static string GetSetupPhaseLabel(string? setupPhase)
@@ -235,7 +235,7 @@ public class TrayIconManager
         if (state != _currentState)
         {
             _currentState = state;
-            _trayIcon.Icon = TrayIconFactory.CreateIcon(state: state);
+            _trayIcon.Icon = TrayIconFactory.CreateIcon(state);
         }
 
         string stateLabel = state switch
@@ -249,14 +249,14 @@ public class TrayIconManager
         string phaseDetail = "";
         if (
             state == ServerState.Starting
-            && !string.IsNullOrEmpty(value: setupPhase)
+            && !string.IsNullOrEmpty(setupPhase)
             && setupPhase != "Complete"
         )
         {
-            phaseDetail = GetSetupPhaseLabel(setupPhase: setupPhase);
+            phaseDetail = GetSetupPhaseLabel(setupPhase);
         }
 
-        string tooltipText = string.IsNullOrEmpty(value: phaseDetail)
+        string tooltipText = string.IsNullOrEmpty(phaseDetail)
             ? $"NoMercy MediaServer - {stateLabel}"
             : $"NoMercy MediaServer - {stateLabel} — {phaseDetail}";
 
@@ -264,7 +264,7 @@ public class TrayIconManager
 
         if (_statusItem is not null)
         {
-            _statusItem.Header = string.IsNullOrEmpty(value: phaseDetail)
+            _statusItem.Header = string.IsNullOrEmpty(phaseDetail)
                 ? $"Server: {stateLabel}"
                 : $"Server: {stateLabel} — {phaseDetail}";
         }
@@ -284,7 +284,7 @@ public class TrayIconManager
 
     internal static string FormatUptime(long totalSeconds)
     {
-        TimeSpan span = TimeSpan.FromSeconds(seconds: totalSeconds);
+        TimeSpan span = TimeSpan.FromSeconds(totalSeconds);
 
         if (span.TotalDays >= 1)
             return $"{(int)span.TotalDays}d {span.Hours}h {span.Minutes}m";
@@ -297,20 +297,20 @@ public class TrayIconManager
 
     private void OpenMainWindow(int selectedTab)
     {
-        Dispatcher.UIThread.Post(action: () =>
+        Dispatcher.UIThread.Post(() =>
         {
             if (_mainWindow is { IsVisible: true })
             {
-                _mainWindow.SelectTab(index: selectedTab);
+                _mainWindow.SelectTab(selectedTab);
                 _mainWindow.Activate();
                 return;
             }
 
-            MainViewModel viewModel = new(serverConnection: _serverConnection, processLauncher: _processLauncher)
+            MainViewModel viewModel = new(_serverConnection, _processLauncher)
             {
                 SelectedTabIndex = selectedTab,
             };
-            _mainWindow = new(viewModel: viewModel);
+            _mainWindow = new(viewModel);
             _mainWindow.Closed += (_, _) => _mainWindow = null;
             _mainWindow.Show();
         });
@@ -318,14 +318,14 @@ public class TrayIconManager
 
     private void OnTrayIconClicked(object? sender, EventArgs e)
     {
-        OpenMainWindow(selectedTab: 0);
+        OpenMainWindow(0);
     }
 
     private async Task<bool> TryLaunchAppForSetup()
     {
         if (_serverConnection.IsConnected)
         {
-            bool posted = await _serverConnection.PostAsync(path: "/manage/app/start");
+            bool posted = await _serverConnection.PostAsync("/manage/app/start");
             if (posted)
                 return true;
         }
@@ -338,13 +338,13 @@ public class TrayIconManager
         try
         {
             if (_serverConnection.IsConnected)
-                await _serverConnection.PostAsync(path: "/manage/app/start");
+                await _serverConnection.PostAsync("/manage/app/start");
             else
                 await _processLauncher.LaunchAppAsync();
         }
         catch (Exception ex)
         {
-            LauncherLog.Error(message: $"Tray OnOpenApp failed: {ex.Message}", ex: ex);
+            LauncherLog.Error($"Tray OnOpenApp failed: {ex.Message}", ex);
         }
     }
 
@@ -353,17 +353,17 @@ public class TrayIconManager
         string url = _dashboardUrl is not null
             ? $"{_dashboardUrl}/dashboard/system"
             : "https://app.nomercy.tv";
-        OpenUrl(url: url);
+        OpenUrl(url);
     }
 
     private void OnViewLogs(object? sender, EventArgs e)
     {
-        OpenMainWindow(selectedTab: 1);
+        OpenMainWindow(1);
     }
 
     private void OnServerControl(object? sender, EventArgs e)
     {
-        OpenMainWindow(selectedTab: 0);
+        OpenMainWindow(0);
     }
 
     private async void OnStartServer(object? sender, EventArgs e)
@@ -371,11 +371,11 @@ public class TrayIconManager
         try
         {
             string extraArgs = LauncherSettings.Load().StartupArguments;
-            await _processLauncher.StartServerAsync(extraArguments: extraArgs);
+            await _processLauncher.StartServerAsync(extraArgs);
         }
         catch (Exception ex)
         {
-            LauncherLog.Error(message: $"Tray OnStartServer failed: {ex.Message}", ex: ex);
+            LauncherLog.Error($"Tray OnStartServer failed: {ex.Message}", ex);
         }
     }
 
@@ -383,18 +383,18 @@ public class TrayIconManager
     {
         try
         {
-            await _serverConnection.PostAsync(path: "/manage/stop");
+            await _serverConnection.PostAsync("/manage/stop");
         }
         catch (Exception ex)
         {
-            LauncherLog.Error(message: $"Tray OnStopServer failed: {ex.Message}", ex: ex);
+            LauncherLog.Error($"Tray OnStopServer failed: {ex.Message}", ex);
         }
     }
 
     private void OnToggleShowOnStartup(object? sender, EventArgs e)
     {
         _showOnStartup = !_showOnStartup;
-        SaveShowOnStartup(value: _showOnStartup);
+        SaveShowOnStartup(_showOnStartup);
 
         if (_showOnStartupItem is not null)
             _showOnStartupItem.Header = _showOnStartup
@@ -411,7 +411,7 @@ public class TrayIconManager
     {
         TraySettings settings = LauncherSettings.Load();
         settings.ShowOnStartup = value;
-        LauncherSettings.Save(settings: settings);
+        LauncherSettings.Save(settings);
     }
 
     private void OnQuit(object? sender, EventArgs e)
@@ -430,6 +430,6 @@ public class TrayIconManager
 
     private static void OpenUrl(string url)
     {
-        using Process? proc = Process.Start(startInfo: new ProcessStartInfo(fileName: url) { UseShellExecute = true });
+        using Process? proc = Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 }

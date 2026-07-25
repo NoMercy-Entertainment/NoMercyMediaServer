@@ -21,16 +21,16 @@ namespace NoMercy.Tests.Storage;
 /// requires calling <c>For</c> directly — otherwise the five comparisons this
 /// codebase never happens to construct with stay permanently unreachable.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class StringComparerFromComparisonTests
 {
     [Theory]
-    [InlineData(data: [StringComparison.Ordinal, "abc", "ABC", false])]
-    [InlineData(data: [StringComparison.OrdinalIgnoreCase, "abc", "ABC", true])]
-    [InlineData(data: [StringComparison.CurrentCulture, "abc", "ABC", false])]
-    [InlineData(data: [StringComparison.CurrentCultureIgnoreCase, "abc", "ABC", true])]
-    [InlineData(data: [StringComparison.InvariantCulture, "abc", "ABC", false])]
-    [InlineData(data: [StringComparison.InvariantCultureIgnoreCase, "abc", "ABC", true])]
+    [InlineData([StringComparison.Ordinal, "abc", "ABC", false])]
+    [InlineData([StringComparison.OrdinalIgnoreCase, "abc", "ABC", true])]
+    [InlineData([StringComparison.CurrentCulture, "abc", "ABC", false])]
+    [InlineData([StringComparison.CurrentCultureIgnoreCase, "abc", "ABC", true])]
+    [InlineData([StringComparison.InvariantCulture, "abc", "ABC", false])]
+    [InlineData([StringComparison.InvariantCultureIgnoreCase, "abc", "ABC", true])]
     public void For_returns_a_comparer_matching_the_requested_comparison_semantics(
         StringComparison comparison,
         string left,
@@ -38,19 +38,19 @@ public sealed class StringComparerFromComparisonTests
         bool expectedEqual
     )
     {
-        StringComparer comparer = StringComparerFromComparison.For(c: comparison);
+        StringComparer comparer = StringComparerFromComparison.For(comparison);
 
-        comparer.Equals(x: left, y: right).Should().Be(expected: expectedEqual);
+        comparer.Equals(left, right).Should().Be(expectedEqual);
     }
 
     [Fact]
     public void For_falls_back_to_Ordinal_for_an_unrecognized_comparison_value()
     {
-        StringComparer comparer = StringComparerFromComparison.For(c: (StringComparison)999);
+        StringComparer comparer = StringComparerFromComparison.For((StringComparison)999);
 
         comparer
-            .Equals(x: "abc", y: "ABC")
+            .Equals("abc", "ABC")
             .Should()
-            .BeFalse(because: "the default arm must behave like Ordinal, not silently ignore case");
+            .BeFalse("the default arm must behave like Ordinal, not silently ignore case");
     }
 }

@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Distribution;
-using Xunit;
 
 namespace NoMercy.Tests.Encoder.Distribution;
 
@@ -24,40 +23,40 @@ public class LicenseTokenClientCacheTests
     private static KeyValuePair<string, (IntrospectResult Result, DateTime CachedAt)> Entry(
         string token,
         DateTime cachedAt
-    ) => new(key: token, value: (new IntrospectResult(Active: true, Scopes: [], Message: null), cachedAt));
+    ) => new(token, (new IntrospectResult(true, [], null), cachedAt));
 
     [Fact]
     public void ExpiredIntrospectKeys_SelectsEntriesAtOrPastTtl_KeepsFreshOnes()
     {
-        DateTime now = new(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 30, kind: DateTimeKind.Utc);
-        TimeSpan ttl = TimeSpan.FromSeconds(seconds: 30);
+        DateTime now = new(2026, 1, 1, 0, 0, 30, DateTimeKind.Utc);
+        TimeSpan ttl = TimeSpan.FromSeconds(30);
         List<KeyValuePair<string, (IntrospectResult Result, DateTime CachedAt)>> entries =
         [
-            Entry(token: "fresh", cachedAt: now.AddSeconds(value: -5)),
-            Entry(token: "edge", cachedAt: now.AddSeconds(value: -30)),
-            Entry(token: "stale", cachedAt: now.AddSeconds(value: -120)),
+            Entry("fresh", now.AddSeconds(-5)),
+            Entry("edge", now.AddSeconds(-30)),
+            Entry("stale", now.AddSeconds(-120)),
         ];
 
-        List<string> expired = LicenseTokenClient.ExpiredIntrospectKeys(entries: entries, now: now, ttl: ttl).ToList();
+        List<string> expired = LicenseTokenClient.ExpiredIntrospectKeys(entries, now, ttl).ToList();
 
-        Assert.Equal(expected: 2, actual: expired.Count);
-        Assert.Contains(expected: "edge", collection: expired);
-        Assert.Contains(expected: "stale", collection: expired);
-        Assert.DoesNotContain(expected: "fresh", collection: expired);
+        Assert.Equal(2, expired.Count);
+        Assert.Contains("edge", expired);
+        Assert.Contains("stale", expired);
+        Assert.DoesNotContain("fresh", expired);
     }
 
     [Fact]
     public void ExpiredIntrospectKeys_AllFresh_SelectsNothing()
     {
-        DateTime now = new(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 30, kind: DateTimeKind.Utc);
+        DateTime now = new(2026, 1, 1, 0, 0, 30, DateTimeKind.Utc);
         List<KeyValuePair<string, (IntrospectResult Result, DateTime CachedAt)>> entries =
         [
-            Entry(token: "a", cachedAt: now.AddSeconds(value: -1)),
-            Entry(token: "b", cachedAt: now.AddSeconds(value: -10)),
+            Entry("a", now.AddSeconds(-1)),
+            Entry("b", now.AddSeconds(-10)),
         ];
 
         Assert.Empty(
-            collection: LicenseTokenClient.ExpiredIntrospectKeys(entries: entries, now: now, ttl: TimeSpan.FromSeconds(seconds: 30))
+            LicenseTokenClient.ExpiredIntrospectKeys(entries, now, TimeSpan.FromSeconds(30))
         );
     }
 }

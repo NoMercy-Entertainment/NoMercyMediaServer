@@ -32,7 +32,7 @@ namespace NoMercy.Tests.Api;
 // / ILiveStreamingService mocks and a real LiveSession/LiveRuntimeSession pair,
 // mocking only the SignalR plumbing (HubCallerContext) a live connection would
 // normally supply — mirrors LiveTranscodeHubReportPlayheadTests.
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class LiveTranscodeHubReportBufferHealthTests
 {
     private static LiveQuality MakeQuality() =>
@@ -59,25 +59,25 @@ public class LiveTranscodeHubReportBufferHealthTests
         httpContext.Request.Path = "/liveTranscodeHub";
 
         LiveTranscodeHub hub = new(
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: Mock.Of<IDbContextFactory<MediaContext>>(),
-            connectedClients: new ConnectedClients(),
-            activityLogger: Mock.Of<IActivityLogger>(),
-            sessionManager: sessionManager,
-            streamingService: streamingService,
-            presenceTracker: Mock.Of<ILiveSessionPresenceTracker>(),
-            logger: NullLogger<LiveTranscodeHub>.Instance
+            new HttpContextAccessorStub(httpContext),
+            Mock.Of<IDbContextFactory<MediaContext>>(),
+            new ConnectedClients(),
+            Mock.Of<IActivityLogger>(),
+            sessionManager,
+            streamingService,
+            Mock.Of<ILiveSessionPresenceTracker>(),
+            NullLogger<LiveTranscodeHub>.Instance
         );
 
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: callerUserId)], authenticationType: "TestAuth")
+            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, callerUserId)], "TestAuth")
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(expression: c => c.User).Returns(value: principal);
-        context.Setup(expression: c => c.UserIdentifier).Returns(value: callerUserId);
-        context.Setup(expression: c => c.ConnectionId).Returns(value: Guid.NewGuid().ToString());
-        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
+        context.Setup(c => c.User).Returns(principal);
+        context.Setup(c => c.UserIdentifier).Returns(callerUserId);
+        context.Setup(c => c.ConnectionId).Returns(Guid.NewGuid().ToString());
+        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
 
         Mock<IHubCallerClients> clients = new();
         hub.Context = context.Object;
@@ -92,24 +92,24 @@ public class LiveTranscodeHubReportBufferHealthTests
         const string sessionId = "sess-owner";
         const string ownerId = "user-1";
 
-        LiveSession session = new(sessionId: sessionId, quality: MakeQuality());
-        LiveRuntimeSession runtime = new(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 6));
+        LiveSession session = new(sessionId, MakeQuality());
+        LiveRuntimeSession runtime = new(session, TimeSpan.FromSeconds(6));
         DateTime lastAccessBeforeCall = runtime.LastAccess;
 
         Mock<ISessionManager> sessionManager = new();
-        sessionManager.Setup(expression: m => m.GetOwnerUserId(sessionId)).Returns(value: ownerId);
+        sessionManager.Setup(m => m.GetOwnerUserId(sessionId)).Returns(ownerId);
 
         Mock<ILiveStreamingService> streamingService = new();
-        streamingService.Setup(expression: s => s.TryGetRuntime(sessionId, out runtime)).Returns(value: true);
+        streamingService.Setup(s => s.TryGetRuntime(sessionId, out runtime)).Returns(true);
 
-        LiveTranscodeHub hub = CreateHub(sessionManager: sessionManager.Object, streamingService: streamingService.Object, callerUserId: ownerId);
+        LiveTranscodeHub hub = CreateHub(sessionManager.Object, streamingService.Object, ownerId);
 
-        hub.ReportBufferHealth(sessionId: sessionId, bufferedSeconds: 12.5, observedBandwidthKbps: 4500);
+        hub.ReportBufferHealth(sessionId, 12.5, 4500);
 
-        session.ClientBufferedAhead.Should().Be(expected: TimeSpan.FromSeconds(value: 12.5));
-        session.ObservedBandwidthKbps.Should().Be(expected: 4500);
-        session.HasFreshClientHealth(maxAge: TimeSpan.FromSeconds(seconds: 10)).Should().BeTrue();
-        runtime.LastAccess.Should().BeOnOrAfter(expected: lastAccessBeforeCall);
+        session.ClientBufferedAhead.Should().Be(TimeSpan.FromSeconds(12.5));
+        session.ObservedBandwidthKbps.Should().Be(4500);
+        session.HasFreshClientHealth(TimeSpan.FromSeconds(10)).Should().BeTrue();
+        runtime.LastAccess.Should().BeOnOrAfter(lastAccessBeforeCall);
     }
 
     [Fact]
@@ -118,21 +118,21 @@ public class LiveTranscodeHubReportBufferHealthTests
         const string sessionId = "sess-clamp";
         const string ownerId = "user-1";
 
-        LiveSession session = new(sessionId: sessionId, quality: MakeQuality());
-        LiveRuntimeSession runtime = new(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 6));
+        LiveSession session = new(sessionId, MakeQuality());
+        LiveRuntimeSession runtime = new(session, TimeSpan.FromSeconds(6));
 
         Mock<ISessionManager> sessionManager = new();
-        sessionManager.Setup(expression: m => m.GetOwnerUserId(sessionId)).Returns(value: ownerId);
+        sessionManager.Setup(m => m.GetOwnerUserId(sessionId)).Returns(ownerId);
 
         Mock<ILiveStreamingService> streamingService = new();
-        streamingService.Setup(expression: s => s.TryGetRuntime(sessionId, out runtime)).Returns(value: true);
+        streamingService.Setup(s => s.TryGetRuntime(sessionId, out runtime)).Returns(true);
 
-        LiveTranscodeHub hub = CreateHub(sessionManager: sessionManager.Object, streamingService: streamingService.Object, callerUserId: ownerId);
+        LiveTranscodeHub hub = CreateHub(sessionManager.Object, streamingService.Object, ownerId);
 
-        hub.ReportBufferHealth(sessionId: sessionId, bufferedSeconds: -5, observedBandwidthKbps: -100);
+        hub.ReportBufferHealth(sessionId, -5, -100);
 
-        session.ClientBufferedAhead.Should().Be(expected: TimeSpan.Zero);
-        session.ObservedBandwidthKbps.Should().Be(expected: 0);
+        session.ClientBufferedAhead.Should().Be(TimeSpan.Zero);
+        session.ObservedBandwidthKbps.Should().Be(0);
     }
 
     [Fact]
@@ -142,22 +142,22 @@ public class LiveTranscodeHubReportBufferHealthTests
         const string ownerId = "user-1";
         const string callerId = "user-2";
 
-        LiveSession session = new(sessionId: sessionId, quality: MakeQuality());
-        LiveRuntimeSession runtime = new(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 6));
+        LiveSession session = new(sessionId, MakeQuality());
+        LiveRuntimeSession runtime = new(session, TimeSpan.FromSeconds(6));
         DateTime lastAccessBeforeCall = runtime.LastAccess;
 
         Mock<ISessionManager> sessionManager = new();
-        sessionManager.Setup(expression: m => m.GetOwnerUserId(sessionId)).Returns(value: ownerId);
+        sessionManager.Setup(m => m.GetOwnerUserId(sessionId)).Returns(ownerId);
 
         Mock<ILiveStreamingService> streamingService = new();
-        streamingService.Setup(expression: s => s.TryGetRuntime(sessionId, out runtime)).Returns(value: true);
+        streamingService.Setup(s => s.TryGetRuntime(sessionId, out runtime)).Returns(true);
 
-        LiveTranscodeHub hub = CreateHub(sessionManager: sessionManager.Object, streamingService: streamingService.Object, callerUserId: callerId);
+        LiveTranscodeHub hub = CreateHub(sessionManager.Object, streamingService.Object, callerId);
 
-        hub.ReportBufferHealth(sessionId: sessionId, bufferedSeconds: 12.5, observedBandwidthKbps: 4500);
+        hub.ReportBufferHealth(sessionId, 12.5, 4500);
 
-        session.HasFreshClientHealth(maxAge: TimeSpan.FromSeconds(seconds: 10)).Should().BeFalse();
-        runtime.LastAccess.Should().Be(expected: lastAccessBeforeCall);
+        session.HasFreshClientHealth(TimeSpan.FromSeconds(10)).Should().BeFalse();
+        runtime.LastAccess.Should().Be(lastAccessBeforeCall);
     }
 
     [Fact]
@@ -168,12 +168,12 @@ public class LiveTranscodeHubReportBufferHealthTests
         // No Setup for TryGetRuntime — unconfigured returns false with a null
         // out value, mirroring an unknown/expired session id.
 
-        LiveTranscodeHub hub = CreateHub(sessionManager: sessionManager.Object, streamingService: streamingService.Object, callerUserId: "user-1");
+        LiveTranscodeHub hub = CreateHub(sessionManager.Object, streamingService.Object, "user-1");
 
-        Action act = () => hub.ReportBufferHealth(sessionId: "sess-unknown", bufferedSeconds: 12.5, observedBandwidthKbps: 4500);
+        Action act = () => hub.ReportBufferHealth("sess-unknown", 12.5, 4500);
 
         act.Should().NotThrow();
-        sessionManager.Verify(expression: m => m.GetOwnerUserId(It.IsAny<string>()), times: Times.Never);
+        sessionManager.Verify(m => m.GetOwnerUserId(It.IsAny<string>()), Times.Never);
     }
 
     private sealed class HttpContextAccessorStub(HttpContext httpContext) : IHttpContextAccessor

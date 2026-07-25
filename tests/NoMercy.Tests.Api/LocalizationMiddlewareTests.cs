@@ -18,33 +18,33 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class LocalizationMiddlewareTests
 {
     [Theory]
-    [InlineData(data: ["en-US,nl;q=0.9", "en-US"])]
-    [InlineData(data: ["nl;q=1.0,en;q=0.5", "nl"])]
-    [InlineData(data: ["nl-NL,nl;q=0.9,en;q=0.8", "nl-NL"])]
-    [InlineData(data: ["en;q=0.8,nl;q=0.9", "nl"])]
-    [InlineData(data: ["*,nl;q=1.0", "nl"])]
-    [InlineData(data: ["", "en-US"])]
+    [InlineData(["en-US,nl;q=0.9", "en-US"])]
+    [InlineData(["nl;q=1.0,en;q=0.5", "nl"])]
+    [InlineData(["nl-NL,nl;q=0.9,en;q=0.8", "nl-NL"])]
+    [InlineData(["en;q=0.8,nl;q=0.9", "nl"])]
+    [InlineData(["*,nl;q=1.0", "nl"])]
+    [InlineData(["", "en-US"])]
     public void ParseBestLanguage_PicksHighestQualityWeight(string header, string expected)
     {
-        Assert.Equal(expected: expected, actual: LocalizationMiddleware.ParseBestLanguage(acceptLanguageHeader: header));
+        Assert.Equal(expected, LocalizationMiddleware.ParseBestLanguage(header));
     }
 
     [Fact]
     public void ApplicationConfiguration_HasSingleUseRequestLocalizationCall()
     {
         string sourceFile = FindRepoFile(
-            relativePath: Path.Combine(path1: "src", path2: "NoMercy.Service", path3: "Configuration", path4: "ApplicationConfiguration.cs")
+            Path.Combine("src", "NoMercy.Service", "Configuration", "ApplicationConfiguration.cs")
         );
 
-        string source = File.ReadAllText(path: sourceFile);
+        string source = File.ReadAllText(sourceFile);
 
-        int count = Regex.Matches(input: source, pattern: @"UseRequestLocalization\s*\(").Count;
+        int count = Regex.Matches(source, @"UseRequestLocalization\s*\(").Count;
 
-        Assert.Equal(expected: 1, actual: count);
+        Assert.Equal(1, count);
     }
 
     // Walk up from the test assembly instead of a fixed ".." chain — the output
@@ -54,118 +54,118 @@ public class LocalizationMiddlewareTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(path1: dir, path2: relativePath);
-            if (File.Exists(path: candidate))
+            string candidate = Path.Combine(dir, relativePath);
+            if (File.Exists(candidate))
                 return candidate;
 
-            dir = Path.GetDirectoryName(path: dir)!;
+            dir = Path.GetDirectoryName(dir)!;
         }
 
         throw new FileNotFoundException(
-            message: $"Could not locate {relativePath} above {AppContext.BaseDirectory}"
+            $"Could not locate {relativePath} above {AppContext.BaseDirectory}"
         );
     }
 
     [Fact]
     public async Task InvokeAsync_SetsGlobalLocalizer_ForRequestLanguage()
     {
-        LocalizationMiddleware middleware = new(next: _ => Task.CompletedTask);
+        LocalizationMiddleware middleware = new(_ => Task.CompletedTask);
         DefaultHttpContext context = new();
-        context.Request.Headers[key: "Accept-Language"] = "nl-NL";
+        context.Request.Headers["Accept-Language"] = "nl-NL";
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.NotNull(@object: LocalizationHelper.GlobalLocalizer);
-        Assert.Equal(expected: "nl", actual: LocalizationHelper.GlobalLocalizer.TargetLanguage);
+        Assert.NotNull(LocalizationHelper.GlobalLocalizer);
+        Assert.Equal("nl", LocalizationHelper.GlobalLocalizer.TargetLanguage);
     }
 
     [Fact]
     public async Task InvokeAsync_SetsLocalizer_WhenNoAcceptLanguageHeader()
     {
-        LocalizationMiddleware middleware = new(next: _ => Task.CompletedTask);
+        LocalizationMiddleware middleware = new(_ => Task.CompletedTask);
         DefaultHttpContext context = new();
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.NotNull(@object: LocalizationHelper.GlobalLocalizer);
+        Assert.NotNull(LocalizationHelper.GlobalLocalizer);
     }
 
     [Fact]
     public async Task InvokeAsync_ReusesCachedLocalizer_ForSameLanguage()
     {
-        LocalizationMiddleware middleware = new(next: _ => Task.CompletedTask);
+        LocalizationMiddleware middleware = new(_ => Task.CompletedTask);
 
         DefaultHttpContext context1 = new();
-        context1.Request.Headers[key: "Accept-Language"] = "de-DE";
-        await middleware.InvokeAsync(context: context1);
+        context1.Request.Headers["Accept-Language"] = "de-DE";
+        await middleware.InvokeAsync(context1);
         ILocalizer firstLocalizer = LocalizationHelper.GlobalLocalizer;
 
         DefaultHttpContext context2 = new();
-        context2.Request.Headers[key: "Accept-Language"] = "de-DE";
-        await middleware.InvokeAsync(context: context2);
+        context2.Request.Headers["Accept-Language"] = "de-DE";
+        await middleware.InvokeAsync(context2);
         ILocalizer secondLocalizer = LocalizationHelper.GlobalLocalizer;
 
-        Assert.Same(expected: firstLocalizer, actual: secondLocalizer);
+        Assert.Same(firstLocalizer, secondLocalizer);
     }
 
     [Fact]
     public async Task InvokeAsync_CreatesDifferentLocalizer_ForDifferentLanguage()
     {
-        LocalizationMiddleware middleware = new(next: _ => Task.CompletedTask);
+        LocalizationMiddleware middleware = new(_ => Task.CompletedTask);
 
         DefaultHttpContext context1 = new();
-        context1.Request.Headers[key: "Accept-Language"] = "fr-FR";
-        await middleware.InvokeAsync(context: context1);
+        context1.Request.Headers["Accept-Language"] = "fr-FR";
+        await middleware.InvokeAsync(context1);
         ILocalizer frLocalizer = LocalizationHelper.GlobalLocalizer;
 
         DefaultHttpContext context2 = new();
-        context2.Request.Headers[key: "Accept-Language"] = "es-ES";
-        await middleware.InvokeAsync(context: context2);
+        context2.Request.Headers["Accept-Language"] = "es-ES";
+        await middleware.InvokeAsync(context2);
         ILocalizer esLocalizer = LocalizationHelper.GlobalLocalizer;
 
-        Assert.NotSame(expected: frLocalizer, actual: esLocalizer);
+        Assert.NotSame(frLocalizer, esLocalizer);
     }
 
     [Fact]
     public async Task InvokeAsync_CallsNextMiddleware()
     {
         bool nextCalled = false;
-        LocalizationMiddleware middleware = new(next: _ =>
+        LocalizationMiddleware middleware = new(_ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
         DefaultHttpContext context = new();
-        context.Request.Headers[key: "Accept-Language"] = "en-US";
+        context.Request.Headers["Accept-Language"] = "en-US";
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.True(condition: nextCalled);
+        Assert.True(nextCalled);
     }
 
     [Fact]
     public async Task InvokeAsync_SetsAcceptLanguageHeader_WithLanguageParts()
     {
-        LocalizationMiddleware middleware = new(next: _ => Task.CompletedTask);
+        LocalizationMiddleware middleware = new(_ => Task.CompletedTask);
         DefaultHttpContext context = new();
-        context.Request.Headers[key: "Accept-Language"] = "nl-NL,en-US;q=0.9";
+        context.Request.Headers["Accept-Language"] = "nl-NL,en-US;q=0.9";
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         string?[] acceptLanguage = context.Request.Headers.AcceptLanguage.ToArray();
-        Assert.Contains(expected: "nl", collection: acceptLanguage);
-        Assert.Contains(expected: "NL", collection: acceptLanguage);
+        Assert.Contains("nl", acceptLanguage);
+        Assert.Contains("NL", acceptLanguage);
     }
 
     [Fact]
     public async Task InvokeAsync_HandlesLanguageWithoutRegion()
     {
-        LocalizationMiddleware middleware = new(next: _ => Task.CompletedTask);
+        LocalizationMiddleware middleware = new(_ => Task.CompletedTask);
         DefaultHttpContext context = new();
-        context.Request.Headers[key: "Accept-Language"] = "nl";
+        context.Request.Headers["Accept-Language"] = "nl";
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.Equal(expected: "nl", actual: LocalizationHelper.GlobalLocalizer.TargetLanguage);
+        Assert.Equal("nl", LocalizationHelper.GlobalLocalizer.TargetLanguage);
     }
 }

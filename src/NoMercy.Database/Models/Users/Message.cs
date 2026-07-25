@@ -15,10 +15,10 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Users;
 
-[PrimaryKey(propertyName: nameof(Id))]
+[PrimaryKey(nameof(Id))]
 public class Message
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public required Ulid Id { get; set; } = Ulid.NewUlid();
 }

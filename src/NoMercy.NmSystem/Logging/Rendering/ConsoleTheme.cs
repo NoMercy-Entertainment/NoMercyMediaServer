@@ -46,10 +46,10 @@ public static class ConsoleThemeColors
     {
         return level switch
         {
-            LogLevel.Critical => ("×", Category(category: LogCategories.Resolve(key: "fatal"), theme: theme)),
-            LogLevel.Error => ("×", Category(category: LogCategories.Resolve(key: "error"), theme: theme)),
-            LogLevel.Warning => ("!", Category(category: LogCategories.Resolve(key: "warning"), theme: theme)),
-            _ => (" ", Category(category: LogCategories.Resolve(key: "info"), theme: theme)),
+            LogLevel.Critical => ("×", Category(LogCategories.Resolve("fatal"), theme)),
+            LogLevel.Error => ("×", Category(LogCategories.Resolve("error"), theme)),
+            LogLevel.Warning => ("!", Category(LogCategories.Resolve("warning"), theme)),
+            _ => (" ", Category(LogCategories.Resolve("info"), theme)),
         };
     }
 }

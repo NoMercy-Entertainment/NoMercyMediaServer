@@ -41,7 +41,7 @@ public class WindowsResourceProviderTests : IDisposable
     private WindowsResourceProvider CreateProvider()
     {
         WindowsResourceProvider provider = new();
-        _providers.Add(item: provider);
+        _providers.Add(provider);
         return provider;
     }
 
@@ -61,10 +61,10 @@ public class WindowsResourceProviderTests : IDisposable
     // throwing) when this suite first tried that route.
     private static PerformanceCounter CreateBrokenCounter() =>
         new(
-            categoryName: "Processor Information",
-            counterName: "% Processor Utility",
-            instanceName: $"nomercy-test-bogus-{Guid.NewGuid():N}",
-            readOnly: true
+            "Processor Information",
+            "% Processor Utility",
+            $"nomercy-test-bogus-{Guid.NewGuid():N}",
+            true
         );
 
     public void Dispose()
@@ -92,22 +92,22 @@ public class WindowsResourceProviderTests : IDisposable
         // both Windows-only OS features with no Linux equivalent — CI runs this suite on
         // a single ubuntu-latest runner (no separate per-OS leg), so this is a hard
         // platform requirement, not something the provider itself should degrade around.
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
 
         WindowsResourceProvider provider = CreateProvider();
 
         Resource resource = provider.Collect();
 
-        resource.Cpu.Total.Should().BeInRange(minimumValue: 0.0, maximumValue: 100.0);
+        resource.Cpu.Total.Should().BeInRange(0.0, 100.0);
         foreach (Core core in resource.Cpu.Core)
-            core.Utilization.Should().BeInRange(minimumValue: 0.0, maximumValue: 100.0);
+            core.Utilization.Should().BeInRange(0.0, 100.0);
     }
 
     [Fact]
     public void Collect_ReturnsPositiveMemoryTotal_OnRealHost()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
 
         WindowsResourceProvider provider = CreateProvider();
@@ -116,13 +116,13 @@ public class WindowsResourceProviderTests : IDisposable
 
         resource
             .Memory.Total.Should()
-            .BeGreaterThan(expected: 0.0, because: "GlobalMemoryStatusEx succeeds on any real Windows host");
+            .BeGreaterThan(0.0, "GlobalMemoryStatusEx succeeds on any real Windows host");
     }
 
     [Fact]
     public void Collect_Gpu_EntriesAreWellFormed_WhenAnyGpuIsReported()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
 
         WindowsResourceProvider provider = CreateProvider();
@@ -133,17 +133,17 @@ public class WindowsResourceProviderTests : IDisposable
         {
             gpu.Name.Should()
                 .NotBeNullOrWhiteSpace(
-                    because: "a reported GPU must resolve to a DXGI adapter name or its fallback"
+                    "a reported GPU must resolve to a DXGI adapter name or its fallback"
                 );
-            gpu.Index.Should().BeGreaterThanOrEqualTo(expected: 0);
-            gpu.Core.Should().BeInRange(minimumValue: 0.0, maximumValue: 100.0);
+            gpu.Index.Should().BeGreaterThanOrEqualTo(0);
+            gpu.Core.Should().BeInRange(0.0, 100.0);
         }
     }
 
     [Fact]
     public void Dispose_TwiceInARow_DoesNotThrow()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         WindowsResourceProvider provider = CreateProvider();
@@ -157,7 +157,7 @@ public class WindowsResourceProviderTests : IDisposable
     [Fact]
     public void Dispose_ClearsCounterFields()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
 
         WindowsResourceProvider provider = CreateProvider();
@@ -165,9 +165,9 @@ public class WindowsResourceProviderTests : IDisposable
 
         provider.Dispose();
 
-        ReflectionHelpers.GetField<PerformanceCounter?>(instance: provider, fieldName: "_cpuTotal").Should().BeNull();
-        ReflectionHelpers.GetField<IList>(instance: provider, fieldName: "_cpuCores").Count.Should().Be(expected: 0);
-        ReflectionHelpers.GetField<IList>(instance: provider, fieldName: "_gpuCounters").Count.Should().Be(expected: 0);
+        ReflectionHelpers.GetField<PerformanceCounter?>(provider, "_cpuTotal").Should().BeNull();
+        ReflectionHelpers.GetField<IList>(provider, "_cpuCores").Count.Should().Be(0);
+        ReflectionHelpers.GetField<IList>(provider, "_gpuCounters").Count.Should().Be(0);
     }
 
     // -----------------------------------------------------------------------
@@ -177,81 +177,81 @@ public class WindowsResourceProviderTests : IDisposable
     [Fact]
     public void CollectCpu_WhenCpuTotalCounterIsNull_ReturnsWithoutModifyingResource()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         WindowsResourceProvider provider = CreateProvider();
-        ReflectionHelpers.SetField(instance: provider, fieldName: "_cpuTotal", value: null);
+        ReflectionHelpers.SetField(provider, "_cpuTotal", null);
         Resource resource = NewResource();
 
-        ReflectionHelpers.InvokeInstance(instance: provider, methodName: "CollectCpu", args: resource);
+        ReflectionHelpers.InvokeInstance(provider, "CollectCpu", resource);
 
         resource
             .Cpu.Total.Should()
-            .Be(expected: 0.0, because: "no counter means no reading — must not fabricate a value");
+            .Be(0.0, "no counter means no reading — must not fabricate a value");
         resource.Cpu.Core.Should().BeEmpty();
     }
 
     [Fact]
     public void CollectCpu_WhenCpuTotalCounterIsBroken_DegradesToZero_DoesNotThrow()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         WindowsResourceProvider provider = CreateProvider();
-        ReflectionHelpers.SetField(instance: provider, fieldName: "_cpuTotal", value: CreateBrokenCounter());
+        ReflectionHelpers.SetField(provider, "_cpuTotal", CreateBrokenCounter());
         Resource resource = NewResource();
 
-        Action act = () => ReflectionHelpers.InvokeInstance(instance: provider, methodName: "CollectCpu", args: resource);
+        Action act = () => ReflectionHelpers.InvokeInstance(provider, "CollectCpu", resource);
 
         act.Should().NotThrow();
         resource
             .Cpu.Total.Should()
-            .Be(expected: 0.0, because: "a broken counter must degrade to zero, not propagate the failure");
+            .Be(0.0, "a broken counter must degrade to zero, not propagate the failure");
     }
 
     [Fact]
     public void CollectCpu_WhenACoreCounterIsBroken_ThatCoreDegradesToZero_OthersUnaffected()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         WindowsResourceProvider provider = CreateProvider();
         PerformanceCounter healthyCore = new(
-            categoryName: "Processor Information",
-            counterName: "% Processor Utility",
-            instanceName: "_Total",
-            readOnly: true
+            "Processor Information",
+            "% Processor Utility",
+            "_Total",
+            true
         );
         healthyCore.NextValue(); // seed the PDH baseline like WarmUp does
         ReflectionHelpers.SetField(
-            instance: provider,
-            fieldName: "_cpuCores",
-            value: new List<PerformanceCounter> { healthyCore, CreateBrokenCounter() }
+            provider,
+            "_cpuCores",
+            new List<PerformanceCounter> { healthyCore, CreateBrokenCounter() }
         );
         Resource resource = NewResource();
 
-        Action act = () => ReflectionHelpers.InvokeInstance(instance: provider, methodName: "CollectCpu", args: resource);
+        Action act = () => ReflectionHelpers.InvokeInstance(provider, "CollectCpu", resource);
 
         act.Should().NotThrow();
-        resource.Cpu.Core.Should().HaveCount(expected: 2);
+        resource.Cpu.Core.Should().HaveCount(2);
         resource
-            .Cpu.Core[index: 1]
+            .Cpu.Core[1]
             .Utilization.Should()
-            .Be(expected: 0.0, because: "the broken core counter must degrade to zero");
-        resource.Cpu.Core[index: 1].Index.Should().Be(expected: 1);
+            .Be(0.0, "the broken core counter must degrade to zero");
+        resource.Cpu.Core[1].Index.Should().Be(1);
     }
 
     [Fact]
     public void WarmUp_WhenCpuTotalIsNull_DoesNotThrow()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         WindowsResourceProvider provider = CreateProvider();
-        ReflectionHelpers.SetField(instance: provider, fieldName: "_cpuTotal", value: null);
+        ReflectionHelpers.SetField(provider, "_cpuTotal", null);
 
-        Action act = () => ReflectionHelpers.InvokeInstance(instance: provider, methodName: "WarmUp");
+        Action act = () => ReflectionHelpers.InvokeInstance(provider, "WarmUp");
 
         act.Should().NotThrow();
     }
@@ -259,17 +259,17 @@ public class WindowsResourceProviderTests : IDisposable
     [Fact]
     public void WarmUp_WhenACoreCounterIsBroken_DoesNotThrow()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         WindowsResourceProvider provider = CreateProvider();
         ReflectionHelpers.SetField(
-            instance: provider,
-            fieldName: "_cpuCores",
-            value: new List<PerformanceCounter> { CreateBrokenCounter() }
+            provider,
+            "_cpuCores",
+            new List<PerformanceCounter> { CreateBrokenCounter() }
         );
 
-        Action act = () => ReflectionHelpers.InvokeInstance(instance: provider, methodName: "WarmUp");
+        Action act = () => ReflectionHelpers.InvokeInstance(provider, "WarmUp");
 
         act.Should().NotThrow();
     }
@@ -282,69 +282,69 @@ public class WindowsResourceProviderTests : IDisposable
     [Fact]
     public void CollectGpu_WhenLastRefreshIsStale_RebuildsCountersAndReturnsWithoutPopulatingGpu()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         WindowsResourceProvider provider = CreateProvider();
         provider.Collect(); // real WarmUp already primed _gpuCounters/_gpuLastRefresh once
-        ReflectionHelpers.SetField(instance: provider, fieldName: "_gpuLastRefresh", value: DateTime.MinValue);
+        ReflectionHelpers.SetField(provider, "_gpuLastRefresh", DateTime.MinValue);
         Resource resource = NewResource();
 
-        Action act = () => ReflectionHelpers.InvokeInstance(instance: provider, methodName: "CollectGpu", args: resource);
+        Action act = () => ReflectionHelpers.InvokeInstance(provider, "CollectGpu", resource);
 
         act.Should().NotThrow();
         resource
             .Gpu.Should()
-            .BeEmpty(because: "a refresh cycle seeds the PDH baseline and returns early by design");
+            .BeEmpty("a refresh cycle seeds the PDH baseline and returns early by design");
     }
 
     [Fact]
     public void CollectGpu_WhenACounterIsBroken_QueuesItStale_RemovesIt_DoesNotThrow()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         WindowsResourceProvider provider = CreateProvider();
         provider.Collect();
         Type entryType = ReflectionHelpers
-            .GetField<IList>(instance: provider, fieldName: "_gpuCounters")
+            .GetField<IList>(provider, "_gpuCounters")
             .GetType()
             .GetGenericArguments()[0];
 
         object brokenEntry = Activator.CreateInstance(
-            type: entryType, args: ["0x00000000_0xDEADBEEF", "3D", CreateBrokenCounter()]
+            entryType, ["0x00000000_0xDEADBEEF", "3D", CreateBrokenCounter()]
         )!;
 
         IList counters = (IList)
-            Activator.CreateInstance(type: typeof(List<>).MakeGenericType(typeArguments: entryType))!;
-        counters.Add(value: brokenEntry);
-        ReflectionHelpers.SetField(instance: provider, fieldName: "_gpuCounters", value: counters);
+            Activator.CreateInstance(typeof(List<>).MakeGenericType(entryType))!;
+        counters.Add(brokenEntry);
+        ReflectionHelpers.SetField(provider, "_gpuCounters", counters);
         // Recent refresh so CollectGpu takes the "read deltas" branch, not the rebuild branch.
-        ReflectionHelpers.SetField(instance: provider, fieldName: "_gpuLastRefresh", value: DateTime.UtcNow);
+        ReflectionHelpers.SetField(provider, "_gpuLastRefresh", DateTime.UtcNow);
         Resource resource = NewResource();
 
-        Action act = () => ReflectionHelpers.InvokeInstance(instance: provider, methodName: "CollectGpu", args: resource);
+        Action act = () => ReflectionHelpers.InvokeInstance(provider, "CollectGpu", resource);
 
         act.Should().NotThrow();
         ReflectionHelpers
-            .GetField<IList>(instance: provider, fieldName: "_gpuCounters")
+            .GetField<IList>(provider, "_gpuCounters")
             .Count.Should()
-            .Be(expected: 0, because: "the stale broken entry must be removed");
+            .Be(0, "the stale broken entry must be removed");
     }
 
     [Fact]
     public void WarmUp_WhenCpuTotalCounterIsBroken_DoesNotThrow()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         // WarmUp() only reads _cpuTotal (it never rebuilds it — that happens once
         // in InitCpuCounters), so a broken counter placed here beforehand survives
         // to be exercised by WarmUp's own try/catch around NextValue().
         WindowsResourceProvider provider = CreateProvider();
-        ReflectionHelpers.SetField(instance: provider, fieldName: "_cpuTotal", value: CreateBrokenCounter());
+        ReflectionHelpers.SetField(provider, "_cpuTotal", CreateBrokenCounter());
 
-        Action act = () => ReflectionHelpers.InvokeInstance(instance: provider, methodName: "WarmUp");
+        Action act = () => ReflectionHelpers.InvokeInstance(provider, "WarmUp");
 
         act.Should().NotThrow();
     }
@@ -354,36 +354,36 @@ public class WindowsResourceProviderTests : IDisposable
     // -----------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: ["pid_1234_luid_0x00000000_0x0001E147_phys_0_eng_0_engtype_3D", "luid_", "0x00000000_0x0001E147"])]
-    [InlineData(data: ["pid_9_luid_0xAAAAAAAA_0xBBBBBBBB_phys_0_eng_1_engtype_VideoDecode", "luid_", "0xAAAAAAAA_0xBBBBBBBB"])]
+    [InlineData(["pid_1234_luid_0x00000000_0x0001E147_phys_0_eng_0_engtype_3D", "luid_", "0x00000000_0x0001E147"])]
+    [InlineData(["pid_9_luid_0xAAAAAAAA_0xBBBBBBBB_phys_0_eng_1_engtype_VideoDecode", "luid_", "0xAAAAAAAA_0xBBBBBBBB"])]
     public void ExtractSegment_ParsesLuidFromInstanceName(
         string instance,
         string prefix,
         string expected
     )
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         string? result = (string?)
             ReflectionHelpers.InvokeStatic(
-                type: typeof(WindowsResourceProvider),
-                methodName: "ExtractSegment", args: [instance, prefix]
+                typeof(WindowsResourceProvider),
+                "ExtractSegment", [instance, prefix]
             );
 
-        result.Should().Be(expected: expected);
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void ExtractSegment_WithoutPrefix_ReturnsNull()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         string? result = (string?)
             ReflectionHelpers.InvokeStatic(
-                type: typeof(WindowsResourceProvider),
-                methodName: "ExtractSegment", args: ["pid_1234_phys_0_eng_0_engtype_3D", "luid_"]
+                typeof(WindowsResourceProvider),
+                "ExtractSegment", ["pid_1234_phys_0_eng_0_engtype_3D", "luid_"]
             );
 
         result.Should().BeNull();
@@ -392,48 +392,48 @@ public class WindowsResourceProviderTests : IDisposable
     [Fact]
     public void ExtractSegment_WithFewerThanTwoSegmentsAfterPrefix_ReturnsNull()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         string? result = (string?)
             ReflectionHelpers.InvokeStatic(
-                type: typeof(WindowsResourceProvider),
-                methodName: "ExtractSegment", args: ["pid_1234_luid_onlyonepart", "luid_"]
+                typeof(WindowsResourceProvider),
+                "ExtractSegment", ["pid_1234_luid_onlyonepart", "luid_"]
             );
 
         result.Should().BeNull();
     }
 
     [Theory]
-    [InlineData(data: ["pid_1_luid_0x0_0x1_phys_0_eng_0_engtype_3D", "3D"])]
-    [InlineData(data: ["pid_1_luid_0x0_0x1_phys_0_eng_1_engtype_VideoDecode", "VideoDecode"])]
-    [InlineData(data: ["pid_1_luid_0x0_0x1_phys_0_eng_2_engtype_VideoEncode", "VideoEncode"])]
+    [InlineData(["pid_1_luid_0x0_0x1_phys_0_eng_0_engtype_3D", "3D"])]
+    [InlineData(["pid_1_luid_0x0_0x1_phys_0_eng_1_engtype_VideoDecode", "VideoDecode"])]
+    [InlineData(["pid_1_luid_0x0_0x1_phys_0_eng_2_engtype_VideoEncode", "VideoEncode"])]
     public void ExtractEngineType_ParsesTrailingEngineType(string instance, string expected)
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         string? result = (string?)
             ReflectionHelpers.InvokeStatic(
-                type: typeof(WindowsResourceProvider),
-                methodName: "ExtractEngineType",
-                args: instance
+                typeof(WindowsResourceProvider),
+                "ExtractEngineType",
+                instance
             );
 
-        result.Should().Be(expected: expected);
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void ExtractEngineType_WithoutMarker_ReturnsNull()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         string? result = (string?)
             ReflectionHelpers.InvokeStatic(
-                type: typeof(WindowsResourceProvider),
-                methodName: "ExtractEngineType",
-                args: "pid_1_luid_0x0_0x1_phys_0_eng_0"
+                typeof(WindowsResourceProvider),
+                "ExtractEngineType",
+                "pid_1_luid_0x0_0x1_phys_0_eng_0"
             );
 
         result.Should().BeNull();
@@ -442,22 +442,22 @@ public class WindowsResourceProviderTests : IDisposable
     [Fact]
     public void ResolveGpuName_ForUnknownLuid_ReturnsFallback()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         string result = (string)
             ReflectionHelpers.InvokeStatic(
-                type: typeof(WindowsResourceProvider),
-                methodName: "ResolveGpuName", args: ["0xDEAD_0xBEEF", 42]
+                typeof(WindowsResourceProvider),
+                "ResolveGpuName", ["0xDEAD_0xBEEF", 42]
             )!;
 
-        result.Should().Be(expected: "GPU 42");
+        result.Should().Be("GPU 42");
     }
 
     [Fact]
     public void ResolveGpuName_ForKnownLuid_ReturnsRealAdapterName_WhenHostHasAnAdapter()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         // DxgiLuidNames is built once from this host's real DXGI adapters. On a
@@ -467,7 +467,7 @@ public class WindowsResourceProviderTests : IDisposable
         // hardware (see coverage report notes).
         Dictionary<string, string> luidNames = ReflectionHelpers.GetField<
             Dictionary<string, string>
-        >(type: typeof(WindowsResourceProvider), fieldName: "DxgiLuidNames");
+        >(typeof(WindowsResourceProvider), "DxgiLuidNames");
 
         if (luidNames.Count == 0)
             return;
@@ -478,17 +478,17 @@ public class WindowsResourceProviderTests : IDisposable
 
         string result = (string)
             ReflectionHelpers.InvokeStatic(
-                type: typeof(WindowsResourceProvider),
-                methodName: "ResolveGpuName", args: [luid, 0]
+                typeof(WindowsResourceProvider),
+                "ResolveGpuName", [luid, 0]
             )!;
 
-        result.Should().Be(expected: name);
+        result.Should().Be(name);
     }
 
     [Fact]
     public void BuildGpuCounters_DoesNotThrow_AndEveryEntryHasAnAllowedEngineType()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         string[] allowedEngineTypes =
@@ -501,8 +501,8 @@ public class WindowsResourceProviderTests : IDisposable
         ];
 
         object result = ReflectionHelpers.InvokeStatic(
-            type: typeof(WindowsResourceProvider),
-            methodName: "BuildGpuCounters"
+            typeof(WindowsResourceProvider),
+            "BuildGpuCounters"
         )!;
         IList entries = (IList)result;
 
@@ -511,18 +511,18 @@ public class WindowsResourceProviderTests : IDisposable
             foreach (object? entry in entries)
             {
                 string engineType = (string)
-                    entry!.GetType().GetProperty(name: "EngineType")!.GetValue(obj: entry)!;
-                allowedEngineTypes.Should().Contain(expected: engineType);
+                    entry!.GetType().GetProperty("EngineType")!.GetValue(entry)!;
+                allowedEngineTypes.Should().Contain(engineType);
 
-                string luid = (string)entry.GetType().GetProperty(name: "Luid")!.GetValue(obj: entry)!;
-                luid.Should().StartWith(expected: "0x");
+                string luid = (string)entry.GetType().GetProperty("Luid")!.GetValue(entry)!;
+                luid.Should().StartWith("0x");
             }
         }
         finally
         {
             foreach (object? entry in entries)
                 (
-                    entry!.GetType().GetProperty(name: "Counter")!.GetValue(obj: entry) as PerformanceCounter
+                    entry!.GetType().GetProperty("Counter")!.GetValue(entry) as PerformanceCounter
                 )?.Dispose();
         }
     }
@@ -530,12 +530,12 @@ public class WindowsResourceProviderTests : IDisposable
     [Fact]
     public void BuildDxgiLuidNames_DoesNotThrow_ReturnsADictionary()
     {
-        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
         object result = ReflectionHelpers.InvokeStatic(
-            type: typeof(WindowsResourceProvider),
-            methodName: "BuildDxgiLuidNames"
+            typeof(WindowsResourceProvider),
+            "BuildDxgiLuidNames"
         )!;
 
         result.Should().BeOfType<Dictionary<string, string>>();

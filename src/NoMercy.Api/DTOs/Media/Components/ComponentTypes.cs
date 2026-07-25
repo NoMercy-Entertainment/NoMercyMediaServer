@@ -38,5 +38,5 @@ public static class ComponentTypes
     public static bool IsContainer(string componentType) =>
         componentType is Grid or List or Carousel or Container;
 
-    public static bool IsLeaf(string componentType) => !IsContainer(componentType: componentType);
+    public static bool IsLeaf(string componentType) => !IsContainer(componentType);
 }

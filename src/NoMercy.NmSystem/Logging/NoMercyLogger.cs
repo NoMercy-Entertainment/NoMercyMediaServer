@@ -26,7 +26,7 @@ public sealed class NoMercyLogger : ILogger
     }
 
     public IDisposable? BeginScope<TState>(TState state)
-        where TState : notnull => _provider.ScopeProvider?.Push(state: state) ?? NullScope.Instance;
+        where TState : notnull => _provider.ScopeProvider?.Push(state) ?? NullScope.Instance;
 
     public bool IsEnabled(LogLevel logLevel) =>
         logLevel != LogLevel.None && logLevel >= EffectiveLevel();
@@ -39,20 +39,20 @@ public sealed class NoMercyLogger : ILogger
         Func<TState, Exception?, string> formatter
     )
     {
-        if (!IsEnabled(logLevel: logLevel))
+        if (!IsEnabled(logLevel))
             return;
 
-        string message = formatter(arg1: state, arg2: exception);
-        if (string.IsNullOrEmpty(value: message) && exception is null)
+        string message = formatter(state, exception);
+        if (string.IsNullOrEmpty(message) && exception is null)
             return;
 
-        _provider.Write(timestamp: DateTime.Now, level: logLevel, sourceContext: _sourceContext, message: message, exception: exception);
+        _provider.Write(DateTime.Now, logLevel, _sourceContext, message, exception);
     }
 
     private LogLevel EffectiveLevel()
     {
-        LogCategory category = LogCategories.ResolveSource(sourceContext: _sourceContext);
-        return _provider.Options.CategoryLevels.TryGetValue(key: category.Key, value: out LogLevel level)
+        LogCategory category = LogCategories.ResolveSource(_sourceContext);
+        return _provider.Options.CategoryLevels.TryGetValue(category.Key, out LogLevel level)
             ? level
             : _provider.Options.MinimumLevel;
     }

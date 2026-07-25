@@ -22,7 +22,7 @@ public interface IPluginConsentStore
 
 public class PluginConsentService(IPluginConsentStore store) : IPluginConsentService
 {
-    private static readonly HashSet<string> BaselineHooks = new(comparer: StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> BaselineHooks = new(StringComparer.OrdinalIgnoreCase)
     {
         PluginHookCapability.MediaSource,
         PluginHookCapability.Metadata,
@@ -37,12 +37,12 @@ public class PluginConsentService(IPluginConsentStore store) : IPluginConsentSer
         if (capabilities.Rest || capabilities.Ws || capabilities.Network is not null)
             return false;
 
-        return capabilities.Hooks.All(predicate: hook => BaselineHooks.Contains(item: hook));
+        return capabilities.Hooks.All(hook => BaselineHooks.Contains(hook));
     }
 
-    public bool HasConsent(Guid pluginId) => store.Contains(pluginId: pluginId);
+    public bool HasConsent(Guid pluginId) => store.Contains(pluginId);
 
-    public void GrantConsent(Guid pluginId) => store.Add(pluginId: pluginId);
+    public void GrantConsent(Guid pluginId) => store.Add(pluginId);
 
-    public void RevokeConsent(Guid pluginId) => store.Remove(pluginId: pluginId);
+    public void RevokeConsent(Guid pluginId) => store.Remove(pluginId);
 }

@@ -24,7 +24,7 @@ public record ProfileValidationResult(
 public static class ProfileValidator
 {
     private static readonly HashSet<string> ForbiddenCustomArgs = new(
-        comparer: StringComparer.OrdinalIgnoreCase
+        StringComparer.OrdinalIgnoreCase
     )
     {
         "c:v",
@@ -50,36 +50,36 @@ public static class ProfileValidator
         List<string> errors = [];
         List<string> warnings = [];
 
-        ValidateContainerCompatibility(profile: profile, errors: errors);
-        ValidateAudioBitrate(profile: profile, errors: errors);
-        ValidateLadder(profile: profile, errors: errors);
-        ValidateCmafCompatibility(profile: profile, errors: errors);
-        ValidateCustomArguments(profile: profile, warnings: warnings);
-        ValidateHlsDerivatives(profile: profile, errors: errors, warnings: warnings);
-        ValidateSubtitleAcquisition(profile: profile, errors: errors, warnings: warnings);
+        ValidateContainerCompatibility(profile, errors);
+        ValidateAudioBitrate(profile, errors);
+        ValidateLadder(profile, errors);
+        ValidateCmafCompatibility(profile, errors);
+        ValidateCustomArguments(profile, warnings);
+        ValidateHlsDerivatives(profile, errors, warnings);
+        ValidateSubtitleAcquisition(profile, errors, warnings);
 
-        return new(IsValid: errors.Count == 0, Errors: errors, Warnings: warnings);
+        return new(errors.Count == 0, errors, warnings);
     }
 
     private static void ValidateContainerCompatibility(EncodingProfile profile, List<string> errors)
     {
         if (profile.Video is { Policy: StreamPolicy.Transcode } video)
         {
-            if (!ContainerCompatibility.SupportsVideo(container: profile.Container, codec: video.Codec))
+            if (!ContainerCompatibility.SupportsVideo(profile.Container, video.Codec))
                 errors.Add(
-                    item: $"Container {profile.Container} does not support video codec {video.Codec}. {SuggestContainerForVideoCodec(codec: video.Codec)}"
+                    $"Container {profile.Container} does not support video codec {video.Codec}. {SuggestContainerForVideoCodec(video.Codec)}"
                 );
         }
 
         foreach (
-            AudioOutput audio in (profile.Audio ?? []).Where(predicate: a =>
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
                 a.Policy == StreamPolicy.Transcode
             )
         )
         {
-            if (!ContainerCompatibility.SupportsAudio(container: profile.Container, codec: audio.Codec))
+            if (!ContainerCompatibility.SupportsAudio(profile.Container, audio.Codec))
                 errors.Add(
-                    item: $"Container {profile.Container} does not support audio codec {audio.Codec}. {SuggestContainerForAudioCodec(codec: audio.Codec)}"
+                    $"Container {profile.Container} does not support audio codec {audio.Codec}. {SuggestContainerForAudioCodec(audio.Codec)}"
                 );
         }
     }
@@ -87,7 +87,7 @@ public static class ProfileValidator
     private static void ValidateAudioBitrate(EncodingProfile profile, List<string> errors)
     {
         foreach (
-            AudioOutput audio in (profile.Audio ?? []).Where(predicate: a =>
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
                 a.Policy == StreamPolicy.Transcode
             )
         )
@@ -97,7 +97,7 @@ public static class ProfileValidator
                 && audio.Codec != AudioCodecType.Flac
                 && audio.Codec != AudioCodecType.TrueHd
             )
-                errors.Add(item: $"Audio output for {audio.Codec}: BitrateKbps must be > 0.");
+                errors.Add($"Audio output for {audio.Codec}: BitrateKbps must be > 0.");
         }
     }
 
@@ -109,7 +109,7 @@ public static class ProfileValidator
         {
             if (profile.Ladder.Rungs is null || profile.Ladder.Rungs.Length == 0)
             {
-                errors.Add(item: "Manual ladder requires non-empty Rungs[].");
+                errors.Add("Manual ladder requires non-empty Rungs[].");
                 return;
             }
 
@@ -117,14 +117,14 @@ public static class ProfileValidator
             {
                 if (profile.Ladder.Rungs[i].BitrateKbps <= profile.Ladder.Rungs[i - 1].BitrateKbps)
                 {
-                    errors.Add(item: "Manual ladder rungs must be sorted ascending by bitrate.");
+                    errors.Add("Manual ladder rungs must be sorted ascending by bitrate.");
                     break;
                 }
             }
         }
 
         if (profile.Ladder.Mode == LadderMode.Auto && profile.Ladder.AutoConfig is not null)
-            ValidateAutoLadder(config: profile.Ladder.AutoConfig, errors: errors);
+            ValidateAutoLadder(profile.Ladder.AutoConfig, errors);
     }
 
     private static void ValidateAutoLadder(AutoLadderConfig config, List<string> errors)
@@ -132,14 +132,14 @@ public static class ProfileValidator
         // Rule 6 — Empty Tiers array (check first; other rules reference tier content)
         if (config.Tiers.Length == 0)
         {
-            errors.Add(item: "AutoLadder.Tiers cannot be empty.");
+            errors.Add("AutoLadder.Tiers cannot be empty.");
             return;
         }
 
         // Rule 1 — MinRungs > MaxRungs
         if (config.MinRungs > config.MaxRungs)
             errors.Add(
-                item: $"AutoLadder.MinRungs cannot exceed MaxRungs (MinRungs={config.MinRungs}, MaxRungs={config.MaxRungs})."
+                $"AutoLadder.MinRungs cannot exceed MaxRungs (MinRungs={config.MinRungs}, MaxRungs={config.MaxRungs})."
             );
 
         // Rule 2 — AppleHlsRecommended + tier with all-null recommended bitrates
@@ -157,7 +157,7 @@ public static class ProfileValidator
                     && tier.RecommendedBitrateAv1Kbps is null
                 )
                     errors.Add(
-                        item: $"Tier '{tier.Label}' missing recommended bitrate for AppleHlsRecommended strategy."
+                        $"Tier '{tier.Label}' missing recommended bitrate for AppleHlsRecommended strategy."
                     );
             }
         }
@@ -166,7 +166,7 @@ public static class ProfileValidator
         if (config.BitrateStrategy == BitrateStrategy.CrfBased)
         {
             if (config.Crf < 0 || config.Crf > 51)
-                errors.Add(item: $"AutoLadder.Crf out of range [0, 51] (got {config.Crf}).");
+                errors.Add($"AutoLadder.Crf out of range [0, 51] (got {config.Crf}).");
         }
 
         // Rule 4 — PercentOfSource + SourcePercentage out of (0, 200]
@@ -174,8 +174,8 @@ public static class ProfileValidator
         {
             if (config.SourcePercentage <= 0 || config.SourcePercentage > 200)
                 errors.Add(
-                    item: "AutoLadder.SourcePercentage must be in (0, 200] "
-                          + $"(got {config.SourcePercentage.ToString(provider: CultureInfo.InvariantCulture)})."
+                    "AutoLadder.SourcePercentage must be in (0, 200] "
+                          + $"(got {config.SourcePercentage.ToString(CultureInfo.InvariantCulture)})."
                 );
         }
 
@@ -184,15 +184,15 @@ public static class ProfileValidator
         {
             if (config.LowTierCodec is null || config.HighTierCodec is null)
                 errors.Add(
-                    item: "AutoLadder.CodecPolicy=Mixed requires both LowTierCodec and HighTierCodec."
+                    "AutoLadder.CodecPolicy=Mixed requires both LowTierCodec and HighTierCodec."
                 );
         }
 
         // Rule 7 — LowTierFramerateMultiplier out of (0, 1.0]
         if (config.LowTierFramerateMultiplier <= 0 || config.LowTierFramerateMultiplier > 1.0)
             errors.Add(
-                item: "AutoLadder.LowTierFramerateMultiplier must be in (0, 1.0] "
-                      + $"(got {config.LowTierFramerateMultiplier.ToString(provider: CultureInfo.InvariantCulture)})."
+                "AutoLadder.LowTierFramerateMultiplier must be in (0, 1.0] "
+                      + $"(got {config.LowTierFramerateMultiplier.ToString(CultureInfo.InvariantCulture)})."
             );
     }
 
@@ -206,46 +206,46 @@ public static class ProfileValidator
 
         if (
             profile.Video is { Policy: StreamPolicy.Transcode } video
-            && !ContainerCompatibility.IsCmafCompatible(codec: video.Codec)
+            && !ContainerCompatibility.IsCmafCompatible(video.Codec)
         )
         {
-            errors.Add(item: $"CMAF requires a CMAF-compatible video codec; got {video.Codec}.");
+            errors.Add($"CMAF requires a CMAF-compatible video codec; got {video.Codec}.");
         }
 
         foreach (
-            AudioOutput audio in (profile.Audio ?? []).Where(predicate: a =>
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
                 a.Policy == StreamPolicy.Transcode
             )
         )
         {
-            if (!ContainerCompatibility.IsCmafCompatible(codec: audio.Codec))
-                errors.Add(item: $"CMAF requires a CMAF-compatible audio codec; got {audio.Codec}.");
+            if (!ContainerCompatibility.IsCmafCompatible(audio.Codec))
+                errors.Add($"CMAF requires a CMAF-compatible audio codec; got {audio.Codec}.");
         }
     }
 
     private static string SuggestContainerForVideoCodec(VideoCodecType codec)
     {
         IEnumerable<string> compatible = Enum.GetValues<Container>()
-            .Where(predicate: c => ContainerCompatibility.SupportsVideo(container: c, codec: codec))
-            .Select(selector: c => c.ToString());
-        return $"Compatible containers for {codec}: {string.Join(separator: ", ", values: compatible)}.";
+            .Where(c => ContainerCompatibility.SupportsVideo(c, codec))
+            .Select(c => c.ToString());
+        return $"Compatible containers for {codec}: {string.Join(", ", compatible)}.";
     }
 
     private static string SuggestContainerForAudioCodec(AudioCodecType codec)
     {
         IEnumerable<string> compatible = Enum.GetValues<Container>()
-            .Where(predicate: c => ContainerCompatibility.SupportsAudio(container: c, codec: codec))
-            .Select(selector: c => c.ToString());
-        return $"Compatible containers for {codec}: {string.Join(separator: ", ", values: compatible)}.";
+            .Where(c => ContainerCompatibility.SupportsAudio(c, codec))
+            .Select(c => c.ToString());
+        return $"Compatible containers for {codec}: {string.Join(", ", compatible)}.";
     }
 
     private static void ValidateCustomArguments(EncodingProfile profile, List<string> warnings)
     {
         if (profile.CustomArguments is null)
             return;
-        foreach (string key in profile.CustomArguments.Keys.Where(predicate: ForbiddenCustomArgs.Contains))
+        foreach (string key in profile.CustomArguments.Keys.Where(ForbiddenCustomArgs.Contains))
             warnings.Add(
-                item: $"CustomArgument '{key}' overrides codec/container choice — will hard-reject in a future release."
+                $"CustomArgument '{key}' overrides codec/container choice — will hard-reject in a future release."
             );
     }
 
@@ -261,26 +261,26 @@ public static class ProfileValidator
 
         // Rule 1 — acquisition enabled but no subtitle output declared
         if ((profile.Subtitles ?? []).Length == 0)
-            errors.Add(item: "SubtitleAcquisition requires at least one declared subtitle output");
+            errors.Add("SubtitleAcquisition requires at least one declared subtitle output");
 
         // Rule 2 — acquisition enabled on audio-only container
-        if (AudioOnlyContainers.Contains(item: profile.Container))
-            errors.Add(item: "SubtitleAcquisition is incompatible with audio-only containers");
+        if (AudioOnlyContainers.Contains(profile.Container))
+            errors.Add("SubtitleAcquisition is incompatible with audio-only containers");
 
         // Rule 3 — MinRating out of [0, 10]
         if (acq.MinRating < 0 || acq.MinRating > 10)
-            errors.Add(item: "SubtitleAcquisition.MinRating must be in [0, 10]");
+            errors.Add("SubtitleAcquisition.MinRating must be in [0, 10]");
 
         // Rule 4 — MaxPerLanguage < 1
         if (acq.MaxPerLanguage < 1)
-            errors.Add(item: "SubtitleAcquisition.MaxPerLanguage must be at least 1");
+            errors.Add("SubtitleAcquisition.MaxPerLanguage must be at least 1");
 
         // Rule 5 — ExactMatchOnly + TitleOnly: warn, never embed
         if (
             acq is { EmbedPolicy: SubtitleEmbedPolicy.ExactMatchOnly, Strategy: SubtitleMatchStrategy.TitleOnly }
         )
             warnings.Add(
-                item: "TitleOnly + ExactMatchOnly will never embed; titles can't satisfy exact-match. Acquisition will run sidecar-only."
+                "TitleOnly + ExactMatchOnly will never embed; titles can't satisfy exact-match. Acquisition will run sidecar-only."
             );
     }
 
@@ -298,11 +298,11 @@ public static class ProfileValidator
         List<string> errors = [];
         List<string> warnings = [];
 
-        ValidateLevelFrameRateCap(profile: profile, source: source, errors: errors);
-        ValidateStereoscopicSource(profile: profile, source: source, errors: errors);
-        ValidateSphericalMetadata(profile: profile, source: source, warnings: warnings);
+        ValidateLevelFrameRateCap(profile, source, errors);
+        ValidateStereoscopicSource(profile, source, errors);
+        ValidateSphericalMetadata(profile, source, warnings);
 
-        return new(IsValid: errors.Count == 0, Errors: errors, Warnings: warnings);
+        return new(errors.Count == 0, errors, warnings);
     }
 
     private static void ValidateLevelFrameRateCap(
@@ -313,14 +313,14 @@ public static class ProfileValidator
     {
         if (
             profile.Video is not { Policy: StreamPolicy.Transcode } video
-            || string.IsNullOrEmpty(value: video.Level)
+            || string.IsNullOrEmpty(video.Level)
         )
             return;
 
         if (source.VideoStreams.Count == 0)
             return;
 
-        VideoStreamInfo primaryVideo = source.VideoStreams[index: 0];
+        VideoStreamInfo primaryVideo = source.VideoStreams[0];
         double fps = primaryVideo.AverageFrameRate ?? primaryVideo.FrameRate;
 
         if (fps <= 0)
@@ -332,7 +332,7 @@ public static class ProfileValidator
         int effectiveHeight = video.Height ?? primaryVideo.Height;
         long lumaSamplesPerSec = (long)(effectiveWidth * effectiveHeight * fps);
 
-        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(codec: video.Codec, level: video.Level);
+        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(video.Codec, video.Level);
         if (cap is null)
             return;
 
@@ -340,20 +340,20 @@ public static class ProfileValidator
             return;
 
         CodecLevelFpsCaps.LevelCap? nextFit = CodecLevelFpsCaps.FindNextFit(
-            codec: video.Codec,
-            requiredSamplesPerSec: lumaSamplesPerSec
+            video.Codec,
+            lumaSamplesPerSec
         );
 
         string fix = nextFit is not null
             ? $"Raise level to {nextFit.Level} (supports up to "
-                + $"{nextFit.MaxLumaSamplesPerSec.ToString(format: "N0", provider: CultureInfo.InvariantCulture)} luma samples/sec)."
+                + $"{nextFit.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec)."
             : "No standard level supports this resolution × frame-rate combination.";
 
         errors.Add(
-            item: $"Level {video.Level} cap exceeded: "
-                  + $"{lumaSamplesPerSec.ToString(format: "N0", provider: CultureInfo.InvariantCulture)} luma samples/sec required "
+            $"Level {video.Level} cap exceeded: "
+                  + $"{lumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec required "
                   + $"but level {video.Level} allows "
-                  + $"{cap.MaxLumaSamplesPerSec.ToString(format: "N0", provider: CultureInfo.InvariantCulture)}. {fix}"
+                  + $"{cap.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)}. {fix}"
         );
     }
 
@@ -370,7 +370,7 @@ public static class ProfileValidator
             return;
 
         errors.Add(
-            item: $"3D source detected (stereo_mode={source.StereoMode}). "
+            $"3D source detected (stereo_mode={source.StereoMode}). "
                   + "NoMercy does not support 3D re-encode. "
                   + "Switch the video output policy to Copy to preserve the source."
         );
@@ -389,7 +389,7 @@ public static class ProfileValidator
             return;
 
         warnings.Add(
-            item: $"VR projection metadata ({source.SphericalProjection}) will be stripped on re-encode. "
+            $"VR projection metadata ({source.SphericalProjection}) will be stripped on re-encode. "
                   + "Use a stream-copy video output to preserve it."
         );
     }
@@ -417,38 +417,38 @@ public static class ProfileValidator
         // Rule 1 — SpriteVtt requires HLS container
         if (d.GenerateSpriteVtt && !isHls)
             errors.Add(
-                item: "HlsDerivatives.GenerateSpriteVtt requires HLS container (HlsFmp4 or HlsTs)"
+                "HlsDerivatives.GenerateSpriteVtt requires HLS container (HlsFmp4 or HlsTs)"
             );
 
         // Rule 2 — IFramePlaylists cannot run on Copy video
         if (d.GenerateIFramePlaylists && profile.Video is { Policy: StreamPolicy.Copy })
             errors.Add(
-                item: "HlsDerivatives.GenerateIFramePlaylists cannot run on Copy video — keyframe positions must be re-muxed"
+                "HlsDerivatives.GenerateIFramePlaylists cannot run on Copy video — keyframe positions must be re-muxed"
             );
 
         // Rule 3 — warn when MasterPlaylist disabled on HLS (power-user option)
         if (!d.GenerateMasterPlaylist && isHls)
             warnings.Add(
-                item: "GenerateMasterPlaylist=false on HLS container — clients won't have a coordinated entry point"
+                "GenerateMasterPlaylist=false on HLS container — clients won't have a coordinated entry point"
             );
 
         // Rule 4 — SpriteVtt numeric ranges
         if (d.SpriteVttIntervalSeconds <= 0 || d.SpriteVttIntervalSeconds > 600)
             errors.Add(
-                item: $"HlsDerivatives.SpriteVttIntervalSeconds must be in [1, 600] (got {d.SpriteVttIntervalSeconds})"
+                $"HlsDerivatives.SpriteVttIntervalSeconds must be in [1, 600] (got {d.SpriteVttIntervalSeconds})"
             );
 
         if (d.SpriteVttColumns <= 0 || d.SpriteVttColumns > 20)
             errors.Add(
-                item: $"HlsDerivatives.SpriteVttColumns must be in [1, 20] (got {d.SpriteVttColumns})"
+                $"HlsDerivatives.SpriteVttColumns must be in [1, 20] (got {d.SpriteVttColumns})"
             );
 
         if (d.SpriteVttRows <= 0 || d.SpriteVttRows > 20)
-            errors.Add(item: $"HlsDerivatives.SpriteVttRows must be in [1, 20] (got {d.SpriteVttRows})");
+            errors.Add($"HlsDerivatives.SpriteVttRows must be in [1, 20] (got {d.SpriteVttRows})");
 
         if (d.SpriteVttThumbnailWidth <= 0 || d.SpriteVttThumbnailWidth > 1920)
             errors.Add(
-                item: $"HlsDerivatives.SpriteVttThumbnailWidth must be in [1, 1920] (got {d.SpriteVttThumbnailWidth})"
+                $"HlsDerivatives.SpriteVttThumbnailWidth must be in [1, 1920] (got {d.SpriteVttThumbnailWidth})"
             );
     }
 }

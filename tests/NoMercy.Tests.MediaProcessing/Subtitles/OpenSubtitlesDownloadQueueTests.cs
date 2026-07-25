@@ -12,7 +12,6 @@
 using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Text;
-using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.MediaProcessing.Subtitles;
 
@@ -28,10 +27,10 @@ public class OpenSubtitlesDownloadQueueTests
     private static byte[] Gzip(string content)
     {
         using MemoryStream destination = new();
-        using (GZipStream gzip = new(stream: destination, mode: CompressionMode.Compress))
+        using (GZipStream gzip = new(destination, CompressionMode.Compress))
         {
-            byte[] raw = Encoding.UTF8.GetBytes(s: content);
-            gzip.Write(buffer: raw, offset: 0, count: raw.Length);
+            byte[] raw = Encoding.UTF8.GetBytes(content);
+            gzip.Write(raw, 0, raw.Length);
         }
 
         return destination.ToArray();
@@ -40,49 +39,49 @@ public class OpenSubtitlesDownloadQueueTests
     [Fact]
     public async Task DownloadSubtitleAsync_SerialisesConcurrentDownloads()
     {
-        RecordingHandler handler = new(body: Gzip(content: "1\n00:00:01,000 --> 00:00:02,000\ncue"));
+        RecordingHandler handler = new(Gzip("1\n00:00:01,000 --> 00:00:02,000\ncue"));
         OpenSubtitlesProvider provider = new(
-            logger: NullLogger<OpenSubtitlesProvider>.Instance,
-            httpClientFactory: new StubFactory(handler: handler)
+            NullLogger<OpenSubtitlesProvider>.Instance,
+            new StubFactory(handler)
         );
 
         await Task.WhenAll(
-            tasks: Enumerable
-                .Range(start: 0, count: 5)
-                .Select(selector: i =>
+            Enumerable
+                .Range(0, 5)
+                .Select(i =>
                     provider.DownloadSubtitleAsync(
-                        downloadUrl: $"https://dl.opensubtitles.org/{i}",
-                        ct: CancellationToken.None
+                        $"https://dl.opensubtitles.org/{i}",
+                        CancellationToken.None
                     )
                 )
         );
 
-        handler.Requests.Should().HaveCount(expected: 5);
-        handler.MaxConcurrent.Should().Be(expected: 1, because: "the queue admits one download at a time");
+        handler.Requests.Should().HaveCount(5);
+        handler.MaxConcurrent.Should().Be(1, "the queue admits one download at a time");
     }
 
     [Fact]
     public async Task DownloadSubtitleAsync_StillReturnsCueBytesThroughTheQueue()
     {
         const string srt = "1\n00:00:01,000 --> 00:00:04,000\nWat als...?";
-        RecordingHandler handler = new(body: Gzip(content: srt));
+        RecordingHandler handler = new(Gzip(srt));
         OpenSubtitlesProvider provider = new(
-            logger: NullLogger<OpenSubtitlesProvider>.Instance,
-            httpClientFactory: new StubFactory(handler: handler)
+            NullLogger<OpenSubtitlesProvider>.Instance,
+            new StubFactory(handler)
         );
 
         byte[] result = await provider.DownloadSubtitleAsync(
-            downloadUrl: "https://dl.opensubtitles.org/x",
-            ct: CancellationToken.None,
-            priority: true
+            "https://dl.opensubtitles.org/x",
+            CancellationToken.None,
+            true
         );
 
-        Encoding.UTF8.GetString(bytes: result).Should().Be(expected: srt);
+        Encoding.UTF8.GetString(result).Should().Be(srt);
     }
 
     private sealed class StubFactory(HttpMessageHandler handler) : IHttpClientFactory
     {
-        public HttpClient CreateClient(string name) => new(handler: handler, disposeHandler: false);
+        public HttpClient CreateClient(string name) => new(handler, false);
     }
 
     private sealed class RecordingHandler(byte[] body) : HttpMessageHandler
@@ -97,20 +96,20 @@ public class OpenSubtitlesDownloadQueueTests
             CancellationToken cancellationToken
         )
         {
-            int running = Interlocked.Increment(location: ref _concurrent);
+            int running = Interlocked.Increment(ref _concurrent);
             lock (Requests)
-                MaxConcurrent = Math.Max(val1: MaxConcurrent, val2: running);
+                MaxConcurrent = Math.Max(MaxConcurrent, running);
 
-            Requests.Add(item: request.RequestUri?.ToString() ?? string.Empty);
+            Requests.Add(request.RequestUri?.ToString() ?? string.Empty);
 
             try
             {
-                await Task.Delay(millisecondsDelay: 40, cancellationToken: cancellationToken);
-                return new(statusCode: System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(content: body) };
+                await Task.Delay(40, cancellationToken);
+                return new(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(body) };
             }
             finally
             {
-                Interlocked.Decrement(location: ref _concurrent);
+                Interlocked.Decrement(ref _concurrent);
             }
         }
     }

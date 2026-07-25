@@ -29,20 +29,20 @@ public class S3DriverConfigParsingTests
     private static StorageFactory FactoryWithConfig(string type, string? config)
     {
         Mock<IDriverConfigResolver> driverResolver = new();
-        driverResolver.Setup(expression: r => r.Resolve(It.IsAny<Ulid>())).Returns(value: (type, config));
+        driverResolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
 
         // Provide dummy credentials so BuildS3 does not reject the config for
         // lacking credentials — these tests verify config parsing, not live S3 access.
         Mock<ICredentialResolver> credResolver = new();
         credResolver
-            .Setup(expression: r => r.Resolve(It.IsAny<string>()))
-            .Returns(value: ("test-access-key", "test-secret-key"));
+            .Setup(r => r.Resolve(It.IsAny<string>()))
+            .Returns(("test-access-key", "test-secret-key"));
 
         return new(
-            driver: new LocalStorageDriver(),
-            logger: NullLogger<StorageFactory>.Instance,
-            driverConfigResolver: driverResolver.Object,
-            credentialResolver: credResolver.Object
+            new LocalStorageDriver(),
+            NullLogger<StorageFactory>.Instance,
+            driverResolver.Object,
+            credResolver.Object
         );
     }
 
@@ -50,45 +50,45 @@ public class S3DriverConfigParsingTests
     public void S3DriverConfig_missing_bucket_throws()
     {
         string json = """{"region":"us-east-1"}""";
-        StorageFactory factory = FactoryWithConfig(type: "s3", config: json);
+        StorageFactory factory = FactoryWithConfig("s3", json);
         Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*bucket*");
+        act.Should().Throw<ArgumentException>().WithMessage("*bucket*");
     }
 
     [Fact]
     public void S3DriverConfig_missing_region_throws()
     {
         string json = """{"bucket":"mybucket"}""";
-        StorageFactory factory = FactoryWithConfig(type: "s3", config: json);
+        StorageFactory factory = FactoryWithConfig("s3", json);
         Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*region*");
+        act.Should().Throw<ArgumentException>().WithMessage("*region*");
     }
 
     [Fact]
     public void R2_without_endpoint_throws()
     {
         string json = """{"bucket":"mybucket","region":"auto"}""";
-        StorageFactory factory = FactoryWithConfig(type: "r2", config: json);
+        StorageFactory factory = FactoryWithConfig("r2", json);
         Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*endpoint*");
+        act.Should().Throw<ArgumentException>().WithMessage("*endpoint*");
     }
 
     [Fact]
     public void Null_configJson_for_s3_throws()
     {
-        StorageFactory factory = FactoryWithConfig(type: "s3", config: null);
+        StorageFactory factory = FactoryWithConfig("s3", null);
         Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().Throw<ArgumentException>();
     }
@@ -96,10 +96,10 @@ public class S3DriverConfigParsingTests
     [Fact]
     public void Malformed_configJson_for_s3_throws_ArgumentException()
     {
-        StorageFactory factory = FactoryWithConfig(type: "s3", config: "not-json{{{");
+        StorageFactory factory = FactoryWithConfig("s3", "not-json{{{");
         Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().Throw<ArgumentException>();
     }
@@ -109,10 +109,10 @@ public class S3DriverConfigParsingTests
     {
         string json =
             """{"bucket":"test","region":"us-east-1","endpoint":"http://localhost:9000"}""";
-        StorageFactory factory = FactoryWithConfig(type: "s3", config: json);
+        StorageFactory factory = FactoryWithConfig("s3", json);
         Ulid driverId = Ulid.NewUlid();
 
-        IStorage storage = factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        IStorage storage = factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
     }
@@ -122,10 +122,10 @@ public class S3DriverConfigParsingTests
     {
         string json =
             """{"bucket":"test","region":"auto","endpoint":"https://account.r2.cloudflarestorage.com"}""";
-        StorageFactory factory = FactoryWithConfig(type: "r2", config: json);
+        StorageFactory factory = FactoryWithConfig("r2", json);
         Ulid driverId = Ulid.NewUlid();
 
-        IStorage storage = factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        IStorage storage = factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
     }
@@ -135,10 +135,10 @@ public class S3DriverConfigParsingTests
     {
         string json =
             """{"bucket":"test","region":"us-east-1","endpoint":"http://localhost:9000"}""";
-        StorageFactory factory = FactoryWithConfig(type: "s3", config: json);
+        StorageFactory factory = FactoryWithConfig("s3", json);
         Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().NotThrow<NotSupportedException>();
     }
@@ -150,7 +150,7 @@ public class S3DriverConfigParsingTests
 // StorageBackends collection fixture and torn down after the last test.
 // ============================================================================
 
-[Collection(name: "StorageBackends")]
+[Collection("StorageBackends")]
 public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
 {
     private string SkipReason => fix.StartupError ?? "storage container not available";
@@ -158,58 +158,58 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
     [SkippableFact]
     public async Task RoundTrip_write_read_delete()
     {
-        Skip.If(condition: !fix.Available, reason: SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
         S3StorageDriver backend = fix.BuildS3Driver();
         string path = $"roundtrip/{Ulid.NewUlid()}.txt";
         byte[] data = "hello s3"u8.ToArray();
 
         // Write
-        await using (Stream w = backend.OpenWrite(path: path, overwrite: true))
+        await using (Stream w = backend.OpenWrite(path, true))
         {
-            await w.WriteAsync(buffer: data);
+            await w.WriteAsync(data);
         }
 
         // Read
-        await using Stream r = backend.OpenRead(path: path);
+        await using Stream r = backend.OpenRead(path);
         using MemoryStream ms = new();
-        await r.CopyToAsync(destination: ms);
-        ms.ToArray().Should().Equal(elements: data);
+        await r.CopyToAsync(ms);
+        ms.ToArray().Should().Equal(data);
 
         // Delete
-        backend.DeleteFile(path: path);
-        backend.FileExists(path: path).Should().BeFalse();
+        backend.DeleteFile(path);
+        backend.FileExists(path).Should().BeFalse();
     }
 
     [SkippableFact]
     public async Task Multipart_upload_large_file()
     {
-        Skip.If(condition: !fix.Available, reason: SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
         S3StorageDriver backend = fix.BuildS3Driver();
         string path = $"large/{Ulid.NewUlid()}.bin";
 
         // 6 MB — exceeds the 5 MB multipart threshold
         byte[] data = new byte[6 * 1024 * 1024];
-        new Random(Seed: 42).NextBytes(buffer: data);
+        new Random(42).NextBytes(data);
 
-        await using (Stream w = backend.OpenWrite(path: path, overwrite: true))
+        await using (Stream w = backend.OpenWrite(path, true))
         {
-            await w.WriteAsync(buffer: data);
+            await w.WriteAsync(data);
         }
 
-        long size = backend.GetFileSize(path: path);
-        size.Should().Be(expected: data.Length);
+        long size = backend.GetFileSize(path);
+        size.Should().Be(data.Length);
 
-        backend.DeleteFile(path: path);
+        backend.DeleteFile(path);
     }
 
     [SkippableFact]
     public async Task EnumerateFileSystemEntries_with_prefix()
     {
-        Skip.If(condition: !fix.Available, reason: SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        S3StorageDriver backend = fix.BuildS3Driver(prefix: "enum-test");
+        S3StorageDriver backend = fix.BuildS3Driver("enum-test");
         string prefix = $"dir-{Ulid.NewUlid()}";
 
         // Write two files under the prefix
@@ -217,102 +217,102 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
         string fileB = $"{prefix}/b.txt";
         byte[] bytes = "x"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(path: fileA, overwrite: true))
-            await w.WriteAsync(buffer: bytes);
-        await using (Stream w2 = backend.OpenWrite(path: fileB, overwrite: true))
-            await w2.WriteAsync(buffer: bytes);
+        await using (Stream w = backend.OpenWrite(fileA, true))
+            await w.WriteAsync(bytes);
+        await using (Stream w2 = backend.OpenWrite(fileB, true))
+            await w2.WriteAsync(bytes);
 
         IEnumerable<string> entries = backend.EnumerateFileSystemEntries(
-            directory: prefix,
-            searchPattern: "*.txt",
-            option: SearchOption.AllDirectories
+            prefix,
+            "*.txt",
+            SearchOption.AllDirectories
         );
 
-        entries.Should().HaveCount(expected: 2);
+        entries.Should().HaveCount(2);
 
-        backend.DeleteDirectory(path: prefix, recursive: true);
+        backend.DeleteDirectory(prefix, true);
     }
 
     [SkippableFact]
     public async Task MoveFile_renames_key()
     {
-        Skip.If(condition: !fix.Available, reason: SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
         S3StorageDriver backend = fix.BuildS3Driver();
         string src = $"move/{Ulid.NewUlid()}-src.txt";
         string dst = $"move/{Ulid.NewUlid()}-dst.txt";
         byte[] data = "move me"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(path: src, overwrite: true))
-            await w.WriteAsync(buffer: data);
+        await using (Stream w = backend.OpenWrite(src, true))
+            await w.WriteAsync(data);
 
-        backend.MoveFile(source: src, destination: dst);
+        backend.MoveFile(src, dst);
 
-        backend.FileExists(path: src).Should().BeFalse();
-        backend.FileExists(path: dst).Should().BeTrue();
+        backend.FileExists(src).Should().BeFalse();
+        backend.FileExists(dst).Should().BeTrue();
 
-        backend.DeleteFile(path: dst);
+        backend.DeleteFile(dst);
     }
 
     [SkippableFact]
     public async Task CopyFile_duplicates_key()
     {
-        Skip.If(condition: !fix.Available, reason: SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
         S3StorageDriver backend = fix.BuildS3Driver();
         string src = $"copy/{Ulid.NewUlid()}-src.txt";
         string dst = $"copy/{Ulid.NewUlid()}-dst.txt";
         byte[] data = "copy me"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(path: src, overwrite: true))
-            await w.WriteAsync(buffer: data);
+        await using (Stream w = backend.OpenWrite(src, true))
+            await w.WriteAsync(data);
 
-        backend.CopyFile(source: src, destination: dst, overwrite: true);
+        backend.CopyFile(src, dst, true);
 
-        backend.FileExists(path: src).Should().BeTrue();
-        backend.FileExists(path: dst).Should().BeTrue();
+        backend.FileExists(src).Should().BeTrue();
+        backend.FileExists(dst).Should().BeTrue();
 
-        backend.DeleteFile(path: src);
-        backend.DeleteFile(path: dst);
+        backend.DeleteFile(src);
+        backend.DeleteFile(dst);
     }
 
     [SkippableFact]
     public async Task OpenRead_large_file_streams_correctly()
     {
-        Skip.If(condition: !fix.Available, reason: SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
         S3StorageDriver backend = fix.BuildS3Driver();
         string path = $"stream/{Ulid.NewUlid()}.bin";
         byte[] data = new byte[2 * 1024 * 1024];
-        new Random(Seed: 7).NextBytes(buffer: data);
+        new Random(7).NextBytes(data);
 
-        await using (Stream w = backend.OpenWrite(path: path, overwrite: true))
-            await w.WriteAsync(buffer: data);
+        await using (Stream w = backend.OpenWrite(path, true))
+            await w.WriteAsync(data);
 
-        await using Stream r = backend.OpenRead(path: path);
+        await using Stream r = backend.OpenRead(path);
         using MemoryStream ms = new();
-        await r.CopyToAsync(destination: ms);
+        await r.CopyToAsync(ms);
 
-        ms.ToArray().Should().HaveCount(expected: data.Length);
-        backend.DeleteFile(path: path);
+        ms.ToArray().Should().HaveCount(data.Length);
+        backend.DeleteFile(path);
     }
 
     [SkippableFact]
     public async Task OpenWrite_overwrite_false_rejects_existing()
     {
-        Skip.If(condition: !fix.Available, reason: SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
         S3StorageDriver backend = fix.BuildS3Driver();
         string path = $"nooverwrite/{Ulid.NewUlid()}.txt";
         byte[] data = "original"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(path: path, overwrite: true))
-            await w.WriteAsync(buffer: data);
+        await using (Stream w = backend.OpenWrite(path, true))
+            await w.WriteAsync(data);
 
-        Action act = () => backend.OpenWrite(path: path, overwrite: false);
-        act.Should().Throw<IOException>().WithMessage(expectedWildcardPattern: "*overwrite*");
+        Action act = () => backend.OpenWrite(path, false);
+        act.Should().Throw<IOException>().WithMessage("*overwrite*");
 
-        backend.DeleteFile(path: path);
+        backend.DeleteFile(path);
     }
 }
 
@@ -330,7 +330,7 @@ public class S3EnumerateContractTests
         string prefix
     )
     {
-        return new(client: mockClient.Object, bucket: bucket, prefix: prefix);
+        return new(mockClient.Object, bucket, prefix);
     }
 
     [Fact]
@@ -345,20 +345,20 @@ public class S3EnumerateContractTests
             IsTruncated = false,
         };
 
-        mock.Setup(expression: c =>
+        mock.Setup(c =>
                 c.ListObjectsV2Async(It.Is<ListObjectsV2Request>(r => r.Delimiter == "/"), default)
             )
-            .ReturnsAsync(value: listResponse);
+            .ReturnsAsync(listResponse);
 
-        S3StorageDriver driver = BuildDriver(mockClient: mock, bucket: "test-bucket", prefix: "media");
+        S3StorageDriver driver = BuildDriver(mock, "test-bucket", "media");
 
         List<string> entries = driver
-            .EnumerateFileSystemEntries(directory: string.Empty, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
             .ToList();
 
-        entries.Should().Contain(expected: "folder/file.mp3");
-        entries.Should().Contain(expected: "folder");
-        entries.Should().NotContain(predicate: e => e.StartsWith("media/"));
+        entries.Should().Contain("folder/file.mp3");
+        entries.Should().Contain("folder");
+        entries.Should().NotContain(e => e.StartsWith("media/"));
     }
 
     [Fact]
@@ -374,10 +374,10 @@ public class S3EnumerateContractTests
             IsTruncated = false,
         };
 
-        mock.Setup(expression: c =>
+        mock.Setup(c =>
                 c.ListObjectsV2Async(It.Is<ListObjectsV2Request>(r => r.Delimiter == "/"), default)
             )
-            .ReturnsAsync(value: listResponse);
+            .ReturnsAsync(listResponse);
 
         // DirectoryExists call — expects prefix "media/folder/" (ToKey("folder") = "media/folder/")
         ListObjectsV2Response existsResponse = new()
@@ -387,25 +387,25 @@ public class S3EnumerateContractTests
             IsTruncated = false,
         };
 
-        mock.Setup(expression: c =>
+        mock.Setup(c =>
                 c.ListObjectsV2Async(
                     It.Is<ListObjectsV2Request>(r => r.Prefix == "media/folder/" && r.MaxKeys == 1),
                     default
                 )
             )
-            .ReturnsAsync(value: existsResponse);
+            .ReturnsAsync(existsResponse);
 
-        S3StorageDriver driver = BuildDriver(mockClient: mock, bucket: "test-bucket", prefix: "media");
+        S3StorageDriver driver = BuildDriver(mock, "test-bucket", "media");
 
         List<string> entries = driver
-            .EnumerateFileSystemEntries(directory: string.Empty, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
             .ToList();
 
-        string dirEntry = entries.Single(predicate: e => e == "folder");
-        bool exists = driver.DirectoryExists(path: dirEntry);
+        string dirEntry = entries.Single(e => e == "folder");
+        bool exists = driver.DirectoryExists(dirEntry);
 
         exists
             .Should()
-            .BeTrue(because: "round-trip from EnumerateFileSystemEntries to DirectoryExists must work");
+            .BeTrue("round-trip from EnumerateFileSystemEntries to DirectoryExists must work");
     }
 }

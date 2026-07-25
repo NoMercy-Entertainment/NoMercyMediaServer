@@ -17,11 +17,11 @@ using NoMercy.Tests.Providers.Infrastructure;
 
 namespace NoMercy.Tests.Providers.MusicBrainz.Client;
 
-[Collection(name: "HttpClientProvider")]
+[Collection("HttpClientProvider")]
 public sealed class MusicBrainzReleaseGroupClientTests : ProviderHttpHarness
 {
     public MusicBrainzReleaseGroupClientTests()
-        : base(httpClientNames: HttpClientNames.MusicBrainz) { }
+        : base(HttpClientNames.MusicBrainz) { }
 
     [Fact]
     public async Task WithAllAppends_RequestsReleaseGroupPathWithArtistsAndReleasesInc()
@@ -29,23 +29,23 @@ public sealed class MusicBrainzReleaseGroupClientTests : ProviderHttpHarness
         Guid releaseGroupId = Guid.NewGuid();
         MusicBrainzReleaseGroupDetails body = new() { Id = releaseGroupId, Title = "Kid A" };
         Handler.WhenGet(
-            pathContains: $"release-group/{releaseGroupId}",
-            responses: MockResponse.Json(status: HttpStatusCode.OK, body: body)
+            $"release-group/{releaseGroupId}",
+            MockResponse.Json(HttpStatusCode.OK, body)
         );
 
-        using MusicBrainzReleaseGroupClient client = new(id: releaseGroupId);
+        using MusicBrainzReleaseGroupClient client = new(releaseGroupId);
         MusicBrainzReleaseGroupDetails? result = await client.WithAllAppends();
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: releaseGroupId);
-        result.Title.Should().Be(expected: "Kid A");
+        result!.Id.Should().Be(releaseGroupId);
+        result.Title.Should().Be("Kid A");
 
         CapturedRequest request = Handler
             .Requests.Should()
-            .ContainSingle(predicate: r => r.Path.Contains($"release-group/{releaseGroupId}"))
+            .ContainSingle(r => r.Path.Contains($"release-group/{releaseGroupId}"))
             .Which;
-        request.Query.Should().ContainKey(expected: "inc").WhoseValue.Should().Be(expected: "artists+releases");
-        request.Query.Should().ContainKey(expected: "fmt").WhoseValue.Should().Be(expected: "json");
+        request.Query.Should().ContainKey("inc").WhoseValue.Should().Be("artists+releases");
+        request.Query.Should().ContainKey("fmt").WhoseValue.Should().Be("json");
     }
 
     [Fact]
@@ -59,27 +59,27 @@ public sealed class MusicBrainzReleaseGroupClientTests : ProviderHttpHarness
         {
             ReleaseGroups = [new() { Id = Guid.NewGuid(), Title = "Kid A" }],
         };
-        Handler.WhenGet(pathContains: "release-group", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
+        Handler.WhenGet("release-group", MockResponse.Json(HttpStatusCode.OK, body));
 
-        using MusicBrainzReleaseGroupClient client = new(id: Guid.NewGuid());
-        MusicBrainzReleaseGroupSearchResponse? result = await client.SearchReleaseGroups(query: query);
+        using MusicBrainzReleaseGroupClient client = new(Guid.NewGuid());
+        MusicBrainzReleaseGroupSearchResponse? result = await client.SearchReleaseGroups(query);
 
         result.Should().NotBeNull();
-        result!.ReleaseGroups.Should().ContainSingle(predicate: rg => rg.Title == "Kid A");
+        result!.ReleaseGroups.Should().ContainSingle(rg => rg.Title == "Kid A");
 
         CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
-        request.Path.Should().Be(expected: "/ws/2/release-group");
-        request.Query.Should().ContainKey(expected: "query").WhoseValue.Should().Be(expected: query);
-        request.Query.Should().NotContainKey(unexpected: "inc");
+        request.Path.Should().Be("/ws/2/release-group");
+        request.Query.Should().ContainKey("query").WhoseValue.Should().Be(query);
+        request.Query.Should().NotContainKey("inc");
     }
 
     [Fact]
     public async Task WithAllAppends_UnknownMbid_ReturnsNull()
     {
         Guid unknownId = Guid.NewGuid();
-        Handler.WhenGet(pathContains: $"release-group/{unknownId}", responses: MockResponse.Status(status: HttpStatusCode.NotFound));
+        Handler.WhenGet($"release-group/{unknownId}", MockResponse.Status(HttpStatusCode.NotFound));
 
-        using MusicBrainzReleaseGroupClient client = new(id: unknownId);
+        using MusicBrainzReleaseGroupClient client = new(unknownId);
         MusicBrainzReleaseGroupDetails? result = await client.WithAllAppends();
 
         result.Should().BeNull();

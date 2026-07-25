@@ -9,20 +9,19 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.MusixMatch.Client;
 using NoMercy.Providers.MusixMatch.Models;
 using NoMercy.Providers.NoMercy.Models;
 
 namespace NoMercy.Tests.Providers.MusixMatch.Client;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MusixMatchLyricMapperTests
 {
     [Fact]
     public void ToCandidate_WithNullResponse_ReturnsNull()
     {
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: null);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(null);
 
         candidate.Should().BeNull();
     }
@@ -32,7 +31,7 @@ public class MusixMatchLyricMapperTests
     {
         MusixMatchSubtitleGet response = new() { Message = null };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().BeNull();
     }
@@ -42,7 +41,7 @@ public class MusixMatchLyricMapperTests
     {
         MusixMatchSubtitleGet response = new() { Message = new() { Body = null } };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().BeNull();
     }
@@ -55,7 +54,7 @@ public class MusixMatchLyricMapperTests
             Message = new() { Body = new() { MacroCalls = null } },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().BeNull();
     }
@@ -68,7 +67,7 @@ public class MusixMatchLyricMapperTests
             Message = new() { Body = new() { MacroCalls = new() { TrackSubtitlesGet = null } } },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().BeNull();
     }
@@ -87,7 +86,7 @@ public class MusixMatchLyricMapperTests
             },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().BeNull();
     }
@@ -109,7 +108,7 @@ public class MusixMatchLyricMapperTests
             },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().BeNull();
     }
@@ -134,7 +133,7 @@ public class MusixMatchLyricMapperTests
             },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().BeNull();
     }
@@ -162,7 +161,7 @@ public class MusixMatchLyricMapperTests
             },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().BeNull();
     }
@@ -196,7 +195,7 @@ public class MusixMatchLyricMapperTests
             },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().BeNull();
     }
@@ -256,14 +255,14 @@ public class MusixMatchLyricMapperTests
             },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().NotBeNull();
-        candidate!.Lines.Should().HaveCount(expected: 2);
-        candidate.Lines[0].Text.Should().Be(expected: "First line");
-        candidate.Lines[0].Time.Total.Should().Be(expected: 1.5);
-        candidate.Lines[1].Text.Should().Be(expected: "Second line");
-        candidate.Lines[1].Time.Total.Should().Be(expected: 3.2);
+        candidate!.Lines.Should().HaveCount(2);
+        candidate.Lines[0].Text.Should().Be("First line");
+        candidate.Lines[0].Time.Total.Should().Be(1.5);
+        candidate.Lines[1].Text.Should().Be("Second line");
+        candidate.Lines[1].Time.Total.Should().Be(3.2);
     }
 
     [Fact]
@@ -284,13 +283,13 @@ public class MusixMatchLyricMapperTests
             },
         ];
 
-        MusixMatchSubtitleGet response = CreateResponseWithSubtitles(lines: lines);
+        MusixMatchSubtitleGet response = CreateResponseWithSubtitles(lines);
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
-        candidate!.Lines[0].Time.Minutes.Should().Be(expected: 0);
-        candidate.Lines[0].Time.Seconds.Should().Be(expected: 2);
-        candidate.Lines[0].Time.Hundredths.Should().Be(expected: 75);
+        candidate!.Lines[0].Time.Minutes.Should().Be(0);
+        candidate.Lines[0].Time.Seconds.Should().Be(2);
+        candidate.Lines[0].Time.Hundredths.Should().Be(75);
     }
 
     [Fact]
@@ -305,9 +304,9 @@ public class MusixMatchLyricMapperTests
             },
         ];
 
-        MusixMatchSubtitleGet response = CreateResponseWithSubtitles(lines: lines);
+        MusixMatchSubtitleGet response = CreateResponseWithSubtitles(lines);
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate!.HasSyncedLyrics.Should().BeTrue();
     }
@@ -324,9 +323,9 @@ public class MusixMatchLyricMapperTests
             },
         ];
 
-        MusixMatchSubtitleGet response = CreateResponseWithSubtitles(lines: lines);
+        MusixMatchSubtitleGet response = CreateResponseWithSubtitles(lines);
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate!.HasSyncedLyrics.Should().BeFalse();
     }
@@ -384,12 +383,12 @@ public class MusixMatchLyricMapperTests
             },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().NotBeNull();
-        candidate!.Title.Should().Be(expected: "Bohemian Rhapsody");
-        candidate.Artist.Should().Be(expected: "Queen");
-        candidate.DurationSeconds.Should().Be(expected: 354);
+        candidate!.Title.Should().Be("Bohemian Rhapsody");
+        candidate.Artist.Should().Be("Queen");
+        candidate.DurationSeconds.Should().Be(354);
     }
 
     [Fact]
@@ -445,7 +444,7 @@ public class MusixMatchLyricMapperTests
             },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate!.DurationSeconds.Should().BeNull();
     }
@@ -489,11 +488,11 @@ public class MusixMatchLyricMapperTests
             },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().NotBeNull();
-        candidate!.Title.Should().Be(expected: string.Empty);
-        candidate.Artist.Should().Be(expected: string.Empty);
+        candidate!.Title.Should().Be(string.Empty);
+        candidate.Artist.Should().Be(string.Empty);
         candidate.DurationSeconds.Should().BeNull();
     }
 
@@ -539,11 +538,11 @@ public class MusixMatchLyricMapperTests
             },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         candidate.Should().NotBeNull();
-        candidate!.Title.Should().Be(expected: string.Empty);
-        candidate.Artist.Should().Be(expected: string.Empty);
+        candidate!.Title.Should().Be(string.Empty);
+        candidate.Artist.Should().Be(string.Empty);
     }
 
     [Fact]
@@ -575,21 +574,21 @@ public class MusixMatchLyricMapperTests
             },
         ];
 
-        MusixMatchSubtitleGet response = CreateResponseWithSubtitles(lines: lines);
+        MusixMatchSubtitleGet response = CreateResponseWithSubtitles(lines);
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
-        candidate!.Lines.Should().HaveCount(expected: 2);
-        candidate.Lines[0].Text.Should().Be(expected: "Verse 1");
-        candidate.Lines[0].Time.Total.Should().Be(expected: 5.25);
-        candidate.Lines[0].Time.Minutes.Should().Be(expected: 0);
-        candidate.Lines[0].Time.Seconds.Should().Be(expected: 5);
-        candidate.Lines[0].Time.Hundredths.Should().Be(expected: 25);
-        candidate.Lines[1].Text.Should().Be(expected: "Verse 2");
-        candidate.Lines[1].Time.Total.Should().Be(expected: 10.75);
-        candidate.Lines[1].Time.Minutes.Should().Be(expected: 0);
-        candidate.Lines[1].Time.Seconds.Should().Be(expected: 10);
-        candidate.Lines[1].Time.Hundredths.Should().Be(expected: 75);
+        candidate!.Lines.Should().HaveCount(2);
+        candidate.Lines[0].Text.Should().Be("Verse 1");
+        candidate.Lines[0].Time.Total.Should().Be(5.25);
+        candidate.Lines[0].Time.Minutes.Should().Be(0);
+        candidate.Lines[0].Time.Seconds.Should().Be(5);
+        candidate.Lines[0].Time.Hundredths.Should().Be(25);
+        candidate.Lines[1].Text.Should().Be("Verse 2");
+        candidate.Lines[1].Time.Total.Should().Be(10.75);
+        candidate.Lines[1].Time.Minutes.Should().Be(0);
+        candidate.Lines[1].Time.Seconds.Should().Be(10);
+        candidate.Lines[1].Time.Hundredths.Should().Be(75);
     }
 
     [Fact]
@@ -639,15 +638,15 @@ public class MusixMatchLyricMapperTests
             },
         };
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
-        candidate!.Lines[0].Text.Should().Be(expected: "First subtitle");
+        candidate!.Lines[0].Text.Should().Be("First subtitle");
     }
 
     [Theory]
-    [InlineData(data: 0)]
-    [InlineData(data: 1)]
-    [InlineData(data: 0.5)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(0.5)]
     public void ToCandidate_HasSyncedLyricsDetectsAnyPositiveTimestamp(double timestamp)
     {
         MusixMatchFormattedLyric[] lines =
@@ -659,12 +658,12 @@ public class MusixMatchLyricMapperTests
             },
         ];
 
-        MusixMatchSubtitleGet response = CreateResponseWithSubtitles(lines: lines);
+        MusixMatchSubtitleGet response = CreateResponseWithSubtitles(lines);
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
 
         bool expectedSynced = timestamp > 0;
-        candidate!.HasSyncedLyrics.Should().Be(expected: expectedSynced);
+        candidate!.HasSyncedLyrics.Should().Be(expectedSynced);
     }
 
     private static MusixMatchSubtitleGet CreateResponseWithSubtitles(

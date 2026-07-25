@@ -33,23 +33,23 @@ public static class TrayIconFactory
         int height = baseIcon.PixelSize.Height;
 
         WriteableBitmap overlay = new(
-            size: new(width: width, height: height),
-            dpi: baseIcon.Dpi,
-            format: PixelFormat.Bgra8888,
-            alphaFormat: AlphaFormat.Premul
+            new(width, height),
+            baseIcon.Dpi,
+            PixelFormat.Bgra8888,
+            AlphaFormat.Premul
         );
 
         using (ILockedFramebuffer buffer = overlay.Lock())
         {
-            baseIcon.CopyPixels(buffer: buffer);
-            DrawStatusDot(buffer: buffer, state: state);
+            baseIcon.CopyPixels(buffer);
+            DrawStatusDot(buffer, state);
         }
 
         using MemoryStream stream = new();
-        overlay.Save(stream: stream);
+        overlay.Save(stream);
         stream.Position = 0;
 
-        return new(stream: stream);
+        return new(stream);
     }
 
     private static Bitmap LoadBaseIcon()
@@ -57,21 +57,21 @@ public static class TrayIconFactory
         if (_baseIcon is not null)
             return _baseIcon;
 
-        string iconPath = Path.Combine(path1: AppContext.BaseDirectory, path2: "Assets", path3: "icon.png");
+        string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "icon.png");
 
-        if (File.Exists(path: iconPath))
+        if (File.Exists(iconPath))
         {
-            _baseIcon = new(fileName: iconPath);
+            _baseIcon = new(iconPath);
             return _baseIcon;
         }
 
         Stream? resourceStream = typeof(TrayIconFactory).Assembly.GetManifestResourceStream(
-            name: "NoMercy.Launcher.icon.png"
+            "NoMercy.Launcher.icon.png"
         );
 
         if (resourceStream is not null)
         {
-            _baseIcon = new(stream: resourceStream);
+            _baseIcon = new(resourceStream);
             return _baseIcon;
         }
 
@@ -83,10 +83,10 @@ public static class TrayIconFactory
     {
         int size = 64;
         WriteableBitmap bmp = new(
-            size: new(width: size, height: size),
-            dpi: new(x: 96, y: 96),
-            format: PixelFormat.Bgra8888,
-            alphaFormat: AlphaFormat.Premul
+            new(size, size),
+            new(96, 96),
+            PixelFormat.Bgra8888,
+            AlphaFormat.Premul
         );
 
         using (ILockedFramebuffer buffer = bmp.Lock())
@@ -120,9 +120,9 @@ public static class TrayIconFactory
         }
 
         using MemoryStream stream = new();
-        bmp.Save(stream: stream);
+        bmp.Save(stream);
         stream.Position = 0;
-        return new(stream: stream);
+        return new(stream);
     }
 
     private static unsafe void DrawStatusDot(ILockedFramebuffer buffer, ServerState state)
@@ -137,8 +137,8 @@ public static class TrayIconFactory
 
         int width = buffer.Size.Width;
         int height = buffer.Size.Height;
-        int dotRadius = Math.Max(val1: width / 6, val2: 4);
-        int borderWidth = Math.Max(val1: dotRadius / 4, val2: 1);
+        int dotRadius = Math.Max(width / 6, 4);
+        int borderWidth = Math.Max(dotRadius / 4, 1);
         int cx = width - dotRadius - 1;
         int cy = height - dotRadius - 1;
         int stride = buffer.RowBytes;
@@ -147,14 +147,14 @@ public static class TrayIconFactory
         int outerRadius = dotRadius + borderWidth;
 
         for (
-            int y = Math.Max(val1: 0, val2: cy - outerRadius);
-            y <= Math.Min(val1: height - 1, val2: cy + outerRadius);
+            int y = Math.Max(0, cy - outerRadius);
+            y <= Math.Min(height - 1, cy + outerRadius);
             y++
         )
         {
             for (
-                int x = Math.Max(val1: 0, val2: cx - outerRadius);
-                x <= Math.Min(val1: width - 1, val2: cx + outerRadius);
+                int x = Math.Max(0, cx - outerRadius);
+                x <= Math.Min(width - 1, cx + outerRadius);
                 x++
             )
             {

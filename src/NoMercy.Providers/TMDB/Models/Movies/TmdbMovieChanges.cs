@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbMovieChanges
 {
-    [JsonProperty(propertyName: "changes")]
+    [JsonProperty("changes")]
     public TmdbChanges[] ChangesChanges { get; set; } = [];
 }

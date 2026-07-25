@@ -20,7 +20,6 @@ using NoMercy.Events.FileWatcher;
 using NoMercy.Events.Inbox;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Inbox;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -28,7 +27,7 @@ using NoMercy.Storage.Factory;
 
 namespace NoMercy.Tests.MediaProcessing.Inbox;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class InboxClassifierEventHandlerTests : IDisposable
 {
     // -----------------------------------------------------------------------
@@ -45,56 +44,56 @@ public class InboxClassifierEventHandlerTests : IDisposable
     public InboxClassifierEventHandlerTests()
     {
         string dbName = Guid.NewGuid().ToString();
-        _connection = new(connectionString: $"DataSource={dbName};Mode=Memory;Cache=Shared");
+        _connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         _connection.Open();
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: _connection)
+            .UseSqlite(_connection)
             .Options;
 
-        _context = new(options: options);
+        _context = new(options);
         _context.Database.EnsureCreated();
-        _context.Database.ExecuteSqlRaw(sql: "PRAGMA foreign_keys = OFF;");
+        _context.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
 
         _eventBusMock = new();
         _eventBusMock
-            .Setup(expression: bus =>
+            .Setup(bus =>
                 bus.Subscribe<FileCreatedEvent>(
                     It.IsAny<Func<FileCreatedEvent, CancellationToken, Task>>()
                 )
             )
-            .Returns(value: Mock.Of<IDisposable>());
+            .Returns(Mock.Of<IDisposable>());
         _eventBusMock
-            .Setup(expression: bus =>
+            .Setup(bus =>
                 bus.PublishAsync(It.IsAny<InboxItemDetectedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Returns(value: Task.CompletedTask);
+            .Returns(Task.CompletedTask);
 
         _probeMock = new();
         _probeMock
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchMoviesAsync(
                     It.IsAny<string>(),
                     It.IsAny<int?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
         _probeMock
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SearchTvAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
         _probeMock
-            .Setup(expression: p => p.LookupMusicReleaseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (CandidateMatch?)null);
+            .Setup(p => p.LookupMusicReleaseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CandidateMatch?)null);
 
         _tagReaderMock = new();
         _tagReaderMock
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.ReadAsync(It.IsAny<string>(), It.IsAny<Ulid>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: (InboxAudioTags?)null);
+            .ReturnsAsync((InboxAudioTags?)null);
 
         _storageFactoryMock = new();
     }
@@ -108,23 +107,23 @@ public class InboxClassifierEventHandlerTests : IDisposable
     private MediaContext CreateSharedContext()
     {
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: _connection)
+            .UseSqlite(_connection)
             .Options;
-        return new(options: options);
+        return new(options);
     }
 
     private InboxClassifierEventHandler MakeHandler()
     {
-        InboxClassifier classifier = new(probe: _probeMock.Object, tagReader: _tagReaderMock.Object);
-        InboxRoutingService routing = new(storageFactory: _storageFactoryMock.Object, jobDispatcher: new());
+        InboxClassifier classifier = new(_probeMock.Object, _tagReaderMock.Object);
+        InboxRoutingService routing = new(_storageFactoryMock.Object, new());
 
         return new(
-            logger: NullLogger<InboxClassifierEventHandler>.Instance,
-            eventBus: _eventBusMock.Object,
-            classifier: classifier,
-            routing: routing,
-            contextFactory: CreateSharedContext,
-            storageFactory: _storageFactoryMock.Object
+            NullLogger<InboxClassifierEventHandler>.Instance,
+            _eventBusMock.Object,
+            classifier,
+            routing,
+            CreateSharedContext,
+            _storageFactoryMock.Object
         );
     }
 
@@ -135,7 +134,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         Ulid driverId = Ulid.NewUlid();
 
         _context.Libraries.Add(
-            entity: new()
+            new()
             {
                 Id = libraryId,
                 Title = "Inbox",
@@ -144,7 +143,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         );
 
         _context.Folders.Add(
-            entity: new()
+            new()
             {
                 Id = folderId,
                 Path = folderPath,
@@ -152,7 +151,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
             }
         );
 
-        _context.FolderLibrary.Add(entity: new() { LibraryId = libraryId, FolderId = folderId });
+        _context.FolderLibrary.Add(new() { LibraryId = libraryId, FolderId = folderId });
 
         _context.SaveChanges();
 
@@ -175,25 +174,25 @@ public class InboxClassifierEventHandlerTests : IDisposable
             LibraryType = MediaTypes.MovieMediaType,
         };
 
-        await handler.OnFileCreated(@event: @event, ct: CancellationToken.None);
+        await handler.OnFileCreated(@event, CancellationToken.None);
 
         _probeMock.Verify(
-            expression: p =>
+            p =>
                 p.SearchMoviesAsync(
                     It.IsAny<string>(),
                     It.IsAny<int?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
         _probeMock.Verify(
-            expression: p =>
+            p =>
                 p.SearchTvAsync(
                     It.IsAny<string>(),
                     It.IsAny<int?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -209,43 +208,43 @@ public class InboxClassifierEventHandlerTests : IDisposable
             LibraryType = MediaTypes.InboxMediaType,
         };
 
-        await handler.OnFileCreated(@event: @event, ct: CancellationToken.None);
+        await handler.OnFileCreated(@event, CancellationToken.None);
 
         _probeMock.Verify(
-            expression: p =>
+            p =>
                 p.SearchMoviesAsync(
                     It.IsAny<string>(),
                     It.IsAny<int?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
     [Fact]
     public async Task InboxEvent_WithSeededLibrary_TriggersClassifyAndRoute()
     {
-        Ulid libraryId = SeedInboxLibraryWithFolder(folderPath: "/inbox");
+        Ulid libraryId = SeedInboxLibraryWithFolder("/inbox");
 
         // Storage mock returns one .mkv child
         Mock<IStorage> storageMock = new();
         storageMock
-            .Setup(expression: s => s.List("", null, false))
-            .Returns(value: [new(Path: "somefile.mkv", IsDirectory: false, SizeBytes: 1024, LastModified: DateTimeOffset.UtcNow)]);
+            .Setup(s => s.List("", null, false))
+            .Returns([new("somefile.mkv", false, 1024, DateTimeOffset.UtcNow)]);
         storageMock
-            .Setup(expression: s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>(valueFunction: (parent, child) => $"{parent}/{child}");
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<string, string>((parent, child) => $"{parent}/{child}");
         _storageFactoryMock
-            .Setup(expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
-            .Returns(value: storageMock.Object);
+            .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
+            .Returns(storageMock.Object);
 
         List<InboxItemDetectedEvent> published = [];
         _eventBusMock
-            .Setup(expression: bus =>
+            .Setup(bus =>
                 bus.PublishAsync(It.IsAny<InboxItemDetectedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<InboxItemDetectedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
-            .Returns(value: Task.CompletedTask);
+            .Callback<InboxItemDetectedEvent, CancellationToken>((evt, _) => published.Add(evt))
+            .Returns(Task.CompletedTask);
 
         InboxClassifierEventHandler handler = MakeHandler();
 
@@ -256,42 +255,42 @@ public class InboxClassifierEventHandlerTests : IDisposable
             LibraryType = MediaTypes.InboxMediaType,
         };
 
-        await handler.OnFileCreated(@event: @event, ct: CancellationToken.None);
+        await handler.OnFileCreated(@event, CancellationToken.None);
 
         // .mkv is a video extension → probe is called for movie/tv
         _probeMock.Verify(
-            expression: p =>
+            p =>
                 p.SearchMoviesAsync(
                     It.IsAny<string>(),
                     It.IsAny<int?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.AtLeastOnce
+            Times.AtLeastOnce
         );
 
         published.Should().ContainSingle();
-        published[index: 0].Status.Should().Be(expected: "NeedsReview");
-        published[index: 0].DetectedType.Should().NotBeNullOrEmpty();
+        published[0].Status.Should().Be("NeedsReview");
+        published[0].DetectedType.Should().NotBeNullOrEmpty();
     }
 
     // -----------------------------------------------------------------------
     // Integration test: loose dropped file classified by real extension
     // -----------------------------------------------------------------------
 
-    [Trait(name: "Category", value: "Integration")]
+    [Trait("Category", "Integration")]
     [Fact]
     public async Task LooseDroppedFile_IsClassifiedByExtension_NotInboxDir()
     {
         // Arrange: real temp inbox dir with a real .mkv file
         string tempRoot = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nm-inbox-handler-it-" + Path.GetRandomFileName()
+            Path.GetTempPath(),
+            "nm-inbox-handler-it-" + Path.GetRandomFileName()
         );
-        string inboxDir = Path.Combine(path1: tempRoot, path2: "inbox");
-        Directory.CreateDirectory(path: inboxDir);
+        string inboxDir = Path.Combine(tempRoot, "inbox");
+        Directory.CreateDirectory(inboxDir);
 
-        string droppedFilePath = Path.Combine(path1: inboxDir, path2: "The Matrix (1999).mkv");
-        await File.WriteAllBytesAsync(path: droppedFilePath, bytes: [0x1A, 0x45, 0xDF, 0xA3]);
+        string droppedFilePath = Path.Combine(inboxDir, "The Matrix (1999).mkv");
+        await File.WriteAllBytesAsync(droppedFilePath, [0x1A, 0x45, 0xDF, 0xA3]);
 
         try
         {
@@ -299,34 +298,34 @@ public class InboxClassifierEventHandlerTests : IDisposable
             LocalStorageDriver realDriver = new();
             Mock<IDriverConfigResolver> resolverMock = new();
             resolverMock
-                .Setup(expression: r => r.Resolve(It.IsAny<Ulid>()))
-                .Returns(value: ("local", "{\"rootPath\":\"\"}"));
+                .Setup(r => r.Resolve(It.IsAny<Ulid>()))
+                .Returns(("local", "{\"rootPath\":\"\"}"));
 
             StorageFactory realStorageFactory = new(
-                driver: realDriver,
-                logger: NullLogger<StorageFactory>.Instance,
-                driverConfigResolver: resolverMock.Object
+                realDriver,
+                NullLogger<StorageFactory>.Instance,
+                resolverMock.Object
             );
 
             // Seed inbox library pointing at the real temp inbox dir
             string dbName = Guid.NewGuid().ToString();
-            SqliteConnection connection = new(connectionString: $"DataSource={dbName};Mode=Memory;Cache=Shared");
+            SqliteConnection connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
             connection.Open();
 
             DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-                .UseSqlite(connection: connection)
+                .UseSqlite(connection)
                 .Options;
 
-            await using MediaContext seedContext = new(options: options);
+            await using MediaContext seedContext = new(options);
             seedContext.Database.EnsureCreated();
-            seedContext.Database.ExecuteSqlRaw(sql: "PRAGMA foreign_keys = OFF;");
+            seedContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
 
             Ulid libraryId = Ulid.NewUlid();
             Ulid folderId = Ulid.NewUlid();
             Ulid driverId = Ulid.NewUlid();
 
             seedContext.Libraries.Add(
-                entity: new()
+                new()
                 {
                     Id = libraryId,
                     Title = "Inbox",
@@ -334,86 +333,86 @@ public class InboxClassifierEventHandlerTests : IDisposable
                 }
             );
             seedContext.Folders.Add(
-                entity: new()
+                new()
                 {
                     Id = folderId,
                     Path = inboxDir,
                     DriverId = driverId,
                 }
             );
-            seedContext.FolderLibrary.Add(entity: new() { LibraryId = libraryId, FolderId = folderId });
+            seedContext.FolderLibrary.Add(new() { LibraryId = libraryId, FolderId = folderId });
             await seedContext.SaveChangesAsync();
 
             Mock<IEventBus> eventBusMock = new();
             eventBusMock
-                .Setup(expression: bus =>
+                .Setup(bus =>
                     bus.Subscribe<FileCreatedEvent>(
                         It.IsAny<Func<FileCreatedEvent, CancellationToken, Task>>()
                     )
                 )
-                .Returns(value: Mock.Of<IDisposable>());
+                .Returns(Mock.Of<IDisposable>());
 
             List<InboxItemDetectedEvent> published = [];
             eventBusMock
-                .Setup(expression: bus =>
+                .Setup(bus =>
                     bus.PublishAsync(
                         It.IsAny<InboxItemDetectedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Callback<InboxItemDetectedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
-                .Returns(value: Task.CompletedTask);
+                .Callback<InboxItemDetectedEvent, CancellationToken>((evt, _) => published.Add(evt))
+                .Returns(Task.CompletedTask);
 
             Mock<IInboxMetadataProbe> probeMock = new();
             probeMock
-                .Setup(expression: p =>
+                .Setup(p =>
                     p.SearchMoviesAsync(
                         It.IsAny<string>(),
                         It.IsAny<int?>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(value: []);
+                .ReturnsAsync([]);
             probeMock
-                .Setup(expression: p =>
+                .Setup(p =>
                     p.SearchTvAsync(
                         It.IsAny<string>(),
                         It.IsAny<int?>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(value: []);
+                .ReturnsAsync([]);
             probeMock
-                .Setup(expression: p =>
+                .Setup(p =>
                     p.LookupMusicReleaseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())
                 )
-                .ReturnsAsync(value: (CandidateMatch?)null);
+                .ReturnsAsync((CandidateMatch?)null);
 
             Mock<IInboxAudioTagReader> tagReaderMock = new();
             tagReaderMock
-                .Setup(expression: r =>
+                .Setup(r =>
                     r.ReadAsync(It.IsAny<string>(), It.IsAny<Ulid>(), It.IsAny<CancellationToken>())
                 )
-                .ReturnsAsync(value: (InboxAudioTags?)null);
+                .ReturnsAsync((InboxAudioTags?)null);
 
-            InboxClassifier classifier = new(probe: probeMock.Object, tagReader: tagReaderMock.Object);
-            InboxRoutingService routing = new(storageFactory: realStorageFactory, jobDispatcher: new());
+            InboxClassifier classifier = new(probeMock.Object, tagReaderMock.Object);
+            InboxRoutingService routing = new(realStorageFactory, new());
 
             MediaContext ContextFactory()
             {
                 DbContextOptions<MediaContext> ctx = new DbContextOptionsBuilder<MediaContext>()
-                    .UseSqlite(connection: connection)
+                    .UseSqlite(connection)
                     .Options;
-                return new(options: ctx);
+                return new(ctx);
             }
 
             InboxClassifierEventHandler handler = new(
-                logger: NullLogger<InboxClassifierEventHandler>.Instance,
-                eventBus: eventBusMock.Object,
-                classifier: classifier,
-                routing: routing,
-                contextFactory: ContextFactory,
-                storageFactory: realStorageFactory
+                NullLogger<InboxClassifierEventHandler>.Instance,
+                eventBusMock.Object,
+                classifier,
+                routing,
+                ContextFactory,
+                realStorageFactory
             );
 
             FileCreatedEvent @event = new()
@@ -424,27 +423,27 @@ public class InboxClassifierEventHandlerTests : IDisposable
             };
 
             // Act
-            await handler.OnFileCreated(@event: @event, ct: CancellationToken.None);
+            await handler.OnFileCreated(@event, CancellationToken.None);
 
             // Assert: one InboxItemDetectedEvent published
-            published.Should().ContainSingle(because: "one item dropped, one event expected");
+            published.Should().ContainSingle("one item dropped, one event expected");
 
             // Assert: detected type is NOT "unknown" — real extension was seen
-            published[index: 0].DetectedType.Should().NotBe(unexpected: "unknown");
+            published[0].DetectedType.Should().NotBe("unknown");
 
             // Assert: an InboxItem was saved with SourcePath = the FILE path (not the dir)
             await using MediaContext verifyContext = ContextFactory();
             List<InboxItem> items = await verifyContext.InboxItems.ToListAsync();
             items.Should().ContainSingle();
             string normalizedSource = Path.GetFullPath(
-                path: items[index: 0].SourcePath.Replace(oldChar: '/', newChar: Path.DirectorySeparatorChar)
+                items[0].SourcePath.Replace('/', Path.DirectorySeparatorChar)
             );
             normalizedSource
                 .Should()
-                .Be(expected: droppedFilePath, because: "SourcePath must be the FILE path, not the inbox directory");
+                .Be(droppedFilePath, "SourcePath must be the FILE path, not the inbox directory");
             normalizedSource
                 .Should()
-                .NotBe(unexpected: inboxDir, because: "SourcePath must not be the inbox root directory");
+                .NotBe(inboxDir, "SourcePath must not be the inbox root directory");
 
             connection.Dispose();
         }
@@ -452,7 +451,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         {
             try
             {
-                Directory.Delete(path: tempRoot, recursive: true);
+                Directory.Delete(tempRoot, true);
             }
             catch
             {
@@ -468,26 +467,26 @@ public class InboxClassifierEventHandlerTests : IDisposable
     [Fact]
     public async Task SecondFireForSameChild_DoesNotCreateDuplicateInboxItem()
     {
-        Ulid libraryId = SeedInboxLibraryWithFolder(folderPath: "/inbox");
+        Ulid libraryId = SeedInboxLibraryWithFolder("/inbox");
 
         Mock<IStorage> storageMock = new();
         storageMock
-            .Setup(expression: s => s.List("", null, false))
-            .Returns(value: [new(Path: "The Matrix (1999).mkv", IsDirectory: false, SizeBytes: 1024, LastModified: DateTimeOffset.UtcNow)]);
+            .Setup(s => s.List("", null, false))
+            .Returns([new("The Matrix (1999).mkv", false, 1024, DateTimeOffset.UtcNow)]);
         storageMock
-            .Setup(expression: s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>(valueFunction: (parent, child) => $"{parent}/{child}");
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<string, string>((parent, child) => $"{parent}/{child}");
         _storageFactoryMock
-            .Setup(expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
-            .Returns(value: storageMock.Object);
+            .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
+            .Returns(storageMock.Object);
 
         List<InboxItemDetectedEvent> published = [];
         _eventBusMock
-            .Setup(expression: bus =>
+            .Setup(bus =>
                 bus.PublishAsync(It.IsAny<InboxItemDetectedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<InboxItemDetectedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
-            .Returns(value: Task.CompletedTask);
+            .Callback<InboxItemDetectedEvent, CancellationToken>((evt, _) => published.Add(evt))
+            .Returns(Task.CompletedTask);
 
         InboxClassifierEventHandler handler = MakeHandler();
 
@@ -499,16 +498,16 @@ public class InboxClassifierEventHandlerTests : IDisposable
         };
 
         // First fire
-        await handler.OnFileCreated(@event: @event, ct: CancellationToken.None);
+        await handler.OnFileCreated(@event, CancellationToken.None);
 
         // Second fire (watcher debounce re-fire)
-        await handler.OnFileCreated(@event: @event, ct: CancellationToken.None);
+        await handler.OnFileCreated(@event, CancellationToken.None);
 
         // Only one InboxItem in DB
         List<InboxItem> items = await _context.InboxItems.ToListAsync();
-        items.Should().ContainSingle(because: "second fire must be deduped");
+        items.Should().ContainSingle("second fire must be deduped");
 
         // Only one event published
-        published.Should().ContainSingle(because: "event published only once");
+        published.Should().ContainSingle("event published only once");
     }
 }

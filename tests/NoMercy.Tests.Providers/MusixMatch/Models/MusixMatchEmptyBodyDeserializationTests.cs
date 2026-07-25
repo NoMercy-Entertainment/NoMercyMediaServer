@@ -21,7 +21,7 @@ namespace NoMercy.Tests.Providers.MusixMatch.Models;
 /// <c>{}</c>. These deserialize the raw payload (not hand-built objects) so they
 /// actually exercise the path that threw before the ObjectOrEmptyArrayConverter.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MusixMatchEmptyBodyDeserializationTests
 {
     [Fact]
@@ -44,7 +44,7 @@ public class MusixMatchEmptyBodyDeserializationTests
             """;
 
         MusixMatchSubtitleGet? response = JsonConvert.DeserializeObject<MusixMatchSubtitleGet>(
-            value: json
+            json
         );
 
         response.Should().NotBeNull();
@@ -52,7 +52,7 @@ public class MusixMatchEmptyBodyDeserializationTests
             .Message!.Body!.MacroCalls!.TrackSubtitlesGet!.Message!.Body!.SubtitleList.Should()
             .BeEmpty();
 
-        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response: response);
+        LyricCandidate? candidate = MusixMatchLyricMapper.ToCandidate(response);
         candidate.Should().BeNull();
     }
 
@@ -75,12 +75,12 @@ public class MusixMatchEmptyBodyDeserializationTests
             """;
 
         MusixMatchSubtitleGet? response = JsonConvert.DeserializeObject<MusixMatchSubtitleGet>(
-            value: json
+            json
         );
 
         response.Should().NotBeNull();
         response!
             .Message!.Body!.MacroCalls!.TrackSubtitlesGet!.Message!.Body!.SubtitleList.Should()
-            .HaveCount(expected: 1);
+            .HaveCount(1);
     }
 }

@@ -28,15 +28,15 @@ public static class EncodingPresetsSeed
 {
     public static async Task Init(MediaContext context, IStorage storage)
     {
-        Logger.Setup(message: "Adding Encoding Presets", level: LogEventLevel.Verbose);
+        Logger.Setup("Adding Encoding Presets", LogEventLevel.Verbose);
 
         try
         {
-            await new BuiltinPresetSeeder(context: context).SeedAsync();
+            await new BuiltinPresetSeeder(context).SeedAsync();
         }
         catch (Exception e)
         {
-            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
+            Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
     }
 }

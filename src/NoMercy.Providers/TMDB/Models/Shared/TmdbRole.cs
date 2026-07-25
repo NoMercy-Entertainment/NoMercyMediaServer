@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbRole
 {
-    [JsonProperty(propertyName: "credit_id")]
+    [JsonProperty("credit_id")]
     public string CreditId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "character")]
+    [JsonProperty("character")]
     public string Character { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "episode_count")]
+    [JsonProperty("episode_count")]
     public int EpisodeCount { get; set; }
 }

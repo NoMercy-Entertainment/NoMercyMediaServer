@@ -12,7 +12,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
@@ -30,7 +29,7 @@ namespace NoMercy.Tests.Api.Dashboard;
 /// call — every case here is rejected by the driver_id/path validation guard
 /// before the controller resolves a driver.
 /// </summary>
-[Trait(name: "Category", value: "DashboardStorageBrowser")]
+[Trait("Category", "DashboardStorageBrowser")]
 public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -46,44 +45,44 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task Probe_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/probe",
-            value: new { type = "local", config = new { } }
+            "/api/v1/dashboard/storage/probe",
+            new { type = "local", config = new { } }
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Probe_MissingType_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/probe",
-            value: new { config = new { } }
+            "/api/v1/dashboard/storage/probe",
+            new { config = new { } }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Probe_UnknownType_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/probe",
-            value: new { type = "ftp", config = new { } }
+            "/api/v1/dashboard/storage/probe",
+            new { type = "ftp", config = new { } }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Probe_MissingConfig_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/probe",
-            value: new { type = "local" }
+            "/api/v1/dashboard/storage/probe",
+            new { type = "local" }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -93,74 +92,74 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
         // to ok=true with no exports, so this exercises the real endpoint without any
         // outbound connection.
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/probe",
-            value: new { type = "local", config = new { } }
+            "/api/v1/dashboard/storage/probe",
+            new { type = "local", config = new { } }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
         JsonElement root = doc.RootElement;
 
-        root.GetProperty(propertyName: "ok").GetBoolean().Should().BeTrue();
-        root.GetProperty(propertyName: "exports").ValueKind.Should().Be(expected: JsonValueKind.Array);
-        root.GetProperty(propertyName: "exports").GetArrayLength().Should().Be(expected: 0);
+        root.GetProperty("ok").GetBoolean().Should().BeTrue();
+        root.GetProperty("exports").ValueKind.Should().Be(JsonValueKind.Array);
+        root.GetProperty("exports").GetArrayLength().Should().Be(0);
     }
 
     [Fact]
     public async Task Probe_NfsMissingServer_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/probe",
-            value: new { type = "nfs", config = new { } }
+            "/api/v1/dashboard/storage/probe",
+            new { type = "nfs", config = new { } }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task List_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/list",
-            value: new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "" }
+            "/api/v1/dashboard/storage/list",
+            new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "" }
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task List_MissingDriverId_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/list",
-            value: new { path = "" }
+            "/api/v1/dashboard/storage/list",
+            new { path = "" }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task List_InvalidDriverIdFormat_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/list",
-            value: new { driver_id = "not-a-valid-ulid", path = "" }
+            "/api/v1/dashboard/storage/list",
+            new { driver_id = "not-a-valid-ulid", path = "" }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task List_UnknownDriverId_Returns404()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/list",
-            value: new { driver_id = Ulid.NewUlid().ToString(), path = "" }
+            "/api/v1/dashboard/storage/list",
+            new { driver_id = Ulid.NewUlid().ToString(), path = "" }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -171,73 +170,73 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
         // storage.List call happens to be on this host — the endpoint never surfaces a
         // storage-layer failure as a 4xx/5xx.
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/list",
-            value: new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "" }
+            "/api/v1/dashboard/storage/list",
+            new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "" }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
         JsonElement root = doc.RootElement;
 
-        root.TryGetProperty(propertyName: "ok", value: out JsonElement ok).Should().BeTrue();
-        ok.ValueKind.Should().BeOneOf(validValues: [JsonValueKind.True, JsonValueKind.False]);
-        root.TryGetProperty(propertyName: "path", value: out _).Should().BeTrue();
+        root.TryGetProperty("ok", out JsonElement ok).Should().BeTrue();
+        ok.ValueKind.Should().BeOneOf([JsonValueKind.True, JsonValueKind.False]);
+        root.TryGetProperty("path", out _).Should().BeTrue();
     }
 
     [Fact]
     public async Task Mkdir_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/mkdir",
-            value: new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "some/sub/path" }
+            "/api/v1/dashboard/storage/mkdir",
+            new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "some/sub/path" }
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Mkdir_MissingDriverId_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/mkdir",
-            value: new { path = "some/sub/path" }
+            "/api/v1/dashboard/storage/mkdir",
+            new { path = "some/sub/path" }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Mkdir_InvalidDriverIdFormat_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/mkdir",
-            value: new { driver_id = "not-a-valid-ulid", path = "some/sub/path" }
+            "/api/v1/dashboard/storage/mkdir",
+            new { driver_id = "not-a-valid-ulid", path = "some/sub/path" }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Mkdir_MissingPath_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/mkdir",
-            value: new { driver_id = Driver.SystemLocalDriverId.ToString() }
+            "/api/v1/dashboard/storage/mkdir",
+            new { driver_id = Driver.SystemLocalDriverId.ToString() }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Mkdir_UnknownDriverId_Returns404()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            requestUri: "/api/v1/dashboard/storage/mkdir",
-            value: new { driver_id = Ulid.NewUlid().ToString(), path = "some/sub/path" }
+            "/api/v1/dashboard/storage/mkdir",
+            new { driver_id = Ulid.NewUlid().ToString(), path = "some/sub/path" }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }

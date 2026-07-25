@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record MoveRequest
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "folder_id")]
+    [JsonProperty("folder_id")]
     public Ulid FolderId { get; set; }
 }

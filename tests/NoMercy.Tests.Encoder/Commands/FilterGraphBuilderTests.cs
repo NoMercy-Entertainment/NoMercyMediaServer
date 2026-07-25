@@ -18,25 +18,25 @@ public class FilterGraphBuilderTests
     [Fact]
     public void SingleScale_ProducesCorrectOutput()
     {
-        string result = new FilterGraphBuilder().AddScale(inputLabel: "0:v", width: 1920, height: 1080, outputLabel: "v0").Build();
+        string result = new FilterGraphBuilder().AddScale("0:v", 1920, 1080, "v0").Build();
 
-        result.Should().Be(expected: "[0:v]scale=1920:1080[v0]");
+        result.Should().Be("[0:v]scale=1920:1080[v0]");
     }
 
     [Fact]
     public void SplitAndMultiScale_ProducesCorrectOutput()
     {
         string result = new FilterGraphBuilder()
-            .AddSplit(inputLabel: "0:v", outputLabels: ["a", "b", "c"])
-            .AddScale(inputLabel: "a", width: 3840, height: 2160, outputLabel: "v0")
-            .AddScale(inputLabel: "b", width: 1920, height: 1080, outputLabel: "v1")
-            .AddScale(inputLabel: "c", width: 1280, height: 720, outputLabel: "v2")
+            .AddSplit("0:v", ["a", "b", "c"])
+            .AddScale("a", 3840, 2160, "v0")
+            .AddScale("b", 1920, 1080, "v1")
+            .AddScale("c", 1280, 720, "v2")
             .Build();
 
         result
             .Should()
             .Be(
-                expected: "[0:v]split=3[a][b][c];[a]scale=3840:2160[v0];[b]scale=1920:1080[v1];[c]scale=1280:720[v2]"
+                "[0:v]split=3[a][b][c];[a]scale=3840:2160[v0];[b]scale=1920:1080[v1];[c]scale=1280:720[v2]"
             );
     }
 
@@ -44,28 +44,28 @@ public class FilterGraphBuilderTests
     public void TonemapThenSplitThenScale_ProducesChain()
     {
         string result = new FilterGraphBuilder()
-            .AddTonemap(inputLabel: "0:v", algorithm: "hable", outputLabel: "sdr")
-            .AddSplit(inputLabel: "sdr", outputLabels: ["a", "b"])
-            .AddScale(inputLabel: "a", width: 1920, height: 1080, outputLabel: "v0")
-            .AddScale(inputLabel: "b", width: 1280, height: 720, outputLabel: "v1")
+            .AddTonemap("0:v", "hable", "sdr")
+            .AddSplit("sdr", ["a", "b"])
+            .AddScale("a", 1920, 1080, "v0")
+            .AddScale("b", 1280, 720, "v1")
             .Build();
 
-        result.Should().StartWith(expected: "[0:v]zscale=t=linear");
-        result.Should().Contain(expected: "[sdr]");
-        result.Should().Contain(expected: "[sdr]split=2[a][b]");
-        result.Should().Contain(expected: "[a]scale=1920:1080[v0]");
-        result.Should().Contain(expected: "[b]scale=1280:720[v1]");
+        result.Should().StartWith("[0:v]zscale=t=linear");
+        result.Should().Contain("[sdr]");
+        result.Should().Contain("[sdr]split=2[a][b]");
+        result.Should().Contain("[a]scale=1920:1080[v0]");
+        result.Should().Contain("[b]scale=1280:720[v1]");
     }
 
     [Fact]
     public void LibplaceboTonemap_ProducesCorrectFilter()
     {
         string result = new FilterGraphBuilder()
-            .AddLibplaceboTonemap(inputLabel: "0:v", algorithm: "hable", outputLabel: "sdr")
+            .AddLibplaceboTonemap("0:v", "hable", "sdr")
             .Build();
 
-        result.Should().Contain(expected: "libplacebo=tonemapping=hable");
-        result.Should().Contain(expected: "color_primaries=bt709");
+        result.Should().Contain("libplacebo=tonemapping=hable");
+        result.Should().Contain("color_primaries=bt709");
     }
 
     [Fact]
@@ -86,34 +86,34 @@ public class FilterGraphBuilderTests
     public void HasFilters_TrueAfterAdd()
     {
         FilterGraphBuilder builder = new();
-        builder.AddScale(inputLabel: "0:v", width: 1920, height: 1080, outputLabel: "v0");
+        builder.AddScale("0:v", 1920, 1080, "v0");
         builder.HasFilters.Should().BeTrue();
     }
 
     [Fact]
     public void Deinterlace_ProducesYadif()
     {
-        string result = new FilterGraphBuilder().AddDeinterlace(inputLabel: "0:v", outputLabel: "deint").Build();
+        string result = new FilterGraphBuilder().AddDeinterlace("0:v", "deint").Build();
 
-        result.Should().Be(expected: "[0:v]yadif[deint]");
+        result.Should().Be("[0:v]yadif[deint]");
     }
 
     [Fact]
     public void Crop_ProducesCorrectParams()
     {
         string result = new FilterGraphBuilder()
-            .AddCrop(inputLabel: "0:v", width: 1920, height: 800, x: 0, y: 140, outputLabel: "cropped")
+            .AddCrop("0:v", 1920, 800, 0, 140, "cropped")
             .Build();
 
-        result.Should().Be(expected: "[0:v]crop=1920:800:0:140[cropped]");
+        result.Should().Be("[0:v]crop=1920:800:0:140[cropped]");
     }
 
     [Fact]
     public void ScaleWidth_UsesMinusTwoForHeight()
     {
-        string result = new FilterGraphBuilder().AddScaleWidth(inputLabel: "0:v", width: 1280, outputLabel: "v0").Build();
+        string result = new FilterGraphBuilder().AddScaleWidth("0:v", 1280, "v0").Build();
 
-        result.Should().Be(expected: "[0:v]scale=1280:-2[v0]");
+        result.Should().Be("[0:v]scale=1280:-2[v0]");
     }
 
     [Fact]
@@ -121,16 +121,16 @@ public class FilterGraphBuilderTests
     {
         // Simulate: 4K HDR → tonemap → split 3 → scale to 4K/1080p/720p
         string result = new FilterGraphBuilder()
-            .AddTonemap(inputLabel: "0:v", algorithm: "hable", outputLabel: "sdr")
-            .AddSplit(inputLabel: "sdr", outputLabels: ["a", "b", "c"])
-            .AddScale(inputLabel: "a", width: 3840, height: 2160, outputLabel: "v0")
-            .AddScale(inputLabel: "b", width: 1920, height: 1080, outputLabel: "v1")
-            .AddScale(inputLabel: "c", width: 1280, height: 720, outputLabel: "v2")
+            .AddTonemap("0:v", "hable", "sdr")
+            .AddSplit("sdr", ["a", "b", "c"])
+            .AddScale("a", 3840, 2160, "v0")
+            .AddScale("b", 1920, 1080, "v1")
+            .AddScale("c", 1280, 720, "v2")
             .Build();
 
         // Should have 5 chains separated by semicolons
-        string[] chains = result.Split(separator: ';');
-        chains.Should().HaveCount(expected: 5);
+        string[] chains = result.Split(';');
+        chains.Should().HaveCount(5);
     }
 
     // ── GPU-accelerated scaling ─────────────────────────────────────────────
@@ -139,130 +139,130 @@ public class FilterGraphBuilderTests
     public void GpuScale_CudaScale_ProducesCorrectFilter()
     {
         string result = new FilterGraphBuilder()
-            .AddGpuScale(inputLabel: "0:v", scaleFilter: "scale_cuda", width: 1920, height: 1080, outputLabel: "v0")
+            .AddGpuScale("0:v", "scale_cuda", 1920, 1080, "v0")
             .Build();
 
-        result.Should().Be(expected: "[0:v]scale_cuda=1920:1080[v0]");
+        result.Should().Be("[0:v]scale_cuda=1920:1080[v0]");
     }
 
     [Fact]
     public void GpuScale_QsvScale_ProducesCorrectFilter()
     {
         string result = new FilterGraphBuilder()
-            .AddGpuScale(inputLabel: "0:v", scaleFilter: "scale_qsv", width: 3840, height: 2160, outputLabel: "v0")
+            .AddGpuScale("0:v", "scale_qsv", 3840, 2160, "v0")
             .Build();
 
-        result.Should().Be(expected: "[0:v]scale_qsv=3840:2160[v0]");
+        result.Should().Be("[0:v]scale_qsv=3840:2160[v0]");
     }
 
     [Theory]
-    [InlineData(data: "scale_cuda")]
-    [InlineData(data: "scale_qsv")]
-    [InlineData(data: "scale_npp")]
+    [InlineData("scale_cuda")]
+    [InlineData("scale_qsv")]
+    [InlineData("scale_npp")]
     public void GpuScale_DifferentScalers_AllFormatted(string scaler)
     {
         string result = new FilterGraphBuilder()
-            .AddGpuScale(inputLabel: "0:v", scaleFilter: scaler, width: 1280, height: 720, outputLabel: "out")
+            .AddGpuScale("0:v", scaler, 1280, 720, "out")
             .Build();
 
-        result.Should().Contain(expected: scaler);
-        result.Should().Contain(expected: "1280:720");
+        result.Should().Contain(scaler);
+        result.Should().Contain("1280:720");
     }
 
     [Fact]
     public void GpuScale_WithExplicitWidth_UsesProvidedDimensions()
     {
         string result = new FilterGraphBuilder()
-            .AddGpuScale(inputLabel: "input", scaleFilter: "scale_cuda", width: 4096, height: 2160, outputLabel: "hq")
+            .AddGpuScale("input", "scale_cuda", 4096, 2160, "hq")
             .Build();
 
-        result.Should().Contain(expected: "4096:2160");
+        result.Should().Contain("4096:2160");
     }
 
     // ── Tonemap algorithm variations ────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: "hable")]
-    [InlineData(data: "mobius")]
-    [InlineData(data: "reinhard")]
-    [InlineData(data: "bt2390")]
+    [InlineData("hable")]
+    [InlineData("mobius")]
+    [InlineData("reinhard")]
+    [InlineData("bt2390")]
     public void Tonemap_VaryingAlgorithm_IncludesAlgo(string algorithm)
     {
-        string result = new FilterGraphBuilder().AddTonemap(inputLabel: "0:v", algorithm: algorithm, outputLabel: "sdr").Build();
+        string result = new FilterGraphBuilder().AddTonemap("0:v", algorithm, "sdr").Build();
 
-        result.Should().Contain(expected: $"tonemap={algorithm}");
+        result.Should().Contain($"tonemap={algorithm}");
     }
 
     [Fact]
     public void Tonemap_Hable_ProducesFullChain()
     {
-        string result = new FilterGraphBuilder().AddTonemap(inputLabel: "0:v", algorithm: "hable", outputLabel: "sdr").Build();
+        string result = new FilterGraphBuilder().AddTonemap("0:v", "hable", "sdr").Build();
 
-        result.Should().Contain(expected: "zscale=t=linear");
-        result.Should().Contain(expected: "tonemap=tonemap=hable");
-        result.Should().Contain(expected: "zscale=t=bt709:m=bt709:r=tv");
-        result.Should().Contain(expected: "format=yuv420p");
+        result.Should().Contain("zscale=t=linear");
+        result.Should().Contain("tonemap=tonemap=hable");
+        result.Should().Contain("zscale=t=bt709:m=bt709:r=tv");
+        result.Should().Contain("format=yuv420p");
     }
 
     [Fact]
     public void LibplaceboTonemap_IncludesAllColorParameters()
     {
         string result = new FilterGraphBuilder()
-            .AddLibplaceboTonemap(inputLabel: "0:v", algorithm: "hable", outputLabel: "sdr")
+            .AddLibplaceboTonemap("0:v", "hable", "sdr")
             .Build();
 
-        result.Should().Contain(expected: "libplacebo=tonemapping=hable");
-        result.Should().Contain(expected: "color_primaries=bt709");
-        result.Should().Contain(expected: "color_trc=bt709");
-        result.Should().Contain(expected: "colorspace=bt709");
-        result.Should().Contain(expected: "format=yuv420p");
+        result.Should().Contain("libplacebo=tonemapping=hable");
+        result.Should().Contain("color_primaries=bt709");
+        result.Should().Contain("color_trc=bt709");
+        result.Should().Contain("colorspace=bt709");
+        result.Should().Contain("format=yuv420p");
     }
 
     [Theory]
-    [InlineData(data: "hable")]
-    [InlineData(data: "lut3d")]
-    [InlineData(data: "mobius")]
+    [InlineData("hable")]
+    [InlineData("lut3d")]
+    [InlineData("mobius")]
     public void LibplaceboTonemap_VaryingAlgorithm_IncludesAlgo(string algorithm)
     {
         string result = new FilterGraphBuilder()
-            .AddLibplaceboTonemap(inputLabel: "0:v", algorithm: algorithm, outputLabel: "sdr")
+            .AddLibplaceboTonemap("0:v", algorithm, "sdr")
             .Build();
 
-        result.Should().Contain(expected: $"libplacebo=tonemapping={algorithm}");
+        result.Should().Contain($"libplacebo=tonemapping={algorithm}");
     }
 
     // ── Deinterlace methods ─────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: "yadif")]
-    [InlineData(data: "w3fdif")]
-    [InlineData(data: "bwdif")]
+    [InlineData("yadif")]
+    [InlineData("w3fdif")]
+    [InlineData("bwdif")]
     public void Deinterlace_DifferentMethods_AllIncluded(string method)
     {
-        string result = new FilterGraphBuilder().AddDeinterlace(inputLabel: "0:v", outputLabel: "deint", method: method).Build();
+        string result = new FilterGraphBuilder().AddDeinterlace("0:v", "deint", method).Build();
 
-        result.Should().Be(expected: $"[0:v]{method}[deint]");
+        result.Should().Be($"[0:v]{method}[deint]");
     }
 
     [Fact]
     public void Deinterlace_DefaultMethod_IsYadif()
     {
-        string result = new FilterGraphBuilder().AddDeinterlace(inputLabel: "0:v", outputLabel: "deint").Build();
+        string result = new FilterGraphBuilder().AddDeinterlace("0:v", "deint").Build();
 
-        result.Should().Contain(expected: "yadif");
+        result.Should().Contain("yadif");
     }
 
     // ── Crop filter ─────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: [1920, 800, 0, 140])]
-    [InlineData(data: [1280, 720, 0, 0])]
-    [InlineData(data: [1080, 1080, 420, 0])]
+    [InlineData([1920, 800, 0, 140])]
+    [InlineData([1280, 720, 0, 0])]
+    [InlineData([1080, 1080, 420, 0])]
     public void Crop_VaryingDimensions_AllFormatted(int w, int h, int x, int y)
     {
-        string result = new FilterGraphBuilder().AddCrop(inputLabel: "0:v", width: w, height: h, x: x, y: y, outputLabel: "cropped").Build();
+        string result = new FilterGraphBuilder().AddCrop("0:v", w, h, x, y, "cropped").Build();
 
-        result.Should().Be(expected: $"[0:v]crop={w}:{h}:{x}:{y}[cropped]");
+        result.Should().Be($"[0:v]crop={w}:{h}:{x}:{y}[cropped]");
     }
 
     // ── Split filter with many outputs ──────────────────────────────────────
@@ -271,27 +271,27 @@ public class FilterGraphBuilderTests
     public void Split_ManyOutputs_AllIncluded()
     {
         string[] outputs = ["a", "b", "c", "d", "e"];
-        string result = new FilterGraphBuilder().AddSplit(inputLabel: "0:v", outputLabels: outputs).Build();
+        string result = new FilterGraphBuilder().AddSplit("0:v", outputs).Build();
 
-        result.Should().Contain(expected: "split=5");
+        result.Should().Contain("split=5");
         foreach (string label in outputs)
         {
-            result.Should().Contain(expected: $"[{label}]");
+            result.Should().Contain($"[{label}]");
         }
     }
 
     // ── ScaleWidth edge case ────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: 320)]
-    [InlineData(data: 640)]
-    [InlineData(data: 1280)]
-    [InlineData(data: 1920)]
+    [InlineData(320)]
+    [InlineData(640)]
+    [InlineData(1280)]
+    [InlineData(1920)]
     public void ScaleWidth_VaryingWidths_MaintainsAspectRatio(int width)
     {
-        string result = new FilterGraphBuilder().AddScaleWidth(inputLabel: "0:v", width: width, outputLabel: "scaled").Build();
+        string result = new FilterGraphBuilder().AddScaleWidth("0:v", width, "scaled").Build();
 
-        result.Should().Contain(expected: $"scale={width}:-2");
+        result.Should().Contain($"scale={width}:-2");
     }
 
     // ── Filter chaining: multiple operations ────────────────────────────────
@@ -300,30 +300,30 @@ public class FilterGraphBuilderTests
     public void MultipleOperations_ChainedCorrectly()
     {
         string result = new FilterGraphBuilder()
-            .AddDeinterlace(inputLabel: "0:v", outputLabel: "deint")
-            .AddScale(inputLabel: "deint", width: 1920, height: 1080, outputLabel: "scaled")
-            .AddCrop(inputLabel: "scaled", width: 1920, height: 1000, x: 0, y: 40, outputLabel: "cropped")
+            .AddDeinterlace("0:v", "deint")
+            .AddScale("deint", 1920, 1080, "scaled")
+            .AddCrop("scaled", 1920, 1000, 0, 40, "cropped")
             .Build();
 
-        string[] chains = result.Split(separator: ';');
-        chains.Should().HaveCount(expected: 3);
-        chains[0].Should().Contain(expected: "yadif");
-        chains[1].Should().Contain(expected: "scale=1920:1080");
-        chains[2].Should().Contain(expected: "crop=1920:1000:0:40");
+        string[] chains = result.Split(';');
+        chains.Should().HaveCount(3);
+        chains[0].Should().Contain("yadif");
+        chains[1].Should().Contain("scale=1920:1080");
+        chains[2].Should().Contain("crop=1920:1000:0:40");
     }
 
     [Fact]
     public void ComplexPipeline_AllOperations()
     {
         string result = new FilterGraphBuilder()
-            .AddTonemap(inputLabel: "0:v", algorithm: "hable", outputLabel: "sdr")
-            .AddSplit(inputLabel: "sdr", outputLabels: ["a", "b"])
-            .AddScale(inputLabel: "a", width: 1920, height: 1080, outputLabel: "v0")
-            .AddGpuScale(inputLabel: "b", scaleFilter: "scale_cuda", width: 1280, height: 720, outputLabel: "v1")
+            .AddTonemap("0:v", "hable", "sdr")
+            .AddSplit("sdr", ["a", "b"])
+            .AddScale("a", 1920, 1080, "v0")
+            .AddGpuScale("b", "scale_cuda", 1280, 720, "v1")
             .Build();
 
-        string[] chains = result.Split(separator: ';');
-        chains.Should().HaveCount(expected: 4);
+        string[] chains = result.Split(';');
+        chains.Should().HaveCount(4);
     }
 
     // ── Empty and single-filter edge cases ──────────────────────────────────
@@ -332,23 +332,23 @@ public class FilterGraphBuilderTests
     public void MultipleFilter_BuildsWithSemicolonSeparator()
     {
         string result = new FilterGraphBuilder()
-            .AddFilter(inputLabel: "0:v", filter: "eq=brightness=0.1", outputLabel: "brightened")
-            .AddFilter(inputLabel: "brightened", filter: "hflip", outputLabel: "flipped")
+            .AddFilter("0:v", "eq=brightness=0.1", "brightened")
+            .AddFilter("brightened", "hflip", "flipped")
             .Build();
 
-        result.Should().Contain(expected: ";");
-        string[] chains = result.Split(separator: ';');
-        chains.Should().HaveCount(expected: 2);
+        result.Should().Contain(";");
+        string[] chains = result.Split(';');
+        chains.Should().HaveCount(2);
     }
 
     [Fact]
     public void ComplexLabelNames_Handled()
     {
         string result = new FilterGraphBuilder()
-            .AddFilter(inputLabel: "input_video", filter: "some_filter=param", outputLabel: "output_video_1")
+            .AddFilter("input_video", "some_filter=param", "output_video_1")
             .Build();
 
-        result.Should().Contain(expected: "[input_video]");
-        result.Should().Contain(expected: "[output_video_1]");
+        result.Should().Contain("[input_video]");
+        result.Should().Contain("[output_video_1]");
     }
 }

@@ -21,7 +21,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Media;
 
-[Trait(name: "Category", value: "People")]
+[Trait("Category", "People")]
 public class PeopleControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -38,27 +38,27 @@ public class PeopleControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Index_Authenticated_ReturnsPaginatedEnvelope()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/person?take=10&page=0");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/person?take=10&page=0");
 
-        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(json: body);
+        using JsonDocument document = JsonDocument.Parse(body);
 
         Assert.True(
-            condition: document.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data),
-            userMessage: "Paginated response must expose a 'data' array"
+            document.RootElement.TryGetProperty("data", out JsonElement data),
+            "Paginated response must expose a 'data' array"
         );
-        Assert.Equal(expected: JsonValueKind.Array, actual: data.ValueKind);
-        Assert.True(condition: document.RootElement.TryGetProperty(propertyName: "has_more", value: out _));
+        Assert.Equal(JsonValueKind.Array, data.ValueKind);
+        Assert.True(document.RootElement.TryGetProperty("has_more", out _));
     }
 
     [Fact]
     public async Task Index_Unauthenticated_DoesNotReturnOk()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: "/api/v1/person?take=10&page=0");
+        HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/person?take=10&page=0");
 
-        Assert.NotEqual(expected: HttpStatusCode.OK, actual: response.StatusCode);
+        Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -66,31 +66,31 @@ public class PeopleControllerTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<IPersonMetadataProvider> providerMock = new();
         providerMock
-            .Setup(expression: p => p.GetPersonAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(exception: new InvalidOperationException(message: "TMDB provider unreachable"));
+            .Setup(p => p.GetPersonAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("TMDB provider unreachable"));
 
         HttpClient client = _factory
-            .WithWebHostBuilder(configuration: builder =>
+            .WithWebHostBuilder(builder =>
             {
-                builder.ConfigureTestServices(servicesConfiguration: services =>
+                builder.ConfigureTestServices(services =>
                 {
                     services.RemoveAll<IPersonMetadataProvider>();
-                    services.AddSingleton(implementationInstance: providerMock.Object);
+                    services.AddSingleton(providerMock.Object);
                 });
             })
             .CreateClient()
             .AsAuthenticated();
 
-        HttpResponseMessage response = await client.GetAsync(requestUri: "/api/v1/person/123");
+        HttpResponseMessage response = await client.GetAsync("/api/v1/person/123");
 
         string body = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound, because: body);
-        response.StatusCode.Should().NotBe(unexpected: HttpStatusCode.InternalServerError);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound, body);
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError);
 
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        doc.RootElement.TryGetProperty(propertyName: "title", value: out JsonElement title)
+        using JsonDocument doc = JsonDocument.Parse(body);
+        doc.RootElement.TryGetProperty("title", out JsonElement title)
             .Should()
-            .BeTrue(because: "a provider failure must still return the standard ProblemDetails envelope");
-        title.GetString().Should().Be(expected: "Not Found.");
+            .BeTrue("a provider failure must still return the standard ProblemDetails envelope");
+        title.GetString().Should().Be("Not Found.");
     }
 }

@@ -42,59 +42,59 @@ public sealed record NfsDriverConfig(
         NfsDriverConfigRaw? raw;
         try
         {
-            raw = JsonSerializer.Deserialize<NfsDriverConfigRaw>(json: json, options: ParseOptions);
+            raw = JsonSerializer.Deserialize<NfsDriverConfigRaw>(json, ParseOptions);
         }
         catch (JsonException ex)
         {
             throw new ArgumentException(
-                message: $"Failed to parse driver_config for NFS folder {folderId}: {ex.Message}",
-                paramName: nameof(json),
-                innerException: ex
+                $"Failed to parse driver_config for NFS folder {folderId}: {ex.Message}",
+                nameof(json),
+                ex
             );
         }
 
         if (raw is null)
             throw new ArgumentException(
-                message: $"driver_config deserialized to null for NFS folder {folderId}.",
-                paramName: nameof(json)
+                $"driver_config deserialized to null for NFS folder {folderId}.",
+                nameof(json)
             );
 
-        if (string.IsNullOrWhiteSpace(value: raw.Server))
+        if (string.IsNullOrWhiteSpace(raw.Server))
             throw new ArgumentException(
-                message: $"driver_config.server is required for NFS folder {folderId}.",
-                paramName: nameof(json)
+                $"driver_config.server is required for NFS folder {folderId}.",
+                nameof(json)
             );
 
-        if (string.IsNullOrWhiteSpace(value: raw.Export))
+        if (string.IsNullOrWhiteSpace(raw.Export))
             throw new ArgumentException(
-                message: $"driver_config.export is required for NFS folder {folderId}.",
-                paramName: nameof(json)
+                $"driver_config.export is required for NFS folder {folderId}.",
+                nameof(json)
             );
 
         int version = raw.Version ?? 3;
         if (version != 3 && version != 4)
             throw new ArgumentException(
-                message: $"driver_config.version must be 3 or 4 for NFS folder {folderId} (got {version}).",
-                paramName: nameof(json)
+                $"driver_config.version must be 3 or 4 for NFS folder {folderId} (got {version}).",
+                nameof(json)
             );
 
         return new(
-            Server: raw.Server.Trim(),
-            Export: NormalizeExport(export: raw.Export.Trim()),
-            Version: version,
-            Uid: raw.Uid,
-            Gid: raw.Gid,
-            Port: raw.Port ?? 2049,
-            MountPort: raw.MountPort
+            raw.Server.Trim(),
+            NormalizeExport(raw.Export.Trim()),
+            version,
+            raw.Uid,
+            raw.Gid,
+            raw.Port ?? 2049,
+            raw.MountPort
         );
     }
 
     private static string NormalizeExport(string export)
     {
-        string normalized = export.Replace(oldChar: '\\', newChar: '/');
-        if (!normalized.StartsWith(value: '/'))
+        string normalized = export.Replace('\\', '/');
+        if (!normalized.StartsWith('/'))
             normalized = "/" + normalized;
-        return normalized.TrimEnd(trimChar: '/') is "" ? "/" : normalized.TrimEnd(trimChar: '/');
+        return normalized.TrimEnd('/') is "" ? "/" : normalized.TrimEnd('/');
     }
 
     // -----------------------------------------------------------------------
@@ -108,7 +108,7 @@ public sealed record NfsDriverConfig(
         int? gid = null,
         int port = 2049,
         int? mountPort = null
-    ) => new(Server: server, Export: NormalizeExport(export: export), Version: version, Uid: uid, Gid: gid, Port: port, MountPort: mountPort);
+    ) => new(server, NormalizeExport(export), version, uid, gid, port, mountPort);
 
     // -----------------------------------------------------------------------
     // Raw deserialization target (snake_case keys)

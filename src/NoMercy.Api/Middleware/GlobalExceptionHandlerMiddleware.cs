@@ -36,24 +36,24 @@ public class GlobalExceptionHandlerMiddleware
     {
         try
         {
-            await _next(context: context);
+            await _next(context);
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
             _logger.LogDebug(
-                message: "[{TraceIdentifier}] Request cancelled by client: {Path}", args: [context.TraceIdentifier, context.Request.Path]
+                "[{TraceIdentifier}] Request cancelled by client: {Path}", [context.TraceIdentifier, context.Request.Path]
             );
         }
-        catch (Exception ex) when (IsClientDisconnect(ex: ex, context: context))
+        catch (Exception ex) when (IsClientDisconnect(ex, context))
         {
             _logger.LogDebug(
-                message: "[{TraceIdentifier}] Client disconnected mid-request: {Path} ({Name}: {Message})", args: [context.TraceIdentifier, context.Request.Path, ex.GetType().Name, ex.Message]
+                "[{TraceIdentifier}] Client disconnected mid-request: {Path} ({Name}: {Message})", [context.TraceIdentifier, context.Request.Path, ex.GetType().Name, ex.Message]
             );
         }
         catch (Exception ex)
         {
             string traceId = context.TraceIdentifier;
-            _logger.LogError(message: "[{TraceId}] Unhandled exception: {Ex}", args: [traceId, ex]);
+            _logger.LogError("[{TraceId}] Unhandled exception: {Ex}", [traceId, ex]);
 
             // Headers already flushed (e.g. mid-stream of a media response) —
             // there's nothing more we can do without throwing again from
@@ -75,7 +75,7 @@ public class GlobalExceptionHandlerMiddleware
                 Extensions = { { "traceId", traceId } },
             };
 
-            await context.Response.WriteAsJsonAsync(value: problem);
+            await context.Response.WriteAsJsonAsync(problem);
         }
     }
 
@@ -89,10 +89,10 @@ public class GlobalExceptionHandlerMiddleware
             BadHttpRequestException => true,
             ConnectionResetException => true,
             IOException io
-                when io.Message.Contains(value: "client reset", comparisonType: StringComparison.OrdinalIgnoreCase)
+                when io.Message.Contains("client reset", StringComparison.OrdinalIgnoreCase)
                     || io.Message.Contains(
-                        value: "connection was forcibly closed",
-                        comparisonType: StringComparison.OrdinalIgnoreCase
+                        "connection was forcibly closed",
+                        StringComparison.OrdinalIgnoreCase
                     )
                     || io.InnerException is ConnectionResetException => true,
             _ => false,

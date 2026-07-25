@@ -35,70 +35,70 @@ public static class BuiltinPresets
         [
             Remux(),
             Archive(
-                name: "HEVC Archive (Visually Lossless)",
-                description: "HEVC 10-bit at CRF 18, source resolution. Indistinguishable from the source at normal viewing distance and typically 40-60% smaller. Audio and subtitles are copied untouched.",
-                codec: VideoCodecType.H265,
-                quality: EncodingQuality.Ultra
+                "HEVC Archive (Visually Lossless)",
+                "HEVC 10-bit at CRF 18, source resolution. Indistinguishable from the source at normal viewing distance and typically 40-60% smaller. Audio and subtitles are copied untouched.",
+                VideoCodecType.H265,
+                EncodingQuality.Ultra
             ),
             Archive(
-                name: "HEVC Space Saver",
-                description: "HEVC 10-bit at CRF 22, source resolution. The best size-to-quality trade for a large library. Audio and subtitles are copied untouched.",
-                codec: VideoCodecType.H265,
-                quality: EncodingQuality.High
+                "HEVC Space Saver",
+                "HEVC 10-bit at CRF 22, source resolution. The best size-to-quality trade for a large library. Audio and subtitles are copied untouched.",
+                VideoCodecType.H265,
+                EncodingQuality.High
             ),
             Archive(
-                name: "AV1 Archive (Maximum Compression)",
-                description: "AV1 10-bit at CRF 26, source resolution. Smallest files of any preset here and slow to produce, best for titles you rarely re-encode. Audio and subtitles are copied untouched.",
-                codec: VideoCodecType.Av1,
-                quality: EncodingQuality.VeryHigh
+                "AV1 Archive (Maximum Compression)",
+                "AV1 10-bit at CRF 26, source resolution. Smallest files of any preset here and slow to produce, best for titles you rarely re-encode. Audio and subtitles are copied untouched.",
+                VideoCodecType.Av1,
+                EncodingQuality.VeryHigh
             ),
             SingleFileExport(
-                name: "H.264 MP4 (Universal)",
-                description: "H.264 MP4 with stereo AAC, source resolution. Plays anywhere.",
-                codec: VideoCodecType.H264,
-                quality: EncodingQuality.Balanced
+                "H.264 MP4 (Universal)",
+                "H.264 MP4 with stereo AAC, source resolution. Plays anywhere.",
+                VideoCodecType.H264,
+                EncodingQuality.Balanced
             ),
             SingleFileExport(
-                name: "HEVC MP4 (High Quality)",
-                description: "HEVC 10-bit MP4 with stereo AAC, source resolution. Smaller than the H.264 export at the same quality, needs a reasonably modern player.",
-                codec: VideoCodecType.H265,
-                quality: EncodingQuality.High
+                "HEVC MP4 (High Quality)",
+                "HEVC 10-bit MP4 with stereo AAC, source resolution. Smaller than the H.264 export at the same quality, needs a reasonably modern player.",
+                VideoCodecType.H265,
+                EncodingQuality.High
             ),
             TwoPassExport(),
             LegacyBaseline(),
             StreamingLadder(
-                name: DefaultStreamingPresetName,
-                description: "Full H.264 ladder from 144p to 2160p in MPEG-TS. The widest-reaching option and the default for auto-encode.",
-                codec: VideoCodecType.H264,
-                tiers: LadderTiers.YouTube,
-                container: Container.HlsTs,
-                audio: [AacStereo()]
+                DefaultStreamingPresetName,
+                "Full H.264 ladder from 144p to 2160p in MPEG-TS. The widest-reaching option and the default for auto-encode.",
+                VideoCodecType.H264,
+                LadderTiers.YouTube,
+                Container.HlsTs,
+                [AacStereo()]
             ),
             StreamingLadder(
-                name: "HEVC Streaming (Premium)",
-                description: "HEVC ladder from 360p to 2160p in fMP4, with stereo AAC and 5.1 E-AC-3. Roughly half the bitrate of H.264 for the same picture.",
-                codec: VideoCodecType.H265,
-                tiers: LadderTiers.Premium,
-                container: Container.HlsFmp4,
-                audio: [AacStereo(), Eac3Surround()]
+                "HEVC Streaming (Premium)",
+                "HEVC ladder from 360p to 2160p in fMP4, with stereo AAC and 5.1 E-AC-3. Roughly half the bitrate of H.264 for the same picture.",
+                VideoCodecType.H265,
+                LadderTiers.Premium,
+                Container.HlsFmp4,
+                [AacStereo(), Eac3Surround()]
             ),
             HdrStreamingLadder(),
             TonemappedStreamingLadder(),
             StreamingLadder(
-                name: "AV1 Streaming (Efficient)",
-                description: "AV1 ladder from 360p to 2160p in fMP4. The cheapest bitrate per rung, for clients new enough to decode it.",
-                codec: VideoCodecType.Av1,
-                tiers: LadderTiers.Premium,
-                container: Container.HlsFmp4,
-                audio: [AacStereo()]
+                "AV1 Streaming (Efficient)",
+                "AV1 ladder from 360p to 2160p in fMP4. The cheapest bitrate per rung, for clients new enough to decode it.",
+                VideoCodecType.Av1,
+                LadderTiers.Premium,
+                Container.HlsFmp4,
+                [AacStereo()]
             ),
             StreamingLadder(
-                name: "DASH Streaming (Universal)",
-                description: "H.264 ladder from 360p to 2160p in DASH, for clients that speak MPEG-DASH rather than HLS.",
-                codec: VideoCodecType.H264,
-                tiers: LadderTiers.Premium,
-                container: Container.Dash,
-                audio: [AacStereo()]
+                "DASH Streaming (Universal)",
+                "H.264 ladder from 360p to 2160p in DASH, for clients that speak MPEG-DASH rather than HLS.",
+                VideoCodecType.H264,
+                LadderTiers.Premium,
+                Container.Dash,
+                [AacStereo()]
             ),
             DirectStreamAudio(),
             // Fixed-resolution library presets. The ladders above adapt per source;
@@ -106,23 +106,23 @@ public static class BuiltinPresets
             // same rung. Height clamps to the source, so a lower-resolution episode
             // is never upscaled to meet the name.
             LibraryPreset(
-                name: "Anime 1080p HEVC 10-bit",
-                description: "HEVC 10-bit 1080p tuned for animation: flat colour and hard line art get the bitrate that x265's default tuning spends on film grain. CRF 20, which lands at roughly source size against the x265 10-bit releases anime usually arrives as.",
+                "Anime 1080p HEVC 10-bit",
+                "HEVC 10-bit 1080p tuned for animation: flat colour and hard line art get the bitrate that x265's default tuning spends on film grain. CRF 20, which lands at roughly source size against the x265 10-bit releases anime usually arrives as.",
                 width: 1920,
                 height: 1080,
                 quality: EncodingQuality.VeryHigh,
                 tune: "animation"
             ),
             LibraryPreset(
-                name: "1080p HEVC 10-bit",
-                description: "HEVC 10-bit 1080p at CRF 18. Visually lossless against a 1080p source, and the smallest a 1080p library gets without giving up picture.",
+                "1080p HEVC 10-bit",
+                "HEVC 10-bit 1080p at CRF 18. Visually lossless against a 1080p source, and the smallest a 1080p library gets without giving up picture.",
                 width: 1920,
                 height: 1080,
                 quality: EncodingQuality.Ultra
             ),
             LibraryPreset(
-                name: "4K HDR HEVC 10-bit",
-                description: "HEVC 10-bit 2160p with HDR carried through untouched. CRF 18, so the only thing that changes against a 4K HDR source is the codec.",
+                "4K HDR HEVC 10-bit",
+                "HEVC 10-bit 2160p with HDR carried through untouched. CRF 18, so the only thing that changes against a 4K HDR source is the codec.",
                 width: 3840,
                 height: 2160,
                 quality: EncodingQuality.Ultra,
@@ -130,8 +130,8 @@ public static class BuiltinPresets
                 hdrOptions: new() { Force10Bit = true }
             ),
             LibraryPreset(
-                name: "1080p SDR HEVC 10-bit",
-                description: "HEVC 10-bit 1080p with any HDR source tonemapped down to SDR. The companion to the 4K HDR preset: pair them on a folder so HDR clients take the 4K and everything else gets a correct SDR picture rather than a washed-out one.",
+                "1080p SDR HEVC 10-bit",
+                "HEVC 10-bit 1080p with any HDR source tonemapped down to SDR. The companion to the 4K HDR preset: pair them on a folder so HDR clients take the 4K and everything else gets a correct SDR picture rather than a washed-out one.",
                 width: 1920,
                 height: 1080,
                 quality: EncodingQuality.Ultra,
@@ -139,26 +139,26 @@ public static class BuiltinPresets
                 convertHdrToSdr: true
             ),
             MusicTrack(
-                name: "Music FLAC Lossless",
-                description: "Lossless FLAC, stereo, 48 kHz.",
-                container: Container.Flac,
-                codec: AudioCodecType.Flac,
+                "Music FLAC Lossless",
+                "Lossless FLAC, stereo, 48 kHz.",
+                Container.Flac,
+                AudioCodecType.Flac,
                 bitrateKbps: 0,
                 sampleRateHz: 48000
             ),
             MusicTrack(
-                name: "Music AAC 256k",
-                description: "AAC 256 kbps, stereo, 44.1 kHz.",
-                container: Container.Aac,
-                codec: AudioCodecType.Aac,
+                "Music AAC 256k",
+                "AAC 256 kbps, stereo, 44.1 kHz.",
+                Container.Aac,
+                AudioCodecType.Aac,
                 bitrateKbps: 256,
                 sampleRateHz: 44100
             ),
             MusicTrack(
-                name: "Music MP3 320k",
-                description: "MP3 320 kbps, stereo, 44.1 kHz.",
-                container: Container.Mp3,
-                codec: AudioCodecType.Mp3,
+                "Music MP3 320k",
+                "MP3 320 kbps, stereo, 44.1 kHz.",
+                Container.Mp3,
+                AudioCodecType.Mp3,
                 bitrateKbps: 320,
                 sampleRateHz: 44100
             ),
@@ -172,8 +172,8 @@ public static class BuiltinPresets
     /// </summary>
     private static Ulid IdFromName(string name)
     {
-        byte[] hash = SHA256.HashData(source: Encoding.UTF8.GetBytes(s: name));
-        return new(bytes: hash.AsSpan(start: 0, length: 16).ToArray());
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(name));
+        return new(hash.AsSpan(0, 16).ToArray());
     }
 
     private static AudioOutput AudioTrack(
@@ -196,9 +196,9 @@ public static class BuiltinPresets
             PlaylistNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}"
         );
 
-    private static AudioOutput AacStereo() => AudioTrack(codec: AudioCodecType.Aac, bitrateKbps: 192, sampleRateHz: 48000, channels: 2);
+    private static AudioOutput AacStereo() => AudioTrack(AudioCodecType.Aac, 192, 48000, 2);
 
-    private static AudioOutput Eac3Surround() => AudioTrack(codec: AudioCodecType.Eac3, bitrateKbps: 448, sampleRateHz: 48000, channels: 6);
+    private static AudioOutput Eac3Surround() => AudioTrack(AudioCodecType.Eac3, 448, 48000, 6);
 
     private static AudioOutput CopyAudio() =>
         new(
@@ -310,7 +310,7 @@ public static class BuiltinPresets
         bool autoDetectCrop = false
     ) =>
         new(
-            Id: IdFromName(name: name),
+            Id: IdFromName(name),
             Name: name,
             Container: container,
             Video: video,
@@ -359,7 +359,7 @@ public static class BuiltinPresets
         SingleFile(
             name: name,
             container: Container.Mkv,
-            video: VideoCrf(codec: codec, tuning: CodecTunings.For(codec: codec, quality: quality)),
+            video: VideoCrf(codec, CodecTunings.For(codec, quality)),
             audio: [CopyAudio()],
             subs: [CopySubs()],
             description: description,
@@ -377,7 +377,7 @@ public static class BuiltinPresets
         SingleFile(
             name: name,
             container: Container.Mp4,
-            video: VideoCrf(codec: codec, tuning: CodecTunings.For(codec: codec, quality: quality)),
+            video: VideoCrf(codec, CodecTunings.For(codec, quality)),
             audio: [AacStereo()],
             subs: [DefaultSubs()],
             description: description,
@@ -393,8 +393,8 @@ public static class BuiltinPresets
     private static EncodingProfile TwoPassExport()
     {
         CodecTunings.CodecTuning tuning = CodecTunings.For(
-            codec: VideoCodecType.H264,
-            quality: EncodingQuality.High
+            VideoCodecType.H264,
+            EncodingQuality.High
         );
 
         VideoOutput video = new(
@@ -437,8 +437,8 @@ public static class BuiltinPresets
             name: "Legacy Device H.264 Baseline",
             container: Container.Mp4,
             video: VideoCrf(
-                codec: VideoCodecType.H264,
-                tuning: CodecTunings.For(codec: VideoCodecType.H264, quality: EncodingQuality.Fast),
+                VideoCodecType.H264,
+                CodecTunings.For(VideoCodecType.H264, EncodingQuality.Fast),
                 codecProfile: CodecProfile.Baseline,
                 level: "4.0",
                 bitDepth: 8
@@ -456,7 +456,7 @@ public static class BuiltinPresets
     /// </summary>
     private static EncodingProfile DirectStreamAudio() =>
         new(
-            Id: IdFromName(name: "Direct Stream Audio HLS"),
+            Id: IdFromName("Direct Stream Audio HLS"),
             Name: "Direct Stream Audio HLS",
             Container: Container.AudioHlsFmp4,
             Video: null,
@@ -494,7 +494,7 @@ public static class BuiltinPresets
             name: name,
             container: container,
             video: null,
-            audio: [AudioTrack(codec: codec, bitrateKbps: bitrateKbps, sampleRateHz: sampleRateHz, channels: 2)],
+            audio: [AudioTrack(codec, bitrateKbps, sampleRateHz, 2)],
             subs: [],
             description: description
         );
@@ -505,12 +505,12 @@ public static class BuiltinPresets
     /// </summary>
     private static EncodingProfile HdrStreamingLadder() =>
         StreamingLadder(
-            name: "HEVC HDR Streaming (Premium)",
-            description: "The HEVC premium ladder with HDR preserved end to end. Clients that cannot take HDR pull the tonemapped SDR rungs instead.",
-            codec: VideoCodecType.H265,
-            tiers: LadderTiers.Premium,
-            container: Container.HlsFmp4,
-            audio: [AacStereo(), Eac3Surround()],
+            "HEVC HDR Streaming (Premium)",
+            "The HEVC premium ladder with HDR preserved end to end. Clients that cannot take HDR pull the tonemapped SDR rungs instead.",
+            VideoCodecType.H265,
+            LadderTiers.Premium,
+            Container.HlsFmp4,
+            [AacStereo(), Eac3Surround()],
             hdrPolicy: HdrPolicies.EmitHdrAndSdr,
             hdrOptions: new() { Force10Bit = true }
         );
@@ -523,12 +523,12 @@ public static class BuiltinPresets
     /// </summary>
     private static EncodingProfile TonemappedStreamingLadder() =>
         StreamingLadder(
-            name: "H.264 Streaming (HDR to SDR)",
-            description: "Tonemaps an HDR source down to 8-bit SDR H.264. For libraries whose clients cannot render HDR at all, where the passthrough ladders would hand them washed-out picture.",
-            codec: VideoCodecType.H264,
-            tiers: LadderTiers.YouTube,
-            container: Container.HlsTs,
-            audio: [AacStereo()],
+            "H.264 Streaming (HDR to SDR)",
+            "Tonemaps an HDR source down to 8-bit SDR H.264. For libraries whose clients cannot render HDR at all, where the passthrough ladders would hand them washed-out picture.",
+            VideoCodecType.H264,
+            LadderTiers.YouTube,
+            Container.HlsTs,
+            [AacStereo()],
             hdrPolicy: HdrPolicies.AlwaysTonemap,
             convertHdrToSdr: true
         );
@@ -551,15 +551,15 @@ public static class BuiltinPresets
         bool convertHdrToSdr = false
     )
     {
-        CodecTunings.CodecTuning tuning = CodecTunings.For(codec: VideoCodecType.H265, quality: quality);
+        CodecTunings.CodecTuning tuning = CodecTunings.For(VideoCodecType.H265, quality);
 
         return new(
-            Id: IdFromName(name: name),
+            Id: IdFromName(name),
             Name: name,
             Container: Container.HlsFmp4,
             Video: VideoCrf(
-                codec: VideoCodecType.H265,
-                tuning: tuning,
+                VideoCodecType.H265,
+                tuning,
                 width: width,
                 height: height,
                 tune: tune,
@@ -622,7 +622,7 @@ public static class BuiltinPresets
         ClientCompatibility compat = ClientCompatibility.Universal
     )
     {
-        CodecTunings.CodecTuning tuning = CodecTunings.For(codec: codec, quality: EncodingQuality.Streaming);
+        CodecTunings.CodecTuning tuning = CodecTunings.For(codec, EncodingQuality.Streaming);
 
         AutoLadderConfig autoConfig = new()
         {
@@ -630,7 +630,7 @@ public static class BuiltinPresets
             BitrateStrategy = BitrateStrategy.AppleHlsRecommended,
             CodecPolicy = LadderCodecPolicy.Uniform,
             Crf = tuning.Crf,
-            MaxRungs = Math.Max(val1: 1, val2: tiers.Length),
+            MaxRungs = Math.Max(1, tiers.Length),
             MinRungs = 1,
             NeverUpscale = true,
             VbrCeilingMultiplier = 1.5,
@@ -638,10 +638,10 @@ public static class BuiltinPresets
         };
 
         return new(
-            Id: IdFromName(name: name),
+            Id: IdFromName(name),
             Name: name,
             Container: container,
-            Video: VideoCrf(codec: codec, tuning: tuning, convertHdrToSdr: convertHdrToSdr),
+            Video: VideoCrf(codec, tuning, convertHdrToSdr: convertHdrToSdr),
             Audio: audio,
             Subtitles: [DefaultSubs()],
             Thumbnails: null,

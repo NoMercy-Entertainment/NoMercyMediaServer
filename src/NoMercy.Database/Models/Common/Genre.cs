@@ -15,20 +15,20 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Common;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(Name))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(Name))]
 public class Genre
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
     public ICollection<GenreMovie> GenreMovies { get; set; } = [];
     public ICollection<GenreTv> GenreTvShows { get; set; } = [];
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public ICollection<Translation> Translations { get; set; } = [];
 }

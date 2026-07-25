@@ -20,7 +20,7 @@ public static class Config
     }
 
     public static string ManagementSocketPath =>
-        Path.Combine(path1: AppFiles.AppPath, path2: "nomercy-management.sock");
+        Path.Combine(AppFiles.AppPath, "nomercy-management.sock");
 
     public static bool IsDev { get; set; }
     public static bool IsTest { get; set; }

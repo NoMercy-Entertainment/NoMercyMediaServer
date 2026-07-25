@@ -36,7 +36,7 @@ namespace NoMercy.Tests.Api.Services;
 ///   (1) FIRES-ON-BAD — the failing input emits exactly that id.
 ///   (2) SILENT-ON-VALID-NEIGHBOR — the closest valid input does NOT emit it.
 /// </summary>
-[Trait(name: "Category", value: "EncoderProfileImportGuard")]
+[Trait("Category", "EncoderProfileImportGuard")]
 public class EncoderProfileImportGuardTests
 {
     private static readonly string ValidProfileJson =
@@ -51,12 +51,12 @@ public class EncoderProfileImportGuardTests
 
     private static MediaContext MakeContext()
     {
-        SqliteConnection connection = new(connectionString: "DataSource=:memory:");
+        SqliteConnection connection = new("DataSource=:memory:");
         connection.Open();
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: connection)
+            .UseSqlite(connection)
             .Options;
-        MediaContext context = new(options: options);
+        MediaContext context = new(options);
         context.Database.EnsureCreated();
         return context;
     }
@@ -65,31 +65,31 @@ public class EncoderProfileImportGuardTests
     {
         Mock<IEncodingPresetRepository> repository = new();
         repository
-            .Setup(expression: r => r.CreateAsync(It.IsAny<EncodingPreset>()))
-            .ReturnsAsync(valueFunction: (EncodingPreset preset) => preset);
+            .Setup(r => r.CreateAsync(It.IsAny<EncodingPreset>()))
+            .ReturnsAsync((EncodingPreset preset) => preset);
 
         Mock<IActivityLogger> activityLogger = new();
 
-        StubHttpMessageHandler handler = new(status: fetchStatus, body: fetchBody);
+        StubHttpMessageHandler handler = new(fetchStatus, fetchBody);
         Mock<IHttpClientFactory> httpClientFactory = new();
         httpClientFactory
-            .Setup(expression: f => f.CreateClient(It.IsAny<string>()))
-            .Returns(valueFunction: () => new(handler: handler));
+            .Setup(f => f.CreateClient(It.IsAny<string>()))
+            .Returns(() => new(handler));
 
         return new(
-            presetRepository: repository.Object,
-            activityLogger: activityLogger.Object,
-            httpClientFactory: httpClientFactory.Object,
-            mediaContext: MakeContext(),
-            logger: NullLogger<EncoderProfileService>.Instance
+            repository.Object,
+            activityLogger.Object,
+            httpClientFactory.Object,
+            MakeContext(),
+            NullLogger<EncoderProfileService>.Instance
         );
     }
 
     private static Task<EncoderProfileService.ImportResult> ImportInline(string? inlineJson)
     {
-        EncoderProfileService service = MakeService(fetchStatus: null, fetchBody: null);
+        EncoderProfileService service = MakeService(null, null);
         return service.ImportAsync(
-            inlineProfileJson: inlineJson,
+            inlineJson,
             url: null,
             trustUnsigned: true,
             signatureVerifier: new Mock<IProfileSignatureVerifier>().Object,
@@ -104,7 +104,7 @@ public class EncoderProfileImportGuardTests
         string fetchBody
     )
     {
-        EncoderProfileService service = MakeService(fetchStatus: fetchStatus, fetchBody: fetchBody);
+        EncoderProfileService service = MakeService(fetchStatus, fetchBody);
         return service.ImportAsync(
             inlineProfileJson: null,
             url: url,
@@ -117,14 +117,14 @@ public class EncoderProfileImportGuardTests
 
     private static bool EmitsError(EncoderProfileService.ImportResult result, string ruleId) =>
         result.ValidationError is not null
-        && result.ValidationError.Errors.Any(predicate: e => e.Id == ruleId);
+        && result.ValidationError.Errors.Any(e => e.Id == ruleId);
 
     // ---- import.source_missing ---------------------------------------------
 
     [Fact]
     public async Task Import_NeitherJsonNorUrl_EmitsSourceMissing()
     {
-        EncoderProfileService service = MakeService(fetchStatus: null, fetchBody: null);
+        EncoderProfileService service = MakeService(null, null);
 
         EncoderProfileService.ImportResult result = await service.ImportAsync(
             inlineProfileJson: null,
@@ -135,15 +135,15 @@ public class EncoderProfileImportGuardTests
             ct: CancellationToken.None
         );
 
-        EmitsError(result: result, ruleId: EncoderRuleId.ImportSourceMissing).Should().BeTrue();
+        EmitsError(result, EncoderRuleId.ImportSourceMissing).Should().BeTrue();
     }
 
     [Fact]
     public async Task Import_WithInlineJson_DoesNotEmitSourceMissing()
     {
-        EncoderProfileService.ImportResult result = await ImportInline(inlineJson: ValidProfileJson);
+        EncoderProfileService.ImportResult result = await ImportInline(ValidProfileJson);
 
-        EmitsError(result: result, ruleId: EncoderRuleId.ImportSourceMissing).Should().BeFalse();
+        EmitsError(result, EncoderRuleId.ImportSourceMissing).Should().BeFalse();
     }
 
     // ---- import.json_malformed ---------------------------------------------
@@ -151,25 +151,25 @@ public class EncoderProfileImportGuardTests
     [Fact]
     public async Task Import_MalformedInlineJson_EmitsJsonMalformed()
     {
-        EncoderProfileService.ImportResult result = await ImportInline(inlineJson: "{ this is not json");
+        EncoderProfileService.ImportResult result = await ImportInline("{ this is not json");
 
-        EmitsError(result: result, ruleId: EncoderRuleId.ImportJsonMalformed).Should().BeTrue();
+        EmitsError(result, EncoderRuleId.ImportJsonMalformed).Should().BeTrue();
     }
 
     [Fact]
     public async Task Import_NullDeserializingJson_EmitsJsonMalformed()
     {
-        EncoderProfileService.ImportResult result = await ImportInline(inlineJson: "null");
+        EncoderProfileService.ImportResult result = await ImportInline("null");
 
-        EmitsError(result: result, ruleId: EncoderRuleId.ImportJsonMalformed).Should().BeTrue();
+        EmitsError(result, EncoderRuleId.ImportJsonMalformed).Should().BeTrue();
     }
 
     [Fact]
     public async Task Import_WellFormedJson_DoesNotEmitJsonMalformed()
     {
-        EncoderProfileService.ImportResult result = await ImportInline(inlineJson: ValidProfileJson);
+        EncoderProfileService.ImportResult result = await ImportInline(ValidProfileJson);
 
-        EmitsError(result: result, ruleId: EncoderRuleId.ImportJsonMalformed).Should().BeFalse();
+        EmitsError(result, EncoderRuleId.ImportJsonMalformed).Should().BeFalse();
     }
 
     // ---- import.http_not_https ---------------------------------------------
@@ -177,7 +177,7 @@ public class EncoderProfileImportGuardTests
     [Fact]
     public async Task Import_PlainHttpUrl_EmitsHttpNotHttps()
     {
-        EncoderProfileService service = MakeService(fetchStatus: HttpStatusCode.OK, fetchBody: ValidProfileJson);
+        EncoderProfileService service = MakeService(HttpStatusCode.OK, ValidProfileJson);
 
         EncoderProfileService.ImportResult result = await service.ImportAsync(
             inlineProfileJson: null,
@@ -188,19 +188,19 @@ public class EncoderProfileImportGuardTests
             ct: CancellationToken.None
         );
 
-        EmitsError(result: result, ruleId: EncoderRuleId.ImportHttpNotHttps).Should().BeTrue();
+        EmitsError(result, EncoderRuleId.ImportHttpNotHttps).Should().BeTrue();
     }
 
     [Fact]
     public async Task Import_HttpsUrl_DoesNotEmitHttpNotHttps()
     {
         EncoderProfileService.ImportResult result = await ImportFromUrl(
-            url: "https://example.com/profile.json",
-            fetchStatus: HttpStatusCode.OK,
-            fetchBody: ValidProfileJson
+            "https://example.com/profile.json",
+            HttpStatusCode.OK,
+            ValidProfileJson
         );
 
-        EmitsError(result: result, ruleId: EncoderRuleId.ImportHttpNotHttps).Should().BeFalse();
+        EmitsError(result, EncoderRuleId.ImportHttpNotHttps).Should().BeFalse();
     }
 
     // ---- import.fetch_failed -----------------------------------------------
@@ -209,36 +209,36 @@ public class EncoderProfileImportGuardTests
     public async Task Import_HttpsUrlReturns404_EmitsFetchFailed()
     {
         EncoderProfileService.ImportResult result = await ImportFromUrl(
-            url: "https://example.com/missing.json",
-            fetchStatus: HttpStatusCode.NotFound,
-            fetchBody: "not found"
+            "https://example.com/missing.json",
+            HttpStatusCode.NotFound,
+            "not found"
         );
 
-        EmitsError(result: result, ruleId: EncoderRuleId.ImportFetchFailed).Should().BeTrue();
+        EmitsError(result, EncoderRuleId.ImportFetchFailed).Should().BeTrue();
     }
 
     [Fact]
     public async Task Import_FetchFailed_IsNotReportedAsHttpNotHttps()
     {
         EncoderProfileService.ImportResult result = await ImportFromUrl(
-            url: "https://example.com/missing.json",
-            fetchStatus: HttpStatusCode.NotFound,
-            fetchBody: "not found"
+            "https://example.com/missing.json",
+            HttpStatusCode.NotFound,
+            "not found"
         );
 
-        EmitsError(result: result, ruleId: EncoderRuleId.ImportHttpNotHttps).Should().BeFalse();
+        EmitsError(result, EncoderRuleId.ImportHttpNotHttps).Should().BeFalse();
     }
 
     [Fact]
     public async Task Import_HttpsUrlReturns200_DoesNotEmitFetchFailed()
     {
         EncoderProfileService.ImportResult result = await ImportFromUrl(
-            url: "https://example.com/profile.json",
-            fetchStatus: HttpStatusCode.OK,
-            fetchBody: ValidProfileJson
+            "https://example.com/profile.json",
+            HttpStatusCode.OK,
+            ValidProfileJson
         );
 
-        EmitsError(result: result, ruleId: EncoderRuleId.ImportFetchFailed).Should().BeFalse();
+        EmitsError(result, EncoderRuleId.ImportFetchFailed).Should().BeFalse();
     }
 
     private sealed class StubHttpMessageHandler(HttpStatusCode? status, string? body)
@@ -249,11 +249,11 @@ public class EncoderProfileImportGuardTests
             CancellationToken cancellationToken
         )
         {
-            HttpResponseMessage response = new(statusCode: status ?? HttpStatusCode.OK)
+            HttpResponseMessage response = new(status ?? HttpStatusCode.OK)
             {
-                Content = new StringContent(content: body ?? string.Empty),
+                Content = new StringContent(body ?? string.Empty),
             };
-            return Task.FromResult(result: response);
+            return Task.FromResult(response);
         }
     }
 }

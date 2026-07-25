@@ -15,99 +15,99 @@ namespace NoMercy.Providers.TVDB.Models.Shared;
 
 public class TvdbStatus
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
-    [JsonProperty(propertyName: "recordType")]
+    [JsonProperty("recordType")]
     public string? RecordType { get; set; }
 
-    [JsonProperty(propertyName: "keepUpdated")]
+    [JsonProperty("keepUpdated")]
     public bool KeepUpdated { get; set; }
 }
 
 public class TvdbRemoteId
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public int Type { get; set; }
 
-    [JsonProperty(propertyName: "sourceName")]
+    [JsonProperty("sourceName")]
     public string SourceName { get; set; } = string.Empty;
 }
 
 public class TvdbTagOption
 {
-    [JsonProperty(propertyName: "helpText")]
+    [JsonProperty("helpText")]
     public string? HelpText { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
-    [JsonProperty(propertyName: "tag")]
+    [JsonProperty("tag")]
     public int Tag { get; set; }
 
-    [JsonProperty(propertyName: "tagName")]
+    [JsonProperty("tagName")]
     public string? TagName { get; set; }
 }
 
 public class TvdbTrailer
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "language")]
+    [JsonProperty("language")]
     public string Language { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public string Url { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "runtime")]
+    [JsonProperty("runtime")]
     public int? Runtime { get; set; }
 }
 
 public class TvdbTranslationData
 {
-    [JsonProperty(propertyName: "aliases")]
+    [JsonProperty("aliases")]
     public string[]? Aliases { get; set; }
 
-    [JsonProperty(propertyName: "isAlias")]
+    [JsonProperty("isAlias")]
     public bool? IsAlias { get; set; }
 
-    [JsonProperty(propertyName: "isPrimary")]
+    [JsonProperty("isPrimary")]
     public bool? IsPrimary { get; set; }
 
-    [JsonProperty(propertyName: "language")]
+    [JsonProperty("language")]
     public string Language { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "tagline")]
+    [JsonProperty("tagline")]
     public string? Tagline { get; set; }
 }
 
 public class TvdbTranslations
 {
-    [JsonProperty(propertyName: "nameTranslations")]
+    [JsonProperty("nameTranslations")]
     public TvdbTranslationData[]? NameTranslations { get; set; }
 
-    [JsonProperty(propertyName: "overviewTranslations")]
+    [JsonProperty("overviewTranslations")]
     public TvdbTranslationData[]? OverviewTranslations { get; set; }
 
-    [JsonProperty(propertyName: "alias")]
+    [JsonProperty("alias")]
     public string[]? Alias { get; set; }
 }

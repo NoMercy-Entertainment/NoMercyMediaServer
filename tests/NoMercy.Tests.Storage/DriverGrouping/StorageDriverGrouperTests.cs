@@ -13,7 +13,7 @@ using NoMercy.Storage.DriverGrouping;
 
 namespace NoMercy.Tests.Storage.DriverGrouping;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class StorageDriverGrouperTests
 {
     // -----------------------------------------------------------------------
@@ -21,45 +21,45 @@ public class StorageDriverGrouperTests
     // -----------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: [@"\\192.168.1.1\Media\Anime", @"\\192.168.1.1\Media", StorageEndpointKind.Smb])]
-    [InlineData(data: [@"\\192.168.1.1\Media\Movies", @"\\192.168.1.1\Media", StorageEndpointKind.Smb])]
-    [InlineData(data: [@"\\NAS\Share\Sub\Folder", @"\\NAS\Share", StorageEndpointKind.Smb])]
-    [InlineData(data: [@"\\server\share", @"\\server\share", StorageEndpointKind.Smb])]
+    [InlineData([@"\\192.168.1.1\Media\Anime", @"\\192.168.1.1\Media", StorageEndpointKind.Smb])]
+    [InlineData([@"\\192.168.1.1\Media\Movies", @"\\192.168.1.1\Media", StorageEndpointKind.Smb])]
+    [InlineData([@"\\NAS\Share\Sub\Folder", @"\\NAS\Share", StorageEndpointKind.Smb])]
+    [InlineData([@"\\server\share", @"\\server\share", StorageEndpointKind.Smb])]
     public void DetectEndpoint_UncPath_ReturnsSmbEndpoint(
         string path,
         string expectedKey,
         StorageEndpointKind expectedKind
     )
     {
-        StorageEndpoint endpoint = StorageDriverGrouper.DetectEndpoint(absolutePath: path);
+        StorageEndpoint endpoint = StorageDriverGrouper.DetectEndpoint(path);
 
-        endpoint.Key.Should().Be(expected: expectedKey);
-        endpoint.Kind.Should().Be(expected: expectedKind);
+        endpoint.Key.Should().Be(expectedKey);
+        endpoint.Kind.Should().Be(expectedKind);
     }
 
     [Theory]
-    [InlineData(data: [@"C:\Media\Movies", "C:", StorageEndpointKind.Local])]
-    [InlineData(data: [@"D:\NAS\Anime", "D:", StorageEndpointKind.Local])]
-    [InlineData(data: [@"E:\", "E:", StorageEndpointKind.Local])]
+    [InlineData([@"C:\Media\Movies", "C:", StorageEndpointKind.Local])]
+    [InlineData([@"D:\NAS\Anime", "D:", StorageEndpointKind.Local])]
+    [InlineData([@"E:\", "E:", StorageEndpointKind.Local])]
     public void DetectEndpoint_WindowsDrivePath_ReturnsLocalEndpoint(
         string path,
         string expectedKey,
         StorageEndpointKind expectedKind
     )
     {
-        StorageEndpoint endpoint = StorageDriverGrouper.DetectEndpoint(absolutePath: path);
+        StorageEndpoint endpoint = StorageDriverGrouper.DetectEndpoint(path);
 
-        endpoint.Key.Should().Be(expected: expectedKey);
-        endpoint.Kind.Should().Be(expected: expectedKind);
+        endpoint.Key.Should().Be(expectedKey);
+        endpoint.Kind.Should().Be(expectedKind);
     }
 
     [Fact]
     public void DetectEndpoint_PosixPath_ReturnsLocalEndpointWithSlashKey()
     {
-        StorageEndpoint endpoint = StorageDriverGrouper.DetectEndpoint(absolutePath: "/mnt/nas/media");
+        StorageEndpoint endpoint = StorageDriverGrouper.DetectEndpoint("/mnt/nas/media");
 
-        endpoint.Key.Should().Be(expected: "/");
-        endpoint.Kind.Should().Be(expected: StorageEndpointKind.Local);
+        endpoint.Key.Should().Be("/");
+        endpoint.Kind.Should().Be(StorageEndpointKind.Local);
     }
 
     // -----------------------------------------------------------------------
@@ -70,22 +70,22 @@ public class StorageDriverGrouperTests
     public void ComputeCommonAncestor_SinglePath_ReturnsThatPath()
     {
         string result = StorageDriverGrouper.ComputeCommonAncestor(
-            absolutePaths: [@"C:\Media\Movies"],
-            kind: StorageEndpointKind.Local
+            [@"C:\Media\Movies"],
+            StorageEndpointKind.Local
         );
 
-        result.Should().Be(expected: @"C:\Media\Movies");
+        result.Should().Be(@"C:\Media\Movies");
     }
 
     [Fact]
     public void ComputeCommonAncestor_TwoSiblingPaths_ReturnsSharedParent()
     {
         string result = StorageDriverGrouper.ComputeCommonAncestor(
-            absolutePaths: [@"C:\Media\Movies", @"C:\Media\TV"],
-            kind: StorageEndpointKind.Local
+            [@"C:\Media\Movies", @"C:\Media\TV"],
+            StorageEndpointKind.Local
         );
 
-        result.Should().Be(expected: @"C:\Media");
+        result.Should().Be(@"C:\Media");
     }
 
     [Fact]
@@ -99,9 +99,9 @@ public class StorageDriverGrouperTests
             @"\\192.168.1.1\Media\Music",
         ];
 
-        string result = StorageDriverGrouper.ComputeCommonAncestor(absolutePaths: paths, kind: StorageEndpointKind.Smb);
+        string result = StorageDriverGrouper.ComputeCommonAncestor(paths, StorageEndpointKind.Smb);
 
-        result.Should().Be(expected: @"\\192.168.1.1\Media");
+        result.Should().Be(@"\\192.168.1.1\Media");
     }
 
     [Fact]
@@ -115,11 +115,11 @@ public class StorageDriverGrouperTests
         ];
 
         string result = StorageDriverGrouper.ComputeCommonAncestor(
-            absolutePaths: paths,
-            kind: StorageEndpointKind.Local
+            paths,
+            StorageEndpointKind.Local
         );
 
-        result.Should().Be(expected: @"C:\Media\TV");
+        result.Should().Be(@"C:\Media\TV");
     }
 
     // -----------------------------------------------------------------------
@@ -130,9 +130,9 @@ public class StorageDriverGrouperTests
     public void ComputeSubPath_FolderEqualsRoot_ReturnsEmpty()
     {
         string result = StorageDriverGrouper.ComputeSubPath(
-            driverRoot: @"C:\Media\Anime",
-            absolutePath: @"C:\Media\Anime",
-            kind: StorageEndpointKind.Local
+            @"C:\Media\Anime",
+            @"C:\Media\Anime",
+            StorageEndpointKind.Local
         );
 
         result.Should().BeEmpty();
@@ -142,24 +142,24 @@ public class StorageDriverGrouperTests
     public void ComputeSubPath_FolderUnderRoot_ReturnsRelativeSegment()
     {
         string result = StorageDriverGrouper.ComputeSubPath(
-            driverRoot: @"C:\Media",
-            absolutePath: @"C:\Media\Anime",
-            kind: StorageEndpointKind.Local
+            @"C:\Media",
+            @"C:\Media\Anime",
+            StorageEndpointKind.Local
         );
 
-        result.Should().Be(expected: "Anime");
+        result.Should().Be("Anime");
     }
 
     [Fact]
     public void ComputeSubPath_UncFolderUnderShare_ReturnsRelativeName()
     {
         string result = StorageDriverGrouper.ComputeSubPath(
-            driverRoot: @"\\192.168.1.1\Media",
-            absolutePath: @"\\192.168.1.1\Media\Movies",
-            kind: StorageEndpointKind.Smb
+            @"\\192.168.1.1\Media",
+            @"\\192.168.1.1\Media\Movies",
+            StorageEndpointKind.Smb
         );
 
-        result.Should().Be(expected: "Movies");
+        result.Should().Be("Movies");
     }
 
     // -----------------------------------------------------------------------
@@ -169,7 +169,7 @@ public class StorageDriverGrouperTests
     [Fact]
     public void Group_EmptyInput_ReturnsEmpty()
     {
-        IReadOnlyList<DriverGroup> result = StorageDriverGrouper.Group(inputs: []);
+        IReadOnlyList<DriverGroup> result = StorageDriverGrouper.Group([]);
 
         result.Should().BeEmpty();
     }
@@ -178,15 +178,15 @@ public class StorageDriverGrouperTests
     public void Group_SingleFolder_ProducesOneDriveRootedAtThatFolder()
     {
         Ulid folderId = Ulid.NewUlid();
-        FolderRootInput[] inputs = [new(FolderId: folderId, AbsoluteRootPath: @"C:\Media\Movies")];
+        FolderRootInput[] inputs = [new(folderId, @"C:\Media\Movies")];
 
-        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs: inputs);
+        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 
-        groups.Should().HaveCount(expected: 1);
-        DriverGroup group = groups[index: 0];
-        group.DriverRoot.Should().Be(expected: @"C:\Media\Movies");
-        group.DriverType.Should().Be(expected: "local");
-        group.Folders.Should().ContainSingle(predicate: a => a.FolderId == folderId && a.SubPath == "");
+        groups.Should().HaveCount(1);
+        DriverGroup group = groups[0];
+        group.DriverRoot.Should().Be(@"C:\Media\Movies");
+        group.DriverType.Should().Be("local");
+        group.Folders.Should().ContainSingle(a => a.FolderId == folderId && a.SubPath == "");
     }
 
     [Fact]
@@ -199,23 +199,23 @@ public class StorageDriverGrouperTests
 
         FolderRootInput[] inputs =
         [
-            new(FolderId: animeId, AbsoluteRootPath: @"\\192.168.1.1\Media\Anime"),
-            new(FolderId: moviesId, AbsoluteRootPath: @"\\192.168.1.1\Media\Movies"),
-            new(FolderId: tvId, AbsoluteRootPath: @"\\192.168.1.1\Media\TV"),
-            new(FolderId: musicId, AbsoluteRootPath: @"\\192.168.1.1\Media\Music"),
+            new(animeId, @"\\192.168.1.1\Media\Anime"),
+            new(moviesId, @"\\192.168.1.1\Media\Movies"),
+            new(tvId, @"\\192.168.1.1\Media\TV"),
+            new(musicId, @"\\192.168.1.1\Media\Music"),
         ];
 
-        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs: inputs);
+        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 
-        groups.Should().HaveCount(expected: 1);
-        DriverGroup group = groups[index: 0];
-        group.DriverType.Should().Be(expected: "local");
-        group.DriverRoot.Should().Be(expected: @"\\192.168.1.1\Media");
-        group.Folders.Should().HaveCount(expected: 4);
-        group.Folders.Should().Contain(predicate: a => a.FolderId == animeId && a.SubPath == "Anime");
-        group.Folders.Should().Contain(predicate: a => a.FolderId == moviesId && a.SubPath == "Movies");
-        group.Folders.Should().Contain(predicate: a => a.FolderId == tvId && a.SubPath == "TV");
-        group.Folders.Should().Contain(predicate: a => a.FolderId == musicId && a.SubPath == "Music");
+        groups.Should().HaveCount(1);
+        DriverGroup group = groups[0];
+        group.DriverType.Should().Be("local");
+        group.DriverRoot.Should().Be(@"\\192.168.1.1\Media");
+        group.Folders.Should().HaveCount(4);
+        group.Folders.Should().Contain(a => a.FolderId == animeId && a.SubPath == "Anime");
+        group.Folders.Should().Contain(a => a.FolderId == moviesId && a.SubPath == "Movies");
+        group.Folders.Should().Contain(a => a.FolderId == tvId && a.SubPath == "TV");
+        group.Folders.Should().Contain(a => a.FolderId == musicId && a.SubPath == "Music");
     }
 
     [Fact]
@@ -224,14 +224,14 @@ public class StorageDriverGrouperTests
         Ulid movieId = Ulid.NewUlid();
         Ulid tvId = Ulid.NewUlid();
 
-        FolderRootInput[] inputs = [new(FolderId: movieId, AbsoluteRootPath: @"C:\Media\Movies"), new(FolderId: tvId, AbsoluteRootPath: @"D:\Media\TV")];
+        FolderRootInput[] inputs = [new(movieId, @"C:\Media\Movies"), new(tvId, @"D:\Media\TV")];
 
-        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs: inputs);
+        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 
-        groups.Should().HaveCount(expected: 2);
-        groups.Select(selector: g => g.DriverType).Should().AllBe(expectation: "local");
-        groups.Should().Contain(predicate: g => g.Folders.Any(a => a.FolderId == movieId));
-        groups.Should().Contain(predicate: g => g.Folders.Any(a => a.FolderId == tvId));
+        groups.Should().HaveCount(2);
+        groups.Select(g => g.DriverType).Should().AllBe("local");
+        groups.Should().Contain(g => g.Folders.Any(a => a.FolderId == movieId));
+        groups.Should().Contain(g => g.Folders.Any(a => a.FolderId == tvId));
     }
 
     [Fact]
@@ -242,15 +242,15 @@ public class StorageDriverGrouperTests
 
         FolderRootInput[] inputs =
         [
-            new(FolderId: movies1Id, AbsoluteRootPath: @"\\nas1\Media\Movies"),
-            new(FolderId: movies2Id, AbsoluteRootPath: @"\\nas2\Media\Movies"),
+            new(movies1Id, @"\\nas1\Media\Movies"),
+            new(movies2Id, @"\\nas2\Media\Movies"),
         ];
 
-        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs: inputs);
+        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 
-        groups.Should().HaveCount(expected: 2);
-        groups.Select(selector: g => g.DriverType).Should().AllBe(expectation: "local");
-        groups.Select(selector: g => g.DriverRoot).Should().OnlyHaveUniqueItems();
+        groups.Should().HaveCount(2);
+        groups.Select(g => g.DriverType).Should().AllBe("local");
+        groups.Select(g => g.DriverRoot).Should().OnlyHaveUniqueItems();
     }
 
     [Fact]
@@ -262,21 +262,21 @@ public class StorageDriverGrouperTests
 
         FolderRootInput[] inputs =
         [
-            new(FolderId: animesId, AbsoluteRootPath: @"C:\Data\Media\Anime"),
-            new(FolderId: moviesId, AbsoluteRootPath: @"C:\Data\Media\Movies"),
-            new(FolderId: musicId, AbsoluteRootPath: @"C:\Data\Media\Music"),
+            new(animesId, @"C:\Data\Media\Anime"),
+            new(moviesId, @"C:\Data\Media\Movies"),
+            new(musicId, @"C:\Data\Media\Music"),
         ];
 
-        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs: inputs);
+        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 
-        groups.Should().HaveCount(expected: 1);
-        DriverGroup group = groups[index: 0];
-        group.DriverRoot.Should().Be(expected: @"C:\Data\Media");
-        group.DriverType.Should().Be(expected: "local");
-        group.Folders.Should().HaveCount(expected: 3);
-        group.Folders.Should().Contain(predicate: a => a.FolderId == animesId && a.SubPath == "Anime");
-        group.Folders.Should().Contain(predicate: a => a.FolderId == moviesId && a.SubPath == "Movies");
-        group.Folders.Should().Contain(predicate: a => a.FolderId == musicId && a.SubPath == "Music");
+        groups.Should().HaveCount(1);
+        DriverGroup group = groups[0];
+        group.DriverRoot.Should().Be(@"C:\Data\Media");
+        group.DriverType.Should().Be("local");
+        group.Folders.Should().HaveCount(3);
+        group.Folders.Should().Contain(a => a.FolderId == animesId && a.SubPath == "Anime");
+        group.Folders.Should().Contain(a => a.FolderId == moviesId && a.SubPath == "Movies");
+        group.Folders.Should().Contain(a => a.FolderId == musicId && a.SubPath == "Music");
     }
 
     [Fact]
@@ -285,14 +285,14 @@ public class StorageDriverGrouperTests
         Ulid aId = Ulid.NewUlid();
         Ulid bId = Ulid.NewUlid();
 
-        FolderRootInput[] inputs = [new(FolderId: aId, AbsoluteRootPath: @"C:\Alpha\Movies"), new(FolderId: bId, AbsoluteRootPath: @"C:\Beta\TV")];
+        FolderRootInput[] inputs = [new(aId, @"C:\Alpha\Movies"), new(bId, @"C:\Beta\TV")];
 
-        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs: inputs);
+        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 
-        groups.Should().HaveCount(expected: 1);
-        DriverGroup group = groups[index: 0];
-        group.DriverRoot.Should().Be(expected: @"C:\");
-        group.Folders.Should().HaveCount(expected: 2);
+        groups.Should().HaveCount(1);
+        DriverGroup group = groups[0];
+        group.DriverRoot.Should().Be(@"C:\");
+        group.Folders.Should().HaveCount(2);
     }
 
     [Fact]
@@ -303,15 +303,15 @@ public class StorageDriverGrouperTests
 
         FolderRootInput[] inputs =
         [
-            new(FolderId: localId, AbsoluteRootPath: @"C:\Media\Movies"),
-            new(FolderId: uncId, AbsoluteRootPath: @"\\nas1\Media\Movies"),
+            new(localId, @"C:\Media\Movies"),
+            new(uncId, @"\\nas1\Media\Movies"),
         ];
 
-        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs: inputs);
+        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 
-        groups.Should().HaveCount(expected: 2);
-        groups.Select(selector: g => g.DriverType).Should().AllBe(expectation: "local");
-        groups.Should().Contain(predicate: g => g.DriverRoot.StartsWith(@"C:"));
-        groups.Should().Contain(predicate: g => g.DriverRoot.StartsWith(@"\\nas1\Media"));
+        groups.Should().HaveCount(2);
+        groups.Select(g => g.DriverType).Should().AllBe("local");
+        groups.Should().Contain(g => g.DriverRoot.StartsWith(@"C:"));
+        groups.Should().Contain(g => g.DriverRoot.StartsWith(@"\\nas1\Media"));
     }
 }

@@ -15,18 +15,18 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbEpisodeGroup
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "order")]
+    [JsonProperty("order")]
     public int Order { get; set; }
 
-    [JsonProperty(propertyName: "episodes")]
+    [JsonProperty("episodes")]
     public TmdbEpisodeGroupEpisode[] Episodes { get; set; } = [];
 
-    [JsonProperty(propertyName: "locked")]
+    [JsonProperty("locked")]
     public bool Locked { get; set; }
 }

@@ -31,7 +31,7 @@ namespace NoMercy.Tests.Api.Dashboard;
 /// swapped with mocks per test class via
 /// <see cref="WebApplicationFactory.WithWebHostBuilder"/>.
 /// </summary>
-[Trait(name: "Category", value: "OpticalMedia")]
+[Trait("Category", "OpticalMedia")]
 public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -44,28 +44,28 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     // ── helpers ────────────────────────────────────────────────────────────
 
     private static DiscDrive MakeDrive(string path, bool hasDisc = true) =>
-        new(Path: path, Label: "TEST DISC", HasDisc: hasDisc, DiscType: OpticalDiscType.BluRay);
+        new(path, "TEST DISC", hasDisc, OpticalDiscType.BluRay);
 
     private static LiveQuality MakeQuality() =>
         new(
-            Id: "1080p",
-            Label: "1080p",
-            Width: 1920,
-            Height: 1080,
-            Codec: VideoCodecType.H264,
-            BitrateKbps: 8000,
-            Encoder: "libx264",
-            IsHardwareAccelerated: false,
-            ExpectedSpeed: 1.0,
-            CanRealtime: true
+            "1080p",
+            "1080p",
+            1920,
+            1080,
+            VideoCodecType.H264,
+            8000,
+            "libx264",
+            false,
+            1.0,
+            true
         );
 
     private static Mock<ILiveSession> MakeSession(string sessionId = "test-session-id")
     {
         Mock<ILiveSession> sessionMock = new();
-        sessionMock.Setup(expression: s => s.SessionId).Returns(value: sessionId);
-        sessionMock.Setup(expression: s => s.CurrentQuality).Returns(value: MakeQuality());
-        sessionMock.Setup(expression: s => s.DisposeAsync()).Returns(value: ValueTask.CompletedTask);
+        sessionMock.Setup(s => s.SessionId).Returns(sessionId);
+        sessionMock.Setup(s => s.CurrentQuality).Returns(MakeQuality());
+        sessionMock.Setup(s => s.DisposeAsync()).Returns(ValueTask.CompletedTask);
         return sessionMock;
     }
 
@@ -78,24 +78,24 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     )
     {
         return _factory
-            .WithWebHostBuilder(configuration: builder =>
+            .WithWebHostBuilder(builder =>
             {
-                builder.ConfigureTestServices(servicesConfiguration: services =>
+                builder.ConfigureTestServices(services =>
                 {
                     services.RemoveAll<IDriveMonitor>();
-                    services.AddSingleton(implementationInstance: driveMonitorMock.Object);
+                    services.AddSingleton(driveMonitorMock.Object);
 
                     services.RemoveAll<ILiveDiscSession>();
-                    services.AddTransient(implementationFactory: _ => liveDiscSessionMock.Object);
+                    services.AddTransient(_ => liveDiscSessionMock.Object);
 
                     services.RemoveAll<ILiveStreamingService>();
-                    services.AddSingleton(implementationInstance: liveStreamingServiceMock.Object);
+                    services.AddSingleton(liveStreamingServiceMock.Object);
 
                     services.RemoveAll<ISessionManager>();
-                    services.AddSingleton(implementationInstance: sessionManagerMock.Object);
+                    services.AddSingleton(sessionManagerMock.Object);
 
                     services.RemoveAll<IDiscSessionRegistry>();
-                    services.AddSingleton(implementationInstance: discSessionRegistryMock.Object);
+                    services.AddSingleton(discSessionRegistryMock.Object);
                 });
             })
             .CreateClient()
@@ -107,14 +107,14 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task PlayMedia_ValidDriveAndTitle_ReturnsOkWithSessionAndPlaylistUrl()
     {
-        Mock<ILiveSession> sessionMock = MakeSession(sessionId: "sess-abc");
+        Mock<ILiveSession> sessionMock = MakeSession("sess-abc");
 
         Mock<IDriveMonitor> driveMonitorMock = new();
-        driveMonitorMock.Setup(expression: m => m.GetDrives()).Returns(value: [MakeDrive(path: @"D:\")]);
+        driveMonitorMock.Setup(m => m.GetDrives()).Returns([MakeDrive(@"D:\")]);
 
         Mock<ILiveDiscSession> liveDiscSessionMock = new();
         liveDiscSessionMock
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.StartAsync(
                     It.IsAny<DiscDrive>(),
                     It.IsAny<int>(),
@@ -123,37 +123,37 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: sessionMock.Object);
+            .ReturnsAsync(sessionMock.Object);
 
         Mock<ILiveStreamingService> liveStreamingServiceMock = new();
         Mock<ISessionManager> sessionManagerMock = new();
-        sessionManagerMock.Setup(expression: m => m.CanStartSession(It.IsAny<string>())).Returns(value: true);
+        sessionManagerMock.Setup(m => m.CanStartSession(It.IsAny<string>())).Returns(true);
 
         Mock<IDiscSessionRegistry> discSessionRegistryMock = new();
 
         HttpClient client = BuildClient(
-            driveMonitorMock: driveMonitorMock,
-            liveDiscSessionMock: liveDiscSessionMock,
-            liveStreamingServiceMock: liveStreamingServiceMock,
-            sessionManagerMock: sessionManagerMock,
-            discSessionRegistryMock: discSessionRegistryMock
+            driveMonitorMock,
+            liveDiscSessionMock,
+            liveStreamingServiceMock,
+            sessionManagerMock,
+            discSessionRegistryMock
         );
 
         HttpResponseMessage response = await client.PostAsync(
-            requestUri: "/api/v1/dashboard/optical/D%3A%5C/play/0",
-            content: null
+            "/api/v1/dashboard/optical/D%3A%5C/play/0",
+            null
         );
 
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 
-        JsonDocument json = JsonDocument.Parse(json: body);
-        json.RootElement.GetProperty(propertyName: "session_id").GetString().Should().Be(expected: "sess-abc");
-        json.RootElement.GetProperty(propertyName: "playlist_url")
+        JsonDocument json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("session_id").GetString().Should().Be("sess-abc");
+        json.RootElement.GetProperty("playlist_url")
             .GetString()
             .Should()
-            .Contain(expected: "/api/v1/streaming/live/sessions/sess-abc/playlist.m3u8");
+            .Contain("/api/v1/streaming/live/sessions/sess-abc/playlist.m3u8");
     }
 
     // ── PlayMedia — session registered with manager and registry ──────────
@@ -161,14 +161,14 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task PlayMedia_ValidDriveAndTitle_RegistersSessionWithManagerAndRegistry()
     {
-        Mock<ILiveSession> sessionMock = MakeSession(sessionId: "sess-xyz");
+        Mock<ILiveSession> sessionMock = MakeSession("sess-xyz");
 
         Mock<IDriveMonitor> driveMonitorMock = new();
-        driveMonitorMock.Setup(expression: m => m.GetDrives()).Returns(value: [MakeDrive(path: @"D:\")]);
+        driveMonitorMock.Setup(m => m.GetDrives()).Returns([MakeDrive(@"D:\")]);
 
         Mock<ILiveDiscSession> liveDiscSessionMock = new();
         liveDiscSessionMock
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.StartAsync(
                     It.IsAny<DiscDrive>(),
                     It.IsAny<int>(),
@@ -177,29 +177,29 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: sessionMock.Object);
+            .ReturnsAsync(sessionMock.Object);
 
         Mock<ILiveStreamingService> liveStreamingServiceMock = new();
         Mock<ISessionManager> sessionManagerMock = new();
-        sessionManagerMock.Setup(expression: m => m.CanStartSession(It.IsAny<string>())).Returns(value: true);
+        sessionManagerMock.Setup(m => m.CanStartSession(It.IsAny<string>())).Returns(true);
 
         Mock<IDiscSessionRegistry> discSessionRegistryMock = new();
 
         HttpClient client = BuildClient(
-            driveMonitorMock: driveMonitorMock,
-            liveDiscSessionMock: liveDiscSessionMock,
-            liveStreamingServiceMock: liveStreamingServiceMock,
-            sessionManagerMock: sessionManagerMock,
-            discSessionRegistryMock: discSessionRegistryMock
+            driveMonitorMock,
+            liveDiscSessionMock,
+            liveStreamingServiceMock,
+            sessionManagerMock,
+            discSessionRegistryMock
         );
 
-        await client.PostAsync(requestUri: "/api/v1/dashboard/optical/D%3A%5C/play/0", content: null);
+        await client.PostAsync("/api/v1/dashboard/optical/D%3A%5C/play/0", null);
 
         sessionManagerMock.Verify(
-            expression: m => m.RegisterSession(sessionMock.Object, It.IsAny<string>()),
-            times: Times.Once
+            m => m.RegisterSession(sessionMock.Object, It.IsAny<string>()),
+            Times.Once
         );
-        discSessionRegistryMock.Verify(expression: m => m.Register(It.IsAny<string>(), "sess-xyz"), times: Times.Once);
+        discSessionRegistryMock.Verify(m => m.Register(It.IsAny<string>(), "sess-xyz"), Times.Once);
     }
 
     // ── PlayMedia — drive not found ────────────────────────────────────────
@@ -208,7 +208,7 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task PlayMedia_DriveNotFound_Returns404()
     {
         Mock<IDriveMonitor> driveMonitorMock = new();
-        driveMonitorMock.Setup(expression: m => m.GetDrives()).Returns(value: []);
+        driveMonitorMock.Setup(m => m.GetDrives()).Returns([]);
 
         Mock<ILiveDiscSession> liveDiscSessionMock = new();
         Mock<ILiveStreamingService> liveStreamingServiceMock = new();
@@ -216,19 +216,19 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
         Mock<IDiscSessionRegistry> discSessionRegistryMock = new();
 
         HttpClient client = BuildClient(
-            driveMonitorMock: driveMonitorMock,
-            liveDiscSessionMock: liveDiscSessionMock,
-            liveStreamingServiceMock: liveStreamingServiceMock,
-            sessionManagerMock: sessionManagerMock,
-            discSessionRegistryMock: discSessionRegistryMock
+            driveMonitorMock,
+            liveDiscSessionMock,
+            liveStreamingServiceMock,
+            sessionManagerMock,
+            discSessionRegistryMock
         );
 
         HttpResponseMessage response = await client.PostAsync(
-            requestUri: "/api/v1/dashboard/optical/D%3A%5C/play/0",
-            content: null
+            "/api/v1/dashboard/optical/D%3A%5C/play/0",
+            null
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     // ── PlayMedia — drive has no disc ──────────────────────────────────────
@@ -237,7 +237,7 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task PlayMedia_NoDisc_Returns400()
     {
         Mock<IDriveMonitor> driveMonitorMock = new();
-        driveMonitorMock.Setup(expression: m => m.GetDrives()).Returns(value: [MakeDrive(path: @"D:\", hasDisc: false)]);
+        driveMonitorMock.Setup(m => m.GetDrives()).Returns([MakeDrive(@"D:\", false)]);
 
         Mock<ILiveDiscSession> liveDiscSessionMock = new();
         Mock<ILiveStreamingService> liveStreamingServiceMock = new();
@@ -245,19 +245,19 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
         Mock<IDiscSessionRegistry> discSessionRegistryMock = new();
 
         HttpClient client = BuildClient(
-            driveMonitorMock: driveMonitorMock,
-            liveDiscSessionMock: liveDiscSessionMock,
-            liveStreamingServiceMock: liveStreamingServiceMock,
-            sessionManagerMock: sessionManagerMock,
-            discSessionRegistryMock: discSessionRegistryMock
+            driveMonitorMock,
+            liveDiscSessionMock,
+            liveStreamingServiceMock,
+            sessionManagerMock,
+            discSessionRegistryMock
         );
 
         HttpResponseMessage response = await client.PostAsync(
-            requestUri: "/api/v1/dashboard/optical/D%3A%5C/play/0",
-            content: null
+            "/api/v1/dashboard/optical/D%3A%5C/play/0",
+            null
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     // ── PlayMedia — invalid title index ───────────────────────────────────
@@ -266,7 +266,7 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task PlayMedia_NonIntegerPlaylistId_Returns400()
     {
         Mock<IDriveMonitor> driveMonitorMock = new();
-        driveMonitorMock.Setup(expression: m => m.GetDrives()).Returns(value: [MakeDrive(path: @"D:\")]);
+        driveMonitorMock.Setup(m => m.GetDrives()).Returns([MakeDrive(@"D:\")]);
 
         Mock<ILiveDiscSession> liveDiscSessionMock = new();
         Mock<ILiveStreamingService> liveStreamingServiceMock = new();
@@ -274,19 +274,19 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
         Mock<IDiscSessionRegistry> discSessionRegistryMock = new();
 
         HttpClient client = BuildClient(
-            driveMonitorMock: driveMonitorMock,
-            liveDiscSessionMock: liveDiscSessionMock,
-            liveStreamingServiceMock: liveStreamingServiceMock,
-            sessionManagerMock: sessionManagerMock,
-            discSessionRegistryMock: discSessionRegistryMock
+            driveMonitorMock,
+            liveDiscSessionMock,
+            liveStreamingServiceMock,
+            sessionManagerMock,
+            discSessionRegistryMock
         );
 
         HttpResponseMessage response = await client.PostAsync(
-            requestUri: "/api/v1/dashboard/optical/D%3A%5C/play/notanumber",
-            content: null
+            "/api/v1/dashboard/optical/D%3A%5C/play/notanumber",
+            null
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     // ── StopMedia — happy path ─────────────────────────────────────────────
@@ -295,40 +295,40 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task StopMedia_ActiveSession_Returns204AndCleansUp()
     {
         Mock<IDriveMonitor> driveMonitorMock = new();
-        driveMonitorMock.Setup(expression: m => m.GetDrives()).Returns(value: [MakeDrive(path: @"D:\")]);
+        driveMonitorMock.Setup(m => m.GetDrives()).Returns([MakeDrive(@"D:\")]);
 
         Mock<ILiveDiscSession> liveDiscSessionMock = new();
         Mock<ILiveStreamingService> liveStreamingServiceMock = new();
         liveStreamingServiceMock
-            .Setup(expression: s => s.RemoveAsync(It.IsAny<string>()))
-            .Returns(value: Task.CompletedTask);
+            .Setup(s => s.RemoveAsync(It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
 
         Mock<ISessionManager> sessionManagerMock = new();
 
         Mock<IDiscSessionRegistry> discSessionRegistryMock = new();
         string capturedSessionId = "sess-stop";
         discSessionRegistryMock
-            .Setup(expression: r => r.TryGet(It.IsAny<string>(), out capturedSessionId))
-            .Returns(value: true);
+            .Setup(r => r.TryGet(It.IsAny<string>(), out capturedSessionId))
+            .Returns(true);
 
         HttpClient client = BuildClient(
-            driveMonitorMock: driveMonitorMock,
-            liveDiscSessionMock: liveDiscSessionMock,
-            liveStreamingServiceMock: liveStreamingServiceMock,
-            sessionManagerMock: sessionManagerMock,
-            discSessionRegistryMock: discSessionRegistryMock
+            driveMonitorMock,
+            liveDiscSessionMock,
+            liveStreamingServiceMock,
+            sessionManagerMock,
+            discSessionRegistryMock
         );
 
         HttpResponseMessage response = await client.PostAsync(
-            requestUri: "/api/v1/dashboard/optical/D%3A%5C/stop",
-            content: null
+            "/api/v1/dashboard/optical/D%3A%5C/stop",
+            null
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        liveStreamingServiceMock.Verify(expression: s => s.RemoveAsync("sess-stop"), times: Times.Once);
-        sessionManagerMock.Verify(expression: m => m.RemoveSession("sess-stop"), times: Times.Once);
-        discSessionRegistryMock.Verify(expression: r => r.Remove(It.IsAny<string>()), times: Times.Once);
+        liveStreamingServiceMock.Verify(s => s.RemoveAsync("sess-stop"), Times.Once);
+        sessionManagerMock.Verify(m => m.RemoveSession("sess-stop"), Times.Once);
+        discSessionRegistryMock.Verify(r => r.Remove(It.IsAny<string>()), Times.Once);
     }
 
     // ── StopMedia — no active session ─────────────────────────────────────
@@ -337,7 +337,7 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task StopMedia_NoActiveSession_Returns404()
     {
         Mock<IDriveMonitor> driveMonitorMock = new();
-        driveMonitorMock.Setup(expression: m => m.GetDrives()).Returns(value: [MakeDrive(path: @"D:\")]);
+        driveMonitorMock.Setup(m => m.GetDrives()).Returns([MakeDrive(@"D:\")]);
 
         Mock<ILiveDiscSession> liveDiscSessionMock = new();
         Mock<ILiveStreamingService> liveStreamingServiceMock = new();
@@ -346,22 +346,22 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
         Mock<IDiscSessionRegistry> discSessionRegistryMock = new();
         string noSession = string.Empty;
         discSessionRegistryMock
-            .Setup(expression: r => r.TryGet(It.IsAny<string>(), out noSession))
-            .Returns(value: false);
+            .Setup(r => r.TryGet(It.IsAny<string>(), out noSession))
+            .Returns(false);
 
         HttpClient client = BuildClient(
-            driveMonitorMock: driveMonitorMock,
-            liveDiscSessionMock: liveDiscSessionMock,
-            liveStreamingServiceMock: liveStreamingServiceMock,
-            sessionManagerMock: sessionManagerMock,
-            discSessionRegistryMock: discSessionRegistryMock
+            driveMonitorMock,
+            liveDiscSessionMock,
+            liveStreamingServiceMock,
+            sessionManagerMock,
+            discSessionRegistryMock
         );
 
         HttpResponseMessage response = await client.PostAsync(
-            requestUri: "/api/v1/dashboard/optical/D%3A%5C/stop",
-            content: null
+            "/api/v1/dashboard/optical/D%3A%5C/stop",
+            null
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }

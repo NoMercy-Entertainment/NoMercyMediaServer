@@ -9,196 +9,195 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Encoder.Analysis;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Sources;
 
 namespace NoMercy.Tests.OpticalMedia.Sources;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class DiscInfoTests
 {
     private static DiscTitle MakeTitle(int index, TimeSpan duration, bool isMainFeature = false) =>
         new(
-            Index: index,
-            Name: $"Title {index}",
-            Duration: duration,
-            VideoStreams: [],
-            AudioStreams: [],
-            Subtitles: [],
-            Chapters: [],
-            EstimatedSizeBytes: 0,
-            IsMainFeature: isMainFeature
+            index,
+            $"Title {index}",
+            duration,
+            [],
+            [],
+            [],
+            [],
+            0,
+            isMainFeature
         );
 
     [Fact]
     public void MainTitleDurationSec_SingleTitle_ReturnsDurationInSeconds()
     {
-        DiscTitle title = MakeTitle(index: 0, duration: TimeSpan.FromSeconds(seconds: 3661));
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [title], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscTitle title = MakeTitle(0, TimeSpan.FromSeconds(3661));
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [title], null, TimeSpan.Zero);
 
         int result = disc.MainTitleDurationSec;
 
-        result.Should().Be(expected: 3661);
+        result.Should().Be(3661);
     }
 
     [Fact]
     public void MainTitleDurationSec_MultipleUnflaggedTitles_ReturnsDurationOfLongest()
     {
-        DiscTitle title1 = MakeTitle(index: 0, duration: TimeSpan.FromSeconds(seconds: 1800));
-        DiscTitle title2 = MakeTitle(index: 1, duration: TimeSpan.FromSeconds(seconds: 5400));
-        DiscTitle title3 = MakeTitle(index: 2, duration: TimeSpan.FromSeconds(seconds: 3600));
+        DiscTitle title1 = MakeTitle(0, TimeSpan.FromSeconds(1800));
+        DiscTitle title2 = MakeTitle(1, TimeSpan.FromSeconds(5400));
+        DiscTitle title3 = MakeTitle(2, TimeSpan.FromSeconds(3600));
 
         DiscInfo disc = new(
-            Type: OpticalDiscType.Dvd,
-            DiscLabel: "TEST",
-            Titles: [title1, title2, title3],
-            AudioTracks: null,
-            TotalDuration: TimeSpan.Zero
+            OpticalDiscType.Dvd,
+            "TEST",
+            [title1, title2, title3],
+            null,
+            TimeSpan.Zero
         );
 
         int result = disc.MainTitleDurationSec;
 
-        result.Should().Be(expected: 5400);
+        result.Should().Be(5400);
     }
 
     [Fact]
     public void MainTitleDurationSec_FlaggedMainFeature_PrefersFlaggedOverLongest()
     {
-        DiscTitle title1 = MakeTitle(index: 0, duration: TimeSpan.FromSeconds(seconds: 3600), isMainFeature: true);
-        DiscTitle title2 = MakeTitle(index: 1, duration: TimeSpan.FromSeconds(seconds: 5400), isMainFeature: false);
+        DiscTitle title1 = MakeTitle(0, TimeSpan.FromSeconds(3600), true);
+        DiscTitle title2 = MakeTitle(1, TimeSpan.FromSeconds(5400), false);
 
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [title1, title2], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [title1, title2], null, TimeSpan.Zero);
 
         int result = disc.MainTitleDurationSec;
 
-        result.Should().Be(expected: 3600);
+        result.Should().Be(3600);
     }
 
     [Fact]
     public void MainTitleDurationSec_NoTitles_ReturnsZero()
     {
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [], null, TimeSpan.Zero);
 
         int result = disc.MainTitleDurationSec;
 
-        result.Should().Be(expected: 0);
+        result.Should().Be(0);
     }
 
     [Fact]
     public void MainTitleDurationSec_TitleWithZeroDuration_ReturnsZero()
     {
-        DiscTitle title = MakeTitle(index: 0, duration: TimeSpan.Zero);
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [title], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscTitle title = MakeTitle(0, TimeSpan.Zero);
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [title], null, TimeSpan.Zero);
 
         int result = disc.MainTitleDurationSec;
 
-        result.Should().Be(expected: 0);
+        result.Should().Be(0);
     }
 
     [Fact]
     public void MainTitleDurationSec_RoundsTruncatesDecimalSeconds()
     {
-        DiscTitle title = MakeTitle(index: 0, duration: TimeSpan.FromSeconds(value: 100.9));
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [title], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscTitle title = MakeTitle(0, TimeSpan.FromSeconds(100.9));
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [title], null, TimeSpan.Zero);
 
         int result = disc.MainTitleDurationSec;
 
-        result.Should().Be(expected: 100);
+        result.Should().Be(100);
     }
 
     [Fact]
     public void MainTitleDurationSec_LargeDurations_Handled()
     {
-        DiscTitle title = MakeTitle(index: 0, duration: TimeSpan.FromHours(hours: 10));
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [title], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscTitle title = MakeTitle(0, TimeSpan.FromHours(10));
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [title], null, TimeSpan.Zero);
 
         int result = disc.MainTitleDurationSec;
 
-        result.Should().Be(expected: 36000);
+        result.Should().Be(36000);
     }
 
     [Fact]
     public void MainTitleDurationSec_PartialSeconds_Converted()
     {
-        DiscTitle title = MakeTitle(index: 0, duration: TimeSpan.FromSeconds(value: 3.5));
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [title], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscTitle title = MakeTitle(0, TimeSpan.FromSeconds(3.5));
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [title], null, TimeSpan.Zero);
 
         int result = disc.MainTitleDurationSec;
 
-        result.Should().Be(expected: 3);
+        result.Should().Be(3);
     }
 
     [Fact]
     public void MainTitleDurationSec_MultipleTitles_OnlyMainFeatureFlaggedButShorter()
     {
-        DiscTitle mainFeature = MakeTitle(index: 0, duration: TimeSpan.FromSeconds(seconds: 1800), isMainFeature: true);
-        DiscTitle bonus1 = MakeTitle(index: 1, duration: TimeSpan.FromSeconds(seconds: 3600), isMainFeature: false);
-        DiscTitle bonus2 = MakeTitle(index: 2, duration: TimeSpan.FromSeconds(seconds: 2700), isMainFeature: false);
+        DiscTitle mainFeature = MakeTitle(0, TimeSpan.FromSeconds(1800), true);
+        DiscTitle bonus1 = MakeTitle(1, TimeSpan.FromSeconds(3600), false);
+        DiscTitle bonus2 = MakeTitle(2, TimeSpan.FromSeconds(2700), false);
 
         DiscInfo disc = new(
-            Type: OpticalDiscType.Dvd,
-            DiscLabel: "TEST",
-            Titles: [mainFeature, bonus1, bonus2],
-            AudioTracks: null,
-            TotalDuration: TimeSpan.Zero
+            OpticalDiscType.Dvd,
+            "TEST",
+            [mainFeature, bonus1, bonus2],
+            null,
+            TimeSpan.Zero
         );
 
         int result = disc.MainTitleDurationSec;
 
-        result.Should().Be(expected: 1800);
+        result.Should().Be(1800);
     }
 
     [Fact]
     public void MainTitleDurationSec_FirstTitleIsMain_ReturnsItsDuration()
     {
-        DiscTitle main = MakeTitle(index: 0, duration: TimeSpan.FromSeconds(seconds: 7200), isMainFeature: true);
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [main], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscTitle main = MakeTitle(0, TimeSpan.FromSeconds(7200), true);
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [main], null, TimeSpan.Zero);
 
         int result = disc.MainTitleDurationSec;
 
-        result.Should().Be(expected: 7200);
+        result.Should().Be(7200);
     }
 
     [Fact]
     public void Type_StoresDiscType()
     {
-        DiscInfo disc = new(Type: OpticalDiscType.BluRay, DiscLabel: "TEST", Titles: [], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscInfo disc = new(OpticalDiscType.BluRay, "TEST", [], null, TimeSpan.Zero);
 
-        disc.Type.Should().Be(expected: OpticalDiscType.BluRay);
+        disc.Type.Should().Be(OpticalDiscType.BluRay);
     }
 
     [Fact]
     public void DiscLabel_StoresLabel()
     {
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "MY_DISC", Titles: [], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscInfo disc = new(OpticalDiscType.Dvd, "MY_DISC", [], null, TimeSpan.Zero);
 
-        disc.DiscLabel.Should().Be(expected: "MY_DISC");
+        disc.DiscLabel.Should().Be("MY_DISC");
     }
 
     [Fact]
     public void Titles_StoresTitleArray()
     {
-        DiscTitle title = MakeTitle(index: 0, duration: TimeSpan.FromSeconds(seconds: 3600));
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [title], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscTitle title = MakeTitle(0, TimeSpan.FromSeconds(3600));
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [title], null, TimeSpan.Zero);
 
-        disc.Titles.Should().HaveCount(expected: 1);
-        disc.Titles[0].Should().Be(expected: title);
+        disc.Titles.Should().HaveCount(1);
+        disc.Titles[0].Should().Be(title);
     }
 
     [Fact]
     public void TotalDuration_StoresTotalDuration()
     {
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [], AudioTracks: null, TotalDuration: TimeSpan.FromHours(hours: 2));
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [], null, TimeSpan.FromHours(2));
 
-        disc.TotalDuration.Should().Be(expected: TimeSpan.FromHours(hours: 2));
+        disc.TotalDuration.Should().Be(TimeSpan.FromHours(2));
     }
 
     [Fact]
     public void DiscTitle_Stores_EmbeddedTitle()
     {
         DiscInfo disc = new(
-            Type: OpticalDiscType.BluRay,
+            OpticalDiscType.BluRay,
             DiscLabel: "VOLUME_LABEL",
             Titles: [],
             AudioTracks: null,
@@ -206,22 +205,22 @@ public class DiscInfoTests
             DiscTitle: "The Dark Knight"
         );
 
-        disc.DiscTitle.Should().Be(expected: "The Dark Knight");
+        disc.DiscTitle.Should().Be("The Dark Knight");
     }
 
     [Fact]
     public void Protection_StoresProtectionInfo()
     {
-        DiscProtection protection = new(Kind: "AACS", VolumeId: "ABC123", Message: "AACS protected");
-        DiscInfo disc = new(Type: OpticalDiscType.BluRay, DiscLabel: "TEST", Titles: [], AudioTracks: null, TotalDuration: TimeSpan.Zero, Protection: protection);
+        DiscProtection protection = new("AACS", "ABC123", "AACS protected");
+        DiscInfo disc = new(OpticalDiscType.BluRay, "TEST", [], null, TimeSpan.Zero, protection);
 
-        disc.Protection.Should().Be(expected: protection);
+        disc.Protection.Should().Be(protection);
     }
 
     [Fact]
     public void Protection_Null_WhenNotProvided()
     {
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [], null, TimeSpan.Zero);
 
         disc.Protection.Should().BeNull();
     }
@@ -229,17 +228,17 @@ public class DiscInfoTests
     [Fact]
     public void AudioTracks_StoresAudioTracks()
     {
-        DiscTrack track = new(Index: 0, Title: "Track 1", Artist: "Artist", Duration: TimeSpan.FromSeconds(seconds: 180), SampleRate: 44100, Channels: 2);
-        DiscInfo disc = new(Type: OpticalDiscType.Cd, DiscLabel: "AUDIO_CD", Titles: [], AudioTracks: [track], TotalDuration: TimeSpan.Zero);
+        DiscTrack track = new(0, "Track 1", "Artist", TimeSpan.FromSeconds(180), 44100, 2);
+        DiscInfo disc = new(OpticalDiscType.Cd, "AUDIO_CD", [], [track], TimeSpan.Zero);
 
-        disc.AudioTracks.Should().HaveCount(expected: 1);
-        disc.AudioTracks![0].Should().Be(expected: track);
+        disc.AudioTracks.Should().HaveCount(1);
+        disc.AudioTracks![0].Should().Be(track);
     }
 
     [Fact]
     public void AudioTracks_Null_ForVideoDiscs()
     {
-        DiscInfo disc = new(Type: OpticalDiscType.Dvd, DiscLabel: "TEST", Titles: [], AudioTracks: null, TotalDuration: TimeSpan.Zero);
+        DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [], null, TimeSpan.Zero);
 
         disc.AudioTracks.Should().BeNull();
     }

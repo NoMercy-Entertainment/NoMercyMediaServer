@@ -15,9 +15,9 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzArtistAppends : MusicBrainzArtistDetails
 {
-    [JsonProperty(propertyName: "gender")]
+    [JsonProperty("gender")]
     public string Gender { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "recordings")]
+    [JsonProperty("recordings")]
     public MusicBrainzRecording[] Recordings { get; set; } = [];
 }

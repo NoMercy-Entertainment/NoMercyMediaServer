@@ -28,98 +28,98 @@ public class DolbyVisionPassthroughTests
     [Fact]
     public void Mp4_PreserveDv_AddsDvh1CodecTag()
     {
-        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
-        strategy.ConfigureOutput(builder: builder, plan: Plan(preserveDv: true), outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, Plan(true), "/output");
 
-        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
-        args.Should().Contain(expected: "-tag:v dvh1");
+        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
+        args.Should().Contain("-tag:v dvh1");
     }
 
     [Fact]
     public void Mp4_NoDv_UsesDefaultTag()
     {
-        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
-        strategy.ConfigureOutput(builder: builder, plan: Plan(preserveDv: false), outputDirectory: "/output");
+        strategy.ConfigureOutput(builder, Plan(false), "/output");
 
-        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
-        args.Should().NotContain(unexpected: "dvh1");
+        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
+        args.Should().NotContain("dvh1");
     }
 
     [Fact]
     public void Hls_PreserveDv_HevcVariant_OverridesHvc1WithDvh1()
     {
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
         strategy.ConfigureOutput(
-            builder: builder,
-            plan: HlsPlan(encoderName: "libx265", preserveDv: true),
-            outputDirectory: "/output"
+            builder,
+            HlsPlan("libx265", true),
+            "/output"
         );
 
-        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
-        args.Should().Contain(expected: "-tag:v dvh1");
+        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
+        args.Should().Contain("-tag:v dvh1");
         // dvh1 replaces hvc1 — both appearing in the same argv is a muxer
         // contradiction and would break playback.
-        args.Should().NotContain(unexpected: "-tag:v hvc1");
+        args.Should().NotContain("-tag:v hvc1");
     }
 
     [Fact]
     public void Hls_PreserveDv_H264Variant_NoDvTag()
     {
-        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
         // DV only rides HEVC. H.264 variants in the same ladder must not
         // inherit the dvh1 tag or the MP4 header becomes invalid.
         strategy.ConfigureOutput(
-            builder: builder,
-            plan: HlsPlan(encoderName: "libx264", preserveDv: true),
-            outputDirectory: "/output"
+            builder,
+            HlsPlan("libx264", true),
+            "/output"
         );
 
-        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
-        args.Should().NotContain(unexpected: "dvh1");
+        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
+        args.Should().NotContain("dvh1");
     }
 
     private static OutputPlan Plan(bool preserveDv) =>
         new(
-            Format: OutputFormat.Mp4,
+            OutputFormat.Mp4,
             VideoOutputs:
             [
                 new(
-                    Width: 3840,
-                    Height: 2160,
-                    EncoderName: "libx265",
-                    Crf: 22,
-                    BitrateKbps: 0,
-                    Preset: "medium",
-                    Profile: "main10",
-                    Level: "5.1",
-                    TenBit: true,
-                    PixelFormat: "yuv420p10le",
-                    MapLabel: "[v0]",
-                    ExtraFlags: new()
+                    3840,
+                    2160,
+                    "libx265",
+                    22,
+                    0,
+                    "medium",
+                    "main10",
+                    "5.1",
+                    true,
+                    "yuv420p10le",
+                    "[v0]",
+                    new()
                 ),
             ],
             AudioOutputs:
             [
                 new(
-                    EncoderName: "libfdk_aac",
-                    BitrateKbps: 192,
-                    Channels: 2,
-                    SampleRate: 48000,
-                    Action: StreamAction.Transcode,
-                    Language: "eng",
-                    MapLabel: "0:a:0"
+                    "libfdk_aac",
+                    192,
+                    2,
+                    48000,
+                    StreamAction.Transcode,
+                    "eng",
+                    "0:a:0"
                 ),
             ],
             SubtitleOutputs: [],
@@ -129,22 +129,22 @@ public class DolbyVisionPassthroughTests
 
     private static OutputPlan HlsPlan(string encoderName, bool preserveDv) =>
         new(
-            Format: OutputFormat.Hls,
+            OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    Width: 3840,
-                    Height: 2160,
-                    EncoderName: encoderName,
-                    Crf: 22,
-                    BitrateKbps: 0,
-                    Preset: "medium",
-                    Profile: "main10",
-                    Level: "5.1",
-                    TenBit: true,
-                    PixelFormat: "yuv420p10le",
-                    MapLabel: "[v0]",
-                    ExtraFlags: new()
+                    3840,
+                    2160,
+                    encoderName,
+                    22,
+                    0,
+                    "medium",
+                    "main10",
+                    "5.1",
+                    true,
+                    "yuv420p10le",
+                    "[v0]",
+                    new()
                 ),
             ],
             AudioOutputs: [],

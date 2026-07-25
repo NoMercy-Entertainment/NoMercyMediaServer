@@ -11,8 +11,6 @@
 
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 
@@ -25,22 +23,22 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         // Step 1: Group server-side for IDs only (avoids SQL APPLY)
         // Use NOT EXISTS against Movies table instead of ToId==null (ToId may not be set for older data)
         List<int> mediaIds = await context
             .Recommendations.AsNoTracking()
-            .Where(predicate: r => r.MovieFromId != null)
-            .Where(predicate: r => r.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(predicate: r =>
+            .Where(r => r.MovieFromId != null)
+            .Where(r => r.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(r =>
                 !context.Movies.Any(m =>
                     m.Id == r.MediaId && m.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Select(selector: r => r.MediaId)
+            .Select(r => r.MediaId)
             .Distinct()
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         if (mediaIds.Count == 0)
             return [];
@@ -48,9 +46,9 @@ public partial class RecommendationRepository
         // Step 2: Fetch metadata for each distinct MediaId
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Recommendations.AsNoTracking()
-            .Where(predicate: r => mediaIds.Contains(r.MediaId) && r.MovieFromId != null)
-            .Where(predicate: r => r.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Select(selector: r => new
+            .Where(r => mediaIds.Contains(r.MediaId) && r.MovieFromId != null)
+            .Where(r => r.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Select(r => new
             {
                 r.MediaId,
                 r.Title,
@@ -61,13 +59,13 @@ public partial class RecommendationRepository
                 r._colorPalette,
                 r.MovieFromId,
             })
-            .ToListAsync(cancellationToken: ct)
+            .ToListAsync(ct)
             .ContinueWith(
-                continuationFunction: t =>
-                    t.Result.GroupBy(keySelector: r => r.MediaId)
+                t =>
+                    t.Result.GroupBy(r => r.MediaId)
                         .ToDictionary(
-                            keySelector: g => g.Key,
-                            elementSelector: g =>
+                            g => g.Key,
+                            g =>
                             {
                                 var first = g.First();
                                 return new RecommendationCandidateDto
@@ -80,14 +78,14 @@ public partial class RecommendationRepository
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.MovieMediaType,
-                                    SourceCount = g.Select(selector: r => r.MovieFromId).Distinct().Count(),
-                                    SourceIds = g.Select(selector: r => r.MovieFromId!.Value)
+                                    SourceCount = g.Select(r => r.MovieFromId).Distinct().Count(),
+                                    SourceIds = g.Select(r => r.MovieFromId!.Value)
                                         .Distinct()
                                         .ToList(),
                                 };
                             }
                         ),
-                cancellationToken: ct
+                ct
             );
 
         return metadataMap.Values.ToList();
@@ -98,31 +96,31 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         List<int> mediaIds = await context
             .Recommendations.AsNoTracking()
-            .Where(predicate: r => r.TvFromId != null)
-            .Where(predicate: r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(predicate: r => r.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
-            .Where(predicate: r =>
+            .Where(r => r.TvFromId != null)
+            .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(r => r.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
+            .Where(r =>
                 !context.Tvs.Any(t =>
                     t.Id == r.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Select(selector: r => r.MediaId)
+            .Select(r => r.MediaId)
             .Distinct()
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         if (mediaIds.Count == 0)
             return [];
 
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Recommendations.AsNoTracking()
-            .Where(predicate: r => mediaIds.Contains(r.MediaId) && r.TvFromId != null)
-            .Where(predicate: r => r.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
-            .Where(predicate: r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Select(selector: r => new
+            .Where(r => mediaIds.Contains(r.MediaId) && r.TvFromId != null)
+            .Where(r => r.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
+            .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Select(r => new
             {
                 r.MediaId,
                 r.Title,
@@ -133,13 +131,13 @@ public partial class RecommendationRepository
                 r._colorPalette,
                 r.TvFromId,
             })
-            .ToListAsync(cancellationToken: ct)
+            .ToListAsync(ct)
             .ContinueWith(
-                continuationFunction: t =>
-                    t.Result.GroupBy(keySelector: r => r.MediaId)
+                t =>
+                    t.Result.GroupBy(r => r.MediaId)
                         .ToDictionary(
-                            keySelector: g => g.Key,
-                            elementSelector: g =>
+                            g => g.Key,
+                            g =>
                             {
                                 var first = g.First();
                                 return new RecommendationCandidateDto
@@ -152,14 +150,14 @@ public partial class RecommendationRepository
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.TvMediaType,
-                                    SourceCount = g.Select(selector: r => r.TvFromId).Distinct().Count(),
-                                    SourceIds = g.Select(selector: r => r.TvFromId!.Value)
+                                    SourceCount = g.Select(r => r.TvFromId).Distinct().Count(),
+                                    SourceIds = g.Select(r => r.TvFromId!.Value)
                                         .Distinct()
                                         .ToList(),
                                 };
                             }
                         ),
-                cancellationToken: ct
+                ct
             );
 
         return metadataMap.Values.ToList();
@@ -170,31 +168,31 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         List<int> mediaIds = await context
             .Recommendations.AsNoTracking()
-            .Where(predicate: r => r.TvFromId != null)
-            .Where(predicate: r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(predicate: r => r.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
-            .Where(predicate: r =>
+            .Where(r => r.TvFromId != null)
+            .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(r => r.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
+            .Where(r =>
                 !context.Tvs.Any(t =>
                     t.Id == r.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Select(selector: r => r.MediaId)
+            .Select(r => r.MediaId)
             .Distinct()
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         if (mediaIds.Count == 0)
             return [];
 
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Recommendations.AsNoTracking()
-            .Where(predicate: r => mediaIds.Contains(r.MediaId) && r.TvFromId != null)
-            .Where(predicate: r => r.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
-            .Where(predicate: r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Select(selector: r => new
+            .Where(r => mediaIds.Contains(r.MediaId) && r.TvFromId != null)
+            .Where(r => r.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
+            .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Select(r => new
             {
                 r.MediaId,
                 r.Title,
@@ -205,13 +203,13 @@ public partial class RecommendationRepository
                 r._colorPalette,
                 r.TvFromId,
             })
-            .ToListAsync(cancellationToken: ct)
+            .ToListAsync(ct)
             .ContinueWith(
-                continuationFunction: t =>
-                    t.Result.GroupBy(keySelector: r => r.MediaId)
+                t =>
+                    t.Result.GroupBy(r => r.MediaId)
                         .ToDictionary(
-                            keySelector: g => g.Key,
-                            elementSelector: g =>
+                            g => g.Key,
+                            g =>
                             {
                                 var first = g.First();
                                 return new RecommendationCandidateDto
@@ -224,14 +222,14 @@ public partial class RecommendationRepository
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.AnimeMediaType,
-                                    SourceCount = g.Select(selector: r => r.TvFromId).Distinct().Count(),
-                                    SourceIds = g.Select(selector: r => r.TvFromId!.Value)
+                                    SourceCount = g.Select(r => r.TvFromId).Distinct().Count(),
+                                    SourceIds = g.Select(r => r.TvFromId!.Value)
                                         .Distinct()
                                         .ToList(),
                                 };
                             }
                         ),
-                cancellationToken: ct
+                ct
             );
 
         return metadataMap.Values.ToList();
@@ -242,29 +240,29 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         List<int> mediaIds = await context
             .Similar.AsNoTracking()
-            .Where(predicate: s => s.MovieFromId != null)
-            .Where(predicate: s => s.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(predicate: s =>
+            .Where(s => s.MovieFromId != null)
+            .Where(s => s.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(s =>
                 !context.Movies.Any(m =>
                     m.Id == s.MediaId && m.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Select(selector: s => s.MediaId)
+            .Select(s => s.MediaId)
             .Distinct()
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         if (mediaIds.Count == 0)
             return [];
 
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Similar.AsNoTracking()
-            .Where(predicate: s => mediaIds.Contains(s.MediaId) && s.MovieFromId != null)
-            .Where(predicate: s => s.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Select(selector: s => new
+            .Where(s => mediaIds.Contains(s.MediaId) && s.MovieFromId != null)
+            .Where(s => s.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Select(s => new
             {
                 s.MediaId,
                 s.Title,
@@ -275,13 +273,13 @@ public partial class RecommendationRepository
                 s._colorPalette,
                 s.MovieFromId,
             })
-            .ToListAsync(cancellationToken: ct)
+            .ToListAsync(ct)
             .ContinueWith(
-                continuationFunction: t =>
-                    t.Result.GroupBy(keySelector: s => s.MediaId)
+                t =>
+                    t.Result.GroupBy(s => s.MediaId)
                         .ToDictionary(
-                            keySelector: g => g.Key,
-                            elementSelector: g =>
+                            g => g.Key,
+                            g =>
                             {
                                 var first = g.First();
                                 return new RecommendationCandidateDto
@@ -294,14 +292,14 @@ public partial class RecommendationRepository
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.MovieMediaType,
-                                    SourceCount = g.Select(selector: s => s.MovieFromId).Distinct().Count(),
-                                    SourceIds = g.Select(selector: s => s.MovieFromId!.Value)
+                                    SourceCount = g.Select(s => s.MovieFromId).Distinct().Count(),
+                                    SourceIds = g.Select(s => s.MovieFromId!.Value)
                                         .Distinct()
                                         .ToList(),
                                 };
                             }
                         ),
-                cancellationToken: ct
+                ct
             );
 
         return metadataMap.Values.ToList();
@@ -312,31 +310,31 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         List<int> mediaIds = await context
             .Similar.AsNoTracking()
-            .Where(predicate: s => s.TvFromId != null)
-            .Where(predicate: s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(predicate: s => s.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
-            .Where(predicate: s =>
+            .Where(s => s.TvFromId != null)
+            .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(s => s.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
+            .Where(s =>
                 !context.Tvs.Any(t =>
                     t.Id == s.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Select(selector: s => s.MediaId)
+            .Select(s => s.MediaId)
             .Distinct()
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         if (mediaIds.Count == 0)
             return [];
 
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Similar.AsNoTracking()
-            .Where(predicate: s => mediaIds.Contains(s.MediaId) && s.TvFromId != null)
-            .Where(predicate: s => s.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
-            .Where(predicate: s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Select(selector: s => new
+            .Where(s => mediaIds.Contains(s.MediaId) && s.TvFromId != null)
+            .Where(s => s.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
+            .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Select(s => new
             {
                 s.MediaId,
                 s.Title,
@@ -347,13 +345,13 @@ public partial class RecommendationRepository
                 s._colorPalette,
                 s.TvFromId,
             })
-            .ToListAsync(cancellationToken: ct)
+            .ToListAsync(ct)
             .ContinueWith(
-                continuationFunction: t =>
-                    t.Result.GroupBy(keySelector: s => s.MediaId)
+                t =>
+                    t.Result.GroupBy(s => s.MediaId)
                         .ToDictionary(
-                            keySelector: g => g.Key,
-                            elementSelector: g =>
+                            g => g.Key,
+                            g =>
                             {
                                 var first = g.First();
                                 return new RecommendationCandidateDto
@@ -366,14 +364,14 @@ public partial class RecommendationRepository
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.TvMediaType,
-                                    SourceCount = g.Select(selector: s => s.TvFromId).Distinct().Count(),
-                                    SourceIds = g.Select(selector: s => s.TvFromId!.Value)
+                                    SourceCount = g.Select(s => s.TvFromId).Distinct().Count(),
+                                    SourceIds = g.Select(s => s.TvFromId!.Value)
                                         .Distinct()
                                         .ToList(),
                                 };
                             }
                         ),
-                cancellationToken: ct
+                ct
             );
 
         return metadataMap.Values.ToList();
@@ -384,31 +382,31 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         List<int> mediaIds = await context
             .Similar.AsNoTracking()
-            .Where(predicate: s => s.TvFromId != null)
-            .Where(predicate: s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(predicate: s => s.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
-            .Where(predicate: s =>
+            .Where(s => s.TvFromId != null)
+            .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(s => s.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
+            .Where(s =>
                 !context.Tvs.Any(t =>
                     t.Id == s.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Select(selector: s => s.MediaId)
+            .Select(s => s.MediaId)
             .Distinct()
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         if (mediaIds.Count == 0)
             return [];
 
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Similar.AsNoTracking()
-            .Where(predicate: s => mediaIds.Contains(s.MediaId) && s.TvFromId != null)
-            .Where(predicate: s => s.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
-            .Where(predicate: s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Select(selector: s => new
+            .Where(s => mediaIds.Contains(s.MediaId) && s.TvFromId != null)
+            .Where(s => s.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
+            .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Select(s => new
             {
                 s.MediaId,
                 s.Title,
@@ -419,13 +417,13 @@ public partial class RecommendationRepository
                 s._colorPalette,
                 s.TvFromId,
             })
-            .ToListAsync(cancellationToken: ct)
+            .ToListAsync(ct)
             .ContinueWith(
-                continuationFunction: t =>
-                    t.Result.GroupBy(keySelector: s => s.MediaId)
+                t =>
+                    t.Result.GroupBy(s => s.MediaId)
                         .ToDictionary(
-                            keySelector: g => g.Key,
-                            elementSelector: g =>
+                            g => g.Key,
+                            g =>
                             {
                                 var first = g.First();
                                 return new RecommendationCandidateDto
@@ -438,14 +436,14 @@ public partial class RecommendationRepository
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.AnimeMediaType,
-                                    SourceCount = g.Select(selector: s => s.TvFromId).Distinct().Count(),
-                                    SourceIds = g.Select(selector: s => s.TvFromId!.Value)
+                                    SourceCount = g.Select(s => s.TvFromId).Distinct().Count(),
+                                    SourceIds = g.Select(s => s.TvFromId!.Value)
                                         .Distinct()
                                         .ToList(),
                                 };
                             }
                         ),
-                cancellationToken: ct
+                ct
             );
 
         return metadataMap.Values.ToList();

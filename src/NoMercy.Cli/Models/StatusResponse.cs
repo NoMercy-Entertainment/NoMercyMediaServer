@@ -15,30 +15,30 @@ namespace NoMercy.Cli.Models;
 
 internal class StatusResponse
 {
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "server_name")]
+    [JsonProperty("server_name")]
     public string ServerName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "version")]
+    [JsonProperty("version")]
     public string Version { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "platform")]
+    [JsonProperty("platform")]
     public string Platform { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "architecture")]
+    [JsonProperty("architecture")]
     public string Architecture { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "os")]
+    [JsonProperty("os")]
     public string Os { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "uptime_seconds")]
+    [JsonProperty("uptime_seconds")]
     public long UptimeSeconds { get; set; }
 
-    [JsonProperty(propertyName: "start_time")]
+    [JsonProperty("start_time")]
     public DateTime StartTime { get; set; }
 
-    [JsonProperty(propertyName: "is_dev")]
+    [JsonProperty("is_dev")]
     public bool IsDev { get; set; }
 }

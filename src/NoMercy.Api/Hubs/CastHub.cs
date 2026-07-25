@@ -48,7 +48,7 @@ public class CastHub : ConnectionHub
         IAuthTokenStore authTokenStore,
         IChromeCastService chromeCast
     )
-        : base(httpContextAccessor: httpContextAccessor, contextFactory: contextFactory, connectedClients: connectedClients, activityLogger: activityLogger)
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _logger = logger;
         _authTokenStore = authTokenStore;
@@ -58,164 +58,164 @@ public class CastHub : ConnectionHub
 
     public class TimeData
     {
-        [JsonProperty(propertyName: "currentTime")]
+        [JsonProperty("currentTime")]
         public double CurrentTime { get; set; }
 
-        [JsonProperty(propertyName: "duration")]
+        [JsonProperty("duration")]
         public double Duration { get; set; }
 
-        [JsonProperty(propertyName: "percentage")]
+        [JsonProperty("percentage")]
         public double Percentage { get; set; }
 
-        [JsonProperty(propertyName: "remaining")]
+        [JsonProperty("remaining")]
         public double Remaining { get; set; }
 
-        [JsonProperty(propertyName: "currentTimeHuman")]
+        [JsonProperty("currentTimeHuman")]
         public string CurrentTimeHuman { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "durationHuman")]
+        [JsonProperty("durationHuman")]
         public string DurationHuman { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "remainingHuman")]
+        [JsonProperty("remainingHuman")]
         public string RemainingHuman { get; set; } = string.Empty;
     }
 
     public class TextTrack
     {
-        [JsonProperty(propertyName: "id")]
+        [JsonProperty("id")]
         public int Id { get; set; }
 
-        [JsonProperty(propertyName: "default")]
+        [JsonProperty("default")]
         public bool Default { get; set; }
 
-        [JsonProperty(propertyName: "file")]
+        [JsonProperty("file")]
         public string File { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "kind")]
+        [JsonProperty("kind")]
         public string Kind { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "label")]
+        [JsonProperty("label")]
         public string? Label { get; set; }
 
-        [JsonProperty(propertyName: "language")]
+        [JsonProperty("language")]
         public string? Language { get; set; }
 
-        [JsonProperty(propertyName: "type")]
+        [JsonProperty("type")]
         public string? Type { get; set; }
 
-        [JsonProperty(propertyName: "ext")]
+        [JsonProperty("ext")]
         public string? Ext { get; set; }
     }
 
     public class AudioTrack
     {
-        [JsonProperty(propertyName: "id")]
+        [JsonProperty("id")]
         public int Id { get; set; }
 
-        [JsonProperty(propertyName: "language")]
+        [JsonProperty("language")]
         public string Language { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "label")]
+        [JsonProperty("label")]
         public string Label { get; set; } = string.Empty;
     }
 
     public class PlaylistItem
     {
-        [JsonProperty(propertyName: "id")]
+        [JsonProperty("id")]
         public string Id { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "uuid")]
+        [JsonProperty("uuid")]
         public string Uuid { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "seasonName")]
+        [JsonProperty("seasonName")]
         public string SeasonName { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "progress")]
+        [JsonProperty("progress")]
         public ProgressDto Progress { get; set; } = new();
 
-        [JsonProperty(propertyName: "duration")]
+        [JsonProperty("duration")]
         public string Duration { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "file")]
+        [JsonProperty("file")]
         public string File { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "image")]
+        [JsonProperty("image")]
         public string Image { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "title")]
+        [JsonProperty("title")]
         public string Title { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "tracks")]
+        [JsonProperty("tracks")]
         public TextTrack[] Tracks { get; set; } = [];
 
-        [JsonProperty(propertyName: "withCredentials")]
+        [JsonProperty("withCredentials")]
         public bool WithCredentials { get; set; }
 
-        [JsonProperty(propertyName: "description")]
+        [JsonProperty("description")]
         public string Description { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "season")]
+        [JsonProperty("season")]
         public int Season { get; set; }
 
-        [JsonProperty(propertyName: "episode")]
+        [JsonProperty("episode")]
         public int Episode { get; set; }
 
-        [JsonProperty(propertyName: "show")]
+        [JsonProperty("show")]
         public string Show { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "year")]
+        [JsonProperty("year")]
         public int Year { get; set; }
 
-        [JsonProperty(propertyName: "logo")]
+        [JsonProperty("logo")]
         public string Logo { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "rating")]
+        [JsonProperty("rating")]
         public RatingDto Rating { get; set; } = new();
     }
 
     public class CastPlayerState
     {
-        [JsonProperty(propertyName: "time")]
+        [JsonProperty("time")]
         public TimeData TimeData { get; set; } = new();
 
-        [JsonProperty(propertyName: "volume")]
+        [JsonProperty("volume")]
         public int Volume { get; set; }
 
-        [JsonProperty(propertyName: "muted")]
+        [JsonProperty("muted")]
         public bool Muted { get; set; }
 
-        [JsonProperty(propertyName: "isPlaying")]
+        [JsonProperty("isPlaying")]
         public bool IsPlaying { get; set; }
 
-        [JsonProperty(propertyName: "playlist")]
+        [JsonProperty("playlist")]
         public PlaylistItem[] Playlist { get; set; } = [];
 
-        [JsonProperty(propertyName: "currentPlaylistItem")]
+        [JsonProperty("currentPlaylistItem")]
         public PlaylistItem? CurrentPlaylistItem { get; set; }
 
-        [JsonProperty(propertyName: "subtitles")]
+        [JsonProperty("subtitles")]
         public TextTrack[] Subtitles { get; set; } = [];
 
-        [JsonProperty(propertyName: "currentSubtitleTrack")]
+        [JsonProperty("currentSubtitleTrack")]
         public TextTrack CurrentSubtitleTextTrack { get; set; } = new();
 
-        [JsonProperty(propertyName: "audioTracks")]
+        [JsonProperty("audioTracks")]
         public AudioTrack[] AudioTracks { get; set; } = [];
 
-        [JsonProperty(propertyName: "currentAudioTrack")]
+        [JsonProperty("currentAudioTrack")]
         public int CurrentAudioTrack { get; set; }
     }
 
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
-        _logger.LogInformation(message: "Cast client connected");
+        _logger.LogInformation("Cast client connected");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await base.OnDisconnectedAsync(exception: exception);
-        _logger.LogInformation(message: "Cast client disconnected");
+        await base.OnDisconnectedAsync(exception);
+        _logger.LogInformation("Cast client disconnected");
     }
 
     public string[] GetChromeCasts()
@@ -225,7 +225,7 @@ public class CastHub : ConnectionHub
 
     public async Task SelectChromecast(string name)
     {
-        await _chromeCast.SelectChromecast(name: name);
+        await _chromeCast.SelectChromecast(name);
     }
 
     public async Task Launch()
@@ -235,7 +235,7 @@ public class CastHub : ConnectionHub
 
     public async Task CastPlaylist(string value)
     {
-        await _chromeCast.CastPlaylist(value: value, accessToken: _authTokenStore.AccessToken);
+        await _chromeCast.CastPlaylist(value, accessToken: _authTokenStore.AccessToken);
     }
 
     public ChromecastStatus? GetChromecastStatus()
@@ -260,201 +260,201 @@ public class CastHub : ConnectionHub
 
     public async Task Play()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "Play", endpoint: "castHub", userId: user.Id);
+        await _clientMessenger.SendTo("Play", "castHub", user.Id);
     }
 
     public async Task Pause()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "Pause", endpoint: "castHub", userId: user.Id);
+        await _clientMessenger.SendTo("Pause", "castHub", user.Id);
     }
 
     public async Task Time(TimeData time)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "Time", endpoint: "castHub", userId: user.Id, data: time);
+        await _clientMessenger.SendTo("Time", "castHub", user.Id, time);
     }
 
     public async Task Ended()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "Ended", endpoint: "castHub", userId: user.Id);
+        await _clientMessenger.SendTo("Ended", "castHub", user.Id);
     }
 
     public async Task Volume(int volume)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "Volume", endpoint: "castHub", userId: user.Id, data: volume);
+        await _clientMessenger.SendTo("Volume", "castHub", user.Id, volume);
     }
 
     public async Task Muted(bool muted)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "Muted", endpoint: "castHub", userId: user.Id, data: muted);
+        await _clientMessenger.SendTo("Muted", "castHub", user.Id, muted);
     }
 
     public async Task Item(PlaylistItem item)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "Item", endpoint: "castHub", userId: user.Id, data: item);
+        await _clientMessenger.SendTo("Item", "castHub", user.Id, item);
     }
 
     public async Task Playlist(PlaylistItem[] item)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "Playlist", endpoint: "castHub", userId: user.Id, data: item);
+        await _clientMessenger.SendTo("Playlist", "castHub", user.Id, item);
     }
 
     public async Task SubtitleTracks(TextTrack[] subtitleTracks)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SubtitleTracks", endpoint: "castHub", userId: user.Id, data: subtitleTracks);
+        await _clientMessenger.SendTo("SubtitleTracks", "castHub", user.Id, subtitleTracks);
     }
 
     public async Task CurrentSubtitleTrack(TextTrack subtitleTrack)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "CurrentSubtitleTrack", endpoint: "castHub", userId: user.Id, data: subtitleTrack);
+        await _clientMessenger.SendTo("CurrentSubtitleTrack", "castHub", user.Id, subtitleTrack);
     }
 
     public async Task AudioTracks(AudioTrack[] audioTrack)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "AudioTracks", endpoint: "castHub", userId: user.Id, data: audioTrack);
+        await _clientMessenger.SendTo("AudioTracks", "castHub", user.Id, audioTrack);
     }
 
     public async Task CurrentAudioTrack(AudioTrack audioTrack)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "CurrentAudioTrack", endpoint: "castHub", userId: user.Id, data: audioTrack);
+        await _clientMessenger.SendTo("CurrentAudioTrack", "castHub", user.Id, audioTrack);
     }
 
     public async Task GetPlayerState()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "GetPlayerState", endpoint: "castHub", userId: user.Id);
+        await _clientMessenger.SendTo("GetPlayerState", "castHub", user.Id);
     }
 
     public async Task PlayerState(CastPlayerState state)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "MusicPlayerState", endpoint: "castHub", userId: user.Id, data: state);
+        await _clientMessenger.SendTo("MusicPlayerState", "castHub", user.Id, state);
     }
 
     public async Task SetAudioTrack(int audioTrack)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SetAudioTrack", endpoint: "castHub", userId: user.Id, data: audioTrack);
+        await _clientMessenger.SendTo("SetAudioTrack", "castHub", user.Id, audioTrack);
     }
 
     public async Task SetSubtitleTrack(int subtitleTrack)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SetSubtitleTrack", endpoint: "castHub", userId: user.Id, data: subtitleTrack);
+        await _clientMessenger.SendTo("SetSubtitleTrack", "castHub", user.Id, subtitleTrack);
     }
 
     public async Task SetPlaylistItem(int item)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SetPlaylistItem", endpoint: "castHub", userId: user.Id, data: item);
+        await _clientMessenger.SendTo("SetPlaylistItem", "castHub", user.Id, item);
     }
 
     public async Task SetVolume(int volume)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SetVolume", endpoint: "castHub", userId: user.Id, data: volume);
+        await _clientMessenger.SendTo("SetVolume", "castHub", user.Id, volume);
     }
 
     public async Task SetMuted(bool muted)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SetMuted", endpoint: "castHub", userId: user.Id, data: muted);
+        await _clientMessenger.SendTo("SetMuted", "castHub", user.Id, muted);
     }
 
     public async Task SetSeek(int time)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SetSeek", endpoint: "castHub", userId: user.Id, data: time);
+        await _clientMessenger.SendTo("SetSeek", "castHub", user.Id, time);
     }
 
     public async Task SetNext()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SetNext", endpoint: "castHub", userId: user.Id);
+        await _clientMessenger.SendTo("SetNext", "castHub", user.Id);
     }
 
     public async Task SetPrevious()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SetPrevious", endpoint: "castHub", userId: user.Id);
+        await _clientMessenger.SendTo("SetPrevious", "castHub", user.Id);
     }
 
     public async Task SetPlay()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SetPlay", endpoint: "castHub", userId: user.Id);
+        await _clientMessenger.SendTo("SetPlay", "castHub", user.Id);
     }
 
     public async Task SetPause()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SetPause", endpoint: "castHub", userId: user.Id);
+        await _clientMessenger.SendTo("SetPause", "castHub", user.Id);
     }
 
     public async Task SetStop()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
-        await _clientMessenger.SendTo(name: "SetStop", endpoint: "castHub", userId: user.Id);
+        await _clientMessenger.SendTo("SetStop", "castHub", user.Id);
     }
 }

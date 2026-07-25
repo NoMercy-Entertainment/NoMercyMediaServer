@@ -31,10 +31,10 @@ namespace NoMercy.Tests.Queue;
 /// regressed into rethrowing, or into looping forever, every test here goes
 /// red.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class JobQueueRetryExhaustionTests
 {
-    private static Exception NonRelational() => new InvalidOperationException(message: "disk full");
+    private static Exception NonRelational() => new InvalidOperationException("disk full");
 
     private static QueueJobModel Job() =>
         new()
@@ -50,7 +50,7 @@ public class JobQueueRetryExhaustionTests
     {
         Mock<IQueueContext> context = new();
         context
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.GetNextJob(
                     It.IsAny<string>(),
                     It.IsAny<byte>(),
@@ -58,29 +58,29 @@ public class JobQueueRetryExhaustionTests
                     It.IsAny<DateTime>()
                 )
             )
-            .Throws(exception: NonRelational());
-        JobQueue queue = new(context: context.Object);
+            .Throws(NonRelational());
+        JobQueue queue = new(context.Object);
 
-        QueueJobModel? result = queue.ReserveJob(name: "extras", currentJobId: null, attempt: 5);
+        QueueJobModel? result = queue.ReserveJob("extras", null, 5);
 
         result.Should().BeNull();
-        context.Verify(expression: c => c.UpdateJob(It.IsAny<QueueJobModel>()), times: Times.Never);
+        context.Verify(c => c.UpdateJob(It.IsAny<QueueJobModel>()), Times.Never);
     }
 
     [Fact]
     public void FailJob_RetriesExhausted_GivesUpSilently_NoPartialWrite()
     {
         Mock<IQueueContext> context = new();
-        context.Setup(expression: c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(exception: NonRelational());
-        JobQueue queue = new(context: context.Object);
+        context.Setup(c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(NonRelational());
+        JobQueue queue = new(context.Object);
 
-        Action act = () => queue.FailJob(queueJob: Job(), exception: new Exception(message: "boom"), attempt: 5);
+        Action act = () => queue.FailJob(Job(), new Exception("boom"), 5);
 
         act.Should().NotThrow();
-        context.Verify(expression: c => c.SaveChanges(), times: Times.Never);
+        context.Verify(c => c.SaveChanges(), Times.Never);
         context.Verify(
-            expression: c => c.AddFailedJobAndRemoveJob(It.IsAny<FailedJobModel>(), It.IsAny<QueueJobModel>()),
-            times: Times.Never
+            c => c.AddFailedJobAndRemoveJob(It.IsAny<FailedJobModel>(), It.IsAny<QueueJobModel>()),
+            Times.Never
         );
     }
 
@@ -88,13 +88,13 @@ public class JobQueueRetryExhaustionTests
     public void ReleaseReservation_RetriesExhausted_GivesUpSilently()
     {
         Mock<IQueueContext> context = new();
-        context.Setup(expression: c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(exception: NonRelational());
-        JobQueue queue = new(context: context.Object);
+        context.Setup(c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(NonRelational());
+        JobQueue queue = new(context.Object);
 
-        Action act = () => queue.ReleaseReservation(job: Job(), availableAfter: TimeSpan.FromSeconds(seconds: 1), attempt: 5);
+        Action act = () => queue.ReleaseReservation(Job(), TimeSpan.FromSeconds(1), 5);
 
         act.Should().NotThrow();
-        context.Verify(expression: c => c.SaveChanges(), times: Times.Never);
+        context.Verify(c => c.SaveChanges(), Times.Never);
     }
 
     [Fact]
@@ -102,13 +102,13 @@ public class JobQueueRetryExhaustionTests
     {
         Mock<IQueueContext> context = new();
         context
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.UpdateJobPayload(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<DateTime>())
             )
-            .Throws(exception: NonRelational());
-        JobQueue queue = new(context: context.Object);
+            .Throws(NonRelational());
+        JobQueue queue = new(context.Object);
 
-        Action act = () => queue.UpdateJobPayload(jobId: 1, newPayload: "{}", availableAfter: TimeSpan.FromSeconds(seconds: 1), attempt: 5);
+        Action act = () => queue.UpdateJobPayload(1, "{}", TimeSpan.FromSeconds(1), 5);
 
         act.Should().NotThrow();
     }
@@ -117,23 +117,23 @@ public class JobQueueRetryExhaustionTests
     public void Requeue_RetriesExhausted_GivesUpSilently_NoSaveChanges()
     {
         Mock<IQueueContext> context = new();
-        context.Setup(expression: c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(exception: NonRelational());
-        JobQueue queue = new(context: context.Object);
+        context.Setup(c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(NonRelational());
+        JobQueue queue = new(context.Object);
 
-        Action act = () => queue.Requeue(job: Job(), newQueue: "encoder-cpu", newPayload: "{}", attempt: 5);
+        Action act = () => queue.Requeue(Job(), "encoder-cpu", "{}", 5);
 
         act.Should().NotThrow();
-        context.Verify(expression: c => c.SaveChanges(), times: Times.Never);
+        context.Verify(c => c.SaveChanges(), Times.Never);
     }
 
     [Fact]
     public void DeleteJob_RetriesExhausted_GivesUpSilently()
     {
         Mock<IQueueContext> context = new();
-        context.Setup(expression: c => c.RemoveJob(It.IsAny<QueueJobModel>())).Throws(exception: NonRelational());
-        JobQueue queue = new(context: context.Object);
+        context.Setup(c => c.RemoveJob(It.IsAny<QueueJobModel>())).Throws(NonRelational());
+        JobQueue queue = new(context.Object);
 
-        Action act = () => queue.DeleteJob(queueJob: Job(), attempt: 5);
+        Action act = () => queue.DeleteJob(Job(), 5);
 
         act.Should().NotThrow();
     }
@@ -142,14 +142,14 @@ public class JobQueueRetryExhaustionTests
     public void RequeueFailedJob_RetriesExhausted_GivesUpSilently_DoesNotFindOrRemove()
     {
         Mock<IQueueContext> context = new();
-        context.Setup(expression: c => c.FindFailedJob(It.IsAny<int>())).Throws(exception: NonRelational());
-        JobQueue queue = new(context: context.Object);
+        context.Setup(c => c.FindFailedJob(It.IsAny<int>())).Throws(NonRelational());
+        JobQueue queue = new(context.Object);
 
-        Action act = () => queue.RequeueFailedJob(failedJobId: 99, attempt: 5);
+        Action act = () => queue.RequeueFailedJob(99, 5);
 
         act.Should().NotThrow();
-        context.Verify(expression: c => c.RemoveFailedJob(It.IsAny<FailedJobModel>()), times: Times.Never);
-        context.Verify(expression: c => c.AddJob(It.IsAny<QueueJobModel>()), times: Times.Never);
+        context.Verify(c => c.RemoveFailedJob(It.IsAny<FailedJobModel>()), Times.Never);
+        context.Verify(c => c.AddJob(It.IsAny<QueueJobModel>()), Times.Never);
     }
 
     /// <summary>
@@ -165,18 +165,18 @@ public class JobQueueRetryExhaustionTests
         Mock<IQueueContext> context = new();
         int calls = 0;
         context
-            .Setup(expression: c => c.RemoveJob(It.IsAny<QueueJobModel>()))
-            .Callback(action: () =>
+            .Setup(c => c.RemoveJob(It.IsAny<QueueJobModel>()))
+            .Callback(() =>
             {
                 calls++;
                 if (calls == 1)
-                    throw new InvalidOperationException(message: "transient");
+                    throw new InvalidOperationException("transient");
             });
-        JobQueue queue = new(context: context.Object);
+        JobQueue queue = new(context.Object);
 
-        Action act = () => queue.DeleteJob(queueJob: Job());
+        Action act = () => queue.DeleteJob(Job());
 
         act.Should().NotThrow();
-        calls.Should().Be(expected: 2);
+        calls.Should().Be(2);
     }
 }

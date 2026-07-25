@@ -24,62 +24,62 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 /// comma-decimal server locale a bare ":F1" turns "(3.2s)" into "(3,2s)" in
 /// that payload — this pins InvariantCulture on the formatter.
 /// </summary>
-[Collection(name: "EventBusProvider")]
+[Collection("EventBusProvider")]
 public class EventBusProgressObserverCultureTests
 {
     private static object? GetField(object obj, string fieldName) =>
-        obj.GetType().GetProperty(name: fieldName)?.GetValue(obj: obj);
+        obj.GetType().GetProperty(fieldName)?.GetValue(obj);
 
     private static IEventBus? GetCurrentInstance() =>
         (IEventBus?)
             typeof(EventBusProvider)
-                .GetField(name: "_instance", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
-                .GetValue(obj: null);
+                .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
+                .GetValue(null);
 
     private static void SetInstance(IEventBus? bus) =>
         typeof(EventBusProvider)
-            .GetField(name: "_instance", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
-            .SetValue(obj: null, value: bus);
+            .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
+            .SetValue(null, bus);
 
     [Theory]
-    [InlineData(data: "de-DE")]
-    [InlineData(data: "nl-NL")]
-    [InlineData(data: "fr-FR")]
+    [InlineData("de-DE")]
+    [InlineData("nl-NL")]
+    [InlineData("fr-FR")]
     public void OnStageCompleted_Message_StaysPeriodDecimalUnderCommaCulture(string culture)
     {
         CultureInfo previousCulture = Thread.CurrentThread.CurrentCulture;
         IEventBus? previousBus = GetCurrentInstance();
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(name: culture);
+            Thread.CurrentThread.CurrentCulture = new(culture);
 
             EncodingProgressBroadcastedEvent? captured = null;
             Mock<IEventBus> mockBus = new();
             mockBus
-                .Setup(expression: b =>
+                .Setup(b =>
                     b.PublishAsync(
                         It.IsAny<EncodingProgressBroadcastedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
                 .Callback<EncodingProgressBroadcastedEvent, CancellationToken>(
-                    action: (e, _) => captured = e
+                    (e, _) => captured = e
                 )
-                .Returns(value: Task.CompletedTask);
+                .Returns(Task.CompletedTask);
 
-            EventBusProvider.Configure(eventBus: mockBus.Object);
+            EventBusProvider.Configure(mockBus.Object);
 
-            EventBusProgressObserver observer = new(jobId: 7, title: "Culture Test Movie");
-            observer.OnStageCompleted(stageName: "VideoEncode", duration: TimeSpan.FromSeconds(value: 3.2));
+            EventBusProgressObserver observer = new(7, "Culture Test Movie");
+            observer.OnStageCompleted("VideoEncode", TimeSpan.FromSeconds(3.2));
 
-            Assert.NotNull(@object: captured);
-            string message = (string)GetField(obj: captured.ProgressData, fieldName: "message")!;
-            Assert.Contains(expectedSubstring: "(3.2s)", actualString: message);
-            Assert.DoesNotContain(expectedSubstring: ",", actualString: message);
+            Assert.NotNull(captured);
+            string message = (string)GetField(captured.ProgressData, "message")!;
+            Assert.Contains("(3.2s)", message);
+            Assert.DoesNotContain(",", message);
         }
         finally
         {
-            SetInstance(bus: previousBus);
+            SetInstance(previousBus);
             Thread.CurrentThread.CurrentCulture = previousCulture;
         }
     }

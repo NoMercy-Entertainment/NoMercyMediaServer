@@ -31,8 +31,8 @@ namespace NoMercy.Tests.Storage.Contract;
 ///   - Seed and backend-check helpers use the raw AWS SDK client directly so they
 ///     don't exercise the abstraction under test.
 /// </summary>
-[Collection(name: "StorageBackends")]
-[Trait(name: "Category", value: "Integration")]
+[Collection("StorageBackends")]
+[Trait("Category", "Integration")]
 public sealed class S3StorageContractTests(StorageBackendsFixture fixture) : IStorageContractTests
 {
     // -----------------------------------------------------------------------
@@ -41,9 +41,9 @@ public sealed class S3StorageContractTests(StorageBackendsFixture fixture) : ISt
 
     protected override IStorage CreateStorage()
     {
-        Skip.If(condition: !fixture.Available, reason: fixture.StartupError ?? "storage container not available");
+        Skip.If(!fixture.Available, fixture.StartupError ?? "storage container not available");
 
-        return new RemoteStorage(driver: fixture.BuildS3Driver());
+        return new RemoteStorage(fixture.BuildS3Driver());
     }
 
     /// <summary>
@@ -56,12 +56,12 @@ public sealed class S3StorageContractTests(StorageBackendsFixture fixture) : ISt
         PutObjectRequest request = new()
         {
             BucketName = StorageBackendsFixture.S3Bucket,
-            Key = relativePath.TrimStart(trimChar: '/'),
-            InputStream = new MemoryStream(buffer: content),
+            Key = relativePath.TrimStart('/'),
+            InputStream = new MemoryStream(content),
             ContentType = "application/octet-stream",
         };
 
-        await client.PutObjectAsync(request: request);
+        await client.PutObjectAsync(request);
     }
 
     /// <summary>
@@ -72,17 +72,17 @@ public sealed class S3StorageContractTests(StorageBackendsFixture fixture) : ISt
     {
         using AmazonS3Client client = fixture.BuildS3RawClient();
 
-        string key = relativePath.TrimStart(trimChar: '/').TrimEnd(trimChar: '/') + "/";
+        string key = relativePath.TrimStart('/').TrimEnd('/') + "/";
 
         PutObjectRequest request = new()
         {
             BucketName = StorageBackendsFixture.S3Bucket,
             Key = key,
-            InputStream = new MemoryStream(buffer: Array.Empty<byte>()),
+            InputStream = new MemoryStream(Array.Empty<byte>()),
             ContentType = "application/x-directory",
         };
 
-        await client.PutObjectAsync(request: request);
+        await client.PutObjectAsync(request);
     }
 
     /// <summary>
@@ -97,10 +97,10 @@ public sealed class S3StorageContractTests(StorageBackendsFixture fixture) : ISt
             GetObjectMetadataRequest request = new()
             {
                 BucketName = StorageBackendsFixture.S3Bucket,
-                Key = relativePath.TrimStart(trimChar: '/'),
+                Key = relativePath.TrimStart('/'),
             };
 
-            await client.GetObjectMetadataAsync(request: request);
+            await client.GetObjectMetadataAsync(request);
             return true;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
@@ -132,30 +132,30 @@ public sealed class S3StorageContractTests(StorageBackendsFixture fixture) : ISt
     // The base contract asserts withDouble == withSingle; this WILL FAIL for S3.
     // Documented here as a known failure (separate named test so xUnit1024 is satisfied).
     [SkippableFact]
-    [Trait(name: "Category", value: "Integration")]
+    [Trait("Category", "Integration")]
     public async Task S3_double_slash_is_known_failure_requires_driver_normalisation()
     {
-        Skip.If(condition: !fixture.Available, reason: fixture.StartupError ?? "storage container not available");
+        Skip.If(!fixture.Available, fixture.StartupError ?? "storage container not available");
 
         IStorage storage = CreateStorage();
         try
         {
             byte[] data = new byte[] { 0x01, 0x02 };
-            await SeedFile(relativePath: "foo/bar.bin", content: data);
+            await SeedFile("foo/bar.bin", data);
 
-            bool withSingle = await storage.ExistsAsync(path: "foo/bar.bin", ct: CancellationToken.None);
+            bool withSingle = await storage.ExistsAsync("foo/bar.bin", CancellationToken.None);
 
             // KNOWN FAILURE: S3StorageDriver does not collapse double slashes before
             // building S3 keys, so "foo//bar.bin" is a distinct key from "foo/bar.bin".
             // This assertion is expected to fail until the driver normalises input paths.
-            bool withDouble = await storage.ExistsAsync(path: "foo//bar.bin", ct: CancellationToken.None);
+            bool withDouble = await storage.ExistsAsync("foo//bar.bin", CancellationToken.None);
 
             withSingle.Should().BeTrue();
             withDouble
                 .Should()
                 .Be(
-                    expected: withSingle,
-                    because: "KNOWN FAILURE: S3StorageDriver does not collapse double slashes — driver fix needed"
+                    withSingle,
+                    "KNOWN FAILURE: S3StorageDriver does not collapse double slashes — driver fix needed"
                 );
         }
         finally

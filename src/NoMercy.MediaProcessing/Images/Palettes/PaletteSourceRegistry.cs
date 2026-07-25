@@ -17,10 +17,10 @@ public class PaletteSourceRegistry
 
     public PaletteSourceRegistry(IEnumerable<IPaletteSource> sources)
     {
-        _sources = sources.ToDictionary(keySelector: s => s.EntityType, elementSelector: s => s);
+        _sources = sources.ToDictionary(s => s.EntityType, s => s);
     }
 
-    public IPaletteSource? Resolve(string entityType) => _sources.GetValueOrDefault(key: entityType);
+    public IPaletteSource? Resolve(string entityType) => _sources.GetValueOrDefault(entityType);
 
     public IReadOnlyCollection<string> EntityTypes => _sources.Keys.ToList();
 }

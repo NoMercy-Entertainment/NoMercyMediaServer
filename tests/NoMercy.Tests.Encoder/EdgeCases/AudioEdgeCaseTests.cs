@@ -36,21 +36,21 @@ public class AudioEdgeCaseTests
 
     public AudioEdgeCaseTests()
     {
-        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
-        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
-        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(h => h.HasGpu).Returns(false);
+        _hardware.Setup(h => h.CpuCores).Returns(8);
+        _hardware.Setup(h => h.Gpus).Returns([]);
 
         _stage = new(
-            graphBuilder: new(),
-            groupingStrategy: new(),
-            costEstimator: new(),
-            codecResolver: _codecResolver.Object,
-            hardware: _hardware.Object,
-            tonemapSelector: new TonemapSelector(),
-            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
-            abrLadderGenerator: new AbrLadderGenerator(),
-            cropDetector: new NoOpCropDetector(),
-            logger: NullLogger<PlanStage>.Instance
+            new(),
+            new(),
+            new(),
+            _codecResolver.Object,
+            _hardware.Object,
+            new TonemapSelector(),
+            new Mock<IFfmpegCapabilities>().Object,
+            new AbrLadderGenerator(),
+            new NoOpCropDetector(),
+            NullLogger<PlanStage>.Instance
         );
     }
 
@@ -64,7 +64,7 @@ public class AudioEdgeCaseTests
         new(
             FilePath: "/music/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 3),
+            Duration: TimeSpan.FromMinutes(3),
             OverallBitRateKbps: bitRateKbps,
             FileSizeBytes: 5_000_000,
             VideoStreams: [],
@@ -101,7 +101,7 @@ public class AudioEdgeCaseTests
             AllowedLanguages: [],
             DefaultLanguage: null,
             Loudness: null,
-            Downmix: downmixMode.HasValue ? new(Mode: downmixMode.Value, CustomPanMatrix: null) : null,
+            Downmix: downmixMode.HasValue ? new(downmixMode.Value, null) : null,
             SegmentNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}",
             PlaylistNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}"
         );
@@ -122,170 +122,163 @@ public class AudioEdgeCaseTests
     [Fact]
     public async Task AacSourceMatchingAacOutput_DowngradesToCopy()
     {
-        MediaInfo media = BuildAudioOnlyMedia(codec: "aac", bitRateKbps: 192);
-        EncodingProfile profile = BuildProfile(audio:
-        [
-            BuildAudioOutput(codec: AudioCodecType.Aac, bitrateKbps: 192),
+        MediaInfo media = BuildAudioOnlyMedia("aac", bitRateKbps: 192);
+        EncodingProfile profile = BuildProfile([
+            BuildAudioOutput(AudioCodecType.Aac, bitrateKbps: 192),
         ]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
-        audio.Action.Should().Be(expected: StreamAction.Copy);
-        audio.EncoderName.Should().Be(expected: "copy");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
+        audio.Action.Should().Be(StreamAction.Copy);
+        audio.EncoderName.Should().Be("copy");
     }
 
     [Fact]
     public async Task AacSourceLowerBitrate_TargetHigherBitrate_TranscodesForBitrateUpgrade()
     {
-        MediaInfo media = BuildAudioOnlyMedia(codec: "aac", bitRateKbps: 128);
-        EncodingProfile profile = BuildProfile(audio:
-        [
-            BuildAudioOutput(codec: AudioCodecType.Aac, bitrateKbps: 256),
+        MediaInfo media = BuildAudioOnlyMedia("aac", bitRateKbps: 128);
+        EncodingProfile profile = BuildProfile([
+            BuildAudioOutput(AudioCodecType.Aac, bitrateKbps: 256),
         ]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
-        audio.Action.Should().Be(expected: StreamAction.Transcode);
-        audio.BitrateKbps.Should().Be(expected: 256);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
+        audio.Action.Should().Be(StreamAction.Transcode);
+        audio.BitrateKbps.Should().Be(256);
     }
 
     [Fact]
     public async Task MonoAudioToStereoProfile_TranscodesForChannelUpgrade()
     {
-        MediaInfo media = BuildAudioOnlyMedia(codec: "aac", channels: 1, bitRateKbps: 192);
-        EncodingProfile profile = BuildProfile(audio: [BuildAudioOutput(codec: AudioCodecType.Aac, channels: 2)]);
+        MediaInfo media = BuildAudioOnlyMedia("aac", channels: 1, bitRateKbps: 192);
+        EncodingProfile profile = BuildProfile([BuildAudioOutput(AudioCodecType.Aac, channels: 2)]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
-        audio.Action.Should().Be(expected: StreamAction.Transcode);
-        audio.Channels.Should().Be(expected: 2);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
+        audio.Action.Should().Be(StreamAction.Transcode);
+        audio.Channels.Should().Be(2);
     }
 
     [Fact]
     public async Task DownmixToStereo_AudioFilterIsItuR128Pan()
     {
-        MediaInfo media = BuildAudioOnlyMedia(codec: "aac", channels: 6);
-        EncodingProfile profile = BuildProfile(audio:
-        [
+        MediaInfo media = BuildAudioOnlyMedia("aac", channels: 6);
+        EncodingProfile profile = BuildProfile([
             BuildAudioOutput(
-                codec: AudioCodecType.Aac,
+                AudioCodecType.Aac,
                 channels: 2,
                 downmixMode: NoMercy.Encoder.Profiles.DownmixMode.StereoItuR128
             ),
         ]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
         audio.AudioFilter.Should().NotBeNullOrEmpty();
-        audio.AudioFilter.Should().Contain(expected: "pan=stereo");
+        audio.AudioFilter.Should().Contain("pan=stereo");
     }
 
     [Fact]
     public async Task DownmixToMono_AudioFilterIsMonoPan()
     {
-        MediaInfo media = BuildAudioOnlyMedia(codec: "aac", channels: 6);
-        EncodingProfile profile = BuildProfile(audio:
-        [
+        MediaInfo media = BuildAudioOnlyMedia("aac", channels: 6);
+        EncodingProfile profile = BuildProfile([
             BuildAudioOutput(
-                codec: AudioCodecType.Aac,
+                AudioCodecType.Aac,
                 channels: 1,
                 downmixMode: NoMercy.Encoder.Profiles.DownmixMode.Mono
             ),
         ]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
         audio.AudioFilter.Should().NotBeNullOrEmpty();
-        audio.AudioFilter.Should().Contain(expected: "pan=mono");
+        audio.AudioFilter.Should().Contain("pan=mono");
     }
 
     [Fact]
     public async Task NoDownmixNoLoudness_AudioFilterIsNull()
     {
-        MediaInfo media = BuildAudioOnlyMedia(codec: "aac", channels: 2);
-        EncodingProfile profile = BuildProfile(audio: [BuildAudioOutput(codec: AudioCodecType.Aac, channels: 2)]);
+        MediaInfo media = BuildAudioOnlyMedia("aac", channels: 2);
+        EncodingProfile profile = BuildProfile([BuildAudioOutput(AudioCodecType.Aac, channels: 2)]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
         audio.AudioFilter.Should().BeNull();
     }
 
     [Fact]
     public async Task OpusSourceMatchingOpusOutput_DowngradesToCopy()
     {
-        MediaInfo media = BuildAudioOnlyMedia(codec: "opus", channels: 2, bitRateKbps: 192);
-        EncodingProfile profile = BuildProfile(audio:
-        [
-            BuildAudioOutput(codec: AudioCodecType.Opus, bitrateKbps: 192),
+        MediaInfo media = BuildAudioOnlyMedia("opus", channels: 2, bitRateKbps: 192);
+        EncodingProfile profile = BuildProfile([
+            BuildAudioOutput(AudioCodecType.Opus, bitrateKbps: 192),
         ]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
-        audio.Action.Should().Be(expected: StreamAction.Copy);
-        audio.EncoderName.Should().Be(expected: "copy");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
+        audio.Action.Should().Be(StreamAction.Copy);
+        audio.EncoderName.Should().Be("copy");
     }
 
     [Fact]
     public async Task Eac3SourceMatchingEac3Output_DowngradesToCopy()
     {
-        MediaInfo media = BuildAudioOnlyMedia(codec: "eac3", channels: 6, bitRateKbps: 448);
-        EncodingProfile profile = BuildProfile(audio:
-        [
-            BuildAudioOutput(codec: AudioCodecType.Eac3, bitrateKbps: 448, channels: 6),
+        MediaInfo media = BuildAudioOnlyMedia("eac3", channels: 6, bitRateKbps: 448);
+        EncodingProfile profile = BuildProfile([
+            BuildAudioOutput(AudioCodecType.Eac3, bitrateKbps: 448, channels: 6),
         ]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
-        audio.Action.Should().Be(expected: StreamAction.Copy);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
+        audio.Action.Should().Be(StreamAction.Copy);
     }
 
     [Fact]
     public async Task TrueHdSourceToAacTranscode_ForcesTranscode()
     {
-        MediaInfo media = BuildAudioOnlyMedia(codec: "truehd", channels: 6, bitRateKbps: 1200);
-        EncodingProfile profile = BuildProfile(audio:
-        [
-            BuildAudioOutput(codec: AudioCodecType.Aac, bitrateKbps: 384),
+        MediaInfo media = BuildAudioOnlyMedia("truehd", channels: 6, bitRateKbps: 1200);
+        EncodingProfile profile = BuildProfile([
+            BuildAudioOutput(AudioCodecType.Aac, bitrateKbps: 384),
         ]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
-        audio.Action.Should().Be(expected: StreamAction.Transcode);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
+        audio.Action.Should().Be(StreamAction.Transcode);
     }
 
     [Theory]
-    [InlineData(data: ["aac", AudioCodecType.Aac, true])]
-    [InlineData(data: ["ac3", AudioCodecType.Ac3, true])]
-    [InlineData(data: ["eac3", AudioCodecType.Eac3, true])]
-    [InlineData(data: ["opus", AudioCodecType.Opus, true])]
-    [InlineData(data: ["unknown", AudioCodecType.Aac, false])]
+    [InlineData("aac", AudioCodecType.Aac, true)]
+    [InlineData("ac3", AudioCodecType.Ac3, true)]
+    [InlineData("eac3", AudioCodecType.Eac3, true)]
+    [InlineData("opus", AudioCodecType.Opus, true)]
+    [InlineData("unknown", AudioCodecType.Aac, false)]
     public async Task AudioCodecMatching_AcrossCodecsInHlsFmp4_ResolvesCopyOrTranscode(
         string sourceCodec,
         AudioCodecType targetCodec,
@@ -307,25 +300,24 @@ public class AudioEdgeCaseTests
         };
 
         MediaInfo media = BuildAudioOnlyMedia(
-            codec: sourceCodec,
+            sourceCodec,
             channels: channels,
             bitRateKbps: bitrate
         );
-        EncodingProfile profile = BuildProfile(audio:
-        [
-            BuildAudioOutput(codec: targetCodec, bitrateKbps: bitrate, channels: channels),
+        EncodingProfile profile = BuildProfile([
+            BuildAudioOutput(targetCodec, bitrateKbps: bitrate, channels: channels),
         ]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
 
         if (shouldCopy)
-            audio.Action.Should().Be(expected: StreamAction.Copy);
+            audio.Action.Should().Be(StreamAction.Copy);
         else
-            audio.Action.Should().Be(expected: StreamAction.Transcode);
+            audio.Action.Should().Be(StreamAction.Transcode);
     }
 
     [Fact]
@@ -334,7 +326,7 @@ public class AudioEdgeCaseTests
         MediaInfo media = new(
             FilePath: "/music/multilang.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 3),
+            Duration: TimeSpan.FromMinutes(3),
             OverallBitRateKbps: 600,
             FileSizeBytes: 5_000_000,
             VideoStreams: [],
@@ -375,19 +367,18 @@ public class AudioEdgeCaseTests
             Chapters: []
         );
 
-        EncodingProfile profile = BuildProfile(audio:
-        [
-            BuildAudioOutput(codec: AudioCodecType.Aac, bitrateKbps: 192),
+        EncodingProfile profile = BuildProfile([
+            BuildAudioOutput(AudioCodecType.Aac, bitrateKbps: 192),
         ]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        success.Value.OutputPlan.AudioOutputs.Should().HaveCount(expected: 3);
-        success.Value.OutputPlan.AudioOutputs[0].Language.Should().Be(expected: "eng");
-        success.Value.OutputPlan.AudioOutputs[1].Language.Should().Be(expected: "spa");
-        success.Value.OutputPlan.AudioOutputs[2].Language.Should().Be(expected: "fra");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        success.Value.OutputPlan.AudioOutputs.Should().HaveCount(3);
+        success.Value.OutputPlan.AudioOutputs[0].Language.Should().Be("eng");
+        success.Value.OutputPlan.AudioOutputs[1].Language.Should().Be("spa");
+        success.Value.OutputPlan.AudioOutputs[2].Language.Should().Be("fra");
     }
 
     [Fact]
@@ -396,7 +387,7 @@ public class AudioEdgeCaseTests
         MediaInfo media = new(
             FilePath: "/music/multilang.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 3),
+            Duration: TimeSpan.FromMinutes(3),
             OverallBitRateKbps: 600,
             FileSizeBytes: 5_000_000,
             VideoStreams: [],
@@ -441,13 +432,13 @@ public class AudioEdgeCaseTests
             PlaylistNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}"
         );
 
-        EncodingProfile profile = BuildProfile(audio: [audioOutput]);
+        EncodingProfile profile = BuildProfile([audioOutput]);
 
-        ValidateInput input = new(Media: media, Profile: profile);
-        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
-        success.Value.OutputPlan.AudioOutputs.Should().HaveCount(expected: 1);
-        success.Value.OutputPlan.AudioOutputs[0].Language.Should().Be(expected: "eng");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        success.Value.OutputPlan.AudioOutputs.Should().HaveCount(1);
+        success.Value.OutputPlan.AudioOutputs[0].Language.Should().Be("eng");
     }
 }

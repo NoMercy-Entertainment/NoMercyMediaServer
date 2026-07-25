@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.WatchProviders;
 
 public class TmdbAvailableRegions
 {
-    [JsonProperty(propertyName: "results")]
+    [JsonProperty("results")]
     public TmdbAvailableRegionsResult[] Results { get; set; } = [];
 }

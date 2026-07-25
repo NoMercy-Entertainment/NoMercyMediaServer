@@ -31,10 +31,10 @@ namespace NoMercy.Encoder.Startup;
 /// </summary>
 public sealed class HardwareBenchmarkRecalibrationService : BackgroundService
 {
-    internal static readonly TimeSpan DefaultCheckInterval = TimeSpan.FromHours(hours: 1);
-    internal static readonly TimeSpan DefaultBusyRetryInterval = TimeSpan.FromMinutes(minutes: 5);
-    internal static readonly TimeSpan DefaultMaxDeferralWindow = TimeSpan.FromDays(days: 7);
-    internal static readonly TimeSpan RecalibrationAge = TimeSpan.FromDays(days: 30);
+    internal static readonly TimeSpan DefaultCheckInterval = TimeSpan.FromHours(1);
+    internal static readonly TimeSpan DefaultBusyRetryInterval = TimeSpan.FromMinutes(5);
+    internal static readonly TimeSpan DefaultMaxDeferralWindow = TimeSpan.FromDays(7);
+    internal static readonly TimeSpan RecalibrationAge = TimeSpan.FromDays(30);
 
     private readonly IHardwareBenchmark _benchmark;
     private readonly IDriverChangeDetector _driverChangeDetector;
@@ -55,15 +55,15 @@ public sealed class HardwareBenchmarkRecalibrationService : BackgroundService
         ILogger<HardwareBenchmarkRecalibrationService> logger
     )
         : this(
-            benchmark: benchmark,
-            driverChangeDetector: driverChangeDetector,
-            store: store,
-            activityProbe: activityProbe,
-            options: options,
-            logger: logger,
-            checkInterval: DefaultCheckInterval,
-            busyRetryInterval: DefaultBusyRetryInterval,
-            maxDeferralWindow: DefaultMaxDeferralWindow
+            benchmark,
+            driverChangeDetector,
+            store,
+            activityProbe,
+            options,
+            logger,
+            DefaultCheckInterval,
+            DefaultBusyRetryInterval,
+            DefaultMaxDeferralWindow
         ) { }
 
     internal HardwareBenchmarkRecalibrationService(
@@ -93,17 +93,17 @@ public sealed class HardwareBenchmarkRecalibrationService : BackgroundService
     {
         if (!_options.AutoCalibrate)
         {
-            _logger.LogDebug(message: "AutoCalibrate disabled — periodic recalibration service is dormant");
+            _logger.LogDebug("AutoCalibrate disabled — periodic recalibration service is dormant");
             return;
         }
 
-        using PeriodicTimer timer = new(period: _checkInterval);
+        using PeriodicTimer timer = new(_checkInterval);
 
-        while (await timer.WaitForNextTickAsync(cancellationToken: stoppingToken).ConfigureAwait(continueOnCapturedContext: false))
+        while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
         {
             try
             {
-                await EvaluateAndRecalibrateAsync(ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+                await EvaluateAndRecalibrateAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -116,8 +116,8 @@ public sealed class HardwareBenchmarkRecalibrationService : BackgroundService
                 // server down. Log and retry on the next interval (as the sibling
                 // periodic services already do).
                 _logger.LogError(
-                    exception: ex,
-                    message: "Hardware recalibration tick failed; retrying on the next interval"
+                    ex,
+                    "Hardware recalibration tick failed; retrying on the next interval"
                 );
             }
         }
@@ -128,13 +128,13 @@ public sealed class HardwareBenchmarkRecalibrationService : BackgroundService
         if (ct.IsCancellationRequested)
             return;
 
-        bool driverChanged = await DetectDriverChangeAsync(ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+        bool driverChanged = await DetectDriverChangeAsync(ct).ConfigureAwait(false);
         bool ageExceeded = IsAgeExceeded();
 
         if (!driverChanged && !ageExceeded)
         {
             _logger.LogDebug(
-                message: "Recalibration check: speed index is fresh and driver unchanged — nothing to do"
+                "Recalibration check: speed index is fresh and driver unchanged — nothing to do"
             );
             return;
         }
@@ -142,15 +142,15 @@ public sealed class HardwareBenchmarkRecalibrationService : BackgroundService
         string reason = driverChanged
             ? "driver change detected"
             : "speed index age exceeded 30 days";
-        _logger.LogInformation(message: "Recalibration triggered: {Reason}", args: reason);
+        _logger.LogInformation("Recalibration triggered: {Reason}", reason);
 
-        bool triggered = await WaitForIdleAndRunAsync(reason: reason, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+        bool triggered = await WaitForIdleAndRunAsync(reason, ct).ConfigureAwait(false);
 
         if (!triggered)
         {
             _logger.LogWarning(
-                message: "Recalibration skipped after {MaxDeferral} of continuous busy state — will re-evaluate next hour",
-                args: _maxDeferralWindow
+                "Recalibration skipped after {MaxDeferral} of continuous busy state — will re-evaluate next hour",
+                _maxDeferralWindow
             );
         }
     }
@@ -160,13 +160,13 @@ public sealed class HardwareBenchmarkRecalibrationService : BackgroundService
         try
         {
             DriverChangeResult result = await _driverChangeDetector
-                .DetectAndPersistAsync(ct: ct)
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .DetectAndPersistAsync(ct)
+                .ConfigureAwait(false);
             return result.Changed;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(exception: ex, message: "Driver fingerprint check failed — treating as unchanged");
+            _logger.LogWarning(ex, "Driver fingerprint check failed — treating as unchanged");
             return false;
         }
     }
@@ -194,12 +194,12 @@ public sealed class HardwareBenchmarkRecalibrationService : BackgroundService
                 return false;
 
             _logger.LogDebug(
-                message: "Recalibration deferred — encoder busy (elapsed: {Elapsed:g}), retry in {Retry}", args: [elapsed, _busyRetryInterval]
+                "Recalibration deferred — encoder busy (elapsed: {Elapsed:g}), retry in {Retry}", [elapsed, _busyRetryInterval]
             );
 
             try
             {
-                await Task.Delay(delay: _busyRetryInterval, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+                await Task.Delay(_busyRetryInterval, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -212,22 +212,22 @@ public sealed class HardwareBenchmarkRecalibrationService : BackgroundService
 
         try
         {
-            _logger.LogInformation(message: "Starting hardware recalibration ({Reason})", args: reason);
-            SpeedIndex result = await _benchmark.CalibrateAsync(ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+            _logger.LogInformation("Starting hardware recalibration ({Reason})", reason);
+            SpeedIndex result = await _benchmark.CalibrateAsync(ct).ConfigureAwait(false);
             _logger.LogInformation(
-                message: "Hardware recalibration finished — {Count} measurements captured",
-                args: result.Measurements.Count
+                "Hardware recalibration finished — {Count} measurements captured",
+                result.Measurements.Count
             );
             return true;
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation(message: "Hardware recalibration cancelled");
+            _logger.LogInformation("Hardware recalibration cancelled");
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(exception: ex, message: "Hardware recalibration failed");
+            _logger.LogError(ex, "Hardware recalibration failed");
             return false;
         }
     }

@@ -17,23 +17,23 @@ namespace NoMercy.Encoder.LiveTranscode;
 public class PlaybackDecisionEngine : IPlaybackDecisionEngine
 {
     public PlaybackDecision[] DecideBatch(MediaInfo[] library, ClientCapabilities client) =>
-        library.Select(selector: m => Decide(media: m, client: client)).ToArray();
+        library.Select(m => Decide(m, client)).ToArray();
 
     public PlaybackDecision Decide(MediaInfo media, ClientCapabilities client)
     {
         // Audio-only path
         if (!media.HasVideo)
         {
-            if (media.HasAudio && IsAudioCompatible(audio: media.AudioStreams[index: 0], client: client))
-                return new(Action: PlaybackAction.DirectPlay, Reason: null, DirectStreamUrl: null);
+            if (media.HasAudio && IsAudioCompatible(media.AudioStreams[0], client))
+                return new(PlaybackAction.DirectPlay, null, null);
 
-            return new(Action: PlaybackAction.TranscodeAudio, Reason: "Audio codec not supported", DirectStreamUrl: null);
+            return new(PlaybackAction.TranscodeAudio, "Audio codec not supported", null);
         }
 
-        VideoStreamInfo video = media.VideoStreams[index: 0];
-        bool videoCodecOk = IsVideoCodecCompatible(video: video, client: client);
-        bool audioCodecOk = !media.HasAudio || IsAudioCompatible(audio: media.AudioStreams[index: 0], client: client);
-        bool containerOk = IsContainerCompatible(format: media.Format, client: client);
+        VideoStreamInfo video = media.VideoStreams[0];
+        bool videoCodecOk = IsVideoCodecCompatible(video, client);
+        bool audioCodecOk = !media.HasAudio || IsAudioCompatible(media.AudioStreams[0], client);
+        bool containerOk = IsContainerCompatible(media.Format, client);
         bool resolutionOk = video.Width <= client.MaxWidth && video.Height <= client.MaxHeight;
         bool bitrateOk = client.MaxBitrateKbps <= 0 || video.BitRateKbps <= client.MaxBitrateKbps;
         bool hdrOk = !video.IsHdr || client.SupportsHdr;
@@ -56,46 +56,46 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
                 : !hdrOk ? "Client doesn't support HDR"
                 : $"Client doesn't support {video.BitDepth}-bit video";
 
-            return new(Action: PlaybackAction.TranscodeVideo, Reason: reason, DirectStreamUrl: null);
+            return new(PlaybackAction.TranscodeVideo, reason, null);
         }
 
         // Video codec OK, but audio needs transcode
         if (!audioCodecOk)
-            return new(Action: PlaybackAction.TranscodeAudio, Reason: "Audio codec not supported by client", DirectStreamUrl: null);
+            return new(PlaybackAction.TranscodeAudio, "Audio codec not supported by client", null);
 
         // Video + audio OK, but container wrong → remux
         if (!containerOk)
             return new(
-                Action: PlaybackAction.Remux,
-                Reason: $"Container '{media.Format}' not supported, remuxing",
-                DirectStreamUrl: null
+                PlaybackAction.Remux,
+                $"Container '{media.Format}' not supported, remuxing",
+                null
             );
 
         // Everything else OK but bitrate too high → transcode to reduce
         if (!bitrateOk)
-            return new(Action: PlaybackAction.TranscodeVideo, Reason: "Bitrate exceeds client limit", DirectStreamUrl: null);
+            return new(PlaybackAction.TranscodeVideo, "Bitrate exceeds client limit", null);
 
-        return new(Action: PlaybackAction.DirectPlay, Reason: null, DirectStreamUrl: null);
+        return new(PlaybackAction.DirectPlay, null, null);
     }
 
     private static bool IsVideoCodecCompatible(VideoStreamInfo video, ClientCapabilities client)
     {
-        VideoCodecType? sourceCodec = MapVideoCodec(codec: video.Codec);
-        return sourceCodec.HasValue && client.SupportedVideoCodecs.Contains(value: sourceCodec.Value);
+        VideoCodecType? sourceCodec = MapVideoCodec(video.Codec);
+        return sourceCodec.HasValue && client.SupportedVideoCodecs.Contains(sourceCodec.Value);
     }
 
     private static bool IsAudioCompatible(AudioStreamInfo audio, ClientCapabilities client)
     {
-        AudioCodecType? sourceCodec = MapAudioCodec(codec: audio.Codec);
-        return sourceCodec.HasValue && client.SupportedAudioCodecs.Contains(value: sourceCodec.Value);
+        AudioCodecType? sourceCodec = MapAudioCodec(audio.Codec);
+        return sourceCodec.HasValue && client.SupportedAudioCodecs.Contains(sourceCodec.Value);
     }
 
     private static bool IsContainerCompatible(string format, ClientCapabilities client)
     {
-        string? container = MapContainer(format: format);
+        string? container = MapContainer(format);
         return container is not null
-            && client.SupportedContainers.Any(predicate: c =>
-                c.Equals(value: container, comparisonType: StringComparison.OrdinalIgnoreCase)
+            && client.SupportedContainers.Any(c =>
+                c.Equals(container, StringComparison.OrdinalIgnoreCase)
             );
     }
 
@@ -127,14 +127,14 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
     private static string? MapContainer(string format) =>
         format.ToLowerInvariant() switch
         {
-            string f when f.Contains(value: "matroska") => "mkv",
-            string f when f.Contains(value: "mp4") || f.Contains(value: "mov") => "mp4",
-            string f when f.Contains(value: "mpegts") => "ts",
+            string f when f.Contains("matroska") => "mkv",
+            string f when f.Contains("mp4") || f.Contains("mov") => "mp4",
+            string f when f.Contains("mpegts") => "ts",
             // ffprobe reports an HLS playlist as "hls,applehttp" (or "applehttp"),
             // never a bare "hls" — an exact match here silently missed every HLS
             // source and forced a needless remux session.
-            string f when f.Contains(value: "hls") || f.Contains(value: "applehttp") => "hls",
-            string f when f.Contains(value: "flac") => "flac",
+            string f when f.Contains("hls") || f.Contains("applehttp") => "hls",
+            string f when f.Contains("flac") => "flac",
             _ => null,
         };
 }

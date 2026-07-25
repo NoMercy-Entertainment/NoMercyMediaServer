@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Companies;
 
 public class AlternativeNames
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "results")]
+    [JsonProperty("results")]
     public TmdbAlternativeNameTmdbResult[] Results { get; set; } = [];
 }

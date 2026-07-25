@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Database.Models.Common;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
@@ -47,26 +46,26 @@ public static class DnsSchemeResolver
 
     public static bool ResolveAndPersist(AppDbContext db)
     {
-        Configuration? existing = db.Configuration.FirstOrDefault(predicate: c => c.Key == ConfigKey);
+        Configuration? existing = db.Configuration.FirstOrDefault(c => c.Key == ConfigKey);
         if (existing is not null)
             return existing.Value.ToBoolean();
 
-        bool hasPriorRegistration = HasEvidenceOfPriorRegistration(db: db);
+        bool hasPriorRegistration = HasEvidenceOfPriorRegistration(db);
         bool useSynthesizedDns = !hasPriorRegistration;
 
-        db.Configuration.Add(entity: new() { Key = ConfigKey, Value = useSynthesizedDns.ToString() });
+        db.Configuration.Add(new() { Key = ConfigKey, Value = useSynthesizedDns.ToString() });
         db.SaveChanges();
 
         RuntimeServerSettings.Current.UseSynthesizedDns = useSynthesizedDns;
 
         Logger.Setup(
-            message: $"DNS scheme decided once: {(useSynthesizedDns ? "srv" : "apex")} "
+            $"DNS scheme decided once: {(useSynthesizedDns ? "srv" : "apex")} "
                      + (
                          hasPriorRegistration
                              ? "(existing server — pinned to apex to avoid a TLS mismatch for already-connected clients)"
                              : "(fresh install — defaulting to the synthesized srv scheme)"
                      ),
-            level: LogEventLevel.Information
+            LogEventLevel.Information
         );
 
         return useSynthesizedDns;
@@ -74,13 +73,13 @@ public static class DnsSchemeResolver
 
     private static bool HasEvidenceOfPriorRegistration(AppDbContext db)
     {
-        return db.Configuration.Any(predicate: c => c.Key == SslCertificateKey || c.Key == SslPrivateKeyKey)
-            || HasAuthAccessToken(db: db);
+        return db.Configuration.Any(c => c.Key == SslCertificateKey || c.Key == SslPrivateKeyKey)
+            || HasAuthAccessToken(db);
     }
 
     private static bool HasAuthAccessToken(AppDbContext db)
     {
-        Configuration? token = db.Configuration.FirstOrDefault(predicate: c => c.Key == AuthAccessTokenKey);
-        return !string.IsNullOrEmpty(value: token?.SecureValue);
+        Configuration? token = db.Configuration.FirstOrDefault(c => c.Key == AuthAccessTokenKey);
+        return !string.IsNullOrEmpty(token?.SecureValue);
     }
 }

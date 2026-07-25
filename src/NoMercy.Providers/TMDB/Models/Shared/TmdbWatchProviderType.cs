@@ -15,21 +15,21 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbWatchProviderType
 {
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri? Link { get; set; }
 
-    [JsonProperty(propertyName: "buy")]
+    [JsonProperty("buy")]
     public TmdbPaymentDetails[] Buy { get; set; } = [];
 
-    [JsonProperty(propertyName: "flatrate")]
+    [JsonProperty("flatrate")]
     public TmdbPaymentDetails[] FlatRate { get; set; } = [];
 
-    [JsonProperty(propertyName: "ads")]
+    [JsonProperty("ads")]
     public TmdbPaymentDetails[] Ads { get; set; } = [];
 
-    [JsonProperty(propertyName: "rent")]
+    [JsonProperty("rent")]
     public TmdbPaymentDetails[] Rent { get; set; } = [];
 
-    [JsonProperty(propertyName: "free")]
+    [JsonProperty("free")]
     public TmdbPaymentDetails[] Free { get; set; } = [];
 }

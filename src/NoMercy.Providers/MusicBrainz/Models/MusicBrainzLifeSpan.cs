@@ -17,35 +17,35 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 public class MusicBrainzLifeSpan
 {
     // ReSharper disable once InconsistentNaming
-    [JsonProperty(propertyName: "begin")]
+    [JsonProperty("begin")]
     private string? _beginSpan { get; set; }
 
     public DateTime? BeginDate
     {
         get =>
-            !string.IsNullOrWhiteSpace(value: _beginSpan)
-            && !string.IsNullOrEmpty(value: _beginSpan)
-            && _beginSpan.TryParseToDateTime(dateTime: out DateTime dt)
+            !string.IsNullOrWhiteSpace(_beginSpan)
+            && !string.IsNullOrEmpty(_beginSpan)
+            && _beginSpan.TryParseToDateTime(out DateTime dt)
                 ? dt
                 : null;
         set => _beginSpan = value.ToString();
     }
 
     // ReSharper disable once InconsistentNaming
-    [JsonProperty(propertyName: "end")]
+    [JsonProperty("end")]
     private string? _endSpan { get; set; }
 
     public DateTime? EndDate
     {
         get =>
-            !string.IsNullOrWhiteSpace(value: _endSpan)
-            && !string.IsNullOrEmpty(value: _endSpan)
-            && _endSpan.TryParseToDateTime(dateTime: out DateTime dt)
+            !string.IsNullOrWhiteSpace(_endSpan)
+            && !string.IsNullOrEmpty(_endSpan)
+            && _endSpan.TryParseToDateTime(out DateTime dt)
                 ? dt
                 : null;
         set => _endSpan = value.ToString();
     }
 
-    [JsonProperty(propertyName: "ended")]
+    [JsonProperty("ended")]
     public bool Ended { get; set; }
 }

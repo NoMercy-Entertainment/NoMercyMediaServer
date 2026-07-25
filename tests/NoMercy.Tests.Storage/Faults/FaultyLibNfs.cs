@@ -81,66 +81,66 @@ internal sealed class FaultyLibNfs : ILibNfs
 
     public void Seed(string path, byte[] content)
     {
-        string key = Normalise(path: path);
-        _files[key: key] = content;
-        _mtimes[key: key] = DateTime.UtcNow;
-        EnsureParentDirs(path: path);
+        string key = Normalise(path);
+        _files[key] = content;
+        _mtimes[key] = DateTime.UtcNow;
+        EnsureParentDirs(path);
     }
 
     public void SeedDir(string path)
     {
-        string key = Normalise(path: path);
-        _dirs[key: key] = true;
-        _mtimes[key: key] = DateTime.UtcNow;
+        string key = Normalise(path);
+        _dirs[key] = true;
+        _mtimes[key] = DateTime.UtcNow;
     }
 
     private static string Normalise(string path)
     {
-        string normalised = path.Replace(oldChar: '\\', newChar: '/');
-        if (!normalised.StartsWith(value: '/'))
+        string normalised = path.Replace('\\', '/');
+        if (!normalised.StartsWith('/'))
             normalised = "/" + normalised;
-        return normalised.TrimEnd(trimChar: '/');
+        return normalised.TrimEnd('/');
     }
 
-    private void EnsureParentDirs(string path) => EnsureParentDirsKey(normalised: Normalise(path: path));
+    private void EnsureParentDirs(string path) => EnsureParentDirsKey(Normalise(path));
 
     private void EnsureParentDirsKey(string normalised)
     {
-        int idx = normalised.LastIndexOf(value: '/');
+        int idx = normalised.LastIndexOf('/');
         while (idx > 0)
         {
-            _dirs[key: normalised[..idx]] = true;
-            idx = normalised[..idx].LastIndexOf(value: '/');
+            _dirs[normalised[..idx]] = true;
+            idx = normalised[..idx].LastIndexOf('/');
         }
-        _dirs[key: "/"] = true;
+        _dirs["/"] = true;
     }
 
     private bool TryFault(string method, out int rc, out string err)
     {
         // Track concurrent execution so stress tests can prove the driver's
         // lock holds the libnfs context single-threaded.
-        int current = Interlocked.Increment(location: ref _currentConcurrent);
+        int current = Interlocked.Increment(ref _currentConcurrent);
         int max = _maxConcurrent;
         while (current > max)
-            max = Interlocked.CompareExchange(location1: ref _maxConcurrent, value: current, comparand: max);
+            max = Interlocked.CompareExchange(ref _maxConcurrent, current, max);
 
         try
         {
             int index;
             lock (CallCounts)
             {
-                index = CallCounts.GetValueOrDefault(key: method, defaultValue: 0);
-                CallCounts[key: method] = index + 1;
+                index = CallCounts.GetValueOrDefault(method, 0);
+                CallCounts[method] = index + 1;
             }
 
             if (ArtificialLatency > TimeSpan.Zero)
-                Thread.Sleep(timeout: ArtificialLatency);
+                Thread.Sleep(ArtificialLatency);
 
             (int rc, string error) fault;
             bool faultPresent;
             lock (Faults)
             {
-                faultPresent = Faults.TryGetValue(key: $"{method}:{index}", value: out fault);
+                faultPresent = Faults.TryGetValue($"{method}:{index}", out fault);
             }
             if (faultPresent)
             {
@@ -155,7 +155,7 @@ internal sealed class FaultyLibNfs : ILibNfs
         }
         finally
         {
-            Interlocked.Decrement(location: ref _currentConcurrent);
+            Interlocked.Decrement(ref _currentConcurrent);
         }
     }
 
@@ -172,36 +172,36 @@ internal sealed class FaultyLibNfs : ILibNfs
 
     public IntPtr InitContext()
     {
-        if (TryFault(method: nameof(InitContext), rc: out _, err: out _))
+        if (TryFault(nameof(InitContext), out _, out _))
             return IntPtr.Zero;
-        return new(value: Interlocked.Increment(location: ref _nextContext));
+        return new(Interlocked.Increment(ref _nextContext));
     }
 
     public void DestroyContext(IntPtr nfs)
     {
-        TryFault(method: nameof(DestroyContext), rc: out _, err: out _);
+        TryFault(nameof(DestroyContext), out _, out _);
     }
 
     public int Mount(IntPtr nfs, string server, string exportPath)
     {
-        if (TryFault(method: nameof(Mount), rc: out int rc, err: out _))
+        if (TryFault(nameof(Mount), out int rc, out _))
             return rc;
         return 0;
     }
 
     public int Umount(IntPtr nfs)
     {
-        TryFault(method: nameof(Umount), rc: out _, err: out _);
+        TryFault(nameof(Umount), out _, out _);
         return 0;
     }
 
-    public void SetUid(IntPtr nfs, int uid) => TryFault(method: nameof(SetUid), rc: out _, err: out _);
+    public void SetUid(IntPtr nfs, int uid) => TryFault(nameof(SetUid), out _, out _);
 
-    public void SetGid(IntPtr nfs, int gid) => TryFault(method: nameof(SetGid), rc: out _, err: out _);
+    public void SetGid(IntPtr nfs, int gid) => TryFault(nameof(SetGid), out _, out _);
 
     public int SetVersion(IntPtr nfs, int version)
     {
-        if (TryFault(method: nameof(SetVersion), rc: out int rc, err: out _))
+        if (TryFault(nameof(SetVersion), out int rc, out _))
             return rc;
         return 0;
     }
@@ -214,7 +214,7 @@ internal sealed class FaultyLibNfs : ILibNfs
     /// </summary>
     public ConcurrentDictionary<IntPtr, string> ClientNames { get; } = new();
 
-    public void SetClientName(IntPtr nfs, string id) => ClientNames[key: nfs] = id;
+    public void SetClientName(IntPtr nfs, string id) => ClientNames[nfs] = id;
 
     public void SetVerifier(IntPtr nfs, string verifier) { }
 
@@ -222,21 +222,21 @@ internal sealed class FaultyLibNfs : ILibNfs
 
     public int Stat64(IntPtr nfs, string path, out LibNfs.NfsStat64 stat)
     {
-        if (TryFault(method: nameof(Stat64), rc: out int rc, err: out _))
+        if (TryFault(nameof(Stat64), out int rc, out _))
         {
             stat = default;
             return rc;
         }
 
-        string key = Normalise(path: path);
+        string key = Normalise(path);
         stat = default;
 
         // Recorded write time so LastModifiedAsync returns a meaningful
         // recent timestamp instead of the Unix epoch.
-        DateTime mtime = _mtimes.TryGetValue(key: key, value: out DateTime t) ? t : DateTime.UtcNow;
-        ulong mtimeSec = (ulong)new DateTimeOffset(dateTime: mtime, offset: TimeSpan.Zero).ToUnixTimeSeconds();
+        DateTime mtime = _mtimes.TryGetValue(key, out DateTime t) ? t : DateTime.UtcNow;
+        ulong mtimeSec = (ulong)new DateTimeOffset(mtime, TimeSpan.Zero).ToUnixTimeSeconds();
 
-        if (_files.TryGetValue(key: key, value: out byte[]? content))
+        if (_files.TryGetValue(key, out byte[]? content))
         {
             stat = new()
             {
@@ -248,7 +248,7 @@ internal sealed class FaultyLibNfs : ILibNfs
             };
             return 0;
         }
-        if (_dirs.ContainsKey(key: key))
+        if (_dirs.ContainsKey(key))
         {
             stat = new()
             {
@@ -265,17 +265,17 @@ internal sealed class FaultyLibNfs : ILibNfs
     }
 
     public int Lstat64(IntPtr nfs, string path, out LibNfs.NfsStat64 stat) =>
-        Stat64(nfs: nfs, path: path, stat: out stat);
+        Stat64(nfs, path, out stat);
 
     public int OpenDir(IntPtr nfs, string path, out IntPtr dir)
     {
-        if (TryFault(method: nameof(OpenDir), rc: out int rc, err: out _))
+        if (TryFault(nameof(OpenDir), out int rc, out _))
         {
             dir = IntPtr.Zero;
             return rc;
         }
 
-        string parent = Normalise(path: path);
+        string parent = Normalise(path);
         string parentPrefix = parent == "/" ? "/" : parent + "/";
 
         // Collect immediate children (not recursive).
@@ -284,57 +284,57 @@ internal sealed class FaultyLibNfs : ILibNfs
 
         foreach (string fileKey in _files.Keys)
         {
-            if (!fileKey.StartsWith(value: parentPrefix, comparisonType: StringComparison.Ordinal))
+            if (!fileKey.StartsWith(parentPrefix, StringComparison.Ordinal))
                 continue;
-            string remainder = fileKey.Substring(startIndex: parentPrefix.Length);
-            if (remainder.Length == 0 || remainder.Contains(value: '/'))
+            string remainder = fileKey.Substring(parentPrefix.Length);
+            if (remainder.Length == 0 || remainder.Contains('/'))
                 continue;
-            entries.Add(item: remainder);
-            entryIsDir.Add(item: false);
+            entries.Add(remainder);
+            entryIsDir.Add(false);
         }
 
         foreach (string dirKey in _dirs.Keys)
         {
             if (dirKey == parent)
                 continue;
-            if (!dirKey.StartsWith(value: parentPrefix, comparisonType: StringComparison.Ordinal))
+            if (!dirKey.StartsWith(parentPrefix, StringComparison.Ordinal))
                 continue;
-            string remainder = dirKey.Substring(startIndex: parentPrefix.Length);
-            if (remainder.Length == 0 || remainder.Contains(value: '/'))
+            string remainder = dirKey.Substring(parentPrefix.Length);
+            if (remainder.Length == 0 || remainder.Contains('/'))
                 continue;
-            entries.Add(item: remainder);
-            entryIsDir.Add(item: true);
+            entries.Add(remainder);
+            entryIsDir.Add(true);
         }
 
-        IntPtr handle = new(value: Interlocked.Increment(location: ref _nextHandle));
-        _openDirs[key: handle] = new() { Entries = entries, EntryIsDir = entryIsDir };
+        IntPtr handle = new(Interlocked.Increment(ref _nextHandle));
+        _openDirs[handle] = new() { Entries = entries, EntryIsDir = entryIsDir };
         dir = handle;
         return 0;
     }
 
     public IntPtr ReadDir(IntPtr nfs, IntPtr dir)
     {
-        TryFault(method: nameof(ReadDir), rc: out _, err: out _);
+        TryFault(nameof(ReadDir), out _, out _);
 
-        if (!_openDirs.TryGetValue(key: dir, value: out DirIter? iter))
+        if (!_openDirs.TryGetValue(dir, out DirIter? iter))
             return IntPtr.Zero;
 
         if (iter.Cursor >= iter.Entries.Count)
             return IntPtr.Zero;
 
-        string name = iter.Entries[index: iter.Cursor];
-        bool isDir = iter.EntryIsDir[index: iter.Cursor];
+        string name = iter.Entries[iter.Cursor];
+        bool isDir = iter.EntryIsDir[iter.Cursor];
         iter.Cursor++;
 
         // Free any previous scratch allocations before allocating fresh ones
         // for this entry — the driver only reads the most recently returned
         // pointer before calling ReadDir again, so we can reuse the slot.
-        FreeScratch(iter: iter);
+        FreeScratch(iter);
 
         // Allocate UTF-8 name buffer in unmanaged memory.
-        byte[] nameBytes = Encoding.UTF8.GetBytes(s: name + "\0");
-        IntPtr namePtr = Marshal.AllocHGlobal(cb: nameBytes.Length);
-        Marshal.Copy(source: nameBytes, startIndex: 0, destination: namePtr, length: nameBytes.Length);
+        byte[] nameBytes = Encoding.UTF8.GetBytes(name + "\0");
+        IntPtr namePtr = Marshal.AllocHGlobal(nameBytes.Length);
+        Marshal.Copy(nameBytes, 0, namePtr, nameBytes.Length);
         iter.ScratchName = namePtr;
 
         // Allocate the NfsDirent struct itself.
@@ -346,8 +346,8 @@ internal sealed class FaultyLibNfs : ILibNfs
             // libnfs ftype3: NF3REG=1, NF3DIR=2.
             Type = isDir ? 2u : 1u,
         };
-        IntPtr entryPtr = Marshal.AllocHGlobal(cb: Marshal.SizeOf<LibNfs.NfsDirent>());
-        Marshal.StructureToPtr(structure: entry, ptr: entryPtr, fDeleteOld: false);
+        IntPtr entryPtr = Marshal.AllocHGlobal(Marshal.SizeOf<LibNfs.NfsDirent>());
+        Marshal.StructureToPtr(entry, entryPtr, false);
         iter.ScratchEntry = entryPtr;
 
         return entryPtr;
@@ -355,50 +355,50 @@ internal sealed class FaultyLibNfs : ILibNfs
 
     public void CloseDir(IntPtr nfs, IntPtr dir)
     {
-        TryFault(method: nameof(CloseDir), rc: out _, err: out _);
-        if (_openDirs.TryRemove(key: dir, value: out DirIter? iter))
-            FreeScratch(iter: iter);
+        TryFault(nameof(CloseDir), out _, out _);
+        if (_openDirs.TryRemove(dir, out DirIter? iter))
+            FreeScratch(iter);
     }
 
     private static void FreeScratch(DirIter iter)
     {
         if (iter.ScratchEntry != IntPtr.Zero)
         {
-            Marshal.FreeHGlobal(hglobal: iter.ScratchEntry);
+            Marshal.FreeHGlobal(iter.ScratchEntry);
             iter.ScratchEntry = IntPtr.Zero;
         }
         if (iter.ScratchName != IntPtr.Zero)
         {
-            Marshal.FreeHGlobal(hglobal: iter.ScratchName);
+            Marshal.FreeHGlobal(iter.ScratchName);
             iter.ScratchName = IntPtr.Zero;
         }
     }
 
     public int MkDir(IntPtr nfs, string path)
     {
-        if (TryFault(method: nameof(MkDir), rc: out int rc, err: out _))
+        if (TryFault(nameof(MkDir), out int rc, out _))
             return rc;
-        _dirs[key: Normalise(path: path)] = true;
+        _dirs[Normalise(path)] = true;
         return 0;
     }
 
     public int RmDir(IntPtr nfs, string path)
     {
-        if (TryFault(method: nameof(RmDir), rc: out int rc, err: out _))
+        if (TryFault(nameof(RmDir), out int rc, out _))
             return rc;
-        _dirs.TryRemove(key: Normalise(path: path), value: out _);
+        _dirs.TryRemove(Normalise(path), out _);
         return 0;
     }
 
     public int Open(IntPtr nfs, string path, int flags, out IntPtr fh)
     {
-        if (TryFault(method: nameof(Open), rc: out int rc, err: out _))
+        if (TryFault(nameof(Open), out int rc, out _))
         {
             fh = IntPtr.Zero;
             return rc;
         }
 
-        string key = Normalise(path: path);
+        string key = Normalise(path);
         bool isCreate =
             (
                 flags & 0x40 /* O_CREAT */
@@ -414,20 +414,20 @@ internal sealed class FaultyLibNfs : ILibNfs
 
         if (isCreate)
         {
-            if (isExcl && _files.ContainsKey(key: key))
+            if (isExcl && _files.ContainsKey(key))
             {
                 fh = IntPtr.Zero;
                 CurrentError = "EEXIST";
                 return -17;
             }
-            if (isTrunc || !_files.ContainsKey(key: key))
+            if (isTrunc || !_files.ContainsKey(key))
             {
-                _files[key: key] = [];
-                _mtimes[key: key] = DateTime.UtcNow;
-                EnsureParentDirsKey(normalised: key);
+                _files[key] = [];
+                _mtimes[key] = DateTime.UtcNow;
+                EnsureParentDirsKey(key);
             }
         }
-        else if (!_files.ContainsKey(key: key))
+        else if (!_files.ContainsKey(key))
         {
             fh = IntPtr.Zero;
             CurrentError = "NFS4ERR_NOENT";
@@ -435,75 +435,75 @@ internal sealed class FaultyLibNfs : ILibNfs
         }
 
         FileHandle handle = new() { Path = key, Mode = flags };
-        IntPtr ptr = new(value: Interlocked.Increment(location: ref _nextHandle));
-        _openHandles[key: ptr] = handle;
+        IntPtr ptr = new(Interlocked.Increment(ref _nextHandle));
+        _openHandles[ptr] = handle;
         fh = ptr;
         return 0;
     }
 
     public int Creat(IntPtr nfs, string path, int mode, out IntPtr fh)
     {
-        if (TryFault(method: nameof(Creat), rc: out int rc, err: out _))
+        if (TryFault(nameof(Creat), out int rc, out _))
         {
             fh = IntPtr.Zero;
             return rc;
         }
-        string key = Normalise(path: path);
-        _files[key: key] = [];
-        _mtimes[key: key] = DateTime.UtcNow;
-        EnsureParentDirsKey(normalised: key);
+        string key = Normalise(path);
+        _files[key] = [];
+        _mtimes[key] = DateTime.UtcNow;
+        EnsureParentDirsKey(key);
         FileHandle handle = new() { Path = key };
-        IntPtr ptr = new(value: Interlocked.Increment(location: ref _nextHandle));
-        _openHandles[key: ptr] = handle;
+        IntPtr ptr = new(Interlocked.Increment(ref _nextHandle));
+        _openHandles[ptr] = handle;
         fh = ptr;
         return 0;
     }
 
     public int Close(IntPtr nfs, IntPtr fh)
     {
-        TryFault(method: nameof(Close), rc: out _, err: out _);
-        _openHandles.TryRemove(key: fh, value: out _);
+        TryFault(nameof(Close), out _, out _);
+        _openHandles.TryRemove(fh, out _);
         return 0;
     }
 
     public int Read(IntPtr nfs, IntPtr fh, IntPtr buf, int count)
     {
-        if (TryFault(method: nameof(Read), rc: out int rc, err: out _))
+        if (TryFault(nameof(Read), out int rc, out _))
             return rc;
 
-        if (!_openHandles.TryGetValue(key: fh, value: out FileHandle? handle))
+        if (!_openHandles.TryGetValue(fh, out FileHandle? handle))
             return -9;
-        if (!_files.TryGetValue(key: handle.Path, value: out byte[]? content))
+        if (!_files.TryGetValue(handle.Path, out byte[]? content))
             return -2;
 
         long remaining = content.Length - handle.Position;
-        int toRead = (int)Math.Min(val1: count, val2: remaining);
+        int toRead = (int)Math.Min(count, remaining);
         if (toRead <= 0)
             return 0;
-        Marshal.Copy(source: content, startIndex: (int)handle.Position, destination: buf, length: toRead);
+        Marshal.Copy(content, (int)handle.Position, buf, toRead);
         handle.Position += toRead;
         return toRead;
     }
 
     public int Write(IntPtr nfs, IntPtr fh, IntPtr buf, int count)
     {
-        if (TryFault(method: nameof(Write), rc: out int rc, err: out _))
+        if (TryFault(nameof(Write), out int rc, out _))
             return rc;
 
-        if (!_openHandles.TryGetValue(key: fh, value: out FileHandle? handle))
+        if (!_openHandles.TryGetValue(fh, out FileHandle? handle))
             return -9;
-        if (!_files.TryGetValue(key: handle.Path, value: out byte[]? content))
+        if (!_files.TryGetValue(handle.Path, out byte[]? content))
             return -2;
 
         byte[] writeBuf = new byte[count];
-        Marshal.Copy(source: buf, destination: writeBuf, startIndex: 0, length: count);
+        Marshal.Copy(buf, writeBuf, 0, count);
 
         long newSize = handle.Position + count;
         if (newSize > content.Length)
-            Array.Resize(array: ref content, newSize: (int)newSize);
-        Array.Copy(sourceArray: writeBuf, sourceIndex: 0, destinationArray: content, destinationIndex: handle.Position, length: count);
-        _files[key: handle.Path] = content;
-        _mtimes[key: handle.Path] = DateTime.UtcNow;
+            Array.Resize(ref content, (int)newSize);
+        Array.Copy(writeBuf, 0, content, handle.Position, count);
+        _files[handle.Path] = content;
+        _mtimes[handle.Path] = DateTime.UtcNow;
         handle.Position += count;
         return count;
     }
@@ -511,9 +511,9 @@ internal sealed class FaultyLibNfs : ILibNfs
     public long Lseek(IntPtr nfs, IntPtr fh, long offset, int whence, out ulong currentOffset)
     {
         currentOffset = 0;
-        if (TryFault(method: nameof(Lseek), rc: out int rc, err: out _))
+        if (TryFault(nameof(Lseek), out int rc, out _))
             return rc;
-        if (!_openHandles.TryGetValue(key: fh, value: out FileHandle? handle))
+        if (!_openHandles.TryGetValue(fh, out FileHandle? handle))
             return -9;
         handle.Position = offset;
         currentOffset = (ulong)offset;
@@ -522,26 +522,26 @@ internal sealed class FaultyLibNfs : ILibNfs
 
     public int Unlink(IntPtr nfs, string path)
     {
-        if (TryFault(method: nameof(Unlink), rc: out int rc, err: out _))
+        if (TryFault(nameof(Unlink), out int rc, out _))
             return rc;
-        _files.TryRemove(key: Normalise(path: path), value: out _);
+        _files.TryRemove(Normalise(path), out _);
         return 0;
     }
 
     public int Rename(IntPtr nfs, string oldPath, string newPath)
     {
-        if (TryFault(method: nameof(Rename), rc: out int rc, err: out _))
+        if (TryFault(nameof(Rename), out int rc, out _))
             return rc;
-        string from = Normalise(path: oldPath);
-        string to = Normalise(path: newPath);
-        if (_files.TryRemove(key: from, value: out byte[]? content))
+        string from = Normalise(oldPath);
+        string to = Normalise(newPath);
+        if (_files.TryRemove(from, out byte[]? content))
         {
-            _files[key: to] = content;
+            _files[to] = content;
             return 0;
         }
-        if (_dirs.TryRemove(key: from, value: out _))
+        if (_dirs.TryRemove(from, out _))
         {
-            _dirs[key: to] = true;
+            _dirs[to] = true;
             return 0;
         }
         CurrentError = "NFS4ERR_NOENT";
@@ -550,7 +550,7 @@ internal sealed class FaultyLibNfs : ILibNfs
 
     public int Readlink(IntPtr nfs, string path, IntPtr buf, int bufSize)
     {
-        if (TryFault(method: nameof(Readlink), rc: out int rc, err: out _))
+        if (TryFault(nameof(Readlink), out int rc, out _))
             return rc;
         return -1;
     }

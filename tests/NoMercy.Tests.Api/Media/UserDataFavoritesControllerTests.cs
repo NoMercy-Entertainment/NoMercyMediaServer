@@ -11,7 +11,6 @@
 
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -25,7 +24,7 @@ namespace NoMercy.Tests.Api.Media;
 /// HomeRepositoryFavoritesTests, since the shared test-auth handler here
 /// only impersonates a single fixed identity.
 /// </summary>
-[Trait(name: "Category", value: "UserData")]
+[Trait("Category", "UserData")]
 public class UserDataFavoritesControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -40,74 +39,74 @@ public class UserDataFavoritesControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Favorites_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: "/api/v1/userData/favorites");
+        HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/userData/favorites");
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Favorites_ReturnsOk_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/userData/favorites");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/userData/favorites");
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task Favorites_ReturnsEnvelopeWithDataProperty()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/userData/favorites");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/userData/favorites");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        doc.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data)
+        doc.RootElement.TryGetProperty("data", out JsonElement data)
             .Should()
-            .BeTrue(because: "favorites response envelope must contain a 'data' property");
-        data.ValueKind.Should().Be(expected: JsonValueKind.Array);
+            .BeTrue("favorites response envelope must contain a 'data' property");
+        data.ValueKind.Should().Be(JsonValueKind.Array);
     }
 
     [Fact]
     public async Task Favorites_ReturnsSeededMovieTvCollectionAndSpecial_OrderedByTitle()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/userData/favorites");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/userData/favorites");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
 
         string[] seeded = ["Breaking Bad", "Spirited Away", "Test Collection", "Test Special"];
 
         List<string?> titles = data.EnumerateArray()
-            .Select(selector: card => card.GetProperty(propertyName: "title").GetString())
+            .Select(card => card.GetProperty("title").GetString())
             .ToList();
 
         // Other test classes sharing this fixture's database legitimately create
         // and self-favorite their own specials (e.g. the dashboard "create empty
         // special" flow), so assert the seeded four are present and in title
         // order relative to each other rather than an exact, closed set.
-        titles.Should().Contain(expected: seeded);
-        titles.Where(predicate: title => seeded.Contains(value: title)).Should().Equal(expected: seeded);
+        titles.Should().Contain(seeded);
+        titles.Where(title => seeded.Contains(title)).Should().Equal(seeded);
     }
 
     [Fact]
     public async Task Favorites_ReturnsExpectedTypePerCard()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/userData/favorites");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/userData/favorites");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
 
         Dictionary<string, string?> typeByTitle = data.EnumerateArray()
             .ToDictionary(
-                keySelector: card => card.GetProperty(propertyName: "title").GetString()!,
-                elementSelector: card => card.GetProperty(propertyName: "type").GetString()
+                card => card.GetProperty("title").GetString()!,
+                card => card.GetProperty("type").GetString()
             );
 
-        typeByTitle[key: "Spirited Away"].Should().Be(expected: "movie");
-        typeByTitle[key: "Breaking Bad"].Should().Be(expected: "tv");
-        typeByTitle[key: "Test Collection"].Should().Be(expected: "collection");
-        typeByTitle[key: "Test Special"].Should().Be(expected: "specials");
+        typeByTitle["Spirited Away"].Should().Be("movie");
+        typeByTitle["Breaking Bad"].Should().Be("tv");
+        typeByTitle["Test Collection"].Should().Be("collection");
+        typeByTitle["Test Special"].Should().Be("specials");
     }
 }

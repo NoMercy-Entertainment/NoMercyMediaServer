@@ -27,21 +27,21 @@ public static class AudioPlanBuilder
         List<AudioOutputPlan> audioPlans = [];
         foreach (AudioOutput audioProfile in profile.Audio)
         {
-            string encoderName = AudioCodecDefinitions.GetEncoder(codecType: audioProfile.Codec).FfmpegName;
+            string encoderName = AudioCodecDefinitions.GetEncoder(audioProfile.Codec).FfmpegName;
             HashSet<string> allowed =
                 audioProfile.AllowedLanguages.Length > 0
                     ? new HashSet<string>(
-                        collection: audioProfile.AllowedLanguages,
-                        comparer: StringComparer.OrdinalIgnoreCase
+                        audioProfile.AllowedLanguages,
+                        StringComparer.OrdinalIgnoreCase
                     )
                     : [];
 
             for (int si = 0; si < media.AudioStreams.Count; si++)
             {
-                AudioStreamInfo stream = media.AudioStreams[index: si];
+                AudioStreamInfo stream = media.AudioStreams[si];
                 string streamLang = stream.Language ?? "und";
 
-                if (allowed.Count > 0 && !allowed.Contains(item: streamLang))
+                if (allowed.Count > 0 && !allowed.Contains(streamLang))
                     continue;
 
                 LoudnessMode loudnessMode = audioProfile.Loudness?.Mode ?? LoudnessMode.None;
@@ -49,9 +49,9 @@ public static class AudioPlanBuilder
                 string? customPanMatrix = audioProfile.Downmix?.CustomPanMatrix;
 
                 string? audioFilter = AudioFilterBuilder.BuildAudioFilter(
-                    loudness: loudnessMode,
-                    downmix: downmixMode,
-                    customPanMatrix: customPanMatrix
+                    loudnessMode,
+                    downmixMode,
+                    customPanMatrix
                 );
 
                 // Policy drives the action: a Copy-policy output (author-declared,
@@ -66,22 +66,22 @@ public static class AudioPlanBuilder
                         : StreamAction.Transcode;
 
                 audioPlans.Add(
-                    item: new(
-                        EncoderName: encoderName,
-                        BitrateKbps: audioProfile.BitrateKbps,
-                        Channels: audioProfile.Channels,
-                        SampleRate: audioProfile.SampleRateHz,
-                        Action: action,
-                        Language: streamLang,
-                        MapLabel: $"0:a:{si}",
-                        SegmentNameTemplate: audioProfile.SegmentNameTemplate,
-                        PlaylistNameTemplate: audioProfile.PlaylistNameTemplate,
-                        AudioFilter: audioFilter,
-                        ExtraFlags: audioProfile.CustomArguments is not null
-                            ? new Dictionary<string, string>(dictionary: audioProfile.CustomArguments)
+                    new(
+                        encoderName,
+                        audioProfile.BitrateKbps,
+                        audioProfile.Channels,
+                        audioProfile.SampleRateHz,
+                        action,
+                        streamLang,
+                        $"0:a:{si}",
+                        audioProfile.SegmentNameTemplate,
+                        audioProfile.PlaylistNameTemplate,
+                        audioFilter,
+                        audioProfile.CustomArguments is not null
+                            ? new Dictionary<string, string>(audioProfile.CustomArguments)
                             : null,
-                        SourceCodecName: stream.Codec.ToLowerInvariant(),
-                        SourceStreamIndex: stream.Index
+                        stream.Codec.ToLowerInvariant(),
+                        stream.Index
                     )
                 );
             }
@@ -93,6 +93,6 @@ public static class AudioPlanBuilder
         // streams all collapse to the same directory + filename. Append the
         // source stream index to colliding plans only — single-stream-per-
         // language sources keep their stable templates.
-        return PlanStageDisambiguation.DisambiguateAudio(plans: audioPlans).ToArray();
+        return PlanStageDisambiguation.DisambiguateAudio(audioPlans).ToArray();
     }
 }

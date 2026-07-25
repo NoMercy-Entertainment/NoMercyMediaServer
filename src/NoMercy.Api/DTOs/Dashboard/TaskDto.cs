@@ -15,21 +15,21 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record TaskDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "value")]
+    [JsonProperty("value")]
     public int Value { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "created_at")]
+    [JsonProperty("created_at")]
     public DateTime CreatedAt { get; set; }
 
-    [JsonProperty(propertyName: "updated_at")]
+    [JsonProperty("updated_at")]
     public DateTime UpdatedAt { get; set; }
 }

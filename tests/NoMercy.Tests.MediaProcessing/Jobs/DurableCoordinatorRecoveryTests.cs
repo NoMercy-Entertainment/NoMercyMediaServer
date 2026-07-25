@@ -28,7 +28,7 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 ///   3. A null <c>Coordinator</c> on the payload signals the initial-run path
 ///      (not a coordinator wake-up).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class DurableCoordinatorRecoveryTests
 {
     private static readonly JsonSerializerSettings SerializerSettings = new()
@@ -58,78 +58,78 @@ public class DurableCoordinatorRecoveryTests
         DateTime now = DateTime.UtcNow;
 
         CoordinatorState original = new(
-            GroupTag: groupTag,
-            TaskIds: taskIds,
-            Phase: CoordinatorPhase.WaitPass1,
-            Pass1DispatchedAt: now,
-            Pass2DispatchedAt: null,
-            Pass1StatsPath: null,
-            PresetId: presetId,
-            ExpectedFinalCount: 3
+            groupTag,
+            taskIds,
+            CoordinatorPhase.WaitPass1,
+            now,
+            null,
+            null,
+            presetId,
+            3
         );
 
-        string json = JsonConvert.SerializeObject(value: original, settings: SerializerSettings);
+        string json = JsonConvert.SerializeObject(original, SerializerSettings);
         CoordinatorState? restored = JsonConvert.DeserializeObject<CoordinatorState>(
-            value: json,
-            settings: SerializerSettings
+            json,
+            SerializerSettings
         );
 
         restored.Should().NotBeNull();
-        restored!.GroupTag.Should().Be(expected: groupTag);
-        restored.TaskIds.Should().BeEquivalentTo(expectation: taskIds);
-        restored.Phase.Should().Be(expected: CoordinatorPhase.WaitPass1);
-        restored.Pass1DispatchedAt.Should().BeCloseTo(nearbyTime: now, precision: TimeSpan.FromMilliseconds(milliseconds: 1));
+        restored!.GroupTag.Should().Be(groupTag);
+        restored.TaskIds.Should().BeEquivalentTo(taskIds);
+        restored.Phase.Should().Be(CoordinatorPhase.WaitPass1);
+        restored.Pass1DispatchedAt.Should().BeCloseTo(now, TimeSpan.FromMilliseconds(1));
         restored.Pass2DispatchedAt.Should().BeNull();
         restored.Pass1StatsPath.Should().BeNull();
-        restored.PresetId.Should().Be(expected: presetId);
-        restored.ExpectedFinalCount.Should().Be(expected: 3);
+        restored.PresetId.Should().Be(presetId);
+        restored.ExpectedFinalCount.Should().Be(3);
     }
 
     [Fact]
     public void CoordinatorState_WaitChildrenPhase_RoundTrip_PhasePreserved()
     {
         CoordinatorState state = new(
-            GroupTag: "grp-abc",
-            TaskIds: ["task-pass2-0", "task-audio-0"],
-            Phase: CoordinatorPhase.WaitChildren,
-            Pass1DispatchedAt: DateTime.UtcNow.AddSeconds(value: -30),
-            Pass2DispatchedAt: DateTime.UtcNow.AddSeconds(value: -5),
-            Pass1StatsPath: "/tmp/stats/x264",
-            PresetId: Ulid.NewUlid(),
-            ExpectedFinalCount: 2
+            "grp-abc",
+            ["task-pass2-0", "task-audio-0"],
+            CoordinatorPhase.WaitChildren,
+            DateTime.UtcNow.AddSeconds(-30),
+            DateTime.UtcNow.AddSeconds(-5),
+            "/tmp/stats/x264",
+            Ulid.NewUlid(),
+            2
         );
 
-        string json = JsonConvert.SerializeObject(value: state, settings: SerializerSettings);
+        string json = JsonConvert.SerializeObject(state, SerializerSettings);
         CoordinatorState? restored = JsonConvert.DeserializeObject<CoordinatorState>(
-            value: json,
-            settings: SerializerSettings
+            json,
+            SerializerSettings
         );
 
-        restored!.Phase.Should().Be(expected: CoordinatorPhase.WaitChildren);
-        restored.Pass1StatsPath.Should().Be(expected: "/tmp/stats/x264");
+        restored!.Phase.Should().Be(CoordinatorPhase.WaitChildren);
+        restored.Pass1StatsPath.Should().Be("/tmp/stats/x264");
     }
 
     [Fact]
     public void CoordinatorState_FinalizePhase_RoundTrip_PhasePreserved()
     {
         CoordinatorState state = new(
-            GroupTag: "grp-xyz",
-            TaskIds: ["task-video-0"],
-            Phase: CoordinatorPhase.Finalize,
-            Pass1DispatchedAt: null,
-            Pass2DispatchedAt: null,
-            Pass1StatsPath: null,
-            PresetId: Ulid.NewUlid(),
-            ExpectedFinalCount: 1
+            "grp-xyz",
+            ["task-video-0"],
+            CoordinatorPhase.Finalize,
+            null,
+            null,
+            null,
+            Ulid.NewUlid(),
+            1
         );
 
-        string json = JsonConvert.SerializeObject(value: state, settings: SerializerSettings);
+        string json = JsonConvert.SerializeObject(state, SerializerSettings);
         CoordinatorState? restored = JsonConvert.DeserializeObject<CoordinatorState>(
-            value: json,
-            settings: SerializerSettings
+            json,
+            SerializerSettings
         );
 
-        restored!.Phase.Should().Be(expected: CoordinatorPhase.Finalize);
+        restored!.Phase.Should().Be(CoordinatorPhase.Finalize);
     }
 
     [Fact]
@@ -144,21 +144,21 @@ public class DurableCoordinatorRecoveryTests
             Coordinator = null,
         };
 
-        job.Coordinator.Should().BeNull(because: "a null Coordinator property signals the initial-run path");
+        job.Coordinator.Should().BeNull("a null Coordinator property signals the initial-run path");
     }
 
     [Fact]
     public void VideoEncodeJob_WithCoordinatorState_IsWakeUp()
     {
         CoordinatorState state = new(
-            GroupTag: "grp-123",
-            TaskIds: ["task-0"],
-            Phase: CoordinatorPhase.WaitChildren,
-            Pass1DispatchedAt: null,
-            Pass2DispatchedAt: null,
-            Pass1StatsPath: null,
-            PresetId: Ulid.NewUlid(),
-            ExpectedFinalCount: 1
+            "grp-123",
+            ["task-0"],
+            CoordinatorPhase.WaitChildren,
+            null,
+            null,
+            null,
+            Ulid.NewUlid(),
+            1
         );
 
         VideoEncodeJob job = new()
@@ -171,23 +171,23 @@ public class DurableCoordinatorRecoveryTests
         };
 
         job.Coordinator.Should()
-            .NotBeNull(because: "a non-null Coordinator property signals the coordinator wake-up path");
-        job.Coordinator!.Phase.Should().Be(expected: CoordinatorPhase.WaitChildren);
-        job.Coordinator.GroupTag.Should().Be(expected: "grp-123");
+            .NotBeNull("a non-null Coordinator property signals the coordinator wake-up path");
+        job.Coordinator!.Phase.Should().Be(CoordinatorPhase.WaitChildren);
+        job.Coordinator.GroupTag.Should().Be("grp-123");
     }
 
     [Fact]
     public void VideoEncodeJob_CoordinatorState_SerializesInsideJobPayload()
     {
         CoordinatorState state = new(
-            GroupTag: "grp-roundtrip",
-            TaskIds: ["t1", "t2"],
-            Phase: CoordinatorPhase.WaitPass1,
-            Pass1DispatchedAt: DateTime.UtcNow,
-            Pass2DispatchedAt: null,
-            Pass1StatsPath: null,
-            PresetId: Ulid.NewUlid(),
-            ExpectedFinalCount: 2
+            "grp-roundtrip",
+            ["t1", "t2"],
+            CoordinatorPhase.WaitPass1,
+            DateTime.UtcNow,
+            null,
+            null,
+            Ulid.NewUlid(),
+            2
         );
 
         VideoEncodeJob original = new()
@@ -199,19 +199,19 @@ public class DurableCoordinatorRecoveryTests
             Coordinator = state,
         };
 
-        string json = JsonConvert.SerializeObject(value: original, settings: SerializerSettings);
+        string json = JsonConvert.SerializeObject(original, SerializerSettings);
 
         VideoEncodeJob? restored = JsonConvert.DeserializeObject<VideoEncodeJob>(
-            value: json,
-            settings: SerializerSettings
+            json,
+            SerializerSettings
         );
 
         restored.Should().NotBeNull();
         restored!
             .Coordinator.Should()
-            .NotBeNull(because: "coordinator state must survive a full job payload round-trip");
-        restored.Coordinator!.Phase.Should().Be(expected: CoordinatorPhase.WaitPass1);
-        restored.Coordinator.GroupTag.Should().Be(expected: "grp-roundtrip");
-        restored.Coordinator.TaskIds.Should().BeEquivalentTo(expectation: ["t1", "t2"]);
+            .NotBeNull("coordinator state must survive a full job payload round-trip");
+        restored.Coordinator!.Phase.Should().Be(CoordinatorPhase.WaitPass1);
+        restored.Coordinator.GroupTag.Should().Be("grp-roundtrip");
+        restored.Coordinator.TaskIds.Should().BeEquivalentTo(["t1", "t2"]);
     }
 }

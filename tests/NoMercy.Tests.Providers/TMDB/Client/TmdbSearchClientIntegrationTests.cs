@@ -22,8 +22,8 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Integration tests for TmdbSearchClient using real TMDB API
 /// These tests require a valid TMDB API key and internet connection
 /// </summary>
-[Trait(name: "Category", value: "Integration")]
-[Collection(name: "TmdbApi")]
+[Trait("Category", "Integration")]
+[Collection("TmdbApi")]
 public class TmdbSearchClientIntegrationTests : TmdbTestBase
 {
     [Fact]
@@ -33,13 +33,13 @@ public class TmdbSearchClientIntegrationTests : TmdbTestBase
         using TmdbSearchClient client = CreateRealSearchClient();
 
         // Act
-        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query: "The Dark Knight", year: "2008");
+        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie("The Dark Knight", "2008");
 
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
-        result.Results.Should().Contain(predicate: m => m.Title!.Contains("Dark Knight"));
-        result.Results.First().Id.Should().BeGreaterThan(expected: 0);
+        result.Results.Should().Contain(m => m.Title!.Contains("Dark Knight"));
+        result.Results.First().Id.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -49,13 +49,13 @@ public class TmdbSearchClientIntegrationTests : TmdbTestBase
         using TmdbSearchClient client = CreateRealSearchClient();
 
         // Act
-        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(query: "Breaking Bad", year: "2008");
+        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow("Breaking Bad", "2008");
 
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
-        result.Results.Should().Contain(predicate: tv => tv.Name!.Contains("Breaking Bad"));
-        result.Results.First().Id.Should().BeGreaterThan(expected: 0);
+        result.Results.Should().Contain(tv => tv.Name!.Contains("Breaking Bad"));
+        result.Results.First().Id.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -65,13 +65,13 @@ public class TmdbSearchClientIntegrationTests : TmdbTestBase
         using TmdbSearchClient client = CreateRealSearchClient();
 
         // Act
-        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person(query: "Leonardo DiCaprio");
+        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person("Leonardo DiCaprio");
 
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
-        result.Results.Should().Contain(predicate: p => p.Name!.Contains("Leonardo"));
-        result.Results.First().Id.Should().BeGreaterThan(expected: 0);
+        result.Results.Should().Contain(p => p.Name!.Contains("Leonardo"));
+        result.Results.First().Id.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public class TmdbSearchClientIntegrationTests : TmdbTestBase
         using TmdbSearchClient client = CreateRealSearchClient();
 
         // Act
-        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi(query: "Marvel");
+        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi("Marvel");
 
         // Assert
         result.Should().NotBeNull();

@@ -22,7 +22,7 @@ namespace NoMercy.Tests.Queue;
 /// <summary>
 /// HIGH-13: Tests that verify cron job registration does not produce duplicates.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class CronWorkerRegistrationTests
 {
     [Fact]
@@ -30,69 +30,69 @@ public class CronWorkerRegistrationTests
     {
         ServiceCollection services = new();
         services.AddLogging();
-        services.RegisterCronJob<TestCronJobA>(jobType: "test-job-a");
-        services.RegisterCronJob<TestCronJobB>(jobType: "test-job-b");
+        services.RegisterCronJob<TestCronJobA>("test-job-a");
+        services.RegisterCronJob<TestCronJobB>("test-job-b");
 
         using ServiceProvider provider = services.BuildServiceProvider();
         TestCronJobA jobA = provider.GetRequiredService<TestCronJobA>();
         TestCronJobB jobB = provider.GetRequiredService<TestCronJobB>();
 
-        Assert.NotNull(@object: jobA);
-        Assert.NotNull(@object: jobB);
+        Assert.NotNull(jobA);
+        Assert.NotNull(jobB);
     }
 
     [Fact]
     public async Task RegisterJob_CalledTwiceWithSameType_StartsOnlyOneWorker()
     {
         await using ServiceProvider provider = BuildProvider();
-        CronWorker cronWorker = CreateCronWorker(provider: provider);
+        CronWorker cronWorker = CreateCronWorker(provider);
 
-        cronWorker.RegisterJob<TestCronJobA>(jobType: "test-job-a", name: "Test Job A", cronExpression: "0 0 * * *");
-        cronWorker.RegisterJob<TestCronJobA>(jobType: "test-job-a", name: "Test Job A Duplicate", cronExpression: "0 0 * * *");
+        cronWorker.RegisterJob<TestCronJobA>("test-job-a", "Test Job A", "0 0 * * *");
+        cronWorker.RegisterJob<TestCronJobA>("test-job-a", "Test Job A Duplicate", "0 0 * * *");
 
         // StopAsync should complete cleanly — no orphaned tasks from duplicate
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
-        await cronWorker.StopAsync(cancellationToken: cts.Token);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
     }
 
     [Fact]
     public async Task RegisterJobWithSchedule_CalledTwiceWithSameType_StartsOnlyOneWorker()
     {
         await using ServiceProvider provider = BuildProvider();
-        CronWorker cronWorker = CreateCronWorker(provider: provider);
+        CronWorker cronWorker = CreateCronWorker(provider);
 
-        cronWorker.RegisterJobWithSchedule<TestCronJobA>(jobType: "test-job-a", serviceProvider: provider);
-        cronWorker.RegisterJobWithSchedule<TestCronJobA>(jobType: "test-job-a", serviceProvider: provider);
+        cronWorker.RegisterJobWithSchedule<TestCronJobA>("test-job-a", provider);
+        cronWorker.RegisterJobWithSchedule<TestCronJobA>("test-job-a", provider);
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
-        await cronWorker.StopAsync(cancellationToken: cts.Token);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
     }
 
     [Fact]
     public async Task RegisterJob_DifferentJobTypes_StartsOneWorkerEach()
     {
         await using ServiceProvider provider = BuildProvider();
-        CronWorker cronWorker = CreateCronWorker(provider: provider);
+        CronWorker cronWorker = CreateCronWorker(provider);
 
-        cronWorker.RegisterJob<TestCronJobA>(jobType: "test-job-a", name: "Test Job A", cronExpression: "0 0 * * *");
-        cronWorker.RegisterJob<TestCronJobB>(jobType: "test-job-b", name: "Test Job B", cronExpression: "0 12 * * *");
+        cronWorker.RegisterJob<TestCronJobA>("test-job-a", "Test Job A", "0 0 * * *");
+        cronWorker.RegisterJob<TestCronJobB>("test-job-b", "Test Job B", "0 12 * * *");
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
-        await cronWorker.StopAsync(cancellationToken: cts.Token);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
     }
 
     [Fact]
     public async Task StopAsync_AfterDuplicateRegistration_CleansUpWithoutOrphanedTasks()
     {
         await using ServiceProvider provider = BuildProvider();
-        CronWorker cronWorker = CreateCronWorker(provider: provider);
+        CronWorker cronWorker = CreateCronWorker(provider);
 
-        cronWorker.RegisterJob<TestCronJobA>(jobType: "test-job-a", name: "Test Job A", cronExpression: "0 0 * * *");
-        cronWorker.RegisterJob<TestCronJobA>(jobType: "test-job-a", name: "Test Job A Dup", cronExpression: "0 0 * * *");
-        cronWorker.RegisterJob<TestCronJobB>(jobType: "test-job-b", name: "Test Job B", cronExpression: "0 12 * * *");
+        cronWorker.RegisterJob<TestCronJobA>("test-job-a", "Test Job A", "0 0 * * *");
+        cronWorker.RegisterJob<TestCronJobA>("test-job-a", "Test Job A Dup", "0 0 * * *");
+        cronWorker.RegisterJob<TestCronJobB>("test-job-b", "Test Job B", "0 12 * * *");
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
-        await cronWorker.StopAsync(cancellationToken: cts.Token);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
     }
 
     [Fact]
@@ -113,52 +113,52 @@ public class CronWorkerRegistrationTests
 
         List<CronJobRegistration> registrations =
         [
-            new(ExecutorType: typeof(UnresolvableCronJob), JobType: "unresolvable-job", CronExpression: "0 0 * * *"),
-            new(ExecutorType: typeof(ObservableCronJob), JobType: "good-job", CronExpression: "0 0 * * *"),
+            new(typeof(UnresolvableCronJob), "unresolvable-job", "0 0 * * *"),
+            new(typeof(ObservableCronJob), "good-job", "0 0 * * *"),
         ];
 
         CronWorker cronWorker = new(
-            serviceProvider: provider,
-            logger: provider.GetRequiredService<ILogger<CronWorker>>(),
-            queueContext: new StubQueueContext(),
-            registrations: registrations
+            provider,
+            provider.GetRequiredService<ILogger<CronWorker>>(),
+            new StubQueueContext(),
+            registrations
         );
 
-        await cronWorker.StartAsync(cancellationToken: CancellationToken.None);
+        await cronWorker.StartAsync(CancellationToken.None);
 
         // ExecuteAsync (and its registration loop) is scheduled by StartAsync rather
         // than run inline, so wait — bounded — for the loop to process both
         // registrations. Old (unguarded) code aborts at the unresolvable
         // registration and never reaches the good one, so WasResolved stays false
         // until this times out; the fix skips the bad one and resolves the good one.
-        using CancellationTokenSource waitCts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        using CancellationTokenSource waitCts = new(TimeSpan.FromSeconds(5));
         while (!ObservableCronJob.WasResolved && !waitCts.IsCancellationRequested)
-            await Task.Delay(millisecondsDelay: 25);
+            await Task.Delay(25);
 
         Assert.True(
-            condition: ObservableCronJob.WasResolved,
-            userMessage: "The good cron job after an unresolvable one must still be registered."
+            ObservableCronJob.WasResolved,
+            "The good cron job after an unresolvable one must still be registered."
         );
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
-        await cronWorker.StopAsync(cancellationToken: cts.Token);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
     }
 
     private static ServiceProvider BuildProvider()
     {
         ServiceCollection services = new();
         services.AddLogging();
-        services.RegisterCronJob<TestCronJobA>(jobType: "test-job-a");
-        services.RegisterCronJob<TestCronJobB>(jobType: "test-job-b");
+        services.RegisterCronJob<TestCronJobA>("test-job-a");
+        services.RegisterCronJob<TestCronJobB>("test-job-b");
         return services.BuildServiceProvider();
     }
 
     private static CronWorker CreateCronWorker(ServiceProvider provider)
     {
         return new(
-            serviceProvider: provider,
-            logger: provider.GetRequiredService<ILogger<CronWorker>>(),
-            queueContext: new StubQueueContext()
+            provider,
+            provider.GetRequiredService<ILogger<CronWorker>>(),
+            new StubQueueContext()
         );
     }
 

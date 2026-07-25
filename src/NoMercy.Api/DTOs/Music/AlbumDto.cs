@@ -19,59 +19,59 @@ namespace NoMercy.Api.DTOs.Music;
 
 public class AlbumDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public JToken? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
     // [JsonProperty("tracks")] public IEnumerable<Track> Tracks { get; set; }
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int? Year { get; set; }
 
-    [JsonProperty(propertyName: "album_artist")]
+    [JsonProperty("album_artist")]
     public Guid? AlbumArtist { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
     public AlbumDto(AlbumArtist albumArtist, string country)
     {
         string? description = albumArtist
-            .Album.Translations.FirstOrDefault(predicate: translation => translation.Iso31661 == country)
+            .Album.Translations.FirstOrDefault(translation => translation.Iso31661 == country)
             ?.Description;
 
-        Image? img = albumArtist.Artist.Images.FirstOrDefault(predicate: image => image.Type == "background");
+        Image? img = albumArtist.Artist.Images.FirstOrDefault(image => image.Type == "background");
 
         Id = albumArtist.Album.Id;
         Name = albumArtist.Album.Name;
         Cover = albumArtist.Album.Cover is not null
-            ? new Uri(uriString: $"/images/music{albumArtist.Album.Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{albumArtist.Album.Cover}", UriKind.Relative).ToString()
             : null;
         Backdrop = img?.FilePath is not null
-            ? new Uri(uriString: $"/images/music{img.FilePath}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
         Disambiguation = albumArtist.Album.Disambiguation;
-        Link = new(uriString: $"/music/albums/{Id}", uriKind: UriKind.Relative);
-        Description = !string.IsNullOrEmpty(value: description)
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
+        Description = !string.IsNullOrEmpty(description)
             ? description
             : albumArtist.Album.Description;
         Type = "album";
@@ -85,52 +85,52 @@ public class AlbumDto
     public AlbumDto(AlbumTrack albumTrack, string country)
     {
         string? description = albumTrack
-            .Album.Translations.FirstOrDefault(predicate: translation => translation.Iso31661 == country)
+            .Album.Translations.FirstOrDefault(translation => translation.Iso31661 == country)
             ?.Description;
 
         Image? img = albumTrack
             .Album.AlbumArtist.FirstOrDefault()
-            ?.Album.Images.FirstOrDefault(predicate: image => image.Type == "background");
+            ?.Album.Images.FirstOrDefault(image => image.Type == "background");
         Id = albumTrack.Album.Id;
         Name = albumTrack.Album.Name;
         Cover = albumTrack.Album.Cover is not null
-            ? new Uri(uriString: $"/images/music{albumTrack.Album.Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{albumTrack.Album.Cover}", UriKind.Relative).ToString()
             : null;
         Backdrop = img?.FilePath is not null
-            ? new Uri(uriString: $"/images/music{img.FilePath}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
         Disambiguation = albumTrack.Album.Disambiguation;
-        Link = new(uriString: $"/music/albums/{Id}", uriKind: UriKind.Relative);
-        Description = !string.IsNullOrEmpty(value: description)
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
+        Description = !string.IsNullOrEmpty(description)
             ? description
             : albumTrack.Album.Description;
         Type = "album";
         ColorPalette = albumTrack.Album._colorPalette.ToRaw();
         Year = albumTrack.Album.Year;
 
-        AlbumArtist = albumTrack.Album.AlbumArtist.MaxBy(keySelector: at => at.ArtistId)?.ArtistId;
+        AlbumArtist = albumTrack.Album.AlbumArtist.MaxBy(at => at.ArtistId)?.ArtistId;
     }
 
     public AlbumDto(Album album, string country)
     {
         string? description = album
-            .Translations.FirstOrDefault(predicate: translation => translation.Iso31661 == country)
+            .Translations.FirstOrDefault(translation => translation.Iso31661 == country)
             ?.Description;
         Image? img = album
             .AlbumArtist.FirstOrDefault()
-            ?.Artist.Images.FirstOrDefault(predicate: image => image.Type == "background");
+            ?.Artist.Images.FirstOrDefault(image => image.Type == "background");
 
         Id = album.Id;
         Name = album.Name;
         Cover = album.Cover is not null
-            ? new Uri(uriString: $"/images/music{album.Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
             : null;
         Backdrop = img?.FilePath is not null
-            ? new Uri(uriString: $"/images/music{img.FilePath}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
         Disambiguation = album.Disambiguation;
-        Link = new(uriString: $"/music/albums/{Id}", uriKind: UriKind.Relative);
-        Description = !string.IsNullOrEmpty(value: description) ? description : album.Description;
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
+        Description = !string.IsNullOrEmpty(description) ? description : album.Description;
         Type = "album";
         ColorPalette = album._colorPalette.ToRaw();
         Disambiguation = album.Disambiguation;
@@ -138,15 +138,15 @@ public class AlbumDto
         Year = album.Year;
 
         List<IGrouping<Guid, AlbumArtist>> artists = album
-            .AlbumArtist.GroupBy(keySelector: albumArtist => albumArtist.ArtistId)
-            .OrderBy(keySelector: artist => artist.Count())
+            .AlbumArtist.GroupBy(albumArtist => albumArtist.ArtistId)
+            .OrderBy(artist => artist.Count())
             .ToList();
 
         int trackCount = album.Tracks;
 
         int? artistTrackCount = album
-            .AlbumTrack.Select(selector: albumTrack => albumTrack.Track)
-            .SelectMany(selector: track => track.ArtistTrack)
+            .AlbumTrack.Select(albumTrack => albumTrack.Track)
+            .SelectMany(track => track.ArtistTrack)
             .Count();
 
         bool isAlbumArtist = artistTrackCount >= trackCount * 0.45;

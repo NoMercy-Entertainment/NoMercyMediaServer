@@ -33,10 +33,10 @@ using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags(tags: "Media TV Shows")]
-[ApiVersion(version: 1.0)]
+[Tags("Media TV Shows")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/tv/{id:int}")] // match themoviedb.org API
+[Route("api/v{version:apiVersion}/tv/{id:int}")] // match themoviedb.org API
 public class TvShowsController(
     ITvShowRepository tvShowRepository,
     ILibraryRepository libraryRepository,
@@ -51,65 +51,65 @@ public class TvShowsController(
     public async Task<IActionResult> Tv(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view tv shows");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view tv shows");
 
         string language = Language();
         string country = Country();
 
-        TvDetail? tvDetail = await tvShowRepository.GetTvAsync(userId: userId, id: id, language: language, country: country, ct: ct);
+        TvDetail? tvDetail = await tvShowRepository.GetTvAsync(userId, id, language, country, ct);
 
         if (tvDetail is not null)
             return Ok(
-                value: new InfoResponseDto
+                new InfoResponseDto
                 {
-                    Data = new(tv: tvDetail.Tv, country: country, similars: tvDetail.Similars, recommendations: tvDetail.Recommendations),
+                    Data = new(tvDetail.Tv, country, tvDetail.Similars, tvDetail.Recommendations),
                 }
             );
 
         TmdbTvShowAppends? tvShowAppends = await tvShowMetadataProvider.GetTvShowAsync(
-            id: id,
-            language: language,
-            ct: ct
+            id,
+            language,
+            ct
         );
 
         if (tvShowAppends is null)
-            return NotFoundResponse(detail: "Tv show not found");
+            return NotFoundResponse("Tv show not found");
 
         // await _tvShowRepository.AddTvShowAsync(id);
 
-        return Ok(value: new InfoResponseDto { Data = new(tmdbTv: tvShowAppends, country: country) });
+        return Ok(new InfoResponseDto { Data = new(tvShowAppends, country) });
     }
 
     [HttpDelete]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> DeleteTv(int id, CancellationToken ct = default)
     {
-        await tvShowRepository.DeleteAsync(id: id, ct: ct);
+        await tvShowRepository.DeleteAsync(id, ct);
 
-        await eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["tv", id.ToString()] });
-        await eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["libraries"] });
-        await eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["home"] });
-        await eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["tv", id.ToString()] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["libraries"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["home"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
 
-        return Ok(value: new StatusResponseDto<string> { Status = "ok", Message = "Show deleted" });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Show deleted" });
     }
 
     [HttpGet]
-    [Route(template: "available")]
+    [Route("available")]
     public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view tv shows");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view tv shows");
 
-        bool available = await tvShowRepository.GetTvAvailableAsync(userId: userId, id: id, ct: ct);
+        bool available = await tvShowRepository.GetTvAvailableAsync(userId, id, ct);
 
         if (!available)
-            return NotFoundResponse(detail: "Tv show not found");
+            return NotFoundResponse("Tv show not found");
 
         return Ok(
-            value: new StatusResponseDto<AvailableResponseDto>
+            new StatusResponseDto<AvailableResponseDto>
             {
                 Data = new() { Available = true },
                 Status = "ok",
@@ -119,43 +119,43 @@ public class TvShowsController(
     }
 
     [HttpGet]
-    [Route(template: "watch")]
+    [Route("watch")]
     public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view tv shows");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view tv shows");
 
         string language = Language();
         string country = Country();
 
-        Tv? tv = await tvShowRepository.GetPlaylistAsync(userId: userId, id: id, language: language, country: country, ct: ct);
+        Tv? tv = await tvShowRepository.GetPlaylistAsync(userId, id, language, country, ct);
 
         if (tv is null)
-            return NotFoundResponse(detail: "Tv show not found");
+            return NotFoundResponse("Tv show not found");
 
         VideoPlaylistResponseDto[] episodes = tv
-            .Seasons.Where(predicate: season => season.SeasonNumber > 0)
-            .SelectMany(selector: season => season.Episodes)
-            .Select(selector: episode => new VideoPlaylistResponseDto(episode: episode, playlistType: "tv", playlistId: id, country: country))
+            .Seasons.Where(season => season.SeasonNumber > 0)
+            .SelectMany(season => season.Episodes)
+            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id, country))
             .ToArray();
 
         VideoPlaylistResponseDto[] extras = tv
-            .Seasons.Where(predicate: season => season.SeasonNumber == 0)
-            .SelectMany(selector: season => season.Episodes)
-            .Select(selector: episode => new VideoPlaylistResponseDto(episode: episode, playlistType: "tv", playlistId: id, country: country))
+            .Seasons.Where(season => season.SeasonNumber == 0)
+            .SelectMany(season => season.Episodes)
+            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id, country))
             .ToArray();
 
         VideoPlaylistResponseDto[] result = episodes
-            .Concat(second: extras)
-            .Where(predicate: episode => episode.Id != 0)
+            .Concat(extras)
+            .Where(episode => episode.Id != 0)
             .ToArray();
 
-        return Ok(value: result);
+        return Ok(result);
     }
 
     [HttpPost]
-    [Route(template: "like")]
+    [Route("like")]
     public async Task<IActionResult> Like(
         int id,
         [FromBody] LikeRequestDto request,
@@ -163,16 +163,16 @@ public class TvShowsController(
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to like tv shows");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to like tv shows");
 
-        bool success = await tvShowRepository.LikeAsync(id: id, userId: userId, like: request.Value, ct: ct);
+        bool success = await tvShowRepository.LikeAsync(id, userId, request.Value, ct);
 
         if (!success)
-            return UnprocessableEntityResponse(detail: "Tv show not found");
+            return UnprocessableEntityResponse("Tv show not found");
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "{1}",
@@ -182,7 +182,7 @@ public class TvShowsController(
     }
 
     [HttpPost]
-    [Route(template: "watch-list")]
+    [Route("watch-list")]
     public async Task<IActionResult> AddToWatchList(
         int id,
         [FromBody] WatchListRequestDto request,
@@ -190,16 +190,16 @@ public class TvShowsController(
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to manage watch list");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to manage watch list");
 
-        bool success = await tvShowRepository.AddToWatchListAsync(tvId: id, userId: userId, add: request.Add, ct: ct);
+        bool success = await tvShowRepository.AddToWatchListAsync(id, userId, request.Add, ct);
 
         if (!success)
-            return UnprocessableEntityResponse(detail: "Tv show not found");
+            return UnprocessableEntityResponse("Tv show not found");
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = request.Add
@@ -210,27 +210,27 @@ public class TvShowsController(
     }
 
     [HttpPost]
-    [Route(template: "rescan")]
+    [Route("rescan")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id: id, ct: ct);
+        Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id, ct);
 
         if (tv is null)
-            return UnprocessableEntityResponse(detail: "Tv show not found");
+            return UnprocessableEntityResponse("Tv show not found");
 
         try
         {
-            jobDispatcher.DispatchJob<FileRescanJob>(id: id, libraryId: tv.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(id, tv.LibraryId);
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
-            return InternalServerErrorResponse(detail: e.Message);
+            logger.LogError(e.Message);
+            return InternalServerErrorResponse(e.Message);
         }
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Rescanning {0} for files in the background",
@@ -240,7 +240,7 @@ public class TvShowsController(
     }
 
     [HttpPost]
-    [Route(template: "refresh")]
+    [Route("refresh")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Refresh(
         int id,
@@ -248,55 +248,55 @@ public class TvShowsController(
         CancellationToken ct = default
     )
     {
-        Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id: id, ct: ct);
+        Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id, ct);
 
         if (tv is null)
-            return UnprocessableEntityResponse(detail: "Tv show not found");
+            return UnprocessableEntityResponse("Tv show not found");
 
         Ulid targetLibraryId;
 
         if (libraryId is not null)
         {
             Library? specified = await libraryRepository.GetLibraryByIdLiteAsync(
-                id: libraryId.Value,
-                ct: ct
+                libraryId.Value,
+                ct
             );
 
             if (specified is null)
-                return NotFoundResponse(detail: "Library not found");
+                return NotFoundResponse("Library not found");
 
             targetLibraryId = specified.Id;
         }
         else
         {
-            TmdbTvShowDetails? show = await tvShowMetadataProvider.GetTvShowDetailsAsync(id: id, ct: ct);
+            TmdbTvShowDetails? show = await tvShowMetadataProvider.GetTvShowDetailsAsync(id, ct);
             if (show == null)
-                return NotFoundResponse(detail: "Tv show not found");
+                return NotFoundResponse("Tv show not found");
 
-            bool isAnime = await KitsuIoClient.IsAnime(title: show.Name, year: show.FirstAirDate.ParseYear());
+            bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
             // Require Japanese origin to avoid false positives on western co-productions
             if (
                 isAnime
-                && !show.OriginCountry.Any(predicate: c =>
-                    string.Equals(a: c, b: "JP", comparisonType: StringComparison.OrdinalIgnoreCase)
+                && !show.OriginCountry.Any(c =>
+                    string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)
                 )
             )
                 isAnime = false;
 
             Library? tvLibrary = await libraryRepository.GetLibraryByTypeAsync(
-                type: isAnime ? "anime" : "tv",
-                fallbackType: "tv",
-                ct: ct
+                isAnime ? "anime" : "tv",
+                "tv",
+                ct
             );
 
             targetLibraryId = tvLibrary?.Id ?? tv.Library.Id;
         }
 
-        jobDispatcher.DispatchJob<ShowImportJob>(id: id, libraryId: targetLibraryId);
+        jobDispatcher.DispatchJob<ShowImportJob>(id, targetLibraryId);
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Refreshing {0} data in background",
@@ -306,7 +306,7 @@ public class TvShowsController(
     }
 
     [HttpPost]
-    [Route(template: "add")]
+    [Route("add")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Add(
         int id,
@@ -318,49 +318,49 @@ public class TvShowsController(
 
         if (libraryId is not null)
         {
-            library = await libraryRepository.GetLibraryByIdLiteAsync(id: libraryId.Value, ct: ct);
+            library = await libraryRepository.GetLibraryByIdLiteAsync(libraryId.Value, ct);
 
             if (library is null)
-                return NotFoundResponse(detail: "Library not found");
+                return NotFoundResponse("Library not found");
         }
         else
         {
-            TmdbTvShowDetails? show = await tvShowMetadataProvider.GetTvShowDetailsAsync(id: id, ct: ct);
+            TmdbTvShowDetails? show = await tvShowMetadataProvider.GetTvShowDetailsAsync(id, ct);
             if (show == null)
-                return NotFoundResponse(detail: "Tv show not found");
+                return NotFoundResponse("Tv show not found");
 
-            bool isAnime = await KitsuIoClient.IsAnime(title: show.Name, year: show.FirstAirDate.ParseYear());
+            bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
             if (
                 isAnime
-                && !show.OriginCountry.Any(predicate: c =>
-                    string.Equals(a: c, b: "JP", comparisonType: StringComparison.OrdinalIgnoreCase)
+                && !show.OriginCountry.Any(c =>
+                    string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)
                 )
             )
                 isAnime = false;
 
             library = await libraryRepository.GetLibraryByTypeAsync(
-                type: isAnime ? "anime" : "tv",
-                fallbackType: "tv",
-                ct: ct
+                isAnime ? "anime" : "tv",
+                "tv",
+                ct
             );
 
             if (library is null)
-                return UnprocessableEntityResponse(detail: "No Tv library found");
+                return UnprocessableEntityResponse("No Tv library found");
         }
 
         try
         {
-            jobDispatcher.DispatchJob<ShowImportJob>(id: id, libraryId: library.Id);
+            jobDispatcher.DispatchJob<ShowImportJob>(id, library.Id);
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
-            return InternalServerErrorResponse(detail: e.Message);
+            logger.LogError(e.Message);
+            return InternalServerErrorResponse(e.Message);
         }
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Adding {0} in the background",
@@ -370,26 +370,26 @@ public class TvShowsController(
     }
 
     [HttpGet]
-    [Route(template: "missing")]
+    [Route("missing")]
     public async Task<IActionResult> Missing(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view library");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view library");
         string language = Language();
 
         IEnumerable<Episode> episodes = await tvShowRepository.GetMissingLibraryShows(
-            userId: userId,
-            id: id,
-            language: language,
-            ct: ct
+            userId,
+            id,
+            language,
+            ct
         );
 
         List<IGrouping<long, MissingEpisodeDto>> concat = episodes
-            .Select(selector: episode => new MissingEpisodeDto(episode: episode))
-            .OrderBy(keySelector: episode => episode.SeasonNumber)
-            .ThenBy(keySelector: episode => episode.EpisodeNumber)
-            .GroupBy(keySelector: episode => episode.SeasonNumber)
+            .Select(episode => new MissingEpisodeDto(episode))
+            .OrderBy(episode => episode.SeasonNumber)
+            .ThenBy(episode => episode.EpisodeNumber)
+            .GroupBy(episode => episode.SeasonNumber)
             .ToList();
 
         if (concat.Count == 0)
@@ -405,36 +405,36 @@ public class TvShowsController(
             };
 
             return Ok(
-                value: ComponentResponse.From(
-                    component: Component
+                ComponentResponse.From(
+                    Component
                         .Grid()
-                        .WithId(id: "missing-episodes-empty")
-                        .WithItems(items: Component.SeasonCard(data: noItems).WithWatch().Build())
+                        .WithId("missing-episodes-empty")
+                        .WithItems(Component.SeasonCard(noItems).WithWatch().Build())
                 )
             );
         }
 
         return Ok(
-            value: ComponentResponse.From(
-                component: Component
+            ComponentResponse.From(
+                Component
                     .List()
-                    .WithId(id: "missing-episodes")
+                    .WithId("missing-episodes")
                     .WithItems(
-                        items: concat.SelectMany(selector: seasonGroup =>
+                        concat.SelectMany(seasonGroup =>
                             new ComponentEnvelope[]
                             {
                                 // Season title component
                                 Component
-                                    .SeasonTitle(data: new(seasonNumber: (int)seasonGroup.Key, episodeCount: seasonGroup.Count()))
-                                    .WithId(id: $"season-{seasonGroup.Key}-title"),
+                                    .SeasonTitle(new((int)seasonGroup.Key, seasonGroup.Count()))
+                                    .WithId($"season-{seasonGroup.Key}-title"),
                                 // Episodes grid for this season
                                 Component
                                     .Grid()
-                                    .WithId(id: $"season-{seasonGroup.Key}-episodes")
-                                    .WithProperties(properties: new() { { "paddingTop", 16 } })
+                                    .WithId($"season-{seasonGroup.Key}-episodes")
+                                    .WithProperties(new() { { "paddingTop", 16 } })
                                     .WithItems(
-                                        builders: seasonGroup.Select(selector: episode =>
-                                            Component.SeasonCard(data: new(dto: episode)).WithWatch()
+                                        seasonGroup.Select(episode =>
+                                            Component.SeasonCard(new(episode)).WithWatch()
                                         )
                                     ),
                             }

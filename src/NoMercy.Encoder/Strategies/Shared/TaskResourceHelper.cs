@@ -28,25 +28,25 @@ internal static class TaskResourceHelper
 
     public static ResourceRequirement ForVideoOutput(VideoOutputPlan video)
     {
-        if (IsGpuEncoder(encoderName: video.EncoderName))
-            return new(GpuDeviceKey: video.EncoderName, GpuSlots: 1, CpuThreads: 2);
+        if (IsGpuEncoder(video.EncoderName))
+            return new(video.EncoderName, 1, 2);
 
-        int cpuThreads = Math.Max(val1: 1, val2: Environment.ProcessorCount / 2);
-        return new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: cpuThreads);
+        int cpuThreads = Math.Max(1, Environment.ProcessorCount / 2);
+        return new(null, 0, cpuThreads);
     }
 
     public static ResourceRequirement CpuOnly(int cpuThreads = 1) =>
-        new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: cpuThreads);
+        new(null, 0, cpuThreads);
 
     private static bool IsGpuEncoder(string encoderName)
     {
-        if (string.IsNullOrEmpty(value: encoderName))
+        if (string.IsNullOrEmpty(encoderName))
             return false;
 
         string lower = encoderName.ToLowerInvariant();
         foreach (string token in GpuEncoderTokens)
         {
-            if (lower.Contains(value: token, comparisonType: StringComparison.Ordinal))
+            if (lower.Contains(token, StringComparison.Ordinal))
                 return true;
         }
 

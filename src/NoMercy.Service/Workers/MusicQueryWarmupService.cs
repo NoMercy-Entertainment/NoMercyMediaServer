@@ -10,9 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using NoMercy.Data.Repositories;
 
 namespace NoMercy.Service.Workers;
@@ -35,7 +32,7 @@ public class MusicQueryWarmupService(
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _ = WarmupAsync(cancellationToken: cancellationToken);
+        _ = WarmupAsync(cancellationToken);
         return Task.CompletedTask;
     }
 
@@ -52,23 +49,23 @@ public class MusicQueryWarmupService(
                 scope.ServiceProvider.GetRequiredService<IMusicRepository>();
 
             Guid probe = Guid.Empty;
-            await repository.GetPlaylistTracksAsync(userId: probe, playlistId: probe, ct: cancellationToken);
-            await repository.GetAlbumTracksAsync(userId: probe, albumId: probe, ct: cancellationToken);
-            await repository.GetArtistTracksAsync(userId: probe, artistId: probe, ct: cancellationToken);
-            await repository.GetGenreTracksAsync(userId: probe, genreId: probe, ct: cancellationToken);
-            await repository.GetTrackAsync(id: probe, ct: cancellationToken);
+            await repository.GetPlaylistTracksAsync(probe, probe, cancellationToken);
+            await repository.GetAlbumTracksAsync(probe, probe, cancellationToken);
+            await repository.GetArtistTracksAsync(probe, probe, cancellationToken);
+            await repository.GetGenreTracksAsync(probe, probe, cancellationToken);
+            await repository.GetTrackAsync(probe, cancellationToken);
 
             stopwatch.Stop();
             logger.LogInformation(
-                message: "Music query warmup completed in {ElapsedMilliseconds}ms",
-                args: stopwatch.ElapsedMilliseconds
+                "Music query warmup completed in {ElapsedMilliseconds}ms",
+                stopwatch.ElapsedMilliseconds
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "Music query warmup failed; continuing — the first real playback start will pay the cold-query cost instead"
+                ex,
+                "Music query warmup failed; continuing — the first real playback start will pay the cold-query cost instead"
             );
         }
     }

@@ -34,36 +34,36 @@ public sealed class FilenameParserPipeline : IFilenameParserPipeline
         options ??= new();
         _logger = logger;
         _adapters = adapters
-            .Where(predicate: adapter => !options.Disabled.Contains(item: adapter.Name))
-            .OrderBy(keySelector: adapter =>
+            .Where(adapter => !options.Disabled.Contains(adapter.Name))
+            .OrderBy(adapter =>
             {
-                int index = options.Order.FindIndex(match: name =>
-                    string.Equals(a: name, b: adapter.Name, comparisonType: StringComparison.OrdinalIgnoreCase)
+                int index = options.Order.FindIndex(name =>
+                    string.Equals(name, adapter.Name, StringComparison.OrdinalIgnoreCase)
                 );
                 return index >= 0 ? index : int.MaxValue;
             })
-            .ThenBy(keySelector: adapter => adapter.Order)
+            .ThenBy(adapter => adapter.Order)
             .ToList();
     }
 
     /// <summary>The effective adapter order, for diagnostics.</summary>
-    public IReadOnlyList<string> Order => _adapters.Select(selector: adapter => adapter.Name).ToList();
+    public IReadOnlyList<string> Order => _adapters.Select(adapter => adapter.Name).ToList();
 
     public MovieFile Parse(ParseContext context)
     {
         foreach (IFilenameParseAdapter adapter in _adapters)
         {
-            MovieFile? result = adapter.TryParse(context: context);
+            MovieFile? result = adapter.TryParse(context);
             if (result is not null)
             {
                 _logger?.LogDebug(
-                    message: "Filename '{File}' parsed by adapter {Adapter}", args: [context.FileNameWithExtension, adapter.Name]
+                    "Filename '{File}' parsed by adapter {Adapter}", [context.FileNameWithExtension, adapter.Name]
                 );
                 return result;
             }
         }
 
         // Every adapter disabled — return an empty, unmatched result.
-        return new(filePath: context.Title);
+        return new(context.Title);
     }
 }

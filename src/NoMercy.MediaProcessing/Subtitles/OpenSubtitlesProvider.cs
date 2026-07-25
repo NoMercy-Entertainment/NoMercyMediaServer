@@ -30,14 +30,14 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
     private readonly IHttpClientFactory _httpClientFactory;
 
     private DateTimeOffset _rateLimitedUntil = DateTimeOffset.MinValue;
-    private static readonly TimeSpan RateLimitBackoff = TimeSpan.FromMinutes(minutes: 5);
+    private static readonly TimeSpan RateLimitBackoff = TimeSpan.FromMinutes(5);
 
     // Searches queue inside OpenSubtitlesBaseClient, keyed on its named client. Downloads hit a
     // different host and so never passed through it: a sweep issued them as fast as its loop ran.
     // One at a time, one second apart, is far above what a paced backlog needs and keeps the
     // interactive lane responsive — priority work drains before any of it.
     private static readonly Providers.Helpers.Queue DownloadQueue = new(
-        options: new()
+        new()
         {
             Concurrent = 1,
             Interval = 1000,
@@ -67,8 +67,8 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         if (IsRateLimited)
         {
             _logger.LogWarning(
-                message: "OpenSubtitles rate-limited — skipping hash search until {Until}",
-                args: _rateLimitedUntil
+                "OpenSubtitles rate-limited — skipping hash search until {Until}",
+                _rateLimitedUntil
             );
             return [];
         }
@@ -76,18 +76,18 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         try
         {
             OpenSubtitlesClient client = new();
-            await client.Login().ConfigureAwait(continueOnCapturedContext: false);
+            await client.Login().ConfigureAwait(false);
 
             List<OpenSubtitlesSearchResult> results = [];
 
-            foreach (string language in ToBibliographicCodes(languages: languages))
+            foreach (string language in ToBibliographicCodes(languages))
             {
                 ct.ThrowIfCancellationRequested();
                 SubtitleSearchResponse? response = await client
-                    .SearchSubtitlesByHash(movieHash: movieHash, fileSize: fileSize, language: language, priority: priority)
-                    .ConfigureAwait(continueOnCapturedContext: false);
+                    .SearchSubtitlesByHash(movieHash, fileSize, language, priority)
+                    .ConfigureAwait(false);
 
-                results.AddRange(collection: OpenSubtitlesResponseParser.Parse(response: response, matchedBy: "moviehash"));
+                results.AddRange(OpenSubtitlesResponseParser.Parse(response, "moviehash"));
             }
 
             return results;
@@ -109,8 +109,8 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         if (IsRateLimited)
         {
             _logger.LogWarning(
-                message: "OpenSubtitles rate-limited — skipping filename search until {Until}",
-                args: _rateLimitedUntil
+                "OpenSubtitles rate-limited — skipping filename search until {Until}",
+                _rateLimitedUntil
             );
             return [];
         }
@@ -118,18 +118,18 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         try
         {
             OpenSubtitlesClient client = new();
-            await client.Login().ConfigureAwait(continueOnCapturedContext: false);
+            await client.Login().ConfigureAwait(false);
 
             List<OpenSubtitlesSearchResult> results = [];
 
-            foreach (string language in ToBibliographicCodes(languages: languages))
+            foreach (string language in ToBibliographicCodes(languages))
             {
                 ct.ThrowIfCancellationRequested();
                 SubtitleSearchResponse? response = await client
-                    .SearchSubtitles(query: filename, language: language, priority: priority)
-                    .ConfigureAwait(continueOnCapturedContext: false);
+                    .SearchSubtitles(filename, language, priority)
+                    .ConfigureAwait(false);
 
-                results.AddRange(collection: OpenSubtitlesResponseParser.Parse(response: response, matchedBy: "filename"));
+                results.AddRange(OpenSubtitlesResponseParser.Parse(response, "filename"));
             }
 
             return results;
@@ -154,8 +154,8 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         if (IsRateLimited)
         {
             _logger.LogWarning(
-                message: "OpenSubtitles rate-limited — skipping title search until {Until}",
-                args: _rateLimitedUntil
+                "OpenSubtitles rate-limited — skipping title search until {Until}",
+                _rateLimitedUntil
             );
             return [];
         }
@@ -163,19 +163,19 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         try
         {
             OpenSubtitlesClient client = new();
-            await client.Login().ConfigureAwait(continueOnCapturedContext: false);
+            await client.Login().ConfigureAwait(false);
 
-            string query = BuildTitleQuery(title: title, season: season, episode: episode, year: year);
+            string query = BuildTitleQuery(title, season, episode, year);
             List<OpenSubtitlesSearchResult> results = [];
 
-            foreach (string language in ToBibliographicCodes(languages: languages))
+            foreach (string language in ToBibliographicCodes(languages))
             {
                 ct.ThrowIfCancellationRequested();
                 SubtitleSearchResponse? response = await client
-                    .SearchSubtitles(query: query, language: language, priority: priority)
-                    .ConfigureAwait(continueOnCapturedContext: false);
+                    .SearchSubtitles(query, language, priority)
+                    .ConfigureAwait(false);
 
-                results.AddRange(collection: OpenSubtitlesResponseParser.Parse(response: response, matchedBy: "title"));
+                results.AddRange(OpenSubtitlesResponseParser.Parse(response, "title"));
             }
 
             return results;
@@ -193,15 +193,15 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         bool priority = false
     )
     {
-        return DownloadQueue.Enqueue(task: () => FetchAsync(downloadUrl: downloadUrl, ct: ct), url: downloadUrl, priority: priority);
+        return DownloadQueue.Enqueue(() => FetchAsync(downloadUrl, ct), downloadUrl, priority);
     }
 
     private async Task<byte[]> FetchAsync(string downloadUrl, CancellationToken ct)
     {
-        HttpClient client = _httpClientFactory.CreateClient(name: HttpClientNames.OpenSubtitlesDownload);
+        HttpClient client = _httpClientFactory.CreateClient(HttpClientNames.OpenSubtitlesDownload);
         using HttpResponseMessage response = await client
-            .GetAsync(requestUri: downloadUrl, cancellationToken: ct)
-            .ConfigureAwait(continueOnCapturedContext: false);
+            .GetAsync(downloadUrl, ct)
+            .ConfigureAwait(false);
 
         if ((int)response.StatusCode == 429)
         {
@@ -210,9 +210,9 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         }
 
         response.EnsureSuccessStatusCode();
-        byte[] payload = await response.Content.ReadAsByteArrayAsync(cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+        byte[] payload = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
 
-        return Decompress(payload: payload);
+        return Decompress(payload);
     }
 
     /// <summary>
@@ -226,17 +226,17 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         if (payload.Length < 2 || payload[0] != 0x1F || payload[1] != 0x8B)
             return payload;
 
-        using MemoryStream source = new(buffer: payload);
-        using GZipStream gzip = new(stream: source, mode: CompressionMode.Decompress);
+        using MemoryStream source = new(payload);
+        using GZipStream gzip = new(source, CompressionMode.Decompress);
         using MemoryStream destination = new();
-        gzip.CopyTo(destination: destination);
+        gzip.CopyTo(destination);
         return destination.ToArray();
     }
 
     private void MarkRateLimited()
     {
-        _rateLimitedUntil = DateTimeOffset.UtcNow.Add(timeSpan: RateLimitBackoff);
-        _logger.LogWarning(message: "OpenSubtitles rate-limited. Backoff until {Until}", args: _rateLimitedUntil);
+        _rateLimitedUntil = DateTimeOffset.UtcNow.Add(RateLimitBackoff);
+        _logger.LogWarning("OpenSubtitles rate-limited. Backoff until {Until}", _rateLimitedUntil);
     }
 
     /// <summary>
@@ -248,9 +248,9 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
     private static IEnumerable<string> ToBibliographicCodes(string[] languages)
     {
         return languages
-            .Select(selector: Culture.BibliographicLanguageCode)
-            .Where(predicate: language => !string.IsNullOrWhiteSpace(value: language))
-            .Distinct(comparer: StringComparer.OrdinalIgnoreCase);
+            .Select(Culture.BibliographicLanguageCode)
+            .Where(language => !string.IsNullOrWhiteSpace(language))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
     private static string BuildTitleQuery(string title, int? season, int? episode, int? year)

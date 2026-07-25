@@ -26,27 +26,27 @@ namespace NoMercy.Database.Models.Playlists;
 /// there is no shared table with the music playlist feature, so neither can
 /// appear in the other's query results.
 /// </summary>
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(UserId))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(UserId))]
 public class UserPlaylist : Timestamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [MaxLength(length: 4096)]
-    [JsonProperty(propertyName: "description")]
+    [MaxLength(4096)]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "user_id")]
+    [JsonProperty("user_id")]
     public Guid UserId { get; set; }
 
-    [JsonProperty(propertyName: "user")]
+    [JsonProperty("user")]
     public User User { get; set; } = null!;
 }

@@ -17,53 +17,53 @@ namespace NoMercy.Api.DTOs.Music;
 
 public class FeaturedDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public int Tracks { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int? Year { get; set; }
 
-    [JsonProperty(propertyName: "album_artist")]
+    [JsonProperty("album_artist")]
     public Guid? AlbumArtist { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
     public FeaturedDto(AlbumArtist albumArtist, string country)
     {
         string? description = albumArtist
-            .Album.Translations.FirstOrDefault(predicate: translation => translation.Iso31661 == country)
+            .Album.Translations.FirstOrDefault(translation => translation.Iso31661 == country)
             ?.Description;
 
         Id = albumArtist.Album.Id;
         Name = albumArtist.Album.Name;
         Cover = albumArtist.Album.Cover is not null
-            ? new Uri(uriString: $"/images/music{albumArtist.Album.Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{albumArtist.Album.Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = albumArtist.Album.Disambiguation;
-        Link = new(uriString: $"/music/albums/{Id}", uriKind: UriKind.Relative);
-        Description = !string.IsNullOrEmpty(value: description)
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
+        Description = !string.IsNullOrEmpty(description)
             ? description
             : albumArtist.Album.Description;
         Type = "album";
@@ -77,18 +77,18 @@ public class FeaturedDto
     public FeaturedDto(Album album, string country)
     {
         string? description = album
-            .Translations.FirstOrDefault(predicate: translation => translation.Iso31661 == country)
+            .Translations.FirstOrDefault(translation => translation.Iso31661 == country)
             ?.Description;
 
         Id = album.Id;
         Name = album.Name;
         Disambiguation = album.Disambiguation;
         Cover = album.Cover is not null
-            ? new Uri(uriString: $"/images/music{album.Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
             : null;
-        Link = new(uriString: $"/music/artists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Type = "artist";
-        Description = !string.IsNullOrEmpty(value: description) ? description : album.Description;
+        Description = !string.IsNullOrEmpty(description) ? description : album.Description;
 
         ColorPalette = album.ColorPalette;
     }

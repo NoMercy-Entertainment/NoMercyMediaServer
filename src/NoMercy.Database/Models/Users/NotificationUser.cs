@@ -14,16 +14,16 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Users;
 
-[PrimaryKey(propertyName: nameof(NotificationId), additionalPropertyNames: nameof(UserId))]
-[Index(propertyName: nameof(NotificationId))]
-[Index(propertyName: nameof(UserId))]
+[PrimaryKey(nameof(NotificationId), nameof(UserId))]
+[Index(nameof(NotificationId))]
+[Index(nameof(UserId))]
 public class NotificationUser
 {
-    [JsonProperty(propertyName: "notification_id")]
+    [JsonProperty("notification_id")]
     public Ulid NotificationId { get; set; }
     public Notification Notification { get; set; } = null!;
 
-    [JsonProperty(propertyName: "user_id")]
+    [JsonProperty("user_id")]
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 

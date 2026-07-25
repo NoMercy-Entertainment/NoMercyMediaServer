@@ -12,7 +12,6 @@
 using Moq;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.Storage;
-using Xunit;
 
 namespace NoMercy.Tests.MediaProcessing.Files;
 
@@ -29,34 +28,34 @@ public class FolderWatcherDedupTests
     public void Watch_SameFolderTwice_KeepsOneWatcherNotStacked()
     {
         string dir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nm-fw-dedup-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nm-fw-dedup-" + Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: dir);
+        Directory.CreateDirectory(dir);
 
         Mock<IStorageDriver> driver = new();
-        driver.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: true);
+        driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(true);
 
-        FolderWatcher watcher = new(storageDriver: driver.Object);
+        FolderWatcher watcher = new(driver.Object);
         try
         {
             // Within-assembly parallelism is disabled, so this clears the static set
             // of any watcher another test left behind before we measure.
             watcher.Dispose();
 
-            watcher.Watch(paths: [dir]);
+            watcher.Watch([dir]);
             int afterFirst = FolderWatcher.WatcherCount;
 
-            watcher.Watch(paths: [dir]);
+            watcher.Watch([dir]);
             int afterSecond = FolderWatcher.WatcherCount;
 
-            Assert.Equal(expected: 1, actual: afterFirst);
-            Assert.Equal(expected: 1, actual: afterSecond);
+            Assert.Equal(1, afterFirst);
+            Assert.Equal(1, afterSecond);
         }
         finally
         {
             watcher.Dispose();
-            Directory.Delete(path: dir, recursive: true);
+            Directory.Delete(dir, true);
         }
     }
 }

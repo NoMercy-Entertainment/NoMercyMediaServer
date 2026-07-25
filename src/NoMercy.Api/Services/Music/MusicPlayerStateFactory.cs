@@ -38,7 +38,7 @@ public class MusicPlayerStateFactory
             Duration = item.Duration.ToMilliSeconds(),
             Shuffle = false,
             Repeat = "off",
-            CurrentList = new(uriString: $"/music/{ToRouteSegment(type: type)}/{listId}", uriKind: UriKind.Relative),
+            CurrentList = new($"/music/{ToRouteSegment(type)}/{listId}", UriKind.Relative),
             Actions = new()
             {
                 Disallows = new()

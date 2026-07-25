@@ -86,26 +86,26 @@ public class OutputPlanMergerTests
     {
         OutputPlan fourKHdr = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [MakeVideo(width: 3840, height: 2160, isHdrOutput: true)],
-            AudioOutputs: [MakeAudio(language: "eng")],
-            SubtitleOutputs: [MakeSubtitle(language: "eng")],
-            Thumbnails: new(Width: 160, Height: 68, IntervalSeconds: 10),
-            Chapters: [new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 5), Title: "Chapter 1")]
+            VideoOutputs: [MakeVideo(3840, 2160, isHdrOutput: true)],
+            AudioOutputs: [MakeAudio("eng")],
+            SubtitleOutputs: [MakeSubtitle("eng")],
+            Thumbnails: new(160, 68, 10),
+            Chapters: [new(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Chapter 1")]
         );
         OutputPlan sdr1080P = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [MakeVideo(width: 1920, height: 1080, isHdrOutput: false)],
-            AudioOutputs: [MakeAudio(language: "eng")],
-            SubtitleOutputs: [MakeSubtitle(language: "fra")],
+            VideoOutputs: [MakeVideo(1920, 1080, isHdrOutput: false)],
+            AudioOutputs: [MakeAudio("eng")],
+            SubtitleOutputs: [MakeSubtitle("fra")],
             Thumbnails: null,
             Chapters: null
         );
 
-        OutputPlan merged = OutputPlanMerger.Merge(plans: [fourKHdr, sdr1080P]);
+        OutputPlan merged = OutputPlanMerger.Merge([fourKHdr, sdr1080P]);
 
-        merged.VideoOutputs.Should().HaveCount(expected: 2);
-        merged.VideoOutputs.Should().Contain(predicate: v => v.Width == 3840 && v.IsHdrOutput);
-        merged.VideoOutputs.Should().Contain(predicate: v => v.Width == 1920 && !v.IsHdrOutput);
+        merged.VideoOutputs.Should().HaveCount(2);
+        merged.VideoOutputs.Should().Contain(v => v.Width == 3840 && v.IsHdrOutput);
+        merged.VideoOutputs.Should().Contain(v => v.Width == 1920 && !v.IsHdrOutput);
     }
 
     [Fact]
@@ -115,23 +115,23 @@ public class OutputPlanMergerTests
         // produced once, not twice.
         OutputPlan preset1 = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [MakeVideo(width: 3840, height: 2160, isHdrOutput: true)],
-            AudioOutputs: [MakeAudio(language: "eng")],
+            VideoOutputs: [MakeVideo(3840, 2160, isHdrOutput: true)],
+            AudioOutputs: [MakeAudio("eng")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
         OutputPlan preset2 = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [MakeVideo(width: 1920, height: 1080, isHdrOutput: false)],
-            AudioOutputs: [MakeAudio(language: "eng")],
+            VideoOutputs: [MakeVideo(1920, 1080, isHdrOutput: false)],
+            AudioOutputs: [MakeAudio("eng")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
 
-        OutputPlan merged = OutputPlanMerger.Merge(plans: [preset1, preset2]);
+        OutputPlan merged = OutputPlanMerger.Merge([preset1, preset2]);
 
-        merged.AudioOutputs.Should().HaveCount(expected: 1);
-        merged.AudioOutputs[0].Language.Should().Be(expected: "eng");
+        merged.AudioOutputs.Should().HaveCount(1);
+        merged.AudioOutputs[0].Language.Should().Be("eng");
     }
 
     [Fact]
@@ -144,36 +144,36 @@ public class OutputPlanMergerTests
         // silently dropped the second.
         OutputPlan preset1 = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [MakeVideo(width: 3840, height: 2160, isHdrOutput: true)],
+            VideoOutputs: [MakeVideo(3840, 2160, isHdrOutput: true)],
             AudioOutputs:
             [
-                MakeAudio(language: "eng", encoderName: "eac3", sourceStreamIndex: 1),
-                MakeAudio(language: "eng", encoderName: "eac3", sourceStreamIndex: 2),
+                MakeAudio("eng", "eac3", sourceStreamIndex: 1),
+                MakeAudio("eng", "eac3", sourceStreamIndex: 2),
             ],
             SubtitleOutputs: [],
             Thumbnails: null
         );
         OutputPlan preset2 = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [MakeVideo(width: 1920, height: 1080, isHdrOutput: false)],
+            VideoOutputs: [MakeVideo(1920, 1080, isHdrOutput: false)],
             AudioOutputs:
             [
-                MakeAudio(language: "eng", encoderName: "eac3", sourceStreamIndex: 1),
-                MakeAudio(language: "eng", encoderName: "eac3", sourceStreamIndex: 2),
+                MakeAudio("eng", "eac3", sourceStreamIndex: 1),
+                MakeAudio("eng", "eac3", sourceStreamIndex: 2),
             ],
             SubtitleOutputs: [],
             Thumbnails: null
         );
 
-        OutputPlan merged = OutputPlanMerger.Merge(plans: [preset1, preset2]);
+        OutputPlan merged = OutputPlanMerger.Merge([preset1, preset2]);
 
         // Two distinct source tracks survive (the cross-preset duplicates of each
         // still dedup to one).
-        merged.AudioOutputs.Should().HaveCount(expected: 2);
+        merged.AudioOutputs.Should().HaveCount(2);
         merged
-            .AudioOutputs.Select(selector: a => a.SourceStreamIndex)
+            .AudioOutputs.Select(a => a.SourceStreamIndex)
             .Should()
-            .BeEquivalentTo(expectation: [1, 2], because: "both distinct source audio tracks must survive the merge");
+            .BeEquivalentTo([1, 2], "both distinct source audio tracks must survive the merge");
     }
 
     [Fact]
@@ -183,58 +183,58 @@ public class OutputPlanMergerTests
         // different (language, codec) pairs describe DIFFERENT renditions.
         OutputPlan preset1 = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [MakeVideo(width: 3840, height: 2160, isHdrOutput: true)],
-            AudioOutputs: [MakeAudio(language: "eng", encoderName: "eac3")],
+            VideoOutputs: [MakeVideo(3840, 2160, isHdrOutput: true)],
+            AudioOutputs: [MakeAudio("eng", "eac3")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
         OutputPlan preset2 = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [MakeVideo(width: 1920, height: 1080, isHdrOutput: false)],
-            AudioOutputs: [MakeAudio(language: "eng", encoderName: "aac")],
+            VideoOutputs: [MakeVideo(1920, 1080, isHdrOutput: false)],
+            AudioOutputs: [MakeAudio("eng", "aac")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
 
-        OutputPlan merged = OutputPlanMerger.Merge(plans: [preset1, preset2]);
+        OutputPlan merged = OutputPlanMerger.Merge([preset1, preset2]);
 
-        merged.AudioOutputs.Should().HaveCount(expected: 2);
-        merged.AudioOutputs.Select(selector: a => a.CodecToken).Should().BeEquivalentTo(expectation: ["eac3", "aac"]);
+        merged.AudioOutputs.Should().HaveCount(2);
+        merged.AudioOutputs.Select(a => a.CodecToken).Should().BeEquivalentTo(["eac3", "aac"]);
     }
 
     [Fact]
     public void Merge_SharedFields_ComeFromThePrimaryPlanOnly()
     {
-        SubtitleOutputPlan primarySubtitle = MakeSubtitle(language: "eng");
-        ThumbnailOutputPlan primaryThumbnails = new(Width: 160, Height: 68, IntervalSeconds: 10);
-        ChapterInfo[] primaryChapters = [new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 1), Title: "Ch1")];
+        SubtitleOutputPlan primarySubtitle = MakeSubtitle("eng");
+        ThumbnailOutputPlan primaryThumbnails = new(160, 68, 10);
+        ChapterInfo[] primaryChapters = [new(TimeSpan.Zero, TimeSpan.FromMinutes(1), "Ch1")];
 
         OutputPlan primary = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [MakeVideo(width: 3840, height: 2160, isHdrOutput: true)],
-            AudioOutputs: [MakeAudio(language: "eng")],
+            VideoOutputs: [MakeVideo(3840, 2160, isHdrOutput: true)],
+            AudioOutputs: [MakeAudio("eng")],
             SubtitleOutputs: [primarySubtitle],
             Thumbnails: primaryThumbnails,
             Chapters: primaryChapters
         );
         OutputPlan secondary = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [MakeVideo(width: 1920, height: 1080, isHdrOutput: false)],
-            AudioOutputs: [MakeAudio(language: "eng")],
+            VideoOutputs: [MakeVideo(1920, 1080, isHdrOutput: false)],
+            AudioOutputs: [MakeAudio("eng")],
             // Deliberately different — must NOT surface in the merge, since
             // subtitles/thumbnails/chapters are source-derived and identical
             // across presets; duplicating them would double the OCR/extract
             // work this merge exists to avoid.
-            SubtitleOutputs: [MakeSubtitle(language: "jpn"), MakeSubtitle(language: "kor")],
-            Thumbnails: new(Width: 320, Height: 180, IntervalSeconds: 5),
-            Chapters: [new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 2), Title: "Other")]
+            SubtitleOutputs: [MakeSubtitle("jpn"), MakeSubtitle("kor")],
+            Thumbnails: new(320, 180, 5),
+            Chapters: [new(TimeSpan.Zero, TimeSpan.FromMinutes(2), "Other")]
         );
 
-        OutputPlan merged = OutputPlanMerger.Merge(plans: [primary, secondary]);
+        OutputPlan merged = OutputPlanMerger.Merge([primary, secondary]);
 
-        merged.SubtitleOutputs.Should().BeEquivalentTo(expectation: [primarySubtitle]);
-        merged.Thumbnails.Should().BeEquivalentTo(expectation: primaryThumbnails);
-        merged.Chapters.Should().BeEquivalentTo(expectation: primaryChapters);
+        merged.SubtitleOutputs.Should().BeEquivalentTo([primarySubtitle]);
+        merged.Thumbnails.Should().BeEquivalentTo(primaryThumbnails);
+        merged.Chapters.Should().BeEquivalentTo(primaryChapters);
     }
 
     [Fact]
@@ -242,20 +242,20 @@ public class OutputPlanMergerTests
     {
         OutputPlan hlsPlan = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [MakeVideo(width: 1920, height: 1080, isHdrOutput: false)],
+            VideoOutputs: [MakeVideo(1920, 1080, isHdrOutput: false)],
             AudioOutputs: [],
             SubtitleOutputs: [],
             Thumbnails: null
         );
         OutputPlan dashPlan = new(
             Format: OutputFormat.Dash,
-            VideoOutputs: [MakeVideo(width: 1920, height: 1080, isHdrOutput: false)],
+            VideoOutputs: [MakeVideo(1920, 1080, isHdrOutput: false)],
             AudioOutputs: [],
             SubtitleOutputs: [],
             Thumbnails: null
         );
 
-        Action act = () => OutputPlanMerger.Merge(plans: [hlsPlan, dashPlan]);
+        Action act = () => OutputPlanMerger.Merge([hlsPlan, dashPlan]);
 
         act.Should().Throw<InvalidOperationException>();
     }
@@ -272,14 +272,14 @@ public class OutputPlanMergerTests
         // codecs — without disambiguation both would resolve to the same
         // "video_1920x1080_SDR/" folder and clobber each other's segments.
         VideoOutputPlan hevc1080P = MakeVideo(
-            width: 1920,
-            height: 1080,
+            1920,
+            1080,
             isHdrOutput: false,
             encoderName: "libx265"
         );
         VideoOutputPlan av1_1080P = MakeVideo(
-            width: 1920,
-            height: 1080,
+            1920,
+            1080,
             isHdrOutput: false,
             encoderName: "libsvtav1"
         );
@@ -299,26 +299,26 @@ public class OutputPlanMergerTests
             Thumbnails: null
         );
 
-        OutputPlan merged = OutputPlanMerger.Merge(plans: [preset1, preset2]);
+        OutputPlan merged = OutputPlanMerger.Merge([preset1, preset2]);
 
-        merged.VideoOutputs.Should().HaveCount(expected: 2);
+        merged.VideoOutputs.Should().HaveCount(2);
         merged
-            .VideoOutputs.Select(selector: v => v.PlaylistNameTemplate)
+            .VideoOutputs.Select(v => v.PlaylistNameTemplate)
             .Should()
-            .OnlyHaveUniqueItems(because: "colliding renditions must resolve to distinct on-disk folders");
+            .OnlyHaveUniqueItems("colliding renditions must resolve to distinct on-disk folders");
         merged
-            .VideoOutputs.Select(selector: v => v.SegmentNameTemplate)
+            .VideoOutputs.Select(v => v.SegmentNameTemplate)
             .Should()
-            .OnlyHaveUniqueItems(because: "colliding renditions must resolve to distinct segment folders");
+            .OnlyHaveUniqueItems("colliding renditions must resolve to distinct segment folders");
         // Both halves of the folder/file template get the same suffix, or the
         // segment files would still collide inside a disambiguated folder.
         merged
             .VideoOutputs.Should()
-            .AllSatisfy(expected: v =>
+            .AllSatisfy(v =>
             {
-                string[] parts = v.PlaylistNameTemplate.Split(separator: '/');
-                parts.Should().HaveCount(expected: 2);
-                parts[0].Should().Be(expected: parts[1]);
+                string[] parts = v.PlaylistNameTemplate.Split('/');
+                parts.Should().HaveCount(2);
+                parts[0].Should().Be(parts[1]);
             });
     }
 
@@ -328,8 +328,8 @@ public class OutputPlanMergerTests
         // The Marvels case from the slice spec: 4K HDR + 1080p SDR never
         // collide (different width AND different HDR/SDR range) — the guard
         // must leave both templates exactly as PlanStage produced them.
-        VideoOutputPlan fourKHdr = MakeVideo(width: 3840, height: 2160, isHdrOutput: true);
-        VideoOutputPlan sdr1080P = MakeVideo(width: 1920, height: 1080, isHdrOutput: false);
+        VideoOutputPlan fourKHdr = MakeVideo(3840, 2160, isHdrOutput: true);
+        VideoOutputPlan sdr1080P = MakeVideo(1920, 1080, isHdrOutput: false);
         string originalFourKTemplate = fourKHdr.PlaylistNameTemplate;
         string originalSdrTemplate = sdr1080P.PlaylistNameTemplate;
 
@@ -348,25 +348,25 @@ public class OutputPlanMergerTests
             Thumbnails: null
         );
 
-        OutputPlan merged = OutputPlanMerger.Merge(plans: [preset1, preset2]);
+        OutputPlan merged = OutputPlanMerger.Merge([preset1, preset2]);
 
-        merged.VideoOutputs.Should().HaveCount(expected: 2);
+        merged.VideoOutputs.Should().HaveCount(2);
         merged
-            .VideoOutputs.First(predicate: v => v.Width == 3840)
+            .VideoOutputs.First(v => v.Width == 3840)
             .PlaylistNameTemplate.Should()
-            .Be(expected: originalFourKTemplate);
+            .Be(originalFourKTemplate);
         merged
-            .VideoOutputs.First(predicate: v => v.Width == 1920)
+            .VideoOutputs.First(v => v.Width == 1920)
             .PlaylistNameTemplate.Should()
-            .Be(expected: originalSdrTemplate);
+            .Be(originalSdrTemplate);
     }
 
     [Fact]
     public void Merge_ThreeWayCollision_AllThreeGetDistinctFolders()
     {
-        VideoOutputPlan h264 = MakeVideo(width: 1920, height: 1080, isHdrOutput: false, encoderName: "libx264");
-        VideoOutputPlan hevc = MakeVideo(width: 1920, height: 1080, isHdrOutput: false, encoderName: "libx265");
-        VideoOutputPlan av1 = MakeVideo(width: 1920, height: 1080, isHdrOutput: false, encoderName: "libsvtav1");
+        VideoOutputPlan h264 = MakeVideo(1920, 1080, isHdrOutput: false, encoderName: "libx264");
+        VideoOutputPlan hevc = MakeVideo(1920, 1080, isHdrOutput: false, encoderName: "libx265");
+        VideoOutputPlan av1 = MakeVideo(1920, 1080, isHdrOutput: false, encoderName: "libsvtav1");
 
         OutputPlan preset1 = new(
             Format: OutputFormat.Hls,
@@ -390,9 +390,9 @@ public class OutputPlanMergerTests
             Thumbnails: null
         );
 
-        OutputPlan merged = OutputPlanMerger.Merge(plans: [preset1, preset2, preset3]);
+        OutputPlan merged = OutputPlanMerger.Merge([preset1, preset2, preset3]);
 
-        merged.VideoOutputs.Should().HaveCount(expected: 3);
-        merged.VideoOutputs.Select(selector: v => v.PlaylistNameTemplate).Should().OnlyHaveUniqueItems();
+        merged.VideoOutputs.Should().HaveCount(3);
+        merged.VideoOutputs.Select(v => v.PlaylistNameTemplate).Should().OnlyHaveUniqueItems();
     }
 }

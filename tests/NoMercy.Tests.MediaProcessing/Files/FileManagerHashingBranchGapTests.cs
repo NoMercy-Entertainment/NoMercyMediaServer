@@ -28,21 +28,21 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 // but is empty/malformed" paths a live scan hits whenever an encode is
 // interrupted mid-write, and ComputeFileHash's stat-failure fallback.
 // ---------------------------------------------------------------------------
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class FileManagerHashingBranchGapTests : IDisposable
 {
     private readonly string _tempRoot;
 
     public FileManagerHashingBranchGapTests()
     {
-        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-branchgap-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempRoot);
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"nm-branchgap-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempRoot);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempRoot))
-            Directory.Delete(path: _tempRoot, recursive: true);
+        if (Directory.Exists(_tempRoot))
+            Directory.Delete(_tempRoot, true);
     }
 
     private static FileManager BuildFileManager()
@@ -52,46 +52,46 @@ public sealed class FileManagerHashingBranchGapTests : IDisposable
         Mock<IStorageDriver> driverMock = new();
         Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
         return new(
-            fileRepository: repoMock.Object,
-            storageFactory: factoryMock.Object,
-            storageDriver: driverMock.Object,
-            mediaAnalyzer: mediaAnalyzerMock.Object
+            repoMock.Object,
+            factoryMock.Object,
+            driverMock.Object,
+            mediaAnalyzerMock.Object
         );
     }
 
     private static IStorage BuildLocalStorage()
     {
         LocalStorageDriver driver = new();
-        return new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
+        return new LocalStorage(driver, new StoragePathGuard([], driver));
     }
 
     private static object InvokePrivate(string methodName, object?[] args, bool isStatic = false)
     {
         MethodInfo method =
             typeof(FileManager).GetMethod(
-                name: methodName,
-                bindingAttr: (isStatic ? BindingFlags.Static : BindingFlags.Instance) | BindingFlags.NonPublic
-            ) ?? throw new InvalidOperationException(message: $"{methodName} not found");
-        return method.Invoke(obj: isStatic ? null : BuildFileManager(), parameters: args)!;
+                methodName,
+                (isStatic ? BindingFlags.Static : BindingFlags.Instance) | BindingFlags.NonPublic
+            ) ?? throw new InvalidOperationException($"{methodName} not found");
+        return method.Invoke(isStatic ? null : BuildFileManager(), args)!;
     }
 
     private static List<IVideo> InvokeGetVideoHashList(IStorage storage, string hostFolder) =>
         (List<IVideo>)
             typeof(FileManager)
-                .GetMethod(name: "GetVideoHashList", bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance)!
-                .Invoke(obj: BuildFileManager(), parameters: [storage, hostFolder])!;
+                .GetMethod("GetVideoHashList", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .Invoke(BuildFileManager(), [storage, hostFolder])!;
 
     private static List<IAudio> InvokeGetAudioHashList(IStorage storage, string hostFolder) =>
         (List<IAudio>)
             typeof(FileManager)
-                .GetMethod(name: "GetAudioHashList", bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance)!
-                .Invoke(obj: BuildFileManager(), parameters: [storage, hostFolder])!;
+                .GetMethod("GetAudioHashList", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .Invoke(BuildFileManager(), [storage, hostFolder])!;
 
     private static List<ISubtitle> InvokeGetSubtitleHashList(IStorage storage, string hostFolder) =>
         (List<ISubtitle>)
             typeof(FileManager)
-                .GetMethod(name: "GetSubtitleHashList", bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance)!
-                .Invoke(obj: BuildFileManager(), parameters: [storage, hostFolder])!;
+                .GetMethod("GetSubtitleHashList", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .Invoke(BuildFileManager(), [storage, hostFolder])!;
 
     // -----------------------------------------------------------------------
     // GetVideoHashList
@@ -100,9 +100,9 @@ public sealed class FileManagerHashingBranchGapTests : IDisposable
     [Fact]
     public void GetVideoHashList_HostFolderMissing_ReturnsEmpty()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "does-not-exist");
+        string hostDir = Path.Combine(_tempRoot, "does-not-exist");
 
-        List<IVideo> result = InvokeGetVideoHashList(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<IVideo> result = InvokeGetVideoHashList(BuildLocalStorage(), hostDir);
 
         result.Should().BeEmpty();
     }
@@ -110,51 +110,51 @@ public sealed class FileManagerHashingBranchGapTests : IDisposable
     [Fact]
     public void GetVideoHashList_VideoDirNameDoesNotMatchWidthHeightPattern_IsSkipped()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.BadVideoDir");
-        Directory.CreateDirectory(path: Path.Combine(path1: hostDir, path2: "video_bogus"));
-        File.WriteAllText(path: Path.Combine(path1: hostDir, path2: "video_bogus", path3: "video_bogus.m3u8"), contents: "#EXTM3U");
+        string hostDir = Path.Combine(_tempRoot, "Movie.BadVideoDir");
+        Directory.CreateDirectory(Path.Combine(hostDir, "video_bogus"));
+        File.WriteAllText(Path.Combine(hostDir, "video_bogus", "video_bogus.m3u8"), "#EXTM3U");
 
-        List<IVideo> result = InvokeGetVideoHashList(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<IVideo> result = InvokeGetVideoHashList(BuildLocalStorage(), hostDir);
 
         result
             .Should()
-            .BeEmpty(because: "a video_* dir name that doesn't parse as WxH must be skipped, not throw");
+            .BeEmpty("a video_* dir name that doesn't parse as WxH must be skipped, not throw");
     }
 
     [Fact]
     public void GetVideoHashList_MatchingDirWithNestedSubdirButNoPlaylist_IsSkipped()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.NoPlaylist");
-        string videoDir = Path.Combine(path1: hostDir, path2: "video_1920x1080");
-        Directory.CreateDirectory(path: videoDir);
+        string hostDir = Path.Combine(_tempRoot, "Movie.NoPlaylist");
+        string videoDir = Path.Combine(hostDir, "video_1920x1080");
+        Directory.CreateDirectory(videoDir);
         // A nested subdirectory forces the playlist lookup's `!e.IsDirectory`
         // guard to see a real directory entry, not just files.
-        Directory.CreateDirectory(path: Path.Combine(path1: videoDir, path2: "stray-subdir"));
-        File.WriteAllBytes(path: Path.Combine(path1: videoDir, path2: "segment0.ts"), bytes: new byte[8]);
+        Directory.CreateDirectory(Path.Combine(videoDir, "stray-subdir"));
+        File.WriteAllBytes(Path.Combine(videoDir, "segment0.ts"), new byte[8]);
         // No .m3u8 file at all — playlist lookup must come back null.
 
-        List<IVideo> result = InvokeGetVideoHashList(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<IVideo> result = InvokeGetVideoHashList(BuildLocalStorage(), hostDir);
 
         result
             .Should()
-            .BeEmpty(because: "a rendition dir with no playlist (interrupted encode) must be skipped");
+            .BeEmpty("a rendition dir with no playlist (interrupted encode) must be skipped");
     }
 
     [Fact]
     public void GetVideoHashList_MatchingDirWithNestedSubdirAndPlaylist_IsIncluded()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.WithSubdirAndPlaylist");
-        string videoDir = Path.Combine(path1: hostDir, path2: "video_1920x1080");
-        Directory.CreateDirectory(path: videoDir);
-        Directory.CreateDirectory(path: Path.Combine(path1: videoDir, path2: "stray-subdir"));
-        File.WriteAllText(path: Path.Combine(path1: videoDir, path2: "video_1920x1080.m3u8"), contents: "#EXTM3U");
-        File.WriteAllBytes(path: Path.Combine(path1: videoDir, path2: "segment0.ts"), bytes: new byte[8]);
+        string hostDir = Path.Combine(_tempRoot, "Movie.WithSubdirAndPlaylist");
+        string videoDir = Path.Combine(hostDir, "video_1920x1080");
+        Directory.CreateDirectory(videoDir);
+        Directory.CreateDirectory(Path.Combine(videoDir, "stray-subdir"));
+        File.WriteAllText(Path.Combine(videoDir, "video_1920x1080.m3u8"), "#EXTM3U");
+        File.WriteAllBytes(Path.Combine(videoDir, "segment0.ts"), new byte[8]);
 
-        List<IVideo> result = InvokeGetVideoHashList(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<IVideo> result = InvokeGetVideoHashList(BuildLocalStorage(), hostDir);
 
         result.Should().ContainSingle();
-        result[index: 0].Width.Should().Be(expected: 1920);
-        result[index: 0].Height.Should().Be(expected: 1080);
+        result[0].Width.Should().Be(1920);
+        result[0].Height.Should().Be(1080);
     }
 
     // -----------------------------------------------------------------------
@@ -164,9 +164,9 @@ public sealed class FileManagerHashingBranchGapTests : IDisposable
     [Fact]
     public void GetAudioHashList_HostFolderMissing_ReturnsEmpty()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "does-not-exist-audio");
+        string hostDir = Path.Combine(_tempRoot, "does-not-exist-audio");
 
-        List<IAudio> result = InvokeGetAudioHashList(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<IAudio> result = InvokeGetAudioHashList(BuildLocalStorage(), hostDir);
 
         result.Should().BeEmpty();
     }
@@ -174,12 +174,12 @@ public sealed class FileManagerHashingBranchGapTests : IDisposable
     [Fact]
     public void GetAudioHashList_AudioDirNameDoesNotMatchLanguagePattern_IsSkipped()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.BadAudioDir");
+        string hostDir = Path.Combine(_tempRoot, "Movie.BadAudioDir");
         // "toolong" is more than the 2-3 letter language token the regex allows.
-        Directory.CreateDirectory(path: Path.Combine(path1: hostDir, path2: "audio_toolonglanguage"));
-        File.WriteAllText(path: Path.Combine(path1: hostDir, path2: "audio_toolonglanguage", path3: "x.m3u8"), contents: "#EXTM3U");
+        Directory.CreateDirectory(Path.Combine(hostDir, "audio_toolonglanguage"));
+        File.WriteAllText(Path.Combine(hostDir, "audio_toolonglanguage", "x.m3u8"), "#EXTM3U");
 
-        List<IAudio> result = InvokeGetAudioHashList(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<IAudio> result = InvokeGetAudioHashList(BuildLocalStorage(), hostDir);
 
         result.Should().BeEmpty();
     }
@@ -187,15 +187,15 @@ public sealed class FileManagerHashingBranchGapTests : IDisposable
     [Fact]
     public void GetAudioHashList_MatchingDirWithNestedSubdirButNoPlaylist_IsSkipped()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.AudioNoPlaylist");
-        string audioDir = Path.Combine(path1: hostDir, path2: "audio_eng_aac");
-        Directory.CreateDirectory(path: audioDir);
-        Directory.CreateDirectory(path: Path.Combine(path1: audioDir, path2: "stray-subdir"));
-        File.WriteAllBytes(path: Path.Combine(path1: audioDir, path2: "segment0.ts"), bytes: new byte[8]);
+        string hostDir = Path.Combine(_tempRoot, "Movie.AudioNoPlaylist");
+        string audioDir = Path.Combine(hostDir, "audio_eng_aac");
+        Directory.CreateDirectory(audioDir);
+        Directory.CreateDirectory(Path.Combine(audioDir, "stray-subdir"));
+        File.WriteAllBytes(Path.Combine(audioDir, "segment0.ts"), new byte[8]);
 
-        List<IAudio> result = InvokeGetAudioHashList(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<IAudio> result = InvokeGetAudioHashList(BuildLocalStorage(), hostDir);
 
-        result.Should().BeEmpty(because: "an audio rendition dir with no playlist must be skipped");
+        result.Should().BeEmpty("an audio rendition dir with no playlist must be skipped");
     }
 
     [Fact]
@@ -205,16 +205,16 @@ public sealed class FileManagerHashingBranchGapTests : IDisposable
         // (no `_<codec>` token) audio dir — the master-rebuild path already
         // pins this end to end; this covers the codec ternary's false branch
         // in GetAudioHashList itself.
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Show.OldNamingAudio");
-        string audioDir = Path.Combine(path1: hostDir, path2: "audio_jpn");
-        Directory.CreateDirectory(path: audioDir);
-        File.WriteAllText(path: Path.Combine(path1: audioDir, path2: "audio_jpn.m3u8"), contents: "#EXTM3U");
+        string hostDir = Path.Combine(_tempRoot, "Show.OldNamingAudio");
+        string audioDir = Path.Combine(hostDir, "audio_jpn");
+        Directory.CreateDirectory(audioDir);
+        File.WriteAllText(Path.Combine(audioDir, "audio_jpn.m3u8"), "#EXTM3U");
 
-        List<IAudio> result = InvokeGetAudioHashList(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<IAudio> result = InvokeGetAudioHashList(BuildLocalStorage(), hostDir);
 
         result.Should().ContainSingle();
-        result[index: 0].Language.Should().Be(expected: "jpn");
-        result[index: 0].Codec.Should().Be(expected: "aac");
+        result[0].Language.Should().Be("jpn");
+        result[0].Codec.Should().Be("aac");
     }
 
     // -----------------------------------------------------------------------
@@ -225,12 +225,12 @@ public sealed class FileManagerHashingBranchGapTests : IDisposable
     [Fact]
     public void GetSubtitleHashList_UnrecognizedFileName_IsSkipped()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.JunkInSubs");
-        string subtitleDir = Path.Combine(path1: hostDir, path2: "subtitles");
-        Directory.CreateDirectory(path: subtitleDir);
-        File.WriteAllText(path: Path.Combine(path1: subtitleDir, path2: "README.txt"), contents: "not a subtitle");
+        string hostDir = Path.Combine(_tempRoot, "Movie.JunkInSubs");
+        string subtitleDir = Path.Combine(hostDir, "subtitles");
+        Directory.CreateDirectory(subtitleDir);
+        File.WriteAllText(Path.Combine(subtitleDir, "README.txt"), "not a subtitle");
 
-        List<ISubtitle> result = InvokeGetSubtitleHashList(storage: BuildLocalStorage(), hostFolder: hostDir);
+        List<ISubtitle> result = InvokeGetSubtitleHashList(BuildLocalStorage(), hostDir);
 
         result.Should().BeEmpty();
     }
@@ -248,12 +248,12 @@ public sealed class FileManagerHashingBranchGapTests : IDisposable
         // the title ternary's false branch (no line after the timing line).
         const string text = "WEBVTT\n\n00:00:00.000 --> 00:00:10.000\n";
 
-        List<IChapter> chapters = FileManager.ParseChaptersVtt(text: text);
+        List<IChapter> chapters = FileManager.ParseChaptersVtt(text);
 
         chapters.Should().ContainSingle();
-        chapters[index: 0].Title.Should().BeEmpty();
-        chapters[index: 0].StartTime.Should().Be(expected: 0);
-        chapters[index: 0].EndTime.Should().Be(expected: 10000);
+        chapters[0].Title.Should().BeEmpty();
+        chapters[0].StartTime.Should().Be(0);
+        chapters[0].EndTime.Should().Be(10000);
     }
 
     // -----------------------------------------------------------------------
@@ -265,18 +265,18 @@ public sealed class FileManagerHashingBranchGapTests : IDisposable
     public void ComputeFileHash_LastModifiedThrows_FallsBackToZeroTicksInsteadOfThrowing()
     {
         Mock<IStorage> storage = new();
-        storage.Setup(expression: s => s.SizeOrZero("some/path")).Returns(value: 42);
-        storage.Setup(expression: s => s.LastModified("some/path")).Throws(exception: new IOException(message: "stat failed"));
+        storage.Setup(s => s.SizeOrZero("some/path")).Returns(42);
+        storage.Setup(s => s.LastModified("some/path")).Throws(new IOException("stat failed"));
 
         MethodInfo method =
             typeof(FileManager).GetMethod(
-                name: "ComputeFileHash",
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
-            ) ?? throw new InvalidOperationException(message: "ComputeFileHash not found");
+                "ComputeFileHash",
+                BindingFlags.NonPublic | BindingFlags.Static
+            ) ?? throw new InvalidOperationException("ComputeFileHash not found");
 
-        string hash = (string)method.Invoke(obj: null, parameters: [storage.Object, "some/path"])!;
+        string hash = (string)method.Invoke(null, [storage.Object, "some/path"])!;
 
         hash.Should().NotBeNullOrEmpty();
-        hash.Should().HaveLength(expected: 64, because: "SHA-256 hex digest");
+        hash.Should().HaveLength(64, "SHA-256 hex digest");
     }
 }

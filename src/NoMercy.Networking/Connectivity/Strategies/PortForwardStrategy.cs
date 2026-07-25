@@ -31,7 +31,7 @@ public class PortForwardStrategy(
         if (connectivityStatus.NatStatus == NatStatus.Open)
         {
             logger.LogInformation(
-                message: "NAT status is open, you can access your server from outside your local network."
+                "NAT status is open, you can access your server from outside your local network."
             );
             return true;
         }
@@ -42,7 +42,7 @@ public class PortForwardStrategy(
         // to external clients.
         if (connectivityStatus.NatStatus == NatStatus.Filtered)
         {
-            logger.LogInformation(message: "UPnP port mapping active — port forwarding confirmed via UPnP.");
+            logger.LogInformation("UPnP port mapping active — port forwarding confirmed via UPnP.");
             connectivityStatus.PortForwarded = true;
             connectivityStatus.NatStatus = NatStatus.Open;
             return true;
@@ -53,14 +53,14 @@ public class PortForwardStrategy(
         if (connectivityStatus.PortForwarded)
         {
             logger.LogInformation(
-                message: "Your server is port forwarded, you can access your server from outside your local network."
+                "Your server is port forwarded, you can access your server from outside your local network."
             );
             connectivityStatus.NatStatus = NatStatus.Open;
             return true;
         }
 
         logger.LogDebug(
-            message: "Port forward check failed — router may not support NAT hairpinning, but external clients may still be able to connect."
+            "Port forward check failed — router may not support NAT hairpinning, but external clients may still be able to connect."
         );
         return false;
     }

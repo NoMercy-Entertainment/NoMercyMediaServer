@@ -45,23 +45,23 @@ public class ChromeCastService : IChromeCastService
     // Synthesized entries survive mDNS rescans (which replace _chromecastReceivers
     // wholesale). Without this, two TVs alternate wiping each other every ping.
     private readonly ConcurrentDictionary<string, ChromecastReceiver> _synthesizedReceivers = new(
-        comparer: StringComparer.OrdinalIgnoreCase
+        StringComparer.OrdinalIgnoreCase
     );
 
-    private readonly SemaphoreSlim _rediscoveryGate = new(initialCount: 1, maxCount: 1);
+    private readonly SemaphoreSlim _rediscoveryGate = new(1, 1);
     private DateTime _lastRediscoveryUtc = DateTime.MinValue;
-    private readonly TimeSpan _rediscoveryCooldown = TimeSpan.FromSeconds(seconds: 30);
+    private readonly TimeSpan _rediscoveryCooldown = TimeSpan.FromSeconds(30);
 
     // Per-receiver client pool keyed by receiver name. Thread-safe.
     private readonly ConcurrentDictionary<string, ChromecastClient> ClientPool = new(
-        comparer: StringComparer.OrdinalIgnoreCase
+        StringComparer.OrdinalIgnoreCase
     );
 
     // Per-name connect gate so concurrent callers (VideoHub, MusicHub × 2
     // observed in practice) don't each open a wasted TCP connection to the
     // same TV. First caller wins, others wait and read from ClientPool.
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _connectGates = new(
-        comparer: StringComparer.OrdinalIgnoreCase
+        StringComparer.OrdinalIgnoreCase
     );
 
     // Tracks which receiver was most recently selected (for compat callers that
@@ -79,7 +79,7 @@ public class ChromeCastService : IChromeCastService
             _lastRediscoveryUtc = DateTime.UtcNow;
 
             foreach (ChromecastReceiver chromecast in _chromecastReceivers)
-                _logger.LogInformation(message: "Found chromecast: {Name}", args: chromecast.Name);
+                _logger.LogInformation("Found chromecast: {Name}", chromecast.Name);
         }
         finally
         {
@@ -89,7 +89,7 @@ public class ChromeCastService : IChromeCastService
 
     public string[] GetChromeCasts()
     {
-        return _chromecastReceivers.Select(selector: x => x.Name).ToArray();
+        return _chromecastReceivers.Select(x => x.Name).ToArray();
     }
 
     /// <summary>
@@ -103,10 +103,10 @@ public class ChromeCastService : IChromeCastService
     /// </summary>
     public async Task<string?> FindReceiverNameByIpAsync(string ip)
     {
-        if (string.IsNullOrEmpty(value: ip))
+        if (string.IsNullOrEmpty(ip))
             return null;
 
-        string? hit = LookupNameByIp(ip: ip);
+        string? hit = LookupNameByIp(ip);
         if (hit is not null)
             return hit;
 
@@ -120,18 +120,18 @@ public class ChromeCastService : IChromeCastService
             if (shouldRescan)
             {
                 _lastRediscoveryUtc = DateTime.UtcNow;
-                _logger.LogInformation(message: "Chromecast cache miss for {Ip} — refreshing mDNS", args: ip);
+                _logger.LogInformation("Chromecast cache miss for {Ip} — refreshing mDNS", ip);
                 try
                 {
                     _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
                     foreach (ChromecastReceiver chromecast in _chromecastReceivers)
                         _logger.LogInformation(
-                            message: "Discovered chromecast: {Name} @ {Host}", args: [chromecast.Name, chromecast.DeviceUri.Host]
+                            "Discovered chromecast: {Name} @ {Host}", [chromecast.Name, chromecast.DeviceUri.Host]
                         );
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogInformation(message: "Chromecast re-discovery failed: {Message}", args: ex.Message);
+                    _logger.LogInformation("Chromecast re-discovery failed: {Message}", ex.Message);
                 }
             }
         }
@@ -142,7 +142,7 @@ public class ChromeCastService : IChromeCastService
 
         if (shouldRescan)
         {
-            string? cached = LookupNameByIp(ip: ip);
+            string? cached = LookupNameByIp(ip);
             if (cached is not null)
                 return cached;
         }
@@ -156,12 +156,12 @@ public class ChromeCastService : IChromeCastService
         // ConcurrentDictionary.GetOrAdd may invoke the factory multiple times
         // under concurrent miss; we want the "Synthesized..." log emitted at
         // most once per IP per process. Build candidate first, then TryAdd.
-        if (!_synthesizedReceivers.TryGetValue(key: ip, value: out ChromecastReceiver? synthetic))
+        if (!_synthesizedReceivers.TryGetValue(ip, out ChromecastReceiver? synthetic))
         {
             ChromecastReceiver candidate = new()
             {
                 Name = ip,
-                DeviceUri = new(uriString: $"https://{ip}"),
+                DeviceUri = new($"https://{ip}"),
                 Port = 8009,
                 Model = "Chromecast",
                 Version = "0",
@@ -169,17 +169,17 @@ public class ChromeCastService : IChromeCastService
                 ExtraInformation = new Dictionary<string, string>(),
             };
 
-            if (_synthesizedReceivers.TryAdd(key: ip, value: candidate))
+            if (_synthesizedReceivers.TryAdd(ip, candidate))
             {
                 _logger.LogInformation(
-                    message: "Synthesized Chromecast receiver for {Ip}:8009 — mDNS unavailable, will attempt direct connect",
-                    args: ip
+                    "Synthesized Chromecast receiver for {Ip}:8009 — mDNS unavailable, will attempt direct connect",
+                    ip
                 );
                 synthetic = candidate;
             }
             else
             {
-                synthetic = _synthesizedReceivers[key: ip];
+                synthetic = _synthesizedReceivers[ip];
             }
         }
 
@@ -192,12 +192,12 @@ public class ChromeCastService : IChromeCastService
         {
             if (
                 receiver.DeviceUri is not null
-                && string.Equals(a: receiver.DeviceUri.Host, b: ip, comparisonType: StringComparison.OrdinalIgnoreCase)
+                && string.Equals(receiver.DeviceUri.Host, ip, StringComparison.OrdinalIgnoreCase)
             )
                 return receiver.Name;
         }
 
-        return _synthesizedReceivers.TryGetValue(key: ip, value: out ChromecastReceiver? synthetic)
+        return _synthesizedReceivers.TryGetValue(ip, out ChromecastReceiver? synthetic)
             ? synthetic.Name
             : null;
     }
@@ -215,7 +215,7 @@ public class ChromeCastService : IChromeCastService
         {
             if (EventBusProvider.IsConfigured)
                 _ = EventBusProvider.Current.PublishAsync(
-                    @event: new CastDeviceStatusChangedEvent
+                    new CastDeviceStatusChangedEvent
                     {
                         EventType = "StatusChanged",
                         StatusData = new()
@@ -232,7 +232,7 @@ public class ChromeCastService : IChromeCastService
         {
             if (EventBusProvider.IsConfigured)
                 _ = EventBusProvider.Current.PublishAsync(
-                    @event: new CastDeviceStatusChangedEvent
+                    new CastDeviceStatusChangedEvent
                     {
                         EventType = "ReceiverStatusChanged",
                         StatusData = new()
@@ -249,7 +249,7 @@ public class ChromeCastService : IChromeCastService
         {
             if (EventBusProvider.IsConfigured)
                 _ = EventBusProvider.Current.PublishAsync(
-                    @event: new CastDeviceStatusChangedEvent
+                    new CastDeviceStatusChangedEvent
                     {
                         EventType = "LaunchStatusChanged",
                         StatusData = new()
@@ -277,8 +277,8 @@ public class ChromeCastService : IChromeCastService
     // async-void chain ever starts. Real fix is to vendor-fork Sharpcaster
     // and try/catch its TimerElapsed body.
     private readonly FieldInfo? _timerOnIntervalElapsedField = typeof(System.Timers.Timer).GetField(
-        name: "_onIntervalElapsed",
-        bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+        "_onIntervalElapsed",
+        BindingFlags.NonPublic | BindingFlags.Instance
     );
 
     // Internal so the reflection-based neutralization can be verified directly
@@ -289,8 +289,8 @@ public class ChromeCastService : IChromeCastService
         {
             object? channels = client
                 .GetType()
-                .GetProperty(name: "Channels", bindingAttr: BindingFlags.Public | BindingFlags.Instance)
-                ?.GetValue(obj: client);
+                .GetProperty("Channels", BindingFlags.Public | BindingFlags.Instance)
+                ?.GetValue(client);
 
             if (channels is System.Collections.IList channelList)
             {
@@ -300,16 +300,16 @@ public class ChromeCastService : IChromeCastService
                 {
                     if (
                         channel is null
-                        || !channel.GetType().Name.Contains(value: "Heartbeat", comparisonType: StringComparison.Ordinal)
+                        || !channel.GetType().Name.Contains("Heartbeat", StringComparison.Ordinal)
                     )
                         continue;
 
-                    heartbeats.Add(item: channel);
-                    NeutralizeTimersIn(owner: channel);
+                    heartbeats.Add(channel);
+                    NeutralizeTimersIn(channel);
                 }
 
                 foreach (object heartbeat in heartbeats)
-                    channelList.Remove(value: heartbeat);
+                    channelList.Remove(heartbeat);
             }
 
             // Also reach the HeartbeatChannel via its public property — Sharpcaster
@@ -317,14 +317,14 @@ public class ChromeCastService : IChromeCastService
             // after Channels is built. Hitting both paths catches every variant.
             object? hbProp = client
                 .GetType()
-                .GetProperty(name: "HeartbeatChannel", bindingAttr: BindingFlags.Public | BindingFlags.Instance)
-                ?.GetValue(obj: client);
+                .GetProperty("HeartbeatChannel", BindingFlags.Public | BindingFlags.Instance)
+                ?.GetValue(client);
             if (hbProp is not null)
-                NeutralizeTimersIn(owner: hbProp);
+                NeutralizeTimersIn(hbProp);
         }
         catch (Exception ex)
         {
-            _logger.LogInformation(message: "DisableSharpcasterHeartbeat failed: {Message}", args: ex.Message);
+            _logger.LogInformation("DisableSharpcasterHeartbeat failed: {Message}", ex.Message);
         }
     }
 
@@ -334,7 +334,7 @@ public class ChromeCastService : IChromeCastService
     // neutralize every WardenIntervalMs across every client in the pool. Catching
     // here is mandatory — the warden's own Elapsed must never re-throw.
     private const double WardenIntervalMs = 2000;
-    private readonly System.Timers.Timer _heartbeatWarden = new(interval: WardenIntervalMs)
+    private readonly System.Timers.Timer _heartbeatWarden = new(WardenIntervalMs)
     {
         AutoReset = true,
     };
@@ -342,7 +342,7 @@ public class ChromeCastService : IChromeCastService
 
     private void EnsureHeartbeatWardenStarted()
     {
-        if (Interlocked.CompareExchange(location1: ref _wardenStarted, value: 1, comparand: 0) != 0)
+        if (Interlocked.CompareExchange(ref _wardenStarted, 1, 0) != 0)
             return;
 
         _heartbeatWarden.Elapsed += (_, _) =>
@@ -353,7 +353,7 @@ public class ChromeCastService : IChromeCastService
                 {
                     try
                     {
-                        DisableSharpcasterHeartbeat(client: pooled);
+                        DisableSharpcasterHeartbeat(pooled);
                     }
                     catch
                     {
@@ -376,12 +376,12 @@ public class ChromeCastService : IChromeCastService
     {
         client.Disconnected += (_, _) =>
         {
-            _logger.LogInformation(message: "Chromecast disconnected: {Name} — removing from pool", args: name);
-            if (ClientPool.TryRemove(key: name, value: out ChromecastClient? removed))
+            _logger.LogInformation("Chromecast disconnected: {Name} — removing from pool", name);
+            if (ClientPool.TryRemove(name, out ChromecastClient? removed))
             {
                 try
                 {
-                    DisableSharpcasterHeartbeat(client: removed);
+                    DisableSharpcasterHeartbeat(removed);
                 }
                 catch
                 {
@@ -399,13 +399,13 @@ public class ChromeCastService : IChromeCastService
         foreach (
             FieldInfo field in owner
                 .GetType()
-                .GetFields(bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance)
+                .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
         )
         {
             object? value;
             try
             {
-                value = field.GetValue(obj: owner);
+                value = field.GetValue(owner);
             }
             catch
             {
@@ -413,7 +413,7 @@ public class ChromeCastService : IChromeCastService
             }
 
             if (value is System.Timers.Timer timer)
-                NeutralizeTimer(timer: timer);
+                NeutralizeTimer(timer);
         }
     }
 
@@ -441,7 +441,7 @@ public class ChromeCastService : IChromeCastService
                     // restarts it via reconnect, we no-op instead of
                     // entering the SocketException-prone async-void path.
                 };
-                _timerOnIntervalElapsedField.SetValue(obj: timer, value: safe);
+                _timerOnIntervalElapsedField.SetValue(timer, safe);
             }
             catch
             {
@@ -458,8 +458,8 @@ public class ChromeCastService : IChromeCastService
 
     private async Task<ChromecastClient?> GetOrCreateClientAsync(string name)
     {
-        ChromecastReceiver? receiver = _chromecastReceivers.FirstOrDefault(predicate: x =>
-            string.Equals(a: x.Name, b: name, comparisonType: StringComparison.OrdinalIgnoreCase)
+        ChromecastReceiver? receiver = _chromecastReceivers.FirstOrDefault(x =>
+            string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)
         );
 
         // Fall back to synthesized receivers — when mDNS is blocked (Windows
@@ -469,43 +469,43 @@ public class ChromeCastService : IChromeCastService
         // though a synthetic was available for direct connect.
         if (
             receiver == null
-            && _synthesizedReceivers.TryGetValue(key: name, value: out ChromecastReceiver? synthetic)
+            && _synthesizedReceivers.TryGetValue(name, out ChromecastReceiver? synthetic)
         )
             receiver = synthetic;
 
         if (receiver == null)
         {
-            _logger.LogInformation(message: "Chromecast not found: {Name}", args: name);
+            _logger.LogInformation("Chromecast not found: {Name}", name);
             return null;
         }
 
         // Lazy-create and connect only when a new entry is added to the pool.
         // If an existing client is already in the pool we reuse it as-is; the
         // caller may reconnect explicitly via SelectChromecast if needed.
-        if (ClientPool.TryGetValue(key: name, value: out ChromecastClient? existing))
+        if (ClientPool.TryGetValue(name, out ChromecastClient? existing))
             return existing;
 
         // Serialize per-name so 3 concurrent callers don't each open a TCP
         // connection. First caller does the work; the rest wait, then read
         // from ClientPool (which the winner populated below).
-        SemaphoreSlim gate = _connectGates.GetOrAdd(key: name, valueFactory: _ => new(initialCount: 1, maxCount: 1));
+        SemaphoreSlim gate = _connectGates.GetOrAdd(name, _ => new(1, 1));
         await gate.WaitAsync();
         try
         {
-            if (ClientPool.TryGetValue(key: name, value: out ChromecastClient? raced))
+            if (ClientPool.TryGetValue(name, out ChromecastClient? raced))
                 return raced;
 
-            ChromecastClient newClient = BuildClient(receiverName: name);
-            _logger.LogInformation(message: "Connecting to chromecast: {Name}", args: name);
-            await newClient.ConnectChromecast(chromecastReceiver: receiver);
+            ChromecastClient newClient = BuildClient(name);
+            _logger.LogInformation("Connecting to chromecast: {Name}", name);
+            await newClient.ConnectChromecast(receiver);
 
             // Disable Sharpcaster's internal heartbeat after Connect — the
             // timer is only constructed once Connect spins up the channels.
-            DisableSharpcasterHeartbeat(client: newClient);
-            WireDisconnectCleanup(name: name, client: newClient);
+            DisableSharpcasterHeartbeat(newClient);
+            WireDisconnectCleanup(name, newClient);
             EnsureHeartbeatWardenStarted();
 
-            ClientPool[key: name] = newClient;
+            ClientPool[name] = newClient;
             return newClient;
         }
         finally
@@ -523,11 +523,11 @@ public class ChromeCastService : IChromeCastService
     // evict the stale client and build a fresh connection.
     private async Task<ChromecastClient?> ForceReconnectAsync(string name)
     {
-        if (ClientPool.TryRemove(key: name, value: out ChromecastClient? stale))
+        if (ClientPool.TryRemove(name, out ChromecastClient? stale))
         {
             try
             {
-                DisableSharpcasterHeartbeat(client: stale);
+                DisableSharpcasterHeartbeat(stale);
             }
             catch
             {
@@ -544,7 +544,7 @@ public class ChromeCastService : IChromeCastService
             }
         }
 
-        return await GetOrCreateClientAsync(name: name);
+        return await GetOrCreateClientAsync(name);
     }
 
     // --- Public API (name-explicit overloads) ---
@@ -556,7 +556,7 @@ public class ChromeCastService : IChromeCastService
     /// </summary>
     public async Task SelectChromecast(string name)
     {
-        ChromecastClient? client = await GetOrCreateClientAsync(name: name);
+        ChromecastClient? client = await GetOrCreateClientAsync(name);
         if (client is not null)
             _lastSelectedName = name;
     }
@@ -565,11 +565,11 @@ public class ChromeCastService : IChromeCastService
     {
         if (receiver == null)
         {
-            _logger.LogInformation(message: "Chromecast not found");
+            _logger.LogInformation("Chromecast not found");
             return;
         }
 
-        await SelectChromecast(name: receiver.Name);
+        await SelectChromecast(receiver.Name);
     }
 
     /// <summary>
@@ -583,11 +583,11 @@ public class ChromeCastService : IChromeCastService
         if (target == null)
             return;
 
-        if (!ClientPool.TryGetValue(key: target, value: out ChromecastClient? client))
+        if (!ClientPool.TryGetValue(target, out ChromecastClient? client))
             return;
 
-        _logger.LogInformation(message: "Launching chromecast: {Target}", args: target);
-        _ = await client.LaunchApplicationAsync(applicationId: "925B4C3C");
+        _logger.LogInformation("Launching chromecast: {Target}", target);
+        _ = await client.LaunchApplicationAsync("925B4C3C");
     }
 
     private int _androidLaunchRequestId = new Random().Next();
@@ -617,7 +617,7 @@ public class ChromeCastService : IChromeCastService
         if (target == null)
             return;
 
-        if (!ClientPool.TryGetValue(key: target, value: out ChromecastClient? client))
+        if (!ClientPool.TryGetValue(target, out ChromecastClient? client))
             return;
 
         // Force a round-trip GET_STATUS before LAUNCH. Sharpcaster's
@@ -640,15 +640,15 @@ public class ChromeCastService : IChromeCastService
             // pulled a client writing to a closed socket. Rebuild the connection
             // once and re-probe before attempting LAUNCH.
             _logger.LogInformation(
-                message: "LaunchAndroidReceiver pre-LAUNCH GET_STATUS failed for {Target}: {Message} — reconnecting stale client", args: [target, ex.Message]
+                "LaunchAndroidReceiver pre-LAUNCH GET_STATUS failed for {Target}: {Message} — reconnecting stale client", [target, ex.Message]
             );
 
-            ChromecastClient? reconnected = await ForceReconnectAsync(name: target);
+            ChromecastClient? reconnected = await ForceReconnectAsync(target);
             if (reconnected is null)
             {
                 _logger.LogInformation(
-                    message: "LaunchAndroidReceiver: reconnect to {Target} failed — aborting launch",
-                    args: target
+                    "LaunchAndroidReceiver: reconnect to {Target} failed — aborting launch",
+                    target
                 );
                 return;
             }
@@ -662,17 +662,17 @@ public class ChromeCastService : IChromeCastService
             catch (Exception retryEx)
             {
                 _logger.LogInformation(
-                    message: "LaunchAndroidReceiver: GET_STATUS still failing for {Target} after reconnect: {Message}", args: [target, retryEx.Message]
+                    "LaunchAndroidReceiver: GET_STATUS still failing for {Target} after reconnect: {Message}", [target, retryEx.Message]
                 );
             }
         }
 
-        int requestId = Interlocked.Increment(location: ref _androidLaunchRequestId);
-        string json = BuildLaunchJson(requestId: requestId, customData: customData, useAndroidReceiver: useAndroidReceiver);
+        int requestId = Interlocked.Increment(ref _androidLaunchRequestId);
+        string json = BuildLaunchJson(requestId, customData, useAndroidReceiver);
 
         string flavor = useAndroidReceiver ? "androidReceiverCompatible" : "webReceiverOnly";
         _logger.LogInformation(
-            message: "Launching cast-tv ({Flavor}{CustomData}) on {Target}", args: [flavor, (customData is null ? "" : ", customData"), target]
+            "Launching cast-tv ({Flavor}{CustomData}) on {Target}", [flavor, (customData is null ? "" : ", customData"), target]
         );
 
         // If the receiver is already running our app (panel already on,
@@ -687,9 +687,9 @@ public class ChromeCastService : IChromeCastService
         // (below) so the running app receives the fresh customData/session
         // info — only the wait-for-broadcast confirmation is skipped.
         bool alreadyRunning = string.Equals(
-            a: client.ChromecastStatus?.Application?.AppId,
-            b: "925B4C3C",
-            comparisonType: StringComparison.OrdinalIgnoreCase
+            client.ChromecastStatus?.Application?.AppId,
+            "925B4C3C",
+            StringComparison.OrdinalIgnoreCase
         );
 
         // Watch for cast_shell's reply on this request id. RECEIVER_STATUS
@@ -705,9 +705,9 @@ public class ChromeCastService : IChromeCastService
             if (
                 status.Application is not null
                 && string.Equals(
-                    a: status.Application.AppId,
-                    b: "925B4C3C",
-                    comparisonType: StringComparison.OrdinalIgnoreCase
+                    status.Application.AppId,
+                    "925B4C3C",
+                    StringComparison.OrdinalIgnoreCase
                 )
             )
                 launchAccepted = true;
@@ -716,7 +716,7 @@ public class ChromeCastService : IChromeCastService
 
         try
         {
-            await SendLaunchAsync(client: client, requestId: requestId, json: json);
+            await SendLaunchAsync(client, requestId, json);
 
             // Wait for the RECEIVER_STATUS broadcast confirming the app was
             // launched. 5s covers cast_shell's handshake + resource allocation
@@ -724,25 +724,25 @@ public class ChromeCastService : IChromeCastService
             int waited = 0;
             while (!launchAccepted && waited < 5000)
             {
-                await Task.Delay(millisecondsDelay: 100);
+                await Task.Delay(100);
                 waited += 100;
             }
 
             if (!launchAccepted)
             {
                 _logger.LogInformation(
-                    message: "LaunchAndroidReceiver: no LAUNCH ack from {Target} within 5s — retrying once",
-                    args: target
+                    "LaunchAndroidReceiver: no LAUNCH ack from {Target} within 5s — retrying once",
+                    target
                 );
-                int retryRequestId = Interlocked.Increment(location: ref _androidLaunchRequestId);
-                string retryJson = BuildLaunchJson(requestId: retryRequestId, customData: customData, useAndroidReceiver: useAndroidReceiver);
-                await SendLaunchAsync(client: client, requestId: retryRequestId, json: retryJson);
+                int retryRequestId = Interlocked.Increment(ref _androidLaunchRequestId);
+                string retryJson = BuildLaunchJson(retryRequestId, customData, useAndroidReceiver);
+                await SendLaunchAsync(client, retryRequestId, retryJson);
             }
         }
         catch (Exception ex)
         {
             _logger.LogInformation(
-                message: "LaunchAndroidReceiver failed for {Target}: {Message}", args: [target, ex.Message]
+                "LaunchAndroidReceiver failed for {Target}: {Message}", [target, ex.Message]
             );
         }
         finally
@@ -789,7 +789,7 @@ public class ChromeCastService : IChromeCastService
                     language = "en-US",
                     supportedAppTypes = new[] { "WEB" },
                 };
-            return JsonConvert.SerializeObject(value: payload);
+            return JsonConvert.SerializeObject(payload);
         }
 
         object payloadWithCustomData = useAndroidReceiver
@@ -812,17 +812,17 @@ public class ChromeCastService : IChromeCastService
                 supportedAppTypes = new[] { "WEB" },
                 customData,
             };
-        return JsonConvert.SerializeObject(value: payloadWithCustomData);
+        return JsonConvert.SerializeObject(payloadWithCustomData);
     }
 
     private async Task SendLaunchAsync(ChromecastClient client, int requestId, string json)
     {
         await client.SendAsync(
-            logger: null,
-            ns: "urn:x-cast:com.google.cast.receiver",
-            messageRequestId: requestId,
-            messagePayload: json,
-            destinationId: "receiver-0"
+            null,
+            "urn:x-cast:com.google.cast.receiver",
+            requestId,
+            json,
+            "receiver-0"
         );
     }
 
@@ -836,10 +836,10 @@ public class ChromeCastService : IChromeCastService
         if (target == null)
             return;
 
-        if (!ClientPool.TryGetValue(key: target, value: out ChromecastClient? client))
+        if (!ClientPool.TryGetValue(target, out ChromecastClient? client))
             return;
 
-        _logger.LogInformation(message: "Casting playlist to {Target}: {Value}", args: [target, value]);
+        _logger.LogInformation("Casting playlist to {Target}: {Value}", [target, value]);
 
         string externalAddress = (_networkDiscovery?.ExternalAddress).OrEmpty();
         string? token = accessToken;
@@ -852,10 +852,10 @@ public class ChromeCastService : IChromeCastService
             DeepLink = $"tv.nomercy.app://{value}/watch",
         };
 
-        string jsonElement = JsonSerializer.Serialize(value: customData);
+        string jsonElement = JsonSerializer.Serialize(customData);
         Media media = new() { CustomData = jsonElement };
 
-        await client.MediaChannel.LoadAsync(media: media).ConfigureAwait(continueOnCapturedContext: false);
+        await client.MediaChannel.LoadAsync(media).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -868,7 +868,7 @@ public class ChromeCastService : IChromeCastService
         if (target == null)
             return null;
 
-        return ClientPool.TryGetValue(key: target, value: out ChromecastClient? client)
+        return ClientPool.TryGetValue(target, out ChromecastClient? client)
             ? client.ChromecastStatus
             : null;
     }
@@ -883,7 +883,7 @@ public class ChromeCastService : IChromeCastService
         if (target == null)
             return null;
 
-        return ClientPool.TryGetValue(key: target, value: out ChromecastClient? client)
+        return ClientPool.TryGetValue(target, out ChromecastClient? client)
             ? client.MediaChannel.MediaStatus
             : null;
     }
@@ -898,7 +898,7 @@ public class ChromeCastService : IChromeCastService
         if (target == null)
             return;
 
-        if (!ClientPool.TryGetValue(key: target, value: out ChromecastClient? client))
+        if (!ClientPool.TryGetValue(target, out ChromecastClient? client))
             return;
 
         await client.MediaChannel.StopAsync();
@@ -921,7 +921,7 @@ public class ChromeCastService : IChromeCastService
         if (target == null)
             return;
 
-        if (!ClientPool.TryRemove(key: target, value: out ChromecastClient? client))
+        if (!ClientPool.TryRemove(target, out ChromecastClient? client))
             return;
 
         try
@@ -943,7 +943,7 @@ public class ChromeCastService : IChromeCastService
         string[] keys = ClientPool.Keys.ToArray();
         foreach (string key in keys)
         {
-            if (!ClientPool.TryRemove(key: key, value: out ChromecastClient? client))
+            if (!ClientPool.TryRemove(key, out ChromecastClient? client))
                 continue;
 
             try
@@ -959,16 +959,16 @@ public class ChromeCastService : IChromeCastService
 
     public class CastCustomData
     {
-        [JsonPropertyName(name: "accessToken")]
+        [JsonPropertyName("accessToken")]
         public string? AccessToken { get; set; }
 
-        [JsonPropertyName(name: "basePath")]
+        [JsonPropertyName("basePath")]
         public string? BasePath { get; set; }
 
-        [JsonPropertyName(name: "playlist")]
+        [JsonPropertyName("playlist")]
         public string? Playlist { get; set; }
 
-        [JsonPropertyName(name: "deepLink")]
+        [JsonPropertyName("deepLink")]
         public string? DeepLink { get; set; }
     }
 }

@@ -26,24 +26,24 @@ public class BuiltinPresetsHlsDerivativesTests
     {
         TheoryData<string> data = [];
         foreach (EncodingProfile profile in BuiltinPresets.All())
-            data.Add(p: profile.Name);
+            data.Add(profile.Name);
 
         return data;
     }
 
     [Theory]
-    [MemberData(memberName: nameof(BuiltinNames))]
+    [MemberData(nameof(BuiltinNames))]
     public void No_builtin_opts_into_an_unimplemented_derivative(string name)
     {
-        EncodingProfile preset = BuiltinPresets.All().Single(predicate: profile => profile.Name == name);
+        EncodingProfile preset = BuiltinPresets.All().Single(profile => profile.Name == name);
 
         HlsDerivatives effective = preset.HlsDerivatives ?? new HlsDerivatives();
 
         effective
             .GenerateIFramePlaylists.Should()
-            .BeFalse(because: "no IFramePlaylistGenerator is wired, so FinalizeStage would throw");
+            .BeFalse("no IFramePlaylistGenerator is wired, so FinalizeStage would throw");
         effective
             .ExtractClosedCaptions.Should()
-            .BeFalse(because: "no CcExtractor is wired, so FinalizeStage would throw");
+            .BeFalse("no CcExtractor is wired, so FinalizeStage would throw");
     }
 }

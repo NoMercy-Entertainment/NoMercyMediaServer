@@ -23,21 +23,21 @@ namespace NoMercy.Tests.NmSystem.Configuration;
 /// Fails without the fix (ServerConfiguration.ShowAdultContent was a settable POCO field
 /// that the dashboard never updated, so the controller gate never reflected the toggle).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ServerConfigurationShowAdultContentTests : IDisposable
 {
     private readonly bool? _originalAllowAdult = RuntimeServerSettings.Current.AllowAdultContent;
 
     private static ServerConfigurationWrapper BuildWrapper()
     {
-        IOptions<ServerConfiguration> opts = Options.Create(options: new ServerConfiguration());
-        return new(options: opts);
+        IOptions<ServerConfiguration> opts = Options.Create(new ServerConfiguration());
+        return new(opts);
     }
 
     public void Dispose()
     {
         RuntimeServerSettings.Current.AllowAdultContent = _originalAllowAdult;
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -80,9 +80,9 @@ public class ServerConfigurationShowAdultContentTests : IDisposable
     }
 
     [Theory]
-    [InlineData(data: [null, false])]
-    [InlineData(data: [false, false])]
-    [InlineData(data: [true, true])]
+    [InlineData([null, false])]
+    [InlineData([false, false])]
+    [InlineData([true, true])]
     public void ShowAdultContent_MatchesRuntimeSettingForAllThreeStates(
         bool? configured,
         bool expected
@@ -90,21 +90,21 @@ public class ServerConfigurationShowAdultContentTests : IDisposable
     {
         RuntimeServerSettings.Current.AllowAdultContent = configured;
 
-        BuildWrapper().ShowAdultContent.Should().Be(expected: expected);
+        BuildWrapper().ShowAdultContent.Should().Be(expected);
     }
 
     [Fact]
     public void ShowAdultContent_IsComputed_NotMutable()
     {
         PropertyInfo property = typeof(ServerConfiguration).GetProperty(
-            name: nameof(ServerConfiguration.ShowAdultContent)
+            nameof(ServerConfiguration.ShowAdultContent)
         )!;
 
         property.Should().NotBeNull();
         property
             .CanWrite.Should()
             .BeFalse(
-                because: "ShowAdultContent must be a computed guard that tracks RuntimeServerSettings, not a settable field"
+                "ShowAdultContent must be a computed guard that tracks RuntimeServerSettings, not a settable field"
             );
     }
 }

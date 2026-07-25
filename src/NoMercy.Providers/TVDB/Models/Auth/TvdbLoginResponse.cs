@@ -18,9 +18,9 @@ public class TvdbLoginResponse : TvdbResponse<TvdbLogin> { }
 
 public class TvdbLogin
 {
-    [JsonProperty(propertyName: "token")]
+    [JsonProperty("token")]
     public string Token { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "expiresAt")]
-    public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMonths(months: 1);
+    [JsonProperty("expiresAt")]
+    public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMonths(1);
 }

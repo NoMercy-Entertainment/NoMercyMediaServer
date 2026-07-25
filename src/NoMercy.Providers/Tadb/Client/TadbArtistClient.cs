@@ -22,7 +22,7 @@ public class TadbArtistClient : TadbBaseClient
         try
         {
             return (
-                await Get<TadbArtistResponse>(url: "artist-mb.php", query: queryParams, priority: priority)
+                await Get<TadbArtistResponse>("artist-mb.php", queryParams, priority)
             )?.Artists?.FirstOrDefault();
         }
         catch (Exception)

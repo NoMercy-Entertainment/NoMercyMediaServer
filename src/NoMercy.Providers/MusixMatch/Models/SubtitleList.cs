@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class SubtitleList
 {
-    [JsonProperty(propertyName: "subtitle")]
+    [JsonProperty("subtitle")]
     public MusixMatchSubtitle? Subtitle { get; set; }
 }

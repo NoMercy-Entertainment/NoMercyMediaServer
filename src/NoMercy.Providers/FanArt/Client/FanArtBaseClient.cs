@@ -20,17 +20,17 @@ public class FanArtBaseClient : ExternalApiClient
     protected FanArtBaseClient() { }
 
     protected FanArtBaseClient(Guid id)
-        : base(id: id) { }
+        : base(id) { }
 
     protected override string HttpClientName => HttpClientNames.FanArt;
-    protected override Uri BaseUrl => new(uriString: "https://webservice.fanart.tv/v3/");
+    protected override Uri BaseUrl => new("https://webservice.fanart.tv/v3/");
     protected override int ConcurrentRequests => 3;
     protected override int RequestIntervalMs => 1000;
 
     protected override void ConfigureClient(HttpClient client)
     {
-        client.DefaultRequestHeaders.Add(name: "api-key", value: ApiKeyStore.Current.FanArtApiKey);
-        if (!string.IsNullOrEmpty(value: ApiKeyStore.Current.FanArtClientKey))
-            client.DefaultRequestHeaders.Add(name: "client-key", value: ApiKeyStore.Current.FanArtClientKey);
+        client.DefaultRequestHeaders.Add("api-key", ApiKeyStore.Current.FanArtApiKey);
+        if (!string.IsNullOrEmpty(ApiKeyStore.Current.FanArtClientKey))
+            client.DefaultRequestHeaders.Add("client-key", ApiKeyStore.Current.FanArtClientKey);
     }
 }

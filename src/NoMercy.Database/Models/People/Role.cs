@@ -15,32 +15,32 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.People;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(CreditId), IsUnique = true)]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(CreditId), IsUnique = true)]
 // GuestStarId's unique index is declared in MediaContext.ConfigureCreditForeignKeyIndexes
 // as a partial index (WHERE GuestStarId IS NOT NULL). A Role belongs to either a Cast
 // credit or a GuestStar, never both, so GuestStarId is NULL on most rows; a plain index
 // over it is non-selective and the planner full-scans.
 public class Role
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "character")]
+    [JsonProperty("character")]
     public string? Character { get; set; }
 
-    [JsonProperty(propertyName: "episode_count")]
+    [JsonProperty("episode_count")]
     public int EpisodeCount { get; set; }
 
-    [JsonProperty(propertyName: "order")]
+    [JsonProperty("order")]
     public int? Order { get; set; } = 9999;
 
-    [JsonProperty(propertyName: "credit_id")]
+    [JsonProperty("credit_id")]
     public string? CreditId { get; set; }
     public Cast? Cast { get; set; }
 
-    [JsonProperty(propertyName: "guest_star_id")]
+    [JsonProperty("guest_star_id")]
     public int? GuestStarId { get; set; }
     public GuestStar? GuestStar { get; set; }
 

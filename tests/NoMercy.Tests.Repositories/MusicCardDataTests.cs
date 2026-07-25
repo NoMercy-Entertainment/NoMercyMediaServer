@@ -9,14 +9,12 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Data.Repositories;
-using Xunit;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MusicCardDataTests
 {
     [Fact]
@@ -29,9 +27,9 @@ public class MusicCardDataTests
             Cover = "",
         };
 
-        MusicCardData card = new(artist: artist);
+        MusicCardData card = new(artist);
 
-        Assert.Null(@object: card.Cover);
+        Assert.Null(card.Cover);
     }
 
     [Fact]
@@ -44,9 +42,9 @@ public class MusicCardDataTests
             Cover = null,
         };
 
-        MusicCardData card = new(artist: artist);
+        MusicCardData card = new(artist);
 
-        Assert.Null(@object: card.Cover);
+        Assert.Null(card.Cover);
     }
 
     [Fact]
@@ -59,8 +57,8 @@ public class MusicCardDataTests
             Cover = "/abc.jpg",
         };
 
-        MusicCardData card = new(artist: artist);
+        MusicCardData card = new(artist);
 
-        Assert.Equal(expected: "/images/music/abc.jpg", actual: card.Cover);
+        Assert.Equal("/images/music/abc.jpg", card.Cover);
     }
 }

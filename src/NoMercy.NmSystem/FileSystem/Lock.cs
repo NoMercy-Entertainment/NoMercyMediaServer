@@ -23,10 +23,10 @@ public static class Locking
         try
         {
             using FileStream stream = File.Open(
-                path: filePath,
-                mode: FileMode.Open,
-                access: FileAccess.ReadWrite,
-                share: FileShare.None
+                filePath,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.None
             );
             stream.Close();
         }
@@ -47,7 +47,7 @@ public static class Locking
 
     public static void CloseApplicationLockingFile(string filePath)
     {
-        Logger.Setup(message: $"Closing application locking {filePath}", level: LogEventLevel.Verbose);
+        Logger.Setup($"Closing application locking {filePath}", LogEventLevel.Verbose);
 
         foreach (Process process in Process.GetProcesses())
             try
@@ -56,8 +56,8 @@ public static class Locking
                     continue;
                 if (
                     !process.MainModule.FileName.Equals(
-                        value: filePath,
-                        comparisonType: StringComparison.OrdinalIgnoreCase
+                        filePath,
+                        StringComparison.OrdinalIgnoreCase
                     )
                 )
                     continue;
@@ -67,9 +67,9 @@ public static class Locking
                 // destroys the user's running job. Log and let the caller's
                 // own retry/defer logic handle the file staying locked.
                 Logger.System(
-                    message: $"{process.ProcessName} (pid {process.Id}) holds {filePath} — "
+                    $"{process.ProcessName} (pid {process.Id}) holds {filePath} — "
                              + "skipping cleanup to avoid killing an in-flight process.",
-                    level: LogEventLevel.Warning
+                    LogEventLevel.Warning
                 );
 
                 break;
@@ -81,8 +81,8 @@ public static class Locking
             catch (InvalidOperationException ex)
             {
                 Logger.System(
-                    message: $"Process {process.ProcessName} has already exited: {ex.Message}",
-                    level: LogEventLevel.Warning
+                    $"Process {process.ProcessName} has already exited: {ex.Message}",
+                    LogEventLevel.Warning
                 );
             }
     }

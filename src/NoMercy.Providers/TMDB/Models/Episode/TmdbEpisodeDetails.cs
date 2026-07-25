@@ -16,12 +16,12 @@ namespace NoMercy.Providers.TMDB.Models.Episode;
 
 public class TmdbEpisodeDetails : TmdbEpisode
 {
-    [JsonProperty(propertyName: "crew")]
+    [JsonProperty("crew")]
     public TmdbCrew[] Crew { get; set; } = [];
 
-    [JsonProperty(propertyName: "cast")]
+    [JsonProperty("cast")]
     public TmdbCast[] Cast { get; set; } = [];
 
-    [JsonProperty(propertyName: "guest_stars")]
+    [JsonProperty("guest_stars")]
     public TmdbGuestStar[] GuestStars { get; set; } = [];
 }

@@ -23,7 +23,7 @@ public class TokenStoreTests : IDisposable
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
 
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(serviceProvider: provider);
+        TokenStore.Initialize(provider);
     }
 
     public void Dispose() { }
@@ -32,53 +32,53 @@ public class TokenStoreTests : IDisposable
     public void EncryptDecrypt_Roundtrip_ReturnsOriginal()
     {
         string original = "my-secret-token-value";
-        string encrypted = TokenStore.EncryptToken(token: original);
-        string? decrypted = TokenStore.DecryptToken(token: encrypted);
+        string encrypted = TokenStore.EncryptToken(original);
+        string? decrypted = TokenStore.DecryptToken(encrypted);
 
-        Assert.NotEqual(expected: original, actual: encrypted);
-        Assert.Equal(expected: original, actual: decrypted);
+        Assert.NotEqual(original, encrypted);
+        Assert.Equal(original, decrypted);
     }
 
     [Fact]
     public void EncryptToken_NullInput_ReturnsEmpty()
     {
-        string result = TokenStore.EncryptToken(token: null);
-        Assert.Equal(expected: string.Empty, actual: result);
+        string result = TokenStore.EncryptToken(null);
+        Assert.Equal(string.Empty, result);
     }
 
     [Fact]
     public void EncryptToken_EmptyInput_ReturnsEmpty()
     {
-        string result = TokenStore.EncryptToken(token: "");
-        Assert.Equal(expected: string.Empty, actual: result);
+        string result = TokenStore.EncryptToken("");
+        Assert.Equal(string.Empty, result);
     }
 
     [Fact]
     public void DecryptToken_NullInput_ReturnsNull()
     {
-        string? result = TokenStore.DecryptToken(token: null);
-        Assert.Null(@object: result);
+        string? result = TokenStore.DecryptToken(null);
+        Assert.Null(result);
     }
 
     [Fact]
     public void DecryptToken_EmptyInput_ReturnsNull()
     {
-        string? result = TokenStore.DecryptToken(token: "");
-        Assert.Null(@object: result);
+        string? result = TokenStore.DecryptToken("");
+        Assert.Null(result);
     }
 
     [Fact]
     public void DecryptToken_GarbageInput_ReturnsNull()
     {
-        string? result = TokenStore.DecryptToken(token: "not-a-valid-encrypted-string");
-        Assert.Null(@object: result);
+        string? result = TokenStore.DecryptToken("not-a-valid-encrypted-string");
+        Assert.Null(result);
     }
 
     [Fact]
     public void DecryptToken_GarbageInput_DoesNotReturnGarbage()
     {
         string garbage = "not-a-valid-encrypted-string";
-        string? result = TokenStore.DecryptToken(token: garbage);
-        Assert.NotEqual(expected: garbage, actual: result);
+        string? result = TokenStore.DecryptToken(garbage);
+        Assert.NotEqual(garbage, result);
     }
 }

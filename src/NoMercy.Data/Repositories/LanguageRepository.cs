@@ -25,13 +25,13 @@ public class LanguageRepository(MediaContext context) : ILanguageRepository
 
     public Task<List<Country>> GetCountriesAsync(CancellationToken ct = default)
     {
-        return context.Countries.AsNoTracking().ToListAsync(cancellationToken: ct);
+        return context.Countries.AsNoTracking().ToListAsync(ct);
     }
 
     public Task<List<LanguageLibrary>> GetLanguagesAsync(string[] list)
     {
         return context
-            .LanguageLibrary.Where(predicate: language => list.Contains(language.Language.Iso6391))
+            .LanguageLibrary.Where(language => list.Contains(language.Language.Iso6391))
             .ToListAsync();
     }
 }

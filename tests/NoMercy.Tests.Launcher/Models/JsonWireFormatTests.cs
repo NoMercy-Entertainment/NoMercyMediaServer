@@ -50,20 +50,20 @@ public sealed class JsonWireFormatTests
             }
             """;
 
-        ServerConfigResponse? result = JsonConvert.DeserializeObject<ServerConfigResponse>(value: json);
+        ServerConfigResponse? result = JsonConvert.DeserializeObject<ServerConfigResponse>(json);
 
         result.Should().NotBeNull();
-        result!.InternalPort.Should().Be(expected: 7626);
-        result.ExternalPort.Should().Be(expected: 7627);
-        result.ServerName.Should().Be(expected: "nomercy-test");
-        result.LibraryWorkers.Should().Be(expected: 1);
-        result.ImportWorkers.Should().Be(expected: 2);
-        result.ExtrasWorkers.Should().Be(expected: 15);
-        result.EncoderWorkers.Should().Be(expected: 1);
-        result.CronWorkers.Should().Be(expected: 1);
-        result.ImageWorkers.Should().Be(expected: 10);
-        result.FileWorkers.Should().Be(expected: 4);
-        result.MusicWorkers.Should().Be(expected: 2);
+        result!.InternalPort.Should().Be(7626);
+        result.ExternalPort.Should().Be(7627);
+        result.ServerName.Should().Be("nomercy-test");
+        result.LibraryWorkers.Should().Be(1);
+        result.ImportWorkers.Should().Be(2);
+        result.ExtrasWorkers.Should().Be(15);
+        result.EncoderWorkers.Should().Be(1);
+        result.CronWorkers.Should().Be(1);
+        result.ImageWorkers.Should().Be(10);
+        result.FileWorkers.Should().Be(4);
+        result.MusicWorkers.Should().Be(2);
         result.Swagger.Should().BeTrue();
     }
 
@@ -77,11 +77,11 @@ public sealed class JsonWireFormatTests
             LibraryWorkers = 3,
         };
 
-        string json = JsonConvert.SerializeObject(value: config);
+        string json = JsonConvert.SerializeObject(config);
 
-        json.Should().Contain(expected: "\"internal_port\":1");
-        json.Should().Contain(expected: "\"external_port\":2");
-        json.Should().Contain(expected: "\"library_workers\":3");
+        json.Should().Contain("\"internal_port\":1");
+        json.Should().Contain("\"external_port\":2");
+        json.Should().Contain("\"library_workers\":3");
     }
 
     [Fact]
@@ -95,22 +95,22 @@ public sealed class JsonWireFormatTests
             }
             """;
 
-        TraySettings? result = JsonConvert.DeserializeObject<TraySettings>(value: json);
+        TraySettings? result = JsonConvert.DeserializeObject<TraySettings>(json);
 
         result.Should().NotBeNull();
         result!.ShowOnStartup.Should().BeTrue();
-        result.StartupArguments.Should().Be(expected: "--dev --port 7626");
+        result.StartupArguments.Should().Be("--dev --port 7626");
         result.AutoStart.Should().BeTrue();
     }
 
     [Fact]
     public void TraySettings_Deserialize_MissingFields_UsesDefaults()
     {
-        TraySettings? result = JsonConvert.DeserializeObject<TraySettings>(value: "{}");
+        TraySettings? result = JsonConvert.DeserializeObject<TraySettings>("{}");
 
         result.Should().NotBeNull();
         result!.ShowOnStartup.Should().BeFalse();
-        result.StartupArguments.Should().Be(expected: string.Empty);
+        result.StartupArguments.Should().Be(string.Empty);
         result.AutoStart.Should().BeFalse();
     }
 
@@ -127,14 +127,14 @@ public sealed class JsonWireFormatTests
             }
             """;
 
-        UpdateCheckResult? result = JsonConvert.DeserializeObject<UpdateCheckResult>(value: json);
+        UpdateCheckResult? result = JsonConvert.DeserializeObject<UpdateCheckResult>(json);
 
         result.Should().NotBeNull();
-        result!.Status.Should().Be(expected: "available");
-        result.Message.Should().Be(expected: "A new version is ready");
+        result!.Status.Should().Be("available");
+        result.Message.Should().Be("A new version is ready");
         result.UseInstaller.Should().BeTrue();
-        result.LatestVersion.Should().Be(expected: "2.1.0");
-        result.Path.Should().Be(expected: "C:\\staged\\update.exe");
+        result.LatestVersion.Should().Be("2.1.0");
+        result.Path.Should().Be("C:\\staged\\update.exe");
     }
 
     [Fact]
@@ -148,11 +148,11 @@ public sealed class JsonWireFormatTests
             }
             """;
 
-        ActivityInfo? result = JsonConvert.DeserializeObject<ActivityInfo>(value: json);
+        ActivityInfo? result = JsonConvert.DeserializeObject<ActivityInfo>(json);
 
         result.Should().NotBeNull();
-        result!.ActiveStreams.Should().Be(expected: 3);
-        result.ActiveEncodes.Should().Be(expected: 1);
+        result!.ActiveStreams.Should().Be(3);
+        result.ActiveEncodes.Should().Be(1);
         result.CanInterruptSafely.Should().BeFalse();
     }
 
@@ -170,15 +170,15 @@ public sealed class JsonWireFormatTests
             }
             """;
 
-        LogEntryResponse? result = JsonConvert.DeserializeObject<LogEntryResponse>(value: json);
+        LogEntryResponse? result = JsonConvert.DeserializeObject<LogEntryResponse>(json);
 
         result.Should().NotBeNull();
-        result!.Type.Should().Be(expected: "Server");
-        result.Message.Should().Be(expected: "listening on port 7626");
-        result.Color.Should().Be(expected: "#22C55E");
-        result.ThreadId.Should().Be(expected: 12);
-        result.Time.Should().Be(expected: new DateTime(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc));
-        result.Level.Should().Be(expected: "Information");
+        result!.Type.Should().Be("Server");
+        result.Message.Should().Be("listening on port 7626");
+        result.Color.Should().Be("#22C55E");
+        result.ThreadId.Should().Be(12);
+        result.Time.Should().Be(new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc));
+        result.Level.Should().Be("Information");
     }
 
     /// <summary>
@@ -204,18 +204,18 @@ public sealed class JsonWireFormatTests
             }
             """;
 
-        ServerStatusResponse? result = JsonConvert.DeserializeObject<ServerStatusResponse>(value: json);
+        ServerStatusResponse? result = JsonConvert.DeserializeObject<ServerStatusResponse>(json);
 
         result.Should().NotBeNull();
         result!.AutoStart.Should().BeTrue();
         result.UpdateAvailable.Should().BeTrue();
         result.RestartNeeded.Should().BeTrue();
-        result.LatestVersion.Should().Be(expected: "2.1.0");
-        result.SetupPhase.Should().Be(expected: "Registering");
-        result.InternalAddress.Should().Be(expected: "https://192.168.1.10:7626");
-        result.ExternalAddress.Should().Be(expected: "https://my-server.nomercy.tv");
+        result.LatestVersion.Should().Be("2.1.0");
+        result.SetupPhase.Should().Be("Registering");
+        result.InternalAddress.Should().Be("https://192.168.1.10:7626");
+        result.ExternalAddress.Should().Be("https://my-server.nomercy.tv");
         result.AppStatus.Should().NotBeNull();
         result.AppStatus!.Running.Should().BeTrue();
-        result.AppStatus.Pid.Should().Be(expected: 4242);
+        result.AppStatus.Pid.Should().Be(4242);
     }
 }

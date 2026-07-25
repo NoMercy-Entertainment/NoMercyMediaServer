@@ -14,7 +14,6 @@ using System.Reflection;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TVDB.Client;
 using NoMercy.Providers.TVDB.Models.Auth;
-using NoMercy.Providers.TVDB.Models.Shared;
 using NoMercy.Tests.Providers.Infrastructure;
 
 namespace NoMercy.Tests.Providers.TVDB.Client;
@@ -33,11 +32,11 @@ namespace NoMercy.Tests.Providers.TVDB.Client;
 /// otherwise a previous test's cached token would silently skip the login
 /// flow this class is meant to verify.
 /// </summary>
-[Collection(name: "HttpClientProvider")]
+[Collection("HttpClientProvider")]
 public sealed class TvdbBaseClientHarnessTests : ProviderHttpHarness
 {
     public TvdbBaseClientHarnessTests()
-        : base(httpClientNames: [HttpClientNames.Tvdb, HttpClientNames.TvdbLogin])
+        : base([HttpClientNames.Tvdb, HttpClientNames.TvdbLogin])
     {
         TvdbTokenAccess.Reset();
     }
@@ -48,7 +47,7 @@ public sealed class TvdbBaseClientHarnessTests : ProviderHttpHarness
         base.Dispose();
     }
 
-    private sealed class TestableClient() : TvdbBaseClient(id: 0, language: "nld")
+    private sealed class TestableClient() : TvdbBaseClient(0, "nld")
     {
         public new Task<T?> Get<T>(
             string url,
@@ -56,14 +55,14 @@ public sealed class TvdbBaseClientHarnessTests : ProviderHttpHarness
             bool? priority = false,
             bool skipCache = false
         )
-            where T : class => base.Get<T>(url: url, query: query, priority: priority, skipCache: skipCache);
+            where T : class => base.Get<T>(url, query, priority, skipCache);
     }
 
     private static TvdbLoginResponse LoginBody(string token) =>
         new()
         {
             Status = "success",
-            Data = new() { Token = token, ExpiresAt = DateTime.UtcNow.AddMonths(months: 1) },
+            Data = new() { Token = token, ExpiresAt = DateTime.UtcNow.AddMonths(1) },
         };
 
     [Fact]
@@ -74,7 +73,7 @@ public sealed class TvdbBaseClientHarnessTests : ProviderHttpHarness
         TestApiKeyStore.Instance.TvdbKey = "";
 
         using TestableClient client = new();
-        string? result = await client.Get<string>(url: Unique(prefix: "series"));
+        string? result = await client.Get<string>(Unique("series"));
 
         result.Should().BeNull();
         Handler.Requests.Should().BeEmpty();
@@ -88,25 +87,25 @@ public sealed class TvdbBaseClientHarnessTests : ProviderHttpHarness
         // resulting bearer token plus the client's configured Accept-Language.
         TestApiKeyStore.Instance.TvdbKey = "test-tvdb-key";
         Handler.WhenPost(
-            pathContains: "login",
-            responses: MockResponse.Json(status: HttpStatusCode.OK, body: LoginBody(token: "session-token-abc"))
+            "login",
+            MockResponse.Json(HttpStatusCode.OK, LoginBody("session-token-abc"))
         );
 
-        string path = Unique(prefix: "series");
-        Handler.WhenGet(pathContains: path, responses: MockResponse.Json(status: HttpStatusCode.OK, body: "\"ok\""));
+        string path = Unique("series");
+        Handler.WhenGet(path, MockResponse.Json(HttpStatusCode.OK, "\"ok\""));
 
         using TestableClient client = new();
-        string? result = await client.Get<string>(url: path);
+        string? result = await client.Get<string>(path);
 
-        result.Should().Be(expected: "ok");
+        result.Should().Be("ok");
 
-        Handler.Requests.Should().ContainSingle(predicate: r => r.Path.Contains("login"));
+        Handler.Requests.Should().ContainSingle(r => r.Path.Contains("login"));
         CapturedRequest getRequest = Handler
             .Requests.Should()
-            .ContainSingle(predicate: r => r.Path.Contains(path))
+            .ContainSingle(r => r.Path.Contains(path))
             .Which;
-        getRequest.HeaderValue(name: "Authorization").Should().Be(expected: "Bearer session-token-abc");
-        getRequest.HeaderValue(name: "Accept-Language").Should().Be(expected: "nld");
+        getRequest.HeaderValue("Authorization").Should().Be("Bearer session-token-abc");
+        getRequest.HeaderValue("Accept-Language").Should().Be("nld");
     }
 
     [Fact]
@@ -114,30 +113,30 @@ public sealed class TvdbBaseClientHarnessTests : ProviderHttpHarness
     {
         // Requirement: EnsureAuthenticatedAsync must not re-login while the
         // cached token is still valid (TVDB tokens last ~1 month).
-        TvdbTokenAccess.Set(token: LoginBody(token: "cached-token"));
+        TvdbTokenAccess.Set(LoginBody("cached-token"));
 
-        string path = Unique(prefix: "series");
-        Handler.WhenGet(pathContains: path, responses: MockResponse.Json(status: HttpStatusCode.OK, body: "\"ok\""));
+        string path = Unique("series");
+        Handler.WhenGet(path, MockResponse.Json(HttpStatusCode.OK, "\"ok\""));
 
         using TestableClient client = new();
-        string? result = await client.Get<string>(url: path);
+        string? result = await client.Get<string>(path);
 
-        result.Should().Be(expected: "ok");
-        Handler.Requests.Should().NotContain(predicate: r => r.Path.Contains("login"));
+        result.Should().Be("ok");
+        Handler.Requests.Should().NotContain(r => r.Path.Contains("login"));
     }
 
     [Theory]
-    [InlineData(data: HttpStatusCode.NotFound)]
-    [InlineData(data: HttpStatusCode.BadRequest)]
-    [InlineData(data: HttpStatusCode.UnprocessableEntity)]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.UnprocessableEntity)]
     public async Task Get_ClientErrorStatuses_SoftFailToNull(HttpStatusCode status)
     {
-        TvdbTokenAccess.Set(token: LoginBody(token: "cached-token"));
-        string path = Unique(prefix: "series");
-        Handler.WhenGet(pathContains: path, responses: MockResponse.Status(status: status));
+        TvdbTokenAccess.Set(LoginBody("cached-token"));
+        string path = Unique("series");
+        Handler.WhenGet(path, MockResponse.Status(status));
 
         using TestableClient client = new();
-        string? result = await client.Get<string>(url: path);
+        string? result = await client.Get<string>(path);
 
         result.Should().BeNull();
     }
@@ -145,12 +144,12 @@ public sealed class TvdbBaseClientHarnessTests : ProviderHttpHarness
     [Fact]
     public async Task Get_MalformedJsonBody_ReturnsNullInsteadOfThrowing()
     {
-        TvdbTokenAccess.Set(token: LoginBody(token: "cached-token"));
-        string path = Unique(prefix: "series");
-        Handler.WhenGet(pathContains: path, responses: MockResponse.Malformed());
+        TvdbTokenAccess.Set(LoginBody("cached-token"));
+        string path = Unique("series");
+        Handler.WhenGet(path, MockResponse.Malformed());
 
         using TestableClient client = new();
-        string? result = await client.Get<string>(url: path);
+        string? result = await client.Get<string>(path);
 
         result.Should().BeNull();
     }
@@ -160,17 +159,17 @@ public sealed class TvdbBaseClientHarnessTests : ProviderHttpHarness
     {
         // Requirement: same shared Queue retry contract as every other
         // provider — a transient 429 is retried before the caller sees it.
-        TvdbTokenAccess.Set(token: LoginBody(token: "cached-token"));
-        string path = Unique(prefix: "series");
+        TvdbTokenAccess.Set(LoginBody("cached-token"));
+        string path = Unique("series");
         Handler.WhenGet(
-            pathContains: path, responses: [MockResponse.Status(status: HttpStatusCode.TooManyRequests), MockResponse.Json(status: HttpStatusCode.OK, body: "\"recovered\"")]
+            path, [MockResponse.Status(HttpStatusCode.TooManyRequests), MockResponse.Json(HttpStatusCode.OK, "\"recovered\"")]
         );
 
         using TestableClient client = new();
-        string? result = await client.Get<string>(url: path);
+        string? result = await client.Get<string>(path);
 
-        result.Should().Be(expected: "recovered");
-        Handler.RequestCountFor(pathContains: path).Should().Be(expected: 2);
+        result.Should().Be("recovered");
+        Handler.RequestCountFor(path).Should().Be(2);
     }
 
     [Fact]
@@ -182,24 +181,24 @@ public sealed class TvdbBaseClientHarnessTests : ProviderHttpHarness
         // even though this call itself still surfaces the 401 failure (401 is
         // not one of TvdbBaseClient's soft-fail statuses, so it throws here).
         TestApiKeyStore.Instance.TvdbKey = "test-tvdb-key";
-        TvdbTokenAccess.Set(token: LoginBody(token: "existing-token"));
-        string firstPath = Unique(prefix: "series");
-        Handler.WhenGet(pathContains: firstPath, responses: MockResponse.Status(status: HttpStatusCode.Unauthorized));
+        TvdbTokenAccess.Set(LoginBody("existing-token"));
+        string firstPath = Unique("series");
+        Handler.WhenGet(firstPath, MockResponse.Status(HttpStatusCode.Unauthorized));
 
         using TestableClient client = new();
-        Func<Task<string?>> act = () => client.Get<string>(url: firstPath);
+        Func<Task<string?>> act = () => client.Get<string>(firstPath);
         await act.Should().ThrowAsync<HttpRequestException>();
 
         TvdbTokenAccess.Get().Should().BeNull();
 
-        Handler.WhenPost(pathContains: "login", responses: MockResponse.Json(status: HttpStatusCode.OK, body: LoginBody(token: "fresh-token")));
-        string secondPath = Unique(prefix: "series");
-        Handler.WhenGet(pathContains: secondPath, responses: MockResponse.Json(status: HttpStatusCode.OK, body: "\"ok\""));
+        Handler.WhenPost("login", MockResponse.Json(HttpStatusCode.OK, LoginBody("fresh-token")));
+        string secondPath = Unique("series");
+        Handler.WhenGet(secondPath, MockResponse.Json(HttpStatusCode.OK, "\"ok\""));
 
-        string? result = await client.Get<string>(url: secondPath);
+        string? result = await client.Get<string>(secondPath);
 
-        result.Should().Be(expected: "ok");
-        Handler.Requests.Should().ContainSingle(predicate: r => r.Path.Contains("login"));
+        result.Should().Be("ok");
+        Handler.Requests.Should().ContainSingle(r => r.Path.Contains("login"));
     }
 }
 
@@ -214,12 +213,12 @@ public sealed class TvdbBaseClientHarnessTests : ProviderHttpHarness
 internal static class TvdbTokenAccess
 {
     private static readonly PropertyInfo TokenProperty =
-        typeof(TvdbBaseClient).GetProperty(name: "Token", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)
-        ?? throw new InvalidOperationException(message: "TvdbBaseClient.Token property not found.");
+        typeof(TvdbBaseClient).GetProperty("Token", BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException("TvdbBaseClient.Token property not found.");
 
-    public static void Reset() => TokenProperty.SetValue(obj: null, value: null);
+    public static void Reset() => TokenProperty.SetValue(null, null);
 
-    public static void Set(TvdbLoginResponse token) => TokenProperty.SetValue(obj: null, value: token);
+    public static void Set(TvdbLoginResponse token) => TokenProperty.SetValue(null, token);
 
-    public static TvdbLoginResponse? Get() => (TvdbLoginResponse?)TokenProperty.GetValue(obj: null);
+    public static TvdbLoginResponse? Get() => (TvdbLoginResponse?)TokenProperty.GetValue(null);
 }

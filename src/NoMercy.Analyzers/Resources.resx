@@ -18,19 +18,19 @@
     </data>
 
     <data name="RequireNamedArgumentsTitle" xml:space="preserve">
-        <value>Use named arguments for multi‑parameter methods</value>
+        <value>Name the argument of a single-letter callback</value>
     </data>
     
     <data name="RequireNamedArgumentsMessage" xml:space="preserve">
-        <value>Use named arguments when calling methods with more than one parameter</value>
+        <value>Name this argument: its callback parameter is a single letter</value>
     </data>
     
     <data name="RequireNamedArgumentsMessageFormat" xml:space="preserve">
-        <value>Use named arguments when calling methods with more than one parameter</value>
+        <value>Name this argument: its callback parameter is a single letter</value>
     </data>
     
     <data name="RequireNamedArgumentsDescription" xml:space="preserve">
-        <value>Enforces named arguments for invocations of methods with more than one parameter</value>
+        <value>Enforces a named argument on callback lambdas whose parameter is a single letter, where the call site alone does not say what the callback is for</value>
     </data>
     
     <data name="CallbackParameterShouldBeRenamedTitle" xml:space="preserve">

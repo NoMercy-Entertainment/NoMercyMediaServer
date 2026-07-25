@@ -9,12 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Music;
-using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.NmSystem.Dto;
-using NoMercy.Providers.MusicBrainz.Models;
 
 namespace NoMercy.MediaProcessing.Jobs;
 
@@ -28,21 +23,9 @@ public interface IJobDispatcher : NoMercyQueue.Core.Interfaces.IJobDispatcher
     void DispatchJob<TJob>(
             Ulid libraryId,
             Ulid folderId,
-            string id,
-            string inputFile,
-            Ulid? sourceDriverId = null
-        )
-            where TJob : AbstractEncoderJob, new();
-
-    void DispatchJob<TJob>(
-            Ulid libraryId,
-            Ulid folderId,
             Guid releaseId,
             string filePath
         )
-            where TJob : AbstractMusicFolderJob, new();
-
-    void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, string filePath)
             where TJob : AbstractMusicFolderJob, new();
 
     void DispatchJob<TJob>(int id, Ulid libraryId)
@@ -50,44 +33,6 @@ public interface IJobDispatcher : NoMercyQueue.Core.Interfaces.IJobDispatcher
 
     void DispatchJob<TJob>(Ulid libraryId)
             where TJob : AbstractMediaJob, new();
-
-    void DispatchJob<TJob>(int id, Library library, int? priority = null)
-            where TJob : AbstractMediaJob, new();
-
-    void DispatchJob<TJob>(string baseFolderPath, Ulid libraryId)
-            where TJob : AbstractMusicFolderJob, new();
-
-    void DispatchJob<TJob>(
-            Ulid libraryId,
-            Guid id,
-            Folder baseFolder,
-            MediaFolderExtend mediaFolder
-        )
-            where TJob : AbstractReleaseJob, new();
-
-    void DispatchJob<TJob>(Guid id1, Guid? id2 = null, Guid? id3 = null)
-            where TJob : AbstractFanArtDataJob, new();
-
-    void DispatchJob<TJob>(MusicBrainzReleaseGroup musicBrainzReleaseGroup)
-            where TJob : MusicMetadataJob, new();
-
-    void DispatchJob<TJob>(MusicBrainzArtist musicBrainzArtist)
-            where TJob : MusicMetadataJob, new();
-
-    void DispatchJob<TJob>(
-            Guid id,
-            Ulid folderId,
-            FolderMetadata folderMetaData,
-            MediaFile mediaFile,
-            MusicBrainzTrack foundTrack,
-            Ulid libraryId,
-            string inputFolder,
-            string inputFile
-        )
-            where TJob : MusicEncodeJob, new();
-
-    void DispatchJob<TJob>(Track track)
-            where TJob : AbstractLyricJob, new();
 
     void DispatchColorPaletteJob(
             string entityType,
@@ -97,4 +42,7 @@ public interface IJobDispatcher : NoMercyQueue.Core.Interfaces.IJobDispatcher
 
     void DispatchJob<TJob, TChild>(IEnumerable<TChild> data, string name)
         where TJob : AbstractShowExtraDataJob<TChild, string>, new();
+
+    void DispatchJob<TJob>()
+        where TJob : AbstractJob, new();
 }

@@ -58,41 +58,47 @@ public class Encoder(
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         logger.LogInformation(
-            message: "[{CorrelationId}] Starting encode: {Input} → {Output}", args: [context.CorrelationId, request.InputPath, request.OutputDirectory]
+            "[{CorrelationId}] Starting encode: {Input} → {Output}",
+            context.CorrelationId,
+            request.InputPath,
+            request.OutputDirectory
         );
 
         // Stage 1: Analyze
-        progress?.OnStageStarted(stageName: "Analyze");
-        StageResult analyzeResult = await analyzeStage.ExecuteAsync(input: request.InputPath, context: context, ct: ct);
+        progress?.OnStageStarted("Analyze");
+        StageResult analyzeResult = await analyzeStage.ExecuteAsync(request.InputPath, context, ct);
         if (analyzeResult is StageFailure analyzeFailure)
-            return Fail(error: analyzeFailure.Error, elapsed: stopwatch.Elapsed, progress: progress);
+            return Fail(analyzeFailure.Error, stopwatch.Elapsed, progress);
 
         MediaInfo mediaInfo = ((StageSuccess<MediaInfo>)analyzeResult).Value;
         context = context with { MediaInfo = mediaInfo };
-        progress?.OnStageCompleted(stageName: "Analyze", duration: stopwatch.Elapsed);
+        progress?.OnStageCompleted("Analyze", stopwatch.Elapsed);
 
         // Profile override seam: a plugin may replace the configured profile based
         // on the analyzed source (e.g. detect anime → an anime preset). Applied
         // once here so every downstream stage sees the effective profile.
         if (profileOverride is not null)
         {
-            EncodingProfile effective = profileOverride.Apply(configured: request.Profile, media: mediaInfo);
-            if (!ReferenceEquals(objA: effective, objB: request.Profile))
+            EncodingProfile effective = profileOverride.Apply(request.Profile, mediaInfo);
+            if (!ReferenceEquals(effective, request.Profile))
             {
                 logger.LogInformation(
-                    message: "[{CorrelationId}] Profile overridden by plugin: '{Old}' → '{New}'", args: [context.CorrelationId, request.Profile.Name, effective.Name]
+                    "[{CorrelationId}] Profile overridden by plugin: '{Old}' → '{New}'",
+                    context.CorrelationId,
+                    request.Profile.Name,
+                    effective.Name
                 );
                 request = request with { Profile = effective };
             }
         }
 
         // Stage 2: Validate
-        progress?.OnStageStarted(stageName: "Validate");
-        ValidateInput validateInput = new(Media: mediaInfo, Profile: request.Profile);
-        StageResult validateResult = await validateStage.ExecuteAsync(input: validateInput, context: context, ct: ct);
+        progress?.OnStageStarted("Validate");
+        ValidateInput validateInput = new(mediaInfo, request.Profile);
+        StageResult validateResult = await validateStage.ExecuteAsync(validateInput, context, ct);
         if (validateResult is StageFailure validateFailure)
-            return Fail(error: validateFailure.Error, elapsed: stopwatch.Elapsed, progress: progress);
-        progress?.OnStageCompleted(stageName: "Validate", duration: stopwatch.Elapsed);
+            return Fail(validateFailure.Error, stopwatch.Elapsed, progress);
+        progress?.OnStageCompleted("Validate", stopwatch.Elapsed);
 
         // Stage 3: Plan
         // The smart-orchestrator merge path (DecomposeMergedAsync) already ran
@@ -103,17 +109,17 @@ public class Encoder(
         // in a merged run build its command / master playlist against the exact
         // same merged plan instead. Null (the default) is every other caller —
         // Plan stage runs exactly as before.
-        progress?.OnStageStarted(stageName: "Plan");
+        progress?.OnStageStarted("Plan");
         ExecutionPlan plan;
         if (request.Options?.PrecomputedPlan is { } precomputedPlan)
         {
-            plan = new ExecutionPlan(Groups: [], EstimatedTotalDuration: TimeSpan.Zero, OutputPlan: precomputedPlan);
+            plan = new ExecutionPlan([], TimeSpan.Zero, precomputedPlan);
         }
         else
         {
-            StageResult planResult = await planStage.ExecuteAsync(input: validateInput, context: context, ct: ct);
+            StageResult planResult = await planStage.ExecuteAsync(validateInput, context, ct);
             if (planResult is StageFailure planFailure)
-                return Fail(error: planFailure.Error, elapsed: stopwatch.Elapsed, progress: progress);
+                return Fail(planFailure.Error, stopwatch.Elapsed, progress);
 
             plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
         }
@@ -121,22 +127,22 @@ public class Encoder(
         // Update observer with resolved stream info from the actual output plan.
         // Format: "{index}:{detail}" for dashboard display.
         progress?.OnPlanResolved(
-            videoStreams: plan.OutputPlan.VideoOutputs.Select(
-                    selector: (v, i) => $"{i}:{v.Width}x{v.Height}_{v.EncoderName}"
+            plan.OutputPlan.VideoOutputs.Select(
+                    (v, i) => $"{i}:{v.Width}x{v.Height}_{v.EncoderName}"
                 )
                 .ToList(),
-            audioStreams: plan.OutputPlan.AudioOutputs.Select(selector: (a, i) => $"{i}:{a.Language}_{a.CodecToken}")
+            plan.OutputPlan.AudioOutputs.Select((a, i) => $"{i}:{a.Language}_{a.CodecToken}")
                 .ToList(),
-            subtitleStreams: plan.OutputPlan.SubtitleOutputs.Select(selector: (s, i) => $"{i}:{s.Language}_{s.OutputCodec}")
+            plan.OutputPlan.SubtitleOutputs.Select((s, i) => $"{i}:{s.Language}_{s.OutputCodec}")
                 .ToList(),
-            hasGpu: plan.OutputPlan.VideoOutputs.Any(predicate: v =>
-                v.EncoderName.Contains(value: "nvenc", comparisonType: StringComparison.OrdinalIgnoreCase)
-                || v.EncoderName.Contains(value: "qsv", comparisonType: StringComparison.OrdinalIgnoreCase)
-                || v.EncoderName.Contains(value: "amf", comparisonType: StringComparison.OrdinalIgnoreCase)
+            hasGpu: plan.OutputPlan.VideoOutputs.Any(v =>
+                v.EncoderName.Contains("nvenc", StringComparison.OrdinalIgnoreCase)
+                || v.EncoderName.Contains("qsv", StringComparison.OrdinalIgnoreCase)
+                || v.EncoderName.Contains("amf", StringComparison.OrdinalIgnoreCase)
             ),
-            isHdr: mediaInfo.VideoStreams.Count > 0 && mediaInfo.VideoStreams[index: 0].IsHdr
+            isHdr: mediaInfo.VideoStreams.Count > 0 && mediaInfo.VideoStreams[0].IsHdr
         );
-        progress?.OnStageCompleted(stageName: "Plan", duration: stopwatch.Elapsed);
+        progress?.OnStageCompleted("Plan", stopwatch.Elapsed);
 
         // Coordinator finalize path: when FinalizeOnly is set the pipeline
         // skips Build + Execute and proceeds straight to FinalizeStage against
@@ -150,19 +156,19 @@ public class Encoder(
         {
             executionResults = [];
             logger.LogInformation(
-                message: "[{CorrelationId}] FinalizeOnly run — skipping Build + Execute; finalizing against the existing tempDir contents.",
-                args: context.CorrelationId
+                "[{CorrelationId}] FinalizeOnly run — skipping Build + Execute; finalizing against the existing tempDir contents.",
+                context.CorrelationId
             );
         }
         else
         {
             // Stage 4: Build
-            progress?.OnStageStarted(stageName: "Build");
+            progress?.OnStageStarted("Build");
             BuildInput buildInput = new(
-                Plan: plan,
-                InputPath: request.InputPath,
-                OutputDirectory: request.OutputDirectory,
-                MediaTitle: request.ResolvedTitle,
+                plan,
+                request.InputPath,
+                request.OutputDirectory,
+                request.ResolvedTitle,
                 DurationLimit: null,
                 Pass: request.Options?.Pass ?? EncodingPass.Single,
                 StatsFilePath: request.Options?.StatsFilePath,
@@ -170,22 +176,22 @@ public class Encoder(
                 TaskFilter: request.Options?.TaskFilter,
                 ResumeFromMs: request.Options?.ResumeFromMs
             );
-            StageResult buildResult = await buildStage.ExecuteAsync(input: buildInput, context: context, ct: ct);
+            StageResult buildResult = await buildStage.ExecuteAsync(buildInput, context, ct);
             if (buildResult is StageFailure buildFailure)
-                return Fail(error: buildFailure.Error, elapsed: stopwatch.Elapsed, progress: progress);
+                return Fail(buildFailure.Error, stopwatch.Elapsed, progress);
 
             FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)buildResult).Value;
-            progress?.OnStageCompleted(stageName: "Build", duration: stopwatch.Elapsed);
+            progress?.OnStageCompleted("Build", stopwatch.Elapsed);
 
             // Stage 5: Execute
-            progress?.OnStageStarted(stageName: "Encode");
-            ExecuteInput executeInput = new(Commands: commands, InputDuration: mediaInfo.Duration, Progress: progress);
-            StageResult executeResult = await executeStage.ExecuteAsync(input: executeInput, context: context, ct: ct);
+            progress?.OnStageStarted("Encode");
+            ExecuteInput executeInput = new(commands, mediaInfo.Duration, progress);
+            StageResult executeResult = await executeStage.ExecuteAsync(executeInput, context, ct);
             if (executeResult is StageFailure executeFailure)
-                return Fail(error: executeFailure.Error, elapsed: stopwatch.Elapsed, progress: progress);
+                return Fail(executeFailure.Error, stopwatch.Elapsed, progress);
 
             executionResults = ((StageSuccess<ExecutionResult[]>)executeResult).Value;
-            progress?.OnStageCompleted(stageName: "Encode", duration: stopwatch.Elapsed);
+            progress?.OnStageCompleted("Encode", stopwatch.Elapsed);
         }
 
         // Stage 6: Finalize
@@ -209,15 +215,15 @@ public class Encoder(
             && taskFilter.Kind != EncodeTaskKind.Whole;
         if (isPerStreamSlice)
         {
-            finalizeOutput = new(OutputPath: request.OutputDirectory, OutputSizeBytes: 0);
+            finalizeOutput = new(request.OutputDirectory, 0);
             logger.LogDebug(
-                message: "[{CorrelationId}] Per-task run — skipping FinalizeStage; coordinator handles master playlist, chapters, fonts.json, manifest.",
-                args: context.CorrelationId
+                "[{CorrelationId}] Per-task run — skipping FinalizeStage; coordinator handles master playlist, chapters, fonts.json, manifest.",
+                context.CorrelationId
             );
         }
         else
         {
-            progress?.OnStageStarted(stageName: "Finalize");
+            progress?.OnStageStarted("Finalize");
 
             // An aux-only bundle (no video and no audio — e.g. a thumbnails top-up)
             // produces no variant playlists, so there is nothing for a master to
@@ -234,37 +240,39 @@ public class Encoder(
                     GenerateMasterPlaylist = false,
                 };
                 logger.LogInformation(
-                    message: "[{CorrelationId}] Bundle covers a subset of renditions — leaving the existing master playlist untouched.",
-                    args: context.CorrelationId
+                    "[{CorrelationId}] Bundle covers a subset of renditions — leaving the existing master playlist untouched.",
+                    context.CorrelationId
                 );
             }
 
             FinalizeInput finalizeInput = new(
-                Results: executionResults,
-                Plan: plan.OutputPlan,
-                OutputDirectory: request.OutputDirectory,
-                MediaTitle: request.ResolvedTitle,
+                executionResults,
+                plan.OutputPlan,
+                request.OutputDirectory,
+                request.ResolvedTitle,
                 Progress: progress,
                 HlsDerivatives: derivatives,
                 Profile: request.Profile
             );
             StageResult finalizeResult = await finalizeStage.ExecuteAsync(
-                input: finalizeInput,
-                context: context,
-                ct: ct
+                finalizeInput,
+                context,
+                ct
             );
             if (finalizeResult is StageFailure finalizeFailure)
-                return Fail(error: finalizeFailure.Error, elapsed: stopwatch.Elapsed, progress: progress);
+                return Fail(finalizeFailure.Error, stopwatch.Elapsed, progress);
 
             finalizeOutput = ((StageSuccess<FinalizeOutput>)finalizeResult).Value;
-            progress?.OnStageCompleted(stageName: "Finalize", duration: stopwatch.Elapsed);
+            progress?.OnStageCompleted("Finalize", stopwatch.Elapsed);
         }
 
         stopwatch.Stop();
         progress?.OnCompleted();
 
         logger.LogInformation(
-            message: "[{CorrelationId}] Encode complete in {Duration}", args: [context.CorrelationId, stopwatch.Elapsed]
+            "[{CorrelationId}] Encode complete in {Duration}",
+            context.CorrelationId,
+            stopwatch.Elapsed
         );
 
         // Metrics from the main encode command (index 0)
@@ -278,12 +286,12 @@ public class Encoder(
 
         // Resolve GPU name from the encoder — nvenc/qsv/amf indicate hardware encoding
         string? gpuUsed = plan
-            .OutputPlan.VideoOutputs.Where(predicate: v =>
-                v.EncoderName.Contains(value: "nvenc", comparisonType: StringComparison.OrdinalIgnoreCase)
-                || v.EncoderName.Contains(value: "qsv", comparisonType: StringComparison.OrdinalIgnoreCase)
-                || v.EncoderName.Contains(value: "amf", comparisonType: StringComparison.OrdinalIgnoreCase)
+            .OutputPlan.VideoOutputs.Where(v =>
+                v.EncoderName.Contains("nvenc", StringComparison.OrdinalIgnoreCase)
+                || v.EncoderName.Contains("qsv", StringComparison.OrdinalIgnoreCase)
+                || v.EncoderName.Contains("amf", StringComparison.OrdinalIgnoreCase)
             )
-            .Select(selector: v => v.EncoderName)
+            .Select(v => v.EncoderName)
             .FirstOrDefault();
 
         return new(
@@ -313,10 +321,13 @@ public class Encoder(
             DestinationStorage = request.DestinationStorage ?? request.SourceStorage,
         };
         Stopwatch stopwatch = Stopwatch.StartNew();
-        TimeSpan previewDuration = TimeSpan.FromSeconds(seconds: previewDurationSeconds);
+        TimeSpan previewDuration = TimeSpan.FromSeconds(previewDurationSeconds);
 
         logger.LogInformation(
-            message: "[{CorrelationId}] Starting preview encode ({Duration}s): {Input}", args: [context.CorrelationId, previewDurationSeconds, request.InputPath]
+            "[{CorrelationId}] Starting preview encode ({Duration}s): {Input}",
+            context.CorrelationId,
+            previewDurationSeconds,
+            request.InputPath
         );
 
         // Strip thumbnails and subtitles — not useful for a short preview
@@ -329,62 +340,62 @@ public class Encoder(
 
         // Stage 1: Analyze
         StageResult analyzeResult = await analyzeStage.ExecuteAsync(
-            input: previewRequest.InputPath,
-            context: context,
-            ct: ct
+            previewRequest.InputPath,
+            context,
+            ct
         );
         if (analyzeResult is StageFailure af)
-            return PreviewFail(error: af.Error, elapsed: stopwatch.Elapsed);
+            return PreviewFail(af.Error, stopwatch.Elapsed);
 
         MediaInfo mediaInfo = ((StageSuccess<MediaInfo>)analyzeResult).Value;
         context = context with { MediaInfo = mediaInfo };
 
         // Stage 2: Validate
-        ValidateInput validateInput = new(Media: mediaInfo, Profile: previewProfile);
-        StageResult validateResult = await validateStage.ExecuteAsync(input: validateInput, context: context, ct: ct);
+        ValidateInput validateInput = new(mediaInfo, previewProfile);
+        StageResult validateResult = await validateStage.ExecuteAsync(validateInput, context, ct);
         if (validateResult is StageFailure vf)
-            return PreviewFail(error: vf.Error, elapsed: stopwatch.Elapsed);
+            return PreviewFail(vf.Error, stopwatch.Elapsed);
 
         // Stage 3: Plan
-        StageResult planResult = await planStage.ExecuteAsync(input: validateInput, context: context, ct: ct);
+        StageResult planResult = await planStage.ExecuteAsync(validateInput, context, ct);
         if (planResult is StageFailure pf)
-            return PreviewFail(error: pf.Error, elapsed: stopwatch.Elapsed);
+            return PreviewFail(pf.Error, stopwatch.Elapsed);
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
 
         // Stage 4: Build — with duration limit
         BuildInput buildInput = new(
-            Plan: plan,
-            InputPath: previewRequest.InputPath,
-            OutputDirectory: previewRequest.OutputDirectory,
-            MediaTitle: previewRequest.ResolvedTitle,
+            plan,
+            previewRequest.InputPath,
+            previewRequest.OutputDirectory,
+            previewRequest.ResolvedTitle,
             DurationLimit: previewDuration
         );
-        StageResult buildResult = await buildStage.ExecuteAsync(input: buildInput, context: context, ct: ct);
+        StageResult buildResult = await buildStage.ExecuteAsync(buildInput, context, ct);
         if (buildResult is StageFailure bf)
-            return PreviewFail(error: bf.Error, elapsed: stopwatch.Elapsed);
+            return PreviewFail(bf.Error, stopwatch.Elapsed);
 
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)buildResult).Value;
 
         // Stage 5: Execute — duration-limited input means short encode
-        ExecuteInput executeInput = new(Commands: commands, InputDuration: previewDuration);
-        StageResult executeResult = await executeStage.ExecuteAsync(input: executeInput, context: context, ct: ct);
+        ExecuteInput executeInput = new(commands, previewDuration);
+        StageResult executeResult = await executeStage.ExecuteAsync(executeInput, context, ct);
         if (executeResult is StageFailure ef)
-            return PreviewFail(error: ef.Error, elapsed: stopwatch.Elapsed);
+            return PreviewFail(ef.Error, stopwatch.Elapsed);
 
         ExecutionResult[] executionResults = ((StageSuccess<ExecutionResult[]>)executeResult).Value;
 
         // Stage 6: Finalize
         FinalizeInput finalizeInput = new(
-            Results: executionResults,
-            Plan: plan.OutputPlan,
-            OutputDirectory: previewRequest.OutputDirectory,
-            MediaTitle: previewRequest.ResolvedTitle,
+            executionResults,
+            plan.OutputPlan,
+            previewRequest.OutputDirectory,
+            previewRequest.ResolvedTitle,
             HlsDerivatives: previewRequest.Profile.HlsDerivatives
         );
-        StageResult finalizeResult = await finalizeStage.ExecuteAsync(input: finalizeInput, context: context, ct: ct);
+        StageResult finalizeResult = await finalizeStage.ExecuteAsync(finalizeInput, context, ct);
         if (finalizeResult is StageFailure ff)
-            return PreviewFail(error: ff.Error, elapsed: stopwatch.Elapsed);
+            return PreviewFail(ff.Error, stopwatch.Elapsed);
 
         FinalizeOutput finalizeOutput = ((StageSuccess<FinalizeOutput>)finalizeResult).Value;
         stopwatch.Stop();
@@ -398,7 +409,9 @@ public class Encoder(
                 : "audio-only";
 
         logger.LogInformation(
-            message: "[{CorrelationId}] Preview encode complete in {Duration}", args: [context.CorrelationId, stopwatch.Elapsed]
+            "[{CorrelationId}] Preview encode complete in {Duration}",
+            context.CorrelationId,
+            stopwatch.Elapsed
         );
 
         return new(
@@ -435,19 +448,19 @@ public class Encoder(
             OriginalOutputDirectory = request.OriginalOutputDirectory,
         };
 
-        StageResult analyzeResult = await analyzeStage.ExecuteAsync(input: request.InputPath, context: context, ct: ct);
+        StageResult analyzeResult = await analyzeStage.ExecuteAsync(request.InputPath, context, ct);
         if (analyzeResult is StageFailure)
             return null;
 
         MediaInfo mediaInfo = ((StageSuccess<MediaInfo>)analyzeResult).Value;
         context = context with { MediaInfo = mediaInfo };
 
-        ValidateInput validateInput = new(Media: mediaInfo, Profile: request.Profile);
-        StageResult validateResult = await validateStage.ExecuteAsync(input: validateInput, context: context, ct: ct);
+        ValidateInput validateInput = new(mediaInfo, request.Profile);
+        StageResult validateResult = await validateStage.ExecuteAsync(validateInput, context, ct);
         if (validateResult is StageFailure)
             return null;
 
-        StageResult planResult = await planStage.ExecuteAsync(input: validateInput, context: context, ct: ct);
+        StageResult planResult = await planStage.ExecuteAsync(validateInput, context, ct);
         if (planResult is StageFailure)
             return null;
 
@@ -460,7 +473,7 @@ public class Encoder(
             Success: false,
             OutputPath: "",
             Duration: elapsed,
-            Metrics: new(OutputSizeBytes: 0, AverageSpeed: 0, AverageFps: 0, EncoderUsed: "", GpuUsed: null),
+            Metrics: new(0, 0, 0, "", null),
             OutputSizeBytes: 0,
             Error: error
         );
@@ -472,13 +485,13 @@ public class Encoder(
         IProgressObserver? progress
     )
     {
-        progress?.OnError(error: error);
+        progress?.OnError(error);
         return new(
             Success: false,
             OutputPath: "",
             Duration: elapsed,
             Error: error,
-            Metrics: new(OutputSizeBytes: 0, AverageSpeed: 0, AverageFps: 0, EncoderUsed: "", GpuUsed: null)
+            Metrics: new(0, 0, 0, "", null)
         );
     }
 }

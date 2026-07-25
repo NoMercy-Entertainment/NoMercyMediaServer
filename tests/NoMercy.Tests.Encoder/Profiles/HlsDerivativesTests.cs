@@ -25,10 +25,10 @@ public class HlsDerivativesTests
 
         d.GenerateMetadataJson.Should().BeTrue();
         d.GenerateSpriteVtt.Should().BeTrue();
-        d.SpriteVttIntervalSeconds.Should().Be(expected: 10);
-        d.SpriteVttColumns.Should().Be(expected: 5);
-        d.SpriteVttRows.Should().Be(expected: 5);
-        d.SpriteVttThumbnailWidth.Should().Be(expected: 160);
+        d.SpriteVttIntervalSeconds.Should().Be(10);
+        d.SpriteVttColumns.Should().Be(5);
+        d.SpriteVttRows.Should().Be(5);
+        d.SpriteVttThumbnailWidth.Should().Be(160);
         d.GenerateChapters.Should().BeTrue();
         d.GenerateFontsJson.Should().BeTrue();
         d.GenerateIFramePlaylists.Should().BeFalse();
@@ -46,7 +46,7 @@ public class HlsDerivativesTests
         HlsDerivatives a = new();
         HlsDerivatives b = new();
 
-        a.Should().Be(expected: b);
+        a.Should().Be(b);
     }
 
     // ── 3. Newtonsoft.Json round-trip ─────────────────────────────────────────
@@ -71,11 +71,11 @@ public class HlsDerivativesTests
             WriteOriginalFilename = false,
         };
 
-        string json = JsonConvert.SerializeObject(value: original);
-        HlsDerivatives? deserialized = JsonConvert.DeserializeObject<HlsDerivatives>(value: json);
+        string json = JsonConvert.SerializeObject(original);
+        HlsDerivatives? deserialized = JsonConvert.DeserializeObject<HlsDerivatives>(json);
 
         deserialized.Should().NotBeNull();
-        deserialized.Should().Be(expected: original);
+        deserialized.Should().Be(original);
     }
 
     // ── 4. `with` doesn't mutate other fields ─────────────────────────────────
@@ -87,17 +87,17 @@ public class HlsDerivativesTests
         HlsDerivatives modified = defaults with { GenerateIFramePlaylists = true };
 
         modified.GenerateIFramePlaylists.Should().BeTrue();
-        modified.GenerateMetadataJson.Should().Be(expected: defaults.GenerateMetadataJson);
-        modified.GenerateSpriteVtt.Should().Be(expected: defaults.GenerateSpriteVtt);
-        modified.SpriteVttIntervalSeconds.Should().Be(expected: defaults.SpriteVttIntervalSeconds);
-        modified.SpriteVttColumns.Should().Be(expected: defaults.SpriteVttColumns);
-        modified.SpriteVttRows.Should().Be(expected: defaults.SpriteVttRows);
-        modified.SpriteVttThumbnailWidth.Should().Be(expected: defaults.SpriteVttThumbnailWidth);
-        modified.GenerateChapters.Should().Be(expected: defaults.GenerateChapters);
-        modified.GenerateFontsJson.Should().Be(expected: defaults.GenerateFontsJson);
-        modified.GenerateThumbnailTrack.Should().Be(expected: defaults.GenerateThumbnailTrack);
-        modified.ExtractClosedCaptions.Should().Be(expected: defaults.ExtractClosedCaptions);
-        modified.GenerateMasterPlaylist.Should().Be(expected: defaults.GenerateMasterPlaylist);
-        modified.WriteOriginalFilename.Should().Be(expected: defaults.WriteOriginalFilename);
+        modified.GenerateMetadataJson.Should().Be(defaults.GenerateMetadataJson);
+        modified.GenerateSpriteVtt.Should().Be(defaults.GenerateSpriteVtt);
+        modified.SpriteVttIntervalSeconds.Should().Be(defaults.SpriteVttIntervalSeconds);
+        modified.SpriteVttColumns.Should().Be(defaults.SpriteVttColumns);
+        modified.SpriteVttRows.Should().Be(defaults.SpriteVttRows);
+        modified.SpriteVttThumbnailWidth.Should().Be(defaults.SpriteVttThumbnailWidth);
+        modified.GenerateChapters.Should().Be(defaults.GenerateChapters);
+        modified.GenerateFontsJson.Should().Be(defaults.GenerateFontsJson);
+        modified.GenerateThumbnailTrack.Should().Be(defaults.GenerateThumbnailTrack);
+        modified.ExtractClosedCaptions.Should().Be(defaults.ExtractClosedCaptions);
+        modified.GenerateMasterPlaylist.Should().Be(defaults.GenerateMasterPlaylist);
+        modified.WriteOriginalFilename.Should().Be(defaults.WriteOriginalFilename);
     }
 }

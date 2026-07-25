@@ -37,25 +37,25 @@ public class GuidKeyDictionaryConverter<TValue> : JsonConverter
         JObject jObject;
         try
         {
-            jObject = JObject.Load(reader: reader);
+            jObject = JObject.Load(reader);
         }
         catch (JsonReaderException exception)
         {
-            Logger.Error(message: exception, level: LogEventLevel.Error);
+            Logger.Error(exception, LogEventLevel.Error);
             return dictionary;
         }
 
         foreach (JProperty property in jObject.Properties())
-            if (Guid.TryParse(input: (ReadOnlySpan<char>)property.Name, result: out Guid key))
+            if (Guid.TryParse((ReadOnlySpan<char>)property.Name, out Guid key))
             {
-                TValue? value = property.Value.ToObject<TValue>(jsonSerializer: serializer);
-                dictionary[key: key] = value;
+                TValue? value = property.Value.ToObject<TValue>(serializer);
+                dictionary[key] = value;
             }
             else
             {
                 // Handle invalid GUIDs here, e.g., set to Guid.Empty or skip
-                TValue? value = property.Value.ToObject<TValue>(jsonSerializer: serializer);
-                dictionary[key: Guid.Empty] = value;
+                TValue? value = property.Value.ToObject<TValue>(serializer);
+                dictionary[Guid.Empty] = value;
             }
 
         return dictionary;
@@ -68,8 +68,8 @@ public class GuidKeyDictionaryConverter<TValue> : JsonConverter
 
         if (dictionary != null)
             foreach (KeyValuePair<Guid, TValue> kvp in dictionary)
-                jObject.Add(propertyName: kvp.Key.ToString(), value: JToken.FromObject(o: kvp.Value, jsonSerializer: serializer));
+                jObject.Add(kvp.Key.ToString(), JToken.FromObject(kvp.Value, serializer));
 
-        jObject.WriteTo(writer: writer);
+        jObject.WriteTo(writer);
     }
 }

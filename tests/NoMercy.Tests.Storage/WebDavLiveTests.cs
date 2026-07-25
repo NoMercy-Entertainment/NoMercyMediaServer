@@ -22,12 +22,12 @@ namespace NoMercy.Tests.Storage;
 // last test.
 // ============================================================================
 
-[Collection(name: "StorageBackends")]
+[Collection("StorageBackends")]
 public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 {
     private WebDavStorageDriver Driver()
     {
-        Skip.If(condition: !fix.Available, reason: fix.StartupError ?? "storage container not available");
+        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
         return fix.BuildWebDavDriver();
     }
 
@@ -45,9 +45,9 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
     {
         using WebDavStorageDriver driver = Driver();
         List<string> entries = driver
-            .EnumerateFileSystemEntries(directory: "/", searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+            .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
             .ToList();
-        Console.WriteLine(value: $"[WebDAV] root entry count: {entries.Count}");
+        Console.WriteLine($"[WebDAV] root entry count: {entries.Count}");
     }
 
     [SkippableFact]
@@ -55,21 +55,21 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
     {
         using WebDavStorageDriver driver = Driver();
         string marker = $"{ScratchName()}.bin";
-        await using (Stream w = driver.OpenWrite(path: marker, overwrite: true))
-            await w.WriteAsync(buffer: new byte[4]);
+        await using (Stream w = driver.OpenWrite(marker, true))
+            await w.WriteAsync(new byte[4]);
 
         try
         {
             List<string> entries = driver
-                .EnumerateFileSystemEntries(directory: "/", searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+                .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
                 .ToList();
 
-            entries.Should().NotContain(predicate: e => e.StartsWith("http", StringComparison.Ordinal));
-            entries.Should().Contain(predicate: e => e.EndsWith(marker, StringComparison.Ordinal));
+            entries.Should().NotContain(e => e.StartsWith("http", StringComparison.Ordinal));
+            entries.Should().Contain(e => e.EndsWith(marker, StringComparison.Ordinal));
         }
         finally
         {
-            driver.DeleteFile(path: marker);
+            driver.DeleteFile(marker);
         }
     }
 
@@ -78,15 +78,15 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
     {
         using WebDavStorageDriver driver = Driver();
         string dir = ScratchName();
-        driver.CreateDirectory(path: dir);
+        driver.CreateDirectory(dir);
 
         try
         {
-            driver.DirectoryExists(path: dir).Should().BeTrue(because: $"DirectoryExists('{dir}') must be true");
+            driver.DirectoryExists(dir).Should().BeTrue($"DirectoryExists('{dir}') must be true");
         }
         finally
         {
-            driver.DeleteDirectory(path: dir, recursive: true);
+            driver.DeleteDirectory(dir, true);
         }
     }
 
@@ -95,16 +95,16 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
     {
         using WebDavStorageDriver driver = Driver();
         string file = $"{ScratchName()}.bin";
-        await using (Stream w = driver.OpenWrite(path: file, overwrite: true))
-            await w.WriteAsync(buffer: new byte[8]);
+        await using (Stream w = driver.OpenWrite(file, true))
+            await w.WriteAsync(new byte[8]);
 
         try
         {
-            driver.FileExists(path: file).Should().BeTrue();
+            driver.FileExists(file).Should().BeTrue();
         }
         finally
         {
-            driver.DeleteFile(path: file);
+            driver.DeleteFile(file);
         }
     }
 
@@ -116,18 +116,18 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            driver.CreateDirectory(path: scratch);
-            driver.DirectoryExists(path: scratch).Should().BeTrue();
+            driver.CreateDirectory(scratch);
+            driver.DirectoryExists(scratch).Should().BeTrue();
         }
         finally
         {
             try
             {
-                driver.DeleteDirectory(path: scratch, recursive: true);
+                driver.DeleteDirectory(scratch, true);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(value: $"[WebDAV] cleanup warning: {ex.Message}");
+                Console.WriteLine($"[WebDAV] cleanup warning: {ex.Message}");
             }
         }
 
@@ -140,27 +140,27 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
         using WebDavStorageDriver driver = Driver();
         string scratch = $"{ScratchName()}.bin";
         byte[] expected = new byte[16 * 1024];
-        new Random(Seed: 1337).NextBytes(buffer: expected);
+        new Random(1337).NextBytes(expected);
 
         try
         {
-            await using (Stream w = driver.OpenWrite(path: scratch, overwrite: true))
-                await w.WriteAsync(buffer: expected);
+            await using (Stream w = driver.OpenWrite(scratch, true))
+                await w.WriteAsync(expected);
 
-            await using Stream r = driver.OpenRead(path: scratch);
+            await using Stream r = driver.OpenRead(scratch);
             using MemoryStream ms = new();
-            await r.CopyToAsync(destination: ms);
-            ms.ToArray().Should().Equal(elements: expected);
+            await r.CopyToAsync(ms);
+            ms.ToArray().Should().Equal(expected);
         }
         finally
         {
             try
             {
-                driver.DeleteFile(path: scratch);
+                driver.DeleteFile(scratch);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(value: $"[WebDAV] cleanup warning: {ex.Message}");
+                Console.WriteLine($"[WebDAV] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -171,24 +171,24 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
         using WebDavStorageDriver driver = Driver();
         string scratch = $"{ScratchName()}.bin";
         byte[] data = new byte[256];
-        new Random(Seed: 42).NextBytes(buffer: data);
+        new Random(42).NextBytes(data);
 
         try
         {
-            await using (Stream w = driver.OpenWrite(path: scratch, overwrite: true))
-                await w.WriteAsync(buffer: data);
+            await using (Stream w = driver.OpenWrite(scratch, true))
+                await w.WriteAsync(data);
 
-            driver.GetFileSize(path: scratch).Should().Be(expected: 256);
+            driver.GetFileSize(scratch).Should().Be(256);
         }
         finally
         {
             try
             {
-                driver.DeleteFile(path: scratch);
+                driver.DeleteFile(scratch);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(value: $"[WebDAV] cleanup warning: {ex.Message}");
+                Console.WriteLine($"[WebDAV] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -202,21 +202,21 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(path: scratch, overwrite: true))
-                await w.WriteAsync(buffer: data);
+            await using (Stream w = driver.OpenWrite(scratch, true))
+                await w.WriteAsync(data);
 
-            DateTime mtime = driver.GetLastWriteTimeUtc(path: scratch);
-            mtime.Should().BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromMinutes(minutes: 5));
+            DateTime mtime = driver.GetLastWriteTimeUtc(scratch);
+            mtime.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(5));
         }
         finally
         {
             try
             {
-                driver.DeleteFile(path: scratch);
+                driver.DeleteFile(scratch);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(value: $"[WebDAV] cleanup warning: {ex.Message}");
+                Console.WriteLine($"[WebDAV] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -228,32 +228,32 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
         string src = $"{ScratchName()}-src.bin";
         string dst = $"{ScratchName()}-dst.bin";
         byte[] data = new byte[64];
-        new Random(Seed: 7).NextBytes(buffer: data);
+        new Random(7).NextBytes(data);
 
         try
         {
-            await using (Stream w = driver.OpenWrite(path: src, overwrite: true))
-                await w.WriteAsync(buffer: data);
+            await using (Stream w = driver.OpenWrite(src, true))
+                await w.WriteAsync(data);
 
-            driver.MoveFile(source: src, destination: dst);
+            driver.MoveFile(src, dst);
 
-            driver.FileExists(path: src).Should().BeFalse();
-            driver.FileExists(path: dst).Should().BeTrue();
+            driver.FileExists(src).Should().BeFalse();
+            driver.FileExists(dst).Should().BeTrue();
 
-            await using Stream r = driver.OpenRead(path: dst);
+            await using Stream r = driver.OpenRead(dst);
             using MemoryStream ms = new();
-            await r.CopyToAsync(destination: ms);
-            ms.ToArray().Should().Equal(elements: data);
+            await r.CopyToAsync(ms);
+            ms.ToArray().Should().Equal(data);
         }
         finally
         {
             try
             {
-                driver.DeleteFile(path: dst);
+                driver.DeleteFile(dst);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(value: $"[WebDAV] cleanup warning: {ex.Message}");
+                Console.WriteLine($"[WebDAV] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -265,36 +265,36 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
         string src = $"{ScratchName()}-src.bin";
         string dst = $"{ScratchName()}-dst.bin";
         byte[] data = new byte[64];
-        new Random(Seed: 99).NextBytes(buffer: data);
+        new Random(99).NextBytes(data);
 
         try
         {
-            await using (Stream w = driver.OpenWrite(path: src, overwrite: true))
-                await w.WriteAsync(buffer: data);
+            await using (Stream w = driver.OpenWrite(src, true))
+                await w.WriteAsync(data);
 
-            driver.CopyFile(source: src, destination: dst, overwrite: true);
+            driver.CopyFile(src, dst, true);
 
-            driver.FileExists(path: src).Should().BeTrue();
-            driver.FileExists(path: dst).Should().BeTrue();
+            driver.FileExists(src).Should().BeTrue();
+            driver.FileExists(dst).Should().BeTrue();
         }
         finally
         {
             try
             {
-                driver.DeleteFile(path: src);
+                driver.DeleteFile(src);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(value: $"[WebDAV] cleanup warning (src): {ex.Message}");
+                Console.WriteLine($"[WebDAV] cleanup warning (src): {ex.Message}");
             }
 
             try
             {
-                driver.DeleteFile(path: dst);
+                driver.DeleteFile(dst);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(value: $"[WebDAV] cleanup warning (dst): {ex.Message}");
+                Console.WriteLine($"[WebDAV] cleanup warning (dst): {ex.Message}");
             }
         }
     }
@@ -308,15 +308,15 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(path: scratch, overwrite: true))
-                await w.WriteAsync(buffer: data);
+            await using (Stream w = driver.OpenWrite(scratch, true))
+                await w.WriteAsync(data);
 
             // WebDAV enforces the no-overwrite guard at PUT time (If-None-Match: *
             // → HTTP 412), which the upload stream surfaces on flush/dispose.
             Func<Task> act = async () =>
             {
-                await using Stream w = driver.OpenWrite(path: scratch, overwrite: false);
-                await w.WriteAsync(buffer: data);
+                await using Stream w = driver.OpenWrite(scratch, false);
+                await w.WriteAsync(data);
             };
             await act.Should().ThrowAsync<IOException>();
         }
@@ -324,11 +324,11 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
         {
             try
             {
-                driver.DeleteFile(path: scratch);
+                driver.DeleteFile(scratch);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(value: $"[WebDAV] cleanup warning: {ex.Message}");
+                Console.WriteLine($"[WebDAV] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -338,7 +338,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
     {
         using WebDavStorageDriver driver = Driver();
         string dir = ScratchName();
-        driver.CreateDirectory(path: dir);
+        driver.CreateDirectory(dir);
         string fileA = $"{dir}/a.txt";
         string fileB = $"{dir}/b.txt";
         string fileC = $"{dir}/c.bin";
@@ -346,29 +346,29 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(path: fileA, overwrite: true))
-                await w.WriteAsync(buffer: bytes);
-            await using (Stream w = driver.OpenWrite(path: fileB, overwrite: true))
-                await w.WriteAsync(buffer: bytes);
-            await using (Stream w = driver.OpenWrite(path: fileC, overwrite: true))
-                await w.WriteAsync(buffer: bytes);
+            await using (Stream w = driver.OpenWrite(fileA, true))
+                await w.WriteAsync(bytes);
+            await using (Stream w = driver.OpenWrite(fileB, true))
+                await w.WriteAsync(bytes);
+            await using (Stream w = driver.OpenWrite(fileC, true))
+                await w.WriteAsync(bytes);
 
             List<string> txtEntries = driver
-                .EnumerateFileSystemEntries(directory: dir, searchPattern: "*.txt", option: SearchOption.TopDirectoryOnly)
+                .EnumerateFileSystemEntries(dir, "*.txt", SearchOption.TopDirectoryOnly)
                 .ToList();
-            txtEntries.Should().HaveCount(expected: 2);
-            txtEntries.Should().Contain(predicate: e => e.EndsWith("a.txt", StringComparison.Ordinal));
-            txtEntries.Should().Contain(predicate: e => e.EndsWith("b.txt", StringComparison.Ordinal));
+            txtEntries.Should().HaveCount(2);
+            txtEntries.Should().Contain(e => e.EndsWith("a.txt", StringComparison.Ordinal));
+            txtEntries.Should().Contain(e => e.EndsWith("b.txt", StringComparison.Ordinal));
         }
         finally
         {
             try
             {
-                driver.DeleteDirectory(path: dir, recursive: true);
+                driver.DeleteDirectory(dir, true);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(value: $"[WebDAV] cleanup warning: {ex.Message}");
+                Console.WriteLine($"[WebDAV] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -378,8 +378,8 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
     {
         using WebDavStorageDriver driver = Driver();
         // WebDAV has no hidden concept; IsHidden must not throw and returns a bool.
-        bool result = driver.IsHidden(path: ".hidden-file");
-        result.Should().Be(expected: result);
+        bool result = driver.IsHidden(".hidden-file");
+        result.Should().Be(result);
     }
 
     [SkippableFact]
@@ -393,20 +393,20 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            driver.CreateDirectory(path: src);
-            await using (Stream w = driver.OpenWrite(path: file, overwrite: true))
-                await w.WriteAsync(buffer: data);
+            driver.CreateDirectory(src);
+            await using (Stream w = driver.OpenWrite(file, true))
+                await w.WriteAsync(data);
 
-            driver.MoveDirectory(source: src, destination: dst);
+            driver.MoveDirectory(src, dst);
 
-            driver.DirectoryExists(path: src).Should().BeFalse();
-            driver.DirectoryExists(path: dst).Should().BeTrue();
+            driver.DirectoryExists(src).Should().BeFalse();
+            driver.DirectoryExists(dst).Should().BeTrue();
         }
         finally
         {
             try
             {
-                driver.DeleteDirectory(path: src, recursive: true);
+                driver.DeleteDirectory(src, true);
             }
             catch
             {
@@ -415,11 +415,11 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
             try
             {
-                driver.DeleteDirectory(path: dst, recursive: true);
+                driver.DeleteDirectory(dst, true);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(value: $"[WebDAV] cleanup warning: {ex.Message}");
+                Console.WriteLine($"[WebDAV] cleanup warning: {ex.Message}");
             }
         }
     }

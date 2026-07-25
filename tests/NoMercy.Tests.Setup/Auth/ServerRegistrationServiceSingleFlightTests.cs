@@ -17,7 +17,6 @@ using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Status;
 using NoMercy.Setup.Auth;
-using Xunit;
 
 namespace NoMercy.Tests.Setup.Auth;
 
@@ -43,7 +42,7 @@ public class ServerRegistrationServiceSingleFlightTests
     private static ServerRegistrationService MakeService()
     {
         Mock<IAuthTokenStore> authTokenStore = new();
-        authTokenStore.Setup(expression: a => a.AccessToken).Returns(value: "test-access-token");
+        authTokenStore.Setup(a => a.AccessToken).Returns("test-access-token");
 
         Mock<IDbContextFactory<AppDbContext>> dbContextFactory = new();
         // Deliberately unconfigured: GetDeviceName() catches any failure here
@@ -53,28 +52,28 @@ public class ServerRegistrationServiceSingleFlightTests
         Mock<IUserProvisioningService> userProvisioning = new();
 
         Mock<IConnectivityStatus> connectivity = new();
-        connectivity.Setup(expression: c => c.StunPublicIp).Returns(value: (string?)null);
-        connectivity.Setup(expression: c => c.StunPublicPort).Returns(value: (int?)null);
-        connectivity.Setup(expression: c => c.NatStatus).Returns(value: NatStatus.None);
+        connectivity.Setup(c => c.StunPublicIp).Returns((string?)null);
+        connectivity.Setup(c => c.StunPublicPort).Returns((int?)null);
+        connectivity.Setup(c => c.NatStatus).Returns(NatStatus.None);
 
         Mock<ICertificateService> certificateService = new();
 
         return new(
-            authTokenStore: authTokenStore.Object,
-            appDbContextFactory: dbContextFactory.Object,
-            userProvisioningService: userProvisioning.Object,
-            connectivityStatus: connectivity.Object,
-            certificateService: certificateService.Object
+            authTokenStore.Object,
+            dbContextFactory.Object,
+            userProvisioning.Object,
+            connectivity.Object,
+            certificateService.Object
         );
     }
 
     private static void SetLastFailureUtc(ServerRegistrationService service, DateTime value)
     {
         FieldInfo field = typeof(ServerRegistrationService).GetField(
-            name: "_lastFailureUtc",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "_lastFailureUtc",
+            BindingFlags.NonPublic | BindingFlags.Instance
         )!;
-        field.SetValue(obj: service, value: value);
+        field.SetValue(service, value);
     }
 
     [Fact]
@@ -82,15 +81,15 @@ public class ServerRegistrationServiceSingleFlightTests
     {
         ServerRegistrationService service = MakeService();
 
-        Task first = service.Init(maxRetries: 1);
-        Task second = service.Init(maxRetries: 1);
+        Task first = service.Init(1);
+        Task second = service.Init(1);
 
-        first.Should().BeSameAs(expected: second);
+        first.Should().BeSameAs(second);
 
         // The real HTTP call will fail in this offline test environment —
         // observe the fault so it never surfaces as an unobserved task
         // exception once this background Task is garbage collected.
-        _ = first.ContinueWith(continuationFunction: t => _ = t.Exception, continuationOptions: TaskContinuationOptions.ExecuteSynchronously);
+        _ = first.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.ExecuteSynchronously);
     }
 
     [Fact]
@@ -98,14 +97,14 @@ public class ServerRegistrationServiceSingleFlightTests
     {
         ServerRegistrationService service = MakeService();
 
-        Task first = service.Init(maxRetries: 1);
-        Task second = service.Init(maxRetries: 1);
-        Task third = service.Init(maxRetries: 1);
+        Task first = service.Init(1);
+        Task second = service.Init(1);
+        Task third = service.Init(1);
 
-        first.Should().BeSameAs(expected: second);
-        second.Should().BeSameAs(expected: third);
+        first.Should().BeSameAs(second);
+        second.Should().BeSameAs(third);
 
-        _ = first.ContinueWith(continuationFunction: t => _ = t.Exception, continuationOptions: TaskContinuationOptions.ExecuteSynchronously);
+        _ = first.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.ExecuteSynchronously);
     }
 
     [Fact]
@@ -115,10 +114,10 @@ public class ServerRegistrationServiceSingleFlightTests
         // single-flight check — a cooling-down service must not silently
         // join (or start) a registration attempt.
         ServerRegistrationService service = MakeService();
-        SetLastFailureUtc(service: service, value: DateTime.UtcNow);
+        SetLastFailureUtc(service, DateTime.UtcNow);
 
-        Action act = () => service.Init(maxRetries: 1);
+        Action act = () => service.Init(1);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*cooldown*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*cooldown*");
     }
 }

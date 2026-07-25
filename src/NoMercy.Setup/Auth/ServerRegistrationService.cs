@@ -36,10 +36,10 @@ public class ServerRegistrationService : IServerRegistrationService
     private readonly INetworkDiscovery? _networkDiscovery;
 
     private static readonly int[] BackoffSeconds = [2, 5, 15, 30, 60];
-    private readonly SemaphoreSlim _initLock = new(initialCount: 1, maxCount: 1);
+    private readonly SemaphoreSlim _initLock = new(1, 1);
     private Task? _inFlightInit;
     private DateTime _lastFailureUtc = DateTime.MinValue;
-    private static readonly TimeSpan FailureCooldown = TimeSpan.FromSeconds(seconds: 60);
+    private static readonly TimeSpan FailureCooldown = TimeSpan.FromSeconds(60);
 
     private readonly IAuthTokenStore _authTokenStore;
     private readonly ICertificateService _certificateService;
@@ -77,9 +77,9 @@ public class ServerRegistrationService : IServerRegistrationService
         if (sinceLastFailure < FailureCooldown)
         {
             Logger.Register(
-                message: $"Registration failed recently, cooling down for {(FailureCooldown - sinceLastFailure).TotalSeconds:F0}s"
+                $"Registration failed recently, cooling down for {(FailureCooldown - sinceLastFailure).TotalSeconds:F0}s"
             );
-            throw new InvalidOperationException(message: "Registration on cooldown after recent failure");
+            throw new InvalidOperationException("Registration on cooldown after recent failure");
         }
 
         _initLock.Wait();
@@ -87,7 +87,7 @@ public class ServerRegistrationService : IServerRegistrationService
         {
             if (_inFlightInit is null || _inFlightInit.IsCompleted)
             {
-                _inFlightInit = RunRegistrationAsync(maxRetries: maxRetries);
+                _inFlightInit = RunRegistrationAsync(maxRetries);
             }
 
             return _inFlightInit;
@@ -102,9 +102,9 @@ public class ServerRegistrationService : IServerRegistrationService
     {
         try
         {
-            await RegisterServer(maxRetries: maxRetries);
-            await AssignServerWithRetry(maxRetries: maxRetries);
-            await _certificateService.RenewSslCertificate(accessToken: _authTokenStore.AccessToken);
+            await RegisterServer(maxRetries);
+            await AssignServerWithRetry(maxRetries);
+            await _certificateService.RenewSslCertificate(_authTokenStore.AccessToken);
         }
         catch
         {
@@ -115,45 +115,45 @@ public class ServerRegistrationService : IServerRegistrationService
 
     private async Task RegisterServer(int maxRetries)
     {
-        Logger.Register(message: "Registering Server, this takes a moment...");
+        Logger.Register("Registering Server, this takes a moment...");
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
             try
             {
                 Dictionary<string, string> serverData = await GetServerInfo();
-                GenericHttpClient authClient = new(baseUrl: ExternalServicesConfig.Current.ApiServerBaseUrl);
+                GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
                 authClient.SetDefaultHeaders(
-                    userAgent: ExternalServicesConfig.Current.UserAgent,
-                    bearerToken: _authTokenStore.AccessToken
+                    ExternalServicesConfig.Current.UserAgent,
+                    _authTokenStore.AccessToken
                 );
                 string response = await authClient.SendAndReadAsync(
-                    method: HttpMethod.Post,
-                    endpoint: "register",
-                    content: new FormUrlEncodedContent(nameValueCollection: serverData)
+                    HttpMethod.Post,
+                    "register",
+                    new FormUrlEncodedContent(serverData)
                 );
 
-                object? data = JsonConvert.DeserializeObject(value: response);
+                object? data = JsonConvert.DeserializeObject(response);
                 if (data == null)
                     throw new InvalidOperationException(
-                        message: "Failed to register Server — empty response"
+                        "Failed to register Server — empty response"
                     );
 
-                Logger.Register(message: "Server registered successfully");
+                Logger.Register("Server registered successfully");
                 return;
             }
             catch (Exception ex) when (attempt < maxRetries)
             {
-                int delay = BackoffSeconds[Math.Min(val1: attempt - 1, val2: BackoffSeconds.Length - 1)];
+                int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
                 Logger.Register(
-                    message: $"Registration failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
-                    level: LogEventLevel.Warning
+                    $"Registration failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    LogEventLevel.Warning
                 );
 
-                if (ex.Message.Contains(value: "401") || ex.Message.Contains(value: "Unauthorized"))
+                if (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
                     break;
 
-                await Task.Delay(delay: TimeSpan.FromSeconds(seconds: delay));
+                await Task.Delay(TimeSpan.FromSeconds(delay));
             }
         }
     }
@@ -169,16 +169,16 @@ public class ServerRegistrationService : IServerRegistrationService
             }
             catch (Exception ex) when (attempt < maxRetries)
             {
-                int delay = BackoffSeconds[Math.Min(val1: attempt - 1, val2: BackoffSeconds.Length - 1)];
+                int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
                 Logger.Register(
-                    message: $"Server assignment failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
-                    level: LogEventLevel.Warning
+                    $"Server assignment failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    LogEventLevel.Warning
                 );
 
-                if (ex.Message.Contains(value: "401") || ex.Message.Contains(value: "Unauthorized"))
+                if (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
                     break;
 
-                await Task.Delay(delay: TimeSpan.FromSeconds(seconds: delay));
+                await Task.Delay(TimeSpan.FromSeconds(delay));
             }
         }
     }
@@ -187,24 +187,24 @@ public class ServerRegistrationService : IServerRegistrationService
     {
         Dictionary<string, string> serverData = await GetServerInfo();
 
-        Logger.Register(message: "Assigning Server, this takes a moment...");
+        Logger.Register("Assigning Server, this takes a moment...");
 
-        GenericHttpClient authClient = new(baseUrl: ExternalServicesConfig.Current.ApiServerBaseUrl);
+        GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
         authClient.SetDefaultHeaders(
-            userAgent: ExternalServicesConfig.Current.UserAgent,
-            bearerToken: _authTokenStore.AccessToken
+            ExternalServicesConfig.Current.UserAgent,
+            _authTokenStore.AccessToken
         );
 
         string response = await authClient.SendAndReadAsync(
-            method: HttpMethod.Post,
-            endpoint: "assign",
-            content: new FormUrlEncodedContent(nameValueCollection: serverData)
+            HttpMethod.Post,
+            "assign",
+            new FormUrlEncodedContent(serverData)
         );
 
         ServerRegisterResponse? data = response.FromJson<ServerRegisterResponse>();
 
         if (data?.Data is null || data.Data.Status == "error")
-            throw new(message: "Failed to assign Server");
+            throw new("Failed to assign Server");
 
         User user = new()
         {
@@ -220,9 +220,9 @@ public class ServerRegistrationService : IServerRegistrationService
             VideoTranscoding = true,
         };
 
-        await _userProvisioningService.ProvisionOwner(user: user);
+        await _userProvisioningService.ProvisionOwner(user);
 
-        Logger.Register(message: "Server assigned successfully");
+        Logger.Register("Server assigned successfully");
     }
 
     public async Task GetTunnelAvailability()
@@ -231,16 +231,16 @@ public class ServerRegistrationService : IServerRegistrationService
         {
             Dictionary<string, string> serverData = await GetServerInfo();
 
-            GenericHttpClient authClient = new(baseUrl: ExternalServicesConfig.Current.ApiServerBaseUrl);
+            GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
             authClient.SetDefaultHeaders(
-                userAgent: ExternalServicesConfig.Current.UserAgent,
-                bearerToken: _authTokenStore.AccessToken
+                ExternalServicesConfig.Current.UserAgent,
+                _authTokenStore.AccessToken
             );
 
             string response = await authClient.SendAndReadAsync(
-                method: HttpMethod.Post,
-                endpoint: "tunnel",
-                content: new FormUrlEncodedContent(nameValueCollection: serverData)
+                HttpMethod.Post,
+                "tunnel",
+                new FormUrlEncodedContent(serverData)
             );
 
             ServerTunnelAvailabilityResponse? data =
@@ -251,11 +251,11 @@ public class ServerRegistrationService : IServerRegistrationService
 
             _connectivityStatus.CloudflareTunnelToken = data.Token;
 
-            Logger.Register(message: "Cloudflare tunnel is available", level: LogEventLevel.Verbose);
+            Logger.Register("Cloudflare tunnel is available", LogEventLevel.Verbose);
         }
         catch (Exception ex)
         {
-            Logger.Register(message: $"Tunnel check: {ex.Message}", level: LogEventLevel.Debug);
+            Logger.Register($"Tunnel check: {ex.Message}", LogEventLevel.Debug);
         }
     }
 
@@ -284,7 +284,7 @@ public class ServerRegistrationService : IServerRegistrationService
         try
         {
             await using AppDbContext appContext = await _appDbContextFactory.CreateDbContextAsync();
-            Configuration? device = await appContext.Configuration.FirstOrDefaultAsync(predicate: device =>
+            Configuration? device = await appContext.Configuration.FirstOrDefaultAsync(device =>
                 device.Key == "serverName"
             );
 

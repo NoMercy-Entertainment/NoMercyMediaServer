@@ -31,30 +31,30 @@ public class VideoStreamInfoVfrThresholdTests
     // ── Above the 1% threshold → VFR ────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: [24.0, 24.5, true])] // ~2% spread, classic VFR
-    [InlineData(data: [30.0, 24.5, true])] // 18% spread
-    [InlineData(data: [60.0, 59.0, true])] // 1.67% spread (just over threshold)
-    [InlineData(data: [23.976, 25.0, true])] // 4.3% spread, common pulldown artefact
+    [InlineData([24.0, 24.5, true])] // ~2% spread, classic VFR
+    [InlineData([30.0, 24.5, true])] // 18% spread
+    [InlineData([60.0, 59.0, true])] // 1.67% spread (just over threshold)
+    [InlineData([23.976, 25.0, true])] // 4.3% spread, common pulldown artefact
     public void Crosses_one_percent_threshold_flags_as_VFR(
         double realFps,
         double avgFps,
         bool expected
     )
     {
-        VideoStreamInfo stream = MakeStream(real: realFps, avg: avgFps);
-        stream.IsVariableFrameRate.Should().Be(expected: expected);
+        VideoStreamInfo stream = MakeStream(realFps, avgFps);
+        stream.IsVariableFrameRate.Should().Be(expected);
     }
 
     // ── At or below the 1% threshold → CFR ─────────────────────────────────
 
     [Theory]
-    [InlineData(data: [24.0, 24.0])] // identical
-    [InlineData(data: [60.0, 60.0])] // identical 60fps
-    [InlineData(data: [23.976, 23.97])] // sub-percent jitter
-    [InlineData(data: [60.0, 59.94])] // 0.1% spread — broadcast NTSC jitter, NOT VFR
+    [InlineData([24.0, 24.0])] // identical
+    [InlineData([60.0, 60.0])] // identical 60fps
+    [InlineData([23.976, 23.97])] // sub-percent jitter
+    [InlineData([60.0, 59.94])] // 0.1% spread — broadcast NTSC jitter, NOT VFR
     public void At_or_below_one_percent_threshold_treated_as_CFR(double realFps, double avgFps)
     {
-        VideoStreamInfo stream = MakeStream(real: realFps, avg: avgFps);
+        VideoStreamInfo stream = MakeStream(realFps, avgFps);
         stream.IsVariableFrameRate.Should().BeFalse();
     }
 
@@ -63,21 +63,21 @@ public class VideoStreamInfoVfrThresholdTests
     [Fact]
     public void Null_real_frame_rate_returns_false()
     {
-        VideoStreamInfo stream = MakeStream(real: null, avg: 24.0);
+        VideoStreamInfo stream = MakeStream(null, 24.0);
         stream.IsVariableFrameRate.Should().BeFalse();
     }
 
     [Fact]
     public void Null_average_frame_rate_returns_false()
     {
-        VideoStreamInfo stream = MakeStream(real: 24.0, avg: null);
+        VideoStreamInfo stream = MakeStream(24.0, null);
         stream.IsVariableFrameRate.Should().BeFalse();
     }
 
     [Fact]
     public void Both_null_returns_false()
     {
-        VideoStreamInfo stream = MakeStream(real: null, avg: null);
+        VideoStreamInfo stream = MakeStream(null, null);
         stream.IsVariableFrameRate.Should().BeFalse();
     }
 
@@ -87,7 +87,7 @@ public class VideoStreamInfoVfrThresholdTests
     public void Zero_real_frame_rate_with_max_floor_avoids_divide_by_zero()
     {
         // The implementation divides by Math.Max(real, 1.0) — never zero.
-        VideoStreamInfo stream = MakeStream(real: 0, avg: 0.005);
+        VideoStreamInfo stream = MakeStream(0, 0.005);
         // diff = 0.005, max(0, 1.0) = 1.0 → 0.5% → below threshold → CFR.
         stream.IsVariableFrameRate.Should().BeFalse();
     }
@@ -98,8 +98,8 @@ public class VideoStreamInfoVfrThresholdTests
         // Math.Abs makes it symmetric in the diff, but the denominator is
         // RealFrameRate (with floor). Swapping flips which is denominator.
         // Pin the current asymmetry so refactors are intentional.
-        VideoStreamInfo highReal = MakeStream(real: 30.0, avg: 24.5);
-        VideoStreamInfo highAvg = MakeStream(real: 24.5, avg: 30.0);
+        VideoStreamInfo highReal = MakeStream(30.0, 24.5);
+        VideoStreamInfo highAvg = MakeStream(24.5, 30.0);
 
         highReal.IsVariableFrameRate.Should().BeTrue();
         highAvg.IsVariableFrameRate.Should().BeTrue();
@@ -111,19 +111,18 @@ public class VideoStreamInfoVfrThresholdTests
     public void MediaInfo_aggregates_any_VFR_stream_as_variable()
     {
         MediaInfo info = new(
-            FilePath: "/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 1),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 0,
-            VideoStreams:
+            "/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(1),
+            8000,
+            0,
             [
-                MakeStream(real: 24.0, avg: 24.0), // CFR
-                MakeStream(real: 30.0, avg: 24.5), // VFR
+                MakeStream(24.0, 24.0), // CFR
+                MakeStream(30.0, 24.5), // VFR
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
         info.IsVariableFrameRate.Should().BeTrue();
@@ -133,15 +132,15 @@ public class VideoStreamInfoVfrThresholdTests
     public void MediaInfo_all_CFR_streams_yields_false()
     {
         MediaInfo info = new(
-            FilePath: "/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 1),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 0,
-            VideoStreams: [MakeStream(real: 24.0, avg: 24.0), MakeStream(real: 60.0, avg: 60.0)],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            "/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(1),
+            8000,
+            0,
+            [MakeStream(24.0, 24.0), MakeStream(60.0, 60.0)],
+            [],
+            [],
+            []
         );
 
         info.IsVariableFrameRate.Should().BeFalse();
@@ -151,15 +150,15 @@ public class VideoStreamInfoVfrThresholdTests
     public void MediaInfo_with_no_video_streams_yields_false()
     {
         MediaInfo info = new(
-            FilePath: "/audio.mp3",
-            Format: "mp3",
-            Duration: TimeSpan.FromMinutes(minutes: 5),
-            OverallBitRateKbps: 192,
-            FileSizeBytes: 0,
-            VideoStreams: [],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            "/audio.mp3",
+            "mp3",
+            TimeSpan.FromMinutes(5),
+            192,
+            0,
+            [],
+            [],
+            [],
+            []
         );
 
         info.IsVariableFrameRate.Should().BeFalse();
@@ -169,19 +168,19 @@ public class VideoStreamInfoVfrThresholdTests
 
     private static VideoStreamInfo MakeStream(double? real, double? avg) =>
         new(
-            Index: 0,
-            Codec: "h264",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: avg ?? real ?? 24.0,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            ColorPrimaries: "bt709",
-            ColorTransfer: "bt709",
-            ColorSpace: "bt709",
-            IsDefault: true,
-            BitRateKbps: 5000,
-            AverageFrameRate: avg,
-            RealFrameRate: real
+            0,
+            "h264",
+            1920,
+            1080,
+            avg ?? real ?? 24.0,
+            8,
+            "yuv420p",
+            "bt709",
+            "bt709",
+            "bt709",
+            true,
+            5000,
+            avg,
+            real
         );
 }

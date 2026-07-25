@@ -47,22 +47,22 @@ public class AnalyzeStageQuirkTests
 
     public AnalyzeStageQuirkTests()
     {
-        _stage = new(analyzer: _analyzer.Object, storage: _storage.Object, logger: NullLogger<AnalyzeStage>.Instance);
+        _stage = new(_analyzer.Object, _storage.Object, NullLogger<AnalyzeStage>.Instance);
     }
 
     private async Task<IReadOnlyList<DecisionLog>> ExecuteAndCollect(MediaInfo info)
     {
-        _storage.Setup(expression: s => s.Exists("/in.mkv")).Returns(value: true);
+        _storage.Setup(s => s.Exists("/in.mkv")).Returns(true);
         _analyzer
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.AnalyzeAsync("/in.mkv", It.IsAny<IStorage>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: info);
+            .ReturnsAsync(info);
 
         ScopedDecisionLog log = new();
         EncodingContext context = EncodingContext.Create() with { Decisions = log };
 
-        await _stage.ExecuteAsync(inputPath: "/in.mkv", context: context, ct: CancellationToken.None);
+        await _stage.ExecuteAsync("/in.mkv", context, CancellationToken.None);
 
         return log.Snapshot();
     }
@@ -81,9 +81,9 @@ public class AnalyzeStageQuirkTests
         );
         MediaInfo info = BuildMedia(dolbyVision: dv);
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().ContainSingle(predicate: e => e.Key == "analyze.dv_present");
+        log.Should().ContainSingle(e => e.Key == "analyze.dv_present");
     }
 
     [Fact]
@@ -91,9 +91,9 @@ public class AnalyzeStageQuirkTests
     {
         MediaInfo info = BuildMedia(dolbyVision: null);
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().NotContain(predicate: e => e.Key == "analyze.dv_present");
+        log.Should().NotContain(e => e.Key == "analyze.dv_present");
     }
 
     // ── Variable frame rate ──────────────────────────────────────────────────
@@ -105,9 +105,9 @@ public class AnalyzeStageQuirkTests
         VideoStreamInfo vfrStream = BuildVideoStream(realFps: 30.0, avgFps: 24.5);
         MediaInfo info = BuildMedia(videoStreams: [vfrStream]);
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().ContainSingle(predicate: e => e.Key == "analyze.vfr_detected");
+        log.Should().ContainSingle(e => e.Key == "analyze.vfr_detected");
     }
 
     [Fact]
@@ -116,9 +116,9 @@ public class AnalyzeStageQuirkTests
         VideoStreamInfo cfrStream = BuildVideoStream(realFps: 24.0, avgFps: 24.0);
         MediaInfo info = BuildMedia(videoStreams: [cfrStream]);
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().NotContain(predicate: e => e.Key == "analyze.vfr_detected");
+        log.Should().NotContain(e => e.Key == "analyze.vfr_detected");
     }
 
     [Fact]
@@ -129,9 +129,9 @@ public class AnalyzeStageQuirkTests
         VideoStreamInfo cfr = BuildVideoStream(realFps: 24.0, avgFps: 24.0, index: 2);
         MediaInfo info = BuildMedia(videoStreams: [vfrA, vfrB, cfr]);
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Count(predicate: e => e.Key == "analyze.vfr_detected").Should().Be(expected: 2);
+        log.Count(e => e.Key == "analyze.vfr_detected").Should().Be(2);
     }
 
     [Fact]
@@ -142,27 +142,27 @@ public class AnalyzeStageQuirkTests
         VideoStreamInfo missingFps = BuildVideoStream(realFps: null, avgFps: 24.5);
         MediaInfo info = BuildMedia(videoStreams: [missingFps]);
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().NotContain(predicate: e => e.Key == "analyze.vfr_detected");
+        log.Should().NotContain(e => e.Key == "analyze.vfr_detected");
     }
 
     // ── Font attachments ─────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: "application/x-font-truetype")]
-    [InlineData(data: "font/ttf")]
-    [InlineData(data: "application/x-font-opentype")]
-    [InlineData(data: "application/vnd.ms-opentype")]
+    [InlineData("application/x-font-truetype")]
+    [InlineData("font/ttf")]
+    [InlineData("application/x-font-opentype")]
+    [InlineData("application/vnd.ms-opentype")]
     public async Task Font_attachment_with_any_font_mime_emits_attached_fonts(string mime)
     {
         MediaInfo info = BuildMedia(
             attachments: [new(Index: 0, Codec: "ttf", Filename: "Roboto.ttf", MimeType: mime)]
         );
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().ContainSingle(predicate: e => e.Key == "analyze.attached_fonts");
+        log.Should().ContainSingle(e => e.Key == "analyze.attached_fonts");
     }
 
     [Fact]
@@ -180,9 +180,9 @@ public class AnalyzeStageQuirkTests
             ]
         );
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().ContainSingle(predicate: e => e.Key == "analyze.attached_fonts");
+        log.Should().ContainSingle(e => e.Key == "analyze.attached_fonts");
     }
 
     [Fact]
@@ -197,9 +197,9 @@ public class AnalyzeStageQuirkTests
             ]
         );
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().NotContain(predicate: e => e.Key == "analyze.attached_fonts");
+        log.Should().NotContain(e => e.Key == "analyze.attached_fonts");
     }
 
     [Fact]
@@ -211,9 +211,9 @@ public class AnalyzeStageQuirkTests
             attachments: [new(Index: 0, Codec: "?", Filename: null, MimeType: null)]
         );
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().NotContain(predicate: e => e.Key == "analyze.attached_fonts");
+        log.Should().NotContain(e => e.Key == "analyze.attached_fonts");
     }
 
     [Fact]
@@ -223,15 +223,15 @@ public class AnalyzeStageQuirkTests
         MediaInfo info = BuildMedia(
             attachments:
             [
-                new(Index: 0, Codec: "ttf", Filename: "F1.ttf", MimeType: "application/x-font-truetype"),
-                new(Index: 1, Codec: "ttf", Filename: "F2.ttf", MimeType: "font/ttf"),
-                new(Index: 2, Codec: "otf", Filename: "F3.otf", MimeType: "application/x-font-opentype"),
+                new(0, "ttf", "F1.ttf", "application/x-font-truetype"),
+                new(1, "ttf", "F2.ttf", "font/ttf"),
+                new(2, "otf", "F3.otf", "application/x-font-opentype"),
             ]
         );
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Count(predicate: e => e.Key == "analyze.attached_fonts").Should().Be(expected: 1);
+        log.Count(e => e.Key == "analyze.attached_fonts").Should().Be(1);
     }
 
     // ── Chapters ─────────────────────────────────────────────────────────────
@@ -242,14 +242,14 @@ public class AnalyzeStageQuirkTests
         MediaInfo info = BuildMedia(
             chapters:
             [
-                new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 10), Title: "Intro"),
-                new(Start: TimeSpan.FromMinutes(minutes: 10), End: TimeSpan.FromMinutes(minutes: 45), Title: "Act 1"),
+                new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "Intro"),
+                new(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(45), "Act 1"),
             ]
         );
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().ContainSingle(predicate: e => e.Key == "analyze.chapter_count");
+        log.Should().ContainSingle(e => e.Key == "analyze.chapter_count");
     }
 
     [Fact]
@@ -257,9 +257,9 @@ public class AnalyzeStageQuirkTests
     {
         MediaInfo info = BuildMedia(chapters: []);
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().NotContain(predicate: e => e.Key == "analyze.chapter_count");
+        log.Should().NotContain(e => e.Key == "analyze.chapter_count");
     }
 
     // ── Quiet source ─────────────────────────────────────────────────────────
@@ -269,12 +269,12 @@ public class AnalyzeStageQuirkTests
     {
         MediaInfo info = BuildMedia(); // all defaults
 
-        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info: info);
+        IReadOnlyList<DecisionLog> log = await ExecuteAndCollect(info);
 
-        log.Should().NotContain(predicate: e => e.Key.StartsWith("analyze.dv_"));
-        log.Should().NotContain(predicate: e => e.Key == "analyze.vfr_detected");
-        log.Should().NotContain(predicate: e => e.Key == "analyze.attached_fonts");
-        log.Should().NotContain(predicate: e => e.Key == "analyze.chapter_count");
+        log.Should().NotContain(e => e.Key.StartsWith("analyze.dv_"));
+        log.Should().NotContain(e => e.Key == "analyze.vfr_detected");
+        log.Should().NotContain(e => e.Key == "analyze.attached_fonts");
+        log.Should().NotContain(e => e.Key == "analyze.chapter_count");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -288,7 +288,7 @@ public class AnalyzeStageQuirkTests
         new(
             FilePath: "/in.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 1),
+            Duration: TimeSpan.FromHours(1),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 0,
             VideoStreams: videoStreams ?? [BuildVideoStream()],

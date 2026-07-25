@@ -22,13 +22,13 @@ public class PluginInstanceFactoryTests
     public void Create_InjectsRegisteredDependencyIntoConstructor()
     {
         ServiceCollection services = new();
-        services.AddSingleton(implementationInstance: new Dependency(value: "injected"));
+        services.AddSingleton(new Dependency("injected"));
         using ServiceProvider provider = services.BuildServiceProvider();
 
-        IPlugin plugin = PluginInstanceFactory.Create(services: provider, pluginType: typeof(DependentPlugin));
+        IPlugin plugin = PluginInstanceFactory.Create(provider, typeof(DependentPlugin));
 
         plugin.Should().BeOfType<DependentPlugin>();
-        ((DependentPlugin)plugin).Dependency.Value.Should().Be(expected: "injected");
+        ((DependentPlugin)plugin).Dependency.Value.Should().Be("injected");
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public class PluginInstanceFactoryTests
     {
         using ServiceProvider provider = new ServiceCollection().BuildServiceProvider();
 
-        IPlugin plugin = PluginInstanceFactory.Create(services: provider, pluginType: typeof(SimplePlugin));
+        IPlugin plugin = PluginInstanceFactory.Create(provider, typeof(SimplePlugin));
 
         plugin.Should().BeOfType<SimplePlugin>();
     }
@@ -46,7 +46,7 @@ public class PluginInstanceFactoryTests
     {
         using ServiceProvider provider = new ServiceCollection().BuildServiceProvider();
 
-        Action act = () => PluginInstanceFactory.Create(services: provider, pluginType: typeof(DependentPlugin));
+        Action act = () => PluginInstanceFactory.Create(provider, typeof(DependentPlugin));
 
         act.Should().Throw<InvalidOperationException>();
     }
@@ -61,8 +61,8 @@ public class PluginInstanceFactoryTests
         public Dependency Dependency { get; } = dependency;
         public string Name => "Dependent";
         public string Description => string.Empty;
-        public Guid Id => Guid.Parse(input: "22222222-2222-2222-2222-222222222222");
-        public Version Version => new(major: 1, minor: 0, build: 0);
+        public Guid Id => Guid.Parse("22222222-2222-2222-2222-222222222222");
+        public Version Version => new(1, 0, 0);
 
         public void Initialize(IPluginContext context) { }
 
@@ -73,8 +73,8 @@ public class PluginInstanceFactoryTests
     {
         public string Name => "Simple";
         public string Description => string.Empty;
-        public Guid Id => Guid.Parse(input: "33333333-3333-3333-3333-333333333333");
-        public Version Version => new(major: 1, minor: 0, build: 0);
+        public Guid Id => Guid.Parse("33333333-3333-3333-3333-333333333333");
+        public Version Version => new(1, 0, 0);
 
         public void Initialize(IPluginContext context) { }
 

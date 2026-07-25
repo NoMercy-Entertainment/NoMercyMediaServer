@@ -14,7 +14,6 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.Service.Seeds;
-using Xunit;
 using ConfigurationModel = NoMercy.Database.Models.Common.Configuration;
 
 namespace NoMercy.Tests.Service.Seeds;
@@ -26,7 +25,7 @@ namespace NoMercy.Tests.Service.Seeds;
 /// reads back. It must both INSERT on a fresh database and UPDATE (not
 /// duplicate) on a re-run with a changed port.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class ConfigSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -36,11 +35,11 @@ public sealed class ConfigSeedTests : IDisposable
 
     public ConfigSeedTests()
     {
-        _connection = new(connectionString: "DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
-        _options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection: _connection).Options;
+        _options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options;
 
-        using AppDbContext ctx = new(options: _options);
+        using AppDbContext ctx = new(_options);
         ctx.Database.EnsureCreated();
     }
 
@@ -56,18 +55,18 @@ public sealed class ConfigSeedTests : IDisposable
     {
         RuntimeServerSettings.Current.InternalServerPort = 7626;
         RuntimeServerSettings.Current.ExternalServerPort = 7627;
-        await using AppDbContext context = new(options: _options);
+        await using AppDbContext context = new(_options);
 
         await context.Init();
 
-        ConfigurationModel? internalPort = await context.Configuration.FirstOrDefaultAsync(predicate: c =>
+        ConfigurationModel? internalPort = await context.Configuration.FirstOrDefaultAsync(c =>
             c.Key == "internalPort"
         );
-        ConfigurationModel? externalPort = await context.Configuration.FirstOrDefaultAsync(predicate: c =>
+        ConfigurationModel? externalPort = await context.Configuration.FirstOrDefaultAsync(c =>
             c.Key == "externalPort"
         );
-        Assert.Equal(expected: "7626", actual: internalPort?.Value);
-        Assert.Equal(expected: "7627", actual: externalPort?.Value);
+        Assert.Equal("7626", internalPort?.Value);
+        Assert.Equal("7627", externalPort?.Value);
     }
 
     [Fact]
@@ -75,19 +74,19 @@ public sealed class ConfigSeedTests : IDisposable
     {
         RuntimeServerSettings.Current.InternalServerPort = 7626;
         RuntimeServerSettings.Current.ExternalServerPort = 7626;
-        await using AppDbContext firstRun = new(options: _options);
+        await using AppDbContext firstRun = new(_options);
         await firstRun.Init();
 
         RuntimeServerSettings.Current.InternalServerPort = 8001;
-        await using AppDbContext secondRun = new(options: _options);
+        await using AppDbContext secondRun = new(_options);
         await secondRun.Init();
 
-        await using AppDbContext verifyContext = new(options: _options);
-        int rowCount = await verifyContext.Configuration.CountAsync(predicate: c => c.Key == "internalPort");
+        await using AppDbContext verifyContext = new(_options);
+        int rowCount = await verifyContext.Configuration.CountAsync(c => c.Key == "internalPort");
         ConfigurationModel? internalPort = await verifyContext.Configuration.FirstOrDefaultAsync(
-            predicate: c => c.Key == "internalPort"
+            c => c.Key == "internalPort"
         );
-        Assert.Equal(expected: 1, actual: rowCount);
-        Assert.Equal(expected: "8001", actual: internalPort?.Value);
+        Assert.Equal(1, rowCount);
+        Assert.Equal("8001", internalPort?.Value);
     }
 }

@@ -15,43 +15,43 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Users;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(UserId))]
-[Index(propertyName: nameof(DeviceId))]
-[Index(propertyName: nameof(Category))]
-[Index(propertyName: nameof(MediaId))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(UserId))]
+[Index(nameof(DeviceId))]
+[Index(nameof(Category))]
+[Index(nameof(MediaId))]
 public class ActivityLog : Timestamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [JsonProperty("id")]
     public int Id { get; private set; }
 
-    [JsonProperty(propertyName: "category")]
+    [JsonProperty("category")]
     public required ActivityCategory Category { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "time")]
+    [JsonProperty("time")]
     public required DateTime Time { get; set; }
 
-    [JsonProperty(propertyName: "media_id")]
+    [JsonProperty("media_id")]
     public Ulid? MediaId { get; set; }
 
-    [JsonProperty(propertyName: "success")]
+    [JsonProperty("success")]
     public bool Success { get; set; } = true;
 
-    [JsonProperty(propertyName: "error_code")]
+    [JsonProperty("error_code")]
     public string? ErrorCode { get; set; }
 
-    [JsonProperty(propertyName: "metadata")]
+    [JsonProperty("metadata")]
     public string? Metadata { get; set; }
 
-    [JsonProperty(propertyName: "device_id")]
+    [JsonProperty("device_id")]
     public Ulid DeviceId { get; set; }
     public Device Device { get; set; } = null!;
 
-    [JsonProperty(propertyName: "user_id")]
+    [JsonProperty("user_id")]
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 }

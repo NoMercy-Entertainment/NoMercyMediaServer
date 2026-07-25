@@ -18,6 +18,6 @@ internal class FileMessageEnricher : ILogEventEnricher
 {
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
-        logEvent.RemovePropertyIfPresent(propertyName: "@mt");
+        logEvent.RemovePropertyIfPresent("@mt");
     }
 }

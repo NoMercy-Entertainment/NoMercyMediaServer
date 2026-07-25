@@ -10,10 +10,8 @@
 // -----------------------------------------------------------------------------
 
 using System.Reflection;
-using Moq;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.MediaProcessing.Files;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
@@ -30,42 +28,40 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 // QueueRunner singleton this test layer does not stand up — see the
 // residue note in the coverage report.
 // ---------------------------------------------------------------------------
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class FileManagerStorageOrphanedSubtitlesTests : IDisposable
 {
     private readonly string _tempRoot;
 
     public FileManagerStorageOrphanedSubtitlesTests()
     {
-        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-orphan-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempRoot);
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"nm-orphan-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempRoot);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempRoot))
-            Directory.Delete(path: _tempRoot, recursive: true);
+        if (Directory.Exists(_tempRoot))
+            Directory.Delete(_tempRoot, true);
     }
 
     [Fact]
     public void SelectOrphanedBitmapSubtitles_BitmapWithoutTextSibling_IsReturned()
     {
-        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles(subtitleFileNames:
-        [
+        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles([
             "Movie.jpn.full.sup",
         ]);
 
         orphans.Should().ContainSingle();
-        orphans[index: 0].Language.Should().Be(expected: "jpn");
-        orphans[index: 0].Variant.Should().Be(expected: "full");
-        orphans[index: 0].MediaTitle.Should().Be(expected: "Movie");
+        orphans[0].Language.Should().Be("jpn");
+        orphans[0].Variant.Should().Be("full");
+        orphans[0].MediaTitle.Should().Be("Movie");
     }
 
     [Fact]
     public void SelectOrphanedBitmapSubtitles_BitmapWithTextSibling_IsExcluded()
     {
-        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles(subtitleFileNames:
-        [
+        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles([
             "Movie.jpn.full.sup",
             "Movie.jpn.full.vtt",
         ]);
@@ -76,8 +72,7 @@ public sealed class FileManagerStorageOrphanedSubtitlesTests : IDisposable
     [Fact]
     public void SelectOrphanedBitmapSubtitles_UnrecognizedFileName_IsIgnored()
     {
-        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles(subtitleFileNames:
-        [
+        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles([
             "README.txt",
         ]);
 
@@ -87,18 +82,17 @@ public sealed class FileManagerStorageOrphanedSubtitlesTests : IDisposable
     [Fact]
     public void SelectOrphanedBitmapSubtitles_MultipleOrphans_MixedWithTextTracks()
     {
-        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles(subtitleFileNames:
-        [
+        IReadOnlyList<OrphanedBitmapSubtitle> orphans = FileManager.SelectOrphanedBitmapSubtitles([
             "Show.jpn.full.sup", // orphan
             "Show.eng.full.sup", // has sibling
             "Show.eng.full.srt", // sibling
             "Show.fre.full.vob", // orphan
         ]);
 
-        orphans.Should().HaveCount(expected: 2);
-        orphans.Should().Contain(predicate: o => o.Language == "jpn");
-        orphans.Should().Contain(predicate: o => o.Language == "fre");
-        orphans.Should().NotContain(predicate: o => o.Language == "eng");
+        orphans.Should().HaveCount(2);
+        orphans.Should().Contain(o => o.Language == "jpn");
+        orphans.Should().Contain(o => o.Language == "fre");
+        orphans.Should().NotContain(o => o.Language == "eng");
     }
 
     // -----------------------------------------------------------------------
@@ -113,23 +107,23 @@ public sealed class FileManagerStorageOrphanedSubtitlesTests : IDisposable
     {
         MethodInfo method =
             typeof(FileManager).GetMethod(
-                name: "DispatchOrphanedBitmapOcrBackfill",
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
-            ) ?? throw new InvalidOperationException(message: "DispatchOrphanedBitmapOcrBackfill not found");
-        method.Invoke(obj: null, parameters: [storage, folder, hostFolder]);
+                "DispatchOrphanedBitmapOcrBackfill",
+                BindingFlags.NonPublic | BindingFlags.Static
+            ) ?? throw new InvalidOperationException("DispatchOrphanedBitmapOcrBackfill not found");
+        method.Invoke(null, [storage, folder, hostFolder]);
     }
 
     private static IStorage BuildLocalStorage()
     {
         LocalStorageDriver driver = new();
-        return new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
+        return new LocalStorage(driver, new StoragePathGuard([], driver));
     }
 
     [Fact]
     public void DispatchOrphanedBitmapOcrBackfill_NoSubtitlesFolder_DoesNothing()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.NoSubsFolder");
-        Directory.CreateDirectory(path: hostDir);
+        string hostDir = Path.Combine(_tempRoot, "Movie.NoSubsFolder");
+        Directory.CreateDirectory(hostDir);
         Folder folder = new()
         {
             Id = Ulid.NewUlid(),
@@ -137,7 +131,7 @@ public sealed class FileManagerStorageOrphanedSubtitlesTests : IDisposable
             DriverId = Ulid.NewUlid(),
         };
 
-        Action act = () => InvokeDispatch(storage: BuildLocalStorage(), folder: folder, hostFolder: hostDir);
+        Action act = () => InvokeDispatch(BuildLocalStorage(), folder, hostDir);
 
         act.Should().NotThrow();
     }
@@ -145,10 +139,10 @@ public sealed class FileManagerStorageOrphanedSubtitlesTests : IDisposable
     [Fact]
     public void DispatchOrphanedBitmapOcrBackfill_SubtitlesFolderExists_NoQueueRunnerConfigured_DoesNothing()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.OrphanNoQueue");
-        string subtitleDir = Path.Combine(path1: hostDir, path2: "subtitles");
-        Directory.CreateDirectory(path: subtitleDir);
-        File.WriteAllBytes(path: Path.Combine(path1: subtitleDir, path2: "Movie.jpn.full.sup"), bytes: [0x00]);
+        string hostDir = Path.Combine(_tempRoot, "Movie.OrphanNoQueue");
+        string subtitleDir = Path.Combine(hostDir, "subtitles");
+        Directory.CreateDirectory(subtitleDir);
+        File.WriteAllBytes(Path.Combine(subtitleDir, "Movie.jpn.full.sup"), [0x00]);
         Folder folder = new()
         {
             Id = Ulid.NewUlid(),
@@ -156,11 +150,11 @@ public sealed class FileManagerStorageOrphanedSubtitlesTests : IDisposable
             DriverId = Ulid.NewUlid(),
         };
 
-        Action act = () => InvokeDispatch(storage: BuildLocalStorage(), folder: folder, hostFolder: hostDir);
+        Action act = () => InvokeDispatch(BuildLocalStorage(), folder, hostDir);
 
         act.Should()
             .NotThrow(
-                because: "with no QueueRunner configured (the state outside the full service host) this must be a no-op, not a crash"
+                "with no QueueRunner configured (the state outside the full service host) this must be a no-op, not a crash"
             );
     }
 }

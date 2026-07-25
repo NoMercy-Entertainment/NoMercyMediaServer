@@ -28,11 +28,11 @@ public class TmdbSearchClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "query"] = query,
-            [key: "primary_release_year"] = year,
+            ["query"] = query,
+            ["primary_release_year"] = year,
         };
 
-        return Get<TmdbPaginatedResponse<TmdbMovie>>(url: "search/movie", query: queryParams, priority: priority);
+        return Get<TmdbPaginatedResponse<TmdbMovie>>("search/movie", queryParams, priority);
     }
 
     public Task<TmdbPaginatedResponse<TmdbTvShow>?> TvShow(
@@ -43,11 +43,11 @@ public class TmdbSearchClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "query"] = query,
-            [key: "first_air_date_year"] = year,
+            ["query"] = query,
+            ["first_air_date_year"] = year,
         };
 
-        return Get<TmdbPaginatedResponse<TmdbTvShow>>(url: "search/tv", query: queryParams, priority: priority);
+        return Get<TmdbPaginatedResponse<TmdbTvShow>>("search/tv", queryParams, priority);
     }
 
     public Task<TmdbPaginatedResponse<TmdbPerson>?> Person(
@@ -58,11 +58,11 @@ public class TmdbSearchClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "query"] = query,
-            [key: "primary_release_year"] = year,
+            ["query"] = query,
+            ["primary_release_year"] = year,
         };
 
-        return Get<TmdbPaginatedResponse<TmdbPerson>>(url: "search/person", query: queryParams, priority: priority);
+        return Get<TmdbPaginatedResponse<TmdbPerson>>("search/person", queryParams, priority);
     }
 
     public Task<TmdbPaginatedResponse<TmdbMultiSearch>?> Multi(
@@ -73,11 +73,11 @@ public class TmdbSearchClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "query"] = query,
-            [key: "primary_release_year"] = year,
+            ["query"] = query,
+            ["primary_release_year"] = year,
         };
 
-        return Get<TmdbPaginatedResponse<TmdbMultiSearch>>(url: "search/multi", query: queryParams, priority: priority);
+        return Get<TmdbPaginatedResponse<TmdbMultiSearch>>("search/multi", queryParams, priority);
     }
 
     public Task<TmdbPaginatedResponse<TmdbCollection>?> Collection(
@@ -88,14 +88,14 @@ public class TmdbSearchClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "query"] = query,
-            [key: "primary_release_year"] = year,
+            ["query"] = query,
+            ["primary_release_year"] = year,
         };
 
         return Get<TmdbPaginatedResponse<TmdbCollection>>(
-            url: "search/collection",
-            query: queryParams,
-            priority: priority
+            "search/collection",
+            queryParams,
+            priority
         );
     }
 
@@ -107,10 +107,10 @@ public class TmdbSearchClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "query"] = query,
-            [key: "primary_release_year"] = year,
+            ["query"] = query,
+            ["primary_release_year"] = year,
         };
 
-        return Get<TmdbPaginatedResponse<TmdbKeyword>>(url: "search/keyword", query: queryParams, priority: priority);
+        return Get<TmdbPaginatedResponse<TmdbKeyword>>("search/keyword", queryParams, priority);
     }
 }

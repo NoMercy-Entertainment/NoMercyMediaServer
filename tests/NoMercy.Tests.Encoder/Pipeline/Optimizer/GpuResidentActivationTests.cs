@@ -24,30 +24,30 @@ public class GpuResidentActivationTests
     public void Resolve_EnabledNvidiaEligible_ReturnsCudaPlan()
     {
         GpuAccelPlan? plan = GpuResidentActivation.Resolve(
-            enabled: true,
-            hasGpu: true,
-            vendor: GpuVendor.Nvidia,
-            plan: EligiblePlan(),
-            hasFilter: HasCuda
+            true,
+            true,
+            GpuVendor.Nvidia,
+            EligiblePlan(),
+            HasCuda
         );
 
         plan.Should().NotBeNull();
-        plan!.ScaleFilter.Should().Be(expected: "scale_cuda");
+        plan!.ScaleFilter.Should().Be("scale_cuda");
     }
 
     [Fact]
     public void Resolve_Disabled_ReturnsNull()
     {
         GpuResidentActivation
-            .Resolve(enabled: false, hasGpu: true, vendor: GpuVendor.Nvidia, plan: EligiblePlan(), hasFilter: HasCuda)
+            .Resolve(false, true, GpuVendor.Nvidia, EligiblePlan(), HasCuda)
             .Should()
-            .BeNull(because: "dark by default — opt-in required");
+            .BeNull("dark by default — opt-in required");
     }
 
     [Fact]
     public void Resolve_NoGpu_ReturnsNull()
     {
-        GpuResidentActivation.Resolve(enabled: true, hasGpu: false, vendor: null, plan: EligiblePlan(), hasFilter: HasCuda).Should().BeNull();
+        GpuResidentActivation.Resolve(true, false, null, EligiblePlan(), HasCuda).Should().BeNull();
     }
 
     [Fact]
@@ -55,12 +55,12 @@ public class GpuResidentActivationTests
     {
         OutputPlan withThumbs = EligiblePlan() with
         {
-            Thumbnails = new(Width: 320, Height: 180, IntervalSeconds: 10),
+            Thumbnails = new(320, 180, 10),
         };
         GpuResidentActivation
-            .Resolve(enabled: true, hasGpu: true, vendor: GpuVendor.Nvidia, plan: withThumbs, hasFilter: HasCuda)
+            .Resolve(true, true, GpuVendor.Nvidia, withThumbs, HasCuda)
             .Should()
-            .BeNull(because: "sprite generation needs a CPU download");
+            .BeNull("sprite generation needs a CPU download");
     }
 
     [Fact]
@@ -68,31 +68,30 @@ public class GpuResidentActivationTests
     {
         OutputPlan hdr = EligiblePlan();
         hdr = hdr with { VideoOutputs = [hdr.VideoOutputs[0] with { ConvertHdrToSdr = true }] };
-        GpuResidentActivation.Resolve(enabled: true, hasGpu: true, vendor: GpuVendor.Nvidia, plan: hdr, hasFilter: HasCuda).Should().BeNull();
+        GpuResidentActivation.Resolve(true, true, GpuVendor.Nvidia, hdr, HasCuda).Should().BeNull();
     }
 
     private static OutputPlan EligiblePlan() =>
         new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920,
-                    Height: 1080,
-                    EncoderName: "h264_nvenc",
-                    Crf: 23,
-                    BitrateKbps: 5000,
-                    Preset: "p4",
-                    Profile: "high",
-                    Level: "4.1",
-                    TenBit: false,
-                    PixelFormat: "yuv420p",
-                    MapLabel: "[v0]",
-                    ExtraFlags: new()
+                    1920,
+                    1080,
+                    "h264_nvenc",
+                    23,
+                    5000,
+                    "p4",
+                    "high",
+                    "4.1",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs: [],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            [],
+            null
         );
 }

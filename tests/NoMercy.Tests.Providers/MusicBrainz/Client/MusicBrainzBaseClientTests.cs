@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
-using NoMercy.NmSystem.Configuration;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
@@ -26,11 +25,11 @@ namespace NoMercy.Tests.Providers.MusicBrainz.Client;
 /// only asserted on <see cref="HttpClient.BaseAddress"/>, never on a request or
 /// response.
 /// </summary>
-[Collection(name: "HttpClientProvider")]
+[Collection("HttpClientProvider")]
 public sealed class MusicBrainzBaseClientTests : ProviderHttpHarness
 {
     public MusicBrainzBaseClientTests()
-        : base(httpClientNames: HttpClientNames.MusicBrainz) { }
+        : base(HttpClientNames.MusicBrainz) { }
 
     private sealed class TestableClient : MusicBrainzBaseClient
     {
@@ -40,7 +39,7 @@ public sealed class MusicBrainzBaseClientTests : ProviderHttpHarness
             bool? priority = false,
             bool skipCache = false
         )
-            where T : class => base.Get<T>(url: url, query: query, priority: priority, skipCache: skipCache);
+            where T : class => base.Get<T>(url, query, priority, skipCache);
     }
 
     [Fact]
@@ -50,32 +49,32 @@ public sealed class MusicBrainzBaseClientTests : ProviderHttpHarness
         // ConfigureClient must add one whenever the DI-registered HttpClient
         // arrives with none set (the harness registers the client bare, exactly
         // like an "early seed caller" per the production comment).
-        string path = Unique(prefix: "artist");
+        string path = Unique("artist");
         MusicBrainzArtist body = new() { Id = Guid.NewGuid(), Name = "Test Artist" };
-        Handler.WhenGet(pathContains: path, responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
+        Handler.WhenGet(path, MockResponse.Json(HttpStatusCode.OK, body));
 
         using TestableClient client = new();
         MusicBrainzArtist? result = await client.Get<MusicBrainzArtist>(
-            url: path,
-            query: new() { [key: "fmt"] = "json" }
+            path,
+            new() { ["fmt"] = "json" }
         );
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: body.Id);
-        result.Name.Should().Be(expected: "Test Artist");
+        result!.Id.Should().Be(body.Id);
+        result.Name.Should().Be("Test Artist");
 
         CapturedRequest request = Handler
             .Requests.Should()
-            .ContainSingle(predicate: r => r.Path.Contains(path))
+            .ContainSingle(r => r.Path.Contains(path))
             .Which;
         // HttpHeaders re-tokenizes User-Agent's product/comment syntax when it
         // merges HttpClient.DefaultRequestHeaders onto the outgoing request, so
         // assert on the leading product token rather than exact string equality
         // — the requirement under test is "a defensive UA was added at all",
         // not byte-for-byte header serialization.
-        request.HasHeader(name: "User-Agent").Should().BeTrue();
-        request.HeaderValue(name: "User-Agent").Should().StartWith(expected: "NoMercy");
-        request.Query.Should().ContainKey(expected: "fmt").WhoseValue.Should().Be(expected: "json");
+        request.HasHeader("User-Agent").Should().BeTrue();
+        request.HeaderValue("User-Agent").Should().StartWith("NoMercy");
+        request.Query.Should().ContainKey("fmt").WhoseValue.Should().Be("json");
     }
 
     [Fact]
@@ -83,11 +82,11 @@ public sealed class MusicBrainzBaseClientTests : ProviderHttpHarness
     {
         // Requirement: MusicBrainz's 404 for an unknown MBID is "no result", not
         // an error the caller must handle.
-        string path = Unique(prefix: "artist");
-        Handler.WhenGet(pathContains: path, responses: MockResponse.Status(status: HttpStatusCode.NotFound));
+        string path = Unique("artist");
+        Handler.WhenGet(path, MockResponse.Status(HttpStatusCode.NotFound));
 
         using TestableClient client = new();
-        MusicBrainzArtist? result = await client.Get<MusicBrainzArtist>(url: path);
+        MusicBrainzArtist? result = await client.Get<MusicBrainzArtist>(path);
 
         result.Should().BeNull();
     }
@@ -98,11 +97,11 @@ public sealed class MusicBrainzBaseClientTests : ProviderHttpHarness
         // Requirement: a 200 response with an unparsable body must degrade to
         // null (FromJson<T> is deliberately forgiving) rather than bubble a
         // JsonException up through every provider caller.
-        string path = Unique(prefix: "artist");
-        Handler.WhenGet(pathContains: path, responses: MockResponse.Malformed());
+        string path = Unique("artist");
+        Handler.WhenGet(path, MockResponse.Malformed());
 
         using TestableClient client = new();
-        MusicBrainzArtist? result = await client.Get<MusicBrainzArtist>(url: path);
+        MusicBrainzArtist? result = await client.Get<MusicBrainzArtist>(path);
 
         result.Should().BeNull();
     }
@@ -113,18 +112,18 @@ public sealed class MusicBrainzBaseClientTests : ProviderHttpHarness
         // Requirement: the shared Queue retries a transient 429/502/503/504
         // with exponential backoff before the caller ever sees a failure — the
         // provider client itself has no retry loop of its own.
-        string path = Unique(prefix: "artist");
+        string path = Unique("artist");
         MusicBrainzArtist body = new() { Id = Guid.NewGuid(), Name = "Recovered After Retry" };
         Handler.WhenGet(
-            pathContains: path, responses: [MockResponse.Status(status: HttpStatusCode.TooManyRequests), MockResponse.Json(status: HttpStatusCode.OK, body: body)]
+            path, [MockResponse.Status(HttpStatusCode.TooManyRequests), MockResponse.Json(HttpStatusCode.OK, body)]
         );
 
         using TestableClient client = new();
-        MusicBrainzArtist? result = await client.Get<MusicBrainzArtist>(url: path);
+        MusicBrainzArtist? result = await client.Get<MusicBrainzArtist>(path);
 
         result.Should().NotBeNull();
-        result!.Name.Should().Be(expected: "Recovered After Retry");
-        Handler.RequestCountFor(pathContains: path).Should().Be(expected: 2);
+        result!.Name.Should().Be("Recovered After Retry");
+        Handler.RequestCountFor(path).Should().Be(2);
     }
 
     [Fact]
@@ -137,13 +136,13 @@ public sealed class MusicBrainzBaseClientTests : ProviderHttpHarness
         // pins that (surprising, cross-provider-inconsistent) contract so a
         // future "make MusicBrainz soft-fail like the others" change is a
         // deliberate decision, not an accidental behavior change.
-        string path = Unique(prefix: "artist");
-        Handler.WhenGet(pathContains: path, responses: MockResponse.Status(status: HttpStatusCode.TooManyRequests));
+        string path = Unique("artist");
+        Handler.WhenGet(path, MockResponse.Status(HttpStatusCode.TooManyRequests));
 
         using TestableClient client = new();
-        Func<Task<MusicBrainzArtist?>> act = () => client.Get<MusicBrainzArtist>(url: path);
+        Func<Task<MusicBrainzArtist?>> act = () => client.Get<MusicBrainzArtist>(path);
 
         await act.Should().ThrowAsync<HttpRequestException>();
-        Handler.RequestCountFor(pathContains: path).Should().Be(expected: 4); // 1 initial attempt + 3 retries
+        Handler.RequestCountFor(path).Should().Be(4); // 1 initial attempt + 3 retries
     }
 }

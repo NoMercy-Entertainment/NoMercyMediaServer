@@ -18,36 +18,36 @@ public class MediaKeyResolverTests
     private readonly MediaKeyResolver _resolver = new();
 
     [Theory]
-    [InlineData(data: [MediaType.Movie, 550, "mfa"])]
-    [InlineData(data: [MediaType.Movie, 1, "m1"])]
-    [InlineData(data: [MediaType.Movie, 0, "m0"])]
-    [InlineData(data: [MediaType.Episode, 12345, "e9ix"])]
-    [InlineData(data: [MediaType.Track, 100, "t2s"])]
+    [InlineData([MediaType.Movie, 550, "mfa"])]
+    [InlineData([MediaType.Movie, 1, "m1"])]
+    [InlineData([MediaType.Movie, 0, "m0"])]
+    [InlineData([MediaType.Episode, 12345, "e9ix"])]
+    [InlineData([MediaType.Track, 100, "t2s"])]
     public void ForMedia_ProducesShortKey(MediaType type, long id, string expected)
     {
-        _resolver.ForMedia(type: type, id: id).Should().Be(expected: expected);
+        _resolver.ForMedia(type, id).Should().Be(expected);
     }
 
     [Fact]
     public void ForMedia_LargeId_StaysShort()
     {
         // Movies in TMDB top out around 7 digits; 36^5 = 60M covers safely.
-        string key = _resolver.ForMedia(type: MediaType.Movie, id: 9_999_999);
-        key.Length.Should().BeLessThanOrEqualTo(expected: 7);
-        key[index: 0].Should().Be(expected: 'm');
+        string key = _resolver.ForMedia(MediaType.Movie, 9_999_999);
+        key.Length.Should().BeLessThanOrEqualTo(7);
+        key[0].Should().Be('m');
     }
 
     [Fact]
     public void ForMedia_NegativeId_Throws()
     {
-        Action act = () => _resolver.ForMedia(type: MediaType.Movie, id: -1);
+        Action act = () => _resolver.ForMedia(MediaType.Movie, -1);
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void ForMedia_UnknownType_Throws()
     {
-        Action act = () => _resolver.ForMedia(type: (MediaType)99, id: 1);
+        Action act = () => _resolver.ForMedia((MediaType)99, 1);
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
@@ -55,7 +55,7 @@ public class MediaKeyResolverTests
     public void ForMedia_MaxLongId_DoesNotOverflowStackBuffer()
     {
         // Documents the design ceiling: 13 base-36 digits encode long.MaxValue.
-        string key = _resolver.ForMedia(type: MediaType.Movie, id: long.MaxValue);
-        key.Should().StartWith(expected: "m").And.HaveLength(expected: 14);
+        string key = _resolver.ForMedia(MediaType.Movie, long.MaxValue);
+        key.Should().StartWith("m").And.HaveLength(14);
     }
 }

@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchTrackSnippetGet
 {
-    [JsonProperty(propertyName: "message")]
+    [JsonProperty("message")]
     public TrackSnippetGetMessage Message { get; set; } = new();
 }

@@ -39,16 +39,16 @@ public class PlanStageAudioFilterTests
 
     public PlanStageAudioFilterTests()
     {
-        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
-        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
-        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
-        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
+        _hardware.Setup(h => h.HasGpu).Returns(false);
+        _hardware.Setup(h => h.CpuCores).Returns(8);
+        _hardware.Setup(h => h.Gpus).Returns([]);
+        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
         _hardware
-            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns(value: (GpuDevice?)null);
+            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns((GpuDevice?)null);
 
         _codecResolver
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -56,69 +56,69 @@ public class PlanStageAudioFilterTests
                 )
             )
             .Returns(
-                value: new ResolvedCodec(
-                    FfmpegEncoderName: "libx264",
-                    EncoderInfo: new(
-                        FfmpegName: "libx264",
-                        RequiredVendor: null,
-                        Presets: ["medium"],
-                        Profiles: ["high"],
-                        Levels: ["4.1"],
-                        QualityRange: new(Min: 0, Max: 51, Default: 23),
-                        SupportedRateControl: [RateControlMode.Crf],
-                        Supports10Bit: false,
-                        SupportsHdr: false,
-                        MaxConcurrentSessions: int.MaxValue,
-                        PixelFormat10Bit: "yuv420p10le",
-                        VendorSpecificFlags: new()
+                new ResolvedCodec(
+                    "libx264",
+                    new(
+                        "libx264",
+                        null,
+                        ["medium"],
+                        ["high"],
+                        ["4.1"],
+                        new(0, 51, 23),
+                        [RateControlMode.Crf],
+                        false,
+                        false,
+                        int.MaxValue,
+                        "yuv420p10le",
+                        new()
                     ),
-                    Device: null,
-                    DefaultRateControl: RateControlMode.Crf
+                    null,
+                    RateControlMode.Crf
                 )
             );
 
         _stage = new(
-            graphBuilder: new(),
-            groupingStrategy: new(),
-            costEstimator: new(),
-            codecResolver: _codecResolver.Object,
-            hardware: _hardware.Object,
-            tonemapSelector: new TonemapSelector(),
-            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
-            abrLadderGenerator: new AbrLadderGenerator(),
-            cropDetector: new NoOpCropDetector(),
-            logger: NullLogger<PlanStage>.Instance
+            new(),
+            new(),
+            new(),
+            _codecResolver.Object,
+            _hardware.Object,
+            new TonemapSelector(),
+            new Mock<IFfmpegCapabilities>().Object,
+            new AbrLadderGenerator(),
+            new NoOpCropDetector(),
+            NullLogger<PlanStage>.Instance
         );
     }
 
     [Fact]
     public async Task LoudnessNone_NoAudioFilter()
     {
-        EncodingProfile profile = BuildProfile(loudness: LoudnessMode.None);
-        OutputPlan plan = await RunPlan(profile: profile);
+        EncodingProfile profile = BuildProfile(LoudnessMode.None);
+        OutputPlan plan = await RunPlan(profile);
 
-        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
-        Assert.Null(@object: audio.AudioFilter);
+        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
+        Assert.Null(audio.AudioFilter);
     }
 
     [Fact]
     public async Task LoudnessEbuR128_EmitsLoudnormWithR128Targets()
     {
-        EncodingProfile profile = BuildProfile(loudness: LoudnessMode.EbuR128);
-        OutputPlan plan = await RunPlan(profile: profile);
+        EncodingProfile profile = BuildProfile(LoudnessMode.EbuR128);
+        OutputPlan plan = await RunPlan(profile);
 
-        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
-        Assert.Equal(expected: "loudnorm=I=-16:TP=-1.5:LRA=11", actual: audio.AudioFilter);
+        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
+        Assert.Equal("loudnorm=I=-16:TP=-1.5:LRA=11", audio.AudioFilter);
     }
 
     [Fact]
     public async Task LoudnessReplayGain_EmitsLoudnormWithRgTargets()
     {
-        EncodingProfile profile = BuildProfile(loudness: LoudnessMode.ReplayGain);
-        OutputPlan plan = await RunPlan(profile: profile);
+        EncodingProfile profile = BuildProfile(LoudnessMode.ReplayGain);
+        OutputPlan plan = await RunPlan(profile);
 
-        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
-        Assert.Equal(expected: "loudnorm=I=-18:TP=-1.5:LRA=11", actual: audio.AudioFilter);
+        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
+        Assert.Equal("loudnorm=I=-18:TP=-1.5:LRA=11", audio.AudioFilter);
     }
 
     [Fact]
@@ -126,11 +126,11 @@ public class PlanStageAudioFilterTests
     {
         // Custom mode means the profile's CustomArguments carry the filter — the mapper
         // does not emit one automatically.
-        EncodingProfile profile = BuildProfile(loudness: LoudnessMode.Custom);
-        OutputPlan plan = await RunPlan(profile: profile);
+        EncodingProfile profile = BuildProfile(LoudnessMode.Custom);
+        OutputPlan plan = await RunPlan(profile);
 
-        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
-        Assert.Null(@object: audio.AudioFilter);
+        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
+        Assert.Null(audio.AudioFilter);
     }
 
     [Fact]
@@ -139,16 +139,16 @@ public class PlanStageAudioFilterTests
         // loudnorm expects the post-downmix channel layout, so pan must run
         // first. The two filters chain as "pan=...,loudnorm=..." in that order.
         EncodingProfile profile = BuildProfile(
-            loudness: LoudnessMode.EbuR128,
-            downmix: new(Mode: DownmixMode.StereoItuR128)
+            LoudnessMode.EbuR128,
+            new(DownmixMode.StereoItuR128)
         );
-        OutputPlan plan = await RunPlan(profile: profile);
+        OutputPlan plan = await RunPlan(profile);
 
-        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
         Assert.Equal(
-            expected: "pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR,"
+            "pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR,"
                       + "loudnorm=I=-16:TP=-1.5:LRA=11",
-            actual: audio.AudioFilter
+            audio.AudioFilter
         );
     }
 
@@ -156,65 +156,63 @@ public class PlanStageAudioFilterTests
     public async Task DownmixOnly_EmitsPanWithoutLoudnorm()
     {
         EncodingProfile profile = BuildProfile(
-            loudness: LoudnessMode.None,
-            downmix: new(Mode: DownmixMode.Mono)
+            LoudnessMode.None,
+            new(DownmixMode.Mono)
         );
-        OutputPlan plan = await RunPlan(profile: profile);
+        OutputPlan plan = await RunPlan(profile);
 
-        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
-        audio.AudioFilter.Should().StartWith(expected: "pan=mono|");
-        audio.AudioFilter.Should().NotContain(unexpected: "loudnorm");
+        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
+        audio.AudioFilter.Should().StartWith("pan=mono|");
+        audio.AudioFilter.Should().NotContain("loudnorm");
     }
 
     private async Task<OutputPlan> RunPlan(EncodingProfile profile)
     {
-        ValidateInput input = new(Media: BuildMedia(), Profile: profile);
+        ValidateInput input = new(BuildMedia(), profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
+        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
         return success.Value.OutputPlan;
     }
 
     private static MediaInfo BuildMedia() =>
         new(
-            FilePath: "/media/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 90),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 4_000_000_000,
-            VideoStreams:
+            "/media/test.mkv",
+            "matroska",
+            TimeSpan.FromMinutes(90),
+            8000,
+            4_000_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: null,
-                    ColorTransfer: null,
-                    ColorSpace: null,
-                    IsDefault: true,
-                    BitRateKbps: 6000
+                    0,
+                    "h264",
+                    1920,
+                    1080,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    null,
+                    null,
+                    null,
+                    true,
+                    6000
                 ),
             ],
-            AudioStreams:
             [
                 new(
-                    Index: 1,
-                    Codec: "ac3",
-                    Channels: 6,
-                    SampleRate: 48000,
-                    BitRateKbps: 640,
-                    Language: "en",
-                    IsDefault: true,
-                    IsForced: false
+                    1,
+                    "ac3",
+                    6,
+                    48000,
+                    640,
+                    "en",
+                    true,
+                    false
                 ),
             ],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            []
         );
 
     private static EncodingProfile BuildProfile(
@@ -222,46 +220,45 @@ public class PlanStageAudioFilterTests
         DownmixConfig? downmix = null
     ) =>
         new(
-            Id: Ulid.NewUlid(),
-            Name: "Audio Filter Test",
-            Container: Container.HlsTs,
-            Video: new(
-                Policy: StreamPolicy.Transcode,
-                Codec: VideoCodecType.H264,
-                Width: 1920,
-                Height: 1080,
-                RateControl: V2RateControlMode.Crf,
-                Crf: 23,
-                BitrateKbps: 4000,
-                MaxBitrateKbps: null,
-                BufferSizeKbps: null,
-                Preset: "medium",
-                CodecProfile: CodecProfile.High,
-                Level: "4.1",
-                Tune: null,
-                BitDepth: 8,
-                PixelFormat: null,
-                KeyframeIntervalSeconds: 2,
-                ConvertHdrToSdr: false,
-                SegmentNameTemplate: "video/{label}",
-                PlaylistNameTemplate: "video/{label}/playlist"
+            Ulid.NewUlid(),
+            "Audio Filter Test",
+            Container.HlsTs,
+            new(
+                StreamPolicy.Transcode,
+                VideoCodecType.H264,
+                1920,
+                1080,
+                V2RateControlMode.Crf,
+                23,
+                4000,
+                null,
+                null,
+                "medium",
+                CodecProfile.High,
+                "4.1",
+                null,
+                8,
+                null,
+                2,
+                false,
+                "video/{label}",
+                "video/{label}/playlist"
             ),
-            Audio:
             [
                 new(
-                    Policy: StreamPolicy.Transcode,
-                    Codec: AudioCodecType.Aac,
-                    BitrateKbps: 192,
-                    Channels: 2,
-                    SampleRateHz: 48000,
-                    AllowedLanguages: [],
-                    DefaultLanguage: null,
-                    Loudness: loudness == LoudnessMode.None ? null : new LoudnessConfig(Mode: loudness),
-                    Downmix: downmix,
-                    SegmentNameTemplate: "audio/{lang}-{codec}",
-                    PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
+                    StreamPolicy.Transcode,
+                    AudioCodecType.Aac,
+                    192,
+                    2,
+                    48000,
+                    [],
+                    null,
+                    loudness == LoudnessMode.None ? null : new LoudnessConfig(loudness),
+                    downmix,
+                    "audio/{lang}-{codec}",
+                    "audio/{lang}-{codec}/playlist"
                 ),
             ],
-            Subtitles: []
+            []
         );
 }

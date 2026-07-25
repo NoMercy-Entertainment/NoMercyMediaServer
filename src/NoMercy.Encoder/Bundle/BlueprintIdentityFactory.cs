@@ -26,27 +26,27 @@ public static class BlueprintIdentityFactory
         media switch
         {
             MovieMediaRef movie => new(
-                Type: "movie",
-                TmdbId: movie.Id,
-                Show: null,
-                Season: null,
-                Episode: null,
-                Title: movie.Title,
-                Year: movie.Year
+                "movie",
+                movie.Id,
+                null,
+                null,
+                null,
+                movie.Title,
+                movie.Year
             ),
             EpisodeMediaRef episode => new(
-                Type: "episode",
-                TmdbId: episode.Id,
-                Show: new(TmdbId: episode.ShowTmdbId, Title: episode.ShowTitle),
-                Season: episode.SeasonNumber,
-                Episode: episode.EpisodeNumber,
-                Title: episode.Title,
-                Year: episode.Year
+                "episode",
+                episode.Id,
+                new(episode.ShowTmdbId, episode.ShowTitle),
+                episode.SeasonNumber,
+                episode.EpisodeNumber,
+                episode.Title,
+                episode.Year
             ),
             _ => throw new ArgumentOutOfRangeException(
-                paramName: nameof(media),
-                actualValue: media.Type,
-                message: $"No blueprint identity mapping for media type '{media.Type}'."
+                nameof(media),
+                media.Type,
+                $"No blueprint identity mapping for media type '{media.Type}'."
             ),
         };
 }

@@ -19,7 +19,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class HomeRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -31,100 +31,100 @@ public class HomeRepositoryTests : IDisposable
     {
         _context = TestMediaContextFactory.CreateSeededContext();
         (_factory, _factoryConnection) = TestMediaContextFactory.CreateFactory();
-        _repository = new(context: _context, contextFactory: _factory);
+        _repository = new(_context, _factory);
     }
 
     [Fact]
     public async Task GetHomeMovies_ReturnsMoviesById()
     {
-        List<HomeMovieCardDto> movies = await _repository.GetHomeMovies(movieIds: [129, 680], language: "en", country: "US");
+        List<HomeMovieCardDto> movies = await _repository.GetHomeMovies([129, 680], "en", "US");
 
-        Assert.Equal(expected: 2, actual: movies.Count);
-        Assert.Contains(collection: movies, filter: m => m.Id == 129);
-        Assert.Contains(collection: movies, filter: m => m.Id == 680);
+        Assert.Equal(2, movies.Count);
+        Assert.Contains(movies, m => m.Id == 129);
+        Assert.Contains(movies, m => m.Id == 680);
     }
 
     [Fact]
     public async Task GetHomeMovies_ReturnsEmpty_WhenIdsNotFound()
     {
-        List<HomeMovieCardDto> movies = await _repository.GetHomeMovies(movieIds: [999999], language: "en", country: "US");
+        List<HomeMovieCardDto> movies = await _repository.GetHomeMovies([999999], "en", "US");
 
-        Assert.Empty(collection: movies);
+        Assert.Empty(movies);
     }
 
     [Fact]
     public async Task GetHomeTvs_ReturnsTvShowsById()
     {
-        List<HomeTvCardDto> shows = await _repository.GetHomeTvs(tvIds: [1399], language: "en", country: "US");
+        List<HomeTvCardDto> shows = await _repository.GetHomeTvs([1399], "en", "US");
 
-        Assert.Single(collection: shows);
-        Assert.Equal(expected: 1399, actual: shows[index: 0].Id);
+        Assert.Single(shows);
+        Assert.Equal(1399, shows[0].Id);
     }
 
     [Fact]
     public async Task GetMovieCountAsync_ReturnsCorrectCount()
     {
-        int count = await _repository.GetMovieCountAsync(userId: SeedConstants.UserId);
+        int count = await _repository.GetMovieCountAsync(SeedConstants.UserId);
 
-        Assert.Equal(expected: 2, actual: count);
+        Assert.Equal(2, count);
     }
 
     [Fact]
     public async Task GetTvCountAsync_ReturnsCorrectCount()
     {
-        int count = await _repository.GetTvCountAsync(userId: SeedConstants.UserId);
+        int count = await _repository.GetTvCountAsync(SeedConstants.UserId);
 
-        Assert.Equal(expected: 1, actual: count);
+        Assert.Equal(1, count);
     }
 
     [Fact]
     public async Task GetMovieCountAsync_ReturnsZero_WhenUserHasNoAccess()
     {
-        int count = await _repository.GetMovieCountAsync(userId: SeedConstants.OtherUserId);
+        int count = await _repository.GetMovieCountAsync(SeedConstants.OtherUserId);
 
-        Assert.Equal(expected: 0, actual: count);
+        Assert.Equal(0, count);
     }
 
     [Fact]
     public async Task GetLibrariesAsync_ReturnsLibrariesForUser()
     {
-        List<Library> libraries = await _repository.GetLibrariesAsync(userId: SeedConstants.UserId);
+        List<Library> libraries = await _repository.GetLibrariesAsync(SeedConstants.UserId);
 
-        Assert.Equal(expected: 2, actual: libraries.Count);
+        Assert.Equal(2, libraries.Count);
     }
 
     [Fact]
     public async Task GetLibrariesAsync_ReturnsEmpty_WhenUserHasNoAccess()
     {
-        List<Library> libraries = await _repository.GetLibrariesAsync(userId: SeedConstants.OtherUserId);
+        List<Library> libraries = await _repository.GetLibrariesAsync(SeedConstants.OtherUserId);
 
-        Assert.Empty(collection: libraries);
+        Assert.Empty(libraries);
     }
 
     [Fact]
     public async Task GetHomeGenresAsync_ReturnsGenresForUser()
     {
         List<GenreHomeDto> genres = await _repository.GetHomeGenresAsync(
-            userId: SeedConstants.UserId,
-            language: "en",
-            take: 10
+            SeedConstants.UserId,
+            "en",
+            10
         );
 
-        Assert.Equal(expected: 2, actual: genres.Count);
-        Assert.Contains(collection: genres, filter: g => g.Name == "Action");
-        Assert.Contains(collection: genres, filter: g => g.Name == "Drama");
+        Assert.Equal(2, genres.Count);
+        Assert.Contains(genres, g => g.Name == "Action");
+        Assert.Contains(genres, g => g.Name == "Drama");
     }
 
     [Fact]
     public async Task GetHomeGenresAsync_RespectsPageAndTake()
     {
         List<GenreHomeDto> genres = await _repository.GetHomeGenresAsync(
-            userId: SeedConstants.UserId,
-            language: "en",
-            take: 1
+            SeedConstants.UserId,
+            "en",
+            1
         );
 
-        Assert.Single(collection: genres);
+        Assert.Single(genres);
     }
 
     [Fact]
@@ -133,14 +133,14 @@ public class HomeRepositoryTests : IDisposable
         // Seed has 3 UserData rows: 2 for movie 129 (duplicate), 1 for tv 1399
         // DistinctBy on { MovieId, CollectionId, TvId, SpecialId } should yield 2 unique entries
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
-            userId: SeedConstants.UserId,
-            language: "en",
-            country: "US"
+            SeedConstants.UserId,
+            "en",
+            "US"
         );
 
-        Assert.Equal(expected: 2, actual: result.Count);
-        Assert.Contains(collection: result, filter: ud => ud.MovieId == 129);
-        Assert.Contains(collection: result, filter: ud => ud.TvId == 1399);
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, ud => ud.MovieId == 129);
+        Assert.Contains(result, ud => ud.TvId == 1399);
     }
 
     [Fact]
@@ -148,53 +148,53 @@ public class HomeRepositoryTests : IDisposable
     {
         // The most recent entry for movie 129 has LastPlayedDate 2026-02-01
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
-            userId: SeedConstants.UserId,
-            language: "en",
-            country: "US"
+            SeedConstants.UserId,
+            "en",
+            "US"
         );
 
-        UserData? movieEntry = result.FirstOrDefault(predicate: ud => ud.MovieId == 129);
-        Assert.NotNull(@object: movieEntry);
-        Assert.Equal(expected: "2026-02-01T10:00:00Z", actual: movieEntry.LastPlayedDate);
+        UserData? movieEntry = result.FirstOrDefault(ud => ud.MovieId == 129);
+        Assert.NotNull(movieEntry);
+        Assert.Equal("2026-02-01T10:00:00Z", movieEntry.LastPlayedDate);
     }
 
     [Fact]
     public async Task GetContinueWatchingAsync_IncludesVideoFile()
     {
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
-            userId: SeedConstants.UserId,
-            language: "en",
-            country: "US"
+            SeedConstants.UserId,
+            "en",
+            "US"
         );
 
-        Assert.All(collection: result, action: ud => Assert.NotNull(@object: ud.VideoFile));
+        Assert.All(result, ud => Assert.NotNull(ud.VideoFile));
     }
 
     [Fact]
     public async Task GetContinueWatchingAsync_IncludesMovieData()
     {
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
-            userId: SeedConstants.UserId,
-            language: "en",
-            country: "US"
+            SeedConstants.UserId,
+            "en",
+            "US"
         );
 
-        UserData? movieEntry = result.FirstOrDefault(predicate: ud => ud.MovieId == 129);
-        Assert.NotNull(@object: movieEntry);
-        Assert.NotNull(@object: movieEntry.Movie);
-        Assert.NotEmpty(collection: movieEntry.Movie.VideoFiles);
+        UserData? movieEntry = result.FirstOrDefault(ud => ud.MovieId == 129);
+        Assert.NotNull(movieEntry);
+        Assert.NotNull(movieEntry.Movie);
+        Assert.NotEmpty(movieEntry.Movie.VideoFiles);
     }
 
     [Fact]
     public async Task GetContinueWatchingAsync_ReturnsEmpty_WhenNoUserData()
     {
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
-            userId: SeedConstants.OtherUserId,
-            language: "en",
-            country: "US"
+            SeedConstants.OtherUserId,
+            "en",
+            "US"
         );
 
-        Assert.Empty(collection: result);
+        Assert.Empty(result);
     }
 
     [Fact]
@@ -203,25 +203,25 @@ public class HomeRepositoryTests : IDisposable
         // Hide both movie 129 rows the way UserDataController.RemoveContinue does —
         // the rows must stay in the table, only disappear from the carousel query.
         List<UserData> movieRows = await _context
-            .UserData.Where(predicate: ud => ud.MovieId == 129)
+            .UserData.Where(ud => ud.MovieId == 129)
             .ToListAsync();
         foreach (UserData row in movieRows)
             row.RemovedFromContinueWatching = true;
         await _context.SaveChangesAsync();
 
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
-            userId: SeedConstants.UserId,
-            language: "en",
-            country: "US"
+            SeedConstants.UserId,
+            "en",
+            "US"
         );
 
-        Assert.Single(collection: result);
-        Assert.DoesNotContain(collection: result, filter: ud => ud.MovieId == 129);
-        Assert.Contains(collection: result, filter: ud => ud.TvId == 1399);
+        Assert.Single(result);
+        Assert.DoesNotContain(result, ud => ud.MovieId == 129);
+        Assert.Contains(result, ud => ud.TvId == 1399);
 
         // The hidden rows must still exist for the recommendation engine.
-        int survivingRows = await _context.UserData.CountAsync(predicate: ud => ud.MovieId == 129);
-        Assert.Equal(expected: 2, actual: survivingRows);
+        int survivingRows = await _context.UserData.CountAsync(ud => ud.MovieId == 129);
+        Assert.Equal(2, survivingRows);
     }
 
     public void Dispose()

@@ -13,7 +13,7 @@ using NoMercy.Setup.Server;
 
 namespace NoMercy.Tests.Setup.Server;
 
-[Trait(name: "Category", value: "Data")]
+[Trait("Category", "Data")]
 public class SetupStateSignalingTests
 {
     [Fact]
@@ -22,8 +22,8 @@ public class SetupStateSignalingTests
         SetupState state = new();
         Task waitTask = state.WaitForChangeAsync();
 
-        await Task.Delay(millisecondsDelay: 10);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        await Task.Delay(10);
+        state.TransitionTo(SetupPhase.Authenticating);
 
         await waitTask;
     }
@@ -32,10 +32,10 @@ public class SetupStateSignalingTests
     public async Task WaitForChangeAsync_cancellation_token_honored()
     {
         SetupState state = new();
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 50));
+        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(50));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            state.WaitForChangeAsync(cancellationToken: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            state.WaitForChangeAsync(cts.Token)
         );
     }
 
@@ -43,12 +43,12 @@ public class SetupStateSignalingTests
     public async Task WaitForSetupCompleteAsync_completes_immediately_when_already_complete()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
-        state.TransitionTo(targetPhase: SetupPhase.Registered);
-        state.TransitionTo(targetPhase: SetupPhase.CertificateAcquired);
-        state.TransitionTo(targetPhase: SetupPhase.Complete);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+        state.TransitionTo(SetupPhase.Complete);
 
         Task completeTask = state.WaitForSetupCompleteAsync();
 
@@ -59,19 +59,19 @@ public class SetupStateSignalingTests
     public async Task WaitForSetupCompleteAsync_waits_until_complete()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticating);
 
         Task waitTask = state.WaitForSetupCompleteAsync();
-        Assert.False(condition: waitTask.IsCompleted);
+        Assert.False(waitTask.IsCompleted);
 
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        await Task.Delay(millisecondsDelay: 10);
-        Assert.False(condition: waitTask.IsCompleted);
+        state.TransitionTo(SetupPhase.Authenticated);
+        await Task.Delay(10);
+        Assert.False(waitTask.IsCompleted);
 
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
-        state.TransitionTo(targetPhase: SetupPhase.Registered);
-        state.TransitionTo(targetPhase: SetupPhase.CertificateAcquired);
-        state.TransitionTo(targetPhase: SetupPhase.Complete);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+        state.TransitionTo(SetupPhase.Complete);
 
         await waitTask;
     }
@@ -80,15 +80,15 @@ public class SetupStateSignalingTests
     public async Task WaitForPhaseAsync_completes_when_phase_reached()
     {
         SetupState state = new();
-        Task waitTask = state.WaitForPhaseAsync(targetPhase: SetupPhase.Authenticated);
+        Task waitTask = state.WaitForPhaseAsync(SetupPhase.Authenticated);
 
-        Assert.False(condition: waitTask.IsCompleted);
+        Assert.False(waitTask.IsCompleted);
 
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        await Task.Delay(millisecondsDelay: 10);
-        Assert.False(condition: waitTask.IsCompleted);
+        state.TransitionTo(SetupPhase.Authenticating);
+        await Task.Delay(10);
+        Assert.False(waitTask.IsCompleted);
 
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Authenticated);
 
         await waitTask;
     }
@@ -97,10 +97,10 @@ public class SetupStateSignalingTests
     public async Task WaitForPhaseAsync_completes_immediately_when_phase_already_reached()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
 
-        Task waitTask = state.WaitForPhaseAsync(targetPhase: SetupPhase.Authenticated);
+        Task waitTask = state.WaitForPhaseAsync(SetupPhase.Authenticated);
 
         await waitTask;
     }
@@ -109,12 +109,12 @@ public class SetupStateSignalingTests
     public async Task WaitForPhaseAsync_completes_when_phase_surpassed()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticating);
 
-        Task waitTask = state.WaitForPhaseAsync(targetPhase: SetupPhase.Authenticated);
+        Task waitTask = state.WaitForPhaseAsync(SetupPhase.Authenticated);
 
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
 
         await waitTask;
     }
@@ -123,10 +123,10 @@ public class SetupStateSignalingTests
     public async Task WaitForPhaseAsync_cancellation_token_honored()
     {
         SetupState state = new();
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 50));
+        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(50));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            state.WaitForPhaseAsync(targetPhase: SetupPhase.Complete, cancellationToken: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            state.WaitForPhaseAsync(SetupPhase.Complete, cts.Token)
         );
     }
 
@@ -136,8 +136,8 @@ public class SetupStateSignalingTests
         SetupState state = new();
         Task waitTask = state.WaitForChangeAsync();
 
-        await Task.Delay(millisecondsDelay: 10);
-        state.SetPhaseDetail(detail: "New detail");
+        await Task.Delay(10);
+        state.SetPhaseDetail("New detail");
 
         await waitTask;
     }
@@ -148,8 +148,8 @@ public class SetupStateSignalingTests
         SetupState state = new();
         Task waitTask = state.WaitForChangeAsync();
 
-        await Task.Delay(millisecondsDelay: 10);
-        state.SetError(message: "Error message");
+        await Task.Delay(10);
+        state.SetError("Error message");
 
         await waitTask;
     }
@@ -158,11 +158,11 @@ public class SetupStateSignalingTests
     public async Task ClearError_signals_change()
     {
         SetupState state = new();
-        state.SetError(message: "Error message");
+        state.SetError("Error message");
 
         Task waitTask = state.WaitForChangeAsync();
 
-        await Task.Delay(millisecondsDelay: 10);
+        await Task.Delay(10);
         state.ClearError();
 
         await waitTask;
@@ -172,11 +172,11 @@ public class SetupStateSignalingTests
     public async Task Reset_signals_change()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticating);
 
         Task waitTask = state.WaitForChangeAsync();
 
-        await Task.Delay(millisecondsDelay: 10);
+        await Task.Delay(10);
         state.Reset();
 
         await waitTask;
@@ -191,10 +191,10 @@ public class SetupStateSignalingTests
         Task wait2 = state.WaitForChangeAsync();
         Task wait3 = state.WaitForChangeAsync();
 
-        await Task.Delay(millisecondsDelay: 10);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        await Task.Delay(10);
+        state.TransitionTo(SetupPhase.Authenticating);
 
-        await Task.WhenAll(tasks: [wait1, wait2, wait3]);
+        await Task.WhenAll([wait1, wait2, wait3]);
     }
 
     [Fact]
@@ -203,15 +203,15 @@ public class SetupStateSignalingTests
         SetupState state = new();
 
         Task wait1 = state.WaitForChangeAsync();
-        await Task.Delay(millisecondsDelay: 10);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        await Task.Delay(10);
+        state.TransitionTo(SetupPhase.Authenticating);
         await wait1;
 
         Task wait2 = state.WaitForChangeAsync();
-        Assert.False(condition: wait2.IsCompleted);
+        Assert.False(wait2.IsCompleted);
 
-        await Task.Delay(millisecondsDelay: 10);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+        await Task.Delay(10);
+        state.TransitionTo(SetupPhase.Authenticated);
 
         await wait2;
     }

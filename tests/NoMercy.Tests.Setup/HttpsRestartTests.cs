@@ -25,10 +25,10 @@ public class CertificateAvailabilityTests : IDisposable
     public CertificateAvailabilityTests()
     {
         _tempDir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nomercy_cert_test_" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nomercy_cert_test_" + Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: _tempDir);
+        Directory.CreateDirectory(_tempDir);
 
         _originalCertPath = AppFiles.CertPath;
     }
@@ -36,10 +36,10 @@ public class CertificateAvailabilityTests : IDisposable
     public void Dispose()
     {
         // Restore original cert path
-        SetCertPath(path: _originalCertPath);
+        SetCertPath(_originalCertPath);
 
-        if (Directory.Exists(path: _tempDir))
-            Directory.Delete(path: _tempDir, recursive: true);
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
     }
 
     private void SetCertPath(string path)
@@ -59,10 +59,10 @@ public class CertificateAvailabilityTests : IDisposable
         try
         {
             bool result = new CertificateService(
-                logger: NullLogger<CertificateService>.Instance,
-                httpClientFactory: null!
+                NullLogger<CertificateService>.Instance,
+                null!
             ).HasValidCertificate();
-            Assert.False(condition: result, userMessage: "No certificate should be present in the test environment");
+            Assert.False(result, "No certificate should be present in the test environment");
         }
         catch (SqliteException)
         {
@@ -80,46 +80,46 @@ public class SetupCompleteSignalTests
         SetupState state = new();
 
         bool completed = false;
-        Task waitTask = Task.Run(function: async () =>
+        Task waitTask = Task.Run(async () =>
         {
             await state.WaitForSetupCompleteAsync();
             completed = true;
         });
 
         // Simulate full setup flow
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
-        state.TransitionTo(targetPhase: SetupPhase.Registered);
-        state.TransitionTo(targetPhase: SetupPhase.CertificateAcquired);
-        state.TransitionTo(targetPhase: SetupPhase.Complete);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+        state.TransitionTo(SetupPhase.Complete);
 
-        await waitTask.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2));
-        Assert.True(condition: completed);
+        await waitTask.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.True(completed);
     }
 
     [Fact]
     public async Task SetupComplete_DoesNotBlock_WhenAlreadyComplete()
     {
         SetupState state = new();
-        state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
+        state.DetermineInitialPhase(true, true);
 
-        Assert.Equal(expected: SetupPhase.Complete, actual: state.CurrentPhase);
+        Assert.Equal(SetupPhase.Complete, state.CurrentPhase);
 
         // Should return immediately
         Task waitTask = state.WaitForSetupCompleteAsync();
-        await waitTask.WaitAsync(timeout: TimeSpan.FromMilliseconds(milliseconds: 100));
-        Assert.True(condition: waitTask.IsCompleted);
+        await waitTask.WaitAsync(TimeSpan.FromMilliseconds(100));
+        Assert.True(waitTask.IsCompleted);
     }
 
     [Fact]
     public async Task SetupComplete_CanBeCancelled()
     {
         SetupState state = new();
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 50));
+        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(50));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            state.WaitForSetupCompleteAsync(cancellationToken: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            state.WaitForSetupCompleteAsync(cts.Token)
         );
     }
 
@@ -129,20 +129,20 @@ public class SetupCompleteSignalTests
         SetupState state = new();
 
         Task[] waiters = Enumerable
-            .Range(start: 0, count: 5)
-            .Select(selector: _ => state.WaitForSetupCompleteAsync())
+            .Range(0, 5)
+            .Select(_ => state.WaitForSetupCompleteAsync())
             .ToArray();
 
         // Complete setup
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
-        state.TransitionTo(targetPhase: SetupPhase.Registered);
-        state.TransitionTo(targetPhase: SetupPhase.CertificateAcquired);
-        state.TransitionTo(targetPhase: SetupPhase.Complete);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+        state.TransitionTo(SetupPhase.Complete);
 
-        await Task.WhenAll(tasks: waiters).WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2));
-        Assert.All(collection: waiters, action: w => Assert.True(condition: w.IsCompleted));
+        await Task.WhenAll(waiters).WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.All(waiters, w => Assert.True(w.IsCompleted));
     }
 }
 
@@ -159,8 +159,8 @@ public class HttpToHttpsTransitionTests
         try
         {
             hasCert = new CertificateService(
-                logger: NullLogger<CertificateService>.Instance,
-                httpClientFactory: null!
+                NullLogger<CertificateService>.Instance,
+                null!
             ).HasValidCertificate();
         }
         catch (SqliteException)
@@ -168,14 +168,14 @@ public class HttpToHttpsTransitionTests
             // Expected when Configuration table does not exist — treated as no cert.
         }
 
-        Assert.False(condition: hasCert);
+        Assert.False(hasCert);
     }
 
     [Fact]
     public void SetupState_TransitionToComplete_IsValid_FromCertificateAcquired()
     {
         Assert.True(
-            condition: SetupState.IsValidTransition(from: SetupPhase.CertificateAcquired, to: SetupPhase.Complete)
+            SetupState.IsValidTransition(SetupPhase.CertificateAcquired, SetupPhase.Complete)
         );
     }
 
@@ -184,15 +184,15 @@ public class HttpToHttpsTransitionTests
     {
         SetupState state = new();
 
-        Assert.True(condition: state.TransitionTo(targetPhase: SetupPhase.Authenticating));
-        Assert.True(condition: state.TransitionTo(targetPhase: SetupPhase.Authenticated));
-        Assert.True(condition: state.TransitionTo(targetPhase: SetupPhase.Registering));
-        Assert.True(condition: state.TransitionTo(targetPhase: SetupPhase.Registered));
-        Assert.True(condition: state.TransitionTo(targetPhase: SetupPhase.CertificateAcquired));
-        Assert.True(condition: state.TransitionTo(targetPhase: SetupPhase.Complete));
+        Assert.True(state.TransitionTo(SetupPhase.Authenticating));
+        Assert.True(state.TransitionTo(SetupPhase.Authenticated));
+        Assert.True(state.TransitionTo(SetupPhase.Registering));
+        Assert.True(state.TransitionTo(SetupPhase.Registered));
+        Assert.True(state.TransitionTo(SetupPhase.CertificateAcquired));
+        Assert.True(state.TransitionTo(SetupPhase.Complete));
 
-        Assert.False(condition: state.IsSetupRequired);
-        Assert.Equal(expected: SetupPhase.Complete, actual: state.CurrentPhase);
+        Assert.False(state.IsSetupRequired);
+        Assert.Equal(SetupPhase.Complete, state.CurrentPhase);
     }
 
     [Fact]
@@ -201,17 +201,17 @@ public class HttpToHttpsTransitionTests
         SetupState state = new();
 
         // Complete setup first
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
-        state.TransitionTo(targetPhase: SetupPhase.Registered);
-        state.TransitionTo(targetPhase: SetupPhase.CertificateAcquired);
-        state.TransitionTo(targetPhase: SetupPhase.Complete);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+        state.TransitionTo(SetupPhase.Complete);
 
         // New waiter should complete immediately
         Task waitTask = state.WaitForSetupCompleteAsync();
-        await waitTask.WaitAsync(timeout: TimeSpan.FromMilliseconds(milliseconds: 100));
-        Assert.True(condition: waitTask.IsCompleted);
+        await waitTask.WaitAsync(TimeSpan.FromMilliseconds(100));
+        Assert.True(waitTask.IsCompleted);
     }
 }
 
@@ -233,8 +233,8 @@ public class SetupStateSurvivesContainerRebuildTests
         // The OLD container's SetupState: BootOrchestrator.RunAsync drove this to
         // Complete because auth succeeded and the server was already registered.
         SetupState oldContainerState = new();
-        oldContainerState.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
-        Assert.Equal(expected: SetupPhase.Complete, actual: oldContainerState.CurrentPhase);
+        oldContainerState.DetermineInitialPhase(true, true);
+        Assert.Equal(SetupPhase.Complete, oldContainerState.CurrentPhase);
 
         // ServerBootstrapper disposes the app (and the old SetupState singleton with
         // it) and calls WebHostFactory.Create again. DI hands the new container a
@@ -243,7 +243,7 @@ public class SetupStateSurvivesContainerRebuildTests
 
         // This is the bug: the new container falsely believes setup is still required,
         // even though the orchestrator already reached Complete on the old one.
-        Assert.True(condition: newContainerStateWithoutFix.IsSetupRequired);
+        Assert.True(newContainerStateWithoutFix.IsSetupRequired);
     }
 
     [Fact]
@@ -252,8 +252,8 @@ public class SetupStateSurvivesContainerRebuildTests
         // Old container reaches Complete (orchestrator ran once, needsSetupMode came
         // back false because auth succeeded).
         SetupState oldContainerState = new();
-        oldContainerState.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
-        Assert.False(condition: oldContainerState.IsSetupRequired);
+        oldContainerState.DetermineInitialPhase(true, true);
+        Assert.False(oldContainerState.IsSetupRequired);
 
         // Rebuild: new container, new SetupState singleton.
         SetupState newContainerState = new();
@@ -262,10 +262,10 @@ public class SetupStateSurvivesContainerRebuildTests
         // new container's SetupState to the phase the orchestrator already reached —
         // hasValidToken/isRegistered are both true by construction at that call site
         // (needsSetupMode was false, and EnsureHttpsCertificate() just returned true).
-        newContainerState.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
+        newContainerState.DetermineInitialPhase(true, true);
 
-        Assert.Equal(expected: SetupPhase.Complete, actual: newContainerState.CurrentPhase);
-        Assert.False(condition: newContainerState.IsSetupRequired);
+        Assert.Equal(SetupPhase.Complete, newContainerState.CurrentPhase);
+        Assert.False(newContainerState.IsSetupRequired);
     }
 
     [Fact]
@@ -277,7 +277,7 @@ public class SetupStateSurvivesContainerRebuildTests
         // and let the real interactive setup flow drive it forward.
         SetupState newContainerState = new();
 
-        Assert.Equal(expected: SetupPhase.Unauthenticated, actual: newContainerState.CurrentPhase);
-        Assert.True(condition: newContainerState.IsSetupRequired);
+        Assert.Equal(SetupPhase.Unauthenticated, newContainerState.CurrentPhase);
+        Assert.True(newContainerState.IsSetupRequired);
     }
 }

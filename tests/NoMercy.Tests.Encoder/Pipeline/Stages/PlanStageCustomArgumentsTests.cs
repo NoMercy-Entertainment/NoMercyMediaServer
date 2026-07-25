@@ -42,16 +42,16 @@ public class PlanStageCustomArgumentsTests
 
     public PlanStageCustomArgumentsTests()
     {
-        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
-        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
-        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
-        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
+        _hardware.Setup(h => h.HasGpu).Returns(false);
+        _hardware.Setup(h => h.CpuCores).Returns(8);
+        _hardware.Setup(h => h.Gpus).Returns([]);
+        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
         _hardware
-            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns(value: (GpuDevice?)null);
+            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns((GpuDevice?)null);
 
         _codecResolver
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -59,38 +59,38 @@ public class PlanStageCustomArgumentsTests
                 )
             )
             .Returns(
-                value: new ResolvedCodec(
-                    FfmpegEncoderName: "libx264",
-                    EncoderInfo: new(
-                        FfmpegName: "libx264",
-                        RequiredVendor: null,
-                        Presets: ["medium"],
-                        Profiles: ["high"],
-                        Levels: ["4.1"],
-                        QualityRange: new(Min: 0, Max: 51, Default: 23),
-                        SupportedRateControl: [RateControlMode.Crf],
-                        Supports10Bit: false,
-                        SupportsHdr: false,
-                        MaxConcurrentSessions: int.MaxValue,
-                        PixelFormat10Bit: "yuv420p10le",
-                        VendorSpecificFlags: new()
+                new ResolvedCodec(
+                    "libx264",
+                    new(
+                        "libx264",
+                        null,
+                        ["medium"],
+                        ["high"],
+                        ["4.1"],
+                        new(0, 51, 23),
+                        [RateControlMode.Crf],
+                        false,
+                        false,
+                        int.MaxValue,
+                        "yuv420p10le",
+                        new()
                     ),
-                    Device: null,
-                    DefaultRateControl: RateControlMode.Crf
+                    null,
+                    RateControlMode.Crf
                 )
             );
 
         _stage = new(
-            graphBuilder: new(),
-            groupingStrategy: new(),
-            costEstimator: new(),
-            codecResolver: _codecResolver.Object,
-            hardware: _hardware.Object,
-            tonemapSelector: new TonemapSelector(),
-            ffmpegCapabilities: _ffmpegCapabilities.Object,
-            abrLadderGenerator: new AbrLadderGenerator(),
-            cropDetector: new NoOpCropDetector(),
-            logger: NullLogger<PlanStage>.Instance
+            new(),
+            new(),
+            new(),
+            _codecResolver.Object,
+            _hardware.Object,
+            new TonemapSelector(),
+            _ffmpegCapabilities.Object,
+            new AbrLadderGenerator(),
+            new NoOpCropDetector(),
+            NullLogger<PlanStage>.Instance
         );
     }
 
@@ -98,101 +98,101 @@ public class PlanStageCustomArgumentsTests
     public async Task VideoCustomArguments_ReachTheOutputExtraFlags()
     {
         EncodingProfile profile = BuildProfile(
-            customArgs: new() { [key: "-x264-params"] = "keyint=48:min-keyint=48" }
+            new() { ["-x264-params"] = "keyint=48:min-keyint=48" }
         );
 
-        OutputPlan plan = await RunPlan(profile: profile);
+        OutputPlan plan = await RunPlan(profile);
 
-        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
         video
             .ExtraFlags.Should()
-            .ContainKey(expected: "-x264-params", because: "video CustomArguments must reach the encode")
+            .ContainKey("-x264-params", "video CustomArguments must reach the encode")
             .WhoseValue.Should()
-            .Be(expected: "keyint=48:min-keyint=48");
+            .Be("keyint=48:min-keyint=48");
     }
 
     [Fact]
     public async Task ProfileCustomArguments_ReachTheGlobalExtraFlags()
     {
-        EncodingProfile profile = BuildProfile(customArgs: null) with
+        EncodingProfile profile = BuildProfile(null) with
         {
-            CustomArguments = new() { [key: "-max_muxing_queue_size"] = "1024" },
+            CustomArguments = new() { ["-max_muxing_queue_size"] = "1024" },
         };
 
-        OutputPlan plan = await RunPlan(profile: profile);
+        OutputPlan plan = await RunPlan(profile);
 
         plan.GlobalExtraFlags.Should()
-            .NotBeNull(because: "profile-level CustomArguments is the global escape hatch");
+            .NotBeNull("profile-level CustomArguments is the global escape hatch");
         plan.GlobalExtraFlags!.Should()
-            .ContainKey(expected: "-max_muxing_queue_size")
+            .ContainKey("-max_muxing_queue_size")
             .WhoseValue.Should()
-            .Be(expected: "1024");
+            .Be("1024");
     }
 
     [Fact]
     public async Task AudioCustomArguments_ReachTheAudioOutputExtraFlags()
     {
-        EncodingProfile profile = BuildProfile(customArgs: null) with
+        EncodingProfile profile = BuildProfile(null) with
         {
             Audio =
             [
                 new(
-                    Policy: StreamPolicy.Transcode,
-                    Codec: AudioCodecType.Aac,
-                    BitrateKbps: 192,
-                    Channels: 2,
-                    SampleRateHz: 48000,
-                    AllowedLanguages: [],
-                    DefaultLanguage: null,
-                    Loudness: null,
-                    Downmix: null,
-                    SegmentNameTemplate: "audio/{lang}",
-                    PlaylistNameTemplate: "audio/{lang}/playlist",
-                    CustomArguments: new() { [key: "-aac_coder"] = "twoloop" }
+                    StreamPolicy.Transcode,
+                    AudioCodecType.Aac,
+                    192,
+                    2,
+                    48000,
+                    [],
+                    null,
+                    null,
+                    null,
+                    "audio/{lang}",
+                    "audio/{lang}/playlist",
+                    new() { ["-aac_coder"] = "twoloop" }
                 ),
             ],
         };
 
-        OutputPlan plan = await RunPlan(profile: profile, media: BuildMediaWithStreams());
+        OutputPlan plan = await RunPlan(profile, BuildMediaWithStreams());
 
-        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
-        audio.ExtraFlags.Should().ContainKey(expected: "-aac_coder").WhoseValue.Should().Be(expected: "twoloop");
+        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
+        audio.ExtraFlags.Should().ContainKey("-aac_coder").WhoseValue.Should().Be("twoloop");
     }
 
     [Fact]
     public async Task SubtitleCustomArguments_ReachTheSubtitleOutputExtraFlags()
     {
-        EncodingProfile profile = BuildProfile(customArgs: null) with
+        EncodingProfile profile = BuildProfile(null) with
         {
             Subtitles =
             [
                 new(
-                    Policy: SubtitlePolicy.Extract,
-                    Codec: SubtitleCodecType.WebVtt,
-                    AllowedLanguages: [],
-                    IncludeForced: false,
-                    OcrLanguage: null,
-                    PlaylistNameTemplate: "subtitles/{lang}",
-                    CustomArguments: new() { [key: "-canvas_size"] = "1920x1080" }
+                    SubtitlePolicy.Extract,
+                    SubtitleCodecType.WebVtt,
+                    [],
+                    false,
+                    null,
+                    "subtitles/{lang}",
+                    new() { ["-canvas_size"] = "1920x1080" }
                 ),
             ],
         };
 
-        OutputPlan plan = await RunPlan(profile: profile, media: BuildMediaWithStreams());
+        OutputPlan plan = await RunPlan(profile, BuildMediaWithStreams());
 
-        SubtitleOutputPlan subtitle = Assert.Single(collection: plan.SubtitleOutputs);
-        subtitle.ExtraFlags.Should().ContainKey(expected: "-canvas_size").WhoseValue.Should().Be(expected: "1920x1080");
+        SubtitleOutputPlan subtitle = Assert.Single(plan.SubtitleOutputs);
+        subtitle.ExtraFlags.Should().ContainKey("-canvas_size").WhoseValue.Should().Be("1920x1080");
     }
 
     private async Task<OutputPlan> RunPlan(EncodingProfile profile) =>
-        await RunPlan(profile: profile, media: BuildSdrMedia());
+        await RunPlan(profile, BuildSdrMedia());
 
     private async Task<OutputPlan> RunPlan(EncodingProfile profile, MediaInfo media)
     {
-        ValidateInput input = new(Media: media, Profile: profile);
+        ValidateInput input = new(media, profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
         return success.Value.OutputPlan;
     }
 
@@ -202,79 +202,78 @@ public class PlanStageCustomArgumentsTests
             AudioStreams =
             [
                 new(
-                    Index: 1,
-                    Codec: "aac",
-                    Channels: 6,
-                    SampleRate: 48000,
-                    BitRateKbps: 384,
-                    Language: "eng",
-                    IsDefault: true,
-                    IsForced: false
+                    1,
+                    "aac",
+                    6,
+                    48000,
+                    384,
+                    "eng",
+                    true,
+                    false
                 ),
             ],
             SubtitleStreams =
             [
-                new(Index: 2, Codec: "subrip", Language: "eng", IsDefault: true, IsForced: false),
+                new(2, "subrip", "eng", true, false),
             ],
         };
 
     private static MediaInfo BuildSdrMedia() =>
         new(
-            FilePath: "/media/sdr.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 90),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 4_000_000_000,
-            VideoStreams:
+            "/media/sdr.mkv",
+            "matroska",
+            TimeSpan.FromMinutes(90),
+            8000,
+            4_000_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: "bt709",
-                    ColorTransfer: "bt709",
-                    ColorSpace: "bt709",
-                    IsDefault: true,
-                    BitRateKbps: 6000
+                    0,
+                    "h264",
+                    1920,
+                    1080,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    "bt709",
+                    "bt709",
+                    "bt709",
+                    true,
+                    6000
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
     private static EncodingProfile BuildProfile(Dictionary<string, string>? customArgs) =>
         new(
-            Id: Ulid.NewUlid(),
-            Name: "CustomArgs Test",
-            Container: Container.HlsTs,
-            Video: new(
-                Policy: StreamPolicy.Transcode,
-                Codec: VideoCodecType.H264,
-                Width: 1920,
-                Height: 1080,
-                RateControl: V2RateControlMode.Crf,
-                Crf: 23,
-                BitrateKbps: 5000,
-                MaxBitrateKbps: null,
-                BufferSizeKbps: null,
-                Preset: "medium",
-                CodecProfile: CodecProfile.High,
-                Level: "4.1",
-                Tune: null,
-                BitDepth: 8,
-                PixelFormat: null,
-                KeyframeIntervalSeconds: 2,
-                ConvertHdrToSdr: false,
-                SegmentNameTemplate: "video/{label}",
-                PlaylistNameTemplate: "video/{label}/playlist",
-                CustomArguments: customArgs
+            Ulid.NewUlid(),
+            "CustomArgs Test",
+            Container.HlsTs,
+            new(
+                StreamPolicy.Transcode,
+                VideoCodecType.H264,
+                1920,
+                1080,
+                V2RateControlMode.Crf,
+                23,
+                5000,
+                null,
+                null,
+                "medium",
+                CodecProfile.High,
+                "4.1",
+                null,
+                8,
+                null,
+                2,
+                false,
+                "video/{label}",
+                "video/{label}/playlist",
+                customArgs
             ),
-            Audio: [],
-            Subtitles: []
+            [],
+            []
         );
 }

@@ -29,6 +29,6 @@ public class ActivityHubBroadcaster : IActivityHubBroadcaster
 
     public Task BroadcastAsync(ActivityLog row, CancellationToken ct = default)
     {
-        return _hubContext.Clients.Group(groupName: ModeratorsGroup).SendAsync(method: EventName, arg1: row, cancellationToken: ct);
+        return _hubContext.Clients.Group(ModeratorsGroup).SendAsync(EventName, row, ct);
     }
 }

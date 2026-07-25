@@ -11,7 +11,7 @@ namespace NoMercy.Database.Migrations.Queue
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateIndex(
-                name: "IX_QueueJobs_Queue_ReservedAt_Priority_CreatedAt_Id",
+                "IX_QueueJobs_Queue_ReservedAt_Priority_CreatedAt_Id",
                 table: "QueueJobs",
                 columns: new[] { "Queue", "ReservedAt", "Priority", "CreatedAt", "Id" },
                 descending: new[] { false, false, true, false, false });
@@ -21,8 +21,8 @@ namespace NoMercy.Database.Migrations.Queue
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(
-                name: "IX_QueueJobs_Queue_ReservedAt_Priority_CreatedAt_Id",
-                table: "QueueJobs");
+                "IX_QueueJobs_Queue_ReservedAt_Priority_CreatedAt_Id",
+                "QueueJobs");
         }
     }
 }

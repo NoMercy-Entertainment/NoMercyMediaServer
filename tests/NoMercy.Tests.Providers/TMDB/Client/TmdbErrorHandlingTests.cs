@@ -19,14 +19,14 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Tests for error handling and edge cases in TMDB clients
 /// Verifies robust behavior under failure conditions
 /// </summary>
-[Collection(name: "TmdbApi")]
+[Collection("TmdbApi")]
 public class TmdbErrorHandlingTests : TmdbTestBase
 {
     [Fact]
     public async Task MovieClient_WithInvalidId_HandlesGracefully()
     {
         // Arrange
-        using TmdbMovieClient client = CreateMockMovieClient(movieId: InvalidMovieId);
+        using TmdbMovieClient client = CreateMockMovieClient(InvalidMovieId);
 
         // Act & Assert
         Func<Task<TmdbMovieDetails?>> detailsTask = async () => await client.Details();
@@ -40,14 +40,14 @@ public class TmdbErrorHandlingTests : TmdbTestBase
     }
 
     [Theory]
-    [InlineData(data: -1)]
-    [InlineData(data: 0)]
-    [InlineData(data: int.MinValue)]
-    [InlineData(data: int.MaxValue)]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(int.MinValue)]
+    [InlineData(int.MaxValue)]
     public async Task MovieClient_WithEdgeCaseIds_HandlesGracefully(int edgeCaseId)
     {
         // Arrange
-        using TmdbMovieClient client = CreateMockMovieClient(movieId: edgeCaseId);
+        using TmdbMovieClient client = CreateMockMovieClient(edgeCaseId);
 
         // Act & Assert
         Func<Task<TmdbMovieDetails?>> detailsTask = async () => await client.Details();
@@ -62,22 +62,22 @@ public class TmdbErrorHandlingTests : TmdbTestBase
 
         // Act & Assert
         Func<Task<TmdbMovieChanges?>> invalidFormatTask = async () =>
-            await client.Changes(startDate: "invalid-date", endDate: "another-invalid-date");
+            await client.Changes("invalid-date", "another-invalid-date");
         await invalidFormatTask.Should().NotThrowAsync();
 
         Func<Task<TmdbMovieChanges?>> futureDateTask = async () =>
-            await client.Changes(startDate: "2099-12-31", endDate: "2100-01-01");
+            await client.Changes("2099-12-31", "2100-01-01");
         await futureDateTask.Should().NotThrowAsync();
 
         Func<Task<TmdbMovieChanges?>> reversedDatesTask = async () =>
-            await client.Changes(startDate: "2023-12-31", endDate: "2023-01-01");
+            await client.Changes("2023-12-31", "2023-01-01");
         await reversedDatesTask.Should().NotThrowAsync();
     }
 
     [Theory]
-    [InlineData(data: null)]
-    [InlineData(data: "")]
-    [InlineData(data: "   ")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     public async Task MovieClient_Changes_WithNullOrEmptyDates_HandlesGracefully(string? dateValue)
     {
         // Arrange
@@ -85,7 +85,7 @@ public class TmdbErrorHandlingTests : TmdbTestBase
 
         // Act & Assert
         Func<Task<TmdbMovieChanges?>> task = async () =>
-            await client.Changes(startDate: dateValue!, endDate: dateValue!);
+            await client.Changes(dateValue!, dateValue!);
         await task.Should().NotThrowAsync();
     }
 
@@ -93,7 +93,7 @@ public class TmdbErrorHandlingTests : TmdbTestBase
     public async Task MovieClient_MultipleSimultaneousOperations_OnInvalidId_HandlesGracefully()
     {
         // Arrange
-        using TmdbMovieClient client = CreateMockMovieClient(movieId: InvalidMovieId);
+        using TmdbMovieClient client = CreateMockMovieClient(InvalidMovieId);
 
         // Act & Assert
         Task<TmdbMovieDetails?> detailsTask = client.Details();
@@ -103,7 +103,7 @@ public class TmdbErrorHandlingTests : TmdbTestBase
         Task<TmdbImages?> imagesTask = client.Images();
 
         Func<Task> allTasksCompletion = async () =>
-            await Task.WhenAll(tasks: [detailsTask, creditsTask, externalIdsTask, keywordsTask, imagesTask]);
+            await Task.WhenAll([detailsTask, creditsTask, externalIdsTask, keywordsTask, imagesTask]);
         await allTasksCompletion.Should().NotThrowAsync();
     }
 
@@ -111,10 +111,10 @@ public class TmdbErrorHandlingTests : TmdbTestBase
     public void MovieClient_ConstructorWithExtremeValues_DoesNotThrow()
     {
         // Arrange & Act & Assert
-        Func<TmdbMovieClient> maxIntConstructor = () => new(id: int.MaxValue);
+        Func<TmdbMovieClient> maxIntConstructor = () => new(int.MaxValue);
         maxIntConstructor.Should().NotThrow();
 
-        Func<TmdbMovieClient> minIntConstructor = () => new(id: int.MinValue);
+        Func<TmdbMovieClient> minIntConstructor = () => new(int.MinValue);
         minIntConstructor.Should().NotThrow();
 
         Func<TmdbMovieClient> zeroConstructor = () => new();
@@ -122,19 +122,19 @@ public class TmdbErrorHandlingTests : TmdbTestBase
     }
 
     [Theory]
-    [InlineData(data: null)]
-    [InlineData(data: "")]
-    [InlineData(data: "invalid-language-code")]
-    [InlineData(data: "xx-XX")]
-    [InlineData(data: "12345")]
-    [InlineData(data: "!@#$%")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("invalid-language-code")]
+    [InlineData("xx-XX")]
+    [InlineData("12345")]
+    [InlineData("!@#$%")]
     public void MovieClient_ConstructorWithInvalidLanguages_DoesNotThrow(string? language)
     {
         // Arrange & Act & Assert
-        Func<TmdbMovieClient> constructor = () => new(id: ValidMovieId, language: language!);
+        Func<TmdbMovieClient> constructor = () => new(ValidMovieId, language: language!);
         constructor.Should().NotThrow();
 
-        using TmdbMovieClient client = new(id: ValidMovieId, language: language!);
+        using TmdbMovieClient client = new(ValidMovieId, language: language!);
         client.Should().NotBeNull();
     }
 
@@ -142,7 +142,7 @@ public class TmdbErrorHandlingTests : TmdbTestBase
     public async Task MovieClient_WithAllAppends_OnInvalidId_HandlesGracefully()
     {
         // Arrange
-        using TmdbMovieClient client = CreateMockMovieClient(movieId: InvalidMovieId);
+        using TmdbMovieClient client = CreateMockMovieClient(InvalidMovieId);
 
         // Act & Assert
         Func<Task<TmdbMovieAppends?>> task = async () => await client.WithAllAppends();
@@ -162,7 +162,7 @@ public class TmdbErrorHandlingTests : TmdbTestBase
         // Assert
         Func<int> propertyAccess = () => client.Id;
         propertyAccess.Should().NotThrow();
-        client.Id.Should().Be(expected: originalId);
+        client.Id.Should().Be(originalId);
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class TmdbErrorHandlingTests : TmdbTestBase
         {
             Func<int> createAndDispose = () =>
             {
-                using TmdbMovieClient client = CreateMockMovieClient(movieId: ValidMovieId + i);
+                using TmdbMovieClient client = CreateMockMovieClient(ValidMovieId + i);
                 return client.Id;
             };
 
@@ -207,17 +207,17 @@ public class TmdbErrorHandlingTests : TmdbTestBase
         using CancellationTokenSource cts = new();
 
         // Act
-        cts.CancelAfter(delay: TimeSpan.FromMilliseconds(milliseconds: 100)); // Cancel quickly
+        cts.CancelAfter(TimeSpan.FromMilliseconds(100)); // Cancel quickly
 
         // Note: The current TMDB client doesn't support cancellation tokens,
         // but we can test that operations complete or timeout gracefully
         Task<TmdbMovieAppends?> task = client.WithAllAppends();
 
         // Wait for either completion or a reasonable timeout
-        Task completedTask = await Task.WhenAny(task1: task, task2: Task.Delay(millisecondsDelay: 5000));
+        Task completedTask = await Task.WhenAny(task, Task.Delay(5000));
 
         // Assert
-        completedTask.Should().Be(expected: task); // Should complete, not timeout
+        completedTask.Should().Be(task); // Should complete, not timeout
         TmdbMovieAppends? result = await task;
         result.Should().NotBeNull();
     }
@@ -233,9 +233,9 @@ public class TmdbErrorHandlingTests : TmdbTestBase
         // Act
         for (int i = 0; i < clientCount; i++)
         {
-            TmdbMovieClient client = CreateMockMovieClient(movieId: ValidMovieId + i);
-            clients.Add(item: client);
-            tasks.Add(item: client.Details());
+            TmdbMovieClient client = CreateMockMovieClient(ValidMovieId + i);
+            clients.Add(client);
+            tasks.Add(client.Details());
         }
 
         // Dispose all clients while operations are potentially running
@@ -245,41 +245,41 @@ public class TmdbErrorHandlingTests : TmdbTestBase
         }
 
         // Assert
-        Func<Task> allTasksCompletion = async () => await Task.WhenAll(tasks: tasks);
+        Func<Task> allTasksCompletion = async () => await Task.WhenAll(tasks);
         await allTasksCompletion.Should().NotThrowAsync();
     }
 
     [Theory]
-    [InlineData(data: true)]
-    [InlineData(data: false)]
-    [InlineData(data: null)]
+    [InlineData(true)]
+    [InlineData(false)]
+    [InlineData(null)]
     public async Task MovieClient_AllMethods_WithPriorityFlags_HandleGracefully(bool? priority)
     {
         // Arrange
         using TmdbMovieClient client = CreateMockMovieClient();
 
         // Act & Assert
-        Func<Task<TmdbMovieDetails?>> detailsTask = async () => await client.Details(priority: priority);
+        Func<Task<TmdbMovieDetails?>> detailsTask = async () => await client.Details(priority);
         await detailsTask.Should().NotThrowAsync();
 
-        Func<Task<TmdbMovieCredits?>> creditsTask = async () => await client.Credits(priority: priority);
+        Func<Task<TmdbMovieCredits?>> creditsTask = async () => await client.Credits(priority);
         await creditsTask.Should().NotThrowAsync();
 
         Func<Task<TmdbMovieExternalIds?>> externalIdsTask = async () =>
-            await client.ExternalIds(priority: priority);
+            await client.ExternalIds(priority);
         await externalIdsTask.Should().NotThrowAsync();
 
-        Func<Task<TmdbMovieKeywords?>> keywordsTask = async () => await client.Keywords(priority: priority);
+        Func<Task<TmdbMovieKeywords?>> keywordsTask = async () => await client.Keywords(priority);
         await keywordsTask.Should().NotThrowAsync();
 
-        Func<Task<TmdbImages?>> imagesTask = async () => await client.Images(priority: priority);
+        Func<Task<TmdbImages?>> imagesTask = async () => await client.Images(priority);
         await imagesTask.Should().NotThrowAsync();
 
-        Func<Task<TmdbMovieLists?>> listsTask = async () => await client.Lists(priority: priority);
+        Func<Task<TmdbMovieLists?>> listsTask = async () => await client.Lists(priority);
         await listsTask.Should().NotThrowAsync();
 
         Func<Task<TmdbMovieAppends?>> appendsTask = async () =>
-            await client.WithAllAppends(priority: priority);
+            await client.WithAllAppends(priority);
         await appendsTask.Should().NotThrowAsync();
     }
 }

@@ -17,18 +17,18 @@ namespace NoMercy.MediaProcessing.Images;
 public abstract class NoMercyImageManager : INoMercyImageManager
 {
     private static readonly Size PaletteDecodeSize = new(
-        width: ColorQuantizer.MaxDimension,
-        height: ColorQuantizer.MaxDimension
+        ColorQuantizer.MaxDimension,
+        ColorQuantizer.MaxDimension
     );
 
     public static async Task<string> ColorPalette(string type, string? path, bool? download = true)
     {
         return await BaseImageManager.ColorPalette(
-            client: NoMercyImageClient.Download,
-            type: type,
-            path: path,
-            download: download,
-            maxDecodeSize: PaletteDecodeSize
+            NoMercyImageClient.Download,
+            type,
+            path,
+            download,
+            PaletteDecodeSize
         );
     }
 
@@ -38,10 +38,10 @@ public abstract class NoMercyImageManager : INoMercyImageManager
     )
     {
         return await BaseImageManager.MultiColorPalette(
-            client: NoMercyImageClient.Download,
-            items: items,
-            download: download,
-            maxDecodeSize: PaletteDecodeSize
+            NoMercyImageClient.Download,
+            items,
+            download,
+            PaletteDecodeSize
         );
     }
 }

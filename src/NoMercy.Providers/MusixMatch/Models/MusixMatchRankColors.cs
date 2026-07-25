@@ -15,15 +15,15 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchRankColors
 {
-    [JsonProperty(propertyName: "rank_color_10")]
+    [JsonProperty("rank_color_10")]
     public string RankColor10 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "rank_color_50")]
+    [JsonProperty("rank_color_50")]
     public string RankColor50 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "rank_color_100")]
+    [JsonProperty("rank_color_100")]
     public string RankColor100 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "rank_color_200")]
+    [JsonProperty("rank_color_200")]
     public string RankColor200 { get; set; } = string.Empty;
 }

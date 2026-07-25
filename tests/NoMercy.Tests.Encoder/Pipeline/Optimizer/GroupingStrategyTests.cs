@@ -25,20 +25,19 @@ public class GroupingStrategyTests
 
     private static IHardwareCapabilities MakeGpuCaps(int maxSessions) =>
         new HardwareCapabilities(
-            Gpus:
             [
                 new(
-                    Vendor: GpuVendor.Nvidia,
-                    Name: "RTX 4090",
-                    VramMb: 24576,
-                    MaxEncoderSessions: maxSessions,
-                    SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
+                    GpuVendor.Nvidia,
+                    "RTX 4090",
+                    24576,
+                    maxSessions,
+                    [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
                 ),
             ],
-            CpuCores: 16
+            16
         );
 
-    private static IHardwareCapabilities NoCpuOnly => new HardwareCapabilities(Gpus: [], CpuCores: 8);
+    private static IHardwareCapabilities NoCpuOnly => new HardwareCapabilities([], 8);
 
     // ------------------------------------------------------------------
     // Node factory helpers
@@ -52,10 +51,10 @@ public class GroupingStrategyTests
         List<ExecutionNode> nodes =
         [
             new(
-                Id: decodeId,
-                Operation: OperationType.Decode,
-                DependsOn: [],
-                Parameters: new() { [key: "stream_index"] = "0", [key: "codec"] = "h264" }
+                decodeId,
+                OperationType.Decode,
+                [],
+                new() { ["stream_index"] = "0", ["codec"] = "h264" }
             ),
         ];
 
@@ -63,31 +62,31 @@ public class GroupingStrategyTests
         {
             string scaleId = $"node_scale_{i}";
             nodes.Add(
-                item: new(
-                    Id: scaleId,
-                    Operation: OperationType.Scale,
-                    DependsOn: [decodeId],
-                    Parameters: new()
+                new(
+                    scaleId,
+                    OperationType.Scale,
+                    [decodeId],
+                    new()
                     {
-                        [key: "width"] = "1920",
-                        [key: "height"] = "1080",
-                        [key: "split_index"] = i.ToString(),
+                        ["width"] = "1920",
+                        ["height"] = "1080",
+                        ["split_index"] = i.ToString(),
                     }
                 )
             );
 
             nodes.Add(
-                item: new(
-                    Id: $"node_encode_{i}",
-                    Operation: OperationType.Encode,
-                    DependsOn: [scaleId],
-                    Parameters: new()
+                new(
+                    $"node_encode_{i}",
+                    OperationType.Encode,
+                    [scaleId],
+                    new()
                     {
-                        [key: "encoder"] = "h264_nvenc",
-                        [key: "crf"] = "22",
-                        [key: "preset"] = "fast",
-                        [key: "width"] = "1920",
-                        [key: "height"] = "1080",
+                        ["encoder"] = "h264_nvenc",
+                        ["crf"] = "22",
+                        ["preset"] = "fast",
+                        ["width"] = "1920",
+                        ["height"] = "1080",
                     }
                 )
             );
@@ -102,11 +101,11 @@ public class GroupingStrategyTests
         for (int i = 0; i < count; i++)
         {
             nodes.Add(
-                item: new(
-                    Id: $"sub_{i}",
-                    Operation: OperationType.SubtitleExtract,
-                    DependsOn: [],
-                    Parameters: new() { [key: "stream_index"] = i.ToString(), [key: "language"] = "eng" }
+                new(
+                    $"sub_{i}",
+                    OperationType.SubtitleExtract,
+                    [],
+                    new() { ["stream_index"] = i.ToString(), ["language"] = "eng" }
                 )
             );
         }
@@ -117,15 +116,15 @@ public class GroupingStrategyTests
     private static List<ExecutionNode> ThumbnailNodes() =>
         [
             new(
-                Id: "thumb_0",
-                Operation: OperationType.ThumbnailCapture,
-                DependsOn: [],
-                Parameters: new() { [key: "width"] = "320", [key: "interval"] = "10" }
+                "thumb_0",
+                OperationType.ThumbnailCapture,
+                [],
+                new() { ["width"] = "320", ["interval"] = "10" }
             ),
         ];
 
     private static List<ExecutionNode> ChapterNodes() =>
-        [new(Id: "chapter_0", Operation: OperationType.ChapterExtract, DependsOn: [], Parameters: new())];
+        [new("chapter_0", OperationType.ChapterExtract, [], new())];
 
     // ------------------------------------------------------------------
     // Tests
@@ -134,93 +133,93 @@ public class GroupingStrategyTests
     [Fact]
     public void ThreeOutputsOnGpuWith12SessionLimit_FitsInOneGroup()
     {
-        List<ExecutionNode> nodes = BuildVideoChainNodes(encodeCount: 3);
-        IHardwareCapabilities hardware = MakeGpuCaps(maxSessions: 12);
+        List<ExecutionNode> nodes = BuildVideoChainNodes(3);
+        IHardwareCapabilities hardware = MakeGpuCaps(12);
 
-        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes: nodes, hardware: hardware);
+        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes, hardware);
 
-        ExecutionGroup mainGroup = groups.Single(predicate: g => g.RequiresGpu);
-        mainGroup.GpuSlotsRequired.Should().Be(expected: 3);
-        mainGroup.Nodes.Count(predicate: n => n.Operation == OperationType.Encode).Should().Be(expected: 3);
+        ExecutionGroup mainGroup = groups.Single(g => g.RequiresGpu);
+        mainGroup.GpuSlotsRequired.Should().Be(3);
+        mainGroup.Nodes.Count(n => n.Operation == OperationType.Encode).Should().Be(3);
     }
 
     [Fact]
     public void FifteenOutputsWithThreeSessionLimit_SplitsIntoMultipleGroups()
     {
-        List<ExecutionNode> nodes = BuildVideoChainNodes(encodeCount: 15);
-        IHardwareCapabilities hardware = MakeGpuCaps(maxSessions: 3);
+        List<ExecutionNode> nodes = BuildVideoChainNodes(15);
+        IHardwareCapabilities hardware = MakeGpuCaps(3);
 
-        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes: nodes, hardware: hardware);
+        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes, hardware);
 
-        IEnumerable<ExecutionGroup> gpuGroups = groups.Where(predicate: g => g.RequiresGpu);
-        gpuGroups.Should().HaveCountGreaterThan(expected: 1);
+        IEnumerable<ExecutionGroup> gpuGroups = groups.Where(g => g.RequiresGpu);
+        gpuGroups.Should().HaveCountGreaterThan(1);
 
         // Total encode nodes across all GPU groups must equal 15
-        int totalEncodes = gpuGroups.Sum(selector: g =>
-            g.Nodes.Count(predicate: n => n.Operation == OperationType.Encode)
+        int totalEncodes = gpuGroups.Sum(g =>
+            g.Nodes.Count(n => n.Operation == OperationType.Encode)
         );
-        totalEncodes.Should().Be(expected: 15);
+        totalEncodes.Should().Be(15);
     }
 
     [Fact]
     public void FifteenOutputsWithThreeSessionLimit_EachGroupHasAtMostThreeEncodes()
     {
-        List<ExecutionNode> nodes = BuildVideoChainNodes(encodeCount: 15);
-        IHardwareCapabilities hardware = MakeGpuCaps(maxSessions: 3);
+        List<ExecutionNode> nodes = BuildVideoChainNodes(15);
+        IHardwareCapabilities hardware = MakeGpuCaps(3);
 
-        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes: nodes, hardware: hardware);
+        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes, hardware);
 
-        foreach (ExecutionGroup group in groups.Where(predicate: g => g.RequiresGpu))
+        foreach (ExecutionGroup group in groups.Where(g => g.RequiresGpu))
         {
             group
-                .Nodes.Count(predicate: n => n.Operation == OperationType.Encode)
+                .Nodes.Count(n => n.Operation == OperationType.Encode)
                 .Should()
-                .BeLessThanOrEqualTo(expected: 3);
+                .BeLessThanOrEqualTo(3);
         }
     }
 
     [Fact]
     public void SubtitleNodes_FormSeparateGroupWithPriorityZero()
     {
-        List<ExecutionNode> nodes = [.. BuildVideoChainNodes(encodeCount: 1), .. SubtitleNodes(count: 2)];
-        IHardwareCapabilities hardware = MakeGpuCaps(maxSessions: 12);
+        List<ExecutionNode> nodes = [.. BuildVideoChainNodes(1), .. SubtitleNodes(2)];
+        IHardwareCapabilities hardware = MakeGpuCaps(12);
 
-        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes: nodes, hardware: hardware);
+        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes, hardware);
 
-        ExecutionGroup subGroup = groups.Single(predicate: g =>
-            g.Nodes.Any(predicate: n => n.Operation == OperationType.SubtitleExtract)
+        ExecutionGroup subGroup = groups.Single(g =>
+            g.Nodes.Any(n => n.Operation == OperationType.SubtitleExtract)
         );
         subGroup.RequiresGpu.Should().BeFalse();
-        subGroup.Priority.Should().Be(expected: 0);
+        subGroup.Priority.Should().Be(0);
     }
 
     [Fact]
     public void ThumbnailNodes_FormSeparateGroupWithPriorityTwo()
     {
-        List<ExecutionNode> nodes = [.. BuildVideoChainNodes(encodeCount: 1), .. ThumbnailNodes()];
-        IHardwareCapabilities hardware = MakeGpuCaps(maxSessions: 12);
+        List<ExecutionNode> nodes = [.. BuildVideoChainNodes(1), .. ThumbnailNodes()];
+        IHardwareCapabilities hardware = MakeGpuCaps(12);
 
-        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes: nodes, hardware: hardware);
+        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes, hardware);
 
-        ExecutionGroup thumbGroup = groups.Single(predicate: g =>
-            g.Nodes.Any(predicate: n => n.Operation == OperationType.ThumbnailCapture)
+        ExecutionGroup thumbGroup = groups.Single(g =>
+            g.Nodes.Any(n => n.Operation == OperationType.ThumbnailCapture)
         );
         thumbGroup.RequiresGpu.Should().BeFalse();
-        thumbGroup.Priority.Should().Be(expected: 2);
+        thumbGroup.Priority.Should().Be(2);
     }
 
     [Fact]
     public void ChapterNodes_FormSeparateGroupWithPriorityZero()
     {
-        List<ExecutionNode> nodes = [.. BuildVideoChainNodes(encodeCount: 1), .. ChapterNodes()];
-        IHardwareCapabilities hardware = MakeGpuCaps(maxSessions: 12);
+        List<ExecutionNode> nodes = [.. BuildVideoChainNodes(1), .. ChapterNodes()];
+        IHardwareCapabilities hardware = MakeGpuCaps(12);
 
-        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes: nodes, hardware: hardware);
+        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes, hardware);
 
-        ExecutionGroup chapterGroup = groups.Single(predicate: g =>
-            g.Nodes.Any(predicate: n => n.Operation == OperationType.ChapterExtract)
+        ExecutionGroup chapterGroup = groups.Single(g =>
+            g.Nodes.Any(n => n.Operation == OperationType.ChapterExtract)
         );
-        chapterGroup.Priority.Should().Be(expected: 0);
+        chapterGroup.Priority.Should().Be(0);
     }
 
     [Fact]
@@ -228,29 +227,29 @@ public class GroupingStrategyTests
     {
         List<ExecutionNode> nodes =
         [
-            .. BuildVideoChainNodes(encodeCount: 1),
-            .. SubtitleNodes(count: 1),
+            .. BuildVideoChainNodes(1),
+            .. SubtitleNodes(1),
             .. ThumbnailNodes(),
             .. ChapterNodes(),
         ];
-        IHardwareCapabilities hardware = MakeGpuCaps(maxSessions: 12);
+        IHardwareCapabilities hardware = MakeGpuCaps(12);
 
-        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes: nodes, hardware: hardware);
+        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes, hardware);
 
-        IEnumerable<int> priorities = groups.Select(selector: g => g.Priority);
+        IEnumerable<int> priorities = groups.Select(g => g.Priority);
         priorities.Should().BeInAscendingOrder();
     }
 
     [Fact]
     public void CpuOnlyHardware_MainGroupDoesNotRequireGpu()
     {
-        List<ExecutionNode> nodes = BuildVideoChainNodes(encodeCount: 1);
+        List<ExecutionNode> nodes = BuildVideoChainNodes(1);
         IHardwareCapabilities hardware = NoCpuOnly;
 
-        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes: nodes, hardware: hardware);
+        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes, hardware);
 
-        ExecutionGroup mainGroup = groups.Single(predicate: g =>
-            g.Nodes.Any(predicate: n => n.Operation == OperationType.Encode)
+        ExecutionGroup mainGroup = groups.Single(g =>
+            g.Nodes.Any(n => n.Operation == OperationType.Encode)
         );
         mainGroup.RequiresGpu.Should().BeFalse();
         mainGroup.DeviceId.Should().BeNull();
@@ -259,13 +258,13 @@ public class GroupingStrategyTests
     [Fact]
     public void GpuHardware_MainGroupHasDeviceId()
     {
-        List<ExecutionNode> nodes = BuildVideoChainNodes(encodeCount: 1);
-        IHardwareCapabilities hardware = MakeGpuCaps(maxSessions: 12);
+        List<ExecutionNode> nodes = BuildVideoChainNodes(1);
+        IHardwareCapabilities hardware = MakeGpuCaps(12);
 
-        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes: nodes, hardware: hardware);
+        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes, hardware);
 
-        ExecutionGroup mainGroup = groups.Single(predicate: g => g.RequiresGpu);
-        mainGroup.DeviceId.Should().Be(expected: "RTX 4090");
+        ExecutionGroup mainGroup = groups.Single(g => g.RequiresGpu);
+        mainGroup.DeviceId.Should().Be("RTX 4090");
     }
 
     [Fact]
@@ -273,16 +272,16 @@ public class GroupingStrategyTests
     {
         List<ExecutionNode> nodes =
         [
-            .. BuildVideoChainNodes(encodeCount: 3),
-            .. SubtitleNodes(count: 2),
+            .. BuildVideoChainNodes(3),
+            .. SubtitleNodes(2),
             .. ThumbnailNodes(),
             .. ChapterNodes(),
         ];
-        IHardwareCapabilities hardware = MakeGpuCaps(maxSessions: 12);
+        IHardwareCapabilities hardware = MakeGpuCaps(12);
 
-        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes: nodes, hardware: hardware);
+        List<ExecutionGroup> groups = Strategy.GroupNodes(nodes, hardware);
 
-        IEnumerable<string> groupIds = groups.Select(selector: g => g.GroupId);
+        IEnumerable<string> groupIds = groups.Select(g => g.GroupId);
         groupIds.Should().OnlyHaveUniqueItems();
     }
 }

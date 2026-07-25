@@ -25,19 +25,19 @@ public class PluginManifestParserTests : IDisposable
     public PluginManifestParserTests()
     {
         _tempDir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nomercy-manifest-tests-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nomercy-manifest-tests-" + Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: _tempDir);
+        Directory.CreateDirectory(_tempDir);
     }
 
     public void Dispose()
     {
         try
         {
-            if (Directory.Exists(path: _tempDir))
+            if (Directory.Exists(_tempDir))
             {
-                Directory.Delete(path: _tempDir, recursive: true);
+                Directory.Delete(_tempDir, recursive: true);
             }
         }
         catch (IOException) { }
@@ -57,22 +57,22 @@ public class PluginManifestParserTests : IDisposable
     {
         Dictionary<string, object?> manifest = new()
         {
-            [key: "id"] = (id ?? Guid.NewGuid()).ToString(),
-            [key: "name"] = name,
-            [key: "description"] = description,
-            [key: "version"] = version,
-            [key: "assembly"] = assembly,
-            [key: "autoEnabled"] = autoEnabled,
+            ["id"] = (id ?? Guid.NewGuid()).ToString(),
+            ["name"] = name,
+            ["description"] = description,
+            ["version"] = version,
+            ["assembly"] = assembly,
+            ["autoEnabled"] = autoEnabled,
         };
 
         if (targetAbi is not null)
-            manifest[key: "targetAbi"] = targetAbi;
+            manifest["targetAbi"] = targetAbi;
         if (author is not null)
-            manifest[key: "author"] = author;
+            manifest["author"] = author;
         if (projectUrl is not null)
-            manifest[key: "projectUrl"] = projectUrl;
+            manifest["projectUrl"] = projectUrl;
 
-        return JsonSerializer.Serialize(value: manifest);
+        return JsonSerializer.Serialize(manifest);
     }
 
     [Fact]
@@ -86,12 +86,12 @@ public class PluginManifestParserTests : IDisposable
             assembly: "MyPlugin.dll"
         );
 
-        PluginManifest manifest = PluginManifestParser.Parse(json: json);
+        PluginManifest manifest = PluginManifestParser.Parse(json);
 
-        manifest.Id.Should().Be(expected: pluginId);
-        manifest.Name.Should().Be(expected: "MyPlugin");
-        manifest.Version.Should().Be(expected: "2.1.0");
-        manifest.Assembly.Should().Be(expected: "MyPlugin.dll");
+        manifest.Id.Should().Be(pluginId);
+        manifest.Name.Should().Be("MyPlugin");
+        manifest.Version.Should().Be("2.1.0");
+        manifest.Assembly.Should().Be("MyPlugin.dll");
         manifest.AutoEnabled.Should().BeTrue();
     }
 
@@ -104,11 +104,11 @@ public class PluginManifestParserTests : IDisposable
             targetAbi: "9.0.0"
         );
 
-        PluginManifest manifest = PluginManifestParser.Parse(json: json);
+        PluginManifest manifest = PluginManifestParser.Parse(json);
 
-        manifest.Author.Should().Be(expected: "Test Author");
-        manifest.ProjectUrl.Should().Be(expected: "https://example.com");
-        manifest.TargetAbi.Should().Be(expected: "9.0.0");
+        manifest.Author.Should().Be("Test Author");
+        manifest.ProjectUrl.Should().Be("https://example.com");
+        manifest.TargetAbi.Should().Be("9.0.0");
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class PluginManifestParserTests : IDisposable
     {
         string json = CreateValidManifestJson(autoEnabled: false);
 
-        PluginManifest manifest = PluginManifestParser.Parse(json: json);
+        PluginManifest manifest = PluginManifestParser.Parse(json);
 
         manifest.AutoEnabled.Should().BeFalse();
     }
@@ -124,7 +124,7 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public void Parse_NullJson_ThrowsArgumentException()
     {
-        Action act = () => PluginManifestParser.Parse(json: null!);
+        Action act = () => PluginManifestParser.Parse(null!);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -132,7 +132,7 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public void Parse_EmptyJson_ThrowsArgumentException()
     {
-        Action act = () => PluginManifestParser.Parse(json: "");
+        Action act = () => PluginManifestParser.Parse("");
 
         act.Should().Throw<ArgumentException>();
     }
@@ -140,7 +140,7 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public void Parse_InvalidJson_ThrowsJsonException()
     {
-        Action act = () => PluginManifestParser.Parse(json: "not json");
+        Action act = () => PluginManifestParser.Parse("not json");
 
         act.Should().Throw<JsonException>();
     }
@@ -152,9 +152,9 @@ public class PluginManifestParserTests : IDisposable
         // ArgumentException.ThrowIfNullOrWhiteSpace guard but deserializes to a
         // null PluginManifest, which must be rejected explicitly rather than
         // let a NullReferenceException surface from Validate().
-        Action act = () => PluginManifestParser.Parse(json: "null");
+        Action act = () => PluginManifestParser.Parse("null");
 
-        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*deserialize*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*deserialize*");
     }
 
     [Fact]
@@ -162,9 +162,9 @@ public class PluginManifestParserTests : IDisposable
     {
         string json = CreateValidManifestJson(id: Guid.Empty);
 
-        Action act = () => PluginManifestParser.Parse(json: json);
+        Action act = () => PluginManifestParser.Parse(json);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*id*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*id*");
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public class PluginManifestParserTests : IDisposable
         string json =
             """{"id":"12345678-1234-1234-1234-123456789012","name":"Test","description":"d","assembly":"t.dll"}""";
 
-        Action act = () => PluginManifestParser.Parse(json: json);
+        Action act = () => PluginManifestParser.Parse(json);
 
         act.Should().Throw<JsonException>();
     }
@@ -183,9 +183,9 @@ public class PluginManifestParserTests : IDisposable
     {
         string json = CreateValidManifestJson(version: "not-a-version");
 
-        Action act = () => PluginManifestParser.Parse(json: json);
+        Action act = () => PluginManifestParser.Parse(json);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*version*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*version*");
     }
 
     [Fact]
@@ -195,9 +195,9 @@ public class PluginManifestParserTests : IDisposable
         string json =
             $@"{{""id"":""{id}"",""name"":""Test"",""description"":""d"",""version"":""1.0.0"",""assembly"":""""}}";
 
-        Action act = () => PluginManifestParser.Parse(json: json);
+        Action act = () => PluginManifestParser.Parse(json);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*assembly*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*assembly*");
     }
 
     [Fact]
@@ -214,9 +214,9 @@ public class PluginManifestParserTests : IDisposable
             ""assembly"": ""Test.dll""
         }}";
 
-        PluginManifest manifest = PluginManifestParser.Parse(json: json);
+        PluginManifest manifest = PluginManifestParser.Parse(json);
 
-        manifest.Id.Should().Be(expected: id);
+        manifest.Id.Should().Be(id);
     }
 
     [Fact]
@@ -232,9 +232,9 @@ public class PluginManifestParserTests : IDisposable
             ""assembly"": ""Test.dll"",
         }}";
 
-        PluginManifest manifest = PluginManifestParser.Parse(json: json);
+        PluginManifest manifest = PluginManifestParser.Parse(json);
 
-        manifest.Id.Should().Be(expected: id);
+        manifest.Id.Should().Be(id);
     }
 
     [Fact]
@@ -242,26 +242,26 @@ public class PluginManifestParserTests : IDisposable
     {
         Guid id = Guid.NewGuid();
         string json = CreateValidManifestJson(id: id, name: "FilePlugin");
-        string filePath = Path.Combine(path1: _tempDir, path2: "plugin.json");
-        await File.WriteAllTextAsync(path: filePath, contents: json);
+        string filePath = Path.Combine(_tempDir, "plugin.json");
+        await File.WriteAllTextAsync(filePath, json);
 
-        IStorage storage = TestStorageHelper.CreateStorage(rootPath: _tempDir);
-        PluginManifest manifest = await PluginManifestParser.ParseFileAsync(filePath: filePath, storage: storage);
+        IStorage storage = TestStorageHelper.CreateStorage(_tempDir);
+        PluginManifest manifest = await PluginManifestParser.ParseFileAsync(filePath, storage);
 
-        manifest.Id.Should().Be(expected: id);
-        manifest.Name.Should().Be(expected: "FilePlugin");
+        manifest.Id.Should().Be(id);
+        manifest.Name.Should().Be("FilePlugin");
     }
 
     [Fact]
     public async Task ParseFileAsync_FileNotFound_ThrowsFileNotFoundException()
     {
-        IStorage storage = TestStorageHelper.CreateStorage(rootPath: _tempDir);
+        IStorage storage = TestStorageHelper.CreateStorage(_tempDir);
         // Missing file UNDER the scoped root. An out-of-root absolute path is
         // rejected by the storage guard before the existence check, and a leading
         // "/" path is absolute on Linux but relative on Windows — so it must stay
         // inside the allowed root to test the not-found path cross-platform.
-        string missingPath = Path.Combine(path1: _tempDir, path2: "nonexistent", path3: "plugin.json");
-        Func<Task> act = () => PluginManifestParser.ParseFileAsync(filePath: missingPath, storage: storage);
+        string missingPath = Path.Combine(_tempDir, "nonexistent", "plugin.json");
+        Func<Task> act = () => PluginManifestParser.ParseFileAsync(missingPath, storage);
 
         await act.Should().ThrowAsync<FileNotFoundException>();
     }
@@ -269,8 +269,8 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public async Task ParseFileAsync_NullPath_ThrowsArgumentException()
     {
-        IStorage storage = TestStorageHelper.CreateStorage(rootPath: _tempDir);
-        Func<Task> act = () => PluginManifestParser.ParseFileAsync(filePath: null!, storage: storage);
+        IStorage storage = TestStorageHelper.CreateStorage(_tempDir);
+        Func<Task> act = () => PluginManifestParser.ParseFileAsync(null!, storage);
 
         await act.Should().ThrowAsync<ArgumentException>();
     }
@@ -292,28 +292,28 @@ public class PluginManifestParserTests : IDisposable
         };
 
         PluginInfo info = PluginManifestParser.ToPluginInfo(
-            manifest: manifest,
-            assemblyPath: "/plugins/TestPlugin.dll",
-            status: PluginStatus.Active,
-            manifestPath: "/plugins/plugin.json"
+            manifest,
+            "/plugins/TestPlugin.dll",
+            PluginStatus.Active,
+            "/plugins/plugin.json"
         );
 
-        info.Id.Should().Be(expected: id);
-        info.Name.Should().Be(expected: "TestPlugin");
-        info.Description.Should().Be(expected: "A test");
-        info.Version.Should().Be(expected: new(major: 2, minor: 0, build: 1));
-        info.Status.Should().Be(expected: PluginStatus.Active);
-        info.Author.Should().Be(expected: "Author");
-        info.ProjectUrl.Should().Be(expected: "https://test.com");
-        info.AssemblyPath.Should().Be(expected: "/plugins/TestPlugin.dll");
-        info.TargetAbi.Should().Be(expected: "9.0.0");
-        info.ManifestPath.Should().Be(expected: "/plugins/plugin.json");
+        info.Id.Should().Be(id);
+        info.Name.Should().Be("TestPlugin");
+        info.Description.Should().Be("A test");
+        info.Version.Should().Be(new(2, 0, 1));
+        info.Status.Should().Be(PluginStatus.Active);
+        info.Author.Should().Be("Author");
+        info.ProjectUrl.Should().Be("https://test.com");
+        info.AssemblyPath.Should().Be("/plugins/TestPlugin.dll");
+        info.TargetAbi.Should().Be("9.0.0");
+        info.ManifestPath.Should().Be("/plugins/plugin.json");
     }
 
     [Fact]
     public void ToPluginInfo_NullManifest_ThrowsArgumentNullException()
     {
-        Action act = () => PluginManifestParser.ToPluginInfo(manifest: null!, assemblyPath: "/path", status: PluginStatus.Active);
+        Action act = () => PluginManifestParser.ToPluginInfo(null!, "/path", PluginStatus.Active);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -331,11 +331,11 @@ public class PluginManifestParserTests : IDisposable
         };
 
         PluginInfo info = PluginManifestParser.ToPluginInfo(
-            manifest: manifest,
-            assemblyPath: "/path",
-            status: PluginStatus.Disabled
+            manifest,
+            "/path",
+            PluginStatus.Disabled
         );
 
-        info.Status.Should().Be(expected: PluginStatus.Disabled);
+        info.Status.Should().Be(PluginStatus.Disabled);
     }
 }

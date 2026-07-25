@@ -19,8 +19,8 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 ///     locally held metadata in sync. Hits the real TMDB API. limit:1 keeps each call to a
 ///     single page so the test stays cheap.
 /// </summary>
-[Trait(name: "Category", value: "Integration")]
-[Collection(name: "TmdbApi")]
+[Trait("Category", "Integration")]
+[Collection("TmdbApi")]
 public class TmdbChangesClientIntegrationTests : TmdbTestBase
 {
     [SkippableFact]
@@ -33,14 +33,14 @@ public class TmdbChangesClientIntegrationTests : TmdbTestBase
         // Act
         List<TmdbChangeListItem>? result = await client.MovieChanges(limit: 1);
         Skip.If(
-            condition: result is null || result.Count == 0,
-            reason: "TMDB changes endpoint returned no data (unavailable or rate-limited)."
+            result is null || result.Count == 0,
+            "TMDB changes endpoint returned no data (unavailable or rate-limited)."
         );
 
         // Assert
         result.Should().NotBeNull();
         result.Should().NotBeEmpty();
-        result!.Should().AllSatisfy(expected: change => change.Id.Should().BeGreaterThan(expected: 0));
+        result!.Should().AllSatisfy(change => change.Id.Should().BeGreaterThan(0));
     }
 
     [SkippableFact]
@@ -53,14 +53,14 @@ public class TmdbChangesClientIntegrationTests : TmdbTestBase
         // Act
         List<TmdbChangeListItem>? result = await client.TvChanges(limit: 1);
         Skip.If(
-            condition: result is null || result.Count == 0,
-            reason: "TMDB changes endpoint returned no data (unavailable or rate-limited)."
+            result is null || result.Count == 0,
+            "TMDB changes endpoint returned no data (unavailable or rate-limited)."
         );
 
         // Assert
         result.Should().NotBeNull();
         result.Should().NotBeEmpty();
-        result!.Should().AllSatisfy(expected: change => change.Id.Should().BeGreaterThan(expected: 0));
+        result!.Should().AllSatisfy(change => change.Id.Should().BeGreaterThan(0));
     }
 
     [SkippableFact]
@@ -73,13 +73,13 @@ public class TmdbChangesClientIntegrationTests : TmdbTestBase
         // Act
         List<TmdbChangeListItem>? result = await client.PersonChanges(limit: 1);
         Skip.If(
-            condition: result is null || result.Count == 0,
-            reason: "TMDB changes endpoint returned no data (unavailable or rate-limited)."
+            result is null || result.Count == 0,
+            "TMDB changes endpoint returned no data (unavailable or rate-limited)."
         );
 
         // Assert
         result.Should().NotBeNull();
         result.Should().NotBeEmpty();
-        result!.Should().AllSatisfy(expected: change => change.Id.Should().BeGreaterThan(expected: 0));
+        result!.Should().AllSatisfy(change => change.Id.Should().BeGreaterThan(0));
     }
 }

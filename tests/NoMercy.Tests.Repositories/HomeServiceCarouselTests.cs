@@ -34,17 +34,17 @@ public class HomeServiceCarouselTests : IDisposable
         (_factory, _connection) = TestMediaContextFactory.CreateFactory();
 
         using MediaContext seedContext = _factory.CreateDbContext();
-        TestMediaContextFactory.SeedData(context: seedContext);
+        TestMediaContextFactory.SeedData(seedContext);
     }
 
     private async Task<List<ComponentEnvelope>> GetHomeComponentsAsync()
     {
         await using MediaContext mainContext = await _factory.CreateDbContextAsync();
-        HomeRepository homeRepository = new(context: mainContext, contextFactory: _factory);
-        LibraryRepository libraryRepository = new(contextFactory: _factory);
-        HomeService service = new(homeRepository: homeRepository, libraryRepository: libraryRepository);
+        HomeRepository homeRepository = new(mainContext, _factory);
+        LibraryRepository libraryRepository = new(_factory);
+        HomeService service = new(homeRepository, libraryRepository);
 
-        ComponentResponse response = await service.GetHomeData(userId: SeedConstants.UserId, language: "en", country: "US");
+        ComponentResponse response = await service.GetHomeData(SeedConstants.UserId, "en", "US");
 
         return response.Data.ToList();
     }
@@ -55,15 +55,15 @@ public class HomeServiceCarouselTests : IDisposable
         List<ComponentEnvelope> components = await GetHomeComponentsAsync();
 
         Assert.Contains(
-            collection: components,
-            filter: envelope =>
+            components,
+            envelope =>
                 envelope.Component == ComponentTypes.Carousel
-                && GetComponentId(envelope: envelope)?.StartsWith(value: "library_") == true
+                && GetComponentId(envelope)?.StartsWith("library_") == true
         );
 
         Assert.Contains(
-            collection: components,
-            filter: envelope => GetComponentTitle(envelope: envelope)?.StartsWith(value: "Latest in") == true
+            components,
+            envelope => GetComponentTitle(envelope)?.StartsWith("Latest in") == true
         );
     }
 
@@ -72,20 +72,20 @@ public class HomeServiceCarouselTests : IDisposable
     {
         List<ComponentEnvelope> components = await GetHomeComponentsAsync();
 
-        Assert.Contains(collection: components, filter: envelope => envelope.Component == ComponentTypes.HomeCard);
+        Assert.Contains(components, envelope => envelope.Component == ComponentTypes.HomeCard);
 
         Assert.Contains(
-            collection: components,
-            filter: envelope =>
+            components,
+            envelope =>
                 envelope.Component == ComponentTypes.Carousel
-                && GetComponentId(envelope: envelope) == "continue"
+                && GetComponentId(envelope) == "continue"
         );
 
         Assert.Contains(
-            collection: components,
-            filter: envelope =>
+            components,
+            envelope =>
                 envelope.Component == ComponentTypes.Carousel
-                && GetComponentId(envelope: envelope)?.StartsWith(value: "genre_") == true
+                && GetComponentId(envelope)?.StartsWith("genre_") == true
         );
     }
 
@@ -95,15 +95,15 @@ public class HomeServiceCarouselTests : IDisposable
         List<ComponentEnvelope> components = await GetHomeComponentsAsync();
 
         HashSet<string> existingCarouselIds = components
-            .Where(predicate: envelope => envelope.Component == ComponentTypes.Carousel)
-            .Select(selector: GetComponentId)
-            .Where(predicate: id => id != null)
-            .Select(selector: id => id!)
+            .Where(envelope => envelope.Component == ComponentTypes.Carousel)
+            .Select(GetComponentId)
+            .Where(id => id != null)
+            .Select(id => id!)
             .ToHashSet();
 
         // Sanity: the seed data produces at least the continue + genre rows this
         // test is meant to walk, otherwise the loop below would vacuously pass.
-        Assert.True(condition: existingCarouselIds.Count >= 2);
+        Assert.True(existingCarouselIds.Count >= 2);
 
         foreach (ComponentEnvelope envelope in components)
         {
@@ -111,10 +111,10 @@ public class HomeServiceCarouselTests : IDisposable
                 continue;
 
             if (containerProps.PreviousId is string previousId)
-                Assert.Contains(expected: previousId, set: existingCarouselIds);
+                Assert.Contains(previousId, existingCarouselIds);
 
             if (containerProps.NextId is string nextId)
-                Assert.Contains(expected: nextId, set: existingCarouselIds);
+                Assert.Contains(nextId, existingCarouselIds);
         }
     }
 
@@ -139,6 +139,6 @@ public class HomeServiceCarouselTests : IDisposable
     public void Dispose()
     {
         _connection.Dispose();
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 }

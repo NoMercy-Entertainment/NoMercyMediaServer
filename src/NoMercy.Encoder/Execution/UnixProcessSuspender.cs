@@ -18,13 +18,13 @@ public sealed class UnixProcessSuspender : IProcessSuspender
 {
     public void Suspend(int processId)
     {
-        using Process? proc = Process.Start(fileName: "kill", arguments: ["-STOP", processId.ToString()]);
-        proc?.WaitForExit(milliseconds: 5000);
+        using Process? proc = Process.Start("kill", ["-STOP", processId.ToString()]);
+        proc?.WaitForExit(5000);
     }
 
     public void Resume(int processId)
     {
-        using Process? proc = Process.Start(fileName: "kill", arguments: ["-CONT", processId.ToString()]);
-        proc?.WaitForExit(milliseconds: 5000);
+        using Process? proc = Process.Start("kill", ["-CONT", processId.ToString()]);
+        proc?.WaitForExit(5000);
     }
 }

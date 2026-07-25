@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace NoMercy.Api.Middleware;
 
-[AttributeUsage(validOn: AttributeTargets.Class | AttributeTargets.Method)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
 public class LocalhostOnlyAttribute : Attribute, IAuthorizationFilter
 {
     public void OnAuthorization(AuthorizationFilterContext context)
@@ -27,12 +27,12 @@ public class LocalhostOnlyAttribute : Attribute, IAuthorizationFilter
         if (remoteIp is null)
             return;
 
-        bool isLocalhost = IPAddress.IsLoopback(address: remoteIp);
+        bool isLocalhost = IPAddress.IsLoopback(remoteIp);
 
         if (!isLocalhost)
         {
             context.Result = new JsonResult(
-                value: new
+                new
                 {
                     status = "error",
                     message = "Management API is only accessible from localhost",

@@ -15,24 +15,24 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class Collection
 {
-    [JsonProperty(propertyName: "editor")]
+    [JsonProperty("editor")]
     public string Editor { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "entity-type")]
+    [JsonProperty("entity-type")]
     public string EntityType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "release-count")]
+    [JsonProperty("release-count")]
     public int ReleaseCount { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type-id")]
+    [JsonProperty("type-id")]
     public Guid? TypeId { get; set; }
 }

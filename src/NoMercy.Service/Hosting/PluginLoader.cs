@@ -33,14 +33,14 @@ public class PluginLoader : IPluginLoader
 
     public async Task<IReadOnlyList<PluginLoadResult>> LoadPlugins(CancellationToken ct)
     {
-        _logger.LogInformation(message: "Loading plugins...");
+        _logger.LogInformation("Loading plugins...");
 
-        IReadOnlyList<PluginLoadResult> loadedPlugins = await _pluginManager.LoadAllAsync(ct: ct);
+        IReadOnlyList<PluginLoadResult> loadedPlugins = await _pluginManager.LoadAllAsync(ct);
 
         foreach (PluginLoadResult pluginResult in loadedPlugins)
         {
             _logger.LogInformation(
-                message: "Plugin loaded: {Name} {Version} ({PluginId})", args: [pluginResult.Name, pluginResult.Version, pluginResult.PluginId]
+                "Plugin loaded: {Name} {Version} ({PluginId})", [pluginResult.Name, pluginResult.Version, pluginResult.PluginId]
             );
         }
 

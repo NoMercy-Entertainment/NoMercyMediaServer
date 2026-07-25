@@ -34,7 +34,7 @@ namespace NoMercy.MediaProcessing.EventHandlers;
 public class FileWatcherEventHandler : IDisposable
 {
     private readonly List<IDisposable> _subscriptions = [];
-    private readonly SemaphoreSlim _semaphore = new(initialCount: 2);
+    private readonly SemaphoreSlim _semaphore = new(2);
     private readonly IStorageDriver _storageDriver;
     private readonly IStorageFactory _storageFactory;
 
@@ -50,34 +50,34 @@ public class FileWatcherEventHandler : IDisposable
         _logger = logger;
         _storageDriver = storageDriver;
         _storageFactory = storageFactory;
-        _subscriptions.Add(item: eventBus.Subscribe<FileCreatedEvent>(handler: OnFileCreated));
-        _subscriptions.Add(item: eventBus.Subscribe<FileDeletedEvent>(handler: OnFileDeleted));
-        _subscriptions.Add(item: eventBus.Subscribe<FileRenamedEvent>(handler: OnFileRenamed));
+        _subscriptions.Add(eventBus.Subscribe<FileCreatedEvent>(OnFileCreated));
+        _subscriptions.Add(eventBus.Subscribe<FileDeletedEvent>(OnFileDeleted));
+        _subscriptions.Add(eventBus.Subscribe<FileRenamedEvent>(OnFileRenamed));
     }
 
     internal async Task OnFileCreated(FileCreatedEvent @event, CancellationToken ct)
     {
-        await _semaphore.WaitAsync(cancellationToken: ct);
+        await _semaphore.WaitAsync(ct);
         try
         {
             _logger.LogInformation(
-                message: "FileWatcher: Processing new/changed content in {FolderPath}",
-                args: @event.FolderPath
+                "FileWatcher: Processing new/changed content in {FolderPath}",
+                @event.FolderPath
             );
 
-            MediaScan mediaScan = new(driver: _storageDriver);
+            MediaScan mediaScan = new(_storageDriver);
             MediaScan scan = mediaScan.EnableFileListing();
 
             if (@event.LibraryType == MediaTypes.MusicMediaType)
                 scan.DisableRegexFilter();
 
-            ConcurrentBag<MediaFolderExtend> mediaFolders = await scan.Process(rootFolder: @event.FolderPath);
+            ConcurrentBag<MediaFolderExtend> mediaFolders = await scan.Process(@event.FolderPath);
 
             if (mediaFolders.Count == 0)
             {
                 _logger.LogWarning(
-                    message: "FileWatcher: No media found in {FolderPath}",
-                    args: @event.FolderPath
+                    "FileWatcher: No media found in {FolderPath}",
+                    @event.FolderPath
                 );
                 return;
             }
@@ -89,21 +89,21 @@ public class FileWatcherEventHandler : IDisposable
                 case MediaTypes.InboxMediaType:
                     return;
                 case MediaTypes.MovieMediaType:
-                    await HandleMovieFolder(@event: @event, mediaFolder: mediaFolder);
+                    await HandleMovieFolder(@event, mediaFolder);
                     break;
                 case MediaTypes.TvMediaType:
                 case MediaTypes.AnimeMediaType:
-                    await HandleTvFolder(@event: @event, mediaFolder: mediaFolder);
+                    await HandleTvFolder(@event, mediaFolder);
                     break;
                 case MediaTypes.MusicMediaType:
-                    HandleMusicFolder(@event: @event, mediaFolder: mediaFolder);
+                    HandleMusicFolder(@event, mediaFolder);
                     break;
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(
-                message: "FileWatcher: Error processing {FolderPath}: {Message}", args: [@event.FolderPath, ex.Message]
+                "FileWatcher: Error processing {FolderPath}: {Message}", [@event.FolderPath, ex.Message]
             );
         }
         finally
@@ -117,36 +117,36 @@ public class FileWatcherEventHandler : IDisposable
         try
         {
             _logger.LogInformation(
-                message: "FileWatcher: Processing deletion of {FullPath}",
-                args: @event.FullPath
+                "FileWatcher: Processing deletion of {FullPath}",
+                @event.FullPath
             );
 
-            string hostFolder = Path.GetDirectoryName(path: @event.FullPath).OrEmpty();
-            string filename = "/" + Path.GetFileName(path: @event.FullPath);
+            string hostFolder = Path.GetDirectoryName(@event.FullPath).OrEmpty();
+            string filename = "/" + Path.GetFileName(@event.FullPath);
 
             await using MediaContext mediaContext = new();
-            FileRepository fileRepository = new(context: mediaContext, storageDriver: _storageDriver);
+            FileRepository fileRepository = new(mediaContext, _storageDriver);
 
             int videoFilesDeleted = await fileRepository.DeleteVideoFilesByHostFolderAsync(
-                hostFolder: hostFolder
+                hostFolder
             );
-            int metadataDeleted = await fileRepository.DeleteMetadataByHostFolderAsync(hostFolder: hostFolder);
+            int metadataDeleted = await fileRepository.DeleteMetadataByHostFolderAsync(hostFolder);
 
             _logger.LogInformation(
-                message: "FileWatcher: Deleted {VideoFilesDeleted} video file(s) and {MetadataDeleted} metadata record(s) for {HostFolder}", args: [videoFilesDeleted, metadataDeleted, hostFolder]
+                "FileWatcher: Deleted {VideoFilesDeleted} video file(s) and {MetadataDeleted} metadata record(s) for {HostFolder}", [videoFilesDeleted, metadataDeleted, hostFolder]
             );
 
             if (videoFilesDeleted > 0 && EventBusProvider.IsConfigured)
             {
                 await EventBusProvider.Current.PublishAsync(
-                    @event: new LibraryRefreshedEvent { QueryKey = ["base", "libraries"] }
+                    new LibraryRefreshedEvent { QueryKey = ["base", "libraries"] }
                 );
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(
-                message: "FileWatcher: Error processing deletion of {FullPath}: {Message}", args: [@event.FullPath, ex.Message]
+                "FileWatcher: Error processing deletion of {FullPath}: {Message}", [@event.FullPath, ex.Message]
             );
         }
     }
@@ -156,57 +156,57 @@ public class FileWatcherEventHandler : IDisposable
         try
         {
             _logger.LogInformation(
-                message: "FileWatcher: Processing rename from {OldFullPath} to {NewFullPath}", args: [@event.OldFullPath, @event.NewFullPath]
+                "FileWatcher: Processing rename from {OldFullPath} to {NewFullPath}", [@event.OldFullPath, @event.NewFullPath]
             );
 
-            string oldHostFolder = Path.GetDirectoryName(path: @event.OldFullPath).OrEmpty();
-            string oldFilename = "/" + Path.GetFileName(path: @event.OldFullPath);
-            string newHostFolder = Path.GetDirectoryName(path: @event.NewFullPath).OrEmpty();
-            string newFilename = "/" + Path.GetFileName(path: @event.NewFullPath);
+            string oldHostFolder = Path.GetDirectoryName(@event.OldFullPath).OrEmpty();
+            string oldFilename = "/" + Path.GetFileName(@event.OldFullPath);
+            string newHostFolder = Path.GetDirectoryName(@event.NewFullPath).OrEmpty();
+            string newFilename = "/" + Path.GetFileName(@event.NewFullPath);
 
             await using MediaContext mediaContext = new();
-            FileRepository fileRepository = new(context: mediaContext, storageDriver: _storageDriver);
+            FileRepository fileRepository = new(mediaContext, _storageDriver);
 
             int updated = await fileRepository.UpdateVideoFilePathsAsync(
-                oldHostFolder: oldHostFolder,
-                oldFilename: oldFilename,
-                newHostFolder: newHostFolder,
-                newFilename: newFilename
+                oldHostFolder,
+                oldFilename,
+                newHostFolder,
+                newFilename
             );
 
             if (updated > 0)
             {
                 _logger.LogInformation(
-                    message: "FileWatcher: Updated {Updated} video file path(s) from {OldHostFolder} to {NewHostFolder}", args: [updated, oldHostFolder, newHostFolder]
+                    "FileWatcher: Updated {Updated} video file path(s) from {OldHostFolder} to {NewHostFolder}", [updated, oldHostFolder, newHostFolder]
                 );
 
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
-                        @event: new LibraryRefreshedEvent { QueryKey = ["base", "libraries"] }
+                        new LibraryRefreshedEvent { QueryKey = ["base", "libraries"] }
                     );
                 }
             }
             else
             {
                 _logger.LogDebug(
-                    message: "FileWatcher: No matching records found for rename, treating as new content"
+                    "FileWatcher: No matching records found for rename, treating as new content"
                 );
                 await OnFileCreated(
-                    @event: new()
+                    new()
                     {
                         FolderPath = newHostFolder,
                         LibraryId = @event.LibraryId,
                         LibraryType = @event.LibraryType,
                     },
-                    ct: ct
+                    ct
                 );
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(
-                message: "FileWatcher: Error processing rename from {OldFullPath} to {NewFullPath}: {Message}", args: [@event.OldFullPath, @event.NewFullPath, ex.Message]
+                "FileWatcher: Error processing rename from {OldFullPath} to {NewFullPath}: {Message}", [@event.OldFullPath, @event.NewFullPath, ex.Message]
             );
         }
     }
@@ -215,148 +215,148 @@ public class FileWatcherEventHandler : IDisposable
     {
         if (mediaFolder.Parsed.Title is null)
         {
-            _logger.LogWarning(message: "FileWatcher: Could not parse title from {Path}", args: mediaFolder.Path);
+            _logger.LogWarning("FileWatcher: Could not parse title from {Path}", mediaFolder.Path);
             return;
         }
 
         _logger.LogInformation(
-            message: "FileWatcher: Movie {Path}: Searching TMDB for '{Title}'", args: [mediaFolder.Path, mediaFolder.Parsed.Title]
+            "FileWatcher: Movie {Path}: Searching TMDB for '{Title}'", [mediaFolder.Path, mediaFolder.Parsed.Title]
         );
 
         using TmdbSearchClient tmdbSearchClient = new();
         TmdbPaginatedResponse<TmdbMovie>? response = await tmdbSearchClient.Movie(
-            query: mediaFolder.Parsed.Title,
-            year: mediaFolder.Parsed.Year
+            mediaFolder.Parsed.Title,
+            mediaFolder.Parsed.Year
         );
 
         if (response?.Results is null || response.Results.Count == 0)
         {
             _logger.LogWarning(
-                message: "FileWatcher: No TMDB results found for movie '{Title}'",
-                args: mediaFolder.Parsed.Title
+                "FileWatcher: No TMDB results found for movie '{Title}'",
+                mediaFolder.Parsed.Title
             );
             return;
         }
 
-        TmdbMovie? movie = response.Results.MaxBy(keySelector: result =>
+        TmdbMovie? movie = response.Results.MaxBy(result =>
             ScoreCandidate(
-                candidateTitle: result.Title,
-                candidateDate: result.ReleaseDate,
-                parsedTitle: mediaFolder.Parsed.Title,
-                parsedYear: mediaFolder.Parsed.Year
+                result.Title,
+                result.ReleaseDate,
+                mediaFolder.Parsed.Title,
+                mediaFolder.Parsed.Year
             )
         );
         if (
             movie is null
-            || FuzzyMatcher.MatchPercentage(strA: movie.Title, strB: mediaFolder.Parsed.Title)
+            || FuzzyMatcher.MatchPercentage(movie.Title, mediaFolder.Parsed.Title)
                 < MinMatchConfidence
         )
         {
             _logger.LogWarning(
-                message: "FileWatcher: No confident TMDB match for movie '{Title}'",
-                args: mediaFolder.Parsed.Title
+                "FileWatcher: No confident TMDB match for movie '{Title}'",
+                mediaFolder.Parsed.Title
             );
             return;
         }
 
         _logger.LogInformation(
-            message: "FileWatcher: Movie '{Title}' found on TMDB (ID: {Id}), dispatching job", args: [movie.Title, movie.Id]
+            "FileWatcher: Movie '{Title}' found on TMDB (ID: {Id}), dispatching job", [movie.Title, movie.Id]
         );
 
         JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<MovieImportJob>(id: movie.Id, libraryId: @event.LibraryId);
+        jobDispatcher.DispatchJob<MovieImportJob>(movie.Id, @event.LibraryId);
     }
 
     private async Task HandleTvFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
     {
         if (mediaFolder.Parsed.Title is null)
         {
-            _logger.LogWarning(message: "FileWatcher: Could not parse title from {Path}", args: mediaFolder.Path);
+            _logger.LogWarning("FileWatcher: Could not parse title from {Path}", mediaFolder.Path);
             return;
         }
 
         _logger.LogInformation(
-            message: "FileWatcher: TV Show {Path}: Searching TMDB for '{Title}'", args: [mediaFolder.Path, mediaFolder.Parsed.Title]
+            "FileWatcher: TV Show {Path}: Searching TMDB for '{Title}'", [mediaFolder.Path, mediaFolder.Parsed.Title]
         );
 
         using TmdbSearchClient tmdbSearchClient = new();
         TmdbPaginatedResponse<TmdbTvShow>? response = await tmdbSearchClient.TvShow(
-            query: mediaFolder.Parsed.Title,
-            year: mediaFolder.Parsed.Year
+            mediaFolder.Parsed.Title,
+            mediaFolder.Parsed.Year
         );
 
         if (response?.Results is null || response.Results.Count == 0)
         {
             _logger.LogWarning(
-                message: "FileWatcher: No TMDB results found for TV show '{Title}'",
-                args: mediaFolder.Parsed.Title
+                "FileWatcher: No TMDB results found for TV show '{Title}'",
+                mediaFolder.Parsed.Title
             );
             return;
         }
 
-        TmdbTvShow? show = response.Results.MaxBy(keySelector: result =>
+        TmdbTvShow? show = response.Results.MaxBy(result =>
             ScoreCandidate(
-                candidateTitle: result.Name,
-                candidateDate: result.FirstAirDate,
-                parsedTitle: mediaFolder.Parsed.Title,
-                parsedYear: mediaFolder.Parsed.Year
+                result.Name,
+                result.FirstAirDate,
+                mediaFolder.Parsed.Title,
+                mediaFolder.Parsed.Year
             )
         );
         if (
             show is null
-            || FuzzyMatcher.MatchPercentage(strA: show.Name, strB: mediaFolder.Parsed.Title)
+            || FuzzyMatcher.MatchPercentage(show.Name, mediaFolder.Parsed.Title)
                 < MinMatchConfidence
         )
         {
             _logger.LogWarning(
-                message: "FileWatcher: No confident TMDB match for TV show '{Title}'",
-                args: mediaFolder.Parsed.Title
+                "FileWatcher: No confident TMDB match for TV show '{Title}'",
+                mediaFolder.Parsed.Title
             );
             return;
         }
 
         _logger.LogInformation(
-            message: "FileWatcher: TV Show '{Name}' found on TMDB (ID: {Id}), dispatching job", args: [show.Name, show.Id]
+            "FileWatcher: TV Show '{Name}' found on TMDB (ID: {Id}), dispatching job", [show.Name, show.Id]
         );
 
         JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<ShowImportJob>(id: show.Id, libraryId: @event.LibraryId);
+        jobDispatcher.DispatchJob<ShowImportJob>(show.Id, @event.LibraryId);
     }
 
     private void HandleMusicFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
     {
-        _logger.LogInformation(message: "FileWatcher: Music {Path}: Processing", args: mediaFolder.Path);
+        _logger.LogInformation("FileWatcher: Music {Path}: Processing", mediaFolder.Path);
 
-        string directoryPath = Path.GetFullPath(path: mediaFolder.Path);
+        string directoryPath = Path.GetFullPath(mediaFolder.Path);
 
         using MediaContext mediaContext = new();
         Library? library = mediaContext
-            .Libraries.Include(navigationPropertyPath: l => l.FolderLibraries)
-                .ThenInclude(navigationPropertyPath: fl => fl.Folder)
-            .FirstOrDefault(predicate: l => l.Id == @event.LibraryId);
+            .Libraries.Include(l => l.FolderLibraries)
+                .ThenInclude(fl => fl.Folder)
+            .FirstOrDefault(l => l.Id == @event.LibraryId);
 
         if (library is null)
             return;
 
-        FolderLibrary? folderLibrary = library.FolderLibraries.FirstOrDefault(predicate: f =>
+        FolderLibrary? folderLibrary = library.FolderLibraries.FirstOrDefault(f =>
         {
             // Resolve through the driver, not the IStorage facade: the facade's
             // GetFullPath is a LocalStorage-only escape hatch that throws on
             // every remote backend, so a facade call here killed folder
             // matching for NFS / SMB music libraries.
             string driverRoot = _storageFactory
-                .For(folderId: f.Folder.Id, driverId: f.Folder.DriverId, subPath: string.Empty)
-                .Driver.GetFullPath(path: f.Folder.Path);
-            return directoryPath.StartsWith(value: driverRoot, comparisonType: StringComparison.OrdinalIgnoreCase);
+                .For(f.Folder.Id, f.Folder.DriverId, string.Empty)
+                .Driver.GetFullPath(f.Folder.Path);
+            return directoryPath.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
         });
         if (folderLibrary is null)
             return;
 
         JobDispatcher jobDispatcher = new();
         jobDispatcher.DispatchJob<AudioImportJob>(
-            libraryId: @event.LibraryId,
-            folderId: folderLibrary.FolderId,
-            filePath: directoryPath
+            @event.LibraryId,
+            folderLibrary.FolderId,
+            directoryPath
         );
     }
 
@@ -369,8 +369,8 @@ public class FileWatcherEventHandler : IDisposable
         string? parsedYear
     )
     {
-        double score = FuzzyMatcher.MatchPercentage(strA: candidateTitle, strB: parsedTitle);
-        if (int.TryParse(s: parsedYear, result: out int year) && candidateDate?.Year == year)
+        double score = FuzzyMatcher.MatchPercentage(candidateTitle, parsedTitle);
+        if (int.TryParse(parsedYear, out int year) && candidateDate?.Year == year)
             score += 25;
         return score;
     }

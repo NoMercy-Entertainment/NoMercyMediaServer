@@ -26,8 +26,8 @@ public class MetadataTrackTests
     {
         MetadataTrack track = new() { Video = null };
 
-        Assert.Null(@object: track._video);
-        Assert.Null(@object: track.Video);
+        Assert.Null(track._video);
+        Assert.Null(track.Video);
     }
 
     [Fact]
@@ -44,13 +44,13 @@ public class MetadataTrackTests
             },
         };
 
-        Assert.NotNull(@object: track._video);
+        Assert.NotNull(track._video);
         IVideo? result = track.Video;
-        Assert.NotNull(@object: result);
-        Assert.Equal(expected: 1920, actual: result!.Width);
-        Assert.Equal(expected: 1080, actual: result.Height);
-        Assert.Equal(expected: "h264", actual: result.Codec);
-        Assert.Equal(expected: 5_000_000, actual: result.BitRate);
+        Assert.NotNull(result);
+        Assert.Equal(1920, result!.Width);
+        Assert.Equal(1080, result.Height);
+        Assert.Equal("h264", result.Codec);
+        Assert.Equal(5_000_000, result.BitRate);
     }
 
     [Fact]
@@ -58,8 +58,8 @@ public class MetadataTrackTests
     {
         MetadataTrack track = new() { Audio = null };
 
-        Assert.Null(@object: track._audio);
-        Assert.Null(@object: track.Audio);
+        Assert.Null(track._audio);
+        Assert.Null(track.Audio);
     }
 
     [Fact]
@@ -75,12 +75,12 @@ public class MetadataTrackTests
             },
         };
 
-        Assert.NotNull(@object: track._audio);
+        Assert.NotNull(track._audio);
         IAudio? result = track.Audio;
-        Assert.NotNull(@object: result);
-        Assert.Equal(expected: "eng", actual: result!.Language);
-        Assert.Equal(expected: "aac", actual: result.Codec);
-        Assert.Equal(expected: 2, actual: result.Channels);
+        Assert.NotNull(result);
+        Assert.Equal("eng", result!.Language);
+        Assert.Equal("aac", result.Codec);
+        Assert.Equal(2, result.Channels);
     }
 
     [Fact]
@@ -88,8 +88,8 @@ public class MetadataTrackTests
     {
         MetadataTrack track = new() { Subtitle = null };
 
-        Assert.Null(@object: track._subtitle);
-        Assert.Null(@object: track.Subtitle);
+        Assert.Null(track._subtitle);
+        Assert.Null(track.Subtitle);
     }
 
     [Fact]
@@ -105,11 +105,11 @@ public class MetadataTrackTests
             },
         };
 
-        Assert.NotNull(@object: track._subtitle);
+        Assert.NotNull(track._subtitle);
         ISubtitle? result = track.Subtitle;
-        Assert.NotNull(@object: result);
-        Assert.Equal(expected: "eng", actual: result!.Language);
-        Assert.Equal(expected: "srt", actual: result.Codec);
-        Assert.Equal(expected: "subrip", actual: result.Type);
+        Assert.NotNull(result);
+        Assert.Equal("eng", result!.Language);
+        Assert.Equal("srt", result.Codec);
+        Assert.Equal("subrip", result.Type);
     }
 }

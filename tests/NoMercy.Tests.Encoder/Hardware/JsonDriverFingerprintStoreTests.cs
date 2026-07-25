@@ -30,27 +30,27 @@ public class JsonDriverFingerprintStoreTests : IDisposable
 
     public JsonDriverFingerprintStoreTests()
     {
-        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: "fp-test-" + Ulid.NewUlid());
-        Directory.CreateDirectory(path: _tempDir);
+        _tempDir = Path.Combine(Path.GetTempPath(), "fp-test-" + Ulid.NewUlid());
+        Directory.CreateDirectory(_tempDir);
         _storage = TestStorageFactory.CreateLocal();
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempDir))
-            Directory.Delete(path: _tempDir, recursive: true);
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
     }
 
     private JsonDriverFingerprintStore BuildStore()
     {
         EncoderOptions opts = new()
         {
-            SpeedIndexCachePath = Path.Combine(path1: _tempDir, path2: "speed_index.json"),
+            SpeedIndexCachePath = Path.Combine(_tempDir, "speed_index.json"),
         };
         return new(
-            options: opts,
-            logger: NullLogger<JsonDriverFingerprintStore>.Instance,
-            storage: _storage
+            opts,
+            NullLogger<JsonDriverFingerprintStore>.Instance,
+            _storage
         );
     }
 
@@ -67,8 +67,8 @@ public class JsonDriverFingerprintStoreTests : IDisposable
     [Fact]
     public async Task LoadHashAsync_CorruptFile_DegradesToNull()
     {
-        string fpPath = Path.Combine(path1: _tempDir, path2: "driver_fingerprint.json");
-        await File.WriteAllTextAsync(path: fpPath, contents: "{ corrupt");
+        string fpPath = Path.Combine(_tempDir, "driver_fingerprint.json");
+        await File.WriteAllTextAsync(fpPath, "{ corrupt");
         JsonDriverFingerprintStore store = BuildStore();
 
         string? hash = await store.LoadHashAsync();
@@ -81,8 +81,8 @@ public class JsonDriverFingerprintStoreTests : IDisposable
     {
         // JSON parses but the hash field is empty — treat as missing so
         // the comparator drives a fresh benchmark.
-        string fpPath = Path.Combine(path1: _tempDir, path2: "driver_fingerprint.json");
-        await File.WriteAllTextAsync(path: fpPath, contents: "{\"hash\":\"\"}");
+        string fpPath = Path.Combine(_tempDir, "driver_fingerprint.json");
+        await File.WriteAllTextAsync(fpPath, "{\"hash\":\"\"}");
         JsonDriverFingerprintStore store = BuildStore();
 
         string? hash = await store.LoadHashAsync();
@@ -96,10 +96,10 @@ public class JsonDriverFingerprintStoreTests : IDisposable
         JsonDriverFingerprintStore store = BuildStore();
         const string fingerprint = "sha256:abc123def456";
 
-        await store.SaveHashAsync(hash: fingerprint);
+        await store.SaveHashAsync(fingerprint);
         string? loaded = await store.LoadHashAsync();
 
-        loaded.Should().Be(expected: fingerprint);
+        loaded.Should().Be(fingerprint);
     }
 
     [Fact]
@@ -107,11 +107,11 @@ public class JsonDriverFingerprintStoreTests : IDisposable
     {
         JsonDriverFingerprintStore store = BuildStore();
 
-        await store.SaveHashAsync(hash: "first-hash");
-        await store.SaveHashAsync(hash: "second-hash");
+        await store.SaveHashAsync("first-hash");
+        await store.SaveHashAsync("second-hash");
         string? loaded = await store.LoadHashAsync();
 
-        loaded.Should().Be(expected: "second-hash");
+        loaded.Should().Be("second-hash");
     }
 
     [Fact]
@@ -122,8 +122,8 @@ public class JsonDriverFingerprintStoreTests : IDisposable
         // both in the same directory.
         JsonDriverFingerprintStore store = BuildStore();
 
-        await store.SaveHashAsync(hash: "test-fingerprint");
+        await store.SaveHashAsync("test-fingerprint");
 
-        File.Exists(path: Path.Combine(path1: _tempDir, path2: "driver_fingerprint.json")).Should().BeTrue();
+        File.Exists(Path.Combine(_tempDir, "driver_fingerprint.json")).Should().BeTrue();
     }
 }

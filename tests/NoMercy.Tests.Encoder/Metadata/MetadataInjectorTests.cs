@@ -71,63 +71,63 @@ public class MetadataInjectorTests
     [Fact]
     public void BuildArgs_Movie_EmitsTitleAndYear()
     {
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx());
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx());
 
-        int titleIdx = IndexOf(args: args, flag: "-metadata", value: "title=Fight Club");
-        titleIdx.Should().BeGreaterThanOrEqualTo(expected: 0, because: "expected -metadata title=Fight Club pair");
+        int titleIdx = IndexOf(args, "-metadata", "title=Fight Club");
+        titleIdx.Should().BeGreaterThanOrEqualTo(0, "expected -metadata title=Fight Club pair");
 
-        int yearIdx = IndexOf(args: args, flag: "-metadata", value: "year=1999");
-        yearIdx.Should().BeGreaterThanOrEqualTo(expected: 0, because: "expected -metadata year=1999 pair");
+        int yearIdx = IndexOf(args, "-metadata", "year=1999");
+        yearIdx.Should().BeGreaterThanOrEqualTo(0, "expected -metadata year=1999 pair");
     }
 
     [Fact]
     public void BuildArgs_Movie_NullYear_OmitsYearFlag()
     {
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx(year: null));
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx(year: null));
 
-        bool hasYear = args.SkipWhile(predicate: a => a != "-metadata")
-            .Skip(count: 1)
-            .Take(count: 1)
-            .Any(predicate: v => v.StartsWith(value: "year="));
+        bool hasYear = args.SkipWhile(a => a != "-metadata")
+            .Skip(1)
+            .Take(1)
+            .Any(v => v.StartsWith("year="));
         // Scan all -metadata pairs
         bool found = false;
         for (int i = 0; i < args.Count - 1; i++)
         {
-            if (args[index: i] == "-metadata" && args[index: i + 1].StartsWith(value: "year="))
+            if (args[i] == "-metadata" && args[i + 1].StartsWith("year="))
             {
                 found = true;
                 break;
             }
         }
-        found.Should().BeFalse(because: "year=… must not appear when Year is null");
+        found.Should().BeFalse("year=… must not appear when Year is null");
     }
 
     [Fact]
     public void BuildArgs_Movie_WithDescription_EmitsDescriptionFlag()
     {
         IReadOnlyList<string> args = _injector.BuildArgs(
-            ctx: MovieCtx(description: "An insomniac office worker.")
+            MovieCtx(description: "An insomniac office worker.")
         );
 
-        int descIdx = IndexOf(args: args, flag: "-metadata", value: "description=An insomniac office worker.");
-        descIdx.Should().BeGreaterThanOrEqualTo(expected: 0, because: "expected -metadata description=… pair");
+        int descIdx = IndexOf(args, "-metadata", "description=An insomniac office worker.");
+        descIdx.Should().BeGreaterThanOrEqualTo(0, "expected -metadata description=… pair");
     }
 
     [Fact]
     public void BuildArgs_Movie_NullDescription_OmitsDescriptionFlag()
     {
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx(description: null));
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx(description: null));
 
         bool found = false;
         for (int i = 0; i < args.Count - 1; i++)
         {
-            if (args[index: i] == "-metadata" && args[index: i + 1].StartsWith(value: "description="))
+            if (args[i] == "-metadata" && args[i + 1].StartsWith("description="))
             {
                 found = true;
                 break;
             }
         }
-        found.Should().BeFalse(because: "description flag must be absent when Description is null");
+        found.Should().BeFalse("description flag must be absent when Description is null");
     }
 
     // ------------------------------------------------------------------
@@ -137,27 +137,27 @@ public class MetadataInjectorTests
     [Fact]
     public void BuildArgs_Episode_EmitsShowSeasonEpisodeFlags()
     {
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: EpisodeCtx());
+        IReadOnlyList<string> args = _injector.BuildArgs(EpisodeCtx());
 
-        IndexOf(args: args, flag: "-metadata", value: "show=Breaking Bad")
+        IndexOf(args, "-metadata", "show=Breaking Bad")
             .Should()
-            .BeGreaterThanOrEqualTo(expected: 0, because: "expected show= flag");
-        IndexOf(args: args, flag: "-metadata", value: "season_number=1")
+            .BeGreaterThanOrEqualTo(0, "expected show= flag");
+        IndexOf(args, "-metadata", "season_number=1")
             .Should()
-            .BeGreaterThanOrEqualTo(expected: 0, because: "expected season_number= flag");
-        IndexOf(args: args, flag: "-metadata", value: "episode_id=1")
+            .BeGreaterThanOrEqualTo(0, "expected season_number= flag");
+        IndexOf(args, "-metadata", "episode_id=1")
             .Should()
-            .BeGreaterThanOrEqualTo(expected: 0, because: "expected episode_id= flag");
+            .BeGreaterThanOrEqualTo(0, "expected episode_id= flag");
     }
 
     [Fact]
     public void BuildArgs_Episode_EmitsTitleFlag()
     {
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: EpisodeCtx(episodeTitle: "Pilot"));
+        IReadOnlyList<string> args = _injector.BuildArgs(EpisodeCtx(episodeTitle: "Pilot"));
 
-        IndexOf(args: args, flag: "-metadata", value: "title=Pilot")
+        IndexOf(args, "-metadata", "title=Pilot")
             .Should()
-            .BeGreaterThanOrEqualTo(expected: 0, because: "episode title flag expected");
+            .BeGreaterThanOrEqualTo(0, "episode title flag expected");
     }
 
     // ------------------------------------------------------------------
@@ -175,11 +175,11 @@ public class MetadataInjectorTests
             IsDefault: false,
             IsForced: false
         );
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx(tracks: [track]));
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx(tracks: [track]));
 
-        IndexOf(args: args, flag: "-metadata:s:a:0", value: "language=eng")
+        IndexOf(args, "-metadata:s:a:0", "language=eng")
             .Should()
-            .BeGreaterThanOrEqualTo(expected: 0, because: "expected -metadata:s:a:0 language=eng");
+            .BeGreaterThanOrEqualTo(0, "expected -metadata:s:a:0 language=eng");
     }
 
     [Fact]
@@ -193,11 +193,11 @@ public class MetadataInjectorTests
             IsDefault: false,
             IsForced: false
         );
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx(tracks: [track]));
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx(tracks: [track]));
 
-        IndexOf(args: args, flag: "-metadata:s:s:0", value: "language=fra")
+        IndexOf(args, "-metadata:s:s:0", "language=fra")
             .Should()
-            .BeGreaterThanOrEqualTo(expected: 0, because: "subtitle stream spec must use :s:");
+            .BeGreaterThanOrEqualTo(0, "subtitle stream spec must use :s:");
     }
 
     [Fact]
@@ -211,11 +211,11 @@ public class MetadataInjectorTests
             IsDefault: false,
             IsForced: false
         );
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx(tracks: [track]));
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx(tracks: [track]));
 
-        IndexOf(args: args, flag: "-metadata:s:v:0", value: "language=eng")
+        IndexOf(args, "-metadata:s:v:0", "language=eng")
             .Should()
-            .BeGreaterThanOrEqualTo(expected: 0, because: "video stream spec must use :v:");
+            .BeGreaterThanOrEqualTo(0, "video stream spec must use :v:");
     }
 
     [Fact]
@@ -223,13 +223,13 @@ public class MetadataInjectorTests
     {
         TrackMetadata[] tracks =
         [
-            new(OutputIndex: 0, Kind: "audio", Language: "eng", Title: null, IsDefault: true, IsForced: false),
-            new(OutputIndex: 1, Kind: "audio", Language: "fra", Title: null, IsDefault: false, IsForced: false),
+            new(0, "audio", "eng", null, true, false),
+            new(1, "audio", "fra", null, false, false),
         ];
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx(tracks: tracks));
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx(tracks: tracks));
 
-        IndexOf(args: args, flag: "-metadata:s:a:0", value: "language=eng").Should().BeGreaterThanOrEqualTo(expected: 0);
-        IndexOf(args: args, flag: "-metadata:s:a:1", value: "language=fra").Should().BeGreaterThanOrEqualTo(expected: 0);
+        IndexOf(args, "-metadata:s:a:0", "language=eng").Should().BeGreaterThanOrEqualTo(0);
+        IndexOf(args, "-metadata:s:a:1", "language=fra").Should().BeGreaterThanOrEqualTo(0);
     }
 
     // ------------------------------------------------------------------
@@ -247,11 +247,11 @@ public class MetadataInjectorTests
             IsDefault: true,
             IsForced: true
         );
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx(tracks: [track]));
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx(tracks: [track]));
 
-        IndexOf(args: args, flag: "-disposition:a:0", value: "default+forced")
+        IndexOf(args, "-disposition:a:0", "default+forced")
             .Should()
-            .BeGreaterThanOrEqualTo(expected: 0, because: "expected -disposition:a:0 default+forced");
+            .BeGreaterThanOrEqualTo(0, "expected -disposition:a:0 default+forced");
     }
 
     [Fact]
@@ -265,11 +265,11 @@ public class MetadataInjectorTests
             IsDefault: true,
             IsForced: false
         );
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx(tracks: [track]));
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx(tracks: [track]));
 
-        IndexOf(args: args, flag: "-disposition:a:0", value: "default")
+        IndexOf(args, "-disposition:a:0", "default")
             .Should()
-            .BeGreaterThanOrEqualTo(expected: 0, because: "expected -disposition:a:0 default");
+            .BeGreaterThanOrEqualTo(0, "expected -disposition:a:0 default");
     }
 
     [Fact]
@@ -283,11 +283,11 @@ public class MetadataInjectorTests
             IsDefault: false,
             IsForced: true
         );
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx(tracks: [track]));
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx(tracks: [track]));
 
-        IndexOf(args: args, flag: "-disposition:s:0", value: "forced")
+        IndexOf(args, "-disposition:s:0", "forced")
             .Should()
-            .BeGreaterThanOrEqualTo(expected: 0, because: "expected -disposition:s:0 forced");
+            .BeGreaterThanOrEqualTo(0, "expected -disposition:s:0 forced");
     }
 
     [Fact]
@@ -301,12 +301,12 @@ public class MetadataInjectorTests
             IsDefault: false,
             IsForced: false
         );
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx(tracks: [track]));
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx(tracks: [track]));
 
-        bool hasDisposition = args.Any(predicate: a => a.StartsWith(value: "-disposition:"));
+        bool hasDisposition = args.Any(a => a.StartsWith("-disposition:"));
         hasDisposition
             .Should()
-            .BeFalse(because: "no -disposition flags when neither IsDefault nor IsForced");
+            .BeFalse("no -disposition flags when neither IsDefault nor IsForced");
     }
 
     // ------------------------------------------------------------------
@@ -317,70 +317,70 @@ public class MetadataInjectorTests
     public void BuildArgs_WithAttachment_EmitsAttachAndMimetype()
     {
         IReadOnlyList<string> args = _injector.BuildArgs(
-            ctx: MovieCtx(attachments: ["/media/covers/cover.jpg"])
+            MovieCtx(attachments: ["/media/covers/cover.jpg"])
         );
 
-        int attachIdx = Array.IndexOf(array: args.ToArray(), value: "-attach");
-        attachIdx.Should().BeGreaterThanOrEqualTo(expected: 0, because: "expected -attach flag");
-        args[index: attachIdx + 1].Should().Be(expected: "/media/covers/cover.jpg");
+        int attachIdx = Array.IndexOf(args.ToArray(), "-attach");
+        attachIdx.Should().BeGreaterThanOrEqualTo(0, "expected -attach flag");
+        args[attachIdx + 1].Should().Be("/media/covers/cover.jpg");
 
         // The mimetype metadata:s:t flag must appear after the -attach pair
         bool hasMime = false;
         for (int i = attachIdx + 2; i < args.Count - 1; i++)
         {
-            if (args[index: i].StartsWith(value: "-metadata:s:t") && args[index: i + 1] == "mimetype=image/jpeg")
+            if (args[i].StartsWith("-metadata:s:t") && args[i + 1] == "mimetype=image/jpeg")
             {
                 hasMime = true;
                 break;
             }
         }
-        hasMime.Should().BeTrue(because: "expected -metadata:s:t mimetype=image/jpeg after -attach");
+        hasMime.Should().BeTrue("expected -metadata:s:t mimetype=image/jpeg after -attach");
     }
 
     [Fact]
     public void BuildArgs_WithPngAttachment_EmitsPngMimetype()
     {
         IReadOnlyList<string> args = _injector.BuildArgs(
-            ctx: MovieCtx(attachments: ["/media/covers/cover.png"])
+            MovieCtx(attachments: ["/media/covers/cover.png"])
         );
 
         bool hasMime = false;
         for (int i = 0; i < args.Count - 1; i++)
         {
-            if (args[index: i].StartsWith(value: "-metadata:s:t") && args[index: i + 1] == "mimetype=image/png")
+            if (args[i].StartsWith("-metadata:s:t") && args[i + 1] == "mimetype=image/png")
             {
                 hasMime = true;
                 break;
             }
         }
-        hasMime.Should().BeTrue(because: "expected mimetype=image/png for .png attachment");
+        hasMime.Should().BeTrue("expected mimetype=image/png for .png attachment");
     }
 
     [Fact]
     public void BuildArgs_WithAttachment_EmitsFilenameTag()
     {
         IReadOnlyList<string> args = _injector.BuildArgs(
-            ctx: MovieCtx(attachments: ["/media/covers/cover.jpg"])
+            MovieCtx(attachments: ["/media/covers/cover.jpg"])
         );
 
         bool hasFilename = false;
         for (int i = 0; i < args.Count - 1; i++)
         {
-            if (args[index: i].StartsWith(value: "-metadata:s:t") && args[index: i + 1].StartsWith(value: "filename="))
+            if (args[i].StartsWith("-metadata:s:t") && args[i + 1].StartsWith("filename="))
             {
                 hasFilename = true;
                 break;
             }
         }
-        hasFilename.Should().BeTrue(because: "expected -metadata:s:t:M filename= tag");
+        hasFilename.Should().BeTrue("expected -metadata:s:t:M filename= tag");
     }
 
     [Fact]
     public void BuildArgs_NoAttachments_NoAttachFlag()
     {
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx(attachments: []));
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx(attachments: []));
 
-        args.Should().NotContain(unexpected: "-attach");
+        args.Should().NotContain("-attach");
     }
 
     // ------------------------------------------------------------------
@@ -390,12 +390,12 @@ public class MetadataInjectorTests
     [Fact]
     public void BuildArgs_EmptyTracksAndAttachments_ProducesNoStreamFlags()
     {
-        IReadOnlyList<string> args = _injector.BuildArgs(ctx: MovieCtx());
+        IReadOnlyList<string> args = _injector.BuildArgs(MovieCtx());
 
-        bool hasStreamMeta = args.Any(predicate: a =>
-            a.StartsWith(value: "-metadata:s:") || a.StartsWith(value: "-disposition:")
+        bool hasStreamMeta = args.Any(a =>
+            a.StartsWith("-metadata:s:") || a.StartsWith("-disposition:")
         );
-        hasStreamMeta.Should().BeFalse(because: "no stream flags for empty track list");
+        hasStreamMeta.Should().BeFalse("no stream flags for empty track list");
     }
 
     // ------------------------------------------------------------------
@@ -408,7 +408,7 @@ public class MetadataInjectorTests
     {
         for (int i = 0; i < args.Count - 1; i++)
         {
-            if (args[index: i] == flag && args[index: i + 1] == value)
+            if (args[i] == flag && args[i + 1] == value)
                 return i;
         }
         return -1;

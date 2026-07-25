@@ -26,23 +26,23 @@ namespace NoMercy.Tests.Setup.Ui;
 /// directly; the macOS/Linux branches are covered by the project's CI on those
 /// platforms.
 /// </remarks>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class DesktopIconCreatorTests : IDisposable
 {
     private readonly string _tempDesktop;
 
     public DesktopIconCreatorTests()
     {
-        _tempDesktop = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-desktop-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempDesktop);
+        _tempDesktop = Path.Combine(Path.GetTempPath(), $"nm-desktop-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDesktop);
     }
 
     public void Dispose()
     {
         try
         {
-            if (Directory.Exists(path: _tempDesktop))
-                Directory.Delete(path: _tempDesktop, recursive: true);
+            if (Directory.Exists(_tempDesktop))
+                Directory.Delete(_tempDesktop, true);
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
@@ -54,15 +54,15 @@ public sealed class DesktopIconCreatorTests : IDisposable
         if (!OperatingSystem.IsWindows())
             return; // this branch is Windows-only; CI covers the other platforms.
 
-        string appPath = Path.Combine(path1: _tempDesktop, path2: "NoMercyMediaServer.exe");
-        string iconPath = Path.Combine(path1: _tempDesktop, path2: "icon.ico");
+        string appPath = Path.Combine(_tempDesktop, "NoMercyMediaServer.exe");
+        string iconPath = Path.Combine(_tempDesktop, "icon.ico");
 
-        DesktopIconCreator.CreateDesktopIcon(appName: "NoMercy Test App", appPath: appPath, iconPath: iconPath, desktopPath: _tempDesktop);
+        DesktopIconCreator.CreateDesktopIcon("NoMercy Test App", appPath, iconPath, _tempDesktop);
 
-        string expectedShortcut = Path.Combine(path1: _tempDesktop, path2: "NoMercy Test App.lnk");
+        string expectedShortcut = Path.Combine(_tempDesktop, "NoMercy Test App.lnk");
         Assert.True(
-            condition: File.Exists(path: expectedShortcut),
-            userMessage: $"expected shortcut at {expectedShortcut} in the isolated temp dir, never the real Desktop"
+            File.Exists(expectedShortcut),
+            $"expected shortcut at {expectedShortcut} in the isolated temp dir, never the real Desktop"
         );
     }
 
@@ -78,13 +78,13 @@ public sealed class DesktopIconCreatorTests : IDisposable
     [Fact]
     public void CreateDesktopIcon_NonexistentDesktopDirectory_DoesNotThrow()
     {
-        string missingDir = Path.Combine(path1: _tempDesktop, path2: "does-not-exist");
-        string appPath = Path.Combine(path1: _tempDesktop, path2: "app.exe");
-        string iconPath = Path.Combine(path1: _tempDesktop, path2: "icon.ico");
+        string missingDir = Path.Combine(_tempDesktop, "does-not-exist");
+        string appPath = Path.Combine(_tempDesktop, "app.exe");
+        string iconPath = Path.Combine(_tempDesktop, "icon.ico");
 
         // CreateWindowsShortcut's own try/catch must absorb the failure (WScript.Shell
         // creating a .lnk under a non-existent directory) rather than throwing.
-        DesktopIconCreator.CreateDesktopIcon(appName: "Test App", appPath: appPath, iconPath: iconPath, desktopPath: missingDir);
+        DesktopIconCreator.CreateDesktopIcon("Test App", appPath, iconPath, missingDir);
     }
 
     [Fact]
@@ -93,9 +93,9 @@ public sealed class DesktopIconCreatorTests : IDisposable
         // Exercises the general try/catch wrapper with unusual (but not literally
         // invalid on any single platform) inputs — an empty app name still produces a
         // shortcut filename of ".lnk", which some filesystems reject; must not throw.
-        string appPath = Path.Combine(path1: _tempDesktop, path2: "app.exe");
-        string iconPath = Path.Combine(path1: _tempDesktop, path2: "icon.ico");
+        string appPath = Path.Combine(_tempDesktop, "app.exe");
+        string iconPath = Path.Combine(_tempDesktop, "icon.ico");
 
-        DesktopIconCreator.CreateDesktopIcon(appName: string.Empty, appPath: appPath, iconPath: iconPath, desktopPath: _tempDesktop);
+        DesktopIconCreator.CreateDesktopIcon(string.Empty, appPath, iconPath, _tempDesktop);
     }
 }

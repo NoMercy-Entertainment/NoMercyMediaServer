@@ -15,12 +15,12 @@ namespace NoMercy.MediaProcessing.Files;
 
 public record Video
 {
-    [JsonProperty(propertyName: "index")]
+    [JsonProperty("index")]
     public int Index { get; set; }
 
-    [JsonProperty(propertyName: "width")]
+    [JsonProperty("width")]
     public int? Width { get; set; }
 
-    [JsonProperty(propertyName: "height")]
+    [JsonProperty("height")]
     public int? Height { get; set; }
 }

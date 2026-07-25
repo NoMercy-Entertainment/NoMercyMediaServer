@@ -15,168 +15,168 @@ namespace NoMercy.Setup.Dto;
 
 public class GithubReleaseResponse
 {
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri Url { get; set; } = null!;
 
-    [JsonProperty(propertyName: "assets_url")]
+    [JsonProperty("assets_url")]
     public Uri AssetsUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "upload_url")]
+    [JsonProperty("upload_url")]
     public string UploadUrl { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "html_url")]
+    [JsonProperty("html_url")]
     public Uri HtmlUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "author")]
+    [JsonProperty("author")]
     public Author Author { get; set; } = new();
 
-    [JsonProperty(propertyName: "node_id")]
+    [JsonProperty("node_id")]
     public string NodeId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "tag_name")]
+    [JsonProperty("tag_name")]
     public string TagName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "target_commitish")]
+    [JsonProperty("target_commitish")]
     public string TargetCommitish { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "draft")]
+    [JsonProperty("draft")]
     public bool Draft { get; set; }
 
-    [JsonProperty(propertyName: "immutable")]
+    [JsonProperty("immutable")]
     public bool Immutable { get; set; }
 
-    [JsonProperty(propertyName: "prerelease")]
+    [JsonProperty("prerelease")]
     public bool Prerelease { get; set; }
 
-    [JsonProperty(propertyName: "created_at")]
+    [JsonProperty("created_at")]
     public DateTimeOffset CreatedAt { get; set; }
 
-    [JsonProperty(propertyName: "updated_at")]
+    [JsonProperty("updated_at")]
     public DateTimeOffset UpdatedAt { get; set; }
 
-    [JsonProperty(propertyName: "published_at")]
+    [JsonProperty("published_at")]
     public DateTimeOffset PublishedAt { get; set; }
 
-    [JsonProperty(propertyName: "assets")]
+    [JsonProperty("assets")]
     public Asset[] Assets { get; set; } = [];
 
-    [JsonProperty(propertyName: "tarball_url")]
+    [JsonProperty("tarball_url")]
     public Uri TarballUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "zipball_url")]
+    [JsonProperty("zipball_url")]
     public Uri ZipballUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "body")]
+    [JsonProperty("body")]
     public string Body { get; set; } = string.Empty;
 }
 
 public class Asset
 {
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri Url { get; set; } = null!;
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "node_id")]
+    [JsonProperty("node_id")]
     public string NodeId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "label")]
+    [JsonProperty("label")]
     public string Label { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "uploader")]
+    [JsonProperty("uploader")]
     public Author Uploader { get; set; } = new();
 
-    [JsonProperty(propertyName: "content_type")]
+    [JsonProperty("content_type")]
     public string ContentType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "state")]
+    [JsonProperty("state")]
     public string State { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "size")]
+    [JsonProperty("size")]
     public long Size { get; set; }
 
-    [JsonProperty(propertyName: "digest")]
+    [JsonProperty("digest")]
     public string Digest { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "download_count")]
+    [JsonProperty("download_count")]
     public long DownloadCount { get; set; }
 
-    [JsonProperty(propertyName: "created_at")]
+    [JsonProperty("created_at")]
     public DateTimeOffset CreatedAt { get; set; }
 
-    [JsonProperty(propertyName: "updated_at")]
+    [JsonProperty("updated_at")]
     public DateTimeOffset UpdatedAt { get; set; }
 
-    [JsonProperty(propertyName: "browser_download_url")]
+    [JsonProperty("browser_download_url")]
     public Uri BrowserDownloadUrl { get; set; } = null!;
 }
 
 public class Author
 {
-    [JsonProperty(propertyName: "login")]
+    [JsonProperty("login")]
     public string Login { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "node_id")]
+    [JsonProperty("node_id")]
     public string NodeId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "avatar_url")]
+    [JsonProperty("avatar_url")]
     public Uri AvatarUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "gravatar_id")]
+    [JsonProperty("gravatar_id")]
     public string GravatarId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri Url { get; set; } = null!;
 
-    [JsonProperty(propertyName: "html_url")]
+    [JsonProperty("html_url")]
     public Uri HtmlUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "followers_url")]
+    [JsonProperty("followers_url")]
     public Uri FollowersUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "following_url")]
+    [JsonProperty("following_url")]
     public string FollowingUrl { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "gists_url")]
+    [JsonProperty("gists_url")]
     public string GistsUrl { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "starred_url")]
+    [JsonProperty("starred_url")]
     public string StarredUrl { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "subscriptions_url")]
+    [JsonProperty("subscriptions_url")]
     public Uri SubscriptionsUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "organizations_url")]
+    [JsonProperty("organizations_url")]
     public Uri OrganizationsUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "repos_url")]
+    [JsonProperty("repos_url")]
     public Uri ReposUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "events_url")]
+    [JsonProperty("events_url")]
     public string EventsUrl { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "received_events_url")]
+    [JsonProperty("received_events_url")]
     public Uri ReceivedEventsUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "user_view_type")]
+    [JsonProperty("user_view_type")]
     public string UserViewType { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "site_admin")]
+    [JsonProperty("site_admin")]
     public bool SiteAdmin { get; set; }
 }

@@ -22,10 +22,10 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags(tags: "Media Genres")]
-[ApiVersion(version: 1.0)]
+[Tags("Media Genres")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "MediaAccess")]
-[Route(template: "api/v{version:apiVersion}/genres")]
+[Route("api/v{version:apiVersion}/genres")]
 public class GenresController : BaseController
 {
     private readonly IGenreRepository _genreRepository;
@@ -48,28 +48,28 @@ public class GenresController : BaseController
 
         // Use optimized query that computes counts in database
         List<GenreWithCountsDto> genreDtos = await _genreRepository.GetGenresWithCountsAsync(
-            userId: userId,
-            language: language,
-            take: request.Take,
-            page: request.Page
+            userId,
+            language,
+            request.Take,
+            request.Page
         );
 
         // Create cards for each genre
         List<GenreCardData> genreCards = genreDtos
-            .Where(predicate: g => g.TotalTvShows > 0 || g.TotalMovies > 0)
-            .Select(selector: dto => new GenreCardData(dto: dto))
+            .Where(g => g.TotalTvShows > 0 || g.TotalMovies > 0)
+            .Select(dto => new GenreCardData(dto))
             .ToList();
 
         ComponentEnvelope response = Component
             .Grid()
-            .WithId(id: "genres")
-            .WithItems(builders: genreCards.Select(selector: card => Component.GenreCard().WithData(data: card)));
+            .WithId("genres")
+            .WithItems(genreCards.Select(card => Component.GenreCard().WithData(card)));
 
-        return Ok(value: ComponentResponse.From(component: response));
+        return Ok(ComponentResponse.From(response));
     }
 
     [HttpGet]
-    [Route(template: "{genreId}")]
+    [Route("{genreId}")]
     [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page", "version"])]
     public async Task<IActionResult> Genre(
         int genreId,
@@ -84,48 +84,48 @@ public class GenresController : BaseController
 
         (GenreDetailDto? genreDetail, List<HomeMovieCardDto> movies, List<HomeTvCardDto> tvShows) =
             await _genreRepository.GetGenreCardsAsync(
-                userId: userId,
-                id: genreId,
-                language: language,
-                country: country,
-                take: request.Take,
-                page: request.Page,
-                ct: ct
+                userId,
+                genreId,
+                language,
+                country,
+                request.Take,
+                request.Page,
+                ct
             );
 
         if (genreDetail is null || (movies.Count == 0 && tvShows.Count == 0))
-            return NotFoundResponse(detail: "Genre not found");
+            return NotFoundResponse("Genre not found");
 
         if (request.Version != "lolomo")
         {
             // Simple grid view
             IOrderedEnumerable<CardData> concat = movies
-                .Select(selector: movie => new CardData(movie: movie, country: country))
-                .Concat(second: tvShows.Select(selector: tv => new CardData(tv: tv, country: country)))
-                .OrderBy(keySelector: card => card.TitleSort);
+                .Select(movie => new CardData(movie, country))
+                .Concat(tvShows.Select(tv => new CardData(tv, country)))
+                .OrderBy(card => card.TitleSort);
 
             ComponentEnvelope response = Component
                 .Grid()
-                .WithId(id: "genre-items")
-                .WithItems(builders: concat.Select(selector: card => Component.Card().WithData(data: card)));
+                .WithId("genre-items")
+                .WithItems(concat.Select(card => Component.Card().WithData(card)));
 
-            return Ok(value: ComponentResponse.From(component: response));
+            return Ok(ComponentResponse.From(response));
         }
 
         // Carousel view organized by first letter
         List<ComponentEnvelope> carousels = Letters
             .Select(
-                selector: (letter, index) =>
+                (letter, index) =>
                 {
                     List<CardData> carouselItems = movies
-                        .Select(selector: movie => new CardData(movie: movie, country: country))
-                        .Where(predicate: card => AlphaBucket.Matches(titleSort: card.TitleSort, bucket: letter))
+                        .Select(movie => new CardData(movie, country))
+                        .Where(card => AlphaBucket.Matches(card.TitleSort, letter))
                         .Concat(
-                            second: tvShows
-                                .Select(selector: tv => new CardData(tv: tv, country: country))
-                                .Where(predicate: card => AlphaBucket.Matches(titleSort: card.TitleSort, bucket: letter))
+                            tvShows
+                                .Select(tv => new CardData(tv, country))
+                                .Where(card => AlphaBucket.Matches(card.TitleSort, letter))
                         )
-                        .OrderBy(keySelector: card => card.TitleSort)
+                        .OrderBy(card => card.TitleSort)
                         .ToList();
 
                     if (carouselItems.Count == 0)
@@ -133,27 +133,27 @@ public class GenresController : BaseController
 
                     return Component
                         .Carousel()
-                        .WithId(id: letter)
-                        .WithTitle(title: letter)
+                        .WithId(letter)
+                        .WithTitle(letter)
                         .WithNavigation(
-                            previousId: index == 0 ? null : Letters.ElementAtOrDefault(index: index - 1) ?? null,
-                            nextId: index == Letters.Length - 1
+                            index == 0 ? null : Letters.ElementAtOrDefault(index - 1) ?? null,
+                            index == Letters.Length - 1
                                 ? null
-                                : Letters.ElementAtOrDefault(index: index + 1) ?? null
+                                : Letters.ElementAtOrDefault(index + 1) ?? null
                         )
-                        .WithItems(builders: carouselItems.Select(selector: card => Component.Card().WithData(data: card)))
+                        .WithItems(carouselItems.Select(card => Component.Card().WithData(card)))
                         .Build();
                 }
             )
-            .Where(predicate: c => c != null)
+            .Where(c => c != null)
             .Cast<ComponentEnvelope>()
             .ToList();
 
         ComponentEnvelope containerResponse = Component
             .Container()
-            .WithId(id: "genre-carousels")
-            .WithItems(items: carousels);
+            .WithId("genre-carousels")
+            .WithItems(carousels);
 
-        return Ok(value: ComponentResponse.From(component: containerResponse));
+        return Ok(ComponentResponse.From(containerResponse));
     }
 }

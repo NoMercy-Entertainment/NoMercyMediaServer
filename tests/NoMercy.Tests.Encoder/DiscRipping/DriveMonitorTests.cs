@@ -28,7 +28,7 @@ public class DriveMonitorTests
     public void GetDrives_ReturnsOpticalDrivesOnly()
     {
         DriveMonitor monitor = new(
-            backend: new PollingDriveBackend(logger: NullLogger<PollingDriveBackend>.Instance)
+            new PollingDriveBackend(NullLogger<PollingDriveBackend>.Instance)
         );
 
         IReadOnlyList<DiscDrive> drives = monitor.GetDrives();
@@ -46,15 +46,15 @@ public class DriveMonitorTests
     public async Task MonitorAsync_CancellationEndsEnumeration()
     {
         DriveMonitor monitor = new(
-            backend: new PollingDriveBackend(logger: NullLogger<PollingDriveBackend>.Instance)
+            new PollingDriveBackend(NullLogger<PollingDriveBackend>.Instance)
         );
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 100));
+        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(100));
         List<DriveEvent> events = [];
 
-        await foreach (DriveEvent evt in monitor.MonitorAsync(ct: cts.Token))
+        await foreach (DriveEvent evt in monitor.MonitorAsync(cts.Token))
         {
-            events.Add(item: evt);
+            events.Add(evt);
         }
 
         // The test completes — that's the success condition. We expect zero
@@ -66,7 +66,7 @@ public class DriveMonitorTests
     public async Task MonitorAsync_AlreadyCancelledToken_ExitsImmediately()
     {
         DriveMonitor monitor = new(
-            backend: new PollingDriveBackend(logger: NullLogger<PollingDriveBackend>.Instance)
+            new PollingDriveBackend(NullLogger<PollingDriveBackend>.Instance)
         );
 
         using CancellationTokenSource cts = new();
@@ -75,12 +75,12 @@ public class DriveMonitorTests
         List<DriveEvent> events = [];
         DateTime start = DateTime.UtcNow;
 
-        await foreach (DriveEvent evt in monitor.MonitorAsync(ct: cts.Token))
+        await foreach (DriveEvent evt in monitor.MonitorAsync(cts.Token))
         {
-            events.Add(item: evt);
+            events.Add(evt);
         }
 
         TimeSpan elapsed = DateTime.UtcNow - start;
-        elapsed.Should().BeLessThan(expected: TimeSpan.FromSeconds(seconds: 1));
+        elapsed.Should().BeLessThan(TimeSpan.FromSeconds(1));
     }
 }

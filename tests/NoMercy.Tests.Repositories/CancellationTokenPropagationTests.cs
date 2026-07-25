@@ -19,7 +19,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class CancellationTokenPropagationTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -35,102 +35,102 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(contextFactory: _factory, logger: NullLogger<MovieRepository>.Instance);
+        MovieRepository repository = new(_factory, NullLogger<MovieRepository>.Instance);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            repository.GetMovieAsync(userId: SeedConstants.UserId, id: 129, language: "en", country: "US", ct: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US", cts.Token)
         );
     }
 
     [Fact]
     public async Task MovieRepository_GetMovieAvailableAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(contextFactory: _factory, logger: NullLogger<MovieRepository>.Instance);
+        MovieRepository repository = new(_factory, NullLogger<MovieRepository>.Instance);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            repository.GetMovieAvailableAsync(userId: SeedConstants.UserId, id: 129, ct: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            repository.GetMovieAvailableAsync(SeedConstants.UserId, 129, cts.Token)
         );
     }
 
     [Fact]
     public async Task MovieRepository_GetMoviePlaylistAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(contextFactory: _factory, logger: NullLogger<MovieRepository>.Instance);
+        MovieRepository repository = new(_factory, NullLogger<MovieRepository>.Instance);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            repository.GetMoviePlaylistAsync(userId: SeedConstants.UserId, id: 129, language: "en", country: "US", ct: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            repository.GetMoviePlaylistAsync(SeedConstants.UserId, 129, "en", "US", cts.Token)
         );
     }
 
     [Fact]
     public async Task MovieRepository_DeleteMovieAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(contextFactory: _factory, logger: NullLogger<MovieRepository>.Instance);
+        MovieRepository repository = new(_factory, NullLogger<MovieRepository>.Instance);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            repository.DeleteAsync(id: 999999, ct: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            repository.DeleteAsync(999999, cts.Token)
         );
     }
 
     [Fact]
     public async Task TvShowRepository_GetTvAvailableAsync_ThrowsWhenCancelled()
     {
-        TvShowRepository repository = new(contextFactory: _factory);
+        TvShowRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            repository.GetTvAvailableAsync(userId: SeedConstants.UserId, id: 1396, ct: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            repository.GetTvAvailableAsync(SeedConstants.UserId, 1396, cts.Token)
         );
     }
 
     [Fact]
     public async Task TvShowRepository_DeleteTvAsync_ThrowsWhenCancelled()
     {
-        TvShowRepository repository = new(contextFactory: _factory);
+        TvShowRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            repository.DeleteAsync(id: 999999, ct: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            repository.DeleteAsync(999999, cts.Token)
         );
     }
 
     [Fact]
     public async Task LibraryRepository_GetLibraries_ThrowsWhenCancelled()
     {
-        LibraryRepository repository = new(contextFactory: _factory);
+        LibraryRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            repository.GetLibraries(userId: SeedConstants.UserId, ct: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            repository.GetLibraries(SeedConstants.UserId, cts.Token)
         );
     }
 
     [Fact]
     public async Task LibraryRepository_GetLibraryMovieCardsAsync_ThrowsWhenCancelled()
     {
-        LibraryRepository repository = new(contextFactory: _factory);
+        LibraryRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetLibraryMovieCardsAsync(
-                userId: SeedConstants.UserId,
-                libraryId: SeedConstants.MovieLibraryId,
-                country: "US",
-                take: 10,
-                skip: 0,
-                ct: cts.Token
+                SeedConstants.UserId,
+                SeedConstants.MovieLibraryId,
+                "US",
+                10,
+                0,
+                cts.Token
             )
         );
     }
@@ -138,18 +138,18 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraryTvCardsAsync_ThrowsWhenCancelled()
     {
-        LibraryRepository repository = new(contextFactory: _factory);
+        LibraryRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetLibraryTvCardsAsync(
-                userId: SeedConstants.UserId,
-                libraryId: SeedConstants.TvLibraryId,
-                country: "US",
-                take: 10,
-                skip: 0,
-                ct: cts.Token
+                SeedConstants.UserId,
+                SeedConstants.TvLibraryId,
+                "US",
+                10,
+                0,
+                cts.Token
             )
         );
     }
@@ -157,58 +157,58 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task CollectionRepository_GetCollectionsListAsync_ThrowsWhenCancelled()
     {
-        CollectionRepository repository = new(contextFactory: _factory);
+        CollectionRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            repository.GetCollectionsListAsync(userId: SeedConstants.UserId, language: "en", country: "US", take: 10, page: 0, ct: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            repository.GetCollectionsListAsync(SeedConstants.UserId, "en", "US", 10, 0, cts.Token)
         );
     }
 
     [Fact]
     public async Task GenreRepository_GetGenresWithCountsAsync_ThrowsWhenCancelled()
     {
-        GenreRepository repository = new(context: _context);
+        GenreRepository repository = new(_context);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            repository.GetGenresWithCountsAsync(userId: SeedConstants.UserId, language: "en", take: 10, page: 0, ct: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            repository.GetGenresWithCountsAsync(SeedConstants.UserId, "en", 10, 0, cts.Token)
         );
     }
 
     [Fact]
     public async Task SpecialRepository_GetSpecialsAsync_ThrowsWhenCancelled()
     {
-        SpecialRepository repository = new(context: _context, contextFactory: _factory);
+        SpecialRepository repository = new(_context, _factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
-            repository.GetSpecialsAsync(userId: SeedConstants.UserId, language: "en", take: 10, page: 0, ct: cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            repository.GetSpecialsAsync(SeedConstants.UserId, "en", 10, 0, cts.Token)
         );
     }
 
     [Fact]
     public async Task MovieRepository_GetMovieAsync_WorksWithDefaultToken()
     {
-        MovieRepository repository = new(contextFactory: _factory, logger: NullLogger<MovieRepository>.Instance);
+        MovieRepository repository = new(_factory, NullLogger<MovieRepository>.Instance);
 
-        Movie? movie = await repository.GetMovieAsync(userId: SeedConstants.UserId, id: 129, language: "en", country: "US");
+        Movie? movie = await repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 
-        Assert.NotNull(@object: movie);
-        Assert.Equal(expected: "Spirited Away", actual: movie.Title);
+        Assert.NotNull(movie);
+        Assert.Equal("Spirited Away", movie.Title);
     }
 
     [Fact]
     public async Task TvShowRepository_GetTvAvailableAsync_WorksWithDefaultToken()
     {
-        TvShowRepository repository = new(contextFactory: _factory);
+        TvShowRepository repository = new(_factory);
 
-        bool available = await repository.GetTvAvailableAsync(userId: SeedConstants.UserId, id: 1399);
+        bool available = await repository.GetTvAvailableAsync(SeedConstants.UserId, 1399);
 
-        Assert.True(condition: available);
+        Assert.True(available);
     }
 
     public void Dispose()

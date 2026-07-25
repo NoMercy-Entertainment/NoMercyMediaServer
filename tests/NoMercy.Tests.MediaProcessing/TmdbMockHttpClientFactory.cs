@@ -25,7 +25,7 @@ namespace NoMercy.Tests.MediaProcessing;
 internal sealed class TmdbMockHttpClientFactory : IHttpClientFactory
 {
     public HttpClient CreateClient(string name) =>
-        new(handler: new TmdbMockHandler()) { BaseAddress = new(uriString: "https://api.themoviedb.org/3/") };
+        new(new TmdbMockHandler()) { BaseAddress = new("https://api.themoviedb.org/3/") };
 
     private sealed class TmdbMockHandler : HttpMessageHandler
     {
@@ -38,21 +38,21 @@ internal sealed class TmdbMockHttpClientFactory : IHttpClientFactory
 
             string? body = true switch
             {
-                _ when path.Contains(value: "/movie/1771") =>
+                _ when path.Contains("/movie/1771") =>
                     MovieResponseMocks.MovieAppendsResponseJson(),
-                _ when path.Contains(value: "/company/420") => Company(id: 420, name: "Marvel Studios"),
-                _ when path.Contains(value: "/company/7505") => Company(id: 7505, name: "Marvel Entertainment"),
+                _ when path.Contains("/company/420") => Company(420, "Marvel Studios"),
+                _ when path.Contains("/company/7505") => Company(7505, "Marvel Entertainment"),
                 _ => null,
             };
 
             HttpResponseMessage response = body is null
-                ? new(statusCode: HttpStatusCode.NotFound)
-                : new HttpResponseMessage(statusCode: HttpStatusCode.OK)
+                ? new(HttpStatusCode.NotFound)
+                : new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new StringContent(content: body, encoding: Encoding.UTF8, mediaType: "application/json"),
+                    Content = new StringContent(body, Encoding.UTF8, "application/json"),
                 };
 
-            return Task.FromResult(result: response);
+            return Task.FromResult(response);
         }
 
         private static string Company(int id, string name) =>

@@ -24,91 +24,91 @@ internal static partial class LogsCommand
 {
     private static DateTime _lastEntryTime = DateTime.MinValue;
 
-    [GeneratedRegex(pattern: @"(\x1b|\\u001[bB])\[[0-9;]*[A-Za-z]")]
+    [GeneratedRegex(@"(\x1b|\\u001[bB])\[[0-9;]*[A-Za-z]")]
     private static partial Regex AnsiEscapeRegex();
 
     public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
-        Option<int> tailOption = new(name: "--tail", aliases: "-n")
+        Option<int> tailOption = new("--tail", "-n")
         {
             Description = "Number of log entries to show",
             DefaultValueFactory = _ => 100,
         };
 
-        Option<bool> followOption = new(name: "--follow", aliases: "-f")
+        Option<bool> followOption = new("--follow", "-f")
         {
             Description = "Stream logs in real-time",
             DefaultValueFactory = _ => false,
         };
 
-        Option<string?> levelOption = new(name: "--level")
+        Option<string?> levelOption = new("--level")
         {
             Description = "Filter by log level (e.g. Information,Warning,Error)",
         };
 
-        Option<string?> typeOption = new(name: "--type") { Description = "Filter by log type" };
+        Option<string?> typeOption = new("--type") { Description = "Filter by log type" };
 
-        Command command = new(name: "logs") { Description = "View server logs" };
-        command.Options.Add(item: tailOption);
-        command.Options.Add(item: followOption);
-        command.Options.Add(item: levelOption);
-        command.Options.Add(item: typeOption);
+        Command command = new("logs") { Description = "View server logs" };
+        command.Options.Add(tailOption);
+        command.Options.Add(followOption);
+        command.Options.Add(levelOption);
+        command.Options.Add(typeOption);
 
         command.SetAction(
-            action: async (parseResult, ct) =>
+            async (parseResult, ct) =>
             {
-                string? pipe = parseResult.GetValue(option: pipeOption);
-                int tail = parseResult.GetValue(option: tailOption);
-                bool follow = parseResult.GetValue(option: followOption);
-                string? level = parseResult.GetValue(option: levelOption);
-                string? type = parseResult.GetValue(option: typeOption);
+                string? pipe = parseResult.GetValue(pipeOption);
+                int tail = parseResult.GetValue(tailOption);
+                bool follow = parseResult.GetValue(followOption);
+                string? level = parseResult.GetValue(levelOption);
+                string? type = parseResult.GetValue(typeOption);
 
-                using ICliClient client = clientFactory.Create(pipeNameOrSocketPath: pipe);
+                using ICliClient client = clientFactory.Create(pipe);
 
                 // Fetch initial batch
-                string query = BuildQuery(tail: tail, level: level, type: type);
+                string query = BuildQuery(tail, level, type);
                 List<LogEntryResponse>? logs = await client.GetAsync<List<LogEntryResponse>>(
-                    path: $"{ApiRoutes.Logs}{query}",
-                    cancellationToken: ct
+                    $"{ApiRoutes.Logs}{query}",
+                    ct
                 );
 
                 if (logs is null)
                 {
-                    await Console.Error.WriteLineAsync(value: "Could not connect to server.");
+                    await Console.Error.WriteLineAsync("Could not connect to server.");
                     return (int)ExitCode.ServerError;
                 }
 
                 foreach (LogEntryResponse entry in logs)
-                    PrintEntry(entry: entry);
+                    PrintEntry(entry);
 
                 if (!follow)
                     return (int)ExitCode.Success;
 
                 // Stream via SSE
-                using IpcClient ipc = new(pipeNameOrSocketPath: pipe);
+                using IpcClient ipc = new(pipe);
                 try
                 {
                     using HttpResponseMessage response = await ipc.GetStreamAsync(
-                        requestUri: $"{ApiRoutes.LogsStream}?backfill=0",
-                        cancellationToken: ct
+                        $"{ApiRoutes.LogsStream}?backfill=0",
+                        ct
                     );
 
-                    await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken: ct);
-                    using StreamReader reader = new(stream: stream);
+                    await using Stream stream = await response.Content.ReadAsStreamAsync(ct);
+                    using StreamReader reader = new(stream);
 
                     while (!ct.IsCancellationRequested)
                     {
-                        string? line = await reader.ReadLineAsync(cancellationToken: ct);
+                        string? line = await reader.ReadLineAsync(ct);
                         if (line is null)
                             break;
-                        if (!line.StartsWith(value: "data: "))
+                        if (!line.StartsWith("data: "))
                             continue;
 
                         string json = line[6..];
                         LogEntryResponse? entry;
                         try
                         {
-                            entry = JsonConvert.DeserializeObject<LogEntryResponse>(value: json);
+                            entry = JsonConvert.DeserializeObject<LogEntryResponse>(json);
                         }
                         catch (JsonException)
                         {
@@ -122,33 +122,33 @@ internal static partial class LogsCommand
 
                         // Apply client-side filters
                         if (
-                            !string.IsNullOrWhiteSpace(value: level)
+                            !string.IsNullOrWhiteSpace(level)
                             && !level
-                                .Split(separator: ',')
-                                .Any(predicate: l =>
+                                .Split(',')
+                                .Any(l =>
                                     string.Equals(
-                                        a: l.Trim(),
-                                        b: entry.Level,
-                                        comparisonType: StringComparison.OrdinalIgnoreCase
+                                        l.Trim(),
+                                        entry.Level,
+                                        StringComparison.OrdinalIgnoreCase
                                     )
                                 )
                         )
                             continue;
 
                         if (
-                            !string.IsNullOrWhiteSpace(value: type)
-                            && !type.Split(separator: ',')
-                                .Any(predicate: t =>
+                            !string.IsNullOrWhiteSpace(type)
+                            && !type.Split(',')
+                                .Any(t =>
                                     string.Equals(
-                                        a: t.Trim(),
-                                        b: entry.Type,
-                                        comparisonType: StringComparison.OrdinalIgnoreCase
+                                        t.Trim(),
+                                        entry.Type,
+                                        StringComparison.OrdinalIgnoreCase
                                     )
                                 )
                         )
                             continue;
 
-                        PrintEntry(entry: entry);
+                        PrintEntry(entry);
                     }
                 }
                 catch (OperationCanceledException)
@@ -157,7 +157,7 @@ internal static partial class LogsCommand
                 }
                 catch (Exception ex)
                 {
-                    await Console.Error.WriteLineAsync(value: $"Stream disconnected: {ex.Message}");
+                    await Console.Error.WriteLineAsync($"Stream disconnected: {ex.Message}");
                     return (int)ExitCode.ServerError;
                 }
 
@@ -175,25 +175,25 @@ internal static partial class LogsCommand
 
         _lastEntryTime = entry.Time;
 
-        string message = CleanMessage(message: entry.Message);
+        string message = CleanMessage(entry.Message);
         string timestamp = entry
             .Time.ToLocalTime()
-            .ToString(format: "d-M-yyyy HH:mm")
-            .Pastel(color: Color.DarkGray);
-        string typeName = entry.Type.ToTitleCase().PadLeft(totalWidth: 14);
+            .ToString("d-M-yyyy HH:mm")
+            .Pastel(Color.DarkGray);
+        string typeName = entry.Type.ToTitleCase().PadLeft(14);
 
-        if (!string.IsNullOrEmpty(value: entry.Color))
-            typeName = typeName.Pastel(hexColor: entry.Color);
+        if (!string.IsNullOrEmpty(entry.Color))
+            typeName = typeName.Pastel(entry.Color);
 
-        Console.WriteLine(value: $"{timestamp} {typeName} | {message}");
+        Console.WriteLine($"{timestamp} {typeName} | {message}");
     }
 
     private static void PrintSessionSeparator()
     {
-        string separator = new(c: '-', count: 60);
+        string separator = new('-', 60);
         Console.WriteLine();
         Console.WriteLine(
-            value: $"{"", 16}{"Server Restart".PadLeft(totalWidth: 14)} | {separator}".Pastel(color: Color.DarkGray)
+            $"{"", 16}{"Server Restart".PadLeft(14)} | {separator}".Pastel(Color.DarkGray)
         );
         Console.WriteLine();
     }
@@ -205,15 +205,15 @@ internal static partial class LogsCommand
             message = message[1..^1];
 
         // Strip ANSI escape codes
-        message = AnsiEscapeRegex().Replace(input: message, replacement: "");
+        message = AnsiEscapeRegex().Replace(message, "");
 
         // Unescape JSON escapes from double-serialization
         message = message
-            .Replace(oldValue: "\\n", newValue: "\n")
-            .Replace(oldValue: "\\r", newValue: "\r")
-            .Replace(oldValue: "\\t", newValue: "\t")
-            .Replace(oldValue: "\\\"", newValue: "\"")
-            .Replace(oldValue: @"\\", newValue: "\\");
+            .Replace("\\n", "\n")
+            .Replace("\\r", "\r")
+            .Replace("\\t", "\t")
+            .Replace("\\\"", "\"")
+            .Replace(@"\\", "\\");
 
         return message;
     }
@@ -221,10 +221,10 @@ internal static partial class LogsCommand
     internal static string BuildQuery(int tail, string? level, string? type)
     {
         List<string> parts = [$"tail={tail}"];
-        if (!string.IsNullOrWhiteSpace(value: level))
-            parts.Add(item: $"levels={Uri.EscapeDataString(stringToEscape: level)}");
-        if (!string.IsNullOrWhiteSpace(value: type))
-            parts.Add(item: $"types={Uri.EscapeDataString(stringToEscape: type)}");
-        return "?" + string.Join(separator: "&", values: parts);
+        if (!string.IsNullOrWhiteSpace(level))
+            parts.Add($"levels={Uri.EscapeDataString(level)}");
+        if (!string.IsNullOrWhiteSpace(type))
+            parts.Add($"types={Uri.EscapeDataString(type)}");
+        return "?" + string.Join("&", parts);
     }
 }

@@ -15,6 +15,6 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class Links
 {
-    [JsonProperty(propertyName: "self")]
+    [JsonProperty("self")]
     public Uri Self { get; set; } = default!;
 }

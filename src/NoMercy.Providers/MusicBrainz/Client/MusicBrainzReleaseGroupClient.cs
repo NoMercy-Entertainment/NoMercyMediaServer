@@ -18,7 +18,7 @@ namespace NoMercy.Providers.MusicBrainz.Client;
 public class MusicBrainzReleaseGroupClient : MusicBrainzBaseClient
 {
     public MusicBrainzReleaseGroupClient(Guid? id)
-        : base(id: (Guid)id!) { }
+        : base((Guid)id!) { }
 
     public Task<MusicBrainzReleaseGroupDetails?> WithAppends(
         string[] appendices,
@@ -27,16 +27,16 @@ public class MusicBrainzReleaseGroupClient : MusicBrainzBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "inc"] = string.Join(separator: "+", value: appendices),
-            [key: "fmt"] = "json",
+            ["inc"] = string.Join("+", appendices),
+            ["fmt"] = "json",
         };
 
-        return Get<MusicBrainzReleaseGroupDetails>(url: "release-group/" + Id, query: queryParams, priority: priority);
+        return Get<MusicBrainzReleaseGroupDetails>("release-group/" + Id, queryParams, priority);
     }
 
     public Task<MusicBrainzReleaseGroupDetails?> WithAllAppends(bool? priority = false)
     {
-        return WithAppends(appendices: ["artists", "releases"], priority: priority);
+        return WithAppends(["artists", "releases"], priority);
     }
 
     public Task<MusicBrainzReleaseGroupSearchResponse?> SearchReleaseGroups(
@@ -44,7 +44,7 @@ public class MusicBrainzReleaseGroupClient : MusicBrainzBaseClient
         bool? priority = false
     )
     {
-        Dictionary<string, string?> queryParams = new() { [key: "query"] = query, [key: "fmt"] = "json" };
-        return Get<MusicBrainzReleaseGroupSearchResponse>(url: "release-group", query: queryParams, priority: priority);
+        Dictionary<string, string?> queryParams = new() { ["query"] = query, ["fmt"] = "json" };
+        return Get<MusicBrainzReleaseGroupSearchResponse>("release-group", queryParams, priority);
     }
 }

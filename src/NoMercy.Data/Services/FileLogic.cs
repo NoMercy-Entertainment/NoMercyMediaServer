@@ -51,10 +51,10 @@ public partial class FileLogic(
 
         foreach (Folder folder in Folders)
         {
-            ConcurrentBag<MediaFolderExtend> files = await GetFiles(folder: folder);
+            ConcurrentBag<MediaFolderExtend> files = await GetFiles(folder);
 
             if (!files.IsEmpty)
-                Files.AddRange(collection: files);
+                Files.AddRange(files);
         }
 
         switch (Library.Type)
@@ -70,7 +70,7 @@ public partial class FileLogic(
                 await StoreMusic();
                 break;
             default:
-                logger.LogInformation(message: "Unknown library type");
+                logger.LogInformation("Unknown library type");
                 break;
         }
     }
@@ -78,50 +78,50 @@ public partial class FileLogic(
     private async Task StoreMusic()
     {
         MediaFile? item = Files
-            .FirstOrDefault(predicate: file => file.Parsed.Title is not null)
-            ?.Files?.FirstOrDefault(predicate: file => file.Parsed is not null);
+            .FirstOrDefault(file => file.Parsed.Title is not null)
+            ?.Files?.FirstOrDefault(file => file.Parsed is not null);
 
         if (item == null)
             return;
 
-        await StoreAudioItem(item: item);
+        await StoreAudioItem(item);
     }
 
     private async Task StoreMovie()
     {
         MediaFile? item = Files
-            .SelectMany(selector: file => file.Files ?? [])
-            .FirstOrDefault(predicate: file => file.Parsed is not null);
+            .SelectMany(file => file.Files ?? [])
+            .FirstOrDefault(file => file.Parsed is not null);
 
         if (item == null)
             return;
 
-        await StoreVideoItem(item: item);
+        await StoreVideoItem(item);
     }
 
     private async Task StoreTvShow()
     {
         List<MediaFile> items = Files
-            .SelectMany(selector: file => file.Files ?? [])
-            .Where(predicate: mediaFolder => mediaFolder.Parsed is not null)
+            .SelectMany(file => file.Files ?? [])
+            .Where(mediaFolder => mediaFolder.Parsed is not null)
             .ToList();
 
         if (items.Count == 0)
             return;
 
         foreach (MediaFile item in items)
-            await StoreVideoItem(item: item);
+            await StoreVideoItem(item);
     }
 
     public class Subtitle
     {
-        [JsonProperty(propertyName: "language")]
+        [JsonProperty("language")]
         public string Language { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "type")]
+        [JsonProperty("type")]
         public string Type { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "ext")]
+        [JsonProperty("ext")]
         public string Ext { get; set; } = string.Empty;
     }
 
@@ -130,7 +130,7 @@ public partial class FileLogic(
         if (item?.Parsed is null)
             return;
 
-        Folder? folder = Folders.FirstOrDefault(predicate: folder => item.Path.Contains(value: folder.Path));
+        Folder? folder = Folders.FirstOrDefault(folder => item.Path.Contains(folder.Path));
         if (folder == null)
             return;
 
@@ -142,7 +142,7 @@ public partial class FileLogic(
         if (item?.Parsed is null)
             return;
 
-        Folder? folder = Folders.FirstOrDefault(predicate: folder => item.Path.Contains(value: folder.Path));
+        Folder? folder = Folders.FirstOrDefault(folder => item.Path.Contains(folder.Path));
         if (folder == null)
             return;
 
@@ -153,28 +153,28 @@ public partial class FileLogic(
         // facade calls below (ExistsAsync / List) accept it on remote backends
         // and the persisted path stays backend-neutral.
         string itemPath = StoragePathHelpers.RebaseToFolderRoot(
-            absolutePath: item.Path.Replace(oldChar: '\\', newChar: '/'),
-            folderPath: folder.Path
+            item.Path.Replace('\\', '/'),
+            folder.Path
         );
-        string fileName = "/" + StoragePathHelpers.GetName(path: itemPath);
-        string hostFolder = itemPath.Replace(oldValue: fileName, newValue: "");
-        string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim(trimChars: ['/', '\\']);
-        int showIdx = string.IsNullOrEmpty(value: showName)
+        string fileName = "/" + StoragePathHelpers.GetName(itemPath);
+        string hostFolder = itemPath.Replace(fileName, "");
+        string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim(['/', '\\']);
+        int showIdx = string.IsNullOrEmpty(showName)
             ? -1
-            : itemPath.IndexOf(value: showName, comparisonType: StringComparison.OrdinalIgnoreCase);
+            : itemPath.IndexOf(showName, StringComparison.OrdinalIgnoreCase);
         string baseFolder =
-            showIdx >= 0 ? ("/" + itemPath[showIdx..]).Replace(oldValue: fileName, newValue: "") : hostFolder;
+            showIdx >= 0 ? ("/" + itemPath[showIdx..]).Replace(fileName, "") : hostFolder;
 
-        string subtitleFolder = hostFolder.TrimEnd(trimChar: '/') + "/subtitles";
+        string subtitleFolder = hostFolder.TrimEnd('/') + "/subtitles";
 
-        IStorage storage = storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: string.Empty);
-        if (await storage.ExistsAsync(path: subtitleFolder, ct: CancellationToken.None))
+        IStorage storage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        if (await storage.ExistsAsync(subtitleFolder, CancellationToken.None))
         {
-            IReadOnlyList<StorageEntry> subtitleEntries = storage.List(path: subtitleFolder, pattern: "*", recursive: false);
-            foreach (string subtitleFile in subtitleEntries.Select(selector: e => e.Path))
+            IReadOnlyList<StorageEntry> subtitleEntries = storage.List(subtitleFolder, "*", false);
+            foreach (string subtitleFile in subtitleEntries.Select(e => e.Path))
             {
                 Regex regex = SubtitleFileTagsRegex();
-                Match match = regex.Match(input: subtitleFile);
+                Match match = regex.Match(subtitleFile);
 
                 if (!match.Success)
                     continue;
@@ -184,15 +184,15 @@ public partial class FileLogic(
                 // every variant (sign, full, sdh, alt, ...). The bitmap track's
                 // own OCR sidecar carries the same {lang}.{type}, so dropping it
                 // here loses nothing: the readable .vtt is listed in its place.
-                string ext = match.Groups[groupname: "ext"].Value;
-                if (SubtitleClassifier.IsBitmapSidecarExtension(extension: ext))
+                string ext = match.Groups["ext"].Value;
+                if (SubtitleClassifier.IsBitmapSidecarExtension(ext))
                     continue;
 
                 subtitles.Add(
-                    item: new()
+                    new()
                     {
-                        Language = match.Groups[groupname: "lang"].Value,
-                        Type = match.Groups[groupname: "type"].Value,
+                        Language = match.Groups["lang"].Value,
+                        Type = match.Groups["type"].Value,
                         Ext = ext,
                     }
                 );
@@ -200,9 +200,9 @@ public partial class FileLogic(
         }
 
         Episode? episode = await mediaContext
-            .Episodes.Where(predicate: e => Show != null && e.TvId == Show.Id)
-            .Where(predicate: e => e.SeasonNumber == item.Parsed.Season)
-            .Where(predicate: e => e.EpisodeNumber == item.Parsed.Episode)
+            .Episodes.Where(e => Show != null && e.TvId == Show.Id)
+            .Where(e => e.SeasonNumber == item.Parsed.Season)
+            .Where(e => e.EpisodeNumber == item.Parsed.Episode)
             .FirstOrDefaultAsync();
 
         try
@@ -211,31 +211,30 @@ public partial class FileLogic(
             {
                 EpisodeId = episode?.Id,
                 MovieId = Movie?.Id,
-                Folder = baseFolder.Replace(oldValue: "\\", newValue: "/"),
-                HostFolder = hostFolder.Replace(oldValue: "\\", newValue: "/"),
-                Filename = fileName.Replace(oldValue: "\\", newValue: "/"),
+                Folder = baseFolder.Replace("\\", "/"),
+                HostFolder = hostFolder.Replace("\\", "/"),
+                Filename = fileName.Replace("\\", "/"),
 
                 Share = folder.Id.ToString(),
                 Duration = Regex.Replace(
-                    input: Regex.Replace(input: (item.FFprobe?.Duration.ToString()).OrEmpty(), pattern: @"\.\d+", replacement: ""),
-                    pattern: "^00:",
-                    replacement: ""
+                    Regex.Replace((item.FFprobe?.Duration.ToString()).OrEmpty(), @"\.\d+", ""),
+                    "^00:",
+                    ""
                 ),
                 // Chapters = JsonConvert.SerializeObject(item.FFprobe?.Chapters ?? []),
                 Chapters = "",
                 Languages = JsonConvert.SerializeObject(
-                    value: item.FFprobe?.AudioStreams.Select(selector: stream => stream.Language)
-                        .Where(predicate: stream => stream != null && stream != "und")
+                    item.FFprobe?.AudioStreams.Select(stream => stream.Language)
+                        .Where(stream => stream != null && stream != "und")
                 ),
                 Quality = (item.FFprobe?.VideoStreams.FirstOrDefault()?.Width.ToString()).OrEmpty(),
-                Subtitles = JsonConvert.SerializeObject(value: subtitles),
+                Subtitles = JsonConvert.SerializeObject(subtitles),
             };
 
             await mediaContext
-                .VideoFiles.Upsert(entity: videoFile)
-                .On(match: vf => vf.Filename)
-                .WhenMatched(
-                    updater: (vs, vi) =>
+                .VideoFiles.Upsert(videoFile)
+                .On(vf => vf.Filename)
+                .WhenMatched((vs, vi) =>
                         new()
                         {
                             Id = vi.Id,
@@ -256,7 +255,7 @@ public partial class FileLogic(
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
+            logger.LogError(e.Message);
         }
     }
 
@@ -265,15 +264,15 @@ public partial class FileLogic(
         switch (Library.Type)
         {
             case MediaTypes.MovieMediaType:
-                Movie = await mediaContext.Movies.Where(predicate: m => m.Id == Id).FirstOrDefaultAsync();
+                Movie = await mediaContext.Movies.Where(m => m.Id == Id).FirstOrDefaultAsync();
                 Type = MediaTypes.MovieMediaType;
                 break;
             case MediaTypes.TvMediaType:
-                Show = await mediaContext.Tvs.Where(predicate: t => t.Id == Id).FirstOrDefaultAsync();
+                Show = await mediaContext.Tvs.Where(t => t.Id == Id).FirstOrDefaultAsync();
                 Type = MediaTypes.TvMediaType;
                 break;
             case MediaTypes.AnimeMediaType:
-                Show = await mediaContext.Tvs.Where(predicate: t => t.Id == Id).FirstOrDefaultAsync();
+                Show = await mediaContext.Tvs.Where(t => t.Id == Id).FirstOrDefaultAsync();
                 Type = MediaTypes.AnimeMediaType;
                 break;
         }
@@ -282,8 +281,8 @@ public partial class FileLogic(
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Folder folder)
     {
         // Resolve the per-folder driver so NFS/SMB folders use the right backend.
-        IStorage folderStorage = storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: string.Empty);
-        MediaScan mediaScan = new(driver: folderStorage.Driver);
+        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        MediaScan mediaScan = new(folderStorage.Driver);
 
         int depth = Library.Type switch
         {
@@ -298,12 +297,12 @@ public partial class FileLogic(
         // remote backend, so a facade call here killed every rescan of an
         // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
         // its own backend, exactly as MediaScan.Process does internally.
-        string scanRoot = folderStorage.Driver.GetFullPath(path: folder.Path);
+        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
 
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
-            .FilterByMediaType(mediaType: Library.Type)
-            .Process(rootFolder: scanRoot, depth: depth);
+            .FilterByMediaType(Library.Type)
+            .Process(scanRoot, depth);
 
         await mediaScan.DisposeAsync();
 
@@ -314,49 +313,49 @@ public partial class FileLogic(
     {
         string? folder = Library.Type switch
         {
-            MediaTypes.MovieMediaType => Movie?.Folder?.Replace(oldValue: "/", newValue: ""),
-            MediaTypes.TvMediaType => Show?.Folder?.Replace(oldValue: "/", newValue: ""),
-            MediaTypes.AnimeMediaType => Show?.Folder?.Replace(oldValue: "/", newValue: ""),
+            MediaTypes.MovieMediaType => Movie?.Folder?.Replace("/", ""),
+            MediaTypes.TvMediaType => Show?.Folder?.Replace("/", ""),
+            MediaTypes.AnimeMediaType => Show?.Folder?.Replace("/", ""),
             _ => "",
         };
 
         if (folder == null)
             return;
 
-        Folder[] rootFolders = Library.FolderLibraries.Select(selector: f => f.Folder).ToArray();
+        Folder[] rootFolders = Library.FolderLibraries.Select(f => f.Folder).ToArray();
 
         foreach (Folder rootFolder in rootFolders)
         {
             IStorage folderStorage = storageFactory.For(
-                folderId: rootFolder.Id,
-                driverId: rootFolder.DriverId,
-                subPath: string.Empty
+                rootFolder.Id,
+                rootFolder.DriverId,
+                string.Empty
             );
             // Stay in scope-relative space: rootFolder.Path is the storage key
             // the facade wants (e.g. "Marvels/TV.Shows"); the facade Exists / List
             // reject absolute paths. Do NOT resolve to an OS/mount-absolute path
             // here — GetFullPath produces "/mnt/vault/..." which StoragePathGuard
             // then rejects as a scope-relative key.
-            string path = folderStorage.CombinePath(parent: rootFolder.Path, child: folder);
+            string path = folderStorage.CombinePath(rootFolder.Path, folder);
 
-            if (!folderStorage.Exists(path: path))
+            if (!folderStorage.Exists(path))
             {
                 // FindMatchingDirectory walks the raw driver, so it needs the
                 // driver-absolute root and returns a driver-absolute directory.
                 // Convert that hit back to a scope-relative key before storing.
-                string resolvedRoot = folderStorage.Driver.GetFullPath(path: rootFolder.Path);
+                string resolvedRoot = folderStorage.Driver.GetFullPath(rootFolder.Path);
                 string? match = FileNameSanitizer.FindMatchingDirectory(
-                    driver: folderStorage.Driver,
-                    rootPath: resolvedRoot,
-                    expectedFolderName: folder
+                    folderStorage.Driver,
+                    resolvedRoot,
+                    folder
                 );
                 if (match != null)
-                    path = folderStorage.CombinePath(parent: rootFolder.Path, child: folderStorage.GetName(path: match));
+                    path = folderStorage.CombinePath(rootFolder.Path, folderStorage.GetName(match));
             }
 
-            if (folderStorage.Exists(path: path))
+            if (folderStorage.Exists(path))
                 Folders.Add(
-                    item: new()
+                    new()
                     {
                         Path = path,
                         Id = rootFolder.Id,
@@ -370,7 +369,7 @@ public partial class FileLogic(
     // anywhere in the filename tail. 2-3 char lang (ISO 639-1/2), any-length
     // variant (sign, full, sdh, alt, forced, …), 3-6 char extension (vtt,
     // ass, srt, ssa, sub, idx, webvtt).
-    [GeneratedRegex(pattern: @"(?<lang>[a-zA-Z]{2,3})\.(?<type>\w+)\.(?<ext>\w{3,6})$")]
+    [GeneratedRegex(@"(?<lang>[a-zA-Z]{2,3})\.(?<type>\w+)\.(?<ext>\w{3,6})$")]
     private static partial Regex SubtitleFileTagsRegex();
 
     public void Dispose()

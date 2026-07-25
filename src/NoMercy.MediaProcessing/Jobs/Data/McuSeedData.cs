@@ -10,16 +10,16 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Database.Models.TvShows;
+using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.NmSystem.Domain;
-using SpecialItem = NoMercy.Service.Seeds.Dto.SpecialItem;
 
-namespace NoMercy.Service.Seeds.Data;
+namespace NoMercy.Data.Data;
 
 public static class McuSeedData
 {
     public static readonly Special Special = new()
     {
-        Id = Ulid.Parse(base32: "01HSBYSE7ZNGN7P586BQJ7W9ZB"),
+        Id = Ulid.Parse("01HSBYSE7ZNGN7P586BQJ7W9ZB"),
         Title = "Marvel Cinematic Universe",
         Backdrop = "/clje9xd4v0000d4ef0usufhy9.jpg",
         Poster = "/4Af70wDv1sN8JztUNnvXgae193O.jpg",
@@ -29,7 +29,7 @@ public static class McuSeedData
         Creator = "Stoney_Eagle",
     };
 
-    public static readonly SpecialItem[] McuItems =
+    public static readonly SpecialSeedItem[] McuItems =
     [
         new()
         {

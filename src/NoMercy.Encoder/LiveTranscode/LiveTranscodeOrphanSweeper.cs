@@ -32,11 +32,11 @@ public class LiveTranscodeOrphanSweeper(
     {
         string cacheRoot = options.ResolvedLiveTranscodeCachePath;
 
-        if (!storage.Exists(path: cacheRoot))
+        if (!storage.Exists(cacheRoot))
         {
             logger.LogDebug(
-                message: "LiveTranscodeOrphanSweeper: cache root {Dir} does not exist, nothing to sweep",
-                args: cacheRoot
+                "LiveTranscodeOrphanSweeper: cache root {Dir} does not exist, nothing to sweep",
+                cacheRoot
             );
             return Task.CompletedTask;
         }
@@ -45,16 +45,16 @@ public class LiveTranscodeOrphanSweeper(
         try
         {
             orphans = storage
-                .List(path: cacheRoot, pattern: "lts-*", recursive: false)
-                .Where(predicate: e => e.IsDirectory)
+                .List(cacheRoot, "lts-*", false)
+                .Where(e => e.IsDirectory)
                 .ToList();
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "LiveTranscodeOrphanSweeper: could not enumerate {Dir}",
-                args: cacheRoot
+                ex,
+                "LiveTranscodeOrphanSweeper: could not enumerate {Dir}",
+                cacheRoot
             );
             return Task.CompletedTask;
         }
@@ -63,18 +63,18 @@ public class LiveTranscodeOrphanSweeper(
         {
             try
             {
-                storage.DeleteDirectory(path: entry.Path, recursive: true);
+                storage.DeleteDirectory(entry.Path, true);
                 logger.LogInformation(
-                    message: "LiveTranscodeOrphanSweeper: deleted orphan {Dir}",
-                    args: entry.Path
+                    "LiveTranscodeOrphanSweeper: deleted orphan {Dir}",
+                    entry.Path
                 );
             }
             catch (Exception ex)
             {
                 logger.LogWarning(
-                    exception: ex,
-                    message: "LiveTranscodeOrphanSweeper: could not delete orphan {Dir}",
-                    args: entry.Path
+                    ex,
+                    "LiveTranscodeOrphanSweeper: could not delete orphan {Dir}",
+                    entry.Path
                 );
             }
         }

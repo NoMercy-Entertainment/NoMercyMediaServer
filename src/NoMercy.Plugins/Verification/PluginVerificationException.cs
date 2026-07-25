@@ -11,4 +11,4 @@
 
 namespace NoMercy.Plugins.Verification;
 
-public class PluginVerificationException(string message) : Exception(message: message);
+public class PluginVerificationException(string message) : Exception(message);

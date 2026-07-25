@@ -62,11 +62,11 @@ internal sealed class SmbWriteStream : Stream
         int sent = 0;
         while (sent < count)
         {
-            int len = Math.Min(val1: _chunkSize, val2: count - sent);
+            int len = Math.Min(_chunkSize, count - sent);
             byte[] chunk = new byte[len];
-            Array.Copy(sourceArray: buffer, sourceIndex: offset + sent, destinationArray: chunk, destinationIndex: 0, length: len);
-            NTStatus st = _session.Store.WriteFile(numberOfBytesWritten: out int written, handle: _handle, offset: _position, data: chunk);
-            SmbStatus.EnsureSuccess(status: st, what: $"write '{_path}'");
+            Array.Copy(buffer, offset + sent, chunk, 0, len);
+            NTStatus st = _session.Store.WriteFile(out int written, _handle, _position, chunk);
+            SmbStatus.EnsureSuccess(st, $"write '{_path}'");
             _position += written;
             sent += written;
         }
@@ -75,13 +75,13 @@ internal sealed class SmbWriteStream : Stream
     public override void Write(ReadOnlySpan<byte> buffer)
     {
         byte[] tmp = buffer.ToArray();
-        Write(buffer: tmp, offset: 0, count: tmp.Length);
+        Write(tmp, 0, tmp.Length);
     }
 
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        Write(buffer: buffer, offset: offset, count: count);
+        Write(buffer, offset, count);
         return Task.CompletedTask;
     }
 
@@ -91,7 +91,7 @@ internal sealed class SmbWriteStream : Stream
     )
     {
         ct.ThrowIfCancellationRequested();
-        Write(buffer: buffer.Span);
+        Write(buffer.Span);
         return ValueTask.CompletedTask;
     }
 
@@ -113,13 +113,13 @@ internal sealed class SmbWriteStream : Stream
         {
             try
             {
-                _session.Store.CloseFile(handle: _handle);
+                _session.Store.CloseFile(_handle);
             }
             finally
             {
                 _session.Dispose();
             }
         }
-        base.Dispose(disposing: disposing);
+        base.Dispose(disposing);
     }
 }

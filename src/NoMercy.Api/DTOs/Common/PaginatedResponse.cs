@@ -15,12 +15,12 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record PaginatedResponse<T>
 {
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public IEnumerable<T> Data { get; set; } = [];
 
-    [JsonProperty(propertyName: "next_page")]
+    [JsonProperty("next_page")]
     public int? NextPage { get; set; }
 
-    [JsonProperty(propertyName: "has_more")]
+    [JsonProperty("has_more")]
     public bool HasMore { get; set; }
 }

@@ -20,7 +20,7 @@ namespace NoMercy.Encoder.PostProcess;
 
 public class FontExtractor(IStorage storage) : IFontExtractor
 {
-    private static readonly HashSet<string> FontExtensions = new(comparer: StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> FontExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".ttf",
         ".ttc",
@@ -29,7 +29,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         ".woff2",
     };
 
-    private static readonly HashSet<string> LutExtensions = new(comparer: StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> LutExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".cube",
         ".3dl",
@@ -52,31 +52,31 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         IReadOnlyList<AttachmentInfo> attachments
     )
     {
-        string fontDir = storage.CombinePath(parent: outputDirectory, child: "fonts");
+        string fontDir = storage.CombinePath(outputDirectory, "fonts");
 
         List<string> args = ["-y", "-hide_banner"];
 
-        HashSet<string> usedNames = new(comparer: StringComparer.OrdinalIgnoreCase);
+        HashSet<string> usedNames = new(StringComparer.OrdinalIgnoreCase);
         foreach (AttachmentInfo attachment in attachments)
         {
-            args.Add(item: $"-dump_attachment:{attachment.Index}");
-            args.Add(item: ResolveSafeAttachmentName(attachment: attachment, usedNames: usedNames));
+            args.Add($"-dump_attachment:{attachment.Index}");
+            args.Add(ResolveSafeAttachmentName(attachment, usedNames));
         }
 
-        args.Add(item: "-i");
-        args.Add(item: inputPath);
-        args.Add(item: "-f");
-        args.Add(item: "null");
-        args.Add(item: "-");
+        args.Add("-i");
+        args.Add(inputPath);
+        args.Add("-f");
+        args.Add("null");
+        args.Add("-");
 
-        return new(Executable: ffmpegPath, Arguments: args.ToArray(), WorkingDirectory: fontDir);
+        return new(ffmpegPath, args.ToArray(), fontDir);
     }
 
     public int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments)
     {
         int count = 0;
         foreach (AttachmentInfo attachment in attachments)
-            if (attachment.Filename is { } name && IsFontExtension(fileName: name))
+            if (attachment.Filename is { } name && IsFontExtension(name))
                 count++;
         return count;
     }
@@ -91,12 +91,12 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         IReadOnlyList<AttachmentInfo> attachments
     )
     {
-        HashSet<string> usedNames = new(comparer: StringComparer.OrdinalIgnoreCase);
+        HashSet<string> usedNames = new(StringComparer.OrdinalIgnoreCase);
         List<AttachmentDumpTarget> targets = [];
         foreach (AttachmentInfo attachment in attachments)
         {
-            string safeName = ResolveSafeAttachmentName(attachment: attachment, usedNames: usedNames);
-            targets.Add(item: new(Index: attachment.Index, RelativePath: $"fonts/{safeName}"));
+            string safeName = ResolveSafeAttachmentName(attachment, usedNames);
+            targets.Add(new(attachment.Index, $"fonts/{safeName}"));
         }
         return targets;
     }
@@ -108,54 +108,54 @@ public class FontExtractor(IStorage storage) : IFontExtractor
     /// </summary>
     public async Task<int> WriteFontManifestAsync(string outputDirectory, CancellationToken ct)
     {
-        string fontDir = storage.CombinePath(parent: outputDirectory, child: "fonts");
+        string fontDir = storage.CombinePath(outputDirectory, "fonts");
 
-        if (!storage.Exists(path: fontDir))
+        if (!storage.Exists(fontDir))
             return 0;
 
         IReadOnlyList<StorageEntry> allDumped = storage
-            .List(path: fontDir, pattern: "*", recursive: false)
-            .Where(predicate: e => !e.IsDirectory)
+            .List(fontDir, "*", false)
+            .Where(e => !e.IsDirectory)
             .ToList();
 
         if (allDumped.Count == 0)
         {
-            storage.DeleteDirectory(path: fontDir, recursive: false);
+            storage.DeleteDirectory(fontDir, false);
             return 0;
         }
 
         List<StorageEntry> fontFiles = allDumped
-            .Where(predicate: f => IsFontExtension(fileName: storage.GetName(path: f.Path)))
+            .Where(f => IsFontExtension(storage.GetName(f.Path)))
             .ToList();
 
         List<StorageEntry> lutFiles = allDumped
-            .Where(predicate: f => IsLutExtension(fileName: storage.GetName(path: f.Path)))
+            .Where(f => IsLutExtension(storage.GetName(f.Path)))
             .ToList();
 
-        await MoveLutsAndWriteManifestAsync(outputDirectory: outputDirectory, lutFiles: lutFiles, ct: ct);
+        await MoveLutsAndWriteManifestAsync(outputDirectory, lutFiles, ct);
 
         if (fontFiles.Count == 0)
         {
             if (
-                !storage.Exists(path: fontDir)
-                || storage.List(path: fontDir, pattern: "*", recursive: false).All(predicate: e => e.IsDirectory)
+                !storage.Exists(fontDir)
+                || storage.List(fontDir, "*", false).All(e => e.IsDirectory)
             )
-                storage.DeleteDirectory(path: fontDir, recursive: false);
+                storage.DeleteDirectory(fontDir, false);
             return 0;
         }
 
         List<AssetEntry> entries = fontFiles
-            .Select(selector: f => new AssetEntry(
-                File: $"fonts/{storage.GetName(path: f.Path)}",
-                MimeType: GetFontMimeType(fileName: storage.GetName(path: f.Path))
+            .Select(f => new AssetEntry(
+                $"fonts/{storage.GetName(f.Path)}",
+                GetFontMimeType(storage.GetName(f.Path))
             ))
             .ToList();
 
-        string json = JsonConvert.SerializeObject(value: entries, formatting: Formatting.Indented);
+        string json = JsonConvert.SerializeObject(entries, Formatting.Indented);
         await storage.WriteAsync(
-            path: storage.CombinePath(parent: outputDirectory, child: "fonts.json"),
-            bytes: Encoding.UTF8.GetBytes(s: json),
-            ct: ct
+            storage.CombinePath(outputDirectory, "fonts.json"),
+            Encoding.UTF8.GetBytes(json),
+            ct
         );
 
         return fontFiles.Count;
@@ -171,30 +171,30 @@ public class FontExtractor(IStorage storage) : IFontExtractor
     )
     {
         string original = attachment.Filename ?? $"attachment_{attachment.Index}";
-        int dot = original.LastIndexOf(value: '.');
+        int dot = original.LastIndexOf('.');
         string stem = dot < 0 ? original : original[..dot];
         string ext = dot < 0 ? string.Empty : original[dot..];
 
-        string safeStem = Sanitize(value: stem);
+        string safeStem = Sanitize(stem);
         if (safeStem.Length == 0)
             safeStem = $"attachment_{attachment.Index}";
 
-        string candidate = safeStem + Sanitize(value: ext);
-        if (usedNames.Add(item: candidate))
+        string candidate = safeStem + Sanitize(ext);
+        if (usedNames.Add(candidate))
             return candidate;
 
         // Two attachments sanitized to the same name — disambiguate by index.
-        string deduped = $"{safeStem}_{attachment.Index}{Sanitize(value: ext)}";
-        usedNames.Add(item: deduped);
+        string deduped = $"{safeStem}_{attachment.Index}{Sanitize(ext)}";
+        usedNames.Add(deduped);
         return deduped;
     }
 
     private static string Sanitize(string value)
     {
-        StringBuilder builder = new(capacity: value.Length);
+        StringBuilder builder = new(value.Length);
         foreach (char character in value)
             builder.Append(
-                value: char.IsLetterOrDigit(c: character) || character is '.' or '-' or '_' ? character : '_'
+                char.IsLetterOrDigit(character) || character is '.' or '-' or '_' ? character : '_'
             );
         return builder.ToString();
     }
@@ -208,48 +208,48 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         if (lutFiles.Count == 0)
             return;
 
-        string lutDir = storage.CombinePath(parent: outputDirectory, child: "luts");
-        storage.CreateDirectory(path: lutDir);
+        string lutDir = storage.CombinePath(outputDirectory, "luts");
+        storage.CreateDirectory(lutDir);
 
         List<AssetEntry> lutEntries = [];
 
         foreach (StorageEntry lutFile in lutFiles)
         {
-            string fileName = storage.GetName(path: lutFile.Path);
-            string destination = storage.CombinePath(parent: lutDir, child: fileName);
+            string fileName = storage.GetName(lutFile.Path);
+            string destination = storage.CombinePath(lutDir, fileName);
 
-            byte[] data = await storage.ReadAsync(path: lutFile.Path, ct: ct);
-            await storage.WriteAsync(path: destination, bytes: data, ct: ct);
-            storage.Delete(path: lutFile.Path);
+            byte[] data = await storage.ReadAsync(lutFile.Path, ct);
+            await storage.WriteAsync(destination, data, ct);
+            storage.Delete(lutFile.Path);
 
-            lutEntries.Add(item: new(File: $"luts/{fileName}", MimeType: "application/octet-stream"));
+            lutEntries.Add(new($"luts/{fileName}", "application/octet-stream"));
         }
 
-        string lutsJson = JsonConvert.SerializeObject(value: lutEntries, formatting: Formatting.Indented);
+        string lutsJson = JsonConvert.SerializeObject(lutEntries, Formatting.Indented);
         await storage.WriteAsync(
-            path: storage.CombinePath(parent: outputDirectory, child: "luts.json"),
-            bytes: Encoding.UTF8.GetBytes(s: lutsJson),
-            ct: ct
+            storage.CombinePath(outputDirectory, "luts.json"),
+            Encoding.UTF8.GetBytes(lutsJson),
+            ct
         );
     }
 
     private static bool IsFontExtension(string fileName)
     {
-        int dot = fileName.LastIndexOf(value: '.');
+        int dot = fileName.LastIndexOf('.');
         string ext = dot < 0 ? string.Empty : fileName[dot..];
-        return FontExtensions.Contains(item: ext);
+        return FontExtensions.Contains(ext);
     }
 
     private static bool IsLutExtension(string fileName)
     {
-        int dot = fileName.LastIndexOf(value: '.');
+        int dot = fileName.LastIndexOf('.');
         string ext = dot < 0 ? string.Empty : fileName[dot..];
-        return LutExtensions.Contains(item: ext);
+        return LutExtensions.Contains(ext);
     }
 
     private static string GetFontMimeType(string fileName)
     {
-        int dot = fileName.LastIndexOf(value: '.');
+        int dot = fileName.LastIndexOf('.');
         string ext = dot < 0 ? string.Empty : fileName[dot..].ToLowerInvariant();
         return ext switch
         {
@@ -265,7 +265,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
     // FontEntry + LutEntry shared the same shape (file path + mime type) so collapsing
     // them avoids two definitions drifting apart over time.
     private record AssetEntry(
-        [property: JsonProperty(propertyName: "file")] string File,
-        [property: JsonProperty(propertyName: "mime_type")] string MimeType
+        [property: JsonProperty("file")] string File,
+        [property: JsonProperty("mime_type")] string MimeType
     );
 }

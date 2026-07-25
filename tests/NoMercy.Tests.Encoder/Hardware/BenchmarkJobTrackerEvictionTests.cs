@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Hardware;
-using Xunit;
 
 namespace NoMercy.Tests.Encoder.Hardware;
 
@@ -22,51 +21,51 @@ public class BenchmarkJobTrackerEvictionTests
 {
     private static BenchmarkJobStatus Job(string id, DateTime? completedAt) =>
         new(
-            JobId: id,
-            Status: completedAt is null ? "running" : "completed",
-            StartedAt: DateTime.UtcNow,
-            CompletedAt: completedAt,
-            MeasurementCount: 0,
-            RequestedCodecs: [],
-            RequestedResolutions: [],
-            Error: null
+            id,
+            completedAt is null ? "running" : "completed",
+            DateTime.UtcNow,
+            completedAt,
+            0,
+            [],
+            [],
+            null
         );
 
     [Fact]
     public void EvictionCandidates_AtOrUnderCap_EvictsNothing()
     {
-        List<BenchmarkJobStatus> jobs = [Job(id: "a", completedAt: DateTime.UtcNow), Job(id: "b", completedAt: DateTime.UtcNow)];
+        List<BenchmarkJobStatus> jobs = [Job("a", DateTime.UtcNow), Job("b", DateTime.UtcNow)];
 
-        Assert.Empty(collection: BenchmarkJobTracker.EvictionCandidates(jobs: jobs, maxRetained: 100));
+        Assert.Empty(BenchmarkJobTracker.EvictionCandidates(jobs, 100));
     }
 
     [Fact]
     public void EvictionCandidates_OverCap_DropsOldestCompletedFirst()
     {
-        DateTime baseTime = new(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc);
+        DateTime baseTime = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         List<BenchmarkJobStatus> jobs = [];
         for (int i = 0; i < 105; i++)
-            jobs.Add(item: Job(id: $"job{i:D3}", completedAt: baseTime.AddMinutes(value: i)));
+            jobs.Add(Job($"job{i:D3}", baseTime.AddMinutes(i)));
 
-        List<string> evicted = BenchmarkJobTracker.EvictionCandidates(jobs: jobs, maxRetained: 100).ToList();
+        List<string> evicted = BenchmarkJobTracker.EvictionCandidates(jobs, 100).ToList();
 
-        Assert.Equal(expected: 5, actual: evicted.Count);
-        Assert.Equal(expected: ["job000", "job001", "job002", "job003", "job004"], actual: evicted);
+        Assert.Equal(5, evicted.Count);
+        Assert.Equal(["job000", "job001", "job002", "job003", "job004"], evicted);
     }
 
     [Fact]
     public void EvictionCandidates_NeverEvictsRunningJobs()
     {
-        DateTime baseTime = new(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc);
+        DateTime baseTime = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         List<BenchmarkJobStatus> jobs = [];
         for (int i = 0; i < 96; i++)
-            jobs.Add(item: Job(id: $"done{i:D3}", completedAt: baseTime.AddMinutes(value: i)));
+            jobs.Add(Job($"done{i:D3}", baseTime.AddMinutes(i)));
         for (int i = 0; i < 10; i++)
-            jobs.Add(item: Job(id: $"run{i:D2}", completedAt: null));
+            jobs.Add(Job($"run{i:D2}", null));
 
-        List<string> evicted = BenchmarkJobTracker.EvictionCandidates(jobs: jobs, maxRetained: 100).ToList();
+        List<string> evicted = BenchmarkJobTracker.EvictionCandidates(jobs, 100).ToList();
 
-        Assert.Equal(expected: 6, actual: evicted.Count);
-        Assert.All(collection: evicted, action: id => Assert.StartsWith(expectedStartString: "done", actualString: id));
+        Assert.Equal(6, evicted.Count);
+        Assert.All(evicted, id => Assert.StartsWith("done", id));
     }
 }

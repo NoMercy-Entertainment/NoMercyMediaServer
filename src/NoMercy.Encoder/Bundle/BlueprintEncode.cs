@@ -18,20 +18,20 @@ namespace NoMercy.Encoder.Bundle;
 /// preset appends a new entry rather than replacing this one.
 /// </summary>
 public record BlueprintEncode(
-    [property: JsonProperty(propertyName: "preset_slug")] string PresetSlug,
-    [property: JsonProperty(propertyName: "preset_id")] string PresetId,
+    [property: JsonProperty("preset_slug")] string PresetSlug,
+    [property: JsonProperty("preset_id")] string PresetId,
     /// <summary>What the reconciler reads — moved here from the old manifest.json.</summary>
-    [property: JsonProperty(propertyName: "profile_fingerprint")] string? ProfileFingerprint,
-    [property: JsonProperty(propertyName: "encoder_version")] string EncoderVersion,
+    [property: JsonProperty("profile_fingerprint")] string? ProfileFingerprint,
+    [property: JsonProperty("encoder_version")] string EncoderVersion,
     /// <summary>The source container a rebuild produces — never the HLS/fMP4 output.</summary>
-    [property: JsonProperty(propertyName: "target_container")] string TargetContainer,
-    [property: JsonProperty(propertyName: "output_location")] string OutputLocation,
-    [property: JsonProperty(propertyName: "created_at")] DateTime CreatedAt,
-    [property: JsonProperty(propertyName: "completed_at")] DateTime CompletedAt,
-    [property: JsonProperty(propertyName: "tracks")] IReadOnlyList<BlueprintTrack> Tracks,
+    [property: JsonProperty("target_container")] string TargetContainer,
+    [property: JsonProperty("output_location")] string OutputLocation,
+    [property: JsonProperty("created_at")] DateTime CreatedAt,
+    [property: JsonProperty("completed_at")] DateTime CompletedAt,
+    [property: JsonProperty("tracks")] IReadOnlyList<BlueprintTrack> Tracks,
     /// <summary>Generated from the structured track mapping, not frozen as a string.</summary>
     [property: JsonProperty(
-        propertyName: "reconstruction_command_template"
+        "reconstruction_command_template"
     )] string? ReconstructionCommandTemplate,
-    [property: JsonProperty(propertyName: "lossy_warnings")] IReadOnlyList<string> LossyWarnings
+    [property: JsonProperty("lossy_warnings")] IReadOnlyList<string> LossyWarnings
 );

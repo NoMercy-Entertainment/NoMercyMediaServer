@@ -25,11 +25,11 @@ namespace NoMercy.Tests.Queue;
 /// (never respawned), stalling the queue. These ops must now match their
 /// Reserve/Fail/Delete siblings: never throw on DB contention.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class JobQueueContentionRetryTests
 {
     private static Exception DbContention() =>
-        new(message: "database is locked") { Source = "Microsoft.EntityFrameworkCore.Relational" };
+        new("database is locked") { Source = "Microsoft.EntityFrameworkCore.Relational" };
 
     private static QueueJobModel Job() =>
         new()
@@ -44,23 +44,23 @@ public class JobQueueContentionRetryTests
     public void ReleaseReservation_OnDbContention_DoesNotThrow_AndSwallows()
     {
         Mock<IQueueContext> context = new();
-        context.Setup(expression: c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(exception: DbContention());
-        JobQueue queue = new(context: context.Object);
+        context.Setup(c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(DbContention());
+        JobQueue queue = new(context.Object);
 
-        Action act = () => queue.ReleaseReservation(job: Job(), availableAfter: TimeSpan.FromSeconds(seconds: 1));
+        Action act = () => queue.ReleaseReservation(Job(), TimeSpan.FromSeconds(1));
 
         act.Should().NotThrow();
-        context.Verify(expression: c => c.SaveChanges(), times: Times.Never);
+        context.Verify(c => c.SaveChanges(), Times.Never);
     }
 
     [Fact]
     public void Requeue_OnDbContention_DoesNotThrow()
     {
         Mock<IQueueContext> context = new();
-        context.Setup(expression: c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(exception: DbContention());
-        JobQueue queue = new(context: context.Object);
+        context.Setup(c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(DbContention());
+        JobQueue queue = new(context.Object);
 
-        Action act = () => queue.Requeue(job: Job(), newQueue: "encoder-cpu", newPayload: "{}");
+        Action act = () => queue.Requeue(Job(), "encoder-cpu", "{}");
 
         act.Should().NotThrow();
     }
@@ -70,13 +70,13 @@ public class JobQueueContentionRetryTests
     {
         Mock<IQueueContext> context = new();
         context
-            .Setup(expression: c =>
+            .Setup(c =>
                 c.UpdateJobPayload(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<DateTime>())
             )
-            .Throws(exception: DbContention());
-        JobQueue queue = new(context: context.Object);
+            .Throws(DbContention());
+        JobQueue queue = new(context.Object);
 
-        Action act = () => queue.UpdateJobPayload(jobId: 1, newPayload: "{}", availableAfter: TimeSpan.FromSeconds(seconds: 1));
+        Action act = () => queue.UpdateJobPayload(1, "{}", TimeSpan.FromSeconds(1));
 
         act.Should().NotThrow();
     }
@@ -87,18 +87,18 @@ public class JobQueueContentionRetryTests
         Mock<IQueueContext> context = new();
         int updateJobCalls = 0;
         context
-            .Setup(expression: c => c.UpdateJob(It.IsAny<QueueJobModel>()))
-            .Callback(action: () =>
+            .Setup(c => c.UpdateJob(It.IsAny<QueueJobModel>()))
+            .Callback(() =>
             {
                 updateJobCalls++;
                 if (updateJobCalls == 1)
-                    throw new InvalidOperationException(message: "transient");
+                    throw new InvalidOperationException("transient");
             });
-        JobQueue queue = new(context: context.Object);
+        JobQueue queue = new(context.Object);
 
-        Action act = () => queue.ReleaseReservation(job: Job(), availableAfter: TimeSpan.FromSeconds(seconds: 1));
+        Action act = () => queue.ReleaseReservation(Job(), TimeSpan.FromSeconds(1));
 
         act.Should().NotThrow();
-        context.Verify(expression: c => c.SaveChanges(), times: Times.Once);
+        context.Verify(c => c.SaveChanges(), Times.Once);
     }
 }

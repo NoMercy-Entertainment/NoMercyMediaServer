@@ -14,107 +14,106 @@ using NoMercy.Database;
 using NoMercy.Database.Models.People;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.People;
 
 namespace NoMercy.Api.DTOs.Media;
 
 public record KnownForDto
 {
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "genre_ids")]
+    [JsonProperty("genre_ids")]
     public int[]? GenreIds { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int? Id { get; set; }
 
-    [JsonProperty(propertyName: "original_language")]
+    [JsonProperty("original_language")]
     public string OriginalLanguage { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "original_title")]
+    [JsonProperty("original_title")]
     public string OriginalTitle { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string Overview { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "popularity")]
+    [JsonProperty("popularity")]
     public double Popularity { get; set; }
 
-    [JsonProperty(propertyName: "release_date")]
+    [JsonProperty("release_date")]
     public DateTime? ReleaseDate { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "video")]
+    [JsonProperty("video")]
     public bool? Video { get; set; }
 
-    [JsonProperty(propertyName: "vote_average")]
+    [JsonProperty("vote_average")]
     public double VoteAverage { get; set; }
 
-    [JsonProperty(propertyName: "vote_count")]
+    [JsonProperty("vote_count")]
     public long VoteCount { get; set; }
 
-    [JsonProperty(propertyName: "character")]
+    [JsonProperty("character")]
     public string? Character { get; set; }
 
-    [JsonProperty(propertyName: "credit_id")]
+    [JsonProperty("credit_id")]
     public string CreditId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "order")]
+    [JsonProperty("order")]
     public long? Order { get; set; }
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string? MediaType { get; set; }
 
-    [JsonProperty(propertyName: "hasItem")]
+    [JsonProperty("hasItem")]
     public bool? HasItem { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string Poster { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public long? Year { get; set; }
 
-    [JsonProperty(propertyName: "origin_country")]
+    [JsonProperty("origin_country")]
     public string[] OriginCountry { get; set; } = [];
 
-    [JsonProperty(propertyName: "original_name")]
+    [JsonProperty("original_name")]
     public string OriginalName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "first_air_date")]
+    [JsonProperty("first_air_date")]
     public DateTimeOffset? FirstAirDate { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "department")]
+    [JsonProperty("department")]
     public string? Department { get; set; }
 
-    [JsonProperty(propertyName: "job")]
+    [JsonProperty("job")]
     public string? Job { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "number_of_items")]
+    [JsonProperty("number_of_items")]
     public int? NumberOfItems { get; set; }
 
-    [JsonProperty(propertyName: "have_items")]
+    [JsonProperty("have_items")]
     public int? HaveItems { get; set; }
 
-    [JsonProperty(propertyName: "episode_count")]
+    [JsonProperty("episode_count")]
     public int? EpisodeCount { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; } = null!;
 
     public KnownForDto(Cast cast)
@@ -133,17 +132,17 @@ public record KnownForDto
         ReleaseDate = cast.Movie?.ReleaseDate ?? cast.Tv?.FirstAirDate;
         VoteAverage = cast.Movie?.VoteAverage ?? cast.Tv?.VoteAverage ?? 0;
         VoteCount = cast.Movie?.VoteCount ?? cast.Tv?.VoteCount ?? 0;
-        Link = new(uriString: $"/{MediaType}/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/{MediaType}/{Id}", UriKind.Relative);
         HasItem =
             cast.Movie?.VideoFiles.Count > 0
-            || (cast.Tv?.Episodes.Any(predicate: e => e.VideoFiles.Count != 0) ?? false);
+            || (cast.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) ?? false);
         NumberOfItems =
             (cast.Movie?.VideoFiles.Count ?? 0)
-            + (cast.Tv?.Episodes.Count(predicate: e => e.VideoFiles.Count != 0) ?? 0);
+            + (cast.Tv?.Episodes.Count(e => e.VideoFiles.Count != 0) ?? 0);
         HaveItems =
             cast.Movie?.VideoFiles.Count > 0
                 ? 1
-                : cast.Tv?.Episodes.Count(predicate: e => e.VideoFiles.Count != 0) ?? 0;
+                : cast.Tv?.Episodes.Count(e => e.VideoFiles.Count != 0) ?? 0;
         ColorPalette = cast.Movie?.ColorPalette ?? cast.Tv?.ColorPalette;
     }
 
@@ -163,17 +162,17 @@ public record KnownForDto
         VoteAverage = crew.Movie?.VoteAverage ?? crew.Tv!.VoteAverage ?? 0;
         VoteCount = crew.Movie?.VoteCount ?? crew.Tv!.VoteCount ?? 0;
         Job = crew.Job.Task.OrEmpty();
-        Link = new(uriString: $"/{MediaType}/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/{MediaType}/{Id}", UriKind.Relative);
         HasItem =
             crew.Movie?.VideoFiles.Count > 0
-            || (crew.Tv?.Episodes.Any(predicate: e => e.VideoFiles.Count != 0) ?? false);
+            || (crew.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) ?? false);
         NumberOfItems =
             (crew.Movie?.VideoFiles.Count ?? 0)
-            + (crew.Tv?.Episodes.Count(predicate: e => e.VideoFiles.Count > 0) ?? 0);
+            + (crew.Tv?.Episodes.Count(e => e.VideoFiles.Count > 0) ?? 0);
         HaveItems =
             crew.Movie?.VideoFiles.Count > 0
                 ? 1
-                : crew.Tv?.Episodes.Count(predicate: e => e.VideoFiles.Count > 0) ?? 0;
+                : crew.Tv?.Episodes.Count(e => e.VideoFiles.Count > 0) ?? 0;
         ColorPalette = crew.Movie?.ColorPalette ?? crew.Tv?.ColorPalette;
     }
 
@@ -204,24 +203,24 @@ public record KnownForDto
         VoteCount = crew.VoteCount;
         Job = crew.Job;
         EpisodeCount = crew.EpisodeCount;
-        Link = new(uriString: $"/{crew.MediaType}/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/{crew.MediaType}/{Id}", UriKind.Relative);
 
         NumberOfItems =
             person
-                ?.Casts.Where(predicate: c =>
+                ?.Casts.Where(c =>
                     c.MovieId == crew.Id
                     || c.TvId == crew.Id
                     || c.SeasonId == crew.Id
                     || c.EpisodeId == crew.Id
                 )
-                .Sum(selector: c =>
+                .Sum(c =>
                     (c.Movie != null && c.Movie.VideoFiles.Count != 0 ? 1 : 0)
                     + (c.Tv?.NumberOfEpisodes ?? 0)
                 )
             ?? 0;
 
         HasItem =
-            person?.Casts.Any(predicate: c =>
+            person?.Casts.Any(c =>
                 (
                     c.MovieId == crew.Id
                     || c.TvId == crew.Id
@@ -230,21 +229,21 @@ public record KnownForDto
                 )
                 && (
                     c.Movie?.VideoFiles.Count > 0
-                    || c.Tv?.Episodes.Any(predicate: e => e.VideoFiles.Count != 0) != null
+                    || c.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) != null
                 )
             ) == true;
 
         HaveItems =
             person
-                ?.Casts.Where(predicate: c =>
+                ?.Casts.Where(c =>
                     c.MovieId == crew.Id
                     || c.TvId == crew.Id
                     || c.SeasonId == crew.Id
                     || c.EpisodeId == crew.Id
                 )
-                .Sum(selector: c =>
+                .Sum(c =>
                     (c.Movie is { VideoFiles.Count: > 0 } ? 1 : 0)
-                    + (c.Tv != null ? c.Tv.Episodes.Count(predicate: e => e.VideoFiles.Count != 0) : 0)
+                    + (c.Tv != null ? c.Tv.Episodes.Count(e => e.VideoFiles.Count != 0) : 0)
                 )
             ?? 0;
     }
@@ -275,10 +274,10 @@ public record KnownForDto
         VoteCount = crew.VoteCount;
         Job = crew.Job;
         EpisodeCount = crew.EpisodeCount;
-        Link = new(uriString: $"/{crew.MediaType}/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/{crew.MediaType}/{Id}", UriKind.Relative);
 
         HasItem =
-            person?.Crews.Any(predicate: c =>
+            person?.Crews.Any(c =>
                 (
                     c.MovieId == crew.Id
                     || c.TvId == crew.Id
@@ -287,19 +286,19 @@ public record KnownForDto
                 )
                 && (
                     c.Movie?.VideoFiles.Count > 0
-                    || c.Tv?.Episodes.Any(predicate: e => e.VideoFiles.Count != 0) != null
+                    || c.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) != null
                 )
             ) == true;
 
         NumberOfItems =
             person
-                ?.Crews.Where(predicate: c =>
+                ?.Crews.Where(c =>
                     c.MovieId == crew.Id
                     || c.TvId == crew.Id
                     || c.SeasonId == crew.Id
                     || c.EpisodeId == crew.Id
                 )
-                .Sum(selector: c =>
+                .Sum(c =>
                     (c.Movie != null && c.Movie.VideoFiles.Count != 0 ? 1 : 0)
                     + (c.Tv?.NumberOfEpisodes ?? 0)
                 )
@@ -307,15 +306,15 @@ public record KnownForDto
 
         HaveItems =
             person
-                ?.Crews.Where(predicate: c =>
+                ?.Crews.Where(c =>
                     c.MovieId == crew.Id
                     || c.TvId == crew.Id
                     || c.SeasonId == crew.Id
                     || c.EpisodeId == crew.Id
                 )
-                .Sum(selector: c =>
+                .Sum(c =>
                     (c.Movie is { VideoFiles.Count: > 0 } ? 1 : 0)
-                    + (c.Tv != null ? c.Tv.Episodes.Count(predicate: e => e.VideoFiles.Count != 0) : 0)
+                    + (c.Tv != null ? c.Tv.Episodes.Count(e => e.VideoFiles.Count != 0) : 0)
                 )
             ?? 0;
     }

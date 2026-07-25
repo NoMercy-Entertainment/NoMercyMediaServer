@@ -15,30 +15,30 @@ namespace NoMercy.Launcher.Models;
 
 public class UpdateCheckResult
 {
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "message")]
+    [JsonProperty("message")]
     public string Message { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "use_installer")]
+    [JsonProperty("use_installer")]
     public bool UseInstaller { get; set; }
 
-    [JsonProperty(propertyName: "latest_version")]
+    [JsonProperty("latest_version")]
     public string? LatestVersion { get; set; }
 
-    [JsonProperty(propertyName: "path")]
+    [JsonProperty("path")]
     public string? Path { get; set; }
 }
 
 public class ActivityInfo
 {
-    [JsonProperty(propertyName: "active_streams")]
+    [JsonProperty("active_streams")]
     public int ActiveStreams { get; set; }
 
-    [JsonProperty(propertyName: "active_encodes")]
+    [JsonProperty("active_encodes")]
     public int ActiveEncodes { get; set; }
 
-    [JsonProperty(propertyName: "can_interrupt_safely")]
+    [JsonProperty("can_interrupt_safely")]
     public bool CanInterruptSafely { get; set; }
 }

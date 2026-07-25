@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record AvailableResponseDto
 {
-    [JsonProperty(propertyName: "available")]
+    [JsonProperty("available")]
     public bool Available { get; set; }
 
-    [JsonProperty(propertyName: "server")]
+    [JsonProperty("server")]
     public string? Message { get; set; }
 }

@@ -19,7 +19,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class IpcClientTests
 {
     [Fact]
@@ -27,15 +27,15 @@ public class IpcClientTests
     {
         using IpcClient client = new();
 
-        Assert.NotNull(@object: client);
+        Assert.NotNull(client);
     }
 
     [Fact]
     public void IpcClient_CanBeCreated_WithCustomPath()
     {
-        using IpcClient client = new(pipeNameOrSocketPath: "/tmp/test-nomercy.sock");
+        using IpcClient client = new("/tmp/test-nomercy.sock");
 
-        Assert.NotNull(@object: client);
+        Assert.NotNull(client);
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class IpcClientTests
     [Fact]
     public void Config_ManagementPipeName_HasDefault()
     {
-        Assert.Equal(expected: "NoMercyManagement", actual: Config.ManagementPipeName);
+        Assert.Equal("NoMercyManagement", Config.ManagementPipeName);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class IpcClientTests
         try
         {
             Config.ManagementPipeName = "TestPipe";
-            Assert.Equal(expected: "TestPipe", actual: Config.ManagementPipeName);
+            Assert.Equal("TestPipe", Config.ManagementPipeName);
         }
         finally
         {
@@ -72,12 +72,12 @@ public class IpcClientTests
     {
         string socketPath = Config.ManagementSocketPath;
 
-        Assert.StartsWith(expectedStartString: AppFiles.AppPath, actualString: socketPath);
-        Assert.EndsWith(expectedEndString: ".sock", actualString: socketPath);
+        Assert.StartsWith(AppFiles.AppPath, socketPath);
+        Assert.EndsWith(".sock", socketPath);
     }
 }
 
-[Trait(name: "Category", value: "Integration")]
+[Trait("Category", "Integration")]
 public class IpcUnixSocketIntegrationTests : IDisposable
 {
     private readonly string _socketPath;
@@ -85,10 +85,10 @@ public class IpcUnixSocketIntegrationTests : IDisposable
 
     public IpcUnixSocketIntegrationTests()
     {
-        _socketPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nomercy-test-{Guid.NewGuid():N}.sock");
-        _listenSocket = new(addressFamily: AddressFamily.Unix, socketType: SocketType.Stream, protocolType: ProtocolType.Unspecified);
-        _listenSocket.Bind(localEP: new UnixDomainSocketEndPoint(path: _socketPath));
-        _listenSocket.Listen(backlog: 1);
+        _socketPath = Path.Combine(Path.GetTempPath(), $"nomercy-test-{Guid.NewGuid():N}.sock");
+        _listenSocket = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        _listenSocket.Bind(new UnixDomainSocketEndPoint(_socketPath));
+        _listenSocket.Listen(1);
     }
 
     [Fact]
@@ -98,36 +98,36 @@ public class IpcUnixSocketIntegrationTests : IDisposable
             return; // Unix sockets only on Linux/macOS
 
         // Arrange — fake HTTP server on the socket
-        Task<string> serverTask = Task.Run(function: async () =>
+        Task<string> serverTask = Task.Run(async () =>
         {
             using Socket accepted = await _listenSocket.AcceptAsync();
-            await using NetworkStream stream = new(socket: accepted);
+            await using NetworkStream stream = new(accepted);
 
             byte[] buffer = new byte[4096];
-            int bytesRead = await stream.ReadAsync(buffer: buffer);
-            string request = Encoding.UTF8.GetString(bytes: buffer, index: 0, count: bytesRead);
+            int bytesRead = await stream.ReadAsync(buffer);
+            string request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
 
-            string responseBody = JsonSerializer.Serialize(value: new { status = "running" });
+            string responseBody = JsonSerializer.Serialize(new { status = "running" });
             string httpResponse =
                 $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {responseBody.Length}\r\nConnection: close\r\n\r\n{responseBody}";
-            byte[] responseBytes = Encoding.UTF8.GetBytes(s: httpResponse);
-            await stream.WriteAsync(buffer: responseBytes);
+            byte[] responseBytes = Encoding.UTF8.GetBytes(httpResponse);
+            await stream.WriteAsync(responseBytes);
 
             return request;
         });
 
         // Act
-        using IpcClient client = new(pipeNameOrSocketPath: _socketPath);
-        HttpResponseMessage response = await client.GetAsync(requestUri: "/manage/status");
+        using IpcClient client = new(_socketPath);
+        HttpResponseMessage response = await client.GetAsync("/manage/status");
 
         // Assert
         string receivedRequest = await serverTask;
-        Assert.Contains(expectedSubstring: "GET /manage/status", actualString: receivedRequest);
-        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
+        Assert.Contains("GET /manage/status", receivedRequest);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(json: content);
-        Assert.Equal(expected: "running", actual: json.RootElement.GetProperty(propertyName: "status").GetString());
+        JsonDocument json = JsonDocument.Parse(content);
+        Assert.Equal("running", json.RootElement.GetProperty("status").GetString());
     }
 
     [Fact]
@@ -136,31 +136,31 @@ public class IpcUnixSocketIntegrationTests : IDisposable
         if (OperatingSystem.IsWindows())
             return;
 
-        Task serverTask = Task.Run(function: async () =>
+        Task serverTask = Task.Run(async () =>
         {
             using Socket accepted = await _listenSocket.AcceptAsync();
-            await using NetworkStream stream = new(socket: accepted);
+            await using NetworkStream stream = new(accepted);
 
             byte[] buffer = new byte[4096];
-            _ = await stream.ReadAsync(buffer: buffer);
+            _ = await stream.ReadAsync(buffer);
 
             string responseBody = JsonSerializer.Serialize(
-                value: new { status = "ok", message = "Server is shutting down" }
+                new { status = "ok", message = "Server is shutting down" }
             );
             string httpResponse =
                 $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {responseBody.Length}\r\nConnection: close\r\n\r\n{responseBody}";
-            await stream.WriteAsync(buffer: Encoding.UTF8.GetBytes(s: httpResponse));
+            await stream.WriteAsync(Encoding.UTF8.GetBytes(httpResponse));
         });
 
-        using IpcClient client = new(pipeNameOrSocketPath: _socketPath);
-        HttpResponseMessage response = await client.PostAsync(requestUri: "/manage/stop", content: null);
+        using IpcClient client = new(_socketPath);
+        HttpResponseMessage response = await client.PostAsync("/manage/stop", null);
 
         await serverTask;
-        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(json: content);
-        Assert.Equal(expected: "ok", actual: json.RootElement.GetProperty(propertyName: "status").GetString());
+        JsonDocument json = JsonDocument.Parse(content);
+        Assert.Equal("ok", json.RootElement.GetProperty("status").GetString());
     }
 
     [Fact]
@@ -169,32 +169,32 @@ public class IpcUnixSocketIntegrationTests : IDisposable
         if (OperatingSystem.IsWindows())
             return;
 
-        Task serverTask = Task.Run(function: async () =>
+        Task serverTask = Task.Run(async () =>
         {
             using Socket accepted = await _listenSocket.AcceptAsync();
-            await using NetworkStream stream = new(socket: accepted);
+            await using NetworkStream stream = new(accepted);
 
             byte[] buffer = new byte[4096];
-            _ = await stream.ReadAsync(buffer: buffer);
+            _ = await stream.ReadAsync(buffer);
 
             string responseBody = JsonSerializer.Serialize(
-                value: new { status = "ok", message = "Configuration updated" }
+                new { status = "ok", message = "Configuration updated" }
             );
             string httpResponse =
                 $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {responseBody.Length}\r\nConnection: close\r\n\r\n{responseBody}";
-            await stream.WriteAsync(buffer: Encoding.UTF8.GetBytes(s: httpResponse));
+            await stream.WriteAsync(Encoding.UTF8.GetBytes(httpResponse));
         });
 
-        using IpcClient client = new(pipeNameOrSocketPath: _socketPath);
+        using IpcClient client = new(_socketPath);
         StringContent body = new(
-            content: JsonSerializer.Serialize(value: new { server_name = "TestServer" }),
-            encoding: Encoding.UTF8,
-            mediaType: "application/json"
+            JsonSerializer.Serialize(new { server_name = "TestServer" }),
+            Encoding.UTF8,
+            "application/json"
         );
-        HttpResponseMessage response = await client.PutAsync(requestUri: "/manage/config", content: body);
+        HttpResponseMessage response = await client.PutAsync("/manage/config", body);
 
         await serverTask;
-        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -204,14 +204,14 @@ public class IpcUnixSocketIntegrationTests : IDisposable
             return;
 
         string badPath = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: $"nomercy-nonexistent-{Guid.NewGuid():N}.sock"
+            Path.GetTempPath(),
+            $"nomercy-nonexistent-{Guid.NewGuid():N}.sock"
         );
 
-        using IpcClient client = new(pipeNameOrSocketPath: badPath);
+        using IpcClient client = new(badPath);
 
-        await Assert.ThrowsAsync<HttpRequestException>(testCode: async () =>
-            await client.GetAsync(requestUri: "/manage/status")
+        await Assert.ThrowsAsync<HttpRequestException>(async () =>
+            await client.GetAsync("/manage/status")
         );
     }
 
@@ -219,7 +219,7 @@ public class IpcUnixSocketIntegrationTests : IDisposable
     {
         _listenSocket.Dispose();
 
-        if (File.Exists(path: _socketPath))
-            File.Delete(path: _socketPath);
+        if (File.Exists(_socketPath))
+            File.Delete(_socketPath);
     }
 }

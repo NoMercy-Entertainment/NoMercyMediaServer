@@ -16,36 +16,36 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbMovieDetails : TmdbMovie
 {
-    [JsonProperty(propertyName: "budget")]
+    [JsonProperty("budget")]
     public int Budget { get; set; }
 
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public TmdbGenre[] Genres { get; set; } = [];
 
-    [JsonProperty(propertyName: "homepage")]
+    [JsonProperty("homepage")]
     public Uri? Homepage { get; set; }
 
-    [JsonProperty(propertyName: "imdb_id")]
+    [JsonProperty("imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty(propertyName: "revenue")]
+    [JsonProperty("revenue")]
     public long Revenue { get; set; }
 
-    [JsonProperty(propertyName: "runtime")]
+    [JsonProperty("runtime")]
     public int Runtime { get; set; }
 
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string? Status { get; set; }
 
-    [JsonProperty(propertyName: "production_companies")]
+    [JsonProperty("production_companies")]
     public TmdbProductionCompany[] ProductionCompanies { get; set; } = [];
 
-    [JsonProperty(propertyName: "belongs_to_collection")]
+    [JsonProperty("belongs_to_collection")]
     public BelongsToCollection? BelongsToCollection { get; set; }
 
-    [JsonProperty(propertyName: "production_countries")]
+    [JsonProperty("production_countries")]
     public TmdbProductionCountry[] ProductionCountries { get; set; } = [];
 
-    [JsonProperty(propertyName: "spoken_languages")]
+    [JsonProperty("spoken_languages")]
     public TmdbSpokenLanguage[] SpokenLanguages { get; set; } = [];
 }

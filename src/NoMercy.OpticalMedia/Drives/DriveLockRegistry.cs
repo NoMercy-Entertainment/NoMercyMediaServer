@@ -29,7 +29,7 @@ namespace NoMercy.OpticalMedia.Drives;
 public sealed class DriveLockRegistry
 {
     private readonly ConcurrentDictionary<string, byte> _locked = new(
-        comparer: StringComparer.OrdinalIgnoreCase
+        StringComparer.OrdinalIgnoreCase
     );
 
     /// <summary>
@@ -48,9 +48,9 @@ public sealed class DriveLockRegistry
     /// </returns>
     public bool TryAcquire(string driveKey, out DriveLock? driveLock)
     {
-        if (_locked.TryAdd(key: driveKey, value: 0))
+        if (_locked.TryAdd(driveKey, 0))
         {
-            driveLock = new(driveKey: driveKey, registry: this);
+            driveLock = new(driveKey, this);
             return true;
         }
 
@@ -60,7 +60,7 @@ public sealed class DriveLockRegistry
 
     internal void Release(string driveKey)
     {
-        _locked.TryRemove(key: driveKey, value: out _);
+        _locked.TryRemove(driveKey, out _);
     }
 }
 
@@ -86,6 +86,6 @@ public sealed class DriveLock : IDisposable
         if (_disposed)
             return;
         _disposed = true;
-        _registry.Release(driveKey: _driveKey);
+        _registry.Release(_driveKey);
     }
 }

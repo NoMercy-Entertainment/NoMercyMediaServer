@@ -18,7 +18,7 @@ using NoMercy.MediaProcessing.Images.Palettes.Sources;
 
 namespace NoMercy.Tests.MediaProcessing.Palettes;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class PaletteSourceTests : IDisposable
 {
     private readonly MediaContext _db;
@@ -26,9 +26,9 @@ public class PaletteSourceTests : IDisposable
     public PaletteSourceTests()
     {
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _db = new(options: options);
+        _db = new(options);
     }
 
     public void Dispose()
@@ -48,13 +48,13 @@ public class PaletteSourceTests : IDisposable
             Poster = null,
             Backdrop = null,
         };
-        _db.Movies.Add(entity: movie);
+        _db.Movies.Add(movie);
         await _db.SaveChangesAsync();
 
         MoviePaletteSource source = new();
-        PaletteResult result = await source.GenerateAsync(db: _db, entityId: "1", ct: CancellationToken.None);
+        PaletteResult result = await source.GenerateAsync(_db, "1", CancellationToken.None);
 
-        result.Json.Should().Be(expected: "{}");
+        result.Json.Should().Be("{}");
         result.Permanent.Should().BeTrue();
     }
 
@@ -62,9 +62,9 @@ public class PaletteSourceTests : IDisposable
     public async Task Movie_returns_NoImage_when_entity_not_found()
     {
         MoviePaletteSource source = new();
-        PaletteResult result = await source.GenerateAsync(db: _db, entityId: "999", ct: CancellationToken.None);
+        PaletteResult result = await source.GenerateAsync(_db, "999", CancellationToken.None);
 
-        result.Json.Should().Be(expected: "{}");
+        result.Json.Should().Be("{}");
         result.Permanent.Should().BeTrue();
     }
 
@@ -78,13 +78,13 @@ public class PaletteSourceTests : IDisposable
             Poster = null,
             Backdrop = null,
         };
-        _db.Tvs.Add(entity: tv);
+        _db.Tvs.Add(tv);
         await _db.SaveChangesAsync();
 
         TvPaletteSource source = new();
-        PaletteResult result = await source.GenerateAsync(db: _db, entityId: "1", ct: CancellationToken.None);
+        PaletteResult result = await source.GenerateAsync(_db, "1", CancellationToken.None);
 
-        result.Json.Should().Be(expected: "{}");
+        result.Json.Should().Be("{}");
         result.Permanent.Should().BeTrue();
     }
 
@@ -92,13 +92,13 @@ public class PaletteSourceTests : IDisposable
     public async Task Season_returns_NoImage_when_poster_is_null()
     {
         Database.Models.TvShows.Season season = new() { Id = 1, Poster = null };
-        _db.Seasons.Add(entity: season);
+        _db.Seasons.Add(season);
         await _db.SaveChangesAsync();
 
         SeasonPaletteSource source = new();
-        PaletteResult result = await source.GenerateAsync(db: _db, entityId: "1", ct: CancellationToken.None);
+        PaletteResult result = await source.GenerateAsync(_db, "1", CancellationToken.None);
 
-        result.Json.Should().Be(expected: "{}");
+        result.Json.Should().Be("{}");
         result.Permanent.Should().BeTrue();
     }
 
@@ -112,17 +112,17 @@ public class PaletteSourceTests : IDisposable
             Site = "https://assets.fanart.tv/",
             AspectRatio = 1.0,
         };
-        _db.Images.Add(entity: image);
+        _db.Images.Add(image);
         await _db.SaveChangesAsync();
 
         ImagePaletteSource source = new();
         PaletteResult result = await source.GenerateAsync(
-            db: _db,
-            entityId: image.Id.ToString(),
-            ct: CancellationToken.None
+            _db,
+            image.Id.ToString(),
+            CancellationToken.None
         );
 
-        result.Json.Should().Be(expected: "{}");
+        result.Json.Should().Be("{}");
         result.Permanent.Should().BeTrue();
     }
 
@@ -136,17 +136,17 @@ public class PaletteSourceTests : IDisposable
             Site = "https://image.tmdb.org/t/p/",
             AspectRatio = 1.0,
         };
-        _db.Images.Add(entity: image);
+        _db.Images.Add(image);
         await _db.SaveChangesAsync();
 
         ImagePaletteSource source = new();
         PaletteResult result = await source.GenerateAsync(
-            db: _db,
-            entityId: image.Id.ToString(),
-            ct: CancellationToken.None
+            _db,
+            image.Id.ToString(),
+            CancellationToken.None
         );
 
-        result.Json.Should().Be(expected: "{}");
+        result.Json.Should().Be("{}");
         result.Permanent.Should().BeTrue();
     }
 
@@ -162,17 +162,17 @@ public class PaletteSourceTests : IDisposable
             HostFolder = "/music",
             Cover = null,
         };
-        _db.Artists.Add(entity: artist);
+        _db.Artists.Add(artist);
         await _db.SaveChangesAsync();
 
         ArtistPaletteSource source = new();
         PaletteResult result = await source.GenerateAsync(
-            db: _db,
-            entityId: artist.Id.ToString(),
-            ct: CancellationToken.None
+            _db,
+            artist.Id.ToString(),
+            CancellationToken.None
         );
 
-        result.Json.Should().Be(expected: "{}");
+        result.Json.Should().Be("{}");
         result.Permanent.Should().BeTrue();
     }
 
@@ -186,17 +186,17 @@ public class PaletteSourceTests : IDisposable
             HostFolder = "/music",
             Cover = "/nonexistent.jpg",
         };
-        _db.Artists.Add(entity: artist);
+        _db.Artists.Add(artist);
         await _db.SaveChangesAsync();
 
         ArtistPaletteSource source = new();
         PaletteResult result = await source.GenerateAsync(
-            db: _db,
-            entityId: artist.Id.ToString(),
-            ct: CancellationToken.None
+            _db,
+            artist.Id.ToString(),
+            CancellationToken.None
         );
 
-        result.Json.Should().Be(expected: "{}");
+        result.Json.Should().Be("{}");
         result.Permanent.Should().BeTrue();
     }
 
@@ -209,17 +209,17 @@ public class PaletteSourceTests : IDisposable
             Name = "Test",
             Cover = null,
         };
-        _db.Albums.Add(entity: album);
+        _db.Albums.Add(album);
         await _db.SaveChangesAsync();
 
         AlbumPaletteSource source = new();
         PaletteResult result = await source.GenerateAsync(
-            db: _db,
-            entityId: album.Id.ToString(),
-            ct: CancellationToken.None
+            _db,
+            album.Id.ToString(),
+            CancellationToken.None
         );
 
-        result.Json.Should().Be(expected: "{}");
+        result.Json.Should().Be("{}");
         result.Permanent.Should().BeTrue();
     }
 
@@ -231,7 +231,7 @@ public class PaletteSourceTests : IDisposable
         Guid trackId = Guid.NewGuid();
 
         _db.Albums.Add(
-            entity: new()
+            new()
             {
                 Id = albumId,
                 Name = "Album",
@@ -240,24 +240,24 @@ public class PaletteSourceTests : IDisposable
             }
         );
         _db.Tracks.Add(
-            entity: new()
+            new()
             {
                 Id = trackId,
                 Name = "Track",
                 Cover = "/cover.jpg",
             }
         );
-        _db.AlbumTrack.Add(entity: new(albumId: albumId, trackId: trackId));
+        _db.AlbumTrack.Add(new(albumId, trackId));
         await _db.SaveChangesAsync();
 
         TrackPaletteSource source = new();
         PaletteResult result = await source.GenerateAsync(
-            db: _db,
-            entityId: trackId.ToString(),
-            ct: CancellationToken.None
+            _db,
+            trackId.ToString(),
+            CancellationToken.None
         );
 
-        result.Json.Should().Be(expected: albumPalette);
+        result.Json.Should().Be(albumPalette);
         result.Permanent.Should().BeFalse();
     }
 
@@ -269,7 +269,7 @@ public class PaletteSourceTests : IDisposable
         Guid trackId = Guid.NewGuid();
 
         _db.Albums.Add(
-            entity: new()
+            new()
             {
                 Id = albumId,
                 Name = "Album",
@@ -278,24 +278,24 @@ public class PaletteSourceTests : IDisposable
             }
         );
         _db.Tracks.Add(
-            entity: new()
+            new()
             {
                 Id = trackId,
                 Name = "Track",
                 Cover = null,
             }
         );
-        _db.AlbumTrack.Add(entity: new(albumId: albumId, trackId: trackId));
+        _db.AlbumTrack.Add(new(albumId, trackId));
         await _db.SaveChangesAsync();
 
         TrackPaletteSource source = new();
         PaletteResult result = await source.GenerateAsync(
-            db: _db,
-            entityId: trackId.ToString(),
-            ct: CancellationToken.None
+            _db,
+            trackId.ToString(),
+            CancellationToken.None
         );
 
-        result.Json.Should().Be(expected: albumPalette);
+        result.Json.Should().Be(albumPalette);
         result.Permanent.Should().BeFalse();
     }
 
@@ -304,7 +304,7 @@ public class PaletteSourceTests : IDisposable
     {
         Guid trackId = Guid.NewGuid();
         _db.Tracks.Add(
-            entity: new()
+            new()
             {
                 Id = trackId,
                 Name = "Track",
@@ -315,12 +315,12 @@ public class PaletteSourceTests : IDisposable
 
         TrackPaletteSource source = new();
         PaletteResult result = await source.GenerateAsync(
-            db: _db,
-            entityId: trackId.ToString(),
-            ct: CancellationToken.None
+            _db,
+            trackId.ToString(),
+            CancellationToken.None
         );
 
-        result.Json.Should().Be(expected: "{}");
+        result.Json.Should().Be("{}");
         result.Permanent.Should().BeTrue();
     }
 }

@@ -29,7 +29,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Authorization;
 
-[Trait(name: "Category", value: "Authorization")]
+[Trait("Category", "Authorization")]
 public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -40,15 +40,15 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
 
     public TokenParamAuthMiddlewareTests()
     {
-        _connection = new(connectionString: $"DataSource={Guid.NewGuid():N};Mode=Memory;Cache=Shared");
+        _connection = new($"DataSource={Guid.NewGuid():N};Mode=Memory;Cache=Shared");
         _connection.Open();
 
         _dbOptions = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: _connection)
-            .AddInterceptors(interceptors: new SqliteNormalizeSearchInterceptor())
+            .UseSqlite(_connection)
+            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
 
-        using MediaContext ctx = new(options: _dbOptions);
+        using MediaContext ctx = new(_dbOptions);
         ctx.Database.EnsureCreated();
 
         Driver driver = new()
@@ -60,7 +60,7 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
-        ctx.Drivers.Add(entity: driver);
+        ctx.Drivers.Add(driver);
 
         Folder folder = new()
         {
@@ -68,7 +68,7 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
             Path = "/media",
             DriverId = Driver.SystemLocalDriverId,
         };
-        ctx.Folders.Add(entity: folder);
+        ctx.Folders.Add(folder);
 
         User user = new()
         {
@@ -77,7 +77,7 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
             Email = "k@nm.tv",
             Allowed = true,
         };
-        ctx.Users.Add(entity: user);
+        ctx.Users.Add(user);
         ctx.SaveChanges();
     }
 
@@ -85,8 +85,8 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
     {
         UserCache.Current.Reset();
 
-        await using MediaContext ctx = new(options: _dbOptions);
-        await UserCache.Current.InitializeAsync(context: ctx);
+        await using MediaContext ctx = new(_dbOptions);
+        await UserCache.Current.InitializeAsync(ctx);
     }
 
     public Task DisposeAsync()
@@ -107,9 +107,9 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
     )
     {
         return new(
-            next: next,
-            ingestKeyStore: ingestKeyStore ?? new LiveIngestKeyStore(),
-            logger: NullLogger<TokenParamAuthMiddleware>.Instance
+            next,
+            ingestKeyStore ?? new LiveIngestKeyStore(),
+            NullLogger<TokenParamAuthMiddleware>.Instance
         );
     }
 
@@ -132,7 +132,7 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
             context.Request.Headers.Authorization = authorizationHeader;
 
         if (ingestKey is not null)
-            context.Request.Headers[key: "X-NoMercy-Ingest-Key"] = ingestKey;
+            context.Request.Headers["X-NoMercy-Ingest-Key"] = ingestKey;
 
         if (remoteIp is not null)
             context.Connection.RemoteIpAddress = remoteIp;
@@ -148,22 +148,22 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
 
     private static ClaimsPrincipal PrincipalWithSub(string sub)
     {
-        List<Claim> claims = [new(type: ClaimTypes.NameIdentifier, value: sub)];
-        return new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
+        List<Claim> claims = [new(ClaimTypes.NameIdentifier, sub)];
+        return new(new ClaimsIdentity(claims, "TestScheme"));
     }
 
     [Fact]
     public async Task Allows_WhenUrlIsNotAFolderPath()
     {
         bool nextCalled = false;
-        TokenParamAuthMiddleware middleware = BuildMiddleware(next: _ =>
+        TokenParamAuthMiddleware middleware = BuildMiddleware(_ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
-        HttpContext context = BuildContext(path: "/api/v1/media/movies");
+        HttpContext context = BuildContext("/api/v1/media/movies");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeTrue();
     }
@@ -172,17 +172,17 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
     public async Task Allows_WhenFolderPathAndBearerTokenPresent()
     {
         bool nextCalled = false;
-        TokenParamAuthMiddleware middleware = BuildMiddleware(next: _ =>
+        TokenParamAuthMiddleware middleware = BuildMiddleware(_ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
         HttpContext context = BuildContext(
-            path: $"/{KnownFolderId}/some-file.mkv",
+            $"/{KnownFolderId}/some-file.mkv",
             authorizationHeader: "Bearer eyJhbGciOiJSUzI1NiJ9.test.sig"
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeTrue();
     }
@@ -191,75 +191,75 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
     public async Task Denies_WithUnauthorized_WhenFolderPathAndNoAuth()
     {
         bool nextCalled = false;
-        TokenParamAuthMiddleware middleware = BuildMiddleware(next: _ =>
+        TokenParamAuthMiddleware middleware = BuildMiddleware(_ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
-        HttpContext context = BuildContext(path: $"/{KnownFolderId}/some-file.mkv");
+        HttpContext context = BuildContext($"/{KnownFolderId}/some-file.mkv");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeFalse();
-        context.Response.StatusCode.Should().Be(expected: 401);
+        context.Response.StatusCode.Should().Be(401);
     }
 
     [Fact]
     public async Task Denies_WithForbidden_WhenFolderPathAndSubMalformed()
     {
         bool nextCalled = false;
-        TokenParamAuthMiddleware middleware = BuildMiddleware(next: _ =>
+        TokenParamAuthMiddleware middleware = BuildMiddleware(_ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
         HttpContext context = BuildContext(
-            path: $"/{KnownFolderId}/some-file.mkv",
-            user: PrincipalWithSub(sub: "not-a-guid")
+            $"/{KnownFolderId}/some-file.mkv",
+            user: PrincipalWithSub("not-a-guid")
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeFalse();
-        context.Response.StatusCode.Should().Be(expected: 403);
+        context.Response.StatusCode.Should().Be(403);
     }
 
     [Fact]
     public async Task Denies_WithForbidden_WhenFolderPathAndUserNotInCache()
     {
         bool nextCalled = false;
-        TokenParamAuthMiddleware middleware = BuildMiddleware(next: _ =>
+        TokenParamAuthMiddleware middleware = BuildMiddleware(_ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
         Guid unknownId = Guid.NewGuid();
         HttpContext context = BuildContext(
-            path: $"/{KnownFolderId}/some-file.mkv",
-            user: PrincipalWithSub(sub: unknownId.ToString())
+            $"/{KnownFolderId}/some-file.mkv",
+            user: PrincipalWithSub(unknownId.ToString())
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeFalse();
-        context.Response.StatusCode.Should().Be(expected: 403);
+        context.Response.StatusCode.Should().Be(403);
     }
 
     [Fact]
     public async Task Allows_WhenFolderPathAndKnownUserInCacheWithNoBearer()
     {
         bool nextCalled = false;
-        TokenParamAuthMiddleware middleware = BuildMiddleware(next: _ =>
+        TokenParamAuthMiddleware middleware = BuildMiddleware(_ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
         HttpContext context = BuildContext(
-            path: $"/{KnownFolderId}/some-file.mkv",
-            user: PrincipalWithSub(sub: KnownUserId.ToString())
+            $"/{KnownFolderId}/some-file.mkv",
+            user: PrincipalWithSub(KnownUserId.ToString())
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeTrue();
     }
@@ -269,25 +269,25 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
     {
         LiveIngestKeyStore store = new();
         string path = $"/{KnownFolderId}/some-file.mkv";
-        string key = store.Issue(servedPath: path);
+        string key = store.Issue(path);
 
         bool nextCalled = false;
         TokenParamAuthMiddleware middleware = BuildMiddleware(
-            next: _ =>
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             },
-            ingestKeyStore: store
+            store
         );
         HttpContext context = BuildContext(
-            path: path,
+            path,
             ingestKey: key,
             remoteIp: IPAddress.Loopback,
             localPort: IngestPort
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         // A loopback ffmpeg self-ingest on the internal ingest port carries only the
         // scoped key, no bearer and no authenticated user — it must still be served.
@@ -299,32 +299,32 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
     {
         LiveIngestKeyStore store = new();
         string path = $"/{KnownFolderId}/some-file.mkv";
-        string key = store.Issue(servedPath: path);
+        string key = store.Issue(path);
 
         bool nextCalled = false;
         TokenParamAuthMiddleware middleware = BuildMiddleware(
-            next: _ =>
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             },
-            ingestKeyStore: store
+            store
         );
         // The cloudflared-relay case: a valid key from a loopback source IP, but the
         // request landed on the PUBLIC port (relayed external traffic), not the
         // loopback-only ingest port. The bypass must not fire — it falls through to
         // the normal 401 (folder path, no auth).
         HttpContext context = BuildContext(
-            path: path,
+            path,
             ingestKey: key,
             remoteIp: IPAddress.Loopback,
             localPort: RuntimeServerSettings.Current.InternalServerPort
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeFalse();
-        context.Response.StatusCode.Should().Be(expected: 401);
+        context.Response.StatusCode.Should().Be(401);
     }
 
     [Fact]
@@ -332,59 +332,59 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
     {
         LiveIngestKeyStore store = new();
         string path = $"/{KnownFolderId}/some-file.mkv";
-        string key = store.Issue(servedPath: path);
+        string key = store.Issue(path);
 
         bool nextCalled = false;
         TokenParamAuthMiddleware middleware = BuildMiddleware(
-            next: _ =>
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             },
-            ingestKeyStore: store
+            store
         );
         // Same valid key, correct port, but a public source address — denied.
         HttpContext context = BuildContext(
-            path: path,
+            path,
             ingestKey: key,
-            remoteIp: IPAddress.Parse(ipString: "203.0.113.7"),
+            remoteIp: IPAddress.Parse("203.0.113.7"),
             localPort: IngestPort
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeFalse();
-        context.Response.StatusCode.Should().Be(expected: 401);
+        context.Response.StatusCode.Should().Be(401);
     }
 
     [Fact]
     public async Task Denies_WhenIngestKeyBoundToDifferentFolder()
     {
         LiveIngestKeyStore store = new();
-        string key = store.Issue(servedPath: $"/{KnownFolderId}/ShowA/Ep/Ep.NoMercy.m3u8");
+        string key = store.Issue($"/{KnownFolderId}/ShowA/Ep/Ep.NoMercy.m3u8");
 
         bool nextCalled = false;
         TokenParamAuthMiddleware middleware = BuildMiddleware(
-            next: _ =>
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             },
-            ingestKeyStore: store
+            store
         );
         // Valid key, loopback, ingest port, but a different title's folder than it
         // was minted for — the key authorizes its own folder subtree, not a sibling.
         HttpContext context = BuildContext(
-            path: $"/{KnownFolderId}/ShowB/Ep/Ep.NoMercy.m3u8",
+            $"/{KnownFolderId}/ShowB/Ep/Ep.NoMercy.m3u8",
             ingestKey: key,
             remoteIp: IPAddress.Loopback,
             localPort: IngestPort
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeFalse();
-        context.Response.StatusCode.Should().Be(expected: 401);
+        context.Response.StatusCode.Should().Be(401);
     }
 
     [Fact]
@@ -393,25 +393,25 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
         LiveIngestKeyStore store = new();
         // Minted for the encoded master; ffmpeg then self-ingests the nested video
         // variant playlist under the same folder — the case that broke on .60.
-        string key = store.Issue(servedPath: $"/{KnownFolderId}/Show/Ep/Ep.NoMercy.m3u8");
+        string key = store.Issue($"/{KnownFolderId}/Show/Ep/Ep.NoMercy.m3u8");
 
         bool nextCalled = false;
         TokenParamAuthMiddleware middleware = BuildMiddleware(
-            next: _ =>
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             },
-            ingestKeyStore: store
+            store
         );
         HttpContext context = BuildContext(
-            path: $"/{KnownFolderId}/Show/Ep/video_1920x1080_SDR/video_1920x1080_SDR.m3u8",
+            $"/{KnownFolderId}/Show/Ep/video_1920x1080_SDR/video_1920x1080_SDR.m3u8",
             ingestKey: key,
             remoteIp: IPAddress.Loopback,
             localPort: IngestPort
         );
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeTrue();
     }

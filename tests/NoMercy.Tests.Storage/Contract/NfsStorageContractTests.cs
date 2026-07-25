@@ -46,7 +46,7 @@ namespace NoMercy.Tests.Storage.Contract;
 ///     has been made. On a fresh empty fake the root "/" is not guaranteed to be in
 ///     _dirs unless explicitly seeded. Test accounts for this.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class NfsStorageContractTests : IStorageContractTests
 {
     private FaultyLibNfs _fake = new();
@@ -58,11 +58,11 @@ public sealed class NfsStorageContractTests : IStorageContractTests
         _fake = new();
 
         // Seed root "/" so DirectoryExists("") → ToNfsPath("") = "/" → stat "/" → exists
-        _fake.SeedDir(path: "/");
+        _fake.SeedDir("/");
 
-        NfsDriverConfig config = NfsDriverConfig.For(server: "fake-server", export: "/export");
-        _driver = new(config: config, libNfs: _fake, log: NullLogger.Instance);
-        _storage = new(driver: _driver);
+        NfsDriverConfig config = NfsDriverConfig.For("fake-server", "/export");
+        _driver = new(config, _fake, NullLogger.Instance);
+        _storage = new(_driver);
         return _storage;
     }
 
@@ -70,24 +70,24 @@ public sealed class NfsStorageContractTests : IStorageContractTests
     {
         // FaultyLibNfs.Seed takes any path and normalises internally.
         // We pass relative path; Normalise() will prepend "/".
-        _fake.Seed(path: relativePath, content: content);
+        _fake.Seed(relativePath, content);
         return Task.CompletedTask;
     }
 
     protected override Task SeedDirectory(string relativePath)
     {
-        _fake.SeedDir(path: relativePath);
+        _fake.SeedDir(relativePath);
         return Task.CompletedTask;
     }
 
     protected override Task<bool> BackendHasFile(string relativePath)
     {
         // FaultyLibNfs.Files keys use the Normalise() form: leading slash, no trailing slash.
-        string key = relativePath.Replace(oldChar: '\\', newChar: '/');
-        if (!key.StartsWith(value: '/'))
+        string key = relativePath.Replace('\\', '/');
+        if (!key.StartsWith('/'))
             key = "/" + key;
-        bool exists = _fake.Files.ContainsKey(key: key);
-        return Task.FromResult(result: exists);
+        bool exists = _fake.Files.ContainsKey(key);
+        return Task.FromResult(exists);
     }
 
     protected override Task DisposeStorage()
@@ -113,7 +113,7 @@ public sealed class NfsStorageContractTests : IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait(name: "Category", value: "Unit")]
+    [Trait("Category", "Unit")]
     public override async Task Exists_empty_string_root_returns_true_when_root_is_directory()
     {
         // NFSC-4: RemoteStorage.ExistsAsync("") passes "" to NfsStorageDriver.FileExists("")

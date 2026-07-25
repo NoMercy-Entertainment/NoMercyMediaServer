@@ -21,7 +21,7 @@ namespace NoMercy.Tests.Storage;
 /// <c>File</c>/<c>Directory</c> would prove nothing about whether the driver
 /// actually reads/writes correctly.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class LocalStorageDriverTests : IDisposable
 {
     private readonly string _root;
@@ -29,15 +29,15 @@ public sealed class LocalStorageDriverTests : IDisposable
 
     public LocalStorageDriverTests()
     {
-        _root = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-lsd-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _root);
+        _root = Path.Combine(Path.GetTempPath(), $"nm-lsd-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_root);
     }
 
     public void Dispose()
     {
         try
         {
-            Directory.Delete(path: _root, recursive: true);
+            Directory.Delete(_root, true);
         }
         catch
         {
@@ -45,154 +45,154 @@ public sealed class LocalStorageDriverTests : IDisposable
         }
     }
 
-    private string P(string relative) => Path.Combine(path1: _root, path2: relative);
+    private string P(string relative) => Path.Combine(_root, relative);
 
     [Fact]
     public void BackendLabel_is_Local()
     {
-        _driver.BackendLabel.Should().Be(expected: "Local");
+        _driver.BackendLabel.Should().Be("Local");
     }
 
     [Fact]
     public void DirectorySeparator_is_the_OS_separator()
     {
-        _driver.DirectorySeparator.Should().Be(expected: Path.DirectorySeparatorChar);
+        _driver.DirectorySeparator.Should().Be(Path.DirectorySeparatorChar);
     }
 
     [Fact]
     public void CombinePath_delegates_to_Path_Combine()
     {
-        _driver.CombinePath(parent: "a", child: "b").Should().Be(expected: Path.Combine(path1: "a", path2: "b"));
+        _driver.CombinePath("a", "b").Should().Be(Path.Combine("a", "b"));
     }
 
     [Fact]
     public void FileExists_and_DirectoryExists_distinguish_files_from_directories()
     {
-        string filePath = P(relative: "file.txt");
-        File.WriteAllText(path: filePath, contents: "x");
-        string dirPath = P(relative: "subdir");
-        Directory.CreateDirectory(path: dirPath);
+        string filePath = P("file.txt");
+        File.WriteAllText(filePath, "x");
+        string dirPath = P("subdir");
+        Directory.CreateDirectory(dirPath);
 
-        _driver.FileExists(path: filePath).Should().BeTrue();
-        _driver.FileExists(path: dirPath).Should().BeFalse();
-        _driver.DirectoryExists(path: dirPath).Should().BeTrue();
-        _driver.DirectoryExists(path: filePath).Should().BeFalse();
+        _driver.FileExists(filePath).Should().BeTrue();
+        _driver.FileExists(dirPath).Should().BeFalse();
+        _driver.DirectoryExists(dirPath).Should().BeTrue();
+        _driver.DirectoryExists(filePath).Should().BeFalse();
     }
 
     [Fact]
     public void CreateDirectory_creates_nested_directories()
     {
-        string nested = P(relative: "a/b/c");
+        string nested = P("a/b/c");
 
-        _driver.CreateDirectory(path: nested);
+        _driver.CreateDirectory(nested);
 
-        Directory.Exists(path: nested).Should().BeTrue();
+        Directory.Exists(nested).Should().BeTrue();
     }
 
     [Fact]
     public void DeleteFile_removes_the_file()
     {
-        string filePath = P(relative: "gone.txt");
-        File.WriteAllText(path: filePath, contents: "x");
+        string filePath = P("gone.txt");
+        File.WriteAllText(filePath, "x");
 
-        _driver.DeleteFile(path: filePath);
+        _driver.DeleteFile(filePath);
 
-        File.Exists(path: filePath).Should().BeFalse();
+        File.Exists(filePath).Should().BeFalse();
     }
 
     [Fact]
     public void DeleteDirectory_recursive_removes_the_subtree()
     {
-        string dir = P(relative: "tree");
-        Directory.CreateDirectory(path: Path.Combine(path1: dir, path2: "nested"));
-        File.WriteAllText(path: Path.Combine(path1: dir, path2: "nested", path3: "f.txt"), contents: "x");
+        string dir = P("tree");
+        Directory.CreateDirectory(Path.Combine(dir, "nested"));
+        File.WriteAllText(Path.Combine(dir, "nested", "f.txt"), "x");
 
-        _driver.DeleteDirectory(path: dir, recursive: true);
+        _driver.DeleteDirectory(dir, true);
 
-        Directory.Exists(path: dir).Should().BeFalse();
+        Directory.Exists(dir).Should().BeFalse();
     }
 
     [Fact]
     public void GetFileSize_returns_byte_length()
     {
-        string filePath = P(relative: "sized.bin");
-        File.WriteAllBytes(path: filePath, bytes: new byte[321]);
+        string filePath = P("sized.bin");
+        File.WriteAllBytes(filePath, new byte[321]);
 
-        _driver.GetFileSize(path: filePath).Should().Be(expected: 321);
+        _driver.GetFileSize(filePath).Should().Be(321);
     }
 
     [Fact]
     public void GetLastWriteTimeUtc_reflects_recent_write()
     {
-        string filePath = P(relative: "written.txt");
-        File.WriteAllText(path: filePath, contents: "x");
+        string filePath = P("written.txt");
+        File.WriteAllText(filePath, "x");
 
-        DateTime result = _driver.GetLastWriteTimeUtc(path: filePath);
+        DateTime result = _driver.GetLastWriteTimeUtc(filePath);
 
-        result.Should().BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromMinutes(minutes: 1));
+        result.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
     }
 
     [Fact]
     public void GetCreationTimeUtc_works_for_both_files_and_directories()
     {
-        string filePath = P(relative: "created.txt");
-        File.WriteAllText(path: filePath, contents: "x");
-        string dirPath = P(relative: "createddir");
-        Directory.CreateDirectory(path: dirPath);
+        string filePath = P("created.txt");
+        File.WriteAllText(filePath, "x");
+        string dirPath = P("createddir");
+        Directory.CreateDirectory(dirPath);
 
         _driver
-            .GetCreationTimeUtc(path: filePath)
+            .GetCreationTimeUtc(filePath)
             .Should()
-            .BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromMinutes(minutes: 1));
+            .BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
         _driver
-            .GetCreationTimeUtc(path: dirPath)
+            .GetCreationTimeUtc(dirPath)
             .Should()
-            .BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromMinutes(minutes: 1));
+            .BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
     }
 
     [Fact]
     public void GetLastAccessTimeUtc_works_for_both_files_and_directories()
     {
-        string filePath = P(relative: "accessed.txt");
-        File.WriteAllText(path: filePath, contents: "x");
-        string dirPath = P(relative: "accesseddir");
-        Directory.CreateDirectory(path: dirPath);
+        string filePath = P("accessed.txt");
+        File.WriteAllText(filePath, "x");
+        string dirPath = P("accesseddir");
+        Directory.CreateDirectory(dirPath);
 
         _driver
-            .GetLastAccessTimeUtc(path: filePath)
+            .GetLastAccessTimeUtc(filePath)
             .Should()
-            .BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromMinutes(minutes: 1));
+            .BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
         _driver
-            .GetLastAccessTimeUtc(path: dirPath)
+            .GetLastAccessTimeUtc(dirPath)
             .Should()
-            .BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromMinutes(minutes: 1));
+            .BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
     }
 
     [Fact]
     public void OpenWrite_then_OpenRead_round_trips_bytes()
     {
-        string filePath = P(relative: "roundtrip.bin");
+        string filePath = P("roundtrip.bin");
         byte[] payload = [1, 2, 3, 4, 5];
 
-        using (Stream write = _driver.OpenWrite(path: filePath, overwrite: true))
-            write.Write(buffer: payload, offset: 0, count: payload.Length);
+        using (Stream write = _driver.OpenWrite(filePath, true))
+            write.Write(payload, 0, payload.Length);
 
-        using Stream read = _driver.OpenRead(path: filePath);
+        using Stream read = _driver.OpenRead(filePath);
         byte[] buffer = new byte[payload.Length];
-        read.ReadExactly(buffer: buffer);
+        read.ReadExactly(buffer);
 
-        buffer.Should().Equal(elements: payload);
+        buffer.Should().Equal(payload);
     }
 
     [Fact]
     public void OpenWrite_overwrite_false_throws_when_file_exists()
     {
-        string filePath = P(relative: "exists.bin");
-        File.WriteAllBytes(path: filePath, bytes: [0x01]);
+        string filePath = P("exists.bin");
+        File.WriteAllBytes(filePath, [0x01]);
 
         Action act = () =>
         {
-            using Stream s = _driver.OpenWrite(path: filePath, overwrite: false);
+            using Stream s = _driver.OpenWrite(filePath, false);
         };
 
         act.Should().Throw<IOException>();
@@ -201,56 +201,56 @@ public sealed class LocalStorageDriverTests : IDisposable
     [Fact]
     public async Task AcquireLocalPathAsync_returns_the_same_path_with_a_noop_lease()
     {
-        string filePath = P(relative: "lease.txt");
-        File.WriteAllText(path: filePath, contents: "x");
+        string filePath = P("lease.txt");
+        File.WriteAllText(filePath, "x");
 
         LocalPathLease lease = await _driver.AcquireLocalPathAsync(
-            path: filePath,
-            ct: CancellationToken.None
+            filePath,
+            CancellationToken.None
         );
 
-        lease.Path.Should().Be(expected: filePath, because: "local files are already local; no staging copy is made");
+        lease.Path.Should().Be(filePath, "local files are already local; no staging copy is made");
         await lease.DisposeAsync();
-        File.Exists(path: filePath)
+        File.Exists(filePath)
             .Should()
-            .BeTrue(because: "the no-op lease must never delete the real local file");
+            .BeTrue("the no-op lease must never delete the real local file");
     }
 
     [Fact]
     public void MoveFile_moves_and_removes_source()
     {
-        string src = P(relative: "src.txt");
-        string dst = P(relative: "dst.txt");
-        File.WriteAllText(path: src, contents: "payload");
+        string src = P("src.txt");
+        string dst = P("dst.txt");
+        File.WriteAllText(src, "payload");
 
-        _driver.MoveFile(source: src, destination: dst);
+        _driver.MoveFile(src, dst);
 
-        File.Exists(path: src).Should().BeFalse();
-        File.ReadAllText(path: dst).Should().Be(expected: "payload");
+        File.Exists(src).Should().BeFalse();
+        File.ReadAllText(dst).Should().Be("payload");
     }
 
     [Fact]
     public void CopyFile_duplicates_and_keeps_source()
     {
-        string src = P(relative: "src.txt");
-        string dst = P(relative: "dst.txt");
-        File.WriteAllText(path: src, contents: "payload");
+        string src = P("src.txt");
+        string dst = P("dst.txt");
+        File.WriteAllText(src, "payload");
 
-        _driver.CopyFile(source: src, destination: dst, overwrite: false);
+        _driver.CopyFile(src, dst, false);
 
-        File.Exists(path: src).Should().BeTrue();
-        File.ReadAllText(path: dst).Should().Be(expected: "payload");
+        File.Exists(src).Should().BeTrue();
+        File.ReadAllText(dst).Should().Be("payload");
     }
 
     [Fact]
     public void CopyFile_overwrite_false_throws_when_destination_exists()
     {
-        string src = P(relative: "src.txt");
-        string dst = P(relative: "dst.txt");
-        File.WriteAllText(path: src, contents: "a");
-        File.WriteAllText(path: dst, contents: "b");
+        string src = P("src.txt");
+        string dst = P("dst.txt");
+        File.WriteAllText(src, "a");
+        File.WriteAllText(dst, "b");
 
-        Action act = () => _driver.CopyFile(source: src, destination: dst, overwrite: false);
+        Action act = () => _driver.CopyFile(src, dst, false);
 
         act.Should().Throw<IOException>();
     }
@@ -258,44 +258,44 @@ public sealed class LocalStorageDriverTests : IDisposable
     [Fact]
     public void EnumerateFileSystemEntries_on_missing_directory_returns_empty_not_throw()
     {
-        string missing = P(relative: "does-not-exist");
+        string missing = P("does-not-exist");
 
         IEnumerable<string> result = _driver.EnumerateFileSystemEntries(
-            directory: missing,
-            searchPattern: "*",
-            option: SearchOption.TopDirectoryOnly
+            missing,
+            "*",
+            SearchOption.TopDirectoryOnly
         );
 
         result
             .Should()
             .BeEmpty(
-                because: "the path contract guarantees List on a missing directory returns empty, never throws"
+                "the path contract guarantees List on a missing directory returns empty, never throws"
             );
     }
 
     [Fact]
     public void EnumerateFileSystemEntries_lists_files_in_existing_directory()
     {
-        File.WriteAllText(path: P(relative: "a.txt"), contents: "x");
-        File.WriteAllText(path: P(relative: "b.txt"), contents: "x");
+        File.WriteAllText(P("a.txt"), "x");
+        File.WriteAllText(P("b.txt"), "x");
 
         IEnumerable<string> result = _driver.EnumerateFileSystemEntries(
-            directory: _root,
-            searchPattern: "*.txt",
-            option: SearchOption.TopDirectoryOnly
+            _root,
+            "*.txt",
+            SearchOption.TopDirectoryOnly
         );
 
-        result.Should().HaveCount(expected: 2);
+        result.Should().HaveCount(2);
     }
 
     [Fact]
     public void EnumerateEntries_on_missing_directory_yields_nothing()
     {
         IStorageDriver driver = _driver;
-        string missing = P(relative: "gone");
+        string missing = P("gone");
 
         List<StorageEntryInfo> entries = driver
-            .EnumerateEntries(directory: missing, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+            .EnumerateEntries(missing, "*", SearchOption.TopDirectoryOnly)
             .ToList();
 
         entries.Should().BeEmpty();
@@ -305,107 +305,107 @@ public sealed class LocalStorageDriverTests : IDisposable
     public void EnumerateEntries_returns_size_and_is_directory_for_each_entry_in_one_pass()
     {
         IStorageDriver driver = _driver;
-        File.WriteAllBytes(path: P(relative: "file.bin"), bytes: new byte[50]);
-        Directory.CreateDirectory(path: P(relative: "childdir"));
+        File.WriteAllBytes(P("file.bin"), new byte[50]);
+        Directory.CreateDirectory(P("childdir"));
 
         List<StorageEntryInfo> entries = driver
-            .EnumerateEntries(directory: _root, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+            .EnumerateEntries(_root, "*", SearchOption.TopDirectoryOnly)
             .ToList();
 
-        entries.Should().HaveCount(expected: 2);
-        entries.Single(predicate: e => !e.IsDirectory).Size.Should().Be(expected: 50);
-        entries.Single(predicate: e => e.IsDirectory).Size.Should().Be(expected: 0);
+        entries.Should().HaveCount(2);
+        entries.Single(e => !e.IsDirectory).Size.Should().Be(50);
+        entries.Single(e => e.IsDirectory).Size.Should().Be(0);
     }
 
     [Fact]
     public void GetFullPath_canonicalizes_relative_segments()
     {
-        string result = _driver.GetFullPath(path: Path.Combine(path1: _root, path2: "a", path3: "..", path4: "b.txt"));
+        string result = _driver.GetFullPath(Path.Combine(_root, "a", "..", "b.txt"));
 
-        result.Should().Be(expected: Path.GetFullPath(path: Path.Combine(path1: _root, path2: "a", path3: "..", path4: "b.txt")));
+        result.Should().Be(Path.GetFullPath(Path.Combine(_root, "a", "..", "b.txt")));
     }
 
     [Fact]
     public void ResolveLinkTarget_returns_null_for_a_plain_file()
     {
-        string filePath = P(relative: "plain.txt");
-        File.WriteAllText(path: filePath, contents: "x");
+        string filePath = P("plain.txt");
+        File.WriteAllText(filePath, "x");
 
-        _driver.ResolveLinkTarget(path: filePath).Should().BeNull(because: "a plain file is not a symlink");
+        _driver.ResolveLinkTarget(filePath).Should().BeNull("a plain file is not a symlink");
     }
 
     [Fact]
     public void ResolveLinkTarget_returns_null_for_a_missing_path()
     {
-        _driver.ResolveLinkTarget(path: P(relative: "missing")).Should().BeNull();
+        _driver.ResolveLinkTarget(P("missing")).Should().BeNull();
     }
 
     [SkippableFact]
     public void ResolveLinkTarget_follows_a_real_symlink_to_its_canonical_target()
     {
-        string target = P(relative: "real-target.txt");
-        File.WriteAllText(path: target, contents: "x");
-        string link = P(relative: "link.txt");
+        string target = P("real-target.txt");
+        File.WriteAllText(target, "x");
+        string link = P("link.txt");
 
         bool canCreateSymlink = true;
         try
         {
-            File.CreateSymbolicLink(path: link, pathToTarget: target);
+            File.CreateSymbolicLink(link, target);
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
             canCreateSymlink = false;
         }
-        Skip.IfNot(condition: canCreateSymlink, reason: "creating symlinks requires elevated privilege on this host");
+        Skip.IfNot(canCreateSymlink, "creating symlinks requires elevated privilege on this host");
 
-        string? resolved = _driver.ResolveLinkTarget(path: link);
+        string? resolved = _driver.ResolveLinkTarget(link);
 
-        resolved.Should().Be(expected: Path.GetFullPath(path: target));
+        resolved.Should().Be(Path.GetFullPath(target));
     }
 
     [Fact]
     public void IsHidden_returns_false_for_a_normal_visible_file()
     {
-        string filePath = P(relative: "visible.txt");
-        File.WriteAllText(path: filePath, contents: "x");
+        string filePath = P("visible.txt");
+        File.WriteAllText(filePath, "x");
 
-        _driver.IsHidden(path: filePath).Should().BeFalse();
+        _driver.IsHidden(filePath).Should().BeFalse();
     }
 
     [Fact]
     public void IsHidden_returns_false_for_a_missing_path_instead_of_throwing()
     {
         _driver
-            .IsHidden(path: P(relative: "missing"))
+            .IsHidden(P("missing"))
             .Should()
-            .BeFalse(because: "querying attributes on a missing path must not throw");
+            .BeFalse("querying attributes on a missing path must not throw");
     }
 
     [SkippableFact]
     public void IsHidden_returns_true_when_the_hidden_attribute_is_set()
     {
         Skip.IfNot(
-            condition: OperatingSystem.IsWindows(),
-            reason: "FileAttributes.Hidden is a Windows-native concept for this test's setup"
+            OperatingSystem.IsWindows(),
+            "FileAttributes.Hidden is a Windows-native concept for this test's setup"
         );
-        string filePath = P(relative: "hidden.txt");
-        File.WriteAllText(path: filePath, contents: "x");
-        File.SetAttributes(path: filePath, fileAttributes: File.GetAttributes(path: filePath) | FileAttributes.Hidden);
+        string filePath = P("hidden.txt");
+        File.WriteAllText(filePath, "x");
+        File.SetAttributes(filePath, File.GetAttributes(filePath) | FileAttributes.Hidden);
 
-        _driver.IsHidden(path: filePath).Should().BeTrue();
+        _driver.IsHidden(filePath).Should().BeTrue();
     }
 
     [Fact]
     public void MoveDirectory_moves_the_whole_subtree()
     {
-        string src = P(relative: "srcdir");
-        string dst = P(relative: "dstdir");
-        Directory.CreateDirectory(path: src);
-        File.WriteAllText(path: Path.Combine(path1: src, path2: "f.txt"), contents: "x");
+        string src = P("srcdir");
+        string dst = P("dstdir");
+        Directory.CreateDirectory(src);
+        File.WriteAllText(Path.Combine(src, "f.txt"), "x");
 
-        _driver.MoveDirectory(source: src, destination: dst);
+        _driver.MoveDirectory(src, dst);
 
-        Directory.Exists(path: src).Should().BeFalse();
-        File.Exists(path: Path.Combine(path1: dst, path2: "f.txt")).Should().BeTrue();
+        Directory.Exists(src).Should().BeFalse();
+        File.Exists(Path.Combine(dst, "f.txt")).Should().BeTrue();
     }
 }

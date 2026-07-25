@@ -15,7 +15,6 @@ using NoMercy.Database.Models.Queue;
 using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
-using NoMercyQueue.Core.Models;
 using NoMercyQueue.Core.Resources;
 using NoMercyQueue.Workers;
 using Xunit;
@@ -40,7 +39,7 @@ public class BudgetGateDegradeTests : IDisposable
     public BudgetGateDegradeTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(context: _adapter);
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
@@ -52,47 +51,47 @@ public class BudgetGateDegradeTests : IDisposable
     [Fact]
     public async Task AbsentGpuDevice_DegradesToSoftware_AndReroutesToCpuQueue()
     {
-        Mock<IResourceBudget> budget = new(behavior: MockBehavior.Loose);
+        Mock<IResourceBudget> budget = new(MockBehavior.Loose);
 
         // TryAcquire returns null for every attempt — from the worker's
         // perspective this looks identical to ordinary saturation...
         budget
-            .Setup(expression: b => b.TryAcquire(It.IsAny<ResourceRequirement>(), TimeSpan.Zero))
-            .Returns(value: (ResourceLease?)null);
+            .Setup(b => b.TryAcquire(It.IsAny<ResourceRequirement>(), TimeSpan.Zero))
+            .Returns((ResourceLease?)null);
 
         // ...until the worker asks whether the GPU key is even registered.
         // It never is — there is no AMD device on this host.
-        budget.Setup(expression: b => b.IsGpuDeviceRegistered("h264_amf")).Returns(value: false);
+        budget.Setup(b => b.IsGpuDeviceRegistered("h264_amf")).Returns(false);
 
         DegradableResourceRequirementJob job = new()
         {
             QueueName = "encoder-gpu",
-            ResourceRequirement = new(GpuDeviceKey: "h264_amf", GpuSlots: 1, CpuThreads: 2),
+            ResourceRequirement = new("h264_amf", 1, 2),
         };
 
         QueueJob queueJob = new()
         {
             Queue = "encoder-gpu",
-            Payload = SerializationHelper.Serialize(obj: job),
+            Payload = SerializationHelper.Serialize(job),
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
 
-        _context.QueueJobs.Add(entity: queueJob);
+        _context.QueueJobs.Add(queueJob);
         await _context.SaveChangesAsync();
 
         QueueWorker worker = new(
-            queue: _jobQueue,
+            _jobQueue,
             name: "encoder-gpu",
             resourceBudget: budget.Object,
             resourceAwareQueues: new HashSet<string> { "encoder-gpu", "encoder-cpu" }
         );
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
 
         try
         {
-            await worker.StartAsync(stopToken: cts.Token);
+            await worker.StartAsync(cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -100,53 +99,53 @@ public class BudgetGateDegradeTests : IDisposable
         }
 
         // The job must still exist — degraded and rerouted, not dropped.
-        QueueJob persisted = Assert.Single(collection: _context.QueueJobs);
-        Assert.Equal(expected: "encoder-cpu", actual: persisted.Queue);
-        Assert.Null(value: persisted.ReservedAt);
+        QueueJob persisted = Assert.Single(_context.QueueJobs);
+        Assert.Equal("encoder-cpu", persisted.Queue);
+        Assert.Null(persisted.ReservedAt);
 
         DegradableResourceRequirementJob degraded = (DegradableResourceRequirementJob)
-            SerializationHelper.Deserialize<object>(data: persisted.Payload);
-        Assert.Null(@object: degraded.ResourceRequirement?.GpuDeviceKey);
-        Assert.Equal(expected: "encoder-cpu", actual: degraded.QueueName);
+            SerializationHelper.Deserialize<object>(persisted.Payload);
+        Assert.Null(degraded.ResourceRequirement?.GpuDeviceKey);
+        Assert.Equal("encoder-cpu", degraded.QueueName);
 
         // The absent-device path never reaches TryAcquire's granted branch,
         // so no lease is ever handed back to release.
-        budget.Verify(expression: b => b.Release(It.IsAny<ResourceLease>()), times: Times.Never);
+        budget.Verify(b => b.Release(It.IsAny<ResourceLease>()), Times.Never);
     }
 
     [Fact]
     public async Task PresentButBusyGpuDevice_StillRetries_DoesNotDegrade()
     {
-        Mock<IResourceBudget> budget = new(behavior: MockBehavior.Loose);
+        Mock<IResourceBudget> budget = new(MockBehavior.Loose);
 
         // Saturated, not absent: TryAcquire returns null but the device IS
         // registered — every slot is just currently leased.
         budget
-            .Setup(expression: b => b.TryAcquire(It.IsAny<ResourceRequirement>(), TimeSpan.Zero))
-            .Returns(value: (ResourceLease?)null);
-        budget.Setup(expression: b => b.IsGpuDeviceRegistered("test-gpu")).Returns(value: true);
-        budget.Setup(expression: b => b.AvailableGpuEncoderSlots("test-gpu")).Returns(value: 0);
-        budget.Setup(expression: b => b.AvailableCpuThreads()).Returns(value: 4);
+            .Setup(b => b.TryAcquire(It.IsAny<ResourceRequirement>(), TimeSpan.Zero))
+            .Returns((ResourceLease?)null);
+        budget.Setup(b => b.IsGpuDeviceRegistered("test-gpu")).Returns(true);
+        budget.Setup(b => b.AvailableGpuEncoderSlots("test-gpu")).Returns(0);
+        budget.Setup(b => b.AvailableCpuThreads()).Returns(4);
 
         DegradableResourceRequirementJob job = new()
         {
             QueueName = "encoder-gpu",
-            ResourceRequirement = new(GpuDeviceKey: "test-gpu", GpuSlots: 1, CpuThreads: 2),
+            ResourceRequirement = new("test-gpu", 1, 2),
         };
 
         QueueJob queueJob = new()
         {
             Queue = "encoder-gpu",
-            Payload = SerializationHelper.Serialize(obj: job),
+            Payload = SerializationHelper.Serialize(job),
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
 
-        _context.QueueJobs.Add(entity: queueJob);
+        _context.QueueJobs.Add(queueJob);
         await _context.SaveChangesAsync();
 
         QueueWorker worker = new(
-            queue: _jobQueue,
+            _jobQueue,
             name: "encoder-gpu",
             resourceBudget: budget.Object,
             resourceAwareQueues: new HashSet<string> { "encoder-gpu", "encoder-cpu" }
@@ -154,11 +153,11 @@ public class BudgetGateDegradeTests : IDisposable
 
         // Cancel before the 5s BudgetRetryDelay fully elapses again — one
         // saturated pass through the gate is enough to prove the branch taken.
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 2));
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(2));
 
         try
         {
-            await worker.StartAsync(stopToken: cts.Token);
+            await worker.StartAsync(cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -166,15 +165,15 @@ public class BudgetGateDegradeTests : IDisposable
         }
 
         // The job stays on its ORIGINAL queue — no degrade, no reroute.
-        QueueJob persisted = Assert.Single(collection: _context.QueueJobs);
-        Assert.Equal(expected: "encoder-gpu", actual: persisted.Queue);
+        QueueJob persisted = Assert.Single(_context.QueueJobs);
+        Assert.Equal("encoder-gpu", persisted.Queue);
 
         DegradableResourceRequirementJob stillPinned = (DegradableResourceRequirementJob)
-            SerializationHelper.Deserialize<object>(data: persisted.Payload);
-        Assert.Equal(expected: "test-gpu", actual: stillPinned.ResourceRequirement?.GpuDeviceKey);
+            SerializationHelper.Deserialize<object>(persisted.Payload);
+        Assert.Equal("test-gpu", stillPinned.ResourceRequirement?.GpuDeviceKey);
 
         // DegradeToSoftware must never have been invoked for a present device.
-        Assert.False(condition: stillPinned.DegradeCalled);
+        Assert.False(stillPinned.DegradeCalled);
     }
 }
 

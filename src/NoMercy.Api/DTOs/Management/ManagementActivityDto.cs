@@ -15,12 +15,12 @@ namespace NoMercy.Api.DTOs.Management;
 
 public record ManagementActivityDto
 {
-    [JsonProperty(propertyName: "active_streams")]
+    [JsonProperty("active_streams")]
     public int ActiveStreams { get; init; }
 
-    [JsonProperty(propertyName: "active_encodes")]
+    [JsonProperty("active_encodes")]
     public int ActiveEncodes { get; init; }
 
-    [JsonProperty(propertyName: "can_interrupt_safely")]
+    [JsonProperty("can_interrupt_safely")]
     public bool CanInterruptSafely { get; init; }
 }

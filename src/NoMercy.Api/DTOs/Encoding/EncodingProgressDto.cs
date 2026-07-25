@@ -14,24 +14,24 @@ namespace NoMercy.Api.DTOs.Encoding;
 
 public record EncodingProgressDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "percentage")]
+    [JsonProperty("percentage")]
     public double Percentage { get; set; }
 
-    [JsonProperty(propertyName: "elapsed")]
+    [JsonProperty("elapsed")]
     public double Elapsed { get; set; }
 
-    [JsonProperty(propertyName: "estimated")]
+    [JsonProperty("estimated")]
     public double? Estimated { get; set; }
 
-    [JsonProperty(propertyName: "fps")]
+    [JsonProperty("fps")]
     public double? Fps { get; set; }
 
-    [JsonProperty(propertyName: "speed")]
+    [JsonProperty("speed")]
     public double? Speed { get; set; }
 
-    [JsonProperty(propertyName: "bitrate_kbps")]
+    [JsonProperty("bitrate_kbps")]
     public int? BitrateKbps { get; set; }
 }

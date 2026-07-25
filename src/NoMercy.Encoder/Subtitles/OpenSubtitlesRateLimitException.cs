@@ -18,8 +18,8 @@ namespace NoMercy.Encoder.Subtitles;
 public class OpenSubtitlesRateLimitException : Exception
 {
     public OpenSubtitlesRateLimitException()
-        : base(message: "OpenSubtitles rate limit exceeded") { }
+        : base("OpenSubtitles rate limit exceeded") { }
 
     public OpenSubtitlesRateLimitException(string message)
-        : base(message: message) { }
+        : base(message) { }
 }

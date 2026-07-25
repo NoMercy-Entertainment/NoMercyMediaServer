@@ -25,7 +25,7 @@ namespace NoMercy.Tests.Service.Seeds;
 /// on every boot after the first. It must never reach the folder-roots stage,
 /// the DB, or the dynamic-static-files folder registration in that case.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class LibrariesSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -33,16 +33,16 @@ public sealed class LibrariesSeedTests : IDisposable
 
     public LibrariesSeedTests()
     {
-        _connection = new(connectionString: "DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection: _connection,
-                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
+                _connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(options: _options);
+        using MediaContext ctx = new(_options);
         ctx.Database.EnsureCreated();
     }
 
@@ -51,18 +51,18 @@ public sealed class LibrariesSeedTests : IDisposable
     [Fact]
     public async Task Init_LibrariesSeedFileMissing_ReturnsBeforeCheckingFolderRoots()
     {
-        Mock<IStorage> storage = new(behavior: MockBehavior.Strict);
-        storage.Setup(expression: s => s.Exists(AppFiles.LibrariesSeedFile)).Returns(value: false);
+        Mock<IStorage> storage = new(MockBehavior.Strict);
+        storage.Setup(s => s.Exists(AppFiles.LibrariesSeedFile)).Returns(false);
         Mock<IStorageDriver> driver = new();
 
-        await using MediaContext context = new(options: _options);
+        await using MediaContext context = new(_options);
 
-        await LibrariesSeed.Init(dbContext: context, storage: storage.Object, storageDriver: driver.Object);
+        await LibrariesSeed.Init(context, storage.Object, driver.Object);
 
         int libraryCount = await context.Libraries.CountAsync();
-        Assert.Equal(expected: 0, actual: libraryCount);
+        Assert.Equal(0, libraryCount);
         // Strict mock: a call to check FolderRootsSeedFile (or anything else)
         // would have thrown — proves the method returned at the FIRST guard.
-        storage.Verify(expression: s => s.Exists(AppFiles.LibrariesSeedFile), times: Times.Once);
+        storage.Verify(s => s.Exists(AppFiles.LibrariesSeedFile), Times.Once);
     }
 }

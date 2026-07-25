@@ -25,9 +25,9 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
     private readonly ILogger<DeviceDropRuleCronJob> _logger;
     private readonly IDeviceListChangeNotifier? _changeNotifier;
 
-    private static readonly TimeSpan GraceWindow = TimeSpan.FromHours(hours: 1);
-    private static readonly TimeSpan EFuseWindow = TimeSpan.FromHours(hours: 24);
-    private static readonly TimeSpan TtlWindow = TimeSpan.FromDays(days: 7);
+    private static readonly TimeSpan GraceWindow = TimeSpan.FromHours(1);
+    private static readonly TimeSpan EFuseWindow = TimeSpan.FromHours(24);
+    private static readonly TimeSpan TtlWindow = TimeSpan.FromDays(7);
 
     public string CronExpression => new CronExpressionBuilder().Hourly();
     public string JobName => "Hourly Device Drop-Rule Job";
@@ -47,15 +47,15 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
     {
         try
         {
-            await ExecuteCoreAsync(cancellationToken: cancellationToken);
+            await ExecuteCoreAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             // Surface the inner exception under our own log channel so the
             // CronWorker's outer wrapper can't drop the diagnostic detail.
             _logger.LogError(
-                exception: ex,
-                message: "DeviceDropRuleCronJob failed: {ErrorType} — {ErrorMessage}", args: [ex.GetType().Name, ex.Message]
+                ex,
+                "DeviceDropRuleCronJob failed: {ErrorType} — {ErrorMessage}", [ex.GetType().Name, ex.Message]
             );
             throw;
         }
@@ -66,19 +66,19 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
         DateTime now = DateTime.UtcNow;
 
         await using MediaContext context = await _contextFactory.CreateDbContextAsync(
-            cancellationToken: cancellationToken
+            cancellationToken
         );
 
         List<Device> candidates = await context
-            .Devices.Where(predicate: d => d.Fingerprint != null && d.OwnerUserId != null)
+            .Devices.Where(d => d.Fingerprint != null && d.OwnerUserId != null)
             .AsNoTracking()
-            .ToListAsync(cancellationToken: cancellationToken);
+            .ToListAsync(cancellationToken);
 
         List<Device> toDrop = [];
 
         foreach (Device d in candidates)
         {
-            DateTime? lastSeen = MaxOf(a: d.WsConnectedAt, b: d.MdnsSeenAt);
+            DateTime? lastSeen = MaxOf(d.WsConnectedAt, d.MdnsSeenAt);
             if (lastSeen is null)
                 continue;
 
@@ -87,14 +87,14 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
 
             if (now - lastSeen.Value >= TtlWindow)
             {
-                toDrop.Add(item: d);
+                toDrop.Add(d);
                 continue;
             }
 
             if (now - lastSeen.Value < EFuseWindow)
                 continue;
 
-            if (string.IsNullOrEmpty(value: d.LanIp))
+            if (string.IsNullOrEmpty(d.LanIp))
                 continue;
 
             string lanIp = d.LanIp;
@@ -107,38 +107,38 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
             DateTime efuseCutoff = now - EFuseWindow;
 
             bool slotReclaimed = await context
-                .Devices.Where(predicate: o =>
+                .Devices.Where(o =>
                     o.LanIp == lanIp
                     && o.Fingerprint != fingerprint
                     && o.MdnsSeenAt != null
                     && o.MdnsSeenAt <= efuseCutoff
                 )
-                .AnyAsync(cancellationToken: cancellationToken);
+                .AnyAsync(cancellationToken);
 
             if (slotReclaimed)
-                toDrop.Add(item: d);
+                toDrop.Add(d);
         }
 
         if (toDrop.Count == 0)
             return;
 
-        List<Ulid> dropIds = toDrop.Select(selector: d => d.Id).ToList();
+        List<Ulid> dropIds = toDrop.Select(d => d.Id).ToList();
 
         List<(Ulid DeviceId, Guid UserId, string Name, string Reason)> notices = toDrop
-            .Where(predicate: d => d.OwnerUserId.HasValue)
-            .Select(selector: d =>
+            .Where(d => d.OwnerUserId.HasValue)
+            .Select(d =>
             {
-                DateTime? lastSeen = MaxOf(a: d.WsConnectedAt, b: d.MdnsSeenAt);
+                DateTime? lastSeen = MaxOf(d.WsConnectedAt, d.MdnsSeenAt);
                 string reason =
                     lastSeen.HasValue && now - lastSeen.Value >= TtlWindow ? "ttl" : "efuse";
-                string name = string.IsNullOrEmpty(value: d.CustomName) ? d.Name : d.CustomName!;
+                string name = string.IsNullOrEmpty(d.CustomName) ? d.Name : d.CustomName!;
                 return (d.Id, d.OwnerUserId!.Value, name, reason);
             })
             .ToList();
 
         List<Device> tracked = await context
-            .Devices.Where(predicate: d => dropIds.Contains(d.Id))
-            .ToListAsync(cancellationToken: cancellationToken);
+            .Devices.Where(d => dropIds.Contains(d.Id))
+            .ToListAsync(cancellationToken);
 
         foreach (Device d in tracked)
         {
@@ -149,7 +149,7 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
         foreach ((Ulid _, Guid userId, string name, string reason) in notices)
         {
             context.DeviceDropNotices.Add(
-                entity: new()
+                new()
                 {
                     UserId = userId,
                     DeviceName = name,
@@ -158,9 +158,9 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
             );
         }
 
-        await context.SaveChangesAsync(cancellationToken: cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation(message: "Dropped {Count} devices from registry", args: toDrop.Count);
+        _logger.LogInformation("Dropped {Count} devices from registry", toDrop.Count);
 
         // The registry just changed (rows disowned) — push a fresh device list to
         // each affected owner so their pickers drop the stale entry immediately.
@@ -169,9 +169,9 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
         // the next broadcast — the root cause of a TV lingering twice in the picker.
         if (_changeNotifier is not null)
         {
-            List<Guid> affectedOwners = notices.Select(selector: n => n.UserId).Distinct().ToList();
+            List<Guid> affectedOwners = notices.Select(n => n.UserId).Distinct().ToList();
             foreach (Guid ownerId in affectedOwners)
-                await _changeNotifier.BroadcastChange(ownerUserId: ownerId);
+                await _changeNotifier.BroadcastChange(ownerId);
         }
     }
 

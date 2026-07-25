@@ -73,7 +73,7 @@ public class HttpRemoteWorker : IRemoteWorker
         _logger = logger;
 
         if (encoderOptions?.IsDistributedEncodingEnabled == true)
-            _hmacSigner = new(secret: encoderOptions.DistributedEncodingSigningKey!);
+            _hmacSigner = new(encoderOptions.DistributedEncodingSigningKey!);
     }
 
     /// <summary>
@@ -93,26 +93,26 @@ public class HttpRemoteWorker : IRemoteWorker
 
     public async Task<DispatchResult> ExecuteTaskAsync(EncodeTask task, CancellationToken ct)
     {
-        string payload = _serializer.Serialize(task: task, signingKey: _signingKey);
-        byte[] bodyBytes = Encoding.UTF8.GetBytes(s: payload);
-        HttpContent content = new ByteArrayContent(content: bodyBytes);
-        content.Headers.ContentType = new(mediaType: "application/json") { CharSet = "utf-8" };
+        string payload = _serializer.Serialize(task, _signingKey);
+        byte[] bodyBytes = Encoding.UTF8.GetBytes(payload);
+        HttpContent content = new ByteArrayContent(bodyBytes);
+        content.Headers.ContentType = new("application/json") { CharSet = "utf-8" };
 
         const string path = "api/v1/worker/tasks";
-        HttpRequestMessage request = new(method: HttpMethod.Post, requestUri: path) { Content = content };
+        HttpRequestMessage request = new(HttpMethod.Post, path) { Content = content };
 
         if (_hmacSigner is not null)
         {
             long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            string signature = _hmacSigner.Sign(method: "POST", path: "/" + path, timestamp: timestamp, body: bodyBytes);
-            request.Headers.Add(name: "X-NoMercy-Timestamp", value: timestamp.ToString());
-            request.Headers.Add(name: "X-NoMercy-Signature", value: signature);
+            string signature = _hmacSigner.Sign("POST", "/" + path, timestamp, bodyBytes);
+            request.Headers.Add("X-NoMercy-Timestamp", timestamp.ToString());
+            request.Headers.Add("X-NoMercy-Signature", signature);
         }
 
         HttpResponseMessage response;
         try
         {
-            response = await _http.SendAsync(request: request, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+            response = await _http.SendAsync(request, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -121,49 +121,49 @@ public class HttpRemoteWorker : IRemoteWorker
         catch (HttpRequestException ex)
         {
             _logger.LogWarning(
-                exception: ex,
-                message: "HTTP error dispatching task {TaskId} to worker {WorkerId}", args: [task.TaskId, WorkerId]
+                ex,
+                "HTTP error dispatching task {TaskId} to worker {WorkerId}", [task.TaskId, WorkerId]
             );
             return new(
-                TaskId: task.TaskId,
-                Success: false,
-                OutputPath: task.OutputPath,
-                Duration: TimeSpan.Zero,
-                Error: $"HTTP error: {ex.Message}",
-                WorkerId: WorkerId
+                task.TaskId,
+                false,
+                task.OutputPath,
+                TimeSpan.Zero,
+                $"HTTP error: {ex.Message}",
+                WorkerId
             );
         }
 
         if (!response.IsSuccessStatusCode)
         {
-            string body = await response.Content.ReadAsStringAsync(cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+            string body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             _logger.LogWarning(
-                message: "Worker {WorkerId} returned {StatusCode} for task {TaskId}: {Body}", args: [WorkerId, (int)response.StatusCode, task.TaskId, Truncate(s: body, max: 500)]
+                "Worker {WorkerId} returned {StatusCode} for task {TaskId}: {Body}", [WorkerId, (int)response.StatusCode, task.TaskId, Truncate(body, 500)]
             );
             return new(
-                TaskId: task.TaskId,
-                Success: false,
-                OutputPath: task.OutputPath,
-                Duration: TimeSpan.Zero,
-                Error: $"Worker returned HTTP {(int)response.StatusCode}",
-                WorkerId: WorkerId
+                task.TaskId,
+                false,
+                task.OutputPath,
+                TimeSpan.Zero,
+                $"Worker returned HTTP {(int)response.StatusCode}",
+                WorkerId
             );
         }
 
-        string responseBody = await response.Content.ReadAsStringAsync(cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
-        DispatchResult? result = _serializer.DeserializeResult(payload: responseBody, signingKey: _signingKey);
+        string responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        DispatchResult? result = _serializer.DeserializeResult(responseBody, _signingKey);
         if (result is null)
         {
             _logger.LogWarning(
-                message: "Worker {WorkerId} returned an unsignable / expired response for task {TaskId}", args: [WorkerId, task.TaskId]
+                "Worker {WorkerId} returned an unsignable / expired response for task {TaskId}", [WorkerId, task.TaskId]
             );
             return new(
-                TaskId: task.TaskId,
-                Success: false,
-                OutputPath: task.OutputPath,
-                Duration: TimeSpan.Zero,
-                Error: "Worker response failed HMAC verification",
-                WorkerId: WorkerId
+                task.TaskId,
+                false,
+                task.OutputPath,
+                TimeSpan.Zero,
+                "Worker response failed HMAC verification",
+                WorkerId
             );
         }
 
@@ -185,23 +185,23 @@ public class HttpRemoteWorker : IRemoteWorker
     )
     {
         _logger.LogWarning(
-            message: "ExecuteJobAsync called on HttpRemoteWorker {WorkerId} — job-level remote dispatch is not supported; use task-level ExecuteTaskAsync",
-            args: WorkerId
+            "ExecuteJobAsync called on HttpRemoteWorker {WorkerId} — job-level remote dispatch is not supported; use task-level ExecuteTaskAsync",
+            WorkerId
         );
         return Task.FromResult(
-            result: new RemoteEncodingResult(
-                Success: false,
-                WorkerId: WorkerId,
-                OutputPath: string.Empty,
-                Duration: TimeSpan.Zero,
-                Error: new(
-                    Kind: EncodingErrorKind.Unknown,
-                    Message: "Job-level remote dispatch not supported — use task-level",
-                    FfmpegStderr: null,
-                    StageName: null,
-                    Recoverable: false
+            new RemoteEncodingResult(
+                false,
+                WorkerId,
+                string.Empty,
+                TimeSpan.Zero,
+                new(
+                    EncodingErrorKind.Unknown,
+                    "Job-level remote dispatch not supported — use task-level",
+                    null,
+                    null,
+                    false
                 ),
-                Metrics: null
+                null
             )
         );
     }

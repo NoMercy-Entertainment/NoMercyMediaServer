@@ -22,7 +22,7 @@ namespace NoMercy.Encoder.Strategies.Audio;
 /// playlist — the music player (hls.js) loads the variant playlist directly.
 /// </summary>
 public class AudioHlsStrategy(IEncoder encoder, ILogger<AudioHlsStrategy> logger, IStorage storage)
-    : SinglePassStrategyBase(encoder: encoder, logger: logger, storage: storage)
+    : SinglePassStrategyBase(encoder, logger, storage)
 {
     public override OutputFormat Format => OutputFormat.AudioHls;
 }

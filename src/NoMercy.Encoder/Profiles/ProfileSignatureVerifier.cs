@@ -36,16 +36,16 @@ public sealed class ProfileSignatureVerifier : IProfileSignatureVerifier
         Func<string, TrustedPublisherKey?> keyLookup
     )
     {
-        TrustedPublisherKey? key = keyLookup(arg: fingerprint);
+        TrustedPublisherKey? key = keyLookup(fingerprint);
 
         if (key is null)
         {
             return new(
-                Id: EncoderRuleId.ImportPublisherUntrusted,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "publisher_key_fingerprint",
-                Message: $"Publisher key with fingerprint '{fingerprint}' is not in the trusted keys list.",
-                Fix: "Add the publisher's public key via POST /api/v1/encoder/trusted-publishers before importing."
+                EncoderRuleId.ImportPublisherUntrusted,
+                EncoderRuleSeverity.Error,
+                "publisher_key_fingerprint",
+                $"Publisher key with fingerprint '{fingerprint}' is not in the trusted keys list.",
+                "Add the publisher's public key via POST /api/v1/encoder/trusted-publishers before importing."
             );
         }
 
@@ -55,40 +55,40 @@ public sealed class ProfileSignatureVerifier : IProfileSignatureVerifier
 
         try
         {
-            publicKeyBytes = Convert.FromBase64String(s: key.PublicKeyBase64);
+            publicKeyBytes = Convert.FromBase64String(key.PublicKeyBase64);
         }
         catch (FormatException)
         {
             return new(
-                Id: EncoderRuleId.ImportSignatureInvalid,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "signature",
-                Message: "The stored public key is not valid base64 — the trusted key record may be corrupt.",
-                Fix: "Re-register the publisher's public key via POST /api/v1/encoder/trusted-publishers."
+                EncoderRuleId.ImportSignatureInvalid,
+                EncoderRuleSeverity.Error,
+                "signature",
+                "The stored public key is not valid base64 — the trusted key record may be corrupt.",
+                "Re-register the publisher's public key via POST /api/v1/encoder/trusted-publishers."
             );
         }
 
         try
         {
-            signatureBytes = Convert.FromBase64String(s: base64Signature);
+            signatureBytes = Convert.FromBase64String(base64Signature);
         }
         catch (FormatException)
         {
             return new(
-                Id: EncoderRuleId.ImportSignatureInvalid,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "signature",
-                Message: "The profile signature field is not valid base64.",
-                Fix: "The profile JSON does not match the supplied signature — re-export from the source."
+                EncoderRuleId.ImportSignatureInvalid,
+                EncoderRuleSeverity.Error,
+                "signature",
+                "The profile signature field is not valid base64.",
+                "The profile JSON does not match the supplied signature — re-export from the source."
             );
         }
 
-        digest = SHA256.HashData(source: Encoding.UTF8.GetBytes(s: profileJson));
+        digest = SHA256.HashData(Encoding.UTF8.GetBytes(profileJson));
 
-        Ed25519PublicKeyParameters pubKey = new(buf: publicKeyBytes, off: 0);
+        Ed25519PublicKeyParameters pubKey = new(publicKeyBytes, 0);
         Ed25519Signer signer = new();
-        signer.Init(forSigning: false, parameters: pubKey);
-        signer.BlockUpdate(buf: digest, off: 0, len: digest.Length);
+        signer.Init(false, pubKey);
+        signer.BlockUpdate(digest, 0, digest.Length);
 
         // Narrow the catch: BouncyCastle's Ed25519 verifier raises InvalidKey /
         // GeneralSecurity / DataLength on malformed key or signature input —
@@ -98,7 +98,7 @@ public sealed class ProfileSignatureVerifier : IProfileSignatureVerifier
         bool valid;
         try
         {
-            valid = signer.VerifySignature(signature: signatureBytes);
+            valid = signer.VerifySignature(signatureBytes);
         }
         catch (InvalidKeyException)
         {
@@ -120,11 +120,11 @@ public sealed class ProfileSignatureVerifier : IProfileSignatureVerifier
         if (!valid)
         {
             return new(
-                Id: EncoderRuleId.ImportSignatureInvalid,
-                Severity: EncoderRuleSeverity.Error,
-                Field: "signature",
-                Message: "The profile JSON does not match the supplied Ed25519 signature.",
-                Fix: "The profile JSON does not match the supplied signature — re-export from the source."
+                EncoderRuleId.ImportSignatureInvalid,
+                EncoderRuleSeverity.Error,
+                "signature",
+                "The profile JSON does not match the supplied Ed25519 signature.",
+                "The profile JSON does not match the supplied signature — re-export from the source."
             );
         }
 

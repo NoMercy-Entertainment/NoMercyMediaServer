@@ -14,16 +14,16 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.TvShows;
 
-[PrimaryKey(propertyName: nameof(GenreId), additionalPropertyNames: nameof(TvId))]
-[Index(propertyName: nameof(GenreId))]
-[Index(propertyName: nameof(TvId))]
+[PrimaryKey(nameof(GenreId), nameof(TvId))]
+[Index(nameof(GenreId))]
+[Index(nameof(TvId))]
 public class GenreTv
 {
-    [JsonProperty(propertyName: "genre_id")]
+    [JsonProperty("genre_id")]
     public int GenreId { get; set; }
     public Genre Genre { get; set; } = null!;
 
-    [JsonProperty(propertyName: "tv_id")]
+    [JsonProperty("tv_id")]
     public int TvId { get; set; }
     public Tv Tv { get; set; } = null!;
 }

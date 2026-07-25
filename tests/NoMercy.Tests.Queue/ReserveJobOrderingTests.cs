@@ -35,23 +35,23 @@ public class ReserveJobOrderingTests : IDisposable
     public ReserveJobOrderingTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(context: _adapter);
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
     {
         _adapter.Dispose();
         _context.Dispose();
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
     public void ReserveJob_EqualPriorityAndCreatedAt_DequeuesFifoByInsertion()
     {
-        DateTime stamp = new(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc);
-        foreach (int i in Enumerable.Range(start: 0, count: 4))
+        DateTime stamp = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        foreach (int i in Enumerable.Range(0, 4))
             _jobQueue.Enqueue(
-                queueJob: new QueueJobModel
+                new QueueJobModel
                 {
                     Queue = "encoder",
                     Payload = $"episode-{i}",
@@ -63,21 +63,21 @@ public class ReserveJobOrderingTests : IDisposable
 
         List<string?> dequeued =
         [
-            _jobQueue.ReserveJob(name: "encoder", currentJobId: null)?.Payload,
-            _jobQueue.ReserveJob(name: "encoder", currentJobId: null)?.Payload,
-            _jobQueue.ReserveJob(name: "encoder", currentJobId: null)?.Payload,
-            _jobQueue.ReserveJob(name: "encoder", currentJobId: null)?.Payload,
+            _jobQueue.ReserveJob("encoder", null)?.Payload,
+            _jobQueue.ReserveJob("encoder", null)?.Payload,
+            _jobQueue.ReserveJob("encoder", null)?.Payload,
+            _jobQueue.ReserveJob("encoder", null)?.Payload,
         ];
 
-        Assert.Equal(expected: ["episode-0", "episode-1", "episode-2", "episode-3"], actual: dequeued);
+        Assert.Equal(["episode-0", "episode-1", "episode-2", "episode-3"], dequeued);
     }
 
     [Fact]
     public void ReserveJob_HigherPriorityFirst_ThenFifo()
     {
-        DateTime stamp = new(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc);
+        DateTime stamp = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         _jobQueue.Enqueue(
-            queueJob: new QueueJobModel
+            new QueueJobModel
             {
                 Queue = "encoder",
                 Payload = "low-first",
@@ -87,7 +87,7 @@ public class ReserveJobOrderingTests : IDisposable
             }
         );
         _jobQueue.Enqueue(
-            queueJob: new QueueJobModel
+            new QueueJobModel
             {
                 Queue = "encoder",
                 Payload = "high-later",
@@ -97,7 +97,7 @@ public class ReserveJobOrderingTests : IDisposable
             }
         );
         _jobQueue.Enqueue(
-            queueJob: new QueueJobModel
+            new QueueJobModel
             {
                 Queue = "encoder",
                 Payload = "low-second",
@@ -109,11 +109,11 @@ public class ReserveJobOrderingTests : IDisposable
 
         List<string?> dequeued =
         [
-            _jobQueue.ReserveJob(name: "encoder", currentJobId: null)?.Payload,
-            _jobQueue.ReserveJob(name: "encoder", currentJobId: null)?.Payload,
-            _jobQueue.ReserveJob(name: "encoder", currentJobId: null)?.Payload,
+            _jobQueue.ReserveJob("encoder", null)?.Payload,
+            _jobQueue.ReserveJob("encoder", null)?.Payload,
+            _jobQueue.ReserveJob("encoder", null)?.Payload,
         ];
 
-        Assert.Equal(expected: ["high-later", "low-first", "low-second"], actual: dequeued);
+        Assert.Equal(["high-later", "low-first", "low-second"], dequeued);
     }
 }

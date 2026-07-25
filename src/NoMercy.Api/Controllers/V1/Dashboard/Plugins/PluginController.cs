@@ -23,10 +23,10 @@ using NoMercy.Plugins.Abstractions;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Plugins;
 
 [ApiController]
-[Tags(tags: "Dashboard Server Plugins")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Server Plugins")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "Owner")]
-[Route(template: "api/v{version:apiVersion}/dashboard/plugins", Order = 10)]
+[Route("api/v{version:apiVersion}/dashboard/plugins", Order = 10)]
 public class PluginController(IPluginManager pluginManager) : BaseController
 {
     [HttpGet]
@@ -36,34 +36,34 @@ public class PluginController(IPluginManager pluginManager) : BaseController
         IReadOnlyList<PluginInfo> plugins = pluginManager.GetInstalledPlugins();
 
         return Ok(
-            value: new DataResponseDto<IEnumerable<PluginInfoDto>>
+            new DataResponseDto<IEnumerable<PluginInfoDto>>
             {
-                Data = plugins.Select(selector: p => new PluginInfoDto(info: p)),
+                Data = plugins.Select(p => new PluginInfoDto(p)),
             }
         );
     }
 
-    [HttpGet(template: "{id:guid}")]
+    [HttpGet("{id:guid}")]
     public IActionResult Show(Guid id)
     {
 
-        PluginInfo? plugin = pluginManager.GetInstalledPlugins().FirstOrDefault(predicate: p => p.Id == id);
+        PluginInfo? plugin = pluginManager.GetInstalledPlugins().FirstOrDefault(p => p.Id == id);
         if (plugin is null)
-            return NotFoundResponse(detail: "Plugin not found");
+            return NotFoundResponse("Plugin not found");
 
-        return Ok(value: new DataResponseDto<PluginInfoDto> { Data = new(info: plugin) });
+        return Ok(new DataResponseDto<PluginInfoDto> { Data = new(plugin) });
     }
 
-    [HttpPost(template: "{id:guid}/enable")]
+    [HttpPost("{id:guid}/enable")]
     public async Task<IActionResult> Enable(Guid id)
     {
 
         try
         {
-            await pluginManager.EnablePluginAsync(pluginId: id);
+            await pluginManager.EnablePluginAsync(id);
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Plugin enabled successfully",
@@ -72,20 +72,20 @@ public class PluginController(IPluginManager pluginManager) : BaseController
         }
         catch (InvalidOperationException ex)
         {
-            return NotFoundResponse(detail: ex.Message);
+            return NotFoundResponse(ex.Message);
         }
     }
 
-    [HttpPost(template: "{id:guid}/disable")]
+    [HttpPost("{id:guid}/disable")]
     public async Task<IActionResult> Disable(Guid id)
     {
 
         try
         {
-            await pluginManager.DisablePluginAsync(pluginId: id);
+            await pluginManager.DisablePluginAsync(id);
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Plugin disabled successfully",
@@ -94,20 +94,20 @@ public class PluginController(IPluginManager pluginManager) : BaseController
         }
         catch (InvalidOperationException ex)
         {
-            return NotFoundResponse(detail: ex.Message);
+            return NotFoundResponse(ex.Message);
         }
     }
 
-    [HttpDelete(template: "{id:guid}")]
+    [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Uninstall(Guid id)
     {
 
         try
         {
-            await pluginManager.UninstallPluginAsync(pluginId: id);
+            await pluginManager.UninstallPluginAsync(id);
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Plugin uninstalled successfully",
@@ -116,22 +116,22 @@ public class PluginController(IPluginManager pluginManager) : BaseController
         }
         catch (InvalidOperationException ex)
         {
-            return NotFoundResponse(detail: ex.Message);
+            return NotFoundResponse(ex.Message);
         }
     }
 
     [HttpGet]
-    [Route(template: "credentials")]
+    [Route("credentials")]
     public IActionResult Credentials()
     {
 
-        UserPass? aniDb = CredentialManager.Credential(target: "AniDb");
+        UserPass? aniDb = CredentialManager.Credential("AniDb");
 
         if (aniDb == null)
-            return NotFoundResponse(detail: "No credentials found for AniDb");
+            return NotFoundResponse("No credentials found for AniDb");
 
         return Ok(
-            value: new AniDbCredentialsResponseDto
+            new AniDbCredentialsResponseDto
             {
                 Key = "AniDb",
                 Username = aniDb.Username,
@@ -141,20 +141,20 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     }
 
     [HttpPost]
-    [Route(template: "credentials")]
+    [Route("credentials")]
     public IActionResult Credentials([FromBody] AniDbCredentialsRequestDto requestDto)
     {
 
-        UserPass? aniDb = CredentialManager.Credential(target: requestDto.Key);
+        UserPass? aniDb = CredentialManager.Credential(requestDto.Key);
         CredentialManager.SetCredentials(
-            target: requestDto.Key,
-            username: requestDto.Username,
-            password: requestDto.Password ?? (aniDb?.Password).OrEmpty(),
-            apiKey: requestDto.ApiKey
+            requestDto.Key,
+            requestDto.Username,
+            requestDto.Password ?? (aniDb?.Password).OrEmpty(),
+            requestDto.ApiKey
         );
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Credentials set successfully for {0}",
@@ -166,25 +166,25 @@ public class PluginController(IPluginManager pluginManager) : BaseController
 
 public record PluginInfoDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; init; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; init; } = null!;
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string Description { get; init; } = null!;
 
-    [JsonProperty(propertyName: "version")]
+    [JsonProperty("version")]
     public string Version { get; init; } = null!;
 
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; init; } = null!;
 
-    [JsonProperty(propertyName: "author")]
+    [JsonProperty("author")]
     public string? Author { get; init; }
 
-    [JsonProperty(propertyName: "project_url")]
+    [JsonProperty("project_url")]
     public string? ProjectUrl { get; init; }
 
     public PluginInfoDto() { }

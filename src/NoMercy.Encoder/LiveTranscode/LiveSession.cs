@@ -24,12 +24,12 @@ public class LiveSession : ILiveSession
     // overwrites the true playhead on every segment GET, and BufferAhead reads
     // as permanently low even though the encoder is racing far past the
     // viewer's real position.
-    private static readonly TimeSpan AuthoritativePlayheadWindow = TimeSpan.FromSeconds(seconds: 15);
+    private static readonly TimeSpan AuthoritativePlayheadWindow = TimeSpan.FromSeconds(15);
 
     private readonly Channel<Segment> _segmentChannel = Channel.CreateUnbounded<Segment>();
 
     // Protects concurrent seeks: only one seek can manipulate the runner CTS at a time.
-    private readonly SemaphoreSlim _seekLock = new(initialCount: 1, maxCount: 1);
+    private readonly SemaphoreSlim _seekLock = new(1, 1);
 
     // Tracks the current runner's cancellation source. Replaced on each seek.
     private CancellationTokenSource _runnerCts = new();
@@ -78,13 +78,13 @@ public class LiveSession : ILiveSession
 
     public string SessionId { get; }
     public LiveSessionState State =>
-        (LiveSessionState)Interlocked.CompareExchange(location1: ref _state, value: 0, comparand: 0);
+        (LiveSessionState)Interlocked.CompareExchange(ref _state, 0, 0);
     public LiveQuality CurrentQuality { get; private set; }
-    public int CurrentAudioStreamIndex => Volatile.Read(location: ref _audioStreamIndex);
+    public int CurrentAudioStreamIndex => Volatile.Read(ref _audioStreamIndex);
     public double CurrentSpeed => _currentSpeed;
     public TimeSpan TranscodedPosition => _transcodedPosition;
     public TimeSpan BufferAhead =>
-        _transcodedPosition - new TimeSpan(ticks: Interlocked.Read(location: ref _playbackPositionTicks));
+        _transcodedPosition - new TimeSpan(Interlocked.Read(ref _playbackPositionTicks));
 
     public IAsyncEnumerable<Segment> Segments => ReadSegmentsAsync();
 
@@ -108,10 +108,10 @@ public class LiveSession : ILiveSession
     internal void PushSegment(Segment segment)
     {
         _transcodedPosition = segment.StartTime + segment.Duration;
-        _segmentChannel.Writer.TryWrite(item: segment);
+        _segmentChannel.Writer.TryWrite(segment);
     }
 
-    internal void SetState(LiveSessionState state) => Interlocked.Exchange(location1: ref _state, value: (int)state);
+    internal void SetState(LiveSessionState state) => Interlocked.Exchange(ref _state, (int)state);
 
     // Updates the reported quality in place, WITHOUT tearing down/restarting the
     // runner. Used by LiveFfmpegRunner's NVENC-session-cap fallback: the runner
@@ -123,7 +123,7 @@ public class LiveSession : ILiveSession
 
     // Sets the audio track a subsequent (re)spawn maps. Called at session start
     // with the track resolved from the library's language preference.
-    internal void SetAudioStreamIndex(int index) => Volatile.Write(location: ref _audioStreamIndex, value: index);
+    internal void SetAudioStreamIndex(int index) => Volatile.Write(ref _audioStreamIndex, index);
 
     internal void SetSpeed(double speed) => _currentSpeed = speed;
 
@@ -181,9 +181,9 @@ public class LiveSession : ILiveSession
         }
 
         Interlocked.CompareExchange(
-            location1: ref _state,
-            value: (int)LiveSessionState.Buffered,
-            comparand: (int)LiveSessionState.Transcoding
+            ref _state,
+            (int)LiveSessionState.Buffered,
+            (int)LiveSessionState.Transcoding
         );
     }
 
@@ -193,16 +193,16 @@ public class LiveSession : ILiveSession
     /// </summary>
     public async Task SeekAsync(TimeSpan position, CancellationToken ct)
     {
-        await _seekLock.WaitAsync(cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+        await _seekLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            SetState(state: LiveSessionState.Seeking);
+            SetState(LiveSessionState.Seeking);
 
             // Tear down existing runner
             CancellationTokenSource oldCts = _runnerCts;
             try
             {
-                await oldCts.CancelAsync().ConfigureAwait(continueOnCapturedContext: false);
+                await oldCts.CancelAsync().ConfigureAwait(false);
             }
             catch (ObjectDisposedException)
             {
@@ -217,12 +217,12 @@ public class LiveSession : ILiveSession
             // stamp the authority window too so a stale, in-flight prefetch report
             // (issued for the pre-seek position, landing just after) cannot
             // immediately clobber the seek target.
-            Interlocked.Exchange(location1: ref _playbackPositionTicks, value: position.Ticks);
-            Interlocked.Exchange(location1: ref _lastAuthoritativePlayheadUtcTicks, value: DateTime.UtcNow.Ticks);
+            Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
+            Interlocked.Exchange(ref _lastAuthoritativePlayheadUtcTicks, DateTime.UtcNow.Ticks);
             _transcodedPosition = position;
 
             // Create a new CTS for the replacement runner, linked to session lifetime
-            _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(token: _sessionCts.Token);
+            _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
 
             // Deliberately NOT invoking _bufferResetCallback here. A seek changes
             // only the playhead — same quality, same absolute segment indices,
@@ -236,12 +236,12 @@ public class LiveSession : ILiveSession
             // Spawn new runner if a factory is wired up
             if (_runnerFactory is not null)
             {
-                SetState(state: LiveSessionState.Transcoding);
+                SetState(LiveSessionState.Transcoding);
                 MarkTranscodeStart();
 
                 _ = Task.Run(
-                    function: () => _runnerFactory(arg1: position, arg2: _runnerCts.Token),
-                    cancellationToken: CancellationToken.None
+                    () => _runnerFactory(position, _runnerCts.Token),
+                    CancellationToken.None
                 );
             }
         }
@@ -257,16 +257,16 @@ public class LiveSession : ILiveSession
         CancellationToken ct
     )
     {
-        await _seekLock.WaitAsync(cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+        await _seekLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            Volatile.Write(location: ref _state, value: (int)LiveSessionState.ChangingQuality);
+            Volatile.Write(ref _state, (int)LiveSessionState.ChangingQuality);
 
             // Tear down existing runner
             CancellationTokenSource oldCts = _runnerCts;
             try
             {
-                await oldCts.CancelAsync().ConfigureAwait(continueOnCapturedContext: false);
+                await oldCts.CancelAsync().ConfigureAwait(false);
             }
             catch (ObjectDisposedException)
             {
@@ -281,21 +281,21 @@ public class LiveSession : ILiveSession
             CurrentQuality = newQuality;
 
             // Create a new CTS for the replacement runner, linked to session lifetime
-            _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(token: _sessionCts.Token);
+            _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
 
             _bufferResetCallback?.Invoke();
 
             // Spawn new runner if a factory is wired up
             if (_runnerFactory is not null)
             {
-                SetState(state: LiveSessionState.Transcoding);
+                SetState(LiveSessionState.Transcoding);
 
                 // Keep same playback position — quality change doesn't rewind
-                TimeSpan resumePosition = new(ticks: Interlocked.Read(location: ref _playbackPositionTicks));
+                TimeSpan resumePosition = new(Interlocked.Read(ref _playbackPositionTicks));
                 MarkTranscodeStart();
                 _ = Task.Run(
-                    function: () => _runnerFactory(arg1: resumePosition, arg2: _runnerCts.Token),
-                    cancellationToken: CancellationToken.None
+                    () => _runnerFactory(resumePosition, _runnerCts.Token),
+                    CancellationToken.None
                 );
             }
         }
@@ -320,9 +320,9 @@ public class LiveSession : ILiveSession
         try
         {
             int previous = Interlocked.CompareExchange(
-                location1: ref _state,
-                value: (int)LiveSessionState.Buffered,
-                comparand: (int)LiveSessionState.Transcoding
+                ref _state,
+                (int)LiveSessionState.Buffered,
+                (int)LiveSessionState.Transcoding
             );
 
             if (previous != (int)LiveSessionState.Transcoding)
@@ -349,9 +349,9 @@ public class LiveSession : ILiveSession
         try
         {
             int previous = Interlocked.CompareExchange(
-                location1: ref _state,
-                value: (int)LiveSessionState.Transcoding,
-                comparand: (int)LiveSessionState.Buffered
+                ref _state,
+                (int)LiveSessionState.Transcoding,
+                (int)LiveSessionState.Buffered
             );
 
             if (previous != (int)LiveSessionState.Buffered)
@@ -362,15 +362,15 @@ public class LiveSession : ILiveSession
             // this is safe even if something else already disposed it.
             _runnerCts.Dispose();
 
-            _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(token: _sessionCts.Token);
+            _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
 
             if (_runnerFactory is not null)
             {
                 MarkTranscodeStart();
-                TimeSpan resumePosition = new(ticks: Interlocked.Read(location: ref _playbackPositionTicks));
+                TimeSpan resumePosition = new(Interlocked.Read(ref _playbackPositionTicks));
                 _ = Task.Run(
-                    function: () => _runnerFactory(arg1: resumePosition, arg2: _runnerCts.Token),
-                    cancellationToken: CancellationToken.None
+                    () => _runnerFactory(resumePosition, _runnerCts.Token),
+                    CancellationToken.None
                 );
             }
         }
@@ -393,41 +393,41 @@ public class LiveSession : ILiveSession
     {
         if (authoritative)
         {
-            Interlocked.Exchange(location1: ref _playbackPositionTicks, value: position.Ticks);
-            Interlocked.Exchange(location1: ref _lastAuthoritativePlayheadUtcTicks, value: DateTime.UtcNow.Ticks);
+            Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
+            Interlocked.Exchange(ref _lastAuthoritativePlayheadUtcTicks, DateTime.UtcNow.Ticks);
             return;
         }
 
         DateTime lastAuthoritative = new(
-            ticks: Interlocked.Read(location: ref _lastAuthoritativePlayheadUtcTicks),
-            kind: DateTimeKind.Utc
+            Interlocked.Read(ref _lastAuthoritativePlayheadUtcTicks),
+            DateTimeKind.Utc
         );
         if (DateTime.UtcNow - lastAuthoritative > AuthoritativePlayheadWindow)
-            Interlocked.Exchange(location1: ref _playbackPositionTicks, value: position.Ticks);
+            Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
     }
 
     public DateTime LastTranscodeStart =>
-        new(ticks: Interlocked.Read(location: ref _lastTranscodeStartTicks), kind: DateTimeKind.Utc);
+        new(Interlocked.Read(ref _lastTranscodeStartTicks), DateTimeKind.Utc);
 
     public void MarkTranscodeStart() =>
-        Interlocked.Exchange(location1: ref _lastTranscodeStartTicks, value: DateTime.UtcNow.Ticks);
+        Interlocked.Exchange(ref _lastTranscodeStartTicks, DateTime.UtcNow.Ticks);
 
-    public TimeSpan ClientBufferedAhead => new(ticks: Interlocked.Read(location: ref _clientBufferedAheadTicks));
+    public TimeSpan ClientBufferedAhead => new(Interlocked.Read(ref _clientBufferedAheadTicks));
 
-    public int ObservedBandwidthKbps => Volatile.Read(location: ref _observedBandwidthKbps);
+    public int ObservedBandwidthKbps => Volatile.Read(ref _observedBandwidthKbps);
 
     public void ReportClientBufferHealth(TimeSpan bufferedAhead, int observedBandwidthKbps)
     {
-        Interlocked.Exchange(location1: ref _clientBufferedAheadTicks, value: bufferedAhead.Ticks);
-        Volatile.Write(location: ref _observedBandwidthKbps, value: observedBandwidthKbps);
-        Interlocked.Exchange(location1: ref _lastClientHealthUtcTicks, value: DateTime.UtcNow.Ticks);
+        Interlocked.Exchange(ref _clientBufferedAheadTicks, bufferedAhead.Ticks);
+        Volatile.Write(ref _observedBandwidthKbps, observedBandwidthKbps);
+        Interlocked.Exchange(ref _lastClientHealthUtcTicks, DateTime.UtcNow.Ticks);
     }
 
     public bool HasFreshClientHealth(TimeSpan maxAge)
     {
         DateTime lastReport = new(
-            ticks: Interlocked.Read(location: ref _lastClientHealthUtcTicks),
-            kind: DateTimeKind.Utc
+            Interlocked.Read(ref _lastClientHealthUtcTicks),
+            DateTimeKind.Utc
         );
         return DateTime.UtcNow - lastReport <= maxAge;
     }
@@ -452,7 +452,7 @@ public class LiveSession : ILiveSession
             // Already disposed
         }
 
-        SetState(state: LiveSessionState.Ended);
+        SetState(LiveSessionState.Ended);
         _segmentChannel.Writer.TryComplete();
 
         _seekLock.Dispose();
@@ -465,7 +465,7 @@ public class LiveSession : ILiveSession
         [EnumeratorCancellation] CancellationToken ct = default
     )
     {
-        await foreach (Segment segment in _segmentChannel.Reader.ReadAllAsync(cancellationToken: ct))
+        await foreach (Segment segment in _segmentChannel.Reader.ReadAllAsync(ct))
         {
             yield return segment;
         }

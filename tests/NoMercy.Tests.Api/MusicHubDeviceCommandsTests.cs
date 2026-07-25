@@ -46,7 +46,7 @@ namespace NoMercy.Tests.Api;
 /// NoMercyApiFactory), mocking only the SignalR plumbing and IChromeCastService
 /// (native Cast SDK has no test double).
 /// </summary>
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -68,7 +68,7 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
             Folder = "/music/",
             FolderId = Ulid.NewUlid(),
         };
-        return new(track: track, country: "US");
+        return new(track, "US");
     }
 
     private static (Client Client, Mock<ISingleClientProxy> Proxy) MakeClientWithProxy(
@@ -80,14 +80,14 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<ISingleClientProxy> proxy = new();
         proxy
-            .Setup(expression: p =>
+            .Setup(p =>
                 p.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(value: Task.CompletedTask);
+            .Returns(Task.CompletedTask);
 
         Client client = new()
         {
@@ -121,48 +121,48 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
             _factory.Services.GetRequiredService<CastPanelWakeLauncher>();
         AuthManager authManager = _factory.Services.GetRequiredService<AuthManager>();
 
-        MusicDeviceManager musicDeviceManager = new(mediaContext: new());
-        MusicPlaylistManager musicPlaylistManager = new(musicService: new MusicRepository(contextFactory: contextFactory), mediaContext: new());
-        DeviceBusRegistry busRegistry = new(contextFactory: contextFactory, hubContext: Mock.Of<IHubContext<DeviceHub>>());
-        CastSessionTokenService castTokenService = new(authManager: authManager, authTokenStore: new AuthTokenStore());
+        MusicDeviceManager musicDeviceManager = new(new());
+        MusicPlaylistManager musicPlaylistManager = new(new MusicRepository(contextFactory), new());
+        DeviceBusRegistry busRegistry = new(contextFactory, Mock.Of<IHubContext<DeviceHub>>());
+        CastSessionTokenService castTokenService = new(authManager, new AuthTokenStore());
 
         DefaultHttpContext httpContext = new() { RequestServices = null! };
         httpContext.Request.Path = "/musicHub";
 
         MusicHub hub = new(
-            logger: NullLogger<MusicHub>.Instance,
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: contextFactory,
-            connectedClients: connectedClients,
-            clientMessenger: clientMessenger,
-            musicPlaybackService: musicPlaybackService,
-            musicPlayerStateManager: stateManager,
-            musicDeviceManager: musicDeviceManager,
-            musicPlaylistManager: musicPlaylistManager,
-            commandHandler: commandHandler,
-            activityLogger: Mock.Of<IActivityLogger>(),
-            busRegistry: busRegistry,
-            castTokenService: castTokenService,
-            chromeCast: Mock.Of<IChromeCastService>(),
-            castPanelWakeLauncher: castPanelWakeLauncher,
-            activeDeviceRegistry: activeDeviceRegistry
+            NullLogger<MusicHub>.Instance,
+            new HttpContextAccessorStub(httpContext),
+            contextFactory,
+            connectedClients,
+            clientMessenger,
+            musicPlaybackService,
+            stateManager,
+            musicDeviceManager,
+            musicPlaylistManager,
+            commandHandler,
+            Mock.Of<IActivityLogger>(),
+            busRegistry,
+            castTokenService,
+            Mock.Of<IChromeCastService>(),
+            castPanelWakeLauncher,
+            activeDeviceRegistry
         );
 
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: userId.ToString())], authenticationType: "TestAuth")
+            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, userId.ToString())], "TestAuth")
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(expression: c => c.User).Returns(value: principal);
-        context.Setup(expression: c => c.ConnectionId).Returns(value: connectionId);
-        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
+        context.Setup(c => c.User).Returns(principal);
+        context.Setup(c => c.ConnectionId).Returns(connectionId);
+        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
 
         Mock<ISingleClientProxy> callerProxy = new();
         Mock<ISingleClientProxy> userProxy = new();
 
         Mock<IHubCallerClients> clients = new();
-        clients.Setup(expression: c => c.Caller).Returns(value: callerProxy.Object);
-        clients.Setup(expression: c => c.User(It.IsAny<string>())).Returns(value: userProxy.Object);
+        clients.Setup(c => c.Caller).Returns(callerProxy.Object);
+        clients.Setup(c => c.User(It.IsAny<string>())).Returns(userProxy.Object);
 
         hub.Context = context.Object;
         hub.Clients = clients.Object;
@@ -181,7 +181,7 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
             Allowed = true,
             Manage = false,
         };
-        UserCache.Current.AddUser(user: user);
+        UserCache.Current.AddUser(user);
         return user;
     }
 
@@ -189,11 +189,11 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
     {
         ConnectedClients connectedClients = _factory.GetConnectedClients();
         foreach (string connectionId in connectionIds)
-            connectedClients.Clients.TryRemove(key: connectionId, value: out _);
+            connectedClients.Clients.TryRemove(connectionId, out _);
 
-        _factory.Services.GetRequiredService<MusicPlayerStateManager>().RemoveState(userId: userId);
-        _factory.Services.GetRequiredService<MusicActiveDeviceRegistry>().Remove(userId: userId);
-        UserCache.Current.RemoveUser(user: user);
+        _factory.Services.GetRequiredService<MusicPlayerStateManager>().RemoveState(userId);
+        _factory.Services.GetRequiredService<MusicActiveDeviceRegistry>().Remove(userId);
+        UserCache.Current.RemoveUser(user);
     }
 
     // =========================================================================
@@ -204,7 +204,7 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
     public async Task ChangeDeviceCommand_NonTvTarget_TransfersDeviceIdAndResolvesVolume()
     {
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId: userId);
+        User user = SeedTestUser(userId);
 
         string phoneConnectionId = Guid.NewGuid().ToString();
         string tabletConnectionId = Guid.NewGuid().ToString();
@@ -212,15 +212,15 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
         string tabletDeviceId = $"tablet-{Guid.NewGuid()}";
 
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        (Client phoneClient, _) = MakeClientWithProxy(userId: userId, deviceId: phoneDeviceId, type: "web");
+        (Client phoneClient, _) = MakeClientWithProxy(userId, phoneDeviceId, "web");
         (Client tabletClient, _) = MakeClientWithProxy(
-            userId: userId,
-            deviceId: tabletDeviceId,
-            type: "web",
+            userId,
+            tabletDeviceId,
+            "web",
             volumePercent: 65
         );
-        connectedClients.Clients[key: phoneConnectionId] = phoneClient;
-        connectedClients.Clients[key: tabletConnectionId] = tabletClient;
+        connectedClients.Clients[phoneConnectionId] = phoneClient;
+        connectedClients.Clients[tabletConnectionId] = tabletClient;
 
         MusicPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<MusicPlayerStateManager>();
@@ -234,31 +234,31 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
             PlayState = true,
             CurrentItem = currentTrack,
             Playlist = [currentTrack],
-            CurrentList = new(uriString: "/music/albums/test", uriKind: UriKind.Relative),
+            CurrentList = new("/music/albums/test", UriKind.Relative),
             Time = 15_000,
         };
-        stateManager.UpdateState(userId: userId, state: state);
-        registry.Set(userId: userId, device: phoneClient);
+        stateManager.UpdateState(userId, state);
+        registry.Set(userId, phoneClient);
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: phoneConnectionId, userId: userId);
+            MusicHub hub = CreateHub(phoneConnectionId, userId);
 
-            await hub.ChangeDeviceCommand(deviceId: tabletDeviceId);
+            await hub.ChangeDeviceCommand(tabletDeviceId);
 
-            stateManager.TryGetValue(userId: userId, state: out MusicPlayerState? after).Should().BeTrue();
-            after!.DeviceId.Should().Be(expected: tabletDeviceId);
+            stateManager.TryGetValue(userId, out MusicPlayerState? after).Should().BeTrue();
+            after!.DeviceId.Should().Be(tabletDeviceId);
             // No prior DeviceVolumes entry for the tablet, so it falls back to
             // the target device's own persisted VolumePercent (65).
-            after.VolumePercentage.Should().Be(expected: 65);
-            after.DeviceVolumes[key: tabletDeviceId].Should().Be(expected: 65);
+            after.VolumePercentage.Should().Be(65);
+            after.DeviceVolumes[tabletDeviceId].Should().Be(65);
 
-            registry.TryGet(userId: userId, device: out Device? active).Should().BeTrue();
-            active!.DeviceId.Should().Be(expected: tabletDeviceId);
+            registry.TryGet(userId, out Device? active).Should().BeTrue();
+            active!.DeviceId.Should().Be(tabletDeviceId);
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: [phoneConnectionId, tabletConnectionId]);
+            Cleanup(userId, user, phoneConnectionId, tabletConnectionId);
         }
     }
 
@@ -266,20 +266,20 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
     public async Task ChangeDeviceCommand_NoExistingPlayerState_IsNoOp()
     {
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId: userId);
+        User user = SeedTestUser(userId);
         string connectionId = Guid.NewGuid().ToString();
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: connectionId, userId: userId);
+            MusicHub hub = CreateHub(connectionId, userId);
 
-            Func<Task> act = async () => await hub.ChangeDeviceCommand(deviceId: "some-device-id");
+            Func<Task> act = async () => await hub.ChangeDeviceCommand("some-device-id");
 
             await act.Should().NotThrowAsync();
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: connectionId);
+            Cleanup(userId, user, connectionId);
         }
     }
 
@@ -290,9 +290,9 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
         Guid unknownUserId = Guid.NewGuid();
         string connectionId = Guid.NewGuid().ToString();
 
-        MusicHub hub = CreateHub(connectionId: connectionId, userId: unknownUserId);
+        MusicHub hub = CreateHub(connectionId, unknownUserId);
 
-        Func<Task> act = async () => await hub.ChangeDeviceCommand(deviceId: "some-device-id");
+        Func<Task> act = async () => await hub.ChangeDeviceCommand("some-device-id");
 
         await act.Should().NotThrowAsync();
     }
@@ -305,13 +305,13 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
     public async Task SetDeviceVolumeCommand_ActiveDeviceTarget_UpdatesScopedVolumePercentage()
     {
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId: userId);
+        User user = SeedTestUser(userId);
         string connectionId = Guid.NewGuid().ToString();
         string deviceId = $"tv-{Guid.NewGuid()}";
 
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        (Client client, _) = MakeClientWithProxy(userId: userId, deviceId: deviceId, type: "tv");
-        connectedClients.Clients[key: connectionId] = client;
+        (Client client, _) = MakeClientWithProxy(userId, deviceId, "tv");
+        connectedClients.Clients[connectionId] = client;
 
         MusicPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<MusicPlayerStateManager>();
@@ -319,22 +319,22 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
             _factory.Services.GetRequiredService<MusicActiveDeviceRegistry>();
 
         MusicPlayerState state = new() { DeviceId = deviceId, PlayState = true };
-        stateManager.UpdateState(userId: userId, state: state);
-        registry.Set(userId: userId, device: client);
+        stateManager.UpdateState(userId, state);
+        registry.Set(userId, client);
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: connectionId, userId: userId);
+            MusicHub hub = CreateHub(connectionId, userId);
 
-            await hub.SetDeviceVolumeCommand(deviceId: deviceId, volume: 77);
+            await hub.SetDeviceVolumeCommand(deviceId, 77);
 
-            state.VolumePercentage.Should().Be(expected: 77);
-            state.DeviceVolumes[key: deviceId].Should().Be(expected: 77);
-            client.VolumePercent.Should().Be(expected: 77);
+            state.VolumePercentage.Should().Be(77);
+            state.DeviceVolumes[deviceId].Should().Be(77);
+            client.VolumePercent.Should().Be(77);
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: connectionId);
+            Cleanup(userId, user, connectionId);
         }
     }
 
@@ -342,17 +342,17 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
     public async Task SetDeviceVolumeCommand_NonActiveDeviceTarget_UpdatesDeviceVolumesOnly()
     {
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId: userId);
+        User user = SeedTestUser(userId);
         string activeConnectionId = Guid.NewGuid().ToString();
         string passiveConnectionId = Guid.NewGuid().ToString();
         string activeDeviceId = $"tv-{Guid.NewGuid()}";
         string passiveDeviceId = $"phone-{Guid.NewGuid()}";
 
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        (Client activeClient, _) = MakeClientWithProxy(userId: userId, deviceId: activeDeviceId, type: "tv");
-        (Client passiveClient, _) = MakeClientWithProxy(userId: userId, deviceId: passiveDeviceId, type: "web");
-        connectedClients.Clients[key: activeConnectionId] = activeClient;
-        connectedClients.Clients[key: passiveConnectionId] = passiveClient;
+        (Client activeClient, _) = MakeClientWithProxy(userId, activeDeviceId, "tv");
+        (Client passiveClient, _) = MakeClientWithProxy(userId, passiveDeviceId, "web");
+        connectedClients.Clients[activeConnectionId] = activeClient;
+        connectedClients.Clients[passiveConnectionId] = passiveClient;
 
         MusicPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<MusicPlayerStateManager>();
@@ -365,24 +365,24 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
             PlayState = true,
             VolumePercentage = 50,
         };
-        stateManager.UpdateState(userId: userId, state: state);
-        registry.Set(userId: userId, device: activeClient);
+        stateManager.UpdateState(userId, state);
+        registry.Set(userId, activeClient);
 
         try
         {
             // The PASSIVE phone adjusts ITS OWN slider — must not move the
             // active TV's scoped VolumePercentage.
-            MusicHub hub = CreateHub(connectionId: passiveConnectionId, userId: userId);
+            MusicHub hub = CreateHub(passiveConnectionId, userId);
 
-            await hub.SetDeviceVolumeCommand(deviceId: passiveDeviceId, volume: 20);
+            await hub.SetDeviceVolumeCommand(passiveDeviceId, 20);
 
-            state.VolumePercentage.Should().Be(expected: 50);
-            state.DeviceVolumes[key: passiveDeviceId].Should().Be(expected: 20);
-            passiveClient.VolumePercent.Should().Be(expected: 20);
+            state.VolumePercentage.Should().Be(50);
+            state.DeviceVolumes[passiveDeviceId].Should().Be(20);
+            passiveClient.VolumePercent.Should().Be(20);
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: [activeConnectionId, passiveConnectionId]);
+            Cleanup(userId, user, activeConnectionId, passiveConnectionId);
         }
     }
 
@@ -390,20 +390,20 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
     public async Task SetDeviceVolumeCommand_NullVolume_IsNoOp()
     {
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId: userId);
+        User user = SeedTestUser(userId);
         string connectionId = Guid.NewGuid().ToString();
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: connectionId, userId: userId);
+            MusicHub hub = CreateHub(connectionId, userId);
 
-            Func<Task> act = async () => await hub.SetDeviceVolumeCommand(deviceId: "any-device", volume: null);
+            Func<Task> act = async () => await hub.SetDeviceVolumeCommand("any-device", null);
 
             await act.Should().NotThrowAsync();
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: connectionId);
+            Cleanup(userId, user, connectionId);
         }
     }
 
@@ -411,21 +411,21 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
     public async Task SetDeviceVolumeCommand_UnknownDeviceIdAndNoActiveDevice_IsNoOp()
     {
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId: userId);
+        User user = SeedTestUser(userId);
         string connectionId = Guid.NewGuid().ToString();
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: connectionId, userId: userId);
+            MusicHub hub = CreateHub(connectionId, userId);
 
             Func<Task> act = async () =>
-                await hub.SetDeviceVolumeCommand(deviceId: "device-that-does-not-exist", volume: 50);
+                await hub.SetDeviceVolumeCommand("device-that-does-not-exist", 50);
 
             await act.Should().NotThrowAsync();
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: connectionId);
+            Cleanup(userId, user, connectionId);
         }
     }
 
@@ -433,13 +433,13 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
     public async Task ChangeVolumeCommand_NullDeviceId_TargetsCurrentActiveDevice()
     {
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId: userId);
+        User user = SeedTestUser(userId);
         string connectionId = Guid.NewGuid().ToString();
         string activeDeviceId = $"tv-{Guid.NewGuid()}";
 
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        (Client activeClient, _) = MakeClientWithProxy(userId: userId, deviceId: activeDeviceId, type: "tv");
-        connectedClients.Clients[key: connectionId] = activeClient;
+        (Client activeClient, _) = MakeClientWithProxy(userId, activeDeviceId, "tv");
+        connectedClients.Clients[connectionId] = activeClient;
 
         MusicPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<MusicPlayerStateManager>();
@@ -447,21 +447,21 @@ public class MusicHubDeviceCommandsTests : IClassFixture<NoMercyApiFactory>
             _factory.Services.GetRequiredService<MusicActiveDeviceRegistry>();
 
         MusicPlayerState state = new() { DeviceId = activeDeviceId, PlayState = true };
-        stateManager.UpdateState(userId: userId, state: state);
-        registry.Set(userId: userId, device: activeClient);
+        stateManager.UpdateState(userId, state);
+        registry.Set(userId, activeClient);
 
         try
         {
-            MusicHub hub = CreateHub(connectionId: connectionId, userId: userId);
+            MusicHub hub = CreateHub(connectionId, userId);
 
-            await hub.ChangeVolumeCommand(volume: 33);
+            await hub.ChangeVolumeCommand(33);
 
-            state.VolumePercentage.Should().Be(expected: 33);
-            activeClient.VolumePercent.Should().Be(expected: 33);
+            state.VolumePercentage.Should().Be(33);
+            activeClient.VolumePercent.Should().Be(33);
         }
         finally
         {
-            Cleanup(userId: userId, user: user, connectionIds: connectionId);
+            Cleanup(userId, user, connectionId);
         }
     }
 

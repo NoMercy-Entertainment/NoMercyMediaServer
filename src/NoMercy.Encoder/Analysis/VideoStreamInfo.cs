@@ -41,11 +41,11 @@ public record VideoStreamInfo(
         {
             if (SampleAspectRatio is null)
                 return false;
-            string[] parts = SampleAspectRatio.Split(separator: ':');
+            string[] parts = SampleAspectRatio.Split(':');
             if (
                 parts.Length != 2
-                || !int.TryParse(s: parts[0], result: out int num)
-                || !int.TryParse(s: parts[1], result: out int den)
+                || !int.TryParse(parts[0], out int num)
+                || !int.TryParse(parts[1], out int den)
             )
                 return false;
             return num > 0 && den > 0 && num != den;
@@ -60,11 +60,11 @@ public record VideoStreamInfo(
     private static readonly HashSet<string> InterlacedFieldOrders = ["tt", "bb", "tb", "bt"];
 
     public bool IsInterlaced =>
-        FieldOrder is not null && InterlacedFieldOrders.Contains(item: FieldOrder);
+        FieldOrder is not null && InterlacedFieldOrders.Contains(FieldOrder);
 
     public bool IsHdr =>
         ColorTransfer is not null
-        && HdrTransfers.Contains(item: ColorTransfer)
+        && HdrTransfers.Contains(ColorTransfer)
         && ColorPrimaries is "bt2020";
 
     // 1% spread between real and average frame-rate is the standard VFR
@@ -78,8 +78,8 @@ public record VideoStreamInfo(
         {
             if (!AverageFrameRate.HasValue || !RealFrameRate.HasValue)
                 return false;
-            double diff = Math.Abs(value: RealFrameRate.Value - AverageFrameRate.Value);
-            return diff / Math.Max(val1: RealFrameRate.Value, val2: 1.0) > 0.01;
+            double diff = Math.Abs(RealFrameRate.Value - AverageFrameRate.Value);
+            return diff / Math.Max(RealFrameRate.Value, 1.0) > 0.01;
         }
     }
 }

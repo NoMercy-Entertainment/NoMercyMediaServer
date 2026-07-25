@@ -26,54 +26,54 @@ public static class DiskOverlayLoader
 
     public static LoadResult Load(string directory)
     {
-        if (!Directory.Exists(path: directory))
-            return new(Loaded: [], Errors: []);
+        if (!Directory.Exists(directory))
+            return new([], []);
 
         List<LoadedPreset> loaded = [];
         List<string> errors = [];
         HashSet<Ulid> seenIds = [];
 
-        foreach (string path in Directory.EnumerateFiles(path: directory, searchPattern: "*.json"))
+        foreach (string path in Directory.EnumerateFiles(directory, "*.json"))
         {
             try
             {
-                string contents = File.ReadAllText(path: path);
-                JObject root = JObject.Parse(json: contents);
+                string contents = File.ReadAllText(path);
+                JObject root = JObject.Parse(contents);
 
                 EncodingProfile profile;
                 Ulid? parentId = null;
                 string? description = null;
 
-                if (root[propertyName: "profile"] is JObject inner)
+                if (root["profile"] is JObject inner)
                 {
                     profile =
                         inner.ToObject<EncodingProfile>()
                         ?? throw new InvalidOperationException(
-                            message: "profile object failed to deserialize"
+                            "profile object failed to deserialize"
                         );
-                    parentId = root[propertyName: "parentPresetId"]?.Value<string>() is { Length: > 0 } pid
-                        ? Ulid.Parse(base32: pid)
+                    parentId = root["parentPresetId"]?.Value<string>() is { Length: > 0 } pid
+                        ? Ulid.Parse(pid)
                         : null;
-                    description = root[propertyName: "description"]?.Value<string>();
+                    description = root["description"]?.Value<string>();
                 }
                 else
                 {
                     profile =
                         root.ToObject<EncodingProfile>()
-                        ?? throw new InvalidOperationException(message: "profile failed to deserialize");
+                        ?? throw new InvalidOperationException("profile failed to deserialize");
                 }
 
-                if (!seenIds.Add(item: profile.Id))
-                    errors.Add(item: $"{path}: duplicate Ulid {profile.Id} (later file wins)");
+                if (!seenIds.Add(profile.Id))
+                    errors.Add($"{path}: duplicate Ulid {profile.Id} (later file wins)");
 
-                loaded.Add(item: new(Profile: profile, ParentPresetId: parentId, Description: description, SourcePath: path));
+                loaded.Add(new(profile, parentId, description, path));
             }
             catch (Exception ex)
             {
-                errors.Add(item: $"{path}: {ex.Message}");
+                errors.Add($"{path}: {ex.Message}");
             }
         }
 
-        return new(Loaded: loaded, Errors: errors);
+        return new(loaded, errors);
     }
 }

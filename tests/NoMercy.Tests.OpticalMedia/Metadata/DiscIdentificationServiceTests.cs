@@ -17,16 +17,16 @@ using NoMercy.OpticalMedia.Sources;
 
 namespace NoMercy.Tests.OpticalMedia.Metadata;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class DiscIdentificationServiceTests
 {
     private static DiscInfo MakeDisc(OpticalDiscType type) =>
         new(
-            Type: type,
-            DiscLabel: "TEST_DISC",
-            Titles: [],
-            AudioTracks: null,
-            TotalDuration: TimeSpan.FromMinutes(minutes: 90)
+            type,
+            "TEST_DISC",
+            [],
+            null,
+            TimeSpan.FromMinutes(90)
         );
 
     private static DiscIdentification MakeIdentification(
@@ -34,24 +34,24 @@ public class DiscIdentificationServiceTests
         bool needsManual = false
     ) =>
         new(
-            Kind: kind,
-            Candidates: needsManual
+            kind,
+            needsManual
                 ? []
                 :
                 [
                     new(
-                        Source: "tmdb",
-                        StableId: "12345",
-                        Title: "Test",
-                        Year: 2024,
-                        PosterUrl: null,
-                        BackdropUrl: null,
-                        Confidence: 0.9
+                        "tmdb",
+                        "12345",
+                        "Test",
+                        2024,
+                        null,
+                        null,
+                        0.9
                     ),
                 ],
-            TopConfidence: needsManual ? 0 : 0.9,
-            AutoApply: !needsManual,
-            NeedsManualAssignment: needsManual
+            needsManual ? 0 : 0.9,
+            !needsManual,
+            needsManual
         );
 
     // ── Dispatcher routing ────────────────────────────────────────────────
@@ -60,35 +60,35 @@ public class DiscIdentificationServiceTests
     public async Task IdentifyAsync_CdDisc_RoutesToAudioCdIdentifier()
     {
         Mock<IDiscIdentifier> videeMock = new();
-        videeMock.Setup(expression: id => id.CanHandle(OpticalDiscType.Cd)).Returns(value: false);
-        videeMock.Setup(expression: id => id.CanHandle(OpticalDiscType.Dvd)).Returns(value: true);
-        videeMock.Setup(expression: id => id.CanHandle(OpticalDiscType.BluRay)).Returns(value: true);
+        videeMock.Setup(id => id.CanHandle(OpticalDiscType.Cd)).Returns(false);
+        videeMock.Setup(id => id.CanHandle(OpticalDiscType.Dvd)).Returns(true);
+        videeMock.Setup(id => id.CanHandle(OpticalDiscType.BluRay)).Returns(true);
 
         Mock<IDiscIdentifier> audioMock = new();
-        audioMock.Setup(expression: id => id.CanHandle(OpticalDiscType.Cd)).Returns(value: true);
-        DiscIdentification expected = MakeIdentification(kind: MediaKind.Music);
+        audioMock.Setup(id => id.CanHandle(OpticalDiscType.Cd)).Returns(true);
+        DiscIdentification expected = MakeIdentification(MediaKind.Music);
         audioMock
-            .Setup(expression: id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: expected);
+            .Setup(id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
 
         DiscIdentificationService sut = new(
-            identifiers: [videeMock.Object, audioMock.Object],
-            logger: NullLogger<DiscIdentificationService>.Instance
+            [videeMock.Object, audioMock.Object],
+            NullLogger<DiscIdentificationService>.Instance
         );
 
         DiscIdentification result = await sut.IdentifyAsync(
-            disc: MakeDisc(type: OpticalDiscType.Cd),
-            ct: CancellationToken.None
+            MakeDisc(OpticalDiscType.Cd),
+            CancellationToken.None
         );
 
-        result.Should().Be(expected: expected);
+        result.Should().Be(expected);
         audioMock.Verify(
-            expression: id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()),
-            times: Times.Once
+            id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()),
+            Times.Once
         );
         videeMock.Verify(
-            expression: id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()),
-            times: Times.Never
+            id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
     }
 
@@ -96,34 +96,34 @@ public class DiscIdentificationServiceTests
     public async Task IdentifyAsync_DvdDisc_RoutesToVideoDiscIdentifier()
     {
         Mock<IDiscIdentifier> videoMock = new();
-        videoMock.Setup(expression: id => id.CanHandle(OpticalDiscType.Dvd)).Returns(value: true);
-        DiscIdentification expected = MakeIdentification(kind: MediaKind.Movie);
+        videoMock.Setup(id => id.CanHandle(OpticalDiscType.Dvd)).Returns(true);
+        DiscIdentification expected = MakeIdentification(MediaKind.Movie);
         videoMock
-            .Setup(expression: id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: expected);
+            .Setup(id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
 
         Mock<IDiscIdentifier> audioMock = new();
-        audioMock.Setup(expression: id => id.CanHandle(OpticalDiscType.Dvd)).Returns(value: false);
-        audioMock.Setup(expression: id => id.CanHandle(OpticalDiscType.Cd)).Returns(value: true);
+        audioMock.Setup(id => id.CanHandle(OpticalDiscType.Dvd)).Returns(false);
+        audioMock.Setup(id => id.CanHandle(OpticalDiscType.Cd)).Returns(true);
 
         DiscIdentificationService sut = new(
-            identifiers: [videoMock.Object, audioMock.Object],
-            logger: NullLogger<DiscIdentificationService>.Instance
+            [videoMock.Object, audioMock.Object],
+            NullLogger<DiscIdentificationService>.Instance
         );
 
         DiscIdentification result = await sut.IdentifyAsync(
-            disc: MakeDisc(type: OpticalDiscType.Dvd),
-            ct: CancellationToken.None
+            MakeDisc(OpticalDiscType.Dvd),
+            CancellationToken.None
         );
 
-        result.Should().Be(expected: expected);
+        result.Should().Be(expected);
         videoMock.Verify(
-            expression: id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()),
-            times: Times.Once
+            id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()),
+            Times.Once
         );
         audioMock.Verify(
-            expression: id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()),
-            times: Times.Never
+            id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
     }
 
@@ -131,29 +131,29 @@ public class DiscIdentificationServiceTests
     public async Task IdentifyAsync_BluRayDisc_RoutesToVideoDiscIdentifier()
     {
         Mock<IDiscIdentifier> videoMock = new();
-        videoMock.Setup(expression: id => id.CanHandle(OpticalDiscType.BluRay)).Returns(value: true);
-        DiscIdentification expected = MakeIdentification(kind: MediaKind.Movie);
+        videoMock.Setup(id => id.CanHandle(OpticalDiscType.BluRay)).Returns(true);
+        DiscIdentification expected = MakeIdentification(MediaKind.Movie);
         videoMock
-            .Setup(expression: id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: expected);
+            .Setup(id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
 
         Mock<IDiscIdentifier> audioMock = new();
-        audioMock.Setup(expression: id => id.CanHandle(OpticalDiscType.BluRay)).Returns(value: false);
+        audioMock.Setup(id => id.CanHandle(OpticalDiscType.BluRay)).Returns(false);
 
         DiscIdentificationService sut = new(
-            identifiers: [videoMock.Object, audioMock.Object],
-            logger: NullLogger<DiscIdentificationService>.Instance
+            [videoMock.Object, audioMock.Object],
+            NullLogger<DiscIdentificationService>.Instance
         );
 
         DiscIdentification result = await sut.IdentifyAsync(
-            disc: MakeDisc(type: OpticalDiscType.BluRay),
-            ct: CancellationToken.None
+            MakeDisc(OpticalDiscType.BluRay),
+            CancellationToken.None
         );
 
-        result.Should().Be(expected: expected);
+        result.Should().Be(expected);
         videoMock.Verify(
-            expression: id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()),
-            times: Times.Once
+            id => id.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()),
+            Times.Once
         );
     }
 
@@ -163,16 +163,16 @@ public class DiscIdentificationServiceTests
     public async Task IdentifyAsync_NoHandlerRegistered_ReturnsNeedsManualAssignment()
     {
         Mock<IDiscIdentifier> audioMock = new();
-        audioMock.Setup(expression: id => id.CanHandle(It.IsAny<OpticalDiscType>())).Returns(value: false);
+        audioMock.Setup(id => id.CanHandle(It.IsAny<OpticalDiscType>())).Returns(false);
 
         DiscIdentificationService sut = new(
-            identifiers: [audioMock.Object],
-            logger: NullLogger<DiscIdentificationService>.Instance
+            [audioMock.Object],
+            NullLogger<DiscIdentificationService>.Instance
         );
 
         DiscIdentification result = await sut.IdentifyAsync(
-            disc: MakeDisc(type: OpticalDiscType.Dvd),
-            ct: CancellationToken.None
+            MakeDisc(OpticalDiscType.Dvd),
+            CancellationToken.None
         );
 
         result.NeedsManualAssignment.Should().BeTrue();
@@ -183,11 +183,11 @@ public class DiscIdentificationServiceTests
     [Fact]
     public async Task IdentifyAsync_EmptyIdentifierList_ReturnsNeedsManualAssignment()
     {
-        DiscIdentificationService sut = new(identifiers: [], logger: NullLogger<DiscIdentificationService>.Instance);
+        DiscIdentificationService sut = new([], NullLogger<DiscIdentificationService>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            disc: MakeDisc(type: OpticalDiscType.Cd),
-            ct: CancellationToken.None
+            MakeDisc(OpticalDiscType.Cd),
+            CancellationToken.None
         );
 
         result.NeedsManualAssignment.Should().BeTrue();
@@ -203,14 +203,14 @@ public class DiscIdentificationServiceTests
         Mock<IDiscIdentifier> audioMock = new();
 
         DiscIdentificationService sut = new(
-            identifiers: [audioMock.Object],
-            logger: NullLogger<DiscIdentificationService>.Instance
+            [audioMock.Object],
+            NullLogger<DiscIdentificationService>.Instance
         );
 
         DiscCandidate[] result = await sut.SearchAsync(
-            query: "Inception",
-            type: MediaType.Movie,
-            ct: CancellationToken.None
+            "Inception",
+            MediaType.Movie,
+            CancellationToken.None
         );
 
         result.Should().BeEmpty();
@@ -219,12 +219,12 @@ public class DiscIdentificationServiceTests
     [Fact]
     public async Task SearchAsync_EmptyIdentifierList_ReturnsEmpty()
     {
-        DiscIdentificationService sut = new(identifiers: [], logger: NullLogger<DiscIdentificationService>.Instance);
+        DiscIdentificationService sut = new([], NullLogger<DiscIdentificationService>.Instance);
 
         DiscCandidate[] result = await sut.SearchAsync(
-            query: "Inception",
-            type: MediaType.Movie,
-            ct: CancellationToken.None
+            "Inception",
+            MediaType.Movie,
+            CancellationToken.None
         );
 
         result.Should().BeEmpty();
@@ -233,11 +233,11 @@ public class DiscIdentificationServiceTests
     [Fact]
     public async Task SearchAsync_VideoDiscIdentifierRegistered_DelegatesToIt()
     {
-        VideoDiscIdentifier videoIdentifier = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier videoIdentifier = new(NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentificationService sut = new(
-            identifiers: [videoIdentifier],
-            logger: NullLogger<DiscIdentificationService>.Instance
+            [videoIdentifier],
+            NullLogger<DiscIdentificationService>.Instance
         );
 
         // No network seam on VideoDiscIdentifier.SearchAsync's TMDB call —
@@ -245,9 +245,9 @@ public class DiscIdentificationServiceTests
         // still proves the delegation path (non-empty query paths are
         // covered end-to-end in VideoDiscIdentifierTests via the HTTP harness).
         DiscCandidate[] result = await sut.SearchAsync(
-            query: string.Empty,
-            type: MediaType.Movie,
-            ct: CancellationToken.None
+            string.Empty,
+            MediaType.Movie,
+            CancellationToken.None
         );
 
         result.Should().BeEmpty();

@@ -25,7 +25,7 @@ namespace NoMercy.Tests.Queue;
 /// the real binder through <see cref="SerializationHelper.Deserialize{T}"/> —
 /// if the allow-list regressed to permit an arbitrary type, this goes red.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class SerializationSecurityTests
 {
     [Fact]
@@ -34,7 +34,7 @@ public class SerializationSecurityTests
         string maliciousPayload =
             "{\"$type\":\"System.Diagnostics.Process, System.Diagnostics.Process\"}";
 
-        Action act = () => SerializationHelper.Deserialize<object>(data: maliciousPayload);
+        Action act = () => SerializationHelper.Deserialize<object>(maliciousPayload);
 
         // Newtonsoft wraps whatever the SerializationBinder throws in its own
         // outer JsonSerializationException ("Error resolving type specified
@@ -44,16 +44,16 @@ public class SerializationSecurityTests
         act.Should()
             .Throw<JsonSerializationException>()
             .WithInnerException<JsonSerializationException>()
-            .WithMessage(expectedWildcardPattern: "*not allowed*");
+            .WithMessage("*not allowed*");
     }
 
     [Fact]
     public void Deserialize_PayloadReferencingAllowedNamespace_Succeeds()
     {
         TestJob job = new() { Message = "allowed" };
-        string payload = SerializationHelper.Serialize(obj: job);
+        string payload = SerializationHelper.Serialize(job);
 
-        object deserialized = SerializationHelper.Deserialize<object>(data: payload);
+        object deserialized = SerializationHelper.Deserialize<object>(payload);
 
         deserialized.Should().BeOfType<TestJob>();
     }
@@ -67,7 +67,7 @@ public class SerializationSecurityTests
         string payload =
             "{\"$type\":\"System.Collections.Generic.List`1[[System.Diagnostics.Process, System.Diagnostics.Process]], System.Private.CoreLib\"}";
 
-        Action act = () => SerializationHelper.Deserialize<object>(data: payload);
+        Action act = () => SerializationHelper.Deserialize<object>(payload);
 
         act.Should().Throw<JsonSerializationException>();
     }
@@ -81,12 +81,12 @@ public class SerializationSecurityTests
         // state must survive since it never appears in the JSON.
         TestJob rebuilt = new() { Message = "will be overwritten", ShouldFail = true };
         string data = SerializationHelper.Serialize(
-            obj: new TestJob { Message = "from payload", ShouldFail = false }
+            new TestJob { Message = "from payload", ShouldFail = false }
         );
 
-        SerializationHelper.Populate(data: data, target: rebuilt);
+        SerializationHelper.Populate(data, rebuilt);
 
-        rebuilt.Message.Should().Be(expected: "from payload");
+        rebuilt.Message.Should().Be("from payload");
         rebuilt.ShouldFail.Should().BeFalse();
     }
 }

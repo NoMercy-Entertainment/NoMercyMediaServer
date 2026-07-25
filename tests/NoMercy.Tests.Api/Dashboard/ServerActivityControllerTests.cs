@@ -19,7 +19,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
-[Trait(name: "Category", value: "ServerActivity")]
+[Trait("Category", "ServerActivity")]
 public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLifetime
 {
     private readonly NoMercyApiFactory _factory;
@@ -40,11 +40,11 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
     {
         await using MediaContext ctx = new();
 
-        bool deviceExists = await ctx.Devices.AnyAsync(predicate: d => d.Id == TestDeviceId);
+        bool deviceExists = await ctx.Devices.AnyAsync(d => d.Id == TestDeviceId);
         if (!deviceExists)
         {
             ctx.Devices.Add(
-                entity: new()
+                new()
                 {
                     Id = TestDeviceId,
                     DeviceId = TestDeviceId.ToString(),
@@ -60,18 +60,18 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
             await ctx.SaveChangesAsync();
         }
 
-        await ctx.ActivityLogs.Where(predicate: x => x.UserId == TestUserId).ExecuteDeleteAsync();
+        await ctx.ActivityLogs.Where(x => x.UserId == TestUserId).ExecuteDeleteAsync();
 
         List<ActivityLog> rows = [];
 
         for (int i = 0; i < 5; i++)
         {
             rows.Add(
-                item: new()
+                new()
                 {
                     Category = ActivityCategory.Auth,
                     Type = "login",
-                    Time = DateTime.UtcNow.AddMinutes(value: -i),
+                    Time = DateTime.UtcNow.AddMinutes(-i),
                     Success = true,
                     UserId = TestUserId,
                     DeviceId = TestDeviceId,
@@ -82,11 +82,11 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
         for (int i = 0; i < 5; i++)
         {
             rows.Add(
-                item: new()
+                new()
                 {
                     Category = ActivityCategory.Connection,
                     Type = "connect",
-                    Time = DateTime.UtcNow.AddMinutes(value: -i - 10),
+                    Time = DateTime.UtcNow.AddMinutes(-i - 10),
                     Success = i % 2 == 0,
                     UserId = TestUserId,
                     DeviceId = TestDeviceId,
@@ -97,11 +97,11 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
         for (int i = 0; i < 20; i++)
         {
             rows.Add(
-                item: new()
+                new()
                 {
                     Category = ActivityCategory.Playback,
                     Type = "play",
-                    Time = DateTime.UtcNow.AddMinutes(value: -i - 20),
+                    Time = DateTime.UtcNow.AddMinutes(-i - 20),
                     Success = true,
                     UserId = TestUserId,
                     DeviceId = TestDeviceId,
@@ -109,14 +109,14 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
             );
         }
 
-        ctx.ActivityLogs.AddRange(entities: rows);
+        ctx.ActivityLogs.AddRange(rows);
         await ctx.SaveChangesAsync();
     }
 
     public async Task DisposeAsync()
     {
         await using MediaContext ctx = new();
-        await ctx.ActivityLogs.Where(predicate: x => x.UserId == TestUserId).ExecuteDeleteAsync();
+        await ctx.ActivityLogs.Where(x => x.UserId == TestUserId).ExecuteDeleteAsync();
     }
 
     // =========================================================================
@@ -127,29 +127,29 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
     public async Task Index_FilterByCategory_ReturnsOnlyMatchingRows()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: "/api/v1/dashboard/activity?category=Auth"
+            "/api/v1/dashboard/activity?category=Auth"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(json: body);
-        JsonElement data = json.RootElement.GetProperty(propertyName: "data");
+        JsonDocument json = JsonDocument.Parse(body);
+        JsonElement data = json.RootElement.GetProperty("data");
 
-        Assert.True(condition: data.ValueKind == JsonValueKind.Array, userMessage: "Expected data to be an array");
+        Assert.True(data.ValueKind == JsonValueKind.Array, "Expected data to be an array");
 
         foreach (JsonElement item in data.EnumerateArray())
         {
-            string? category = item.GetProperty(propertyName: "category").GetString();
-            Assert.Equal(expected: "Auth", actual: category);
+            string? category = item.GetProperty("category").GetString();
+            Assert.Equal("Auth", category);
         }
 
         Assert.True(
-            condition: data.GetArrayLength() == 5,
-            userMessage: $"Expected 5 Auth rows, got {data.GetArrayLength()}"
+            data.GetArrayLength() == 5,
+            $"Expected 5 Auth rows, got {data.GetArrayLength()}"
         );
     }
 
@@ -161,25 +161,25 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
     public async Task Index_FilterBySuccessFalse_ReturnsOnlyFailures()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: "/api/v1/dashboard/activity?success=false"
+            "/api/v1/dashboard/activity?success=false"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(json: body);
-        JsonElement data = json.RootElement.GetProperty(propertyName: "data");
+        JsonDocument json = JsonDocument.Parse(body);
+        JsonElement data = json.RootElement.GetProperty("data");
 
-        Assert.True(condition: data.ValueKind == JsonValueKind.Array, userMessage: "Expected data to be an array");
-        Assert.True(condition: data.GetArrayLength() > 0, userMessage: "Expected at least one failure row");
+        Assert.True(data.ValueKind == JsonValueKind.Array, "Expected data to be an array");
+        Assert.True(data.GetArrayLength() > 0, "Expected at least one failure row");
 
         foreach (JsonElement item in data.EnumerateArray())
         {
-            bool success = item.GetProperty(propertyName: "success").GetBoolean();
-            Assert.False(condition: success, userMessage: "Expected success=false on all returned rows");
+            bool success = item.GetProperty("success").GetBoolean();
+            Assert.False(success, "Expected success=false on all returned rows");
         }
     }
 
@@ -191,31 +191,31 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
     public async Task Index_Pagination_RespectsSkipAndTake()
     {
         HttpResponseMessage fullResponse = await _authed.GetAsync(
-            requestUri: "/api/v1/dashboard/activity?take=100&skip=0"
+            "/api/v1/dashboard/activity?take=100&skip=0"
         );
         string fullBody = await fullResponse.Content.ReadAsStringAsync();
         Assert.True(
-            condition: fullResponse.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected OK, got {(int)fullResponse.StatusCode}: {fullBody}"
+            fullResponse.StatusCode == HttpStatusCode.OK,
+            $"Expected OK, got {(int)fullResponse.StatusCode}: {fullBody}"
         );
-        JsonDocument fullJson = JsonDocument.Parse(json: fullBody);
-        JsonElement fullData = fullJson.RootElement.GetProperty(propertyName: "data");
+        JsonDocument fullJson = JsonDocument.Parse(fullBody);
+        JsonElement fullData = fullJson.RootElement.GetProperty("data");
         int totalCount = fullData.GetArrayLength();
 
         HttpResponseMessage pagedResponse = await _authed.GetAsync(
-            requestUri: "/api/v1/dashboard/activity?take=5&skip=10"
+            "/api/v1/dashboard/activity?take=5&skip=10"
         );
         string pagedBody = await pagedResponse.Content.ReadAsStringAsync();
         Assert.True(
-            condition: pagedResponse.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected OK, got {(int)pagedResponse.StatusCode}: {pagedBody}"
+            pagedResponse.StatusCode == HttpStatusCode.OK,
+            $"Expected OK, got {(int)pagedResponse.StatusCode}: {pagedBody}"
         );
 
-        JsonDocument pagedJson = JsonDocument.Parse(json: pagedBody);
-        JsonElement pagedData = pagedJson.RootElement.GetProperty(propertyName: "data");
+        JsonDocument pagedJson = JsonDocument.Parse(pagedBody);
+        JsonElement pagedData = pagedJson.RootElement.GetProperty("data");
 
-        Assert.True(condition: totalCount >= 30, userMessage: $"Expected at least 30 seeded rows, got {totalCount}");
-        Assert.Equal(expected: 5, actual: pagedData.GetArrayLength());
+        Assert.True(totalCount >= 30, $"Expected at least 30 seeded rows, got {totalCount}");
+        Assert.Equal(5, pagedData.GetArrayLength());
     }
 
     // =========================================================================
@@ -225,11 +225,11 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
     [Fact]
     public async Task Index_Unauthenticated_ReturnsUnauthorized()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: "/api/v1/dashboard/activity");
+        HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/activity");
 
         Assert.True(
-            condition: response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            userMessage: $"Expected 401 or 403, got {(int)response.StatusCode}"
+            response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
+            $"Expected 401 or 403, got {(int)response.StatusCode}"
         );
     }
 
@@ -240,11 +240,11 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
     [Fact]
     public async Task Destroy_Unauthenticated_ReturnsUnauthorized()
     {
-        HttpResponseMessage response = await _unauthed.DeleteAsync(requestUri: "/api/v1/dashboard/activity");
+        HttpResponseMessage response = await _unauthed.DeleteAsync("/api/v1/dashboard/activity");
 
         Assert.True(
-            condition: response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            userMessage: $"Expected 401 or 403, got {(int)response.StatusCode}"
+            response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
+            $"Expected 401 or 403, got {(int)response.StatusCode}"
         );
     }
 
@@ -256,42 +256,42 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
     public async Task Destroy_ByCategory_DeletesOnlyMatchingRows()
     {
         HttpResponseMessage deleteResponse = await _authed.DeleteAsync(
-            requestUri: "/api/v1/dashboard/activity?category=Auth"
+            "/api/v1/dashboard/activity?category=Auth"
         );
 
         string deleteBody = await deleteResponse.Content.ReadAsStringAsync();
         Assert.True(
-            condition: deleteResponse.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected OK, got {(int)deleteResponse.StatusCode}: {deleteBody}"
+            deleteResponse.StatusCode == HttpStatusCode.OK,
+            $"Expected OK, got {(int)deleteResponse.StatusCode}: {deleteBody}"
         );
 
-        JsonDocument deleteJson = JsonDocument.Parse(json: deleteBody);
-        JsonElement deleteData = deleteJson.RootElement.GetProperty(propertyName: "data");
-        int deleted = deleteData.GetProperty(propertyName: "deleted").GetInt32();
-        Assert.True(condition: deleted >= 5, userMessage: $"Expected at least 5 Auth rows deleted, got {deleted}");
+        JsonDocument deleteJson = JsonDocument.Parse(deleteBody);
+        JsonElement deleteData = deleteJson.RootElement.GetProperty("data");
+        int deleted = deleteData.GetProperty("deleted").GetInt32();
+        Assert.True(deleted >= 5, $"Expected at least 5 Auth rows deleted, got {deleted}");
 
         HttpResponseMessage verifyResponse = await _authed.GetAsync(
-            requestUri: "/api/v1/dashboard/activity?category=Auth&take=100"
+            "/api/v1/dashboard/activity?category=Auth&take=100"
         );
         string verifyBody = await verifyResponse.Content.ReadAsStringAsync();
         Assert.True(
-            condition: verifyResponse.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected OK on verify, got {(int)verifyResponse.StatusCode}: {verifyBody}"
+            verifyResponse.StatusCode == HttpStatusCode.OK,
+            $"Expected OK on verify, got {(int)verifyResponse.StatusCode}: {verifyBody}"
         );
 
-        JsonDocument verifyJson = JsonDocument.Parse(json: verifyBody);
-        JsonElement verifyData = verifyJson.RootElement.GetProperty(propertyName: "data");
-        Assert.Equal(expected: 0, actual: verifyData.GetArrayLength());
+        JsonDocument verifyJson = JsonDocument.Parse(verifyBody);
+        JsonElement verifyData = verifyJson.RootElement.GetProperty("data");
+        Assert.Equal(0, verifyData.GetArrayLength());
 
         HttpResponseMessage connectionResponse = await _authed.GetAsync(
-            requestUri: "/api/v1/dashboard/activity?category=Connection&take=100"
+            "/api/v1/dashboard/activity?category=Connection&take=100"
         );
         string connectionBody = await connectionResponse.Content.ReadAsStringAsync();
-        JsonDocument connectionJson = JsonDocument.Parse(json: connectionBody);
-        JsonElement connectionData = connectionJson.RootElement.GetProperty(propertyName: "data");
+        JsonDocument connectionJson = JsonDocument.Parse(connectionBody);
+        JsonElement connectionData = connectionJson.RootElement.GetProperty("data");
         Assert.True(
-            condition: connectionData.GetArrayLength() >= 5,
-            userMessage: $"Expected Connection rows to survive, got {connectionData.GetArrayLength()}"
+            connectionData.GetArrayLength() >= 5,
+            $"Expected Connection rows to survive, got {connectionData.GetArrayLength()}"
         );
     }
 }

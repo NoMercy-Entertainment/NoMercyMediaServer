@@ -15,12 +15,12 @@ namespace NoMercy.Providers.AcoustId.Models;
 
 public class AcoustIdFingerprintTrack
 {
-    [JsonProperty(propertyName: "artists")]
+    [JsonProperty("artists")]
     public AcoustIdFingerprintArtist[]? Artists { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "position")]
+    [JsonProperty("position")]
     public int? Position { get; set; }
 }

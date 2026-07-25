@@ -16,17 +16,17 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchSubtitle
 {
-    [JsonProperty(propertyName: "subtitle_id")]
+    [JsonProperty("subtitle_id")]
     public long SubtitleId { get; set; }
 
-    [JsonProperty(propertyName: "restricted")]
+    [JsonProperty("restricted")]
     public long Restricted { get; set; }
 
-    [JsonProperty(propertyName: "published_status")]
+    [JsonProperty("published_status")]
     public long PublishedStatus { get; set; }
 
-    [Column(name: "SubtitleBody")]
-    [JsonProperty(propertyName: "subtitle_body")]
+    [Column("SubtitleBody")]
+    [JsonProperty("subtitle_body")]
     [System.Text.Json.Serialization.JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string? _subtitle_body { get; set; }
@@ -37,40 +37,40 @@ public class MusixMatchSubtitle
         get =>
             _subtitle_body is null
                 ? null
-                : JsonConvert.DeserializeObject<MusixMatchFormattedLyric[]>(value: _subtitle_body);
-        set => _subtitle_body = JsonConvert.SerializeObject(value: value);
+                : JsonConvert.DeserializeObject<MusixMatchFormattedLyric[]>(_subtitle_body);
+        set => _subtitle_body = JsonConvert.SerializeObject(value);
     }
 
-    [JsonProperty(propertyName: "subtitle_avg_count")]
+    [JsonProperty("subtitle_avg_count")]
     public long SubtitleAvgCount { get; set; }
 
-    [JsonProperty(propertyName: "lyrics_copyright")]
+    [JsonProperty("lyrics_copyright")]
     public string LyricsCopyright { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "subtitle_length")]
+    [JsonProperty("subtitle_length")]
     public long SubtitleLength { get; set; }
 
-    [JsonProperty(propertyName: "subtitle_language")]
+    [JsonProperty("subtitle_language")]
     public string SubtitleLanguage { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "subtitle_language_description")]
+    [JsonProperty("subtitle_language_description")]
     public string SubtitleLanguageDescription { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "script_tracking_url")]
+    [JsonProperty("script_tracking_url")]
     public Uri ScriptTrackingUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "pixel_tracking_url")]
+    [JsonProperty("pixel_tracking_url")]
     public Uri PixelTrackingUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "html_tracking_url")]
+    [JsonProperty("html_tracking_url")]
     public Uri HtmlTrackingUrl { get; set; } = null!;
 
-    [JsonProperty(propertyName: "writer_list")]
+    [JsonProperty("writer_list")]
     public object[] WriterList { get; set; } = [];
 
-    [JsonProperty(propertyName: "publisher_list")]
+    [JsonProperty("publisher_list")]
     public object[] PublisherList { get; set; } = [];
 
-    [JsonProperty(propertyName: "updated_time")]
+    [JsonProperty("updated_time")]
     public DateTimeOffset UpdatedTime { get; set; }
 }

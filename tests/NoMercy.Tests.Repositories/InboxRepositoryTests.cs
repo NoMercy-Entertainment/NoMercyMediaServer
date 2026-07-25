@@ -30,7 +30,7 @@ public class InboxRepositoryTests : IDisposable
 
     public InboxRepositoryTests()
     {
-        _connection = new(connectionString: "Data Source=:memory:");
+        _connection = new("Data Source=:memory:");
         _connection.Open();
 
         using (SqliteCommand fkOff = _connection.CreateCommand())
@@ -39,9 +39,9 @@ public class InboxRepositoryTests : IDisposable
             fkOff.ExecuteNonQuery();
         }
 
-        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(connection: _connection).Options;
+        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(_connection).Options;
 
-        using MediaContext ctx = new(options: _options);
+        using MediaContext ctx = new(_options);
         ctx.Database.EnsureCreated();
     }
 
@@ -52,7 +52,7 @@ public class InboxRepositoryTests : IDisposable
 
     private MediaContext OpenContext()
     {
-        return new(options: _options);
+        return new(_options);
     }
 
     private static InboxItem MakeItem(string status, Ulid? id = null)
@@ -71,32 +71,32 @@ public class InboxRepositoryTests : IDisposable
     public async Task GetAllAsync_NoStatusFilter_ReturnsEveryItem()
     {
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.InboxItems.AddRange(entities: [MakeItem(status: "NeedsReview"), MakeItem(status: "Done")]);
+        seedCtx.InboxItems.AddRange([MakeItem("NeedsReview"), MakeItem("Done")]);
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        InboxRepository repository = new(context: queryCtx, routingService: null!);
+        InboxRepository repository = new(queryCtx, null!);
 
-        List<InboxItem> result = await repository.GetAllAsync(status: null);
+        List<InboxItem> result = await repository.GetAllAsync(null);
 
-        result.Should().HaveCount(expected: 2);
+        result.Should().HaveCount(2);
     }
 
     [Fact]
     public async Task GetAllAsync_WithStatusFilter_ExcludesOtherStatuses()
     {
         await using MediaContext seedCtx = OpenContext();
-        InboxItem needsReview = MakeItem(status: "NeedsReview");
-        InboxItem done = MakeItem(status: "Done");
-        seedCtx.InboxItems.AddRange(entities: [needsReview, done]);
+        InboxItem needsReview = MakeItem("NeedsReview");
+        InboxItem done = MakeItem("Done");
+        seedCtx.InboxItems.AddRange([needsReview, done]);
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        InboxRepository repository = new(context: queryCtx, routingService: null!);
+        InboxRepository repository = new(queryCtx, null!);
 
-        List<InboxItem> result = await repository.GetAllAsync(status: "NeedsReview");
+        List<InboxItem> result = await repository.GetAllAsync("NeedsReview");
 
-        result.Should().ContainSingle(predicate: i => i.Id == needsReview.Id);
+        result.Should().ContainSingle(i => i.Id == needsReview.Id);
     }
 
     [Fact]
@@ -109,54 +109,54 @@ public class InboxRepositoryTests : IDisposable
         // insertion order cannot stand in for "the lexicographically greater Id" below.
         // These two are fixed and pre-ordered so the tie-break assertion is
         // deterministic regardless of how fast the test host runs.
-        Ulid lowerId = Ulid.Parse(base32: "01ARZ3NDEKTSV4RRFFQ69G5FAA");
-        Ulid higherId = Ulid.Parse(base32: "01ARZ3NDEKTSV4RRFFQ69G5FBB");
+        Ulid lowerId = Ulid.Parse("01ARZ3NDEKTSV4RRFFQ69G5FAA");
+        Ulid higherId = Ulid.Parse("01ARZ3NDEKTSV4RRFFQ69G5FBB");
 
-        InboxItem tieOlder = MakeItem(status: "NeedsReview", id: lowerId);
-        InboxItem tieNewer = MakeItem(status: "NeedsReview", id: higherId);
-        InboxItem newest = MakeItem(status: "NeedsReview");
+        InboxItem tieOlder = MakeItem("NeedsReview", lowerId);
+        InboxItem tieNewer = MakeItem("NeedsReview", higherId);
+        InboxItem newest = MakeItem("NeedsReview");
 
-        seedCtx.InboxItems.Add(entity: tieOlder);
+        seedCtx.InboxItems.Add(tieOlder);
         await seedCtx.SaveChangesAsync();
-        seedCtx.InboxItems.Add(entity: tieNewer);
+        seedCtx.InboxItems.Add(tieNewer);
         await seedCtx.SaveChangesAsync();
-        seedCtx.InboxItems.Add(entity: newest);
+        seedCtx.InboxItems.Add(newest);
         await seedCtx.SaveChangesAsync();
 
-        DateTime anchor = new(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc);
+        DateTime anchor = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         await seedCtx.Database.ExecuteSqlInterpolatedAsync(
-            sql: $"UPDATE InboxItems SET CreatedAt = {anchor} WHERE Id = {tieOlder.Id.ToString()}"
+            $"UPDATE InboxItems SET CreatedAt = {anchor} WHERE Id = {tieOlder.Id.ToString()}"
         );
         await seedCtx.Database.ExecuteSqlInterpolatedAsync(
-            sql: $"UPDATE InboxItems SET CreatedAt = {anchor} WHERE Id = {tieNewer.Id.ToString()}"
+            $"UPDATE InboxItems SET CreatedAt = {anchor} WHERE Id = {tieNewer.Id.ToString()}"
         );
         await seedCtx.Database.ExecuteSqlInterpolatedAsync(
-            sql: $"UPDATE InboxItems SET CreatedAt = {anchor.AddHours(value: 1)} WHERE Id = {newest.Id.ToString()}"
+            $"UPDATE InboxItems SET CreatedAt = {anchor.AddHours(1)} WHERE Id = {newest.Id.ToString()}"
         );
 
         await using MediaContext queryCtx = OpenContext();
-        InboxRepository repository = new(context: queryCtx, routingService: null!);
+        InboxRepository repository = new(queryCtx, null!);
 
-        List<InboxItem> result = await repository.GetAllAsync(status: null);
+        List<InboxItem> result = await repository.GetAllAsync(null);
 
-        result.Should().HaveCount(expected: 3);
-        result[index: 0].Id.Should().Be(expected: newest.Id, because: "the strictly newer CreatedAt must sort first");
-        result[index: 1]
+        result.Should().HaveCount(3);
+        result[0].Id.Should().Be(newest.Id, "the strictly newer CreatedAt must sort first");
+        result[1]
             .Id.Should()
             .Be(
-                expected: tieNewer.Id,
-                because: "of two equal CreatedAt values, the higher (Ulid, so lexicographically greater) Id must win the tie-break"
+                tieNewer.Id,
+                "of two equal CreatedAt values, the higher (Ulid, so lexicographically greater) Id must win the tie-break"
             );
-        result[index: 2].Id.Should().Be(expected: tieOlder.Id);
+        result[2].Id.Should().Be(tieOlder.Id);
     }
 
     [Fact]
     public async Task GetByIdAsync_UnknownId_ReturnsNull()
     {
         await using MediaContext ctx = OpenContext();
-        InboxRepository repository = new(context: ctx, routingService: null!);
+        InboxRepository repository = new(ctx, null!);
 
-        InboxItem? result = await repository.GetByIdAsync(id: Ulid.NewUlid());
+        InboxItem? result = await repository.GetByIdAsync(Ulid.NewUlid());
 
         result.Should().BeNull();
     }
@@ -164,15 +164,15 @@ public class InboxRepositoryTests : IDisposable
     [Fact]
     public async Task GetByIdAsync_ReturnsAnUntrackedInstance()
     {
-        InboxItem item = MakeItem(status: "NeedsReview");
+        InboxItem item = MakeItem("NeedsReview");
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.InboxItems.Add(entity: item);
+        seedCtx.InboxItems.Add(item);
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        InboxRepository repository = new(context: queryCtx, routingService: null!);
+        InboxRepository repository = new(queryCtx, null!);
 
-        InboxItem? result = await repository.GetByIdAsync(id: item.Id);
+        InboxItem? result = await repository.GetByIdAsync(item.Id);
 
         result.Should().NotBeNull();
         queryCtx.ChangeTracker.Entries().Should().BeEmpty();
@@ -181,31 +181,31 @@ public class InboxRepositoryTests : IDisposable
     [Fact]
     public async Task GetTrackedByIdAsync_ReturnsATrackedInstance_SoMutationsPersistOnSaveChanges()
     {
-        InboxItem item = MakeItem(status: "NeedsReview");
+        InboxItem item = MakeItem("NeedsReview");
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.InboxItems.Add(entity: item);
+        seedCtx.InboxItems.Add(item);
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        InboxRepository repository = new(context: queryCtx, routingService: null!);
+        InboxRepository repository = new(queryCtx, null!);
 
-        InboxItem? tracked = await repository.GetTrackedByIdAsync(id: item.Id);
+        InboxItem? tracked = await repository.GetTrackedByIdAsync(item.Id);
         tracked.Should().NotBeNull();
         tracked!.Status = "Imported";
         await queryCtx.SaveChangesAsync();
 
         await using MediaContext verifyCtx = OpenContext();
-        InboxItem persisted = await verifyCtx.InboxItems.SingleAsync(predicate: i => i.Id == item.Id);
-        persisted.Status.Should().Be(expected: "Imported");
+        InboxItem persisted = await verifyCtx.InboxItems.SingleAsync(i => i.Id == item.Id);
+        persisted.Status.Should().Be("Imported");
     }
 
     [Fact]
     public async Task GetFolderByIdAsync_UnknownId_ReturnsNull()
     {
         await using MediaContext ctx = OpenContext();
-        InboxRepository repository = new(context: ctx, routingService: null!);
+        InboxRepository repository = new(ctx, null!);
 
-        Folder? result = await repository.GetFolderByIdAsync(folderId: Ulid.NewUlid());
+        Folder? result = await repository.GetFolderByIdAsync(Ulid.NewUlid());
 
         result.Should().BeNull();
     }
@@ -215,54 +215,54 @@ public class InboxRepositoryTests : IDisposable
     {
         Ulid folderId = Ulid.NewUlid();
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Folders.Add(entity: new() { Id = folderId, Path = "/media/inbox" });
+        seedCtx.Folders.Add(new() { Id = folderId, Path = "/media/inbox" });
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        InboxRepository repository = new(context: queryCtx, routingService: null!);
+        InboxRepository repository = new(queryCtx, null!);
 
-        Folder? result = await repository.GetFolderByIdAsync(folderId: folderId);
+        Folder? result = await repository.GetFolderByIdAsync(folderId);
 
         result.Should().NotBeNull();
-        result!.Path.Should().Be(expected: "/media/inbox");
+        result!.Path.Should().Be("/media/inbox");
     }
 
     [Fact]
     public async Task DismissAsync_SetsStatusToDismissedAndPersistsIt()
     {
-        InboxItem item = MakeItem(status: "NeedsReview");
+        InboxItem item = MakeItem("NeedsReview");
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.InboxItems.Add(entity: item);
+        seedCtx.InboxItems.Add(item);
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext ctx = OpenContext();
-        InboxItem tracked = await ctx.InboxItems.FirstAsync(predicate: i => i.Id == item.Id);
-        InboxRepository repository = new(context: ctx, routingService: null!);
+        InboxItem tracked = await ctx.InboxItems.FirstAsync(i => i.Id == item.Id);
+        InboxRepository repository = new(ctx, null!);
 
-        await repository.DismissAsync(item: tracked);
+        await repository.DismissAsync(tracked);
 
         await using MediaContext verifyCtx = OpenContext();
-        InboxItem persisted = await verifyCtx.InboxItems.SingleAsync(predicate: i => i.Id == item.Id);
-        persisted.Status.Should().Be(expected: "Dismissed");
+        InboxItem persisted = await verifyCtx.InboxItems.SingleAsync(i => i.Id == item.Id);
+        persisted.Status.Should().Be("Dismissed");
     }
 
     [Fact]
     public async Task DeleteAsync_RemovesOnlyTheGivenItem()
     {
-        InboxItem toDelete = MakeItem(status: "NeedsReview");
-        InboxItem toKeep = MakeItem(status: "NeedsReview");
+        InboxItem toDelete = MakeItem("NeedsReview");
+        InboxItem toKeep = MakeItem("NeedsReview");
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.InboxItems.AddRange(entities: [toDelete, toKeep]);
+        seedCtx.InboxItems.AddRange([toDelete, toKeep]);
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext ctx = OpenContext();
-        InboxItem tracked = await ctx.InboxItems.FirstAsync(predicate: i => i.Id == toDelete.Id);
-        InboxRepository repository = new(context: ctx, routingService: null!);
+        InboxItem tracked = await ctx.InboxItems.FirstAsync(i => i.Id == toDelete.Id);
+        InboxRepository repository = new(ctx, null!);
 
-        await repository.DeleteAsync(item: tracked);
+        await repository.DeleteAsync(tracked);
 
         await using MediaContext verifyCtx = OpenContext();
-        (await verifyCtx.InboxItems.AnyAsync(predicate: i => i.Id == toDelete.Id)).Should().BeFalse();
-        (await verifyCtx.InboxItems.AnyAsync(predicate: i => i.Id == toKeep.Id)).Should().BeTrue();
+        (await verifyCtx.InboxItems.AnyAsync(i => i.Id == toDelete.Id)).Should().BeFalse();
+        (await verifyCtx.InboxItems.AnyAsync(i => i.Id == toKeep.Id)).Should().BeTrue();
     }
 }

@@ -20,25 +20,25 @@ namespace NoMercy.Tests.Storage;
 /// NTStatus through. A silently-swallowed non-success status would surface
 /// as a corrupted read/write instead of a clear error.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class SmbStatusTests
 {
     [Fact]
     public void EnsureSuccess_does_not_throw_for_STATUS_SUCCESS()
     {
-        Action act = () => SmbStatus.EnsureSuccess(status: NTStatus.STATUS_SUCCESS, what: "connect");
+        Action act = () => SmbStatus.EnsureSuccess(NTStatus.STATUS_SUCCESS, "connect");
 
         act.Should().NotThrow();
     }
 
     [Theory]
-    [InlineData(data: NTStatus.STATUS_ACCESS_DENIED)]
-    [InlineData(data: NTStatus.STATUS_OBJECT_NAME_NOT_FOUND)]
-    [InlineData(data: NTStatus.STATUS_OBJECT_PATH_NOT_FOUND)]
+    [InlineData(NTStatus.STATUS_ACCESS_DENIED)]
+    [InlineData(NTStatus.STATUS_OBJECT_NAME_NOT_FOUND)]
+    [InlineData(NTStatus.STATUS_OBJECT_PATH_NOT_FOUND)]
     public void EnsureSuccess_throws_IOException_with_the_operation_name_and_status(NTStatus status)
     {
-        Action act = () => SmbStatus.EnsureSuccess(status: status, what: "tree connect");
+        Action act = () => SmbStatus.EnsureSuccess(status, "tree connect");
 
-        act.Should().Throw<IOException>().WithMessage(expectedWildcardPattern: $"*tree connect*{status}*");
+        act.Should().Throw<IOException>().WithMessage($"*tree connect*{status}*");
     }
 }

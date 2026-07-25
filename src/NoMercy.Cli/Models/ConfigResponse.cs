@@ -15,36 +15,36 @@ namespace NoMercy.Cli.Models;
 
 internal class ConfigResponse
 {
-    [JsonProperty(propertyName: "internal_port")]
+    [JsonProperty("internal_port")]
     public int InternalPort { get; set; }
 
-    [JsonProperty(propertyName: "external_port")]
+    [JsonProperty("external_port")]
     public int ExternalPort { get; set; }
 
-    [JsonProperty(propertyName: "server_name")]
+    [JsonProperty("server_name")]
     public string? ServerName { get; set; }
 
-    [JsonProperty(propertyName: "queue_workers")]
+    [JsonProperty("queue_workers")]
     public int QueueWorkers { get; set; }
 
-    [JsonProperty(propertyName: "encoder_workers")]
+    [JsonProperty("encoder_workers")]
     public int EncoderWorkers { get; set; }
 
-    [JsonProperty(propertyName: "cron_workers")]
+    [JsonProperty("cron_workers")]
     public int CronWorkers { get; set; }
 
-    [JsonProperty(propertyName: "data_workers")]
+    [JsonProperty("data_workers")]
     public int DataWorkers { get; set; }
 
-    [JsonProperty(propertyName: "image_workers")]
+    [JsonProperty("image_workers")]
     public int ImageWorkers { get; set; }
 
-    [JsonProperty(propertyName: "file_workers")]
+    [JsonProperty("file_workers")]
     public int FileWorkers { get; set; }
 
-    [JsonProperty(propertyName: "request_workers")]
+    [JsonProperty("request_workers")]
     public int RequestWorkers { get; set; }
 
-    [JsonProperty(propertyName: "swagger")]
+    [JsonProperty("swagger")]
     public bool Swagger { get; set; }
 }

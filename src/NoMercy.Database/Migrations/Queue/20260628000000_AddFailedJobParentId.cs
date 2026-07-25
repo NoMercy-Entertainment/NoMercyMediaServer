@@ -21,7 +21,7 @@ namespace NoMercy.Database.Migrations.Queue
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<int>(
-                name: "ParentJobId",
+                "ParentJobId",
                 table: "FailedJobs",
                 type: "INTEGER",
                 nullable: true
@@ -31,7 +31,7 @@ namespace NoMercy.Database.Migrations.Queue
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(name: "ParentJobId", table: "FailedJobs");
+            migrationBuilder.DropColumn("ParentJobId", "FailedJobs");
         }
     }
 }

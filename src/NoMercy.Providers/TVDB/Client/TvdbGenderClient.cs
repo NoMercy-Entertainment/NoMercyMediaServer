@@ -17,6 +17,6 @@ public class TvdbGenderClient : TvdbBaseClient
 {
     public Task<TvdbGendersResponse?> Genders(bool? priority = false)
     {
-        return Get<TvdbGendersResponse>(url: "genders", priority: priority);
+        return Get<TvdbGendersResponse>("genders", priority: priority);
     }
 }

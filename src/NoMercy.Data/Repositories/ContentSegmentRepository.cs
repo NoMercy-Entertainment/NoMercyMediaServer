@@ -26,9 +26,9 @@ public class ContentSegmentRepository(MediaContext context) : IContentSegmentRep
     public Task<List<ContentSegment>> GetForEpisodeAsync(int episodeId) =>
         context
             .ContentSegments.AsNoTracking()
-            .Where(predicate: s => s.EpisodeId == episodeId)
-            .OrderBy(keySelector: s => s.StartSeconds)
-            .ThenBy(keySelector: s => s.Id)
+            .Where(s => s.EpisodeId == episodeId)
+            .OrderBy(s => s.StartSeconds)
+            .ThenBy(s => s.Id)
             .ToListAsync();
 
     /// <summary>
@@ -48,13 +48,13 @@ public class ContentSegmentRepository(MediaContext context) : IContentSegmentRep
 
         IQueryable<ContentSegment> query = context.ContentSegments.AsNoTracking();
         if (filterType.HasValue)
-            query = query.Where(predicate: s => s.SegmentType == filterType.Value);
+            query = query.Where(s => s.SegmentType == filterType.Value);
 
         return await query
-            .OrderByDescending(keySelector: s => s.UpdatedAt)
-            .ThenByDescending(keySelector: s => s.Id)
-            .Skip(count: pageIndex * pageSize)
-            .Take(count: pageSize)
+            .OrderByDescending(s => s.UpdatedAt)
+            .ThenByDescending(s => s.Id)
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
             .ToListAsync();
     }
 
@@ -63,32 +63,32 @@ public class ContentSegmentRepository(MediaContext context) : IContentSegmentRep
     public Task<List<ContentSegment>> GetForMovieAsync(int movieId) =>
         context
             .ContentSegments.AsNoTracking()
-            .Where(predicate: s => s.MovieId == movieId)
-            .OrderBy(keySelector: s => s.StartSeconds)
-            .ThenBy(keySelector: s => s.Id)
+            .Where(s => s.MovieId == movieId)
+            .OrderBy(s => s.StartSeconds)
+            .ThenBy(s => s.Id)
             .ToListAsync();
 
     public Task<ContentSegment?> GetByIdAsync(Ulid id) =>
-        context.ContentSegments.AsNoTracking().FirstOrDefaultAsync(predicate: s => s.Id == id);
+        context.ContentSegments.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id);
 
     public async Task<ContentSegment> CreateAsync(ContentSegment segment)
     {
         segment.CreatedAt = DateTime.UtcNow;
         segment.UpdatedAt = segment.CreatedAt;
-        context.ContentSegments.Add(entity: segment);
+        context.ContentSegments.Add(segment);
         await context.SaveChangesAsync();
         return segment;
     }
 
     public async Task<ContentSegment?> UpdateAsync(Ulid id, Action<ContentSegment> apply)
     {
-        ContentSegment? existing = await context.ContentSegments.FirstOrDefaultAsync(predicate: s =>
+        ContentSegment? existing = await context.ContentSegments.FirstOrDefaultAsync(s =>
             s.Id == id
         );
         if (existing is null)
             return null;
 
-        apply(obj: existing);
+        apply(existing);
         existing.UpdatedAt = DateTime.UtcNow;
         await context.SaveChangesAsync();
         return existing;
@@ -96,13 +96,13 @@ public class ContentSegmentRepository(MediaContext context) : IContentSegmentRep
 
     public async Task<bool> DeleteAsync(Ulid id)
     {
-        ContentSegment? existing = await context.ContentSegments.FirstOrDefaultAsync(predicate: s =>
+        ContentSegment? existing = await context.ContentSegments.FirstOrDefaultAsync(s =>
             s.Id == id
         );
         if (existing is null)
             return false;
 
-        context.ContentSegments.Remove(entity: existing);
+        context.ContentSegments.Remove(existing);
         await context.SaveChangesAsync();
         return true;
     }
@@ -118,10 +118,10 @@ public class ContentSegmentRepository(MediaContext context) : IContentSegmentRep
     )
     {
         List<ContentSegment> oldDetector = await context
-            .ContentSegments.Where(predicate: s => s.EpisodeId == episodeId && s.Source == "detector")
+            .ContentSegments.Where(s => s.EpisodeId == episodeId && s.Source == "detector")
             .ToListAsync();
 
-        context.ContentSegments.RemoveRange(entities: oldDetector);
+        context.ContentSegments.RemoveRange(oldDetector);
         foreach (ContentSegment seg in newSegments)
         {
             seg.EpisodeId = episodeId;
@@ -129,7 +129,7 @@ public class ContentSegmentRepository(MediaContext context) : IContentSegmentRep
             seg.Source = "detector";
             seg.CreatedAt = DateTime.UtcNow;
             seg.UpdatedAt = seg.CreatedAt;
-            context.ContentSegments.Add(entity: seg);
+            context.ContentSegments.Add(seg);
         }
 
         await context.SaveChangesAsync();

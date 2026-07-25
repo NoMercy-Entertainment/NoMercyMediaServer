@@ -22,76 +22,76 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record PersonResponseItemDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty(propertyName: "also_known_as")]
+    [JsonProperty("also_known_as")]
     public string[]? AlsoKnownAs { get; set; }
 
-    [JsonProperty(propertyName: "biography")]
+    [JsonProperty("biography")]
     public string? Biography { get; set; }
 
-    [JsonProperty(propertyName: "birthday")]
+    [JsonProperty("birthday")]
     public DateTime? Birthday { get; set; }
 
-    [JsonProperty(propertyName: "deathday")]
+    [JsonProperty("deathday")]
     public DateTime? DeathDay { get; set; }
 
-    [JsonProperty(propertyName: "gender")]
+    [JsonProperty("gender")]
     public string Gender { get; set; } = nameof(TmdbGender.Unknown);
 
-    [JsonProperty(propertyName: "homepage")]
+    [JsonProperty("homepage")]
     public string? Homepage { get; set; }
 
-    [JsonProperty(propertyName: "imdb_id")]
+    [JsonProperty("imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty(propertyName: "known_for_department")]
+    [JsonProperty("known_for_department")]
     public string? KnownForDepartment { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "place_of_birth")]
+    [JsonProperty("place_of_birth")]
     public string? PlaceOfBirth { get; set; }
 
-    [JsonProperty(propertyName: "popularity")]
+    [JsonProperty("popularity")]
     public double Popularity { get; set; }
 
-    [JsonProperty(propertyName: "profile")]
+    [JsonProperty("profile")]
     public string? Profile { get; set; }
 
-    [JsonProperty(propertyName: "titleSort")]
+    [JsonProperty("titleSort")]
     public string TitleSort { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "created_at")]
+    [JsonProperty("created_at")]
     public DateTime CreatedAt { get; set; }
 
-    [JsonProperty(propertyName: "updated_at")]
+    [JsonProperty("updated_at")]
     public DateTime UpdatedAt { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; } = null!;
 
-    [JsonProperty(propertyName: "combined_credits")]
+    [JsonProperty("combined_credits")]
     public Credits CombinedCredits { get; set; } = new();
 
-    [JsonProperty(propertyName: "external_ids")]
+    [JsonProperty("external_ids")]
     public TmdbPersonExternalIds? ExternalIds { get; set; }
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public TranslationsDto TranslationsDto { get; set; } = new();
 
-    [JsonProperty(propertyName: "known_for")]
+    [JsonProperty("known_for")]
     public KnownForDto[] KnownFor { get; set; } = [];
 
-    [JsonProperty(propertyName: "images")]
+    [JsonProperty("images")]
     public ImagesDto ImagesDto { get; set; } = new();
 
     public PersonResponseItemDto(Person person)
@@ -100,7 +100,7 @@ public record PersonResponseItemDto
 
         Id = person.Id;
         Name = person.Name;
-        Biography = !string.IsNullOrEmpty(value: biography) ? biography : person.Biography;
+        Biography = !string.IsNullOrEmpty(biography) ? biography : person.Biography;
         Adult = person.Adult;
         AlsoKnownAs = person.AlsoKnownAs.FromJson<string[]>() ?? [];
         Birthday = person.BirthDay;
@@ -115,30 +115,30 @@ public record PersonResponseItemDto
         CreatedAt = person.CreatedAt;
         ExternalIds = person.ExternalIds;
         Gender = person.Gender;
-        Link = new(uriString: $"/person/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/person/{Id}", UriKind.Relative);
 
         ImagesDto = new()
         {
-            Profiles = person.Images.Select(selector: image => new ImageDto(media: image)).ToArray(),
+            Profiles = person.Images.Select(image => new ImageDto(image)).ToArray(),
         };
 
         CombinedCredits = new()
         {
             Cast = person
-                .Casts.Select(selector: cast => new KnownForDto(cast: cast))
-                .OrderByDescending(keySelector: knownFor => knownFor.Year)
+                .Casts.Select(cast => new KnownForDto(cast))
+                .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
 
             Crew = person
-                .Crews.Select(selector: crew => new KnownForDto(crew: crew))
-                .OrderByDescending(keySelector: knownFor => knownFor.Year)
+                .Crews.Select(crew => new KnownForDto(crew))
+                .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
         };
 
         KnownFor = person
-            .Casts.Select(selector: crew => new KnownForDto(cast: crew))
-            .Concat(second: person.Crews.Select(selector: crew => new KnownForDto(crew: crew)))
-            .OrderByDescending(keySelector: knownFor => knownFor.Popularity)
+            .Casts.Select(crew => new KnownForDto(crew))
+            .Concat(person.Crews.Select(crew => new KnownForDto(crew)))
+            .OrderByDescending(knownFor => knownFor.Popularity)
             .ToArray();
     }
 
@@ -149,14 +149,14 @@ public record PersonResponseItemDto
     )
     {
         string? biography = tmdbPersonAppends
-            .Translations.Translations.FirstOrDefault(predicate: translation =>
+            .Translations.Translations.FirstOrDefault(translation =>
                 translation.Iso31661 == country
             )
             ?.TmdbPersonTranslationData.Overview;
 
         Id = tmdbPersonAppends.Id;
         Name = tmdbPersonAppends.Name;
-        Biography = !string.IsNullOrEmpty(value: biography) ? biography : tmdbPersonAppends.Biography;
+        Biography = !string.IsNullOrEmpty(biography) ? biography : tmdbPersonAppends.Biography;
         Adult = tmdbPersonAppends.Adult;
         AlsoKnownAs = tmdbPersonAppends.AlsoKnownAs;
         Birthday = tmdbPersonAppends.BirthDay;
@@ -169,47 +169,47 @@ public record PersonResponseItemDto
         Profile = tmdbPersonAppends.ProfilePath;
         ColorPalette = new();
         ExternalIds = tmdbPersonAppends.ExternalIds;
-        Gender = Enum.Parse<TmdbGender>(value: tmdbPersonAppends.TmdbGender.ToString(), ignoreCase: true).ToString();
-        Link = new(uriString: $"/person/{Id}", uriKind: UriKind.Relative);
+        Gender = Enum.Parse<TmdbGender>(tmdbPersonAppends.TmdbGender.ToString(), true).ToString();
+        Link = new($"/person/{Id}", UriKind.Relative);
 
         ImagesDto = new()
         {
             Profiles = tmdbPersonAppends
-                .Images.Profiles.Select(selector: image => new ImageDto(image: image))
+                .Images.Profiles.Select(image => new ImageDto(image))
                 .ToArray(),
         };
 
         CombinedCredits = new()
         {
             Cast = tmdbPersonAppends
-                .CombinedCredits.Cast.Select(selector: cast => new KnownForDto(crew: cast, person: person))
-                .Where(predicate: knownFor =>
+                .CombinedCredits.Cast.Select(cast => new KnownForDto(cast, person))
+                .Where(knownFor =>
                     RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult
                 )
-                .OrderByDescending(keySelector: knownFor => knownFor.Year)
+                .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
 
             Crew = tmdbPersonAppends
-                .CombinedCredits.Crew.Select(selector: crew => new KnownForDto(crew: crew, person: person))
-                .Where(predicate: knownFor =>
+                .CombinedCredits.Crew.Select(crew => new KnownForDto(crew, person))
+                .Where(knownFor =>
                     RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult
                 )
-                .OrderByDescending(keySelector: knownFor => knownFor.Year)
+                .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
         };
 
         KnownForDto[] cast = tmdbPersonAppends
-            .CombinedCredits.Cast.Select(selector: cast => new KnownForDto(crew: cast, person: person))
-            .Where(predicate: knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
-            .DistinctBy(keySelector: knownFor => knownFor.Id)
+            .CombinedCredits.Cast.Select(cast => new KnownForDto(cast, person))
+            .Where(knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
+            .DistinctBy(knownFor => knownFor.Id)
             .ToArray();
 
         KnownForDto[] crew = tmdbPersonAppends
-            .CombinedCredits.Crew.Select(selector: crew => new KnownForDto(crew: crew, person: person))
-            .Where(predicate: knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
-            .DistinctBy(keySelector: knownFor => knownFor.Id)
+            .CombinedCredits.Crew.Select(crew => new KnownForDto(crew, person))
+            .Where(knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
+            .DistinctBy(knownFor => knownFor.Id)
             .ToArray();
 
-        KnownFor = cast.Concat(second: crew).OrderByDescending(keySelector: knownFor => knownFor.VoteCount).ToArray();
+        KnownFor = cast.Concat(crew).OrderByDescending(knownFor => knownFor.VoteCount).ToArray();
     }
 }

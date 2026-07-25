@@ -18,7 +18,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Tests for TmdbBaseClient functionality
 /// Tests the base HTTP client behavior and common functionality
 /// </summary>
-[Collection(name: "TmdbApi")]
+[Collection("TmdbApi")]
 public class TmdbBaseClientTests : TmdbTestBase
 {
     private class TestableBaseClient : TmdbBaseClient
@@ -26,7 +26,7 @@ public class TmdbBaseClientTests : TmdbTestBase
         public TestableBaseClient() { }
 
         public TestableBaseClient(int id, string language = "en-US")
-            : base(id: id, language: language) { }
+            : base(id, language) { }
 
         public new Task<T?> Get<T>(
             string url,
@@ -36,13 +36,13 @@ public class TmdbBaseClientTests : TmdbTestBase
         )
             where T : class
         {
-            return base.Get<T>(url: url, query: query, priority: priority, skipCache: skipCache);
+            return base.Get<T>(url, query, priority, skipCache);
         }
 
         public new Task<List<T>?> Paginated<T>(string url, int limit)
             where T : class
         {
-            return base.Paginated<T>(url: url, limit: limit);
+            return base.Paginated<T>(url, limit);
         }
     }
 
@@ -53,7 +53,7 @@ public class TmdbBaseClientTests : TmdbTestBase
         using TestableBaseClient client = new();
 
         // Assert
-        client.Id.Should().Be(expected: 0);
+        client.Id.Should().Be(0);
     }
 
     [Fact]
@@ -64,26 +64,26 @@ public class TmdbBaseClientTests : TmdbTestBase
         const string language = "fr-FR";
 
         // Act
-        using TestableBaseClient client = new(id: expectedId, language: language);
+        using TestableBaseClient client = new(expectedId, language);
 
         // Assert
-        client.Id.Should().Be(expected: expectedId);
+        client.Id.Should().Be(expectedId);
     }
 
     [Theory]
-    [InlineData(data: "en-US")]
-    [InlineData(data: "fr-FR")]
-    [InlineData(data: "es-ES")]
-    [InlineData(data: "de-DE")]
-    [InlineData(data: "ja-JP")]
+    [InlineData("en-US")]
+    [InlineData("fr-FR")]
+    [InlineData("es-ES")]
+    [InlineData("de-DE")]
+    [InlineData("ja-JP")]
     public void Constructor_WithDifferentLanguages_CreatesClientSuccessfully(string language)
     {
         // Arrange & Act
-        using TestableBaseClient client = new(id: ValidMovieId, language: language);
+        using TestableBaseClient client = new(ValidMovieId, language);
 
         // Assert
         client.Should().NotBeNull();
-        client.Id.Should().Be(expected: ValidMovieId);
+        client.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -116,10 +116,10 @@ public class TmdbBaseClientTests : TmdbTestBase
         const int negativeId = -1;
 
         // Act
-        using TestableBaseClient client = new(id: negativeId);
+        using TestableBaseClient client = new(negativeId);
 
         // Assert
-        client.Id.Should().Be(expected: negativeId);
+        client.Id.Should().Be(negativeId);
     }
 
     [Fact]
@@ -129,24 +129,24 @@ public class TmdbBaseClientTests : TmdbTestBase
         const int maxId = int.MaxValue;
 
         // Act
-        using TestableBaseClient client = new(id: maxId);
+        using TestableBaseClient client = new(maxId);
 
         // Assert
-        client.Id.Should().Be(expected: maxId);
+        client.Id.Should().Be(maxId);
     }
 
     [Theory]
-    [InlineData(data: "")]
-    [InlineData(data: null)]
-    [InlineData(data: "invalid-language")]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("invalid-language")]
     public void Constructor_WithInvalidLanguage_CreatesClientSuccessfully(string? language)
     {
         // Arrange & Act
-        using TestableBaseClient client = new(id: ValidMovieId, language: language!);
+        using TestableBaseClient client = new(ValidMovieId, language!);
 
         // Assert
         client.Should().NotBeNull();
-        client.Id.Should().Be(expected: ValidMovieId);
+        client.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
@@ -158,13 +158,13 @@ public class TmdbBaseClientTests : TmdbTestBase
         const string lang2 = "fr-FR";
 
         // Act
-        using TestableBaseClient client1 = new(id: id1);
-        using TestableBaseClient client2 = new(id: id2, language: lang2);
+        using TestableBaseClient client1 = new(id1);
+        using TestableBaseClient client2 = new(id2, lang2);
 
         // Assert
-        client1.Id.Should().Be(expected: id1);
-        client2.Id.Should().Be(expected: id2);
-        client1.Should().NotBeSameAs(unexpected: client2);
+        client1.Id.Should().Be(id1);
+        client2.Id.Should().Be(id2);
+        client1.Should().NotBeSameAs(client2);
     }
 
     [Fact]
@@ -174,25 +174,25 @@ public class TmdbBaseClientTests : TmdbTestBase
         const string emptyLanguage = "";
 
         // Act
-        using TestableBaseClient client = new(id: ValidMovieId, language: emptyLanguage);
+        using TestableBaseClient client = new(ValidMovieId, emptyLanguage);
 
         // Assert
         client.Should().NotBeNull();
-        client.Id.Should().Be(expected: ValidMovieId);
+        client.Id.Should().Be(ValidMovieId);
     }
 
     [Fact]
     public void Client_AfterDispose_PropertiesStillAccessible()
     {
         // Arrange
-        TestableBaseClient client = new(id: ValidMovieId);
+        TestableBaseClient client = new(ValidMovieId);
         int originalId = client.Id;
 
         // Act
         client.Dispose();
 
         // Assert
-        client.Id.Should().Be(expected: originalId);
+        client.Id.Should().Be(originalId);
     }
 
     [Fact]
@@ -205,16 +205,16 @@ public class TmdbBaseClientTests : TmdbTestBase
         // in Get<T> and runs synchronously before any I/O, so the caller's
         // dictionary is already mutated the instant the call returns —
         // no need to wait on the (real) network response to assert on it.
-        using TestableBaseClient client = new(id: ValidMovieId, language: "en-US");
-        Dictionary<string, string?> query = new() { [key: "language"] = "nl" };
+        using TestableBaseClient client = new(ValidMovieId, "en-US");
+        Dictionary<string, string?> query = new() { ["language"] = "nl" };
 
         Task<TmdbGenreMovies?> task = client.Get<TmdbGenreMovies>(
-            url: "genre/movie/list",
-            query: query,
-            priority: false
+            "genre/movie/list",
+            query,
+            false
         );
 
-        query[key: "language"].Should().Be(expected: "nl");
+        query["language"].Should().Be("nl");
 
         client.Dispose();
         try

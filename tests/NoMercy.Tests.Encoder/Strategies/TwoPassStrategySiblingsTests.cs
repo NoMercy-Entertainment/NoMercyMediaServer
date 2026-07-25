@@ -39,15 +39,15 @@ public class TwoPassStrategySiblingsTests : IDisposable
 
     public TwoPassStrategySiblingsTests()
     {
-        _outputDir = Path.Combine(path1: Path.GetTempPath(), path2: $"TwoPassSiblings_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _outputDir);
+        _outputDir = Path.Combine(Path.GetTempPath(), $"TwoPassSiblings_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_outputDir);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _outputDir))
-            Directory.Delete(path: _outputDir, recursive: true);
-        GC.SuppressFinalize(obj: this);
+        if (Directory.Exists(_outputDir))
+            Directory.Delete(_outputDir, true);
+        GC.SuppressFinalize(this);
     }
 
     public static TheoryData<IEncodingStrategy, OutputFormat> SiblingsWithFormat()
@@ -58,28 +58,28 @@ public class TwoPassStrategySiblingsTests : IDisposable
         {
             {
                 new HlsTwoPassStrategy(
-                    encoder: encoder.Object,
-                    checkpointStore: store.Object,
-                    logger: NullLogger<HlsTwoPassStrategy>.Instance,
-                    storage: TestStorageFactory.CreateLocal()
+                    encoder.Object,
+                    store.Object,
+                    NullLogger<HlsTwoPassStrategy>.Instance,
+                    TestStorageFactory.CreateLocal()
                 ),
                 OutputFormat.Hls
             },
             {
                 new Mp4TwoPassStrategy(
-                    encoder: encoder.Object,
-                    checkpointStore: store.Object,
-                    logger: NullLogger<Mp4TwoPassStrategy>.Instance,
-                    storage: TestStorageFactory.CreateLocal()
+                    encoder.Object,
+                    store.Object,
+                    NullLogger<Mp4TwoPassStrategy>.Instance,
+                    TestStorageFactory.CreateLocal()
                 ),
                 OutputFormat.Mp4
             },
             {
                 new DashTwoPassStrategy(
-                    encoder: encoder.Object,
-                    checkpointStore: store.Object,
-                    logger: NullLogger<DashTwoPassStrategy>.Instance,
-                    storage: TestStorageFactory.CreateLocal()
+                    encoder.Object,
+                    store.Object,
+                    NullLogger<DashTwoPassStrategy>.Instance,
+                    TestStorageFactory.CreateLocal()
                 ),
                 OutputFormat.Dash
             },
@@ -87,81 +87,81 @@ public class TwoPassStrategySiblingsTests : IDisposable
     }
 
     [Theory]
-    [MemberData(memberName: nameof(SiblingsWithFormat))]
+    [MemberData(nameof(SiblingsWithFormat))]
     public void Siblings_ReportCorrectFormatAndTwoPassMode(
         IEncodingStrategy strategy,
         OutputFormat expectedFormat
     )
     {
-        Assert.Equal(expected: expectedFormat, actual: strategy.Format);
-        Assert.Equal(expected: EncodeMode.TwoPass, actual: strategy.EncodeMode);
+        Assert.Equal(expectedFormat, strategy.Format);
+        Assert.Equal(EncodeMode.TwoPass, strategy.EncodeMode);
     }
 
     [Theory]
-    [InlineData(data: OutputFormat.Mp4)]
-    [InlineData(data: OutputFormat.Dash)]
+    [InlineData(OutputFormat.Mp4)]
+    [InlineData(OutputFormat.Dash)]
     public async Task Siblings_CallEncoderTwice_Pass1ThenPass2(OutputFormat format)
     {
         _checkpointStore
-            .Setup(expression: s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (JobCheckpoint?)null);
+            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobCheckpoint?)null);
         SetupSuccessfulEncoder();
 
-        IEncodingStrategy strategy = Build(format: format);
+        IEncodingStrategy strategy = Build(format);
         EncodingResult result = await strategy.EncodeAsync(
-            request: BuildRequest(format: format),
-            progress: null,
-            ct: CancellationToken.None
+            BuildRequest(format),
+            null,
+            CancellationToken.None
         );
 
-        Assert.True(condition: result.Success);
+        Assert.True(result.Success);
         _encoder.Verify(
-            expression: e =>
+            e =>
                 e.EncodeAsync(
                     It.Is<EncodingRequest>(r => r.Options!.Pass == EncodingPass.One),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
         _encoder.Verify(
-            expression: e =>
+            e =>
                 e.EncodeAsync(
                     It.Is<EncodingRequest>(r => r.Options!.Pass == EncodingPass.Two),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
     [Theory]
-    [InlineData(data: OutputFormat.Mp4)]
-    [InlineData(data: OutputFormat.Dash)]
+    [InlineData(OutputFormat.Mp4)]
+    [InlineData(OutputFormat.Dash)]
     public async Task Siblings_SavesCheckpointBetweenPasses(OutputFormat format)
     {
         _checkpointStore
-            .Setup(expression: s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (JobCheckpoint?)null);
+            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobCheckpoint?)null);
         SetupSuccessfulEncoder();
 
-        IEncodingStrategy strategy = Build(format: format);
-        await strategy.EncodeAsync(request: BuildRequest(format: format), progress: null, ct: CancellationToken.None);
+        IEncodingStrategy strategy = Build(format);
+        await strategy.EncodeAsync(BuildRequest(format), null, CancellationToken.None);
 
         _checkpointStore.Verify(
-            expression: s =>
+            s =>
                 s.SaveAsync(
                     It.Is<JobCheckpoint>(c => c.Pass1Completed && c.EncodeMode == "TwoPass"),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
     private void SetupSuccessfulEncoder()
     {
         _encoder
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -169,12 +169,12 @@ public class TwoPassStrategySiblingsTests : IDisposable
                 )
             )
             .ReturnsAsync(
-                value: new EncodingResult(
-                    Success: true,
-                    OutputPath: "/out",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
-                    Error: null,
-                    Metrics: new(OutputSizeBytes: 1024, AverageSpeed: 2.0, AverageFps: 24.0, EncoderUsed: "libx264", GpuUsed: null)
+                new EncodingResult(
+                    true,
+                    "/out",
+                    TimeSpan.FromSeconds(1),
+                    null,
+                    new(1024, 2.0, 24.0, "libx264", null)
                 )
             );
     }
@@ -183,18 +183,18 @@ public class TwoPassStrategySiblingsTests : IDisposable
         format switch
         {
             OutputFormat.Mp4 => new Mp4TwoPassStrategy(
-                encoder: _encoder.Object,
-                checkpointStore: _checkpointStore.Object,
-                logger: NullLogger<Mp4TwoPassStrategy>.Instance,
-                storage: TestStorageFactory.CreateLocal()
+                _encoder.Object,
+                _checkpointStore.Object,
+                NullLogger<Mp4TwoPassStrategy>.Instance,
+                TestStorageFactory.CreateLocal()
             ),
             OutputFormat.Dash => new DashTwoPassStrategy(
-                encoder: _encoder.Object,
-                checkpointStore: _checkpointStore.Object,
-                logger: NullLogger<DashTwoPassStrategy>.Instance,
-                storage: TestStorageFactory.CreateLocal()
+                _encoder.Object,
+                _checkpointStore.Object,
+                NullLogger<DashTwoPassStrategy>.Instance,
+                TestStorageFactory.CreateLocal()
             ),
-            _ => throw new ArgumentException(message: $"No 2-pass sibling for {format}"),
+            _ => throw new ArgumentException($"No 2-pass sibling for {format}"),
         };
 
     private static Container ToContainer(OutputFormat format) =>
@@ -209,12 +209,12 @@ public class TwoPassStrategySiblingsTests : IDisposable
 
     private EncodingRequest BuildRequest(OutputFormat format) =>
         new(
-            InputPath: "/media/src.mkv",
-            OutputDirectory: _outputDir,
-            Profile: new(
-                Id: Ulid.NewUlid(),
+            "/media/src.mkv",
+            _outputDir,
+            new(
+                Ulid.NewUlid(),
                 Name: $"{format} 2-pass",
-                Container: ToContainer(format: format),
+                Container: ToContainer(format),
                 Video: null,
                 Audio: [],
                 Subtitles: [],

@@ -15,20 +15,20 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Music;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(UserId))]
-[Index(propertyName: nameof(TrackId))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(UserId))]
+[Index(nameof(TrackId))]
 public class MusicPlay : Timestamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "user_id")]
+    [JsonProperty("user_id")]
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
-    [JsonProperty(propertyName: "track_id")]
+    [JsonProperty("track_id")]
     public Guid TrackId { get; set; }
     public Track Track { get; set; } = null!;
 

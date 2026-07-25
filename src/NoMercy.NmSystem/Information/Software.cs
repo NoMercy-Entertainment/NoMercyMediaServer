@@ -23,11 +23,11 @@ namespace NoMercy.NmSystem.Information;
 
 public static class Software
 {
-    public static Version? Version { get; set; } = new(major: 0, minor: 1, build: 0, revision: 0);
+    public static Version? Version { get; set; } = new(0, 1, 0, 0);
 
-    public static bool IsWindows => RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows);
-    public static bool IsMac => RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.OSX);
-    public static bool IsLinux => RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux);
+    public static bool IsWindows => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    public static bool IsMac => RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+    public static bool IsLinux => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 
     internal static string GetPlatform()
     {
@@ -38,17 +38,17 @@ public static class Software
         if (IsLinux)
             return "linux";
 
-        throw new(message: "Unknown platform");
+        throw new("Unknown platform");
     }
 
     internal static Guid GetDeviceId()
     {
         bool inContainer =
-            Environment.GetEnvironmentVariable(variable: "DOTNET_RUNNING_IN_CONTAINER") is "true" or "1";
+            Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") is "true" or "1";
 
         string? generatedId = new DeviceIdBuilder()
-            .OnWindows(windowsBuilderConfiguration: windows => windows.AddMotherboardSerialNumber().AddSystemDriveSerialNumber())
-            .OnLinux(linuxBuilderConfiguration: linux =>
+            .OnWindows(windows => windows.AddMotherboardSerialNumber().AddSystemDriveSerialNumber())
+            .OnLinux(linux =>
             {
                 linux.AddMotherboardSerialNumber().AddSystemDriveSerialNumber();
 
@@ -64,12 +64,12 @@ public static class Software
                 if (inContainer)
                     linux.AddMachineId();
             })
-            .OnMac(macBuilderConfiguration: mac => mac.AddSystemDriveVolumeUUID().AddPlatformSerialNumber())
+            .OnMac(mac => mac.AddSystemDriveVolumeUUID().AddPlatformSerialNumber())
             .ToString();
 
-        byte[] hash = MD5.HashData(source: Encoding.UTF8.GetBytes(s: generatedId));
+        byte[] hash = MD5.HashData(Encoding.UTF8.GetBytes(generatedId));
 
-        return new(b: hash);
+        return new(hash);
     }
 
     public static string? GetSystemVersion()
@@ -77,17 +77,17 @@ public static class Software
         if (IsWindows)
         {
 #pragma warning disable CA1416
-            ManagementObjectSearcher searcher = new(queryString: "select Version from Win32_OperatingSystem");
+            ManagementObjectSearcher searcher = new("select Version from Win32_OperatingSystem");
             foreach (ManagementBaseObject? o in searcher.Get())
             {
                 ManagementObject? item = (ManagementObject)o;
-                return item[propertyName: "Version"].ToString();
+                return item["Version"].ToString();
             }
 #pragma warning restore CA1416
         }
         else
         {
-            string output = Shell.ExecCommand(command: "uname -r");
+            string output = Shell.ExecCommand("uname -r");
             return output.Trim();
         }
 
@@ -103,10 +103,10 @@ public static class Software
     {
         try
         {
-            if (!driver.FileExists(path: exePath))
+            if (!driver.FileExists(exePath))
                 return null;
 
-            FileVersionInfo fileInfo = FileVersionInfo.GetVersionInfo(fileName: exePath);
+            FileVersionInfo fileInfo = FileVersionInfo.GetVersionInfo(exePath);
             if (
                 fileInfo is { FileMajorPart: 0, FileMinorPart: 0, FileBuildPart: 0 }
             )
@@ -126,35 +126,35 @@ public static class Software
         {
 #pragma warning disable CA1416
             ManagementObjectSearcher searcher = new(
-                queryString: "select LastBootUpTime from Win32_OperatingSystem"
+                "select LastBootUpTime from Win32_OperatingSystem"
             );
             foreach (ManagementBaseObject? o in searcher.Get())
             {
                 ManagementObject? item = (ManagementObject)o;
-                return ManagementDateTimeConverter.ToDateTime(dmtfDate: item[propertyName: "LastBootUpTime"].ToString());
+                return ManagementDateTimeConverter.ToDateTime(item["LastBootUpTime"].ToString());
 #pragma warning restore CA1416
             }
         }
-        else if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.OSX))
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            string output = Shell.ExecCommand(command: "sysctl -n kern.boottime");
+            string output = Shell.ExecCommand("sysctl -n kern.boottime");
             // Tolerate unexpected sysctl output rather than crashing the
             // diagnostic call; fall through to DateTime.UtcNow as a sentinel.
-            return long.TryParse(s: output.Split(separator: ' ').Last(), result: out long bootSec)
-                ? new DateTime(year: 1970, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc).AddSeconds(value: bootSec)
+            return long.TryParse(output.Split(' ').Last(), out long bootSec)
+                ? new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(bootSec)
                 : DateTime.UtcNow;
         }
         else
         {
-            string output = Shell.ExecCommand(command: "uptime -s");
+            string output = Shell.ExecCommand("uptime -s");
             // "uptime -s" can return sentinels (e.g. "Unknown") that
             // culture-sensitive DateTime.Parse throws on — tolerate them the
             // same way the macOS branch above does.
             return DateTime.TryParse(
-                s: output.Trim(),
-                provider: CultureInfo.InvariantCulture,
-                styles: DateTimeStyles.None,
-                result: out DateTime bootTime
+                output.Trim(),
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out DateTime bootTime
             )
                 ? bootTime
                 : DateTime.UtcNow;

@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbRecommendationsTvShow : TmdbTvShow
 {
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool Adult { get; set; }
 }

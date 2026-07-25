@@ -17,7 +17,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Collection(name: "ClaimsPrincipalExtensions")]
+[Collection("ClaimsPrincipalExtensions")]
 public class ClaimsPrincipalExtensionsTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -36,25 +36,25 @@ public class ClaimsPrincipalExtensionsTests : IDisposable
     [Fact]
     public async Task Initialize_LoadsUsersFromContext()
     {
-        await UserCache.Current.InitializeAsync(context: _context);
+        await UserCache.Current.InitializeAsync(_context);
 
-        Assert.Single(collection: UserCache.Current.Users);
-        Assert.Equal(expected: SeedConstants.UserId, actual: UserCache.Current.Users[index: 0].Id);
+        Assert.Single(UserCache.Current.Users);
+        Assert.Equal(SeedConstants.UserId, UserCache.Current.Users[0].Id);
     }
 
     [Fact]
     public async Task Initialize_LoadsFolderIdsFromContext()
     {
-        await UserCache.Current.InitializeAsync(context: _context);
+        await UserCache.Current.InitializeAsync(_context);
 
-        Assert.Single(collection: UserCache.Current.FolderIds);
-        Assert.Equal(expected: SeedConstants.MovieFolderId, actual: UserCache.Current.FolderIds[index: 0]);
+        Assert.Single(UserCache.Current.FolderIds);
+        Assert.Equal(SeedConstants.MovieFolderId, UserCache.Current.FolderIds[0]);
     }
 
     [Fact]
     public async Task NewUserCreatedAfterStartup_IsAccessibleViaAddUser()
     {
-        await UserCache.Current.InitializeAsync(context: _context);
+        await UserCache.Current.InitializeAsync(_context);
 
         Guid newUserId = Guid.NewGuid();
         User newUser = new()
@@ -67,31 +67,31 @@ public class ClaimsPrincipalExtensionsTests : IDisposable
             Manage = false,
         };
 
-        UserCache.Current.AddUser(user: newUser);
+        UserCache.Current.AddUser(newUser);
 
-        Assert.Equal(expected: 2, actual: UserCache.Current.Users.Count);
-        Assert.Contains(collection: UserCache.Current.Users, filter: u => u.Id == newUserId);
+        Assert.Equal(2, UserCache.Current.Users.Count);
+        Assert.Contains(UserCache.Current.Users, u => u.Id == newUserId);
     }
 
     [Fact]
     public async Task DeletedUser_IsRemovedFromList()
     {
-        await UserCache.Current.InitializeAsync(context: _context);
+        await UserCache.Current.InitializeAsync(_context);
 
         User existingUser = UserCache.Current.Users.First();
-        UserCache.Current.RemoveUser(user: existingUser);
+        UserCache.Current.RemoveUser(existingUser);
 
-        Assert.Empty(collection: UserCache.Current.Users);
+        Assert.Empty(UserCache.Current.Users);
     }
 
     [Fact]
     public async Task RefreshUsers_ReloadsFromDatabase()
     {
-        await UserCache.Current.InitializeAsync(context: _context);
+        await UserCache.Current.InitializeAsync(_context);
 
         Guid newUserId = Guid.NewGuid();
         _context.Users.Add(
-            entity: new()
+            new()
             {
                 Id = newUserId,
                 Email = "added@nomercy.tv",
@@ -103,16 +103,16 @@ public class ClaimsPrincipalExtensionsTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
-        await UserCache.Current.RefreshUsersAsync(context: _context);
+        await UserCache.Current.RefreshUsersAsync(_context);
 
-        Assert.Equal(expected: 2, actual: UserCache.Current.Users.Count);
-        Assert.Contains(collection: UserCache.Current.Users, filter: u => u.Id == newUserId);
+        Assert.Equal(2, UserCache.Current.Users.Count);
+        Assert.Contains(UserCache.Current.Users, u => u.Id == newUserId);
     }
 
     [Fact]
     public async Task UpdateUser_ReplacesExistingUserInList()
     {
-        await UserCache.Current.InitializeAsync(context: _context);
+        await UserCache.Current.InitializeAsync(_context);
 
         User updatedUser = new()
         {
@@ -124,18 +124,18 @@ public class ClaimsPrincipalExtensionsTests : IDisposable
             Manage = true,
         };
 
-        UserCache.Current.UpdateUser(user: updatedUser);
+        UserCache.Current.UpdateUser(updatedUser);
 
-        Assert.Single(collection: UserCache.Current.Users);
-        Assert.Equal(expected: "Updated User", actual: UserCache.Current.Users[index: 0].Name);
-        Assert.Equal(expected: "updated@nomercy.tv", actual: UserCache.Current.Users[index: 0].Email);
+        Assert.Single(UserCache.Current.Users);
+        Assert.Equal("Updated User", UserCache.Current.Users[0].Name);
+        Assert.Equal("updated@nomercy.tv", UserCache.Current.Users[0].Email);
     }
 
     [Fact]
     public async Task Initialize_ClearsPreviousData()
     {
         UserCache.Current.AddUser(
-            user: new()
+            new()
             {
                 Id = Guid.NewGuid(),
                 Email = "stale@nomercy.tv",
@@ -146,20 +146,20 @@ public class ClaimsPrincipalExtensionsTests : IDisposable
             }
         );
 
-        await UserCache.Current.InitializeAsync(context: _context);
+        await UserCache.Current.InitializeAsync(_context);
 
-        Assert.Single(collection: UserCache.Current.Users);
-        Assert.Equal(expected: SeedConstants.UserId, actual: UserCache.Current.Users[index: 0].Id);
+        Assert.Single(UserCache.Current.Users);
+        Assert.Equal(SeedConstants.UserId, UserCache.Current.Users[0].Id);
     }
 
     [Fact]
     public void NoStaticMediaContext_FieldDoesNotExist()
     {
         FieldInfo? field = typeof(ClaimsPrincipalExtensions).GetField(
-            name: "MediaContext",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
+            "MediaContext",
+            BindingFlags.NonPublic | BindingFlags.Static
         );
 
-        Assert.Null(@object: field);
+        Assert.Null(field);
     }
 }

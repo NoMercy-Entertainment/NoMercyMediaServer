@@ -20,22 +20,22 @@ public class ProgressParserTests
     {
         ProgressParser parser = new();
 
-        parser.FeedLine(line: "frame=1234").Should().BeNull();
-        parser.FeedLine(line: "fps=59.8").Should().BeNull();
-        parser.FeedLine(line: "bitrate=8234.5kbits/s").Should().BeNull();
-        parser.FeedLine(line: "total_size=12345678").Should().BeNull();
-        parser.FeedLine(line: "out_time_us=60000000").Should().BeNull();
-        parser.FeedLine(line: "speed=2.50x").Should().BeNull();
+        parser.FeedLine("frame=1234").Should().BeNull();
+        parser.FeedLine("fps=59.8").Should().BeNull();
+        parser.FeedLine("bitrate=8234.5kbits/s").Should().BeNull();
+        parser.FeedLine("total_size=12345678").Should().BeNull();
+        parser.FeedLine("out_time_us=60000000").Should().BeNull();
+        parser.FeedLine("speed=2.50x").Should().BeNull();
 
-        FfmpegProgressSnapshot? snapshot = parser.FeedLine(line: "progress=continue");
+        FfmpegProgressSnapshot? snapshot = parser.FeedLine("progress=continue");
 
         snapshot.Should().NotBeNull();
-        snapshot!.Frame.Should().Be(expected: 1234);
-        snapshot.Fps.Should().BeApproximately(expectedValue: 59.8, precision: 0.01);
-        snapshot.BitrateKbps.Should().BeApproximately(expectedValue: 8234.5, precision: 0.1);
-        snapshot.TotalSizeBytes.Should().Be(expected: 12345678);
-        snapshot.OutTime.Should().Be(expected: TimeSpan.FromSeconds(seconds: 60));
-        snapshot.Speed.Should().BeApproximately(expectedValue: 2.5, precision: 0.01);
+        snapshot!.Frame.Should().Be(1234);
+        snapshot.Fps.Should().BeApproximately(59.8, 0.01);
+        snapshot.BitrateKbps.Should().BeApproximately(8234.5, 0.1);
+        snapshot.TotalSizeBytes.Should().Be(12345678);
+        snapshot.OutTime.Should().Be(TimeSpan.FromSeconds(60));
+        snapshot.Speed.Should().BeApproximately(2.5, 0.01);
         snapshot.IsEnd.Should().BeFalse();
     }
 
@@ -43,12 +43,12 @@ public class ProgressParserTests
     public void Parse_EndProgress_IsEndTrue()
     {
         ProgressParser parser = new();
-        parser.FeedLine(line: "frame=100");
-        parser.FeedLine(line: "fps=30.0");
-        parser.FeedLine(line: "speed=1.0x");
-        parser.FeedLine(line: "out_time_us=5000000");
+        parser.FeedLine("frame=100");
+        parser.FeedLine("fps=30.0");
+        parser.FeedLine("speed=1.0x");
+        parser.FeedLine("out_time_us=5000000");
 
-        FfmpegProgressSnapshot? snapshot = parser.FeedLine(line: "progress=end");
+        FfmpegProgressSnapshot? snapshot = parser.FeedLine("progress=end");
 
         snapshot.Should().NotBeNull();
         snapshot!.IsEnd.Should().BeTrue();
@@ -58,29 +58,29 @@ public class ProgressParserTests
     public void Parse_NaBitrate_ReturnsNull()
     {
         ProgressParser parser = new();
-        parser.FeedLine(line: "bitrate=N/A");
-        parser.FeedLine(line: "speed=N/A");
+        parser.FeedLine("bitrate=N/A");
+        parser.FeedLine("speed=N/A");
 
-        FfmpegProgressSnapshot? snapshot = parser.FeedLine(line: "progress=continue");
+        FfmpegProgressSnapshot? snapshot = parser.FeedLine("progress=continue");
 
         snapshot.Should().NotBeNull();
         snapshot!.BitrateKbps.Should().BeNull();
-        snapshot.Speed.Should().Be(expected: 0);
+        snapshot.Speed.Should().Be(0);
     }
 
     [Fact]
     public void Parse_EmptyLine_ReturnsNull()
     {
         ProgressParser parser = new();
-        parser.FeedLine(line: "").Should().BeNull();
-        parser.FeedLine(line: "   ").Should().BeNull();
+        parser.FeedLine("").Should().BeNull();
+        parser.FeedLine("   ").Should().BeNull();
     }
 
     [Fact]
     public void Parse_MalformedLine_ReturnsNull()
     {
         ProgressParser parser = new();
-        parser.FeedLine(line: "no equals sign here").Should().BeNull();
+        parser.FeedLine("no equals sign here").Should().BeNull();
     }
 
     [Fact]
@@ -88,21 +88,21 @@ public class ProgressParserTests
     {
         ProgressParser parser = new();
 
-        parser.FeedLine(line: "frame=100");
-        parser.FeedLine(line: "speed=2.0x");
-        parser.FeedLine(line: "out_time_us=5000000");
-        FfmpegProgressSnapshot? first = parser.FeedLine(line: "progress=continue");
+        parser.FeedLine("frame=100");
+        parser.FeedLine("speed=2.0x");
+        parser.FeedLine("out_time_us=5000000");
+        FfmpegProgressSnapshot? first = parser.FeedLine("progress=continue");
 
-        parser.FeedLine(line: "frame=200");
-        parser.FeedLine(line: "speed=2.5x");
-        parser.FeedLine(line: "out_time_us=10000000");
-        FfmpegProgressSnapshot? second = parser.FeedLine(line: "progress=continue");
+        parser.FeedLine("frame=200");
+        parser.FeedLine("speed=2.5x");
+        parser.FeedLine("out_time_us=10000000");
+        FfmpegProgressSnapshot? second = parser.FeedLine("progress=continue");
 
         first.Should().NotBeNull();
-        first!.Frame.Should().Be(expected: 100);
+        first!.Frame.Should().Be(100);
         second.Should().NotBeNull();
-        second!.Frame.Should().Be(expected: 200);
-        second.Speed.Should().BeApproximately(expectedValue: 2.5, precision: 0.01);
+        second!.Frame.Should().Be(200);
+        second.Speed.Should().BeApproximately(2.5, 0.01);
     }
 
     [Fact]
@@ -110,22 +110,22 @@ public class ProgressParserTests
     {
         ProgressParser parser = new();
 
-        parser.FeedLine(line: "speed=0.5x");
-        FfmpegProgressSnapshot? slow = parser.FeedLine(line: "progress=continue");
-        slow!.Speed.Should().BeApproximately(expectedValue: 0.5, precision: 0.01);
+        parser.FeedLine("speed=0.5x");
+        FfmpegProgressSnapshot? slow = parser.FeedLine("progress=continue");
+        slow!.Speed.Should().BeApproximately(0.5, 0.01);
 
-        parser.FeedLine(line: "speed=10.2x");
-        FfmpegProgressSnapshot? fast = parser.FeedLine(line: "progress=continue");
-        fast!.Speed.Should().BeApproximately(expectedValue: 10.2, precision: 0.1);
+        parser.FeedLine("speed=10.2x");
+        FfmpegProgressSnapshot? fast = parser.FeedLine("progress=continue");
+        fast!.Speed.Should().BeApproximately(10.2, 0.1);
     }
 
     [Fact]
     public void Parse_OutTimeConvertsCorrectly()
     {
         ProgressParser parser = new();
-        parser.FeedLine(line: "out_time_us=7200000000"); // 7200 seconds = 2 hours
-        FfmpegProgressSnapshot? snapshot = parser.FeedLine(line: "progress=continue");
+        parser.FeedLine("out_time_us=7200000000"); // 7200 seconds = 2 hours
+        FfmpegProgressSnapshot? snapshot = parser.FeedLine("progress=continue");
 
-        snapshot!.OutTime.Should().Be(expected: TimeSpan.FromHours(hours: 2));
+        snapshot!.OutTime.Should().Be(TimeSpan.FromHours(2));
     }
 }

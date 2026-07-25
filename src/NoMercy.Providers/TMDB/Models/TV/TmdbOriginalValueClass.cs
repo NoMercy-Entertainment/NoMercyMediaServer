@@ -16,27 +16,27 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbOriginalValueClass
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int? Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "credit_id")]
+    [JsonProperty("credit_id")]
     public string CreditId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "person_id")]
+    [JsonProperty("person_id")]
     public int? PersonId { get; set; }
 
-    [JsonProperty(propertyName: "season_id")]
+    [JsonProperty("season_id")]
     public int? SeasonId { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public TmdbPoster TmdbPoster { get; set; } = new();
 
-    [JsonProperty(propertyName: "department")]
+    [JsonProperty("department")]
     public string Department { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "job")]
+    [JsonProperty("job")]
     public string Job { get; set; } = string.Empty;
 }

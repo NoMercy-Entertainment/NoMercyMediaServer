@@ -38,9 +38,9 @@ public class EpisodeManager(
         bool? priority = false
     )
     {
-        IEnumerable<TmdbEpisodeAppends> episodeAppends = await Collect(show: show, season: season, priority: priority);
+        IEnumerable<TmdbEpisodeAppends> episodeAppends = await Collect(show, season, priority);
 
-        IEnumerable<Episode> episodes = episodeAppends.Select(selector: episode => new Episode
+        IEnumerable<Episode> episodes = episodeAppends.Select(episode => new Episode
         {
             TvId = show.Id,
             SeasonId = season.Id,
@@ -60,13 +60,13 @@ public class EpisodeManager(
         });
 
         logger.LogDebug(
-            message: "Show {Name}: Season {SeasonNumber} Episodes stored", args: [show.Name, season.SeasonNumber]
+            "Show {Name}: Season {SeasonNumber} Episodes stored", [show.Name, season.SeasonNumber]
         );
 
         foreach (Episode episode in episodes)
-            jobDispatcher.DispatchColorPaletteJob(entityType: "episode", entityId: episode.Id.ToString());
+            jobDispatcher.DispatchColorPaletteJob("episode", episode.Id.ToString());
 
-        jobDispatcher.DispatchJob<EpisodeExtrasJob, TmdbEpisodeAppends>(data: episodeAppends, name: show.Name);
+        jobDispatcher.DispatchJob<EpisodeExtrasJob, TmdbEpisodeAppends>(episodeAppends, show.Name);
 
         return episodes;
     }
@@ -80,28 +80,28 @@ public class EpisodeManager(
         ConcurrentBag<TmdbEpisodeAppends> episodeAppends = [];
 
         await Parallel.ForEachAsync(
-            source: season.Episodes,
-            parallelOptions: SystemParallelism.Options,
-            body: async (episode, _) =>
+            season.Episodes,
+            SystemParallelism.Options,
+            async (episode, _) =>
             {
                 try
                 {
                     using TmdbEpisodeClient tmdbEpisodeClient = new(
-                        id: show.Id,
-                        seasonNumber: episode.SeasonNumber,
-                        episodeNumber: episode.EpisodeNumber
+                        show.Id,
+                        episode.SeasonNumber,
+                        episode.EpisodeNumber
                     );
                     TmdbEpisodeAppends? seasonTask = await tmdbEpisodeClient.WithAllAppends(
-                        priority: priority
+                        priority
                     );
                     if (seasonTask is null)
                         return;
 
-                    episodeAppends.Add(item: seasonTask);
+                    episodeAppends.Add(seasonTask);
                 }
                 catch (Exception e)
                 {
-                    logger.LogError(message: e.Message);
+                    logger.LogError(e.Message);
                 }
             }
         );
@@ -112,10 +112,10 @@ public class EpisodeManager(
     internal async Task StoreTranslations(string showName, TmdbEpisodeAppends episode)
     {
         List<Translation> translations = episode
-            .Translations.Translations.Where(predicate: translation =>
+            .Translations.Translations.Where(translation =>
                 translation.Data.Title != null || translation.Data.Overview != ""
             )
-            .Select(selector: translation => new Translation
+            .Select(translation => new Translation
             {
                 Iso31661 = translation.Iso31661,
                 Iso6391 = translation.Iso6391,
@@ -128,10 +128,10 @@ public class EpisodeManager(
             })
             .ToList();
 
-        await episodeRepository.StoreEpisodeTranslations(translations: translations);
+        await episodeRepository.StoreEpisodeTranslations(translations);
 
         logger.LogInformation(
-            message: "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Translations stored", args: [showName, episode.SeasonNumber, episode.EpisodeNumber]
+            "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Translations stored", [showName, episode.SeasonNumber, episode.EpisodeNumber]
         );
     }
 
@@ -140,7 +140,7 @@ public class EpisodeManager(
         try
         {
             IEnumerable<Image> stills = episode
-                .TmdbEpisodeImages.Stills.Select(selector: image => new Image
+                .TmdbEpisodeImages.Stills.Select(image => new Image
                 {
                     AspectRatio = image.AspectRatio,
                     FilePath = image.FilePath,
@@ -155,28 +155,28 @@ public class EpisodeManager(
                 })
                 .ToList();
 
-            await episodeRepository.StoreEpisodeImages(images: stills);
+            await episodeRepository.StoreEpisodeImages(stills);
 
             logger.LogDebug(
-                message: "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Images stored", args: [showName, episode.SeasonNumber, episode.EpisodeNumber]
+                "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Images stored", [showName, episode.SeasonNumber, episode.EpisodeNumber]
             );
 
             await using MediaContext db = new();
             List<int> imageIds = await db
                 .Images.AsNoTracking()
-                .Where(predicate: i =>
+                .Where(i =>
                     i.EpisodeId == episode.Id && (i._colorPalette == null || i._colorPalette == "")
                 )
-                .Select(selector: i => i.Id)
+                .Select(i => i.Id)
                 .ToListAsync();
 
             foreach (int id in imageIds)
-                jobDispatcher.DispatchColorPaletteJob(entityType: "image", entityId: id.ToString());
+                jobDispatcher.DispatchColorPaletteJob("image", id.ToString());
         }
         catch (Exception e)
         {
             logger.LogError(
-                message: "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Error storing images: {Message}", args: [showName, episode.SeasonNumber, episode.EpisodeNumber, e.Message]
+                "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Error storing images: {Message}", [showName, episode.SeasonNumber, episode.EpisodeNumber, e.Message]
             );
         }
     }

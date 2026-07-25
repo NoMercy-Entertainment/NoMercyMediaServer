@@ -28,9 +28,9 @@ public class StageInterfaceTests
     {
         ServiceCollection services = new();
         services.AddLogging();
-        services.AddDbContextFactory<MediaContext>(optionsAction: o => o.UseInMemoryDatabase(databaseName: "test-media"));
-        services.AddDbContextFactory<AppDbContext>(optionsAction: o => o.UseInMemoryDatabase(databaseName: "test-app"));
-        services.AddNoMercyEncoder(configure: opts =>
+        services.AddDbContextFactory<MediaContext>(o => o.UseInMemoryDatabase("test-media"));
+        services.AddDbContextFactory<AppDbContext>(o => o.UseInMemoryDatabase("test-app"));
+        services.AddNoMercyEncoder(opts =>
         {
             opts.FfmpegPathOverride = "ffmpeg";
             opts.FfprobePathOverride = "ffprobe";
@@ -54,7 +54,7 @@ public class StageInterfaceTests
         ServiceProvider provider = BuildProvider();
         IValidationStage byInterface = provider.GetRequiredService<IValidationStage>();
         ValidateStage byConcrete = provider.GetRequiredService<ValidateStage>();
-        byInterface.Should().BeOfType(expectedType: byConcrete.GetType());
+        byInterface.Should().BeOfType(byConcrete.GetType());
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class StageInterfaceTests
         ServiceProvider provider = BuildProvider();
         IAnalysisStage byInterface = provider.GetRequiredService<IAnalysisStage>();
         AnalyzeStage byConcrete = provider.GetRequiredService<AnalyzeStage>();
-        byInterface.Should().BeOfType(expectedType: byConcrete.GetType());
+        byInterface.Should().BeOfType(byConcrete.GetType());
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class StageInterfaceTests
         ServiceProvider provider = BuildProvider();
         IPlanStage byInterface = provider.GetRequiredService<IPlanStage>();
         PlanStage byConcrete = provider.GetRequiredService<PlanStage>();
-        byInterface.Should().BeOfType(expectedType: byConcrete.GetType());
+        byInterface.Should().BeOfType(byConcrete.GetType());
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class StageInterfaceTests
         ServiceProvider provider = BuildProvider();
         IBuildStage byInterface = provider.GetRequiredService<IBuildStage>();
         BuildStage byConcrete = provider.GetRequiredService<BuildStage>();
-        byInterface.Should().BeOfType(expectedType: byConcrete.GetType());
+        byInterface.Should().BeOfType(byConcrete.GetType());
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class StageInterfaceTests
         ServiceProvider provider = BuildProvider();
         IExecutionStage byInterface = provider.GetRequiredService<IExecutionStage>();
         ExecuteStage byConcrete = provider.GetRequiredService<ExecuteStage>();
-        byInterface.Should().BeOfType(expectedType: byConcrete.GetType());
+        byInterface.Should().BeOfType(byConcrete.GetType());
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class StageInterfaceTests
         ServiceProvider provider = BuildProvider();
         IFinalizeStage byInterface = provider.GetRequiredService<IFinalizeStage>();
         FinalizeStage byConcrete = provider.GetRequiredService<FinalizeStage>();
-        byInterface.Should().BeOfType(expectedType: byConcrete.GetType());
+        byInterface.Should().BeOfType(byConcrete.GetType());
     }
 
     // ── Concrete stages carry the interface ──────────────────────────────────
@@ -219,10 +219,10 @@ public class StageInterfaceTests
     public void IStageOverrides_CustomPlanOverride_IsObservableThroughInterface()
     {
         StubPlanStage stub = new();
-        StrategyWithPlanOverride strategy = new(planOverride: stub);
+        StrategyWithPlanOverride strategy = new(stub);
 
         IStageOverrides overrides = strategy;
-        overrides.Plan.Should().BeSameAs(expected: stub);
+        overrides.Plan.Should().BeSameAs(stub);
         overrides.Validation.Should().BeNull();
         overrides.Analysis.Should().BeNull();
         overrides.Build.Should().BeNull();
@@ -242,7 +242,7 @@ public class StageInterfaceTests
             EncodingRequest request,
             IProgressObserver? progress,
             CancellationToken ct
-        ) => Task.FromResult(result: new EncodingResult(Success: false, OutputPath: string.Empty, Duration: TimeSpan.Zero, Error: null, Metrics: null!));
+        ) => Task.FromResult(new EncodingResult(false, string.Empty, TimeSpan.Zero, null, null!));
     }
 
     /// <summary>Strategy that overrides only the Plan stage.</summary>
@@ -256,7 +256,7 @@ public class StageInterfaceTests
             EncodingRequest request,
             IProgressObserver? progress,
             CancellationToken ct
-        ) => Task.FromResult(result: new EncodingResult(Success: false, OutputPath: string.Empty, Duration: TimeSpan.Zero, Error: null, Metrics: null!));
+        ) => Task.FromResult(new EncodingResult(false, string.Empty, TimeSpan.Zero, null, null!));
     }
 
     /// <summary>Stub IPlanStage that satisfies the type contract without any logic.</summary>
@@ -270,7 +270,7 @@ public class StageInterfaceTests
             CancellationToken ct
         ) =>
             Task.FromResult<StageResult>(
-                result: new StageFailure(Error: new(Kind: EncodingErrorKind.Unknown, Message: "stub", FfmpegStderr: null, StageName: Name, Recoverable: false))
+                new StageFailure(new(EncodingErrorKind.Unknown, "stub", null, Name, false))
             );
     }
 }

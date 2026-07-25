@@ -9,9 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FluentAssertions;
 using NoMercy.Service.Hosting;
-using Xunit;
 
 namespace NoMercy.Tests.Service.Hosting;
 
@@ -22,33 +20,33 @@ namespace NoMercy.Tests.Service.Hosting;
 /// the message/inner exception through to the base <see cref="Exception"/> —
 /// a mismatch here would surface as a swallowed or misleading fatal log line.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class StartupAbortExceptionTests
 {
     [Fact]
     public void Constructor_WithMessage_SetsMessage()
     {
-        StartupAbortException exception = new(message: "Port 7626 is in use.");
+        StartupAbortException exception = new("Port 7626 is in use.");
 
-        exception.Message.Should().Be(expected: "Port 7626 is in use.");
+        exception.Message.Should().Be("Port 7626 is in use.");
         exception.InnerException.Should().BeNull();
     }
 
     [Fact]
     public void Constructor_WithMessageAndInnerException_SetsBoth()
     {
-        InvalidOperationException inner = new(message: "socket bind failed");
+        InvalidOperationException inner = new("socket bind failed");
 
-        StartupAbortException exception = new(message: "Port 7626 is in use.", innerException: inner);
+        StartupAbortException exception = new("Port 7626 is in use.", inner);
 
-        exception.Message.Should().Be(expected: "Port 7626 is in use.");
-        exception.InnerException.Should().BeSameAs(expected: inner);
+        exception.Message.Should().Be("Port 7626 is in use.");
+        exception.InnerException.Should().BeSameAs(inner);
     }
 
     [Fact]
     public void StartupAbortException_IsAnException()
     {
-        StartupAbortException exception = new(message: "boom");
+        StartupAbortException exception = new("boom");
 
         exception.Should().BeAssignableTo<Exception>();
     }

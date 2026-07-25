@@ -12,9 +12,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
-using NoMercy.Database.Models.Storage;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Setup.Maintenance;
 
@@ -24,7 +22,7 @@ namespace NoMercy.Tests.Setup;
 /// Pins the behaviour that fixed music TitleSort not propagating: an algorithm
 /// change must reach rows that already hold a (stale) value, not only null ones.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class TitleSortBackfillTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -32,23 +30,23 @@ public class TitleSortBackfillTests : IDisposable
 
     public TitleSortBackfillTests()
     {
-        _connection = new(connectionString: "DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
 
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection: _connection,
-                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
+                _connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(options: _options);
+        using MediaContext ctx = new(_options);
         ctx.Database.EnsureCreated();
     }
 
     public void Dispose() => _connection.Dispose();
 
-    private MediaContext CreateContext() => new(options: _options);
+    private MediaContext CreateContext() => new(_options);
 
     [Fact]
     public async Task RunAsync_RecomputesDriftedValue_AndFillsNull()
@@ -59,7 +57,7 @@ public class TitleSortBackfillTests : IDisposable
         await using (MediaContext ctx = CreateContext())
         {
             ctx.Artists.Add(
-                entity: new Artist
+                new Artist
                 {
                     Id = staleId,
                     Name = "The Beatles",
@@ -68,7 +66,7 @@ public class TitleSortBackfillTests : IDisposable
                 }
             );
             ctx.Artists.Add(
-                entity: new Artist
+                new Artist
                 {
                     Id = nullId,
                     Name = "A Perfect Circle",
@@ -79,18 +77,18 @@ public class TitleSortBackfillTests : IDisposable
             await ctx.SaveChangesAsync();
         }
 
-        await TitleSortBackfill.RunAsync(contextFactory: CreateContext, ct: CancellationToken.None);
+        await TitleSortBackfill.RunAsync(CreateContext, CancellationToken.None);
 
         await using (MediaContext ctx = CreateContext())
         {
-            Artist drifted = await ctx.Artists.SingleAsync(predicate: a => a.Id == staleId);
-            Artist wasNull = await ctx.Artists.SingleAsync(predicate: a => a.Id == nullId);
+            Artist drifted = await ctx.Artists.SingleAsync(a => a.Id == staleId);
+            Artist wasNull = await ctx.Artists.SingleAsync(a => a.Id == nullId);
 
             // The stale value is replaced with the current algorithm's output
             // (leading article stripped, lower-cased), and the null is filled.
-            drifted.TitleSort.Should().Be(expected: "The Beatles".TitleSort());
-            drifted.TitleSort.Should().NotBe(unexpected: "value-from-an-older-algorithm");
-            wasNull.TitleSort.Should().Be(expected: "A Perfect Circle".TitleSort());
+            drifted.TitleSort.Should().Be("The Beatles".TitleSort());
+            drifted.TitleSort.Should().NotBe("value-from-an-older-algorithm");
+            wasNull.TitleSort.Should().Be("A Perfect Circle".TitleSort());
         }
     }
 
@@ -103,7 +101,7 @@ public class TitleSortBackfillTests : IDisposable
         await using (MediaContext ctx = CreateContext())
         {
             ctx.Artists.Add(
-                entity: new Artist
+                new Artist
                 {
                     Id = id,
                     Name = "The Beatles",
@@ -114,12 +112,12 @@ public class TitleSortBackfillTests : IDisposable
             await ctx.SaveChangesAsync();
         }
 
-        await TitleSortBackfill.RunAsync(contextFactory: CreateContext, ct: CancellationToken.None);
+        await TitleSortBackfill.RunAsync(CreateContext, CancellationToken.None);
 
         await using (MediaContext ctx = CreateContext())
         {
-            Artist artist = await ctx.Artists.SingleAsync(predicate: a => a.Id == id);
-            artist.TitleSort.Should().Be(expected: current);
+            Artist artist = await ctx.Artists.SingleAsync(a => a.Id == id);
+            artist.TitleSort.Should().Be(current);
         }
     }
 
@@ -136,7 +134,7 @@ public class TitleSortBackfillTests : IDisposable
         await using (MediaContext ctx = CreateContext())
         {
             ctx.Albums.Add(
-                entity: new Album
+                new Album
                 {
                     Id = staleId,
                     Name = "The White Album",
@@ -148,7 +146,7 @@ public class TitleSortBackfillTests : IDisposable
                 }
             );
             ctx.Albums.Add(
-                entity: new Album
+                new Album
                 {
                     Id = nullId,
                     Name = "A Moon Shaped Pool",
@@ -162,16 +160,16 @@ public class TitleSortBackfillTests : IDisposable
             await ctx.SaveChangesAsync();
         }
 
-        await TitleSortBackfill.RunAsync(contextFactory: CreateContext, ct: CancellationToken.None);
+        await TitleSortBackfill.RunAsync(CreateContext, CancellationToken.None);
 
         await using (MediaContext ctx = CreateContext())
         {
-            Album drifted = await ctx.Albums.SingleAsync(predicate: a => a.Id == staleId);
-            Album wasNull = await ctx.Albums.SingleAsync(predicate: a => a.Id == nullId);
+            Album drifted = await ctx.Albums.SingleAsync(a => a.Id == staleId);
+            Album wasNull = await ctx.Albums.SingleAsync(a => a.Id == nullId);
 
-            drifted.TitleSort.Should().Be(expected: "The White Album".TitleSort());
-            drifted.TitleSort.Should().NotBe(unexpected: "value-from-an-older-algorithm");
-            wasNull.TitleSort.Should().Be(expected: "A Moon Shaped Pool".TitleSort());
+            drifted.TitleSort.Should().Be("The White Album".TitleSort());
+            drifted.TitleSort.Should().NotBe("value-from-an-older-algorithm");
+            wasNull.TitleSort.Should().Be("A Moon Shaped Pool".TitleSort());
         }
     }
 
@@ -185,7 +183,7 @@ public class TitleSortBackfillTests : IDisposable
         await using (MediaContext ctx = CreateContext())
         {
             ctx.Albums.Add(
-                entity: new Album
+                new Album
                 {
                     Id = id,
                     Name = "The White Album",
@@ -199,12 +197,12 @@ public class TitleSortBackfillTests : IDisposable
             await ctx.SaveChangesAsync();
         }
 
-        await TitleSortBackfill.RunAsync(contextFactory: CreateContext, ct: CancellationToken.None);
+        await TitleSortBackfill.RunAsync(CreateContext, CancellationToken.None);
 
         await using (MediaContext ctx = CreateContext())
         {
-            Album album = await ctx.Albums.SingleAsync(predicate: a => a.Id == id);
-            album.TitleSort.Should().Be(expected: current);
+            Album album = await ctx.Albums.SingleAsync(a => a.Id == id);
+            album.TitleSort.Should().Be(current);
         }
     }
 
@@ -222,7 +220,7 @@ public class TitleSortBackfillTests : IDisposable
 
         await using MediaContext ctx = CreateContext();
         ctx.Libraries.Add(
-            entity: new()
+            new()
             {
                 Id = libraryId,
                 Title = "Music",
@@ -230,7 +228,7 @@ public class TitleSortBackfillTests : IDisposable
             }
         );
         ctx.Drivers.Add(
-            entity: new()
+            new()
             {
                 Id = driverId,
                 Name = "Local Filesystem",
@@ -239,7 +237,7 @@ public class TitleSortBackfillTests : IDisposable
             }
         );
         ctx.Folders.Add(
-            entity: new()
+            new()
             {
                 Id = folderId,
                 Path = "/media/music",
@@ -256,7 +254,7 @@ public class TitleSortBackfillTests : IDisposable
     {
         // Both Reconcile* methods must exit cleanly on their very first page check
         // (batch.Count == 0) when the library is empty — the common first-boot case.
-        await TitleSortBackfill.RunAsync(contextFactory: CreateContext, ct: CancellationToken.None);
+        await TitleSortBackfill.RunAsync(CreateContext, CancellationToken.None);
     }
 
     [Fact]
@@ -266,8 +264,8 @@ public class TitleSortBackfillTests : IDisposable
         // itself (e.g. a locked/corrupt DB file) rather than crashing the deferred
         // background job that calls it.
         await TitleSortBackfill.RunAsync(
-            contextFactory: () => throw new InvalidOperationException(message: "simulated context factory failure"),
-            ct: CancellationToken.None
+            () => throw new InvalidOperationException("simulated context factory failure"),
+            CancellationToken.None
         );
     }
 }

@@ -57,12 +57,12 @@ public static class AlphaBucket
     /// </summary>
     public static bool Matches(string? titleSort, string bucket)
     {
-        if (string.IsNullOrEmpty(value: titleSort))
+        if (string.IsNullOrEmpty(titleSort))
             return bucket == "#";
 
         if (bucket == "#")
-            return !char.IsLetter(c: titleSort[index: 0]);
+            return !char.IsLetter(titleSort[0]);
 
-        return titleSort.StartsWith(value: bucket, comparisonType: StringComparison.OrdinalIgnoreCase);
+        return titleSort.StartsWith(bucket, StringComparison.OrdinalIgnoreCase);
     }
 }

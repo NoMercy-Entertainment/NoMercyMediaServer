@@ -20,7 +20,7 @@ internal class FileTimestampEnricher : ILogEventEnricher
     {
         DateTime timestamp = DateTime.UtcNow;
 
-        logEvent.RemovePropertyIfPresent(propertyName: "@t");
-        logEvent.AddPropertyIfAbsent(property: propertyFactory.CreateProperty(name: "Time", value: timestamp));
+        logEvent.RemovePropertyIfPresent("@t");
+        logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty("Time", timestamp));
     }
 }

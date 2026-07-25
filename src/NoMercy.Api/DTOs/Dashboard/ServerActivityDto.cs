@@ -16,45 +16,45 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record ServerActivityDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "category")]
+    [JsonProperty("category")]
     public ActivityCategory Category { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "time")]
+    [JsonProperty("time")]
     public DateTime Time { get; set; }
 
-    [JsonProperty(propertyName: "created_at")]
+    [JsonProperty("created_at")]
     public DateTime CreatedAt { get; set; }
 
-    [JsonProperty(propertyName: "updated_at")]
+    [JsonProperty("updated_at")]
     public DateTime UpdatedAt { get; set; }
 
-    [JsonProperty(propertyName: "user_id")]
+    [JsonProperty("user_id")]
     public Guid UserId { get; set; }
 
-    [JsonProperty(propertyName: "device_id")]
+    [JsonProperty("device_id")]
     public Ulid DeviceId { get; set; }
 
-    [JsonProperty(propertyName: "media_id")]
+    [JsonProperty("media_id")]
     public Ulid? MediaId { get; set; }
 
-    [JsonProperty(propertyName: "success")]
+    [JsonProperty("success")]
     public bool Success { get; set; }
 
-    [JsonProperty(propertyName: "error_code")]
+    [JsonProperty("error_code")]
     public string? ErrorCode { get; set; }
 
-    [JsonProperty(propertyName: "metadata")]
+    [JsonProperty("metadata")]
     public string? Metadata { get; set; }
 
-    [JsonProperty(propertyName: "device")]
+    [JsonProperty("device")]
     public string Device { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "user")]
+    [JsonProperty("user")]
     public string User { get; set; } = string.Empty;
 }

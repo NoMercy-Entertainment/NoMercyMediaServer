@@ -25,11 +25,11 @@ public class TvPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         return await db
-            .Tvs.Where(predicate: t => t.Id == id)
-            .Select(selector: t => t._colorPalette)
-            .FirstOrDefaultAsync(cancellationToken: ct);
+            .Tvs.Where(t => t.Id == id)
+            .Select(t => t._colorPalette)
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -38,21 +38,20 @@ public class TvPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
-        Tv? tv = await db.Tvs.FirstOrDefaultAsync(predicate: t => t.Id == id, cancellationToken: ct);
+        int id = int.Parse(entityId);
+        Tv? tv = await db.Tvs.FirstOrDefaultAsync(t => t.Id == id, ct);
         if (tv is null)
             return PaletteResult.NoImage();
         if (tv.Poster is null && tv.Backdrop is null)
             return PaletteResult.NoImage();
 
-        string json = await MovieDbImageManager.MultiColorPalette(items:
-        [
-            new(key: "poster", path: tv.Poster),
-            new(key: "backdrop", path: tv.Backdrop),
+        string json = await MovieDbImageManager.MultiColorPalette([
+            new("poster", tv.Poster),
+            new("backdrop", tv.Backdrop),
         ]);
-        return string.IsNullOrWhiteSpace(value: json)
+        return string.IsNullOrWhiteSpace(json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json: json);
+            : PaletteResult.Success(json);
     }
 
     public async Task PersistAsync(
@@ -62,9 +61,9 @@ public class TvPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         await db
-            .Tvs.Where(predicate: t => t.Id == id)
-            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: t => t._colorPalette, valueExpression: json), cancellationToken: ct);
+            .Tvs.Where(t => t.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t._colorPalette, json), ct);
     }
 }

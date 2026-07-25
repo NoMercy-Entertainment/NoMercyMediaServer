@@ -46,28 +46,28 @@ public class FfmpegBluRayCapability(
 
     public async Task ProbeAsync(CancellationToken ct = default)
     {
-        BluRayProtocolPresent = await CheckBluRayProtocolAsync(ct: ct);
+        BluRayProtocolPresent = await CheckBluRayProtocolAsync(ct);
 
         ActiveKeyDbPath = ResolveActiveKeyDbPath();
 
         if (BluRayProtocolPresent)
         {
             logger.LogInformation(
-                message: "[BluRay] ffmpeg bluray: protocol present — AACS/BD+ support active. KEYDB source: {KeyDb}",
-                args: ActiveKeyDbPath
+                "[BluRay] ffmpeg bluray: protocol present — AACS/BD+ support active. KEYDB source: {KeyDb}",
+                ActiveKeyDbPath
             );
         }
         else
         {
             logger.LogWarning(
-                message: "[BluRay] ffmpeg bluray: protocol NOT present in this build — Blu-ray ripping will fail. Rebuild nomercy-ffmpeg with --enable-libbluray."
+                "[BluRay] ffmpeg bluray: protocol NOT present in this build — Blu-ray ripping will fail. Rebuild nomercy-ffmpeg with --enable-libbluray."
             );
         }
 
         string? aacsOverride = options.BluRay?.AacsKeysOverridePath;
-        if (!string.IsNullOrWhiteSpace(value: aacsOverride))
+        if (!string.IsNullOrWhiteSpace(aacsOverride))
         {
-            logger.LogInformation(message: "[BluRay] LIBAACS_KEY_DB override: {Path}", args: aacsOverride);
+            logger.LogInformation("[BluRay] LIBAACS_KEY_DB override: {Path}", aacsOverride);
         }
     }
 
@@ -76,22 +76,22 @@ public class FfmpegBluRayCapability(
     private async Task<bool> CheckBluRayProtocolAsync(CancellationToken ct)
     {
         ProcessResult result = await processRunner.RunAsync(
-            executable: options.FfmpegPath,
-            arguments: ["-hide_banner", "-protocols"],
-            workingDirectory: null,
-            cancellationToken: ct
+            options.FfmpegPath,
+            ["-hide_banner", "-protocols"],
+            null,
+            ct
         );
 
         // ffmpeg -protocols writes to stdout; result is exit 0.
         // The bluray: line appears in the output regardless of success/failure exit.
         string combined = result.StdOut + result.StdErr;
-        return combined.Contains(value: "bluray", comparisonType: StringComparison.OrdinalIgnoreCase);
+        return combined.Contains("bluray", StringComparison.OrdinalIgnoreCase);
     }
 
     private string ResolveActiveKeyDbPath()
     {
         string? overridePath = options.BluRay?.KeyDbOverridePath;
-        if (!string.IsNullOrWhiteSpace(value: overridePath))
+        if (!string.IsNullOrWhiteSpace(overridePath))
             return $"override:{overridePath}";
 
         // libaacs searches XDG_CONFIG_HOME/aacs/KEYDB.cfg (Linux) or

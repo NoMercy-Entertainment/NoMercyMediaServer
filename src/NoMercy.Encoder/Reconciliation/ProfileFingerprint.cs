@@ -36,7 +36,7 @@ namespace NoMercy.Encoder.Reconciliation;
 public static class ProfileFingerprint
 {
     private static readonly JsonSerializer CanonicalSerializer = JsonSerializer.Create(
-        settings: new JsonSerializerSettings
+        new JsonSerializerSettings
         {
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Include,
@@ -46,11 +46,11 @@ public static class ProfileFingerprint
 
     public static string Compute(EncodingProfile profile)
     {
-        JToken raw = JToken.FromObject(o: profile, jsonSerializer: CanonicalSerializer);
-        JToken canonical = Canonicalize(token: raw);
-        string json = canonical.ToString(formatting: Formatting.None);
-        byte[] hash = SHA256.HashData(source: Encoding.UTF8.GetBytes(s: json));
-        return Convert.ToHexString(inArray: hash).ToLowerInvariant();
+        JToken raw = JToken.FromObject(profile, CanonicalSerializer);
+        JToken canonical = Canonicalize(raw);
+        string json = canonical.ToString(Formatting.None);
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private static JToken Canonicalize(JToken token)
@@ -59,9 +59,9 @@ public static class ProfileFingerprint
         {
             JObject sorted = new();
             foreach (
-                JProperty property in obj.Properties().OrderBy(keySelector: p => p.Name, comparer: StringComparer.Ordinal)
+                JProperty property in obj.Properties().OrderBy(p => p.Name, StringComparer.Ordinal)
             )
-                sorted.Add(propertyName: property.Name, value: Canonicalize(token: property.Value));
+                sorted.Add(property.Name, Canonicalize(property.Value));
             return sorted;
         }
 
@@ -69,7 +69,7 @@ public static class ProfileFingerprint
         {
             JArray sortedArray = new();
             foreach (JToken item in array)
-                sortedArray.Add(item: Canonicalize(token: item));
+                sortedArray.Add(Canonicalize(item));
             return sortedArray;
         }
 

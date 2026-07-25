@@ -28,72 +28,71 @@ public class ThumbnailPlanBuilderTests
 {
     private static MediaInfo BuildMediaWithVideo(int width = 1920, int height = 1080) =>
         new(
-            FilePath: "/movies/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 2),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 7_200_000_000,
-            VideoStreams:
+            "/movies/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(2),
+            8000,
+            7_200_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: width,
-                    Height: height,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: null,
-                    ColorTransfer: null,
-                    ColorSpace: null,
-                    IsDefault: true,
-                    BitRateKbps: 6000
+                    0,
+                    "h264",
+                    width,
+                    height,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    null,
+                    null,
+                    null,
+                    true,
+                    6000
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
     private static MediaInfo BuildAudioOnlyMedia() =>
         new(
-            FilePath: "/music/test.flac",
-            Format: "flac",
-            Duration: TimeSpan.FromMinutes(minutes: 4),
-            OverallBitRateKbps: 900,
-            FileSizeBytes: 27_000_000,
-            VideoStreams: [],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            "/music/test.flac",
+            "flac",
+            TimeSpan.FromMinutes(4),
+            900,
+            27_000_000,
+            [],
+            [],
+            [],
+            []
         );
 
     private static VideoOutput BuildVideoOutput(StreamPolicy policy) =>
         new(
-            Policy: policy,
-            Codec: policy == StreamPolicy.Copy ? VideoCodecType.Copy : VideoCodecType.H264,
-            Width: 1920,
-            Height: 1080,
-            RateControl: NoMercy.Encoder.Profiles.RateControlMode.Crf,
-            Crf: 23,
-            BitrateKbps: 4000,
-            MaxBitrateKbps: null,
-            BufferSizeKbps: null,
-            Preset: "medium",
-            CodecProfile: CodecProfile.Auto,
-            Level: null,
-            Tune: null,
-            BitDepth: 8,
-            PixelFormat: null,
-            KeyframeIntervalSeconds: 2,
-            ConvertHdrToSdr: false,
-            SegmentNameTemplate: "video/{label}",
-            PlaylistNameTemplate: "video/{label}/playlist"
+            policy,
+            policy == StreamPolicy.Copy ? VideoCodecType.Copy : VideoCodecType.H264,
+            1920,
+            1080,
+            NoMercy.Encoder.Profiles.RateControlMode.Crf,
+            23,
+            4000,
+            null,
+            null,
+            "medium",
+            CodecProfile.Auto,
+            null,
+            null,
+            8,
+            null,
+            2,
+            false,
+            "video/{label}",
+            "video/{label}/playlist"
         );
 
     private static EncodingProfile BuildProfile(VideoOutput video, bool generateSpriteVtt = true) =>
         new(
-            Id: Ulid.NewUlid(),
+            Ulid.NewUlid(),
             Name: "ThumbnailPlanBuilderFixture",
             Container: Container.HlsFmp4,
             Video: video,
@@ -106,22 +105,22 @@ public class ThumbnailPlanBuilderTests
     public void CopyProfile_WithVideoStream_BuildsPlan()
     {
         MediaInfo media = BuildMediaWithVideo();
-        EncodingProfile profile = BuildProfile(video: BuildVideoOutput(policy: StreamPolicy.Copy));
+        EncodingProfile profile = BuildProfile(BuildVideoOutput(StreamPolicy.Copy));
 
-        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile: profile, media: media);
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
 
-        plan.Should().NotBeNull(because: "a remux/copy profile can still sprite via a separate command");
-        plan!.Width.Should().Be(expected: 160);
-        plan.IntervalSeconds.Should().Be(expected: 10);
+        plan.Should().NotBeNull("a remux/copy profile can still sprite via a separate command");
+        plan!.Width.Should().Be(160);
+        plan.IntervalSeconds.Should().Be(10);
     }
 
     [Fact]
     public void TranscodeProfile_WithVideoStream_BuildsPlan()
     {
         MediaInfo media = BuildMediaWithVideo();
-        EncodingProfile profile = BuildProfile(video: BuildVideoOutput(policy: StreamPolicy.Transcode));
+        EncodingProfile profile = BuildProfile(BuildVideoOutput(StreamPolicy.Transcode));
 
-        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile: profile, media: media);
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
 
         plan.Should().NotBeNull();
     }
@@ -131,11 +130,11 @@ public class ThumbnailPlanBuilderTests
     {
         MediaInfo media = BuildMediaWithVideo();
         EncodingProfile profile = BuildProfile(
-            video: BuildVideoOutput(policy: StreamPolicy.Copy),
-            generateSpriteVtt: false
+            BuildVideoOutput(StreamPolicy.Copy),
+            false
         );
 
-        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile: profile, media: media);
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
 
         plan.Should().BeNull();
     }
@@ -144,24 +143,24 @@ public class ThumbnailPlanBuilderTests
     public void AudioOnlyMedia_ReturnsNull()
     {
         MediaInfo media = BuildAudioOnlyMedia();
-        EncodingProfile profile = BuildProfile(video: BuildVideoOutput(policy: StreamPolicy.Copy));
+        EncodingProfile profile = BuildProfile(BuildVideoOutput(StreamPolicy.Copy));
 
-        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile: profile, media: media);
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
 
-        plan.Should().BeNull(because: "audio-only media has no frames to sprite from");
+        plan.Should().BeNull("audio-only media has no frames to sprite from");
     }
 
     [Fact]
     public void NoVideoOutputOnProfile_ReturnsNull()
     {
         MediaInfo media = BuildMediaWithVideo();
-        EncodingProfile profile = BuildProfile(video: BuildVideoOutput(policy: StreamPolicy.Copy)) with
+        EncodingProfile profile = BuildProfile(BuildVideoOutput(StreamPolicy.Copy)) with
         {
             Video = null,
         };
 
-        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile: profile, media: media);
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
 
-        plan.Should().BeNull(because: "a profile with no video output has nothing to sprite");
+        plan.Should().BeNull("a profile with no video output has nothing to sprite");
     }
 }

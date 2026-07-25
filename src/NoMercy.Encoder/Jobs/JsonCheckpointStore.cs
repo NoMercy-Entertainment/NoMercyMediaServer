@@ -33,14 +33,14 @@ public class JsonCheckpointStore(IStorage storage, ILogger<JsonCheckpointStore> 
 
     public async Task SaveAsync(JobCheckpoint checkpoint, CancellationToken ct = default)
     {
-        storage.CreateDirectory(path: checkpoint.OutputDirectory);
-        string path = Path.Combine(path1: checkpoint.OutputDirectory, path2: FileName);
+        storage.CreateDirectory(checkpoint.OutputDirectory);
+        string path = Path.Combine(checkpoint.OutputDirectory, FileName);
 
         JobCheckpoint toWrite = checkpoint with { LastUpdated = DateTime.UtcNow };
-        string json = JsonSerializer.Serialize(value: toWrite, options: SerializerOptions);
-        await storage.WriteAsync(path: path, bytes: Encoding.UTF8.GetBytes(s: json), ct: ct);
+        string json = JsonSerializer.Serialize(toWrite, SerializerOptions);
+        await storage.WriteAsync(path, Encoding.UTF8.GetBytes(json), ct);
 
-        logger.LogDebug(message: "Checkpoint saved: {JobId} → {Path}", args: [checkpoint.JobId, path]);
+        logger.LogDebug("Checkpoint saved: {JobId} → {Path}", [checkpoint.JobId, path]);
     }
 
     public async Task<JobCheckpoint?> LoadAsync(
@@ -48,33 +48,33 @@ public class JsonCheckpointStore(IStorage storage, ILogger<JsonCheckpointStore> 
         CancellationToken ct = default
     )
     {
-        string path = Path.Combine(path1: outputDirectory, path2: FileName);
-        if (!storage.Exists(path: path))
+        string path = Path.Combine(outputDirectory, FileName);
+        if (!storage.Exists(path))
             return null;
 
         try
         {
-            await using Stream stream = await storage.OpenReadAsync(path: path, ct: ct);
+            await using Stream stream = await storage.OpenReadAsync(path, ct);
             return await JsonSerializer.DeserializeAsync<JobCheckpoint>(
-                utf8Json: stream,
-                options: SerializerOptions,
-                cancellationToken: ct
+                stream,
+                SerializerOptions,
+                ct
             );
         }
         catch (JsonException ex)
         {
-            logger.LogWarning(exception: ex, message: "Checkpoint at {Path} is corrupt; treating as missing", args: path);
+            logger.LogWarning(ex, "Checkpoint at {Path} is corrupt; treating as missing", path);
             return null;
         }
     }
 
     public Task DeleteAsync(string outputDirectory, CancellationToken ct = default)
     {
-        string path = Path.Combine(path1: outputDirectory, path2: FileName);
-        if (storage.Exists(path: path))
+        string path = Path.Combine(outputDirectory, FileName);
+        if (storage.Exists(path))
         {
-            storage.Delete(path: path);
-            logger.LogDebug(message: "Checkpoint deleted at {Path}", args: path);
+            storage.Delete(path);
+            logger.LogDebug("Checkpoint deleted at {Path}", path);
         }
 
         return Task.CompletedTask;

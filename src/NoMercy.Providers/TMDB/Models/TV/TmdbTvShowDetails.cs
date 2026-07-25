@@ -19,60 +19,60 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbTvShowDetails : TmdbTvShow
 {
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty(propertyName: "created_by")]
+    [JsonProperty("created_by")]
     public TmdbCreatedBy[] CreatedBy { get; set; } = [];
 
-    [JsonProperty(propertyName: "episode_run_time")]
+    [JsonProperty("episode_run_time")]
     public int[]? EpisodeRunTime { get; set; } = [];
 
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public TmdbGenre[] Genres { get; set; } = [];
 
-    [JsonProperty(propertyName: "homepage")]
+    [JsonProperty("homepage")]
     public Uri? Homepage { get; set; }
 
-    [JsonProperty(propertyName: "in_production")]
+    [JsonProperty("in_production")]
     public bool InProduction { get; set; }
 
-    [JsonProperty(propertyName: "languages")]
+    [JsonProperty("languages")]
     public string[] Languages { get; set; } = [];
 
-    [JsonProperty(propertyName: "last_episode_to_air")]
+    [JsonProperty("last_episode_to_air")]
     public TmdbEpisode? LastEpisodeToAir { get; set; }
 
-    [JsonProperty(propertyName: "next_episode_to_air")]
+    [JsonProperty("next_episode_to_air")]
     public TmdbEpisode? NextEpisodeToAir { get; set; }
 
-    [JsonProperty(propertyName: "networks")]
+    [JsonProperty("networks")]
     public TmdbNetwork[] Networks { get; set; } = [];
 
-    [JsonProperty(propertyName: "number_of_episodes")]
+    [JsonProperty("number_of_episodes")]
     public int NumberOfEpisodes { get; set; }
 
-    [JsonProperty(propertyName: "number_of_seasons")]
+    [JsonProperty("number_of_seasons")]
     public int NumberOfSeasons { get; set; }
 
-    [JsonProperty(propertyName: "production_companies")]
+    [JsonProperty("production_companies")]
     public TmdbProductionCompany[] ProductionCompanies { get; set; } = [];
 
-    [JsonProperty(propertyName: "production_countries")]
+    [JsonProperty("production_countries")]
     public TmdbProductionCountry[] ProductionCountries { get; set; } = [];
 
-    [JsonProperty(propertyName: "seasons")]
+    [JsonProperty("seasons")]
     public List<TmdbSeason> Seasons { get; set; } = [];
 
-    [JsonProperty(propertyName: "spoken_languages")]
+    [JsonProperty("spoken_languages")]
     public TmdbSpokenLanguage[] SpokenLanguages { get; set; } = [];
 
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string? Status { get; set; }
 
-    [JsonProperty(propertyName: "tagline")]
+    [JsonProperty("tagline")]
     public string? Tagline { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 }

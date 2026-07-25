@@ -25,13 +25,13 @@ public class TvdbUpdatesClient : TvdbBaseClient
     {
         Dictionary<string, string?> query = new()
         {
-            [key: "since"] = since.ToString(),
-            [key: "page"] = page.ToString(),
+            ["since"] = since.ToString(),
+            ["page"] = page.ToString(),
         };
-        if (!string.IsNullOrEmpty(value: type))
-            query[key: "type"] = type;
-        if (!string.IsNullOrEmpty(value: action))
-            query[key: "action"] = action;
-        return Get<TvdbUpdatesResponse>(url: "updates", query: query, priority: priority);
+        if (!string.IsNullOrEmpty(type))
+            query["type"] = type;
+        if (!string.IsNullOrEmpty(action))
+            query["action"] = action;
+        return Get<TvdbUpdatesResponse>("updates", query, priority);
     }
 }

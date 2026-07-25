@@ -9,194 +9,192 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Extensions;
-
 namespace NoMercy.Tests.NmSystem;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class FileNameSanitizerTests
 {
     [Fact]
     public void CleanFileName_WithEmptyString_ReturnsEmpty()
     {
         string result = "".CleanFileName();
-        result.Should().Be(expected: "");
+        result.Should().Be("");
     }
 
     [Fact]
     public void CleanFileName_WithNull_ReturnsEmpty()
     {
         string result = ((string?)null).CleanFileName();
-        result.Should().Be(expected: "");
+        result.Should().Be("");
     }
 
     [Fact]
     public void CleanFileName_WithNormalName_ReturnsUnchanged()
     {
         string result = "MovieTitle.mkv".CleanFileName();
-        result.Should().Be(expected: "MovieTitle.mkv");
+        result.Should().Be("MovieTitle.mkv");
     }
 
     [Fact]
     public void CleanFileName_WithInvalidChars_ReplacesWithDots()
     {
         string result = "Movie|Title?.mkv".CleanFileName();
-        result.Should().NotContain(unexpected: "|");
-        result.Should().NotContain(unexpected: "?");
+        result.Should().NotContain("|");
+        result.Should().NotContain("?");
     }
 
     [Fact]
     public void CleanFileName_WithWhitespace_ReplacesWithDots()
     {
         string result = "Movie Title.mkv".CleanFileName();
-        result.Should().Contain(expected: ".");
+        result.Should().Contain(".");
     }
 
     [Fact]
     public void CleanFileName_WithAmpersand_ReplacesWithAnd()
     {
         string result = "Movie&Title.mkv".CleanFileName();
-        result.Should().Contain(expected: "and");
+        result.Should().Contain("and");
     }
 
     [Fact]
     public void CleanFileName_WithDegreesSign_ReplacesWithText()
     {
         string result = "90°.mkv".CleanFileName();
-        result.Should().Contain(expected: "Degrees");
+        result.Should().Contain("Degrees");
     }
 
     [Fact]
     public void CleanFileName_WithDashes_ReplacesManyWithOne()
     {
         string result = "Movie—Title–Test–Case.mkv".CleanFileName();
-        result.Should().Contain(expected: "-");
+        result.Should().Contain("-");
     }
 
     [Fact]
     public void CleanFileName_WithMultipleDots_CollapsesToOne()
     {
         string result = "Movie...Title...Name.mkv".CleanFileName();
-        result.Should().NotContain(unexpected: "...");
+        result.Should().NotContain("...");
     }
 
     [Fact]
     public void CleanFileName_WithLeadingTrailingDots_RemovesThem()
     {
         string result = ".MovieTitle.".CleanFileName();
-        result.Should().NotStartWith(unexpected: ".");
-        result.Should().NotEndWith(unexpected: ".");
+        result.Should().NotStartWith(".");
+        result.Should().NotEndWith(".");
     }
 
     [Fact]
     public void DirectorySafeName_WithNull_ReturnsEmpty()
     {
         string result = ((string?)null).DirectorySafeName();
-        result.Should().Be(expected: "");
+        result.Should().Be("");
     }
 
     [Fact]
     public void DirectorySafeName_WithNormalName_ReturnsName()
     {
         string result = "MyFolder".DirectorySafeName();
-        result.Should().Be(expected: "MyFolder");
+        result.Should().Be("MyFolder");
     }
 
     [Fact]
     public void DirectorySafeName_WithInvalidChars_ReplacesWithSpaces()
     {
         string result = "Folder/Name|Other".DirectorySafeName();
-        result.Should().NotContain(unexpected: "/");
-        result.Should().NotContain(unexpected: "|");
+        result.Should().NotContain("/");
+        result.Should().NotContain("|");
     }
 
     [Fact]
     public void MusicBrainzSafeName_WithNull_ReturnsEmpty()
     {
         string result = ((string?)null).MusicBrainzSafeName();
-        result.Should().Be(expected: "");
+        result.Should().Be("");
     }
 
     [Fact]
     public void MusicBrainzSafeName_WithNormalName_ReturnsName()
     {
         string result = "ArtistName".MusicBrainzSafeName();
-        result.Should().Be(expected: "ArtistName");
+        result.Should().Be("ArtistName");
     }
 
     [Fact]
     public void MusicBrainzSafeName_WithInvalidChars_ReplacesWithUnderscores()
     {
         string result = "Artist/Name|Other".MusicBrainzSafeName();
-        result.Should().NotContain(unexpected: "/");
-        result.Should().NotContain(unexpected: "|");
+        result.Should().NotContain("/");
+        result.Should().NotContain("|");
     }
 
     [Fact]
     public void SanitizeFileName_WithSmartQuotes_ConvertsToAscii()
     {
         string result = "movie’s tale.mkv".SanitizeFileName();
-        result.Should().Contain(expected: "'");
+        result.Should().Contain("'");
     }
 
     [Fact]
     public void SanitizeFileName_WithLeftDoubleQuote_ConvertsToAscii()
     {
         string result = "“movie”.mkv".SanitizeFileName();
-        result.Should().Contain(expected: "\"");
+        result.Should().Contain("\"");
     }
 
     [Fact]
     public void SanitizeFileName_WithEnDash_ConvertsToHyphen()
     {
         string result = "movie–name.mkv".SanitizeFileName();
-        result.Should().Contain(expected: "-");
+        result.Should().Contain("-");
     }
 
     [Theory]
-    [InlineData(data: ["simple", "simple"])]
-    [InlineData(data: ["with spaces", "withspaces"])]
-    [InlineData(data: ["with-dashes", "withdashes"])]
-    [InlineData(data: ["CamelCase", "camelcase"])]
+    [InlineData(["simple", "simple"])]
+    [InlineData(["with spaces", "withspaces"])]
+    [InlineData(["with-dashes", "withdashes"])]
+    [InlineData(["CamelCase", "camelcase"])]
     public void NormalizeForComparison_StripsNonAlphanumeric(string input, string expected)
     {
         string result = input.NormalizeForComparison();
-        result.Should().Be(expected: expected);
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void NormalizeForComparison_ConvertAmpersand()
     {
         string result = "A&B".NormalizeForComparison();
-        result.Should().Be(expected: "aandb");
+        result.Should().Be("aandb");
     }
 
     [Fact]
     public void NormalizeForComparison_IsCaseInsensitive()
     {
         string result = "HELLO".NormalizeForComparison();
-        result.Should().Be(expected: "hello");
+        result.Should().Be("hello");
     }
 
     [Fact]
     public void Shorten_WithinLimit_ReturnsUnchanged()
     {
         // Short titles keep their exact existing path — no relocation of content.
-        "Breaking Bad".Shorten().Should().Be(expected: "Breaking Bad");
+        "Breaking Bad".Shorten().Should().Be("Breaking Bad");
     }
 
     [Fact]
     public void Shorten_NullOrEmpty_ReturnsEmpty()
     {
-        ((string?)null).Shorten().Should().Be(expected: "");
-        "".Shorten().Should().Be(expected: "");
+        ((string?)null).Shorten().Should().Be("");
+        "".Shorten().Should().Be("");
     }
 
     [Fact]
     public void Shorten_LongInput_IsBoundedToMaxLength()
     {
-        string result = new string(c: 'a', count: 200).Shorten();
-        result.Length.Should().BeLessThanOrEqualTo(expected: FileNameSanitizer.MaxTitleComponentLength);
+        string result = new string('a', 200).Shorten();
+        result.Length.Should().BeLessThanOrEqualTo(FileNameSanitizer.MaxTitleComponentLength);
     }
 
     [Fact]
@@ -204,7 +202,7 @@ public class FileNameSanitizerTests
     {
         const string longTitle =
             "My.Gift.Lvl.9999.Unlimited.Gacha.Backstabbed.in.a.Backwater.Dungeon.Im.Out.for.Revenge";
-        longTitle.Shorten().Should().Be(expected: longTitle.Shorten());
+        longTitle.Shorten().Should().Be(longTitle.Shorten());
     }
 
     [Fact]
@@ -219,8 +217,8 @@ public class FileNameSanitizerTests
 
         string result = cleaned.Shorten();
 
-        result.Should().Be(expected: "OO.Magic.Episode.3.The.Magic.of.Waking.Up.at.a");
-        result.Should().NotMatchRegex(regularExpression: "[0-9a-f]{8}$", because: "a digest is not part of a title");
+        result.Should().Be("OO.Magic.Episode.3.The.Magic.of.Waking.Up.at.a");
+        result.Should().NotMatchRegex("[0-9a-f]{8}$", "a digest is not part of a title");
     }
 
     [Fact]
@@ -228,12 +226,12 @@ public class FileNameSanitizerTests
     {
         // The digest used to eat nine of the fifty characters, so a title was cut
         // far shorter than the limit actually required.
-        string cleaned = new string(c: 'a', count: 60);
+        string cleaned = new string('a', 60);
 
         cleaned
             .Shorten()
             .Length.Should()
-            .Be(expected: FileNameSanitizer.MaxTitleComponentLength, because: "every character of the cap is title");
+            .Be(FileNameSanitizer.MaxTitleComponentLength, "every character of the cap is title");
     }
 
     [Fact]
@@ -244,7 +242,7 @@ public class FileNameSanitizerTests
 
         string result = cleaned.Shorten();
 
-        result.Length.Should().BeLessThanOrEqualTo(expected: FileNameSanitizer.MaxTitleComponentLength);
-        result.Should().StartWith(expected: "My.Gift");
+        result.Length.Should().BeLessThanOrEqualTo(FileNameSanitizer.MaxTitleComponentLength);
+        result.Should().StartWith("My.Gift");
     }
 }

@@ -19,7 +19,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Networking;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class PortForwardStrategyTests
 {
     private sealed class StubNetworkDiscovery : INetworkDiscovery
@@ -47,7 +47,7 @@ public sealed class PortForwardStrategyTests
 
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
-        public Task<bool> IsPortOpenAsync() => Task.FromResult(result: _portOpen);
+        public Task<bool> IsPortOpenAsync() => Task.FromResult(_portOpen);
     }
 
     private static PortForwardStrategy BuildStrategy(
@@ -56,9 +56,9 @@ public sealed class PortForwardStrategyTests
     )
     {
         return new(
-            networkDiscovery: new StubNetworkDiscovery(portOpen: portOpen),
-            connectivityStatus: status,
-            logger: NullLogger<PortForwardStrategy>.Instance
+            new StubNetworkDiscovery(portOpen),
+            status,
+            NullLogger<PortForwardStrategy>.Instance
         );
     }
 
@@ -66,59 +66,59 @@ public sealed class PortForwardStrategyTests
     public async Task TryEstablishAsync_WhenNatStatusIsOpen_ReturnsTrue_WithoutCheckingPort()
     {
         ConnectivityStatus status = new() { NatStatus = NatStatus.Open };
-        PortForwardStrategy strategy = BuildStrategy(status: status, portOpen: false);
+        PortForwardStrategy strategy = BuildStrategy(status, false);
 
-        bool result = await strategy.TryEstablishAsync(ct: CancellationToken.None);
+        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.True(condition: result);
-        Assert.Equal(expected: NatStatus.Open, actual: status.NatStatus);
+        Assert.True(result);
+        Assert.Equal(NatStatus.Open, status.NatStatus);
     }
 
     [Fact]
     public async Task TryEstablishAsync_WhenNatStatusIsFiltered_SetsPortForwarded_AndPromotesToOpen()
     {
         ConnectivityStatus status = new() { NatStatus = NatStatus.Filtered };
-        PortForwardStrategy strategy = BuildStrategy(status: status, portOpen: false);
+        PortForwardStrategy strategy = BuildStrategy(status, false);
 
-        bool result = await strategy.TryEstablishAsync(ct: CancellationToken.None);
+        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.True(condition: result);
-        Assert.True(condition: status.PortForwarded);
-        Assert.Equal(expected: NatStatus.Open, actual: status.NatStatus);
+        Assert.True(result);
+        Assert.True(status.PortForwarded);
+        Assert.Equal(NatStatus.Open, status.NatStatus);
     }
 
     [Fact]
     public async Task TryEstablishAsync_WhenNatStatusIsNone_AndPortOpen_ReturnsTrueAndSetsOpen()
     {
         ConnectivityStatus status = new() { NatStatus = NatStatus.None };
-        PortForwardStrategy strategy = BuildStrategy(status: status, portOpen: true);
+        PortForwardStrategy strategy = BuildStrategy(status, true);
 
-        bool result = await strategy.TryEstablishAsync(ct: CancellationToken.None);
+        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.True(condition: result);
-        Assert.Equal(expected: NatStatus.Open, actual: status.NatStatus);
+        Assert.True(result);
+        Assert.Equal(NatStatus.Open, status.NatStatus);
     }
 
     [Fact]
     public async Task TryEstablishAsync_WhenNatStatusIsNone_AndPortClosed_ReturnsFalse()
     {
         ConnectivityStatus status = new() { NatStatus = NatStatus.None };
-        PortForwardStrategy strategy = BuildStrategy(status: status, portOpen: false);
+        PortForwardStrategy strategy = BuildStrategy(status, false);
 
-        bool result = await strategy.TryEstablishAsync(ct: CancellationToken.None);
+        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(condition: result);
+        Assert.False(result);
     }
 
     [Fact]
     public async Task TryEstablishAsync_WhenNatStatusIsClosed_AndPortClosed_ReturnsFalse()
     {
         ConnectivityStatus status = new() { NatStatus = NatStatus.Closed };
-        PortForwardStrategy strategy = BuildStrategy(status: status, portOpen: false);
+        PortForwardStrategy strategy = BuildStrategy(status, false);
 
-        bool result = await strategy.TryEstablishAsync(ct: CancellationToken.None);
+        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(condition: result);
+        Assert.False(result);
     }
 
     [Fact]
@@ -127,48 +127,48 @@ public sealed class PortForwardStrategyTests
         TrackingNetworkDiscovery tracking = new();
         ConnectivityStatus status = new() { NatStatus = NatStatus.Filtered };
         PortForwardStrategy strategy = new(
-            networkDiscovery: tracking,
-            connectivityStatus: status,
-            logger: NullLogger<PortForwardStrategy>.Instance
+            tracking,
+            status,
+            NullLogger<PortForwardStrategy>.Instance
         );
 
-        await strategy.TryEstablishAsync(ct: CancellationToken.None);
+        await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(condition: tracking.IsPortOpenCalled);
+        Assert.False(tracking.IsPortOpenCalled);
     }
 
     [Fact]
     public void Priority_IsOne()
     {
-        PortForwardStrategy strategy = BuildStrategy(status: new());
+        PortForwardStrategy strategy = BuildStrategy(new());
 
-        Assert.Equal(expected: 1, actual: strategy.Priority);
+        Assert.Equal(1, strategy.Priority);
     }
 
     [Fact]
     public void Type_IsPortForward()
     {
-        PortForwardStrategy strategy = BuildStrategy(status: new());
+        PortForwardStrategy strategy = BuildStrategy(new());
 
-        Assert.Equal(expected: ConnectivityType.PortForward, actual: strategy.Type);
+        Assert.Equal(ConnectivityType.PortForward, strategy.Type);
     }
 
     [Fact]
     public void Name_IsPortForward()
     {
-        PortForwardStrategy strategy = BuildStrategy(status: new());
+        PortForwardStrategy strategy = BuildStrategy(new());
 
-        Assert.Equal(expected: "PortForward", actual: strategy.Name);
+        Assert.Equal("PortForward", strategy.Name);
     }
 
     [Fact]
     public async Task TeardownAsync_DoesNotThrow_AndCompletes()
     {
-        PortForwardStrategy strategy = BuildStrategy(status: new());
+        PortForwardStrategy strategy = BuildStrategy(new());
 
-        Exception? ex = await Record.ExceptionAsync(testCode: strategy.TeardownAsync);
+        Exception? ex = await Record.ExceptionAsync(strategy.TeardownAsync);
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     private sealed class TrackingNetworkDiscovery : INetworkDiscovery
@@ -193,7 +193,7 @@ public sealed class PortForwardStrategyTests
         public Task<bool> IsPortOpenAsync()
         {
             IsPortOpenCalled = true;
-            return Task.FromResult(result: false);
+            return Task.FromResult(false);
         }
     }
 }

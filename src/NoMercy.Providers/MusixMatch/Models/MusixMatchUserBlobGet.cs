@@ -15,9 +15,9 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchUserBlobGet
 {
-    [JsonProperty(propertyName: "message")]
+    [JsonProperty("message")]
     public UserBlobGetMessage Message { get; set; } = new();
 
-    [JsonProperty(propertyName: "meta")]
+    [JsonProperty("meta")]
     public UserBlobGetMeta Meta { get; set; } = new();
 }

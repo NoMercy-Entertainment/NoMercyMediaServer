@@ -35,7 +35,7 @@ public class ActivityGateWorkerTests : IDisposable
     public ActivityGateWorkerTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(context: _adapter);
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
@@ -48,7 +48,7 @@ public class ActivityGateWorkerTests : IDisposable
     {
         public bool Defer { get; set; }
 
-        public TimeSpan DeferInterval { get; init; } = TimeSpan.FromMilliseconds(milliseconds: 50);
+        public TimeSpan DeferInterval { get; init; } = TimeSpan.FromMilliseconds(50);
 
         public bool ShouldDefer(string queueName) => Defer;
     }
@@ -62,19 +62,19 @@ public class ActivityGateWorkerTests : IDisposable
         QueueJob queueJob = new()
         {
             Queue = "library",
-            Payload = SerializationHelper.Serialize(obj: plainJob),
+            Payload = SerializationHelper.Serialize(plainJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(entity: queueJob);
+        _context.QueueJobs.Add(queueJob);
         await _context.SaveChangesAsync();
 
-        QueueWorker worker = new(queue: _jobQueue, name: "library", activityGate: gate);
+        QueueWorker worker = new(_jobQueue, name: "library", activityGate: gate);
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 300));
+        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(300));
         try
         {
-            await worker.StartAsync(stopToken: cts.Token);
+            await worker.StartAsync(cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -83,9 +83,9 @@ public class ActivityGateWorkerTests : IDisposable
 
         // Never reserved — the job is untouched in the queue.
         int jobCount = _context.QueueJobs.Count();
-        jobCount.Should().Be(expected: 1);
+        jobCount.Should().Be(1);
 
-        QueueJob? persisted = _context.QueueJobs.Find(keyValues: queueJob.Id);
+        QueueJob? persisted = _context.QueueJobs.Find(queueJob.Id);
         persisted.Should().NotBeNull();
         persisted!.ReservedAt.Should().BeNull();
     }
@@ -99,31 +99,31 @@ public class ActivityGateWorkerTests : IDisposable
         QueueJob queueJob = new()
         {
             Queue = "library",
-            Payload = SerializationHelper.Serialize(obj: plainJob),
+            Payload = SerializationHelper.Serialize(plainJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(entity: queueJob);
+        _context.QueueJobs.Add(queueJob);
         await _context.SaveChangesAsync();
 
-        QueueWorker worker = new(queue: _jobQueue, name: "library", activityGate: gate);
+        QueueWorker worker = new(_jobQueue, name: "library", activityGate: gate);
 
         // Signal completion off the worker's own event rather than a fixed
         // sleep: under coverage instrumentation the defer poll + reserve +
         // execute is far slower, and a wall-clock window flakes. The cap is
         // generous; the assertion is that the event fired, not that it fired fast.
-        TaskCompletionSource jobDone = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource jobDone = new(TaskCreationOptions.RunContinuationsAsynchronously);
         worker.WorkCompleted += (_, _) => jobDone.TrySetResult();
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 30));
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
 
         // Run the worker on its own task — StartAsync's loop blocks between
         // reservations, so it must not run on the test thread.
-        Task workerTask = Task.Run(function: async () =>
+        Task workerTask = Task.Run(async () =>
         {
             try
             {
-                await worker.StartAsync(stopToken: cts.Token);
+                await worker.StartAsync(cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -132,19 +132,19 @@ public class ActivityGateWorkerTests : IDisposable
         });
 
         // Let the worker defer at least once, then lift the gate.
-        await Task.Delay(millisecondsDelay: 100);
+        await Task.Delay(100);
         gate.Defer = false;
 
-        Task finished = await Task.WhenAny(task1: jobDone.Task, task2: Task.Delay(delay: TimeSpan.FromSeconds(seconds: 20)));
+        Task finished = await Task.WhenAny(jobDone.Task, Task.Delay(TimeSpan.FromSeconds(20)));
         finished
             .Should()
-            .Be(expected: jobDone.Task, because: "the worker must reserve and execute the job once the gate clears");
+            .Be(jobDone.Task, "the worker must reserve and execute the job once the gate clears");
 
         await cts.CancelAsync();
         await workerTask;
 
         // Job was reserved, executed, and deleted once the gate cleared.
         int jobCount = _context.QueueJobs.Count();
-        jobCount.Should().Be(expected: 0);
+        jobCount.Should().Be(0);
     }
 }

@@ -11,7 +11,6 @@
 
 using System.Globalization;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using HardwarePreference = NoMercy.Encoder.Profiles.HardwarePreference;
@@ -37,44 +36,44 @@ public class HardwarePreferenceResolverCultureTests
 
         foreach ((VideoCodecType codec, string encoder, double fps) in entries)
         {
-            SpeedKey key = new(Codec: codec, Encoder: encoder, Width: 1920, DeviceName: null);
-            dict[key: key] = new(Fps: fps, SpeedMultiplier: 1.0, MeasuredAt: DateTime.UtcNow);
+            SpeedKey key = new(codec, encoder, 1920, null);
+            dict[key] = new(fps, 1.0, DateTime.UtcNow);
         }
 
-        return new(Measurements: dict);
+        return new(dict);
     }
 
     private static List<string> WithNvenc() =>
         ["libx264", "libx265", "libsvtav1", "h264_nvenc", "hevc_nvenc"];
 
     [Theory]
-    [InlineData(data: "de-DE")]
-    [InlineData(data: "nl-NL")]
-    [InlineData(data: "fr-FR")]
+    [InlineData("de-DE")]
+    [InlineData("nl-NL")]
+    [InlineData("fr-FR")]
     public void PreferHardware_Ratio_StaysPeriodDecimalUnderCommaCulture(string culture)
     {
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(name: culture);
+            Thread.CurrentThread.CurrentCulture = new(culture);
 
             // 250 / 100 = 2.5x exactly — clean single-decimal ratio.
-            SpeedIndex index = MakeSpeedIndex(entries: [(VideoCodecType.H264, "libx264", 100), (VideoCodecType.H264, "h264_nvenc", 250)]
+            SpeedIndex index = MakeSpeedIndex([(VideoCodecType.H264, "libx264", 100), (VideoCodecType.H264, "h264_nvenc", 250)]
             );
             ScopedDecisionLog log = new();
 
             HardwareResolutionResult result = _resolver.Resolve(
-                codec: VideoCodecType.H264,
-                preference: HardwarePreference.PreferHardware,
-                availableEncoders: WithNvenc(),
-                speedIndex: index,
-                decisions: log
+                VideoCodecType.H264,
+                HardwarePreference.PreferHardware,
+                WithNvenc(),
+                index,
+                log
             );
 
-            Assert.Equal(expected: "h264_nvenc", actual: result.EncoderHandle);
-            string message = log.Snapshot()[index: 0].Message;
-            Assert.Contains(expectedSubstring: "2.5", actualString: message);
-            Assert.DoesNotContain(expectedSubstring: "2,5", actualString: message);
+            Assert.Equal("h264_nvenc", result.EncoderHandle);
+            string message = log.Snapshot()[0].Message;
+            Assert.Contains("2.5", message);
+            Assert.DoesNotContain("2,5", message);
         }
         finally
         {
@@ -83,32 +82,32 @@ public class HardwarePreferenceResolverCultureTests
     }
 
     [Theory]
-    [InlineData(data: "de-DE")]
-    [InlineData(data: "nl-NL")]
-    [InlineData(data: "fr-FR")]
+    [InlineData("de-DE")]
+    [InlineData("nl-NL")]
+    [InlineData("fr-FR")]
     public void ForceHardware_Ratio_StaysPeriodDecimalUnderCommaCulture(string culture)
     {
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(name: culture);
+            Thread.CurrentThread.CurrentCulture = new(culture);
 
-            SpeedIndex index = MakeSpeedIndex(entries: [(VideoCodecType.H264, "libx264", 100), (VideoCodecType.H264, "h264_nvenc", 250)]
+            SpeedIndex index = MakeSpeedIndex([(VideoCodecType.H264, "libx264", 100), (VideoCodecType.H264, "h264_nvenc", 250)]
             );
             ScopedDecisionLog log = new();
 
             HardwareResolutionResult result = _resolver.Resolve(
-                codec: VideoCodecType.H264,
-                preference: HardwarePreference.ForceHardware,
-                availableEncoders: WithNvenc(),
-                speedIndex: index,
-                decisions: log
+                VideoCodecType.H264,
+                HardwarePreference.ForceHardware,
+                WithNvenc(),
+                index,
+                log
             );
 
-            Assert.Equal(expected: "h264_nvenc", actual: result.EncoderHandle);
-            string message = log.Snapshot()[index: 0].Message;
-            Assert.Contains(expectedSubstring: "2.5", actualString: message);
-            Assert.DoesNotContain(expectedSubstring: "2,5", actualString: message);
+            Assert.Equal("h264_nvenc", result.EncoderHandle);
+            string message = log.Snapshot()[0].Message;
+            Assert.Contains("2.5", message);
+            Assert.DoesNotContain("2,5", message);
         }
         finally
         {

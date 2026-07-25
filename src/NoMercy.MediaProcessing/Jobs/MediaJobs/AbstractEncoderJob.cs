@@ -14,12 +14,11 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
-
-using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -43,7 +42,7 @@ public abstract class AbstractEncoderJob : IShouldQueue, IJobStorageInjector
     public ILoggerFactory LoggerFactory { get; set; } = null!;
 
     [JsonIgnore]
-    protected ILogger Log => field ??= LoggerFactory.CreateLogger(type: GetType());
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
 
     public abstract string QueueName { get; }
     public abstract int Priority { get; }

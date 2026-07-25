@@ -24,7 +24,6 @@ using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.Storage;
-using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Tests.OpticalMedia.Rip;
 
@@ -40,7 +39,7 @@ file sealed class ConfigurableTargetsDiscRipJob(Folder? folder, Library? library
         Ulid folderId,
         Ulid libraryId,
         CancellationToken cancellationToken
-    ) => Task.FromResult(result: (folder, library));
+    ) => Task.FromResult((folder, library));
 }
 
 /// <summary>
@@ -52,43 +51,43 @@ file sealed class ConfigurableTargetsDiscRipJob(Folder? folder, Library? library
 /// longer exists" branch, and <c>ResolveHostPath</c>'s fallback when
 /// <see cref="IStorage.GetFullPath"/> throws.
 /// </summary>
-[Collection(name: "EventBusProvider")]
-[Trait(name: "Category", value: "Unit")]
+[Collection("EventBusProvider")]
+[Trait("Category", "Unit")]
 public class DiscRipJobMiscTests
 {
     [Fact]
     public void QueueName_IsImport()
     {
         DiscRipJob job = new();
-        job.QueueName.Should().Be(expected: "import");
+        job.QueueName.Should().Be("import");
     }
 
     [Fact]
     public void Priority_IsFive()
     {
         DiscRipJob job = new();
-        job.Priority.Should().Be(expected: 5);
+        job.Priority.Should().Be(5);
     }
 
     [Fact]
     public void InjectStorageServices_ResolvesEveryDependencyFromServiceProvider()
     {
         ServiceCollection services = new();
-        services.AddSingleton<ILoggerFactory>(implementationInstance: NullLoggerFactory.Instance);
-        services.AddSingleton(implementationInstance: Mock.Of<IDiscRipper>());
+        services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+        services.AddSingleton(Mock.Of<IDiscRipper>());
         services.AddSingleton(
-            implementationInstance: new DiscIdentificationService(identifiers: [], logger: NullLogger<DiscIdentificationService>.Instance)
+            new DiscIdentificationService([], NullLogger<DiscIdentificationService>.Instance)
         );
-        services.AddSingleton(implementationInstance: Mock.Of<IStorageFactory>());
-        services.AddSingleton(implementationInstance: Mock.Of<IStorageDriver>());
-        services.AddSingleton(implementationInstance: new DriveLockRegistry());
-        services.AddSingleton(implementationInstance: Mock.Of<IAudioMetadataWriter>());
+        services.AddSingleton(Mock.Of<IStorageFactory>());
+        services.AddSingleton(Mock.Of<IStorageDriver>());
+        services.AddSingleton(new DriveLockRegistry());
+        services.AddSingleton(Mock.Of<IAudioMetadataWriter>());
         using ServiceProvider provider = services.BuildServiceProvider();
 
         DiscRipJob job = new();
-        job.InjectStorageServices(serviceProvider: provider);
+        job.InjectStorageServices(provider);
 
-        job.LoggerFactory.Should().BeSameAs(expected: NullLoggerFactory.Instance);
+        job.LoggerFactory.Should().BeSameAs(NullLoggerFactory.Instance);
         job.DiscRipper.Should().NotBeNull();
         job.IdentificationService.Should().NotBeNull();
         job.StorageFactory.Should().NotBeNull();
@@ -96,7 +95,7 @@ public class DiscRipJobMiscTests
         job.DriveLockRegistry.Should().NotBeNull();
         job.AudioMetadataWriter.Should().NotBeNull();
         job.MusicBrainzReleaseClient.Should()
-            .NotBeNull(because: "constructed directly since it isn't DI-registered");
+            .NotBeNull("constructed directly since it isn't DI-registered");
         // QueueRunner.Current is never started by this test process, so the
         // dispatcher falls back to null — this proves that fallback runs
         // rather than throwing when no queue runner is active.
@@ -107,10 +106,10 @@ public class DiscRipJobMiscTests
     public async Task Handle_TargetsNoLongerExist_PublishesErrorAndReturns()
     {
         RipRequest request = new(
-            DrivePath: "D:\\",
+            "D:\\",
             SelectedTitleIndices: [1],
             MetadataId: null,
-            Custom: new(Title: "Movie", Year: 2024, Type: MediaType.Movie, PosterUrl: null),
+            Custom: new("Movie", 2024, MediaType.Movie, null),
             LibraryId: Ulid.NewUlid(),
             FolderId: Ulid.NewUlid(),
             EncodingProfileId: null,
@@ -122,29 +121,28 @@ public class DiscRipJobMiscTests
 
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value:
-            [
-                new DiscRipResult(TitleIndex: 1, OutputPath: "/tmp/x.mkv", Success: true, Duration: TimeSpan.FromMinutes(minutes: 10), OutputSizeBytes: 1000, Error: null),
+            .ReturnsAsync([
+                new DiscRipResult(1, "/tmp/x.mkv", true, TimeSpan.FromMinutes(10), 1000, null),
             ]);
 
         List<DriveStateChangedEvent> published = [];
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(expression: b =>
+            .Setup(b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<DriveStateChangedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
-            .Returns(value: Task.CompletedTask);
-        EventBusProvider.Configure(eventBus: busMock.Object);
+            .Callback<DriveStateChangedEvent, CancellationToken>((evt, _) => published.Add(evt))
+            .Returns(Task.CompletedTask);
+        EventBusProvider.Configure(busMock.Object);
 
-        ConfigurableTargetsDiscRipJob job = new(folder: null, library: null)
+        ConfigurableTargetsDiscRipJob job = new(null, null)
         {
             Request = request,
             OutputDir = Path.GetTempPath(),
@@ -152,7 +150,7 @@ public class DiscRipJobMiscTests
             TargetLibraryId = request.LibraryId,
             TargetLibraryType = "movie",
             DiscRipper = ripperMock.Object,
-            IdentificationService = new(identifiers: [], logger: NullLogger<DiscIdentificationService>.Instance),
+            IdentificationService = new([], NullLogger<DiscIdentificationService>.Instance),
             StorageFactory = Mock.Of<IStorageFactory>(),
             StorageDriver = Mock.Of<IStorageDriver>(),
             DriveLockRegistry = new(),
@@ -161,11 +159,11 @@ public class DiscRipJobMiscTests
 
         await job.Handle();
 
-        published.Select(selector: e => e.DriveStateData.Method).Should().Contain(expected: "rip_error");
+        published.Select(e => e.DriveStateData.Method).Should().Contain("rip_error");
         published
-            .Select(selector: e => e.DriveStateData.Message)
+            .Select(e => e.DriveStateData.Message)
             .Should()
-            .Contain(predicate: m => m.Contains("no longer exists"));
+            .Contain(m => m.Contains("no longer exists"));
     }
 
     [Fact]
@@ -176,17 +174,17 @@ public class DiscRipJobMiscTests
         // "rip_progress"` default arm is otherwise unreachable from the
         // public API, so it's exercised directly via reflection.
         RipRequest request = new(
-            DrivePath: "D:\\",
-            SelectedTitleIndices: [1],
-            MetadataId: null,
-            Custom: null,
-            LibraryId: Ulid.NewUlid(),
-            FolderId: Ulid.NewUlid(),
-            EncodingProfileId: null,
-            AudioTracks: [],
-            Subtitles: []
+            "D:\\",
+            [1],
+            null,
+            null,
+            Ulid.NewUlid(),
+            Ulid.NewUlid(),
+            null,
+            [],
+            []
         );
-        DiscRipJob job = new(request: request, outputDir: Path.GetTempPath(), targetFolderId: null, targetLibraryId: null, targetLibraryType: null)
+        DiscRipJob job = new(request, Path.GetTempPath(), null, null, null)
         {
             LoggerFactory = NullLoggerFactory.Instance,
         };
@@ -194,34 +192,34 @@ public class DiscRipJobMiscTests
         List<DriveStateChangedEvent> published = [];
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(expression: b =>
+            .Setup(b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<DriveStateChangedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
-            .Returns(value: Task.CompletedTask);
-        EventBusProvider.Configure(eventBus: busMock.Object);
+            .Callback<DriveStateChangedEvent, CancellationToken>((evt, _) => published.Add(evt))
+            .Returns(Task.CompletedTask);
+        EventBusProvider.Configure(busMock.Object);
 
         MethodInfo publishProgress = typeof(DiscRipJob).GetMethod(
-            name: "PublishProgress",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            "PublishProgress",
+            BindingFlags.NonPublic | BindingFlags.Instance
         )!;
-        publishProgress.Invoke(obj: job, parameters: ["unknown-status", "some message"]);
+        publishProgress.Invoke(job, ["unknown-status", "some message"]);
 
         published.Should().ContainSingle();
-        published[index: 0].DriveStateData.Method.Should().Be(expected: "rip_progress");
+        published[0].DriveStateData.Method.Should().Be("rip_progress");
     }
 
     [Fact]
     public void ResolvePresetId_MalformedUlidString_ReturnsNull()
     {
         MethodInfo resolvePresetId = typeof(DiscRipJob).GetMethod(
-            name: "ResolvePresetId",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
+            "ResolvePresetId",
+            BindingFlags.NonPublic | BindingFlags.Static
         )!;
 
         object? result = resolvePresetId.Invoke(
-            obj: null,
-            parameters: ["not-a-valid-ulid", Array.Empty<NoMercy.Database.Models.Media.EncodingPresetFolder>()]
+            null,
+            ["not-a-valid-ulid", Array.Empty<NoMercy.Database.Models.Media.EncodingPresetFolder>()]
         );
 
         result.Should().BeNull();
@@ -231,15 +229,15 @@ public class DiscRipJobMiscTests
     public void ResolveHostPath_StorageThrows_FallsBackToRawSubPath()
     {
         Mock<IStorage> storageMock = new();
-        storageMock.Setup(expression: s => s.GetFullPath(It.IsAny<string>())).Throws<NotSupportedException>();
+        storageMock.Setup(s => s.GetFullPath(It.IsAny<string>())).Throws<NotSupportedException>();
 
         MethodInfo resolveHostPath = typeof(DiscRipJob).GetMethod(
-            name: "ResolveHostPath",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
+            "ResolveHostPath",
+            BindingFlags.NonPublic | BindingFlags.Static
         )!;
 
-        object? result = resolveHostPath.Invoke(obj: null, parameters: [storageMock.Object, "relative/path.mkv"]);
+        object? result = resolveHostPath.Invoke(null, [storageMock.Object, "relative/path.mkv"]);
 
-        result.Should().Be(expected: "relative/path.mkv");
+        result.Should().Be("relative/path.mkv");
     }
 }

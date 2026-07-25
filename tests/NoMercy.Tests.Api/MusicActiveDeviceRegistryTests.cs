@@ -15,7 +15,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MusicActiveDeviceRegistryTests
 {
     private static Device MakeDevice(string deviceId)
@@ -28,7 +28,7 @@ public class MusicActiveDeviceRegistryTests
     {
         MusicActiveDeviceRegistry registry = new();
 
-        bool found = registry.TryGet(userId: Guid.NewGuid(), device: out Device? device);
+        bool found = registry.TryGet(Guid.NewGuid(), out Device? device);
 
         found.Should().BeFalse();
         device.Should().BeNull();
@@ -39,12 +39,12 @@ public class MusicActiveDeviceRegistryTests
     {
         MusicActiveDeviceRegistry registry = new();
         Guid userId = Guid.NewGuid();
-        Device device = MakeDevice(deviceId: "device-a");
+        Device device = MakeDevice("device-a");
 
-        registry.Set(userId: userId, device: device);
+        registry.Set(userId, device);
 
-        registry.TryGet(userId: userId, device: out Device? found).Should().BeTrue();
-        found.Should().BeSameAs(expected: device);
+        registry.TryGet(userId, out Device? found).Should().BeTrue();
+        found.Should().BeSameAs(device);
     }
 
     [Fact]
@@ -52,13 +52,13 @@ public class MusicActiveDeviceRegistryTests
     {
         MusicActiveDeviceRegistry registry = new();
         Guid userId = Guid.NewGuid();
-        registry.Set(userId: userId, device: MakeDevice(deviceId: "device-a"));
+        registry.Set(userId, MakeDevice("device-a"));
 
-        Device replacement = MakeDevice(deviceId: "device-b");
-        registry.Set(userId: userId, device: replacement);
+        Device replacement = MakeDevice("device-b");
+        registry.Set(userId, replacement);
 
-        registry.TryGet(userId: userId, device: out Device? found).Should().BeTrue();
-        found.Should().BeSameAs(expected: replacement);
+        registry.TryGet(userId, out Device? found).Should().BeTrue();
+        found.Should().BeSameAs(replacement);
     }
 
     [Fact]
@@ -66,11 +66,11 @@ public class MusicActiveDeviceRegistryTests
     {
         MusicActiveDeviceRegistry registry = new();
         Guid userId = Guid.NewGuid();
-        registry.Set(userId: userId, device: MakeDevice(deviceId: "device-a"));
+        registry.Set(userId, MakeDevice("device-a"));
 
-        registry.Remove(userId: userId);
+        registry.Remove(userId);
 
-        registry.TryGet(userId: userId, device: out _).Should().BeFalse();
+        registry.TryGet(userId, out _).Should().BeFalse();
     }
 
     [Fact]
@@ -78,12 +78,12 @@ public class MusicActiveDeviceRegistryTests
     {
         MusicActiveDeviceRegistry registry = new();
         Guid userId = Guid.NewGuid();
-        registry.Set(userId: userId, device: MakeDevice(deviceId: "stale-device"));
+        registry.Set(userId, MakeDevice("stale-device"));
 
-        bool removed = registry.RemoveIfMatches(userId: userId, deviceId: "stale-device");
+        bool removed = registry.RemoveIfMatches(userId, "stale-device");
 
         removed.Should().BeTrue();
-        registry.TryGet(userId: userId, device: out _).Should().BeFalse();
+        registry.TryGet(userId, out _).Should().BeFalse();
     }
 
     [Fact]
@@ -91,9 +91,9 @@ public class MusicActiveDeviceRegistryTests
     {
         MusicActiveDeviceRegistry registry = new();
         Guid userId = Guid.NewGuid();
-        registry.Set(userId: userId, device: MakeDevice(deviceId: "Stale-Device"));
+        registry.Set(userId, MakeDevice("Stale-Device"));
 
-        bool removed = registry.RemoveIfMatches(userId: userId, deviceId: "stale-device");
+        bool removed = registry.RemoveIfMatches(userId, "stale-device");
 
         removed.Should().BeTrue();
     }
@@ -106,15 +106,15 @@ public class MusicActiveDeviceRegistryTests
         // before the sweep's RemoveIfMatches actually runs. The switch must win.
         MusicActiveDeviceRegistry registry = new();
         Guid userId = Guid.NewGuid();
-        registry.Set(userId: userId, device: MakeDevice(deviceId: "old-device"));
+        registry.Set(userId, MakeDevice("old-device"));
 
-        registry.Set(userId: userId, device: MakeDevice(deviceId: "new-device"));
+        registry.Set(userId, MakeDevice("new-device"));
 
-        bool removed = registry.RemoveIfMatches(userId: userId, deviceId: "old-device");
+        bool removed = registry.RemoveIfMatches(userId, "old-device");
 
         removed.Should().BeFalse();
-        registry.TryGet(userId: userId, device: out Device? found).Should().BeTrue();
-        found!.DeviceId.Should().Be(expected: "new-device");
+        registry.TryGet(userId, out Device? found).Should().BeTrue();
+        found!.DeviceId.Should().Be("new-device");
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class MusicActiveDeviceRegistryTests
     {
         MusicActiveDeviceRegistry registry = new();
 
-        bool removed = registry.RemoveIfMatches(userId: Guid.NewGuid(), deviceId: "anything");
+        bool removed = registry.RemoveIfMatches(Guid.NewGuid(), "anything");
 
         removed.Should().BeFalse();
     }
@@ -132,12 +132,12 @@ public class MusicActiveDeviceRegistryTests
     {
         MusicActiveDeviceRegistry registry = new();
         Guid userId = Guid.NewGuid();
-        registry.Set(userId: userId, device: MakeDevice(deviceId: "device-a"));
+        registry.Set(userId, MakeDevice("device-a"));
 
-        bool removed = registry.RemoveIfMatches(userId: userId, deviceId: "device-b");
+        bool removed = registry.RemoveIfMatches(userId, "device-b");
 
         removed.Should().BeFalse();
-        registry.TryGet(userId: userId, device: out Device? found).Should().BeTrue();
-        found!.DeviceId.Should().Be(expected: "device-a");
+        registry.TryGet(userId, out Device? found).Should().BeTrue();
+        found!.DeviceId.Should().Be("device-a");
     }
 }

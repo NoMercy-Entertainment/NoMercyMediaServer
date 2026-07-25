@@ -15,71 +15,71 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Libraries;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(Status))]
-[Index(propertyName: nameof(DetectedType))]
-[Index(propertyName: nameof(CreatedAt))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(Status))]
+[Index(nameof(DetectedType))]
+[Index(nameof(CreatedAt))]
 public class InboxItem : Timestamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty(propertyName: "source_path")]
+    [JsonProperty("source_path")]
     public string SourcePath { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "driver_id")]
+    [JsonProperty("driver_id")]
     public Ulid DriverId { get; set; }
 
     /// movie, tv, anime, music, unknown
-    [JsonProperty(propertyName: "detected_type")]
+    [JsonProperty("detected_type")]
     public string DetectedType { get; set; } = "unknown";
 
     /// high, medium, low
-    [JsonProperty(propertyName: "confidence")]
+    [JsonProperty("confidence")]
     public string Confidence { get; set; } = "low";
 
     /// NeedsReview, Routing, Imported, Encoding, Done, Failed, Dismissed
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; } = "NeedsReview";
 
     /// JSON array of CandidateMatch. Stored as text; exceeds the global 256 cap (see MediaContext config).
-    [Column(name: "Candidates")]
+    [Column("Candidates")]
     [JsonIgnore]
     public string CandidatesJson { get; set; } = "[]";
 
     [NotMapped]
-    [JsonProperty(propertyName: "candidates")]
+    [JsonProperty("candidates")]
     public CandidateMatch[] Candidates
     {
-        get => JsonConvert.DeserializeObject<CandidateMatch[]>(value: CandidatesJson) ?? [];
-        set => CandidatesJson = JsonConvert.SerializeObject(value: value);
+        get => JsonConvert.DeserializeObject<CandidateMatch[]>(CandidatesJson) ?? [];
+        set => CandidatesJson = JsonConvert.SerializeObject(value);
     }
 
-    [Column(name: "SelectedMatch")]
+    [Column("SelectedMatch")]
     [JsonIgnore]
     public string? SelectedMatchJson { get; set; }
 
     [NotMapped]
-    [JsonProperty(propertyName: "selected_match")]
+    [JsonProperty("selected_match")]
     public CandidateMatch? SelectedMatch
     {
         get =>
             SelectedMatchJson is null
                 ? null
-                : JsonConvert.DeserializeObject<CandidateMatch>(value: SelectedMatchJson);
-        set => SelectedMatchJson = value is null ? null : JsonConvert.SerializeObject(value: value);
+                : JsonConvert.DeserializeObject<CandidateMatch>(SelectedMatchJson);
+        set => SelectedMatchJson = value is null ? null : JsonConvert.SerializeObject(value);
     }
 
-    [JsonProperty(propertyName: "target_library_id")]
+    [JsonProperty("target_library_id")]
     public Ulid? TargetLibraryId { get; set; }
 
-    [JsonProperty(propertyName: "target_folder_id")]
+    [JsonProperty("target_folder_id")]
     public Ulid? TargetFolderId { get; set; }
 
-    [JsonProperty(propertyName: "target_profile_id")]
+    [JsonProperty("target_profile_id")]
     public Ulid? TargetProfileId { get; set; }
 
-    [JsonProperty(propertyName: "error")]
+    [JsonProperty("error")]
     public string? Error { get; set; }
 }

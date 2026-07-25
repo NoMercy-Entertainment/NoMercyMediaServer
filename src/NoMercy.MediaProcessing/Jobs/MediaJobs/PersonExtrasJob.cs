@@ -31,7 +31,7 @@ public class PersonExtrasJob : AbstractShowExtraDataJob<TmdbPersonAppends, strin
     public PersonExtrasJob(
         ILoggerFactory loggerFactory
     )
-        : base(loggerFactory: loggerFactory) { }
+        : base(loggerFactory) { }
 
     public override string QueueName => "extras";
     public override int Priority => 1;
@@ -42,19 +42,19 @@ public class PersonExtrasJob : AbstractShowExtraDataJob<TmdbPersonAppends, strin
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        PersonRepository personRepository = new(context: context, logger: LoggerFactory.CreateLogger<PersonRepository>());
+        PersonRepository personRepository = new(context, LoggerFactory.CreateLogger<PersonRepository>());
         PersonManager personManager = new(
-            personRepository: personRepository,
-            jobDispatcher: jobDispatcher,
-            logger: LoggerFactory.CreateLogger<PersonManager>()
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
         );
 
         foreach (TmdbPersonAppends person in Storage)
         {
-            await personManager.StoreTranslations(person: person);
-            await personManager.StoreImages(person: person);
+            await personManager.StoreTranslations(person);
+            await personManager.StoreImages(person);
         }
 
-        Log.LogDebug(message: "Show {Name}: People: Translations and Images stored", args: Name);
+        Log.LogDebug("Show {Name}: People: Translations and Images stored", Name);
     }
 }

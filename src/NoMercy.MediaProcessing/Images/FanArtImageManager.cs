@@ -23,18 +23,18 @@ namespace NoMercy.MediaProcessing.Images;
 public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageManager
 {
     private static readonly Size PaletteDecodeSize = new(
-        width: ColorQuantizer.MaxDimension,
-        height: ColorQuantizer.MaxDimension
+        ColorQuantizer.MaxDimension,
+        ColorQuantizer.MaxDimension
     );
 
     public static async Task<string> ColorPalette(string type, Uri url, bool? download = true)
     {
         return await BaseImageManager.ColorPalette(
-            client: FanArtImageClient.Download,
-            type: type,
-            path: url,
-            download: download,
-            maxDecodeSize: PaletteDecodeSize
+            FanArtImageClient.Download,
+            type,
+            url,
+            download,
+            PaletteDecodeSize
         );
     }
 
@@ -44,10 +44,10 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
     )
     {
         return await BaseImageManager.MultiColorPalette(
-            client: FanArtImageClient.Download,
-            items: items,
-            download: download,
-            maxDecodeSize: PaletteDecodeSize
+            FanArtImageClient.Download,
+            items,
+            download,
+            PaletteDecodeSize
         );
     }
 
@@ -61,7 +61,7 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
         {
             List<Image> thumbs = fanArtArtistDetails
                 .Thumbs.ToList()
-                .ConvertAll<Image>(converter: image =>
+                .ConvertAll<Image>(image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -74,7 +74,7 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
                 );
             List<Image> logos = fanArtArtistDetails
                 .Logos.ToList()
-                .ConvertAll<Image>(converter: image =>
+                .ConvertAll<Image>(image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -87,7 +87,7 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
                 );
             List<Image> banners = fanArtArtistDetails
                 .Banners.ToList()
-                .ConvertAll<Image>(converter: image =>
+                .ConvertAll<Image>(image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -100,7 +100,7 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
                 );
             List<Image> hdLogos = fanArtArtistDetails
                 .HdLogos.ToList()
-                .ConvertAll<Image>(converter: image =>
+                .ConvertAll<Image>(image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -113,7 +113,7 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
                 );
             List<Image> artistBackgrounds = fanArtArtistDetails
                 .Backgrounds.ToList()
-                .ConvertAll<Image>(converter: image =>
+                .ConvertAll<Image>(image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -126,19 +126,19 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
                 );
 
             List<Image> images = thumbs
-                .Concat(second: logos)
-                .Concat(second: banners)
-                .Concat(second: hdLogos)
-                .Concat(second: artistBackgrounds)
+                .Concat(logos)
+                .Concat(banners)
+                .Concat(hdLogos)
+                .Concat(artistBackgrounds)
                 .ToList();
 
-            return await imageRepository.StoreArtistImages(images: images, dbArtist: dbArtist);
+            return await imageRepository.StoreArtistImages(images, dbArtist);
         }
         catch (Exception e)
         {
-            if (e.Message.Contains(value: "404"))
+            if (e.Message.Contains("404"))
                 return [];
-            Logger.FanArt(message: e.Message, level: LogEventLevel.Verbose);
+            Logger.FanArt(e.Message, LogEventLevel.Verbose);
         }
 
         return [];
@@ -153,7 +153,7 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
             foreach ((Guid _, Albums albums) in fanArt.Albums)
             {
                 covers.AddRange(
-                    collection: albums.Cover.Select(selector: image => new Image
+                    albums.Cover.Select(image => new Image
                     {
                         AspectRatio = 1,
                         Type = "cover",
@@ -166,7 +166,7 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
                 );
 
                 cdArts.AddRange(
-                    collection: albums.CdArt.Select(selector: image => new Image
+                    albums.CdArt.Select(image => new Image
                     {
                         AspectRatio = 1,
                         Type = "cdArt",
@@ -179,11 +179,11 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
                 );
             }
 
-            ReleaseGroup dbRelease = await imageRepository.GetReleaseImages(id: releaseId);
+            ReleaseGroup dbRelease = await imageRepository.GetReleaseImages(releaseId);
 
             IEnumerable<Image> images = covers
-                .Concat(second: cdArts)
-                .Where(predicate: image => dbRelease.AlbumReleaseGroup.Any(predicate: ar => ar.AlbumId == image.AlbumId));
+                .Concat(cdArts)
+                .Where(image => dbRelease.AlbumReleaseGroup.Any(ar => ar.AlbumId == image.AlbumId));
 
             Image? albumCover = covers.FirstOrDefault();
 
@@ -195,13 +195,13 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
             }
 
             await imageRepository.CommitReleaseChanges();
-            await imageRepository.StoreReleaseImages(images: images);
+            await imageRepository.StoreReleaseImages(images);
         }
         catch (Exception e)
         {
-            if (e.Message.Contains(value: "404"))
+            if (e.Message.Contains("404"))
                 return;
-            Logger.FanArt(message: e.Message, level: LogEventLevel.Verbose);
+            Logger.FanArt(e.Message, LogEventLevel.Verbose);
         }
     }
 
@@ -211,16 +211,16 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
         Artist dbArtist
     )
     {
-        List<Album> albums = dbArtist.AlbumArtist.Select(selector: a => a.Album).ToList();
+        List<Album> albums = dbArtist.AlbumArtist.Select(a => a.Album).ToList();
 
         Dictionary<Guid, Albums> filteredAlbums = fanArtArtistAlbums
-            .Where(predicate: fa => albums.Any(predicate: a => a.Id == fa.Key))
+            .Where(fa => albums.Any(a => a.Id == fa.Key))
             .ToDictionary();
 
         List<Image> images = [];
         foreach ((Guid id, Albums fanArtArtistAlbum) in filteredAlbums)
         {
-            images.AddRange(collection: await StoreReleaseImages(fanArtArtistAlbums: fanArtArtistAlbum, albumId: artistId, dbArtist: dbArtist));
+            images.AddRange(await StoreReleaseImages(fanArtArtistAlbum, artistId, dbArtist));
         }
 
         return images;
@@ -235,7 +235,7 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
         try
         {
             List<Image> cdArts = fanArtArtistAlbums
-                .CdArt.Select(selector: image => new Image
+                .CdArt.Select(image => new Image
                 {
                     AspectRatio = 1,
                     Type = "cdArt",
@@ -247,7 +247,7 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
                 .ToList();
 
             List<Image> covers = fanArtArtistAlbums
-                .Cover.Select(selector: image => new Image
+                .Cover.Select(image => new Image
                 {
                     AspectRatio = 1,
                     Type = "cover",
@@ -258,15 +258,15 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
                 })
                 .ToList();
 
-            List<Image> images = cdArts.Concat(second: covers).ToList();
+            List<Image> images = cdArts.Concat(covers).ToList();
 
-            return await imageRepository.StoreArtistImages(images: images, dbArtist: dbArtist);
+            return await imageRepository.StoreArtistImages(images, dbArtist);
         }
         catch (Exception e)
         {
-            if (e.Message.Contains(value: "404"))
+            if (e.Message.Contains("404"))
                 return [];
-            Logger.FanArt(message: e.Message, level: LogEventLevel.Verbose);
+            Logger.FanArt(e.Message, LogEventLevel.Verbose);
         }
 
         return [];
@@ -280,27 +280,27 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
         try
         {
             using FanArtMusicClient fanArtMusicClient = new();
-            FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(id: id);
+            FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(id);
             if (fanArt is null)
                 return null;
 
-            List<Uri> coverList = fanArt.Thumbs.Select(selector: t => t.Url).ToList();
+            List<Uri> coverList = fanArt.Thumbs.Select(t => t.Url).ToList();
 
             foreach (Uri coverItem in coverList)
             {
-                if (!coverItem.HasSuccessStatus(contentType: "image/*"))
+                if (!coverItem.HasSuccessStatus("image/*"))
                     continue;
 
-                return new() { Palette = await ColorPalette(type: "cover", url: coverItem), Url = coverItem };
+                return new() { Palette = await ColorPalette("cover", coverItem), Url = coverItem };
             }
 
             return null;
         }
         catch (Exception e)
         {
-            if (e.Message.Contains(value: "404"))
+            if (e.Message.Contains("404"))
                 return null;
-            Logger.FanArt(message: e.Message, level: LogEventLevel.Verbose);
+            Logger.FanArt(e.Message, LogEventLevel.Verbose);
             return null;
         }
     }

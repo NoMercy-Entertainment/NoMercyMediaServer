@@ -17,46 +17,46 @@ namespace NoMercy.Database;
 
 public class MetadataTracks : Timestamps
 {
-    [Column(name: "Video")]
-    [StringLength(maximumLength: 1024)]
+    [Column("Video")]
+    [StringLength(1024)]
     [JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string? _video { get; set; }
 
     [NotMapped]
-    [JsonProperty(propertyName: "video")]
+    [JsonProperty("video")]
     public List<IVideo>? Video
     {
-        get => _video != null ? JsonConvert.DeserializeObject<List<IVideo>>(value: _video) : null;
-        init => _video = JsonConvert.SerializeObject(value: value);
+        get => _video != null ? JsonConvert.DeserializeObject<List<IVideo>>(_video) : null;
+        init => _video = JsonConvert.SerializeObject(value);
     }
 
-    [Column(name: "Audio")]
-    [StringLength(maximumLength: 1024)]
+    [Column("Audio")]
+    [StringLength(1024)]
     [JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string? _audio { get; set; }
 
     [NotMapped]
-    [JsonProperty(propertyName: "audio")]
+    [JsonProperty("audio")]
     public List<IAudio>? Audio
     {
-        get => _audio != null ? JsonConvert.DeserializeObject<List<IAudio>>(value: _audio) : null;
-        init => _audio = JsonConvert.SerializeObject(value: value);
+        get => _audio != null ? JsonConvert.DeserializeObject<List<IAudio>>(_audio) : null;
+        init => _audio = JsonConvert.SerializeObject(value);
     }
 
-    [Column(name: "Subtitles")]
-    [StringLength(maximumLength: 1024)]
+    [Column("Subtitles")]
+    [StringLength(1024)]
     [JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string? _subtitles { get; set; }
 
     [NotMapped]
-    [JsonProperty(propertyName: "subtitles")]
+    [JsonProperty("subtitles")]
     public List<ISubtitle>? Subtitles
     {
         get =>
-            _subtitles != null ? JsonConvert.DeserializeObject<List<ISubtitle>>(value: _subtitles) : null;
-        init => _subtitles = JsonConvert.SerializeObject(value: value);
+            _subtitles != null ? JsonConvert.DeserializeObject<List<ISubtitle>>(_subtitles) : null;
+        init => _subtitles = JsonConvert.SerializeObject(value);
     }
 }

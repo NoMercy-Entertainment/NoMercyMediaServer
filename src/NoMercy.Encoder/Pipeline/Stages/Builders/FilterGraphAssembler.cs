@@ -56,7 +56,7 @@ public static class FilterGraphAssembler
         && plan.VideoOutputs.Length > 0
         // A crop must run on the CPU filter graph before the GPU scale chain;
         // the GPU-resident path has no crop stage, so any cropped rung disqualifies it.
-        && plan.VideoOutputs.All(predicate: v => string.IsNullOrWhiteSpace(value: v.CropFilter));
+        && plan.VideoOutputs.All(v => string.IsNullOrWhiteSpace(v.CropFilter));
 
     public static string? BuildFilterGraph(
         OutputPlan plan,
@@ -70,7 +70,7 @@ public static class FilterGraphAssembler
         // not be routed through filter_complex — ffmpeg rejects streamcopy fed
         // from a filtergraph with exit -22.
         VideoOutputPlan[] videoOutputs = plan
-            .VideoOutputs.Where(predicate: v => v.MapLabel.StartsWith(value: '['))
+            .VideoOutputs.Where(v => v.MapLabel.StartsWith('['))
             .ToArray();
 
         // No video outputs or no filter-graph labels — nothing to build
@@ -81,16 +81,16 @@ public static class FilterGraphAssembler
         if (mediaInfo is null || mediaInfo.VideoStreams.Count == 0)
             return null;
 
-        int sourceWidth = mediaInfo.VideoStreams[index: 0].Width;
-        int sourceHeight = mediaInfo.VideoStreams[index: 0].Height;
-        bool sourceIs10Bit = mediaInfo.VideoStreams[index: 0].BitDepth > 8;
+        int sourceWidth = mediaInfo.VideoStreams[0].Width;
+        int sourceHeight = mediaInfo.VideoStreams[0].Height;
+        bool sourceIs10Bit = mediaInfo.VideoStreams[0].BitDepth > 8;
         bool hasThumbnails = plan.Thumbnails is not null;
-        bool sourceIsHdr = mediaInfo.VideoStreams[index: 0].IsHdr;
-        bool sourceIsInterlaced = mediaInfo.VideoStreams[index: 0].IsInterlaced;
-        bool sourceIsAnamorphic = mediaInfo.VideoStreams[index: 0].IsAnamorphic;
+        bool sourceIsHdr = mediaInfo.VideoStreams[0].IsHdr;
+        bool sourceIsInterlaced = mediaInfo.VideoStreams[0].IsInterlaced;
+        bool sourceIsAnamorphic = mediaInfo.VideoStreams[0].IsAnamorphic;
         string? thumbnailTonemapChain = videoOutputs
-            .Select(selector: v => v.TonemapFilterChain)
-            .FirstOrDefault(predicate: c => !string.IsNullOrEmpty(value: c));
+            .Select(v => v.TonemapFilterChain)
+            .FirstOrDefault(c => !string.IsNullOrEmpty(c));
 
         // Crop is a property of the SOURCE (its letterbox / pillarbox), not of
         // any single rung — every participating output resolves the same crop
@@ -102,8 +102,8 @@ public static class FilterGraphAssembler
         // rectangle (never happens for a single source, but keeps the old path
         // correct if it ever did).
         string[] distinctCrops = videoOutputs
-            .Where(predicate: v => !string.IsNullOrWhiteSpace(value: v.CropFilter))
-            .Select(selector: v => v.CropFilter!)
+            .Where(v => !string.IsNullOrWhiteSpace(v.CropFilter))
+            .Select(v => v.CropFilter!)
             .Distinct()
             .ToArray();
         string? sharedCrop = distinctCrops.Length == 1 ? distinctCrops[0] : null;
@@ -111,10 +111,10 @@ public static class FilterGraphAssembler
         // First text-based subtitle output with BurnIn mode (PGS burn-in uses
         // the overlay path handled before this method is called).
         string? burnInExpr = ResolveBurnInExpression(
-            subs: plan.SubtitleOutputs,
-            mediaInfo: mediaInfo,
-            inputPath: inputPath,
-            assBurnInFilterBuilder: assBurnInFilterBuilder
+            plan.SubtitleOutputs,
+            mediaInfo,
+            inputPath,
+            assBurnInFilterBuilder
         );
 
         FilterGraphBuilder fg = new();
@@ -131,7 +131,7 @@ public static class FilterGraphAssembler
         // progressive frames, so it runs once on the shared source.
         if (sourceIsInterlaced)
         {
-            fg.AddFilter(inputLabel: baseLabel, filter: "yadif", outputLabel: "deint");
+            fg.AddFilter(baseLabel, "yadif", "deint");
             baseLabel = "deint";
         }
 
@@ -140,9 +140,9 @@ public static class FilterGraphAssembler
         // cleared so a rung does not crop twice.
         if (sharedCrop is not null)
         {
-            fg.AddFilter(inputLabel: baseLabel, filter: $"crop={sharedCrop}", outputLabel: "cropped");
+            fg.AddFilter(baseLabel, $"crop={sharedCrop}", "cropped");
             baseLabel = "cropped";
-            videoOutputs = videoOutputs.Select(selector: v => v with { CropFilter = null }).ToArray();
+            videoOutputs = videoOutputs.Select(v => v with { CropFilter = null }).ToArray();
         }
 
         // Un-anamorph: a non-square-pixel (anamorphic) source scaled by the
@@ -152,8 +152,8 @@ public static class FilterGraphAssembler
         // and SAR is reset to 1:1 for every downstream rung.
         if (sourceIsAnamorphic)
         {
-            string[] sar = mediaInfo.VideoStreams[index: 0].SampleAspectRatio!.Split(separator: ':');
-            fg.AddFilter(inputLabel: baseLabel, filter: $"scale=trunc(iw*{sar[0]}/{sar[1]}/2)*2:ih,setsar=1", outputLabel: "square");
+            string[] sar = mediaInfo.VideoStreams[0].SampleAspectRatio!.Split(':');
+            fg.AddFilter(baseLabel, $"scale=trunc(iw*{sar[0]}/{sar[1]}/2)*2:ih,setsar=1", "square");
             baseLabel = "square";
         }
 
@@ -161,33 +161,33 @@ public static class FilterGraphAssembler
         // the input) and scaled on the GPU. Eligibility guarantees no tonemap /
         // crop / burn-in, so every branch is just a GPU scale. Sprites need a CPU
         // download, so this path is skipped when thumbnails are requested.
-        if (UsesGpuResidentPath(plan: plan) && !sourceIsInterlaced && !sourceIsAnamorphic)
+        if (UsesGpuResidentPath(plan) && !sourceIsInterlaced && !sourceIsAnamorphic)
         {
             string scaleFilter = plan.GpuAccel!.ScaleFilter;
             if (videoOutputs.Length == 1)
             {
                 VideoOutputPlan only = videoOutputs[0];
                 fg.AddGpuScale(
-                    inputLabel: "0:v:0",
-                    scaleFilter: scaleFilter,
-                    width: only.Width,
-                    height: only.Height,
-                    outputLabel: only.MapLabel.Trim(trimChars: ['[', ']'])
+                    "0:v:0",
+                    scaleFilter,
+                    only.Width,
+                    only.Height,
+                    only.MapLabel.Trim(['[', ']'])
                 );
             }
             else
             {
-                List<string> splitLabels = videoOutputs.Select(selector: (_, i) => $"gsplit{i}").ToList();
-                fg.AddSplit(inputLabel: "0:v:0", outputLabels: splitLabels.ToArray());
+                List<string> splitLabels = videoOutputs.Select((_, i) => $"gsplit{i}").ToList();
+                fg.AddSplit("0:v:0", splitLabels.ToArray());
                 for (int i = 0; i < videoOutputs.Length; i++)
                 {
                     VideoOutputPlan rung = videoOutputs[i];
                     fg.AddGpuScale(
-                        inputLabel: splitLabels[index: i],
-                        scaleFilter: scaleFilter,
-                        width: rung.Width,
-                        height: rung.Height,
-                        outputLabel: rung.MapLabel.Trim(trimChars: ['[', ']'])
+                        splitLabels[i],
+                        scaleFilter,
+                        rung.Width,
+                        rung.Height,
+                        rung.MapLabel.Trim(['[', ']'])
                     );
                 }
             }
@@ -212,11 +212,11 @@ public static class FilterGraphAssembler
 
         string? sharedTonemap = null;
         bool dedupeTonemap = false;
-        if (needsTonemapPerBranch.Count(predicate: needs => needs) >= 1)
+        if (needsTonemapPerBranch.Count(needs => needs) >= 1)
         {
             string?[] tonemapChains = videoOutputs
-                .Where(predicate: (_, idx) => needsTonemapPerBranch[idx])
-                .Select(selector: video => video.TonemapFilterChain)
+                .Where((_, idx) => needsTonemapPerBranch[idx])
+                .Select(video => video.TonemapFilterChain)
                 .ToArray();
             if (tonemapChains.Distinct().Count() == 1)
             {
@@ -232,17 +232,17 @@ public static class FilterGraphAssembler
         {
             // Single video, no thumbnails — no split needed
             VideoOutputPlan single = videoOutputs[0];
-            string outputLabel = single.MapLabel.Trim(trimChars: ['[', ']']);
+            string outputLabel = single.MapLabel.Trim(['[', ']']);
             BuildBranchFilter(
-                fg: fg,
-                inputLabel: baseLabel,
-                outputLabel: outputLabel,
-                video: single,
-                sourceWidth: sourceWidth,
-                sourceHeight: sourceHeight,
-                sourceIs10Bit: sourceIs10Bit,
-                burnInExpr: burnInExpr,
-                tonemapAlreadyApplied: false
+                fg,
+                baseLabel,
+                outputLabel,
+                single,
+                sourceWidth,
+                sourceHeight,
+                sourceIs10Bit,
+                burnInExpr,
+                false
             );
         }
         else if (dedupeTonemap)
@@ -253,7 +253,7 @@ public static class FilterGraphAssembler
             //   - HDR-pass branches (needsTonemap=false): use [0:v:0] directly
             //   - SDR-tonemapped branches: use [sdr] intermediate
             // Thumbnails (SDR-friendly format) branch from [sdr] when present.
-            int sdrBranchCount = needsTonemapPerBranch.Count(predicate: needs => needs);
+            int sdrBranchCount = needsTonemapPerBranch.Count(needs => needs);
             int hdrPassBranchCount = videoOutputs.Length - sdrBranchCount;
             int thumbsFromSdr = hasThumbnails ? 1 : 0;
 
@@ -261,28 +261,28 @@ public static class FilterGraphAssembler
 
             List<string> sourceSplitLabels = new();
             for (int i = 0; i < hdrPassBranchCount; i++)
-                sourceSplitLabels.Add(item: $"hdr{i}");
-            sourceSplitLabels.Add(item: "tonemap_in");
+                sourceSplitLabels.Add($"hdr{i}");
+            sourceSplitLabels.Add("tonemap_in");
 
             if (sourceSplitCount == 1)
             {
                 // Only one downstream consumer of the source — the tonemap input.
                 // No source split needed; tonemap directly from the base label.
-                fg.AddFilter(inputLabel: baseLabel, filter: sharedTonemap!, outputLabel: "sdr");
+                fg.AddFilter(baseLabel, sharedTonemap!, "sdr");
             }
             else
             {
-                fg.AddSplit(inputLabel: baseLabel, outputLabels: sourceSplitLabels.ToArray());
-                fg.AddFilter(inputLabel: "tonemap_in", filter: sharedTonemap!, outputLabel: "sdr");
+                fg.AddSplit(baseLabel, sourceSplitLabels.ToArray());
+                fg.AddFilter("tonemap_in", sharedTonemap!, "sdr");
             }
 
             // Split [sdr] into per-SDR-branch labels + thumbnail source.
             int sdrSplitCount = sdrBranchCount + thumbsFromSdr;
             List<string> sdrSplitLabels = new();
             for (int i = 0; i < sdrBranchCount; i++)
-                sdrSplitLabels.Add(item: $"sdr{i}");
+                sdrSplitLabels.Add($"sdr{i}");
             if (hasThumbnails)
-                sdrSplitLabels.Add(item: "thumbsrc");
+                sdrSplitLabels.Add("thumbsrc");
 
             if (sdrSplitCount == 1)
             {
@@ -291,7 +291,7 @@ public static class FilterGraphAssembler
             }
             else
             {
-                fg.AddSplit(inputLabel: "sdr", outputLabels: sdrSplitLabels.ToArray());
+                fg.AddSplit("sdr", sdrSplitLabels.ToArray());
             }
 
             int hdrIdx = 0;
@@ -300,14 +300,14 @@ public static class FilterGraphAssembler
             for (int i = 0; i < videoOutputs.Length; i++)
             {
                 VideoOutputPlan video = videoOutputs[i];
-                string outputLabel = video.MapLabel.Trim(trimChars: ['[', ']']);
+                string outputLabel = video.MapLabel.Trim(['[', ']']);
                 string inputLabel;
                 bool tonemapApplied;
 
                 if (needsTonemapPerBranch[i])
                 {
                     inputLabel =
-                        sdrSplitCount == 1 ? sdrInputForSingleConsumer : sdrSplitLabels[index: sdrIdx++];
+                        sdrSplitCount == 1 ? sdrInputForSingleConsumer : sdrSplitLabels[sdrIdx++];
                     tonemapApplied = true;
                 }
                 else
@@ -317,15 +317,15 @@ public static class FilterGraphAssembler
                 }
 
                 BuildBranchFilter(
-                    fg: fg,
-                    inputLabel: inputLabel,
-                    outputLabel: outputLabel,
-                    video: video,
-                    sourceWidth: sourceWidth,
-                    sourceHeight: sourceHeight,
-                    sourceIs10Bit: sourceIs10Bit,
-                    burnInExpr: burnInExpr,
-                    tonemapAlreadyApplied: tonemapApplied
+                    fg,
+                    inputLabel,
+                    outputLabel,
+                    video,
+                    sourceWidth,
+                    sourceHeight,
+                    sourceIs10Bit,
+                    burnInExpr,
+                    tonemapApplied
                 );
             }
 
@@ -334,9 +334,9 @@ public static class FilterGraphAssembler
                 ThumbnailOutputPlan thumbs = plan.Thumbnails!;
                 string thumbInput = sdrSplitCount == 1 ? sdrInputForSingleConsumer : "thumbsrc";
                 fg.AddFilter(
-                    inputLabel: thumbInput,
-                    filter: $"format=yuvj420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
-                    outputLabel: "thumbs"
+                    thumbInput,
+                    $"format=yuvj420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
+                    "thumbs"
                 );
             }
         }
@@ -345,27 +345,27 @@ public static class FilterGraphAssembler
             // Legacy path: no dedupe possible (mixed tonemap params, single
             // tonemap branch, or none at all). Split source N+1 ways and let
             // each branch run its own filter chain.
-            List<string> splitLabels = videoOutputs.Select(selector: (_, i) => $"split{i}").ToList();
+            List<string> splitLabels = videoOutputs.Select((_, i) => $"split{i}").ToList();
             if (hasThumbnails)
-                splitLabels.Add(item: "thumbsrc");
+                splitLabels.Add("thumbsrc");
 
-            fg.AddSplit(inputLabel: baseLabel, outputLabels: splitLabels.ToArray());
+            fg.AddSplit(baseLabel, splitLabels.ToArray());
 
             for (int i = 0; i < videoOutputs.Length; i++)
             {
                 VideoOutputPlan video = videoOutputs[i];
-                string outputLabel = video.MapLabel.Trim(trimChars: ['[', ']']);
+                string outputLabel = video.MapLabel.Trim(['[', ']']);
 
                 BuildBranchFilter(
-                    fg: fg,
-                    inputLabel: splitLabels[index: i],
-                    outputLabel: outputLabel,
-                    video: video,
-                    sourceWidth: sourceWidth,
-                    sourceHeight: sourceHeight,
-                    sourceIs10Bit: sourceIs10Bit,
-                    burnInExpr: burnInExpr,
-                    tonemapAlreadyApplied: false
+                    fg,
+                    splitLabels[i],
+                    outputLabel,
+                    video,
+                    sourceWidth,
+                    sourceHeight,
+                    sourceIs10Bit,
+                    burnInExpr,
+                    false
                 );
             }
 
@@ -376,14 +376,14 @@ public static class FilterGraphAssembler
             {
                 ThumbnailOutputPlan thumbs = plan.Thumbnails!;
                 fg.AddFilter(
-                    inputLabel: "thumbsrc",
-                    filter: ThumbnailFilterResolver.Resolve(
-                        intervalSeconds: thumbs.IntervalSeconds,
-                        width: thumbs.Width,
-                        sourceIsHdr: sourceIsHdr,
-                        tonemapChain: thumbnailTonemapChain
+                    "thumbsrc",
+                    ThumbnailFilterResolver.Resolve(
+                        thumbs.IntervalSeconds,
+                        thumbs.Width,
+                        sourceIsHdr,
+                        thumbnailTonemapChain
                     ),
-                    outputLabel: "thumbs"
+                    "thumbs"
                 );
             }
         }
@@ -414,7 +414,7 @@ public static class FilterGraphAssembler
         bool tonemapAlreadyApplied
     )
     {
-        bool needsCrop = !string.IsNullOrWhiteSpace(value: video.CropFilter);
+        bool needsCrop = !string.IsNullOrWhiteSpace(video.CropFilter);
         bool needsTonemap =
             !tonemapAlreadyApplied && video is { ConvertHdrToSdr: true, TonemapFilterChain: not null };
         bool needsScale = video.Width != sourceWidth || video.Height != sourceHeight;
@@ -423,7 +423,7 @@ public static class FilterGraphAssembler
 
         if (!needsCrop && !needsTonemap && !needsScale && !needs8BitConversion && !needsBurnIn)
         {
-            fg.AddFilter(inputLabel: inputLabel, filter: "copy", outputLabel: outputLabel);
+            fg.AddFilter(inputLabel, "copy", outputLabel);
             return;
         }
 
@@ -440,7 +440,7 @@ public static class FilterGraphAssembler
             bool hasDownstreamWork =
                 needsTonemap || needsScale || needs8BitConversion || needsBurnIn;
             string cropOut = hasDownstreamWork ? $"{outputLabel}_cropped" : videoChainEnd;
-            fg.AddFilter(inputLabel: currentLabel, filter: $"crop={video.CropFilter}", outputLabel: cropOut);
+            fg.AddFilter(currentLabel, $"crop={video.CropFilter}", cropOut);
             currentLabel = cropOut;
 
             if (!hasDownstreamWork)
@@ -451,7 +451,7 @@ public static class FilterGraphAssembler
         if (needsTonemap)
         {
             string nextLabel = needsScale ? $"{outputLabel}_tonemapped" : videoChainEnd;
-            fg.AddFilter(inputLabel: currentLabel, filter: video.TonemapFilterChain!, outputLabel: nextLabel);
+            fg.AddFilter(currentLabel, video.TonemapFilterChain!, nextLabel);
             currentLabel = nextLabel;
 
             needs8BitConversion = false;
@@ -464,32 +464,32 @@ public static class FilterGraphAssembler
         if (needsScale && needs8BitConversion)
         {
             string intermediate = $"{outputLabel}_scaled";
-            fg.AddScaleWidth(inputLabel: currentLabel, width: video.Width, outputLabel: intermediate);
-            fg.AddFilter(inputLabel: intermediate, filter: $"format={video.PixelFormat}", outputLabel: videoChainEnd);
+            fg.AddScaleWidth(currentLabel, video.Width, intermediate);
+            fg.AddFilter(intermediate, $"format={video.PixelFormat}", videoChainEnd);
             currentLabel = videoChainEnd;
         }
         else if (needsScale)
         {
-            fg.AddScaleWidth(inputLabel: currentLabel, width: video.Width, outputLabel: videoChainEnd);
+            fg.AddScaleWidth(currentLabel, video.Width, videoChainEnd);
             currentLabel = videoChainEnd;
         }
         else if (needs8BitConversion)
         {
-            fg.AddFilter(inputLabel: currentLabel, filter: $"format={video.PixelFormat}", outputLabel: videoChainEnd);
+            fg.AddFilter(currentLabel, $"format={video.PixelFormat}", videoChainEnd);
             currentLabel = videoChainEnd;
         }
         else if (needsBurnIn && !needsTonemap)
         {
             // No video processing yet — but we still need to land on the intermediate label
             // so the subtitles filter below can read from it.
-            fg.AddFilter(inputLabel: currentLabel, filter: "copy", outputLabel: videoChainEnd);
+            fg.AddFilter(currentLabel, "copy", videoChainEnd);
             currentLabel = videoChainEnd;
         }
 
         // Step 3: Burn-in subtitles — always last (after resolution is final).
         if (needsBurnIn)
         {
-            fg.AddFilter(inputLabel: currentLabel, filter: burnInExpr!, outputLabel: outputLabel);
+            fg.AddFilter(currentLabel, burnInExpr!, outputLabel);
         }
     }
 
@@ -513,14 +513,14 @@ public static class FilterGraphAssembler
         AssBurnInFilterBuilder? assBurnInFilterBuilder
     )
     {
-        SubtitleOutputPlan? burnIn = subs.FirstOrDefault(predicate: s => s.Policy == SubtitlePolicy.BurnIn);
+        SubtitleOutputPlan? burnIn = subs.FirstOrDefault(s => s.Policy == SubtitlePolicy.BurnIn);
         if (burnIn is null)
             return null;
 
         // Only text-based codecs here — bitmap (PGS/DVD) uses the overlay path.
         if (burnIn.SourceIndex < mediaInfo.SubtitleStreams.Count)
         {
-            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[index: burnIn.SourceIndex];
+            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[burnIn.SourceIndex];
             if (!stream.IsTextBased)
                 return null;
 
@@ -528,18 +528,18 @@ public static class FilterGraphAssembler
             if (
                 assBurnInFilterBuilder is not null
                 && (
-                    stream.Codec.Equals(value: "ass", comparisonType: StringComparison.OrdinalIgnoreCase)
-                    || stream.Codec.Equals(value: "ssa", comparisonType: StringComparison.OrdinalIgnoreCase)
+                    stream.Codec.Equals("ass", StringComparison.OrdinalIgnoreCase)
+                    || stream.Codec.Equals("ssa", StringComparison.OrdinalIgnoreCase)
                 )
             )
             {
-                return assBurnInFilterBuilder.Build(assFilePath: inputPath);
+                return assBurnInFilterBuilder.Build(inputPath);
             }
         }
 
         // Generic text subtitle fallback: subtitles= filter with stream-index.
         // Delegate to shared escape logic so both code paths stay in sync.
-        string escaped = FilterGraphPathEscaper.Escape(path: inputPath);
+        string escaped = FilterGraphPathEscaper.Escape(inputPath);
 
         return $"subtitles={escaped}:si={burnIn.SourceIndex}";
     }
@@ -559,7 +559,7 @@ public static class FilterGraphAssembler
     {
         VideoOutputPlan[] remapped = plan
             .VideoOutputs.Select(
-                selector: (v, i) => v with { MapLabel = burnedLabels[index: Math.Min(val1: i, val2: burnedLabels.Count - 1)] }
+                (v, i) => v with { MapLabel = burnedLabels[Math.Min(i, burnedLabels.Count - 1)] }
             )
             .ToArray();
 

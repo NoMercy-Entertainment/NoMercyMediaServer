@@ -29,7 +29,7 @@ namespace NoMercy.Tests.Api.Services.Video;
 // (explicit itemId, else most-recently-progressed, else first), and it is the
 // place that stamps the dynamic "playlist_id" onto every DTO in the list. None
 // of that branching had a single test before this file.
-[Trait(name: "Category", value: "Playlist")]
+[Trait("Category", "Playlist")]
 public sealed class VideoPlaylistManagerTests
 {
     private readonly Mock<IMovieRepository> _movieRepository = new();
@@ -40,11 +40,11 @@ public sealed class VideoPlaylistManagerTests
     private VideoPlaylistManager CreateManager()
     {
         return new(
-            mediaContext: new MediaContext(),
-            movieRepository: _movieRepository.Object,
-            collectionRepository: _collectionRepository.Object,
-            specialRepository: _specialRepository.Object,
-            tvShowRepository: _tvShowRepository.Object
+            new MediaContext(),
+            _movieRepository.Object,
+            _collectionRepository.Object,
+            _specialRepository.Object,
+            _tvShowRepository.Object
         );
     }
 
@@ -56,7 +56,7 @@ public sealed class VideoPlaylistManagerTests
             Title = $"Movie {id}",
             TitleSort = $"movie {id}",
             Overview = "Overview",
-            ReleaseDate = new DateTime(year: 2020, month: 1, day: 1),
+            ReleaseDate = new DateTime(2020, 1, 1),
         };
         VideoFile file = new()
         {
@@ -70,8 +70,8 @@ public sealed class VideoPlaylistManagerTests
             Movie = movie,
         };
         if (userData is not null)
-            file.UserData.Add(item: userData);
-        movie.VideoFiles.Add(item: file);
+            file.UserData.Add(userData);
+        movie.VideoFiles.Add(file);
         return movie;
     }
 
@@ -100,8 +100,8 @@ public sealed class VideoPlaylistManagerTests
             Episode = episode,
         };
         if (userData is not null)
-            file.UserData.Add(item: userData);
-        episode.VideoFiles.Add(item: file);
+            file.UserData.Add(userData);
+        episode.VideoFiles.Add(file);
         return episode;
     }
 
@@ -111,7 +111,7 @@ public sealed class VideoPlaylistManagerTests
         {
             Type = "progress",
             Time = 120,
-            LastPlayedDate = playedAt.ToString(format: "O"),
+            LastPlayedDate = playedAt.ToString("O"),
         };
     }
 
@@ -121,32 +121,32 @@ public sealed class VideoPlaylistManagerTests
         VideoPlaylistManager manager = CreateManager();
 
         Func<Task> act = async () =>
-            await manager.GetPlaylist(userId: Guid.NewGuid(), type: "not-a-real-type", listId: "1", itemId: null, language: "en", country: "US");
+            await manager.GetPlaylist(Guid.NewGuid(), "not-a-real-type", "1", null, "en", "US");
 
-        (await act.Should().ThrowAsync<ArgumentException>()).WithParameterName(paramName: "type");
+        (await act.Should().ThrowAsync<ArgumentException>()).WithParameterName("type");
     }
 
     [Fact]
     public async Task GetPlaylist_MovieType_ParsesStringListId_AndStampsIntPlaylistId()
     {
-        Movie movie = BuildMovie(id: 42);
+        Movie movie = BuildMovie(42);
         _movieRepository
-            .Setup(expression: r => r.GetMoviePlaylistAsync(It.IsAny<Guid>(), 42, "en", "US", default))
-            .ReturnsAsync(value: [movie]);
+            .Setup(r => r.GetMoviePlaylistAsync(It.IsAny<Guid>(), 42, "en", "US", default))
+            .ReturnsAsync([movie]);
         VideoPlaylistManager manager = CreateManager();
 
         (VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist) =
-            await manager.GetPlaylist(userId: Guid.NewGuid(), type: "movie", listId: "42", itemId: null, language: "en", country: "US");
+            await manager.GetPlaylist(Guid.NewGuid(), "movie", "42", null, "en", "US");
 
         playlist.Should().ContainSingle();
         item.Should().NotBeNull();
-        item!.Id.Should().Be(expected: 42);
+        item!.Id.Should().Be(42);
         // The manager re-parses the string listId to an int before handing it to
         // the DTO as the dynamic "playlist_id" -- movies serialize that field as
         // a JSON number, unlike tv/collection/special (see tests below).
         ((object)item.PlaylistId)
             .Should()
-            .Be(expected: 42);
+            .Be(42);
     }
 
     [Fact]
@@ -161,15 +161,15 @@ public sealed class VideoPlaylistManagerTests
         // Locking this in so a future refactor of the parse call doesn't
         // silently start accepting ints while pretending strings still work.
         _movieRepository
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.GetMoviePlaylistAsync(It.IsAny<Guid>(), It.IsAny<int>(), "en", "US", default)
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
         VideoPlaylistManager manager = CreateManager();
         dynamic nonStringListId = 42;
 
         Func<Task> act = async () =>
-            await manager.GetPlaylist(userId: Guid.NewGuid(), type: "movie", listId: nonStringListId, itemId: null, language: "en", country: "US");
+            await manager.GetPlaylist(Guid.NewGuid(), "movie", nonStringListId, null, "en", "US");
 
         await act.Should().ThrowAsync<Microsoft.CSharp.RuntimeBinder.RuntimeBinderException>();
     }
@@ -182,7 +182,7 @@ public sealed class VideoPlaylistManagerTests
             Id = 1399,
             Title = "Breaking Bad",
             TitleSort = "breaking bad",
-            FirstAirDate = new DateTime(year: 2008, month: 1, day: 20),
+            FirstAirDate = new DateTime(2008, 1, 20),
         };
         Season season = new()
         {
@@ -191,17 +191,17 @@ public sealed class VideoPlaylistManagerTests
             TvId = tv.Id,
             Tv = tv,
         };
-        tv.Seasons.Add(item: season);
-        Episode episode = BuildEpisode(id: 1, tv: tv, season: season);
-        season.Episodes.Add(item: episode);
+        tv.Seasons.Add(season);
+        Episode episode = BuildEpisode(1, tv, season);
+        season.Episodes.Add(episode);
 
         _tvShowRepository
-            .Setup(expression: r => r.GetPlaylistAsync(It.IsAny<Guid>(), 1399, "en", "US", default))
-            .ReturnsAsync(value: tv);
+            .Setup(r => r.GetPlaylistAsync(It.IsAny<Guid>(), 1399, "en", "US", default))
+            .ReturnsAsync(tv);
         VideoPlaylistManager manager = CreateManager();
 
         (VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist) =
-            await manager.GetPlaylist(userId: Guid.NewGuid(), type: "tv", listId: "1399", itemId: null, language: "en", country: "US");
+            await manager.GetPlaylist(Guid.NewGuid(), "tv", "1399", null, "en", "US");
 
         playlist.Should().ContainSingle();
         item.Should().NotBeNull();
@@ -209,7 +209,7 @@ public sealed class VideoPlaylistManagerTests
         // straight through as playlist_id -- here that is still the string.
         ((object)item!.PlaylistId)
             .Should()
-            .Be(expected: "1399");
+            .Be("1399");
     }
 
     [Fact]
@@ -235,30 +235,30 @@ public sealed class VideoPlaylistManagerTests
             TvId = tv.Id,
             Tv = tv,
         };
-        Episode regularEpisode = BuildEpisode(id: 10, tv: tv, season: regular);
-        Episode extraEpisode = BuildEpisode(id: 11, tv: tv, season: extras);
-        regular.Episodes.Add(item: regularEpisode);
-        extras.Episodes.Add(item: extraEpisode);
+        Episode regularEpisode = BuildEpisode(10, tv, regular);
+        Episode extraEpisode = BuildEpisode(11, tv, extras);
+        regular.Episodes.Add(regularEpisode);
+        extras.Episodes.Add(extraEpisode);
         // Extras season deliberately added to Seasons BEFORE the regular season
         // to prove the split is by SeasonNumber, not by insertion order.
-        tv.Seasons.Add(item: extras);
-        tv.Seasons.Add(item: regular);
+        tv.Seasons.Add(extras);
+        tv.Seasons.Add(regular);
 
         _tvShowRepository
-            .Setup(expression: r => r.GetPlaylistAsync(It.IsAny<Guid>(), 5, "en", "US", default))
-            .ReturnsAsync(value: tv);
+            .Setup(r => r.GetPlaylistAsync(It.IsAny<Guid>(), 5, "en", "US", default))
+            .ReturnsAsync(tv);
         VideoPlaylistManager manager = CreateManager();
 
         (_, List<VideoPlaylistResponseDto> playlist) = await manager.GetPlaylist(
-            userId: Guid.NewGuid(),
-            type: "tv",
-            listId: "5",
-            itemId: null,
-            language: "en",
-            country: "US"
+            Guid.NewGuid(),
+            "tv",
+            "5",
+            null,
+            "en",
+            "US"
         );
 
-        playlist.Select(selector: p => p.Id).Should().Equal(elements: [10, 11]);
+        playlist.Select(p => p.Id).Should().Equal(10, 11);
     }
 
     [Fact]
@@ -277,28 +277,28 @@ public sealed class VideoPlaylistManagerTests
             TvId = tv.Id,
             Tv = tv,
         };
-        Episode first = BuildEpisode(id: 20, tv: tv, season: season, userData: ProgressAt(playedAt: new DateTime(year: 2026, month: 1, day: 1)));
-        Episode second = BuildEpisode(id: 21, tv: tv, season: season);
-        season.Episodes.Add(item: first);
-        season.Episodes.Add(item: second);
-        tv.Seasons.Add(item: season);
+        Episode first = BuildEpisode(20, tv, season, ProgressAt(new DateTime(2026, 1, 1)));
+        Episode second = BuildEpisode(21, tv, season);
+        season.Episodes.Add(first);
+        season.Episodes.Add(second);
+        tv.Seasons.Add(season);
 
         _tvShowRepository
-            .Setup(expression: r => r.GetPlaylistAsync(It.IsAny<Guid>(), 7, "en", "US", default))
-            .ReturnsAsync(value: tv);
+            .Setup(r => r.GetPlaylistAsync(It.IsAny<Guid>(), 7, "en", "US", default))
+            .ReturnsAsync(tv);
         VideoPlaylistManager manager = CreateManager();
 
         (VideoPlaylistResponseDto? item, _) = await manager.GetPlaylist(
-            userId: Guid.NewGuid(),
-            type: "tv",
-            listId: "7",
-            itemId: 21,
-            language: "en",
-            country: "US"
+            Guid.NewGuid(),
+            "tv",
+            "7",
+            21,
+            "en",
+            "US"
         );
 
         item.Should().NotBeNull();
-        item!.Id.Should().Be(expected: 21);
+        item!.Id.Should().Be(21);
     }
 
     [Fact]
@@ -317,30 +317,30 @@ public sealed class VideoPlaylistManagerTests
             TvId = tv.Id,
             Tv = tv,
         };
-        Episode older = BuildEpisode(id: 30, tv: tv, season: season, userData: ProgressAt(playedAt: new DateTime(year: 2025, month: 1, day: 1)));
-        Episode newer = BuildEpisode(id: 31, tv: tv, season: season, userData: ProgressAt(playedAt: new DateTime(year: 2026, month: 6, day: 1)));
-        Episode noProgress = BuildEpisode(id: 32, tv: tv, season: season);
-        season.Episodes.Add(item: older);
-        season.Episodes.Add(item: newer);
-        season.Episodes.Add(item: noProgress);
-        tv.Seasons.Add(item: season);
+        Episode older = BuildEpisode(30, tv, season, ProgressAt(new DateTime(2025, 1, 1)));
+        Episode newer = BuildEpisode(31, tv, season, ProgressAt(new DateTime(2026, 6, 1)));
+        Episode noProgress = BuildEpisode(32, tv, season);
+        season.Episodes.Add(older);
+        season.Episodes.Add(newer);
+        season.Episodes.Add(noProgress);
+        tv.Seasons.Add(season);
 
         _tvShowRepository
-            .Setup(expression: r => r.GetPlaylistAsync(It.IsAny<Guid>(), 8, "en", "US", default))
-            .ReturnsAsync(value: tv);
+            .Setup(r => r.GetPlaylistAsync(It.IsAny<Guid>(), 8, "en", "US", default))
+            .ReturnsAsync(tv);
         VideoPlaylistManager manager = CreateManager();
 
         (VideoPlaylistResponseDto? item, _) = await manager.GetPlaylist(
-            userId: Guid.NewGuid(),
-            type: "tv",
-            listId: "8",
+            Guid.NewGuid(),
+            "tv",
+            "8",
             itemId: 999,
-            language: "en",
-            country: "US"
+            "en",
+            "US"
         );
 
         item.Should().NotBeNull();
-        item!.Id.Should().Be(expected: 31, because: "the episode with the latest LastPlayedDate must win");
+        item!.Id.Should().Be(31, "the episode with the latest LastPlayedDate must win");
     }
 
     [Fact]
@@ -359,40 +359,40 @@ public sealed class VideoPlaylistManagerTests
             TvId = tv.Id,
             Tv = tv,
         };
-        Episode first = BuildEpisode(id: 40, tv: tv, season: season);
-        Episode second = BuildEpisode(id: 41, tv: tv, season: season);
-        season.Episodes.Add(item: first);
-        season.Episodes.Add(item: second);
-        tv.Seasons.Add(item: season);
+        Episode first = BuildEpisode(40, tv, season);
+        Episode second = BuildEpisode(41, tv, season);
+        season.Episodes.Add(first);
+        season.Episodes.Add(second);
+        tv.Seasons.Add(season);
 
         _tvShowRepository
-            .Setup(expression: r => r.GetPlaylistAsync(It.IsAny<Guid>(), 9, "en", "US", default))
-            .ReturnsAsync(value: tv);
+            .Setup(r => r.GetPlaylistAsync(It.IsAny<Guid>(), 9, "en", "US", default))
+            .ReturnsAsync(tv);
         VideoPlaylistManager manager = CreateManager();
 
         (VideoPlaylistResponseDto? item, _) = await manager.GetPlaylist(
-            userId: Guid.NewGuid(),
-            type: "tv",
-            listId: "9",
+            Guid.NewGuid(),
+            "tv",
+            "9",
             itemId: 999,
-            language: "en",
-            country: "US"
+            "en",
+            "US"
         );
 
         item.Should().NotBeNull();
-        item!.Id.Should().Be(expected: 40);
+        item!.Id.Should().Be(40);
     }
 
     [Fact]
     public async Task GetPlaylist_TvType_RepositoryReturnsNull_YieldsEmptyPlaylistAndNullItem()
     {
         _tvShowRepository
-            .Setup(expression: r => r.GetPlaylistAsync(It.IsAny<Guid>(), 123, "en", "US", default))
-            .ReturnsAsync(value: (Tv?)null);
+            .Setup(r => r.GetPlaylistAsync(It.IsAny<Guid>(), 123, "en", "US", default))
+            .ReturnsAsync((Tv?)null);
         VideoPlaylistManager manager = CreateManager();
 
         (VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist) =
-            await manager.GetPlaylist(userId: Guid.NewGuid(), type: "tv", listId: "123", itemId: null, language: "en", country: "US");
+            await manager.GetPlaylist(Guid.NewGuid(), "tv", "123", null, "en", "US");
 
         item.Should().BeNull();
         playlist.Should().BeEmpty();
@@ -402,58 +402,58 @@ public sealed class VideoPlaylistManagerTests
     public async Task GetPlaylist_CollectionType_MapsMoviesWithOneBasedIndexAndCollectionId()
     {
         Collection collection = new() { Id = 500, Title = "Franchise" };
-        Movie movieA = BuildMovie(id: 1);
-        Movie movieB = BuildMovie(id: 2);
-        collection.CollectionMovies.Add(item: new() { Collection = collection, Movie = movieA });
-        collection.CollectionMovies.Add(item: new() { Collection = collection, Movie = movieB });
+        Movie movieA = BuildMovie(1);
+        Movie movieB = BuildMovie(2);
+        collection.CollectionMovies.Add(new() { Collection = collection, Movie = movieA });
+        collection.CollectionMovies.Add(new() { Collection = collection, Movie = movieB });
 
         _collectionRepository
-            .Setup(expression: r => r.GetCollectionPlaylistAsync(It.IsAny<Guid>(), 500, "en", "US", default))
-            .ReturnsAsync(value: collection);
+            .Setup(r => r.GetCollectionPlaylistAsync(It.IsAny<Guid>(), 500, "en", "US", default))
+            .ReturnsAsync(collection);
         VideoPlaylistManager manager = CreateManager();
 
         (_, List<VideoPlaylistResponseDto> playlist) = await manager.GetPlaylist(
-            userId: Guid.NewGuid(),
-            type: "collection",
-            listId: "500",
-            itemId: null,
-            language: "en",
-            country: "US"
+            Guid.NewGuid(),
+            "collection",
+            "500",
+            null,
+            "en",
+            "US"
         );
 
-        playlist.Should().HaveCount(expected: 2);
-        playlist.Select(selector: p => p.Episode).Should().Equal(elements: [1, 2]);
-        playlist.Select(selector: p => p.TmdbId).Should().AllBeEquivalentTo(expectation: 500);
-        ((object)playlist[index: 0].PlaylistId).Should().Be(expected: "500");
+        playlist.Should().HaveCount(2);
+        playlist.Select(p => p.Episode).Should().Equal(1, 2);
+        playlist.Select(p => p.TmdbId).Should().AllBeEquivalentTo(500);
+        ((object)playlist[0].PlaylistId).Should().Be("500");
     }
 
     [Fact]
     public async Task GetPlaylist_CollectionType_NoItemIdMatch_FallsBackToMostRecentProgress()
     {
         Collection collection = new() { Id = 501, Title = "Franchise" };
-        Movie noProgress = BuildMovie(id: 100);
-        Movie older = BuildMovie(id: 101, userData: ProgressAt(playedAt: new DateTime(year: 2025, month: 1, day: 1)));
-        Movie newer = BuildMovie(id: 102, userData: ProgressAt(playedAt: new DateTime(year: 2026, month: 6, day: 1)));
-        collection.CollectionMovies.Add(item: new() { Collection = collection, Movie = noProgress });
-        collection.CollectionMovies.Add(item: new() { Collection = collection, Movie = older });
-        collection.CollectionMovies.Add(item: new() { Collection = collection, Movie = newer });
+        Movie noProgress = BuildMovie(100);
+        Movie older = BuildMovie(101, ProgressAt(new DateTime(2025, 1, 1)));
+        Movie newer = BuildMovie(102, ProgressAt(new DateTime(2026, 6, 1)));
+        collection.CollectionMovies.Add(new() { Collection = collection, Movie = noProgress });
+        collection.CollectionMovies.Add(new() { Collection = collection, Movie = older });
+        collection.CollectionMovies.Add(new() { Collection = collection, Movie = newer });
 
         _collectionRepository
-            .Setup(expression: r => r.GetCollectionPlaylistAsync(It.IsAny<Guid>(), 501, "en", "US", default))
-            .ReturnsAsync(value: collection);
+            .Setup(r => r.GetCollectionPlaylistAsync(It.IsAny<Guid>(), 501, "en", "US", default))
+            .ReturnsAsync(collection);
         VideoPlaylistManager manager = CreateManager();
 
         (VideoPlaylistResponseDto? item, _) = await manager.GetPlaylist(
-            userId: Guid.NewGuid(),
-            type: "collection",
-            listId: "501",
+            Guid.NewGuid(),
+            "collection",
+            "501",
             itemId: 999,
-            language: "en",
-            country: "US"
+            "en",
+            "US"
         );
 
         item.Should().NotBeNull();
-        item!.Id.Should().Be(expected: 102, because: "the movie with the latest LastPlayedDate must win");
+        item!.Id.Should().Be(102, "the movie with the latest LastPlayedDate must win");
     }
 
     [Fact]
@@ -474,7 +474,7 @@ public sealed class VideoPlaylistManagerTests
             TvId = tv.Id,
             Tv = tv,
         };
-        Episode episode = BuildEpisode(id: 70, tv: tv, season: season);
+        Episode episode = BuildEpisode(70, tv, season);
         SpecialItem specialItem = new()
         {
             Order = 0,
@@ -483,27 +483,27 @@ public sealed class VideoPlaylistManagerTests
             EpisodeId = episode.Id,
             Episode = episode,
         };
-        special.Items.Add(item: specialItem);
+        special.Items.Add(specialItem);
 
         _specialRepository
-            .Setup(expression: r => r.GetSpecialPlaylistAsync(It.IsAny<Guid>(), specialId, "en", "US", default))
-            .ReturnsAsync(value: special);
+            .Setup(r => r.GetSpecialPlaylistAsync(It.IsAny<Guid>(), specialId, "en", "US", default))
+            .ReturnsAsync(special);
         VideoPlaylistManager manager = CreateManager();
 
         (VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist) =
             await manager.GetPlaylist(
-                userId: Guid.NewGuid(),
-                type: "specials",
-                listId: specialId.ToString(),
-                itemId: null,
-                language: "en",
-                country: "US"
+                Guid.NewGuid(),
+                "specials",
+                specialId.ToString(),
+                null,
+                "en",
+                "US"
             );
 
         playlist.Should().ContainSingle();
         item.Should().NotBeNull();
-        item!.Id.Should().Be(expected: 70);
-        item.VideoType.Should().Be(expected: "tv");
+        item!.Id.Should().Be(70);
+        item.VideoType.Should().Be("tv");
     }
 
     [Fact]
@@ -511,7 +511,7 @@ public sealed class VideoPlaylistManagerTests
     {
         Ulid specialId = Ulid.NewUlid();
         Special special = new() { Id = specialId, Title = "Special" };
-        Movie movie = BuildMovie(id: 80);
+        Movie movie = BuildMovie(80);
         SpecialItem specialItem = new()
         {
             Order = 0,
@@ -520,27 +520,27 @@ public sealed class VideoPlaylistManagerTests
             MovieId = movie.Id,
             Movie = movie,
         };
-        special.Items.Add(item: specialItem);
+        special.Items.Add(specialItem);
 
         _specialRepository
-            .Setup(expression: r => r.GetSpecialPlaylistAsync(It.IsAny<Guid>(), specialId, "en", "US", default))
-            .ReturnsAsync(value: special);
+            .Setup(r => r.GetSpecialPlaylistAsync(It.IsAny<Guid>(), specialId, "en", "US", default))
+            .ReturnsAsync(special);
         VideoPlaylistManager manager = CreateManager();
 
         (VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist) =
             await manager.GetPlaylist(
-                userId: Guid.NewGuid(),
-                type: "specials",
-                listId: specialId.ToString(),
-                itemId: null,
-                language: "en",
-                country: "US"
+                Guid.NewGuid(),
+                "specials",
+                specialId.ToString(),
+                null,
+                "en",
+                "US"
             );
 
         playlist.Should().ContainSingle();
         item.Should().NotBeNull();
-        item!.Id.Should().Be(expected: 80);
-        item.VideoType.Should().Be(expected: "movie");
+        item!.Id.Should().Be(80);
+        item.VideoType.Should().Be("movie");
     }
 
     [Fact]
@@ -548,11 +548,11 @@ public sealed class VideoPlaylistManagerTests
     {
         Ulid specialId = Ulid.NewUlid();
         Special special = new() { Id = specialId, Title = "Special" };
-        Movie noProgress = BuildMovie(id: 200);
-        Movie older = BuildMovie(id: 201, userData: ProgressAt(playedAt: new DateTime(year: 2025, month: 1, day: 1)));
-        Movie newer = BuildMovie(id: 202, userData: ProgressAt(playedAt: new DateTime(year: 2026, month: 6, day: 1)));
+        Movie noProgress = BuildMovie(200);
+        Movie older = BuildMovie(201, ProgressAt(new DateTime(2025, 1, 1)));
+        Movie newer = BuildMovie(202, ProgressAt(new DateTime(2026, 6, 1)));
         special.Items.Add(
-            item: new()
+            new()
             {
                 Order = 0,
                 SpecialId = specialId,
@@ -562,7 +562,7 @@ public sealed class VideoPlaylistManagerTests
             }
         );
         special.Items.Add(
-            item: new()
+            new()
             {
                 Order = 1,
                 SpecialId = specialId,
@@ -572,7 +572,7 @@ public sealed class VideoPlaylistManagerTests
             }
         );
         special.Items.Add(
-            item: new()
+            new()
             {
                 Order = 2,
                 SpecialId = specialId,
@@ -583,21 +583,21 @@ public sealed class VideoPlaylistManagerTests
         );
 
         _specialRepository
-            .Setup(expression: r => r.GetSpecialPlaylistAsync(It.IsAny<Guid>(), specialId, "en", "US", default))
-            .ReturnsAsync(value: special);
+            .Setup(r => r.GetSpecialPlaylistAsync(It.IsAny<Guid>(), specialId, "en", "US", default))
+            .ReturnsAsync(special);
         VideoPlaylistManager manager = CreateManager();
 
         (VideoPlaylistResponseDto? item, _) = await manager.GetPlaylist(
-            userId: Guid.NewGuid(),
-            type: "specials",
-            listId: specialId.ToString(),
+            Guid.NewGuid(),
+            "specials",
+            specialId.ToString(),
             itemId: 999,
-            language: "en",
-            country: "US"
+            "en",
+            "US"
         );
 
         item.Should().NotBeNull();
-        item!.Id.Should().Be(expected: 202, because: "the item with the latest LastPlayedDate must win");
+        item!.Id.Should().Be(202, "the item with the latest LastPlayedDate must win");
     }
 
     [Fact]
@@ -605,11 +605,11 @@ public sealed class VideoPlaylistManagerTests
     {
         Ulid specialId = Ulid.NewUlid();
         Special special = new() { Id = specialId, Title = "Special" };
-        Movie first = BuildMovie(id: 90);
-        Movie second = BuildMovie(id: 91);
+        Movie first = BuildMovie(90);
+        Movie second = BuildMovie(91);
         // Deliberately added out of Order sequence.
         special.Items.Add(
-            item: new()
+            new()
             {
                 Order = 1,
                 SpecialId = specialId,
@@ -619,7 +619,7 @@ public sealed class VideoPlaylistManagerTests
             }
         );
         special.Items.Add(
-            item: new()
+            new()
             {
                 Order = 0,
                 SpecialId = specialId,
@@ -630,26 +630,26 @@ public sealed class VideoPlaylistManagerTests
         );
 
         _specialRepository
-            .Setup(expression: r => r.GetSpecialPlaylistAsync(It.IsAny<Guid>(), specialId, "en", "US", default))
-            .ReturnsAsync(value: special);
+            .Setup(r => r.GetSpecialPlaylistAsync(It.IsAny<Guid>(), specialId, "en", "US", default))
+            .ReturnsAsync(special);
         VideoPlaylistManager manager = CreateManager();
 
         (_, List<VideoPlaylistResponseDto> playlist) = await manager.GetPlaylist(
-            userId: Guid.NewGuid(),
-            type: "specials",
-            listId: specialId.ToString(),
-            itemId: null,
-            language: "en",
-            country: "US"
+            Guid.NewGuid(),
+            "specials",
+            specialId.ToString(),
+            null,
+            "en",
+            "US"
         );
 
-        playlist.Select(selector: p => p.Id).Should().Equal(elements: [90, 91]);
+        playlist.Select(p => p.Id).Should().Equal(90, 91);
     }
 
     [Theory]
-    [InlineData(data: [0, new int[] { }, new int[] { 21, 22 }])]
-    [InlineData(data: [1, new int[] { 20 }, new int[] { 22 }])]
-    [InlineData(data: [2, new int[] { 20, 21 }, new int[] { }])]
+    [InlineData(0, new int[] { }, new int[] { 21, 22 })]
+    [InlineData(1, new int[] { 20 }, new int[] { 22 })]
+    [InlineData(2, new int[] { 20, 21 }, new int[] { })]
     public void SplitPlaylist_SplitsAroundTheCurrentTrack(
         int currentIndex,
         int[] expectedBefore,
@@ -665,10 +665,10 @@ public sealed class VideoPlaylistManagerTests
         ];
 
         (List<VideoPlaylistResponseDto> before, List<VideoPlaylistResponseDto> after) =
-            manager.SplitPlaylist(playlist: playlist, currentTrackId: playlist[index: currentIndex].Id);
+            manager.SplitPlaylist(playlist, playlist[currentIndex].Id);
 
-        before.Select(selector: p => p.Id).Should().Equal(elements: expectedBefore);
-        after.Select(selector: p => p.Id).Should().Equal(elements: expectedAfter);
+        before.Select(p => p.Id).Should().Equal(expectedBefore);
+        after.Select(p => p.Id).Should().Equal(expectedAfter);
     }
 
     [Fact]
@@ -678,9 +678,9 @@ public sealed class VideoPlaylistManagerTests
         List<VideoPlaylistResponseDto> playlist = [new() { Id = 1 }, new() { Id = 2 }];
 
         (List<VideoPlaylistResponseDto> before, List<VideoPlaylistResponseDto> after) =
-            manager.SplitPlaylist(playlist: playlist, currentTrackId: 999);
+            manager.SplitPlaylist(playlist, currentTrackId: 999);
 
         before.Should().BeEmpty();
-        after.Should().BeEquivalentTo(expectation: playlist, config: opts => opts.WithStrictOrdering());
+        after.Should().BeEquivalentTo(playlist, opts => opts.WithStrictOrdering());
     }
 }

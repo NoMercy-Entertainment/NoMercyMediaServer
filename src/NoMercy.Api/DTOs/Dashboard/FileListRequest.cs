@@ -15,12 +15,12 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record FileListRequest
 {
-    [JsonProperty(propertyName: "folder")]
+    [JsonProperty("folder")]
     public string Folder { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "driver_id")]
+    [JsonProperty("driver_id")]
     public string? DriverId { get; set; }
 }

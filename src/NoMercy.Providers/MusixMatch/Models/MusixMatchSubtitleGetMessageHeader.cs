@@ -15,15 +15,15 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchSubtitleGetMessageHeader
 {
-    [JsonProperty(propertyName: "status_code")]
+    [JsonProperty("status_code")]
     public long StatusCode { get; set; }
 
-    [JsonProperty(propertyName: "execute_time")]
+    [JsonProperty("execute_time")]
     public double ExecuteTime { get; set; }
 
-    [JsonProperty(propertyName: "pid")]
+    [JsonProperty("pid")]
     public long Pid { get; set; }
 
-    [JsonProperty(propertyName: "surrogate_key_list")]
+    [JsonProperty("surrogate_key_list")]
     public object[] SurrogateKeyList { get; set; } = [];
 }

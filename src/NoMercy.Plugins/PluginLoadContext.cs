@@ -24,9 +24,9 @@ public class PluginLoadContext : AssemblyLoadContext
     private readonly IReadOnlySet<string> _sharedAssemblies;
 
     public PluginLoadContext(string pluginPath, IReadOnlySet<string>? sharedAssemblies = null)
-        : base(isCollectible: true)
+        : base(true)
     {
-        _resolver = new(componentAssemblyPath: pluginPath);
+        _resolver = new(pluginPath);
         _sharedAssemblies = sharedAssemblies ?? PluginHostOptions.DefaultSharedAssemblies;
     }
 
@@ -34,13 +34,13 @@ public class PluginLoadContext : AssemblyLoadContext
     {
         // Return null for shared assemblies so the runtime falls back to the default
         // AssemblyLoadContext. This preserves type identity across the host/plugin boundary.
-        if (assemblyName.Name is not null && _sharedAssemblies.Contains(item: assemblyName.Name))
+        if (assemblyName.Name is not null && _sharedAssemblies.Contains(assemblyName.Name))
             return null;
 
-        string? assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName: assemblyName);
+        string? assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
         if (assemblyPath is not null)
         {
-            return LoadFromAssemblyPath(assemblyPath: assemblyPath);
+            return LoadFromAssemblyPath(assemblyPath);
         }
 
         return null;
@@ -48,10 +48,10 @@ public class PluginLoadContext : AssemblyLoadContext
 
     protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
     {
-        string? libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName: unmanagedDllName);
+        string? libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
         if (libraryPath is not null)
         {
-            return LoadUnmanagedDllFromPath(unmanagedDllPath: libraryPath);
+            return LoadUnmanagedDllFromPath(libraryPath);
         }
 
         return IntPtr.Zero;

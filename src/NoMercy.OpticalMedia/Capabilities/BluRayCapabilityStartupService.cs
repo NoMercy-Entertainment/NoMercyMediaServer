@@ -28,19 +28,19 @@ public sealed class BluRayCapabilityStartupService(
     IServerPhaseTracker phaseTracker
 ) : BackgroundService
 {
-    private static readonly TimeSpan InitialGrace = TimeSpan.FromSeconds(seconds: 5);
+    private static readonly TimeSpan InitialGrace = TimeSpan.FromSeconds(5);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!lifetime.ApplicationStarted.IsCancellationRequested)
         {
-            TaskCompletionSource tcs = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             await using CancellationTokenRegistration startedReg =
-                lifetime.ApplicationStarted.Register(callback: () => tcs.TrySetResult());
-            await using CancellationTokenRegistration cancelReg = stoppingToken.Register(callback: () =>
+                lifetime.ApplicationStarted.Register(() => tcs.TrySetResult());
+            await using CancellationTokenRegistration cancelReg = stoppingToken.Register(() =>
                 tcs.TrySetResult()
             );
-            await tcs.Task.ConfigureAwait(continueOnCapturedContext: false);
+            await tcs.Task.ConfigureAwait(false);
         }
 
         if (stoppingToken.IsCancellationRequested)
@@ -48,8 +48,8 @@ public sealed class BluRayCapabilityStartupService(
 
         try
         {
-            await phaseTracker.WhenReachedAsync(stage: BootStage.All, ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
-            await Task.Delay(delay: InitialGrace, cancellationToken: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+            await phaseTracker.WhenReachedAsync(BootStage.All, stoppingToken).ConfigureAwait(false);
+            await Task.Delay(InitialGrace, stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -58,17 +58,17 @@ public sealed class BluRayCapabilityStartupService(
 
         try
         {
-            await capability.ProbeAsync(ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+            await capability.ProbeAsync(stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
-            logger.LogInformation(message: "Blu-ray capability probe cancelled during shutdown");
+            logger.LogInformation("Blu-ray capability probe cancelled during shutdown");
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "Blu-ray capability probe failed — Blu-ray features may be unavailable"
+                ex,
+                "Blu-ray capability probe failed — Blu-ray features may be unavailable"
             );
         }
     }

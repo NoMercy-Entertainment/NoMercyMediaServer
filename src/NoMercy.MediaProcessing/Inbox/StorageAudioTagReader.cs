@@ -27,24 +27,24 @@ public sealed class StorageAudioTagReader : IInboxAudioTagReader
     {
         try
         {
-            IStorage storage = _storageFactory.For(folderId: Ulid.Empty, driverId: driverId, subPath: string.Empty);
-            await using LocalPathLease lease = await storage.AcquireLocalPathAsync(path: path, ct: ct);
+            IStorage storage = _storageFactory.For(Ulid.Empty, driverId, string.Empty);
+            await using LocalPathLease lease = await storage.AcquireLocalPathAsync(path, ct);
 
-            using TagLib.File tagFile = TagLib.File.Create(path: lease.Path);
+            using TagLib.File tagFile = TagLib.File.Create(lease.Path);
             Tag? tag = tagFile.Tag;
 
             if (tag is null)
                 return null;
 
             Guid? releaseId = null;
-            if (Guid.TryParse(input: tag.MusicBrainzReleaseId, result: out Guid parsedId))
+            if (Guid.TryParse(tag.MusicBrainzReleaseId, out Guid parsedId))
                 releaseId = parsedId;
 
             return new()
             {
                 MusicBrainzReleaseId = releaseId == Guid.Empty ? null : releaseId,
-                Album = string.IsNullOrWhiteSpace(value: tag.Album) ? null : tag.Album,
-                Artist = string.IsNullOrWhiteSpace(value: tag.FirstPerformer) ? null : tag.FirstPerformer,
+                Album = string.IsNullOrWhiteSpace(tag.Album) ? null : tag.Album,
+                Artist = string.IsNullOrWhiteSpace(tag.FirstPerformer) ? null : tag.FirstPerformer,
             };
         }
         catch

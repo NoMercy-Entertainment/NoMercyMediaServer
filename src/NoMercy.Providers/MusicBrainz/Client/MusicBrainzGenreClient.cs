@@ -22,12 +22,12 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
 
     public Task<MusicBrainzAllGenres?> FirstPage() =>
         Get<MusicBrainzAllGenres>(
-            url: "genre/all",
-            query: new Dictionary<string, string?>
+            "genre/all",
+            new Dictionary<string, string?>
             {
-                [key: "limit"] = "100",
-                [key: "offset"] = "0",
-                [key: "fmt"] = "json",
+                ["limit"] = "100",
+                ["offset"] = "0",
+                ["fmt"] = "json",
             }
         );
 
@@ -42,19 +42,19 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
         for (long offset = pageSize; offset < firstPage.GenreCount; offset += pageSize)
         {
             MusicBrainzAllGenres? page = await Get<MusicBrainzAllGenres>(
-                url: "genre/all",
-                query: new Dictionary<string, string?>
+                "genre/all",
+                new Dictionary<string, string?>
                 {
-                    [key: "limit"] = pageSize.ToString(),
-                    [key: "offset"] = offset.ToString(),
-                    [key: "fmt"] = "json",
+                    ["limit"] = pageSize.ToString(),
+                    ["offset"] = offset.ToString(),
+                    ["fmt"] = "json",
                 }
             );
 
             if (page is null)
                 continue;
 
-            genres.AddRange(collection: page.Genres);
+            genres.AddRange(page.Genres);
         }
 
         return genres;
@@ -67,15 +67,15 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
             return [];
 
         List<MusicBrainzGenre> genres = [.. firstPage.Genres];
-        genres.AddRange(collection: await RemainingPages(firstPage: firstPage));
+        genres.AddRange(await RemainingPages(firstPage));
         return genres;
     }
 
     public async Task<MusicBrainzGenre?> SearchGenre(string query)
     {
         MusicBrainzAllGenres? data = await Get<MusicBrainzAllGenres>(
-            url: "genre",
-            query: new Dictionary<string, string?> { [key: "query"] = query, [key: "fmt"] = "json" }
+            "genre",
+            new Dictionary<string, string?> { ["query"] = query, ["fmt"] = "json" }
         );
 
         return data?.Genres.FirstOrDefault();

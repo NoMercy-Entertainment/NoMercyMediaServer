@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
-using System.Net.Sockets;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -33,24 +32,7 @@ public static class WebHostFactory
         //     localAddresses.Add(IPAddress.IPv6Any);
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
-
-        builder.Services.AddSingleton<IPortManager, PortManager>();
-        builder.Services.AddSingleton<IShutdownCoordinator, ShutdownCoordinator>();
-        builder.Services.AddSingleton<IServerRunner, ServerRunner>();
-        builder.Services.AddSingleton<IPluginLoader, PluginLoader>();
-        builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
-        builder.Services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
-
-        builder.Services.Configure<ServerConfiguration>(config: builder.Configuration.GetSection(key: "Server"));
-        builder.Services.AddSingleton<IServerConfiguration, ServerConfigurationWrapper>();
-
-        builder.Services.AddSingleton(implementationInstance: options);
-        builder.Services.AddSingleton<
-            IApiVersionDescriptionProvider,
-            DefaultApiVersionDescriptionProvider
-        >();
-        builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
-        builder.Services.AddSingleton<NmSystem.Logging.NoMercyLoggerOptions>(implementationFactory: _ =>
+        builder.Services.AddSingleton<NmSystem.Logging.NoMercyLoggerOptions>(_ =>
             new()
             {
                 MinimumLevel = LogLevel.Information,
@@ -78,20 +60,37 @@ public static class WebHostFactory
                     // lines still wrap and hang under the gutter instead of the
                     // consumer terminal hard-wrapping them flush-left.
                     return
-                        int.TryParse(s: Environment.GetEnvironmentVariable(variable: "COLUMNS"), result: out int cols)
+                        int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int cols)
                         && cols > 0
-                        ? cols
-                        : 120;
+                            ? cols
+                            : 120;
                 },
             }
         );
         builder.Services.AddSingleton<NmSystem.Logging.NoMercyLoggerProvider>();
-        builder.Services.AddSingleton(serviceType: typeof(ILogger<>), implementationType: typeof(CustomLogger<>));
+        builder.Services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
+
+        builder.Services.AddSingleton<IPortManager, PortManager>();
+        builder.Services.AddSingleton<IShutdownCoordinator, ShutdownCoordinator>();
+        builder.Services.AddSingleton<IServerRunner, ServerRunner>();
+        builder.Services.AddSingleton<IPluginLoader, PluginLoader>();
+        builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
+        builder.Services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
+
+        builder.Services.Configure<ServerConfiguration>(builder.Configuration.GetSection("Server"));
+        builder.Services.AddSingleton<IServerConfiguration, ServerConfigurationWrapper>();
+
+        builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton<
+            IApiVersionDescriptionProvider,
+            DefaultApiVersionDescriptionProvider
+        >();
+        builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
 
         // Configure host options with reduced shutdown timeout
-        builder.Services.Configure<HostOptions>(configureOptions: hostOptions =>
+        builder.Services.Configure<HostOptions>(hostOptions =>
         {
-            hostOptions.ShutdownTimeout = TimeSpan.FromSeconds(seconds: 10);
+            hostOptions.ShutdownTimeout = TimeSpan.FromSeconds(10);
         });
 
         // Service integration — context-aware lifetime management
@@ -113,21 +112,21 @@ public static class WebHostFactory
         // providers and had its entries dropped without a trace. That silence hid
         // real encode failures: a job's Log.LogWarning in a catch went nowhere.
         // Register the provider so both paths land in the same sink.
-        builder.Logging.Services.AddSingleton<ILoggerProvider>(implementationFactory: serviceProvider =>
+        builder.Logging.Services.AddSingleton<ILoggerProvider>(serviceProvider =>
             serviceProvider.GetRequiredService<NmSystem.Logging.NoMercyLoggerProvider>()
         );
 
         // The framework's own categories were silenced wholesale by ClearProviders.
         // Now that the factory can write again, keep their routine chatter out while
         // letting genuine problems (Kestrel, hosting) through.
-        builder.Logging.AddFilter(category: "Microsoft", level: LogLevel.Warning);
-        builder.Logging.AddFilter(category: "System", level: LogLevel.Warning);
+        builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
+        builder.Logging.AddFilter("System", LogLevel.Warning);
 
-        builder.WebHost.ConfigureKestrel(options: kestrelOptions =>
+        builder.WebHost.ConfigureKestrel(kestrelOptions =>
         {
             ICertificateService certificateService =
                 kestrelOptions.ApplicationServices.GetRequiredService<ICertificateService>();
-            certificateService.KestrelConfig(options: kestrelOptions);
+            certificateService.KestrelConfig(kestrelOptions);
 
             // Main server endpoints.
             // forceHttp = true during setup/auth, so we never need HTTPS to handle the
@@ -135,9 +134,9 @@ public static class WebHostFactory
             foreach (IPAddress address in localAddresses)
             {
                 kestrelOptions.Listen(
-                    address: address,
-                    port: RuntimeServerSettings.Current.InternalServerPort,
-                    configure: listenOptions =>
+                    address,
+                    RuntimeServerSettings.Current.InternalServerPort,
+                    listenOptions =>
                     {
                         if (forceHttp)
                         {
@@ -157,7 +156,7 @@ public static class WebHostFactory
                             // drop h2 and let WebSockets use the plain HTTP/1.1 upgrade. Do not
                             // re-add Http2 here without first solving Extended CONNECT.
                             listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
-                            certificateService.ConfigureHttpsListener(listenOptions: listenOptions);
+                            certificateService.ConfigureHttpsListener(listenOptions);
                         }
                     }
                 );
@@ -167,9 +166,9 @@ public static class WebHostFactory
             // No TLS is configured here, so Http3 can never negotiate — requesting it
             // just makes Kestrel log a "HTTP/3 is not enabled" warning every startup.
             kestrelOptions.Listen(
-                address: IPAddress.Loopback,
-                port: RuntimeServerSettings.Current.InternalServerPort + 1,
-                configure: listenOptions =>
+                IPAddress.Loopback,
+                RuntimeServerSettings.Current.InternalServerPort + 1,
+                listenOptions =>
                 {
                     listenOptions.Protocols = HttpProtocols.Http1;
                 }
@@ -180,32 +179,32 @@ public static class WebHostFactory
             if (Software.IsWindows)
             {
                 kestrelOptions.ListenNamedPipe(
-                    pipeName: Config.ManagementPipeName,
-                    configure: listenOptions =>
+                    Config.ManagementPipeName,
+                    listenOptions =>
                     {
                         listenOptions.Protocols = HttpProtocols.Http1;
                     }
                 );
 
-                Logger.App(message: $"IPC listening on named pipe: {Config.ManagementPipeName}");
+                Logger.App($"IPC listening on named pipe: {Config.ManagementPipeName}");
             }
             else
             {
                 string socketPath = Config.ManagementSocketPath;
 
                 // Remove stale socket file from previous run
-                if (File.Exists(path: socketPath))
-                    File.Delete(path: socketPath);
+                if (File.Exists(socketPath))
+                    File.Delete(socketPath);
 
                 kestrelOptions.ListenUnixSocket(
-                    socketPath: socketPath,
-                    configure: listenOptions =>
+                    socketPath,
+                    listenOptions =>
                     {
                         listenOptions.Protocols = HttpProtocols.Http1;
                     }
                 );
 
-                Logger.App(message: $"IPC listening on Unix socket: {socketPath}");
+                Logger.App($"IPC listening on Unix socket: {socketPath}");
             }
         });
 
@@ -214,18 +213,18 @@ public static class WebHostFactory
 
         // Set content root to executable directory when running as a service
         if (options.RunAsService)
-            builder.WebHost.UseContentRoot(contentRoot: AppContext.BaseDirectory);
+            builder.WebHost.UseContentRoot(AppContext.BaseDirectory);
 
         // Register services from Startup.ConfigureServices
-        ServiceConfiguration.ConfigureServices(services: builder.Services, configuration: builder.Configuration);
-        builder.Services.AddSingleton(implementationInstance: options);
+        ServiceConfiguration.ConfigureServices(builder.Services, builder.Configuration);
+        builder.Services.AddSingleton(options);
 
         WebApplication app = builder.Build();
 
         // Configure middleware from Startup.Configure
         IApiVersionDescriptionProvider provider =
             app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        ApplicationConfiguration.ConfigureApp(app: app, provider: provider);
+        ApplicationConfiguration.ConfigureApp(app, provider);
 
         return app;
     }

@@ -22,28 +22,28 @@ public class AppDbContext : DbContext
     public AppDbContext() { }
 
     public AppDbContext(DbContextOptions<AppDbContext> options)
-        : base(options: options) { }
+        : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
             .Model.GetEntityTypes()
-            .SelectMany(selector: t => t.GetProperties())
-            .Where(predicate: p => p.Name is "CreatedAt" or "UpdatedAt")
+            .SelectMany(t => t.GetProperties())
+            .Where(p => p.Name is "CreatedAt" or "UpdatedAt")
             .ToList()
-            .ForEach(action: p => p.SetDefaultValueSql(value: "CURRENT_TIMESTAMP"));
+            .ForEach(p => p.SetDefaultValueSql("CURRENT_TIMESTAMP"));
 
         modelBuilder
             .Entity<Configuration>()
-            .Property(propertyExpression: e => e.SecureValue)
-            .HasConversion(convertToProviderExpression: v => TokenStore.EncryptToken(v), convertFromProviderExpression: v => TokenStore.DecryptToken(v));
+            .Property(e => e.SecureValue)
+            .HasConversion(v => TokenStore.EncryptToken(v), v => TokenStore.DecryptToken(v));
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         if (!options.IsConfigured)
         {
-            options.UseSqlite(connectionString: $"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;");
+            options.UseSqlite($"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;");
         }
     }
 }

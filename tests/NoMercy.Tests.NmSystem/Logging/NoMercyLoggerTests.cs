@@ -19,7 +19,7 @@ namespace NoMercy.Tests.NmSystem;
 /// per-category levels gate output, scopes render as a dim suffix, and structured
 /// message arguments are formatted.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class NoMercyLoggerTests
 {
     private static (ILogger Logger, StringWriter Sink, NoMercyLoggerProvider Provider) Build(
@@ -28,33 +28,33 @@ public class NoMercyLoggerTests
     )
     {
         NoMercyLoggerOptions options = new() { Color = false };
-        configure?.Invoke(obj: options);
+        configure?.Invoke(options);
         StringWriter sink = new();
-        NoMercyLoggerProvider provider = new(options: options, output: sink);
-        return (provider.CreateLogger(categoryName: source), sink, provider);
+        NoMercyLoggerProvider provider = new(options, sink);
+        return (provider.CreateLogger(source), sink, provider);
     }
 
     [Fact]
     public void Log_RendersCategoryAndFormattedMessage()
     {
         (ILogger logger, StringWriter sink, _) = Build(
-            source: "NoMercy.Providers.TMDB.Client.TmdbBaseClient"
+            "NoMercy.Providers.TMDB.Client.TmdbBaseClient"
         );
 
-        logger.LogInformation(message: "Fetching {Id}", args: 27205);
+        logger.LogInformation("Fetching {Id}", 27205);
 
-        sink.ToString().Should().Contain(expected: "TheMovieDB │ Fetching 27205");
+        sink.ToString().Should().Contain("TheMovieDB │ Fetching 27205");
     }
 
     [Fact]
     public void Log_BelowMinimumLevel_IsSuppressed()
     {
         (ILogger logger, StringWriter sink, _) = Build(
-            source: "NoMercy.Service.Whatever",
-            configure: o => o.MinimumLevel = LogLevel.Warning
+            "NoMercy.Service.Whatever",
+            o => o.MinimumLevel = LogLevel.Warning
         );
 
-        logger.LogInformation(message: "ignored");
+        logger.LogInformation("ignored");
 
         sink.ToString().Should().BeEmpty();
     }
@@ -63,17 +63,17 @@ public class NoMercyLoggerTests
     public void Log_CategoryOverride_EnablesBelowGlobalMinimum()
     {
         (ILogger logger, StringWriter sink, _) = Build(
-            source: "NoMercy.Providers.TMDB.Client.TmdbBaseClient",
-            configure: o =>
+            "NoMercy.Providers.TMDB.Client.TmdbBaseClient",
+            o =>
             {
                 o.MinimumLevel = LogLevel.Warning;
-                o.CategoryLevels[key: "moviedb"] = LogLevel.Debug;
+                o.CategoryLevels["moviedb"] = LogLevel.Debug;
             }
         );
 
-        logger.LogDebug(message: "debug detail");
+        logger.LogDebug("debug detail");
 
-        sink.ToString().Should().Contain(expected: "debug detail");
+        sink.ToString().Should().Contain("debug detail");
     }
 
     [Fact]
@@ -86,16 +86,16 @@ public class NoMercyLoggerTests
             OnRecord = record => captured = record,
         };
         StringWriter sink = new();
-        NoMercyLoggerProvider provider = new(options: options, output: sink);
-        provider.SetScopeProvider(scopeProvider: new LoggerExternalScopeProvider());
-        ILogger logger = provider.CreateLogger(categoryName: "NoMercy.Providers.TMDB.Client.TmdbBaseClient");
+        NoMercyLoggerProvider provider = new(options, sink);
+        provider.SetScopeProvider(new LoggerExternalScopeProvider());
+        ILogger logger = provider.CreateLogger("NoMercy.Providers.TMDB.Client.TmdbBaseClient");
 
-        using (logger.BeginScope(state: "imp=7f3a"))
-            logger.LogInformation(message: "scoped");
+        using (logger.BeginScope("imp=7f3a"))
+            logger.LogInformation("scoped");
 
         // Scope is structured telemetry, not console noise: it must not reach the console
         // line but must still ride along on the record (and the per-run JSON file).
-        sink.ToString().Should().NotContain(unexpected: "imp=7f3a").And.NotContain(unexpected: "·");
-        captured!.Scope.Should().Be(expected: "imp=7f3a");
+        sink.ToString().Should().NotContain("imp=7f3a").And.NotContain("·");
+        captured!.Scope.Should().Be("imp=7f3a");
     }
 }

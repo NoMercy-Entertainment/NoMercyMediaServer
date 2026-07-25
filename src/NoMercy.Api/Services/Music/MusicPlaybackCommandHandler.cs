@@ -26,33 +26,33 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
             case "play":
                 if (state.Actions.Disallows.Resuming)
                     break;
-                HandlePlay(user: user, state: state);
+                HandlePlay(user, state);
                 break;
             case "pause":
                 if (state.Actions.Disallows.Pausing)
                     break;
-                HandlePause(user: user, state: state);
+                HandlePause(user, state);
                 break;
             case "seek":
                 if (state.Actions.Disallows.Seeking)
                     break;
-                HandleSeek(state: state, data: data);
+                HandleSeek(state, data);
                 break;
             case "next":
                 if (state.Actions.Disallows.Next)
                     break;
-                HandleNext(user: user, state: state);
+                HandleNext(user, state);
                 break;
             case "previous":
                 if (state.Actions.Disallows.Previous)
                     break;
-                HandlePrevious(user: user, state: state);
+                HandlePrevious(user, state);
                 break;
             case "stop":
                 // stop() is unconditional per the NoMercy Connect protocol — the
                 // Disallows.Stopping flag is a client UI hint, not server-side
                 // enforcement (matches VideoPlaybackCommandHandler).
-                HandleStop(state: state);
+                HandleStop(state);
                 break;
             case "mute":
                 if (state.Actions.Disallows.Muting)
@@ -67,7 +67,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
             case "repeat":
                 if (state.Actions.Disallows.TogglingRepeatContext)
                     break;
-                HandleRepeat(state: state);
+                HandleRepeat(state);
                 break;
         }
     }
@@ -75,13 +75,13 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
     private void HandlePlay(User user, MusicPlayerState state)
     {
         state.PlayState = true;
-        musicPlaybackService.StartPlaybackTimer(user: user);
+        musicPlaybackService.StartPlaybackTimer(user);
     }
 
     private void HandlePause(User user, MusicPlayerState state)
     {
         state.PlayState = false;
-        musicPlaybackService.RemoveTimer(userId: user.Id);
+        musicPlaybackService.RemoveTimer(user.Id);
     }
 
     private void HandleSeek(MusicPlayerState state, object? data)
@@ -89,16 +89,16 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         string raw = data?.ToString() ?? "0";
         int seekSeconds;
 
-        if (int.TryParse(s: raw, result: out int intValue))
+        if (int.TryParse(raw, out int intValue))
         {
             seekSeconds = intValue;
         }
         else if (
             double.TryParse(
-                s: raw,
-                style: NumberStyles.Float,
-                provider: CultureInfo.InvariantCulture,
-                result: out double floatValue
+                raw,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double floatValue
             )
         )
         {
@@ -109,7 +109,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
             seekSeconds = 0;
         }
 
-        state.SetPosition(positionMs: seekSeconds * 1000);
+        state.SetPosition(seekSeconds * 1000);
         state.CrossfadeSignalSent = false; // User seeked, invalidate any pending crossfade
     }
 
@@ -117,29 +117,29 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
     {
         if (state.CurrentItem == null)
             return;
-        musicPlaybackService.RemoveTimer(userId: user.Id);
+        musicPlaybackService.RemoveTimer(user.Id);
         state.CrossfadeSignalSent = false; // Reset for new track
 
         // Add current item to backlog
-        state.Backlog.Add(item: state.CurrentItem);
+        state.Backlog.Add(state.CurrentItem);
 
         // Move to the next track
         if (state.Playlist.Count > 0)
         {
             state.CurrentItem = state.Playlist.First();
-            state.Playlist.RemoveAt(index: 0);
-            state.SetPosition(positionMs: 0);
+            state.Playlist.RemoveAt(0);
+            state.SetPosition(0);
             state.Duration = state.CurrentItem.Duration.ToMilliSeconds();
-            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         }
         else
         {
-            HandlePlaylistCompletion(user: user, state: state);
+            HandlePlaylistCompletion(user, state);
             return;
         }
 
         state.PlayState = true;
-        musicPlaybackService.StartPlaybackTimer(user: user);
+        musicPlaybackService.StartPlaybackTimer(user);
     }
 
     private void HandlePlaylistCompletion(User user, MusicPlayerState state)
@@ -148,9 +148,9 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         {
             case "one":
                 // If repeat one, play the same item again
-                state.SetPosition(positionMs: 0);
-                state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
-                musicPlaybackService.StartPlaybackTimer(user: user);
+                state.SetPosition(0);
+                state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
+                musicPlaybackService.StartPlaybackTimer(user);
                 break;
             case "all":
                 // If repeat all, move the backlog to the playlist and start from the beginning
@@ -159,17 +159,17 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
                 if (state.Playlist.Count > 0)
                 {
                     state.CurrentItem = state.Playlist.First();
-                    state.Playlist.RemoveAt(index: 0);
-                    state.SetPosition(positionMs: 0);
-                    state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
+                    state.Playlist.RemoveAt(0);
+                    state.SetPosition(0);
+                    state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
                     state.PlayState = true;
-                    musicPlaybackService.StartPlaybackTimer(user: user);
+                    musicPlaybackService.StartPlaybackTimer(user);
                 }
                 else
                 {
                     // If the playlist is empty, stop playback
                     state.PlayState = false;
-                    state.SetPosition(positionMs: 0);
+                    state.SetPosition(0);
                     state.CurrentItem = null;
                 }
 
@@ -177,7 +177,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
             default:
                 // If repeat is off, stop playback
                 state.PlayState = false;
-                state.SetPosition(positionMs: 0);
+                state.SetPosition(0);
                 state.CurrentItem = null;
                 break;
         }
@@ -192,8 +192,8 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         // If we're more than 3 seconds into the song, restart it
         if (state.Time > 3000)
         {
-            state.SetPosition(positionMs: 0);
-            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
+            state.SetPosition(0);
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             return;
         }
 
@@ -201,29 +201,29 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         // If backlog is empty, just restart the current track
         if (state.Backlog.Count == 0)
         {
-            state.SetPosition(positionMs: 0);
-            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
+            state.SetPosition(0);
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             return;
         }
 
-        musicPlaybackService.RemoveTimer(userId: user.Id);
+        musicPlaybackService.RemoveTimer(user.Id);
 
         // Move current item back to the start of playlist
-        state.Playlist.Insert(index: 0, item: state.CurrentItem);
+        state.Playlist.Insert(0, state.CurrentItem);
 
         // Move last backlog item to current
         state.CurrentItem = state.Backlog.Last();
-        state.Backlog.RemoveAt(index: state.Backlog.Count - 1);
-        state.SetPosition(positionMs: 0);
+        state.Backlog.RemoveAt(state.Backlog.Count - 1);
+        state.SetPosition(0);
         state.Duration = state.CurrentItem.Duration.ToMilliSeconds();
-        state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
+        state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         state.PlayState = true;
-        musicPlaybackService.StartPlaybackTimer(user: user);
+        musicPlaybackService.StartPlaybackTimer(user);
     }
 
     private void HandleRepeat(MusicPlayerState state)
     {
-        int currentIndex = Array.IndexOf(array: _repeatStates, value: state.Repeat);
+        int currentIndex = Array.IndexOf(_repeatStates, state.Repeat);
         state.Repeat = _repeatStates[(currentIndex + 1) % _repeatStates.Length];
     }
 
@@ -237,10 +237,10 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         // to active and audibly hijacked playback away from the TV.
         state.CurrentItem = null;
         state.PlayState = false;
-        state.SetPosition(positionMs: 0);
+        state.SetPosition(0);
         state.Backlog = [];
         state.Playlist = [];
-        state.CurrentList = new(uriString: "", uriKind: UriKind.Relative);
+        state.CurrentList = new("", UriKind.Relative);
         state.Actions = new()
         {
             Disallows = new()

@@ -35,7 +35,7 @@ namespace NoMercy.Tests.Api;
 // 52). These tests build a real DashboardHub against the app's actual
 // DI-configured MediaContext/UserCache (via NoMercyApiFactory) and mock only
 // the SignalR plumbing (HubCallerContext) plus the two gated services.
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class DashboardHubResourceAuthTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -66,30 +66,30 @@ public class DashboardHubResourceAuthTests : IClassFixture<NoMercyApiFactory>
         logBroadcastService = new();
 
         DashboardHub hub = new(
-            logger: NullLogger<DashboardHub>.Instance,
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: contextFactory,
+            NullLogger<DashboardHub>.Instance,
+            new HttpContextAccessorStub(httpContext),
+            contextFactory,
             // A fresh, empty ConnectedClients so StopResources' "last dashboard
             // connection" check always evaluates true, isolated from any other
             // test's device state.
-            connectedClients: new ConnectedClients(),
-            clientMessenger: Mock.Of<IClientMessenger>(),
-            logBroadcastService: logBroadcastService.Object,
-            resourceMonitorService: resourceMonitorService.Object,
-            activityLogger: Mock.Of<IActivityLogger>()
+            new ConnectedClients(),
+            Mock.Of<IClientMessenger>(),
+            logBroadcastService.Object,
+            resourceMonitorService.Object,
+            Mock.Of<IActivityLogger>()
         );
 
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(
-                claims: [new(type: ClaimTypes.NameIdentifier, value: callerUserId.ToString())],
-                authenticationType: "TestAuth"
+            new ClaimsIdentity(
+                [new(ClaimTypes.NameIdentifier, callerUserId.ToString())],
+                "TestAuth"
             )
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(expression: c => c.User).Returns(value: principal);
-        context.Setup(expression: c => c.ConnectionId).Returns(value: Guid.NewGuid().ToString());
-        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
+        context.Setup(c => c.User).Returns(principal);
+        context.Setup(c => c.ConnectionId).Returns(Guid.NewGuid().ToString());
+        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
 
         hub.Context = context.Object;
         hub.Clients = Mock.Of<IHubCallerClients>();
@@ -101,14 +101,14 @@ public class DashboardHubResourceAuthTests : IClassFixture<NoMercyApiFactory>
     public void StartResources_StartsMonitor_WhenCallerIsModerator()
     {
         DashboardHub hub = CreateHub(
-            callerUserId: TestAuthHandler.DefaultUserId,
-            resourceMonitorService: out Mock<IResourceMonitorService> resourceMonitorService,
-            logBroadcastService: out _
+            TestAuthHandler.DefaultUserId,
+            out Mock<IResourceMonitorService> resourceMonitorService,
+            out _
         );
 
         hub.StartResources();
 
-        resourceMonitorService.Verify(expression: s => s.Start(), times: Times.Once);
+        resourceMonitorService.Verify(s => s.Start(), Times.Once);
     }
 
     [Fact]
@@ -118,44 +118,44 @@ public class DashboardHubResourceAuthTests : IClassFixture<NoMercyApiFactory>
         // "merely authenticated" tier that must no longer be able to start the
         // shared resource monitor for every connected dashboard client.
         DashboardHub hub = CreateHub(
-            callerUserId: TestAuthHandler.SecondaryUserId,
-            resourceMonitorService: out Mock<IResourceMonitorService> resourceMonitorService,
-            logBroadcastService: out _
+            TestAuthHandler.SecondaryUserId,
+            out Mock<IResourceMonitorService> resourceMonitorService,
+            out _
         );
 
         hub.StartResources();
 
-        resourceMonitorService.Verify(expression: s => s.Start(), times: Times.Never);
+        resourceMonitorService.Verify(s => s.Start(), Times.Never);
     }
 
     [Fact]
     public void StopResources_StopsServices_WhenCallerIsModerator()
     {
         DashboardHub hub = CreateHub(
-            callerUserId: TestAuthHandler.DefaultUserId,
-            resourceMonitorService: out Mock<IResourceMonitorService> resourceMonitorService,
-            logBroadcastService: out Mock<ILogBroadcastService> logBroadcastService
+            TestAuthHandler.DefaultUserId,
+            out Mock<IResourceMonitorService> resourceMonitorService,
+            out Mock<ILogBroadcastService> logBroadcastService
         );
 
         hub.StopResources();
 
-        resourceMonitorService.Verify(expression: s => s.Stop(), times: Times.Once);
-        logBroadcastService.Verify(expression: s => s.Stop(), times: Times.Once);
+        resourceMonitorService.Verify(s => s.Stop(), Times.Once);
+        logBroadcastService.Verify(s => s.Stop(), Times.Once);
     }
 
     [Fact]
     public void StopResources_DoesNotStopServices_WhenCallerIsNonModeratorSecondaryUser()
     {
         DashboardHub hub = CreateHub(
-            callerUserId: TestAuthHandler.SecondaryUserId,
-            resourceMonitorService: out Mock<IResourceMonitorService> resourceMonitorService,
-            logBroadcastService: out Mock<ILogBroadcastService> logBroadcastService
+            TestAuthHandler.SecondaryUserId,
+            out Mock<IResourceMonitorService> resourceMonitorService,
+            out Mock<ILogBroadcastService> logBroadcastService
         );
 
         hub.StopResources();
 
-        resourceMonitorService.Verify(expression: s => s.Stop(), times: Times.Never);
-        logBroadcastService.Verify(expression: s => s.Stop(), times: Times.Never);
+        resourceMonitorService.Verify(s => s.Stop(), Times.Never);
+        logBroadcastService.Verify(s => s.Stop(), Times.Never);
     }
 
     // Minimal IHttpContextAccessor stand-in — the real implementation is an

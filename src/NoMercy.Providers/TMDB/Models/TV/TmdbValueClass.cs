@@ -16,39 +16,39 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbValueClass
 {
-    [JsonProperty(propertyName: "season_id")]
+    [JsonProperty("season_id")]
     public int? SeasonId { get; set; }
 
-    [JsonProperty(propertyName: "season_number")]
+    [JsonProperty("season_number")]
     public int? SeasonNumber { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int? Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "add_to_every_season")]
+    [JsonProperty("add_to_every_season")]
     public bool? AddToEverySeason { get; set; }
 
-    [JsonProperty(propertyName: "character")]
+    [JsonProperty("character")]
     public string Character { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "credit_id")]
+    [JsonProperty("credit_id")]
     public string CreditId { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "order")]
+    [JsonProperty("order")]
     public int? Order { get; set; }
 
-    [JsonProperty(propertyName: "person_id")]
+    [JsonProperty("person_id")]
     public int? PersonId { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public TmdbPoster TmdbPoster { get; set; } = new();
 
-    [JsonProperty(propertyName: "department")]
+    [JsonProperty("department")]
     public string Department { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "job")]
+    [JsonProperty("job")]
     public string Job { get; set; } = string.Empty;
 }

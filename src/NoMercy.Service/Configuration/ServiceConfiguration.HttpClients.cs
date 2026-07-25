@@ -19,7 +19,7 @@ public static partial class ServiceConfiguration
 {
     private static void ConfigureHttpClients(IServiceCollection services)
     {
-        TimeSpan defaultTimeout = TimeSpan.FromMinutes(minutes: 5);
+        TimeSpan defaultTimeout = TimeSpan.FromMinutes(5);
 
         IServerConfiguration config = services
             .BuildServiceProvider()
@@ -27,57 +27,57 @@ public static partial class ServiceConfiguration
         string userAgent = config.UserAgent;
 
         services.AddHttpClient(
-            name: HttpClientNames.Tmdb,
-            configureClient: client =>
+            HttpClientNames.Tmdb,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://api.themoviedb.org/3/");
+                client.BaseAddress = new("https://api.themoviedb.org/3/");
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "application/json"));
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.Timeout = defaultTimeout;
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.TmdbImage,
-            configureClient: client =>
+            HttpClientNames.TmdbImage,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://image.tmdb.org/t/p/");
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
-                client.DefaultRequestHeaders.Add(name: "Accept", value: "image/*");
+                client.BaseAddress = new("https://image.tmdb.org/t/p/");
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
+                client.DefaultRequestHeaders.Add("Accept", "image/*");
                 client.Timeout = defaultTimeout;
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.Tvdb,
-            configureClient: client =>
+            HttpClientNames.Tvdb,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://api4.thetvdb.com/v4/");
+                client.BaseAddress = new("https://api4.thetvdb.com/v4/");
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "application/json"));
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.Timeout = defaultTimeout;
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.TvdbLogin,
-            configureClient: client =>
+            HttpClientNames.TvdbLogin,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://api4.thetvdb.com/v4/");
-                client.DefaultRequestHeaders.Add(name: "Accept", value: "application/json");
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
+                client.BaseAddress = new("https://api4.thetvdb.com/v4/");
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.MusicBrainz,
-            configureClient: client =>
+            HttpClientNames.MusicBrainz,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://musicbrainz.org/ws/2/");
+                client.BaseAddress = new("https://musicbrainz.org/ws/2/");
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "application/json"));
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
                 // A blank/generic UA (including the literal string "anonymous")
                 // lands in MusicBrainz's shared 50 req/s bucket — not a per-client
                 // allowance, but one pool split across every anonymous client on
@@ -86,86 +86,86 @@ public static partial class ServiceConfiguration
                 // identified UA bypasses UA-based throttling entirely and only
                 // has to respect the 1 req/sec-per-IP limit our Queue already
                 // paces to (MusicBrainzBaseClient.RequestIntervalMs).
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.AcoustId,
-            configureClient: client =>
+            HttpClientNames.AcoustId,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://api.acoustid.org/v2/");
+                client.BaseAddress = new("https://api.acoustid.org/v2/");
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "application/json"));
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.OpenSubtitles,
-            configureClient: client =>
+            HttpClientNames.OpenSubtitles,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://api.opensubtitles.org/xml-rpc");
+                client.BaseAddress = new("https://api.opensubtitles.org/xml-rpc");
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "text/xml"));
+                client.DefaultRequestHeaders.Accept.Add(new("text/xml"));
                 client.DefaultRequestHeaders.Add(
-                    name: "User-Agent",
-                    value: ExternalServicesConfig.Current.OpenSubtitlesUserAgent
+                    "User-Agent",
+                    ExternalServicesConfig.Current.OpenSubtitlesUserAgent
                 );
                 client.Timeout = defaultTimeout;
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.OpenSubtitlesDownload,
-            configureClient: client =>
+            HttpClientNames.OpenSubtitlesDownload,
+            client =>
             {
                 client.DefaultRequestHeaders.Add(
-                    name: "User-Agent",
-                    value: ExternalServicesConfig.Current.OpenSubtitlesUserAgent
+                    "User-Agent",
+                    ExternalServicesConfig.Current.OpenSubtitlesUserAgent
                 );
                 client.Timeout = defaultTimeout;
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.FanArt,
-            configureClient: client =>
+            HttpClientNames.FanArt,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://webservice.fanart.tv/v3/");
+                client.BaseAddress = new("https://webservice.fanart.tv/v3/");
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "application/json"));
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.FanArtImage,
-            configureClient: client =>
+            HttpClientNames.FanArtImage,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://assets.fanart.tv");
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
-                client.DefaultRequestHeaders.Add(name: "Accept", value: "image/*");
+                client.BaseAddress = new("https://assets.fanart.tv");
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
+                client.DefaultRequestHeaders.Add("Accept", "image/*");
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.CoverArt,
-            configureClient: client =>
+            HttpClientNames.CoverArt,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://coverartarchive.org/");
+                client.BaseAddress = new("https://coverartarchive.org/");
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "application/json"));
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.CoverArtImage,
-            configureClient: client =>
+            HttpClientNames.CoverArtImage,
+            client =>
             {
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
-                client.DefaultRequestHeaders.Add(name: "Accept", value: "image/*");
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
+                client.DefaultRequestHeaders.Add("Accept", "image/*");
             }
         );
 
@@ -175,70 +175,70 @@ public static partial class ServiceConfiguration
         // WaitAsync bound gives up on the caller side well before this, but the
         // request itself still needs to actually stop so the provider's
         // rate-limited Queue slot is freed instead of held for the full 100s.
-        TimeSpan lyricsProviderTimeout = TimeSpan.FromSeconds(seconds: 15);
+        TimeSpan lyricsProviderTimeout = TimeSpan.FromSeconds(15);
 
         services.AddHttpClient(
-            name: HttpClientNames.Lrclib,
-            configureClient: client =>
+            HttpClientNames.Lrclib,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://lrclib.net/api/");
+                client.BaseAddress = new("https://lrclib.net/api/");
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "application/json"));
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.Timeout = lyricsProviderTimeout;
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.MusixMatch,
-            configureClient: client =>
+            HttpClientNames.MusixMatch,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://apic-desktop.musixmatch.com/ws/1.1/");
+                client.BaseAddress = new("https://apic-desktop.musixmatch.com/ws/1.1/");
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "application/json"));
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
-                client.DefaultRequestHeaders.Add(name: "authority", value: "apic-desktop.musixmatch.com");
-                client.DefaultRequestHeaders.Add(name: "cookie", value: "x-mxm-token-guid=");
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
+                client.DefaultRequestHeaders.Add("authority", "apic-desktop.musixmatch.com");
+                client.DefaultRequestHeaders.Add("cookie", "x-mxm-token-guid=");
                 client.Timeout = lyricsProviderTimeout;
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.Tadb,
-            configureClient: client =>
+            HttpClientNames.Tadb,
+            client =>
             {
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "application/json"));
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.Timeout = defaultTimeout;
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.NoMercyImage,
-            configureClient: client =>
+            HttpClientNames.NoMercyImage,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://image.nomercy.tv/");
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
-                client.DefaultRequestHeaders.Add(name: "Accept", value: "image/*");
+                client.BaseAddress = new("https://image.nomercy.tv/");
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
+                client.DefaultRequestHeaders.Add("Accept", "image/*");
                 client.Timeout = defaultTimeout;
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.KitsuIo,
-            configureClient: client =>
+            HttpClientNames.KitsuIo,
+            client =>
             {
-                client.BaseAddress = new(uriString: "https://kitsu.io/api/edge/");
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(input: userAgent);
+                client.BaseAddress = new("https://kitsu.io/api/edge/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
             }
         );
 
         services.AddHttpClient(
-            name: HttpClientNames.General,
-            configureClient: client =>
+            HttpClientNames.General,
+            client =>
             {
-                client.DefaultRequestHeaders.Add(name: "User-Agent", value: userAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.Timeout = defaultTimeout;
             }
         );

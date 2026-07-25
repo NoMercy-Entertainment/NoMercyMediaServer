@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record SetupResponseDto
 {
-    [JsonProperty(propertyName: "setup_complete")]
+    [JsonProperty("setup_complete")]
     public bool SetupComplete { get; set; }
 }

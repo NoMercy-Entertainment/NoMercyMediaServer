@@ -33,17 +33,17 @@ public class PlaylistGeneratorTests
         // collapse the ladder onto one shared BANDWIDTH). Mirror the production
         // keying so the lookup in GenerateMasterPlaylist resolves.
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
-            keySelector: VideoVariantKey,
-            elementSelector: _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
+            VideoVariantKey,
+            _ => new VariantMetrics(5_000_000, 4_500_000)
         );
 
         Dictionary<string, VariantMetrics> audioMetrics = plan.AudioOutputs.ToDictionary(
-            keySelector: AudioVariantKey,
-            elementSelector: _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
+            AudioVariantKey,
+            _ => new VariantMetrics(192_000, 180_000)
         );
 
         PlaylistGenerator generator = new();
-        return generator.GenerateMasterPlaylist(plan: plan, mediaTitle: MediaTitle, videoMetrics: videoMetrics, audioMetrics: audioMetrics);
+        return generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
     }
 
     // The metrics-dict key a variant is stored/looked-up under: its resolved
@@ -51,60 +51,60 @@ public class PlaylistGeneratorTests
     // PlaylistGenerator exactly.
     private static string VideoVariantKey(VideoOutputPlan video) =>
         TemplateResolver.Resolve(
-            template: video.PlaylistNameTemplate,
-            values: TemplateResolver.VideoTokens(width: video.Width, height: video.Height, isHdrOutput: video.IsHdrOutput)
+            video.PlaylistNameTemplate,
+            TemplateResolver.VideoTokens(video.Width, video.Height, video.IsHdrOutput)
         );
 
     private static string AudioVariantKey(AudioOutputPlan audio) =>
         TemplateResolver.Resolve(
-            template: audio.PlaylistNameTemplate,
-            values: TemplateResolver.AudioTokens(language: audio.Language ?? "und", codecName: audio.CodecToken, channels: audio.Channels)
+            audio.PlaylistNameTemplate,
+            TemplateResolver.AudioTokens(audio.Language ?? "und", audio.CodecToken, audio.Channels)
         );
 
     [Fact]
     public void MasterPlaylist_ContainsExtm3u()
     {
-        string playlist = Generate(plan: CreatePlan());
+        string playlist = Generate(CreatePlan());
 
-        playlist.Should().StartWith(expected: "#EXTM3U");
+        playlist.Should().StartWith("#EXTM3U");
         // Version is computed from active features. Basic mpegts with no subtitles
         // group, no fMP4, and no chapter date-ranges requires version 3.
-        playlist.Should().Contain(expected: "#EXT-X-VERSION:3");
+        playlist.Should().Contain("#EXT-X-VERSION:3");
     }
 
     [Fact]
     public void MasterPlaylist_ContainsIndependentSegments()
     {
-        string playlist = Generate(plan: CreatePlan());
+        string playlist = Generate(CreatePlan());
 
-        playlist.Should().Contain(expected: "#EXT-X-INDEPENDENT-SEGMENTS");
+        playlist.Should().Contain("#EXT-X-INDEPENDENT-SEGMENTS");
     }
 
     [Fact]
     public void MasterPlaylist_ContainsVideoVariants()
     {
-        string playlist = Generate(plan: CreateMultiResPlan());
+        string playlist = Generate(CreateMultiResPlan());
 
-        playlist.Should().Contain(expected: "RESOLUTION=1920x1080");
-        playlist.Should().Contain(expected: "RESOLUTION=1280x720");
-        playlist.Should().Contain(expected: "video_1920x1080_SDR/video_1920x1080_SDR.m3u8");
-        playlist.Should().Contain(expected: "video_1280x720_SDR/video_1280x720_SDR.m3u8");
+        playlist.Should().Contain("RESOLUTION=1920x1080");
+        playlist.Should().Contain("RESOLUTION=1280x720");
+        playlist.Should().Contain("video_1920x1080_SDR/video_1920x1080_SDR.m3u8");
+        playlist.Should().Contain("video_1280x720_SDR/video_1280x720_SDR.m3u8");
     }
 
     [Fact]
     public void MasterPlaylist_H264_CorrectCodecTag()
     {
-        string playlist = Generate(plan: CreatePlan());
+        string playlist = Generate(CreatePlan());
 
-        playlist.Should().Contain(expected: "avc1.640028");
+        playlist.Should().Contain("avc1.640028");
     }
 
     [Fact]
     public void MasterPlaylist_Hevc_CorrectCodecTag()
     {
-        string playlist = Generate(plan: CreatePlan(encoderName: "hevc_nvenc"));
+        string playlist = Generate(CreatePlan("hevc_nvenc"));
 
-        playlist.Should().Contain(expected: "hvc1.");
+        playlist.Should().Contain("hvc1.");
     }
 
     [Fact]
@@ -115,9 +115,9 @@ public class PlaylistGeneratorTests
         // spec-accurate HlsCodecsStringBuilder which derives the level index
         // from the plan instead of hard-coding 5.3 (index 15) like the legacy
         // generator did.
-        string playlist = Generate(plan: CreatePlan(encoderName: "libsvtav1", tenBit: true));
+        string playlist = Generate(CreatePlan("libsvtav1", true));
 
-        playlist.Should().Contain(expected: "av01.0.08M.10");
+        playlist.Should().Contain("av01.0.08M.10");
     }
 
     [Fact]
@@ -126,39 +126,39 @@ public class PlaylistGeneratorTests
         // "copy" is a passthrough — the real codec could be anything. The
         // master must never advertise avc1 (the old H.264-fallback bug) for
         // a copy-mode variant; CODECS should list only the known audio codec.
-        string playlist = Generate(plan: CreatePlan(encoderName: "copy"));
+        string playlist = Generate(CreatePlan("copy"));
 
-        playlist.Should().NotContain(unexpected: "avc1.");
-        playlist.Should().Contain(expected: "CODECS=\"mp4a.40.2\"");
+        playlist.Should().NotContain("avc1.");
+        playlist.Should().Contain("CODECS=\"mp4a.40.2\"");
     }
 
     [Fact]
     public void MasterPlaylist_AudioGroup_Present()
     {
-        string playlist = Generate(plan: CreatePlan());
+        string playlist = Generate(CreatePlan());
 
-        playlist.Should().Contain(expected: "#EXT-X-MEDIA:TYPE=AUDIO");
-        playlist.Should().Contain(expected: "GROUP-ID=\"audio_aac\"");
-        playlist.Should().Contain(expected: "LANGUAGE=\"eng\"");
+        playlist.Should().Contain("#EXT-X-MEDIA:TYPE=AUDIO");
+        playlist.Should().Contain("GROUP-ID=\"audio_aac\"");
+        playlist.Should().Contain("LANGUAGE=\"eng\"");
     }
 
     [Fact]
     public void MasterPlaylist_AacAudio_Mp4aCodecTag()
     {
-        string playlist = Generate(plan: CreatePlan());
+        string playlist = Generate(CreatePlan());
 
-        playlist.Should().Contain(expected: "mp4a.40.2");
+        playlist.Should().Contain("mp4a.40.2");
     }
 
     // ── ComputeMasterVersion (internal helper) ─────────────────────────────
 
     [Theory]
-    [InlineData(data: [false, false, false, 3])] // mpegts baseline → v3
-    [InlineData(data: [true, false, false, 6])] // subs → v6
-    [InlineData(data: [false, true, false, 7])] // fmp4 → v7
-    [InlineData(data: [true, true, false, 7])] // subs + fmp4 → v7
-    [InlineData(data: [false, false, true, 8])] // chapter date-ranges → v8
-    [InlineData(data: [true, true, true, 8])] // everything → v8
+    [InlineData([false, false, false, 3])] // mpegts baseline → v3
+    [InlineData([true, false, false, 6])] // subs → v6
+    [InlineData([false, true, false, 7])] // fmp4 → v7
+    [InlineData([true, true, false, 7])] // subs + fmp4 → v7
+    [InlineData([false, false, true, 8])] // chapter date-ranges → v8
+    [InlineData([true, true, true, 8])] // everything → v8
     public void ComputeMasterVersion_ReturnsCorrectMinVersion(
         bool hasSubsGroup,
         bool hasFmp4,
@@ -173,12 +173,12 @@ public class PlaylistGeneratorTests
         int actual = (int)
             typeof(PlaylistGenerator)
                 .GetMethod(
-                    name: "ComputeMasterVersion",
-                    bindingAttr: System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic
+                    "ComputeMasterVersion",
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic
                 )!
-                .Invoke(obj: null, parameters: [hasSubsGroup, hasFmp4, hasChapterDateRanges])!;
+                .Invoke(null, [hasSubsGroup, hasFmp4, hasChapterDateRanges])!;
 
-        actual.Should().Be(expected: expectedVersion);
+        actual.Should().Be(expectedVersion);
     }
 
     [Fact]
@@ -190,11 +190,11 @@ public class PlaylistGeneratorTests
             HlsOptions = new() { SegmentType = "fmp4" },
         };
 
-        string playlist = Generate(plan: plan);
+        string playlist = Generate(plan);
 
-        playlist.Should().Contain(expected: "#EXT-X-VERSION:7");
+        playlist.Should().Contain("#EXT-X-VERSION:7");
         // fMP4 forces INDEPENDENT-SEGMENTS regardless of option.
-        playlist.Should().Contain(expected: "#EXT-X-INDEPENDENT-SEGMENTS");
+        playlist.Should().Contain("#EXT-X-INDEPENDENT-SEGMENTS");
     }
 
     [Fact]
@@ -204,13 +204,13 @@ public class PlaylistGeneratorTests
         // group — the master MUST list it the same as a transcoded variant.
         OutputPlan plan = CreatePlan() with
         {
-            AudioOutputs = [new(EncoderName: "aac", BitrateKbps: 0, Channels: 2, SampleRate: 48000, Action: StreamAction.Copy, Language: "eng", MapLabel: "0:a:0")],
+            AudioOutputs = [new("aac", 0, 2, 48000, StreamAction.Copy, "eng", "0:a:0")],
         };
 
-        string playlist = Generate(plan: plan);
+        string playlist = Generate(plan);
 
-        playlist.Should().Contain(expected: "#EXT-X-MEDIA:TYPE=AUDIO");
-        playlist.Should().Contain(expected: "LANGUAGE=\"eng\"");
+        playlist.Should().Contain("#EXT-X-MEDIA:TYPE=AUDIO");
+        playlist.Should().Contain("LANGUAGE=\"eng\"");
     }
 
     [Fact]
@@ -223,21 +223,21 @@ public class PlaylistGeneratorTests
         OutputPlan plan = CreatePlan();
         Dictionary<string, VariantMetrics> vidMetrics = new()
         {
-            [key: VideoVariantKey(video: plan.VideoOutputs[0])] = new(PeakBandwidth: 5_000_000, AverageBandwidth: 3_500_000),
+            [VideoVariantKey(plan.VideoOutputs[0])] = new(5_000_000, 3_500_000),
         };
         Dictionary<string, VariantMetrics> audMetrics = new()
         {
-            [key: AudioVariantKey(audio: plan.AudioOutputs[0])] = new(PeakBandwidth: 0, AverageBandwidth: 0),
+            [AudioVariantKey(plan.AudioOutputs[0])] = new(0, 0),
         };
 
         string playlist = generator.GenerateMasterPlaylist(
-            plan: plan,
-            mediaTitle: MediaTitle,
-            videoMetrics: vidMetrics,
-            audioMetrics: audMetrics
+            plan,
+            MediaTitle,
+            vidMetrics,
+            audMetrics
         );
 
-        playlist.Should().NotContain(unexpected: "#EXT-X-MEDIA:TYPE=AUDIO");
+        playlist.Should().NotContain("#EXT-X-MEDIA:TYPE=AUDIO");
     }
 
     [Fact]
@@ -249,21 +249,21 @@ public class PlaylistGeneratorTests
         OutputPlan plan = CreatePlan();
         Dictionary<string, VariantMetrics> vidMetrics = new()
         {
-            [key: VideoVariantKey(video: plan.VideoOutputs[0])] = new(PeakBandwidth: 0, AverageBandwidth: 0),
+            [VideoVariantKey(plan.VideoOutputs[0])] = new(0, 0),
         };
         Dictionary<string, VariantMetrics> audMetrics = new()
         {
-            [key: AudioVariantKey(audio: plan.AudioOutputs[0])] = new(PeakBandwidth: 192_000, AverageBandwidth: 180_000),
+            [AudioVariantKey(plan.AudioOutputs[0])] = new(192_000, 180_000),
         };
 
         string playlist = generator.GenerateMasterPlaylist(
-            plan: plan,
-            mediaTitle: MediaTitle,
-            videoMetrics: vidMetrics,
-            audioMetrics: audMetrics
+            plan,
+            MediaTitle,
+            vidMetrics,
+            audMetrics
         );
 
-        playlist.Should().NotContain(unexpected: "RESOLUTION=");
+        playlist.Should().NotContain("RESOLUTION=");
     }
 
     [Fact]
@@ -271,12 +271,12 @@ public class PlaylistGeneratorTests
     {
         OutputPlan plan = CreatePlan() with
         {
-            AudioOutputs = [new(EncoderName: "libopus", BitrateKbps: 128, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0")],
+            AudioOutputs = [new("libopus", 128, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
         };
 
-        string playlist = Generate(plan: plan);
+        string playlist = Generate(plan);
 
-        playlist.Should().Contain(expected: "opus");
+        playlist.Should().Contain("opus");
     }
 
     [Fact]
@@ -284,12 +284,12 @@ public class PlaylistGeneratorTests
     {
         OutputPlan plan = CreatePlan() with
         {
-            AudioOutputs = [new(EncoderName: "eac3", BitrateKbps: 384, Channels: 6, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0")],
+            AudioOutputs = [new("eac3", 384, 6, 48000, StreamAction.Transcode, "eng", "0:a:0")],
         };
 
-        string playlist = Generate(plan: plan);
+        string playlist = Generate(plan);
 
-        playlist.Should().Contain(expected: "ec-3");
+        playlist.Should().Contain("ec-3");
     }
 
     [Fact]
@@ -299,22 +299,22 @@ public class PlaylistGeneratorTests
         OutputPlan plan = CreatePlan();
         Dictionary<string, VariantMetrics> vidMetrics = new()
         {
-            [key: VideoVariantKey(video: plan.VideoOutputs[0])] = new(PeakBandwidth: 5_000_000, AverageBandwidth: 3_500_000),
+            [VideoVariantKey(plan.VideoOutputs[0])] = new(5_000_000, 3_500_000),
         };
         Dictionary<string, VariantMetrics> audMetrics = new()
         {
-            [key: AudioVariantKey(audio: plan.AudioOutputs[0])] = new(PeakBandwidth: 256_000, AverageBandwidth: 192_000),
+            [AudioVariantKey(plan.AudioOutputs[0])] = new(256_000, 192_000),
         };
 
         string playlist = generator.GenerateMasterPlaylist(
-            plan: plan,
-            mediaTitle: MediaTitle,
-            videoMetrics: vidMetrics,
-            audioMetrics: audMetrics
+            plan,
+            MediaTitle,
+            vidMetrics,
+            audMetrics
         );
 
-        playlist.Should().Contain(expected: "BANDWIDTH=5256000");
-        playlist.Should().Contain(expected: "AVERAGE-BANDWIDTH=3692000");
+        playlist.Should().Contain("BANDWIDTH=5256000");
+        playlist.Should().Contain("AVERAGE-BANDWIDTH=3692000");
     }
 
     [Fact]
@@ -345,92 +345,90 @@ public class PlaylistGeneratorTests
 
         Dictionary<string, VariantMetrics> vidMetrics = new()
         {
-            [key: VideoVariantKey(video: plan.VideoOutputs[0])] = new(PeakBandwidth: 8_000_000, AverageBandwidth: 6_000_000),
-            [key: VideoVariantKey(video: plan.VideoOutputs[1])] = new(PeakBandwidth: 3_000_000, AverageBandwidth: 2_400_000),
+            [VideoVariantKey(plan.VideoOutputs[0])] = new(8_000_000, 6_000_000),
+            [VideoVariantKey(plan.VideoOutputs[1])] = new(3_000_000, 2_400_000),
         };
         Dictionary<string, VariantMetrics> audMetrics = new()
         {
-            [key: AudioVariantKey(audio: plan.AudioOutputs[0])] = new(PeakBandwidth: 192_000, AverageBandwidth: 180_000),
+            [AudioVariantKey(plan.AudioOutputs[0])] = new(192_000, 180_000),
         };
 
         string playlist = new PlaylistGenerator().GenerateMasterPlaylist(
-            plan: plan,
-            mediaTitle: MediaTitle,
-            videoMetrics: vidMetrics,
-            audioMetrics: audMetrics
+            plan,
+            MediaTitle,
+            vidMetrics,
+            audMetrics
         );
 
         // Each variant advertises its own bandwidth (video + audio), proving the
         // shared-MapLabel collision no longer collapses the ladder.
-        playlist.Should().Contain(expected: "BANDWIDTH=8192000");
-        playlist.Should().Contain(expected: "BANDWIDTH=3192000");
+        playlist.Should().Contain("BANDWIDTH=8192000");
+        playlist.Should().Contain("BANDWIDTH=3192000");
     }
 
     private static OutputPlan CreatePlan(string encoderName = "libx264", bool tenBit = false)
     {
         return new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920,
-                    Height: 1080,
-                    EncoderName: encoderName,
-                    Crf: 23,
-                    BitrateKbps: 8000,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.0",
-                    TenBit: tenBit,
-                    PixelFormat: tenBit ? "yuv420p10le" : "yuv420p",
-                    MapLabel: "[v0]",
-                    ExtraFlags: new()
+                    1920,
+                    1080,
+                    encoderName,
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    tenBit,
+                    tenBit ? "yuv420p10le" : "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs: [new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0")],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            [],
+            null
         );
     }
 
     private static OutputPlan CreateMultiResPlan()
     {
         return new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920,
-                    Height: 1080,
-                    EncoderName: "libx264",
-                    Crf: 23,
-                    BitrateKbps: 8000,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.0",
-                    TenBit: false,
-                    PixelFormat: "yuv420p",
-                    MapLabel: "[v0]",
-                    ExtraFlags: new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
                 new(
-                    Width: 1280,
-                    Height: 720,
-                    EncoderName: "libx264",
-                    Crf: 23,
-                    BitrateKbps: 4000,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "3.1",
-                    TenBit: false,
-                    PixelFormat: "yuv420p",
-                    MapLabel: "[v1]",
-                    ExtraFlags: new()
+                    1280,
+                    720,
+                    "libx264",
+                    23,
+                    4000,
+                    "medium",
+                    "high",
+                    "3.1",
+                    false,
+                    "yuv420p",
+                    "[v1]",
+                    new()
                 ),
             ],
-            AudioOutputs: [new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0")],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            [],
+            null
         );
     }
 }

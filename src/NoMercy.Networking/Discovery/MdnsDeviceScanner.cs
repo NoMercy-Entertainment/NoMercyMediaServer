@@ -43,38 +43,38 @@ public sealed class MdnsDeviceScanner : IDisposable
 
     public void Start(CancellationToken stoppingToken)
     {
-        if (Interlocked.CompareExchange(location1: ref _started, value: 1, comparand: 0) != 0)
+        if (Interlocked.CompareExchange(ref _started, 1, 0) != 0)
             return;
 
         _discovery.ServiceInstanceDiscovered += OnInstanceDiscovered;
         _multicast.NetworkInterfaceDiscovered += (_, _) =>
-            _discovery.QueryServiceInstances(service: ServiceType);
+            _discovery.QueryServiceInstances(ServiceType);
 
         _multicast.Start();
 
-        stoppingToken.Register(callback: () =>
+        stoppingToken.Register(() =>
         {
             _multicast.Stop();
             _discovery.ServiceInstanceDiscovered -= OnInstanceDiscovered;
         });
     }
 
-    public void Probe() => _discovery.QueryServiceInstances(service: ServiceType);
+    public void Probe() => _discovery.QueryServiceInstances(ServiceType);
 
     private async void OnInstanceDiscovered(object? sender, ServiceInstanceDiscoveryEventArgs e)
     {
         try
         {
-            string? fingerprint = ExtractFingerprint(msg: e.Message);
-            if (string.IsNullOrEmpty(value: fingerprint))
+            string? fingerprint = ExtractFingerprint(e.Message);
+            if (string.IsNullOrEmpty(fingerprint))
                 return;
 
-            (string? ip, int? port) = ExtractEndpoint(msg: e.Message);
+            (string? ip, int? port) = ExtractEndpoint(e.Message);
             if (ip is null)
                 return;
 
             await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-            Device? device = await ctx.Devices.FirstOrDefaultAsync(predicate: d =>
+            Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
                 d.Fingerprint == fingerprint
             );
 
@@ -86,7 +86,7 @@ public sealed class MdnsDeviceScanner : IDisposable
             bool portChanged = device.LanPort != port;
             bool stale =
                 device.MdnsSeenAt is null
-                || now - device.MdnsSeenAt.Value > TimeSpan.FromMinutes(minutes: 5);
+                || now - device.MdnsSeenAt.Value > TimeSpan.FromMinutes(5);
 
             if (!ipChanged && !portChanged && !stale)
                 return;
@@ -97,11 +97,11 @@ public sealed class MdnsDeviceScanner : IDisposable
             await ctx.SaveChangesAsync();
 
             if (_changeNotifier is not null && device.OwnerUserId is not null)
-                await _changeNotifier.BroadcastChange(ownerUserId: device.OwnerUserId.Value);
+                await _changeNotifier.BroadcastChange(device.OwnerUserId.Value);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(exception: ex, message: "mDNS hit processing failed");
+            _logger.LogWarning(ex, "mDNS hit processing failed");
         }
     }
 
@@ -113,7 +113,7 @@ public sealed class MdnsDeviceScanner : IDisposable
         {
             foreach (string s in rec.Strings)
             {
-                if (s.StartsWith(value: "fp=", comparisonType: StringComparison.OrdinalIgnoreCase))
+                if (s.StartsWith("fp=", StringComparison.OrdinalIgnoreCase))
                     return s[3..];
             }
         }

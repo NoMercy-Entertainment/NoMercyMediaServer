@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
@@ -21,7 +22,6 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Collections;
 using NoMercy.Providers.TMDB.Models.Movies;
-using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Collections;
 
 public class CollectionManager(
@@ -33,7 +33,7 @@ public class CollectionManager(
 {
     public async Task<TmdbCollectionAppends?> Add(int id, Library library)
     {
-        TmdbCollectionClient collectionClient = new(id: id);
+        TmdbCollectionClient collectionClient = new(id);
         TmdbCollectionAppends? collectionAppends = await collectionClient.WithAllAppends();
 
         if (collectionAppends is null)
@@ -44,7 +44,7 @@ public class CollectionManager(
             Id = collectionAppends.Id,
             Title = collectionAppends.Name,
             TitleSort = collectionAppends.Name.TitleSort(
-                date: collectionAppends.Parts.MinBy(keySelector: movie => movie.ReleaseDate)?.ReleaseDate
+                collectionAppends.Parts.MinBy(movie => movie.ReleaseDate)?.ReleaseDate
             ),
             Backdrop = collectionAppends.BackdropPath,
             Poster = collectionAppends.PosterPath,
@@ -54,16 +54,16 @@ public class CollectionManager(
             LibraryId = library.Id,
         };
 
-        await collectionRepository.Store(collection: collection);
+        await collectionRepository.Store(collection);
 
-        logger.LogDebug(message: "Collection: {Title}: Added to Database", args: collection.Title);
+        logger.LogDebug("Collection: {Title}: Added to Database", collection.Title);
 
-        await StoreTranslations(collection: collectionAppends);
+        await StoreTranslations(collectionAppends);
 
-        jobDispatcher.DispatchColorPaletteJob(entityType: "collection", entityId: collection.Id.ToString());
-        jobDispatcher.DispatchJob<CollectionExtrasJob, TmdbCollectionAppends>(data: collectionAppends);
+        jobDispatcher.DispatchColorPaletteJob("collection", collection.Id.ToString());
+        jobDispatcher.DispatchJob<CollectionExtrasJob, TmdbCollectionAppends>(collectionAppends);
 
-        logger.LogDebug(message: "Collection: {Name}: Added to Library {Title}", args: [collectionAppends.Name, library.Title]);
+        logger.LogDebug("Collection: {Name}: Added to Library {Title}", [collectionAppends.Name, library.Title]);
 
         return collectionAppends;
     }
@@ -71,19 +71,19 @@ public class CollectionManager(
     public Task UpdateCollectionAsync(int id, Library library)
     {
         // Re-importing refreshes all metadata via idempotent upserts.
-        return Add(id: id, library: library);
+        return Add(id, library);
     }
 
     public async Task RemoveCollectionAsync(int id, Library library)
     {
-        await collectionRepository.Remove(id: id);
-        logger.LogDebug(message: "Collection: {Id}: Removed from Database", args: id);
+        await collectionRepository.Remove(id);
+        logger.LogDebug("Collection: {Id}: Removed from Database", id);
     }
 
     private async Task StoreTranslations(TmdbCollectionAppends collection)
     {
         IEnumerable<Translation> translations = collection.Translations.Translations.Select(
-            selector: translation => new Translation
+            translation => new Translation
             {
                 Iso31661 = translation.Iso31661,
                 Iso6391 = translation.Iso6391,
@@ -96,15 +96,15 @@ public class CollectionManager(
             }
         );
 
-        await collectionRepository.StoreTranslations(translations: translations);
+        await collectionRepository.StoreTranslations(translations);
 
-        logger.LogDebug(message: "Collection: {Name}: Translations stored", args: collection.Name);
+        logger.LogDebug("Collection: {Name}: Translations stored", collection.Name);
     }
 
     internal async Task StoreImages(TmdbCollectionAppends collection)
     {
         IEnumerable<Image> posters = collection
-            .Images.Posters.Select(selector: image => new Image
+            .Images.Posters.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 FilePath = image.FilePath,
@@ -119,11 +119,11 @@ public class CollectionManager(
             })
             .ToArray();
 
-        await collectionRepository.StoreImages(images: posters);
-        logger.LogDebug(message: "Movie: {Name}: Posters stored", args: collection.Name);
+        await collectionRepository.StoreImages(posters);
+        logger.LogDebug("Movie: {Name}: Posters stored", collection.Name);
 
         IEnumerable<Image> backdrops = collection
-            .Images.Backdrops.Select(selector: image => new Image
+            .Images.Backdrops.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 FilePath = image.FilePath,
@@ -138,11 +138,11 @@ public class CollectionManager(
             })
             .ToArray();
 
-        await collectionRepository.StoreImages(images: backdrops);
-        logger.LogDebug(message: "Collection: {Name}: backdrops stored", args: collection.Name);
+        await collectionRepository.StoreImages(backdrops);
+        logger.LogDebug("Collection: {Name}: backdrops stored", collection.Name);
 
         IEnumerable<Image> logos = collection
-            .Images.Logos.Select(selector: image => new Image
+            .Images.Logos.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 FilePath = image.FilePath,
@@ -157,8 +157,8 @@ public class CollectionManager(
             })
             .ToArray();
 
-        await collectionRepository.StoreImages(images: logos);
-        logger.LogDebug(message: "Collection: {Name}: Logos stored", args: collection.Name);
+        await collectionRepository.StoreImages(logos);
+        logger.LogDebug("Collection: {Name}: Logos stored", collection.Name);
     }
 
     public async Task AddCollectionMovies(TmdbCollectionAppends collectionAppends, Library library)
@@ -166,24 +166,24 @@ public class CollectionManager(
         List<TmdbMovieAppends> movies = [];
 
         await Parallel.ForEachAsync(
-            source: collectionAppends.Parts,
-            parallelOptions: SystemParallelism.Options,
-            body: async (movie, _) =>
+            collectionAppends.Parts,
+            SystemParallelism.Options,
+            async (movie, _) =>
             {
-                TmdbMovieClient movieClient = new(id: movie.Id);
+                TmdbMovieClient movieClient = new(movie.Id);
                 TmdbMovieAppends? movieAppends = await movieClient.WithAllAppends();
                 if (movieAppends is null)
                     return;
 
-                movies.Add(item: movieAppends);
+                movies.Add(movieAppends);
             }
         );
 
         foreach (TmdbMovieAppends movie in movies)
-            await movieManager.Add(id: movie.Id, library: library);
+            await movieManager.Add(movie.Id, library);
 
-        await collectionRepository.LinkToMovies(collection: collectionAppends);
+        await collectionRepository.LinkToMovies(collectionAppends);
 
-        logger.LogDebug(message: "Collection: {Name}: Movies added", args: collectionAppends.Name);
+        logger.LogDebug("Collection: {Name}: Movies added", collectionAppends.Name);
     }
 }

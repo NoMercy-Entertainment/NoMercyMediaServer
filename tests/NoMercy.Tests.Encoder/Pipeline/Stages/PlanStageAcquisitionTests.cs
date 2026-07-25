@@ -38,18 +38,18 @@ public class PlanStageAcquisitionTests
     public async Task AcquisitionDisabled_ServiceNotCalled_AcquiredSubtitlesEmpty()
     {
         Mock<ISubtitleAcquisitionService> svc = new();
-        PlanStage stage = BuildStage(acquisitionService: svc.Object);
+        PlanStage stage = BuildStage(svc.Object);
 
         EncodingProfile profile = BuildProfile(
-            acquisition: new() { Enabled = false, Languages = ["en"] }
+            new() { Enabled = false, Languages = ["en"] }
         );
 
-        OutputPlan plan = await RunPlan(stage: stage, profile: profile);
+        OutputPlan plan = await RunPlan(stage, profile);
 
         plan.AcquiredSubtitles.Should().BeEmpty();
         svc.Verify(
-            expression: s => s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>()),
-            times: Times.Never
+            s => s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
     }
 
@@ -58,24 +58,24 @@ public class PlanStageAcquisitionTests
     public async Task AcquisitionEnabled_ServiceCalled_ResultsInOutputPlan()
     {
         AcquiredSubtitle acquired = new(
-            Language: "en",
-            LocalPath: "/tmp/subs/en.srt",
-            Provider: "OpenSubtitles",
-            IsExactMatch: true,
-            Rating: 8.0,
-            Downloads: 1000,
-            Format: "srt"
+            "en",
+            "/tmp/subs/en.srt",
+            "OpenSubtitles",
+            true,
+            8.0,
+            1000,
+            "srt"
         );
 
         Mock<ISubtitleAcquisitionService> svc = new();
-        svc.Setup(expression: s =>
+        svc.Setup(s =>
                 s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(value: [acquired]);
+            .ReturnsAsync([acquired]);
 
-        PlanStage stage = BuildStage(acquisitionService: svc.Object);
+        PlanStage stage = BuildStage(svc.Object);
         EncodingProfile profile = BuildProfile(
-            acquisition: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["en"],
@@ -83,14 +83,14 @@ public class PlanStageAcquisitionTests
             }
         );
 
-        OutputPlan plan = await RunPlan(stage: stage, profile: profile);
+        OutputPlan plan = await RunPlan(stage, profile);
 
-        plan.AcquiredSubtitles.Should().HaveCount(expected: 1);
-        plan.AcquiredSubtitles[index: 0].Language.Should().Be(expected: "en");
-        plan.AcquiredSubtitles[index: 0].IsExactMatch.Should().BeTrue();
+        plan.AcquiredSubtitles.Should().HaveCount(1);
+        plan.AcquiredSubtitles[0].Language.Should().Be("en");
+        plan.AcquiredSubtitles[0].IsExactMatch.Should().BeTrue();
         svc.Verify(
-            expression: s => s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>()),
-            times: Times.Once
+            s => s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>()),
+            Times.Once
         );
     }
 
@@ -99,14 +99,14 @@ public class PlanStageAcquisitionTests
     public async Task ServiceThrows_PlanSucceeds_AcquiredSubtitlesEmpty()
     {
         Mock<ISubtitleAcquisitionService> svc = new();
-        svc.Setup(expression: s =>
+        svc.Setup(s =>
                 s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>())
             )
-            .ThrowsAsync(exception: new InvalidOperationException(message: "provider down"));
+            .ThrowsAsync(new InvalidOperationException("provider down"));
 
-        PlanStage stage = BuildStage(acquisitionService: svc.Object);
+        PlanStage stage = BuildStage(svc.Object);
         EncodingProfile profile = BuildProfile(
-            acquisition: new()
+            new()
             {
                 Enabled = true,
                 Languages = ["en"],
@@ -114,7 +114,7 @@ public class PlanStageAcquisitionTests
             }
         );
 
-        StageResult result = await RunPlanRaw(stage: stage, profile: profile);
+        StageResult result = await RunPlanRaw(stage, profile);
 
         result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
         StageSuccess<ExecutionPlan> success = (StageSuccess<ExecutionPlan>)result;
@@ -124,15 +124,15 @@ public class PlanStageAcquisitionTests
     private static PlanStage BuildStage(ISubtitleAcquisitionService? acquisitionService = null)
     {
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
-        hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
-        hardware.Setup(expression: h => h.Gpus).Returns(value: []);
-        hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
-        hardware.Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns(value: (GpuDevice?)null);
+        hardware.Setup(h => h.HasGpu).Returns(false);
+        hardware.Setup(h => h.CpuCores).Returns(8);
+        hardware.Setup(h => h.Gpus).Returns([]);
+        hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        hardware.Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns((GpuDevice?)null);
 
         Mock<ICodecResolver> codecResolver = new();
         codecResolver
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -140,29 +140,29 @@ public class PlanStageAcquisitionTests
                 )
             )
             .Returns(
-                value: new ResolvedCodec(
-                    FfmpegEncoderName: "libx264",
-                    EncoderInfo: new(
-                        FfmpegName: "libx264",
-                        RequiredVendor: null,
-                        Presets: ["medium"],
-                        Profiles: ["high"],
-                        Levels: ["4.1"],
-                        QualityRange: new(Min: 0, Max: 51, Default: 23),
-                        SupportedRateControl: [EncoderRateControlMode.Crf],
-                        Supports10Bit: false,
-                        SupportsHdr: false,
-                        MaxConcurrentSessions: int.MaxValue,
-                        PixelFormat10Bit: "yuv420p10le",
-                        VendorSpecificFlags: new()
+                new ResolvedCodec(
+                    "libx264",
+                    new(
+                        "libx264",
+                        null,
+                        ["medium"],
+                        ["high"],
+                        ["4.1"],
+                        new(0, 51, 23),
+                        [EncoderRateControlMode.Crf],
+                        false,
+                        false,
+                        int.MaxValue,
+                        "yuv420p10le",
+                        new()
                     ),
-                    Device: null,
-                    DefaultRateControl: EncoderRateControlMode.Crf
+                    null,
+                    EncoderRateControlMode.Crf
                 )
             );
 
         return new(
-            graphBuilder: new(),
+            new(),
             groupingStrategy: new(),
             costEstimator: new(),
             codecResolver: codecResolver.Object,
@@ -178,84 +178,82 @@ public class PlanStageAcquisitionTests
 
     private static async Task<OutputPlan> RunPlan(PlanStage stage, EncodingProfile profile)
     {
-        StageResult result = await RunPlanRaw(stage: stage, profile: profile);
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        StageResult result = await RunPlanRaw(stage, profile);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
         return success.Value.OutputPlan;
     }
 
     private static async Task<StageResult> RunPlanRaw(PlanStage stage, EncodingProfile profile)
     {
-        ValidateInput input = new(Media: BuildMedia(), Profile: profile);
+        ValidateInput input = new(BuildMedia(), profile);
         EncodingContext context = EncodingContext.Create();
-        return await stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
+        return await stage.ExecuteAsync(input, context, CancellationToken.None);
     }
 
     private static MediaInfo BuildMedia() =>
         new(
-            FilePath: "/media/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 90),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 4_000_000_000,
-            VideoStreams:
+            "/media/test.mkv",
+            "matroska",
+            TimeSpan.FromMinutes(90),
+            8000,
+            4_000_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: null,
-                    ColorTransfer: null,
-                    ColorSpace: null,
-                    IsDefault: true,
-                    BitRateKbps: 6000
+                    0,
+                    "h264",
+                    1920,
+                    1080,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    null,
+                    null,
+                    null,
+                    true,
+                    6000
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
     private static EncodingProfile BuildProfile(SubtitleAcquisitionConfig? acquisition = null)
     {
         EncodingProfile profile = new(
-            Id: Ulid.NewUlid(),
-            Name: "Acquisition Test",
-            Container: Container.HlsTs,
-            Video: new(
-                Policy: StreamPolicy.Transcode,
-                Codec: VideoCodecType.H264,
-                Width: 1920,
-                Height: 1080,
-                RateControl: V2RateControlMode.Crf,
-                Crf: 23,
-                BitrateKbps: 4000,
-                MaxBitrateKbps: null,
-                BufferSizeKbps: null,
-                Preset: "medium",
-                CodecProfile: CodecProfile.High,
-                Level: "4.1",
-                Tune: null,
-                BitDepth: 8,
-                PixelFormat: null,
-                KeyframeIntervalSeconds: 2,
-                ConvertHdrToSdr: false,
-                SegmentNameTemplate: "video/{label}",
-                PlaylistNameTemplate: "video/{label}/playlist"
+            Ulid.NewUlid(),
+            "Acquisition Test",
+            Container.HlsTs,
+            new(
+                StreamPolicy.Transcode,
+                VideoCodecType.H264,
+                1920,
+                1080,
+                V2RateControlMode.Crf,
+                23,
+                4000,
+                null,
+                null,
+                "medium",
+                CodecProfile.High,
+                "4.1",
+                null,
+                8,
+                null,
+                2,
+                false,
+                "video/{label}",
+                "video/{label}/playlist"
             ),
-            Audio: [],
-            Subtitles:
+            [],
             [
                 new(
-                    Policy: SubtitlePolicy.Extract,
-                    Codec: SubtitleCodecType.WebVtt,
-                    AllowedLanguages: ["en"],
-                    IncludeForced: false,
-                    OcrLanguage: null,
-                    PlaylistNameTemplate: "subtitles/:filename:.:language:.:variant:"
+                    SubtitlePolicy.Extract,
+                    SubtitleCodecType.WebVtt,
+                    ["en"],
+                    false,
+                    null,
+                    "subtitles/:filename:.:language:.:variant:"
                 ),
             ]
         );

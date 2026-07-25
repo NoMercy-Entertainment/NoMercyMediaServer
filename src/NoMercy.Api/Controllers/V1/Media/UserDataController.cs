@@ -26,9 +26,9 @@ using NoMercy.NmSystem.Domain;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[ApiVersion(version: 1.0)]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/userData")]
+[Route("api/v{version:apiVersion}/userData")]
 public class UserDataController(
     IHomeRepository homeRepository,
     IUserDataRepository userDataRepository,
@@ -40,131 +40,131 @@ public class UserDataController(
     public IActionResult Index()
     {
         // Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthenticatedResponse(detail: "You do not have permission to view user data");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthenticatedResponse("You do not have permission to view user data");
 
-        return Ok(value: new PlaceholderResponse { Data = [] });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpGet]
-    [Route(template: "continue")]
+    [Route("continue")]
     [ResponseCache(NoStore = true)]
     public async Task<IActionResult> ContinueWatching()
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthenticatedResponse(detail: "You do not have permission to view continue watching");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthenticatedResponse("You do not have permission to view continue watching");
 
         string language = Language();
         string country = Country();
 
         HashSet<UserData> continueWatching = await homeRepository.GetContinueWatchingAsync(
-            userId: userId,
-            language: language,
-            country: country
+            userId,
+            language,
+            country
         );
 
         return Ok(
-            value: new CarouselResponseDto<NmCardDto>
+            new CarouselResponseDto<NmCardDto>
             {
                 Data = continueWatching
-                    .Select(selector: item => new NmCardDto(item: item, country: country))
-                    .DistinctBy(keySelector: item => item.Link),
+                    .Select(item => new NmCardDto(item, country))
+                    .DistinctBy(item => item.Link),
             }
         );
     }
 
     [HttpDelete]
-    [Route(template: "continue")]
+    [Route("continue")]
     public async Task<IActionResult> RemoveContinue(FavoriteRequest body)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse(
-                detail: "You do not have permission to remove continue watching"
+                "You do not have permission to remove continue watching"
             );
 
-        if (!TryParseFavoriteIds(body: body, intId: out int? intId, ulidId: out Ulid? ulidId))
-            return BadRequestResponse(detail: "Invalid id for the requested type");
+        if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))
+            return BadRequestResponse("Invalid id for the requested type");
 
         List<UserData> userData = await userDataRepository.GetUserDataAsync(
-            userId: userId,
-            type: body.Type,
-            intId: intId,
-            ulidId: ulidId
+            userId,
+            body.Type,
+            intId,
+            ulidId
         );
 
         if (userData.Count == 0)
-            return NotFoundResponse(detail: "Item not found");
+            return NotFoundResponse("Item not found");
 
-        logger.LogInformation(message: "{UserData}", args: userData);
+        logger.LogInformation("{UserData}", userData);
 
-        await userDataRepository.HideFromContinueWatchingAsync(userData: userData);
+        await userDataRepository.HideFromContinueWatchingAsync(userData);
 
-        await eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
 
-        return Ok(value: new StatusResponseDto<string> { Status = "ok", Message = "Item removed" });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Item removed" });
     }
 
     [HttpGet]
-    [Route(template: "watched")]
+    [Route("watched")]
     public async Task<IActionResult> Watched([FromQuery] FavoriteRequest body)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthenticatedResponse(detail: "You do not have permission to view watched");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthenticatedResponse("You do not have permission to view watched");
 
-        if (!TryParseFavoriteIds(body: body, intId: out int? intId, ulidId: out Ulid? ulidId))
-            return BadRequestResponse(detail: "Invalid id for the requested type");
+        if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))
+            return BadRequestResponse("Invalid id for the requested type");
 
         UserData? userData = await userDataRepository.GetUserDataSingleAsync(
-            userId: userId,
-            type: body.Type,
-            intId: intId,
-            ulidId: ulidId
+            userId,
+            body.Type,
+            intId,
+            ulidId
         );
 
         if (userData == null)
-            return NotFoundResponse(detail: "Item not found");
+            return NotFoundResponse("Item not found");
 
         return Ok(
-            value: new StatusResponseDto<string> { Status = "ok", Message = "Item marked as watched" }
+            new StatusResponseDto<string> { Status = "ok", Message = "Item marked as watched" }
         );
     }
 
     [HttpGet]
-    [Route(template: "favorites")]
+    [Route("favorites")]
     [ResponseCache(NoStore = true)]
     public async Task<IActionResult> Favorites(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthenticatedResponse(detail: "You do not have permission to view favorites");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthenticatedResponse("You do not have permission to view favorites");
 
         string language = Language();
         string country = Country();
 
         FavoritesData favorites = await homeRepository.GetFavoritesAsync(
-            userId: userId,
-            language: language,
-            country: country,
-            ct: ct
+            userId,
+            language,
+            country,
+            ct
         );
 
         List<NmCardDto> cards =
         [
-            .. favorites.Movies.Select(selector: movie => new NmCardDto(movie: movie, country: country)),
-            .. favorites.TvShows.Select(selector: tv => new NmCardDto(tv: tv, country: country)),
-            .. favorites.Collections.Select(selector: collection => new NmCardDto(collection: collection, country: country)),
-            .. favorites.Specials.Select(selector: special => new NmCardDto(special: special, country: country)),
+            .. favorites.Movies.Select(movie => new NmCardDto(movie, country)),
+            .. favorites.TvShows.Select(tv => new NmCardDto(tv, country)),
+            .. favorites.Collections.Select(collection => new NmCardDto(collection, country)),
+            .. favorites.Specials.Select(special => new NmCardDto(special, country)),
         ];
 
         return Ok(
-            value: new CarouselResponseDto<NmCardDto>
+            new CarouselResponseDto<NmCardDto>
             {
                 Data = cards
-                    .OrderBy(keySelector: card => card.Title, comparer: StringComparer.OrdinalIgnoreCase)
-                    .DistinctBy(keySelector: item => item.Link),
+                    .OrderBy(card => card.Title, StringComparer.OrdinalIgnoreCase)
+                    .DistinctBy(item => item.Link),
             }
         );
     }
@@ -180,7 +180,7 @@ public class UserDataController(
     {
         intId = null;
         ulidId = null;
-        if (string.IsNullOrEmpty(value: body.Id))
+        if (string.IsNullOrEmpty(body.Id))
             return false;
 
         switch (body.Type)
@@ -188,12 +188,12 @@ public class UserDataController(
             case MediaTypes.MovieMediaType:
             case MediaTypes.TvMediaType:
             case MediaTypes.CollectionMediaType:
-                if (!int.TryParse(s: body.Id, result: out int parsedInt))
+                if (!int.TryParse(body.Id, out int parsedInt))
                     return false;
                 intId = parsedInt;
                 return true;
             case MediaTypes.SpecialMediaType:
-                if (!Ulid.TryParse(base32: body.Id, ulid: out Ulid parsedUlid))
+                if (!Ulid.TryParse(body.Id, out Ulid parsedUlid))
                     return false;
                 ulidId = parsedUlid;
                 return true;

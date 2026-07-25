@@ -13,9 +13,9 @@ namespace NoMercy.Encoder.Jobs;
 
 public record PathAllowlist(string[] AllowedInputPaths, string[] AllowedOutputPaths)
 {
-    public bool IsInputPathAllowed(string path) => IsUnderAny(path: path, allowedRoots: AllowedInputPaths);
+    public bool IsInputPathAllowed(string path) => IsUnderAny(path, AllowedInputPaths);
 
-    public bool IsOutputPathAllowed(string path) => IsUnderAny(path: path, allowedRoots: AllowedOutputPaths);
+    public bool IsOutputPathAllowed(string path) => IsUnderAny(path, AllowedOutputPaths);
 
     /// <summary>
     /// Returns true when <paramref name="path"/> resolves to either an
@@ -32,22 +32,22 @@ public record PathAllowlist(string[] AllowedInputPaths, string[] AllowedOutputPa
         if (allowedRoots.Length == 0)
             return false;
 
-        string normalized = Path.GetFullPath(path: path);
+        string normalized = Path.GetFullPath(path);
 
         foreach (string allowed in allowedRoots)
         {
-            string root = Path.GetFullPath(path: allowed)
-                .TrimEnd(trimChars: [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
+            string root = Path.GetFullPath(allowed)
+                .TrimEnd([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
 
             // Exact match: the path is the root itself.
-            if (normalized.Equals(value: root, comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (normalized.Equals(root, StringComparison.OrdinalIgnoreCase))
                 return true;
 
             // Descendant: the path must continue with a directory separator
             // immediately after the root prefix. Without the separator check,
             // "/media/movies" would let "/media/movies_private" through.
             string rootWithSep = root + Path.DirectorySeparatorChar;
-            if (normalized.StartsWith(value: rootWithSep, comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (normalized.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 

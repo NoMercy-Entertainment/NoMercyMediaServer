@@ -17,34 +17,34 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record MusicPlaylistResponseItemDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "created_at")]
+    [JsonProperty("created_at")]
     public DateTime CreatedAt { get; set; }
 
-    [JsonProperty(propertyName: "updated_at")]
+    [JsonProperty("updated_at")]
     public DateTime UpdatedAt { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public ICollection<PlaylistTrack> Tracks { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
     public MusicPlaylistResponseItemDto(Playlist playlist)
@@ -53,13 +53,13 @@ public record MusicPlaylistResponseItemDto
         Name = playlist.Name;
         Description = playlist.Description;
         Cover = playlist.Cover is not null
-            ? new Uri(uriString: $"/images/music{playlist.Cover}", uriKind: UriKind.Relative).ToString()
+            ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString()
             : null;
         ColorPalette = playlist.ColorPalette;
         CreatedAt = playlist.CreatedAt;
         UpdatedAt = playlist.UpdatedAt;
         Tracks = playlist.Tracks;
         Type = "playlist";
-        Link = new(uriString: $"/music/playlists/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/playlists/{Id}", UriKind.Relative);
     }
 }

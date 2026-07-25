@@ -15,21 +15,21 @@ namespace NoMercy.Providers.TMDB.Models.Episode;
 
 public class TmdbEpisodeExternalIds
 {
-    [JsonProperty(propertyName: "imdb_id")]
+    [JsonProperty("imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty(propertyName: "freebase_mid")]
+    [JsonProperty("freebase_mid")]
     public string? FreebaseMid { get; set; }
 
-    [JsonProperty(propertyName: "freebase_id")]
+    [JsonProperty("freebase_id")]
     public string? FreebaseId { get; set; }
 
-    [JsonProperty(propertyName: "tvrage_id")]
+    [JsonProperty("tvrage_id")]
     public int? TvRageId { get; set; }
 
-    [JsonProperty(propertyName: "tvdb_id")]
+    [JsonProperty("tvdb_id")]
     public int? TvdbId { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 }

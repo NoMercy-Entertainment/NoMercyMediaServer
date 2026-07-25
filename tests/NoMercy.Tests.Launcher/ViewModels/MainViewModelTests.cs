@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Launcher.ViewModels;
 public sealed class MainViewModelTests
 {
     private static MainViewModel CreateViewModel() =>
-        new(serverConnection: new ServerConnection(pipeNameOrSocketPath: $"nomercy-test-{Guid.NewGuid():N}"), processLauncher: new ServerProcessLauncher());
+        new(new ServerConnection($"nomercy-test-{Guid.NewGuid():N}"), new ServerProcessLauncher());
 
     [Fact]
     public void Constructor_CreatesAllFourChildViewModels()
@@ -48,13 +48,13 @@ public sealed class MainViewModelTests
         viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is not null)
-                changed.Add(item: e.PropertyName);
+                changed.Add(e.PropertyName);
         };
 
         viewModel.SelectedTabIndex = 1;
 
-        viewModel.SelectedTabIndex.Should().Be(expected: 1);
-        changed.Should().Contain(expected: nameof(MainViewModel.SelectedTabIndex));
+        viewModel.SelectedTabIndex.Should().Be(1);
+        changed.Should().Contain(nameof(MainViewModel.SelectedTabIndex));
     }
 
     [Fact]

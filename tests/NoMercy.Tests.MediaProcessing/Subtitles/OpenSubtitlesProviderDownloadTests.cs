@@ -12,7 +12,6 @@
 using System.IO.Compression;
 using System.Net;
 using System.Text;
-using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.MediaProcessing.Subtitles;
@@ -38,17 +37,17 @@ public class OpenSubtitlesProviderDownloadTests
 
     private static OpenSubtitlesProvider CreateProvider(byte[] responseBody)
     {
-        StubHttpClientFactory factory = new(body: responseBody);
-        return new(logger: NullLogger<OpenSubtitlesProvider>.Instance, httpClientFactory: factory);
+        StubHttpClientFactory factory = new(responseBody);
+        return new(NullLogger<OpenSubtitlesProvider>.Instance, factory);
     }
 
     private static byte[] Gzip(string content)
     {
         using MemoryStream destination = new();
-        using (GZipStream gzip = new(stream: destination, mode: CompressionMode.Compress))
+        using (GZipStream gzip = new(destination, CompressionMode.Compress))
         {
-            byte[] raw = Encoding.UTF8.GetBytes(s: content);
-            gzip.Write(buffer: raw, offset: 0, count: raw.Length);
+            byte[] raw = Encoding.UTF8.GetBytes(content);
+            gzip.Write(raw, 0, raw.Length);
         }
 
         return destination.ToArray();
@@ -57,54 +56,54 @@ public class OpenSubtitlesProviderDownloadTests
     [Fact]
     public async Task DownloadSubtitleAsync_UnwrapsTheGzipArchiveIntoCueText()
     {
-        OpenSubtitlesProvider provider = CreateProvider(responseBody: Gzip(content: DutchSrt));
+        OpenSubtitlesProvider provider = CreateProvider(Gzip(DutchSrt));
 
         byte[] result = await provider.DownloadSubtitleAsync(
-            downloadUrl: "https://dl.opensubtitles.org/en/download/src-api/vrf-19a70c55/file/1955260090",
-            ct: CancellationToken.None
+            "https://dl.opensubtitles.org/en/download/src-api/vrf-19a70c55/file/1955260090",
+            CancellationToken.None
         );
 
-        Encoding.UTF8.GetString(bytes: result).Should().Be(expected: DutchSrt);
+        Encoding.UTF8.GetString(result).Should().Be(DutchSrt);
     }
 
     [Fact]
     public async Task DownloadSubtitleAsync_ProducesTextTheVttConverterCanRead()
     {
-        OpenSubtitlesProvider provider = CreateProvider(responseBody: Gzip(content: DutchSrt));
+        OpenSubtitlesProvider provider = CreateProvider(Gzip(DutchSrt));
 
         byte[] result = await provider.DownloadSubtitleAsync(
-            downloadUrl: "https://dl.opensubtitles.org/x",
-            ct: CancellationToken.None
+            "https://dl.opensubtitles.org/x",
+            CancellationToken.None
         );
-        string vtt = SubtitleFormatConverter.SrtToVtt(srtContent: Encoding.UTF8.GetString(bytes: result));
+        string vtt = SubtitleFormatConverter.SrtToVtt(Encoding.UTF8.GetString(result));
 
-        vtt.Should().StartWith(expected: "WEBVTT");
-        vtt.Should().Contain(expected: "00:00:01.000 --> 00:00:04.000");
-        vtt.Should().Contain(expected: "Wat als Captain Carter de eerste Avenger was?");
-        vtt.Should().Contain(expected: "Hé, dat is één van mijn vragen.");
+        vtt.Should().StartWith("WEBVTT");
+        vtt.Should().Contain("00:00:01.000 --> 00:00:04.000");
+        vtt.Should().Contain("Wat als Captain Carter de eerste Avenger was?");
+        vtt.Should().Contain("Hé, dat is één van mijn vragen.");
     }
 
     [Fact]
     public async Task DownloadSubtitleAsync_PassesThroughAnUncompressedPayload()
     {
-        OpenSubtitlesProvider provider = CreateProvider(responseBody: Encoding.UTF8.GetBytes(s: DutchSrt));
+        OpenSubtitlesProvider provider = CreateProvider(Encoding.UTF8.GetBytes(DutchSrt));
 
         byte[] result = await provider.DownloadSubtitleAsync(
-            downloadUrl: "https://dl.opensubtitles.org/x",
-            ct: CancellationToken.None
+            "https://dl.opensubtitles.org/x",
+            CancellationToken.None
         );
 
-        Encoding.UTF8.GetString(bytes: result).Should().Be(expected: DutchSrt);
+        Encoding.UTF8.GetString(result).Should().Be(DutchSrt);
     }
 
     [Fact]
     public async Task DownloadSubtitleAsync_ThrowsRateLimit_OnTooManyRequests()
     {
-        StubHttpClientFactory factory = new(body: [], status: HttpStatusCode.TooManyRequests);
-        OpenSubtitlesProvider provider = new(logger: NullLogger<OpenSubtitlesProvider>.Instance, httpClientFactory: factory);
+        StubHttpClientFactory factory = new([], HttpStatusCode.TooManyRequests);
+        OpenSubtitlesProvider provider = new(NullLogger<OpenSubtitlesProvider>.Instance, factory);
 
-        await Assert.ThrowsAsync<OpenSubtitlesRateLimitException>(testCode: () =>
-            provider.DownloadSubtitleAsync(downloadUrl: "https://dl.opensubtitles.org/x", ct: CancellationToken.None)
+        await Assert.ThrowsAsync<OpenSubtitlesRateLimitException>(() =>
+            provider.DownloadSubtitleAsync("https://dl.opensubtitles.org/x", CancellationToken.None)
         );
 
         provider.IsRateLimited.Should().BeTrue();
@@ -115,7 +114,7 @@ public class OpenSubtitlesProviderDownloadTests
         HttpStatusCode status = HttpStatusCode.OK
     ) : IHttpClientFactory
     {
-        public HttpClient CreateClient(string name) => new(handler: new StubHandler(body: body, status: status));
+        public HttpClient CreateClient(string name) => new(new StubHandler(body, status));
 
         private sealed class StubHandler(byte[] body, HttpStatusCode status) : HttpMessageHandler
         {
@@ -125,7 +124,7 @@ public class OpenSubtitlesProviderDownloadTests
             )
             {
                 return Task.FromResult(
-                    result: new HttpResponseMessage(statusCode: status) { Content = new ByteArrayContent(content: body) }
+                    new HttpResponseMessage(status) { Content = new ByteArrayContent(body) }
                 );
             }
         }
@@ -140,12 +139,12 @@ public class OpenSubtitlesProviderDownloadTests
 public class OpenSubtitlesLanguageCodeTests
 {
     [Theory]
-    [InlineData(data: ["nl", "dut"])]
-    [InlineData(data: ["de", "ger"])]
-    [InlineData(data: ["en", "eng"])]
+    [InlineData(["nl", "dut"])]
+    [InlineData(["de", "ger"])]
+    [InlineData(["en", "eng"])]
     public void WatchRequestLanguage_BecomesTheCodeTheApiAccepts(string watch, string wire)
     {
-        Culture.BibliographicLanguageCode(code: watch).Should().Be(expected: wire);
+        Culture.BibliographicLanguageCode(watch).Should().Be(wire);
     }
 
     [Fact]
@@ -155,6 +154,6 @@ public class OpenSubtitlesLanguageCodeTests
         string[] fromResponse = ["jpn", "hun", "pob", "slv", "spa"];
 
         foreach (string code in fromResponse)
-            Culture.BibliographicLanguageCode(code: code).Should().Be(expected: code);
+            Culture.BibliographicLanguageCode(code).Should().Be(code);
     }
 }

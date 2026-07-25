@@ -23,16 +23,16 @@ public class LiveFfmpegArgumentBuilderStopPositionTests
 {
     private static LiveQuality MakeQuality() =>
         new(
-            Id: "1080p",
-            Label: "1080p",
-            Width: 1920,
-            Height: 1080,
-            Codec: VideoCodecType.H264,
-            BitrateKbps: 8000,
-            Encoder: "libx264",
-            IsHardwareAccelerated: false,
-            ExpectedSpeed: 2.0,
-            CanRealtime: true
+            "1080p",
+            "1080p",
+            1920,
+            1080,
+            VideoCodecType.H264,
+            8000,
+            "libx264",
+            false,
+            2.0,
+            true
         );
 
     [Fact]
@@ -42,27 +42,27 @@ public class LiveFfmpegArgumentBuilderStopPositionTests
         // unbounded one token-for-token: bounding a run may add "-t" and nothing
         // else, so the unbounded path every existing session takes is unchanged.
         LiveRunInput baseInput = new(
-            InputPath: "/media/in.mkv",
-            OutputDirectory: "/tmp/live",
-            StartPosition: TimeSpan.FromSeconds(seconds: 120),
-            Quality: MakeQuality(),
-            SegmentDurationSeconds: 6
+            "/media/in.mkv",
+            "/tmp/live",
+            TimeSpan.FromSeconds(120),
+            MakeQuality(),
+            6
         );
         LiveRunInput unbounded = baseInput with { StopPosition = null };
-        LiveRunInput bounded = baseInput with { StopPosition = TimeSpan.FromSeconds(seconds: 180) };
+        LiveRunInput bounded = baseInput with { StopPosition = TimeSpan.FromSeconds(180) };
 
-        string[] unboundedArgs = LiveFfmpegArgumentBuilder.Build(input: unbounded);
-        string[] boundedArgs = LiveFfmpegArgumentBuilder.Build(input: bounded);
+        string[] unboundedArgs = LiveFfmpegArgumentBuilder.Build(unbounded);
+        string[] boundedArgs = LiveFfmpegArgumentBuilder.Build(bounded);
 
-        unboundedArgs.Should().NotContain(unexpected: "-t");
+        unboundedArgs.Should().NotContain("-t");
 
-        int tIdx = Array.IndexOf(array: boundedArgs, value: "-t");
-        tIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
+        int tIdx = Array.IndexOf(boundedArgs, "-t");
+        tIdx.Should().BeGreaterThanOrEqualTo(0);
 
         List<string> boundedWithoutDashT = [.. boundedArgs];
-        boundedWithoutDashT.RemoveRange(index: tIdx, count: 2); // "-t" and its value
+        boundedWithoutDashT.RemoveRange(tIdx, 2); // "-t" and its value
 
-        boundedWithoutDashT.Should().Equal(expected: unboundedArgs);
+        boundedWithoutDashT.Should().Equal(unboundedArgs);
     }
 
     [Fact]
@@ -71,27 +71,27 @@ public class LiveFfmpegArgumentBuilderStopPositionTests
         // Start segment index 20 (120s / 6s) — offset is 120s. Stop at 180s means
         // the pre-offset duration ffmpeg must run for is 180 - 120 = 60s.
         LiveRunInput input = new(
-            InputPath: "/media/in.mkv",
+            "/media/in.mkv",
             OutputDirectory: "/tmp/live",
-            StartPosition: TimeSpan.FromSeconds(seconds: 120),
+            StartPosition: TimeSpan.FromSeconds(120),
             Quality: MakeQuality(),
             SegmentDurationSeconds: 6,
-            StopPosition: TimeSpan.FromSeconds(seconds: 180)
+            StopPosition: TimeSpan.FromSeconds(180)
         );
 
-        string[] args = LiveFfmpegArgumentBuilder.Build(input: input);
+        string[] args = LiveFfmpegArgumentBuilder.Build(input);
 
-        int tIdx = Array.IndexOf(array: args, value: "-t");
-        tIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        args[tIdx + 1].Should().Be(expected: "60.000");
+        int tIdx = Array.IndexOf(args, "-t");
+        tIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[tIdx + 1].Should().Be("60.000");
 
-        int offsetIdx = Array.IndexOf(array: args, value: "-output_ts_offset");
-        offsetIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
-        tIdx.Should().BeLessThan(expected: offsetIdx, because: "-t must be emitted before -output_ts_offset");
+        int offsetIdx = Array.IndexOf(args, "-output_ts_offset");
+        offsetIdx.Should().BeGreaterThanOrEqualTo(0);
+        tIdx.Should().BeLessThan(offsetIdx, "-t must be emitted before -output_ts_offset");
 
         // The absolute start index is unaffected by bounding the run.
-        int startNumberIdx = Array.IndexOf(array: args, value: "-start_number");
-        args[startNumberIdx + 1].Should().Be(expected: "20");
+        int startNumberIdx = Array.IndexOf(args, "-start_number");
+        args[startNumberIdx + 1].Should().Be("20");
     }
 
     [Fact]
@@ -101,16 +101,16 @@ public class LiveFfmpegArgumentBuilderStopPositionTests
         // index 10, offset 60s exactly), so a StopPosition at or before it yields
         // a non-positive duration — must never emit "-t 0" or negative.
         LiveRunInput input = new(
-            InputPath: "/media/in.mkv",
+            "/media/in.mkv",
             OutputDirectory: "/tmp/live",
-            StartPosition: TimeSpan.FromSeconds(seconds: 60),
+            StartPosition: TimeSpan.FromSeconds(60),
             Quality: MakeQuality(),
             SegmentDurationSeconds: 6,
-            StopPosition: TimeSpan.FromSeconds(seconds: 50)
+            StopPosition: TimeSpan.FromSeconds(50)
         );
 
-        string[] args = LiveFfmpegArgumentBuilder.Build(input: input);
+        string[] args = LiveFfmpegArgumentBuilder.Build(input);
 
-        args.Should().NotContain(unexpected: "-t");
+        args.Should().NotContain("-t");
     }
 }

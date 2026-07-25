@@ -28,17 +28,17 @@ public class WorkerSelfRegistrationServiceTests
         // hosted service is registered but shouldn't activate.
         RecordingHandler handler = new();
         WorkerSelfRegistrationService sut = MakeService(
-            handler: handler,
-            configure: opts =>
+            handler,
+            opts =>
             {
                 opts.DistributedEncodingSigningKey = "key";
                 // CoordinatorUrl intentionally not set.
             }
         );
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 1));
-        await sut.StartAsync(cancellationToken: cts.Token);
-        await sut.StopAsync(cancellationToken: CancellationToken.None);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
+        await sut.StartAsync(cts.Token);
+        await sut.StopAsync(CancellationToken.None);
 
         handler.RequestLog.Should().BeEmpty();
     }
@@ -46,69 +46,69 @@ public class WorkerSelfRegistrationServiceTests
     [Fact]
     public async Task ExecuteAsync_Enabled_PostsRegistrationOnStart()
     {
-        TaskCompletionSource registerSeen = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
-        RecordingHandler handler = new(respond: req =>
+        TaskCompletionSource registerSeen = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingHandler handler = new(req =>
         {
-            if (req.RequestUri!.ToString().Contains(value: "register"))
+            if (req.RequestUri!.ToString().Contains("register"))
                 registerSeen.TrySetResult();
-            return new(statusCode: HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         });
 
         WorkerSelfRegistrationService sut = MakeService(
-            handler: handler,
-            configure: opts =>
+            handler,
+            opts =>
             {
                 opts.DistributedEncodingSigningKey = "key";
                 opts.CoordinatorUrl = "http://coordinator.test";
                 opts.WorkerSelfBaseUrl = "http://worker.test";
                 opts.WorkerId = "test-worker";
-                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(milliseconds: 50);
+                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(50);
             }
         );
 
         using CancellationTokenSource cts = new();
-        await sut.StartAsync(cancellationToken: cts.Token);
+        await sut.StartAsync(cts.Token);
 
         // Deterministic wait: signal fires when register is observed.
-        await registerSeen.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
+        await registerSeen.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         await cts.CancelAsync();
-        await sut.StopAsync(cancellationToken: CancellationToken.None);
+        await sut.StopAsync(CancellationToken.None);
 
-        handler.RequestLog.Should().Contain(predicate: r => r.Path.Contains("register"));
+        handler.RequestLog.Should().Contain(r => r.Path.Contains("register"));
     }
 
     [Fact]
     public async Task ExecuteAsync_Shutdown_SendsUnregisterDelete()
     {
-        TaskCompletionSource registerSeen = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
-        RecordingHandler handler = new(respond: req =>
+        TaskCompletionSource registerSeen = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingHandler handler = new(req =>
         {
-            if (req.RequestUri!.ToString().Contains(value: "register") && req.Method == HttpMethod.Post)
+            if (req.RequestUri!.ToString().Contains("register") && req.Method == HttpMethod.Post)
                 registerSeen.TrySetResult();
-            return new(statusCode: HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         });
 
         WorkerSelfRegistrationService sut = MakeService(
-            handler: handler,
-            configure: opts =>
+            handler,
+            opts =>
             {
                 opts.DistributedEncodingSigningKey = "key";
                 opts.CoordinatorUrl = "http://coordinator.test";
                 opts.WorkerSelfBaseUrl = "http://worker.test";
                 opts.WorkerId = "tw";
-                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(milliseconds: 50);
+                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(50);
             }
         );
 
         using CancellationTokenSource cts = new();
-        await sut.StartAsync(cancellationToken: cts.Token);
-        await registerSeen.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
-        await sut.StopAsync(cancellationToken: CancellationToken.None);
+        await sut.StartAsync(cts.Token);
+        await registerSeen.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await sut.StopAsync(CancellationToken.None);
 
         handler
             .RequestLog.Should()
-            .Contain(predicate: r =>
+            .Contain(r =>
                 r.Method == HttpMethod.Delete && r.Path.Contains("/distribution/workers/tw")
             );
     }
@@ -120,45 +120,45 @@ public class WorkerSelfRegistrationServiceTests
         // Service must retry register instead of staying in a 404 loop.
         int registerCount = 0;
         TaskCompletionSource secondRegister = new(
-            creationOptions: TaskCreationOptions.RunContinuationsAsynchronously
+            TaskCreationOptions.RunContinuationsAsynchronously
         );
-        RecordingHandler handler = new(respond: req =>
+        RecordingHandler handler = new(req =>
         {
-            if (req.RequestUri!.ToString().Contains(value: "register"))
+            if (req.RequestUri!.ToString().Contains("register"))
             {
-                int n = Interlocked.Increment(location: ref registerCount);
+                int n = Interlocked.Increment(ref registerCount);
                 if (n >= 2)
                     secondRegister.TrySetResult();
-                return new(statusCode: HttpStatusCode.OK);
+                return new(HttpStatusCode.OK);
             }
-            if (req.RequestUri.ToString().Contains(value: "heartbeat"))
-                return new(statusCode: HttpStatusCode.NotFound);
-            return new(statusCode: HttpStatusCode.OK);
+            if (req.RequestUri.ToString().Contains("heartbeat"))
+                return new(HttpStatusCode.NotFound);
+            return new(HttpStatusCode.OK);
         });
 
         WorkerSelfRegistrationService sut = MakeService(
-            handler: handler,
-            configure: opts =>
+            handler,
+            opts =>
             {
                 opts.DistributedEncodingSigningKey = "key";
                 opts.CoordinatorUrl = "http://coordinator.test";
                 opts.WorkerSelfBaseUrl = "http://worker.test";
                 opts.WorkerId = "tw";
-                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(milliseconds: 30);
+                opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(30);
             }
         );
 
         using CancellationTokenSource cts = new();
-        await sut.StartAsync(cancellationToken: cts.Token);
-        await secondRegister.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
+        await sut.StartAsync(cts.Token);
+        await secondRegister.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         await cts.CancelAsync();
-        await sut.StopAsync(cancellationToken: CancellationToken.None);
+        await sut.StopAsync(CancellationToken.None);
 
         Volatile
-            .Read(location: ref registerCount)
+            .Read(ref registerCount)
             .Should()
-            .BeGreaterThan(expected: 1, because: "heartbeat 404 must trigger re-registration");
+            .BeGreaterThan(1, "heartbeat 404 must trigger re-registration");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -171,22 +171,22 @@ public class WorkerSelfRegistrationServiceTests
     )
     {
         EncoderOptions opts = new();
-        configure(obj: opts);
+        configure(opts);
 
         ServiceCollection services = new();
-        services.AddSingleton(implementationInstance: opts);
-        services.AddSingleton<IHardwareCapabilities>(implementationInstance: new HardwareCapabilities(Gpus: [], CpuCores: 4));
+        services.AddSingleton(opts);
+        services.AddSingleton<IHardwareCapabilities>(new HardwareCapabilities([], 4));
         services
             .AddHttpClient()
-            .ConfigureHttpClientDefaults(configure: b => b.ConfigurePrimaryHttpMessageHandler(configureHandler: () => handler));
+            .ConfigureHttpClientDefaults(b => b.ConfigurePrimaryHttpMessageHandler(() => handler));
 
         ServiceProvider provider = services.BuildServiceProvider();
 
         return new(
-            capabilities: provider.GetRequiredService<IHardwareCapabilities>(),
-            options: opts,
-            httpClientFactory: provider.GetRequiredService<IHttpClientFactory>(),
-            logger: NullLogger<WorkerSelfRegistrationService>.Instance
+            provider.GetRequiredService<IHardwareCapabilities>(),
+            opts,
+            provider.GetRequiredService<IHttpClientFactory>(),
+            NullLogger<WorkerSelfRegistrationService>.Instance
         );
     }
 
@@ -196,7 +196,7 @@ public class WorkerSelfRegistrationServiceTests
         private readonly List<(HttpMethod Method, string Path)> _log = [];
 
         public RecordingHandler(HashSet<string>? okOn = null)
-            : this(respond: req => new(statusCode: ShouldOk(req: req, okOn: okOn) ? HttpStatusCode.OK : HttpStatusCode.NotFound))
+            : this(req => new(ShouldOk(req, okOn) ? HttpStatusCode.OK : HttpStatusCode.NotFound))
         { }
 
         public RecordingHandler(Func<HttpRequestMessage, HttpResponseMessage> respond)
@@ -220,8 +220,8 @@ public class WorkerSelfRegistrationServiceTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             lock (_log)
-                _log.Add(item: (request.Method, request.RequestUri!.AbsolutePath));
-            return Task.FromResult(result: _respond(arg: request));
+                _log.Add((request.Method, request.RequestUri!.AbsolutePath));
+            return Task.FromResult(_respond(request));
         }
 
         private static bool ShouldOk(HttpRequestMessage req, HashSet<string>? okOn)
@@ -229,7 +229,7 @@ public class WorkerSelfRegistrationServiceTests
             if (okOn is null)
                 return true;
             string path = req.RequestUri!.AbsolutePath;
-            return okOn.Any(predicate: pattern => path.Contains(value: pattern));
+            return okOn.Any(pattern => path.Contains(pattern));
         }
     }
 }

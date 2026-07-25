@@ -47,8 +47,8 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
         Func<DateTime>? clock = null
     )
     {
-        _staleAfter = staleAfter ?? TimeSpan.FromSeconds(seconds: 60);
-        _cooldownDuration = cooldownDuration ?? TimeSpan.FromMinutes(minutes: 2);
+        _staleAfter = staleAfter ?? TimeSpan.FromSeconds(60);
+        _cooldownDuration = cooldownDuration ?? TimeSpan.FromMinutes(2);
         _clock = clock ?? (() => DateTime.UtcNow);
     }
 
@@ -60,11 +60,11 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
     /// </summary>
     public void Register(IRemoteWorker worker)
     {
-        _workers[key: worker.WorkerId] = new(
-            Worker: worker,
-            LastSeenUtc: _clock(),
-            ConsecutiveFailures: 0,
-            CooldownUntilUtc: null
+        _workers[worker.WorkerId] = new(
+            worker,
+            _clock(),
+            0,
+            null
         );
     }
 
@@ -76,7 +76,7 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
     /// </summary>
     public void RecordTaskOutcome(string workerId, bool success)
     {
-        if (!_workers.TryGetValue(key: workerId, value: out RegisteredWorker? existing))
+        if (!_workers.TryGetValue(workerId, out RegisteredWorker? existing))
             return;
 
         if (success)
@@ -84,7 +84,7 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
             if (existing is { ConsecutiveFailures: 0, CooldownUntilUtc: null })
                 return; // Already healthy — avoid needless dictionary write.
 
-            _workers[key: workerId] = existing with { ConsecutiveFailures = 0, CooldownUntilUtc = null };
+            _workers[workerId] = existing with { ConsecutiveFailures = 0, CooldownUntilUtc = null };
             return;
         }
 
@@ -92,7 +92,7 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
         DateTime? cooldown =
             failures >= FailureThreshold ? _clock() + _cooldownDuration : existing.CooldownUntilUtc;
 
-        _workers[key: workerId] = existing with
+        _workers[workerId] = existing with
         {
             ConsecutiveFailures = failures,
             CooldownUntilUtc = cooldown,
@@ -105,10 +105,10 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
     /// </summary>
     public bool Heartbeat(string workerId)
     {
-        if (!_workers.TryGetValue(key: workerId, value: out RegisteredWorker? existing))
+        if (!_workers.TryGetValue(workerId, out RegisteredWorker? existing))
             return false;
 
-        _workers[key: workerId] = existing with { LastSeenUtc = _clock() };
+        _workers[workerId] = existing with { LastSeenUtc = _clock() };
         return true;
     }
 
@@ -116,7 +116,7 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
     /// Removes a worker explicitly — called when a worker shuts down
     /// cleanly so the dispatcher stops trying to reach it.
     /// </summary>
-    public bool Unregister(string workerId) => _workers.TryRemove(key: workerId, value: out _);
+    public bool Unregister(string workerId) => _workers.TryRemove(workerId, out _);
 
     public IReadOnlyList<IRemoteWorker> GetActiveWorkers()
     {
@@ -127,11 +127,11 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
         // unbounded when workers come and go.
         foreach (
             KeyValuePair<string, RegisteredWorker> kvp in _workers
-                .Where(predicate: kvp => kvp.Value.LastSeenUtc < cutoff)
+                .Where(kvp => kvp.Value.LastSeenUtc < cutoff)
                 .ToArray()
         )
         {
-            _workers.TryRemove(key: kvp.Key, value: out _);
+            _workers.TryRemove(kvp.Key, out _);
         }
 
         // Hide workers still in their cooldown window. They stay registered
@@ -139,8 +139,8 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
         // but the dispatcher doesn't pick them until the window elapses.
         // Cooldown lifts automatically on the next read after the deadline.
         return _workers
-            .Values.Where(predicate: rw => !IsInCooldown(rw: rw, now: now))
-            .Select(selector: rw => rw.Worker)
+            .Values.Where(rw => !IsInCooldown(rw, now))
+            .Select(rw => rw.Worker)
             .ToArray();
     }
 
@@ -154,11 +154,11 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
     {
         DateTime now = _clock();
         return _workers
-            .Values.Select(selector: rw => new WorkerHealthSnapshot(
-                Worker: rw.Worker,
-                LastSeenUtc: rw.LastSeenUtc,
-                ConsecutiveFailures: rw.ConsecutiveFailures,
-                CooldownUntilUtc: IsInCooldown(rw: rw, now: now) ? rw.CooldownUntilUtc : null
+            .Values.Select(rw => new WorkerHealthSnapshot(
+                rw.Worker,
+                rw.LastSeenUtc,
+                rw.ConsecutiveFailures,
+                IsInCooldown(rw, now) ? rw.CooldownUntilUtc : null
             ))
             .ToArray();
     }

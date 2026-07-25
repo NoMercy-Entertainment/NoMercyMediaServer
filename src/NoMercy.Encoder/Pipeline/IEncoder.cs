@@ -98,7 +98,7 @@ public record EncodingRequest(
     /// </summary>
     public string ResolvedTitle =>
         MediaTitle
-        ?? $"{Path.GetFileName(path: Path.TrimEndingDirectorySeparator(path: OutputDirectory))}.NoMercy";
+        ?? $"{Path.GetFileName(Path.TrimEndingDirectorySeparator(OutputDirectory))}.NoMercy";
 }
 
 public record EncodingOptions(

@@ -22,46 +22,46 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record PeopleDto
 {
-    [JsonProperty(propertyName: "character")]
+    [JsonProperty("character")]
     public string? Character { get; set; }
 
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool? Adult { get; set; }
 
-    [JsonProperty(propertyName: "job")]
+    [JsonProperty("job")]
     public string? Job { get; set; }
 
-    [JsonProperty(propertyName: "profile")]
+    [JsonProperty("profile")]
     public string? ProfilePath { get; set; }
 
-    [JsonProperty(propertyName: "gender")]
+    [JsonProperty("gender")]
     public string Gender { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "known_for_department")]
+    [JsonProperty("known_for_department")]
     public string? KnownForDepartment { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    [JsonProperty(propertyName: "popularity")]
+    [JsonProperty("popularity")]
     public double Popularity { get; set; }
 
-    [JsonProperty(propertyName: "deathday")]
+    [JsonProperty("deathday")]
     public DateTime? DeathDay { get; set; }
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public TranslationDto[] Translations { get; set; }
 
-    [JsonProperty(propertyName: "order")]
+    [JsonProperty("order")]
     public int? Order { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
     public PeopleDto()
@@ -70,7 +70,7 @@ public record PeopleDto
         Adult = null;
         Gender = string.Empty;
         Translations = [];
-        Link = new(uriString: "/person/0", uriKind: UriKind.Relative);
+        Link = new("/person/0", UriKind.Relative);
     }
 
     public PeopleDto(Cast cast)
@@ -85,7 +85,7 @@ public record PeopleDto
         DeathDay = cast.Person.DeathDay;
         Gender = cast.Person.Gender;
         Order = cast.Role.Order;
-        Link = new(uriString: $"/person/{cast.Person.Id}", uriKind: UriKind.Relative);
+        Link = new($"/person/{cast.Person.Id}", UriKind.Relative);
         Translations = [];
     }
 
@@ -98,9 +98,9 @@ public record PeopleDto
         KnownForDepartment = tmdbCast.KnownForDepartment;
         Name = tmdbCast.Name.OrEmpty();
         ColorPalette = new();
-        Gender = Enum.Parse<TmdbGender>(value: tmdbCast.Gender.ToString(), ignoreCase: true).ToString();
+        Gender = Enum.Parse<TmdbGender>(tmdbCast.Gender.ToString(), true).ToString();
         Order = tmdbCast.Order;
-        Link = new(uriString: $"/person/{tmdbCast.Id}", uriKind: UriKind.Relative);
+        Link = new($"/person/{tmdbCast.Id}", UriKind.Relative);
         Translations = [];
     }
 
@@ -116,7 +116,7 @@ public record PeopleDto
         DeathDay = crew.Person.DeathDay;
         Gender = crew.Person.Gender;
         Order = crew.Job.Order;
-        Link = new(uriString: $"/person/{crew.Person.Id}", uriKind: UriKind.Relative);
+        Link = new($"/person/{crew.Person.Id}", UriKind.Relative);
         Translations = [];
     }
 
@@ -129,9 +129,9 @@ public record PeopleDto
         KnownForDepartment = tmdbCrew.KnownForDepartment;
         Name = tmdbCrew.Name;
         ColorPalette = new();
-        Gender = Enum.Parse<TmdbGender>(value: tmdbCrew.Gender.ToString(), ignoreCase: true).ToString();
+        Gender = Enum.Parse<TmdbGender>(tmdbCrew.Gender.ToString(), true).ToString();
         Order = tmdbCrew.Order;
-        Link = new(uriString: $"/person/{tmdbCrew.Id}", uriKind: UriKind.Relative);
+        Link = new($"/person/{tmdbCrew.Id}", UriKind.Relative);
         Translations = [];
     }
 
@@ -142,8 +142,8 @@ public record PeopleDto
         ProfilePath = crew.ProfilePath;
         Name = crew.Name;
         ColorPalette = new();
-        Gender = Enum.Parse<TmdbGender>(value: crew.Gender.ToString(), ignoreCase: true).ToString();
-        Link = new(uriString: $"/person/{crew.Id}", uriKind: UriKind.Relative);
+        Gender = Enum.Parse<TmdbGender>(crew.Gender.ToString(), true).ToString();
+        Link = new($"/person/{crew.Id}", UriKind.Relative);
         Translations = [];
     }
 
@@ -158,7 +158,7 @@ public record PeopleDto
         ColorPalette = creator.Person.ColorPalette;
         DeathDay = creator.Person.DeathDay;
         Gender = creator.Person.Gender;
-        Link = new(uriString: $"/person/{creator.Person.Id}", uriKind: UriKind.Relative);
+        Link = new($"/person/{creator.Person.Id}", UriKind.Relative);
         Translations = [];
     }
 }

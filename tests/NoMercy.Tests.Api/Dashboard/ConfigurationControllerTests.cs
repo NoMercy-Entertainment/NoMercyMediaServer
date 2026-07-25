@@ -12,13 +12,12 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
-[Trait(name: "Category", value: "DashboardConfiguration")]
+[Trait("Category", "DashboardConfiguration")]
 public class ConfigurationControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -31,130 +30,130 @@ public class ConfigurationControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     private static StringContent JsonBody(object obj) =>
-        new(content: JsonSerializer.Serialize(value: obj), encoding: Encoding.UTF8, mediaType: "application/json");
+        new(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
 
     private Task<HttpResponseMessage> PatchAsync(HttpClient client, string url, object body) =>
-        client.PatchAsync(requestUri: url, content: JsonBody(obj: body));
+        client.PatchAsync(url, JsonBody(body));
 
     [Fact]
     public async Task GetConfiguration_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: "/api/v1/dashboard/configuration");
+        HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/configuration");
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetConfiguration_ReturnsOk_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/configuration");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/configuration");
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task GetConfiguration_ReturnsEnvelopeWithDataObject()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/configuration");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/configuration");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        doc.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data)
+        doc.RootElement.TryGetProperty("data", out JsonElement data)
             .Should()
-            .BeTrue(because: "configuration response must have a 'data' property");
-        data.ValueKind.Should().Be(expected: JsonValueKind.Object);
+            .BeTrue("configuration response must have a 'data' property");
+        data.ValueKind.Should().Be(JsonValueKind.Object);
     }
 
     [Fact]
     public async Task GetConfiguration_DataObject_ContainsWorkerCountFields()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/configuration");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/configuration");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        JsonElement data = doc.RootElement.GetProperty("data");
 
-        data.TryGetProperty(propertyName: "library_workers", value: out _)
+        data.TryGetProperty("library_workers", out _)
             .Should()
-            .BeTrue(because: "clients read 'library_workers' to display queue depth settings");
-        data.TryGetProperty(propertyName: "import_workers", value: out _)
+            .BeTrue("clients read 'library_workers' to display queue depth settings");
+        data.TryGetProperty("import_workers", out _)
             .Should()
-            .BeTrue(because: "clients read 'import_workers'");
-        data.TryGetProperty(propertyName: "encoder_workers", value: out _)
+            .BeTrue("clients read 'import_workers'");
+        data.TryGetProperty("encoder_workers", out _)
             .Should()
-            .BeTrue(because: "clients read 'encoder_workers'");
+            .BeTrue("clients read 'encoder_workers'");
     }
 
     [Fact]
     public async Task GetConfiguration_DataObject_ContainsPortFields()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/configuration");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/configuration");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        JsonElement data = doc.RootElement.GetProperty("data");
 
-        data.TryGetProperty(propertyName: "internal_port", value: out _)
+        data.TryGetProperty("internal_port", out _)
             .Should()
-            .BeTrue(because: "clients read 'internal_port' for server connectivity display");
-        data.TryGetProperty(propertyName: "external_port", value: out _).Should().BeTrue(because: "clients read 'external_port'");
+            .BeTrue("clients read 'internal_port' for server connectivity display");
+        data.TryGetProperty("external_port", out _).Should().BeTrue("clients read 'external_port'");
     }
 
     [Fact]
     public async Task PostConfiguration_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsync(
-            requestUri: "/api/v1/dashboard/configuration",
-            content: null
+            "/api/v1/dashboard/configuration",
+            null
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task PostConfiguration_ReturnsOk_WhenAuthenticated()
     {
         HttpResponseMessage response = await _authed.PostAsync(
-            requestUri: "/api/v1/dashboard/configuration",
-            content: null
+            "/api/v1/dashboard/configuration",
+            null
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task PatchConfiguration_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await PatchAsync(
-            client: _unauthed,
-            url: "/api/v1/dashboard/configuration",
-            body: new { swagger = false }
+            _unauthed,
+            "/api/v1/dashboard/configuration",
+            new { swagger = false }
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task PatchConfiguration_ReturnsOkWithStatusSuccess_WhenAuthenticated()
     {
         HttpResponseMessage response = await PatchAsync(
-            client: _authed,
-            url: "/api/v1/dashboard/configuration",
-            body: new { swagger = false }
+            _authed,
+            "/api/v1/dashboard/configuration",
+            new { swagger = false }
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        doc.RootElement.TryGetProperty(propertyName: "status", value: out JsonElement status)
+        doc.RootElement.TryGetProperty("status", out JsonElement status)
             .Should()
-            .BeTrue(because: "update response must include 'status'");
-        status.GetString().Should().Be(expected: "success");
+            .BeTrue("update response must include 'status'");
+        status.GetString().Should().Be("success");
     }
 
     [Fact]
@@ -163,70 +162,70 @@ public class ConfigurationControllerTests : IClassFixture<NoMercyApiFactory>
         string uniqueName = $"TestServer-{Guid.NewGuid():N}";
 
         HttpResponseMessage patchResponse = await PatchAsync(
-            client: _authed,
-            url: "/api/v1/dashboard/configuration",
-            body: new { name = uniqueName }
+            _authed,
+            "/api/v1/dashboard/configuration",
+            new { name = uniqueName }
         );
-        patchResponse.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        patchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpResponseMessage getResponse = await _authed.GetAsync(requestUri: "/api/v1/dashboard/configuration");
+        HttpResponseMessage getResponse = await _authed.GetAsync("/api/v1/dashboard/configuration");
         string body = await getResponse.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
-        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
-        data.TryGetProperty(propertyName: "name", value: out JsonElement nameEl).Should().BeTrue();
-        nameEl.GetString().Should().Be(expected: uniqueName);
+        JsonElement data = doc.RootElement.GetProperty("data");
+        data.TryGetProperty("name", out JsonElement nameEl).Should().BeTrue();
+        nameEl.GetString().Should().Be(uniqueName);
     }
 
     [Fact]
     public async Task GetLanguages_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            requestUri: "/api/v1/dashboard/configuration/languages"
+            "/api/v1/dashboard/configuration/languages"
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetLanguages_ReturnsOkWithArray_WhenAuthenticated()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: "/api/v1/dashboard/configuration/languages"
+            "/api/v1/dashboard/configuration/languages"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
         doc.RootElement.ValueKind.Should()
-            .Be(expected: JsonValueKind.Array, because: "languages endpoint returns a bare array");
+            .Be(JsonValueKind.Array, "languages endpoint returns a bare array");
     }
 
     [Fact]
     public async Task GetCountries_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            requestUri: "/api/v1/dashboard/configuration/countries"
+            "/api/v1/dashboard/configuration/countries"
         );
 
-        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetCountries_ReturnsOkWithArray_WhenAuthenticated()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: "/api/v1/dashboard/configuration/countries"
+            "/api/v1/dashboard/configuration/countries"
         );
 
-        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json: body);
+        using JsonDocument doc = JsonDocument.Parse(body);
 
         doc.RootElement.ValueKind.Should()
-            .Be(expected: JsonValueKind.Array, because: "countries endpoint returns a bare array");
+            .Be(JsonValueKind.Array, "countries endpoint returns a bare array");
     }
 }

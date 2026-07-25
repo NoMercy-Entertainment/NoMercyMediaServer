@@ -15,69 +15,69 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Users;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(VideoFileId), additionalPropertyNames: [nameof(UserId), nameof(MovieId)], IsUnique = true)]
-[Index(propertyName: nameof(VideoFileId), additionalPropertyNames: [nameof(UserId), nameof(TvId)], IsUnique = true)]
-[Index(propertyName: nameof(VideoFileId), additionalPropertyNames: [nameof(UserId), nameof(CollectionId)], IsUnique = true)]
-[Index(propertyName: nameof(VideoFileId), additionalPropertyNames: [nameof(UserId), nameof(SpecialId)], IsUnique = true)]
-[Index(propertyName: nameof(UserId))]
-[Index(propertyName: nameof(MovieId))]
-[Index(propertyName: nameof(TvId))]
-[Index(propertyName: nameof(CollectionId))]
-[Index(propertyName: nameof(SpecialId))]
-[Index(propertyName: nameof(VideoFileId))]
-[Index(propertyName: nameof(UserId), additionalPropertyNames: nameof(LastPlayedDate))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(VideoFileId), [nameof(UserId), nameof(MovieId)], IsUnique = true)]
+[Index(nameof(VideoFileId), [nameof(UserId), nameof(TvId)], IsUnique = true)]
+[Index(nameof(VideoFileId), [nameof(UserId), nameof(CollectionId)], IsUnique = true)]
+[Index(nameof(VideoFileId), [nameof(UserId), nameof(SpecialId)], IsUnique = true)]
+[Index(nameof(UserId))]
+[Index(nameof(MovieId))]
+[Index(nameof(TvId))]
+[Index(nameof(CollectionId))]
+[Index(nameof(SpecialId))]
+[Index(nameof(VideoFileId))]
+[Index(nameof(UserId), nameof(LastPlayedDate))]
 public class UserData : Timestamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "rating")]
+    [JsonProperty("rating")]
     public int? Rating { get; set; }
 
-    [JsonProperty(propertyName: "last_played_date")]
+    [JsonProperty("last_played_date")]
     public string? LastPlayedDate { get; set; }
 
-    [JsonProperty(propertyName: "audio")]
+    [JsonProperty("audio")]
     public string? Audio { get; set; }
 
-    [JsonProperty(propertyName: "subtitle")]
+    [JsonProperty("subtitle")]
     public string? Subtitle { get; set; }
 
-    [JsonProperty(propertyName: "subtitle_type")]
+    [JsonProperty("subtitle_type")]
     public string? SubtitleType { get; set; }
 
-    [JsonProperty(propertyName: "time")]
+    [JsonProperty("time")]
     public int? Time { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "user_id")]
+    [JsonProperty("user_id")]
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
-    [JsonProperty(propertyName: "movie_id")]
+    [JsonProperty("movie_id")]
     public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
-    [JsonProperty(propertyName: "tv_id")]
+    [JsonProperty("tv_id")]
     public int? TvId { get; set; }
     public Tv? Tv { get; set; }
 
-    [JsonProperty(propertyName: "collection_id")]
+    [JsonProperty("collection_id")]
     public int? CollectionId { get; set; }
     public Collection? Collection { get; set; }
 
-    [JsonProperty(propertyName: "special_id")]
+    [JsonProperty("special_id")]
     public Ulid? SpecialId { get; set; }
     public Special? Special { get; set; }
 
-    [JsonProperty(propertyName: "video_file_id")]
+    [JsonProperty("video_file_id")]
     public Ulid VideoFileId { get; set; }
     public VideoFile VideoFile { get; set; } = null!;
 
-    [JsonProperty(propertyName: "removed_from_continue_watching")]
+    [JsonProperty("removed_from_continue_watching")]
     public bool RemovedFromContinueWatching { get; set; }
 }

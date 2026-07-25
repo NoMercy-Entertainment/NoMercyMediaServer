@@ -30,7 +30,7 @@ public class DeviceOwnershipTests
     {
         // SQLite in-memory without "Foreign Keys=True" so we can seed devices with
         // arbitrary owner ids without materializing full User rows.
-        SqliteConnection connection = new(connectionString: "DataSource=:memory:");
+        SqliteConnection connection = new("DataSource=:memory:");
         connection.Open();
         // Devices reference Users via a FK; these unit tests exercise ownership
         // routing in isolation, so disable FK enforcement instead of materializing
@@ -41,9 +41,9 @@ public class DeviceOwnershipTests
             pragma.ExecuteNonQuery();
         }
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection: connection)
+            .UseSqlite(connection)
             .Options;
-        MediaContext context = new(options: options);
+        MediaContext context = new(options);
         context.Database.EnsureCreated();
         return context;
     }
@@ -55,15 +55,15 @@ public class DeviceOwnershipTests
         Guid userA = Guid.NewGuid();
 
         (Device device, Guid? previousOwner) = await DeviceBusEndpoint.ResolveOwnedDeviceAsync(
-            ctx: ctx,
-            fingerprint: "fp-1",
-            userId: userA,
-            deviceName: "TV",
-            deviceType: "tv"
+            ctx,
+            "fp-1",
+            userA,
+            "TV",
+            "tv"
         );
 
         previousOwner.Should().BeNull();
-        device.OwnerUserId.Should().Be(expected: userA);
+        device.OwnerUserId.Should().Be(userA);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class DeviceOwnershipTests
         Guid userA = Guid.NewGuid();
         Guid userB = Guid.NewGuid();
         ctx.Devices.Add(
-            entity: new()
+            new()
             {
                 DeviceId = "fp-1",
                 Fingerprint = "fp-1",
@@ -85,20 +85,20 @@ public class DeviceOwnershipTests
         await ctx.SaveChangesAsync();
 
         (Device device, Guid? previousOwner) = await DeviceBusEndpoint.ResolveOwnedDeviceAsync(
-            ctx: ctx,
-            fingerprint: "fp-1",
-            userId: userA,
-            deviceName: "TV",
-            deviceType: "tv"
+            ctx,
+            "fp-1",
+            userA,
+            "TV",
+            "tv"
         );
 
         // ownership moved to the account the device is now logged into
-        device.OwnerUserId.Should().Be(expected: userA);
-        previousOwner.Should().Be(expected: userB);
+        device.OwnerUserId.Should().Be(userA);
+        previousOwner.Should().Be(userB);
         // the existing row was re-owned, not duplicated (DeviceId is unique)
-        (await ctx.Devices.CountAsync(predicate: d => d.DeviceId == "fp-1"))
+        (await ctx.Devices.CountAsync(d => d.DeviceId == "fp-1"))
             .Should()
-            .Be(expected: 1);
+            .Be(1);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class DeviceOwnershipTests
         await using MediaContext ctx = MakeContext();
         Guid userA = Guid.NewGuid();
         ctx.Devices.Add(
-            entity: new()
+            new()
             {
                 DeviceId = "fp-1",
                 Fingerprint = "fp-1",
@@ -119,16 +119,16 @@ public class DeviceOwnershipTests
         await ctx.SaveChangesAsync();
 
         (Device device, Guid? previousOwner) = await DeviceBusEndpoint.ResolveOwnedDeviceAsync(
-            ctx: ctx,
-            fingerprint: "fp-1",
-            userId: userA,
-            deviceName: "TV",
-            deviceType: "tv"
+            ctx,
+            "fp-1",
+            userA,
+            "TV",
+            "tv"
         );
 
-        device.OwnerUserId.Should().Be(expected: userA);
+        device.OwnerUserId.Should().Be(userA);
         // previousOwner == caller, so HandleHello skips the previous-owner refresh
-        previousOwner.Should().Be(expected: userA);
+        previousOwner.Should().Be(userA);
     }
 }
 
@@ -163,9 +163,9 @@ public class DeviceBusMusicHubGuardTests
     {
         ConnectedClients connectedClients = new();
         string deviceId = $"tv-{Guid.NewGuid()}";
-        connectedClients.Clients[key: "conn-1"] = MakeMusicHubClient(deviceId: deviceId);
+        connectedClients.Clients["conn-1"] = MakeMusicHubClient(deviceId);
 
-        DeviceBusEndpoint.IsStillOnMusicHub(connectedClients: connectedClients, deviceId: deviceId).Should().BeTrue();
+        DeviceBusEndpoint.IsStillOnMusicHub(connectedClients, deviceId).Should().BeTrue();
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class DeviceBusMusicHubGuardTests
         ConnectedClients connectedClients = new();
         string deviceId = $"tv-{Guid.NewGuid()}";
 
-        DeviceBusEndpoint.IsStillOnMusicHub(connectedClients: connectedClients, deviceId: deviceId).Should().BeFalse();
+        DeviceBusEndpoint.IsStillOnMusicHub(connectedClients, deviceId).Should().BeFalse();
     }
 
     [Fact]
@@ -182,9 +182,9 @@ public class DeviceBusMusicHubGuardTests
     {
         ConnectedClients connectedClients = new();
         string deviceId = $"tv-{Guid.NewGuid()}";
-        connectedClients.Clients[key: "conn-1"] = MakeMusicHubClient(deviceId: $"phone-{Guid.NewGuid()}");
+        connectedClients.Clients["conn-1"] = MakeMusicHubClient($"phone-{Guid.NewGuid()}");
 
-        DeviceBusEndpoint.IsStillOnMusicHub(connectedClients: connectedClients, deviceId: deviceId).Should().BeFalse();
+        DeviceBusEndpoint.IsStillOnMusicHub(connectedClients, deviceId).Should().BeFalse();
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class DeviceBusMusicHubGuardTests
         // castHub) without being on musicHub at all — those must not count.
         ConnectedClients connectedClients = new();
         string deviceId = $"tv-{Guid.NewGuid()}";
-        connectedClients.Clients[key: "conn-1"] = new()
+        connectedClients.Clients["conn-1"] = new()
         {
             Id = Ulid.NewUlid(),
             Sub = Guid.NewGuid(),
@@ -202,7 +202,7 @@ public class DeviceBusMusicHubGuardTests
             Endpoint = "/deviceHub",
         };
 
-        DeviceBusEndpoint.IsStillOnMusicHub(connectedClients: connectedClients, deviceId: deviceId).Should().BeFalse();
+        DeviceBusEndpoint.IsStillOnMusicHub(connectedClients, deviceId).Should().BeFalse();
     }
 
     [Fact]
@@ -210,8 +210,8 @@ public class DeviceBusMusicHubGuardTests
     {
         ConnectedClients connectedClients = new();
         string deviceId = $"TV-{Guid.NewGuid()}";
-        connectedClients.Clients[key: "conn-1"] = MakeMusicHubClient(deviceId: deviceId.ToLowerInvariant());
+        connectedClients.Clients["conn-1"] = MakeMusicHubClient(deviceId.ToLowerInvariant());
 
-        DeviceBusEndpoint.IsStillOnMusicHub(connectedClients: connectedClients, deviceId: deviceId).Should().BeTrue();
+        DeviceBusEndpoint.IsStillOnMusicHub(connectedClients, deviceId).Should().BeTrue();
     }
 }

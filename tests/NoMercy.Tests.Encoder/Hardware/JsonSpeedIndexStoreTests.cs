@@ -31,30 +31,30 @@ public class JsonSpeedIndexStoreTests : IDisposable
 
     public JsonSpeedIndexStoreTests()
     {
-        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: "speed-index-test-" + Ulid.NewUlid());
-        Directory.CreateDirectory(path: _tempDir);
+        _tempDir = Path.Combine(Path.GetTempPath(), "speed-index-test-" + Ulid.NewUlid());
+        Directory.CreateDirectory(_tempDir);
         _storage = TestStorageFactory.CreateLocal();
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempDir))
-            Directory.Delete(path: _tempDir, recursive: true);
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
     }
 
     private JsonSpeedIndexStore BuildStore(string? cachePath = null)
     {
         EncoderOptions opts = new()
         {
-            SpeedIndexCachePath = cachePath ?? Path.Combine(path1: _tempDir, path2: "speed-index.json"),
+            SpeedIndexCachePath = cachePath ?? Path.Combine(_tempDir, "speed-index.json"),
         };
-        return new(options: opts, logger: NullLogger<JsonSpeedIndexStore>.Instance, storage: _storage);
+        return new(opts, NullLogger<JsonSpeedIndexStore>.Instance, _storage);
     }
 
     [Fact]
     public void Load_NullPath_ReturnsNull()
     {
-        JsonSpeedIndexStore store = BuildStore(cachePath: "");
+        JsonSpeedIndexStore store = BuildStore("");
 
         store.Load().Should().BeNull();
     }
@@ -63,7 +63,7 @@ public class JsonSpeedIndexStoreTests : IDisposable
     public void Load_MissingFile_ReturnsNull()
     {
         JsonSpeedIndexStore store = BuildStore(
-            cachePath: Path.Combine(path1: _tempDir, path2: "does_not_exist.json")
+            Path.Combine(_tempDir, "does_not_exist.json")
         );
 
         store.Load().Should().BeNull();
@@ -74,9 +74,9 @@ public class JsonSpeedIndexStoreTests : IDisposable
     [Fact]
     public void Load_CorruptFile_DegradesToNull()
     {
-        string cache = Path.Combine(path1: _tempDir, path2: "corrupt.json");
-        File.WriteAllText(path: cache, contents: "{ not valid json");
-        JsonSpeedIndexStore store = BuildStore(cachePath: cache);
+        string cache = Path.Combine(_tempDir, "corrupt.json");
+        File.WriteAllText(cache, "{ not valid json");
+        JsonSpeedIndexStore store = BuildStore(cache);
 
         store.Load().Should().BeNull();
     }
@@ -85,10 +85,10 @@ public class JsonSpeedIndexStoreTests : IDisposable
     public void Save_NullPath_NoOps()
     {
         // No cache path → save is a no-op; LastCalibratedAt stays null.
-        JsonSpeedIndexStore store = BuildStore(cachePath: "");
-        SpeedIndex index = new(Measurements: new());
+        JsonSpeedIndexStore store = BuildStore("");
+        SpeedIndex index = new(new());
 
-        store.Save(index: index);
+        store.Save(index);
 
         store.LastCalibratedAt.Should().BeNull();
     }
@@ -96,47 +96,47 @@ public class JsonSpeedIndexStoreTests : IDisposable
     [Fact]
     public void Save_ThenLoad_RoundTripsMeasurements()
     {
-        string cache = Path.Combine(path1: _tempDir, path2: "roundtrip.json");
-        JsonSpeedIndexStore store = BuildStore(cachePath: cache);
-        DateTime measuredAt = new(year: 2026, month: 5, day: 22, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc);
+        string cache = Path.Combine(_tempDir, "roundtrip.json");
+        JsonSpeedIndexStore store = BuildStore(cache);
+        DateTime measuredAt = new(2026, 5, 22, 12, 0, 0, DateTimeKind.Utc);
 
         SpeedIndex original = new(
-            Measurements: new()
+            new()
             {
-                [key: new(Codec: VideoCodecType.H264, Encoder: "h264_nvenc", Width: 1920, DeviceName: "RTX 4080")] = new(
-                    Fps: 240.0,
-                    SpeedMultiplier: 8.0,
-                    MeasuredAt: measuredAt
+                [new(VideoCodecType.H264, "h264_nvenc", 1920, "RTX 4080")] = new(
+                    240.0,
+                    8.0,
+                    measuredAt
                 ),
-                [key: new(Codec: VideoCodecType.H265, Encoder: "libx265", Width: 1280, DeviceName: null)] = new(
-                    Fps: 60.0,
-                    SpeedMultiplier: 2.0,
-                    MeasuredAt: measuredAt
+                [new(VideoCodecType.H265, "libx265", 1280, null)] = new(
+                    60.0,
+                    2.0,
+                    measuredAt
                 ),
             }
         );
 
-        store.Save(index: original);
+        store.Save(original);
 
         // Fresh store, same file — exercises the disk persistence layer.
-        JsonSpeedIndexStore fresh = BuildStore(cachePath: cache);
+        JsonSpeedIndexStore fresh = BuildStore(cache);
         SpeedIndex? loaded = fresh.Load();
 
         loaded.Should().NotBeNull();
-        loaded!.Measurements.Should().HaveCount(expected: 2);
+        loaded!.Measurements.Should().HaveCount(2);
         loaded
-            .GetSpeed(codec: VideoCodecType.H264, encoder: "h264_nvenc", width: 1920, deviceName: "RTX 4080")
+            .GetSpeed(VideoCodecType.H264, "h264_nvenc", 1920, "RTX 4080")
             .Should()
-            .BeEquivalentTo(expectation: new SpeedMeasurement(Fps: 240.0, SpeedMultiplier: 8.0, MeasuredAt: measuredAt));
+            .BeEquivalentTo(new SpeedMeasurement(240.0, 8.0, measuredAt));
         loaded
-            .GetSpeed(codec: VideoCodecType.H265, encoder: "libx265", width: 1280, deviceName: null)
+            .GetSpeed(VideoCodecType.H265, "libx265", 1280, null)
             .Should()
-            .BeEquivalentTo(expectation: new SpeedMeasurement(Fps: 60.0, SpeedMultiplier: 2.0, MeasuredAt: measuredAt));
+            .BeEquivalentTo(new SpeedMeasurement(60.0, 2.0, measuredAt));
 
         // LastCalibratedAt populated on load + matches store-time within
         // the same UTC second.
         fresh.LastCalibratedAt.Should().NotBeNull();
-        fresh.LoadedSchemaVersion.Should().Be(expected: HardwareBenchmark.BenchmarkSchemaVersion);
+        fresh.LoadedSchemaVersion.Should().Be(HardwareBenchmark.BenchmarkSchemaVersion);
     }
 
     [Fact]
@@ -145,29 +145,29 @@ public class JsonSpeedIndexStoreTests : IDisposable
         JsonSpeedIndexStore store = BuildStore();
         DateTime before = DateTime.UtcNow;
 
-        store.Save(index: new(Measurements: new()));
+        store.Save(new(new()));
 
         store.LastCalibratedAt.Should().NotBeNull();
-        store.LastCalibratedAt!.Value.Should().BeOnOrAfter(expected: before);
-        store.LoadedSchemaVersion.Should().Be(expected: HardwareBenchmark.BenchmarkSchemaVersion);
+        store.LastCalibratedAt!.Value.Should().BeOnOrAfter(before);
+        store.LoadedSchemaVersion.Should().Be(HardwareBenchmark.BenchmarkSchemaVersion);
     }
 
     [Fact]
     public void Save_OverwritesExistingCache()
     {
-        string cache = Path.Combine(path1: _tempDir, path2: "overwrite.json");
-        JsonSpeedIndexStore store = BuildStore(cachePath: cache);
+        string cache = Path.Combine(_tempDir, "overwrite.json");
+        JsonSpeedIndexStore store = BuildStore(cache);
 
         // Initial save.
-        store.Save(index: new(Measurements: new()));
+        store.Save(new(new()));
         store.Save(
-            index: new(
-                Measurements: new()
+            new(
+                new()
                 {
-                    [key: new(Codec: VideoCodecType.Av1, Encoder: "av1_nvenc", Width: 3840, DeviceName: "RTX 4090")] = new(
-                        Fps: 120.0,
-                        SpeedMultiplier: 4.0,
-                        MeasuredAt: DateTime.UtcNow
+                    [new(VideoCodecType.Av1, "av1_nvenc", 3840, "RTX 4090")] = new(
+                        120.0,
+                        4.0,
+                        DateTime.UtcNow
                     ),
                 }
             )
@@ -175,7 +175,7 @@ public class JsonSpeedIndexStoreTests : IDisposable
 
         SpeedIndex? loaded = store.Load();
         loaded.Should().NotBeNull();
-        loaded!.Measurements.Should().HaveCount(expected: 1);
-        loaded.GetSpeed(codec: VideoCodecType.Av1, encoder: "av1_nvenc", width: 3840, deviceName: "RTX 4090").Should().NotBeNull();
+        loaded!.Measurements.Should().HaveCount(1);
+        loaded.GetSpeed(VideoCodecType.Av1, "av1_nvenc", 3840, "RTX 4090").Should().NotBeNull();
     }
 }

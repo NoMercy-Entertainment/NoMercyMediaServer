@@ -20,14 +20,14 @@ namespace NoMercy.Tests.Storage;
 /// to parse" (a syntactically valid <c>null</c> literal is valid JSON but an
 /// invalid config).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class NfsDriverConfigTests
 {
     [Fact]
     public void Parse_json_null_literal_throws()
     {
-        Action act = () => NfsDriverConfig.Parse(json: "null", folderId: Ulid.NewUlid());
+        Action act = () => NfsDriverConfig.Parse("null", Ulid.NewUlid());
 
-        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*null*");
+        act.Should().Throw<ArgumentException>().WithMessage("*null*");
     }
 }

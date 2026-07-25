@@ -24,7 +24,7 @@ public class SignalRNotificationEventHandler : IDisposable
     public SignalRNotificationEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
     {
         _clientMessenger = clientMessenger;
-        _subscriptions.Add(item: eventBus.Subscribe<UserNotifiedEvent>(handler: OnUserNotification));
+        _subscriptions.Add(eventBus.Subscribe<UserNotifiedEvent>(OnUserNotification));
     }
 
     internal async Task OnUserNotification(UserNotifiedEvent @event, CancellationToken ct)
@@ -37,9 +37,9 @@ public class SignalRNotificationEventHandler : IDisposable
         };
 
         if (@event.UserId is { } userId)
-            await _clientMessenger.SendTo(name: "Notify", endpoint: @event.Hub, userId: userId, data: payload);
+            await _clientMessenger.SendTo("Notify", @event.Hub, userId, payload);
         else
-            await _clientMessenger.SendToAll(name: "Notify", endpoint: @event.Hub, data: payload);
+            await _clientMessenger.SendToAll("Notify", @event.Hub, payload);
     }
 
     public void Dispose()

@@ -30,31 +30,31 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 // in ParseChaptersVtt itself, and GetChapterHashListAsync end-to-end against
 // a real chapter file on disk.
 // ---------------------------------------------------------------------------
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class FileManagerChapterTimestampTests : IDisposable
 {
     private readonly string _tempRoot;
 
     public FileManagerChapterTimestampTests()
     {
-        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-chapters-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempRoot);
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"nm-chapters-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempRoot);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempRoot))
-            Directory.Delete(path: _tempRoot, recursive: true);
+        if (Directory.Exists(_tempRoot))
+            Directory.Delete(_tempRoot, true);
     }
 
     private static int InvokeParseVttTimestampMs(string timestamp)
     {
         MethodInfo method =
             typeof(FileManager).GetMethod(
-                name: "ParseVttTimestampMs",
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
-            ) ?? throw new InvalidOperationException(message: "ParseVttTimestampMs not found");
-        return (int)method.Invoke(obj: null, parameters: [timestamp])!;
+                "ParseVttTimestampMs",
+                BindingFlags.NonPublic | BindingFlags.Static
+            ) ?? throw new InvalidOperationException("ParseVttTimestampMs not found");
+        return (int)method.Invoke(null, [timestamp])!;
     }
 
     // -----------------------------------------------------------------------
@@ -64,25 +64,25 @@ public sealed class FileManagerChapterTimestampTests : IDisposable
     [Fact]
     public void ParseVttTimestampMs_ThreePart_Valid_ReturnsWholeMilliseconds()
     {
-        InvokeParseVttTimestampMs(timestamp: "01:02:03.500").Should().Be(expected: 3723500);
+        InvokeParseVttTimestampMs("01:02:03.500").Should().Be(3723500);
     }
 
     [Fact]
     public void ParseVttTimestampMs_ThreePart_HoursUnparseable_ReturnsMinusOne()
     {
-        InvokeParseVttTimestampMs(timestamp: "ab:02:03.500").Should().Be(expected: -1);
+        InvokeParseVttTimestampMs("ab:02:03.500").Should().Be(-1);
     }
 
     [Fact]
     public void ParseVttTimestampMs_ThreePart_MinutesUnparseable_ReturnsMinusOne()
     {
-        InvokeParseVttTimestampMs(timestamp: "01:ab:03.500").Should().Be(expected: -1);
+        InvokeParseVttTimestampMs("01:ab:03.500").Should().Be(-1);
     }
 
     [Fact]
     public void ParseVttTimestampMs_ThreePart_SecondsUnparseable_ReturnsMinusOne()
     {
-        InvokeParseVttTimestampMs(timestamp: "01:02:ab").Should().Be(expected: -1);
+        InvokeParseVttTimestampMs("01:02:ab").Should().Be(-1);
     }
 
     // -----------------------------------------------------------------------
@@ -92,19 +92,19 @@ public sealed class FileManagerChapterTimestampTests : IDisposable
     [Fact]
     public void ParseVttTimestampMs_TwoPart_Valid_ReturnsWholeMilliseconds()
     {
-        InvokeParseVttTimestampMs(timestamp: "02:03.500").Should().Be(expected: 123500);
+        InvokeParseVttTimestampMs("02:03.500").Should().Be(123500);
     }
 
     [Fact]
     public void ParseVttTimestampMs_TwoPart_MinutesUnparseable_ReturnsMinusOne()
     {
-        InvokeParseVttTimestampMs(timestamp: "ab:03.500").Should().Be(expected: -1);
+        InvokeParseVttTimestampMs("ab:03.500").Should().Be(-1);
     }
 
     [Fact]
     public void ParseVttTimestampMs_TwoPart_SecondsUnparseable_ReturnsMinusOne()
     {
-        InvokeParseVttTimestampMs(timestamp: "02:ab").Should().Be(expected: -1);
+        InvokeParseVttTimestampMs("02:ab").Should().Be(-1);
     }
 
     // -----------------------------------------------------------------------
@@ -115,12 +115,12 @@ public sealed class FileManagerChapterTimestampTests : IDisposable
     // -----------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: "01:02:03:04")]
-    [InlineData(data: "05")]
-    [InlineData(data: "")]
+    [InlineData("01:02:03:04")]
+    [InlineData("05")]
+    [InlineData("")]
     public void ParseVttTimestampMs_WrongPartCount_ReturnsMinusOne(string timestamp)
     {
-        InvokeParseVttTimestampMs(timestamp: timestamp).Should().Be(expected: -1);
+        InvokeParseVttTimestampMs(timestamp).Should().Be(-1);
     }
 
     // -----------------------------------------------------------------------
@@ -129,17 +129,17 @@ public sealed class FileManagerChapterTimestampTests : IDisposable
     // -----------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: "NOTE this is a comment")]
-    [InlineData(data: "STYLE\n::cue { color: white; }")]
-    [InlineData(data: "REGION\nid:bottom\nwidth:40%")]
+    [InlineData("NOTE this is a comment")]
+    [InlineData("STYLE\n::cue { color: white; }")]
+    [InlineData("REGION\nid:bottom\nwidth:40%")]
     public void ParseChaptersVtt_MetadataBlock_IsSkipped_NotEmittedAsChapter(string metadataBlock)
     {
         string text =
             "WEBVTT\n\n" + metadataBlock + "\n\n" + "00:00:10.000 --> 00:00:20.000\nReal Chapter\n";
 
-        List<IChapter> chapters = FileManager.ParseChaptersVtt(text: text);
+        List<IChapter> chapters = FileManager.ParseChaptersVtt(text);
 
-        chapters.Should().ContainSingle(predicate: c => c.Title == "Real Chapter");
+        chapters.Should().ContainSingle(c => c.Title == "Real Chapter");
     }
 
     // -----------------------------------------------------------------------
@@ -154,17 +154,17 @@ public sealed class FileManagerChapterTimestampTests : IDisposable
         Mock<IStorageDriver> driverMock = new();
         Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
         return new(
-            fileRepository: repoMock.Object,
-            storageFactory: factoryMock.Object,
-            storageDriver: driverMock.Object,
-            mediaAnalyzer: mediaAnalyzerMock.Object
+            repoMock.Object,
+            factoryMock.Object,
+            driverMock.Object,
+            mediaAnalyzerMock.Object
         );
     }
 
     private static IStorage BuildLocalStorage()
     {
         LocalStorageDriver driver = new();
-        return new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
+        return new LocalStorage(driver, new StoragePathGuard([], driver));
     }
 
     private static async Task<List<IChapter>> InvokeGetChapterHashListAsync(
@@ -176,48 +176,48 @@ public sealed class FileManagerChapterTimestampTests : IDisposable
     {
         MethodInfo method =
             typeof(FileManager).GetMethod(
-                name: "GetChapterHashListAsync",
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
-            ) ?? throw new InvalidOperationException(message: "GetChapterHashListAsync not found");
+                "GetChapterHashListAsync",
+                BindingFlags.NonPublic | BindingFlags.Instance
+            ) ?? throw new InvalidOperationException("GetChapterHashListAsync not found");
 
-        return await (Task<List<IChapter>>)method.Invoke(obj: manager, parameters: [storage, hostFolder, file])!;
+        return await (Task<List<IChapter>>)method.Invoke(manager, [storage, hostFolder, file])!;
     }
 
     [Fact]
     public async Task GetChapterHashListAsync_RealChapterFile_ReturnsParsedChapters()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.Chapters");
-        Directory.CreateDirectory(path: hostDir);
+        string hostDir = Path.Combine(_tempRoot, "Movie.Chapters");
+        Directory.CreateDirectory(hostDir);
         File.WriteAllText(
-            path: Path.Combine(path1: hostDir, path2: "chapters.vtt"),
-            contents: "WEBVTT\n\nChapter 1\n00:00:00.000 --> 00:01:00.000\nIntro\n"
+            Path.Combine(hostDir, "chapters.vtt"),
+            "WEBVTT\n\nChapter 1\n00:00:00.000 --> 00:01:00.000\nIntro\n"
         );
 
         List<IChapter> result = await InvokeGetChapterHashListAsync(
-            manager: BuildFileManager(),
-            storage: BuildLocalStorage(),
-            hostFolder: hostDir,
-            file: "chapters.vtt"
+            BuildFileManager(),
+            BuildLocalStorage(),
+            hostDir,
+            "chapters.vtt"
         );
 
         result.Should().ContainSingle();
-        result[index: 0].Title.Should().Be(expected: "Intro");
-        result[index: 0].StartTime.Should().Be(expected: 0);
-        result[index: 0].EndTime.Should().Be(expected: 60000);
+        result[0].Title.Should().Be("Intro");
+        result[0].StartTime.Should().Be(0);
+        result[0].EndTime.Should().Be(60000);
     }
 
     [Fact]
     public async Task GetChapterHashListAsync_EmptyChapterFile_ReturnsEmptyList()
     {
-        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.EmptyChapters");
-        Directory.CreateDirectory(path: hostDir);
-        File.WriteAllText(path: Path.Combine(path1: hostDir, path2: "chapters.vtt"), contents: "WEBVTT\n");
+        string hostDir = Path.Combine(_tempRoot, "Movie.EmptyChapters");
+        Directory.CreateDirectory(hostDir);
+        File.WriteAllText(Path.Combine(hostDir, "chapters.vtt"), "WEBVTT\n");
 
         List<IChapter> result = await InvokeGetChapterHashListAsync(
-            manager: BuildFileManager(),
-            storage: BuildLocalStorage(),
-            hostFolder: hostDir,
-            file: "chapters.vtt"
+            BuildFileManager(),
+            BuildLocalStorage(),
+            hostDir,
+            "chapters.vtt"
         );
 
         result.Should().BeEmpty();

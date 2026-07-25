@@ -15,18 +15,18 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbReleaseDate
 {
-    [JsonProperty(propertyName: "certification")]
+    [JsonProperty("certification")]
     public string Certification { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "iso_639_1")]
+    [JsonProperty("iso_639_1")]
     public string Iso6391 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "release_date")]
+    [JsonProperty("release_date")]
     public DateTime ReleaseDateReleaseDate { get; set; } = DateTime.MinValue;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public int Type { get; set; }
 
-    [JsonProperty(propertyName: "note")]
+    [JsonProperty("note")]
     public string? Note { get; set; }
 }

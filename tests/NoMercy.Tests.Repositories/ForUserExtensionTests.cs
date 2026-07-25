@@ -31,11 +31,11 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        List<Movie> movies = await context.Movies.AsNoTracking().ForUser(userId: _userId).ToListAsync();
+        List<Movie> movies = await context.Movies.AsNoTracking().ForUser(_userId).ToListAsync();
 
-        Assert.Equal(expected: 2, actual: movies.Count);
-        Assert.Contains(collection: movies, filter: m => m.Title == "Spirited Away");
-        Assert.Contains(collection: movies, filter: m => m.Title == "Pulp Fiction");
+        Assert.Equal(2, movies.Count);
+        Assert.Contains(movies, m => m.Title == "Spirited Away");
+        Assert.Contains(movies, m => m.Title == "Pulp Fiction");
     }
 
     [Fact]
@@ -45,10 +45,10 @@ public class ForUserExtensionTests
 
         List<Movie> movies = await context
             .Movies.AsNoTracking()
-            .ForUser(userId: _otherUserId)
+            .ForUser(_otherUserId)
             .ToListAsync();
 
-        Assert.Empty(collection: movies);
+        Assert.Empty(movies);
     }
 
     [Fact]
@@ -56,10 +56,10 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        List<Tv> shows = await context.Tvs.AsNoTracking().ForUser(userId: _userId).ToListAsync();
+        List<Tv> shows = await context.Tvs.AsNoTracking().ForUser(_userId).ToListAsync();
 
-        Assert.Single(collection: shows);
-        Assert.Equal(expected: "Breaking Bad", actual: shows[index: 0].Title);
+        Assert.Single(shows);
+        Assert.Equal("Breaking Bad", shows[0].Title);
     }
 
     [Fact]
@@ -67,9 +67,9 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        List<Tv> shows = await context.Tvs.AsNoTracking().ForUser(userId: _otherUserId).ToListAsync();
+        List<Tv> shows = await context.Tvs.AsNoTracking().ForUser(_otherUserId).ToListAsync();
 
-        Assert.Empty(collection: shows);
+        Assert.Empty(shows);
     }
 
     [Fact]
@@ -79,12 +79,12 @@ public class ForUserExtensionTests
 
         List<Library> libraries = await context
             .Libraries.AsNoTracking()
-            .ForUser(userId: _userId)
+            .ForUser(_userId)
             .ToListAsync();
 
-        Assert.Equal(expected: 2, actual: libraries.Count);
-        Assert.Contains(collection: libraries, filter: l => l.Title == "Movies");
-        Assert.Contains(collection: libraries, filter: l => l.Title == "TV Shows");
+        Assert.Equal(2, libraries.Count);
+        Assert.Contains(libraries, l => l.Title == "Movies");
+        Assert.Contains(libraries, l => l.Title == "TV Shows");
     }
 
     [Fact]
@@ -94,10 +94,10 @@ public class ForUserExtensionTests
 
         List<Library> libraries = await context
             .Libraries.AsNoTracking()
-            .ForUser(userId: _otherUserId)
+            .ForUser(_otherUserId)
             .ToListAsync();
 
-        Assert.Empty(collection: libraries);
+        Assert.Empty(libraries);
     }
 
     [Fact]
@@ -113,23 +113,23 @@ public class ForUserExtensionTests
             TitleSort = "test collection",
             LibraryId = SeedConstants.MovieLibraryId,
         };
-        context.Collections.Add(entity: collection);
+        context.Collections.Add(collection);
         await context.SaveChangesAsync();
 
         List<Collection> collections = await context
             .Collections.AsNoTracking()
-            .ForUser(userId: _userId)
+            .ForUser(_userId)
             .ToListAsync();
 
-        Assert.Single(collection: collections);
-        Assert.Equal(expected: "Test Collection", actual: collections[index: 0].Title);
+        Assert.Single(collections);
+        Assert.Equal("Test Collection", collections[0].Title);
 
         List<Collection> otherUserCollections = await context
             .Collections.AsNoTracking()
-            .ForUser(userId: _otherUserId)
+            .ForUser(_otherUserId)
             .ToListAsync();
 
-        Assert.Empty(collection: otherUserCollections);
+        Assert.Empty(otherUserCollections);
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public class ForUserExtensionTests
         // Add an album to the existing movie library (has user access already seeded)
         Folder folder = await context.Folders.FirstAsync();
         context.Albums.Add(
-            entity: new()
+            new()
             {
                 Id = Guid.NewGuid(),
                 Name = "Test Album",
@@ -152,17 +152,17 @@ public class ForUserExtensionTests
         );
         await context.SaveChangesAsync();
 
-        List<Album> albums = await context.Albums.AsNoTracking().ForUser(userId: _userId).ToListAsync();
+        List<Album> albums = await context.Albums.AsNoTracking().ForUser(_userId).ToListAsync();
 
-        Assert.Single(collection: albums);
-        Assert.Equal(expected: "Test Album", actual: albums[index: 0].Name);
+        Assert.Single(albums);
+        Assert.Equal("Test Album", albums[0].Name);
 
         List<Album> otherUserAlbums = await context
             .Albums.AsNoTracking()
-            .ForUser(userId: _otherUserId)
+            .ForUser(_otherUserId)
             .ToListAsync();
 
-        Assert.Empty(collection: otherUserAlbums);
+        Assert.Empty(otherUserAlbums);
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class ForUserExtensionTests
         Ulid musicLibraryId = Ulid.NewUlid();
         Ulid musicFolderId = Ulid.NewUlid();
         context.Libraries.Add(
-            entity: new()
+            new()
             {
                 Id = musicLibraryId,
                 Title = "Music",
@@ -183,7 +183,7 @@ public class ForUserExtensionTests
             }
         );
         context.Drivers.Add(
-            entity: new()
+            new()
             {
                 Id = Driver.SystemLocalDriverId,
                 Name = "Local Filesystem",
@@ -194,7 +194,7 @@ public class ForUserExtensionTests
             }
         );
         context.Folders.Add(
-            entity: new()
+            new()
             {
                 Id = musicFolderId,
                 Path = "/media/music",
@@ -202,7 +202,7 @@ public class ForUserExtensionTests
             }
         );
         context.Users.Add(
-            entity: new()
+            new()
             {
                 Id = _userId,
                 Email = "test@nomercy.tv",
@@ -211,9 +211,9 @@ public class ForUserExtensionTests
                 Allowed = true,
             }
         );
-        context.LibraryUser.Add(entity: new(libraryId: musicLibraryId, userId: _userId));
+        context.LibraryUser.Add(new(musicLibraryId, _userId));
         context.Artists.Add(
-            entity: new()
+            new()
             {
                 Id = Guid.NewGuid(),
                 Name = "Test Artist",
@@ -224,17 +224,17 @@ public class ForUserExtensionTests
         );
         await context.SaveChangesAsync();
 
-        List<Artist> artists = await context.Artists.AsNoTracking().ForUser(userId: _userId).ToListAsync();
+        List<Artist> artists = await context.Artists.AsNoTracking().ForUser(_userId).ToListAsync();
 
-        Assert.Single(collection: artists);
-        Assert.Equal(expected: "Test Artist", actual: artists[index: 0].Name);
+        Assert.Single(artists);
+        Assert.Equal("Test Artist", artists[0].Name);
 
         List<Artist> otherUserArtists = await context
             .Artists.AsNoTracking()
-            .ForUser(userId: _otherUserId)
+            .ForUser(_otherUserId)
             .ToListAsync();
 
-        Assert.Empty(collection: otherUserArtists);
+        Assert.Empty(otherUserArtists);
     }
 
     [Fact]
@@ -244,12 +244,12 @@ public class ForUserExtensionTests
 
         Movie? movie = await context
             .Movies.AsNoTracking()
-            .Where(predicate: m => m.Id == 129)
-            .ForUser(userId: _userId)
+            .Where(m => m.Id == 129)
+            .ForUser(_userId)
             .FirstOrDefaultAsync();
 
-        Assert.NotNull(@object: movie);
-        Assert.Equal(expected: "Spirited Away", actual: movie.Title);
+        Assert.NotNull(movie);
+        Assert.Equal("Spirited Away", movie.Title);
     }
 
     [Fact]
@@ -257,13 +257,13 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        int movieCount = await context.Movies.AsNoTracking().ForUser(userId: _userId).CountAsync();
+        int movieCount = await context.Movies.AsNoTracking().ForUser(_userId).CountAsync();
 
-        Assert.Equal(expected: 2, actual: movieCount);
+        Assert.Equal(2, movieCount);
 
-        int otherUserCount = await context.Movies.AsNoTracking().ForUser(userId: _otherUserId).CountAsync();
+        int otherUserCount = await context.Movies.AsNoTracking().ForUser(_otherUserId).CountAsync();
 
-        Assert.Equal(expected: 0, actual: otherUserCount);
+        Assert.Equal(0, otherUserCount);
     }
 
     [Fact]
@@ -273,11 +273,11 @@ public class ForUserExtensionTests
 
         // The seeded user has access to both movie and TV libraries
         // ForUser on Movies should return movies, ForUser on Tvs should return shows
-        int movieCount = await context.Movies.AsNoTracking().ForUser(userId: _userId).CountAsync();
-        int tvCount = await context.Tvs.AsNoTracking().ForUser(userId: _userId).CountAsync();
+        int movieCount = await context.Movies.AsNoTracking().ForUser(_userId).CountAsync();
+        int tvCount = await context.Tvs.AsNoTracking().ForUser(_userId).CountAsync();
 
-        Assert.Equal(expected: 2, actual: movieCount);
-        Assert.Equal(expected: 1, actual: tvCount);
+        Assert.Equal(2, movieCount);
+        Assert.Equal(1, tvCount);
     }
 
     [Fact]
@@ -288,7 +288,7 @@ public class ForUserExtensionTests
         // Add a second user with access to only the TV library
         Guid partialUserId = Guid.NewGuid();
         context.Users.Add(
-            entity: new()
+            new()
             {
                 Id = partialUserId,
                 Email = "partial@nomercy.tv",
@@ -297,19 +297,19 @@ public class ForUserExtensionTests
                 Allowed = true,
             }
         );
-        context.LibraryUser.Add(entity: new(libraryId: SeedConstants.TvLibraryId, userId: partialUserId));
+        context.LibraryUser.Add(new(SeedConstants.TvLibraryId, partialUserId));
         await context.SaveChangesAsync();
 
         // Partial user should see TV shows but not movies
         List<Movie> movies = await context
             .Movies.AsNoTracking()
-            .ForUser(userId: partialUserId)
+            .ForUser(partialUserId)
             .ToListAsync();
-        List<Tv> shows = await context.Tvs.AsNoTracking().ForUser(userId: partialUserId).ToListAsync();
+        List<Tv> shows = await context.Tvs.AsNoTracking().ForUser(partialUserId).ToListAsync();
 
-        Assert.Empty(collection: movies);
-        Assert.Single(collection: shows);
-        Assert.Equal(expected: "Breaking Bad", actual: shows[index: 0].Title);
+        Assert.Empty(movies);
+        Assert.Single(shows);
+        Assert.Equal("Breaking Bad", shows[0].Title);
     }
 
     [Fact]
@@ -318,10 +318,10 @@ public class ForUserExtensionTests
         (MediaContext context, SqlCaptureInterceptor interceptor) =
             TestMediaContextFactory.CreateSeededContextWithInterceptor();
 
-        await context.Movies.AsNoTracking().ForUser(userId: _userId).ToListAsync();
+        await context.Movies.AsNoTracking().ForUser(_userId).ToListAsync();
 
-        string sql = string.Join(separator: " ", values: interceptor.CapturedSql);
-        Assert.Contains(expectedSubstring: "EXISTS", actualString: sql, comparisonType: StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(expectedSubstring: "LibraryUser", actualString: sql, comparisonType: StringComparison.OrdinalIgnoreCase);
+        string sql = string.Join(" ", interceptor.CapturedSql);
+        Assert.Contains("EXISTS", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("LibraryUser", sql, StringComparison.OrdinalIgnoreCase);
     }
 }

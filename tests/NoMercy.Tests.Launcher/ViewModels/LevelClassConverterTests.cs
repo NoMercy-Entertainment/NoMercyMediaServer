@@ -26,44 +26,44 @@ namespace NoMercy.Tests.Launcher.ViewModels;
 public sealed class LevelClassConverterTests
 {
     private static IBrush Convert(FuncValueConverter<string, IBrush> converter, string? level) =>
-        (IBrush)converter.Convert(value: level, targetType: typeof(IBrush), parameter: null, culture: CultureInfo.InvariantCulture)!;
+        (IBrush)converter.Convert(level, typeof(IBrush), null, CultureInfo.InvariantCulture)!;
 
     [Theory]
-    [InlineData(data: ["fatal", "#DC2626"])]
-    [InlineData(data: ["FATAL", "#DC2626"])]
-    [InlineData(data: ["error", "#EF4444"])]
-    [InlineData(data: ["warning", "#EAB308"])]
-    [InlineData(data: ["debug", "#6B7280"])]
-    [InlineData(data: ["verbose", "#4B5563"])]
+    [InlineData(["fatal", "#DC2626"])]
+    [InlineData(["FATAL", "#DC2626"])]
+    [InlineData(["error", "#EF4444"])]
+    [InlineData(["warning", "#EAB308"])]
+    [InlineData(["debug", "#6B7280"])]
+    [InlineData(["verbose", "#4B5563"])]
     public void LevelColorConverter_KnownLevel_ReturnsExpectedColor(
         string level,
         string expectedHex
     )
     {
-        IBrush brush = Convert(converter: LevelColorConverter.Instance, level: level);
+        IBrush brush = Convert(LevelColorConverter.Instance, level);
 
         brush.Should().BeOfType<SolidColorBrush>();
-        ((SolidColorBrush)brush).Color.Should().Be(expected: Color.Parse(s: expectedHex));
+        ((SolidColorBrush)brush).Color.Should().Be(Color.Parse(expectedHex));
     }
 
     [Theory]
-    [InlineData(data: "information")]
-    [InlineData(data: "unknown-level")]
-    [InlineData(data: null)]
+    [InlineData("information")]
+    [InlineData("unknown-level")]
+    [InlineData(null)]
     public void LevelColorConverter_UnknownOrNullLevel_FallsBackToNeutralGray(string? level)
     {
-        IBrush brush = Convert(converter: LevelColorConverter.Instance, level: level);
+        IBrush brush = Convert(LevelColorConverter.Instance, level);
 
-        ((SolidColorBrush)brush).Color.Should().Be(expected: Color.Parse(s: "#D1D5DB"));
+        ((SolidColorBrush)brush).Color.Should().Be(Color.Parse("#D1D5DB"));
     }
 
     [Theory]
-    [InlineData(data: ["fatal", FontWeight.Bold])]
-    [InlineData(data: ["error", FontWeight.Bold])]
-    [InlineData(data: ["ERROR", FontWeight.Bold])]
-    [InlineData(data: ["warning", FontWeight.Normal])]
-    [InlineData(data: ["information", FontWeight.Normal])]
-    [InlineData(data: [null, FontWeight.Normal])]
+    [InlineData(["fatal", FontWeight.Bold])]
+    [InlineData(["error", FontWeight.Bold])]
+    [InlineData(["ERROR", FontWeight.Bold])]
+    [InlineData(["warning", FontWeight.Normal])]
+    [InlineData(["information", FontWeight.Normal])]
+    [InlineData([null, FontWeight.Normal])]
     public void LevelWeightConverter_ReturnsBoldOnlyForFatalOrError(
         string? level,
         FontWeight expected
@@ -71,38 +71,38 @@ public sealed class LevelClassConverterTests
     {
         FontWeight weight = (FontWeight)
             LevelWeightConverter.Instance.Convert(
-                value: level,
-                targetType: typeof(FontWeight),
-                parameter: null,
-                culture: CultureInfo.InvariantCulture
+                level,
+                typeof(FontWeight),
+                null,
+                CultureInfo.InvariantCulture
             )!;
 
-        weight.Should().Be(expected: expected);
+        weight.Should().Be(expected);
     }
 
     [Fact]
     public void LogColorConverter_ValidHex_ParsesToMatchingBrush()
     {
-        IBrush brush = Convert(converter: LogColorConverter.Instance, level: "#22C55E");
+        IBrush brush = Convert(LogColorConverter.Instance, "#22C55E");
 
-        ((SolidColorBrush)brush).Color.Should().Be(expected: Color.Parse(s: "#22C55E"));
+        ((SolidColorBrush)brush).Color.Should().Be(Color.Parse("#22C55E"));
     }
 
     [Theory]
-    [InlineData(data: null)]
-    [InlineData(data: "")]
+    [InlineData(null)]
+    [InlineData("")]
     public void LogColorConverter_NullOrEmpty_ReturnsDefaultBrush(string? colorHex)
     {
-        IBrush brush = Convert(converter: LogColorConverter.Instance, level: colorHex);
+        IBrush brush = Convert(LogColorConverter.Instance, colorHex);
 
-        ((SolidColorBrush)brush).Color.Should().Be(expected: Color.Parse(s: "#D1D5DB"));
+        ((SolidColorBrush)brush).Color.Should().Be(Color.Parse("#D1D5DB"));
     }
 
     [Fact]
     public void LogColorConverter_UnparsableColor_FallsBackToDefaultBrushInsteadOfThrowing()
     {
-        IBrush brush = Convert(converter: LogColorConverter.Instance, level: "not-a-color");
+        IBrush brush = Convert(LogColorConverter.Instance, "not-a-color");
 
-        ((SolidColorBrush)brush).Color.Should().Be(expected: Color.Parse(s: "#D1D5DB"));
+        ((SolidColorBrush)brush).Color.Should().Be(Color.Parse("#D1D5DB"));
     }
 }

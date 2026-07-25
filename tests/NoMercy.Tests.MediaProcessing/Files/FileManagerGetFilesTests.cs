@@ -31,21 +31,21 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 // video/audio file would make MediaScan invoke the real ffprobe binary,
 // which is an external process this unit-test layer must not depend on.
 // ---------------------------------------------------------------------------
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class FileManagerGetFilesTests : IDisposable
 {
     private readonly string _tempRoot;
 
     public FileManagerGetFilesTests()
     {
-        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-getfiles-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempRoot);
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"nm-getfiles-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempRoot);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempRoot))
-            Directory.Delete(path: _tempRoot, recursive: true);
+        if (Directory.Exists(_tempRoot))
+            Directory.Delete(_tempRoot, true);
     }
 
     private static async Task<ConcurrentBag<MediaFolderExtend>> InvokeGetFiles(
@@ -56,12 +56,12 @@ public sealed class FileManagerGetFilesTests : IDisposable
     {
         MethodInfo method =
             typeof(FileManager).GetMethod(
-                name: "GetFiles",
-                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
-            ) ?? throw new InvalidOperationException(message: "GetFiles not found");
+                "GetFiles",
+                BindingFlags.NonPublic | BindingFlags.Instance
+            ) ?? throw new InvalidOperationException("GetFiles not found");
 
         return await (Task<ConcurrentBag<MediaFolderExtend>>)
-            method.Invoke(obj: manager, parameters: [library, folder])!;
+            method.Invoke(manager, [library, folder])!;
     }
 
     private static FileManager BuildManager(IStorageFactory factory)
@@ -69,13 +69,13 @@ public sealed class FileManagerGetFilesTests : IDisposable
         Mock<IFileRepository> repoMock = new();
         Mock<IStorageDriver> driverMock = new();
         Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
-        return new(fileRepository: repoMock.Object, storageFactory: factory, storageDriver: driverMock.Object, mediaAnalyzer: mediaAnalyzerMock.Object);
+        return new(repoMock.Object, factory, driverMock.Object, mediaAnalyzerMock.Object);
     }
 
     private Folder BuildFolderOnRealStorage(out IStorage storage)
     {
         LocalStorageDriver driver = new();
-        storage = new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
+        storage = new LocalStorage(driver, new StoragePathGuard([], driver));
         return new()
         {
             Id = Ulid.NewUlid(),
@@ -87,60 +87,60 @@ public sealed class FileManagerGetFilesTests : IDisposable
     [Fact]
     public async Task GetFiles_MovieLibrary_EmptyFolder_ReturnsRootEntryWithNoFiles()
     {
-        Folder folder = BuildFolderOnRealStorage(storage: out IStorage storage);
+        Folder folder = BuildFolderOnRealStorage(out IStorage storage);
         Mock<IStorageFactory> factoryMock = new();
-        factoryMock.Setup(expression: f => f.For(folder.Id, folder.DriverId, string.Empty)).Returns(value: storage);
+        factoryMock.Setup(f => f.For(folder.Id, folder.DriverId, string.Empty)).Returns(storage);
 
-        FileManager manager = BuildManager(factory: factoryMock.Object);
+        FileManager manager = BuildManager(factoryMock.Object);
         Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.MovieMediaType };
 
-        ConcurrentBag<MediaFolderExtend> result = await InvokeGetFiles(manager: manager, library: library, folder: folder);
+        ConcurrentBag<MediaFolderExtend> result = await InvokeGetFiles(manager, library, folder);
 
-        result.Should().ContainSingle(predicate: f => f.Path == _tempRoot);
+        result.Should().ContainSingle(f => f.Path == _tempRoot);
     }
 
     [Fact]
     public async Task GetFiles_TvLibrary_EmptyFolder_ReturnsRootEntryWithNoFiles()
     {
-        Folder folder = BuildFolderOnRealStorage(storage: out IStorage storage);
+        Folder folder = BuildFolderOnRealStorage(out IStorage storage);
         Mock<IStorageFactory> factoryMock = new();
-        factoryMock.Setup(expression: f => f.For(folder.Id, folder.DriverId, string.Empty)).Returns(value: storage);
+        factoryMock.Setup(f => f.For(folder.Id, folder.DriverId, string.Empty)).Returns(storage);
 
-        FileManager manager = BuildManager(factory: factoryMock.Object);
+        FileManager manager = BuildManager(factoryMock.Object);
         Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.TvMediaType };
 
-        ConcurrentBag<MediaFolderExtend> result = await InvokeGetFiles(manager: manager, library: library, folder: folder);
+        ConcurrentBag<MediaFolderExtend> result = await InvokeGetFiles(manager, library, folder);
 
-        result.Should().ContainSingle(predicate: f => f.Path == _tempRoot);
+        result.Should().ContainSingle(f => f.Path == _tempRoot);
     }
 
     [Fact]
     public async Task GetFiles_AnimeLibrary_EmptyFolder_ReturnsRootEntryWithNoFiles()
     {
-        Folder folder = BuildFolderOnRealStorage(storage: out IStorage storage);
+        Folder folder = BuildFolderOnRealStorage(out IStorage storage);
         Mock<IStorageFactory> factoryMock = new();
-        factoryMock.Setup(expression: f => f.For(folder.Id, folder.DriverId, string.Empty)).Returns(value: storage);
+        factoryMock.Setup(f => f.For(folder.Id, folder.DriverId, string.Empty)).Returns(storage);
 
-        FileManager manager = BuildManager(factory: factoryMock.Object);
+        FileManager manager = BuildManager(factoryMock.Object);
         Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.AnimeMediaType };
 
-        ConcurrentBag<MediaFolderExtend> result = await InvokeGetFiles(manager: manager, library: library, folder: folder);
+        ConcurrentBag<MediaFolderExtend> result = await InvokeGetFiles(manager, library, folder);
 
-        result.Should().ContainSingle(predicate: f => f.Path == _tempRoot);
+        result.Should().ContainSingle(f => f.Path == _tempRoot);
     }
 
     [Fact]
     public async Task GetFiles_MusicLibrary_UsesZeroDepth_StillReturnsRootEntry()
     {
-        Folder folder = BuildFolderOnRealStorage(storage: out IStorage storage);
+        Folder folder = BuildFolderOnRealStorage(out IStorage storage);
         Mock<IStorageFactory> factoryMock = new();
-        factoryMock.Setup(expression: f => f.For(folder.Id, folder.DriverId, string.Empty)).Returns(value: storage);
+        factoryMock.Setup(f => f.For(folder.Id, folder.DriverId, string.Empty)).Returns(storage);
 
-        FileManager manager = BuildManager(factory: factoryMock.Object);
+        FileManager manager = BuildManager(factoryMock.Object);
         Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.MusicMediaType };
 
-        ConcurrentBag<MediaFolderExtend> result = await InvokeGetFiles(manager: manager, library: library, folder: folder);
+        ConcurrentBag<MediaFolderExtend> result = await InvokeGetFiles(manager, library, folder);
 
-        result.Should().ContainSingle(predicate: f => f.Path == _tempRoot);
+        result.Should().ContainSingle(f => f.Path == _tempRoot);
     }
 }

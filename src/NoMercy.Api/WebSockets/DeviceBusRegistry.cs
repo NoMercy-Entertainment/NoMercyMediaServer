@@ -37,48 +37,48 @@ public sealed class DeviceBusRegistry(
 
     public void UpdateStatus(Ulid deviceId, bool foreground, bool screenOn)
     {
-        _status[key: deviceId] = (foreground, screenOn);
+        _status[deviceId] = (foreground, screenOn);
     }
 
     public (bool Foreground, bool ScreenOn) GetStatus(Ulid deviceId) =>
-        _status.TryGetValue(key: deviceId, value: out (bool Foreground, bool ScreenOn) s) ? s : (false, false);
+        _status.TryGetValue(deviceId, out (bool Foreground, bool ScreenOn) s) ? s : (false, false);
 
     public async Task Register(Ulid deviceId, WebSocket ws)
     {
-        _live[key: deviceId] = ws;
+        _live[deviceId] = ws;
 
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
-        Device? device = await ctx.Devices.FindAsync(keyValues: deviceId);
+        Device? device = await ctx.Devices.FindAsync(deviceId);
         if (device?.OwnerUserId is not null)
-            await BroadcastChange(ownerUserId: device.OwnerUserId.Value);
+            await BroadcastChange(device.OwnerUserId.Value);
     }
 
     public async Task Unregister(Ulid deviceId)
     {
-        _live.TryRemove(key: deviceId, value: out _);
-        _status.TryRemove(key: deviceId, value: out _);
+        _live.TryRemove(deviceId, out _);
+        _status.TryRemove(deviceId, out _);
 
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
-        Device? device = await ctx.Devices.FindAsync(keyValues: deviceId);
+        Device? device = await ctx.Devices.FindAsync(deviceId);
         if (device is null)
             return;
         device.WsConnectedAt = null;
         await ctx.SaveChangesAsync();
 
         if (device.OwnerUserId is not null)
-            await BroadcastChange(ownerUserId: device.OwnerUserId.Value);
+            await BroadcastChange(device.OwnerUserId.Value);
     }
 
-    public bool IsOnline(Ulid deviceId) => _live.ContainsKey(key: deviceId);
+    public bool IsOnline(Ulid deviceId) => _live.ContainsKey(deviceId);
 
     public async Task<bool> SendAsync(Ulid deviceId, object payload, CancellationToken ct = default)
     {
-        if (!_live.TryGetValue(key: deviceId, value: out WebSocket? ws) || ws.State != WebSocketState.Open)
+        if (!_live.TryGetValue(deviceId, out WebSocket? ws) || ws.State != WebSocketState.Open)
             return false;
 
-        string json = JsonSerializer.Serialize(value: payload);
-        byte[] bytes = Encoding.UTF8.GetBytes(s: json);
-        await ws.SendAsync(buffer: bytes, messageType: WebSocketMessageType.Text, endOfMessage: true, cancellationToken: ct);
+        string json = JsonSerializer.Serialize(payload);
+        byte[] bytes = Encoding.UTF8.GetBytes(json);
+        await ws.SendAsync(bytes, WebSocketMessageType.Text, true, ct);
         return true;
     }
 
@@ -89,7 +89,7 @@ public sealed class DeviceBusRegistry(
 
     public void ForceClose(Ulid deviceId)
     {
-        if (_live.TryRemove(key: deviceId, value: out WebSocket? ws) && ws.State == WebSocketState.Open)
+        if (_live.TryRemove(deviceId, out WebSocket? ws) && ws.State == WebSocketState.Open)
             ws.Abort();
     }
 
@@ -97,19 +97,19 @@ public sealed class DeviceBusRegistry(
     {
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
         List<Device> rows = await ctx
-            .Devices.Where(predicate: d => d.OwnerUserId == ownerUserId && d.Fingerprint != null)
+            .Devices.Where(d => d.OwnerUserId == ownerUserId && d.Fingerprint != null)
             .ToListAsync();
 
-        List<DeviceListItem> items = rows.Select(selector: d =>
+        List<DeviceListItem> items = rows.Select(d =>
             {
-                (bool Foreground, bool ScreenOn) s = GetStatus(deviceId: d.Id);
+                (bool Foreground, bool ScreenOn) s = GetStatus(d.Id);
                 return new DeviceListItem
                 {
                     DeviceId = d.Id,
                     Fingerprint = d.Fingerprint!,
                     Name = d.CustomName ?? d.Name,
                     Type = d.Type,
-                    Online = IsOnline(deviceId: d.Id),
+                    Online = IsOnline(d.Id),
                     LanIp = d.LanIp,
                     LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
                     Foreground = s.Foreground,
@@ -118,6 +118,6 @@ public sealed class DeviceBusRegistry(
             })
             .ToList();
 
-        await hubContext.Clients.User(userId: ownerUserId.ToString()).SendAsync(method: "DeviceListChanged", arg1: items);
+        await hubContext.Clients.User(ownerUserId.ToString()).SendAsync("DeviceListChanged", items);
     }
 }

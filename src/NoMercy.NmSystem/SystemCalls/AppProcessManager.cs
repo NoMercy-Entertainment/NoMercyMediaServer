@@ -57,15 +57,15 @@ public class AppProcessManager
                 return false;
 
             ProcessStartInfo? startInfo =
-                CreateProductionStartInfo(driver: _driver)
-                ?? CreateInstalledStartInfo(driver: _driver)
-                ?? CreateDevBinaryStartInfo(driver: _driver)
-                ?? CreateDotnetRunStartInfo(driver: _driver);
+                CreateProductionStartInfo(_driver)
+                ?? CreateInstalledStartInfo(_driver)
+                ?? CreateDevBinaryStartInfo(_driver)
+                ?? CreateDotnetRunStartInfo(_driver);
 
-            if (startInfo is not null && !string.IsNullOrEmpty(value: route))
+            if (startInfo is not null && !string.IsNullOrEmpty(route))
             {
-                startInfo.ArgumentList.Add(item: "--route");
-                startInfo.ArgumentList.Add(item: route);
+                startInfo.ArgumentList.Add("--route");
+                startInfo.ArgumentList.Add(route);
             }
 
             if (startInfo is null)
@@ -89,7 +89,7 @@ public class AppProcessManager
                 return false;
             }
 
-            Shell.ChildProcessManager.Attach(process: _appProcess);
+            Shell.ChildProcessManager.Attach(_appProcess);
 
             return true;
         }
@@ -107,7 +107,7 @@ public class AppProcessManager
 
             try
             {
-                _appProcess.Kill(entireProcessTree: true);
+                _appProcess.Kill(true);
             }
             catch (InvalidOperationException)
             {
@@ -123,32 +123,32 @@ public class AppProcessManager
     {
         string exePath = AppFiles.AppExePath;
 
-        if (!driver.FileExists(path: exePath))
+        if (!driver.FileExists(exePath))
             return null;
 
-        return new(fileName: exePath) { UseShellExecute = false, CreateNoWindow = true };
+        return new(exePath) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateInstalledStartInfo(IStorageDriver driver)
     {
         string? ownDir = Path.GetDirectoryName(
-            path: Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
         );
 
         if (ownDir is null)
             return null;
 
-        string candidate = Path.Combine(path1: ownDir, path2: "NoMercyApp" + Info.ExecSuffix);
+        string candidate = Path.Combine(ownDir, "NoMercyApp" + Info.ExecSuffix);
 
-        if (!driver.FileExists(path: candidate))
+        if (!driver.FileExists(candidate))
             return null;
 
-        return new(fileName: candidate) { UseShellExecute = false, CreateNoWindow = true };
+        return new(candidate) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateDevBinaryStartInfo(IStorageDriver driver)
     {
-        string? appProjectDir = FindProjectDirectory(projectName: "NoMercy.App", driver: driver);
+        string? appProjectDir = FindProjectDirectory("NoMercy.App", driver);
 
         if (appProjectDir is null)
             return null;
@@ -157,16 +157,16 @@ public class AppProcessManager
 
         string[] searchPaths =
         [
-            Path.Combine(paths: [appProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine([appProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
             ),
-            Path.Combine(paths: [appProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine([appProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
             ),
         ];
 
         foreach (string path in searchPaths)
         {
-            if (driver.FileExists(path: path))
-                return new(fileName: path) { UseShellExecute = false, CreateNoWindow = true };
+            if (driver.FileExists(path))
+                return new(path) { UseShellExecute = false, CreateNoWindow = true };
         }
 
         return null;
@@ -174,38 +174,38 @@ public class AppProcessManager
 
     private static ProcessStartInfo? CreateDotnetRunStartInfo(IStorageDriver driver)
     {
-        string? appProjectDir = FindProjectDirectory(projectName: "NoMercy.App", driver: driver);
+        string? appProjectDir = FindProjectDirectory("NoMercy.App", driver);
 
         if (appProjectDir is null)
             return null;
 
-        ProcessStartInfo startInfo = new(fileName: "dotnet")
+        ProcessStartInfo startInfo = new("dotnet")
         {
             UseShellExecute = false,
             CreateNoWindow = true,
         };
 
-        startInfo.ArgumentList.Add(item: "run");
-        startInfo.ArgumentList.Add(item: "--project");
-        startInfo.ArgumentList.Add(item: appProjectDir);
+        startInfo.ArgumentList.Add("run");
+        startInfo.ArgumentList.Add("--project");
+        startInfo.ArgumentList.Add(appProjectDir);
 
         return startInfo;
     }
 
     private static string? FindProjectDirectory(string projectName, IStorageDriver driver)
     {
-        string? assemblyLocation = Path.GetDirectoryName(path: Assembly.GetExecutingAssembly().Location);
+        string? assemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
         string? directory = assemblyLocation;
 
         while (directory is not null)
         {
-            string candidate = Path.Combine(path1: directory, path2: "src", path3: projectName);
+            string candidate = Path.Combine(directory, "src", projectName);
 
-            if (driver.DirectoryExists(path: candidate))
+            if (driver.DirectoryExists(candidate))
                 return candidate;
 
-            directory = Path.GetDirectoryName(path: directory);
+            directory = Path.GetDirectoryName(directory);
         }
 
         return null;

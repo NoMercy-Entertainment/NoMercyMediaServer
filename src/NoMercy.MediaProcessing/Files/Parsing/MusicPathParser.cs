@@ -21,10 +21,10 @@ namespace NoMercy.MediaProcessing.Files.Parsing;
 /// </summary>
 public static partial class MusicPathParser
 {
-    [GeneratedRegex(pattern: @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]|\[(?<releaseType>Singles)\])\s?(?<album>.*)?")]
+    [GeneratedRegex(@"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]|\[(?<releaseType>Singles)\])\s?(?<album>.*)?")]
     public static partial Regex MatchAlbumPath();
 
-    [GeneratedRegex(pattern: @"\[\d{4}\]\s?")]
+    [GeneratedRegex(@"\[\d{4}\]\s?")]
     public static partial Regex MatchYearTag();
 
     /// <summary>Parsed album metadata. Year is 0 when absent.</summary>
@@ -37,19 +37,19 @@ public static partial class MusicPathParser
     /// </summary>
     public static MusicAlbumInfo Parse(string directoryPath, string folderName)
     {
-        Match match = MatchAlbumPath().Match(input: directoryPath);
+        Match match = MatchAlbumPath().Match(directoryPath);
 
-        int year = match.Groups[groupname: "year"].Success
-            ? int.Parse(s: match.Groups[groupname: "year"].Value)
+        int year = match.Groups["year"].Success
+            ? int.Parse(match.Groups["year"].Value)
             : 0;
 
-        string albumName = match.Groups[groupname: "album"].Success
-            ? match.Groups[groupname: "album"].Value
-            : MatchYearTag().Replace(input: folderName, replacement: string.Empty);
+        string albumName = match.Groups["album"].Success
+            ? match.Groups["album"].Value
+            : MatchYearTag().Replace(folderName, string.Empty);
 
-        string? artist = match.Groups[groupname: "artist"].Success ? match.Groups[groupname: "artist"].Value : null;
-        string? releaseType = match.Groups[groupname: "releaseType"].Success ? match.Groups[groupname: "releaseType"].Value : null;
+        string? artist = match.Groups["artist"].Success ? match.Groups["artist"].Value : null;
+        string? releaseType = match.Groups["releaseType"].Success ? match.Groups["releaseType"].Value : null;
 
-        return new(Year: year, AlbumName: albumName, Artist: artist, ReleaseType: releaseType);
+        return new(year, albumName, artist, releaseType);
     }
 }

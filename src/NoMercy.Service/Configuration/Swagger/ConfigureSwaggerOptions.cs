@@ -31,20 +31,20 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
         foreach (ApiVersionDescription description in _provider.ApiVersionDescriptions)
         {
             string groupName = $"v{description.ApiVersion.MajorVersion}";
-            options.SwaggerDoc(name: groupName, info: CreateInfoForApiVersion(description: description, groupName: groupName));
+            options.SwaggerDoc(groupName, CreateInfoForApiVersion(description, groupName));
         }
 
         // Configure security definitions - only add once, not per version
         options.AddSecurityDefinition(
-            name: "Keycloak",
-            securityScheme: new OpenApiSecurityScheme
+            "Keycloak",
+            new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.OAuth2,
                 Flows = new()
                 {
                     Implicit = new()
                     {
-                        AuthorizationUrl = new(uriString: $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth"),
+                        AuthorizationUrl = new($"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth"),
                         Scopes = new Dictionary<string, string>
                         {
                             { "openid", "openid" },
@@ -55,8 +55,8 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
             }
         );
 
-        options.AddSecurityRequirement(securityRequirement: document =>
-            new() { { new(referenceId: "Keycloak", hostDocument: document), [] }, { new(referenceId: "Bearer", hostDocument: document), [] } }
+        options.AddSecurityRequirement(document =>
+            new() { { new("Keycloak", document), [] }, { new("Bearer", document), [] } }
         );
     }
 
@@ -74,9 +74,9 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
             {
                 Name = "NoMercy",
                 Email = "info@nomercy.tv",
-                Url = new(uriString: "https://nomercy.tv"),
+                Url = new("https://nomercy.tv"),
             },
-            TermsOfService = new(uriString: "https://nomercy.tv/terms-of-service"),
+            TermsOfService = new("https://nomercy.tv/terms-of-service"),
         };
 
         if (description.IsDeprecated)

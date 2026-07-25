@@ -21,7 +21,7 @@ using NoMercy.Storage;
 
 namespace NoMercy.Tests.MediaProcessing.Inbox;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class InboxRoutingServiceTests : IDisposable
 {
     // -----------------------------------------------------------------------
@@ -37,41 +37,41 @@ public class InboxRoutingServiceTests : IDisposable
     public InboxRoutingServiceTests()
     {
         DbContextOptionsBuilder<MediaContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
+        optionsBuilder.UseSqlite("Data Source=:memory:");
 
-        _context = new(options: optionsBuilder.Options);
+        _context = new(optionsBuilder.Options);
         _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
-        _context.Database.ExecuteSqlRaw(sql: "PRAGMA foreign_keys = OFF;");
+        _context.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
 
         _driverMock = new();
-        _driverMock.Setup(expression: d => d.GetFullPath(It.IsAny<string>())).Returns<string>(valueFunction: p => p);
-        _driverMock.Setup(expression: d => d.MoveFile(It.IsAny<string>(), It.IsAny<string>()));
-        _driverMock.Setup(expression: d => d.CreateDirectory(It.IsAny<string>()));
-        _driverMock.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: true);
+        _driverMock.Setup(d => d.GetFullPath(It.IsAny<string>())).Returns<string>(p => p);
+        _driverMock.Setup(d => d.MoveFile(It.IsAny<string>(), It.IsAny<string>()));
+        _driverMock.Setup(d => d.CreateDirectory(It.IsAny<string>()));
+        _driverMock.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(true);
 
         _storageMock = new();
-        _storageMock.Setup(expression: s => s.Driver).Returns(value: _driverMock.Object);
-        _storageMock.Setup(expression: s => s.GetFullPath(It.IsAny<string>())).Returns<string>(valueFunction: p => p);
+        _storageMock.Setup(s => s.Driver).Returns(_driverMock.Object);
+        _storageMock.Setup(s => s.GetFullPath(It.IsAny<string>())).Returns<string>(p => p);
         _storageMock
-            .Setup(expression: s => s.ReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: []);
+            .Setup(s => s.ReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         _storageMock
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.WriteAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<CancellationToken>())
             )
-            .Returns(value: Task.CompletedTask);
+            .Returns(Task.CompletedTask);
         _storageMock
-            .Setup(expression: s => s.SizeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: 0L);
+            .Setup(s => s.SizeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0L);
         _storageMock
-            .Setup(expression: s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(value: Task.CompletedTask);
+            .Setup(s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         _storageFactoryMock = new();
         _storageFactoryMock
-            .Setup(expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
-            .Returns(value: _storageMock.Object);
+            .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
+            .Returns(_storageMock.Object);
 
         _dispatcherMock = new();
     }
@@ -83,7 +83,7 @@ public class InboxRoutingServiceTests : IDisposable
     }
 
     private InboxRoutingService MakeService() =>
-        new(storageFactory: _storageFactoryMock.Object, jobDispatcher: _dispatcherMock.Object);
+        new(_storageFactoryMock.Object, _dispatcherMock.Object);
 
     // -----------------------------------------------------------------------
     // Seed helpers
@@ -117,10 +117,10 @@ public class InboxRoutingServiceTests : IDisposable
 
         FolderLibrary folderLibrary = new() { FolderId = folder.Id, LibraryId = library.Id };
 
-        _context.Libraries.Add(entity: library);
-        _context.Folders.Add(entity: folder);
-        _context.EncodingPresetFolders.Add(entity: profileFolder);
-        _context.FolderLibrary.Add(entity: folderLibrary);
+        _context.Libraries.Add(library);
+        _context.Folders.Add(folder);
+        _context.EncodingPresetFolders.Add(profileFolder);
+        _context.FolderLibrary.Add(folderLibrary);
         _context.SaveChanges();
 
         return (library, folder, profileId);
@@ -139,8 +139,8 @@ public class InboxRoutingServiceTests : IDisposable
 
         FolderLibrary folderLibrary = new() { FolderId = folder.Id, LibraryId = library.Id };
 
-        _context.Folders.Add(entity: folder);
-        _context.FolderLibrary.Add(entity: folderLibrary);
+        _context.Folders.Add(folder);
+        _context.FolderLibrary.Add(folderLibrary);
         _context.SaveChanges();
 
         return folder;
@@ -165,7 +165,7 @@ public class InboxRoutingServiceTests : IDisposable
         {
             DetectedType = detectedType,
             Confidence = confidence,
-            Candidates = candidates ?? [MakeCandidate(provider: "tmdb", externalId: "12345", title: "Test Title")],
+            Candidates = candidates ?? [MakeCandidate("tmdb", "12345", "Test Title")],
         };
 
     // -----------------------------------------------------------------------
@@ -175,12 +175,12 @@ public class InboxRoutingServiceTests : IDisposable
     [Fact]
     public async Task ResolveDestinations_OneValidMovieDestination_ReturnsOne()
     {
-        SeedLibraryWithProfile(type: "movie");
+        SeedLibraryWithProfile("movie");
         InboxRoutingService service = MakeService();
 
-        List<InboxDestination> results = await service.ResolveDestinations(detectedType: "movie", context: _context);
+        List<InboxDestination> results = await service.ResolveDestinations("movie", _context);
 
-        results.Should().HaveCount(expected: 1);
+        results.Should().HaveCount(1);
     }
 
     [Fact]
@@ -192,27 +192,27 @@ public class InboxRoutingServiceTests : IDisposable
             Title = "movie library no profile",
             Type = "movie",
         };
-        _context.Libraries.Add(entity: library);
+        _context.Libraries.Add(library);
         _context.SaveChanges();
 
-        Folder folder = SeedFolderWithoutProfile(library: library);
+        Folder folder = SeedFolderWithoutProfile(library);
 
         InboxRoutingService service = MakeService();
-        List<InboxDestination> results = await service.ResolveDestinations(detectedType: "movie", context: _context);
+        List<InboxDestination> results = await service.ResolveDestinations("movie", _context);
 
-        results.Should().HaveCount(expected: 1);
-        results[index: 0].LibraryId.Should().Be(expected: library.Id);
-        results[index: 0].FolderId.Should().Be(expected: folder.Id);
-        results[index: 0].ProfileId.Should().Be(expected: Ulid.Empty);
+        results.Should().HaveCount(1);
+        results[0].LibraryId.Should().Be(library.Id);
+        results[0].FolderId.Should().Be(folder.Id);
+        results[0].ProfileId.Should().Be(Ulid.Empty);
     }
 
     [Fact]
     public async Task ResolveDestinations_TypeMismatchedLibrary_IsExcluded()
     {
-        SeedLibraryWithProfile(type: "tv");
+        SeedLibraryWithProfile("tv");
 
         InboxRoutingService service = MakeService();
-        List<InboxDestination> results = await service.ResolveDestinations(detectedType: "movie", context: _context);
+        List<InboxDestination> results = await service.ResolveDestinations("movie", _context);
 
         results.Should().BeEmpty();
     }
@@ -220,27 +220,27 @@ public class InboxRoutingServiceTests : IDisposable
     [Fact]
     public async Task ResolveDestinations_TwoValidDestinations_ReturnsBoth()
     {
-        SeedLibraryWithProfile(type: "movie");
-        SeedLibraryWithProfile(type: "movie");
+        SeedLibraryWithProfile("movie");
+        SeedLibraryWithProfile("movie");
 
         InboxRoutingService service = MakeService();
-        List<InboxDestination> results = await service.ResolveDestinations(detectedType: "movie", context: _context);
+        List<InboxDestination> results = await service.ResolveDestinations("movie", _context);
 
-        results.Should().HaveCount(expected: 2);
+        results.Should().HaveCount(2);
     }
 
     [Fact]
     public async Task ResolveDestinations_MapsProfileIdAndDriverId()
     {
-        (Library _, Folder folder, Ulid profileId) = SeedLibraryWithProfile(type: "movie");
+        (Library _, Folder folder, Ulid profileId) = SeedLibraryWithProfile("movie");
 
         InboxRoutingService service = MakeService();
-        List<InboxDestination> results = await service.ResolveDestinations(detectedType: "movie", context: _context);
+        List<InboxDestination> results = await service.ResolveDestinations("movie", _context);
 
         InboxDestination dest = results.Single();
-        dest.ProfileId.Should().Be(expected: profileId);
-        dest.DriverId.Should().Be(expected: folder.DriverId);
-        dest.FolderId.Should().Be(expected: folder.Id);
+        dest.ProfileId.Should().Be(profileId);
+        dest.DriverId.Should().Be(folder.DriverId);
+        dest.FolderId.Should().Be(folder.Id);
     }
 
     // -----------------------------------------------------------------------
@@ -250,21 +250,21 @@ public class InboxRoutingServiceTests : IDisposable
     [Fact]
     public async Task Route_HighConfidence_SingleMatch_SingleDestination_ReturnsAuto()
     {
-        SeedLibraryWithProfile(type: "movie");
+        SeedLibraryWithProfile("movie");
         InboxRoutingService service = MakeService();
 
-        ClassificationResult classification = MakeClassification(detectedType: "movie", confidence: "high");
+        ClassificationResult classification = MakeClassification("movie", "high");
         RouteOutcome outcome = await service.Route(
-            classification: classification,
-            sourcePath: "inbox/The Matrix (1999).mkv",
-            driverId: Ulid.NewUlid(),
-            context: _context
+            classification,
+            "inbox/The Matrix (1999).mkv",
+            Ulid.NewUlid(),
+            _context
         );
 
-        outcome.Mode.Should().Be(expected: "auto");
+        outcome.Mode.Should().Be("auto");
         outcome.Destination.Should().NotBeNull();
         outcome.Item.Should().NotBeNull();
-        outcome.Item.Status.Should().Be(expected: "Routing");
+        outcome.Item.Status.Should().Be("Routing");
     }
 
     // -----------------------------------------------------------------------
@@ -276,17 +276,17 @@ public class InboxRoutingServiceTests : IDisposable
     {
         InboxRoutingService service = MakeService();
 
-        ClassificationResult classification = MakeClassification(detectedType: "movie", confidence: "high");
+        ClassificationResult classification = MakeClassification("movie", "high");
         RouteOutcome outcome = await service.Route(
-            classification: classification,
-            sourcePath: "inbox/movie.mkv",
-            driverId: Ulid.NewUlid(),
-            context: _context
+            classification,
+            "inbox/movie.mkv",
+            Ulid.NewUlid(),
+            _context
         );
 
-        outcome.Mode.Should().Be(expected: "review");
+        outcome.Mode.Should().Be("review");
         outcome.Destination.Should().BeNull();
-        outcome.Item.Status.Should().Be(expected: "NeedsReview");
+        outcome.Item.Status.Should().Be("NeedsReview");
     }
 
     // -----------------------------------------------------------------------
@@ -296,21 +296,21 @@ public class InboxRoutingServiceTests : IDisposable
     [Fact]
     public async Task Route_MultipleDestinations_ReturnsReview()
     {
-        SeedLibraryWithProfile(type: "movie");
-        SeedLibraryWithProfile(type: "movie");
+        SeedLibraryWithProfile("movie");
+        SeedLibraryWithProfile("movie");
 
         InboxRoutingService service = MakeService();
-        ClassificationResult classification = MakeClassification(detectedType: "movie", confidence: "high");
+        ClassificationResult classification = MakeClassification("movie", "high");
 
         RouteOutcome outcome = await service.Route(
-            classification: classification,
-            sourcePath: "inbox/movie.mkv",
-            driverId: Ulid.NewUlid(),
-            context: _context
+            classification,
+            "inbox/movie.mkv",
+            Ulid.NewUlid(),
+            _context
         );
 
-        outcome.Mode.Should().Be(expected: "review");
-        outcome.Item.Status.Should().Be(expected: "NeedsReview");
+        outcome.Mode.Should().Be("review");
+        outcome.Item.Status.Should().Be("NeedsReview");
     }
 
     // -----------------------------------------------------------------------
@@ -318,23 +318,23 @@ public class InboxRoutingServiceTests : IDisposable
     // -----------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: "medium")]
-    [InlineData(data: "low")]
+    [InlineData("medium")]
+    [InlineData("low")]
     public async Task Route_NonHighConfidence_ReturnsReview(string confidence)
     {
-        SeedLibraryWithProfile(type: "movie");
+        SeedLibraryWithProfile("movie");
         InboxRoutingService service = MakeService();
 
-        ClassificationResult classification = MakeClassification(detectedType: "movie", confidence: confidence);
+        ClassificationResult classification = MakeClassification("movie", confidence);
         RouteOutcome outcome = await service.Route(
-            classification: classification,
-            sourcePath: "inbox/movie.mkv",
-            driverId: Ulid.NewUlid(),
-            context: _context
+            classification,
+            "inbox/movie.mkv",
+            Ulid.NewUlid(),
+            _context
         );
 
-        outcome.Mode.Should().Be(expected: "review");
-        outcome.Item.Status.Should().Be(expected: "NeedsReview");
+        outcome.Mode.Should().Be("review");
+        outcome.Item.Status.Should().Be("NeedsReview");
     }
 
     // -----------------------------------------------------------------------
@@ -346,20 +346,20 @@ public class InboxRoutingServiceTests : IDisposable
     {
         InboxRoutingService service = MakeService();
 
-        CandidateMatch candidate = MakeCandidate(provider: "tmdb", externalId: "999", title: "Unknown Film");
-        ClassificationResult classification = MakeClassification(detectedType: "movie", confidence: "low", candidates: [candidate]);
+        CandidateMatch candidate = MakeCandidate("tmdb", "999", "Unknown Film");
+        ClassificationResult classification = MakeClassification("movie", "low", [candidate]);
 
         RouteOutcome outcome = await service.Route(
-            classification: classification,
-            sourcePath: "inbox/unknown.mkv",
-            driverId: Ulid.NewUlid(),
-            context: _context
+            classification,
+            "inbox/unknown.mkv",
+            Ulid.NewUlid(),
+            _context
         );
 
-        outcome.Item.DetectedType.Should().Be(expected: "movie");
-        outcome.Item.Confidence.Should().Be(expected: "low");
-        outcome.Item.Candidates.Should().HaveCount(expected: 1);
-        outcome.Item.Candidates[0].Title.Should().Be(expected: "Unknown Film");
+        outcome.Item.DetectedType.Should().Be("movie");
+        outcome.Item.Confidence.Should().Be("low");
+        outcome.Item.Candidates.Should().HaveCount(1);
+        outcome.Item.Candidates[0].Title.Should().Be("Unknown Film");
         outcome.Item.TargetLibraryId.Should().BeNull();
         outcome.Item.TargetFolderId.Should().BeNull();
         outcome.Item.TargetProfileId.Should().BeNull();
@@ -372,11 +372,11 @@ public class InboxRoutingServiceTests : IDisposable
     [Fact]
     public async Task ExecuteAuto_Movie_CallsMoveAsync_AndDispatchesMovieImportJob()
     {
-        (Library library, Folder folder, _) = SeedLibraryWithProfile(type: "movie");
+        (Library library, Folder folder, _) = SeedLibraryWithProfile("movie");
 
         InboxRoutingService service = MakeService();
 
-        CandidateMatch candidate = MakeCandidate(provider: "tmdb", externalId: "603", title: "The Matrix");
+        CandidateMatch candidate = MakeCandidate("tmdb", "603", "The Matrix");
         InboxDestination destination = new()
         {
             LibraryId = library.Id,
@@ -404,19 +404,19 @@ public class InboxRoutingServiceTests : IDisposable
             Item = item,
         };
 
-        await service.ExecuteAuto(outcome: outcome, context: _context);
+        await service.ExecuteAuto(outcome, _context);
 
         // Same-driver branch: uses Driver.MoveFile with absolute paths, not IStorage.MoveAsync.
         _driverMock.Verify(
-            expression: d => d.MoveFile("inbox/The Matrix (1999).mkv", "The Matrix (1999).mkv"),
-            times: Times.Once
+            d => d.MoveFile("inbox/The Matrix (1999).mkv", "The Matrix (1999).mkv"),
+            Times.Once
         );
 
-        _dispatcherMock.Verify(expression: d => d.DispatchJob<MovieImportJob>(603, library.Id), times: Times.Once);
+        _dispatcherMock.Verify(d => d.DispatchJob<MovieImportJob>(603, library.Id), Times.Once);
 
-        item.Status.Should().Be(expected: "Imported");
-        item.TargetLibraryId.Should().Be(expected: library.Id);
-        item.TargetFolderId.Should().Be(expected: folder.Id);
+        item.Status.Should().Be("Imported");
+        item.TargetLibraryId.Should().Be(library.Id);
+        item.TargetFolderId.Should().Be(folder.Id);
     }
 
     // -----------------------------------------------------------------------
@@ -426,11 +426,11 @@ public class InboxRoutingServiceTests : IDisposable
     [Fact]
     public async Task ExecuteAuto_Tv_DispatchesShowImportJob()
     {
-        (Library library, Folder folder, _) = SeedLibraryWithProfile(type: "tv");
+        (Library library, Folder folder, _) = SeedLibraryWithProfile("tv");
 
         InboxRoutingService service = MakeService();
 
-        CandidateMatch candidate = MakeCandidate(provider: "tmdb", externalId: "1396", title: "Breaking Bad");
+        CandidateMatch candidate = MakeCandidate("tmdb", "1396", "Breaking Bad");
         InboxDestination destination = new()
         {
             LibraryId = library.Id,
@@ -458,11 +458,11 @@ public class InboxRoutingServiceTests : IDisposable
             Item = item,
         };
 
-        await service.ExecuteAuto(outcome: outcome, context: _context);
+        await service.ExecuteAuto(outcome, _context);
 
-        _dispatcherMock.Verify(expression: d => d.DispatchJob<ShowImportJob>(1396, library.Id), times: Times.Once);
+        _dispatcherMock.Verify(d => d.DispatchJob<ShowImportJob>(1396, library.Id), Times.Once);
 
-        item.Status.Should().Be(expected: "Imported");
+        item.Status.Should().Be("Imported");
     }
 
     // -----------------------------------------------------------------------
@@ -472,11 +472,11 @@ public class InboxRoutingServiceTests : IDisposable
     [Fact]
     public async Task ExecuteAuto_Anime_DispatchesShowImportJob()
     {
-        (Library library, Folder folder, _) = SeedLibraryWithProfile(type: "anime");
+        (Library library, Folder folder, _) = SeedLibraryWithProfile("anime");
 
         InboxRoutingService service = MakeService();
 
-        CandidateMatch candidate = MakeCandidate(provider: "tmdb", externalId: "31478", title: "Frieren");
+        CandidateMatch candidate = MakeCandidate("tmdb", "31478", "Frieren");
         InboxDestination destination = new()
         {
             LibraryId = library.Id,
@@ -504,11 +504,11 @@ public class InboxRoutingServiceTests : IDisposable
             Item = item,
         };
 
-        await service.ExecuteAuto(outcome: outcome, context: _context);
+        await service.ExecuteAuto(outcome, _context);
 
-        _dispatcherMock.Verify(expression: d => d.DispatchJob<ShowImportJob>(31478, library.Id), times: Times.Once);
+        _dispatcherMock.Verify(d => d.DispatchJob<ShowImportJob>(31478, library.Id), Times.Once);
 
-        item.Status.Should().Be(expected: "Imported");
+        item.Status.Should().Be("Imported");
     }
 
     // -----------------------------------------------------------------------
@@ -518,11 +518,11 @@ public class InboxRoutingServiceTests : IDisposable
     [Fact]
     public async Task ExecuteAuto_Music_DispatchesAudioImportJob()
     {
-        (Library library, Folder folder, _) = SeedLibraryWithProfile(type: "music");
+        (Library library, Folder folder, _) = SeedLibraryWithProfile("music");
 
         InboxRoutingService service = MakeService();
 
-        CandidateMatch candidate = MakeCandidate(provider: "musicbrainz", externalId: "some-release-id", title: "Album Name");
+        CandidateMatch candidate = MakeCandidate("musicbrainz", "some-release-id", "Album Name");
         InboxDestination destination = new()
         {
             LibraryId = library.Id,
@@ -550,14 +550,14 @@ public class InboxRoutingServiceTests : IDisposable
             Item = item,
         };
 
-        await service.ExecuteAuto(outcome: outcome, context: _context);
+        await service.ExecuteAuto(outcome, _context);
 
         _dispatcherMock.Verify(
-            expression: d => d.DispatchJob<AudioImportJob>(library.Id, folder.Id, It.IsAny<string>()),
-            times: Times.Once
+            d => d.DispatchJob<AudioImportJob>(library.Id, folder.Id, It.IsAny<string>()),
+            Times.Once
         );
 
-        item.Status.Should().Be(expected: "Imported");
+        item.Status.Should().Be("Imported");
     }
 
     // -----------------------------------------------------------------------
@@ -567,11 +567,11 @@ public class InboxRoutingServiceTests : IDisposable
     [Fact]
     public async Task ExecuteAuto_Movie_DoesNotDispatchVideoEncodeJob()
     {
-        (Library library, Folder folder, _) = SeedLibraryWithProfile(type: "movie");
+        (Library library, Folder folder, _) = SeedLibraryWithProfile("movie");
 
         InboxRoutingService service = MakeService();
 
-        CandidateMatch candidate = MakeCandidate(provider: "tmdb", externalId: "603", title: "The Matrix");
+        CandidateMatch candidate = MakeCandidate("tmdb", "603", "The Matrix");
         InboxDestination destination = new()
         {
             LibraryId = library.Id,
@@ -599,10 +599,10 @@ public class InboxRoutingServiceTests : IDisposable
             Item = item,
         };
 
-        await service.ExecuteAuto(outcome: outcome, context: _context);
+        await service.ExecuteAuto(outcome, _context);
 
         _dispatcherMock.Verify(
-            expression: d =>
+            d =>
                 d.DispatchJob<VideoEncodeJob>(
                     It.IsAny<Ulid>(),
                     It.IsAny<Ulid>(),
@@ -610,7 +610,7 @@ public class InboxRoutingServiceTests : IDisposable
                     It.IsAny<string>(),
                     It.IsAny<Ulid?>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -627,14 +627,14 @@ public class InboxRoutingServiceTests : IDisposable
             Title = "movie library no profile",
             Type = "movie",
         };
-        _context.Libraries.Add(entity: library);
+        _context.Libraries.Add(library);
         _context.SaveChanges();
 
-        Folder folder = SeedFolderWithoutProfile(library: library);
+        Folder folder = SeedFolderWithoutProfile(library);
 
         InboxRoutingService service = MakeService();
 
-        CandidateMatch candidate = MakeCandidate(provider: "tmdb", externalId: "603", title: "The Matrix");
+        CandidateMatch candidate = MakeCandidate("tmdb", "603", "The Matrix");
         InboxDestination destination = new()
         {
             LibraryId = library.Id,
@@ -662,11 +662,11 @@ public class InboxRoutingServiceTests : IDisposable
             Item = item,
         };
 
-        await service.ExecuteAuto(outcome: outcome, context: _context);
+        await service.ExecuteAuto(outcome, _context);
 
         item.TargetProfileId.Should().BeNull();
 
-        InboxItem? persisted = await _context.InboxItems.FindAsync(keyValues: item.Id);
+        InboxItem? persisted = await _context.InboxItems.FindAsync(item.Id);
         persisted.Should().NotBeNull();
         persisted!.TargetProfileId.Should().BeNull();
     }
@@ -678,11 +678,11 @@ public class InboxRoutingServiceTests : IDisposable
     [Fact]
     public async Task ExecuteAuto_SetsStatusToImported_AfterMove()
     {
-        (Library library, Folder folder, _) = SeedLibraryWithProfile(type: "movie");
+        (Library library, Folder folder, _) = SeedLibraryWithProfile("movie");
 
         InboxRoutingService service = MakeService();
 
-        CandidateMatch candidate = MakeCandidate(provider: "tmdb", externalId: "100", title: "Test Movie");
+        CandidateMatch candidate = MakeCandidate("tmdb", "100", "Test Movie");
         InboxDestination destination = new()
         {
             LibraryId = library.Id,
@@ -710,12 +710,12 @@ public class InboxRoutingServiceTests : IDisposable
             Item = item,
         };
 
-        await service.ExecuteAuto(outcome: outcome, context: _context);
+        await service.ExecuteAuto(outcome, _context);
 
-        item.Status.Should().Be(expected: "Imported");
+        item.Status.Should().Be("Imported");
 
-        InboxItem? persisted = await _context.InboxItems.FindAsync(keyValues: item.Id);
+        InboxItem? persisted = await _context.InboxItems.FindAsync(item.Id);
         persisted.Should().NotBeNull();
-        persisted!.Status.Should().Be(expected: "Imported");
+        persisted!.Status.Should().Be("Imported");
     }
 }

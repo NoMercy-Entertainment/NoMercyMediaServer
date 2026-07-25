@@ -50,25 +50,25 @@ internal sealed class PluginLoader(
         CancellationToken ct = default
     )
     {
-        string pluginDir = Path.GetDirectoryName(path: manifestPath)!;
+        string pluginDir = Path.GetDirectoryName(manifestPath)!;
 
         try
         {
             PluginManifest manifest = await PluginManifestParser.ParseFileAsync(
-                filePath: manifestPath,
-                storage: _storage,
-                ct: ct
+                manifestPath,
+                _storage,
+                ct
             );
-            string assemblyPath = Path.Combine(path1: pluginDir, path2: manifest.Assembly);
+            string assemblyPath = Path.Combine(pluginDir, manifest.Assembly);
 
-            if (!_storage.Exists(path: assemblyPath))
+            if (!_storage.Exists(assemblyPath))
             {
                 _logger.LogWarning(
-                    message: "Plugin manifest {ManifestPath} references assembly '{Assembly}' which was not found.", args: [manifestPath, manifest.Assembly]
+                    "Plugin manifest {ManifestPath} references assembly '{Assembly}' which was not found.", [manifestPath, manifest.Assembly]
                 );
 
                 await _eventBus.PublishAsync(
-                    @event: new PluginErrorOccurredEvent
+                    new PluginErrorOccurredEvent
                     {
                         PluginId = manifest.Id.ToString(),
                         PluginName = manifest.Name,
@@ -76,63 +76,63 @@ internal sealed class PluginLoader(
                             $"Assembly '{manifest.Assembly}' not found in plugin directory.",
                         ExceptionType = nameof(FileNotFoundException),
                     },
-                    ct: ct
+                    ct
                 );
 
                 return;
             }
 
-            string absoluteAssemblyPath = ToLocalAssemblyPath(storagePath: assemblyPath);
+            string absoluteAssemblyPath = ToLocalAssemblyPath(assemblyPath);
 
             // Manual drops carry no repository checksum; only ABI is enforced here.
             PluginVerificationResult verification = _verifier.Verify(
-                manifest: manifest,
-                assemblyPath: absoluteAssemblyPath,
-                expectedChecksum: null
+                manifest,
+                absoluteAssemblyPath,
+                null
             );
 
             if (!verification.Verified)
             {
-                string failureMessage = string.Join(separator: "; ", values: verification.Failures);
+                string failureMessage = string.Join("; ", verification.Failures);
 
                 _logger.LogWarning(
-                    message: "Plugin {PluginName} failed verification and was marked malfunctioned: {Failures}", args: [manifest.Name, failureMessage]
+                    "Plugin {PluginName} failed verification and was marked malfunctioned: {Failures}", [manifest.Name, failureMessage]
                 );
 
                 PluginInfo malfunctionedInfo = PluginManifestParser.ToPluginInfo(
-                    manifest: manifest,
-                    assemblyPath: assemblyPath,
-                    status: PluginStatus.Malfunctioned,
-                    manifestPath: manifestPath,
-                    verified: verification.Verified,
-                    trusted: verification.Trusted
+                    manifest,
+                    assemblyPath,
+                    PluginStatus.Malfunctioned,
+                    manifestPath,
+                    verification.Verified,
+                    verification.Trusted
                 );
 
-                _registry[id: manifest.Id] = new(info: malfunctionedInfo, instance: null, loadContext: null);
+                _registry[manifest.Id] = new(malfunctionedInfo, null, null);
 
                 await _eventBus.PublishAsync(
-                    @event: new PluginErrorOccurredEvent
+                    new PluginErrorOccurredEvent
                     {
                         PluginId = manifest.Id.ToString(),
                         PluginName = manifest.Name,
                         ErrorMessage = failureMessage,
                         ExceptionType = nameof(PluginVerificationException),
                     },
-                    ct: ct
+                    ct
                 );
 
                 return;
             }
 
-            PluginLoadContext loadContext = new(pluginPath: absoluteAssemblyPath);
+            PluginLoadContext loadContext = new(absoluteAssemblyPath);
 
             try
             {
-                Assembly assembly = loadContext.LoadFromAssemblyPath(assemblyPath: absoluteAssemblyPath);
+                Assembly assembly = loadContext.LoadFromAssemblyPath(absoluteAssemblyPath);
                 List<Type> pluginTypes = assembly
                     .GetTypes()
-                    .Where(predicate: t =>
-                        typeof(IPlugin).IsAssignableFrom(c: t)
+                    .Where(t =>
+                        typeof(IPlugin).IsAssignableFrom(t)
                         && t is { IsAbstract: false, IsInterface: false }
                     )
                     .ToList();
@@ -141,7 +141,7 @@ internal sealed class PluginLoader(
 
                 foreach (Type pluginType in pluginTypes)
                 {
-                    IPlugin? instance = PluginInstanceFactory.Create(services: _serviceProvider, pluginType: pluginType);
+                    IPlugin? instance = PluginInstanceFactory.Create(_serviceProvider, pluginType);
                     if (instance is null)
                     {
                         continue;
@@ -154,8 +154,8 @@ internal sealed class PluginLoader(
                     bool mayAutoEnable =
                         manifest.AutoEnabled
                         && (
-                            _consentService.IsBaseline(capabilities: manifest.Capabilities)
-                            || _consentService.HasConsent(pluginId: manifest.Id)
+                            _consentService.IsBaseline(manifest.Capabilities)
+                            || _consentService.HasConsent(manifest.Id)
                         );
 
                     PluginStatus initialStatus = mayAutoEnable
@@ -165,27 +165,27 @@ internal sealed class PluginLoader(
                     if (mayAutoEnable)
                     {
                         string dataFolder = Path.Combine(
-                            path1: _pluginsPath,
-                            path2: "data",
-                            path3: instance.Id.ToString(format: "N")
+                            _pluginsPath,
+                            "data",
+                            instance.Id.ToString("N")
                         );
-                        if (!_storage.Exists(path: dataFolder))
+                        if (!_storage.Exists(dataFolder))
                         {
-                            _storage.CreateDirectory(path: dataFolder);
+                            _storage.CreateDirectory(dataFolder);
                         }
 
                         PluginContext context = new(
-                            eventBus: _eventBus,
-                            services: _serviceProvider,
-                            logger: _logger,
-                            dataFolderPath: dataFolder,
-                            storage: _storage,
-                            capabilities: manifest.Capabilities
+                            _eventBus,
+                            _serviceProvider,
+                            _logger,
+                            dataFolder,
+                            _storage,
+                            manifest.Capabilities
                         );
 
                         try
                         {
-                            instance.Initialize(context: context);
+                            instance.Initialize(context);
                         }
                         catch (Exception ex)
                         {
@@ -193,27 +193,27 @@ internal sealed class PluginLoader(
                             instance.Dispose();
 
                             PluginInfo errorInfo = PluginManifestParser.ToPluginInfo(
-                                manifest: manifest,
-                                assemblyPath: assemblyPath,
-                                status: initialStatus,
-                                manifestPath: manifestPath,
-                                verified: verification.Verified,
-                                trusted: verification.Trusted
+                                manifest,
+                                assemblyPath,
+                                initialStatus,
+                                manifestPath,
+                                verification.Verified,
+                                verification.Trusted
                             );
 
-                            LoadedPlugin errorLoaded = new(info: errorInfo, instance: null, loadContext: loadContext);
-                            _registry[id: manifest.Id] = errorLoaded;
+                            LoadedPlugin errorLoaded = new(errorInfo, null, loadContext);
+                            _registry[manifest.Id] = errorLoaded;
                             foundPlugin = true;
 
                             await _eventBus.PublishAsync(
-                                @event: new PluginErrorOccurredEvent
+                                new PluginErrorOccurredEvent
                                 {
                                     PluginId = manifest.Id.ToString(),
                                     PluginName = manifest.Name,
                                     ErrorMessage = ex.Message,
                                     ExceptionType = ex.GetType().Name,
                                 },
-                                ct: ct
+                                ct
                             );
 
                             continue;
@@ -221,12 +221,12 @@ internal sealed class PluginLoader(
                     }
 
                     PluginInfo info = PluginManifestParser.ToPluginInfo(
-                        manifest: manifest,
-                        assemblyPath: assemblyPath,
-                        status: initialStatus,
-                        manifestPath: manifestPath,
-                        verified: verification.Verified,
-                        trusted: verification.Trusted
+                        manifest,
+                        assemblyPath,
+                        initialStatus,
+                        manifestPath,
+                        verification.Verified,
+                        verification.Trusted
                     );
 
                     IPlugin? storedInstance =
@@ -243,20 +243,20 @@ internal sealed class PluginLoader(
                         instance.Dispose();
                     }
 
-                    LoadedPlugin loaded = new(info: info, instance: storedInstance, loadContext: loadContext);
-                    _registry[id: manifest.Id] = loaded;
+                    LoadedPlugin loaded = new(info, storedInstance, loadContext);
+                    _registry[manifest.Id] = loaded;
                     foundPlugin = true;
 
                     if (initialStatus == PluginStatus.Active)
                     {
                         await _eventBus.PublishAsync(
-                            @event: new PluginLoadedEvent
+                            new PluginLoadedEvent
                             {
                                 PluginId = manifest.Id.ToString(),
                                 PluginName = manifest.Name,
                                 Version = manifest.Version,
                             },
-                            ct: ct
+                            ct
                         );
                     }
                 }
@@ -269,23 +269,23 @@ internal sealed class PluginLoader(
             catch (ReflectionTypeLoadException ex)
             {
                 string errorMessage = string.Join(
-                    separator: "; ",
-                    values: ex.LoaderExceptions.Where(predicate: e => e is not null).Select(selector: e => e!.Message)
+                    "; ",
+                    ex.LoaderExceptions.Where(e => e is not null).Select(e => e!.Message)
                 );
 
                 _logger.LogWarning(
-                    message: "Failed to load plugin assembly {AssemblyPath}: {Error}", args: [assemblyPath, errorMessage]
+                    "Failed to load plugin assembly {AssemblyPath}: {Error}", [assemblyPath, errorMessage]
                 );
 
                 await _eventBus.PublishAsync(
-                    @event: new PluginErrorOccurredEvent
+                    new PluginErrorOccurredEvent
                     {
                         PluginId = manifest.Id.ToString(),
                         PluginName = manifest.Name,
                         ErrorMessage = errorMessage,
                         ExceptionType = nameof(ReflectionTypeLoadException),
                     },
-                    ct: ct
+                    ct
                 );
 
                 loadContext.Unload();
@@ -293,18 +293,18 @@ internal sealed class PluginLoader(
             catch (Exception ex)
             {
                 _logger.LogWarning(
-                    message: "Failed to load plugin assembly {AssemblyPath}: {Error}", args: [assemblyPath, ex.Message]
+                    "Failed to load plugin assembly {AssemblyPath}: {Error}", [assemblyPath, ex.Message]
                 );
 
                 await _eventBus.PublishAsync(
-                    @event: new PluginErrorOccurredEvent
+                    new PluginErrorOccurredEvent
                     {
                         PluginId = manifest.Id.ToString(),
                         PluginName = manifest.Name,
                         ErrorMessage = ex.Message,
                         ExceptionType = ex.GetType().Name,
                     },
-                    ct: ct
+                    ct
                 );
 
                 loadContext.Unload();
@@ -312,28 +312,28 @@ internal sealed class PluginLoader(
         }
         catch (Exception ex)
         {
-            string pluginName = Path.GetFileName(path: pluginDir);
+            string pluginName = Path.GetFileName(pluginDir);
 
             _logger.LogWarning(
-                message: "Failed to parse plugin manifest {ManifestPath}: {Error}", args: [manifestPath, ex.Message]
+                "Failed to parse plugin manifest {ManifestPath}: {Error}", [manifestPath, ex.Message]
             );
 
             await _eventBus.PublishAsync(
-                @event: new PluginErrorOccurredEvent
+                new PluginErrorOccurredEvent
                 {
                     PluginId = Guid.Empty.ToString(),
                     PluginName = pluginName,
                     ErrorMessage = $"Invalid plugin manifest: {ex.Message}",
                     ExceptionType = ex.GetType().Name,
                 },
-                ct: ct
+                ct
             );
         }
     }
 
     internal async Task LoadPluginAssemblyAsync(string assemblyPath, CancellationToken ct = default)
     {
-        string absoluteAssemblyPath = ToLocalAssemblyPath(storagePath: assemblyPath);
+        string absoluteAssemblyPath = ToLocalAssemblyPath(assemblyPath);
         PluginLoadContext loadContext;
         try
         {
@@ -343,35 +343,35 @@ internal sealed class PluginLoader(
             // Windows tolerates it. Constructing outside the try let that escape
             // and abort discovery of every other plugin — guard it so a bad
             // assembly is skipped and reported, not fatal.
-            loadContext = new(pluginPath: absoluteAssemblyPath);
+            loadContext = new(absoluteAssemblyPath);
         }
         catch (Exception loadContextEx)
         {
             _logger.LogWarning(
-                message: "Failed to initialize plugin load context for {AssemblyPath}: {Error}", args: [assemblyPath, loadContextEx.Message]
+                "Failed to initialize plugin load context for {AssemblyPath}: {Error}", [assemblyPath, loadContextEx.Message]
             );
 
             await _eventBus.PublishAsync(
-                @event: new PluginErrorOccurredEvent
+                new PluginErrorOccurredEvent
                 {
                     PluginId = Guid.Empty.ToString(),
-                    PluginName = Path.GetFileNameWithoutExtension(path: assemblyPath),
+                    PluginName = Path.GetFileNameWithoutExtension(assemblyPath),
                     ErrorMessage =
-                        $"Failed to initialize plugin load context: {loadContextEx.Message}",
+                        $"Failed to initialize plugin load {loadContextEx.Message}",
                     ExceptionType = loadContextEx.GetType().Name,
                 },
-                ct: ct
+                ct
             );
             return;
         }
 
         try
         {
-            Assembly assembly = loadContext.LoadFromAssemblyPath(assemblyPath: absoluteAssemblyPath);
+            Assembly assembly = loadContext.LoadFromAssemblyPath(absoluteAssemblyPath);
             List<Type> pluginTypes = assembly
                 .GetTypes()
-                .Where(predicate: t =>
-                    typeof(IPlugin).IsAssignableFrom(c: t)
+                .Where(t =>
+                    typeof(IPlugin).IsAssignableFrom(t)
                     && t is { IsAbstract: false, IsInterface: false }
                 )
                 .ToList();
@@ -385,31 +385,31 @@ internal sealed class PluginLoader(
                 IPlugin? instance = null;
                 try
                 {
-                    instance = PluginInstanceFactory.Create(services: _serviceProvider, pluginType: pluginType);
+                    instance = PluginInstanceFactory.Create(_serviceProvider, pluginType);
                     if (instance is null)
                     {
                         continue;
                     }
 
                     string dataFolder = Path.Combine(
-                        path1: _pluginsPath,
-                        path2: "data",
-                        path3: instance.Id.ToString(format: "N")
+                        _pluginsPath,
+                        "data",
+                        instance.Id.ToString("N")
                     );
-                    if (!_storage.Exists(path: dataFolder))
+                    if (!await _storage.ExistsAsync(dataFolder, ct))
                     {
-                        _storage.CreateDirectory(path: dataFolder);
+                        await _storage.CreateDirectoryAsync(dataFolder, ct);
                     }
 
                     PluginContext context = new(
-                        eventBus: _eventBus,
-                        services: _serviceProvider,
-                        logger: _logger,
-                        dataFolderPath: dataFolder,
-                        storage: _storage
+                        _eventBus,
+                        _serviceProvider,
+                        _logger,
+                        dataFolder,
+                        _storage
                     );
 
-                    instance.Initialize(context: context);
+                    instance.Initialize(context);
 
                     PluginInfo info = new()
                     {
@@ -421,17 +421,17 @@ internal sealed class PluginLoader(
                         AssemblyPath = assemblyPath,
                     };
 
-                    LoadedPlugin loaded = new(info: info, instance: instance, loadContext: loadContext);
-                    _registry[id: instance.Id] = loaded;
+                    LoadedPlugin loaded = new(info, instance, loadContext);
+                    _registry[instance.Id] = loaded;
 
                     await _eventBus.PublishAsync(
-                        @event: new PluginLoadedEvent
+                        new PluginLoadedEvent
                         {
                             PluginId = instance.Id.ToString(),
                             PluginName = instance.Name,
                             Version = instance.Version.ToString(),
                         },
-                        ct: ct
+                        ct
                     );
                 }
                 catch (Exception ex)
@@ -439,11 +439,11 @@ internal sealed class PluginLoader(
                     // The failure may itself be a throwing property getter, so
                     // read the plugin's identity defensively — building the error
                     // record must never re-enter a faulty getter and throw again.
-                    SafePluginIdentity identity = SafePluginIdentity.Read(instance: instance, pluginType: pluginType);
+                    SafePluginIdentity identity = SafePluginIdentity.Read(instance, pluginType);
 
                     _logger.LogError(
-                        exception: ex,
-                        message: "Plugin {PluginName} in assembly {AssemblyPath} failed to load and was marked malfunctioned: {Error}", args: [identity.Name, assemblyPath, ex.Message]
+                        ex,
+                        "Plugin {PluginName} in assembly {AssemblyPath} failed to load and was marked malfunctioned: {Error}", [identity.Name, assemblyPath, ex.Message]
                     );
 
                     if (instance is not null)
@@ -455,9 +455,9 @@ internal sealed class PluginLoader(
                         catch (Exception disposeEx)
                         {
                             _logger.LogWarning(
-                                exception: disposeEx,
-                                message: "Plugin {PluginName} threw while being disposed after a load failure.",
-                                args: identity.Name
+                                disposeEx,
+                                "Plugin {PluginName} threw while being disposed after a load failure.",
+                                identity.Name
                             );
                         }
                     }
@@ -472,21 +472,21 @@ internal sealed class PluginLoader(
                         AssemblyPath = assemblyPath,
                     };
 
-                    LoadedPlugin loaded = new(info: info, instance: null, loadContext: loadContext);
+                    LoadedPlugin loaded = new(info, null, loadContext);
                     if (identity.Id != Guid.Empty)
                     {
-                        _registry[id: identity.Id] = loaded;
+                        _registry[identity.Id] = loaded;
                     }
 
                     await _eventBus.PublishAsync(
-                        @event: new PluginErrorOccurredEvent
+                        new PluginErrorOccurredEvent
                         {
                             PluginId = identity.Id.ToString(),
                             PluginName = identity.Name,
                             ErrorMessage = ex.Message,
                             ExceptionType = ex.GetType().Name,
                         },
-                        ct: ct
+                        ct
                     );
                 }
             }
@@ -498,46 +498,46 @@ internal sealed class PluginLoader(
         }
         catch (ReflectionTypeLoadException ex)
         {
-            string assemblyName = Path.GetFileNameWithoutExtension(path: assemblyPath);
+            string assemblyName = Path.GetFileNameWithoutExtension(assemblyPath);
             string errorMessage = string.Join(
-                separator: "; ",
-                values: ex.LoaderExceptions.Where(predicate: e => e is not null).Select(selector: e => e!.Message)
+                "; ",
+                ex.LoaderExceptions.Where(e => e is not null).Select(e => e!.Message)
             );
 
             _logger.LogWarning(
-                message: "Failed to load plugin assembly {AssemblyPath}: {Error}", args: [assemblyPath, errorMessage]
+                "Failed to load plugin assembly {AssemblyPath}: {Error}", [assemblyPath, errorMessage]
             );
 
             await _eventBus.PublishAsync(
-                @event: new PluginErrorOccurredEvent
+                new PluginErrorOccurredEvent
                 {
                     PluginId = Guid.Empty.ToString(),
                     PluginName = assemblyName,
                     ErrorMessage = errorMessage,
                     ExceptionType = nameof(ReflectionTypeLoadException),
                 },
-                ct: ct
+                ct
             );
 
             loadContext.Unload();
         }
         catch (Exception ex)
         {
-            string assemblyName = Path.GetFileNameWithoutExtension(path: assemblyPath);
+            string assemblyName = Path.GetFileNameWithoutExtension(assemblyPath);
 
             _logger.LogWarning(
-                message: "Failed to load plugin assembly {AssemblyPath}: {Error}", args: [assemblyPath, ex.Message]
+                "Failed to load plugin assembly {AssemblyPath}: {Error}", [assemblyPath, ex.Message]
             );
 
             await _eventBus.PublishAsync(
-                @event: new PluginErrorOccurredEvent
+                new PluginErrorOccurredEvent
                 {
                     PluginId = Guid.Empty.ToString(),
                     PluginName = assemblyName,
                     ErrorMessage = ex.Message,
                     ExceptionType = ex.GetType().Name,
                 },
-                ct: ct
+                ct
             );
 
             loadContext.Unload();
@@ -550,6 +550,6 @@ internal sealed class PluginLoader(
     // unchanged. Plugin assemblies are always local — they cannot be loaded from a remote driver.
     private string ToLocalAssemblyPath(string storagePath)
     {
-        return Path.GetFullPath(path: Path.Combine(path1: _pluginsPath, path2: storagePath));
+        return Path.GetFullPath(Path.Combine(_pluginsPath, storagePath));
     }
 }

@@ -34,7 +34,7 @@ namespace NoMercy.Tests.Api.Jobs;
 // with no storage access — Handle() still reaches its final, unconditional
 // LibraryRefreshedEvent publish with an empty file scan.
 // ---------------------------------------------------------------------------
-[Trait(name: "Category", value: "Jobs")]
+[Trait("Category", "Jobs")]
 public class FindMediaFilesJobTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -50,9 +50,9 @@ public class FindMediaFilesJobTests : IClassFixture<NoMercyApiFactory>
         IEventBus eventBus = _factory.Services.GetRequiredService<IEventBus>();
         List<LibraryRefreshedEvent> captured = [];
         using IDisposable subscription = eventBus.Subscribe<LibraryRefreshedEvent>(
-            handler: (evt, _) =>
+            (evt, _) =>
             {
-                captured.Add(item: evt);
+                captured.Add(evt);
                 return Task.CompletedTask;
             }
         );
@@ -64,7 +64,7 @@ public class FindMediaFilesJobTests : IClassFixture<NoMercyApiFactory>
             Type = MediaTypes.MovieMediaType,
         };
 
-        FindMediaFilesJob job = new(id: unseededMovieId, library: library)
+        FindMediaFilesJob job = new(unseededMovieId, library)
         {
             LoggerFactory = NullLoggerFactory.Instance,
         };
@@ -74,11 +74,11 @@ public class FindMediaFilesJobTests : IClassFixture<NoMercyApiFactory>
         captured
             .Should()
             .ContainSingle(
-                predicate: evt =>
+                evt =>
                     evt.QueryKey.SequenceEqual(
                         new object?[] { MediaTypes.MovieMediaType, unseededMovieId.ToString() }
                     ),
-                because: "the published id element must be the STRING form of the scan id, not a raw int — "
+                "the published id element must be the STRING form of the scan id, not a raw int — "
                          + "a bare `Id` element here would fail this SequenceEqual against \"555555\""
             );
     }

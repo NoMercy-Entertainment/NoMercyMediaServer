@@ -23,7 +23,7 @@ public class LongConverter : JsonConverter
     public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
     {
         if (value is long longValue)
-            writer.WriteValue(value: longValue);
+            writer.WriteValue(longValue);
         else
             writer.WriteNull();
     }
@@ -41,8 +41,8 @@ public class LongConverter : JsonConverter
         return reader.TokenType switch
         {
             JsonToken.Null => null,
-            JsonToken.Integer => Convert.ToInt64(value: reader.Value),
-            JsonToken.String when long.TryParse(s: (string)reader.Value, result: out long result) => result,
+            JsonToken.Integer => Convert.ToInt64(reader.Value),
+            JsonToken.String when long.TryParse((string)reader.Value, out long result) => result,
             _ => null,
         };
     }

@@ -34,7 +34,7 @@ namespace NoMercy.Tests.Api;
 // These tests build a real RipperHub against the app's actual DI-configured
 // MediaContext/UserCache (via NoMercyApiFactory) with IDriveMonitor and
 // IDiscSource fully mocked — no real drive, disc, or probe ever runs.
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class RipperHubGetDriveStateTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -61,29 +61,29 @@ public class RipperHubGetDriveStateTests : IClassFixture<NoMercyApiFactory>
         DefaultHttpContext httpContext = new() { RequestServices = null! };
         httpContext.Request.Path = "/ripperHub";
 
-        DiscSourceFactory discSourceFactory = new(sources: discSource is null ? [] : [discSource.Object]);
+        DiscSourceFactory discSourceFactory = new(discSource is null ? [] : [discSource.Object]);
 
         RipperHub hub = new(
-            logger: NullLogger<RipperHub>.Instance,
-            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
-            contextFactory: contextFactory,
-            connectedClients: new ConnectedClients(),
-            activityLogger: Mock.Of<IActivityLogger>(),
-            driveMonitor: driveMonitor.Object,
-            discSourceFactory: discSourceFactory
+            NullLogger<RipperHub>.Instance,
+            new HttpContextAccessorStub(httpContext),
+            contextFactory,
+            new ConnectedClients(),
+            Mock.Of<IActivityLogger>(),
+            driveMonitor.Object,
+            discSourceFactory
         );
 
         ClaimsPrincipal principal = new(
-            identity: new ClaimsIdentity(
-                claims: [new(type: ClaimTypes.NameIdentifier, value: callerUserId.ToString())],
-                authenticationType: "TestAuth"
+            new ClaimsIdentity(
+                [new(ClaimTypes.NameIdentifier, callerUserId.ToString())],
+                "TestAuth"
             )
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(expression: c => c.User).Returns(value: principal);
-        context.Setup(expression: c => c.ConnectionId).Returns(value: Guid.NewGuid().ToString());
-        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
+        context.Setup(c => c.User).Returns(principal);
+        context.Setup(c => c.ConnectionId).Returns(Guid.NewGuid().ToString());
+        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
 
         hub.Context = context.Object;
         hub.Clients = Mock.Of<IHubCallerClients>();
@@ -92,23 +92,23 @@ public class RipperHubGetDriveStateTests : IClassFixture<NoMercyApiFactory>
     }
 
     private static object? GetProp(object? source, string propertyName) =>
-        source?.GetType().GetProperty(name: propertyName)?.GetValue(obj: source);
+        source?.GetType().GetProperty(propertyName)?.GetValue(source);
 
     [Fact]
     public async Task GetDriveState_ReturnsNull_WhenCallerIsNotModerator()
     {
         Mock<IDriveMonitor> driveMonitor = new();
         driveMonitor
-            .Setup(expression: m => m.GetDrives())
-            .Returns(value: [new DiscDrive(Path: "D:\\", Label: "Movie Disc", HasDisc: true, DiscType: OpticalDiscType.Dvd)]);
+            .Setup(m => m.GetDrives())
+            .Returns([new DiscDrive("D:\\", "Movie Disc", true, OpticalDiscType.Dvd)]);
 
-        RipperHub hub = CreateHub(callerUserId: TestAuthHandler.SecondaryUserId, driveMonitor: driveMonitor);
+        RipperHub hub = CreateHub(TestAuthHandler.SecondaryUserId, driveMonitor);
 
-        object? result = await hub.GetDriveState(drivePath: "D:\\");
+        object? result = await hub.GetDriveState("D:\\");
 
         result.Should().BeNull();
         // The moderator gate must reject before the drive list is even read.
-        driveMonitor.Verify(expression: m => m.GetDrives(), times: Times.Never);
+        driveMonitor.Verify(m => m.GetDrives(), Times.Never);
     }
 
     [Fact]
@@ -116,19 +116,19 @@ public class RipperHubGetDriveStateTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<IDriveMonitor> driveMonitor = new();
         driveMonitor
-            .Setup(expression: m => m.GetDrives())
-            .Returns(value: [new DiscDrive(Path: "D:\\", Label: "Movie Disc", HasDisc: true, DiscType: OpticalDiscType.Dvd)]);
+            .Setup(m => m.GetDrives())
+            .Returns([new DiscDrive("D:\\", "Movie Disc", true, OpticalDiscType.Dvd)]);
         Mock<IDiscSource> discSource = new();
-        discSource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.Dvd);
+        discSource.Setup(s => s.Type).Returns(OpticalDiscType.Dvd);
 
-        RipperHub hub = CreateHub(callerUserId: TestAuthHandler.DefaultUserId, driveMonitor: driveMonitor, discSource: discSource);
+        RipperHub hub = CreateHub(TestAuthHandler.DefaultUserId, driveMonitor, discSource);
 
-        object? result = await hub.GetDriveState(drivePath: "Z:\\");
+        object? result = await hub.GetDriveState("Z:\\");
 
         result.Should().BeNull();
         discSource.Verify(
-            expression: s => s.ProbeAsync(It.IsAny<DiscDrive>(), It.IsAny<CancellationToken>()),
-            times: Times.Never
+            s => s.ProbeAsync(It.IsAny<DiscDrive>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
     }
 
@@ -136,11 +136,11 @@ public class RipperHubGetDriveStateTests : IClassFixture<NoMercyApiFactory>
     public async Task GetDriveState_EmptyDrivePath_NoDrivesPresent_ReturnsNull_WithoutException()
     {
         Mock<IDriveMonitor> driveMonitor = new();
-        driveMonitor.Setup(expression: m => m.GetDrives()).Returns(value: []);
+        driveMonitor.Setup(m => m.GetDrives()).Returns([]);
 
-        RipperHub hub = CreateHub(callerUserId: TestAuthHandler.DefaultUserId, driveMonitor: driveMonitor);
+        RipperHub hub = CreateHub(TestAuthHandler.DefaultUserId, driveMonitor);
 
-        object? result = await hub.GetDriveState(drivePath: "");
+        object? result = await hub.GetDriveState("");
 
         result.Should().BeNull();
     }
@@ -150,12 +150,12 @@ public class RipperHubGetDriveStateTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<IDriveMonitor> driveMonitor = new();
         driveMonitor
-            .Setup(expression: m => m.GetDrives())
-            .Returns(value: [new DiscDrive(Path: "D:\\", Label: "Empty Tray", HasDisc: false, DiscType: OpticalDiscType.None)]);
+            .Setup(m => m.GetDrives())
+            .Returns([new DiscDrive("D:\\", "Empty Tray", false, OpticalDiscType.None)]);
 
-        RipperHub hub = CreateHub(callerUserId: TestAuthHandler.DefaultUserId, driveMonitor: driveMonitor);
+        RipperHub hub = CreateHub(TestAuthHandler.DefaultUserId, driveMonitor);
 
-        object? result = await hub.GetDriveState(drivePath: "   ");
+        object? result = await hub.GetDriveState("   ");
 
         result.Should().BeNull();
     }
@@ -164,11 +164,11 @@ public class RipperHubGetDriveStateTests : IClassFixture<NoMercyApiFactory>
     public async Task GetDriveState_NullDrivePath_NoDrivesPresent_ReturnsNull_WithoutException()
     {
         Mock<IDriveMonitor> driveMonitor = new();
-        driveMonitor.Setup(expression: m => m.GetDrives()).Returns(value: []);
+        driveMonitor.Setup(m => m.GetDrives()).Returns([]);
 
-        RipperHub hub = CreateHub(callerUserId: TestAuthHandler.DefaultUserId, driveMonitor: driveMonitor);
+        RipperHub hub = CreateHub(TestAuthHandler.DefaultUserId, driveMonitor);
 
-        object? result = await hub.GetDriveState(drivePath: null!);
+        object? result = await hub.GetDriveState(null!);
 
         result.Should().BeNull();
     }
@@ -183,12 +183,12 @@ public class RipperHubGetDriveStateTests : IClassFixture<NoMercyApiFactory>
         // null gracefully instead of surfacing an unhandled exception.
         Mock<IDriveMonitor> driveMonitor = new();
         driveMonitor
-            .Setup(expression: m => m.GetDrives())
-            .Returns(value: [new DiscDrive(Path: "D:\\", Label: "Empty Tray", HasDisc: false, DiscType: OpticalDiscType.None)]);
+            .Setup(m => m.GetDrives())
+            .Returns([new DiscDrive("D:\\", "Empty Tray", false, OpticalDiscType.None)]);
 
-        RipperHub hub = CreateHub(callerUserId: TestAuthHandler.DefaultUserId, driveMonitor: driveMonitor);
+        RipperHub hub = CreateHub(TestAuthHandler.DefaultUserId, driveMonitor);
 
-        object? result = await hub.GetDriveState(drivePath: null!);
+        object? result = await hub.GetDriveState(null!);
 
         result.Should().BeNull();
     }
@@ -198,22 +198,22 @@ public class RipperHubGetDriveStateTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<IDriveMonitor> driveMonitor = new();
         driveMonitor
-            .Setup(expression: m => m.GetDrives())
-            .Returns(value: [new DiscDrive(Path: "D:\\", Label: "Empty Tray", HasDisc: false, DiscType: OpticalDiscType.None)]);
+            .Setup(m => m.GetDrives())
+            .Returns([new DiscDrive("D:\\", "Empty Tray", false, OpticalDiscType.None)]);
         Mock<IDiscSource> discSource = new();
-        discSource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.None);
+        discSource.Setup(s => s.Type).Returns(OpticalDiscType.None);
 
-        RipperHub hub = CreateHub(callerUserId: TestAuthHandler.DefaultUserId, driveMonitor: driveMonitor, discSource: discSource);
+        RipperHub hub = CreateHub(TestAuthHandler.DefaultUserId, driveMonitor, discSource);
 
-        object? result = await hub.GetDriveState(drivePath: "D:\\");
+        object? result = await hub.GetDriveState("D:\\");
 
         result.Should().NotBeNull();
-        GetProp(source: result, propertyName: "has_disc").Should().Be(expected: false);
-        GetProp(source: result, propertyName: "open").Should().Be(expected: true);
-        GetProp(source: result, propertyName: "disc_type").Should().Be(expected: "none");
+        GetProp(result, "has_disc").Should().Be(false);
+        GetProp(result, "open").Should().Be(true);
+        GetProp(result, "disc_type").Should().Be("none");
         discSource.Verify(
-            expression: s => s.ProbeAsync(It.IsAny<DiscDrive>(), It.IsAny<CancellationToken>()),
-            times: Times.Never
+            s => s.ProbeAsync(It.IsAny<DiscDrive>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
     }
 
@@ -222,83 +222,83 @@ public class RipperHubGetDriveStateTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<IDriveMonitor> driveMonitor = new();
         driveMonitor
-            .Setup(expression: m => m.GetDrives())
-            .Returns(value: [new DiscDrive(Path: "D:\\", Label: "Mystery Disc", HasDisc: true, DiscType: OpticalDiscType.Cd)]);
+            .Setup(m => m.GetDrives())
+            .Returns([new DiscDrive("D:\\", "Mystery Disc", true, OpticalDiscType.Cd)]);
 
         // No IDiscSource registered for OpticalDiscType.Cd -> DiscSourceFactory.CreateFor
         // returns null and the probe branch must never be reached.
-        RipperHub hub = CreateHub(callerUserId: TestAuthHandler.DefaultUserId, driveMonitor: driveMonitor);
+        RipperHub hub = CreateHub(TestAuthHandler.DefaultUserId, driveMonitor);
 
-        object? result = await hub.GetDriveState(drivePath: "D:\\");
+        object? result = await hub.GetDriveState("D:\\");
 
         result.Should().NotBeNull();
-        GetProp(source: result, propertyName: "has_disc").Should().Be(expected: true);
-        GetProp(source: result, propertyName: "open").Should().Be(expected: false);
-        GetProp(source: result, propertyName: "disc_type").Should().Be(expected: "cd");
-        GetProp(source: result, propertyName: "label").Should().Be(expected: "Mystery Disc");
+        GetProp(result, "has_disc").Should().Be(true);
+        GetProp(result, "open").Should().Be(false);
+        GetProp(result, "disc_type").Should().Be("cd");
+        GetProp(result, "label").Should().Be("Mystery Disc");
     }
 
     [Fact]
     public async Task GetDriveState_KnownDriveWithDisc_RegisteredSource_ReturnsProbedDiscInfo()
     {
-        DiscDrive drive = new(Path: "D:\\", Label: "Fallback Label", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DiscDrive drive = new("D:\\", "Fallback Label", true, OpticalDiscType.Dvd);
         DiscInfo discInfo = new(
-            Type: OpticalDiscType.Dvd,
-            DiscLabel: "DISC_LABEL",
-            Titles: [],
-            AudioTracks: null,
-            TotalDuration: TimeSpan.FromMinutes(minutes: 90),
+            OpticalDiscType.Dvd,
+            "DISC_LABEL",
+            [],
+            null,
+            TimeSpan.FromMinutes(90),
             DiscTitle: "The Movie"
         );
 
         Mock<IDriveMonitor> driveMonitor = new();
-        driveMonitor.Setup(expression: m => m.GetDrives()).Returns(value: [drive]);
+        driveMonitor.Setup(m => m.GetDrives()).Returns([drive]);
 
         Mock<IDiscSource> discSource = new();
-        discSource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.Dvd);
+        discSource.Setup(s => s.Type).Returns(OpticalDiscType.Dvd);
         discSource
-            .Setup(expression: s => s.ProbeAsync(drive, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: discInfo);
+            .Setup(s => s.ProbeAsync(drive, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(discInfo);
 
-        RipperHub hub = CreateHub(callerUserId: TestAuthHandler.DefaultUserId, driveMonitor: driveMonitor, discSource: discSource);
+        RipperHub hub = CreateHub(TestAuthHandler.DefaultUserId, driveMonitor, discSource);
 
-        object? result = await hub.GetDriveState(drivePath: "D:\\");
+        object? result = await hub.GetDriveState("D:\\");
 
         result.Should().NotBeNull();
-        GetProp(source: result, propertyName: "path").Should().Be(expected: "D:");
-        GetProp(source: result, propertyName: "label").Should().Be(expected: "The Movie");
-        GetProp(source: result, propertyName: "has_disc").Should().Be(expected: true);
-        GetProp(source: result, propertyName: "open").Should().Be(expected: false);
-        GetProp(source: result, propertyName: "disc_type").Should().Be(expected: "dvd");
-        discSource.Verify(expression: s => s.ProbeAsync(drive, It.IsAny<CancellationToken>()), times: Times.Once);
+        GetProp(result, "path").Should().Be("D:");
+        GetProp(result, "label").Should().Be("The Movie");
+        GetProp(result, "has_disc").Should().Be(true);
+        GetProp(result, "open").Should().Be(false);
+        GetProp(result, "disc_type").Should().Be("dvd");
+        discSource.Verify(s => s.ProbeAsync(drive, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task GetDriveState_ProbeThrows_ReturnsFallbackDriveInfo_WithoutDiscField()
     {
-        DiscDrive drive = new(Path: "D:\\", Label: "Fallback Label", HasDisc: true, DiscType: OpticalDiscType.BluRay);
+        DiscDrive drive = new("D:\\", "Fallback Label", true, OpticalDiscType.BluRay);
 
         Mock<IDriveMonitor> driveMonitor = new();
-        driveMonitor.Setup(expression: m => m.GetDrives()).Returns(value: [drive]);
+        driveMonitor.Setup(m => m.GetDrives()).Returns([drive]);
 
         Mock<IDiscSource> discSource = new();
-        discSource.Setup(expression: s => s.Type).Returns(value: OpticalDiscType.BluRay);
+        discSource.Setup(s => s.Type).Returns(OpticalDiscType.BluRay);
         discSource
-            .Setup(expression: s => s.ProbeAsync(drive, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(exception: new InvalidOperationException(message: "drive busy"));
+            .Setup(s => s.ProbeAsync(drive, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("drive busy"));
 
-        RipperHub hub = CreateHub(callerUserId: TestAuthHandler.DefaultUserId, driveMonitor: driveMonitor, discSource: discSource);
+        RipperHub hub = CreateHub(TestAuthHandler.DefaultUserId, driveMonitor, discSource);
 
-        object? result = await hub.GetDriveState(drivePath: "D:\\");
+        object? result = await hub.GetDriveState("D:\\");
 
         result.Should().NotBeNull();
-        GetProp(source: result, propertyName: "label").Should().Be(expected: "Fallback Label");
-        GetProp(source: result, propertyName: "has_disc").Should().Be(expected: true);
-        GetProp(source: result, propertyName: "open").Should().Be(expected: false);
-        GetProp(source: result, propertyName: "disc_type").Should().Be(expected: "bluray");
+        GetProp(result, "label").Should().Be("Fallback Label");
+        GetProp(result, "has_disc").Should().Be(true);
+        GetProp(result, "open").Should().Be(false);
+        GetProp(result, "disc_type").Should().Be("bluray");
         // The success-only "disc" field must be absent from the exception fallback
         // shape, distinguishing it from the probed-success envelope.
-        GetProp(source: result, propertyName: "disc").Should().BeNull();
+        GetProp(result, "disc").Should().BeNull();
     }
 
     // Minimal IHttpContextAccessor stand-in — the real implementation is an

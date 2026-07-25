@@ -18,7 +18,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Media.Components;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ComponentExtensionsTests
 {
     private static Movie BuildMovie(int id = 1) =>
@@ -89,45 +89,45 @@ public class ComponentExtensionsTests
     [Fact]
     public void Movie_ToCard_WatchTrue_LinkPointsAtWatchRoute()
     {
-        Movie movie = BuildMovie(id: 129);
+        Movie movie = BuildMovie(129);
 
-        ComponentEnvelope envelope = movie.ToCard(country: "US", watch: true);
+        ComponentEnvelope envelope = movie.ToCard("US", watch: true);
 
         CardData data = ((LeafProps<CardData>)envelope.Props).Data!;
-        data.Link.ToString().Should().Be(expected: "/movie/129/watch");
+        data.Link.ToString().Should().Be("/movie/129/watch");
     }
 
     [Fact]
     public void Movie_ToCard_WatchFalse_LinkDoesNotPointAtWatchRoute()
     {
-        Movie movie = BuildMovie(id: 129);
+        Movie movie = BuildMovie(129);
 
-        ComponentEnvelope envelope = movie.ToCard(country: "US");
+        ComponentEnvelope envelope = movie.ToCard("US");
 
         CardData data = ((LeafProps<CardData>)envelope.Props).Data!;
-        data.Link.ToString().Should().Be(expected: "/movie/129");
+        data.Link.ToString().Should().Be("/movie/129");
     }
 
     [Fact]
     public void Tv_ToCard_WatchTrue_LinkPointsAtWatchRoute()
     {
-        Tv tv = BuildTv(id: 1399);
+        Tv tv = BuildTv(1399);
 
-        ComponentEnvelope envelope = tv.ToCard(country: "US", watch: true);
+        ComponentEnvelope envelope = tv.ToCard("US", watch: true);
 
         CardData data = ((LeafProps<CardData>)envelope.Props).Data!;
-        data.Link.ToString().Should().Be(expected: "/tv/1399/watch");
+        data.Link.ToString().Should().Be("/tv/1399/watch");
     }
 
     [Fact]
     public void Collection_ToCard_WatchTrue_LinkPointsAtWatchRoute()
     {
-        Collection collection = BuildCollection(id: 42);
+        Collection collection = BuildCollection(42);
 
-        ComponentEnvelope envelope = collection.ToCard(country: "US", watch: true);
+        ComponentEnvelope envelope = collection.ToCard("US", watch: true);
 
         CardData data = ((LeafProps<CardData>)envelope.Props).Data!;
-        data.Link.ToString().Should().Be(expected: "/collection/42/watch");
+        data.Link.ToString().Should().Be("/collection/42/watch");
     }
 
     [Fact]
@@ -135,10 +135,10 @@ public class ComponentExtensionsTests
     {
         Special special = BuildSpecial();
 
-        ComponentEnvelope envelope = special.ToCard(country: "US", watch: true);
+        ComponentEnvelope envelope = special.ToCard("US", watch: true);
 
         CardData data = ((LeafProps<CardData>)envelope.Props).Data!;
-        data.Link.ToString().Should().Be(expected: $"/specials/{special.Id}/watch");
+        data.Link.ToString().Should().Be($"/specials/{special.Id}/watch");
     }
 
     // =========================================================================
@@ -150,7 +150,7 @@ public class ComponentExtensionsTests
     {
         Movie movie = BuildMovie();
 
-        ComponentEnvelope envelope = movie.ToCard(country: "US", watch: true);
+        ComponentEnvelope envelope = movie.ToCard("US", watch: true);
 
         ((LeafProps<CardData>)envelope.Props).Watch.Should().BeTrue();
     }
@@ -160,7 +160,7 @@ public class ComponentExtensionsTests
     {
         Movie movie = BuildMovie();
 
-        ComponentEnvelope envelope = movie.ToCard(country: "US");
+        ComponentEnvelope envelope = movie.ToCard("US");
 
         ((LeafProps<CardData>)envelope.Props).Watch.Should().BeFalse();
     }
@@ -172,12 +172,12 @@ public class ComponentExtensionsTests
     [Fact]
     public void Movie_ToCard_UsesCardComponentType()
     {
-        Movie movie = BuildMovie(id: 7);
+        Movie movie = BuildMovie(7);
 
-        ComponentEnvelope envelope = movie.ToCard(country: "US");
+        ComponentEnvelope envelope = movie.ToCard("US");
 
-        envelope.Component.Should().Be(expected: ComponentTypes.Card);
-        ((object)((LeafProps<CardData>)envelope.Props).Data!.Id!).Should().Be(expected: 7);
+        envelope.Component.Should().Be(ComponentTypes.Card);
+        ((object)((LeafProps<CardData>)envelope.Props).Data!.Id!).Should().Be(7);
     }
 
     // =========================================================================
@@ -187,41 +187,41 @@ public class ComponentExtensionsTests
     [Fact]
     public void Movies_ToCards_WatchTrue_EveryCardLinksToWatchRoute()
     {
-        List<Movie> movies = [BuildMovie(id: 1), BuildMovie(id: 2)];
+        List<Movie> movies = [BuildMovie(1), BuildMovie(2)];
 
-        List<ComponentEnvelope> envelopes = movies.ToCards(country: "US", watch: true).ToList();
+        List<ComponentEnvelope> envelopes = movies.ToCards("US", watch: true).ToList();
 
-        envelopes.Should().HaveCount(expected: 2);
+        envelopes.Should().HaveCount(2);
         envelopes
-            .Select(selector: e => ((LeafProps<CardData>)e.Props).Data!.Link.ToString())
+            .Select(e => ((LeafProps<CardData>)e.Props).Data!.Link.ToString())
             .Should()
-            .Equal(expected: ["/movie/1/watch", "/movie/2/watch"]);
+            .Equal("/movie/1/watch", "/movie/2/watch");
     }
 
     [Fact]
     public void Shows_ToCards_WatchTrue_EveryCardLinksToWatchRoute()
     {
-        List<Tv> shows = [BuildTv(id: 10), BuildTv(id: 20)];
+        List<Tv> shows = [BuildTv(10), BuildTv(20)];
 
-        List<ComponentEnvelope> envelopes = shows.ToCards(country: "US", watch: true).ToList();
+        List<ComponentEnvelope> envelopes = shows.ToCards("US", watch: true).ToList();
 
         envelopes
-            .Select(selector: e => ((LeafProps<CardData>)e.Props).Data!.Link.ToString())
+            .Select(e => ((LeafProps<CardData>)e.Props).Data!.Link.ToString())
             .Should()
-            .Equal(expected: ["/tv/10/watch", "/tv/20/watch"]);
+            .Equal("/tv/10/watch", "/tv/20/watch");
     }
 
     [Fact]
     public void Collections_ToCards_WatchTrue_EveryCardLinksToWatchRoute()
     {
-        List<Collection> collections = [BuildCollection(id: 1), BuildCollection(id: 2)];
+        List<Collection> collections = [BuildCollection(1), BuildCollection(2)];
 
-        List<ComponentEnvelope> envelopes = collections.ToCards(country: "US", watch: true).ToList();
+        List<ComponentEnvelope> envelopes = collections.ToCards("US", watch: true).ToList();
 
         envelopes
-            .Select(selector: e => ((LeafProps<CardData>)e.Props).Data!.Link.ToString())
+            .Select(e => ((LeafProps<CardData>)e.Props).Data!.Link.ToString())
             .Should()
-            .Equal(expected: ["/collection/1/watch", "/collection/2/watch"]);
+            .Equal("/collection/1/watch", "/collection/2/watch");
     }
 
     // =========================================================================
@@ -231,23 +231,23 @@ public class ComponentExtensionsTests
     [Fact]
     public void Movie_ToHomeCard_UsesHomeCardComponentType()
     {
-        Movie movie = BuildMovie(id: 129);
+        Movie movie = BuildMovie(129);
 
-        ComponentEnvelope envelope = movie.ToHomeCard(country: "US");
+        ComponentEnvelope envelope = movie.ToHomeCard("US");
 
-        envelope.Component.Should().Be(expected: ComponentTypes.HomeCard);
-        ((object)((LeafProps<HomeCardData>)envelope.Props).Data!.Id!).Should().Be(expected: 129);
+        envelope.Component.Should().Be(ComponentTypes.HomeCard);
+        ((object)((LeafProps<HomeCardData>)envelope.Props).Data!.Id!).Should().Be(129);
     }
 
     [Fact]
     public void Tv_ToHomeCard_UsesHomeCardComponentType()
     {
-        Tv tv = BuildTv(id: 1399);
+        Tv tv = BuildTv(1399);
 
-        ComponentEnvelope envelope = tv.ToHomeCard(country: "US");
+        ComponentEnvelope envelope = tv.ToHomeCard("US");
 
-        envelope.Component.Should().Be(expected: ComponentTypes.HomeCard);
-        ((object)((LeafProps<HomeCardData>)envelope.Props).Data!.Id!).Should().Be(expected: 1399);
+        envelope.Component.Should().Be(ComponentTypes.HomeCard);
+        ((object)((LeafProps<HomeCardData>)envelope.Props).Data!.Id!).Should().Be(1399);
     }
 
     // =========================================================================
@@ -261,7 +261,7 @@ public class ComponentExtensionsTests
 
         ComponentEnvelope envelope = genre.ToGenreCard();
 
-        envelope.Component.Should().Be(expected: ComponentTypes.GenreCard);
+        envelope.Component.Should().Be(ComponentTypes.GenreCard);
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public class ComponentExtensionsTests
 
         ComponentEnvelope envelope = musicGenre.ToGenreCard();
 
-        envelope.Component.Should().Be(expected: ComponentTypes.GenreCard);
+        envelope.Component.Should().Be(ComponentTypes.GenreCard);
     }
 
     // =========================================================================
@@ -285,8 +285,8 @@ public class ComponentExtensionsTests
 
         ComponentEnvelope envelope = album.ToMusicCard();
 
-        envelope.Component.Should().Be(expected: ComponentTypes.MusicCard);
-        ((LeafProps<MusicCardData>)envelope.Props).Data!.Id.Should().Be(expected: album.Id.ToString());
+        envelope.Component.Should().Be(ComponentTypes.MusicCard);
+        ((LeafProps<MusicCardData>)envelope.Props).Data!.Id.Should().Be(album.Id.ToString());
     }
 
     [Fact]
@@ -296,8 +296,8 @@ public class ComponentExtensionsTests
 
         ComponentEnvelope envelope = artist.ToMusicCard();
 
-        envelope.Component.Should().Be(expected: ComponentTypes.MusicCard);
-        ((LeafProps<MusicCardData>)envelope.Props).Data!.Id.Should().Be(expected: artist.Id.ToString());
+        envelope.Component.Should().Be(ComponentTypes.MusicCard);
+        ((LeafProps<MusicCardData>)envelope.Props).Data!.Id.Should().Be(artist.Id.ToString());
     }
 
     [Fact]
@@ -307,7 +307,7 @@ public class ComponentExtensionsTests
 
         ComponentEnvelope envelope = track.ToTrackRow();
 
-        envelope.Component.Should().Be(expected: ComponentTypes.TrackRow);
+        envelope.Component.Should().Be(ComponentTypes.TrackRow);
     }
 
     [Fact]
@@ -329,9 +329,9 @@ public class ComponentExtensionsTests
         Track otherTrack = BuildTrack();
         List<Track> tracks = [favoriteTrack, otherTrack];
 
-        List<ComponentEnvelope> envelopes = tracks.ToTrackRows(isFavorite: t => t == favoriteTrack).ToList();
+        List<ComponentEnvelope> envelopes = tracks.ToTrackRows(t => t == favoriteTrack).ToList();
 
-        envelopes.Should().HaveCount(expected: 2);
+        envelopes.Should().HaveCount(2);
     }
 
     [Fact]
@@ -341,7 +341,7 @@ public class ComponentExtensionsTests
 
         List<ComponentEnvelope> envelopes = tracks.ToTrackRows().ToList();
 
-        envelopes.Should().HaveCount(expected: 2);
+        envelopes.Should().HaveCount(2);
     }
 
     // =========================================================================
@@ -351,61 +351,61 @@ public class ComponentExtensionsTests
     [Fact]
     public void WrapInCarousel_SetsTitleMoreLinkItemsAndId()
     {
-        List<ComponentEnvelope> items = [BuildMovie(id: 1).ToCard(country: "US"), BuildMovie(id: 2).ToCard(country: "US")];
+        List<ComponentEnvelope> items = [BuildMovie(1).ToCard("US"), BuildMovie(2).ToCard("US")];
         Ulid id = Ulid.NewUlid();
 
-        ComponentEnvelope envelope = items.WrapInCarousel(title: "Continue Watching", moreLink: "/more", id: id);
+        ComponentEnvelope envelope = items.WrapInCarousel("Continue Watching", "/more", id);
 
-        envelope.Component.Should().Be(expected: ComponentTypes.Carousel);
+        envelope.Component.Should().Be(ComponentTypes.Carousel);
         ContainerProps props = (ContainerProps)envelope.Props;
-        props.Title.Should().Be(expected: "Continue Watching");
-        props.MoreLink!.ToString().Should().Be(expected: "/more");
-        props.Items.Should().HaveCount(expected: 2);
-        ((Ulid)props.Id!).Should().Be(expected: id);
+        props.Title.Should().Be("Continue Watching");
+        props.MoreLink!.ToString().Should().Be("/more");
+        props.Items.Should().HaveCount(2);
+        ((Ulid)props.Id!).Should().Be(id);
     }
 
     [Fact]
     public void WrapInCarousel_NullId_LeavesDefaultId()
     {
-        List<ComponentEnvelope> items = [BuildMovie(id: 1).ToCard(country: "US")];
+        List<ComponentEnvelope> items = [BuildMovie(1).ToCard("US")];
 
         ComponentEnvelope envelope = items.WrapInCarousel();
 
-        envelope.Component.Should().Be(expected: ComponentTypes.Carousel);
+        envelope.Component.Should().Be(ComponentTypes.Carousel);
     }
 
     [Fact]
     public void WrapInGrid_SetsTitleMoreLinkAndItems()
     {
-        List<ComponentEnvelope> items = [BuildMovie(id: 1).ToCard(country: "US")];
+        List<ComponentEnvelope> items = [BuildMovie(1).ToCard("US")];
 
-        ComponentEnvelope envelope = items.WrapInGrid(title: "All Movies", moreLink: "/movies");
+        ComponentEnvelope envelope = items.WrapInGrid("All Movies", "/movies");
 
-        envelope.Component.Should().Be(expected: ComponentTypes.Grid);
+        envelope.Component.Should().Be(ComponentTypes.Grid);
         ContainerProps props = (ContainerProps)envelope.Props;
-        props.Title.Should().Be(expected: "All Movies");
-        props.MoreLink!.ToString().Should().Be(expected: "/movies");
+        props.Title.Should().Be("All Movies");
+        props.MoreLink!.ToString().Should().Be("/movies");
         props.Items.Should().ContainSingle();
     }
 
     [Fact]
     public void WrapInList_SetsTitleMoreLinkAndItems()
     {
-        List<ComponentEnvelope> items = [BuildTv(id: 1).ToCard(country: "US")];
+        List<ComponentEnvelope> items = [BuildTv(1).ToCard("US")];
 
-        ComponentEnvelope envelope = items.WrapInList(title: "Shows", moreLink: "/shows");
+        ComponentEnvelope envelope = items.WrapInList("Shows", "/shows");
 
-        envelope.Component.Should().Be(expected: ComponentTypes.List);
+        envelope.Component.Should().Be(ComponentTypes.List);
         ContainerProps props = (ContainerProps)envelope.Props;
-        props.Title.Should().Be(expected: "Shows");
-        props.MoreLink!.ToString().Should().Be(expected: "/shows");
+        props.Title.Should().Be("Shows");
+        props.MoreLink!.ToString().Should().Be("/shows");
         props.Items.Should().ContainSingle();
     }
 
     [Fact]
     public void WrapInList_NoTitleOrMoreLink_LeavesThemEmpty()
     {
-        List<ComponentEnvelope> items = [BuildTv(id: 1).ToCard(country: "US")];
+        List<ComponentEnvelope> items = [BuildTv(1).ToCard("US")];
 
         ComponentEnvelope envelope = items.WrapInList();
 

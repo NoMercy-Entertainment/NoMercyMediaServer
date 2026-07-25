@@ -21,49 +21,49 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record LoloMoRowItemDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "logo")]
+    [JsonProperty("logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "titleSort")]
+    [JsonProperty("titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int? Year { get; set; }
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string? MediaType { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public GenreDto[]? LoloMos { get; set; }
 
-    [JsonProperty(propertyName: "rating")]
+    [JsonProperty("rating")]
     public RatingClass? Rating { get; set; }
 
-    [JsonProperty(propertyName: "videos")]
+    [JsonProperty("videos")]
     public VideoDto[]? Videos { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
     public LoloMoRowItemDto(GenreMovie genreMovie)
@@ -73,10 +73,10 @@ public record LoloMoRowItemDto
         Overview = genreMovie.Movie.Overview;
         Poster = genreMovie.Movie.Poster;
         Backdrop = genreMovie.Movie.Backdrop;
-        TitleSort = genreMovie.Movie.Title.TitleSort(date: genreMovie.Movie.ReleaseDate);
+        TitleSort = genreMovie.Movie.Title.TitleSort(genreMovie.Movie.ReleaseDate);
         Year = genreMovie.Movie.ReleaseDate.ParseYear();
         MediaType = MediaTypes.MovieMediaType;
-        Link = new(uriString: $"/movie/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         ColorPalette = genreMovie.Movie.ColorPalette;
     }
 
@@ -87,11 +87,11 @@ public record LoloMoRowItemDto
         Overview = genreTv.Tv.Overview;
         Poster = genreTv.Tv.Poster;
         Backdrop = genreTv.Tv.Backdrop;
-        TitleSort = genreTv.Tv.Title.TitleSort(date: genreTv.Tv.FirstAirDate);
+        TitleSort = genreTv.Tv.Title.TitleSort(genreTv.Tv.FirstAirDate);
         Type = genreTv.Tv.Type;
         Year = genreTv.Tv.FirstAirDate.ParseYear();
         MediaType = MediaTypes.TvMediaType;
-        Link = new(uriString: $"/tv/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/tv/{Id}", UriKind.Relative);
         ColorPalette = genreTv.Tv.ColorPalette;
     }
 }

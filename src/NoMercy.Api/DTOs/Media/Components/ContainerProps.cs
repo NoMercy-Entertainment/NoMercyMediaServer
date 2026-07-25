@@ -20,34 +20,34 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record ContainerProps : IContainerProps
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public dynamic Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "next_id", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public dynamic? NextId { get; set; }
 
-    [JsonProperty(propertyName: "previous_id", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public dynamic? PreviousId { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "more_link", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("more_link", NullValueHandling = NullValueHandling.Ignore)]
     public Uri? MoreLink { get; set; }
 
-    [JsonProperty(propertyName: "more_link_text", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("more_link_text", NullValueHandling = NullValueHandling.Ignore)]
     public string? MoreLinkText => MoreLink is not null ? "See all".Localize() : null;
 
-    [JsonProperty(propertyName: "items")]
+    [JsonProperty("items")]
     public IEnumerable<ComponentEnvelope> Items { get; set; } = [];
 
-    [JsonProperty(propertyName: "context_menu_items", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("context_menu_items", NullValueHandling = NullValueHandling.Ignore)]
     public IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
 
-    [JsonProperty(propertyName: "url", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public Uri? Url { get; set; }
 
-    [JsonProperty(propertyName: "properties", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
     public Dictionary<string, dynamic>? Properties { get; set; }
 }
 
@@ -56,10 +56,10 @@ public record ContainerProps : IContainerProps
 /// </summary>
 public record GridProps : ContainerProps
 {
-    [JsonProperty(propertyName: "columns", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("columns", NullValueHandling = NullValueHandling.Ignore)]
     public int? Columns { get; set; }
 
-    [JsonProperty(propertyName: "gap", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("gap", NullValueHandling = NullValueHandling.Ignore)]
     public int? Gap { get; set; }
 }
 
@@ -68,7 +68,7 @@ public record GridProps : ContainerProps
 /// </summary>
 public record ListProps : ContainerProps
 {
-    [JsonProperty(propertyName: "orientation", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("orientation", NullValueHandling = NullValueHandling.Ignore)]
     public string? Orientation { get; set; }
 }
 
@@ -77,10 +77,10 @@ public record ListProps : ContainerProps
 /// </summary>
 public record CarouselProps : ContainerProps
 {
-    [JsonProperty(propertyName: "auto_scroll", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("auto_scroll", NullValueHandling = NullValueHandling.Ignore)]
     public bool? AutoScroll { get; set; }
 
-    [JsonProperty(propertyName: "scroll_interval", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("scroll_interval", NullValueHandling = NullValueHandling.Ignore)]
     public int? ScrollInterval { get; set; }
 }
 
@@ -89,6 +89,6 @@ public record CarouselProps : ContainerProps
 /// </summary>
 public record NmContainerProps : ContainerProps
 {
-    [JsonProperty(propertyName: "layout", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("layout", NullValueHandling = NullValueHandling.Ignore)]
     public string? Layout { get; set; }
 }

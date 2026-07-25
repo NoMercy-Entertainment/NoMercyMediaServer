@@ -28,7 +28,7 @@ public class ChangeTrackerBloatTests : IDisposable
     public ChangeTrackerBloatTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(context: _adapter);
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
@@ -48,13 +48,13 @@ public class ChangeTrackerBloatTests : IDisposable
                 Payload = $"payload-{i}",
                 AvailableAt = DateTime.UtcNow,
             };
-            _jobQueue.Enqueue(queueJob: job);
+            _jobQueue.Enqueue(job);
 
             int trackedEntities = _context.ChangeTracker.Entries().Count();
-            Assert.Equal(expected: 0, actual: trackedEntities);
+            Assert.Equal(0, trackedEntities);
         }
 
-        Assert.Equal(expected: 100, actual: _context.QueueJobs.Count());
+        Assert.Equal(100, _context.QueueJobs.Count());
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class ChangeTrackerBloatTests : IDisposable
         for (int i = 0; i < 50; i++)
         {
             _jobQueue.Enqueue(
-                queueJob: new()
+                new()
                 {
                     Queue = "test",
                     Payload = $"payload-{i}",
@@ -75,13 +75,13 @@ public class ChangeTrackerBloatTests : IDisposable
         for (int i = 0; i < 50; i++)
         {
             QueueJobModel? job = _jobQueue.Dequeue();
-            Assert.NotNull(@object: job);
+            Assert.NotNull(job);
 
             int trackedEntities = _context.ChangeTracker.Entries().Count();
-            Assert.Equal(expected: 0, actual: trackedEntities);
+            Assert.Equal(0, trackedEntities);
         }
 
-        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+        Assert.Equal(0, _context.QueueJobs.Count());
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class ChangeTrackerBloatTests : IDisposable
         for (int i = 0; i < 20; i++)
         {
             _jobQueue.Enqueue(
-                queueJob: new()
+                new()
                 {
                     Queue = "test",
                     Payload = $"payload-{i}",
@@ -113,13 +113,13 @@ public class ChangeTrackerBloatTests : IDisposable
                 AvailableAt = job.AvailableAt,
                 CreatedAt = job.CreatedAt,
             };
-            _jobQueue.DeleteJob(queueJob: model);
+            _jobQueue.DeleteJob(model);
 
             int trackedEntities = _context.ChangeTracker.Entries().Count();
-            Assert.Equal(expected: 0, actual: trackedEntities);
+            Assert.Equal(0, trackedEntities);
         }
 
-        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+        Assert.Equal(0, _context.QueueJobs.Count());
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public class ChangeTrackerBloatTests : IDisposable
         for (int i = 0; i < 20; i++)
         {
             _context.FailedJobs.Add(
-                entity: new()
+                new()
                 {
                     Uuid = Guid.NewGuid(),
                     Connection = "default",
@@ -145,21 +145,21 @@ public class ChangeTrackerBloatTests : IDisposable
         _jobQueue.RetryFailedJobs();
 
         int trackedEntities = _context.ChangeTracker.Entries().Count();
-        Assert.Equal(expected: 0, actual: trackedEntities);
+        Assert.Equal(0, trackedEntities);
 
-        Assert.Equal(expected: 0, actual: _context.FailedJobs.Count());
-        Assert.Equal(expected: 20, actual: _context.QueueJobs.Count());
+        Assert.Equal(0, _context.FailedJobs.Count());
+        Assert.Equal(20, _context.QueueJobs.Count());
     }
 
     [Fact]
     public void FailJob_ChangeTrackerClearedAfterSave()
     {
-        JobQueue jobQueue = new(context: _adapter, maxAttempts: 1);
+        JobQueue jobQueue = new(_adapter, 1);
 
         for (int i = 0; i < 20; i++)
         {
             _context.QueueJobs.Add(
-                entity: new()
+                new()
                 {
                     Queue = "test",
                     Payload = $"payload-{i}",
@@ -186,14 +186,14 @@ public class ChangeTrackerBloatTests : IDisposable
                 AvailableAt = job.AvailableAt,
                 CreatedAt = job.CreatedAt,
             };
-            jobQueue.FailJob(queueJob: model, exception: new(message: "test error"));
+            jobQueue.FailJob(model, new("test error"));
 
             int trackedEntities = _context.ChangeTracker.Entries().Count();
-            Assert.Equal(expected: 0, actual: trackedEntities);
+            Assert.Equal(0, trackedEntities);
         }
 
-        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
-        Assert.Equal(expected: 20, actual: _context.FailedJobs.Count());
+        Assert.Equal(0, _context.QueueJobs.Count());
+        Assert.Equal(20, _context.FailedJobs.Count());
     }
 
     [Fact]
@@ -204,7 +204,7 @@ public class ChangeTrackerBloatTests : IDisposable
             for (int i = 0; i < 100; i++)
             {
                 _jobQueue.Enqueue(
-                    queueJob: new()
+                    new()
                     {
                         Queue = "test",
                         Payload = $"cycle-{cycle}-payload-{i}",
@@ -216,13 +216,13 @@ public class ChangeTrackerBloatTests : IDisposable
             for (int i = 0; i < 100; i++)
             {
                 QueueJobModel? job = _jobQueue.Dequeue();
-                Assert.NotNull(@object: job);
+                Assert.NotNull(job);
             }
 
             int trackedEntities = _context.ChangeTracker.Entries().Count();
-            Assert.Equal(expected: 0, actual: trackedEntities);
+            Assert.Equal(0, trackedEntities);
         }
 
-        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+        Assert.Equal(0, _context.QueueJobs.Count());
     }
 }

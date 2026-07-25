@@ -15,22 +15,22 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class RelationRecording
 {
-    [JsonProperty(propertyName: "artist-credit")]
+    [JsonProperty("artist-credit")]
     public RecordingArtistCredit[] ArtistCredit { get; set; } = [];
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string Disambiguation { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
     // [JsonProperty("isrcs")] public object[] Isrcs { get; set; }
-    [JsonProperty(propertyName: "length")]
+    [JsonProperty("length")]
     public int? Length { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "video")]
+    [JsonProperty("video")]
     public bool Video { get; set; }
 }

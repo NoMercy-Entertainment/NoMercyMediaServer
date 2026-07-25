@@ -22,52 +22,52 @@ namespace NoMercy.Tests.Api.Dashboard;
 public class RipStagingPathTests
 {
     private static readonly string StagingRoot = Path.Combine(
-        path1: Path.GetTempPath(),
-        path2: "nm-ripstaging-test",
-        path3: "ripper"
+        Path.GetTempPath(),
+        "nm-ripstaging-test",
+        "ripper"
     );
 
     [Fact]
     public void FileDirectlyInsideStaging_IsAllowed()
     {
-        string candidate = Path.Combine(path1: StagingRoot, path2: "drive0", path3: "movie.mkv");
-        Assert.True(condition: RipStagingPath.IsWithinStaging(ripOutputPath: candidate, stagingRoot: StagingRoot));
+        string candidate = Path.Combine(StagingRoot, "drive0", "movie.mkv");
+        Assert.True(RipStagingPath.IsWithinStaging(candidate, StagingRoot));
     }
 
     [Fact]
     public void TraversalOutOfStaging_IsRejected()
     {
-        string candidate = Path.Combine(path1: StagingRoot, path2: "..", path3: "..", path4: "secret.conf");
-        Assert.False(condition: RipStagingPath.IsWithinStaging(ripOutputPath: candidate, stagingRoot: StagingRoot));
+        string candidate = Path.Combine(StagingRoot, "..", "..", "secret.conf");
+        Assert.False(RipStagingPath.IsWithinStaging(candidate, StagingRoot));
     }
 
     [Fact]
     public void SiblingPrefixDirectory_IsRejected()
     {
         // "ripper-evil" must not be treated as inside "ripper".
-        string candidate = Path.Combine(path1: StagingRoot + "-evil", path2: "movie.mkv");
-        Assert.False(condition: RipStagingPath.IsWithinStaging(ripOutputPath: candidate, stagingRoot: StagingRoot));
+        string candidate = Path.Combine(StagingRoot + "-evil", "movie.mkv");
+        Assert.False(RipStagingPath.IsWithinStaging(candidate, StagingRoot));
     }
 
     [Fact]
     public void StagingRootItself_IsRejected()
     {
-        Assert.False(condition: RipStagingPath.IsWithinStaging(ripOutputPath: StagingRoot, stagingRoot: StagingRoot));
+        Assert.False(RipStagingPath.IsWithinStaging(StagingRoot, StagingRoot));
     }
 
     [Theory]
-    [InlineData(data: null)]
-    [InlineData(data: "")]
-    [InlineData(data: "   ")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     public void EmptyOrNullPath_IsRejected(string? candidate)
     {
-        Assert.False(condition: RipStagingPath.IsWithinStaging(ripOutputPath: candidate, stagingRoot: StagingRoot));
+        Assert.False(RipStagingPath.IsWithinStaging(candidate, StagingRoot));
     }
 
     [Fact]
     public void AbsolutePathOutsideStaging_IsRejected()
     {
-        string candidate = Path.Combine(path1: Path.GetTempPath(), path2: "elsewhere", path3: "movie.mkv");
-        Assert.False(condition: RipStagingPath.IsWithinStaging(ripOutputPath: candidate, stagingRoot: StagingRoot));
+        string candidate = Path.Combine(Path.GetTempPath(), "elsewhere", "movie.mkv");
+        Assert.False(RipStagingPath.IsWithinStaging(candidate, StagingRoot));
     }
 }

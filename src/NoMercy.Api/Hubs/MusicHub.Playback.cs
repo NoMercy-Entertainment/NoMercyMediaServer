@@ -29,7 +29,7 @@ public partial class MusicHub
         // MusicPlaybackService.DebouncedUpdatePlaybackState.
         long entryMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -38,15 +38,15 @@ public partial class MusicHub
         // → null on the wire). Without this check the SignalR-generated
         // invocation thunk NREs while unboxing null into the value-type
         // parameter, before the method body even runs.
-        if (string.IsNullOrEmpty(value: type) || listId is null || trackId is null)
+        if (string.IsNullOrEmpty(type) || listId is null || trackId is null)
         {
             _logger.LogWarning(
-                message: "{Name}: [MusicHub.StartPlaybackCommand] ignored — null arg (type='{Null}', listId={Null2}, trackId={Null3})", args: [user.Name, type ?? "<null>", listId?.ToString() ?? "<null>", trackId?.ToString() ?? "<null>"]
+                "{Name}: [MusicHub.StartPlaybackCommand] ignored — null arg (type='{Null}', listId={Null2}, trackId={Null3})", [user.Name, type ?? "<null>", listId?.ToString() ?? "<null>", trackId?.ToString() ?? "<null>"]
             );
             return;
         }
 
-        SemaphoreSlim userLock = GetUserLock(userId: user.Id);
+        SemaphoreSlim userLock = GetUserLock(user.Id);
         await userLock.WaitAsync();
         long lockAcquiredMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -64,7 +64,7 @@ public partial class MusicHub
         // BeginPlaybackStart/EndPlaybackStart bracket that window so the watchdog
         // never treats it as staleness; a genuinely dead device is still caught on
         // the very next cadence once the flag clears (see MusicPlaybackService).
-        _musicPlaybackService.BeginPlaybackStart(userId: user.Id);
+        _musicPlaybackService.BeginPlaybackStart(user.Id);
         try
         {
             string country = GetCountryFromContext();
@@ -73,20 +73,20 @@ public partial class MusicHub
                 System.Diagnostics.Stopwatch.StartNew();
             (PlaylistTrackDto item, List<PlaylistTrackDto> playlist) =
                 await _musicPlaylistManager.GetPlaylist(
-                    userId: user.Id,
-                    type: type,
-                    listId: listId.Value,
-                    trackId: trackId.Value,
-                    country: country
+                    user.Id,
+                    type,
+                    listId.Value,
+                    trackId.Value,
+                    country
                 );
             playlistStopwatch.Stop();
             long playlistFetchedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             _logger.Log(
-                logLevel: playlistStopwatch.ElapsedMilliseconds > 1000 ? LogLevel.Warning : LogLevel.Debug,
-                message: "[MusicHub.StartPlaybackCommand] GetPlaylist({Type}) took {ElapsedMilliseconds}ms ({Count} tracks)", args: [type, playlistStopwatch.ElapsedMilliseconds, playlist.Count]
+                playlistStopwatch.ElapsedMilliseconds > 1000 ? LogLevel.Warning : LogLevel.Debug,
+                "[MusicHub.StartPlaybackCommand] GetPlaylist({Type}) took {ElapsedMilliseconds}ms ({Count} tracks)", [type, playlistStopwatch.ElapsedMilliseconds, playlist.Count]
             );
 
-            await HandlePlaybackState(user: user, type: type, listId: listId.Value, item: item, playlist: playlist);
+            await HandlePlaybackState(user, type, listId.Value, item, playlist);
 
             // Round-trip proof: entry -> lock -> playlist fetch -> HandlePlaybackState
             // (which awaits MusicPlaybackService.UpdatePlaybackState internally, so
@@ -94,60 +94,60 @@ public partial class MusicHub
             // connected device for this user actually completed).
             long broadcastMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             _logger.LogInformation(
-                message: "{Name}: [MusicHub.StartPlaybackCommand] type={Type} entryMs={EntryMs} lockAcquiredMs={LockAcquiredMs} (+{LockWaitMs}ms) playlistFetchedMs={PlaylistFetchedMs} (+{PlaylistMs}ms) broadcastMs={BroadcastMs} (+{BroadcastDeltaMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount}", args: [user.Name, type, entryMs, lockAcquiredMs, lockAcquiredMs - entryMs, playlistFetchedMs, playlistFetchedMs - lockAcquiredMs, broadcastMs, broadcastMs - playlistFetchedMs, broadcastMs - entryMs, playlist.Count]
+                "{Name}: [MusicHub.StartPlaybackCommand] type={Type} entryMs={EntryMs} lockAcquiredMs={LockAcquiredMs} (+{LockWaitMs}ms) playlistFetchedMs={PlaylistFetchedMs} (+{PlaylistMs}ms) broadcastMs={BroadcastMs} (+{BroadcastDeltaMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount}", [user.Name, type, entryMs, lockAcquiredMs, lockAcquiredMs - entryMs, playlistFetchedMs, playlistFetchedMs - lockAcquiredMs, broadcastMs, broadcastMs - playlistFetchedMs, broadcastMs - entryMs, playlist.Count]
             );
         }
         catch (ArgumentException ex)
         {
-            _logger.LogInformation(message: "Invalid playlist type: {Message}", args: ex.Message);
+            _logger.LogInformation("Invalid playlist type: {Message}", ex.Message);
 
-            ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? client2);
+            ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
             Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
             try
             {
                 await ActivityLogger.LogFailureAsync(
-                    type: "failure.playback_start",
-                    userId: user.Id,
-                    deviceId: deviceId2,
-                    errorCode: ex.GetType().Name,
-                    message: ex.Message
+                    "failure.playback_start",
+                    user.Id,
+                    deviceId2,
+                    ex.GetType().Name,
+                    ex.Message
                 );
             }
             catch (Exception logEx)
             {
                 _logger.LogWarning(
-                    message: "Failed to log failure.playback_start: {Message}",
-                    args: logEx.Message
+                    "Failed to log failure.playback_start: {Message}",
+                    logEx.Message
                 );
             }
         }
         catch (Exception ex)
         {
-            _logger.LogInformation(message: "Error in StartPlaybackCommand: {Message}", args: ex.Message);
+            _logger.LogInformation("Error in StartPlaybackCommand: {Message}", ex.Message);
 
-            ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? client2);
+            ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
             Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
             try
             {
                 await ActivityLogger.LogFailureAsync(
-                    type: "failure.playback_start",
-                    userId: user.Id,
-                    deviceId: deviceId2,
-                    errorCode: ex.GetType().Name,
-                    message: ex.Message
+                    "failure.playback_start",
+                    user.Id,
+                    deviceId2,
+                    ex.GetType().Name,
+                    ex.Message
                 );
             }
             catch (Exception logEx)
             {
                 _logger.LogWarning(
-                    message: "Failed to log failure.playback_start: {Message}",
-                    args: logEx.Message
+                    "Failed to log failure.playback_start: {Message}",
+                    logEx.Message
                 );
             }
         }
         finally
         {
-            _musicPlaybackService.EndPlaybackStart(userId: user.Id);
+            _musicPlaybackService.EndPlaybackStart(user.Id);
             userLock.Release();
         }
     }
@@ -160,7 +160,7 @@ public partial class MusicHub
         List<PlaylistTrackDto> playlist
     )
     {
-        MusicPlayerState? playerState = _musicPlayerStateManager.GetState(userId: user.Id);
+        MusicPlayerState? playerState = _musicPlayerStateManager.GetState(user.Id);
 
         // Special handling for type="track" - only works with existing player state
         if (type.ToLower().Trim() == "track")
@@ -168,22 +168,22 @@ public partial class MusicHub
             if (playerState?.CurrentItem is null)
             {
                 // No active player state, cannot reorder - log and return
-                _logger.LogInformation(message: "Cannot play track: No active playlist");
+                _logger.LogInformation("Cannot play track: No active playlist");
                 return;
             }
-            await HandleTrackReorder(user: user, state: playerState, item: item);
+            await HandleTrackReorder(user, playerState, item);
             return;
         }
 
         // Normal playlist handling
         if (playerState?.CurrentItem is null || playerState.Playlist.Count == 0)
-            await HandleNewPlayerState(user: user, type: type, listId: listId, item: item, playlist: playlist);
-        else if (IsSamePlaylistAndTrack(state: playerState, type: type, listId: listId, itemId: item.Id))
-            await HandleExistingPlaylistState(user: user, state: playerState);
-        else if (IsSamePlaylist(state: playerState, type: type, listId: listId))
-            await HandleTrackReorder(user: user, state: playerState, item: item);
+            await HandleNewPlayerState(user, type, listId, item, playlist);
+        else if (IsSamePlaylistAndTrack(playerState, type, listId, item.Id))
+            await HandleExistingPlaylistState(user, playerState);
+        else if (IsSamePlaylist(playerState, type, listId))
+            await HandleTrackReorder(user, playerState, item);
         else
-            await HandlePlaylistChange(user: user, state: playerState, type: type, listId: listId, item: item, playlist: playlist);
+            await HandlePlaylistChange(user, playerState, type, listId, item, playlist);
     }
 
     private async Task HandleNewPlayerState(
@@ -199,30 +199,30 @@ public partial class MusicHub
         // This prevents a passive sender (phone tapping a playlist after
         // a stop) from being promoted to active just because the previous
         // state had no CurrentItem — the active flag stays on the TV.
-        Device device = GetOrPromoteActiveDevice(user: user);
+        Device device = GetOrPromoteActiveDevice(user);
         MusicPlayerState musicPlayerState = MusicPlayerStateFactory.Create(
-            device: device,
-            item: item,
-            playlist: playlist,
-            type: type,
-            listId: listId
+            device,
+            item,
+            playlist,
+            type,
+            listId
         );
-        musicPlayerState.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
+        musicPlayerState.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
 
-        _musicPlaybackService.RemoveTimer(userId: user.Id);
-        _musicPlayerStateManager.UpdateState(userId: user.Id, state: musicPlayerState);
-        _musicPlaybackService.StartPlaybackTimer(user: user);
-        await _musicPlaybackService.UpdatePlaybackState(user: user, state: musicPlayerState);
-        await _musicPlaybackService.PublishStartedEventAsync(userId: user.Id, state: musicPlayerState);
+        _musicPlaybackService.RemoveTimer(user.Id);
+        _musicPlayerStateManager.UpdateState(user.Id, musicPlayerState);
+        _musicPlaybackService.StartPlaybackTimer(user);
+        await _musicPlaybackService.UpdatePlaybackState(user, musicPlayerState);
+        await _musicPlaybackService.PublishStartedEventAsync(user.Id, musicPlayerState);
 
         try
         {
             await ActivityLogger.LogPlaybackAsync(
-                type: "playback.started",
-                userId: user.Id,
-                deviceId: device.Id,
-                mediaId: Ulid.Empty,
-                metadata: new
+                "playback.started",
+                user.Id,
+                device.Id,
+                Ulid.Empty,
+                new
                 {
                     media_type = "audio",
                     track_id = item.Id,
@@ -232,7 +232,7 @@ public partial class MusicHub
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(message: "Failed to log playback.started: {Message}", args: ex.Message);
+            _logger.LogWarning("Failed to log playback.started: {Message}", ex.Message);
         }
     }
 
@@ -241,7 +241,7 @@ public partial class MusicHub
         return state.CurrentItem is not null
             && state
                 .CurrentList.ToString()
-                .Contains(value: $"{MusicPlayerStateFactory.ToRouteSegment(type: type)}/{listId}");
+                .Contains($"{MusicPlayerStateFactory.ToRouteSegment(type)}/{listId}");
     }
 
     private static bool IsSamePlaylistAndTrack(
@@ -251,7 +251,7 @@ public partial class MusicHub
         Guid itemId
     )
     {
-        return IsSamePlaylist(state: state, type: type, listId: listId) && state.CurrentItem?.Id == itemId;
+        return IsSamePlaylist(state, type, listId) && state.CurrentItem?.Id == itemId;
     }
 
     private async Task HandleExistingPlaylistState(User user, MusicPlayerState state)
@@ -263,43 +263,43 @@ public partial class MusicHub
         // this, resuming the exact same track/list from a new device after a release
         // left the session with DeviceId permanently null — no device recognized as
         // active, so the liveness watchdog could never refresh or ever expire it.
-        UpdateDeviceInfo(state: state);
+        UpdateDeviceInfo(state);
 
         state.PlayState = !state.PlayState;
-        UpdateActionsDisallows(state: state);
-        _musicPlaybackService.StartPlaybackTimer(user: user);
-        await _musicPlaybackService.UpdatePlaybackState(user: user, state: state);
+        UpdateActionsDisallows(state);
+        _musicPlaybackService.StartPlaybackTimer(user);
+        await _musicPlaybackService.UpdatePlaybackState(user, state);
         if (state.PlayState)
         {
-            await _musicPlaybackService.PublishStartedEventAsync(userId: user.Id, state: state);
+            await _musicPlaybackService.PublishStartedEventAsync(user.Id, state);
         }
     }
 
     private async Task HandleTrackReorder(User user, MusicPlayerState state, PlaylistTrackDto item)
     {
         // Stop the old timer before modifying state to prevent race conditions
-        _musicPlaybackService.RemoveTimer(userId: user.Id);
+        _musicPlaybackService.RemoveTimer(user.Id);
 
         // See the identical call in HandleExistingPlaylistState: promotes the caller to
         // active only when nobody currently owns the session, so resuming/reordering
         // from a new device right after a graceful release actually claims it.
-        UpdateDeviceInfo(state: state);
+        UpdateDeviceInfo(state);
 
         // Check if it's the current item
         if (state.CurrentItem?.Id == item.Id)
         {
             // Already playing this track, just restart it
-            state.SetPosition(positionMs: 0);
-            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
+            state.SetPosition(0);
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             state.PlayState = true;
-            UpdateActionsDisallows(state: state);
-            _musicPlaybackService.StartPlaybackTimer(user: user);
-            await _musicPlaybackService.UpdatePlaybackState(user: user, state: state);
+            UpdateActionsDisallows(state);
+            _musicPlaybackService.StartPlaybackTimer(user);
+            await _musicPlaybackService.UpdatePlaybackState(user, state);
             return;
         }
 
         // Find the track in the current playlist
-        int playlistIndex = state.Playlist.FindIndex(match: t => t.Id == item.Id);
+        int playlistIndex = state.Playlist.FindIndex(t => t.Id == item.Id);
 
         if (playlistIndex != -1)
         {
@@ -307,61 +307,61 @@ public partial class MusicHub
             // Add current item to backlog
             if (state.CurrentItem != null)
             {
-                state.Backlog.Add(item: state.CurrentItem);
+                state.Backlog.Add(state.CurrentItem);
             }
 
             // Add all tracks BEFORE the selected one to backlog (they're being skipped over)
             for (int i = 0; i < playlistIndex; i++)
             {
-                state.Backlog.Add(item: state.Playlist[index: i]);
+                state.Backlog.Add(state.Playlist[i]);
             }
 
             // Remove everything up to and including the selected track
-            state.Playlist.RemoveRange(index: 0, count: playlistIndex + 1);
+            state.Playlist.RemoveRange(0, playlistIndex + 1);
 
             // Set the selected track as current
             // The remaining playlist continues naturally from here
             state.CurrentItem = item;
-            state.SetPosition(positionMs: 0);
-            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
+            state.SetPosition(0);
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             state.PlayState = true;
             state.Duration = item.Duration.ToMilliSeconds();
         }
         else
         {
             // Check if track is in backlog (going backwards)
-            int backlogIndex = state.Backlog.FindIndex(match: t => t.Id == item.Id);
+            int backlogIndex = state.Backlog.FindIndex(t => t.Id == item.Id);
 
             if (backlogIndex != -1)
             {
                 // Track is in backlog - going backwards
                 // Remove it from backlog
-                state.Backlog.RemoveAt(index: backlogIndex);
+                state.Backlog.RemoveAt(backlogIndex);
 
                 // Add current item to backlog
                 if (state.CurrentItem != null)
                 {
-                    state.Backlog.Add(item: state.CurrentItem);
+                    state.Backlog.Add(state.CurrentItem);
                 }
 
                 // Set the selected track as current
                 state.CurrentItem = item;
-                state.SetPosition(positionMs: 0);
-                state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
+                state.SetPosition(0);
+                state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
                 state.PlayState = true;
                 state.Duration = item.Duration.ToMilliSeconds();
             }
             else
             {
                 // Track not found in current queue at all
-                _logger.LogInformation(message: "Track {Id} not found in current queue", args: item.Id);
+                _logger.LogInformation("Track {Id} not found in current queue", item.Id);
                 return;
             }
         }
 
-        UpdateActionsDisallows(state: state);
-        _musicPlaybackService.StartPlaybackTimer(user: user);
-        await _musicPlaybackService.UpdatePlaybackState(user: user, state: state);
+        UpdateActionsDisallows(state);
+        _musicPlaybackService.StartPlaybackTimer(user);
+        await _musicPlaybackService.UpdatePlaybackState(user, state);
     }
 
     private async Task HandlePlaylistChange(
@@ -373,28 +373,28 @@ public partial class MusicHub
         List<PlaylistTrackDto> playlist
     )
     {
-        _musicPlaybackService.RemoveTimer(userId: user.Id);
+        _musicPlaybackService.RemoveTimer(user.Id);
 
-        UpdateDeviceInfo(state: state);
-        UpdatePlaylistInfo(state: state, type: type, listId: listId, item: item, playlist: playlist);
-        UpdateActionsDisallows(state: state);
+        UpdateDeviceInfo(state);
+        UpdatePlaylistInfo(state, type, listId, item, playlist);
+        UpdateActionsDisallows(state);
 
-        _musicPlaybackService.StartPlaybackTimer(user: user);
-        await _musicPlaybackService.UpdatePlaybackState(user: user, state: state);
-        await _musicPlaybackService.PublishStartedEventAsync(userId: user.Id, state: state);
+        _musicPlaybackService.StartPlaybackTimer(user);
+        await _musicPlaybackService.UpdatePlaybackState(user, state);
+        await _musicPlaybackService.PublishStartedEventAsync(user.Id, state);
 
         // Logging only — record who triggered the playlist change without
         // promoting them to active. The active flag is governed by
         // UpdateDeviceInfo, which respects an existing active device.
-        Device device = GetCallerDevice(user: user);
+        Device device = GetCallerDevice(user);
         try
         {
             await ActivityLogger.LogPlaybackAsync(
-                type: "playback.started",
-                userId: user.Id,
-                deviceId: device.Id,
-                mediaId: Ulid.Empty,
-                metadata: new
+                "playback.started",
+                user.Id,
+                device.Id,
+                Ulid.Empty,
+                new
                 {
                     media_type = "audio",
                     track_id = item.Id,
@@ -404,7 +404,7 @@ public partial class MusicHub
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(message: "Failed to log playback.started: {Message}", args: ex.Message);
+            _logger.LogWarning("Failed to log playback.started: {Message}", ex.Message);
         }
     }
 
@@ -417,21 +417,21 @@ public partial class MusicHub
     )
     {
         (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) =
-            _musicPlaylistManager.SplitPlaylist(playlist: playlist, currentTrackId: item.Id);
+            _musicPlaylistManager.SplitPlaylist(playlist, item.Id);
         List<PlaylistTrackDto> sortedPlaylist = [];
-        sortedPlaylist.AddRange(collection: after);
-        sortedPlaylist.AddRange(collection: before);
+        sortedPlaylist.AddRange(after);
+        sortedPlaylist.AddRange(before);
 
         state.CurrentItem = item;
         state.PlayState = true;
         state.Playlist = sortedPlaylist;
         state.CurrentList = new(
-            uriString: $"/music/{MusicPlayerStateFactory.ToRouteSegment(type: type)}/{listId}",
-            uriKind: UriKind.Relative
+            $"/music/{MusicPlayerStateFactory.ToRouteSegment(type)}/{listId}",
+            UriKind.Relative
         );
-        state.Backlog.Add(item: item);
-        state.SetPosition(positionMs: 0);
-        state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
+        state.Backlog.Add(item);
+        state.SetPosition(0);
+        state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         state.Duration = item.Duration.ToMilliSeconds();
     }
 
@@ -462,19 +462,19 @@ public partial class MusicHub
 
     public MusicPlayerState? GetStateCommand()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return null;
 
-        _musicPlayerStateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? playerState);
+        _musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState);
         if (playerState is null)
             return null;
 
         // A state read from the active device is free proof of life (no extra I/O)
         // and closes the gap for a client that polls state rather than pushing
         // position reports on its own cadence.
-        if (ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? caller))
-            MusicPlaybackService.TryRefreshHeartbeat(state: playerState, callerDeviceId: caller.DeviceId);
+        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller))
+            MusicPlaybackService.TryRefreshHeartbeat(playerState, caller.DeviceId);
 
         // A direct read is its own clock-sync emit — without a fresh stamp here a
         // client polling state (rather than receiving a push) would derive elapsed
@@ -493,34 +493,34 @@ public partial class MusicHub
         // own epoch-stamped tap time and see exactly where the round trip goes.
         long entryMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
-        if (string.IsNullOrEmpty(value: command))
+        if (string.IsNullOrEmpty(command))
         {
             _logger.LogWarning(
-                message: "{Name}: [MusicHub.PlaybackCommand] ignored — command was null/empty",
-                args: user.Name
+                "{Name}: [MusicHub.PlaybackCommand] ignored — command was null/empty",
+                user.Name
             );
             return;
         }
 
-        SemaphoreSlim userLock = GetUserLock(userId: user.Id);
+        SemaphoreSlim userLock = GetUserLock(user.Id);
         await userLock.WaitAsync();
         long lockAcquiredMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         try
         {
-            if (!_musicPlayerStateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? state))
+            if (!_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
             {
-                await _musicPlaybackService.UpdatePlaybackState(user: user, state: null);
+                await _musicPlaybackService.UpdatePlaybackState(user, null);
                 return;
             }
 
-            _commandHandler.HandleCommand(user: user, command: command, data: data, state: state);
+            _commandHandler.HandleCommand(user, command, data, state);
 
             if (state.DeviceId == null)
-                if (ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? device))
+                if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
                 {
                     state.DeviceId = device.DeviceId;
                     state.VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent;
@@ -531,30 +531,30 @@ public partial class MusicHub
             // (unlike play/next/previous), so without this an active device that is
             // only being interacted with, never idly reporting position, could look
             // stale to MusicPlaybackService's sweep despite being very much alive.
-            if (ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? caller))
-                MusicPlaybackService.TryRefreshHeartbeat(state: state, callerDeviceId: caller.DeviceId);
+            if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller))
+                MusicPlaybackService.TryRefreshHeartbeat(state, caller.DeviceId);
 
-            UpdateActionsDisallows(state: state);
+            UpdateActionsDisallows(state);
 
             long handlerDoneMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
             bool isSkipCommand =
-                command.Equals(value: "next", comparisonType: StringComparison.OrdinalIgnoreCase)
-                || command.Equals(value: "previous", comparisonType: StringComparison.OrdinalIgnoreCase);
+                command.Equals("next", StringComparison.OrdinalIgnoreCase)
+                || command.Equals("previous", StringComparison.OrdinalIgnoreCase);
 
             // next/previous go through the 150ms debounce — broadcastMs below only
             // marks when the debounce Timer was SCHEDULED, not when the relay
             // actually left; MusicPlaybackService.DebouncedUpdatePlaybackState logs
             // the real fire-and-send timing separately once the timer elapses.
             if (isSkipCommand)
-                _musicPlaybackService.DebouncedUpdatePlaybackState(user: user, state: state);
+                _musicPlaybackService.DebouncedUpdatePlaybackState(user, state);
             else
-                await _musicPlaybackService.UpdatePlaybackState(user: user, state: state);
+                await _musicPlaybackService.UpdatePlaybackState(user, state);
 
             long broadcastMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
             _logger.LogInformation(
-                message: "{Name}: [MusicHub.PlaybackCommand] cmd={Command} entryMs={EntryMs} lockAcquiredMs={LockAcquiredMs} (+{LockWaitMs}ms) handlerDoneMs={HandlerDoneMs} (+{HandlerMs}ms) broadcastMs={BroadcastMs} (+{BroadcastDeltaMs}ms) totalMs={TotalMs}ms debounced={Debounced} playlist={PlaylistCount} backlog={BacklogCount}", args: [user.Name, command, entryMs, lockAcquiredMs, lockAcquiredMs - entryMs, handlerDoneMs, handlerDoneMs - lockAcquiredMs, broadcastMs, broadcastMs - handlerDoneMs, broadcastMs - entryMs, isSkipCommand, state.Playlist.Count, state.Backlog.Count]
+                "{Name}: [MusicHub.PlaybackCommand] cmd={Command} entryMs={EntryMs} lockAcquiredMs={LockAcquiredMs} (+{LockWaitMs}ms) handlerDoneMs={HandlerDoneMs} (+{HandlerMs}ms) broadcastMs={BroadcastMs} (+{BroadcastDeltaMs}ms) totalMs={TotalMs}ms debounced={Debounced} playlist={PlaylistCount} backlog={BacklogCount}", [user.Name, command, entryMs, lockAcquiredMs, lockAcquiredMs - entryMs, handlerDoneMs, handlerDoneMs - lockAcquiredMs, broadcastMs, broadcastMs - handlerDoneMs, broadcastMs - entryMs, isSkipCommand, state.Playlist.Count, state.Backlog.Count]
             );
         }
         finally
@@ -572,26 +572,26 @@ public partial class MusicHub
     {
         if (time is null)
             return;
-        await ReportPositionCommand(positionMs: time.Value * 1000);
+        await ReportPositionCommand(time.Value * 1000);
     }
 
     // See the untagged-vs-tagged note on CurrentTimeCommand above.
     public async Task ReportPositionCommand(int? positionMs)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
         if (positionMs is null)
             return;
 
-        if (!_musicPlayerStateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? playerState))
+        if (!_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
-            await _musicPlaybackService.UpdatePlaybackState(user: user, state: playerState);
+            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
             return;
         }
 
-        ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? caller);
+        ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller);
 
         // Liveness first, ahead of the ignore-window gate below: a report from the
         // ACTIVE device that is about to be dropped for landing inside the ignore
@@ -602,15 +602,15 @@ public partial class MusicHub
         // staleness sweep, and must never snap everyone else's playback back to a
         // passive mirror's own (possibly paused, torn down, or drifted) position. A
         // passive report is a complete no-op for both liveness and position.
-        if (!MusicPlaybackService.TryRefreshHeartbeat(state: playerState, callerDeviceId: caller?.DeviceId))
+        if (!MusicPlaybackService.TryRefreshHeartbeat(playerState, caller?.DeviceId))
             return;
 
         if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
             return;
 
-        playerState.SetPosition(positionMs: positionMs.Value);
+        playerState.SetPosition(positionMs.Value);
 
-        await _musicPlaybackService.UpdatePlaybackState(user: user, state: playerState);
+        await _musicPlaybackService.UpdatePlaybackState(user, playerState);
     }
 
     /// <summary>
@@ -621,7 +621,7 @@ public partial class MusicHub
     {
         if (seconds is null)
             return;
-        await ReportPositionForItemCommand(positionMs: (long)Math.Round(a: seconds.Value * 1000), itemId: itemId);
+        await ReportPositionForItemCommand((long)Math.Round(seconds.Value * 1000), itemId);
     }
 
     /// <summary>
@@ -639,20 +639,20 @@ public partial class MusicHub
     /// </summary>
     public async Task ReportPositionForItemCommand(long? positionMs, string? itemId)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
         if (positionMs is null)
             return;
 
-        if (!_musicPlayerStateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? playerState))
+        if (!_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
-            await _musicPlaybackService.UpdatePlaybackState(user: user, state: playerState);
+            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
             return;
         }
 
-        ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? caller);
+        ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller);
 
         // Liveness first, ahead of both drop gates below: a report from the ACTIVE
         // device that is about to be rejected as stale-item or as landing inside
@@ -662,18 +662,18 @@ public partial class MusicHub
         // stray/passive report must never mask a truly-dead active device from
         // MusicPlaybackService's staleness sweep. A passive report is a complete
         // no-op for both liveness and position.
-        if (!MusicPlaybackService.TryRefreshHeartbeat(state: playerState, callerDeviceId: caller?.DeviceId))
+        if (!MusicPlaybackService.TryRefreshHeartbeat(playerState, caller?.DeviceId))
             return;
 
-        if (!MusicPlaybackService.IsReportForCurrentItem(state: playerState, itemId: itemId))
+        if (!MusicPlaybackService.IsReportForCurrentItem(playerState, itemId))
             return;
 
         if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
             return;
 
-        playerState.SetPosition(positionMs: (int)positionMs.Value);
+        playerState.SetPosition((int)positionMs.Value);
 
-        await _musicPlaybackService.UpdatePlaybackState(user: user, state: playerState);
+        await _musicPlaybackService.UpdatePlaybackState(user, playerState);
     }
 
     public long GetServerTime()
@@ -693,17 +693,17 @@ public partial class MusicHub
     /// </param>
     public Task CrossfadeStartCommand(int? fadeDurationMs)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return Task.CompletedTask;
 
         if (fadeDurationMs is null)
             return Task.CompletedTask;
 
-        if (!ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? client))
+        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             return Task.CompletedTask;
 
-        _musicPlaybackService.StartCrossfade(userId: user.Id, deviceId: client.DeviceId, fadeDurationMs: fadeDurationMs.Value);
+        _musicPlaybackService.StartCrossfade(user.Id, client.DeviceId, fadeDurationMs.Value);
         return Task.CompletedTask;
     }
 
@@ -715,22 +715,22 @@ public partial class MusicHub
     /// <param name="newTrackId">The <see cref="Guid"/> of the track that is now playing.</param>
     public async Task CrossfadeCompleteCommand(Guid? newTrackId)
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
         if (newTrackId is null)
         {
             _logger.LogWarning(
-                message: "{Name}: [MusicHub.CrossfadeCompleteCommand] ignored — newTrackId was null",
-                args: user.Name
+                "{Name}: [MusicHub.CrossfadeCompleteCommand] ignored — newTrackId was null",
+                user.Name
             );
             return;
         }
 
-        if (!ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? client))
+        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             return;
 
-        await _musicPlaybackService.CompleteCrossfade(user: user, deviceId: client.DeviceId, newTrackId: newTrackId.Value);
+        await _musicPlaybackService.CompleteCrossfade(user, client.DeviceId, newTrackId.Value);
     }
 }

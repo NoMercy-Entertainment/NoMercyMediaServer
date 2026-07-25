@@ -26,8 +26,8 @@ public class DeviceCapabilitiesTests
         caps.VideoCodecs.Should().BeEmpty();
         caps.MaxVideoHeight.Should().BeNull();
         caps.HdrSupport.Should().BeFalse();
-        caps.DolbyVision.Should().Be(expected: DolbyVisionProfile.None);
-        caps.RamTier.Should().Be(expected: DeviceRamTier.Standard);
+        caps.DolbyVision.Should().Be(DolbyVisionProfile.None);
+        caps.RamTier.Should().Be(DeviceRamTier.Standard);
         caps.PlayerBufferCapMb.Should().BeNull();
         caps.Notes.Should().BeNull();
     }
@@ -48,31 +48,31 @@ public class DeviceCapabilitiesTests
             Notes = "flagship phone",
         };
 
-        string json = JsonConvert.SerializeObject(value: original);
-        DeviceCapabilities? restored = JsonConvert.DeserializeObject<DeviceCapabilities>(value: json);
+        string json = JsonConvert.SerializeObject(original);
+        DeviceCapabilities? restored = JsonConvert.DeserializeObject<DeviceCapabilities>(json);
 
         restored.Should().NotBeNull();
-        restored!.MaxAudioChannels.Should().Be(expected: 6);
-        restored.AudioCodecs.Should().BeEquivalentTo(expectation: ["aac", "ac3", "eac3"]);
-        restored.VideoCodecs.Should().BeEquivalentTo(expectation: ["h264", "hevc"]);
-        restored.MaxVideoHeight.Should().Be(expected: 2160);
+        restored!.MaxAudioChannels.Should().Be(6);
+        restored.AudioCodecs.Should().BeEquivalentTo(["aac", "ac3", "eac3"]);
+        restored.VideoCodecs.Should().BeEquivalentTo(["h264", "hevc"]);
+        restored.MaxVideoHeight.Should().Be(2160);
         restored.HdrSupport.Should().BeTrue();
-        restored.DolbyVision.Should().Be(expected: DolbyVisionProfile.Profile81);
-        restored.RamTier.Should().Be(expected: DeviceRamTier.HighRam);
-        restored.PlayerBufferCapMb.Should().Be(expected: 500);
-        restored.Notes.Should().Be(expected: "flagship phone");
+        restored.DolbyVision.Should().Be(DolbyVisionProfile.Profile81);
+        restored.RamTier.Should().Be(DeviceRamTier.HighRam);
+        restored.PlayerBufferCapMb.Should().Be(500);
+        restored.Notes.Should().Be("flagship phone");
     }
 
     [Fact]
     public void JsonRoundTrip_NullNotes_Preserved()
     {
         DeviceCapabilities original = new() { MaxAudioChannels = 2 };
-        string json = JsonConvert.SerializeObject(value: original);
-        DeviceCapabilities? restored = JsonConvert.DeserializeObject<DeviceCapabilities>(value: json);
+        string json = JsonConvert.SerializeObject(original);
+        DeviceCapabilities? restored = JsonConvert.DeserializeObject<DeviceCapabilities>(json);
 
         restored.Should().NotBeNull();
         restored!.Notes.Should().BeNull();
-        restored.MaxAudioChannels.Should().Be(expected: 2);
+        restored.MaxAudioChannels.Should().Be(2);
     }
 
     [Fact]
@@ -86,21 +86,21 @@ public class DeviceCapabilitiesTests
             Notes = "Nokia bedroom TV — stereo speaker only",
         };
 
-        string json = JsonConvert.SerializeObject(value: caps);
+        string json = JsonConvert.SerializeObject(caps);
         json.Should().NotBeNullOrEmpty();
 
-        DeviceCapabilities? parsed = JsonConvert.DeserializeObject<DeviceCapabilities>(value: json);
+        DeviceCapabilities? parsed = JsonConvert.DeserializeObject<DeviceCapabilities>(json);
         parsed.Should().NotBeNull();
-        parsed!.MaxAudioChannels.Should().Be(expected: 2);
-        parsed.AudioCodecs.Should().BeEquivalentTo(expectation: ["aac"]);
-        parsed.RamTier.Should().Be(expected: DeviceRamTier.LowRam);
-        parsed.Notes.Should().Be(expected: "Nokia bedroom TV — stereo speaker only");
+        parsed!.MaxAudioChannels.Should().Be(2);
+        parsed.AudioCodecs.Should().BeEquivalentTo(["aac"]);
+        parsed.RamTier.Should().Be(DeviceRamTier.LowRam);
+        parsed.Notes.Should().Be("Nokia bedroom TV — stereo speaker only");
     }
 
     [Fact]
     public void NullJson_DeserializesToNull()
     {
-        DeviceCapabilities? result = JsonConvert.DeserializeObject<DeviceCapabilities>(value: "null");
+        DeviceCapabilities? result = JsonConvert.DeserializeObject<DeviceCapabilities>("null");
         result.Should().BeNull();
     }
 }

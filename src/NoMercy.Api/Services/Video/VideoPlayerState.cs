@@ -18,49 +18,49 @@ namespace NoMercy.Api.Services.Video;
 
 public class VideoPlayerState
 {
-    [JsonProperty(propertyName: "actions")]
+    [JsonProperty("actions")]
     public Actions Actions { get; set; } = null!;
 
-    [JsonProperty(propertyName: "device_id")]
+    [JsonProperty("device_id")]
     public string? DeviceId { get; set; }
 
-    [JsonProperty(propertyName: "is_playing")]
+    [JsonProperty("is_playing")]
     public bool PlayState { get; set; }
 
-    [JsonProperty(propertyName: "item")]
+    [JsonProperty("item")]
     public VideoPlaylistResponseDto? CurrentItem { get; set; }
 
-    [JsonProperty(propertyName: "playlist")]
+    [JsonProperty("playlist")]
     public List<VideoPlaylistResponseDto> Playlist { get; set; } = [];
 
-    [JsonProperty(propertyName: "progress_ms")]
+    [JsonProperty("progress_ms")]
     public int Time { get; set; }
 
-    [JsonProperty(propertyName: "duration_ms")]
+    [JsonProperty("duration_ms")]
     public int Duration { get; set; }
 
-    [JsonProperty(propertyName: "current_list")]
+    [JsonProperty("current_list")]
     public Uri CurrentList { get; set; } = null!;
 
-    [JsonProperty(propertyName: "muted_state")]
+    [JsonProperty("muted_state")]
     public bool Muted { get; set; }
 
-    [JsonProperty(propertyName: "timestamp")]
+    [JsonProperty("timestamp")]
     public long Timestamp { get; set; }
 
-    [JsonProperty(propertyName: "volume_percentage")]
+    [JsonProperty("volume_percentage")]
     public int VolumePercentage { get; set; }
 
-    [JsonProperty(propertyName: "seek_offset")]
+    [JsonProperty("seek_offset")]
     public int SeekOffset { get; set; }
 
-    [JsonProperty(propertyName: "current_caption")]
+    [JsonProperty("current_caption")]
     public ISubtitle? CurrentCaption { get; set; }
 
-    [JsonProperty(propertyName: "current_audio")]
+    [JsonProperty("current_audio")]
     public IAudio? CurrentAudio { get; set; }
 
-    [JsonProperty(propertyName: "current_quality")]
+    [JsonProperty("current_quality")]
     public IVideo? CurrentQuality { get; set; }
 
     // Server-internal cast/remote-control lists (chapter skip, cycle audio/

@@ -11,9 +11,9 @@
 
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Middleware;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.Authorization;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -31,18 +31,18 @@ public static class LibrariesSeed
         IStorageDriver storageDriver
     )
     {
-        if (!storage.Exists(path: AppFiles.LibrariesSeedFile))
+        if (!storage.Exists(AppFiles.LibrariesSeedFile))
             return;
-        Logger.Setup(message: "Adding Libraries", level: LogEventLevel.Verbose);
+        Logger.Setup("Adding Libraries", LogEventLevel.Verbose);
 
         List<LibrarySeedDto> librarySeed =
             storage
-                .ReadAllTextAsync(path: AppFiles.LibrariesSeedFile, ct: CancellationToken.None)
+                .ReadAllTextAsync(AppFiles.LibrariesSeedFile, CancellationToken.None)
                 .Result.FromJson<List<LibrarySeedDto>>()
             ?? [];
 
         List<Library> libraries = librarySeed
-            .Select(selector: librarySeedDto => new Library
+            .Select(librarySeedDto => new Library
             {
                 Id = librarySeedDto.Id,
                 AutoRefreshInterval = librarySeedDto.AutoRefreshInterval,
@@ -62,10 +62,9 @@ public static class LibrariesSeed
         try
         {
             await dbContext
-                .Libraries.UpsertRange(entities: libraries)
-                .On(match: v => new { v.Id })
-                .WhenMatched(
-                    updater: (vs, vi) =>
+                .Libraries.UpsertRange(libraries)
+                .On(v => new { v.Id })
+                .WhenMatched((vs, vi) =>
                         new()
                         {
                             Id = vi.Id,
@@ -86,30 +85,30 @@ public static class LibrariesSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
+            Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
-        if (!storage.Exists(path: AppFiles.FolderRootsSeedFile))
+        if (!storage.Exists(AppFiles.FolderRootsSeedFile))
             return;
-        Logger.Setup(message: "Adding Folder Roots", level: LogEventLevel.Verbose);
+        Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
 
         Folder[] folders =
             storage
-                .ReadAllTextAsync(path: AppFiles.FolderRootsSeedFile, ct: CancellationToken.None)
+                .ReadAllTextAsync(AppFiles.FolderRootsSeedFile, CancellationToken.None)
                 .Result.FromJson<Folder[]>()
             ?? [];
 
         try
         {
             await dbContext
-                .Folders.UpsertRange(entities: folders)
-                .On(match: v => new { v.Id })
-                .WhenMatched(updater: (vs, vi) => new() { Id = vi.Id, Path = vi.Path })
+                .Folders.UpsertRange(folders)
+                .On(v => new { v.Id })
+                .WhenMatched((vs, vi) => new() { Id = vi.Id, Path = vi.Path })
                 .RunAsync();
         }
         catch (Exception e)
         {
-            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
+            Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
         // Register seeded folders with the middleware so they can serve files
@@ -120,7 +119,7 @@ public static class LibrariesSeed
         {
             try
             {
-                DynamicStaticFilesMiddleware.AddFolder(folderId: folder.Id, driverId: folder.DriverId, subPath: folder.Path);
+                DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
             }
             catch (Exception ex)
                 when (ex
@@ -131,31 +130,31 @@ public static class LibrariesSeed
                 )
             {
                 Logger.Setup(
-                    message: $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
-                    level: LogEventLevel.Warning
+                    $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
+                    LogEventLevel.Warning
                 );
             }
         }
 
-        await UserCache.Current.RefreshFolderIdsAsync(context: dbContext);
+        await UserCache.Current.RefreshFolderIdsAsync(dbContext);
 
         List<FolderLibrary> libraryFolders = [];
 
         foreach (LibrarySeedDto library in librarySeed)
         foreach (FolderSeedDto folder in library.Folders)
-            libraryFolders.Add(item: new(folderId: folder.Id, libraryId: library.Id));
+            libraryFolders.Add(new(folder.Id, library.Id));
 
         try
         {
             await dbContext
-                .FolderLibrary.UpsertRange(entities: libraryFolders)
-                .On(match: v => new { v.FolderId, v.LibraryId })
-                .WhenMatched(updater: (vs, vi) => new() { FolderId = vi.FolderId, LibraryId = vi.LibraryId })
+                .FolderLibrary.UpsertRange(libraryFolders)
+                .On(v => new { v.FolderId, v.LibraryId })
+                .WhenMatched((vs, vi) => new() { FolderId = vi.FolderId, LibraryId = vi.LibraryId })
                 .RunAsync();
         }
         catch (Exception e)
         {
-            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
+            Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
     }
 }

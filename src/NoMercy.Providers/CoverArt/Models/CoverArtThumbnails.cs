@@ -26,35 +26,35 @@ public class CoverArtThumbnails
     // ReSharper disable once InconsistentNaming
     private Uri __small { get; set; } = null!;
 
-    [JsonProperty(propertyName: "250")]
+    [JsonProperty("250")]
     public Uri _250
     {
         get => __250.ToHttps();
         init => __250 = value;
     }
 
-    [JsonProperty(propertyName: "500")]
+    [JsonProperty("500")]
     public Uri _500
     {
         get => __500.ToHttps();
         init => __500 = value;
     }
 
-    [JsonProperty(propertyName: "1200")]
+    [JsonProperty("1200")]
     public Uri _1200
     {
         get => __1200.ToHttps();
         init => __1200 = value;
     }
 
-    [JsonProperty(propertyName: "large")]
+    [JsonProperty("large")]
     public Uri Large
     {
         get => __large.ToHttps();
         init => __large = value;
     }
 
-    [JsonProperty(propertyName: "small")]
+    [JsonProperty("small")]
     public Uri Small
     {
         get => __small.ToHttps();

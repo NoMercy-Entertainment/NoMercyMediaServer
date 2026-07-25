@@ -19,4 +19,4 @@ namespace NoMercy.Encoder.Orchestration;
 /// dispatching each preset independently, exactly as before the smart
 /// orchestrator existed, rather than crashing the whole folder's encode.
 /// </summary>
-public sealed class MergedEncodingIncompatibleException(string message) : Exception(message: message);
+public sealed class MergedEncodingIncompatibleException(string message) : Exception(message);

@@ -21,45 +21,45 @@ namespace NoMercy.Tests.Cli.Commands;
 /// "not provided", and any filter value must be percent-encoded so a value
 /// containing a comma or space cannot corrupt the query string.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class LogsCommandBuildQueryTests
 {
     [Fact]
     public void BuildQuery_NoFilters_ReturnsTailOnly()
     {
-        LogsCommand.BuildQuery(tail: 100, level: null, type: null).Should().Be(expected: "?tail=100");
+        LogsCommand.BuildQuery(100, null, null).Should().Be("?tail=100");
     }
 
     [Fact]
     public void BuildQuery_WhitespaceOnlyFilters_TreatedAsAbsent()
     {
-        LogsCommand.BuildQuery(tail: 50, level: "   ", type: "\t").Should().Be(expected: "?tail=50");
+        LogsCommand.BuildQuery(50, "   ", "\t").Should().Be("?tail=50");
     }
 
     [Fact]
     public void BuildQuery_LevelOnly_AppendsLevelsParameter()
     {
-        LogsCommand.BuildQuery(tail: 10, level: "Error", type: null).Should().Be(expected: "?tail=10&levels=Error");
+        LogsCommand.BuildQuery(10, "Error", null).Should().Be("?tail=10&levels=Error");
     }
 
     [Fact]
     public void BuildQuery_TypeOnly_AppendsTypesParameter()
     {
-        LogsCommand.BuildQuery(tail: 10, level: null, type: "App").Should().Be(expected: "?tail=10&types=App");
+        LogsCommand.BuildQuery(10, null, "App").Should().Be("?tail=10&types=App");
     }
 
     [Fact]
     public void BuildQuery_LevelAndType_AppendsBothInOrder()
     {
-        LogsCommand.BuildQuery(tail: 25, level: "Error", type: "App").Should().Be(expected: "?tail=25&levels=Error&types=App");
+        LogsCommand.BuildQuery(25, "Error", "App").Should().Be("?tail=25&levels=Error&types=App");
     }
 
     [Fact]
     public void BuildQuery_CommaSeparatedLevels_PercentEncodesTheComma()
     {
         LogsCommand
-            .BuildQuery(tail: 10, level: "Error,Warning", type: null)
+            .BuildQuery(10, "Error,Warning", null)
             .Should()
-            .Be(expected: "?tail=10&levels=Error%2CWarning");
+            .Be("?tail=10&levels=Error%2CWarning");
     }
 }

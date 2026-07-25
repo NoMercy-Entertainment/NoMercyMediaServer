@@ -25,13 +25,13 @@ public class PluginServiceRegistrationTests : IDisposable
     public PluginServiceRegistrationTests()
     {
         _tempPluginsDir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nomercy-svc-reg-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nomercy-svc-reg-" + Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: _tempPluginsDir);
+        Directory.CreateDirectory(_tempPluginsDir);
 
-        _echoPluginDir = Path.Combine(path1: _tempPluginsDir, path2: "Echo");
-        Directory.CreateDirectory(path: _echoPluginDir);
+        _echoPluginDir = Path.Combine(_tempPluginsDir, "Echo");
+        Directory.CreateDirectory(_echoPluginDir);
     }
 
     public void Dispose()
@@ -42,8 +42,8 @@ public class PluginServiceRegistrationTests : IDisposable
 
         try
         {
-            if (Directory.Exists(path: _tempPluginsDir))
-                Directory.Delete(path: _tempPluginsDir, recursive: true);
+            if (Directory.Exists(_tempPluginsDir))
+                Directory.Delete(_tempPluginsDir, true);
         }
         catch (Exception) { }
     }
@@ -58,34 +58,33 @@ public class PluginServiceRegistrationTests : IDisposable
         // Echo location:          .../<repo>/tests/NoMercy.Plugin.Samples.Echo/bin/<Config>/net10.0/
         // Derive <Config> from the test assembly path so Debug and Release CI jobs both resolve.
         string testBinDir = Path.GetDirectoryName(
-            path: typeof(PluginServiceRegistrationTests).Assembly.Location
+            typeof(PluginServiceRegistrationTests).Assembly.Location
         )!;
 
         // testBinDir == .../bin/<Config>/net10.0  →  parent of parent is .../bin
         // parent of that is the test project root, parent again is tests/, parent again is repo root.
         string tfmDir = testBinDir; // net10.0
-        string configDir = Path.GetDirectoryName(path: tfmDir)!; // <Config> e.g. Debug | Release
-        string buildConfig = Path.GetFileName(path: configDir);
+        string configDir = Path.GetDirectoryName(tfmDir)!; // <Config> e.g. Debug | Release
+        string buildConfig = Path.GetFileName(configDir);
 
-        string repoRoot = Path.GetFullPath(path: Path.Combine(paths: [testBinDir, "..", "..", "..", "..", ".."]));
+        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
 
         // Prefer the configuration that matches the currently running test assembly.
         // Fall back to the other known configuration so a local Debug build still works
         // when a Release artefact happens to be present (and vice-versa).
-        string preferred = Path.Combine(paths: [repoRoot, "tests", "NoMercy.Plugin.Samples.Echo", "bin", buildConfig, "net10.0"]
+        string preferred = Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Echo", "bin", buildConfig, "net10.0"]
         );
-        string fallback = Path.Combine(paths:
-            [repoRoot, "tests", "NoMercy.Plugin.Samples.Echo", "bin", string.Equals(a: buildConfig, b: "Release", comparisonType: StringComparison.OrdinalIgnoreCase)
+        string fallback = Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Echo", "bin", string.Equals(buildConfig, "Release", StringComparison.OrdinalIgnoreCase)
                 ? "Debug"
                 : "Release",
                 "net10.0"
             ]
         );
 
-        if (Directory.Exists(path: preferred))
+        if (Directory.Exists(preferred))
             return preferred;
 
-        if (Directory.Exists(path: fallback))
+        if (Directory.Exists(fallback))
             return fallback;
 
         // Return preferred so the FileNotFoundException message names the right config.
@@ -95,54 +94,54 @@ public class PluginServiceRegistrationTests : IDisposable
     private void StageEchoPlugin()
     {
         string binDir = GetEchoPluginBinDir();
-        string dllSrc = Path.Combine(path1: binDir, path2: "NoMercy.Plugin.Samples.Echo.dll");
-        string manifestSrc = Path.Combine(path1: binDir, path2: "plugin.json");
+        string dllSrc = Path.Combine(binDir, "NoMercy.Plugin.Samples.Echo.dll");
+        string manifestSrc = Path.Combine(binDir, "plugin.json");
 
-        if (!File.Exists(path: dllSrc))
+        if (!File.Exists(dllSrc))
             throw new FileNotFoundException(
-                message: $"Echo plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Echo first."
+                $"Echo plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Echo first."
             );
 
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.dll"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: _echoPluginDir, path2: Path.GetFileName(path: file)), overwrite: true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
+            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), true);
 
-        if (File.Exists(path: manifestSrc))
-            File.Copy(sourceFileName: manifestSrc, destFileName: Path.Combine(path1: _echoPluginDir, path2: "plugin.json"), overwrite: true);
+        if (File.Exists(manifestSrc))
+            File.Copy(manifestSrc, Path.Combine(_echoPluginDir, "plugin.json"), true);
     }
 
     private static string GetFailuresPluginBinDir()
     {
         string testBinDir = Path.GetDirectoryName(
-            path: typeof(PluginServiceRegistrationTests).Assembly.Location
+            typeof(PluginServiceRegistrationTests).Assembly.Location
         )!;
         string tfmDir = testBinDir;
-        string configDir = Path.GetDirectoryName(path: tfmDir)!;
-        string buildConfig = Path.GetFileName(path: configDir);
-        string repoRoot = Path.GetFullPath(path: Path.Combine(paths: [testBinDir, "..", "..", "..", "..", ".."]));
+        string configDir = Path.GetDirectoryName(tfmDir)!;
+        string buildConfig = Path.GetFileName(configDir);
+        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
 
-        return Path.Combine(paths: [repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0"]
+        return Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0"]
         );
     }
 
     private void StageFailuresPlugin(string targetDir)
     {
         string binDir = GetFailuresPluginBinDir();
-        string dllSrc = Path.Combine(path1: binDir, path2: "NoMercy.Plugin.Samples.Failures.dll");
-        string manifestSrc = Path.Combine(path1: binDir, path2: "plugin.json");
+        string dllSrc = Path.Combine(binDir, "NoMercy.Plugin.Samples.Failures.dll");
+        string manifestSrc = Path.Combine(binDir, "plugin.json");
 
-        if (!File.Exists(path: dllSrc))
+        if (!File.Exists(dllSrc))
             throw new FileNotFoundException(
-                message: $"Failures plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Failures first."
+                $"Failures plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Failures first."
             );
 
-        Directory.CreateDirectory(path: targetDir);
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.dll"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: targetDir, path2: Path.GetFileName(path: file)), overwrite: true);
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.deps.json"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: targetDir, path2: Path.GetFileName(path: file)), overwrite: true);
+        Directory.CreateDirectory(targetDir);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
+            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
+            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), true);
 
-        if (File.Exists(path: manifestSrc))
-            File.Copy(sourceFileName: manifestSrc, destFileName: Path.Combine(path1: targetDir, path2: "plugin.json"), overwrite: true);
+        if (File.Exists(manifestSrc))
+            File.Copy(manifestSrc, Path.Combine(targetDir, "plugin.json"), true);
     }
 
     [Fact]
@@ -150,7 +149,7 @@ public class PluginServiceRegistrationTests : IDisposable
     {
         IServiceCollection services = new ServiceCollection();
 
-        Action act = () => services.RegisterPluginServicesFromManifests(pluginsPath: _tempPluginsDir);
+        Action act = () => services.RegisterPluginServicesFromManifests(_tempPluginsDir);
 
         act.Should().NotThrow();
     }
@@ -160,11 +159,11 @@ public class PluginServiceRegistrationTests : IDisposable
     {
         IServiceCollection services = new ServiceCollection();
         string missing = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "no-such-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "no-such-" + Guid.NewGuid().ToString("N")
         );
 
-        Action act = () => services.RegisterPluginServicesFromManifests(pluginsPath: missing);
+        Action act = () => services.RegisterPluginServicesFromManifests(missing);
 
         act.Should().NotThrow();
     }
@@ -176,7 +175,7 @@ public class PluginServiceRegistrationTests : IDisposable
 
         IServiceCollection services = new ServiceCollection();
 
-        Action act = () => services.RegisterPluginServicesFromManifests(pluginsPath: _tempPluginsDir);
+        Action act = () => services.RegisterPluginServicesFromManifests(_tempPluginsDir);
 
         // Echo plugin does not implement IPluginServiceRegistrator so no services are added,
         // but the scan itself must never throw.
@@ -191,24 +190,24 @@ public class PluginServiceRegistrationTests : IDisposable
         IServiceCollection services = new ServiceCollection();
         int countBefore = services.Count;
 
-        services.RegisterPluginServicesFromManifests(pluginsPath: _tempPluginsDir);
+        services.RegisterPluginServicesFromManifests(_tempPluginsDir);
 
         int countAfter = services.Count;
 
         // Echo does not register any services — count stays the same.
-        countAfter.Should().Be(expected: countBefore);
+        countAfter.Should().Be(countBefore);
     }
 
     [Fact]
     public void RegisterPluginServicesFromManifests_MalformedManifest_DoesNotThrow()
     {
-        string badDir = Path.Combine(path1: _tempPluginsDir, path2: "Bad");
-        Directory.CreateDirectory(path: badDir);
-        File.WriteAllText(path: Path.Combine(path1: badDir, path2: "plugin.json"), contents: "not json {{{{");
+        string badDir = Path.Combine(_tempPluginsDir, "Bad");
+        Directory.CreateDirectory(badDir);
+        File.WriteAllText(Path.Combine(badDir, "plugin.json"), "not json {{{{");
 
         IServiceCollection services = new ServiceCollection();
 
-        Action act = () => services.RegisterPluginServicesFromManifests(pluginsPath: _tempPluginsDir);
+        Action act = () => services.RegisterPluginServicesFromManifests(_tempPluginsDir);
 
         act.Should().NotThrow();
     }
@@ -219,12 +218,12 @@ public class PluginServiceRegistrationTests : IDisposable
         // Real reserved directories the plugin manager itself creates alongside
         // installed plugins — the scanner must recognise and skip both by name
         // rather than trying (and failing) to read a plugin.json from them.
-        Directory.CreateDirectory(path: Path.Combine(path1: _tempPluginsDir, path2: "configurations"));
-        Directory.CreateDirectory(path: Path.Combine(path1: _tempPluginsDir, path2: "data"));
+        Directory.CreateDirectory(Path.Combine(_tempPluginsDir, "configurations"));
+        Directory.CreateDirectory(Path.Combine(_tempPluginsDir, "data"));
 
         IServiceCollection services = new ServiceCollection();
 
-        Action act = () => services.RegisterPluginServicesFromManifests(pluginsPath: _tempPluginsDir);
+        Action act = () => services.RegisterPluginServicesFromManifests(_tempPluginsDir);
 
         act.Should().NotThrow();
         services.Should().BeEmpty();
@@ -233,11 +232,11 @@ public class PluginServiceRegistrationTests : IDisposable
     [Fact]
     public void RegisterPluginServicesFromManifests_ManifestReferencesMissingAssembly_SkipsPlugin()
     {
-        string pluginDir = Path.Combine(path1: _tempPluginsDir, path2: "MissingAssembly");
-        Directory.CreateDirectory(path: pluginDir);
+        string pluginDir = Path.Combine(_tempPluginsDir, "MissingAssembly");
+        Directory.CreateDirectory(pluginDir);
         File.WriteAllText(
-            path: Path.Combine(path1: pluginDir, path2: "plugin.json"),
-            contents: """
+            Path.Combine(pluginDir, "plugin.json"),
+            """
                       {
                         "id": "44444444-4444-4444-4444-444444444444",
                         "name": "MissingAssembly",
@@ -250,7 +249,7 @@ public class PluginServiceRegistrationTests : IDisposable
 
         IServiceCollection services = new ServiceCollection();
 
-        Action act = () => services.RegisterPluginServicesFromManifests(pluginsPath: _tempPluginsDir);
+        Action act = () => services.RegisterPluginServicesFromManifests(_tempPluginsDir);
 
         act.Should().NotThrow();
         services.Should().BeEmpty();
@@ -264,12 +263,12 @@ public class PluginServiceRegistrationTests : IDisposable
         // (AbstractServiceRegistratorBase, which must be found but never
         // constructed), and two IPlugin-only types that must not match the
         // IPluginServiceRegistrator filter at all.
-        string pluginDir = Path.Combine(path1: _tempPluginsDir, path2: "Failures");
-        StageFailuresPlugin(targetDir: pluginDir);
+        string pluginDir = Path.Combine(_tempPluginsDir, "Failures");
+        StageFailuresPlugin(pluginDir);
 
         IServiceCollection services = new ServiceCollection();
 
-        services.RegisterPluginServicesFromManifests(pluginsPath: _tempPluginsDir);
+        services.RegisterPluginServicesFromManifests(_tempPluginsDir);
 
         // The registered service's Type was loaded through a transient,
         // already-unloaded PluginLoadContext — comparing by CLR type identity
@@ -277,8 +276,8 @@ public class PluginServiceRegistrationTests : IDisposable
         // ALC boundary. Comparing the descriptor's type NAME is the correct,
         // ALC-agnostic way to prove RegisterServices actually ran.
         services.Should().ContainSingle();
-        services[index: 0]
+        services[0]
             .ServiceType.FullName.Should()
-            .Be(expected: "NoMercy.Plugin.Samples.Failures.FailuresPluginMarker");
+            .Be("NoMercy.Plugin.Samples.Failures.FailuresPluginMarker");
     }
 }

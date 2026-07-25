@@ -19,7 +19,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class JsonSerializerConfigurationTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -36,13 +36,13 @@ public class JsonSerializerConfigurationTests : IClassFixture<NoMercyApiFactory>
             .Services.GetRequiredService<IOptions<MvcNewtonsoftJsonOptions>>()
             .Value;
 
-        bool hasStringEnumConverter = options.SerializerSettings.Converters.Any(predicate: c =>
+        bool hasStringEnumConverter = options.SerializerSettings.Converters.Any(c =>
             c is StringEnumConverter
         );
 
         Assert.True(
-            condition: hasStringEnumConverter,
-            userMessage: "Newtonsoft.Json controller settings must include StringEnumConverter for enum-as-string serialization"
+            hasStringEnumConverter,
+            "Newtonsoft.Json controller settings must include StringEnumConverter for enum-as-string serialization"
         );
     }
 
@@ -54,8 +54,8 @@ public class JsonSerializerConfigurationTests : IClassFixture<NoMercyApiFactory>
             .Value;
 
         Assert.Equal(
-            expected: ReferenceLoopHandling.Ignore,
-            actual: options.SerializerSettings.ReferenceLoopHandling
+            ReferenceLoopHandling.Ignore,
+            options.SerializerSettings.ReferenceLoopHandling
         );
     }
 
@@ -66,7 +66,7 @@ public class JsonSerializerConfigurationTests : IClassFixture<NoMercyApiFactory>
             .Services.GetRequiredService<IOptions<MvcNewtonsoftJsonOptions>>()
             .Value;
 
-        Assert.Equal(expected: DateTimeZoneHandling.Utc, actual: options.SerializerSettings.DateTimeZoneHandling);
+        Assert.Equal(DateTimeZoneHandling.Utc, options.SerializerSettings.DateTimeZoneHandling);
     }
 
     [Fact]
@@ -77,8 +77,8 @@ public class JsonSerializerConfigurationTests : IClassFixture<NoMercyApiFactory>
             .Value;
 
         Assert.Equal(
-            expected: DateFormatHandling.IsoDateFormat,
-            actual: options.SerializerSettings.DateFormatHandling
+            DateFormatHandling.IsoDateFormat,
+            options.SerializerSettings.DateFormatHandling
         );
     }
 
@@ -87,13 +87,13 @@ public class JsonSerializerConfigurationTests : IClassFixture<NoMercyApiFactory>
     {
         JsonOptions options = _factory.Services.GetRequiredService<IOptions<JsonOptions>>().Value;
 
-        bool hasJsonStringEnumConverter = options.JsonSerializerOptions.Converters.Any(predicate: c =>
+        bool hasJsonStringEnumConverter = options.JsonSerializerOptions.Converters.Any(c =>
             c.GetType().Name == "JsonStringEnumConverter"
         );
 
         Assert.False(
-            condition: hasJsonStringEnumConverter,
-            userMessage: "System.Text.Json should not have JsonStringEnumConverter configured — "
+            hasJsonStringEnumConverter,
+            "System.Text.Json should not have JsonStringEnumConverter configured — "
                          + "Newtonsoft.Json is the sole controller serializer and handles enum conversion via StringEnumConverter"
         );
     }

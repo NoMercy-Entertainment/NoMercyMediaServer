@@ -31,90 +31,90 @@ public class StreamActionResolverTests
     [Fact]
     public void Audio_MatchingCodecAndSufficientBitrate_Copy()
     {
-        AudioStreamInfo source = new(Index: 0, Codec: "aac", Channels: 2, SampleRate: 48000, BitRateKbps: 192, Language: "eng", IsDefault: true, IsForced: false);
+        AudioStreamInfo source = new(0, "aac", 2, 48000, 192, "eng", true, false);
         AudioOutput profile = new(
-            Policy: StreamPolicy.Transcode,
-            Codec: AudioCodecType.Aac,
-            BitrateKbps: 128,
-            Channels: 2,
-            SampleRateHz: 48000,
-            AllowedLanguages: [],
-            DefaultLanguage: null,
-            Loudness: null,
-            Downmix: null,
-            SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
-            PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
+            StreamPolicy.Transcode,
+            AudioCodecType.Aac,
+            128,
+            2,
+            48000,
+            [],
+            null,
+            null,
+            null,
+            ":type:_:language:_:codec:/:type:_:language:_:codec:",
+            ":type:_:language:_:codec:/:type:_:language:_:codec:"
         );
-        _resolver.ResolveAudio(source: source, profile: profile, format: OutputFormat.Mkv).Should().Be(expected: StreamAction.Copy);
+        _resolver.ResolveAudio(source, profile, OutputFormat.Mkv).Should().Be(StreamAction.Copy);
     }
 
     [Fact]
     public void Audio_DifferentCodec_Transcode()
     {
-        AudioStreamInfo source = new(Index: 0, Codec: "ac3", Channels: 6, SampleRate: 48000, BitRateKbps: 640, Language: "eng", IsDefault: true, IsForced: false);
+        AudioStreamInfo source = new(0, "ac3", 6, 48000, 640, "eng", true, false);
         AudioOutput profile = new(
-            Policy: StreamPolicy.Transcode,
-            Codec: AudioCodecType.Aac,
-            BitrateKbps: 192,
-            Channels: 2,
-            SampleRateHz: 48000,
-            AllowedLanguages: [],
-            DefaultLanguage: null,
-            Loudness: null,
-            Downmix: null,
-            SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
-            PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
+            StreamPolicy.Transcode,
+            AudioCodecType.Aac,
+            192,
+            2,
+            48000,
+            [],
+            null,
+            null,
+            null,
+            ":type:_:language:_:codec:/:type:_:language:_:codec:",
+            ":type:_:language:_:codec:/:type:_:language:_:codec:"
         );
         _resolver
-            .ResolveAudio(source: source, profile: profile, format: OutputFormat.Mkv)
+            .ResolveAudio(source, profile, OutputFormat.Mkv)
             .Should()
-            .Be(expected: StreamAction.Transcode);
+            .Be(StreamAction.Transcode);
     }
 
     [Fact]
     public void Audio_LosslessSourceLossyTarget_AlwaysTranscode()
     {
-        AudioStreamInfo source = new(Index: 0, Codec: "flac", Channels: 2, SampleRate: 48000, BitRateKbps: 900, Language: "eng", IsDefault: true, IsForced: false);
+        AudioStreamInfo source = new(0, "flac", 2, 48000, 900, "eng", true, false);
         AudioOutput profile = new(
-            Policy: StreamPolicy.Transcode,
-            Codec: AudioCodecType.Aac,
-            BitrateKbps: 192,
-            Channels: 2,
-            SampleRateHz: 48000,
-            AllowedLanguages: [],
-            DefaultLanguage: null,
-            Loudness: null,
-            Downmix: null,
-            SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
-            PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
+            StreamPolicy.Transcode,
+            AudioCodecType.Aac,
+            192,
+            2,
+            48000,
+            [],
+            null,
+            null,
+            null,
+            ":type:_:language:_:codec:/:type:_:language:_:codec:",
+            ":type:_:language:_:codec:/:type:_:language:_:codec:"
         );
         _resolver
-            .ResolveAudio(source: source, profile: profile, format: OutputFormat.Mkv)
+            .ResolveAudio(source, profile, OutputFormat.Mkv)
             .Should()
-            .Be(expected: StreamAction.Transcode);
+            .Be(StreamAction.Transcode);
     }
 
     [Fact]
     public void Audio_InsufficientChannels_Transcode()
     {
-        AudioStreamInfo source = new(Index: 0, Codec: "aac", Channels: 2, SampleRate: 48000, BitRateKbps: 192, Language: "eng", IsDefault: true, IsForced: false);
+        AudioStreamInfo source = new(0, "aac", 2, 48000, 192, "eng", true, false);
         AudioOutput profile = new(
-            Policy: StreamPolicy.Transcode,
-            Codec: AudioCodecType.Aac,
-            BitrateKbps: 192,
-            Channels: 6,
-            SampleRateHz: 48000,
-            AllowedLanguages: [],
-            DefaultLanguage: null,
-            Loudness: null,
-            Downmix: null,
-            SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
-            PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
+            StreamPolicy.Transcode,
+            AudioCodecType.Aac,
+            192,
+            6,
+            48000,
+            [],
+            null,
+            null,
+            null,
+            ":type:_:language:_:codec:/:type:_:language:_:codec:",
+            ":type:_:language:_:codec:/:type:_:language:_:codec:"
         );
         _resolver
-            .ResolveAudio(source: source, profile: profile, format: OutputFormat.Mkv)
+            .ResolveAudio(source, profile, OutputFormat.Mkv)
             .Should()
-            .Be(expected: StreamAction.Transcode);
+            .Be(StreamAction.Transcode);
     }
 
     // --- Subtitle: text ---
@@ -122,52 +122,52 @@ public class StreamActionResolverTests
     [Fact]
     public void Subtitle_TextSub_Mkv_Copy()
     {
-        SubtitleStreamInfo source = new(Index: 0, Codec: "srt", Language: "eng", IsDefault: true, IsForced: false);
+        SubtitleStreamInfo source = new(0, "srt", "eng", true, false);
         SubtitleOutput profile = new(
-            Policy: SubtitlePolicy.Extract,
-            Codec: SubtitleCodecType.Srt,
-            AllowedLanguages: [],
-            IncludeForced: false,
-            OcrLanguage: null,
-            PlaylistNameTemplate: "subtitles/:filename:.:language:.:variant:"
+            SubtitlePolicy.Extract,
+            SubtitleCodecType.Srt,
+            [],
+            false,
+            null,
+            "subtitles/:filename:.:language:.:variant:"
         );
-        _resolver.ResolveSubtitle(source: source, profile: profile, format: OutputFormat.Mkv).Should().Be(expected: StreamAction.Copy);
+        _resolver.ResolveSubtitle(source, profile, OutputFormat.Mkv).Should().Be(StreamAction.Copy);
     }
 
     [Fact]
     public void Subtitle_TextSub_Hls_Extract()
     {
-        SubtitleStreamInfo source = new(Index: 0, Codec: "srt", Language: "eng", IsDefault: true, IsForced: false);
+        SubtitleStreamInfo source = new(0, "srt", "eng", true, false);
         SubtitleOutput profile = new(
-            Policy: SubtitlePolicy.Extract,
-            Codec: SubtitleCodecType.WebVtt,
-            AllowedLanguages: [],
-            IncludeForced: false,
-            OcrLanguage: null,
-            PlaylistNameTemplate: "subtitles/:filename:.:language:.:variant:"
+            SubtitlePolicy.Extract,
+            SubtitleCodecType.WebVtt,
+            [],
+            false,
+            null,
+            "subtitles/:filename:.:language:.:variant:"
         );
         _resolver
-            .ResolveSubtitle(source: source, profile: profile, format: OutputFormat.Hls)
+            .ResolveSubtitle(source, profile, OutputFormat.Hls)
             .Should()
-            .Be(expected: StreamAction.Extract);
+            .Be(StreamAction.Extract);
     }
 
     [Fact]
     public void Subtitle_TextSub_Mp4_Extract()
     {
-        SubtitleStreamInfo source = new(Index: 0, Codec: "ass", Language: "eng", IsDefault: true, IsForced: false);
+        SubtitleStreamInfo source = new(0, "ass", "eng", true, false);
         SubtitleOutput profile = new(
-            Policy: SubtitlePolicy.Extract,
-            Codec: SubtitleCodecType.WebVtt,
-            AllowedLanguages: [],
-            IncludeForced: false,
-            OcrLanguage: null,
-            PlaylistNameTemplate: "subtitles/:filename:.:language:.:variant:"
+            SubtitlePolicy.Extract,
+            SubtitleCodecType.WebVtt,
+            [],
+            false,
+            null,
+            "subtitles/:filename:.:language:.:variant:"
         );
         _resolver
-            .ResolveSubtitle(source: source, profile: profile, format: OutputFormat.Mp4)
+            .ResolveSubtitle(source, profile, OutputFormat.Mp4)
             .Should()
-            .Be(expected: StreamAction.Extract);
+            .Be(StreamAction.Extract);
     }
 
     // --- Subtitle: bitmap ---
@@ -175,53 +175,53 @@ public class StreamActionResolverTests
     [Fact]
     public void Subtitle_BitmapSub_Mkv_Copy()
     {
-        SubtitleStreamInfo source = new(Index: 0, Codec: "hdmv_pgs_subtitle", Language: "eng", IsDefault: true, IsForced: false);
+        SubtitleStreamInfo source = new(0, "hdmv_pgs_subtitle", "eng", true, false);
         SubtitleOutput profile = new(
-            Policy: SubtitlePolicy.Extract,
-            Codec: SubtitleCodecType.WebVtt,
-            AllowedLanguages: [],
-            IncludeForced: false,
-            OcrLanguage: null,
-            PlaylistNameTemplate: "subtitles/:filename:.:language:.:variant:"
+            SubtitlePolicy.Extract,
+            SubtitleCodecType.WebVtt,
+            [],
+            false,
+            null,
+            "subtitles/:filename:.:language:.:variant:"
         );
-        _resolver.ResolveSubtitle(source: source, profile: profile, format: OutputFormat.Mkv).Should().Be(expected: StreamAction.Copy);
+        _resolver.ResolveSubtitle(source, profile, OutputFormat.Mkv).Should().Be(StreamAction.Copy);
     }
 
     [Fact]
     public void Subtitle_BitmapSub_Hls_Transcode()
     {
         // Bitmap subs for HLS must be burned in (mapped to Transcode)
-        SubtitleStreamInfo source = new(Index: 0, Codec: "hdmv_pgs_subtitle", Language: "eng", IsDefault: true, IsForced: false);
+        SubtitleStreamInfo source = new(0, "hdmv_pgs_subtitle", "eng", true, false);
         SubtitleOutput profile = new(
-            Policy: SubtitlePolicy.Extract,
-            Codec: SubtitleCodecType.WebVtt,
-            AllowedLanguages: [],
-            IncludeForced: false,
-            OcrLanguage: null,
-            PlaylistNameTemplate: "subtitles/:filename:.:language:.:variant:"
+            SubtitlePolicy.Extract,
+            SubtitleCodecType.WebVtt,
+            [],
+            false,
+            null,
+            "subtitles/:filename:.:language:.:variant:"
         );
         _resolver
-            .ResolveSubtitle(source: source, profile: profile, format: OutputFormat.Hls)
+            .ResolveSubtitle(source, profile, OutputFormat.Hls)
             .Should()
-            .Be(expected: StreamAction.Transcode);
+            .Be(StreamAction.Transcode);
     }
 
     [Fact]
     public void Subtitle_BurnInMode_AlwaysTranscode()
     {
-        SubtitleStreamInfo source = new(Index: 0, Codec: "srt", Language: "eng", IsDefault: true, IsForced: false);
+        SubtitleStreamInfo source = new(0, "srt", "eng", true, false);
         SubtitleOutput profile = new(
-            Policy: SubtitlePolicy.BurnIn,
-            Codec: SubtitleCodecType.WebVtt,
-            AllowedLanguages: [],
-            IncludeForced: false,
-            OcrLanguage: null,
-            PlaylistNameTemplate: "subtitles/:filename:.:language:.:variant:"
+            SubtitlePolicy.BurnIn,
+            SubtitleCodecType.WebVtt,
+            [],
+            false,
+            null,
+            "subtitles/:filename:.:language:.:variant:"
         );
         _resolver
-            .ResolveSubtitle(source: source, profile: profile, format: OutputFormat.Mkv)
+            .ResolveSubtitle(source, profile, OutputFormat.Mkv)
             .Should()
-            .Be(expected: StreamAction.Transcode);
+            .Be(StreamAction.Transcode);
     }
 
     // --- Video ---
@@ -230,245 +230,245 @@ public class StreamActionResolverTests
     public void Video_DifferentCodec_Transcode()
     {
         VideoStreamInfo source = new(
-            Index: 0,
-            Codec: "hevc",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: 24.0,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            ColorPrimaries: "bt709",
-            ColorTransfer: "bt709",
-            ColorSpace: "bt709",
-            IsDefault: true,
-            BitRateKbps: 8000
+            0,
+            "hevc",
+            1920,
+            1080,
+            24.0,
+            8,
+            "yuv420p",
+            "bt709",
+            "bt709",
+            "bt709",
+            true,
+            8000
         );
         VideoOutput profile = new(
-            Policy: StreamPolicy.Transcode,
-            Codec: VideoCodecType.H264,
-            Width: 1920,
-            Height: 1080,
-            RateControl: RateControlMode.Crf,
-            Crf: 0,
-            BitrateKbps: 8000,
-            MaxBitrateKbps: null,
-            BufferSizeKbps: null,
-            Preset: null,
-            CodecProfile: CodecProfile.Auto,
-            Level: null,
-            Tune: null,
-            BitDepth: 8,
-            PixelFormat: null,
-            KeyframeIntervalSeconds: 0,
-            ConvertHdrToSdr: false,
-            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            StreamPolicy.Transcode,
+            VideoCodecType.H264,
+            1920,
+            1080,
+            RateControlMode.Crf,
+            0,
+            8000,
+            null,
+            null,
+            null,
+            CodecProfile.Auto,
+            null,
+            null,
+            8,
+            null,
+            0,
+            false,
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
         );
-        _resolver.ResolveVideo(source: source, profile: profile).Should().Be(expected: StreamAction.Transcode);
+        _resolver.ResolveVideo(source, profile).Should().Be(StreamAction.Transcode);
     }
 
     [Fact]
     public void Video_SameCodecSameRes_Copy()
     {
         VideoStreamInfo source = new(
-            Index: 0,
-            Codec: "h264",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: 24.0,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            ColorPrimaries: "bt709",
-            ColorTransfer: "bt709",
-            ColorSpace: "bt709",
-            IsDefault: true,
-            BitRateKbps: 8000
+            0,
+            "h264",
+            1920,
+            1080,
+            24.0,
+            8,
+            "yuv420p",
+            "bt709",
+            "bt709",
+            "bt709",
+            true,
+            8000
         );
         VideoOutput profile = new(
-            Policy: StreamPolicy.Transcode,
-            Codec: VideoCodecType.H264,
-            Width: 1920,
-            Height: 1080,
-            RateControl: RateControlMode.Crf,
-            Crf: 0,
-            BitrateKbps: 8000,
-            MaxBitrateKbps: null,
-            BufferSizeKbps: null,
-            Preset: null,
-            CodecProfile: CodecProfile.Auto,
-            Level: null,
-            Tune: null,
-            BitDepth: 8,
-            PixelFormat: null,
-            KeyframeIntervalSeconds: 0,
-            ConvertHdrToSdr: false,
-            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            StreamPolicy.Transcode,
+            VideoCodecType.H264,
+            1920,
+            1080,
+            RateControlMode.Crf,
+            0,
+            8000,
+            null,
+            null,
+            null,
+            CodecProfile.Auto,
+            null,
+            null,
+            8,
+            null,
+            0,
+            false,
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
         );
-        _resolver.ResolveVideo(source: source, profile: profile).Should().Be(expected: StreamAction.Copy);
+        _resolver.ResolveVideo(source, profile).Should().Be(StreamAction.Copy);
     }
 
     [Fact]
     public void Video_SameCodecDifferentRes_Transcode()
     {
         VideoStreamInfo source = new(
-            Index: 0,
-            Codec: "h264",
-            Width: 3840,
-            Height: 2160,
-            FrameRate: 24.0,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            ColorPrimaries: "bt709",
-            ColorTransfer: "bt709",
-            ColorSpace: "bt709",
-            IsDefault: true,
-            BitRateKbps: 20000
+            0,
+            "h264",
+            3840,
+            2160,
+            24.0,
+            8,
+            "yuv420p",
+            "bt709",
+            "bt709",
+            "bt709",
+            true,
+            20000
         );
         VideoOutput profile = new(
-            Policy: StreamPolicy.Transcode,
-            Codec: VideoCodecType.H264,
-            Width: 1920,
-            Height: 1080,
-            RateControl: RateControlMode.Crf,
-            Crf: 0,
-            BitrateKbps: 8000,
-            MaxBitrateKbps: null,
-            BufferSizeKbps: null,
-            Preset: null,
-            CodecProfile: CodecProfile.Auto,
-            Level: null,
-            Tune: null,
-            BitDepth: 8,
-            PixelFormat: null,
-            KeyframeIntervalSeconds: 0,
-            ConvertHdrToSdr: false,
-            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            StreamPolicy.Transcode,
+            VideoCodecType.H264,
+            1920,
+            1080,
+            RateControlMode.Crf,
+            0,
+            8000,
+            null,
+            null,
+            null,
+            CodecProfile.Auto,
+            null,
+            null,
+            8,
+            null,
+            0,
+            false,
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
         );
-        _resolver.ResolveVideo(source: source, profile: profile).Should().Be(expected: StreamAction.Transcode);
+        _resolver.ResolveVideo(source, profile).Should().Be(StreamAction.Transcode);
     }
 
     [Fact]
     public void Video_HevcMain10SameResSufficientBitrate_Copy()
     {
         VideoStreamInfo source = new(
-            Index: 0,
-            Codec: "hevc",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: 24.0,
-            BitDepth: 10,
-            PixelFormat: "yuv420p10le",
-            ColorPrimaries: "bt2020",
-            ColorTransfer: "smpte2084",
-            ColorSpace: "bt2020nc",
-            IsDefault: true,
-            BitRateKbps: 12000
+            0,
+            "hevc",
+            1920,
+            1080,
+            24.0,
+            10,
+            "yuv420p10le",
+            "bt2020",
+            "smpte2084",
+            "bt2020nc",
+            true,
+            12000
         );
         VideoOutput profile = new(
-            Policy: StreamPolicy.Transcode,
-            Codec: VideoCodecType.H265,
-            Width: 1920,
-            Height: 1080,
-            RateControl: RateControlMode.Crf,
-            Crf: 0,
-            BitrateKbps: 8000,
-            MaxBitrateKbps: null,
-            BufferSizeKbps: null,
-            Preset: null,
-            CodecProfile: CodecProfile.Auto,
-            Level: null,
-            Tune: null,
-            BitDepth: 10,
-            PixelFormat: null,
-            KeyframeIntervalSeconds: 0,
-            ConvertHdrToSdr: false,
-            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            StreamPolicy.Transcode,
+            VideoCodecType.H265,
+            1920,
+            1080,
+            RateControlMode.Crf,
+            0,
+            8000,
+            null,
+            null,
+            null,
+            CodecProfile.Auto,
+            null,
+            null,
+            10,
+            null,
+            0,
+            false,
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
         );
-        _resolver.ResolveVideo(source: source, profile: profile).Should().Be(expected: StreamAction.Copy);
+        _resolver.ResolveVideo(source, profile).Should().Be(StreamAction.Copy);
     }
 
     [Fact]
     public void Video_10BitSourceAgainst8BitProfile_Transcode()
     {
         VideoStreamInfo source = new(
-            Index: 0,
-            Codec: "hevc",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: 24.0,
-            BitDepth: 10,
-            PixelFormat: "yuv420p10le",
-            ColorPrimaries: "bt2020",
-            ColorTransfer: "smpte2084",
-            ColorSpace: "bt2020nc",
-            IsDefault: true,
-            BitRateKbps: 12000
+            0,
+            "hevc",
+            1920,
+            1080,
+            24.0,
+            10,
+            "yuv420p10le",
+            "bt2020",
+            "smpte2084",
+            "bt2020nc",
+            true,
+            12000
         );
         VideoOutput profile = new(
-            Policy: StreamPolicy.Transcode,
-            Codec: VideoCodecType.H265,
-            Width: 1920,
-            Height: 1080,
-            RateControl: RateControlMode.Crf,
-            Crf: 0,
-            BitrateKbps: 8000,
-            MaxBitrateKbps: null,
-            BufferSizeKbps: null,
-            Preset: null,
-            CodecProfile: CodecProfile.Auto,
-            Level: null,
-            Tune: null,
-            BitDepth: 8,
-            PixelFormat: null,
-            KeyframeIntervalSeconds: 0,
-            ConvertHdrToSdr: false,
-            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            StreamPolicy.Transcode,
+            VideoCodecType.H265,
+            1920,
+            1080,
+            RateControlMode.Crf,
+            0,
+            8000,
+            null,
+            null,
+            null,
+            CodecProfile.Auto,
+            null,
+            null,
+            8,
+            null,
+            0,
+            false,
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
         );
-        _resolver.ResolveVideo(source: source, profile: profile).Should().Be(expected: StreamAction.Transcode);
+        _resolver.ResolveVideo(source, profile).Should().Be(StreamAction.Transcode);
     }
 
     [Fact]
     public void Video_8BitSourceAgainst10BitProfile_Transcode()
     {
         VideoStreamInfo source = new(
-            Index: 0,
-            Codec: "h264",
-            Width: 1920,
-            Height: 1080,
-            FrameRate: 24.0,
-            BitDepth: 8,
-            PixelFormat: "yuv420p",
-            ColorPrimaries: "bt709",
-            ColorTransfer: "bt709",
-            ColorSpace: "bt709",
-            IsDefault: true,
-            BitRateKbps: 8000
+            0,
+            "h264",
+            1920,
+            1080,
+            24.0,
+            8,
+            "yuv420p",
+            "bt709",
+            "bt709",
+            "bt709",
+            true,
+            8000
         );
         VideoOutput profile = new(
-            Policy: StreamPolicy.Transcode,
-            Codec: VideoCodecType.H264,
-            Width: 1920,
-            Height: 1080,
-            RateControl: RateControlMode.Crf,
-            Crf: 0,
-            BitrateKbps: 4000,
-            MaxBitrateKbps: null,
-            BufferSizeKbps: null,
-            Preset: null,
-            CodecProfile: CodecProfile.Auto,
-            Level: null,
-            Tune: null,
-            BitDepth: 10,
-            PixelFormat: null,
-            KeyframeIntervalSeconds: 0,
-            ConvertHdrToSdr: false,
-            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            StreamPolicy.Transcode,
+            VideoCodecType.H264,
+            1920,
+            1080,
+            RateControlMode.Crf,
+            0,
+            4000,
+            null,
+            null,
+            null,
+            CodecProfile.Auto,
+            null,
+            null,
+            10,
+            null,
+            0,
+            false,
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
         );
-        _resolver.ResolveVideo(source: source, profile: profile).Should().Be(expected: StreamAction.Transcode);
+        _resolver.ResolveVideo(source, profile).Should().Be(StreamAction.Transcode);
     }
 }

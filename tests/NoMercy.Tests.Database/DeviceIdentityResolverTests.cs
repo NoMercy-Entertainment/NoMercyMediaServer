@@ -29,7 +29,7 @@ public class DeviceIdentityResolverTests : IDisposable
         ServiceCollection services = new();
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(serviceProvider: provider);
+        TokenStore.Initialize(provider);
 
         _context = CreateFreshContext();
     }
@@ -43,16 +43,16 @@ public class DeviceIdentityResolverTests : IDisposable
     [Fact]
     public void ResolveAndPersist_Container_PersistedId_IsStableAcrossCalls()
     {
-        Guid first = DeviceIdentityResolver.ResolveAndPersist(db: _context, inContainer: true);
-        Guid second = DeviceIdentityResolver.ResolveAndPersist(db: _context, inContainer: true);
+        Guid first = DeviceIdentityResolver.ResolveAndPersist(_context, inContainer: true);
+        Guid second = DeviceIdentityResolver.ResolveAndPersist(_context, inContainer: true);
 
-        Assert.Equal(expected: first, actual: second);
+        Assert.Equal(first, second);
 
-        Configuration? stored = _context.Configuration.FirstOrDefault(predicate: c =>
+        Configuration? stored = _context.Configuration.FirstOrDefault(c =>
             c.Key == DeviceIdentityResolver.ConfigKey
         );
-        Assert.NotNull(@object: stored);
-        Assert.Equal(expected: first.ToString(), actual: stored.Value);
+        Assert.NotNull(stored);
+        Assert.Equal(first.ToString(), stored.Value);
     }
 
     [Fact]
@@ -60,33 +60,33 @@ public class DeviceIdentityResolverTests : IDisposable
     {
         using AppDbContext otherInstall = CreateFreshContext();
 
-        Guid firstInstallId = DeviceIdentityResolver.ResolveAndPersist(db: _context, inContainer: true);
+        Guid firstInstallId = DeviceIdentityResolver.ResolveAndPersist(_context, inContainer: true);
         Guid secondInstallId = DeviceIdentityResolver.ResolveAndPersist(
-            db: otherInstall,
+            otherInstall,
             inContainer: true
         );
 
-        Assert.NotEqual(expected: Guid.Empty, actual: firstInstallId);
-        Assert.NotEqual(expected: Guid.Empty, actual: secondInstallId);
-        Assert.NotEqual(expected: firstInstallId, actual: secondInstallId);
+        Assert.NotEqual(Guid.Empty, firstInstallId);
+        Assert.NotEqual(Guid.Empty, secondInstallId);
+        Assert.NotEqual(firstInstallId, secondInstallId);
     }
 
     [Fact]
     public void ResolveAndPersist_Container_EvidenceOfPriorRegistration_KeepsHardwareDerivedId()
     {
         _context.Configuration.Add(
-            entity: new() { Key = "ssl_certificate", SecureValue = "existing-cert" }
+            new() { Key = "ssl_certificate", SecureValue = "existing-cert" }
         );
-        _context.Configuration.Add(entity: new() { Key = "ssl_private_key", SecureValue = "existing-key" });
+        _context.Configuration.Add(new() { Key = "ssl_private_key", SecureValue = "existing-key" });
         _context.SaveChanges();
 
-        Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(db: _context, inContainer: true);
+        Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(_context, inContainer: true);
 
-        Assert.Equal(expected: Info.DeviceId, actual: resolvedId);
+        Assert.Equal(Info.DeviceId, resolvedId);
 
         // Regression guard: the non-degenerate path must never touch the cert rows.
-        Assert.NotNull(@object: _context.Configuration.FirstOrDefault(predicate: c => c.Key == "ssl_certificate"));
-        Assert.NotNull(@object: _context.Configuration.FirstOrDefault(predicate: c => c.Key == "ssl_private_key"));
+        Assert.NotNull(_context.Configuration.FirstOrDefault(c => c.Key == "ssl_certificate"));
+        Assert.NotNull(_context.Configuration.FirstOrDefault(c => c.Key == "ssl_private_key"));
     }
 
     [Fact]
@@ -99,20 +99,20 @@ public class DeviceIdentityResolverTests : IDisposable
         Guid knownDegenerateId = KnownDegenerateDeviceIds.Values.First();
 
         _context.Configuration.Add(
-            entity: new() { Key = "ssl_certificate", SecureValue = "existing-cert" }
+            new() { Key = "ssl_certificate", SecureValue = "existing-cert" }
         );
-        _context.Configuration.Add(entity: new() { Key = "ssl_private_key", SecureValue = "existing-key" });
+        _context.Configuration.Add(new() { Key = "ssl_private_key", SecureValue = "existing-key" });
         _context.SaveChanges();
 
         Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(
-            db: _context,
-            hardwareDerivedId: knownDegenerateId,
+            _context,
+            knownDegenerateId,
             inContainer: false
         );
 
-        Assert.Equal(expected: knownDegenerateId, actual: resolvedId);
-        Assert.NotNull(@object: _context.Configuration.FirstOrDefault(predicate: c => c.Key == "ssl_certificate"));
-        Assert.NotNull(@object: _context.Configuration.FirstOrDefault(predicate: c => c.Key == "ssl_private_key"));
+        Assert.Equal(knownDegenerateId, resolvedId);
+        Assert.NotNull(_context.Configuration.FirstOrDefault(c => c.Key == "ssl_certificate"));
+        Assert.NotNull(_context.Configuration.FirstOrDefault(c => c.Key == "ssl_private_key"));
     }
 
     [Fact]
@@ -121,48 +121,48 @@ public class DeviceIdentityResolverTests : IDisposable
         Guid knownDegenerateId = KnownDegenerateDeviceIds.Values.First();
 
         _context.Configuration.Add(
-            entity: new() { Key = "ssl_certificate", SecureValue = "existing-cert" }
+            new() { Key = "ssl_certificate", SecureValue = "existing-cert" }
         );
-        _context.Configuration.Add(entity: new() { Key = "ssl_private_key", SecureValue = "existing-key" });
+        _context.Configuration.Add(new() { Key = "ssl_private_key", SecureValue = "existing-key" });
         _context.Configuration.Add(
-            entity: new() { Key = "auth_access_token", SecureValue = "existing-access-token" }
+            new() { Key = "auth_access_token", SecureValue = "existing-access-token" }
         );
         _context.Configuration.Add(
-            entity: new() { Key = "auth_refresh_token", SecureValue = "existing-refresh-token" }
+            new() { Key = "auth_refresh_token", SecureValue = "existing-refresh-token" }
         );
         _context.SaveChanges();
 
         Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(
-            db: _context,
-            hardwareDerivedId: knownDegenerateId,
+            _context,
+            knownDegenerateId,
             inContainer: true
         );
 
-        Assert.NotEqual(expected: knownDegenerateId, actual: resolvedId);
-        Assert.False(condition: KnownDegenerateDeviceIds.IsDegenerate(id: resolvedId));
+        Assert.NotEqual(knownDegenerateId, resolvedId);
+        Assert.False(KnownDegenerateDeviceIds.IsDegenerate(resolvedId));
 
         // The stale cert must be gone — otherwise HasValidCertificate() keeps
         // reporting "registered" under a certificate that doesn't cover the new id.
-        Assert.Null(@object: _context.Configuration.FirstOrDefault(predicate: c => c.Key == "ssl_certificate"));
-        Assert.Null(@object: _context.Configuration.FirstOrDefault(predicate: c => c.Key == "ssl_private_key"));
+        Assert.Null(_context.Configuration.FirstOrDefault(c => c.Key == "ssl_certificate"));
+        Assert.Null(_context.Configuration.FirstOrDefault(c => c.Key == "ssl_private_key"));
 
         // Auth tokens must survive so the re-registration that follows is non-interactive.
-        Configuration? accessToken = _context.Configuration.FirstOrDefault(predicate: c =>
+        Configuration? accessToken = _context.Configuration.FirstOrDefault(c =>
             c.Key == "auth_access_token"
         );
-        Configuration? refreshToken = _context.Configuration.FirstOrDefault(predicate: c =>
+        Configuration? refreshToken = _context.Configuration.FirstOrDefault(c =>
             c.Key == "auth_refresh_token"
         );
-        Assert.NotNull(@object: accessToken);
-        Assert.Equal(expected: "existing-access-token", actual: accessToken.SecureValue);
-        Assert.NotNull(@object: refreshToken);
-        Assert.Equal(expected: "existing-refresh-token", actual: refreshToken.SecureValue);
+        Assert.NotNull(accessToken);
+        Assert.Equal("existing-access-token", accessToken.SecureValue);
+        Assert.NotNull(refreshToken);
+        Assert.Equal("existing-refresh-token", refreshToken.SecureValue);
 
-        Configuration? deviceIdRow = _context.Configuration.FirstOrDefault(predicate: c =>
+        Configuration? deviceIdRow = _context.Configuration.FirstOrDefault(c =>
             c.Key == DeviceIdentityResolver.ConfigKey
         );
-        Assert.NotNull(@object: deviceIdRow);
-        Assert.Equal(expected: resolvedId.ToString(), actual: deviceIdRow.Value);
+        Assert.NotNull(deviceIdRow);
+        Assert.Equal(resolvedId.ToString(), deviceIdRow.Value);
     }
 
     [Fact]
@@ -171,32 +171,32 @@ public class DeviceIdentityResolverTests : IDisposable
         Guid knownDegenerateId = KnownDegenerateDeviceIds.Values.First();
 
         _context.Configuration.Add(
-            entity: new() { Key = DeviceIdentityResolver.ConfigKey, Value = knownDegenerateId.ToString() }
+            new() { Key = DeviceIdentityResolver.ConfigKey, Value = knownDegenerateId.ToString() }
         );
         _context.SaveChanges();
 
         Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(
-            db: _context,
-            hardwareDerivedId: knownDegenerateId,
+            _context,
+            knownDegenerateId,
             inContainer: true
         );
 
-        Assert.NotEqual(expected: knownDegenerateId, actual: resolvedId);
-        Assert.False(condition: KnownDegenerateDeviceIds.IsDegenerate(id: resolvedId));
+        Assert.NotEqual(knownDegenerateId, resolvedId);
+        Assert.False(KnownDegenerateDeviceIds.IsDegenerate(resolvedId));
 
-        Configuration? stored = _context.Configuration.FirstOrDefault(predicate: c =>
+        Configuration? stored = _context.Configuration.FirstOrDefault(c =>
             c.Key == DeviceIdentityResolver.ConfigKey
         );
-        Assert.NotNull(@object: stored);
-        Assert.Equal(expected: resolvedId.ToString(), actual: stored.Value);
+        Assert.NotNull(stored);
+        Assert.Equal(resolvedId.ToString(), stored.Value);
     }
 
     private static AppDbContext CreateFreshContext()
     {
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
+        optionsBuilder.UseSqlite("Data Source=:memory:");
 
-        AppDbContext context = new(options: optionsBuilder.Options);
+        AppDbContext context = new(optionsBuilder.Options);
         context.Database.OpenConnection();
         context.Database.EnsureCreated();
 

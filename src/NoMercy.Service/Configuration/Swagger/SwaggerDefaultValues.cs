@@ -29,7 +29,7 @@ public class SwaggerDefaultValues : IOperationFilter
                 ? "default"
                 : responseType.StatusCode.ToString();
             if (
-                operation.Responses?.TryGetValue(key: responseKey, value: out IOpenApiResponse? response)
+                operation.Responses?.TryGetValue(responseKey, out IOpenApiResponse? response)
                 != true
             )
                 continue;
@@ -37,8 +37,8 @@ public class SwaggerDefaultValues : IOperationFilter
                 continue;
 
             foreach (string? contentType in response.Content.Keys)
-                if (responseType.ApiResponseFormats.All(predicate: x => x.MediaType != contentType))
-                    response.Content.Remove(key: contentType);
+                if (responseType.ApiResponseFormats.All(x => x.MediaType != contentType))
+                    response.Content.Remove(contentType);
         }
 
         if (operation.Parameters == null)
@@ -47,7 +47,7 @@ public class SwaggerDefaultValues : IOperationFilter
         foreach (OpenApiParameter parameter in operation.Parameters)
         {
             ApiParameterDescription? description =
-                apiDescription.ParameterDescriptions.FirstOrDefault(predicate: p => p.Name == parameter.Name);
+                apiDescription.ParameterDescriptions.FirstOrDefault(p => p.Name == parameter.Name);
             if (description is null)
                 continue;
 
@@ -61,10 +61,10 @@ public class SwaggerDefaultValues : IOperationFilter
             )
             {
                 string json = JsonSerializer.Serialize(
-                    value: description.DefaultValue,
-                    inputType: modelMetadata.ModelType
+                    description.DefaultValue,
+                    modelMetadata.ModelType
                 );
-                schema.Default = JsonNode.Parse(json: json);
+                schema.Default = JsonNode.Parse(json);
             }
 
             parameter.Required |= description.IsRequired;

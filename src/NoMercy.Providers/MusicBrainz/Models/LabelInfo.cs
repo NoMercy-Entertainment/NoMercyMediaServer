@@ -15,9 +15,9 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class LabelInfo
 {
-    [JsonProperty(propertyName: "catalog-number")]
+    [JsonProperty("catalog-number")]
     public string CatalogNumber { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "label")]
+    [JsonProperty("label")]
     public MusicBrainzLabel MusicBrainzLabel { get; set; } = new();
 }

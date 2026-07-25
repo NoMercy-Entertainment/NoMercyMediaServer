@@ -29,7 +29,7 @@ namespace NoMercy.Tests.MediaProcessing.Inbox;
 /// driver rooted at temp directories. These tests prove actual file movement happens
 /// and that the same-driver path-scoping in InboxRoutingService is correct.
 /// </summary>
-[Trait(name: "Category", value: "Integration")]
+[Trait("Category", "Integration")]
 public sealed class InboxRoutingIntegrationTests : IDisposable
 {
     // Temp root that owns both inbox and library dirs; cleaned up in Dispose.
@@ -48,14 +48,14 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
 
     public InboxRoutingIntegrationTests()
     {
-        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: "nm-inbox-it-" + Path.GetRandomFileName());
-        _inboxDir = Path.Combine(path1: _tempRoot, path2: "inbox");
-        _movieLibDir = Path.Combine(path1: _tempRoot, path2: "movies");
-        _musicLibDir = Path.Combine(path1: _tempRoot, path2: "music");
+        _tempRoot = Path.Combine(Path.GetTempPath(), "nm-inbox-it-" + Path.GetRandomFileName());
+        _inboxDir = Path.Combine(_tempRoot, "inbox");
+        _movieLibDir = Path.Combine(_tempRoot, "movies");
+        _musicLibDir = Path.Combine(_tempRoot, "music");
 
-        Directory.CreateDirectory(path: _inboxDir);
-        Directory.CreateDirectory(path: _movieLibDir);
-        Directory.CreateDirectory(path: _musicLibDir);
+        Directory.CreateDirectory(_inboxDir);
+        Directory.CreateDirectory(_movieLibDir);
+        Directory.CreateDirectory(_musicLibDir);
 
         // Single shared driver ID for same-driver move tests.
         _sharedDriverId = Ulid.NewUlid();
@@ -67,10 +67,10 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
         LocalStorageDriver realDriver = new();
         Mock<IDriverConfigResolver> resolverMock = new();
         resolverMock
-            .Setup(expression: r => r.Resolve(It.IsAny<Ulid>()))
-            .Returns(value: ("local", "{\"rootPath\":\"\"}"));
+            .Setup(r => r.Resolve(It.IsAny<Ulid>()))
+            .Returns(("local", "{\"rootPath\":\"\"}"));
 
-        _storageFactory = new(driver: realDriver, logger: NullLogger<StorageFactory>.Instance, driverConfigResolver: resolverMock.Object);
+        _storageFactory = new(realDriver, NullLogger<StorageFactory>.Instance, resolverMock.Object);
 
         _dispatcherMock = new();
     }
@@ -79,8 +79,8 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(path: _tempRoot))
-                Directory.Delete(path: _tempRoot, recursive: true);
+            if (Directory.Exists(_tempRoot))
+                Directory.Delete(_tempRoot, true);
         }
         catch
         {
@@ -95,11 +95,11 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
     private MediaContext BuildContext()
     {
         DbContextOptionsBuilder<MediaContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
-        MediaContext context = new(options: optionsBuilder.Options);
+        optionsBuilder.UseSqlite("Data Source=:memory:");
+        MediaContext context = new(optionsBuilder.Options);
         context.Database.OpenConnection();
         context.Database.EnsureCreated();
-        context.Database.ExecuteSqlRaw(sql: "PRAGMA foreign_keys = OFF;");
+        context.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
         return context;
     }
 
@@ -140,10 +140,10 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
 
         FolderLibrary folderLibrary = new() { FolderId = folderId, LibraryId = libraryId };
 
-        context.Libraries.Add(entity: library);
-        context.Folders.Add(entity: folder);
-        context.EncodingPresetFolders.Add(entity: profileFolder);
-        context.FolderLibrary.Add(entity: folderLibrary);
+        context.Libraries.Add(library);
+        context.Folders.Add(folder);
+        context.EncodingPresetFolders.Add(profileFolder);
+        context.FolderLibrary.Add(folderLibrary);
         context.SaveChanges();
 
         return new()
@@ -156,7 +156,7 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
         };
     }
 
-    private InboxRoutingService BuildService() => new(storageFactory: _storageFactory, jobDispatcher: _dispatcherMock.Object);
+    private InboxRoutingService BuildService() => new(_storageFactory, _dispatcherMock.Object);
 
     // -----------------------------------------------------------------------
     // Test 1: Auto-route a movie — file must land in the movie library folder
@@ -166,11 +166,11 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
     public async Task ExecuteAuto_Movie_MovesFileToDestinationAndDispatchesImport()
     {
         // Arrange: write a real .mkv into the inbox temp dir.
-        string inboxFilePath = Path.Combine(path1: _inboxDir, path2: "The Matrix (1999).mkv");
-        await File.WriteAllBytesAsync(path: inboxFilePath, bytes: [0x00, 0x01, 0x02, 0x03]);
+        string inboxFilePath = Path.Combine(_inboxDir, "The Matrix (1999).mkv");
+        await File.WriteAllBytesAsync(inboxFilePath, [0x00, 0x01, 0x02, 0x03]);
 
         await using MediaContext context = BuildContext();
-        InboxDestination destination = SeedLibraryDestination(context: context, libType: "movie", libDir: _movieLibDir);
+        InboxDestination destination = SeedLibraryDestination(context, "movie", _movieLibDir);
 
         CandidateMatch candidate = new()
         {
@@ -202,22 +202,22 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
         InboxRoutingService service = BuildService();
 
         // Act
-        await service.ExecuteAuto(outcome: outcome, context: context);
+        await service.ExecuteAuto(outcome, context);
 
         // Assert — file physically moved to the movie library directory.
-        string expectedDest = Path.Combine(path1: _movieLibDir, path2: "The Matrix (1999).mkv");
-        File.Exists(path: expectedDest).Should().BeTrue(because: "file must exist in destination folder");
-        File.Exists(path: inboxFilePath).Should().BeFalse(because: "file must no longer be in inbox");
+        string expectedDest = Path.Combine(_movieLibDir, "The Matrix (1999).mkv");
+        File.Exists(expectedDest).Should().BeTrue("file must exist in destination folder");
+        File.Exists(inboxFilePath).Should().BeFalse("file must no longer be in inbox");
 
         // Assert — InboxItem updated.
-        item.Status.Should().Be(expected: "Imported");
-        item.TargetLibraryId.Should().Be(expected: destination.LibraryId);
-        item.TargetFolderId.Should().Be(expected: destination.FolderId);
+        item.Status.Should().Be("Imported");
+        item.TargetLibraryId.Should().Be(destination.LibraryId);
+        item.TargetFolderId.Should().Be(destination.FolderId);
 
         // Assert — MovieImportJob dispatched with tmdbId=603 and correct libraryId.
         _dispatcherMock.Verify(
-            expression: d => d.DispatchJob<MovieImportJob>(603, destination.LibraryId),
-            times: Times.Once
+            d => d.DispatchJob<MovieImportJob>(603, destination.LibraryId),
+            Times.Once
         );
     }
 
@@ -229,15 +229,15 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
     public async Task ExecuteAssignment_UserChosenMatch_MovesAndDispatchesShowImport()
     {
         // Arrange: a TV show episode dropped in inbox.
-        string inboxFilePath = Path.Combine(path1: _inboxDir, path2: "Breaking Bad S01E01.mkv");
-        await File.WriteAllBytesAsync(path: inboxFilePath, bytes: [0xAB, 0xCD]);
+        string inboxFilePath = Path.Combine(_inboxDir, "Breaking Bad S01E01.mkv");
+        await File.WriteAllBytesAsync(inboxFilePath, [0xAB, 0xCD]);
 
         // Use the movie lib dir re-purposed as tv lib dir for isolation.
-        string tvLibDir = Path.Combine(path1: _tempRoot, path2: "tv");
-        Directory.CreateDirectory(path: tvLibDir);
+        string tvLibDir = Path.Combine(_tempRoot, "tv");
+        Directory.CreateDirectory(tvLibDir);
 
         await using MediaContext context = BuildContext();
-        InboxDestination destination = SeedLibraryDestination(context: context, libType: "tv", libDir: tvLibDir);
+        InboxDestination destination = SeedLibraryDestination(context, "tv", tvLibDir);
 
         CandidateMatch userChoice = new()
         {
@@ -262,19 +262,19 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
         InboxRoutingService service = BuildService();
 
         // Act — user-driven assignment (bypasses the Route auto/review decision).
-        await service.ExecuteAssignment(item: item, match: userChoice, destination: destination, context: context);
+        await service.ExecuteAssignment(item, userChoice, destination, context);
 
         // Assert — file physically in tv library directory.
-        string expectedDest = Path.Combine(path1: tvLibDir, path2: "Breaking Bad S01E01.mkv");
-        File.Exists(path: expectedDest).Should().BeTrue(because: "file must exist in destination folder");
-        File.Exists(path: inboxFilePath).Should().BeFalse(because: "file must no longer be in inbox");
+        string expectedDest = Path.Combine(tvLibDir, "Breaking Bad S01E01.mkv");
+        File.Exists(expectedDest).Should().BeTrue("file must exist in destination folder");
+        File.Exists(inboxFilePath).Should().BeFalse("file must no longer be in inbox");
 
-        item.Status.Should().Be(expected: "Imported");
+        item.Status.Should().Be("Imported");
 
         // ShowImportJob dispatched with tmdbId=1396.
         _dispatcherMock.Verify(
-            expression: d => d.DispatchJob<ShowImportJob>(1396, destination.LibraryId),
-            times: Times.Once
+            d => d.DispatchJob<ShowImportJob>(1396, destination.LibraryId),
+            Times.Once
         );
     }
 
@@ -286,11 +286,11 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
     public async Task ExecuteAuto_Music_MovesFileAndDispatchesAudioImport()
     {
         // Arrange: a real .flac in the inbox dir.
-        string inboxFilePath = Path.Combine(path1: _inboxDir, path2: "01 - Track One.flac");
-        await File.WriteAllBytesAsync(path: inboxFilePath, bytes: [0xFF, 0xFB, 0x90, 0x00]);
+        string inboxFilePath = Path.Combine(_inboxDir, "01 - Track One.flac");
+        await File.WriteAllBytesAsync(inboxFilePath, [0xFF, 0xFB, 0x90, 0x00]);
 
         await using MediaContext context = BuildContext();
-        InboxDestination destination = SeedLibraryDestination(context: context, libType: "music", libDir: _musicLibDir);
+        InboxDestination destination = SeedLibraryDestination(context, "music", _musicLibDir);
 
         CandidateMatch candidate = new()
         {
@@ -322,24 +322,24 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
         InboxRoutingService service = BuildService();
 
         // Act
-        await service.ExecuteAuto(outcome: outcome, context: context);
+        await service.ExecuteAuto(outcome, context);
 
         // Assert — file physically in music library directory.
-        string expectedDest = Path.Combine(path1: _musicLibDir, path2: "01 - Track One.flac");
-        File.Exists(path: expectedDest).Should().BeTrue(because: "file must exist in destination folder");
-        File.Exists(path: inboxFilePath).Should().BeFalse(because: "file must no longer be in inbox");
+        string expectedDest = Path.Combine(_musicLibDir, "01 - Track One.flac");
+        File.Exists(expectedDest).Should().BeTrue("file must exist in destination folder");
+        File.Exists(inboxFilePath).Should().BeFalse("file must no longer be in inbox");
 
-        item.Status.Should().Be(expected: "Imported");
+        item.Status.Should().Be("Imported");
 
         // AudioImportJob dispatched with (libraryId, folderId, movedPath).
         _dispatcherMock.Verify(
-            expression: d =>
+            d =>
                 d.DispatchJob<AudioImportJob>(
                     destination.LibraryId,
                     destination.FolderId,
                     It.IsAny<string>()
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 }

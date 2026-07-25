@@ -14,16 +14,16 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Libraries;
 
-[PrimaryKey(propertyName: nameof(FolderId), additionalPropertyNames: nameof(LibraryId))]
-[Index(propertyName: nameof(FolderId))]
-[Index(propertyName: nameof(LibraryId))]
+[PrimaryKey(nameof(FolderId), nameof(LibraryId))]
+[Index(nameof(FolderId))]
+[Index(nameof(LibraryId))]
 public class FolderLibrary
 {
-    [JsonProperty(propertyName: "folder_id")]
+    [JsonProperty("folder_id")]
     public Ulid FolderId { get; set; }
     public Folder Folder { get; set; } = null!;
 
-    [JsonProperty(propertyName: "library_id")]
+    [JsonProperty("library_id")]
     public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;
 

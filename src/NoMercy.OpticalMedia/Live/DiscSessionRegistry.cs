@@ -16,13 +16,13 @@ namespace NoMercy.OpticalMedia.Live;
 public class DiscSessionRegistry : IDiscSessionRegistry
 {
     private readonly ConcurrentDictionary<string, string> _map = new(
-        comparer: StringComparer.OrdinalIgnoreCase
+        StringComparer.OrdinalIgnoreCase
     );
 
-    public void Register(string drivePath, string sessionId) => _map[key: drivePath] = sessionId;
+    public void Register(string drivePath, string sessionId) => _map[drivePath] = sessionId;
 
     public bool TryGet(string drivePath, out string sessionId) =>
-        _map.TryGetValue(key: drivePath, value: out sessionId!);
+        _map.TryGetValue(drivePath, out sessionId!);
 
-    public void Remove(string drivePath) => _map.TryRemove(key: drivePath, value: out _);
+    public void Remove(string drivePath) => _map.TryRemove(drivePath, out _);
 }

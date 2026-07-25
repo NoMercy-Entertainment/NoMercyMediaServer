@@ -39,57 +39,56 @@ public class LiveEncoderGapFillTests
 
     private static LiveQuality MakeQuality() =>
         new(
-            Id: "1080p",
-            Label: "1080p",
-            Width: 1920,
-            Height: 1080,
-            Codec: VideoCodecType.H264,
-            BitrateKbps: 8000,
-            Encoder: "libx264",
-            IsHardwareAccelerated: false,
-            ExpectedSpeed: 2.0,
-            CanRealtime: true
+            "1080p",
+            "1080p",
+            1920,
+            1080,
+            VideoCodecType.H264,
+            8000,
+            "libx264",
+            false,
+            2.0,
+            true
         );
 
     private static MediaInfo MakeMedia(TimeSpan duration) =>
         new(
-            FilePath: "/media/test.mkv",
-            Format: "matroska,webm",
-            Duration: duration,
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 5_000_000_000L,
-            VideoStreams:
+            "/media/test.mkv",
+            "matroska,webm",
+            duration,
+            8000,
+            5_000_000_000L,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: "bt709",
-                    ColorTransfer: "bt709",
-                    ColorSpace: "bt709",
-                    IsDefault: true,
-                    BitRateKbps: 8000
+                    0,
+                    "h264",
+                    1920,
+                    1080,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    "bt709",
+                    "bt709",
+                    "bt709",
+                    true,
+                    8000
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
     private static ClientCapabilities MakeClient() =>
         new(
-            SupportedVideoCodecs: [VideoCodecType.H264],
-            SupportedAudioCodecs: [AudioCodecType.Aac],
-            SupportedContainers: ["mp4", "mkv"],
-            MaxWidth: 1920,
-            MaxHeight: 1080,
-            SupportsHdr: false,
-            Supports10Bit: false,
-            MaxBitrateKbps: 0
+            [VideoCodecType.H264],
+            [AudioCodecType.Aac],
+            ["mp4", "mkv"],
+            1920,
+            1080,
+            false,
+            false,
+            0
         );
 
     private sealed class CapturingLiveFfmpegRunner : ILiveFfmpegRunner
@@ -100,7 +99,7 @@ public class LiveEncoderGapFillTests
 
         public Task RunAsync(LiveRunInput input, LiveSession session, CancellationToken ct)
         {
-            _captured.Enqueue(item: input);
+            _captured.Enqueue(input);
             return Task.CompletedTask;
         }
     }
@@ -115,8 +114,8 @@ public class LiveEncoderGapFillTests
     private static Fixture BuildFixture()
     {
         IStorage storage = TestStorageFactory.CreateLocal();
-        ILiveSegmentInventory segmentInventory = TestStorageFactory.CreateSegmentInventory(storage: storage);
-        string cachePath = Path.Combine(path1: Path.GetTempPath(), path2: $"nomercy-gapfill-{Guid.NewGuid():N}");
+        ILiveSegmentInventory segmentInventory = TestStorageFactory.CreateSegmentInventory(storage);
+        string cachePath = Path.Combine(Path.GetTempPath(), $"nomercy-gapfill-{Guid.NewGuid():N}");
 
         EncoderOptions options = new()
         {
@@ -129,7 +128,7 @@ public class LiveEncoderGapFillTests
         Mock<ILiveQualitySelector> selectorMock = new();
         LiveQuality quality = MakeQuality();
         selectorMock
-            .Setup(expression: s =>
+            .Setup(s =>
                 s.SelectOptimal(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
@@ -137,37 +136,37 @@ public class LiveEncoderGapFillTests
                     It.IsAny<IResourceBudget>()
                 )
             )
-            .Returns(value: quality);
+            .Returns(quality);
 
         SessionManager sessionManager = new(
-            limits: new() { MaxConcurrentSessions = 100, MaxSessionsPerUser = 100 }
+            new() { MaxConcurrentSessions = 100, MaxSessionsPerUser = 100 }
         );
         LiveStreamingService streamingService = new(
-            logger: NullLogger<LiveStreamingService>.Instance,
-            storage: storage,
-            segmentInventory: segmentInventory
+            NullLogger<LiveStreamingService>.Instance,
+            storage,
+            segmentInventory
         );
         CapturingLiveFfmpegRunner runner = new();
-        SpeedIndex speedIndex = new(Measurements: new());
-        IResourceBudget budget = new ResourceBudget(gpuDevices: [], cpuCores: 8);
+        SpeedIndex speedIndex = new(new());
+        IResourceBudget budget = new ResourceBudget([], 8);
 
         LiveEncoder encoder = new(
-            qualitySelector: selectorMock.Object,
-            sessionManager: sessionManager,
-            streamingService: streamingService,
-            runner: runner,
-            segmentInventory: segmentInventory,
-            options: options,
-            speedIndex: speedIndex,
-            budget: budget,
-            logger: NullLogger<LiveEncoder>.Instance
+            selectorMock.Object,
+            sessionManager,
+            streamingService,
+            runner,
+            segmentInventory,
+            options,
+            speedIndex,
+            budget,
+            NullLogger<LiveEncoder>.Instance
         );
 
-        return new(Encoder: encoder, Runner: runner, Storage: storage, CachePath: cachePath);
+        return new(encoder, runner, storage, cachePath);
     }
 
     private static string ScratchDirFor(Fixture fixture, string sessionId) =>
-        Path.Combine(path1: fixture.CachePath, path2: $"lts-{sessionId}");
+        Path.Combine(fixture.CachePath, $"lts-{sessionId}");
 
     private static void PlantSegments(
         Fixture fixture,
@@ -176,11 +175,11 @@ public class LiveEncoderGapFillTests
         int toIndexInclusive
     )
     {
-        fixture.Storage.CreateDirectory(path: scratchDir);
+        fixture.Storage.CreateDirectory(scratchDir);
         for (int index = fromIndex; index <= toIndexInclusive; index++)
         {
-            string path = fixture.Storage.CombinePath(parent: scratchDir, child: $"seg_{index:D5}.ts");
-            fixture.Storage.Write(path: path, bytes: [1]);
+            string path = fixture.Storage.CombinePath(scratchDir, $"seg_{index:D5}.ts");
+            fixture.Storage.Write(path, [1]);
         }
     }
 
@@ -190,12 +189,12 @@ public class LiveEncoderGapFillTests
         TimeSpan timeout
     )
     {
-        DateTime deadline = DateTime.UtcNow.Add(value: timeout);
+        DateTime deadline = DateTime.UtcNow.Add(timeout);
         while (DateTime.UtcNow < deadline)
         {
             if (runner.Captured.Count >= expectedCount)
                 return;
-            await Task.Delay(millisecondsDelay: 10);
+            await Task.Delay(10);
         }
     }
 
@@ -205,12 +204,12 @@ public class LiveEncoderGapFillTests
         TimeSpan timeout
     )
     {
-        DateTime deadline = DateTime.UtcNow.Add(value: timeout);
+        DateTime deadline = DateTime.UtcNow.Add(timeout);
         while (DateTime.UtcNow < deadline)
         {
             if (session.State == expected)
                 return;
-            await Task.Delay(millisecondsDelay: 10);
+            await Task.Delay(10);
         }
     }
 
@@ -221,33 +220,33 @@ public class LiveEncoderGapFillTests
         // index 100. Without the fix the respawn is unbounded, re-encodes
         // 200..260 (content already on disk) and continues to EOF.
         Fixture fixture = BuildFixture();
-        MediaInfo media = MakeMedia(duration: TimeSpan.FromHours(hours: 1)); // lastIndex far beyond 260
+        MediaInfo media = MakeMedia(TimeSpan.FromHours(1)); // lastIndex far beyond 260
 
         LiveEncodeRequest request = new(
-            InputPath: "/media/test.mkv",
-            CachedInfo: media,
-            Client: MakeClient(),
-            StartPosition: TimeSpan.Zero,
-            PreferredQuality: null
+            "/media/test.mkv",
+            media,
+            MakeClient(),
+            TimeSpan.Zero,
+            null
         );
 
-        ILiveSession session = await fixture.Encoder.StartAsync(request: request, ct: CancellationToken.None);
-        await WaitForCaptureCountAsync(runner: fixture.Runner, expectedCount: 1, timeout: TimeSpan.FromSeconds(seconds: 5));
+        ILiveSession session = await fixture.Encoder.StartAsync(request, CancellationToken.None);
+        await WaitForCaptureCountAsync(fixture.Runner, 1, TimeSpan.FromSeconds(5));
         fixture
             .Runner.Captured.Should()
-            .HaveCount(expected: 1, because: "the session-start spawn must have fired first");
+            .HaveCount(1, "the session-start spawn must have fired first");
 
-        string scratchDir = ScratchDirFor(fixture: fixture, sessionId: session.SessionId);
-        PlantSegments(fixture: fixture, scratchDir: scratchDir, fromIndex: 0, toIndexInclusive: 50);
-        PlantSegments(fixture: fixture, scratchDir: scratchDir, fromIndex: 200, toIndexInclusive: 260);
+        string scratchDir = ScratchDirFor(fixture, session.SessionId);
+        PlantSegments(fixture, scratchDir, 0, 50);
+        PlantSegments(fixture, scratchDir, 200, 260);
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 100 * SegDur), ct: CancellationToken.None);
-        await WaitForCaptureCountAsync(runner: fixture.Runner, expectedCount: 2, timeout: TimeSpan.FromSeconds(seconds: 5));
+        await session.SeekAsync(TimeSpan.FromSeconds(100 * SegDur), CancellationToken.None);
+        await WaitForCaptureCountAsync(fixture.Runner, 2, TimeSpan.FromSeconds(5));
 
-        fixture.Runner.Captured.Should().HaveCount(expected: 2);
-        LiveRunInput seekRun = fixture.Runner.Captured[index: 1];
-        seekRun.StartPosition.Should().Be(expected: TimeSpan.FromSeconds(seconds: 100 * SegDur));
-        seekRun.StopPosition.Should().Be(expected: TimeSpan.FromSeconds(seconds: 200 * SegDur));
+        fixture.Runner.Captured.Should().HaveCount(2);
+        LiveRunInput seekRun = fixture.Runner.Captured[1];
+        seekRun.StartPosition.Should().Be(TimeSpan.FromSeconds(100 * SegDur));
+        seekRun.StopPosition.Should().Be(TimeSpan.FromSeconds(200 * SegDur));
     }
 
     [Fact]
@@ -256,28 +255,28 @@ public class LiveEncoderGapFillTests
         // Covered 0..50, seek to index 20 (already covered) — the respawn must
         // skip forward to the first real gap (51), not re-encode 20..50.
         Fixture fixture = BuildFixture();
-        MediaInfo media = MakeMedia(duration: TimeSpan.FromHours(hours: 1));
+        MediaInfo media = MakeMedia(TimeSpan.FromHours(1));
 
         LiveEncodeRequest request = new(
-            InputPath: "/media/test.mkv",
-            CachedInfo: media,
-            Client: MakeClient(),
-            StartPosition: TimeSpan.Zero,
-            PreferredQuality: null
+            "/media/test.mkv",
+            media,
+            MakeClient(),
+            TimeSpan.Zero,
+            null
         );
 
-        ILiveSession session = await fixture.Encoder.StartAsync(request: request, ct: CancellationToken.None);
-        await WaitForCaptureCountAsync(runner: fixture.Runner, expectedCount: 1, timeout: TimeSpan.FromSeconds(seconds: 5));
+        ILiveSession session = await fixture.Encoder.StartAsync(request, CancellationToken.None);
+        await WaitForCaptureCountAsync(fixture.Runner, 1, TimeSpan.FromSeconds(5));
 
-        string scratchDir = ScratchDirFor(fixture: fixture, sessionId: session.SessionId);
-        PlantSegments(fixture: fixture, scratchDir: scratchDir, fromIndex: 0, toIndexInclusive: 50);
+        string scratchDir = ScratchDirFor(fixture, session.SessionId);
+        PlantSegments(fixture, scratchDir, 0, 50);
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 20 * SegDur), ct: CancellationToken.None);
-        await WaitForCaptureCountAsync(runner: fixture.Runner, expectedCount: 2, timeout: TimeSpan.FromSeconds(seconds: 5));
+        await session.SeekAsync(TimeSpan.FromSeconds(20 * SegDur), CancellationToken.None);
+        await WaitForCaptureCountAsync(fixture.Runner, 2, TimeSpan.FromSeconds(5));
 
-        fixture.Runner.Captured.Should().HaveCount(expected: 2);
-        LiveRunInput seekRun = fixture.Runner.Captured[index: 1];
-        seekRun.StartPosition.Should().Be(expected: TimeSpan.FromSeconds(seconds: 51 * SegDur));
+        fixture.Runner.Captured.Should().HaveCount(2);
+        LiveRunInput seekRun = fixture.Runner.Captured[1];
+        seekRun.StartPosition.Should().Be(TimeSpan.FromSeconds(51 * SegDur));
         seekRun.StopPosition.Should().BeNull();
     }
 
@@ -288,28 +287,28 @@ public class LiveEncoderGapFillTests
         // content the client can already fetch. No new LiveRunInput must be
         // captured, and the session must park itself Buffered instead.
         Fixture fixture = BuildFixture();
-        MediaInfo media = MakeMedia(duration: TimeSpan.FromSeconds(seconds: 60)); // lastIndex = 9 at 6s segments
+        MediaInfo media = MakeMedia(TimeSpan.FromSeconds(60)); // lastIndex = 9 at 6s segments
 
         LiveEncodeRequest request = new(
-            InputPath: "/media/test.mkv",
-            CachedInfo: media,
-            Client: MakeClient(),
-            StartPosition: TimeSpan.Zero,
-            PreferredQuality: null
+            "/media/test.mkv",
+            media,
+            MakeClient(),
+            TimeSpan.Zero,
+            null
         );
 
-        ILiveSession session = await fixture.Encoder.StartAsync(request: request, ct: CancellationToken.None);
-        await WaitForCaptureCountAsync(runner: fixture.Runner, expectedCount: 1, timeout: TimeSpan.FromSeconds(seconds: 5));
+        ILiveSession session = await fixture.Encoder.StartAsync(request, CancellationToken.None);
+        await WaitForCaptureCountAsync(fixture.Runner, 1, TimeSpan.FromSeconds(5));
 
-        string scratchDir = ScratchDirFor(fixture: fixture, sessionId: session.SessionId);
-        PlantSegments(fixture: fixture, scratchDir: scratchDir, fromIndex: 0, toIndexInclusive: 9); // the entire file, 0..lastIndex
+        string scratchDir = ScratchDirFor(fixture, session.SessionId);
+        PlantSegments(fixture, scratchDir, 0, 9); // the entire file, 0..lastIndex
 
-        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 5 * SegDur), ct: CancellationToken.None);
-        await WaitForStateAsync(session: session, expected: LiveSessionState.Buffered, timeout: TimeSpan.FromSeconds(seconds: 5));
+        await session.SeekAsync(TimeSpan.FromSeconds(5 * SegDur), CancellationToken.None);
+        await WaitForStateAsync(session, LiveSessionState.Buffered, TimeSpan.FromSeconds(5));
 
         fixture
             .Runner.Captured.Should()
-            .HaveCount(expected: 1, because: "a fully-covered seek must not spawn a new run");
-        session.State.Should().Be(expected: LiveSessionState.Buffered);
+            .HaveCount(1, "a fully-covered seek must not spawn a new run");
+        session.State.Should().Be(LiveSessionState.Buffered);
     }
 }

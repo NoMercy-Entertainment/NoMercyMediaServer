@@ -16,43 +16,43 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public sealed class InboxItemDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; }
 
-    [JsonProperty(propertyName: "source_path")]
+    [JsonProperty("source_path")]
     public string SourcePath { get; set; }
 
-    [JsonProperty(propertyName: "detected_type")]
+    [JsonProperty("detected_type")]
     public string DetectedType { get; set; }
 
-    [JsonProperty(propertyName: "confidence")]
+    [JsonProperty("confidence")]
     public string Confidence { get; set; }
 
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; }
 
-    [JsonProperty(propertyName: "candidates")]
+    [JsonProperty("candidates")]
     public CandidateMatch[] Candidates { get; set; }
 
-    [JsonProperty(propertyName: "selected_match")]
+    [JsonProperty("selected_match")]
     public CandidateMatch? SelectedMatch { get; set; }
 
-    [JsonProperty(propertyName: "target_library_id")]
+    [JsonProperty("target_library_id")]
     public string? TargetLibraryId { get; set; }
 
-    [JsonProperty(propertyName: "target_folder_id")]
+    [JsonProperty("target_folder_id")]
     public string? TargetFolderId { get; set; }
 
-    [JsonProperty(propertyName: "target_profile_id")]
+    [JsonProperty("target_profile_id")]
     public string? TargetProfileId { get; set; }
 
-    [JsonProperty(propertyName: "error")]
+    [JsonProperty("error")]
     public string? Error { get; set; }
 
-    [JsonProperty(propertyName: "created_at")]
+    [JsonProperty("created_at")]
     public DateTime CreatedAt { get; set; }
 
-    [JsonProperty(propertyName: "updated_at")]
+    [JsonProperty("updated_at")]
     public DateTime UpdatedAt { get; set; }
 
     public InboxItemDto(InboxItem item)

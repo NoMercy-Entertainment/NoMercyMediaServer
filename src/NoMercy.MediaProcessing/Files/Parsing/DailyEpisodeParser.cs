@@ -24,7 +24,7 @@ namespace NoMercy.MediaProcessing.Files.Parsing;
 public static partial class DailyEpisodeParser
 {
     [GeneratedRegex(
-        pattern: @"(?<![0-9])(?<y>(?:19|20)\d{2})[._\-/](?<m>0[1-9]|1[0-2])[._\-/](?<d>0[1-9]|[12]\d|3[01])(?![0-9])")]
+        @"(?<![0-9])(?<y>(?:19|20)\d{2})[._\-/](?<m>0[1-9]|1[0-2])[._\-/](?<d>0[1-9]|[12]\d|3[01])(?![0-9])")]
     private static partial Regex AirDate();
 
     /// <summary>
@@ -33,20 +33,20 @@ public static partial class DailyEpisodeParser
     /// </summary>
     public static DateOnly? TryGetAirDate(string? name)
     {
-        if (string.IsNullOrEmpty(value: name))
+        if (string.IsNullOrEmpty(name))
             return null;
 
-        Match match = AirDate().Match(input: name);
+        Match match = AirDate().Match(name);
         if (!match.Success)
             return null;
 
-        int year = int.Parse(s: match.Groups[groupname: "y"].Value);
-        int month = int.Parse(s: match.Groups[groupname: "m"].Value);
-        int day = int.Parse(s: match.Groups[groupname: "d"].Value);
+        int year = int.Parse(match.Groups["y"].Value);
+        int month = int.Parse(match.Groups["m"].Value);
+        int day = int.Parse(match.Groups["d"].Value);
 
         try
         {
-            return new DateOnly(year: year, month: month, day: day);
+            return new DateOnly(year, month, day);
         }
         catch (ArgumentOutOfRangeException)
         {

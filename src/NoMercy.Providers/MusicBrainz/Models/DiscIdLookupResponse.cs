@@ -23,18 +23,18 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 /// </summary>
 public class DiscIdLookupResponse
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "offset-count")]
+    [JsonProperty("offset-count")]
     public int OffsetCount { get; set; }
 
-    [JsonProperty(propertyName: "offsets")]
+    [JsonProperty("offsets")]
     public int[] Offsets { get; set; } = [];
 
-    [JsonProperty(propertyName: "sectors")]
+    [JsonProperty("sectors")]
     public int Sectors { get; set; }
 
-    [JsonProperty(propertyName: "releases")]
+    [JsonProperty("releases")]
     public MusicBrainzReleaseAppends[] Releases { get; set; } = [];
 }

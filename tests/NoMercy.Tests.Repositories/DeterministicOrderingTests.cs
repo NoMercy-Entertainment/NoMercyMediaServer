@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Repositories;
 /// than surfacing as an intermittent "duplicated card" bug in the client.
 /// Empty tables still emit the query, so no seeding is required.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class DeterministicOrderingTests : IDisposable
 {
     private readonly string _dbName = Guid.NewGuid().ToString();
@@ -38,28 +38,28 @@ public class DeterministicOrderingTests : IDisposable
     {
         string connectionString =
             $"DataSource={_dbName};Mode=Memory;Cache=Shared;Foreign Keys=True";
-        _keepAlive = new(connectionString: connectionString);
+        _keepAlive = new(connectionString);
         _keepAlive.Open();
-        _keepAlive.CreateFunction(name: "normalize_search", function: (string? input) => input ?? string.Empty);
+        _keepAlive.CreateFunction("normalize_search", (string? input) => input ?? string.Empty);
 
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connectionString: connectionString,
-                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
+                connectionString,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(interceptors: [_interceptor, new SqliteNormalizeSearchInterceptor()])
+            .AddInterceptors([_interceptor, new SqliteNormalizeSearchInterceptor()])
             .Options;
 
-        using TestMediaContext init = new(options: _options);
+        using TestMediaContext init = new(_options);
         init.Database.EnsureCreated();
     }
 
     private string CapturedSqlContaining(string needle)
     {
         return string.Join(
-            separator: "\n",
-            values: _interceptor.CapturedSql.Where(predicate: sql =>
-                sql.Contains(value: needle, comparisonType: StringComparison.OrdinalIgnoreCase)
+            "\n",
+            _interceptor.CapturedSql.Where(sql =>
+                sql.Contains(needle, StringComparison.OrdinalIgnoreCase)
             )
         );
     }
@@ -67,20 +67,20 @@ public class DeterministicOrderingTests : IDisposable
     [Fact]
     public async Task HomeRepository_GetHome_OrdersPaginatedGenreQuery()
     {
-        TestMediaContext context = new(options: _options);
-        HomeRepository repository = new(context: context, contextFactory: new TestDbContextFactory(options: _options));
+        TestMediaContext context = new(_options);
+        HomeRepository repository = new(context, new TestDbContextFactory(_options));
         _interceptor.Clear();
 
-        await repository.GetHome(userId: Guid.NewGuid(), language: "en", take: 10, page: 1);
+        await repository.GetHome(Guid.NewGuid(), "en", 10, 1);
 
         // The genre list query is the one that paginates (LIMIT/OFFSET); it must
         // carry an ORDER BY so page N is stable across requests.
-        string genreQuery = CapturedSqlContaining(needle: "LIMIT");
+        string genreQuery = CapturedSqlContaining("LIMIT");
         Assert.False(
-            condition: string.IsNullOrEmpty(value: genreQuery),
-            userMessage: "expected a paginated (LIMIT) query to be executed"
+            string.IsNullOrEmpty(genreQuery),
+            "expected a paginated (LIMIT) query to be executed"
         );
-        Assert.Contains(expectedSubstring: "ORDER BY", actualString: genreQuery, comparisonType: StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ORDER BY", genreQuery, StringComparison.OrdinalIgnoreCase);
     }
 
     private void AssertOrderedByColumnExists(string orderColumn)
@@ -89,39 +89,39 @@ public class DeterministicOrderingTests : IDisposable
         // Include correlations order by the parent KEY, so keying the assertion
         // on the domain column (not just "ORDER BY") means a regression that
         // drops the primary ordering still fails here.
-        bool ordered = _interceptor.CapturedSql.Any(predicate: sql =>
-            sql.Contains(value: "ORDER BY", comparisonType: StringComparison.OrdinalIgnoreCase)
-            && sql.Contains(value: orderColumn, comparisonType: StringComparison.OrdinalIgnoreCase)
+        bool ordered = _interceptor.CapturedSql.Any(sql =>
+            sql.Contains("ORDER BY", StringComparison.OrdinalIgnoreCase)
+            && sql.Contains(orderColumn, StringComparison.OrdinalIgnoreCase)
         );
-        Assert.True(condition: ordered, userMessage: $"expected a query ordered by {orderColumn}");
+        Assert.True(ordered, $"expected a query ordered by {orderColumn}");
     }
 
     [Fact]
     public async Task MusicRepository_GetLatestAlbums_OrdersByCreatedAt()
     {
-        MusicRepository repository = new(contextFactory: new TestDbContextFactory(options: _options));
+        MusicRepository repository = new(new TestDbContextFactory(_options));
         _interceptor.Clear();
 
         await repository.GetLatestAlbums();
 
-        AssertOrderedByColumnExists(orderColumn: "CreatedAt");
+        AssertOrderedByColumnExists("CreatedAt");
     }
 
     [Fact]
     public async Task MusicRepository_GetLatestArtists_OrdersByCreatedAt()
     {
-        MusicRepository repository = new(contextFactory: new TestDbContextFactory(options: _options));
+        MusicRepository repository = new(new TestDbContextFactory(_options));
         _interceptor.Clear();
 
         await repository.GetLatestArtists();
 
-        AssertOrderedByColumnExists(orderColumn: "CreatedAt");
+        AssertOrderedByColumnExists("CreatedAt");
     }
 
     public void Dispose()
     {
         _keepAlive.Close();
         _keepAlive.Dispose();
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 }

@@ -13,153 +13,153 @@ using NoMercy.Setup.Server;
 
 namespace NoMercy.Tests.Setup.Server;
 
-[Trait(name: "Category", value: "Data")]
+[Trait("Category", "Data")]
 public class SetupStateTransitionsTests
 {
     [Fact]
     public void InvalidTransition_Authenticating_to_Registered_fails()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticating);
 
-        bool result = state.TransitionTo(targetPhase: SetupPhase.Registered);
+        bool result = state.TransitionTo(SetupPhase.Registered);
 
-        Assert.False(condition: result);
-        Assert.Equal(expected: SetupPhase.Authenticating, actual: state.CurrentPhase);
+        Assert.False(result);
+        Assert.Equal(SetupPhase.Authenticating, state.CurrentPhase);
     }
 
     [Fact]
     public void InvalidTransition_Authenticated_to_Registering_skipping_phases_fails()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
 
-        bool result = state.TransitionTo(targetPhase: SetupPhase.CertificateAcquired);
+        bool result = state.TransitionTo(SetupPhase.CertificateAcquired);
 
-        Assert.False(condition: result);
-        Assert.Equal(expected: SetupPhase.Authenticated, actual: state.CurrentPhase);
+        Assert.False(result);
+        Assert.Equal(SetupPhase.Authenticated, state.CurrentPhase);
     }
 
     [Fact]
     public void InvalidTransition_Registered_to_Unauthenticated_backward_to_start_fails()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
-        state.TransitionTo(targetPhase: SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
 
-        bool result = state.TransitionTo(targetPhase: SetupPhase.Unauthenticated);
+        bool result = state.TransitionTo(SetupPhase.Unauthenticated);
 
-        Assert.False(condition: result);
-        Assert.Equal(expected: SetupPhase.Registered, actual: state.CurrentPhase);
+        Assert.False(result);
+        Assert.Equal(SetupPhase.Registered, state.CurrentPhase);
     }
 
     [Fact]
     public void InvalidTransition_Complete_to_Registered_backward_fails()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
-        state.TransitionTo(targetPhase: SetupPhase.Registered);
-        state.TransitionTo(targetPhase: SetupPhase.CertificateAcquired);
-        state.TransitionTo(targetPhase: SetupPhase.Complete);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+        state.TransitionTo(SetupPhase.Complete);
 
-        bool result = state.TransitionTo(targetPhase: SetupPhase.Registered);
+        bool result = state.TransitionTo(SetupPhase.Registered);
 
-        Assert.False(condition: result);
-        Assert.Equal(expected: SetupPhase.Complete, actual: state.CurrentPhase);
+        Assert.False(result);
+        Assert.Equal(SetupPhase.Complete, state.CurrentPhase);
     }
 
     [Fact]
     public void ErrorRecoveryTransition_Authenticating_to_Unauthenticated_succeeds()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticating);
 
-        bool result = state.TransitionTo(targetPhase: SetupPhase.Unauthenticated);
+        bool result = state.TransitionTo(SetupPhase.Unauthenticated);
 
-        Assert.True(condition: result);
-        Assert.Equal(expected: SetupPhase.Unauthenticated, actual: state.CurrentPhase);
+        Assert.True(result);
+        Assert.Equal(SetupPhase.Unauthenticated, state.CurrentPhase);
     }
 
     [Fact]
     public void ErrorRecoveryTransition_Registering_to_Authenticated_succeeds()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
 
-        bool result = state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+        bool result = state.TransitionTo(SetupPhase.Authenticated);
 
-        Assert.True(condition: result);
-        Assert.Equal(expected: SetupPhase.Authenticated, actual: state.CurrentPhase);
+        Assert.True(result);
+        Assert.Equal(SetupPhase.Authenticated, state.CurrentPhase);
     }
 
     [Fact]
     public void RetryTransition_Authenticated_stays_Authenticated()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
 
-        bool result = state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+        bool result = state.TransitionTo(SetupPhase.Authenticated);
 
-        Assert.True(condition: result);
-        Assert.Equal(expected: SetupPhase.Authenticated, actual: state.CurrentPhase);
+        Assert.True(result);
+        Assert.Equal(SetupPhase.Authenticated, state.CurrentPhase);
     }
 
     [Fact]
     public void RetryTransition_Registered_stays_Registered()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
-        state.TransitionTo(targetPhase: SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
 
-        bool result = state.TransitionTo(targetPhase: SetupPhase.Registered);
+        bool result = state.TransitionTo(SetupPhase.Registered);
 
-        Assert.True(condition: result);
-        Assert.Equal(expected: SetupPhase.Registered, actual: state.CurrentPhase);
+        Assert.True(result);
+        Assert.Equal(SetupPhase.Registered, state.CurrentPhase);
     }
 
     [Fact]
     public void SetError_preserves_current_phase()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticating);
 
-        state.SetError(message: "Authentication failed");
+        state.SetError("Authentication failed");
 
-        Assert.Equal(expected: SetupPhase.Authenticating, actual: state.CurrentPhase);
-        Assert.Equal(expected: "Authentication failed", actual: state.ErrorMessage);
+        Assert.Equal(SetupPhase.Authenticating, state.CurrentPhase);
+        Assert.Equal("Authentication failed", state.ErrorMessage);
     }
 
     [Fact]
     public void ClearError_removes_error_message()
     {
         SetupState state = new();
-        state.SetError(message: "Some error");
+        state.SetError("Some error");
 
         state.ClearError();
 
-        Assert.Null(@object: state.ErrorMessage);
+        Assert.Null(state.ErrorMessage);
     }
 
     [Fact]
     public void ErrorOnTransition_clears_previous_error()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.SetError(message: "Previous error");
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.SetError("Previous error");
 
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Authenticated);
 
-        Assert.Null(@object: state.ErrorMessage);
+        Assert.Null(state.ErrorMessage);
     }
 
     [Fact]
@@ -167,9 +167,9 @@ public class SetupStateTransitionsTests
     {
         SetupState state = new();
 
-        state.SetPhaseDetail(detail: "Custom detail message");
+        state.SetPhaseDetail("Custom detail message");
 
-        Assert.Equal(expected: "Custom detail message", actual: state.PhaseDetail);
+        Assert.Equal("Custom detail message", state.PhaseDetail);
     }
 
     [Fact]
@@ -177,23 +177,23 @@ public class SetupStateTransitionsTests
     {
         SetupState state = new();
 
-        state.SetServerUrl(url: "https://nomercy.local:8080");
+        state.SetServerUrl("https://nomercy.local:8080");
 
-        Assert.Equal(expected: "https://nomercy.local:8080", actual: state.ServerUrl);
+        Assert.Equal("https://nomercy.local:8080", state.ServerUrl);
     }
 
     [Fact]
     public void Reset_returns_to_Unauthenticated()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.SetError(message: "Some error");
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.SetError("Some error");
 
         state.Reset();
 
-        Assert.Equal(expected: SetupPhase.Unauthenticated, actual: state.CurrentPhase);
-        Assert.Null(@object: state.ErrorMessage);
+        Assert.Equal(SetupPhase.Unauthenticated, state.CurrentPhase);
+        Assert.Null(state.ErrorMessage);
     }
 
     [Fact]
@@ -201,11 +201,11 @@ public class SetupStateTransitionsTests
     {
         SetupState state = new();
 
-        SetupPhase result = state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
+        SetupPhase result = state.DetermineInitialPhase(true, true);
 
-        Assert.Equal(expected: SetupPhase.Complete, actual: result);
-        Assert.Equal(expected: SetupPhase.Complete, actual: state.CurrentPhase);
-        Assert.False(condition: state.IsSetupRequired);
+        Assert.Equal(SetupPhase.Complete, result);
+        Assert.Equal(SetupPhase.Complete, state.CurrentPhase);
+        Assert.False(state.IsSetupRequired);
     }
 
     [Fact]
@@ -213,12 +213,12 @@ public class SetupStateTransitionsTests
     {
         SetupState state = new();
 
-        SetupPhase result = state.DetermineInitialPhase(hasValidToken: true, isRegistered: false);
+        SetupPhase result = state.DetermineInitialPhase(true, false);
 
-        Assert.Equal(expected: SetupPhase.Authenticated, actual: result);
-        Assert.Equal(expected: SetupPhase.Authenticated, actual: state.CurrentPhase);
-        Assert.True(condition: state.IsSetupRequired);
-        Assert.True(condition: state.IsAuthenticated);
+        Assert.Equal(SetupPhase.Authenticated, result);
+        Assert.Equal(SetupPhase.Authenticated, state.CurrentPhase);
+        Assert.True(state.IsSetupRequired);
+        Assert.True(state.IsAuthenticated);
     }
 
     [Fact]
@@ -226,26 +226,26 @@ public class SetupStateTransitionsTests
     {
         SetupState state = new();
 
-        SetupPhase result = state.DetermineInitialPhase(hasValidToken: false, isRegistered: true);
+        SetupPhase result = state.DetermineInitialPhase(false, true);
 
-        Assert.Equal(expected: SetupPhase.Unauthenticated, actual: result);
-        Assert.Equal(expected: SetupPhase.Unauthenticated, actual: state.CurrentPhase);
-        Assert.True(condition: state.IsSetupRequired);
-        Assert.False(condition: state.IsAuthenticated);
+        Assert.Equal(SetupPhase.Unauthenticated, result);
+        Assert.Equal(SetupPhase.Unauthenticated, state.CurrentPhase);
+        Assert.True(state.IsSetupRequired);
+        Assert.False(state.IsAuthenticated);
     }
 
     [Fact]
     public void IsSetupRequired_false_when_complete()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
-        state.TransitionTo(targetPhase: SetupPhase.Registered);
-        state.TransitionTo(targetPhase: SetupPhase.CertificateAcquired);
-        state.TransitionTo(targetPhase: SetupPhase.Complete);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+        state.TransitionTo(SetupPhase.Complete);
 
-        Assert.False(condition: state.IsSetupRequired);
+        Assert.False(state.IsSetupRequired);
     }
 
     [Fact]
@@ -253,28 +253,28 @@ public class SetupStateTransitionsTests
     {
         SetupState state = new();
 
-        Assert.False(condition: state.IsAuthenticated);
+        Assert.False(state.IsAuthenticated);
     }
 
     [Fact]
     public void IsAuthenticated_true_when_authenticated()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
 
-        Assert.True(condition: state.IsAuthenticated);
+        Assert.True(state.IsAuthenticated);
     }
 
     [Fact]
     public void IsAuthenticated_true_when_registered()
     {
         SetupState state = new();
-        state.TransitionTo(targetPhase: SetupPhase.Authenticating);
-        state.TransitionTo(targetPhase: SetupPhase.Authenticated);
-        state.TransitionTo(targetPhase: SetupPhase.Registering);
-        state.TransitionTo(targetPhase: SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
 
-        Assert.True(condition: state.IsAuthenticated);
+        Assert.True(state.IsAuthenticated);
     }
 }

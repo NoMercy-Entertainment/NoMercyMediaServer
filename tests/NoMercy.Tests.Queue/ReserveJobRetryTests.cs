@@ -25,7 +25,7 @@ namespace NoMercy.Tests.Queue;
 /// the result instead of discarding it (the bug was a missing `return` before
 /// the recursive call).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ReserveJobRetryTests : IDisposable
 {
     private readonly QueueContext _context;
@@ -35,7 +35,7 @@ public class ReserveJobRetryTests : IDisposable
     public ReserveJobRetryTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(context: _adapter);
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
@@ -57,20 +57,20 @@ public class ReserveJobRetryTests : IDisposable
         // call followed by a return, not a pop (discard). We inspect via reflection
         // to confirm the method references itself.
         MethodInfo? reserveJobMethod = typeof(JobQueue).GetMethod(
-            name: "ReserveJob",
-            bindingAttr: BindingFlags.Public | BindingFlags.Instance,
-            types: [typeof(string), typeof(long?), typeof(int)]
+            "ReserveJob",
+            BindingFlags.Public | BindingFlags.Instance,
+            [typeof(string), typeof(long?), typeof(int)]
         );
 
-        Assert.NotNull(@object: reserveJobMethod);
+        Assert.NotNull(reserveJobMethod);
 
         // Get the IL bytes and verify the recursive call exists
         MethodBody? body = reserveJobMethod.GetMethodBody();
-        Assert.NotNull(@object: body);
+        Assert.NotNull(body);
 
         byte[] ilBytes = body.GetILAsByteArray()!;
-        Assert.NotNull(@object: ilBytes);
-        Assert.True(condition: ilBytes.Length > 0);
+        Assert.NotNull(ilBytes);
+        Assert.True(ilBytes.Length > 0);
 
         // The method token for the recursive call should be present in the IL.
         // A missing `return` before the recursive call would cause the result
@@ -89,7 +89,7 @@ public class ReserveJobRetryTests : IDisposable
             // call or callvirt instruction is 5 bytes: opcode + 4-byte token
             if (ilBytes[i] == 0x28 || ilBytes[i] == 0x6F)
             {
-                int token = BitConverter.ToInt32(value: ilBytes, startIndex: i + 1);
+                int token = BitConverter.ToInt32(ilBytes, i + 1);
                 if (token == recursiveCallToken && i + 5 < ilBytes.Length)
                 {
                     // Check if next instruction after the call is pop (0x26)
@@ -102,8 +102,8 @@ public class ReserveJobRetryTests : IDisposable
         }
 
         Assert.False(
-            condition: foundPopAfterRecursiveCall,
-            userMessage: "CRIT-09 regression: ReserveJob recursive call result is being discarded (pop after call). "
+            foundPopAfterRecursiveCall,
+            "CRIT-09 regression: ReserveJob recursive call result is being discarded (pop after call). "
                          + "The recursive call must have 'return' before it."
         );
     }
@@ -118,8 +118,8 @@ public class ReserveJobRetryTests : IDisposable
 
         // With an empty queue, ReserveJob returns null on the happy path too,
         // so we verify the method handles high attempt values gracefully.
-        QueueJobModel? result = _jobQueue.ReserveJob(name: "nonexistent-queue", currentJobId: null, attempt: 5);
-        Assert.Null(@object: result);
+        QueueJobModel? result = _jobQueue.ReserveJob("nonexistent-queue", null, 5);
+        Assert.Null(result);
     }
 
     [Fact]
@@ -134,22 +134,22 @@ public class ReserveJobRetryTests : IDisposable
             Priority = 1,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(entity: job);
+        _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
-        QueueJobModel? reserved = _jobQueue.ReserveJob(name: "normal-path", currentJobId: null);
+        QueueJobModel? reserved = _jobQueue.ReserveJob("normal-path", null);
 
-        Assert.NotNull(@object: reserved);
-        Assert.Equal(expected: "normal-payload", actual: reserved.Payload);
-        Assert.NotNull(value: reserved.ReservedAt);
-        Assert.Equal(expected: 1, actual: reserved.Attempts);
+        Assert.NotNull(reserved);
+        Assert.Equal("normal-payload", reserved.Payload);
+        Assert.NotNull(reserved.ReservedAt);
+        Assert.Equal(1, reserved.Attempts);
     }
 
     [Fact]
     public void ReserveJob_NormalPathNoJob_ReturnsNull()
     {
         // Verify the method returns null when no jobs match (empty queue).
-        QueueJobModel? reserved = _jobQueue.ReserveJob(name: "empty-queue", currentJobId: null);
-        Assert.Null(@object: reserved);
+        QueueJobModel? reserved = _jobQueue.ReserveJob("empty-queue", null);
+        Assert.Null(reserved);
     }
 }

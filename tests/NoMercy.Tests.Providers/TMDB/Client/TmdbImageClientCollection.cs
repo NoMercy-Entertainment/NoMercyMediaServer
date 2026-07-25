@@ -9,8 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Xunit;
-
 namespace NoMercy.Tests.Providers.TMDB.Client;
 
 /// <summary>
@@ -19,5 +17,5 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// storage clobbers another's mid-call. Grouping them in one collection forces
 /// serial execution.
 /// </summary>
-[CollectionDefinition(name: "TmdbImageClient")]
+[CollectionDefinition("TmdbImageClient")]
 public class TmdbImageClientCollection;

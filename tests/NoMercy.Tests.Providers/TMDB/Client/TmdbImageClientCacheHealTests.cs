@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FluentAssertions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Storage;
@@ -25,33 +24,33 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// check on every later scan and the decode failed forever. The cached-load path
 /// must discard an undecodable cache entry so the next run re-downloads.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
-[Collection(name: "TmdbImageClient")]
+[Trait("Category", "Unit")]
+[Collection("TmdbImageClient")]
 public class TmdbImageClientCacheHealTests
 {
     private static IStorage RealScopedStorage()
     {
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new(allowedRoots: [AppFiles.AppPath], driver: driver);
-        return new LocalStorage(driver: driver, guard: guard);
+        StoragePathGuard guard = new([AppFiles.AppPath], driver);
+        return new LocalStorage(driver, guard);
     }
 
     [Fact]
     public async Task Download_UndecodableCachedFile_IsDeletedSoItCanBeRefetched()
     {
         IStorage storage = RealScopedStorage();
-        TmdbImageClient.Initialize(storage: storage);
+        TmdbImageClient.Initialize(storage);
 
-        string folder = Path.Join(path1: AppFiles.ImagesPath, path2: "original");
-        Directory.CreateDirectory(path: folder);
+        string folder = Path.Join(AppFiles.ImagesPath, "original");
+        Directory.CreateDirectory(folder);
 
         // A poison cache entry: a .jpg name holding a non-image body, exactly the
         // shape an older build would have written from a bad 200 response.
         const string fileName = "poison-cache-heal-test.jpg";
-        string filePath = Path.Join(path1: folder, path2: fileName);
-        await File.WriteAllTextAsync(path: filePath, contents: "<html><body>Not Found</body></html>");
+        string filePath = Path.Join(folder, fileName);
+        await File.WriteAllTextAsync(filePath, "<html><body>Not Found</body></html>");
 
-        File.Exists(path: filePath).Should().BeTrue(because: "the poison file is seeded before the call");
+        File.Exists(filePath).Should().BeTrue("the poison file is seeded before the call");
 
         // Download is keyed by "/{fileName}" -> path.Replace("/","") == fileName.
         // After discarding the poison entry the client re-downloads; with no
@@ -61,7 +60,7 @@ public class TmdbImageClientCacheHealTests
         try
         {
             Task<SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>?>? download =
-                TmdbImageClient.Download(path: "/" + fileName);
+                TmdbImageClient.Download("/" + fileName);
             if (download is not null)
                 await download;
         }
@@ -75,10 +74,10 @@ public class TmdbImageClientCacheHealTests
         // deletes the undecodable file before re-downloading, so it is gone (the
         // failed re-fetch wrote nothing) — never left as the original HTML poison,
         // which would make every later scan fail forever.
-        File.Exists(path: filePath)
+        File.Exists(filePath)
             .Should()
             .BeFalse(
-                because: "the undecodable poison cache entry must be discarded so the next run re-downloads a clean copy"
+                "the undecodable poison cache entry must be discarded so the next run re-downloads a clean copy"
             );
     }
 }

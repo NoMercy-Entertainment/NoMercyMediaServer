@@ -29,24 +29,24 @@ public class ChapterWriter(IStorage storage) : IChapterWriter
             return;
 
         StringBuilder sb = new();
-        sb.AppendLine(value: "WEBVTT");
+        sb.AppendLine("WEBVTT");
         sb.AppendLine();
 
         for (int i = 0; i < chapters.Count; i++)
         {
-            ChapterInfo chapter = chapters[index: i];
-            sb.AppendLine(handler: $"Chapter {i + 1}");
-            sb.AppendLine(handler: $"{FormatVttTime(ts: chapter.Start)} --> {FormatVttTime(ts: chapter.End)}");
-            sb.AppendLine(value: chapter.Title ?? $"Chapter {i + 1}");
+            ChapterInfo chapter = chapters[i];
+            sb.AppendLine($"Chapter {i + 1}");
+            sb.AppendLine($"{FormatVttTime(chapter.Start)} --> {FormatVttTime(chapter.End)}");
+            sb.AppendLine(chapter.Title ?? $"Chapter {i + 1}");
 
             if (includeThumbUris)
-                sb.AppendLine(handler: $"chapters/{i:D2}.webp");
+                sb.AppendLine($"chapters/{i:D2}.webp");
 
             sb.AppendLine();
         }
 
-        string chaptersFile = Path.Combine(path1: outputDirectory, path2: "chapters.vtt");
-        await storage.WriteAsync(path: chaptersFile, bytes: Encoding.UTF8.GetBytes(s: sb.ToString()), ct: ct);
+        string chaptersFile = Path.Combine(outputDirectory, "chapters.vtt");
+        await storage.WriteAsync(chaptersFile, Encoding.UTF8.GetBytes(sb.ToString()), ct);
     }
 
     private static string FormatVttTime(TimeSpan ts) =>

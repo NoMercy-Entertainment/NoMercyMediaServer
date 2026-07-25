@@ -19,7 +19,7 @@ namespace NoMercy.Encoder.PostProcess;
 
 public class SubtitleExtractor : ISubtitleExtractor
 {
-    private static readonly HashSet<string> AssCodecs = new(comparer: StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> AssCodecs = new(StringComparer.OrdinalIgnoreCase)
     {
         "ass",
         "ssa",
@@ -44,8 +44,8 @@ public class SubtitleExtractor : ISubtitleExtractor
         // un-classified track collapses to "alt" (or worse, to "full" for
         // multiple peers of the same language with no per-language tiebreak).
         string variant = plan.Variant;
-        bool isBitmap = SubtitleClassifier.IsBitmapBased(codec: stream.Codec);
-        bool isAss = AssCodecs.Contains(item: stream.Codec);
+        bool isBitmap = SubtitleClassifier.IsBitmapBased(stream.Codec);
+        bool isAss = AssCodecs.Contains(stream.Codec);
 
         string extension;
         string ffmpegCodec;
@@ -55,7 +55,7 @@ public class SubtitleExtractor : ISubtitleExtractor
             // VobSub gets its native .idx/.sub pair via NoMercy ffmpeg's
             // vobsubenc muxer. PGS / DVB stay in .mks for preservation —
             // OCR pass converts them to WebVTT downstream.
-            bool isVobSub = stream.Codec.Equals(value: "dvd_subtitle", comparisonType: StringComparison.OrdinalIgnoreCase);
+            bool isVobSub = stream.Codec.Equals("dvd_subtitle", StringComparison.OrdinalIgnoreCase);
             extension = isVobSub ? "idx" : "mks";
             ffmpegCodec = "copy";
         }
@@ -73,28 +73,28 @@ public class SubtitleExtractor : ISubtitleExtractor
                 SubtitleCodecType.WebVtt => ("vtt", "webvtt"),
                 SubtitleCodecType.Ass => ("ass", "ass"),
                 SubtitleCodecType.Srt => ("srt", "srt"),
-                SubtitleCodecType.Copy => CopyExtensionFor(sourceCodec: stream.Codec),
+                SubtitleCodecType.Copy => CopyExtensionFor(stream.Codec),
                 _ => ("vtt", "webvtt"),
             };
         }
 
         Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
-            language: language,
-            variant: variant,
-            filename: mediaTitle
+            language,
+            variant,
+            mediaTitle
         );
-        string resolved = TemplateResolver.Resolve(template: plan.PlaylistNameTemplate, values: tokens);
+        string resolved = TemplateResolver.Resolve(plan.PlaylistNameTemplate, tokens);
         // Relative path — FFmpeg CWD is set to the output directory.
         string outputPath = $"{resolved}.{extension}";
 
         return new(
-            OutputPath: outputPath,
-            FfmpegCodec: ffmpegCodec,
-            Extension: extension,
-            Language: language,
-            Variant: variant,
-            IsBitmap: isBitmap,
-            SourceIndex: plan.SourceIndex
+            outputPath,
+            ffmpegCodec,
+            extension,
+            language,
+            variant,
+            isBitmap,
+            plan.SourceIndex
         );
     }
 
@@ -110,8 +110,8 @@ public class SubtitleExtractor : ISubtitleExtractor
     {
         string language = stream.Language ?? plan.Language ?? "und";
         string variant = plan.Variant;
-        bool isBitmap = SubtitleClassifier.IsBitmapBased(codec: stream.Codec);
-        bool isAss = AssCodecs.Contains(item: stream.Codec);
+        bool isBitmap = SubtitleClassifier.IsBitmapBased(stream.Codec);
+        bool isAss = AssCodecs.Contains(stream.Codec);
 
         string extension;
         if (isBitmap)
@@ -128,11 +128,11 @@ public class SubtitleExtractor : ISubtitleExtractor
         }
 
         Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
-            language: language,
-            variant: variant,
-            filename: mediaTitle
+            language,
+            variant,
+            mediaTitle
         );
-        string resolved = TemplateResolver.Resolve(template: plan.PlaylistNameTemplate, values: tokens);
+        string resolved = TemplateResolver.Resolve(plan.PlaylistNameTemplate, tokens);
         return $"{resolved}.{extension}";
     }
 

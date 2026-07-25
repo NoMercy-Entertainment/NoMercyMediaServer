@@ -15,13 +15,13 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbCertificationItem
 {
-    [JsonProperty(propertyName: "certification")]
+    [JsonProperty("certification")]
     public string Certification { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "meaning")]
+    [JsonProperty("meaning")]
     public string Meaning { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "order")]
+    [JsonProperty("order")]
     public int Order { get; set; }
     public string Iso31661 { get; set; } = string.Empty;
 }

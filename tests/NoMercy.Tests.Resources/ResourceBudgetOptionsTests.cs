@@ -28,19 +28,19 @@ public sealed class ResourceBudgetOptionsTests
     [Fact]
     public void Disabled_CpuHeadroomPercent_SatisfiesDisabledContract()
     {
-        ResourceBudgetOptions.Disabled.CpuHeadroomPercent.Should().BeLessThanOrEqualTo(expected: 0);
+        ResourceBudgetOptions.Disabled.CpuHeadroomPercent.Should().BeLessThanOrEqualTo(0);
     }
 
     [Fact]
     public void Disabled_GpuHeadroomPercent_SatisfiesDisabledContract()
     {
-        ResourceBudgetOptions.Disabled.GpuHeadroomPercent.Should().BeLessThanOrEqualTo(expected: 0);
+        ResourceBudgetOptions.Disabled.GpuHeadroomPercent.Should().BeLessThanOrEqualTo(0);
     }
 
     [Fact]
     public void Disabled_MinFreeMemoryMb_SatisfiesDisabledContract()
     {
-        ResourceBudgetOptions.Disabled.MinFreeMemoryMb.Should().Be(expected: 0);
+        ResourceBudgetOptions.Disabled.MinFreeMemoryMb.Should().Be(0);
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class ResourceBudgetOptionsTests
         // still be value-equal, but the "single shared instance" shape is what
         // the doc comment promises ("Used by ... tests that don't want to
         // model live host load"), so pin object identity, not just equality.
-        ResourceBudgetOptions.Disabled.Should().BeSameAs(expected: ResourceBudgetOptions.Disabled);
+        ResourceBudgetOptions.Disabled.Should().BeSameAs(ResourceBudgetOptions.Disabled);
     }
 
     [Fact]
@@ -62,9 +62,9 @@ public sealed class ResourceBudgetOptionsTests
         // by accident instead of the documented "leave headroom" behavior.
         ResourceBudgetOptions defaults = new();
 
-        defaults.CpuHeadroomPercent.Should().BeGreaterThan(expected: 0);
-        defaults.GpuHeadroomPercent.Should().BeGreaterThan(expected: 0);
-        defaults.MinFreeMemoryMb.Should().BeGreaterThan(expected: 0);
+        defaults.CpuHeadroomPercent.Should().BeGreaterThan(0);
+        defaults.GpuHeadroomPercent.Should().BeGreaterThan(0);
+        defaults.MinFreeMemoryMb.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -75,21 +75,21 @@ public sealed class ResourceBudgetOptionsTests
         // could never actually cross (or would always be crossed).
         ResourceBudgetOptions defaults = new();
 
-        defaults.CpuHeadroomPercent.Should().BeInRange(minimumValue: 0, maximumValue: 100);
-        defaults.GpuHeadroomPercent.Should().BeInRange(minimumValue: 0, maximumValue: 100);
+        defaults.CpuHeadroomPercent.Should().BeInRange(0, 100);
+        defaults.GpuHeadroomPercent.Should().BeInRange(0, 100);
     }
 
     [Fact]
     public void Constructor_ExplicitValues_AreAssignedToMatchingProperties()
     {
         ResourceBudgetOptions options = new(
-            CpuHeadroomPercent: 42.5,
-            GpuHeadroomPercent: 33.3,
-            MinFreeMemoryMb: 2048
+            42.5,
+            33.3,
+            2048
         );
 
-        options.CpuHeadroomPercent.Should().Be(expected: 42.5);
-        options.GpuHeadroomPercent.Should().Be(expected: 33.3);
-        options.MinFreeMemoryMb.Should().Be(expected: 2048);
+        options.CpuHeadroomPercent.Should().Be(42.5);
+        options.GpuHeadroomPercent.Should().Be(33.3);
+        options.MinFreeMemoryMb.Should().Be(2048);
     }
 }

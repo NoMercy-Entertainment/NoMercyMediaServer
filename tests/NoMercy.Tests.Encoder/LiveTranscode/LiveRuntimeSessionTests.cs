@@ -33,7 +33,7 @@ public class LiveRuntimeSessionTests
     private static Mock<ILiveSession> SessionMock()
     {
         Mock<ILiveSession> session = new();
-        session.Setup(expression: s => s.DisposeAsync()).Returns(value: ValueTask.CompletedTask);
+        session.Setup(s => s.DisposeAsync()).Returns(ValueTask.CompletedTask);
         return session;
     }
 
@@ -43,18 +43,18 @@ public class LiveRuntimeSessionTests
         string? scratchDir = null
     ) =>
         new(
-            session: (session ?? SessionMock()).Object,
-            targetSegmentDuration: target ?? TimeSpan.FromSeconds(seconds: 4),
-            scratchDirectory: scratchDir
+            (session ?? SessionMock()).Object,
+            target ?? TimeSpan.FromSeconds(4),
+            scratchDir
         );
 
     private static Segment Seg(int index, double startSec = 0, double durSec = 4) =>
         new(
-            Index: index,
-            StartTime: TimeSpan.FromSeconds(value: startSec),
-            Duration: TimeSpan.FromSeconds(value: durSec),
-            FilePath: $"/scratch/segment-{index}.ts",
-            SizeBytes: 1024
+            index,
+            TimeSpan.FromSeconds(startSec),
+            TimeSpan.FromSeconds(durSec),
+            $"/scratch/segment-{index}.ts",
+            1024
         );
 
     // ── Construction state ───────────────────────────────────────────────────
@@ -65,7 +65,7 @@ public class LiveRuntimeSessionTests
         LiveRuntimeSession runtime = Build();
 
         runtime.IsComplete.Should().BeFalse();
-        runtime.HighestSegmentIndex.Should().Be(expected: -1);
+        runtime.HighestSegmentIndex.Should().Be(-1);
         runtime.SnapshotSegments().Should().BeEmpty();
     }
 
@@ -73,12 +73,12 @@ public class LiveRuntimeSessionTests
     public void Newly_constructed_session_carries_target_duration_and_scratch_dir()
     {
         LiveRuntimeSession runtime = Build(
-            target: TimeSpan.FromSeconds(seconds: 6),
+            target: TimeSpan.FromSeconds(6),
             scratchDir: "/tmp/live-1"
         );
 
-        runtime.TargetSegmentDuration.Should().Be(expected: TimeSpan.FromSeconds(seconds: 6));
-        runtime.ScratchDirectory.Should().Be(expected: "/tmp/live-1");
+        runtime.TargetSegmentDuration.Should().Be(TimeSpan.FromSeconds(6));
+        runtime.ScratchDirectory.Should().Be("/tmp/live-1");
     }
 
     [Fact]
@@ -97,20 +97,20 @@ public class LiveRuntimeSessionTests
     public void BufferSegment_first_segment_sets_highest_to_segment_index()
     {
         LiveRuntimeSession runtime = Build();
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 0));
+        InvokeBuffer(runtime, Seg(0));
 
-        runtime.HighestSegmentIndex.Should().Be(expected: 0);
+        runtime.HighestSegmentIndex.Should().Be(0);
     }
 
     [Fact]
     public void BufferSegment_monotonic_indices_raise_highest()
     {
         LiveRuntimeSession runtime = Build();
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 0));
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 1));
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 2));
+        InvokeBuffer(runtime, Seg(0));
+        InvokeBuffer(runtime, Seg(1));
+        InvokeBuffer(runtime, Seg(2));
 
-        runtime.HighestSegmentIndex.Should().Be(expected: 2);
+        runtime.HighestSegmentIndex.Should().Be(2);
     }
 
     [Fact]
@@ -119,11 +119,11 @@ public class LiveRuntimeSessionTests
         // Drainer can write segments out-of-order on retry. Highest must NOT
         // drop back — clients use HighestSegmentIndex to know what's available.
         LiveRuntimeSession runtime = Build();
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 0));
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 5));
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 2));
+        InvokeBuffer(runtime, Seg(0));
+        InvokeBuffer(runtime, Seg(5));
+        InvokeBuffer(runtime, Seg(2));
 
-        runtime.HighestSegmentIndex.Should().Be(expected: 5);
+        runtime.HighestSegmentIndex.Should().Be(5);
     }
 
     [Fact]
@@ -131,10 +131,10 @@ public class LiveRuntimeSessionTests
     {
         // CompareExchange loop must short-circuit when new == current.
         LiveRuntimeSession runtime = Build();
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 3));
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 3, startSec: 12, durSec: 5)); // replacement
+        InvokeBuffer(runtime, Seg(3));
+        InvokeBuffer(runtime, Seg(3, 12, 5)); // replacement
 
-        runtime.HighestSegmentIndex.Should().Be(expected: 3);
+        runtime.HighestSegmentIndex.Should().Be(3);
     }
 
     // ── TryGetSegment ────────────────────────────────────────────────────────
@@ -143,22 +143,22 @@ public class LiveRuntimeSessionTests
     public void TryGetSegment_returns_buffered_segment_by_index()
     {
         LiveRuntimeSession runtime = Build();
-        Segment original = Seg(index: 7, startSec: 28);
-        InvokeBuffer(runtime: runtime, segment: original);
+        Segment original = Seg(7, 28);
+        InvokeBuffer(runtime, original);
 
-        bool found = runtime.TryGetSegment(index: 7, segment: out Segment retrieved);
+        bool found = runtime.TryGetSegment(7, out Segment retrieved);
 
         found.Should().BeTrue();
-        retrieved.Should().BeEquivalentTo(expectation: original);
+        retrieved.Should().BeEquivalentTo(original);
     }
 
     [Fact]
     public void TryGetSegment_returns_false_for_missing_index()
     {
         LiveRuntimeSession runtime = Build();
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 0));
+        InvokeBuffer(runtime, Seg(0));
 
-        bool found = runtime.TryGetSegment(index: 99, segment: out _);
+        bool found = runtime.TryGetSegment(99, out _);
 
         found.Should().BeFalse();
     }
@@ -169,12 +169,12 @@ public class LiveRuntimeSessionTests
         // Drainer occasionally rewrites a segment (e.g. re-encode on quality change).
         // The dictionary must yield the LATEST value, not the original.
         LiveRuntimeSession runtime = Build();
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 2, startSec: 8, durSec: 4));
-        Segment replacement = Seg(index: 2, startSec: 8, durSec: 5);
-        InvokeBuffer(runtime: runtime, segment: replacement);
+        InvokeBuffer(runtime, Seg(2, 8, 4));
+        Segment replacement = Seg(2, 8, 5);
+        InvokeBuffer(runtime, replacement);
 
-        runtime.TryGetSegment(index: 2, segment: out Segment seg);
-        seg.Should().BeEquivalentTo(expectation: replacement);
+        runtime.TryGetSegment(2, out Segment seg);
+        seg.Should().BeEquivalentTo(replacement);
     }
 
     // ── SnapshotSegments ─────────────────────────────────────────────────────
@@ -185,14 +185,14 @@ public class LiveRuntimeSessionTests
         // ConcurrentDictionary enumeration is unordered — Snapshot MUST sort.
         // The playlist generator relies on this for HLS sequence numbering.
         LiveRuntimeSession runtime = Build();
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 5));
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 1));
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 3));
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 0));
+        InvokeBuffer(runtime, Seg(5));
+        InvokeBuffer(runtime, Seg(1));
+        InvokeBuffer(runtime, Seg(3));
+        InvokeBuffer(runtime, Seg(0));
 
         IReadOnlyList<Segment> snapshot = runtime.SnapshotSegments();
 
-        snapshot.Select(selector: s => s.Index).Should().Equal(elements: [0, 1, 3, 5]);
+        snapshot.Select(s => s.Index).Should().Equal([0, 1, 3, 5]);
     }
 
     [Fact]
@@ -201,13 +201,13 @@ public class LiveRuntimeSessionTests
         // Snapshot is a List<Segment>, not a live view — adding more after
         // snapshot must NOT mutate the returned list.
         LiveRuntimeSession runtime = Build();
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 0));
+        InvokeBuffer(runtime, Seg(0));
         IReadOnlyList<Segment> snapshot = runtime.SnapshotSegments();
 
-        InvokeBuffer(runtime: runtime, segment: Seg(index: 1));
+        InvokeBuffer(runtime, Seg(1));
 
-        snapshot.Should().HaveCount(expected: 1);
-        snapshot[index: 0].Index.Should().Be(expected: 0);
+        snapshot.Should().HaveCount(1);
+        snapshot[0].Index.Should().Be(0);
     }
 
     // ── MarkComplete + IsComplete ────────────────────────────────────────────
@@ -218,7 +218,7 @@ public class LiveRuntimeSessionTests
         LiveRuntimeSession runtime = Build();
 
         runtime.IsComplete.Should().BeFalse();
-        InvokeMarkComplete(runtime: runtime);
+        InvokeMarkComplete(runtime);
         runtime.IsComplete.Should().BeTrue();
     }
 
@@ -228,8 +228,8 @@ public class LiveRuntimeSessionTests
         // Drainer may call MarkComplete more than once on retry paths — must
         // never flip back to false.
         LiveRuntimeSession runtime = Build();
-        InvokeMarkComplete(runtime: runtime);
-        InvokeMarkComplete(runtime: runtime);
+        InvokeMarkComplete(runtime);
+        InvokeMarkComplete(runtime);
 
         runtime.IsComplete.Should().BeTrue();
     }
@@ -239,11 +239,11 @@ public class LiveRuntimeSessionTests
     [Fact]
     public void LastAccess_initialized_to_construction_time()
     {
-        DateTime before = DateTime.UtcNow.AddSeconds(value: -1);
+        DateTime before = DateTime.UtcNow.AddSeconds(-1);
         LiveRuntimeSession runtime = Build();
-        DateTime after = DateTime.UtcNow.AddSeconds(value: 1);
+        DateTime after = DateTime.UtcNow.AddSeconds(1);
 
-        runtime.LastAccess.Should().BeOnOrAfter(expected: before).And.BeOnOrBefore(expected: after);
+        runtime.LastAccess.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 
     [Fact]
@@ -252,11 +252,11 @@ public class LiveRuntimeSessionTests
         LiveRuntimeSession runtime = Build();
         DateTime initial = runtime.LastAccess;
         // Windows DateTime.UtcNow resolution is ~15.6ms. 50ms guarantees a tick.
-        Thread.Sleep(millisecondsTimeout: 50);
+        Thread.Sleep(50);
 
         runtime.TouchLastAccess();
 
-        runtime.LastAccess.Should().BeAfter(expected: initial);
+        runtime.LastAccess.Should().BeAfter(initial);
     }
 
     [Fact]
@@ -265,7 +265,7 @@ public class LiveRuntimeSessionTests
         // Idle reaper compares with DateTime.UtcNow — wrong Kind makes that
         // comparison silently lose 1-hour-of-DST worth of accuracy.
         LiveRuntimeSession runtime = Build();
-        runtime.LastAccess.Kind.Should().Be(expected: DateTimeKind.Utc);
+        runtime.LastAccess.Kind.Should().Be(DateTimeKind.Utc);
     }
 
     // ── DisposeAsync ─────────────────────────────────────────────────────────
@@ -274,42 +274,42 @@ public class LiveRuntimeSessionTests
     public async Task DisposeAsync_with_no_drainer_task_completes_cleanly()
     {
         Mock<ILiveSession> session = SessionMock();
-        LiveRuntimeSession runtime = Build(session: session);
+        LiveRuntimeSession runtime = Build(session);
 
         await runtime.DisposeAsync();
 
-        session.Verify(expression: s => s.DisposeAsync(), times: Times.Once);
+        session.Verify(s => s.DisposeAsync(), Times.Once);
     }
 
     [Fact]
     public async Task DisposeAsync_awaits_drainer_task_and_disposes_inner_session()
     {
         Mock<ILiveSession> session = SessionMock();
-        LiveRuntimeSession runtime = Build(session: session);
+        LiveRuntimeSession runtime = Build(session);
 
         TaskCompletionSource<bool> drainerStarted = new();
-        Task drainer = Task.Run(function: async () =>
+        Task drainer = Task.Run(async () =>
         {
-            drainerStarted.SetResult(result: true);
-            await Task.Delay(millisecondsDelay: Timeout.Infinite, cancellationToken: runtime.DrainerCancellation);
+            drainerStarted.SetResult(true);
+            await Task.Delay(Timeout.Infinite, runtime.DrainerCancellation);
         });
-        SetDrainerTask(runtime: runtime, task: drainer);
+        SetDrainerTask(runtime, drainer);
 
         await drainerStarted.Task;
         await runtime.DisposeAsync();
 
         drainer.IsCompleted.Should().BeTrue();
-        session.Verify(expression: s => s.DisposeAsync(), times: Times.Once);
+        session.Verify(s => s.DisposeAsync(), Times.Once);
     }
 
     [Fact]
     public async Task DisposeAsync_swallows_OperationCanceledException_from_drainer()
     {
         Mock<ILiveSession> session = SessionMock();
-        LiveRuntimeSession runtime = Build(session: session);
+        LiveRuntimeSession runtime = Build(session);
 
-        Task drainer = Task.Run(function: () => Task.Delay(millisecondsDelay: Timeout.Infinite, cancellationToken: runtime.DrainerCancellation));
-        SetDrainerTask(runtime: runtime, task: drainer);
+        Task drainer = Task.Run(() => Task.Delay(Timeout.Infinite, runtime.DrainerCancellation));
+        SetDrainerTask(runtime, drainer);
 
         // DisposeAsync must not bubble the OperationCanceledException from
         // the drainer task — that exception is expected on shutdown.
@@ -323,7 +323,7 @@ public class LiveRuntimeSessionTests
         // Idle reaper + outer container both call DisposeAsync — second call
         // must be safe (catches ObjectDisposedException internally).
         Mock<ILiveSession> session = SessionMock();
-        LiveRuntimeSession runtime = Build(session: session);
+        LiveRuntimeSession runtime = Build(session);
 
         await runtime.DisposeAsync();
         Func<Task> act = () => runtime.DisposeAsync().AsTask();
@@ -340,24 +340,24 @@ public class LiveRuntimeSessionTests
     private static void InvokeBuffer(LiveRuntimeSession runtime, Segment segment) =>
         typeof(LiveRuntimeSession)
             .GetMethod(
-                name: "BufferSegment",
-                bindingAttr: System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
+                "BufferSegment",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
             )!
-            .Invoke(obj: runtime, parameters: [segment]);
+            .Invoke(runtime, [segment]);
 
     private static void InvokeMarkComplete(LiveRuntimeSession runtime) =>
         typeof(LiveRuntimeSession)
             .GetMethod(
-                name: "MarkComplete",
-                bindingAttr: System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
+                "MarkComplete",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
             )!
-            .Invoke(obj: runtime, parameters: []);
+            .Invoke(runtime, []);
 
     private static void SetDrainerTask(LiveRuntimeSession runtime, Task task) =>
         typeof(LiveRuntimeSession)
             .GetProperty(
-                name: "DrainerTask",
-                bindingAttr: System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
+                "DrainerTask",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
             )!
-            .SetValue(obj: runtime, value: task);
+            .SetValue(runtime, task);
 }

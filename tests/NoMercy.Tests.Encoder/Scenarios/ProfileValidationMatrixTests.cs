@@ -20,25 +20,25 @@ public class ProfileValidationMatrixTests
         string? pixelFormat = null
     ) =>
         new(
-            Policy: StreamPolicy.Transcode,
-            Codec: codec,
-            Width: width,
-            Height: height,
-            RateControl: rc,
-            Crf: crf,
-            BitrateKbps: bitrate,
-            MaxBitrateKbps: null,
-            BufferSizeKbps: null,
-            Preset: "fast",
-            CodecProfile: CodecProfile.Auto,
-            Level: level,
-            Tune: null,
-            BitDepth: bitDepth,
-            PixelFormat: pixelFormat,
-            KeyframeIntervalSeconds: 2,
-            ConvertHdrToSdr: false,
-            SegmentNameTemplate: "video/{label}",
-            PlaylistNameTemplate: "video/{label}/playlist"
+            StreamPolicy.Transcode,
+            codec,
+            width,
+            height,
+            rc,
+            crf,
+            bitrate,
+            null,
+            null,
+            "fast",
+            CodecProfile.Auto,
+            level,
+            null,
+            bitDepth,
+            pixelFormat,
+            2,
+            false,
+            "video/{label}",
+            "video/{label}/playlist"
         );
 
     private static AudioOutput Audio(
@@ -46,21 +46,21 @@ public class ProfileValidationMatrixTests
         int bitrate = 192
     ) =>
         new(
-            Policy: StreamPolicy.Transcode,
-            Codec: codec,
-            BitrateKbps: bitrate,
-            Channels: 2,
-            SampleRateHz: 48000,
-            AllowedLanguages: ["eng"],
-            DefaultLanguage: "eng",
-            Loudness: null,
-            Downmix: null,
-            SegmentNameTemplate: "audio/{lang}-{codec}",
-            PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
+            StreamPolicy.Transcode,
+            codec,
+            bitrate,
+            2,
+            48000,
+            ["eng"],
+            "eng",
+            null,
+            null,
+            "audio/{lang}-{codec}",
+            "audio/{lang}-{codec}/playlist"
         );
 
     private static SubtitleOutput Subtitle(SubtitleCodecType codec = SubtitleCodecType.Ass) =>
-        new(Policy: SubtitlePolicy.Extract, Codec: codec, AllowedLanguages: ["eng"], IncludeForced: true, OcrLanguage: null, PlaylistNameTemplate: "subs/{lang}");
+        new(SubtitlePolicy.Extract, codec, ["eng"], true, null, "subs/{lang}");
 
     private static EncodingProfile Profile(
         string name = "test",
@@ -72,99 +72,99 @@ public class ProfileValidationMatrixTests
         HdrPolicies hdr = HdrPolicies.PassthroughWhenPossible,
         Dictionary<string, string>? customArgs = null
     ) =>
-        new(Id: Ulid.NewUlid(), Name: name, Container: container, Video: video, Audio: audio ?? [], Subtitles: subtitles ?? [], Thumbnails: null, Ladder: ladder)
+        new(Ulid.NewUlid(), name, container, video, audio ?? [], subtitles ?? [], null, ladder)
         {
             HdrPolicies = hdr,
             CustomArguments = customArgs,
         };
 
     private static bool HasRule(ValidationEnvelope env, string id) =>
-        env.Errors.Any(predicate: r => r.Id == id) || env.Warnings.Any(predicate: r => r.Id == id);
+        env.Errors.Any(r => r.Id == id) || env.Warnings.Any(r => r.Id == id);
 
     private static EncoderRule? FindRule(ValidationEnvelope env, string id) =>
-        env.Errors.FirstOrDefault(predicate: r => r.Id == id) ?? env.Warnings.FirstOrDefault(predicate: r => r.Id == id);
+        env.Errors.FirstOrDefault(r => r.Id == id) ?? env.Warnings.FirstOrDefault(r => r.Id == id);
 
     [Fact]
     public void H265InHlsTs_Rejected()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(container: Container.HlsTs, video: Video(codec: VideoCodecType.H265))
+            Profile(container: Container.HlsTs, video: Video(codec: VideoCodecType.H265))
         );
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.HlsFmp4CodecMismatch).Should().BeTrue();
-        FindRule(env: result, id: EncoderRuleId.HlsFmp4CodecMismatch)!.Fix.Should().Contain(expected: "HlsFmp4");
+        HasRule(result, EncoderRuleId.HlsFmp4CodecMismatch).Should().BeTrue();
+        FindRule(result, EncoderRuleId.HlsFmp4CodecMismatch)!.Fix.Should().Contain("HlsFmp4");
     }
 
     [Fact]
     public void Vp9InMp4_Rejected()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(container: Container.Mp4, video: Video(codec: VideoCodecType.Vp9))
+            Profile(container: Container.Mp4, video: Video(codec: VideoCodecType.Vp9))
         );
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.CodecContainerMismatch).Should().BeTrue();
+        HasRule(result, EncoderRuleId.CodecContainerMismatch).Should().BeTrue();
     }
 
     [Fact]
     public void TruehdInMp4_Rejected()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(
+            Profile(
                 container: Container.Mp4,
                 audio: [Audio(codec: AudioCodecType.TrueHd, bitrate: 0)]
             )
         );
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.AudioCodecContainerMismatch).Should().BeTrue();
+        HasRule(result, EncoderRuleId.AudioCodecContainerMismatch).Should().BeTrue();
     }
 
     [Fact]
     public void CrfModeNoCrf_Rejected()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(video: Video(rc: RateControlMode.Crf, crf: 0))
+            Profile(video: Video(rc: RateControlMode.Crf, crf: 0))
         );
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.VideoRateControlMissing).Should().BeTrue();
+        HasRule(result, EncoderRuleId.VideoRateControlMissing).Should().BeTrue();
     }
 
     [Fact]
     public void VbrModeNoBitrate_Rejected()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(video: Video(rc: RateControlMode.Vbr, bitrate: 0))
+            Profile(video: Video(rc: RateControlMode.Vbr, bitrate: 0))
         );
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.VideoRateControlMissing).Should().BeTrue();
+        HasRule(result, EncoderRuleId.VideoRateControlMissing).Should().BeTrue();
     }
 
     [Fact]
     public void VbrWithCrfButNoBitrate_Rejected()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(video: Video(rc: RateControlMode.Vbr, bitrate: 0, crf: 23))
+            Profile(video: Video(rc: RateControlMode.Vbr, bitrate: 0, crf: 23))
         );
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.VideoRateControlConflict).Should().BeTrue();
+        HasRule(result, EncoderRuleId.VideoRateControlConflict).Should().BeTrue();
     }
 
     [Fact]
     public void AacWithZeroBitrate_Rejected()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(audio: [Audio(codec: AudioCodecType.Aac, bitrate: 0)])
+            Profile(audio: [Audio(codec: AudioCodecType.Aac, bitrate: 0)])
         );
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.AudioBitrateMissing).Should().BeTrue();
+        HasRule(result, EncoderRuleId.AudioBitrateMissing).Should().BeTrue();
     }
 
     [Fact]
     public void ManualLadderNoRungs_Rejected()
     {
         LadderConfig ladder = new() { Mode = LadderMode.Manual, Rungs = [] };
-        ValidationEnvelope result = ProfileRuleValidator.Validate(profile: Profile(ladder: ladder));
+        ValidationEnvelope result = ProfileRuleValidator.Validate(Profile(ladder: ladder));
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.LadderManualEmpty).Should().BeTrue();
+        HasRule(result, EncoderRuleId.LadderManualEmpty).Should().BeTrue();
     }
 
     [Fact]
@@ -172,32 +172,32 @@ public class ProfileValidationMatrixTests
     {
         LadderRung[] rungs =
         [
-            new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 5000, MaxBitrateKbps: 7500, BufferSizeKbps: 10000, Framerate: 30),
-            new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 3000, MaxBitrateKbps: 4500, BufferSizeKbps: 6000, Framerate: 30),
+            new(1280, 720, VideoCodecType.H264, 5000, 7500, 10000, 30),
+            new(1920, 1080, VideoCodecType.H264, 3000, 4500, 6000, 30),
         ];
         LadderConfig ladder = new() { Mode = LadderMode.Manual, Rungs = rungs };
-        ValidationEnvelope result = ProfileRuleValidator.Validate(profile: Profile(ladder: ladder));
+        ValidationEnvelope result = ProfileRuleValidator.Validate(Profile(ladder: ladder));
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.LadderManualUnsorted).Should().BeTrue();
+        HasRule(result, EncoderRuleId.LadderManualUnsorted).Should().BeTrue();
     }
 
     [Fact]
     public void Level4K_4_0_Rejected()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(
+            Profile(
                 video: Video(codec: VideoCodecType.H264, width: 3840, height: 2160, level: "4.0")
             )
         );
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.LevelResolutionMismatch).Should().BeTrue();
+        HasRule(result, EncoderRuleId.LevelResolutionMismatch).Should().BeTrue();
     }
 
     [Fact]
     public void Bitrate1080At200kbps_Warning()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(
+            Profile(
                 video: Video(
                     codec: VideoCodecType.H264,
                     width: 1920,
@@ -208,48 +208,48 @@ public class ProfileValidationMatrixTests
                 )
             )
         );
-        HasRule(env: result, id: EncoderRuleId.BitrateTooLowForResolution).Should().BeTrue();
-        FindRule(env: result, id: EncoderRuleId.BitrateTooLowForResolution)!
+        HasRule(result, EncoderRuleId.BitrateTooLowForResolution).Should().BeTrue();
+        FindRule(result, EncoderRuleId.BitrateTooLowForResolution)!
             .Severity.Should()
-            .Be(expected: EncoderRuleSeverity.Warning);
+            .Be(EncoderRuleSeverity.Warning);
     }
 
     [Fact]
     public void CrfOutOfRange_Warning()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(video: Video(rc: RateControlMode.Crf, crf: 50))
+            Profile(video: Video(rc: RateControlMode.Crf, crf: 50))
         );
-        HasRule(env: result, id: EncoderRuleId.CrfOutOfTypicalRange).Should().BeTrue();
-        FindRule(env: result, id: EncoderRuleId.CrfOutOfTypicalRange)!
+        HasRule(result, EncoderRuleId.CrfOutOfTypicalRange).Should().BeTrue();
+        FindRule(result, EncoderRuleId.CrfOutOfTypicalRange)!
             .Severity.Should()
-            .Be(expected: EncoderRuleSeverity.Warning);
+            .Be(EncoderRuleSeverity.Warning);
     }
 
     [Fact]
     public void ProfileNameMissing_Rejected()
     {
-        ValidationEnvelope result = ProfileRuleValidator.Validate(profile: Profile(name: ""));
+        ValidationEnvelope result = ProfileRuleValidator.Validate(Profile(name: ""));
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.ProfileNameMissing).Should().BeTrue();
+        HasRule(result, EncoderRuleId.ProfileNameMissing).Should().BeTrue();
     }
 
     [Fact]
     public void VideoWidthZero_Rejected()
     {
-        ValidationEnvelope result = ProfileRuleValidator.Validate(profile: Profile(video: Video(width: 0)));
+        ValidationEnvelope result = ProfileRuleValidator.Validate(Profile(video: Video(width: 0)));
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.VideoWidthInvalid).Should().BeTrue();
+        HasRule(result, EncoderRuleId.VideoWidthInvalid).Should().BeTrue();
     }
 
     [Fact]
     public void VideoHeightNegative_Rejected()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(video: Video(height: -1))
+            Profile(video: Video(height: -1))
         );
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.VideoHeightInvalid).Should().BeTrue();
+        HasRule(result, EncoderRuleId.VideoHeightInvalid).Should().BeTrue();
     }
 
     [Fact]
@@ -257,42 +257,42 @@ public class ProfileValidationMatrixTests
     {
         LadderRung[] rungs =
         [
-            new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 5000, MaxBitrateKbps: 7500, BufferSizeKbps: 10000, Framerate: 30),
-            new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 5000, MaxBitrateKbps: 7500, BufferSizeKbps: 10000, Framerate: 30),
+            new(1920, 1080, VideoCodecType.H264, 5000, 7500, 10000, 30),
+            new(1920, 1080, VideoCodecType.H264, 5000, 7500, 10000, 30),
         ];
         LadderConfig ladder = new() { Mode = LadderMode.Manual, Rungs = rungs };
-        ValidationEnvelope result = ProfileRuleValidator.Validate(profile: Profile(ladder: ladder));
-        HasRule(env: result, id: EncoderRuleId.LadderDuplicateVariant).Should().BeTrue();
-        FindRule(env: result, id: EncoderRuleId.LadderDuplicateVariant)!
+        ValidationEnvelope result = ProfileRuleValidator.Validate(Profile(ladder: ladder));
+        HasRule(result, EncoderRuleId.LadderDuplicateVariant).Should().BeTrue();
+        FindRule(result, EncoderRuleId.LadderDuplicateVariant)!
             .Severity.Should()
-            .Be(expected: EncoderRuleSeverity.Warning);
+            .Be(EncoderRuleSeverity.Warning);
     }
 
     [Fact]
     public void CustomArgsReservedFlag_Rejected()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(video: Video(), customArgs: new() { { "-c:v", "libx264" } })
+            Profile(video: Video(), customArgs: new() { { "-c:v", "libx264" } })
         );
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.CustomArgsReservedFlag).Should().BeTrue();
+        HasRule(result, EncoderRuleId.CustomArgsReservedFlag).Should().BeTrue();
     }
 
     [Fact]
     public void AssInMp4_Rejected()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(container: Container.Mp4, subtitles: [Subtitle(codec: SubtitleCodecType.Ass)])
+            Profile(container: Container.Mp4, subtitles: [Subtitle(codec: SubtitleCodecType.Ass)])
         );
         result.Valid.Should().BeFalse();
-        HasRule(env: result, id: EncoderRuleId.SubtitlesContainerIncompatible).Should().BeTrue();
+        HasRule(result, EncoderRuleId.SubtitlesContainerIncompatible).Should().BeTrue();
     }
 
     [Fact]
     public void H264InHlsTs_Valid()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(
+            Profile(
                 container: Container.HlsTs,
                 video: Video(codec: VideoCodecType.H264),
                 audio: [Audio(codec: AudioCodecType.Aac)]
@@ -306,7 +306,7 @@ public class ProfileValidationMatrixTests
     public void H265InHlsFmp4_Valid()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(
+            Profile(
                 container: Container.HlsFmp4,
                 video: Video(codec: VideoCodecType.H265),
                 audio: [Audio(codec: AudioCodecType.Aac)]
@@ -320,7 +320,7 @@ public class ProfileValidationMatrixTests
     public void Av1InHlsFmp4_Valid()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(
+            Profile(
                 container: Container.HlsFmp4,
                 video: Video(codec: VideoCodecType.Av1),
                 audio: [Audio(codec: AudioCodecType.Aac)]
@@ -334,7 +334,7 @@ public class ProfileValidationMatrixTests
     public void H264Mp4WithAac_Valid()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(
+            Profile(
                 container: Container.Mp4,
                 video: Video(codec: VideoCodecType.H264),
                 audio: [Audio(codec: AudioCodecType.Aac, bitrate: 128)]
@@ -348,7 +348,7 @@ public class ProfileValidationMatrixTests
     public void Hevc10BitArchive_Valid()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(
+            Profile(
                 container: Container.Mkv,
                 video: Video(
                     codec: VideoCodecType.H265,
@@ -367,7 +367,7 @@ public class ProfileValidationMatrixTests
     public void OneTwentyAtFiveMbps_Valid()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(video: Video(width: 1920, height: 1080, rc: RateControlMode.Vbr, bitrate: 5000))
+            Profile(video: Video(width: 1920, height: 1080, rc: RateControlMode.Vbr, bitrate: 5000))
         );
         result.Valid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
@@ -378,13 +378,13 @@ public class ProfileValidationMatrixTests
     {
         LadderRung[] rungs =
         [
-            new(Width: 640, Height: 360, Codec: VideoCodecType.H264, BitrateKbps: 500, MaxBitrateKbps: 750, BufferSizeKbps: 1000, Framerate: 30),
-            new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 2000, MaxBitrateKbps: 3000, BufferSizeKbps: 4000, Framerate: 30),
-            new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 5000, MaxBitrateKbps: 7500, BufferSizeKbps: 10000, Framerate: 30),
+            new(640, 360, VideoCodecType.H264, 500, 750, 1000, 30),
+            new(1280, 720, VideoCodecType.H264, 2000, 3000, 4000, 30),
+            new(1920, 1080, VideoCodecType.H264, 5000, 7500, 10000, 30),
         ];
         LadderConfig ladder = new() { Mode = LadderMode.Manual, Rungs = rungs };
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(video: Video(), ladder: ladder)
+            Profile(video: Video(), ladder: ladder)
         );
         result.Valid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
@@ -394,7 +394,7 @@ public class ProfileValidationMatrixTests
     public void OneEightyAt4_1_Valid()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(video: Video(width: 1920, height: 1080, level: "4.1"))
+            Profile(video: Video(width: 1920, height: 1080, level: "4.1"))
         );
         result.Valid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
@@ -404,7 +404,7 @@ public class ProfileValidationMatrixTests
     public void CrfInRange_Valid()
     {
         ValidationEnvelope result = ProfileRuleValidator.Validate(
-            profile: Profile(video: Video(rc: RateControlMode.Crf, crf: 23))
+            Profile(video: Video(rc: RateControlMode.Crf, crf: 23))
         );
         result.Valid.Should().BeTrue();
         result.Errors.Should().BeEmpty();

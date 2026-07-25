@@ -28,7 +28,7 @@ public static class PublicKeyFingerprint
     /// <returns>64-character lowercase hex string.</returns>
     public static string Compute(byte[] publicKeyBytes)
     {
-        byte[] hash = SHA256.HashData(source: publicKeyBytes);
-        return Convert.ToHexString(inArray: hash).ToLowerInvariant();
+        byte[] hash = SHA256.HashData(publicKeyBytes);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }

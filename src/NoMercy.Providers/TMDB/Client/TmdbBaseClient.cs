@@ -42,16 +42,16 @@ public class TmdbBaseClient : ExternalApiClient
     public new int Id { get; private set; }
 
     protected override string HttpClientName => HttpClientNames.Tmdb;
-    protected override Uri BaseUrl => new(uriString: "https://api.themoviedb.org/3/");
+    protected override Uri BaseUrl => new("https://api.themoviedb.org/3/");
     protected override int ConcurrentRequests => 50;
 
     protected override void ConfigureClient(HttpClient client) =>
         client.DefaultRequestHeaders.Add(
-            name: "Authorization",
-            value: $"Bearer {ApiKeyStore.Current.TmdbToken}"
+            "Authorization",
+            $"Bearer {ApiKeyStore.Current.TmdbToken}"
         );
 
-    protected override void LogRequest(string url) => Logger.MovieDb(message: url, level: LogEventLevel.Verbose);
+    protected override void LogRequest(string url) => Logger.MovieDb(url, LogEventLevel.Verbose);
 
     private static int Max(int available, int wanted, int constraint)
     {
@@ -71,46 +71,46 @@ public class TmdbBaseClient : ExternalApiClient
         where T : class
     {
         query ??= new();
-        if (!query.ContainsKey(key: "language"))
-            query[key: "language"] = priority is true ? Language : "";
-        query[key: "include_adult"] = RuntimeServerSettings.Current.ShowAdultContent ? "true" : "false";
+        if (!query.ContainsKey("language"))
+            query["language"] = priority is true ? Language : "";
+        query["include_adult"] = RuntimeServerSettings.Current.ShowAdultContent ? "true" : "false";
 
-        string newUrl = QueryHelpers.AddQueryString(uri: url, queryString: query);
+        string newUrl = QueryHelpers.AddQueryString(url, query);
 
         if (!skipCache)
         {
-            (bool found, T? result) = await CacheController.ReadAsync<T>(url: newUrl);
+            (bool found, T? result) = await CacheController.ReadAsync<T>(newUrl);
             if (found)
                 return result;
         }
 
-        LogRequest(url: BaseUrl + newUrl);
+        LogRequest(BaseUrl + newUrl);
 
         try
         {
             string response = await RequestQueue.Enqueue(
-                task: () =>
+                () =>
                 {
                     if (Disposed)
                         throw new ObjectDisposedException(
-                            objectName: nameof(TmdbBaseClient),
-                            message: "Cannot access a disposed TMDB client."
+                            nameof(TmdbBaseClient),
+                            "Cannot access a disposed TMDB client."
                         );
-                    return Client.GetStringAsync(requestUri: newUrl);
+                    return Client.GetStringAsync(newUrl);
                 },
-                url: newUrl,
-                priority: priority
+                newUrl,
+                priority
             );
 
             if (!skipCache)
-                await CacheController.Write(url: newUrl, data: response);
+                await CacheController.Write(newUrl, response);
             return response.FromJson<T>();
         }
         catch (ObjectDisposedException)
         {
             Logger.MovieDb(
-                message: $"TMDB client disposed during operation for {newUrl}",
-                level: LogEventLevel.Debug
+                $"TMDB client disposed during operation for {newUrl}",
+                LogEventLevel.Debug
             );
             return null;
         }
@@ -124,7 +124,7 @@ public class TmdbBaseClient : ExternalApiClient
                         or HttpStatusCode.ServiceUnavailable
             )
         {
-            Logger.MovieDb(message: $"HTTP {ex.StatusCode} for {newUrl}", level: LogEventLevel.Debug);
+            Logger.MovieDb($"HTTP {ex.StatusCode} for {newUrl}", LogEventLevel.Debug);
             return null;
         }
         catch (HttpRequestException ex)
@@ -134,8 +134,8 @@ public class TmdbBaseClient : ExternalApiClient
             // Degrade to a null (cache-miss-style) result rather than throwing so
             // callers — and the *HandlesGracefully contract — never see an exception.
             Logger.MovieDb(
-                message: $"TMDB HTTP request failed for {newUrl}: {ex.Message}",
-                level: LogEventLevel.Warning
+                $"TMDB HTTP request failed for {newUrl}: {ex.Message}",
+                LogEventLevel.Warning
             );
             return null;
         }
@@ -143,8 +143,8 @@ public class TmdbBaseClient : ExternalApiClient
             when (ex is Newtonsoft.Json.JsonException or OperationCanceledException)
         {
             Logger.MovieDb(
-                message: $"TMDB response could not be processed for {newUrl}: {ex.Message}",
-                level: LogEventLevel.Warning
+                $"TMDB response could not be processed for {newUrl}: {ex.Message}",
+                LogEventLevel.Warning
             );
             return null;
         }
@@ -154,21 +154,21 @@ public class TmdbBaseClient : ExternalApiClient
         where T : class
     {
         List<T> list = [];
-        TmdbPaginatedResponse<T>? firstPage = await Get<TmdbPaginatedResponse<T>>(url: url);
-        list.AddRange(collection: firstPage?.Results ?? []);
+        TmdbPaginatedResponse<T>? firstPage = await Get<TmdbPaginatedResponse<T>>(url);
+        list.AddRange(firstPage?.Results ?? []);
         if (limit > 1)
             await Parallel.ForAsync(
-                fromInclusive: 2,
-                toExclusive: Max(available: firstPage?.TotalPages ?? 0, wanted: limit, constraint: 500) + 1,
-                body: async (i, _) =>
+                2,
+                Max(firstPage?.TotalPages ?? 0, limit, 500) + 1,
+                async (i, _) =>
                 {
                     TmdbPaginatedResponse<T>? page = await Get<TmdbPaginatedResponse<T>>(
-                        url: url,
-                        query: new() { [key: "page"] = i.ToString() }
+                        url,
+                        new() { ["page"] = i.ToString() }
                     );
                     lock (list)
                     {
-                        list.AddRange(collection: page?.Results ?? []);
+                        list.AddRange(page?.Results ?? []);
                     }
                 }
             );
@@ -177,6 +177,6 @@ public class TmdbBaseClient : ExternalApiClient
 
     public Task<TmdbTmdbNetworkDetails?> CompanyDetails(int id, bool? priority = false)
     {
-        return Get<TmdbTmdbNetworkDetails>(url: "company/" + id, priority: priority);
+        return Get<TmdbTmdbNetworkDetails>("company/" + id, priority: priority);
     }
 }

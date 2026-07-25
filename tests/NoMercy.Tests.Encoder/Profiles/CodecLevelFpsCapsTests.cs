@@ -26,55 +26,55 @@ public class CodecLevelFpsCapsTests
     // ── H.264 spec values ───────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: ["4.0", 62_914_560L])] // 1080p30 needs ~62M
-    [InlineData(data: ["4.1", 62_914_560L])] // Same as 4.0
-    [InlineData(data: ["4.2", 133_693_440L])] // 1080p60
-    [InlineData(data: ["5.0", 150_994_944L])] // Up to ~4K30 in theory
-    [InlineData(data: ["5.1", 251_658_240L])] // 4K30 typical declared
-    [InlineData(data: ["5.2", 530_841_600L])] // 4K60
-    [InlineData(data: ["6.0", 1_069_547_520L])] // 8K30
-    [InlineData(data: ["6.2", 4_278_190_080L])] // 8K120
+    [InlineData(["4.0", 62_914_560L])] // 1080p30 needs ~62M
+    [InlineData(["4.1", 62_914_560L])] // Same as 4.0
+    [InlineData(["4.2", 133_693_440L])] // 1080p60
+    [InlineData(["5.0", 150_994_944L])] // Up to ~4K30 in theory
+    [InlineData(["5.1", 251_658_240L])] // 4K30 typical declared
+    [InlineData(["5.2", 530_841_600L])] // 4K60
+    [InlineData(["6.0", 1_069_547_520L])] // 8K30
+    [InlineData(["6.2", 4_278_190_080L])] // 8K120
     public void H264_Lookup_SpecValues(string level, long expected)
     {
         CodecLevelFpsCaps
-            .Lookup(codec: VideoCodecType.H264, level: level)
+            .Lookup(VideoCodecType.H264, level)
             .Should()
             .NotBeNull()
-            .And.Match<CodecLevelFpsCaps.LevelCap>(predicate: c => c.MaxLumaSamplesPerSec == expected);
+            .And.Match<CodecLevelFpsCaps.LevelCap>(c => c.MaxLumaSamplesPerSec == expected);
     }
 
     // ── HEVC spec values ────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: ["3.1", 33_177_600L])] // 720p30
-    [InlineData(data: ["4.0", 66_846_720L])] // 1080p30 typical
-    [InlineData(data: ["4.1", 133_693_440L])] // 1080p60
-    [InlineData(data: ["5.0", 267_386_880L])] // 4K30
-    [InlineData(data: ["5.1", 534_773_760L])] // 4K60
-    [InlineData(data: ["5.2", 1_069_547_520L])] // 8K30
+    [InlineData(["3.1", 33_177_600L])] // 720p30
+    [InlineData(["4.0", 66_846_720L])] // 1080p30 typical
+    [InlineData(["4.1", 133_693_440L])] // 1080p60
+    [InlineData(["5.0", 267_386_880L])] // 4K30
+    [InlineData(["5.1", 534_773_760L])] // 4K60
+    [InlineData(["5.2", 1_069_547_520L])] // 8K30
     public void Hevc_Lookup_SpecValues(string level, long expected)
     {
         CodecLevelFpsCaps
-            .Lookup(codec: VideoCodecType.H265, level: level)
+            .Lookup(VideoCodecType.H265, level)
             .Should()
             .NotBeNull()
-            .And.Match<CodecLevelFpsCaps.LevelCap>(predicate: c => c.MaxLumaSamplesPerSec == expected);
+            .And.Match<CodecLevelFpsCaps.LevelCap>(c => c.MaxLumaSamplesPerSec == expected);
     }
 
     // ── VP9 spec values ─────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: ["3.1", 36_864_000L])]
-    [InlineData(data: ["4", 83_558_400L])]
-    [InlineData(data: ["5", 311_951_360L])]
-    [InlineData(data: ["5.1", 588_251_136L])]
+    [InlineData(["3.1", 36_864_000L])]
+    [InlineData(["4", 83_558_400L])]
+    [InlineData(["5", 311_951_360L])]
+    [InlineData(["5.1", 588_251_136L])]
     public void Vp9_Lookup_SpecValues(string level, long expected)
     {
         CodecLevelFpsCaps
-            .Lookup(codec: VideoCodecType.Vp9, level: level)
+            .Lookup(VideoCodecType.Vp9, level)
             .Should()
             .NotBeNull()
-            .And.Match<CodecLevelFpsCaps.LevelCap>(predicate: c => c.MaxLumaSamplesPerSec == expected);
+            .And.Match<CodecLevelFpsCaps.LevelCap>(c => c.MaxLumaSamplesPerSec == expected);
     }
 
     // ── Lookup edge cases ───────────────────────────────────────────────────
@@ -82,24 +82,24 @@ public class CodecLevelFpsCapsTests
     [Fact]
     public void Lookup_UnknownLevel_ReturnsNull()
     {
-        CodecLevelFpsCaps.Lookup(codec: VideoCodecType.H264, level: "9.9").Should().BeNull();
+        CodecLevelFpsCaps.Lookup(VideoCodecType.H264, "9.9").Should().BeNull();
     }
 
     [Fact]
     public void Lookup_UnsupportedCodec_ReturnsNull()
     {
         // AV1 / Copy / etc. have no entries in this table yet.
-        CodecLevelFpsCaps.Lookup(codec: VideoCodecType.Av1, level: "5.0").Should().BeNull();
-        CodecLevelFpsCaps.Lookup(codec: VideoCodecType.Copy, level: "5.0").Should().BeNull();
+        CodecLevelFpsCaps.Lookup(VideoCodecType.Av1, "5.0").Should().BeNull();
+        CodecLevelFpsCaps.Lookup(VideoCodecType.Copy, "5.0").Should().BeNull();
     }
 
     [Fact]
     public void Lookup_CaseInsensitive()
     {
         // Level strings can come from user input or DB rows — accept any case.
-        CodecLevelFpsCaps.Lookup(codec: VideoCodecType.H264, level: "4.0").Should().NotBeNull();
+        CodecLevelFpsCaps.Lookup(VideoCodecType.H264, "4.0").Should().NotBeNull();
         CodecLevelFpsCaps
-            .Lookup(codec: VideoCodecType.H264, level: "4.0".ToUpperInvariant())
+            .Lookup(VideoCodecType.H264, "4.0".ToUpperInvariant())
             .Should()
             .NotBeNull();
     }
@@ -107,11 +107,11 @@ public class CodecLevelFpsCapsTests
     // ── FindNextFit ─────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: [VideoCodecType.H264, 62_914_560L, "4.0"])] // Exact-match boundary
-    [InlineData(data: [VideoCodecType.H264, 70_000_000L, "4.2"])] // Bumps to next level
-    [InlineData(data: [VideoCodecType.H264, 530_841_600L, "5.2"])] // 4K60ish exact-match boundary
-    [InlineData(data: [VideoCodecType.H265, 100_000_000L, "4.1"])] // HEVC 4.1 = 133M
-    [InlineData(data: [VideoCodecType.H265, 500_000_000L, "5.1"])] // 4K60 HEVC
+    [InlineData([VideoCodecType.H264, 62_914_560L, "4.0"])] // Exact-match boundary
+    [InlineData([VideoCodecType.H264, 70_000_000L, "4.2"])] // Bumps to next level
+    [InlineData([VideoCodecType.H264, 530_841_600L, "5.2"])] // 4K60ish exact-match boundary
+    [InlineData([VideoCodecType.H265, 100_000_000L, "4.1"])] // HEVC 4.1 = 133M
+    [InlineData([VideoCodecType.H265, 500_000_000L, "5.1"])] // 4K60 HEVC
     public void FindNextFit_PicksFirstSufficientLevel(
         VideoCodecType codec,
         long required,
@@ -119,31 +119,31 @@ public class CodecLevelFpsCapsTests
     )
     {
         CodecLevelFpsCaps
-            .FindNextFit(codec: codec, requiredSamplesPerSec: required)
+            .FindNextFit(codec, required)
             .Should()
             .NotBeNull()
-            .And.Match<CodecLevelFpsCaps.LevelCap>(predicate: c => c.Level == expected);
+            .And.Match<CodecLevelFpsCaps.LevelCap>(c => c.Level == expected);
     }
 
     [Fact]
     public void FindNextFit_ExceedsHighestLevel_ReturnsNull()
     {
         // H.264 6.2 caps at 4.28B; ask for more.
-        CodecLevelFpsCaps.FindNextFit(codec: VideoCodecType.H264, requiredSamplesPerSec: 5_000_000_000L).Should().BeNull();
+        CodecLevelFpsCaps.FindNextFit(VideoCodecType.H264, 5_000_000_000L).Should().BeNull();
     }
 
     [Fact]
     public void FindNextFit_UnsupportedCodec_ReturnsNull()
     {
-        CodecLevelFpsCaps.FindNextFit(codec: VideoCodecType.Av1, requiredSamplesPerSec: 100_000_000L).Should().BeNull();
+        CodecLevelFpsCaps.FindNextFit(VideoCodecType.Av1, 100_000_000L).Should().BeNull();
     }
 
     // ── Table integrity ─────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: VideoCodecType.H264)]
-    [InlineData(data: VideoCodecType.H265)]
-    [InlineData(data: VideoCodecType.Vp9)]
+    [InlineData(VideoCodecType.H264)]
+    [InlineData(VideoCodecType.H265)]
+    [InlineData(VideoCodecType.Vp9)]
     public void Tables_AreMonotonicallyIncreasing(VideoCodecType codec)
     {
         // FindNextFit relies on tables being ordered low→high so the first
@@ -160,12 +160,12 @@ public class CodecLevelFpsCapsTests
         for (int i = 1; i < table.Count; i++)
         {
             // Allow equal (4.0 / 4.1 in H.264 share the same cap by design).
-            table[index: i]
+            table[i]
                 .MaxLumaSamplesPerSec.Should()
                 .BeGreaterThanOrEqualTo(
-                    expected: table[index: i - 1].MaxLumaSamplesPerSec,
-                    because: $"{codec} table entry {table[index: i].Level} must be >= preceding "
-                             + $"{table[index: i - 1].Level}"
+                    table[i - 1].MaxLumaSamplesPerSec,
+                    $"{codec} table entry {table[i].Level} must be >= preceding "
+                             + $"{table[i - 1].Level}"
                 );
         }
     }

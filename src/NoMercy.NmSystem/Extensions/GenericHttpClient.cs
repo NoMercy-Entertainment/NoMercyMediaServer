@@ -26,43 +26,43 @@ public class GenericHttpClient
     {
         _client = new();
 
-        if (!string.IsNullOrEmpty(value: baseUrl))
-            _client.BaseAddress = new(uriString: baseUrl);
+        if (!string.IsNullOrEmpty(baseUrl))
+            _client.BaseAddress = new(baseUrl);
 
         // Timeout policy
         AsyncTimeoutPolicy<HttpResponseMessage>? timeoutPolicy =
             Policy.TimeoutAsync<HttpResponseMessage>(
-                timeout: TimeSpan.FromSeconds(seconds: timeoutSeconds),
-                timeoutStrategy: TimeoutStrategy.Optimistic
+                TimeSpan.FromSeconds(timeoutSeconds),
+                TimeoutStrategy.Optimistic
             );
 
         // Retry only for transient failures: 5xx, 408 (RequestTimeout), 429 (TooManyRequests) and network exceptions
         AsyncRetryPolicy<HttpResponseMessage>? retryPolicy = Policy<HttpResponseMessage>
             .Handle<HttpRequestException>()
             .Or<TaskCanceledException>() // often indicates a timeout or network drop
-            .OrResult(resultPredicate: r => r != null && IsTransientStatusCode(statusCode: r.StatusCode))
+            .OrResult(r => r != null && IsTransientStatusCode(r.StatusCode))
             .WaitAndRetryAsync(
-                retryCount: retryCount,
-                sleepDurationProvider: retryAttempt =>
+                retryCount,
+                retryAttempt =>
                 {
                     // Exponential backoff with cap
-                    double seconds = Math.Min(val1: Math.Pow(x: 2, y: retryAttempt), val2: 30);
-                    return TimeSpan.FromSeconds(value: seconds);
+                    double seconds = Math.Min(Math.Pow(2, retryAttempt), 30);
+                    return TimeSpan.FromSeconds(seconds);
                 },
-                onRetryAsync: (_, _, _, _) => Task.CompletedTask
+                (_, _, _, _) => Task.CompletedTask
             );
 
-        _resiliencePolicy = Policy.WrapAsync(policies: [retryPolicy, timeoutPolicy]);
+        _resiliencePolicy = Policy.WrapAsync(retryPolicy, timeoutPolicy);
     }
 
     public void SetDefaultHeaders(string userAgent, string? bearerToken = null)
     {
-        _client.DefaultRequestHeaders.UserAgent.ParseAdd(input: userAgent);
+        _client.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
         _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "application/json"));
+        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
-        if (!string.IsNullOrEmpty(value: bearerToken))
-            _client.DefaultRequestHeaders.Authorization = new(scheme: "Bearer", parameter: bearerToken);
+        if (!string.IsNullOrEmpty(bearerToken))
+            _client.DefaultRequestHeaders.Authorization = new("Bearer", bearerToken);
     }
 
     public Task<HttpResponseMessage> SendAsync(
@@ -73,12 +73,12 @@ public class GenericHttpClient
     )
     {
         return _resiliencePolicy.ExecuteAsync(
-            action: ct =>
+            ct =>
             {
-                HttpRequestMessage request = new(method: method, requestUri: endpoint) { Content = content };
-                return _client.SendAsync(request: request, cancellationToken: ct);
+                HttpRequestMessage request = new(method, endpoint) { Content = content };
+                return _client.SendAsync(request, ct);
             },
-            cancellationToken: cancellationToken
+            cancellationToken
         );
     }
 
@@ -95,16 +95,16 @@ public class GenericHttpClient
         // every SendAndReadAsync call held the connection until GC.
         using HttpResponseMessage response =
             queryParams?.Count > 0
-                ? await SendAsync(method: method, endpoint: endpoint, queryParams: queryParams, cancellationToken: cancellationToken)
-                : await SendAsync(method: method, endpoint: endpoint, content: content, cancellationToken: cancellationToken);
+                ? await SendAsync(method, endpoint, queryParams, cancellationToken)
+                : await SendAsync(method, endpoint, content, cancellationToken);
 
-        string body = await response.Content.ReadAsStringAsync(cancellationToken: cancellationToken);
+        string body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
             throw new HttpRequestException(
-                message: $"Request to {endpoint} failed with status {(int)response.StatusCode} ({response.StatusCode}): {body}",
-                inner: null,
-                statusCode: response.StatusCode
+                $"Request to {endpoint} failed with status {(int)response.StatusCode} ({response.StatusCode}): {body}",
+                null,
+                response.StatusCode
             );
 
         return body;
@@ -120,21 +120,21 @@ public class GenericHttpClient
         if (queryParams.Count > 0)
         {
             string query = string.Join(
-                separator: "&",
-                values: queryParams.Select(selector: kvp =>
-                    $"{Uri.EscapeDataString(stringToEscape: kvp.Key)}={Uri.EscapeDataString(stringToEscape: kvp.Value)}"
+                "&",
+                queryParams.Select(kvp =>
+                    $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"
                 )
             );
-            endpoint = $"{endpoint}{(endpoint.Contains(value: '?') ? "&" : "?")}{query}";
+            endpoint = $"{endpoint}{(endpoint.Contains('?') ? "&" : "?")}{query}";
         }
 
         return _resiliencePolicy.ExecuteAsync(
-            action: ct =>
+            ct =>
             {
-                HttpRequestMessage request = new(method: method, requestUri: endpoint);
-                return _client.SendAsync(request: request, cancellationToken: ct);
+                HttpRequestMessage request = new(method, endpoint);
+                return _client.SendAsync(request, ct);
             },
-            cancellationToken: cancellationToken
+            cancellationToken
         );
     }
 

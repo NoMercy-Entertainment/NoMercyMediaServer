@@ -34,7 +34,7 @@ public sealed class LinearQualityScaler : IQualityScaler
         if (sourceMax <= 0)
             return 0;
 
-        int scaled = (int)Math.Round(a: (double)sourceCrf / sourceMax * targetMax);
-        return Math.Clamp(value: scaled, min: 0, max: targetMax);
+        int scaled = (int)Math.Round((double)sourceCrf / sourceMax * targetMax);
+        return Math.Clamp(scaled, 0, targetMax);
     }
 }

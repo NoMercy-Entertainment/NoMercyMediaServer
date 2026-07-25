@@ -17,11 +17,11 @@ using NoMercy.Tests.Providers.Infrastructure;
 
 namespace NoMercy.Tests.Providers.MusicBrainz.Client;
 
-[Collection(name: "HttpClientProvider")]
+[Collection("HttpClientProvider")]
 public sealed class MusicBrainzDiscClientTests : ProviderHttpHarness
 {
     public MusicBrainzDiscClientTests()
-        : base(httpClientNames: HttpClientNames.MusicBrainz) { }
+        : base(HttpClientNames.MusicBrainz) { }
 
     [Fact]
     public async Task LookupByDiscId_RequestsDiscIdPathWithDefaultIncludes()
@@ -32,25 +32,25 @@ public sealed class MusicBrainzDiscClientTests : ProviderHttpHarness
             Id = discId,
             Releases = [new() { Id = Guid.NewGuid(), Barcode = "test" }],
         };
-        Handler.WhenGet(pathContains: $"discid/{discId}", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
+        Handler.WhenGet($"discid/{discId}", MockResponse.Json(HttpStatusCode.OK, body));
 
         using MusicBrainzDiscClient client = new();
-        DiscIdLookupResponse? result = await client.LookupByDiscId(discId: discId);
+        DiscIdLookupResponse? result = await client.LookupByDiscId(discId);
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(expected: discId);
-        result.Releases.Should().HaveCount(expected: 1);
+        result!.Id.Should().Be(discId);
+        result.Releases.Should().HaveCount(1);
 
         CapturedRequest request = Handler
             .Requests.Should()
-            .ContainSingle(predicate: r => r.Path.Contains($"discid/{discId}"))
+            .ContainSingle(r => r.Path.Contains($"discid/{discId}"))
             .Which;
         request
             .Query.Should()
-            .ContainKey(expected: "inc")
+            .ContainKey("inc")
             .WhoseValue.Should()
-            .Be(expected: "recordings+artist-credits+release-groups");
-        request.Query.Should().ContainKey(expected: "fmt").WhoseValue.Should().Be(expected: "json");
+            .Be("recordings+artist-credits+release-groups");
+        request.Query.Should().ContainKey("fmt").WhoseValue.Should().Be("json");
     }
 
     [Fact]
@@ -60,26 +60,26 @@ public sealed class MusicBrainzDiscClientTests : ProviderHttpHarness
         // id), and forwards the caller-built toc= string verbatim.
         string toc = $"1 2 150 {Guid.NewGuid():N}";
         DiscIdLookupResponse body = new() { Releases = [] };
-        Handler.WhenGet(pathContains: "discid/-", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
+        Handler.WhenGet("discid/-", MockResponse.Json(HttpStatusCode.OK, body));
 
         using MusicBrainzDiscClient client = new();
-        DiscIdLookupResponse? result = await client.LookupByTocString(tocString: toc);
+        DiscIdLookupResponse? result = await client.LookupByTocString(toc);
 
         result.Should().NotBeNull();
 
         CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
-        request.Path.Should().Be(expected: "/ws/2/discid/-");
-        request.Query.Should().ContainKey(expected: "toc").WhoseValue.Should().Be(expected: toc);
+        request.Path.Should().Be("/ws/2/discid/-");
+        request.Query.Should().ContainKey("toc").WhoseValue.Should().Be(toc);
     }
 
     [Fact]
     public async Task LookupByDiscId_UnknownDisc_ReturnsNull()
     {
         string discId = $"disc-{Guid.NewGuid():N}";
-        Handler.WhenGet(pathContains: $"discid/{discId}", responses: MockResponse.Status(status: HttpStatusCode.NotFound));
+        Handler.WhenGet($"discid/{discId}", MockResponse.Status(HttpStatusCode.NotFound));
 
         using MusicBrainzDiscClient client = new();
-        DiscIdLookupResponse? result = await client.LookupByDiscId(discId: discId);
+        DiscIdLookupResponse? result = await client.LookupByDiscId(discId);
 
         result.Should().BeNull();
     }

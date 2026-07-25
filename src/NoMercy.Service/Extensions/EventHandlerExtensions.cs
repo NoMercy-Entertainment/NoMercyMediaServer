@@ -16,7 +16,6 @@ using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Inbox;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.Networking.Messaging;
 using NoMercy.Storage;
 
@@ -26,145 +25,145 @@ public static class EventHandlerExtensions
 {
     public static IServiceCollection AddSignalREventHandlers(this IServiceCollection services)
     {
-        services.AddSingleton<SignalRPlaybackEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<SignalRPlaybackEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
             return new(
-                logger: sp.GetRequiredService<ILogger<SignalRPlaybackEventHandler>>(),
-                eventBus: eventBus,
-                clientMessenger: clientMessenger
+                sp.GetRequiredService<ILogger<SignalRPlaybackEventHandler>>(),
+                eventBus,
+                clientMessenger
             );
         });
 
-        services.AddSingleton<SignalREncodingEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<SignalREncodingEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
             return new(
-                logger: sp.GetRequiredService<ILogger<SignalREncodingEventHandler>>(),
-                eventBus: eventBus,
-                clientMessenger: clientMessenger
+                sp.GetRequiredService<ILogger<SignalREncodingEventHandler>>(),
+                eventBus,
+                clientMessenger
             );
         });
 
-        services.AddSingleton<SignalRLibraryScanEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<SignalRLibraryScanEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
             return new(
-                logger: sp.GetRequiredService<ILogger<SignalRLibraryScanEventHandler>>(),
-                eventBus: eventBus,
-                clientMessenger: clientMessenger
+                sp.GetRequiredService<ILogger<SignalRLibraryScanEventHandler>>(),
+                eventBus,
+                clientMessenger
             );
         });
 
-        services.AddSingleton<SignalRLibraryRefreshEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<SignalRLibraryRefreshEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus: eventBus, clientMessenger: clientMessenger);
+            return new(eventBus, clientMessenger);
         });
 
-        services.AddSingleton<FileWatcherEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<FileWatcherEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
             IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
             return new(
-                logger: sp.GetRequiredService<ILogger<FileWatcherEventHandler>>(),
-                eventBus: eventBus,
-                storageDriver: storageDriver,
-                storageFactory: storageFactory
+                sp.GetRequiredService<ILogger<FileWatcherEventHandler>>(),
+                eventBus,
+                storageDriver,
+                storageFactory
             );
         });
 
-        services.AddSingleton<FolderPathEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<FolderPathEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IServiceScopeFactory scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-            return new(eventBus: eventBus, scopeFactory: scopeFactory);
+            return new(eventBus, scopeFactory);
         });
 
-        services.AddSingleton<MusicLikeEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<MusicLikeEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             MusicPlaybackService playbackService = sp.GetRequiredService<MusicPlaybackService>();
-            return new(eventBus: eventBus, musicPlaybackService: playbackService);
+            return new(eventBus, playbackService);
         });
 
-        services.AddSingleton<SignalRNotificationEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<SignalRNotificationEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus: eventBus, clientMessenger: clientMessenger);
+            return new(eventBus, clientMessenger);
         });
 
-        services.AddSingleton<DriveMonitorEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<DriveMonitorEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus: eventBus, clientMessenger: clientMessenger);
+            return new(eventBus, clientMessenger);
         });
 
-        services.AddSingleton<CastEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<CastEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus: eventBus, clientMessenger: clientMessenger);
+            return new(eventBus, clientMessenger);
         });
 
-        services.AddSingleton<UserPermissionsEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<UserPermissionsEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
             return new(
-                logger: sp.GetRequiredService<ILogger<UserPermissionsEventHandler>>(),
-                eventBus: eventBus,
-                clientMessenger: clientMessenger
+                sp.GetRequiredService<ILogger<UserPermissionsEventHandler>>(),
+                eventBus,
+                clientMessenger
             );
         });
 
         services.AddSingleton<IInboxMetadataProbe, TmdbMusicBrainzMetadataProbe>();
-        services.AddSingleton<IInboxAudioTagReader>(implementationFactory: sp =>
+        services.AddSingleton<IInboxAudioTagReader>(sp =>
         {
             IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
-            return new StorageAudioTagReader(storageFactory: storageFactory);
+            return new StorageAudioTagReader(storageFactory);
         });
-        services.AddSingleton<InboxClassifier>(implementationFactory: sp =>
+        services.AddSingleton<InboxClassifier>(sp =>
         {
             IInboxMetadataProbe probe = sp.GetRequiredService<IInboxMetadataProbe>();
             IInboxAudioTagReader tagReader = sp.GetRequiredService<IInboxAudioTagReader>();
-            return new(probe: probe, tagReader: tagReader);
+            return new(probe, tagReader);
         });
-        services.AddSingleton<InboxRoutingService>(implementationFactory: sp =>
+        services.AddSingleton<InboxRoutingService>(sp =>
         {
             IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
-            return new(storageFactory: storageFactory, jobDispatcher: new());
+            return new(storageFactory, new());
         });
-        services.AddSingleton<InboxClassifierEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<InboxClassifierEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             InboxClassifier classifier = sp.GetRequiredService<InboxClassifier>();
             InboxRoutingService routing = sp.GetRequiredService<InboxRoutingService>();
             IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
             return new(
-                logger: sp.GetRequiredService<ILogger<InboxClassifierEventHandler>>(),
-                eventBus: eventBus,
-                classifier: classifier,
-                routing: routing,
-                contextFactory: () => sp.GetRequiredService<IDbContextFactory<MediaContext>>().CreateDbContext(),
-                storageFactory: storageFactory
+                sp.GetRequiredService<ILogger<InboxClassifierEventHandler>>(),
+                eventBus,
+                classifier,
+                routing,
+                () => sp.GetRequiredService<IDbContextFactory<MediaContext>>().CreateDbContext(),
+                storageFactory
             );
         });
-        services.AddSingleton<SignalRInboxEventHandler>(implementationFactory: sp =>
+        services.AddSingleton<SignalRInboxEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
             return new(
-                logger: sp.GetRequiredService<ILogger<SignalRInboxEventHandler>>(),
-                eventBus: eventBus,
-                clientMessenger: clientMessenger
+                sp.GetRequiredService<ILogger<SignalRInboxEventHandler>>(),
+                eventBus,
+                clientMessenger
             );
         });
 

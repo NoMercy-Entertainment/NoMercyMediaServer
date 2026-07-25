@@ -31,17 +31,17 @@ public sealed class WebDavDriverBuilder : IStorageDriverBuilder
 
     public IStorage Build(Ulid folderId, string driverType, string? driverConfigJson, string subPath)
     {
-        if (string.IsNullOrWhiteSpace(value: driverConfigJson))
+        if (string.IsNullOrWhiteSpace(driverConfigJson))
             throw new ArgumentException(
-                message: $"driver_config is required for 'webdav' (folder {folderId}). "
+                $"driver_config is required for 'webdav' (folder {folderId}). "
                          + "Supply at minimum: url.",
-                paramName: nameof(driverConfigJson)
+                nameof(driverConfigJson)
             );
 
         WebDavDriverConfig webDavConfig = WebDavDriverConfig.Parse(
-            json: driverConfigJson,
-            folderId: folderId,
-            logger: _logger
+            driverConfigJson,
+            folderId,
+            _logger
         );
 
         string? username = null;
@@ -50,7 +50,7 @@ public sealed class WebDavDriverBuilder : IStorageDriverBuilder
         if (_credentialResolver is not null)
         {
             (string AccessKey, string SecretKey)? creds = _credentialResolver.Resolve(
-                credentialsRef: $"driver:{folderId}"
+                $"driver:{folderId}"
             );
             if (creds is not null)
             {
@@ -60,8 +60,8 @@ public sealed class WebDavDriverBuilder : IStorageDriverBuilder
             else
             {
                 _logger.LogWarning(
-                    message: "No credentials found in store for WebDAV driver (folder {FolderId}); connecting anonymously",
-                    args: folderId
+                    "No credentials found in store for WebDAV driver (folder {FolderId}); connecting anonymously",
+                    folderId
                 );
             }
         }
@@ -69,14 +69,14 @@ public sealed class WebDavDriverBuilder : IStorageDriverBuilder
         webDavConfig = webDavConfig with { Username = username, Password = password };
 
         // Append sub-path to the WebDAV base URL when non-empty.
-        if (!string.IsNullOrEmpty(value: subPath))
+        if (!string.IsNullOrEmpty(subPath))
         {
-            string combinedUrl = JoinRoot(root: webDavConfig.Url, subPath: subPath, driverType: "webdav");
+            string combinedUrl = JoinRoot(webDavConfig.Url, subPath, "webdav");
             webDavConfig = webDavConfig with { Url = combinedUrl };
         }
 
-        WebDavStorageDriver webDavDriver = new(config: webDavConfig);
-        return new RemoteStorage(driver: webDavDriver);
+        WebDavStorageDriver webDavDriver = new(webDavConfig);
+        return new RemoteStorage(webDavDriver);
     }
 
 }

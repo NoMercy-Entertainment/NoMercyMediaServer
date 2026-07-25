@@ -47,10 +47,10 @@ public abstract class ProviderHttpHarness : IDisposable
     {
         ServiceCollection services = new();
         foreach (string name in httpClientNames)
-            services.AddHttpClient(name: name).ConfigurePrimaryHttpMessageHandler(configureHandler: () => Handler);
+            services.AddHttpClient(name).ConfigurePrimaryHttpMessageHandler(() => Handler);
 
         _serviceProvider = services.BuildServiceProvider();
-        HttpClientProvider.Initialize(factory: _serviceProvider.GetRequiredService<IHttpClientFactory>());
+        HttpClientProvider.Initialize(_serviceProvider.GetRequiredService<IHttpClientFactory>());
     }
 
     /// <summary>
@@ -64,6 +64,6 @@ public abstract class ProviderHttpHarness : IDisposable
     {
         HttpClientProvider.Reset();
         _serviceProvider.Dispose();
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 }

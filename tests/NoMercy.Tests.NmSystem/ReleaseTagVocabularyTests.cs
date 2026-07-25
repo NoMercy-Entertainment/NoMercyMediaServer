@@ -20,73 +20,73 @@ namespace NoMercy.Tests.NmSystem;
 public class ReleaseTagVocabularyTests
 {
     [Theory]
-    [InlineData(data: "SDTV")]
-    [InlineData(data: "DVB")]
-    [InlineData(data: "VODRip")]
-    [InlineData(data: "TVRip")]
-    [InlineData(data: "SATRip")]
-    [InlineData(data: "WEBCap")]
-    [InlineData(data: "HDTS")]
-    [InlineData(data: "TELESYNC")]
-    [InlineData(data: "TELECINE")]
-    [InlineData(data: "WORKPRINT")]
-    [InlineData(data: "PPV")]
-    [InlineData(data: "SCREENER")]
+    [InlineData("SDTV")]
+    [InlineData("DVB")]
+    [InlineData("VODRip")]
+    [InlineData("TVRip")]
+    [InlineData("SATRip")]
+    [InlineData("WEBCap")]
+    [InlineData("HDTS")]
+    [InlineData("TELESYNC")]
+    [InlineData("TELECINE")]
+    [InlineData("WORKPRINT")]
+    [InlineData("PPV")]
+    [InlineData("SCREENER")]
     public void NewSourceTokens_Match(string token) =>
-        StringExtensions.MatchSourceTag().IsMatch(input: token).Should().BeTrue();
+        StringExtensions.MatchSourceTag().IsMatch(token).Should().BeTrue();
 
     [Theory]
-    [InlineData(data: "AV1")]
-    [InlineData(data: "VVC")]
-    [InlineData(data: "H266")]
-    [InlineData(data: "H.266")]
-    [InlineData(data: "MPEG4")]
+    [InlineData("AV1")]
+    [InlineData("VVC")]
+    [InlineData("H266")]
+    [InlineData("H.266")]
+    [InlineData("MPEG4")]
     public void NewCodecTokens_Match(string token) =>
-        StringExtensions.MatchCodecTag().IsMatch(input: token).Should().BeTrue();
+        StringExtensions.MatchCodecTag().IsMatch(token).Should().BeTrue();
 
     [Theory]
-    [InlineData(data: "LPCM")]
-    [InlineData(data: "DD+")]
-    [InlineData(data: "DDP+")]
+    [InlineData("LPCM")]
+    [InlineData("DD+")]
+    [InlineData("DDP+")]
     public void NewAudioTokens_Match(string token) =>
-        StringExtensions.MatchAudioTag().IsMatch(input: token).Should().BeTrue();
+        StringExtensions.MatchAudioTag().IsMatch(token).Should().BeTrue();
 
     [Fact]
     public void Sdr_Matches() =>
-        StringExtensions.MatchHdrTag().IsMatch(input: "SDR").Should().BeTrue();
+        StringExtensions.MatchHdrTag().IsMatch("SDR").Should().BeTrue();
 
     [Theory]
-    [InlineData(data: "DIRFIX")]
-    [InlineData(data: "NFOFIX")]
-    [InlineData(data: "READNFO")]
-    [InlineData(data: "PROOFFIX")]
-    [InlineData(data: "RERIP")]
+    [InlineData("DIRFIX")]
+    [InlineData("NFOFIX")]
+    [InlineData("READNFO")]
+    [InlineData("PROOFFIX")]
+    [InlineData("RERIP")]
     public void NewFlagTokens_Match(string token) =>
-        StringExtensions.MatchFlagTag().IsMatch(input: token).Should().BeTrue();
+        StringExtensions.MatchFlagTag().IsMatch(token).Should().BeTrue();
 
     [Theory]
-    [InlineData(data: ["The Bureau SDTV", "The Bureau"])]
-    [InlineData(data: ["Some Doc SCREENER", "Some Doc"])]
-    [InlineData(data: ["Planet Earth WORKPRINT", "Planet Earth"])]
-    [InlineData(data: ["Short Film AV1", "Short Film"])]
-    [InlineData(data: ["Old Clip MPEG4", "Old Clip"])]
-    [InlineData(data: ["Concert LPCM", "Concert"])]
-    [InlineData(data: ["The Mix DD+", "The Mix"])]
-    [InlineData(data: ["Demo Scene SDR", "Demo Scene"])]
-    [InlineData(data: ["Some Release DIRFIX", "Some Release"])]
-    [InlineData(data: ["The File NFOFIX", "The File"])]
+    [InlineData(["The Bureau SDTV", "The Bureau"])]
+    [InlineData(["Some Doc SCREENER", "Some Doc"])]
+    [InlineData(["Planet Earth WORKPRINT", "Planet Earth"])]
+    [InlineData(["Short Film AV1", "Short Film"])]
+    [InlineData(["Old Clip MPEG4", "Old Clip"])]
+    [InlineData(["Concert LPCM", "Concert"])]
+    [InlineData(["The Mix DD+", "The Mix"])]
+    [InlineData(["Demo Scene SDR", "Demo Scene"])]
+    [InlineData(["Some Release DIRFIX", "Some Release"])]
+    [InlineData(["The File NFOFIX", "The File"])]
     public void CleanReleaseTitle_StripsNewTokens(string raw, string expected) =>
-        raw.CleanReleaseTitle().Should().Be(expected: expected);
+        raw.CleanReleaseTitle().Should().Be(expected);
 
     // Over-strip guards: none of these contain a real tag, so they must be returned
     // verbatim. They specifically exercise words we deliberately did NOT add.
     [Theory]
-    [InlineData(data: "Internal Affairs")]
-    [InlineData(data: "Opus")]
-    [InlineData(data: "Extended Family")]
-    [InlineData(data: "The Complete Angler")]
-    [InlineData(data: "Without a Trace")]
-    [InlineData(data: "Dual Survival")]
+    [InlineData("Internal Affairs")]
+    [InlineData("Opus")]
+    [InlineData("Extended Family")]
+    [InlineData("The Complete Angler")]
+    [InlineData("Without a Trace")]
+    [InlineData("Dual Survival")]
     public void CleanReleaseTitle_DoesNotOverStripTitleWords(string title) =>
-        title.CleanReleaseTitle().Should().Be(expected: title);
+        title.CleanReleaseTitle().Should().Be(title);
 }

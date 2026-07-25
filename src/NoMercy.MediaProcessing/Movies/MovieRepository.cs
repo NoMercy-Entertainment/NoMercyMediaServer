@@ -25,10 +25,10 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     public async Task Add(Movie movie)
     {
         await context
-            .Movies.Upsert(entity: movie)
-            .On(match: v => new { v.Id })
+            .Movies.Upsert(movie)
+            .On(v => new { v.Id })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         Id = ti.Id,
@@ -55,19 +55,19 @@ public class MovieRepository(MediaContext context) : IMovieRepository
             .RunAsync();
 
         await context
-            .Movies.Where(predicate: m => m.Id == movie.Id)
-            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: t => t.CreatedAt, valueExpression: t => movie.CreatedAt));
+            .Movies.Where(m => m.Id == movie.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.CreatedAt, t => movie.CreatedAt));
 
         await context.SaveChangesAsync();
 
         // Link any existing recommendation/similar rows that reference this movie as their target
         await context
-            .Recommendations.Where(predicate: r => r.MediaId == movie.Id && r.MovieToId == null)
-            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: r => r.MovieToId, valueExpression: movie.Id));
+            .Recommendations.Where(r => r.MediaId == movie.Id && r.MovieToId == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.MovieToId, movie.Id));
 
         await context
-            .Similar.Where(predicate: r => r.MediaId == movie.Id && r.MovieToId == null)
-            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: r => r.MovieToId, valueExpression: movie.Id));
+            .Similar.Where(r => r.MediaId == movie.Id && r.MovieToId == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.MovieToId, movie.Id));
     }
 
     public async Task Remove(int id)
@@ -83,14 +83,14 @@ public class MovieRepository(MediaContext context) : IMovieRepository
 
         try
         {
-            await context.Database.ExecuteSqlRawAsync(sql: "PRAGMA foreign_keys = OFF");
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
             try
             {
-                await context.Movies.Where(predicate: movie => movie.Id == id).ExecuteDeleteAsync();
+                await context.Movies.Where(movie => movie.Id == id).ExecuteDeleteAsync();
             }
             finally
             {
-                await context.Database.ExecuteSqlRawAsync(sql: "PRAGMA foreign_keys = ON");
+                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
             }
         }
         finally
@@ -103,19 +103,19 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     public Task LinkToLibrary(Library library, Movie movie)
     {
         return context
-            .LibraryMovie.Upsert(entity: new(libraryId: library.Id, movieId: movie.Id))
-            .On(match: v => new { v.LibraryId, v.MovieId })
-            .WhenMatched(updater: (lts, lti) => new() { LibraryId = lti.LibraryId, MovieId = lti.MovieId })
+            .LibraryMovie.Upsert(new(library.Id, movie.Id))
+            .On(v => new { v.LibraryId, v.MovieId })
+            .WhenMatched((lts, lti) => new() { LibraryId = lti.LibraryId, MovieId = lti.MovieId })
             .RunAsync();
     }
 
     public Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles)
     {
         return context
-            .AlternativeTitles.UpsertRange(entities: alternativeTitles)
-            .On(match: a => new { a.Title, a.MovieId })
+            .AlternativeTitles.UpsertRange(alternativeTitles)
+            .On(a => new { a.Title, a.MovieId })
             .WhenMatched(
-                updater: (ats, ati) =>
+                (ats, ati) =>
                     new()
                     {
                         Title = ati.Title,
@@ -130,18 +130,18 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context
             .Translations.UpsertRange(
-                entities: translations.Where(predicate: translation =>
+                translations.Where(translation =>
                     translation.Title != "" || translation.Overview != ""
                 )
             )
-            .On(match: t => new
+            .On(t => new
             {
                 t.Iso31661,
                 t.Iso6391,
                 t.MovieId,
             })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         Iso31661 = ti.Iso31661,
@@ -169,21 +169,21 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context
             .Certifications.AsEnumerable()
-            .Where(predicate: c =>
-                certificationCriteria.Any(predicate: cc =>
+            .Where(c =>
+                certificationCriteria.Any(cc =>
                     cc.Iso31661 == c.Iso31661 && cc.Certification == c.Rating
                 )
             )
-            .Select(selector: c => new CertificationMovie { CertificationId = c.Id, MovieId = movie.Id });
+            .Select(c => new CertificationMovie { CertificationId = c.Id, MovieId = movie.Id });
     }
 
     public Task StoreContentRatings(IEnumerable<CertificationMovie> certifications)
     {
         return context
-            .CertificationMovie.UpsertRange(entities: certifications)
-            .On(match: v => new { v.CertificationId, v.MovieId })
+            .CertificationMovie.UpsertRange(certifications)
+            .On(v => new { v.CertificationId, v.MovieId })
             .WhenMatched(
-                updater: (ts, ti) => new() { CertificationId = ti.CertificationId, MovieId = ti.MovieId }
+                (ts, ti) => new() { CertificationId = ti.CertificationId, MovieId = ti.MovieId }
             )
             .RunAsync();
     }
@@ -191,10 +191,10 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     public Task StoreSimilar(IEnumerable<Similar> similar)
     {
         return context
-            .Similar.UpsertRange(entities: similar)
-            .On(match: v => new { v.MediaId, v.MovieFromId })
+            .Similar.UpsertRange(similar)
+            .On(v => new { v.MediaId, v.MovieFromId })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         MovieToId = ti.MovieToId,
@@ -213,10 +213,10 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     public Task StoreRecommendations(IEnumerable<Recommendation> recommendations)
     {
         return context
-            .Recommendations.UpsertRange(entities: recommendations)
-            .On(match: v => new { v.MediaId, v.MovieFromId })
+            .Recommendations.UpsertRange(recommendations)
+            .On(v => new { v.MediaId, v.MovieFromId })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         MovieToId = ti.MovieToId,
@@ -235,10 +235,10 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     public Task StoreVideos(IEnumerable<Media> videos)
     {
         return context
-            .Medias.UpsertRange(entities: videos)
-            .On(match: v => new { v.Src, v.MovieId })
+            .Medias.UpsertRange(videos)
+            .On(v => new { v.Src, v.MovieId })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         Src = ti.Src,
@@ -256,10 +256,10 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     public Task StoreImages(IEnumerable<Image> images)
     {
         return context
-            .Images.UpsertRange(entities: images)
-            .On(match: v => new { v.FilePath, v.MovieId })
+            .Images.UpsertRange(images)
+            .On(v => new { v.FilePath, v.MovieId })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         AspectRatio = ti.AspectRatio,
@@ -280,37 +280,37 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     public Task StoreKeywords(IEnumerable<Keyword> keywords)
     {
         return context
-            .Keywords.UpsertRange(entities: keywords)
-            .On(match: v => new { v.Id })
-            .WhenMatched(updater: (ts, ti) => new() { Id = ti.Id, Name = ti.Name })
+            .Keywords.UpsertRange(keywords)
+            .On(v => new { v.Id })
+            .WhenMatched((ts, ti) => new() { Id = ti.Id, Name = ti.Name })
             .RunAsync();
     }
 
     public Task LinkKeywordsToMovie(IEnumerable<KeywordMovie> keywordMovies)
     {
         return context
-            .KeywordMovie.UpsertRange(entities: keywordMovies)
-            .On(match: v => new { v.KeywordId, v.MovieId })
-            .WhenMatched(updater: (ts, ti) => new() { KeywordId = ti.KeywordId, MovieId = ti.MovieId })
+            .KeywordMovie.UpsertRange(keywordMovies)
+            .On(v => new { v.KeywordId, v.MovieId })
+            .WhenMatched((ts, ti) => new() { KeywordId = ti.KeywordId, MovieId = ti.MovieId })
             .RunAsync();
     }
 
     public Task StoreGenres(IEnumerable<GenreMovie> genreMovies)
     {
         return context
-            .GenreMovie.UpsertRange(entities: genreMovies)
-            .On(match: v => new { v.GenreId, v.MovieId })
-            .WhenMatched(updater: (ts, ti) => new() { GenreId = ti.GenreId, MovieId = ti.MovieId })
+            .GenreMovie.UpsertRange(genreMovies)
+            .On(v => new { v.GenreId, v.MovieId })
+            .WhenMatched((ts, ti) => new() { GenreId = ti.GenreId, MovieId = ti.MovieId })
             .RunAsync();
     }
 
     public Task StoreCompanies(List<Company> companies)
     {
         return context
-            .Companies.UpsertRange(entities: companies)
-            .On(match: v => new { v.Id })
+            .Companies.UpsertRange(companies)
+            .On(v => new { v.Id })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         Id = ti.Id,
@@ -329,19 +329,19 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     public Task StoreCompanyMovies(List<CompanyMovie> companyMovies)
     {
         return context
-            .CompanyMovie.UpsertRange(entities: companyMovies)
-            .On(match: v => new { v.CompanyId, v.MovieId })
-            .WhenMatched(updater: (ts, ti) => new() { CompanyId = ti.CompanyId, MovieId = ti.MovieId })
+            .CompanyMovie.UpsertRange(companyMovies)
+            .On(v => new { v.CompanyId, v.MovieId })
+            .WhenMatched((ts, ti) => new() { CompanyId = ti.CompanyId, MovieId = ti.MovieId })
             .RunAsync();
     }
 
     public Task StoreWatchProviders(List<WatchProvider> watchProviders)
     {
         return context
-            .WatchProviders.UpsertRange(entities: watchProviders)
-            .On(match: v => new { v.Id })
+            .WatchProviders.UpsertRange(watchProviders)
+            .On(v => new { v.Id })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         Id = ti.Id,
@@ -356,8 +356,8 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     public Task StoreWatchProviderMedias(List<WatchProviderMedia> watchProviderMedias)
     {
         return context
-            .WatchProviderMedia.UpsertRange(entities: watchProviderMedias)
-            .On(match: v => new
+            .WatchProviderMedia.UpsertRange(watchProviderMedias)
+            .On(v => new
             {
                 v.WatchProviderId,
                 v.CountryCode,
@@ -366,7 +366,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
                 v.TvId,
             })
             .WhenMatched(
-                updater: (ts, ti) =>
+                (ts, ti) =>
                     new()
                     {
                         WatchProviderId = ti.WatchProviderId,

@@ -56,22 +56,22 @@ public class VideoPlaylistManager
         return type switch
         {
             MediaTypes.SpecialMediaType => await GetSpecialItems(
-                userId: userId,
-                listId: listId,
-                itemId: itemId,
-                language: language,
-                country: country
+                userId,
+                listId,
+                itemId,
+                language,
+                country
             ),
             MediaTypes.CollectionMediaType => await GetCollectionItems(
-                userId: userId,
-                listId: listId,
-                itemId: itemId,
-                language: language,
-                country: country
+                userId,
+                listId,
+                itemId,
+                language,
+                country
             ),
-            MediaTypes.TvMediaType => await GetTvItems(userId: userId, listId: listId, itemId: itemId, language: language, country: country),
-            MediaTypes.MovieMediaType => await GetMovieItems(userId: userId, listId: listId, itemId: itemId, language: language, country: country),
-            _ => throw new ArgumentException(message: "Invalid playlist type", paramName: nameof(type)),
+            MediaTypes.TvMediaType => await GetTvItems(userId, listId, itemId, language, country),
+            MediaTypes.MovieMediaType => await GetMovieItems(userId, listId, itemId, language, country),
+            _ => throw new ArgumentException("Invalid playlist type", nameof(type)),
         };
     }
 
@@ -80,14 +80,14 @@ public class VideoPlaylistManager
         List<VideoPlaylistResponseDto> after
     ) SplitPlaylist(List<VideoPlaylistResponseDto> playlist, int currentTrackId)
     {
-        int index = playlist.FindIndex(match: p => p.Id == currentTrackId);
+        int index = playlist.FindIndex(p => p.Id == currentTrackId);
         if (index == -1)
             return ([], playlist);
 
-        List<VideoPlaylistResponseDto> before = playlist.GetRange(index: 0, count: index);
+        List<VideoPlaylistResponseDto> before = playlist.GetRange(0, index);
         List<VideoPlaylistResponseDto> after = playlist.GetRange(
-            index: index + 1,
-            count: playlist.Count - index - 1
+            index + 1,
+            playlist.Count - index - 1
         );
 
         return (before, after);
@@ -99,41 +99,41 @@ public class VideoPlaylistManager
     )> GetSpecialItems(Guid userId, dynamic listId, int? itemId, string language, string country)
     {
         Special? special = await _specialRepository.GetSpecialPlaylistAsync(
-            userId: userId,
-            id: Ulid.Parse(listId),
-            language: language,
-            country: country
+            userId,
+            Ulid.Parse(listId),
+            language,
+            country
         );
 
         List<VideoPlaylistResponseDto> playlist =
             special
-                ?.Items.OrderBy(keySelector: item => item.Order)
+                ?.Items.OrderBy(item => item.Order)
                 .Select(
-                    selector: (item, index) =>
+                    (item, index) =>
                         item.EpisodeId is not null
                             ? new(
-                                episode: item.Episode ?? new Episode(),
-                                playlistType: MediaTypes.SpecialMediaType,
-                                playlistId: listId,
-                                country: country,
-                                index: index
+                                item.Episode ?? new Episode(),
+                                MediaTypes.SpecialMediaType,
+                                listId,
+                                country,
+                                index
                             )
                             : new VideoPlaylistResponseDto(
-                                movie: item.Movie ?? new Movie(),
-                                playlistType: MediaTypes.SpecialMediaType,
-                                playlistId: listId,
-                                country: country,
-                                index: index
+                                item.Movie ?? new Movie(),
+                                MediaTypes.SpecialMediaType,
+                                listId,
+                                country,
+                                index
                             )
                 )
                 .ToList()
             ?? [];
 
-        VideoPlaylistResponseDto? item = playlist.FirstOrDefault(predicate: p => p.Id == itemId);
+        VideoPlaylistResponseDto? item = playlist.FirstOrDefault(p => p.Id == itemId);
 
-        if (item is null && playlist.Any(predicate: p => p.Progress?.Date is not null))
+        if (item is null && playlist.Any(p => p.Progress?.Date is not null))
         {
-            item = playlist.OrderByDescending(keySelector: p => p.Progress?.Date).FirstOrDefault();
+            item = playlist.OrderByDescending(p => p.Progress?.Date).FirstOrDefault();
         }
         if (item is null && playlist.Count != 0)
         {
@@ -149,33 +149,33 @@ public class VideoPlaylistManager
     )> GetCollectionItems(Guid userId, dynamic listId, int? itemId, string language, string country)
     {
         Collection? collection = await _collectionRepository.GetCollectionPlaylistAsync(
-            userId: userId,
-            id: int.Parse(listId),
-            language: language,
-            country: country
+            userId,
+            int.Parse(listId),
+            language,
+            country
         );
 
         List<VideoPlaylistResponseDto> playlist =
             collection
                 ?.CollectionMovies.Select(
-                    selector: (movie, index) =>
+                    (movie, index) =>
                         new VideoPlaylistResponseDto(
-                            movie: movie.Movie,
-                            playlistType: MediaTypes.CollectionMediaType,
-                            playlistId: listId,
-                            country: country,
-                            index: index + 1,
-                            collection: collection
+                            movie.Movie,
+                            MediaTypes.CollectionMediaType,
+                            listId,
+                            country,
+                            index + 1,
+                            collection
                         )
                 )
                 .ToList()
             ?? [];
 
-        VideoPlaylistResponseDto? item = playlist.FirstOrDefault(predicate: p => p.Id == itemId);
+        VideoPlaylistResponseDto? item = playlist.FirstOrDefault(p => p.Id == itemId);
 
-        if (item is null && playlist.Any(predicate: p => p.Progress?.Date is not null))
+        if (item is null && playlist.Any(p => p.Progress?.Date is not null))
         {
-            item = playlist.OrderByDescending(keySelector: p => p.Progress?.Date).FirstOrDefault();
+            item = playlist.OrderByDescending(p => p.Progress?.Date).FirstOrDefault();
         }
         if (item is null && playlist.Count != 0)
         {
@@ -191,43 +191,43 @@ public class VideoPlaylistManager
     )> GetTvItems(Guid userId, dynamic listId, int? itemId, string language, string country)
     {
         Tv? tv = await _tvShowRepository.GetPlaylistAsync(
-            userId: userId,
-            id: int.Parse(listId),
-            language: language,
-            country: country
+            userId,
+            int.Parse(listId),
+            language,
+            country
         );
 
         VideoPlaylistResponseDto[] episodes =
-            tv?.Seasons.Where(predicate: season => season.SeasonNumber > 0)
-                .SelectMany(selector: season => season.Episodes)
-                .Select(selector: episode => new VideoPlaylistResponseDto(
-                    episode: episode,
-                    playlistType: MediaTypes.TvMediaType,
-                    playlistId: listId,
-                    country: country
+            tv?.Seasons.Where(season => season.SeasonNumber > 0)
+                .SelectMany(season => season.Episodes)
+                .Select(episode => new VideoPlaylistResponseDto(
+                    episode,
+                    MediaTypes.TvMediaType,
+                    listId,
+                    country
                 ))
                 .ToArray()
             ?? [];
 
         VideoPlaylistResponseDto[] extras =
-            tv?.Seasons.Where(predicate: season => season.SeasonNumber == 0)
-                .SelectMany(selector: season => season.Episodes)
-                .Select(selector: episode => new VideoPlaylistResponseDto(
-                    episode: episode,
-                    playlistType: MediaTypes.TvMediaType,
-                    playlistId: listId,
-                    country: country
+            tv?.Seasons.Where(season => season.SeasonNumber == 0)
+                .SelectMany(season => season.Episodes)
+                .Select(episode => new VideoPlaylistResponseDto(
+                    episode,
+                    MediaTypes.TvMediaType,
+                    listId,
+                    country
                 ))
                 .ToArray()
             ?? [];
 
-        List<VideoPlaylistResponseDto> playlist = episodes.Concat(second: extras).ToList();
+        List<VideoPlaylistResponseDto> playlist = episodes.Concat(extras).ToList();
 
-        VideoPlaylistResponseDto? item = playlist.FirstOrDefault(predicate: p => p.Id == itemId);
+        VideoPlaylistResponseDto? item = playlist.FirstOrDefault(p => p.Id == itemId);
 
-        if (item is null && playlist.Any(predicate: p => p.Progress?.Date is not null))
+        if (item is null && playlist.Any(p => p.Progress?.Date is not null))
         {
-            item = playlist.OrderByDescending(keySelector: p => p.Progress?.Date).FirstOrDefault();
+            item = playlist.OrderByDescending(p => p.Progress?.Date).FirstOrDefault();
         }
         if (item is null && playlist.Count != 0)
         {
@@ -243,22 +243,22 @@ public class VideoPlaylistManager
     )> GetMovieItems(Guid userId, dynamic listId, int? itemId, string language, string country)
     {
         List<Movie> movies = await _movieRepository.GetMoviePlaylistAsync(
-            userId: userId,
-            id: int.Parse(listId),
-            language: language,
-            country: country
+            userId,
+            int.Parse(listId),
+            language,
+            country
         );
         List<VideoPlaylistResponseDto> playlist = movies
-            .Select(selector: movie => new VideoPlaylistResponseDto(
-                movie: movie,
-                playlistType: MediaTypes.MovieMediaType,
-                playlistId: int.Parse(listId),
-                country: country
+            .Select(movie => new VideoPlaylistResponseDto(
+                movie,
+                MediaTypes.MovieMediaType,
+                int.Parse(listId),
+                country
             ))
             .ToList();
 
         VideoPlaylistResponseDto? item =
-            playlist.FirstOrDefault(predicate: p => p.Id == itemId) ?? playlist.FirstOrDefault();
+            playlist.FirstOrDefault(p => p.Id == itemId) ?? playlist.FirstOrDefault();
 
         return (item, playlist);
     }

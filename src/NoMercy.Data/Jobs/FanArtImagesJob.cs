@@ -10,19 +10,18 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.FanArt.Models;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using Image = NoMercy.Database.Models.Media.Image;
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using NoMercyQueue;
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
@@ -32,7 +31,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
     public ILoggerFactory LoggerFactory { get; set; } = null!;
 
     [JsonIgnore]
-    private ILogger Log => field ??= LoggerFactory.CreateLogger(type: GetType());
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
 
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
@@ -73,10 +72,10 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
     public async Task Handle()
     {
         if (MusicBrainzArtist is not null)
-            await StoreArtist(musicBrainzArtist: MusicBrainzArtist);
+            await StoreArtist(MusicBrainzArtist);
 
         if (MusicBrainzRelease is not null)
-            await StoreRelease(musicBrainzRelease: MusicBrainzRelease);
+            await StoreRelease(MusicBrainzRelease);
     }
 
     public async Task StoreArtist(MusicBrainzArtist musicBrainzArtist)
@@ -84,13 +83,13 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
         try
         {
             using FanArtMusicClient fanArtMusicClient = new();
-            FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(id: musicBrainzArtist.Id);
+            FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(musicBrainzArtist.Id);
             if (fanArt is null)
                 return;
 
             List<Image> thumbs = fanArt
                 .Thumbs.ToList()
-                .ConvertAll<Image>(converter: image =>
+                .ConvertAll<Image>(image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -104,7 +103,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
 
             List<Image> logos = fanArt
                 .Logos.ToList()
-                .ConvertAll<Image>(converter: image =>
+                .ConvertAll<Image>(image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -117,7 +116,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                 );
             List<Image> banners = fanArt
                 .Banners.ToList()
-                .ConvertAll<Image>(converter: image =>
+                .ConvertAll<Image>(image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -130,7 +129,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                 );
             List<Image> hdLogos = fanArt
                 .HdLogos.ToList()
-                .ConvertAll<Image>(converter: image =>
+                .ConvertAll<Image>(image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -143,7 +142,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                 );
             List<Image> artistBackgrounds = fanArt
                 .Backgrounds.ToList()
-                .ConvertAll<Image>(converter: image =>
+                .ConvertAll<Image>(image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -156,14 +155,14 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                 );
 
             List<Image> images = thumbs
-                .Concat(second: logos)
-                .Concat(second: banners)
-                .Concat(second: hdLogos)
-                .Concat(second: artistBackgrounds)
+                .Concat(logos)
+                .Concat(banners)
+                .Concat(hdLogos)
+                .Concat(artistBackgrounds)
                 .ToList();
 
             await using MediaContext mediaContext = new();
-            Artist dbArtist = await mediaContext.Artists.FirstAsync(predicate: a =>
+            Artist dbArtist = await mediaContext.Artists.FirstAsync(a =>
                 a.Id == musicBrainzArtist.Id
             );
 
@@ -173,10 +172,9 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
             await mediaContext.SaveChangesAsync();
 
             await mediaContext
-                .Images.UpsertRange(entities: images)
-                .On(match: v => new { v.FilePath, v.ArtistId })
-                .WhenMatched(
-                    updater: (s, i) =>
+                .Images.UpsertRange(images)
+                .On(v => new { v.FilePath, v.ArtistId })
+                .WhenMatched((s, i) =>
                         new()
                         {
                             AspectRatio = i.AspectRatio,
@@ -193,9 +191,9 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
         }
         catch (Exception e)
         {
-            if (e.Message.Contains(value: "404"))
+            if (e.Message.Contains("404"))
                 return;
-            Log.LogTrace(message: e.Message);
+            Log.LogTrace(e.Message);
         }
     }
 
@@ -205,7 +203,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
         {
             using FanArtMusicClient fanArtMusicClient = new();
             FanArtAlbum? fanArt = await fanArtMusicClient.Album(
-                id: musicBrainzRelease.MusicBrainzReleaseGroup.Id
+                musicBrainzRelease.MusicBrainzReleaseGroup.Id
             );
             if (fanArt is null)
                 return;
@@ -215,7 +213,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
             foreach ((Guid albumId, Albums albums) in fanArt.Albums)
             {
                 covers.AddRange(
-                    collection: albums.Cover.Select(selector: image => new Image
+                    albums.Cover.Select(image => new Image
                     {
                         AspectRatio = 1,
                         Type = "cover",
@@ -228,7 +226,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                 );
 
                 cdArts.AddRange(
-                    collection: albums.CdArt.Select(selector: image => new Image
+                    albums.CdArt.Select(image => new Image
                     {
                         AspectRatio = 1,
                         Type = "cdArt",
@@ -243,13 +241,13 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
 
             await using MediaContext mediaContext = new();
             ReleaseGroup dbRelease = await mediaContext
-                .ReleaseGroups.Include(navigationPropertyPath: a => a.AlbumReleaseGroup)
-                    .ThenInclude(navigationPropertyPath: a => a.Album)
-                .FirstAsync(predicate: a => a.Id == musicBrainzRelease.MusicBrainzReleaseGroup.Id);
+                .ReleaseGroups.Include(a => a.AlbumReleaseGroup)
+                    .ThenInclude(a => a.Album)
+                .FirstAsync(a => a.Id == musicBrainzRelease.MusicBrainzReleaseGroup.Id);
 
             IEnumerable<Image> images = covers
-                .Concat(second: cdArts)
-                .Where(predicate: image => dbRelease.AlbumReleaseGroup.Any(predicate: ar => ar.AlbumId == image.AlbumId));
+                .Concat(cdArts)
+                .Where(image => dbRelease.AlbumReleaseGroup.Any(ar => ar.AlbumId == image.AlbumId));
 
             Image? albumCover = covers.FirstOrDefault();
 
@@ -263,10 +261,9 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
             await mediaContext.SaveChangesAsync();
 
             await mediaContext
-                .Images.UpsertRange(entities: images)
-                .On(match: v => new { v.FilePath, v.AlbumId })
-                .WhenMatched(
-                    updater: (s, i) =>
+                .Images.UpsertRange(images)
+                .On(v => new { v.FilePath, v.AlbumId })
+                .WhenMatched((s, i) =>
                         new()
                         {
                             AspectRatio = i.AspectRatio,
@@ -284,9 +281,9 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
         }
         catch (Exception e)
         {
-            if (e.Message.Contains(value: "404"))
+            if (e.Message.Contains("404"))
                 return;
-            Log.LogTrace(message: e.Message);
+            Log.LogTrace(e.Message);
         }
     }
 }

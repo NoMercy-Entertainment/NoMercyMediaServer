@@ -12,14 +12,14 @@ using SyntaxFactory = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 namespace NoMercy.Analyzers;
 
 [ExportCodeFixProvider(
-    firstLanguage: LanguageNames.CSharp,
+    LanguageNames.CSharp,
     Name = nameof(CallbackParameterCodeFixProvider)
 )]
 [Shared]
 public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
 {
     public override ImmutableArray<string> FixableDiagnosticIds =>
-        ImmutableArray.Create(item: DiagnosticIds.CallbackParameter);
+        ImmutableArray.Create(DiagnosticIds.CallbackParameter);
 
     // WellKnownFixAllProviders.BatchFixer computes each diagnostic's fix as an
     // independently edited copy of the document, then merges the copies via a
@@ -29,18 +29,18 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
     // rename as one structural SyntaxNode.ReplaceNodes edit against a single
     // unmodified tree instead — no per-diagnostic documents to merge.
     public override FixAllProvider GetFixAllProvider() =>
-        FixAllProvider.Create(fixAllAsync: FixAllInDocumentAsync);
+        FixAllProvider.Create(FixAllInDocumentAsync);
 
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
     {
-        Diagnostic diagnostic = context.Diagnostics[index: 0];
+        Diagnostic diagnostic = context.Diagnostics[0];
         SyntaxNode? root = await context
-            .Document.GetSyntaxRootAsync(cancellationToken: context.CancellationToken)
-            .ConfigureAwait(continueOnCapturedContext: false);
+            .Document.GetSyntaxRootAsync(context.CancellationToken)
+            .ConfigureAwait(false);
         if (root == null)
             return;
 
-        SyntaxNode node = root.FindNode(span: diagnostic.Location.SourceSpan);
+        SyntaxNode node = root.FindNode(diagnostic.Location.SourceSpan);
 
         // We must find the ParameterSyntax
         ParameterSyntax? parameter = node as ParameterSyntax;
@@ -48,17 +48,17 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
             return;
 
         context.RegisterCodeFix(
-            action: Microsoft.CodeAnalysis.CodeActions.CodeAction.Create(
-                title: Resources.CallbackParameterTitle,
-                createChangedDocument: ct =>
+            Microsoft.CodeAnalysis.CodeActions.CodeAction.Create(
+                Resources.CallbackParameterTitle,
+                ct =>
                     RenameParameterAsync(
-                        document: context.Document,
-                        parameter: parameter,
-                        cancellationToken: ct
+                        context.Document,
+                        parameter,
+                        ct
                     ),
-                equivalenceKey: nameof(CallbackParameterCodeFixProvider)
+                nameof(CallbackParameterCodeFixProvider)
             ),
-            diagnostic: diagnostic
+            diagnostic
         );
     }
 
@@ -69,8 +69,8 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
     )
     {
         SyntaxNode? root = await document
-            .GetSyntaxRootAsync(cancellationToken: cancellationToken)
-            .ConfigureAwait(continueOnCapturedContext: false);
+            .GetSyntaxRootAsync(cancellationToken)
+            .ConfigureAwait(false);
         if (root == null)
             return document;
 
@@ -82,15 +82,15 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
             return document;
 
         SemanticModel? model = await document
-            .GetSemanticModelAsync(cancellationToken: cancellationToken)
-            .ConfigureAwait(continueOnCapturedContext: false);
-        string newName = ComputeNewName(model: model, parameter: parameter, lambda: lambda);
+            .GetSemanticModelAsync(cancellationToken)
+            .ConfigureAwait(false);
+        string newName = ComputeNewName(model, parameter, lambda);
 
-        Dictionary<string, string> renameMap = new() { [key: parameter.Identifier.Text] = newName };
-        SyntaxNode newLambda = new LambdaRenameRewriter(renameMap: renameMap).Visit(node: lambda);
+        Dictionary<string, string> renameMap = new() { [parameter.Identifier.Text] = newName };
+        SyntaxNode newLambda = new LambdaRenameRewriter(renameMap).Visit(lambda);
 
-        SyntaxNode? newRoot = root.ReplaceNode(oldNode: lambda, newNode: newLambda);
-        return document.WithSyntaxRoot(root: newRoot);
+        SyntaxNode? newRoot = root.ReplaceNode(lambda, newLambda);
+        return document.WithSyntaxRoot(newRoot);
     }
 
     private static async Task<Document?> FixAllInDocumentAsync(
@@ -103,14 +103,14 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
             return document;
 
         SyntaxNode? root = await document
-            .GetSyntaxRootAsync(cancellationToken: fixAllContext.CancellationToken)
-            .ConfigureAwait(continueOnCapturedContext: false);
+            .GetSyntaxRootAsync(fixAllContext.CancellationToken)
+            .ConfigureAwait(false);
         if (root is null)
             return document;
 
         SemanticModel? model = await document
-            .GetSemanticModelAsync(cancellationToken: fixAllContext.CancellationToken)
-            .ConfigureAwait(continueOnCapturedContext: false);
+            .GetSemanticModelAsync(fixAllContext.CancellationToken)
+            .ConfigureAwait(false);
 
         // Group by enclosing lambda first: a parenthesized lambda can report one
         // diagnostic per single-letter parameter, and all of them must be renamed
@@ -120,7 +120,7 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
         foreach (Diagnostic diagnostic in diagnostics)
         {
             if (
-                root.FindNode(span: diagnostic.Location.SourceSpan) is not ParameterSyntax parameter
+                root.FindNode(diagnostic.Location.SourceSpan) is not ParameterSyntax parameter
             )
                 continue;
 
@@ -131,19 +131,19 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
 
             if (
                 !renamesByLambda.TryGetValue(
-                    key: lambda,
-                    value: out Dictionary<string, string>? renameMap
+                    lambda,
+                    out Dictionary<string, string>? renameMap
                 )
             )
             {
                 renameMap = new Dictionary<string, string>();
-                renamesByLambda[key: lambda] = renameMap;
+                renamesByLambda[lambda] = renameMap;
             }
 
-            renameMap[key: parameter.Identifier.Text] = ComputeNewName(
-                model: model,
-                parameter: parameter,
-                lambda: lambda
+            renameMap[parameter.Identifier.Text] = ComputeNewName(
+                model,
+                parameter,
+                lambda
             );
         }
 
@@ -158,18 +158,18 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
             > entry in renamesByLambda
         )
         {
-            SyntaxNode rewritten = new LambdaRenameRewriter(renameMap: entry.Value).Visit(
-                node: entry.Key
+            SyntaxNode rewritten = new LambdaRenameRewriter(entry.Value).Visit(
+                entry.Key
             );
-            replacements[key: entry.Key] = (LambdaExpressionSyntax)rewritten;
+            replacements[entry.Key] = (LambdaExpressionSyntax)rewritten;
         }
 
         SyntaxNode newRoot = root.ReplaceNodes(
-            nodes: replacements.Keys,
-            computeReplacementNode: (original, _) => replacements[key: original]
+            replacements.Keys,
+            (original, _) => replacements[original]
         );
 
-        return document.WithSyntaxRoot(root: newRoot);
+        return document.WithSyntaxRoot(newRoot);
     }
 
     private static string ComputeNewName(
@@ -183,14 +183,14 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
         if (lambda.Parent is ArgumentSyntax arg)
         {
             INamedTypeSymbol? type =
-                model?.GetTypeInfo(node: arg.Expression).ConvertedType as INamedTypeSymbol;
-            type = UnwrapExpressionType(type: type);
+                model?.GetTypeInfo(arg.Expression).ConvertedType as INamedTypeSymbol;
+            type = UnwrapExpressionType(type);
             IMethodSymbol? invoke = type?.DelegateInvokeMethod;
 
             int parameterIndex = lambda switch
             {
                 ParenthesizedLambdaExpressionSyntax paren => paren.ParameterList.Parameters.IndexOf(
-                    node: parameter
+                    parameter
                 ),
                 _ => 0,
             };
@@ -200,14 +200,14 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
                 && parameterIndex >= 0
                 && parameterIndex < invoke.Parameters.Length
             )
-                newName = ToCamelCase(name: invoke.Parameters[index: parameterIndex].Type.Name);
+                newName = ToCamelCase(invoke.Parameters[parameterIndex].Type.Name);
         }
 
         // Fallback: if no delegate type, use a safe default
         if (newName == parameter.Identifier.Text)
             newName = "value";
 
-        return EscapeIdentifier(identifier: newName);
+        return EscapeIdentifier(newName);
     }
 
     private static INamedTypeSymbol? UnwrapExpressionType(INamedTypeSymbol? type)
@@ -219,7 +219,7 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
             type is { TypeArguments.Length: 1 }
             && type.OriginalDefinition.ToDisplayString()
                 == "System.Linq.Expressions.Expression<TDelegate>"
-            && type.TypeArguments[index: 0] is INamedTypeSymbol innerDelegate
+            && type.TypeArguments[0] is INamedTypeSymbol innerDelegate
         )
             return innerDelegate;
 
@@ -228,17 +228,17 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
 
     private static string ToCamelCase(string name)
     {
-        if (string.IsNullOrEmpty(value: name) || char.IsLower(c: name[index: 0]))
+        if (string.IsNullOrEmpty(name) || char.IsLower(name[0]))
             return name;
 
-        return char.ToLowerInvariant(c: name[index: 0]) + name.Substring(startIndex: 1);
+        return char.ToLowerInvariant(name[0]) + name.Substring(1);
     }
 
     // A camelCased type name can collide with a reserved keyword (e.g. "String" ->
     // "string"), which isn't a legal bare identifier — escape it like the sibling
     // NamedArgumentsCodeFixProvider does for the same problem.
     private static string EscapeIdentifier(string identifier) =>
-        Microsoft.CodeAnalysis.CSharp.SyntaxFacts.GetKeywordKind(text: identifier)
+        Microsoft.CodeAnalysis.CSharp.SyntaxFacts.GetKeywordKind(identifier)
         == Microsoft.CodeAnalysis.CSharp.SyntaxKind.None
             ? identifier
             : $"@{identifier}";
@@ -254,18 +254,18 @@ public sealed class CallbackParameterCodeFixProvider : CodeFixProvider
 
         public override SyntaxNode? VisitIdentifierName(IdentifierNameSyntax node)
         {
-            if (_renameMap.TryGetValue(key: node.Identifier.Text, value: out string? newName))
-                return node.WithIdentifier(identifier: SyntaxFactory.Identifier(text: newName));
+            if (_renameMap.TryGetValue(node.Identifier.Text, out string? newName))
+                return node.WithIdentifier(SyntaxFactory.Identifier(newName));
 
-            return base.VisitIdentifierName(node: node);
+            return base.VisitIdentifierName(node);
         }
 
         public override SyntaxNode? VisitParameter(ParameterSyntax node)
         {
-            if (_renameMap.TryGetValue(key: node.Identifier.Text, value: out string? newName))
-                return node.WithIdentifier(identifier: SyntaxFactory.Identifier(text: newName));
+            if (_renameMap.TryGetValue(node.Identifier.Text, out string? newName))
+                return node.WithIdentifier(SyntaxFactory.Identifier(newName));
 
-            return base.VisitParameter(node: node);
+            return base.VisitParameter(node);
         }
     }
 }

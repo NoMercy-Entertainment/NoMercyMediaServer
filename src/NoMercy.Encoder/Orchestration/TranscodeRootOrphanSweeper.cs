@@ -51,10 +51,10 @@ public class TranscodeRootOrphanSweeper : IHostedService
 
     public TranscodeRootOrphanSweeper(ILogger<TranscodeRootOrphanSweeper> logger, IStorage storage)
         : this(
-            logger: logger,
-            storage: storage,
-            root: StoragePaths.TranscodeRoot,
-            sweepAllChildren: IsDedicatedEncoderCache(root: StoragePaths.TranscodeRoot)
+            logger,
+            storage,
+            StoragePaths.TranscodeRoot,
+            IsDedicatedEncoderCache(StoragePaths.TranscodeRoot)
         ) { }
 
     internal TranscodeRootOrphanSweeper(
@@ -72,11 +72,11 @@ public class TranscodeRootOrphanSweeper : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        if (!_storage.Exists(path: _root))
+        if (!_storage.Exists(_root))
         {
             _logger.LogDebug(
-                message: "TranscodeRootOrphanSweeper: transcode root {Dir} does not exist, nothing to sweep",
-                args: _root
+                "TranscodeRootOrphanSweeper: transcode root {Dir} does not exist, nothing to sweep",
+                _root
             );
             return Task.CompletedTask;
         }
@@ -87,13 +87,13 @@ public class TranscodeRootOrphanSweeper : IHostedService
         try
         {
             orphans = _storage
-                .List(path: _root, pattern: pattern, recursive: false)
-                .Where(predicate: entry => entry.IsDirectory)
+                .List(_root, pattern, false)
+                .Where(entry => entry.IsDirectory)
                 .ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(exception: ex, message: "TranscodeRootOrphanSweeper: could not enumerate {Dir}", args: _root);
+            _logger.LogWarning(ex, "TranscodeRootOrphanSweeper: could not enumerate {Dir}", _root);
             return Task.CompletedTask;
         }
 
@@ -101,18 +101,18 @@ public class TranscodeRootOrphanSweeper : IHostedService
         {
             try
             {
-                _storage.DeleteDirectory(path: entry.Path, recursive: true);
+                _storage.DeleteDirectory(entry.Path, true);
                 _logger.LogInformation(
-                    message: "TranscodeRootOrphanSweeper: deleted orphan {Dir}",
-                    args: entry.Path
+                    "TranscodeRootOrphanSweeper: deleted orphan {Dir}",
+                    entry.Path
                 );
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(
-                    exception: ex,
-                    message: "TranscodeRootOrphanSweeper: could not delete orphan {Dir}",
-                    args: entry.Path
+                    ex,
+                    "TranscodeRootOrphanSweeper: could not delete orphan {Dir}",
+                    entry.Path
                 );
             }
         }
@@ -124,14 +124,14 @@ public class TranscodeRootOrphanSweeper : IHostedService
 
     private static bool IsDedicatedEncoderCache(string root)
     {
-        string normalizedRoot = Path.TrimEndingDirectorySeparator(path: Path.GetFullPath(path: root));
+        string normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
         string normalizedCache = Path.TrimEndingDirectorySeparator(
-            path: Path.GetFullPath(path: AppFiles.EncoderCachePath)
+            Path.GetFullPath(AppFiles.EncoderCachePath)
         );
         return string.Equals(
-            a: normalizedRoot,
-            b: normalizedCache,
-            comparisonType: OperatingSystem.IsWindows()
+            normalizedRoot,
+            normalizedCache,
+            OperatingSystem.IsWindows()
                 ? StringComparison.OrdinalIgnoreCase
                 : StringComparison.Ordinal
         );

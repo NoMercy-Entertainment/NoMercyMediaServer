@@ -35,17 +35,17 @@ public class HttpSourceFetcherBranchTests
         string tempDir = CreateTempDir();
         try
         {
-            HttpSourceFetcher sut = MakeFetcher(tempDir: tempDir, handler: out FakeHandler handler);
-            EncodeTask task = MakeTask(inputPath: string.Empty, taskId: "no-input");
+            HttpSourceFetcher sut = MakeFetcher(tempDir, out FakeHandler handler);
+            EncodeTask task = MakeTask(string.Empty, "no-input");
 
-            string local = await sut.EnsureLocalAsync(task: task, ct: CancellationToken.None);
+            string local = await sut.EnsureLocalAsync(task, CancellationToken.None);
 
             local.Should().BeEmpty();
-            handler.Requests.Should().BeEmpty(because: "no coordinator request for empty input");
+            handler.Requests.Should().BeEmpty("no coordinator request for empty input");
         }
         finally
         {
-            Directory.Delete(path: tempDir, recursive: true);
+            Directory.Delete(tempDir, true);
         }
     }
 
@@ -67,25 +67,25 @@ public class HttpSourceFetcherBranchTests
             };
 
             ServiceCollection services = new();
-            services.AddSingleton(implementationInstance: options);
+            services.AddSingleton(options);
             services.AddHttpClient();
             ServiceProvider provider = services.BuildServiceProvider();
 
             HttpSourceFetcher sut = new(
-                httpClientFactory: provider.GetRequiredService<IHttpClientFactory>(),
-                options: options,
-                logger: NullLogger<HttpSourceFetcher>.Instance,
-                storage: TestStorageFactory.CreateLocal()
+                provider.GetRequiredService<IHttpClientFactory>(),
+                options,
+                NullLogger<HttpSourceFetcher>.Instance,
+                TestStorageFactory.CreateLocal()
             );
-            EncodeTask task = MakeTask(inputPath: "/nonexistent/source.mkv", taskId: "no-coord");
+            EncodeTask task = MakeTask("/nonexistent/source.mkv", "no-coord");
 
-            string local = await sut.EnsureLocalAsync(task: task, ct: CancellationToken.None);
+            string local = await sut.EnsureLocalAsync(task, CancellationToken.None);
 
-            local.Should().Be(expected: "/nonexistent/source.mkv");
+            local.Should().Be("/nonexistent/source.mkv");
         }
         finally
         {
-            Directory.Delete(path: tempDir, recursive: true);
+            Directory.Delete(tempDir, true);
         }
     }
 
@@ -98,23 +98,23 @@ public class HttpSourceFetcherBranchTests
         string tempDir = CreateTempDir();
         try
         {
-            HttpSourceFetcher sut = MakeFetcher(tempDir: tempDir, handler: out FakeHandler handler);
-            handler.RespondWith(status: HttpStatusCode.OK, body: [0xA]);
+            HttpSourceFetcher sut = MakeFetcher(tempDir, out FakeHandler handler);
+            handler.RespondWith(HttpStatusCode.OK, [0xA]);
 
-            EncodeTask task = MakeTask(inputPath: "/nonexistent/source.mkv", taskId: "t-hmac");
-            await sut.EnsureLocalAsync(task: task, ct: CancellationToken.None);
+            EncodeTask task = MakeTask("/nonexistent/source.mkv", "t-hmac");
+            await sut.EnsureLocalAsync(task, CancellationToken.None);
 
             handler.Requests.Should().ContainSingle();
-            RequestSnapshot snapshot = handler.Requests[index: 0];
-            snapshot.Headers.Should().ContainKey(expected: "X-NoMercy-Timestamp");
-            snapshot.Headers.Should().ContainKey(expected: "X-NoMercy-Signature");
+            RequestSnapshot snapshot = handler.Requests[0];
+            snapshot.Headers.Should().ContainKey("X-NoMercy-Timestamp");
+            snapshot.Headers.Should().ContainKey("X-NoMercy-Signature");
             // The signature is base64 over HMAC-SHA256, length 44 with
             // trailing '='.
-            snapshot.Headers[key: "X-NoMercy-Signature"].Should().HaveLength(expected: 44);
+            snapshot.Headers["X-NoMercy-Signature"].Should().HaveLength(44);
         }
         finally
         {
-            Directory.Delete(path: tempDir, recursive: true);
+            Directory.Delete(tempDir, true);
         }
     }
 
@@ -126,18 +126,18 @@ public class HttpSourceFetcherBranchTests
         string tempDir = CreateTempDir();
         try
         {
-            HttpSourceFetcher sut = MakeFetcher(tempDir: tempDir, handler: out FakeHandler handler);
-            handler.RespondWith(status: HttpStatusCode.OK, body: [0xB]);
+            HttpSourceFetcher sut = MakeFetcher(tempDir, out FakeHandler handler);
+            handler.RespondWith(HttpStatusCode.OK, [0xB]);
 
-            EncodeTask task = MakeTask(inputPath: "/share/raw-bytes", taskId: "t-noext");
-            string local = await sut.EnsureLocalAsync(task: task, ct: CancellationToken.None);
+            EncodeTask task = MakeTask("/share/raw-bytes", "t-noext");
+            string local = await sut.EnsureLocalAsync(task, CancellationToken.None);
 
-            local.Should().EndWith(expected: ".src");
-            Path.GetFileNameWithoutExtension(path: local).Should().Be(expected: "t-noext");
+            local.Should().EndWith(".src");
+            Path.GetFileNameWithoutExtension(local).Should().Be("t-noext");
         }
         finally
         {
-            Directory.Delete(path: tempDir, recursive: true);
+            Directory.Delete(tempDir, true);
         }
     }
 
@@ -150,18 +150,18 @@ public class HttpSourceFetcherBranchTests
         string tempDir = CreateTempDir();
         try
         {
-            HttpSourceFetcher sut = MakeFetcher(tempDir: tempDir, handler: out FakeHandler handler);
-            handler.RespondWith(status: HttpStatusCode.OK, body: [0xC]);
+            HttpSourceFetcher sut = MakeFetcher(tempDir, out FakeHandler handler);
+            handler.RespondWith(HttpStatusCode.OK, [0xC]);
 
-            EncodeTask task = MakeTask(inputPath: "/share/My Movies/raw bytes.mkv", taskId: "t-encoded");
-            await sut.EnsureLocalAsync(task: task, ct: CancellationToken.None);
+            EncodeTask task = MakeTask("/share/My Movies/raw bytes.mkv", "t-encoded");
+            await sut.EnsureLocalAsync(task, CancellationToken.None);
 
-            handler.Requests[index: 0].Query.Should().Contain(expected: "%20", because: "spaces must be percent-encoded");
-            handler.Requests[index: 0].Query.Should().NotContain(unexpected: " ");
+            handler.Requests[0].Query.Should().Contain("%20", "spaces must be percent-encoded");
+            handler.Requests[0].Query.Should().NotContain(" ");
         }
         finally
         {
-            Directory.Delete(path: tempDir, recursive: true);
+            Directory.Delete(tempDir, true);
         }
     }
 
@@ -173,16 +173,16 @@ public class HttpSourceFetcherBranchTests
         string tempDir = CreateTempDir();
         try
         {
-            HttpSourceFetcher sut = MakeFetcher(tempDir: tempDir, handler: out _);
-            EncodeTask task = MakeTask(inputPath: "/nonexistent/source.mkv", taskId: "t-no-cache");
+            HttpSourceFetcher sut = MakeFetcher(tempDir, out _);
+            EncodeTask task = MakeTask("/nonexistent/source.mkv", "t-no-cache");
 
-            Func<Task> act = () => sut.ReleaseAsync(task: task);
+            Func<Task> act = () => sut.ReleaseAsync(task);
 
             await act.Should().NotThrowAsync();
         }
         finally
         {
-            Directory.Delete(path: tempDir, recursive: true);
+            Directory.Delete(tempDir, true);
         }
     }
 
@@ -194,17 +194,17 @@ public class HttpSourceFetcherBranchTests
         string tempDir = CreateTempDir();
         try
         {
-            HttpSourceFetcher sut = MakeFetcher(tempDir: tempDir, handler: out FakeHandler handler);
-            handler.RespondWith(status: HttpStatusCode.InternalServerError, body: Encoding.UTF8.GetBytes(s: "boom"));
+            HttpSourceFetcher sut = MakeFetcher(tempDir, out FakeHandler handler);
+            handler.RespondWith(HttpStatusCode.InternalServerError, Encoding.UTF8.GetBytes("boom"));
 
-            EncodeTask task = MakeTask(inputPath: "/nonexistent/source.mkv", taskId: "t-500");
+            EncodeTask task = MakeTask("/nonexistent/source.mkv", "t-500");
 
-            Func<Task> act = () => sut.EnsureLocalAsync(task: task, ct: CancellationToken.None);
+            Func<Task> act = () => sut.EnsureLocalAsync(task, CancellationToken.None);
             await act.Should().ThrowAsync<InvalidOperationException>();
         }
         finally
         {
-            Directory.Delete(path: tempDir, recursive: true);
+            Directory.Delete(tempDir, true);
         }
     }
 
@@ -213,17 +213,17 @@ public class HttpSourceFetcherBranchTests
     private static string CreateTempDir()
     {
         string dir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nomercy-test-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nomercy-test-" + Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: dir);
+        Directory.CreateDirectory(dir);
         return dir;
     }
 
     private static EncodeTask MakeTask(string inputPath, string taskId = "task") =>
         new(
-            TaskId: taskId,
-            Command: new(Executable: "ffmpeg", Arguments: ["-i", inputPath, "out.ts"], WorkingDirectory: null),
+            taskId,
+            Command: new("ffmpeg", ["-i", inputPath, "out.ts"], null),
             OutputPath: "/out/" + taskId,
             Type: EncodeTaskType.QualityVariant,
             InputPath: inputPath
@@ -242,19 +242,19 @@ public class HttpSourceFetcherBranchTests
         FakeHandler capturedHandler = handler;
 
         ServiceCollection services = new();
-        services.AddSingleton(implementationInstance: options);
+        services.AddSingleton(options);
         services
             .AddHttpClient()
-            .ConfigureHttpClientDefaults(configure: b =>
-                b.ConfigurePrimaryHttpMessageHandler(configureHandler: () => capturedHandler)
+            .ConfigureHttpClientDefaults(b =>
+                b.ConfigurePrimaryHttpMessageHandler(() => capturedHandler)
             );
         ServiceProvider provider = services.BuildServiceProvider();
 
         return new(
-            httpClientFactory: provider.GetRequiredService<IHttpClientFactory>(),
-            options: options,
-            logger: NullLogger<HttpSourceFetcher>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            provider.GetRequiredService<IHttpClientFactory>(),
+            options,
+            NullLogger<HttpSourceFetcher>.Instance,
+            TestStorageFactory.CreateLocal()
         );
     }
 
@@ -288,14 +288,14 @@ public class HttpSourceFetcherBranchTests
             Dictionary<string, string> headers = new();
             foreach (KeyValuePair<string, IEnumerable<string>> h in request.Headers)
             {
-                headers[key: h.Key] = string.Join(separator: ",", values: h.Value);
+                headers[h.Key] = string.Join(",", h.Value);
             }
 
             lock (_requests)
-                _requests.Add(item: new(Query: request.RequestUri!.Query, Headers: headers));
+                _requests.Add(new(request.RequestUri!.Query, headers));
 
             return Task.FromResult(
-                result: new HttpResponseMessage(statusCode: _status) { Content = new ByteArrayContent(content: _body) }
+                new HttpResponseMessage(_status) { Content = new ByteArrayContent(_body) }
             );
         }
     }

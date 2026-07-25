@@ -43,7 +43,7 @@ public class ConnectionHub : Hub
 
     protected IMediaAuthorizationPolicy AuthPolicy =>
         _httpContextAccessor.HttpContext?.RequestServices?.GetService<IMediaAuthorizationPolicy>()
-        ?? new MediaAuthorizationPolicy(userCache: UserCache.Current);
+        ?? new MediaAuthorizationPolicy(UserCache.Current);
 
     protected ConnectionHub(
         IHttpContextAccessor httpContextAccessor,
@@ -62,7 +62,7 @@ public class ConnectionHub : Hub
 
     public string GetCountryFromContext()
     {
-        return _httpContextAccessor.HttpContext?.Request.Headers[key: "country"].FirstOrDefault()
+        return _httpContextAccessor.HttpContext?.Request.Headers["country"].FirstOrDefault()
             ?? "US";
     }
 
@@ -70,7 +70,7 @@ public class ConnectionHub : Hub
     {
         return _httpContextAccessor
                 .HttpContext?.Request.Headers.AcceptLanguage.FirstOrDefault()
-                ?.Split(separator: "_")
+                ?.Split("_")
                 .FirstOrDefault()
             ?? LocalizationHelper.GlobalLocalizer.TargetLanguage;
     }
@@ -79,7 +79,7 @@ public class ConnectionHub : Hub
     {
         await base.OnConnectedAsync();
 
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
         {
             // The "api" authorization policy already required this same UserCache
@@ -89,8 +89,8 @@ public class ConnectionHub : Hub
             // ConnectedClients: every future SendTo/SendToAll for this user skips it
             // forever, with no error anywhere, until the client happens to reconnect.
             Logger.Socket(
-                message: $"{Endpoint}: OnConnectedAsync found no cached user for sub {Context.User.UserId()} — connection will not receive broadcasts",
-                level: LogEventLevel.Warning
+                $"{Endpoint}: OnConnectedAsync found no cached user for sub {Context.User.UserId()} — connection will not receive broadcasts",
+                LogEventLevel.Warning
             );
             return;
         }
@@ -109,49 +109,48 @@ public class ConnectionHub : Hub
         IQueryCollection? query = _httpContextAccessor.HttpContext?.Request.Query;
         if (query is not null && query.Count > 0)
         {
-            if (query.TryGetValue(key: "client_id", value: out StringValues value))
+            if (query.TryGetValue("client_id", out StringValues value))
                 client.DeviceId = value.ToString();
 
-            if (query.TryGetValue(key: "custom_name", value: out StringValues customName))
+            if (query.TryGetValue("custom_name", out StringValues customName))
                 client.CustomName = customName.ToString();
 
             if (
-                query.TryGetValue(key: "client_volume", value: out StringValues volumePercent)
-                && int.TryParse(s: volumePercent.ToString(), result: out int parsedVolume)
+                query.TryGetValue("client_volume", out StringValues volumePercent)
+                && int.TryParse(volumePercent.ToString(), out int parsedVolume)
             )
             {
-                client.VolumePercent = Math.Clamp(value: parsedVolume, min: 0, max: 100);
+                client.VolumePercent = Math.Clamp(parsedVolume, 0, 100);
             }
 
-            if (query.TryGetValue(key: "client_name", value: out StringValues name))
+            if (query.TryGetValue("client_name", out StringValues name))
                 client.Name = name.ToString();
 
-            if (query.TryGetValue(key: "client_type", value: out StringValues type))
+            if (query.TryGetValue("client_type", out StringValues type))
                 client.Type = type.ToString();
 
-            if (query.TryGetValue(key: "client_version", value: out StringValues version))
+            if (query.TryGetValue("client_version", out StringValues version))
                 client.Version = version.ToString();
 
-            if (query.TryGetValue(key: "client_os", value: out StringValues os))
+            if (query.TryGetValue("client_os", out StringValues os))
                 client.Os = os.ToString();
 
-            if (query.TryGetValue(key: "client_browser", value: out StringValues browser))
+            if (query.TryGetValue("client_browser", out StringValues browser))
                 client.Browser = browser.ToString();
 
-            if (query.TryGetValue(key: "client_device", value: out StringValues model))
+            if (query.TryGetValue("client_device", out StringValues model))
                 client.Model = model.ToString();
         }
 
         // client_id is the only field the upsert keys on — without it, every such
         // connection would collide on the same empty-string DeviceId row.
-        if (!string.IsNullOrEmpty(value: client.DeviceId))
+        if (!string.IsNullOrEmpty(client.DeviceId))
         {
             await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
             await mediaContext
-                .Devices.Upsert(entity: client)
-                .On(match: x => x.DeviceId)
-                .WhenMatched(
-                    updater: (ds, di) =>
+                .Devices.Upsert(client)
+                .On(x => x.DeviceId)
+                .WhenMatched((ds, di) =>
                         new()
                         {
                             Browser = di.Browser,
@@ -173,36 +172,36 @@ public class ConnectionHub : Hub
 
             // Update CustomName separately — FlexLabs upsert doesn't support conditional expressions.
             // Only overwrite when the client sends a non-empty custom_name, preserving existing names otherwise.
-            if (!string.IsNullOrEmpty(value: client.CustomName))
+            if (!string.IsNullOrEmpty(client.CustomName))
             {
                 await mediaContext
-                    .Devices.Where(predicate: x => x.DeviceId == client.DeviceId)
-                    .ExecuteUpdateAsync(setPropertyCalls: x => x.SetProperty(propertyExpression: d => d.CustomName, valueExpression: client.CustomName));
+                    .Devices.Where(x => x.DeviceId == client.DeviceId)
+                    .ExecuteUpdateAsync(x => x.SetProperty(d => d.CustomName, client.CustomName));
             }
 
-            Device? device = await mediaContext.Devices.FirstOrDefaultAsync(predicate: x =>
+            Device? device = await mediaContext.Devices.FirstOrDefaultAsync(x =>
                 x.DeviceId == client.DeviceId
             );
 
-            AlignClientWithPersistedDevice(client: client, device: device);
+            AlignClientWithPersistedDevice(client, device);
 
             if (device is not null)
             {
                 await mediaContext
-                    .Devices.Where(predicate: x => x.DeviceId == device.DeviceId)
-                    .ExecuteUpdateAsync(setPropertyCalls: x => x.SetProperty(propertyExpression: d => d.IsActive, valueExpression: true));
+                    .Devices.Where(x => x.DeviceId == device.DeviceId)
+                    .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, true));
                 await mediaContext.SaveChangesAsync();
 
-                await ActivityLogger.LogConnectionAsync(type: "connection.connected", userId: user.Id, deviceId: device.Id);
+                await ActivityLogger.LogConnectionAsync("connection.connected", user.Id, device.Id);
             }
         }
 
-        ConnectedClients.Clients.TryAdd(key: Context.ConnectionId, value: client);
+        ConnectedClients.Clients.TryAdd(Context.ConnectionId, client);
 
         // Devices() is already filtered to this caller's user, so it must only go to
         // that user's own connections — Clients.All leaked one user's device names/IPs
         // to every connected client and corrupted the Connect device-switcher state.
-        await Clients.User(userId: user.Id.ToString()).SendAsync(method: "ConnectedDevicesState", arg1: Devices());
+        await Clients.User(user.Id.ToString()).SendAsync("ConnectedDevicesState", Devices());
     }
 
     private static void AlignClientWithPersistedDevice(Client client, Device? device)
@@ -223,47 +222,47 @@ public class ConnectionHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await base.OnDisconnectedAsync(exception: exception);
+        await base.OnDisconnectedAsync(exception);
 
-        if (ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? client))
+        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
         {
             await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
-            Device? device = await mediaContext.Devices.FirstOrDefaultAsync(predicate: x =>
+            Device? device = await mediaContext.Devices.FirstOrDefaultAsync(x =>
                 x.DeviceId == client.DeviceId
             );
             if (device is not null)
             {
                 await mediaContext
-                    .Devices.Where(predicate: x => x.DeviceId == device.DeviceId)
-                    .ExecuteUpdateAsync(setPropertyCalls: x => x.SetProperty(propertyExpression: d => d.IsActive, valueExpression: false));
+                    .Devices.Where(x => x.DeviceId == device.DeviceId)
+                    .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, false));
                 await mediaContext.SaveChangesAsync();
 
                 await ActivityLogger.LogConnectionAsync(
-                    type: "connection.disconnected",
-                    userId: client.Sub,
-                    deviceId: device.Id
+                    "connection.disconnected",
+                    client.Sub,
+                    device.Id
                 );
             }
 
-            ConnectedClients.Clients.Remove(key: Context.ConnectionId, value: out _);
+            ConnectedClients.Clients.Remove(Context.ConnectionId, out _);
 
             // Scope to the disconnecting client's own user (see OnConnectedAsync).
             await Clients
-                .User(userId: Context.User.UserId().ToString())
-                .SendAsync(method: "ConnectedDevicesState", arg1: Devices());
+                .User(Context.User.UserId().ToString())
+                .SendAsync("ConnectedDevicesState", Devices());
         }
     }
 
     public List<Device> Devices()
     {
-        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return [];
 
         return ConnectedClients
-            .Clients.Values.Where(predicate: x => x.Sub.Equals(g: user.Id))
-            .Where(predicate: x => x.Endpoint == Endpoint)
-            .Select(selector: c => new Device
+            .Clients.Values.Where(x => x.Sub.Equals(user.Id))
+            .Where(x => x.Endpoint == Endpoint)
+            .Select(c => new Device
             {
                 Name = c.Name,
                 Ip = c.Ip,

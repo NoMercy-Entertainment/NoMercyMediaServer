@@ -39,23 +39,23 @@ public class JsonSpeedIndexStore(
     public SpeedIndex? Load()
     {
         string? path = options.SpeedIndexCachePath;
-        if (string.IsNullOrWhiteSpace(value: path) || !storage.Exists(path: path))
+        if (string.IsNullOrWhiteSpace(path) || !storage.Exists(path))
             return null;
 
         try
         {
-            string json = Encoding.UTF8.GetString(bytes: storage.Read(path: path));
-            SpeedIndexDto? dto = JsonConvert.DeserializeObject<SpeedIndexDto>(value: json);
+            string json = Encoding.UTF8.GetString(storage.Read(path));
+            SpeedIndexDto? dto = JsonConvert.DeserializeObject<SpeedIndexDto>(json);
             if (dto is null)
                 return null;
 
             Dictionary<SpeedKey, SpeedMeasurement> map = new();
             foreach (SpeedEntryDto entry in dto.Entries)
             {
-                map[key: new(Codec: entry.Codec, Encoder: entry.Encoder, Width: entry.Width, DeviceName: entry.DeviceName)] = new(
-                    Fps: entry.Fps,
-                    SpeedMultiplier: entry.SpeedMultiplier,
-                    MeasuredAt: entry.MeasuredAt
+                map[new(entry.Codec, entry.Encoder, entry.Width, entry.DeviceName)] = new(
+                    entry.Fps,
+                    entry.SpeedMultiplier,
+                    entry.MeasuredAt
                 );
             }
 
@@ -65,14 +65,14 @@ public class JsonSpeedIndexStore(
             // and trip the version-mismatch invalidation in
             // HardwareBenchmark.NeedsRecalibration on the next boot.
             _loadedSchemaVersion = dto.SchemaVersion;
-            return new(Measurements: map);
+            return new(map);
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                exception: ex,
-                message: "Could not load SpeedIndex cache at {Path} — treating as empty",
-                args: path
+                ex,
+                "Could not load SpeedIndex cache at {Path} — treating as empty",
+                path
             );
             return null;
         }
@@ -81,48 +81,48 @@ public class JsonSpeedIndexStore(
     public void Save(SpeedIndex index)
     {
         string? path = options.SpeedIndexCachePath;
-        if (string.IsNullOrWhiteSpace(value: path))
+        if (string.IsNullOrWhiteSpace(path))
         {
-            logger.LogDebug(message: "No SpeedIndexCachePath configured — skipping save");
+            logger.LogDebug("No SpeedIndexCachePath configured — skipping save");
             return;
         }
 
         try
         {
-            storage.CreateDirectory(path: Path.GetDirectoryName(path: path)!);
+            storage.CreateDirectory(Path.GetDirectoryName(path)!);
 
             DateTime now = DateTime.UtcNow;
             SpeedIndexDto dto = new(
-                CalibratedAt: now,
+                now,
                 SchemaVersion: HardwareBenchmark.BenchmarkSchemaVersion,
                 Entries: index
-                    .Measurements.Select(selector: kvp => new SpeedEntryDto(
-                        Codec: kvp.Key.Codec,
-                        Encoder: kvp.Key.Encoder,
-                        Width: kvp.Key.Width,
-                        DeviceName: kvp.Key.DeviceName,
-                        Fps: kvp.Value.Fps,
-                        SpeedMultiplier: kvp.Value.SpeedMultiplier,
-                        MeasuredAt: kvp.Value.MeasuredAt
+                    .Measurements.Select(kvp => new SpeedEntryDto(
+                        kvp.Key.Codec,
+                        kvp.Key.Encoder,
+                        kvp.Key.Width,
+                        kvp.Key.DeviceName,
+                        kvp.Value.Fps,
+                        kvp.Value.SpeedMultiplier,
+                        kvp.Value.MeasuredAt
                     ))
                     .ToArray()
             );
 
             string tmp = path + ".tmp";
             storage.Write(
-                path: tmp,
-                bytes: Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: dto, formatting: Formatting.Indented))
+                tmp,
+                Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(dto, Formatting.Indented))
             );
-            if (storage.Exists(path: path))
-                storage.Delete(path: path);
-            storage.Move(from: tmp, to: path);
+            if (storage.Exists(path))
+                storage.Delete(path);
+            storage.Move(tmp, path);
 
             _lastCalibratedAt = now;
             _loadedSchemaVersion = HardwareBenchmark.BenchmarkSchemaVersion;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(exception: ex, message: "Could not save SpeedIndex cache to {Path}", args: path);
+            logger.LogWarning(ex, "Could not save SpeedIndex cache to {Path}", path);
         }
     }
 

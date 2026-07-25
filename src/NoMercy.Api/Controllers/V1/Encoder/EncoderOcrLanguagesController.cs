@@ -23,10 +23,10 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 /// model is owner-only; listing is open to any authenticated moderator.
 /// </summary>
 [ApiController]
-[Tags(tags: "Encoder OCR Languages")]
-[ApiVersion(version: 1.0)]
+[Tags("Encoder OCR Languages")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/encoder/ocr")]
+[Route("api/v{version:apiVersion}/encoder/ocr")]
 public class EncoderOcrLanguagesController(ITesseractModelManager modelManager) : BaseController
 {
     /// <summary>
@@ -34,12 +34,12 @@ public class EncoderOcrLanguagesController(ITesseractModelManager modelManager) 
     /// about (<c>available</c>) and the subset that are already downloaded to
     /// disk (<c>downloaded</c>).
     /// </summary>
-    [HttpGet(template: "languages")]
+    [HttpGet("languages")]
     [Authorize(Policy = "Moderator")]
     public IActionResult GetLanguages()
     {
         return Ok(
-            value: new
+            new
             {
                 available = modelManager.GetAvailableLanguages(),
                 downloaded = modelManager.GetDownloadedLanguages(),
@@ -52,22 +52,22 @@ public class EncoderOcrLanguagesController(ITesseractModelManager modelManager) 
     /// the language code and the path to the <c>.traineddata</c> file.
     /// Owner-only — downloads can be large and slow.
     /// </summary>
-    [HttpPost(template: "languages/{code}/download")]
+    [HttpPost("languages/{code}/download")]
     [Authorize(Policy = "Owner")]
     public async Task<IActionResult> DownloadLanguage(string code, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(value: code))
-            return BadRequestResponse(detail: "Language code is required");
+        if (string.IsNullOrWhiteSpace(code))
+            return BadRequestResponse("Language code is required");
 
         try
         {
-            string path = await modelManager.EnsureLanguageModelAsync(language: code, ct: ct);
-            return Ok(value: new { language = code, path });
+            string path = await modelManager.EnsureLanguageModelAsync(code, ct);
+            return Ok(new { language = code, path });
         }
         catch (Exception ex)
         {
             return InternalServerErrorResponse(
-                detail: $"Failed to download language model '{code}': {ex.Message}"
+                $"Failed to download language model '{code}': {ex.Message}"
             );
         }
     }

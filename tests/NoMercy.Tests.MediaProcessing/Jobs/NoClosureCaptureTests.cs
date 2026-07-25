@@ -27,7 +27,7 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 ///   2. <c>VideoEncodeJob</c> must not declare class-level fields of the
 ///      disqualified types (MediaContext, FileRepository, FileManager).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public partial class NoClosureCaptureTests
 {
     private static readonly string[] DisqualifiedTypes =
@@ -42,12 +42,12 @@ public partial class NoClosureCaptureTests
     {
         string source = ReadVideoEncodeJobSource();
 
-        bool hasSubscribe = source.Contains(value: ".Subscribe(", comparisonType: StringComparison.OrdinalIgnoreCase);
+        bool hasSubscribe = source.Contains(".Subscribe(", StringComparison.OrdinalIgnoreCase);
 
         hasSubscribe
             .Should()
             .BeFalse(
-                because: "VideoEncodeJob must not register EventBus subscriptions — "
+                "VideoEncodeJob must not register EventBus subscriptions — "
                          + "subscriptions would capture MediaContext across Handle() invocations (B1 regression)"
             );
     }
@@ -57,9 +57,9 @@ public partial class NoClosureCaptureTests
     {
         string source = ReadEncodeTaskJobSource();
 
-        bool hasSubscribe = source.Contains(value: ".Subscribe(", comparisonType: StringComparison.OrdinalIgnoreCase);
+        bool hasSubscribe = source.Contains(".Subscribe(", StringComparison.OrdinalIgnoreCase);
 
-        hasSubscribe.Should().BeFalse(because: "EncodeTaskJob must not register EventBus subscriptions");
+        hasSubscribe.Should().BeFalse("EncodeTaskJob must not register EventBus subscriptions");
     }
 
     [Fact]
@@ -71,14 +71,14 @@ public partial class NoClosureCaptureTests
 
         foreach (string typeName in DisqualifiedTypes)
         {
-            if (FieldDeclarationPattern(typeName: typeName).IsMatch(input: source))
-                violations.Add(item: typeName);
+            if (FieldDeclarationPattern(typeName).IsMatch(source))
+                violations.Add(typeName);
         }
 
         violations
             .Should()
             .BeEmpty(
-                because: "MediaContext, FileRepository, and FileManager must be opened locally "
+                "MediaContext, FileRepository, and FileManager must be opened locally "
                          + "inside each phase method and disposed before the method returns. "
                          + "Class-level fields of these types would survive across Handle() calls."
             );
@@ -102,46 +102,46 @@ public partial class NoClosureCaptureTests
         foreach (string methodName in phaseMethodNames)
         {
             int methodStart = source.IndexOf(
-                value: $"private async Task {methodName}",
-                comparisonType: StringComparison.Ordinal
+                $"private async Task {methodName}",
+                StringComparison.Ordinal
             );
 
             if (methodStart < 0)
             {
-                phasesWithoutContext.Add(item: $"{methodName} (not found)");
+                phasesWithoutContext.Add($"{methodName} (not found)");
                 continue;
             }
 
             // Extract a window large enough to contain the method body opening
-            int windowEnd = Math.Min(val1: methodStart + 600, val2: source.Length);
+            int windowEnd = Math.Min(methodStart + 600, source.Length);
             string window = source[methodStart..windowEnd];
 
             bool hasLocalContext =
-                window.Contains(value: "await using MediaContext context", comparisonType: StringComparison.Ordinal)
-                || window.Contains(value: "using MediaContext context", comparisonType: StringComparison.Ordinal);
+                window.Contains("await using MediaContext context", StringComparison.Ordinal)
+                || window.Contains("using MediaContext context", StringComparison.Ordinal);
 
             if (!hasLocalContext)
-                phasesWithoutContext.Add(item: methodName);
+                phasesWithoutContext.Add(methodName);
         }
 
         phasesWithoutContext
             .Should()
             .BeEmpty(
-                because: "every coordinator phase method must open its own MediaContext locally "
+                "every coordinator phase method must open its own MediaContext locally "
                          + "so it is disposed before Handle() returns"
             );
     }
 
     private static string ReadVideoEncodeJobSource()
     {
-        string path = FindSourceFile(fileName: "VideoEncodeJob.cs");
-        return File.ReadAllText(path: path);
+        string path = FindSourceFile("VideoEncodeJob.cs");
+        return File.ReadAllText(path);
     }
 
     private static string ReadEncodeTaskJobSource()
     {
-        string path = FindSourceFile(fileName: "EncodeTaskJob.cs");
-        return File.ReadAllText(path: path);
+        string path = FindSourceFile("EncodeTaskJob.cs");
+        return File.ReadAllText(path);
     }
 
     private static string FindSourceFile(string fileName)
@@ -150,27 +150,27 @@ public partial class NoClosureCaptureTests
 
         while (dir != null)
         {
-            string candidate = Path.Combine(path1: dir, path2: "src");
-            if (Directory.Exists(path: candidate))
+            string candidate = Path.Combine(dir, "src");
+            if (Directory.Exists(candidate))
             {
                 string[] matches = Directory.GetFiles(
-                    path: candidate,
-                    searchPattern: fileName,
-                    searchOption: SearchOption.AllDirectories
+                    candidate,
+                    fileName,
+                    SearchOption.AllDirectories
                 );
 
                 if (matches.Length > 0)
                     return matches[0];
             }
 
-            dir = Directory.GetParent(path: dir)?.FullName;
+            dir = Directory.GetParent(dir)?.FullName;
         }
 
         throw new FileNotFoundException(
-            message: $"Could not find source file '{fileName}' under any src/ directory"
+            $"Could not find source file '{fileName}' under any src/ directory"
         );
     }
 
     private static Regex FieldDeclarationPattern(string typeName) =>
-        new(pattern: $@"private\s+(readonly\s+)?{Regex.Escape(str: typeName)}\s+\w+", options: RegexOptions.Compiled);
+        new($@"private\s+(readonly\s+)?{Regex.Escape(typeName)}\s+\w+", RegexOptions.Compiled);
 }

@@ -22,7 +22,7 @@ namespace NoMercy.Tests.Storage;
 /// the whole file, so a passing round-trip is evidence of true streaming — the
 /// bytes flow through in chunks and the SHA-256 matches end to end.
 /// </summary>
-[Collection(name: "StorageBackends")]
+[Collection("StorageBackends")]
 public sealed class SmbStreamingTests(StorageBackendsFixture fix)
 {
     // 64 MiB: well past the 1 MiB per-chunk read/write size and large enough that
@@ -33,7 +33,7 @@ public sealed class SmbStreamingTests(StorageBackendsFixture fix)
     [SkippableFact]
     public async Task Large_file_round_trips_via_streaming_without_buffering()
     {
-        Skip.If(condition: !fix.Available, reason: fix.StartupError ?? "storage container not available");
+        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
 
         using SmbStorageDriver driver = fix.BuildSmbDriver();
         string path = $"streaming/large-{Ulid.NewUlid()}.bin";
@@ -41,47 +41,47 @@ public sealed class SmbStreamingTests(StorageBackendsFixture fix)
         byte[] expectedHash;
         // Write: feed the stream in 1 MiB blocks from a deterministic generator so
         // the whole payload never exists in the test's memory as one array either.
-        using (IncrementalHash writeHash = IncrementalHash.CreateHash(hashAlgorithm: HashAlgorithmName.SHA256))
+        using (IncrementalHash writeHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
         {
-            await using Stream w = driver.OpenWrite(path: path, overwrite: true);
+            await using Stream w = driver.OpenWrite(path, true);
             byte[] block = new byte[1024 * 1024];
             int written = 0;
             int seed = 0;
             while (written < PayloadBytes)
             {
-                FillDeterministic(block: block, seed: seed++);
-                int len = Math.Min(val1: block.Length, val2: PayloadBytes - written);
-                writeHash.AppendData(data: block, offset: 0, count: len);
-                await w.WriteAsync(buffer: block.AsMemory(start: 0, length: len));
+                FillDeterministic(block, seed++);
+                int len = Math.Min(block.Length, PayloadBytes - written);
+                writeHash.AppendData(block, 0, len);
+                await w.WriteAsync(block.AsMemory(0, len));
                 written += len;
             }
             expectedHash = writeHash.GetHashAndReset();
         }
 
-        driver.GetFileSize(path: path).Should().Be(expected: PayloadBytes);
+        driver.GetFileSize(path).Should().Be(PayloadBytes);
 
         // Read back in blocks, hashing as we go — never materialising the whole
         // file, mirroring how the encoder/copy paths consume a source.
         byte[] actualHash;
-        using (IncrementalHash readHash = IncrementalHash.CreateHash(hashAlgorithm: HashAlgorithmName.SHA256))
+        using (IncrementalHash readHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
         {
-            await using Stream r = driver.OpenRead(path: path);
+            await using Stream r = driver.OpenRead(path);
             byte[] buffer = new byte[1024 * 1024];
             long total = 0;
             int read;
-            while ((read = await r.ReadAsync(buffer: buffer)) > 0)
+            while ((read = await r.ReadAsync(buffer)) > 0)
             {
-                readHash.AppendData(data: buffer, offset: 0, count: read);
+                readHash.AppendData(buffer, 0, read);
                 total += read;
             }
-            total.Should().Be(expected: PayloadBytes);
+            total.Should().Be(PayloadBytes);
             actualHash = readHash.GetHashAndReset();
         }
 
-        actualHash.Should().Equal(elements: expectedHash);
+        actualHash.Should().Equal(expectedHash);
 
-        driver.DeleteFile(path: path);
-        driver.FileExists(path: path).Should().BeFalse();
+        driver.DeleteFile(path);
+        driver.FileExists(path).Should().BeFalse();
     }
 
     // Deterministic, seed-varied fill so each block differs (a constant block would

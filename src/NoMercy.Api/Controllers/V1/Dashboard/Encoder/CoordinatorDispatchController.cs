@@ -30,10 +30,10 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 /// proxies the <see cref="ITaskProgressStore"/>.
 /// </summary>
 [ApiController]
-[Tags(tags: "Distribution Dispatch")]
-[ApiVersion(version: 1.0)]
+[Tags("Distribution Dispatch")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "Owner")]
-[Route(template: "api/v{version:apiVersion}/distribution/workers/dispatch")]
+[Route("api/v{version:apiVersion}/distribution/workers/dispatch")]
 public class CoordinatorDispatchController(
     IWorkerDispatcher dispatcher,
     ITaskProgressStore progressStore,
@@ -54,30 +54,30 @@ public class CoordinatorDispatchController(
     {
 
         if (request.Tasks is not { Count: > 0 })
-            return BadRequestResponse(detail: "tasks must be a non-empty array");
+            return BadRequestResponse("tasks must be a non-empty array");
 
         EncodeTask[] tasks = request
-            .Tasks.Select(selector: t => new EncodeTask(
-                TaskId: t.TaskId ?? Guid.NewGuid().ToString(format: "N"),
-                Command: new(
-                    Executable: "ffmpeg",
-                    Arguments: t.Arguments?.ToArray() ?? [],
-                    WorkingDirectory: null
+            .Tasks.Select(t => new EncodeTask(
+                t.TaskId ?? Guid.NewGuid().ToString("N"),
+                new(
+                    "ffmpeg",
+                    t.Arguments?.ToArray() ?? [],
+                    null
                 ),
-                OutputPath: t.OutputPath,
-                Type: t.TaskType
+                t.OutputPath,
+                t.TaskType
             ))
             .ToArray();
 
-        DispatchResult[] results = await dispatcher.DispatchAsync(tasks: tasks, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+        DispatchResult[] results = await dispatcher.DispatchAsync(tasks, ct).ConfigureAwait(false);
 
         return Ok(
-            value: new
+            new
             {
                 available_workers = dispatcher.AvailableWorkerCount,
                 distribution_enabled = encoderOptions.IsDistributedEncodingEnabled,
                 dispatched_count = results.Length,
-                tasks = results.Select(selector: r => new
+                tasks = results.Select(r => new
                 {
                     task_id = r.TaskId,
                     worker_id = r.WorkerId,
@@ -95,19 +95,19 @@ public class CoordinatorDispatchController(
     /// Returns 404 when no progress has been received yet (the task
     /// may still be queued or the worker hasn't pushed its first tick).
     /// </summary>
-    [HttpGet(template: "{taskId}/status")]
+    [HttpGet("{taskId}/status")]
     public IActionResult GetTaskStatus(string taskId)
     {
 
         TaskProgressSnapshot? snapshot = progressStore
             .GetAll()
-            .FirstOrDefault(predicate: s => s.TaskId == taskId);
+            .FirstOrDefault(s => s.TaskId == taskId);
 
         if (snapshot is null)
-            return NotFoundResponse(detail: $"No progress recorded for task '{taskId}'");
+            return NotFoundResponse($"No progress recorded for task '{taskId}'");
 
         return Ok(
-            value: new
+            new
             {
                 task_id = snapshot.TaskId,
                 worker_id = snapshot.WorkerId,
@@ -127,13 +127,13 @@ public class CoordinatorDispatchController(
 
 /// <summary>Request body for POST /distribution/workers/dispatch.</summary>
 public record DispatchEncodeJobRequest(
-    [property: JsonProperty(propertyName: "tasks")] List<DispatchTaskRequest>? Tasks
+    [property: JsonProperty("tasks")] List<DispatchTaskRequest>? Tasks
 );
 
 /// <summary>Per-task descriptor in a dispatch request.</summary>
 public record DispatchTaskRequest(
-    [property: JsonProperty(propertyName: "output_path")] string OutputPath,
-    [property: JsonProperty(propertyName: "task_id")] string? TaskId = null,
-    [property: JsonProperty(propertyName: "arguments")] List<string>? Arguments = null,
-    [property: JsonProperty(propertyName: "task_type")] EncodeTaskType TaskType = EncodeTaskType.QualityVariant
+    [property: JsonProperty("output_path")] string OutputPath,
+    [property: JsonProperty("task_id")] string? TaskId = null,
+    [property: JsonProperty("arguments")] List<string>? Arguments = null,
+    [property: JsonProperty("task_type")] EncodeTaskType TaskType = EncodeTaskType.QualityVariant
 );

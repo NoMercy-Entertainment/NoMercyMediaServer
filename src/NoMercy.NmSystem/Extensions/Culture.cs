@@ -45,14 +45,14 @@ public static class Culture
     /// </summary>
     public static string EnglishLanguageTag(this CultureInfo culture)
     {
-        ArgumentNullException.ThrowIfNull(argument: culture);
+        ArgumentNullException.ThrowIfNull(culture);
 
         string iso3 = culture.ThreeLetterISOLanguageName;
 
         // Only replace if the language is not English
-        bool isEnglish = iso3.Equals(value: "eng", comparisonType: StringComparison.OrdinalIgnoreCase);
+        bool isEnglish = iso3.Equals("eng", StringComparison.OrdinalIgnoreCase);
         string tag =
-            !isEnglish && LegacyIsoMap.TryGetValue(key: iso3, value: out string? legacyCode)
+            !isEnglish && LegacyIsoMap.TryGetValue(iso3, out string? legacyCode)
                 ? legacyCode
                 : iso3;
 
@@ -63,15 +63,15 @@ public static class Culture
 
     private static Dictionary<string, string> BuildIso3Map()
     {
-        Dictionary<string, string> map = new(comparer: StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> map = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (CultureInfo c in CultureInfo.GetCultures(types: CultureTypes.NeutralCultures))
+        foreach (CultureInfo c in CultureInfo.GetCultures(CultureTypes.NeutralCultures))
         {
             string iso2 = c.TwoLetterISOLanguageName;
             string iso3 = c.ThreeLetterISOLanguageName;
 
             if (iso2.Length == 2 && iso3.Length == 3)
-                map.TryAdd(key: iso2, value: iso3);
+                map.TryAdd(iso2, iso3);
         }
 
         return map;
@@ -84,47 +84,47 @@ public static class Culture
     /// </summary>
     public static string BibliographicLanguageCode(string code)
     {
-        if (string.IsNullOrWhiteSpace(value: code))
+        if (string.IsNullOrWhiteSpace(code))
             return code;
 
-        string bare = code.Trim().Split(separator: ['-', '_'])[0].ToLowerInvariant();
+        string bare = code.Trim().Split(['-', '_'])[0].ToLowerInvariant();
 
         string iso3 =
-            bare.Length == 2 && Iso3ByIso2.TryGetValue(key: bare, value: out string? mapped) ? mapped : bare;
+            bare.Length == 2 && Iso3ByIso2.TryGetValue(bare, out string? mapped) ? mapped : bare;
 
-        return LegacyIsoMap.TryGetValue(key: iso3, value: out string? bibliographic) ? bibliographic : iso3;
+        return LegacyIsoMap.TryGetValue(iso3, out string? bibliographic) ? bibliographic : iso3;
     }
 
     private static readonly Dictionary<string, string> EnglishNameByCode = BuildEnglishNameMap();
 
     private static Dictionary<string, string> BuildEnglishNameMap()
     {
-        Dictionary<string, string> map = new(comparer: StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> map = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (CultureInfo c in CultureInfo.GetCultures(types: CultureTypes.NeutralCultures))
+        foreach (CultureInfo c in CultureInfo.GetCultures(CultureTypes.NeutralCultures))
         {
             string iso2 = c.TwoLetterISOLanguageName;
             string iso3 = c.ThreeLetterISOLanguageName;
-            string name = StripRegion(englishName: c.EnglishName);
+            string name = StripRegion(c.EnglishName);
 
             if (iso2.Length == 2)
-                map.TryAdd(key: iso2, value: name);
+                map.TryAdd(iso2, name);
             if (iso3.Length == 3)
-                map.TryAdd(key: iso3, value: name);
+                map.TryAdd(iso3, name);
         }
 
         // Map the legacy/bibliographic codes to the same English name as the
         // ISO 639-3 form (deu→ger, fra→fre, nld→dut etc).
         foreach (KeyValuePair<string, string> entry in LegacyIsoMap)
         {
-            if (map.TryGetValue(key: entry.Key, value: out string? name))
-                map.TryAdd(key: entry.Value, value: name);
+            if (map.TryGetValue(entry.Key, out string? name))
+                map.TryAdd(entry.Value, name);
         }
 
         // Fixed display labels for codes the runtime doesn't carry.
-        map.TryAdd(key: "und", value: "Unknown");
-        map.TryAdd(key: "mul", value: "Multiple Languages");
-        map.TryAdd(key: "zxx", value: "No Language");
+        map.TryAdd("und", "Unknown");
+        map.TryAdd("mul", "Multiple Languages");
+        map.TryAdd("zxx", "No Language");
 
         return map;
     }
@@ -136,10 +136,10 @@ public static class Culture
     /// </summary>
     public static string EnglishLanguageName(string code)
     {
-        if (string.IsNullOrWhiteSpace(value: code))
+        if (string.IsNullOrWhiteSpace(code))
             return "Unknown";
 
-        return EnglishNameByCode.TryGetValue(key: code, value: out string? name)
+        return EnglishNameByCode.TryGetValue(code, out string? name)
             ? name
             : code.ToUpperInvariant();
     }
@@ -149,11 +149,11 @@ public static class Culture
         // CultureInfo.EnglishName is "Dutch (Netherlands)" / "English (United States)"
         // for neutral cultures the parenthesis is absent, but defensive trim
         // covers both shapes.
-        int paren = englishName.IndexOf(value: ' ', comparisonType: StringComparison.Ordinal);
+        int paren = englishName.IndexOf(' ', StringComparison.Ordinal);
         if (paren < 0)
             return englishName;
 
-        if (englishName[paren..].StartsWith(value: " (", comparisonType: StringComparison.Ordinal))
+        if (englishName[paren..].StartsWith(" (", StringComparison.Ordinal))
             return englishName[..paren];
 
         return englishName;

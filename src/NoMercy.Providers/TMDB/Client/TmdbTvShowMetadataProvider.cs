@@ -21,8 +21,8 @@ public class TmdbTvShowMetadataProvider : ITvShowMetadataProvider
         CancellationToken ct = default
     )
     {
-        using TmdbTvClient tmdbTvClient = new(id: id, language: language);
-        return await tmdbTvClient.WithAllAppends(priority: true);
+        using TmdbTvClient tmdbTvClient = new(id, language: language);
+        return await tmdbTvClient.WithAllAppends(true);
     }
 
     public async Task<TmdbTvShowDetails?> GetTvShowDetailsAsync(
@@ -30,7 +30,7 @@ public class TmdbTvShowMetadataProvider : ITvShowMetadataProvider
         CancellationToken ct = default
     )
     {
-        using TmdbTvClient tmdbTvClient = new(id: id);
-        return await tmdbTvClient.Details(priority: true);
+        using TmdbTvClient tmdbTvClient = new(id);
+        return await tmdbTvClient.Details(true);
     }
 }

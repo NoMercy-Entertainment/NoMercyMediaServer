@@ -15,6 +15,6 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class Relationship
 {
-    [JsonProperty(propertyName: "links")]
+    [JsonProperty("links")]
     public RelationshipLinks Links { get; set; } = new();
 }

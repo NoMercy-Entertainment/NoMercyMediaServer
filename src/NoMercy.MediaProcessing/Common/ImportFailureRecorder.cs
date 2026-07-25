@@ -27,7 +27,7 @@ public static class ImportFailureRecorder
         string errorMessage
     )
     {
-        ImportFailure? existing = await context.ImportFailures.FirstOrDefaultAsync(predicate: f =>
+        ImportFailure? existing = await context.ImportFailures.FirstOrDefaultAsync(f =>
             f.JobType == jobType && f.FilePath == filePath && !f.Resolved
         );
 
@@ -41,7 +41,7 @@ public static class ImportFailureRecorder
         else
         {
             context.ImportFailures.Add(
-                entity: new()
+                new()
                 {
                     JobType = jobType,
                     FilePath = filePath,

@@ -46,19 +46,19 @@ public class ArtistManager(
         MusicBrainzReleaseAppends releaseAppends
     )
     {
-        logger.LogTrace(message: "Storing Artist: {Name}", args: artistCredit.MusicBrainzArtist.Name);
-        string artistFolder = MakeArtistFolder(artist: artistCredit.MusicBrainzArtist.Name);
-        string folder = mediaFolder.Path.Replace(oldValue: ResolveLibraryRoot(libraryFolder: libraryFolder), newValue: "");
+        logger.LogTrace("Storing Artist: {Name}", artistCredit.MusicBrainzArtist.Name);
+        string artistFolder = MakeArtistFolder(artistCredit.MusicBrainzArtist.Name);
+        string folder = mediaFolder.Path.Replace(ResolveLibraryRoot(libraryFolder), "");
 
         Artist artist = new()
         {
             Id = artistCredit.MusicBrainzArtist.Id,
             Name = artistCredit.MusicBrainzArtist.Name,
-            Disambiguation = string.IsNullOrEmpty(value: artistCredit.MusicBrainzArtist.Disambiguation)
+            Disambiguation = string.IsNullOrEmpty(artistCredit.MusicBrainzArtist.Disambiguation)
                 ? null
                 : artistCredit.MusicBrainzArtist.Disambiguation,
             Country = artistCredit.MusicBrainzArtist.Country,
-            TitleSort = string.IsNullOrEmpty(value: artistCredit.MusicBrainzArtist.SortName)
+            TitleSort = string.IsNullOrEmpty(artistCredit.MusicBrainzArtist.SortName)
                 ? artistCredit.MusicBrainzArtist.Name.TitleSort()
                 : artistCredit.MusicBrainzArtist.SortName,
 
@@ -69,32 +69,32 @@ public class ArtistManager(
             HostFolder = folder.PathName(),
         };
 
-        await artistRepository.StoreAsync(artist: artist);
-        jobDispatcher.DispatchColorPaletteJob(entityType: "artist", entityId: artist.Id.ToString());
+        await artistRepository.StoreAsync(artist);
+        jobDispatcher.DispatchColorPaletteJob("artist", artist.Id.ToString());
 
-        await LinkToLibrary(artistMusicBrainzArtist: artistCredit.MusicBrainzArtist, library: library);
-        await LinkToRelease(artistMusicBrainzArtist: artistCredit.MusicBrainzArtist, releaseAppends: releaseAppends);
+        await LinkToLibrary(artistCredit.MusicBrainzArtist, library);
+        await LinkToRelease(artistCredit.MusicBrainzArtist, releaseAppends);
 
         try
         {
             List<ArtistMusicGenre> genres = artistCredit
-                .MusicBrainzArtist.Genres.Select(selector: genre => new ArtistMusicGenre
+                .MusicBrainzArtist.Genres.Select(genre => new ArtistMusicGenre
                 {
                     ArtistId = artistCredit.MusicBrainzArtist.Id,
                     MusicGenreId = genre.Id,
                 })
                 .ToList();
 
-            await musicGenreRepository.LinkToArtist(genreArtists: genres);
+            await musicGenreRepository.LinkToArtist(genres);
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
+            logger.LogError(e.Message);
         }
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                @event: new LibraryRefreshedEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey = ["music", "artist", artistCredit.MusicBrainzArtist.Id.ToString()],
                 }
@@ -109,24 +109,24 @@ public class ArtistManager(
         Folder libraryFolder
     )
     {
-        logger.LogTrace(message: "Storing Artist: {Name}", args: artistCredit.Name);
-        string artistFolder = MakeArtistFolder(artist: artistCredit.Name);
-        string folder = artistFolder.Replace(oldValue: "/", newValue: StringExtensions.DirectorySeparator);
+        logger.LogTrace("Storing Artist: {Name}", artistCredit.Name);
+        string artistFolder = MakeArtistFolder(artistCredit.Name);
+        string folder = artistFolder.Replace("/", StringExtensions.DirectorySeparator);
 
         CoverArtImageManagerManager.CoverPalette? coverPalette = await GetCoverArtForArtist(
-            artistCredit: artistCredit
+            artistCredit
         );
 
         Artist artist = new()
         {
             Id = artistCredit.Id,
             Name = artistCredit.Name,
-            Disambiguation = string.IsNullOrEmpty(value: artistCredit.Disambiguation)
+            Disambiguation = string.IsNullOrEmpty(artistCredit.Disambiguation)
                 ? null
                 : artistCredit.Disambiguation,
             Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
             Country = artistCredit.Country,
-            TitleSort = string.IsNullOrEmpty(value: artistCredit.SortName)
+            TitleSort = string.IsNullOrEmpty(artistCredit.SortName)
                 ? artistCredit.Name.TitleSort()
                 : artistCredit.SortName,
 
@@ -137,12 +137,12 @@ public class ArtistManager(
             HostFolder = folder.PathName(),
         };
 
-        await artistRepository.StoreAsync(artist: artist);
-        jobDispatcher.DispatchColorPaletteJob(entityType: "artist", entityId: artist.Id.ToString());
-        jobDispatcher.DispatchJob<MusicMetadataJob>(musicBrainzArtist: artistCredit);
+        await artistRepository.StoreAsync(artist);
+        jobDispatcher.DispatchColorPaletteJob("artist", artist.Id.ToString());
+        jobDispatcher.DispatchJob<MusicMetadataJob>(artistCredit);
 
-        await LinkToLibrary(artistMusicBrainzArtist: artistCredit, library: library);
-        await LinkToRelease(artistMusicBrainzArtist: artistCredit, releaseAppends: releaseAppends);
+        await LinkToLibrary(artistCredit, library);
+        await LinkToRelease(artistCredit, releaseAppends);
 
         foreach (MusicBrainzGenreDetails musicBrainzGenreDetails in artistCredit.Genres)
         {
@@ -151,28 +151,28 @@ public class ArtistManager(
                 Id = musicBrainzGenreDetails.Id,
                 Name = musicBrainzGenreDetails.Name,
             };
-            await musicGenreRepository.Store(musicGenre: musicGenre);
+            await musicGenreRepository.Store(musicGenre);
         }
         try
         {
             List<ArtistMusicGenre> genres = artistCredit
-                .Genres.Select(selector: genre => new ArtistMusicGenre
+                .Genres.Select(genre => new ArtistMusicGenre
                 {
                     ArtistId = artistCredit.Id,
                     MusicGenreId = genre.Id,
                 })
                 .ToList();
 
-            await musicGenreRepository.LinkToArtist(genreArtists: genres);
+            await musicGenreRepository.LinkToArtist(genres);
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
+            logger.LogError(e.Message);
         }
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                @event: new LibraryRefreshedEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey = ["music", "artist", artistCredit.Id.ToString()],
                 }
@@ -188,24 +188,24 @@ public class ArtistManager(
         MusicBrainzTrack track
     )
     {
-        logger.LogTrace(message: "Storing Artist: {Name}", args: artistCredit.Name);
-        string artistFolder = MakeArtistFolder(artist: artistCredit.Name);
-        string folder = mediaFolder.Path.Replace(oldValue: ResolveLibraryRoot(libraryFolder: libraryFolder), newValue: "");
+        logger.LogTrace("Storing Artist: {Name}", artistCredit.Name);
+        string artistFolder = MakeArtistFolder(artistCredit.Name);
+        string folder = mediaFolder.Path.Replace(ResolveLibraryRoot(libraryFolder), "");
 
         CoverArtImageManagerManager.CoverPalette? coverPalette = await GetCoverArtForArtist(
-            artistCredit: artistCredit
+            artistCredit
         );
 
         Artist artist = new()
         {
             Id = artistCredit.Id,
             Name = artistCredit.Name,
-            Disambiguation = string.IsNullOrEmpty(value: artistCredit.Disambiguation)
+            Disambiguation = string.IsNullOrEmpty(artistCredit.Disambiguation)
                 ? null
                 : artistCredit.Disambiguation,
             Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
             Country = artistCredit.Country,
-            TitleSort = string.IsNullOrEmpty(value: artistCredit.SortName)
+            TitleSort = string.IsNullOrEmpty(artistCredit.SortName)
                 ? artistCredit.Name.TitleSort()
                 : artistCredit.SortName,
 
@@ -216,12 +216,12 @@ public class ArtistManager(
             HostFolder = folder.PathName(),
         };
 
-        await artistRepository.StoreAsync(artist: artist);
-        jobDispatcher.DispatchColorPaletteJob(entityType: "artist", entityId: artist.Id.ToString());
-        jobDispatcher.DispatchJob<MusicMetadataJob>(musicBrainzArtist: artistCredit);
+        await artistRepository.StoreAsync(artist);
+        jobDispatcher.DispatchColorPaletteJob("artist", artist.Id.ToString());
+        jobDispatcher.DispatchJob<MusicMetadataJob>(artistCredit);
 
-        await LinkToLibrary(artistMusicBrainzArtist: artistCredit, library: library);
-        await LinkToTrack(artistCredit: artistCredit, track: track);
+        await LinkToLibrary(artistCredit, library);
+        await LinkToTrack(artistCredit, track);
         foreach (MusicBrainzGenreDetails musicBrainzGenreDetails in artistCredit.Genres)
         {
             MusicGenre musicGenre = new()
@@ -229,28 +229,28 @@ public class ArtistManager(
                 Id = musicBrainzGenreDetails.Id,
                 Name = musicBrainzGenreDetails.Name,
             };
-            await musicGenreRepository.Store(musicGenre: musicGenre);
+            await musicGenreRepository.Store(musicGenre);
         }
         try
         {
             List<ArtistMusicGenre> genres = artistCredit
-                .Genres.Select(selector: genre => new ArtistMusicGenre
+                .Genres.Select(genre => new ArtistMusicGenre
                 {
                     ArtistId = artistCredit.Id,
                     MusicGenreId = genre.Id,
                 })
                 .ToList();
 
-            await musicGenreRepository.LinkToArtist(genreArtists: genres);
+            await musicGenreRepository.LinkToArtist(genres);
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
+            logger.LogError(e.Message);
         }
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                @event: new LibraryRefreshedEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey = ["music", "artist", artistCredit.Id.ToString()],
                 }
@@ -262,14 +262,14 @@ public class ArtistManager(
     )
     {
         CoverArtImageManagerManager.CoverPalette? coverPalette = await FanArtImageManager.Add(
-            id: artistCredit.Id,
-            priority: true
+            artistCredit.Id,
+            true
         );
 
         if (coverPalette is not null)
         {
             using Image<Rgba32>? downloadedImage = await FanArtImageClient.Download(
-                url: coverPalette.Url!
+                coverPalette.Url!
             );
         }
 
@@ -278,11 +278,11 @@ public class ArtistManager(
 
     private async Task LinkToTrack(MusicBrainzArtistDetails artistCredit, MusicBrainzTrack track)
     {
-        logger.LogTrace(message: "Linking Artist to Track: {Name}", args: artistCredit.Name);
+        logger.LogTrace("Linking Artist to Track: {Name}", artistCredit.Name);
 
         ArtistTrack insert = new() { ArtistId = artistCredit.Id, TrackId = track.Id };
 
-        await artistRepository.LinkToRecording(insert: insert);
+        await artistRepository.LinkToRecording(insert);
     }
 
     private async Task LinkToRelease(
@@ -290,7 +290,7 @@ public class ArtistManager(
         MusicBrainzReleaseAppends releaseAppends
     )
     {
-        logger.LogTrace(message: "Linking Artist to Release: {Name}", args: artistMusicBrainzArtist.Name);
+        logger.LogTrace("Linking Artist to Release: {Name}", artistMusicBrainzArtist.Name);
 
         AlbumArtist insert = new()
         {
@@ -298,7 +298,7 @@ public class ArtistManager(
             AlbumId = releaseAppends.Id,
         };
 
-        await artistRepository.LinkToRelease(insert: insert);
+        await artistRepository.LinkToRelease(insert);
     }
 
     private async Task LinkToLibrary(
@@ -306,7 +306,7 @@ public class ArtistManager(
         Library library
     )
     {
-        logger.LogTrace(message: "Linking Artist to Library: {Name}", args: artistMusicBrainzArtist.Name);
+        logger.LogTrace("Linking Artist to Library: {Name}", artistMusicBrainzArtist.Name);
 
         ArtistLibrary insert = new()
         {
@@ -314,16 +314,16 @@ public class ArtistManager(
             LibraryId = library.Id,
         };
 
-        await artistRepository.LinkToLibrary(insert: insert);
+        await artistRepository.LinkToLibrary(insert);
     }
 
     private static string MakeArtistFolder(string artist)
     {
         string artistName = artist.RemoveDiacritics();
 
-        string artistFolder = char.IsNumber(c: artistName[index: 0])
+        string artistFolder = char.IsNumber(artistName[0])
             ? "#"
-            : artistName[index: 0].ToString().ToUpper();
+            : artistName[0].ToString().ToUpper();
 
         return $"/{artistFolder}/{artistName}";
     }
@@ -331,10 +331,10 @@ public class ArtistManager(
     private string ResolveLibraryRoot(Folder libraryFolder)
     {
         IStorage folderStorage = storageFactory.For(
-            folderId: libraryFolder.Id,
-            driverId: libraryFolder.DriverId,
-            subPath: string.Empty
+            libraryFolder.Id,
+            libraryFolder.DriverId,
+            string.Empty
         );
-        return FolderRootPath(storage: folderStorage, path: libraryFolder.Path);
+        return FolderRootPath(folderStorage, libraryFolder.Path);
     }
 }

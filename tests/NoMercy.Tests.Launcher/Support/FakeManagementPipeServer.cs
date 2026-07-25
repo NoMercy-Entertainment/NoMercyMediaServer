@@ -39,17 +39,17 @@ internal sealed class FakeManagementPipeServer
     )
     {
         await using NamedPipeServerStream server = new(
-            pipeName: PipeName,
-            direction: PipeDirection.InOut,
-            maxNumberOfServerInstances: 1,
-            transmissionMode: PipeTransmissionMode.Byte,
-            options: PipeOptions.Asynchronous
+            PipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous
         );
 
-        await server.WaitForConnectionAsync(cancellationToken: ct);
+        await server.WaitForConnectionAsync(ct);
 
-        string request = await ReadRequestAsync(stream: server, ct: ct);
-        await respond(arg: server);
+        string request = await ReadRequestAsync(server, ct);
+        await respond(server);
 
         return request;
     }
@@ -57,8 +57,8 @@ internal sealed class FakeManagementPipeServer
     private static async Task<string> ReadRequestAsync(Stream stream, CancellationToken ct)
     {
         byte[] buffer = new byte[8192];
-        int read = await stream.ReadAsync(buffer: buffer, cancellationToken: ct);
-        return Encoding.UTF8.GetString(bytes: buffer, index: 0, count: read);
+        int read = await stream.ReadAsync(buffer, ct);
+        return Encoding.UTF8.GetString(buffer, 0, read);
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ internal sealed class FakeManagementPipeServer
 
         foreach (Func<Stream, Task> responder in responders)
         {
-            requests.Add(item: await RunOnceAsync(respond: responder));
+            requests.Add(await RunOnceAsync(responder));
         }
 
         return requests;
@@ -95,13 +95,13 @@ internal sealed class FakeManagementPipeServer
     )
     {
         StringBuilder sb = new();
-        sb.Append(value: "HTTP/1.1 ").Append(value: statusCode).Append(value: ' ').Append(value: reasonPhrase).Append(value: "\r\n");
-        sb.Append(value: "Content-Type: ").Append(value: contentType).Append(value: "\r\n");
-        sb.Append(value: "Connection: close\r\n");
-        sb.Append(value: "\r\n");
-        sb.Append(value: body);
+        sb.Append("HTTP/1.1 ").Append(statusCode).Append(' ').Append(reasonPhrase).Append("\r\n");
+        sb.Append("Content-Type: ").Append(contentType).Append("\r\n");
+        sb.Append("Connection: close\r\n");
+        sb.Append("\r\n");
+        sb.Append(body);
 
-        byte[] bytes = Encoding.UTF8.GetBytes(s: sb.ToString());
-        await stream.WriteAsync(buffer: bytes, cancellationToken: ct);
+        byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
+        await stream.WriteAsync(bytes, ct);
     }
 }

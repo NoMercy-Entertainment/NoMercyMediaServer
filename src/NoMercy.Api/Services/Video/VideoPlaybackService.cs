@@ -31,7 +31,7 @@ public class VideoPlaybackService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IClientMessenger _clientMessenger;
     private readonly IEventBus? _eventBus;
-    private static int PlayerStateEventId => Interlocked.Increment(location: ref field);
+    private static int PlayerStateEventId => Interlocked.Increment(ref field);
 
     public VideoPlaybackService(
         VideoPlayerStateManager stateManager,
@@ -52,35 +52,35 @@ public class VideoPlaybackService
 
     internal void StartPlaybackTimer(User user)
     {
-        if (_timers.TryGetValue(key: user.Id, value: out Timer? existingTimer))
+        if (_timers.TryGetValue(user.Id, out Timer? existingTimer))
             existingTimer.Dispose();
 
-        if (!_stateManager.TryGetValue(userId: user.Id, state: out VideoPlayerState? _))
+        if (!_stateManager.TryGetValue(user.Id, out VideoPlayerState? _))
             return;
 
         Timer timer = new(
-            callback: async _ =>
+            async _ =>
             {
                 // A throw from this async-void timer callback is rethrown on the thread
                 // pool and terminates the whole server, so nothing may escape here.
                 try
                 {
-                    if (!_stateManager.TryGetValue(userId: user.Id, state: out VideoPlayerState? playerState))
+                    if (!_stateManager.TryGetValue(user.Id, out VideoPlayerState? playerState))
                         return;
                     if (!playerState.PlayState || playerState.CurrentItem is null)
                         return;
 
                     playerState.Time += TimerInterval;
 
-                    if (_lastTimes.TryGetValue(key: user.Id, value: out int lastTimer) && lastTimer >= 1000)
+                    if (_lastTimes.TryGetValue(user.Id, out int lastTimer) && lastTimer >= 1000)
                     {
-                        _lastTimes[key: user.Id] = 0;
-                        await StoreWatchProgression(state: playerState, user: user);
-                        await PublishProgressEventAsync(userId: user.Id, state: playerState);
+                        _lastTimes[user.Id] = 0;
+                        await StoreWatchProgression(playerState, user);
+                        await PublishProgressEventAsync(user.Id, playerState);
                     }
                     else
                     {
-                        _lastTimes.AddOrUpdate(key: user.Id, addValue: 0, updateValueFactory: (_, value) => value + TimerInterval);
+                        _lastTimes.AddOrUpdate(user.Id, 0, (_, value) => value + TimerInterval);
                     }
 
                     int duration = playerState.CurrentItem.Duration.ToMilliSeconds();
@@ -88,28 +88,28 @@ public class VideoPlaybackService
                     if (playerState.Time < duration - TimerInterval)
                         return;
 
-                    RemoveTimer(userId: user.Id);
-                    await HandleTrackCompletion(user: user, state: playerState);
+                    RemoveTimer(user.Id);
+                    await HandleTrackCompletion(user, playerState);
                 }
                 catch (Exception ex)
                 {
                     Logger.App(
-                        message: $"Playback timer tick failed for user {user.Id}: {ex.Message}",
-                        level: LogEventLevel.Error
+                        $"Playback timer tick failed for user {user.Id}: {ex.Message}",
+                        LogEventLevel.Error
                     );
                 }
             },
-            state: null,
-            dueTime: 100,
-            period: TimerInterval
+            null,
+            100,
+            TimerInterval
         );
 
-        _timers[key: user.Id] = timer;
+        _timers[user.Id] = timer;
     }
 
     public void RemoveTimer(Guid userId)
     {
-        if (_timers.TryRemove(key: userId, value: out Timer? timer))
+        if (_timers.TryRemove(userId, out Timer? timer))
             timer.Dispose();
     }
 
@@ -117,28 +117,28 @@ public class VideoPlaybackService
     {
         if (state.CurrentItem == null)
             return;
-        RemoveTimer(userId: user.Id);
+        RemoveTimer(user.Id);
 
-        int currentIndex = state.Playlist.IndexOf(item: state.CurrentItem);
+        int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
 
         if (currentIndex + 1 == state.Playlist.Count)
         {
-            await PublishCompletedEventAsync(userId: user.Id, state: state);
+            await PublishCompletedEventAsync(user.Id, state);
 
-            UpdateState(state: state, currentIndex: -1);
+            UpdateState(state, -1);
 
-            await UpdatePlaybackState(user: user, state: state);
+            await UpdatePlaybackState(user, state);
 
-            _stateManager.RemoveState(userId: user.Id);
+            _stateManager.RemoveState(user.Id);
 
             return;
         }
 
-        UpdateState(state: state, currentIndex: currentIndex + 1);
+        UpdateState(state, currentIndex + 1);
 
-        await UpdatePlaybackState(user: user, state: state);
+        await UpdatePlaybackState(user, state);
 
-        StartPlaybackTimer(user: user);
+        StartPlaybackTimer(user);
     }
 
     public async Task UpdatePlaybackState(User user, VideoPlayerState? state)
@@ -160,7 +160,7 @@ public class VideoPlaybackService
             ],
         };
 
-        await _clientMessenger.SendTo(name: "VideoPlayerState", endpoint: "videoHub", userId: user.Id, data: payload);
+        await _clientMessenger.SendTo("VideoPlayerState", "videoHub", user.Id, payload);
     }
 
     private void UpdateState(VideoPlayerState state, int currentIndex)
@@ -171,7 +171,7 @@ public class VideoPlaybackService
             state.Time = 0;
             state.CurrentItem = null;
             state.Playlist.Clear();
-            state.CurrentList = new(uriString: "/home", uriKind: UriKind.Relative);
+            state.CurrentList = new("/home", UriKind.Relative);
             state.Actions = new()
             {
                 Disallows = new()
@@ -190,7 +190,7 @@ public class VideoPlaybackService
         {
             state.PlayState = true;
             state.Time = 0;
-            state.CurrentItem = state.Playlist[index: currentIndex + 1];
+            state.CurrentItem = state.Playlist[currentIndex + 1];
         }
         else
         {
@@ -208,7 +208,7 @@ public class VideoPlaybackService
             return;
 
         await bus.PublishAsync(
-            @event: new PlaybackStartedEvent
+            new PlaybackStartedEvent
             {
                 UserId = userId,
                 MediaId = state.CurrentItem.TmdbId,
@@ -228,12 +228,12 @@ public class VideoPlaybackService
         int duration = state.CurrentItem.Duration.ToMilliSeconds();
 
         await bus.PublishAsync(
-            @event: new PlaybackProgressUpdatedEvent
+            new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = state.CurrentItem.TmdbId,
-                Position = TimeSpan.FromMilliseconds(milliseconds: state.Time),
-                Duration = TimeSpan.FromMilliseconds(milliseconds: duration),
+                Position = TimeSpan.FromMilliseconds(state.Time),
+                Duration = TimeSpan.FromMilliseconds(duration),
             }
         );
     }
@@ -246,7 +246,7 @@ public class VideoPlaybackService
             return;
 
         await bus.PublishAsync(
-            @event: new PlaybackCompletedEvent
+            new PlaybackCompletedEvent
             {
                 UserId = userId,
                 MediaId = state.CurrentItem.TmdbId,
@@ -275,8 +275,8 @@ public class VideoPlaybackService
         )
         {
             Logger.App(
-                message: $"StoreWatchProgression: unsupported playlist type '{state.CurrentItem.PlaylistType}', skipping",
-                level: LogEventLevel.Warning
+                $"StoreWatchProgression: unsupported playlist type '{state.CurrentItem.PlaylistType}', skipping",
+                LogEventLevel.Warning
             );
             return;
         }
@@ -311,43 +311,43 @@ public class VideoPlaybackService
             IDbContextFactory<MediaContext>
         >();
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
-        UpsertCommandBuilder<UserData> query = mediaContext.UserData.Upsert(entity: userdata);
+        UpsertCommandBuilder<UserData> query = mediaContext.UserData.Upsert(userdata);
 
         query = state.CurrentItem.PlaylistType switch
         {
-            MediaTypes.MovieMediaType => query.On(match: x => new
+            MediaTypes.MovieMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.MovieId,
             }),
-            MediaTypes.TvMediaType or MediaTypes.AnimeMediaType => query.On(match: x => new
+            MediaTypes.TvMediaType or MediaTypes.AnimeMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.TvId,
             }),
-            MediaTypes.CollectionMediaType => query.On(match: x => new
+            MediaTypes.CollectionMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.CollectionId,
             }),
-            MediaTypes.SpecialMediaType => query.On(match: x => new
+            MediaTypes.SpecialMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.SpecialId,
             }),
             _ => throw new ArgumentException(
-                message: "Invalid playlist type",
-                paramName: state.CurrentItem.PlaylistType
+                "Invalid playlist type",
+                state.CurrentItem.PlaylistType
             ),
         };
 
         await query
             .WhenMatched(
-                updater: (uds, udi) =>
+                (uds, udi) =>
                     new()
                     {
                         Id = uds.Id,

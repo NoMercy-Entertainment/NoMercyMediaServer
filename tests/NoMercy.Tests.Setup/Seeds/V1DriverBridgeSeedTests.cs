@@ -19,7 +19,7 @@ using NoMercy.Service.Seeds;
 
 namespace NoMercy.Tests.Setup.Seeds;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class V1DriverBridgeSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -27,17 +27,17 @@ public class V1DriverBridgeSeedTests : IDisposable
 
     public V1DriverBridgeSeedTests()
     {
-        _connection = new(connectionString: "DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
 
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection: _connection,
-                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
+                _connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(options: _options);
+        using MediaContext ctx = new(_options);
         ctx.Database.EnsureCreated();
     }
 
@@ -46,7 +46,7 @@ public class V1DriverBridgeSeedTests : IDisposable
         _connection.Dispose();
     }
 
-    private MediaContext CreateContext() => new(options: _options);
+    private MediaContext CreateContext() => new(_options);
 
     // -----------------------------------------------------------------------
     // Helpers
@@ -58,7 +58,7 @@ public class V1DriverBridgeSeedTests : IDisposable
             Id = id,
             Name = rootPath,
             Type = "local",
-            Config = JsonConvert.SerializeObject(value: new { rootPath }),
+            Config = JsonConvert.SerializeObject(new { rootPath }),
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
@@ -91,36 +91,36 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(entities: [MakeLocalDriver(id: moviesId, rootPath: @"C:\Media\Movies"), MakeLocalDriver(id: tvId, rootPath: @"C:\Media\TV")]
+            seed.Drivers.AddRange([MakeLocalDriver(moviesId, @"C:\Media\Movies"), MakeLocalDriver(tvId, @"C:\Media\TV")]
             );
-            seed.Folders.AddRange(entities: [MakeSelfDriverFolder(id: moviesId), MakeSelfDriverFolder(id: tvId)]);
+            seed.Folders.AddRange([MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId)]);
             await seed.SaveChangesAsync();
         }
 
         await using (MediaContext ctx = CreateContext())
         {
-            await V1DriverBridgeSeed.RunAsync(context: ctx);
+            await V1DriverBridgeSeed.RunAsync(ctx);
         }
 
         await using MediaContext verify = CreateContext();
 
         List<Folder> folders = await verify.Folders.ToListAsync();
-        Assert.Equal(expected: 2, actual: folders.Count);
+        Assert.Equal(2, folders.Count);
 
-        Ulid sharedDriverId = folders[index: 0].DriverId;
-        Assert.Equal(expected: sharedDriverId, actual: folders[index: 1].DriverId);
+        Ulid sharedDriverId = folders[0].DriverId;
+        Assert.Equal(sharedDriverId, folders[1].DriverId);
 
-        Driver? sharedDriver = await verify.Drivers.FindAsync(keyValues: sharedDriverId);
-        Assert.NotNull(@object: sharedDriver);
-        Assert.Equal(expected: "local", actual: sharedDriver.Type);
-        Assert.Contains(expectedSubstring: "Media", actualString: sharedDriver.Config);
+        Driver? sharedDriver = await verify.Drivers.FindAsync(sharedDriverId);
+        Assert.NotNull(sharedDriver);
+        Assert.Equal("local", sharedDriver.Type);
+        Assert.Contains("Media", sharedDriver.Config);
 
-        Folder? movies = folders.Find(match: f => f.Id == moviesId);
-        Folder? tv = folders.Find(match: f => f.Id == tvId);
-        Assert.NotNull(@object: movies);
-        Assert.NotNull(@object: tv);
-        Assert.Equal(expected: "Movies", actual: movies.Path);
-        Assert.Equal(expected: "TV", actual: tv.Path);
+        Folder? movies = folders.Find(f => f.Id == moviesId);
+        Folder? tv = folders.Find(f => f.Id == tvId);
+        Assert.NotNull(movies);
+        Assert.NotNull(tv);
+        Assert.Equal("Movies", movies.Path);
+        Assert.Equal("TV", tv.Path);
     }
 
     [Fact]
@@ -132,8 +132,7 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(entities:
-                [MakeLocalDriver(id: moviesId, rootPath: @"C:\Media\Movies"), MakeLocalDriver(id: tvId, rootPath: @"C:\Media\TV"), new Driver
+            seed.Drivers.AddRange([MakeLocalDriver(moviesId, @"C:\Media\Movies"), MakeLocalDriver(tvId, @"C:\Media\TV"), new Driver
                     {
                         Id = sharedId,
                         Name = @"C:\Media",
@@ -144,7 +143,7 @@ public class V1DriverBridgeSeedTests : IDisposable
                     }
                 ]
             );
-            seed.Folders.AddRange(entities: [MakeSelfDriverFolder(id: moviesId), MakeSelfDriverFolder(id: tvId)]);
+            seed.Folders.AddRange([MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId)]);
             await seed.SaveChangesAsync();
         }
 
@@ -164,15 +163,15 @@ public class V1DriverBridgeSeedTests : IDisposable
                 p = cmd.CreateParameter();
                 p.ParameterName = "@d";
                 p.Value = sharedStr;
-                cmd.Parameters.Add(value: p);
+                cmd.Parameters.Add(p);
                 p = cmd.CreateParameter();
                 p.ParameterName = "@path";
                 p.Value = "Movies";
-                cmd.Parameters.Add(value: p);
+                cmd.Parameters.Add(p);
                 p = cmd.CreateParameter();
                 p.ParameterName = "@id";
                 p.Value = moviesId.ToString();
-                cmd.Parameters.Add(value: p);
+                cmd.Parameters.Add(p);
                 await cmd.ExecuteNonQueryAsync();
             }
 
@@ -182,29 +181,29 @@ public class V1DriverBridgeSeedTests : IDisposable
                 p = cmd.CreateParameter();
                 p.ParameterName = "@d";
                 p.Value = sharedStr;
-                cmd.Parameters.Add(value: p);
+                cmd.Parameters.Add(p);
                 p = cmd.CreateParameter();
                 p.ParameterName = "@path";
                 p.Value = "TV";
-                cmd.Parameters.Add(value: p);
+                cmd.Parameters.Add(p);
                 p = cmd.CreateParameter();
                 p.ParameterName = "@id";
                 p.Value = tvId.ToString();
-                cmd.Parameters.Add(value: p);
+                cmd.Parameters.Add(p);
                 await cmd.ExecuteNonQueryAsync();
             }
         }
 
         await using MediaContext verify = CreateContext();
         List<Folder> folders = await verify.Folders.ToListAsync();
-        Assert.Equal(expected: 2, actual: folders.Count);
+        Assert.Equal(2, folders.Count);
 
-        Folder? movies = folders.Find(match: f => f.Id == moviesId);
-        Folder? tv = folders.Find(match: f => f.Id == tvId);
-        Assert.NotNull(@object: movies);
-        Assert.NotNull(@object: tv);
-        Assert.Equal(expected: sharedId, actual: movies.DriverId);
-        Assert.Equal(expected: sharedId, actual: tv.DriverId);
+        Folder? movies = folders.Find(f => f.Id == moviesId);
+        Folder? tv = folders.Find(f => f.Id == tvId);
+        Assert.NotNull(movies);
+        Assert.NotNull(tv);
+        Assert.Equal(sharedId, movies.DriverId);
+        Assert.Equal(sharedId, tv.DriverId);
     }
 
     [Fact]
@@ -215,27 +214,27 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(entities: [MakeLocalDriver(id: moviesId, rootPath: @"C:\Media\Movies"), MakeLocalDriver(id: tvId, rootPath: @"C:\Media\TV")]
+            seed.Drivers.AddRange([MakeLocalDriver(moviesId, @"C:\Media\Movies"), MakeLocalDriver(tvId, @"C:\Media\TV")]
             );
-            seed.Folders.AddRange(entities: [MakeSelfDriverFolder(id: moviesId), MakeSelfDriverFolder(id: tvId)]);
+            seed.Folders.AddRange([MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId)]);
             await seed.SaveChangesAsync();
         }
 
         await using (MediaContext ctx = CreateContext())
         {
-            await V1DriverBridgeSeed.RunAsync(context: ctx);
+            await V1DriverBridgeSeed.RunAsync(ctx);
         }
 
         await using MediaContext verify = CreateContext();
 
         List<Folder> folders = await verify.Folders.ToListAsync();
-        Assert.Equal(expected: 2, actual: folders.Count);
+        Assert.Equal(2, folders.Count);
 
-        Folder? movies = folders.Find(match: f => f.Id == moviesId);
-        Folder? tv = folders.Find(match: f => f.Id == tvId);
-        Assert.NotNull(@object: movies);
-        Assert.NotNull(@object: tv);
-        Assert.Equal(expected: movies.DriverId, actual: tv.DriverId);
+        Folder? movies = folders.Find(f => f.Id == moviesId);
+        Folder? tv = folders.Find(f => f.Id == tvId);
+        Assert.NotNull(movies);
+        Assert.NotNull(tv);
+        Assert.Equal(movies.DriverId, tv.DriverId);
     }
 
     // -----------------------------------------------------------------------
@@ -249,27 +248,27 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.Add(entity: MakeLocalDriver(id: folderId, rootPath: @"C:\Media\Anime"));
-            seed.Folders.Add(entity: MakeSelfDriverFolder(id: folderId));
+            seed.Drivers.Add(MakeLocalDriver(folderId, @"C:\Media\Anime"));
+            seed.Folders.Add(MakeSelfDriverFolder(folderId));
             await seed.SaveChangesAsync();
         }
 
         await using (MediaContext ctx = CreateContext())
         {
-            await V1DriverBridgeSeed.RunAsync(context: ctx);
+            await V1DriverBridgeSeed.RunAsync(ctx);
         }
 
         await using MediaContext verify = CreateContext();
 
-        Folder? folder = await verify.Folders.FindAsync(keyValues: folderId);
-        Assert.NotNull(@object: folder);
+        Folder? folder = await verify.Folders.FindAsync(folderId);
+        Assert.NotNull(folder);
 
-        Driver? driver = await verify.Drivers.FindAsync(keyValues: folder.DriverId);
-        Assert.NotNull(@object: driver);
-        Assert.Equal(expected: "local", actual: driver.Type);
-        Assert.Equal(expected: string.Empty, actual: folder.Path);
-        Assert.Contains(expectedSubstring: "Media", actualString: driver.Config!);
-        Assert.Contains(expectedSubstring: "Anime", actualString: driver.Config!);
+        Driver? driver = await verify.Drivers.FindAsync(folder.DriverId);
+        Assert.NotNull(driver);
+        Assert.Equal("local", driver.Type);
+        Assert.Equal(string.Empty, folder.Path);
+        Assert.Contains("Media", driver.Config!);
+        Assert.Contains("Anime", driver.Config!);
     }
 
     // -----------------------------------------------------------------------
@@ -288,7 +287,7 @@ public class V1DriverBridgeSeedTests : IDisposable
         await using (MediaContext seed = CreateContext())
         {
             seed.Drivers.Add(
-                entity: new()
+                new()
                 {
                     Id = realDriverId,
                     Name = "NAS",
@@ -298,26 +297,26 @@ public class V1DriverBridgeSeedTests : IDisposable
                     UpdatedAt = DateTimeOffset.UtcNow,
                 }
             );
-            seed.Folders.Add(entity: MakeRealDriverFolder(id: folderId, driverId: realDriverId, subPath: originalPath));
+            seed.Folders.Add(MakeRealDriverFolder(folderId, realDriverId, originalPath));
             await seed.SaveChangesAsync();
         }
 
         await using (MediaContext ctx = CreateContext())
         {
-            await V1DriverBridgeSeed.RunAsync(context: ctx);
+            await V1DriverBridgeSeed.RunAsync(ctx);
         }
 
         await using MediaContext verify = CreateContext();
 
-        Folder? folder = await verify.Folders.FindAsync(keyValues: folderId);
-        Assert.NotNull(@object: folder);
-        Assert.Equal(expected: realDriverId, actual: folder.DriverId);
-        Assert.Equal(expected: originalPath, actual: folder.Path);
+        Folder? folder = await verify.Folders.FindAsync(folderId);
+        Assert.NotNull(folder);
+        Assert.Equal(realDriverId, folder.DriverId);
+        Assert.Equal(originalPath, folder.Path);
 
-        Driver? driver = await verify.Drivers.FindAsync(keyValues: realDriverId);
-        Assert.NotNull(@object: driver);
-        Assert.Equal(expected: "nfs", actual: driver.Type);
-        Assert.Equal(expected: originalDriverConfig, actual: driver.Config);
+        Driver? driver = await verify.Drivers.FindAsync(realDriverId);
+        Assert.NotNull(driver);
+        Assert.Equal("nfs", driver.Type);
+        Assert.Equal(originalDriverConfig, driver.Config);
     }
 
     // -----------------------------------------------------------------------
@@ -335,8 +334,7 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(entities:
-                [
+            seed.Drivers.AddRange([
                     new Driver
                     {
                         Id = nfsDriverId,
@@ -357,29 +355,29 @@ public class V1DriverBridgeSeedTests : IDisposable
                     }
                 ]
             );
-            seed.Folders.AddRange(entities: [MakeRealDriverFolder(id: nfsFolderId, driverId: nfsDriverId, subPath: "Movies"), MakeRealDriverFolder(id: s3FolderId, driverId: s3DriverId, subPath: "TV")]
+            seed.Folders.AddRange([MakeRealDriverFolder(nfsFolderId, nfsDriverId, "Movies"), MakeRealDriverFolder(s3FolderId, s3DriverId, "TV")]
             );
             await seed.SaveChangesAsync();
         }
 
         await using (MediaContext ctx = CreateContext())
         {
-            await V1DriverBridgeSeed.RunAsync(context: ctx);
+            await V1DriverBridgeSeed.RunAsync(ctx);
         }
 
         await using MediaContext verify = CreateContext();
 
-        Driver? nfsDriver = await verify.Drivers.FindAsync(keyValues: nfsDriverId);
-        Driver? s3Driver = await verify.Drivers.FindAsync(keyValues: s3DriverId);
+        Driver? nfsDriver = await verify.Drivers.FindAsync(nfsDriverId);
+        Driver? s3Driver = await verify.Drivers.FindAsync(s3DriverId);
 
-        Assert.NotNull(@object: nfsDriver);
-        Assert.Equal(expected: "nfs", actual: nfsDriver.Type);
+        Assert.NotNull(nfsDriver);
+        Assert.Equal("nfs", nfsDriver.Type);
 
-        Assert.NotNull(@object: s3Driver);
-        Assert.Equal(expected: "s3", actual: s3Driver.Type);
+        Assert.NotNull(s3Driver);
+        Assert.Equal("s3", s3Driver.Type);
 
         int driverCount = await verify.Drivers.CountAsync();
-        Assert.Equal(expected: 2, actual: driverCount);
+        Assert.Equal(2, driverCount);
     }
 
     // -----------------------------------------------------------------------
@@ -397,8 +395,7 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(entities:
-                [
+            seed.Drivers.AddRange([
                     new Driver
                     {
                         Id = realDriverId,
@@ -408,33 +405,33 @@ public class V1DriverBridgeSeedTests : IDisposable
                         CreatedAt = DateTimeOffset.UtcNow,
                         UpdatedAt = DateTimeOffset.UtcNow,
                     },
-                    MakeLocalDriver(id: moviesId, rootPath: @"D:\Media\Movies"), MakeLocalDriver(id: tvId, rootPath: @"D:\Media\TV")
+                    MakeLocalDriver(moviesId, @"D:\Media\Movies"), MakeLocalDriver(tvId, @"D:\Media\TV")
                 ]
             );
-            seed.Folders.AddRange(entities: [MakeRealDriverFolder(id: realFolderId, driverId: realDriverId, subPath: "Films"), MakeSelfDriverFolder(id: moviesId), MakeSelfDriverFolder(id: tvId)]
+            seed.Folders.AddRange([MakeRealDriverFolder(realFolderId, realDriverId, "Films"), MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId)]
             );
             await seed.SaveChangesAsync();
         }
 
         await using (MediaContext ctx = CreateContext())
         {
-            await V1DriverBridgeSeed.RunAsync(context: ctx);
+            await V1DriverBridgeSeed.RunAsync(ctx);
         }
 
         await using MediaContext verify = CreateContext();
 
-        Folder? realFolder = await verify.Folders.FindAsync(keyValues: realFolderId);
-        Assert.NotNull(@object: realFolder);
-        Assert.Equal(expected: realDriverId, actual: realFolder.DriverId);
-        Assert.Equal(expected: "Films", actual: realFolder.Path);
+        Folder? realFolder = await verify.Folders.FindAsync(realFolderId);
+        Assert.NotNull(realFolder);
+        Assert.Equal(realDriverId, realFolder.DriverId);
+        Assert.Equal("Films", realFolder.Path);
 
-        Folder? movies = await verify.Folders.FindAsync(keyValues: moviesId);
-        Folder? tv = await verify.Folders.FindAsync(keyValues: tvId);
-        Assert.NotNull(@object: movies);
-        Assert.NotNull(@object: tv);
-        Assert.Equal(expected: movies.DriverId, actual: tv.DriverId);
-        Assert.NotEqual(expected: moviesId, actual: movies.DriverId);
-        Assert.NotEqual(expected: tvId, actual: tv.DriverId);
+        Folder? movies = await verify.Folders.FindAsync(moviesId);
+        Folder? tv = await verify.Folders.FindAsync(tvId);
+        Assert.NotNull(movies);
+        Assert.NotNull(tv);
+        Assert.Equal(movies.DriverId, tv.DriverId);
+        Assert.NotEqual(moviesId, movies.DriverId);
+        Assert.NotEqual(tvId, tv.DriverId);
     }
 
     // -----------------------------------------------------------------------
@@ -449,15 +446,15 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(entities: [MakeLocalDriver(id: moviesId, rootPath: @"C:\Data\Media\Movies"), MakeLocalDriver(id: tvId, rootPath: @"C:\Data\Media\TV")]
+            seed.Drivers.AddRange([MakeLocalDriver(moviesId, @"C:\Data\Media\Movies"), MakeLocalDriver(tvId, @"C:\Data\Media\TV")]
             );
-            seed.Folders.AddRange(entities: [MakeSelfDriverFolder(id: moviesId), MakeSelfDriverFolder(id: tvId)]);
+            seed.Folders.AddRange([MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId)]);
             await seed.SaveChangesAsync();
         }
 
         await using (MediaContext firstRun = CreateContext())
         {
-            await V1DriverBridgeSeed.RunAsync(context: firstRun);
+            await V1DriverBridgeSeed.RunAsync(firstRun);
         }
 
         Ulid driverIdAfterFirstRun;
@@ -466,8 +463,8 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext snapshot = CreateContext())
         {
-            Folder movies = await snapshot.Folders.FindAsync(keyValues: moviesId) ?? throw new();
-            Folder tv = await snapshot.Folders.FindAsync(keyValues: tvId) ?? throw new();
+            Folder movies = await snapshot.Folders.FindAsync(moviesId) ?? throw new();
+            Folder tv = await snapshot.Folders.FindAsync(tvId) ?? throw new();
             driverIdAfterFirstRun = movies.DriverId;
             pathMoviesAfterFirstRun = movies.Path;
             pathTvAfterFirstRun = tv.Path;
@@ -475,22 +472,22 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext secondRun = CreateContext())
         {
-            await V1DriverBridgeSeed.RunAsync(context: secondRun);
+            await V1DriverBridgeSeed.RunAsync(secondRun);
         }
 
         await using MediaContext verify = CreateContext();
 
-        Folder? moviesAfter = await verify.Folders.FindAsync(keyValues: moviesId);
-        Folder? tvAfter = await verify.Folders.FindAsync(keyValues: tvId);
-        Assert.NotNull(@object: moviesAfter);
-        Assert.NotNull(@object: tvAfter);
-        Assert.Equal(expected: driverIdAfterFirstRun, actual: moviesAfter.DriverId);
-        Assert.Equal(expected: driverIdAfterFirstRun, actual: tvAfter.DriverId);
-        Assert.Equal(expected: pathMoviesAfterFirstRun, actual: moviesAfter.Path);
-        Assert.Equal(expected: pathTvAfterFirstRun, actual: tvAfter.Path);
+        Folder? moviesAfter = await verify.Folders.FindAsync(moviesId);
+        Folder? tvAfter = await verify.Folders.FindAsync(tvId);
+        Assert.NotNull(moviesAfter);
+        Assert.NotNull(tvAfter);
+        Assert.Equal(driverIdAfterFirstRun, moviesAfter.DriverId);
+        Assert.Equal(driverIdAfterFirstRun, tvAfter.DriverId);
+        Assert.Equal(pathMoviesAfterFirstRun, moviesAfter.Path);
+        Assert.Equal(pathTvAfterFirstRun, tvAfter.Path);
 
         int driverCount = await verify.Drivers.CountAsync();
-        Assert.Equal(expected: 1, actual: driverCount);
+        Assert.Equal(1, driverCount);
     }
 
     // -----------------------------------------------------------------------
@@ -501,12 +498,12 @@ public class V1DriverBridgeSeedTests : IDisposable
     public async Task EmptyDatabase_DoesNotThrow()
     {
         await using MediaContext ctx = CreateContext();
-        await V1DriverBridgeSeed.RunAsync(context: ctx);
+        await V1DriverBridgeSeed.RunAsync(ctx);
 
         int folderCount = await ctx.Folders.CountAsync();
         int driverCount = await ctx.Drivers.CountAsync();
-        Assert.Equal(expected: 0, actual: folderCount);
-        Assert.Equal(expected: 0, actual: driverCount);
+        Assert.Equal(0, folderCount);
+        Assert.Equal(0, driverCount);
     }
 
     // -----------------------------------------------------------------------
@@ -518,14 +515,14 @@ public class V1DriverBridgeSeedTests : IDisposable
     [Fact]
     public async Task FileBased_Bridge_Regroups_AutoSeeded_AndLeavesConfiguredDriverUntouched()
     {
-        string dbPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nmtest_{Ulid.NewUlid()}.db");
+        string dbPath = Path.Combine(Path.GetTempPath(), $"nmtest_{Ulid.NewUlid()}.db");
         string connectionString = $"Data Source={dbPath}; Foreign Keys=True;";
         try
         {
             DbContextOptions<MediaContext> fileOptions = new DbContextOptionsBuilder<MediaContext>()
                 .UseSqlite(
-                    connectionString: connectionString,
-                    sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
+                    connectionString,
+                    o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
                 )
                 .Options;
 
@@ -535,12 +532,11 @@ public class V1DriverBridgeSeedTests : IDisposable
             Ulid configuredDriverId = Ulid.NewUlid();
             Ulid configuredFolderId = Ulid.NewUlid();
 
-            await using (MediaContext seedCtx = new(options: fileOptions))
+            await using (MediaContext seedCtx = new(fileOptions))
             {
                 await seedCtx.Database.EnsureCreatedAsync();
 
-                seedCtx.Drivers.AddRange(entities:
-                    [MakeLocalDriver(id: moviesId, rootPath: @"C:\Media\Movies"), MakeLocalDriver(id: tvId, rootPath: @"C:\Media\TV"), new Driver
+                seedCtx.Drivers.AddRange([MakeLocalDriver(moviesId, @"C:\Media\Movies"), MakeLocalDriver(tvId, @"C:\Media\TV"), new Driver
                         {
                             Id = configuredDriverId,
                             Name = "NAS",
@@ -551,87 +547,87 @@ public class V1DriverBridgeSeedTests : IDisposable
                         }
                     ]
                 );
-                seedCtx.Folders.AddRange(entities: [MakeSelfDriverFolder(id: moviesId), MakeSelfDriverFolder(id: tvId), MakeRealDriverFolder(id: configuredFolderId, driverId: configuredDriverId, subPath: "Films")]
+                seedCtx.Folders.AddRange([MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId), MakeRealDriverFolder(configuredFolderId, configuredDriverId, "Films")]
                 );
                 await seedCtx.SaveChangesAsync();
             }
 
             // ── run bridge ────────────────────────────────────────────────────
-            await using (MediaContext bridgeCtx = new(options: fileOptions))
+            await using (MediaContext bridgeCtx = new(fileOptions))
             {
-                await V1DriverBridgeSeed.RunAsync(context: bridgeCtx);
+                await V1DriverBridgeSeed.RunAsync(bridgeCtx);
             }
 
             // ── verify ────────────────────────────────────────────────────────
             Ulid sharedDriverId;
-            await using (MediaContext verifyCtx = new(options: fileOptions))
+            await using (MediaContext verifyCtx = new(fileOptions))
             {
-                Folder? movies = await verifyCtx.Folders.FindAsync(keyValues: moviesId);
-                Folder? tv = await verifyCtx.Folders.FindAsync(keyValues: tvId);
-                Folder? configured = await verifyCtx.Folders.FindAsync(keyValues: configuredFolderId);
+                Folder? movies = await verifyCtx.Folders.FindAsync(moviesId);
+                Folder? tv = await verifyCtx.Folders.FindAsync(tvId);
+                Folder? configured = await verifyCtx.Folders.FindAsync(configuredFolderId);
 
-                Assert.NotNull(@object: movies);
-                Assert.NotNull(@object: tv);
-                Assert.NotNull(@object: configured);
+                Assert.NotNull(movies);
+                Assert.NotNull(tv);
+                Assert.NotNull(configured);
 
                 // auto-seeded folders share one driver
-                Assert.Equal(expected: movies.DriverId, actual: tv.DriverId);
+                Assert.Equal(movies.DriverId, tv.DriverId);
                 sharedDriverId = movies.DriverId;
 
                 // the shared driver is neither of the original per-folder drivers
-                Assert.NotEqual(expected: moviesId, actual: movies.DriverId);
-                Assert.NotEqual(expected: tvId, actual: tv.DriverId);
+                Assert.NotEqual(moviesId, movies.DriverId);
+                Assert.NotEqual(tvId, tv.DriverId);
 
                 // sub-paths are set correctly
-                Assert.Equal(expected: "Movies", actual: movies.Path);
-                Assert.Equal(expected: "TV", actual: tv.Path);
+                Assert.Equal("Movies", movies.Path);
+                Assert.Equal("TV", tv.Path);
 
                 // shared driver exists and has the common root in its config
-                Driver? sharedDriver = await verifyCtx.Drivers.FindAsync(keyValues: movies.DriverId);
-                Assert.NotNull(@object: sharedDriver);
-                Assert.Equal(expected: "local", actual: sharedDriver.Type);
-                Assert.Contains(expectedSubstring: "Media", actualString: sharedDriver.Config);
+                Driver? sharedDriver = await verifyCtx.Drivers.FindAsync(movies.DriverId);
+                Assert.NotNull(sharedDriver);
+                Assert.Equal("local", sharedDriver.Type);
+                Assert.Contains("Media", sharedDriver.Config);
 
                 // configured driver is completely untouched
-                Assert.Equal(expected: configuredDriverId, actual: configured.DriverId);
-                Assert.Equal(expected: "Films", actual: configured.Path);
+                Assert.Equal(configuredDriverId, configured.DriverId);
+                Assert.Equal("Films", configured.Path);
 
-                Driver? nfsDriver = await verifyCtx.Drivers.FindAsync(keyValues: configuredDriverId);
-                Assert.NotNull(@object: nfsDriver);
-                Assert.Equal(expected: "nfs", actual: nfsDriver.Type);
+                Driver? nfsDriver = await verifyCtx.Drivers.FindAsync(configuredDriverId);
+                Assert.NotNull(nfsDriver);
+                Assert.Equal("nfs", nfsDriver.Type);
             }
 
             // ── second run is a no-op ─────────────────────────────────────────
-            await using (MediaContext secondRunCtx = new(options: fileOptions))
+            await using (MediaContext secondRunCtx = new(fileOptions))
             {
-                await V1DriverBridgeSeed.RunAsync(context: secondRunCtx);
+                await V1DriverBridgeSeed.RunAsync(secondRunCtx);
             }
 
-            await using (MediaContext afterSecondRun = new(options: fileOptions))
+            await using (MediaContext afterSecondRun = new(fileOptions))
             {
-                Folder? moviesAgain = await afterSecondRun.Folders.FindAsync(keyValues: moviesId);
-                Folder? tvAgain = await afterSecondRun.Folders.FindAsync(keyValues: tvId);
-                Assert.NotNull(@object: moviesAgain);
-                Assert.NotNull(@object: tvAgain);
-                Assert.Equal(expected: sharedDriverId, actual: moviesAgain.DriverId);
-                Assert.Equal(expected: sharedDriverId, actual: tvAgain.DriverId);
-                Assert.Equal(expected: "Movies", actual: moviesAgain.Path);
-                Assert.Equal(expected: "TV", actual: tvAgain.Path);
+                Folder? moviesAgain = await afterSecondRun.Folders.FindAsync(moviesId);
+                Folder? tvAgain = await afterSecondRun.Folders.FindAsync(tvId);
+                Assert.NotNull(moviesAgain);
+                Assert.NotNull(tvAgain);
+                Assert.Equal(sharedDriverId, moviesAgain.DriverId);
+                Assert.Equal(sharedDriverId, tvAgain.DriverId);
+                Assert.Equal("Movies", moviesAgain.Path);
+                Assert.Equal("TV", tvAgain.Path);
             }
         }
         finally
         {
             // Clear connection pool so SQLite releases all file handles.
-            SqliteConnection.ClearPool(connection: new(connectionString: connectionString));
+            SqliteConnection.ClearPool(new(connectionString));
 
-            if (File.Exists(path: dbPath))
-                File.Delete(path: dbPath);
+            if (File.Exists(dbPath))
+                File.Delete(dbPath);
             string walPath = dbPath + "-wal";
             string shmPath = dbPath + "-shm";
-            if (File.Exists(path: walPath))
-                File.Delete(path: walPath);
-            if (File.Exists(path: shmPath))
-                File.Delete(path: shmPath);
+            if (File.Exists(walPath))
+                File.Delete(walPath);
+            if (File.Exists(shmPath))
+                File.Delete(shmPath);
         }
     }
 }

@@ -15,9 +15,9 @@ namespace NoMercy.Data.Requests;
 
 public class RescanLibraryRequest
 {
-    [JsonProperty(propertyName: "forceUpdate")]
+    [JsonProperty("forceUpdate")]
     public bool ForceUpdate { get; set; }
 
-    [JsonProperty(propertyName: "synchronous")]
+    [JsonProperty("synchronous")]
     public bool Synchronous { get; set; }
 }

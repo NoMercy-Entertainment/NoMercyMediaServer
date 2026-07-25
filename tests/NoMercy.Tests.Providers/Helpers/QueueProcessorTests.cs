@@ -16,11 +16,11 @@ namespace NoMercy.Tests.Providers.Helpers;
 public class QueueProcessorTests
 {
     [Fact]
-    [Trait(name: "Category", value: "Unit")]
+    [Trait("Category", "Unit")]
     public async Task Queue_ContinuesProcessing_AfterTransientError()
     {
         ProviderQueue queue = new(
-            options: new()
+            new()
             {
                 Concurrent = 1,
                 Interval = 10,
@@ -34,13 +34,13 @@ public class QueueProcessorTests
         try
         {
             await queue.Enqueue<string>(
-                task: async () =>
+                async () =>
                 {
-                    Interlocked.Increment(location: ref callCount);
-                    await Task.Delay(millisecondsDelay: 1);
-                    throw new InvalidOperationException(message: "Transient failure");
+                    Interlocked.Increment(ref callCount);
+                    await Task.Delay(1);
+                    throw new InvalidOperationException("Transient failure");
                 },
-                url: "http://test/fail"
+                "http://test/fail"
             );
         }
         catch (InvalidOperationException)
@@ -50,25 +50,25 @@ public class QueueProcessorTests
 
         // Second task should still work (queue continues processing)
         string result = await queue.Enqueue<string>(
-            task: async () =>
+            async () =>
             {
-                Interlocked.Increment(location: ref callCount);
-                await Task.Delay(millisecondsDelay: 1);
+                Interlocked.Increment(ref callCount);
+                await Task.Delay(1);
                 return "success";
             },
-            url: "http://test/ok"
+            "http://test/ok"
         );
 
-        result.Should().Be(expected: "success");
-        callCount.Should().Be(expected: 2);
+        result.Should().Be("success");
+        callCount.Should().Be(2);
     }
 
     [Fact]
-    [Trait(name: "Category", value: "Unit")]
+    [Trait("Category", "Unit")]
     public async Task Queue_PropagatesFailure_ToCaller()
     {
         ProviderQueue queue = new(
-            options: new()
+            new()
             {
                 Concurrent = 1,
                 Interval = 10,
@@ -76,7 +76,7 @@ public class QueueProcessorTests
             }
         );
 
-        InvalidOperationException thrownException = new(message: "Test error for rejection");
+        InvalidOperationException thrownException = new("Test error for rejection");
         Exception? caught = null;
 
         // Failures surface to the caller via the per-task TaskCompletionSource
@@ -84,12 +84,12 @@ public class QueueProcessorTests
         try
         {
             await queue.Enqueue<string>(
-                task: async () =>
+                async () =>
                 {
-                    await Task.Delay(millisecondsDelay: 1);
+                    await Task.Delay(1);
                     throw thrownException;
                 },
-                url: "http://test/reject"
+                "http://test/reject"
             );
         }
         catch (InvalidOperationException ex)
@@ -98,15 +98,15 @@ public class QueueProcessorTests
         }
 
         caught.Should().NotBeNull();
-        caught!.Message.Should().Be(expected: "Test error for rejection");
+        caught!.Message.Should().Be("Test error for rejection");
     }
 
     [Fact]
-    [Trait(name: "Category", value: "Unit")]
+    [Trait("Category", "Unit")]
     public async Task Queue_ProcessesMultipleTasks_InOrder()
     {
         ProviderQueue queue = new(
-            options: new()
+            new()
             {
                 Concurrent = 1,
                 Interval = 10,
@@ -117,29 +117,29 @@ public class QueueProcessorTests
         List<int> executionOrder = [];
 
         int result1 = await queue.Enqueue(
-            task: async () =>
+            async () =>
             {
-                await Task.Delay(millisecondsDelay: 1);
+                await Task.Delay(1);
                 lock (executionOrder)
-                    executionOrder.Add(item: 1);
+                    executionOrder.Add(1);
                 return 1;
             },
-            url: "http://test/1"
+            "http://test/1"
         );
 
         int result2 = await queue.Enqueue(
-            task: async () =>
+            async () =>
             {
-                await Task.Delay(millisecondsDelay: 1);
+                await Task.Delay(1);
                 lock (executionOrder)
-                    executionOrder.Add(item: 2);
+                    executionOrder.Add(2);
                 return 2;
             },
-            url: "http://test/2"
+            "http://test/2"
         );
 
-        result1.Should().Be(expected: 1);
-        result2.Should().Be(expected: 2);
-        executionOrder.Should().ContainInOrder(expected: [1, 2]);
+        result1.Should().Be(1);
+        result2.Should().Be(2);
+        executionOrder.Should().ContainInOrder([1, 2]);
     }
 }

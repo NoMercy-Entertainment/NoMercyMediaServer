@@ -16,70 +16,70 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.Tests.NmSystem.Images;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ImageServiceTests : IDisposable
 {
     private readonly ImageService _imageService = new();
     private readonly string _sourcePath = Path.Combine(
-        path1: Path.GetTempPath(),
-        path2: $"nomercy-image-test-{Guid.NewGuid():N}.png"
+        Path.GetTempPath(),
+        $"nomercy-image-test-{Guid.NewGuid():N}.png"
     );
 
     public ImageServiceTests()
     {
         // High-frequency detail so encoder quality measurably affects output size;
         // a flat colour compresses identically at every quality level.
-        using Image<Rgba32> image = new(width: 160, height: 160);
+        using Image<Rgba32> image = new(160, 160);
         for (int y = 0; y < image.Height; y++)
         for (int x = 0; x < image.Width; x++)
         {
             byte red = (byte)((x * 37 + y * 17) % 256);
             byte green = (byte)((x * 11 + y * 53) % 256);
             byte blue = (byte)((x * 29 + y * 7) % 256);
-            image[x: x, y: y] = new(r: red, g: green, b: blue, a: 255);
+            image[x, y] = new(red, green, blue, 255);
         }
 
-        image.SaveAsPng(path: _sourcePath);
+        image.SaveAsPng(_sourcePath);
     }
 
     [Fact]
     public void ResizeMagickNet_EncodesRealAvif_NotAMislabeledPng()
     {
         (byte[] data, string mimeType) = _imageService.ResizeMagickNet(
-            image: _sourcePath,
-            width: 60,
-            aspectRatio: null,
-            type: "avif",
-            quality: 50
+            _sourcePath,
+            60,
+            null,
+            "avif",
+            50
         );
 
-        mimeType.Should().Be(expected: "image/avif");
-        IsAvif(data: data).Should().BeTrue(because: "the bytes must be a real AVIF container, not PNG");
-        IsPng(data: data).Should().BeFalse(because: "AVIF must not silently fall back to PNG bytes");
+        mimeType.Should().Be("image/avif");
+        IsAvif(data).Should().BeTrue("the bytes must be a real AVIF container, not PNG");
+        IsPng(data).Should().BeFalse("AVIF must not silently fall back to PNG bytes");
     }
 
     [Fact]
     public void ResizeMagickNet_HonorsQuality_LowerQualityIsSmaller()
     {
-        (byte[] high, _) = _imageService.ResizeMagickNet(image: _sourcePath, width: 120, aspectRatio: null, type: "avif", quality: 90);
-        (byte[] low, _) = _imageService.ResizeMagickNet(image: _sourcePath, width: 120, aspectRatio: null, type: "avif", quality: 20);
+        (byte[] high, _) = _imageService.ResizeMagickNet(_sourcePath, 120, null, "avif", 90);
+        (byte[] low, _) = _imageService.ResizeMagickNet(_sourcePath, 120, null, "avif", 20);
 
-        low.Length.Should().BeLessThan(expected: high.Length);
+        low.Length.Should().BeLessThan(high.Length);
     }
 
     [Fact]
     public void ResizeMagickNet_NonAvifType_StillUsesImageSharp()
     {
         (byte[] data, string mimeType) = _imageService.ResizeMagickNet(
-            image: _sourcePath,
-            width: 60,
-            aspectRatio: null,
-            type: "png",
-            quality: null
+            _sourcePath,
+            60,
+            null,
+            "png",
+            null
         );
 
-        mimeType.Should().Be(expected: "image/png");
-        IsPng(data: data).Should().BeTrue();
+        mimeType.Should().Be("image/png");
+        IsPng(data).Should().BeTrue();
     }
 
     private static bool IsPng(byte[] data) =>
@@ -94,17 +94,17 @@ public class ImageServiceTests : IDisposable
         if (data.Length < 12)
             return false;
 
-        string boxType = Encoding.ASCII.GetString(bytes: data, index: 4, count: 4);
-        string majorBrand = Encoding.ASCII.GetString(bytes: data, index: 8, count: 4);
+        string boxType = Encoding.ASCII.GetString(data, 4, 4);
+        string majorBrand = Encoding.ASCII.GetString(data, 8, 4);
 
-        return boxType == "ftyp" && majorBrand.Contains(value: "avif");
+        return boxType == "ftyp" && majorBrand.Contains("avif");
     }
 
     public void Dispose()
     {
-        if (File.Exists(path: _sourcePath))
-            File.Delete(path: _sourcePath);
+        if (File.Exists(_sourcePath))
+            File.Delete(_sourcePath);
 
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 }

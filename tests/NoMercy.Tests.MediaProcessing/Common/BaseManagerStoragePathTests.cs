@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FluentAssertions;
 using Moq;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.Storage;
@@ -24,19 +23,19 @@ public class BaseManagerStoragePathTests
     private sealed class ConcreteBaseManager : BaseManager
     {
         public string TestFolderRootPath(IStorage storage, string path) =>
-            FolderRootPath(storage: storage, path: path);
+            FolderRootPath(storage, path);
     }
 
     private static LocalStorage BuildLocalStorage()
     {
-        Mock<IStorageDriver> driver = new(behavior: MockBehavior.Loose);
+        Mock<IStorageDriver> driver = new(MockBehavior.Loose);
         driver
-            .Setup(expression: b => b.GetFullPath(It.IsAny<string>()))
-            .Returns<string>(valueFunction: p => Path.GetFullPath(path: p));
-        driver.Setup(expression: b => b.ResolveLinkTarget(It.IsAny<string>())).Returns(value: (string?)null);
+            .Setup(b => b.GetFullPath(It.IsAny<string>()))
+            .Returns<string>(p => Path.GetFullPath(p));
+        driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
 
-        StoragePathGuard guard = new(allowedRoots: [], driver: driver.Object);
-        return new(driver: driver.Object, guard: guard);
+        StoragePathGuard guard = new([], driver.Object);
+        return new(driver.Object, guard);
     }
 
     [Fact]
@@ -46,36 +45,36 @@ public class BaseManagerStoragePathTests
         string scopeRelativePath = "Movies/Action";
 
         ConcreteBaseManager manager = new();
-        string result = manager.TestFolderRootPath(storage: storage, path: scopeRelativePath);
+        string result = manager.TestFolderRootPath(storage, scopeRelativePath);
 
         result.Should().NotBeNull().And.NotBeEmpty();
-        result.Should().Contain(expected: "Movies");
-        result.Should().Contain(expected: "Action");
+        result.Should().Contain("Movies");
+        result.Should().Contain("Action");
     }
 
     [Fact]
     public void FolderRootPath_WithRemoteStorage_ReturnsScopeRelativePathUnchanged()
     {
         Mock<IStorageDriver> driver = new();
-        RemoteStorage storage = new(driver: driver.Object);
+        RemoteStorage storage = new(driver.Object);
         string scopeRelativePath = "Movies/Action";
 
         ConcreteBaseManager manager = new();
-        string result = manager.TestFolderRootPath(storage: storage, path: scopeRelativePath);
+        string result = manager.TestFolderRootPath(storage, scopeRelativePath);
 
-        result.Should().Be(expected: scopeRelativePath);
+        result.Should().Be(scopeRelativePath);
     }
 
     [Fact]
     public void FolderRootPath_WithRemoteStorage_DoesNotThrowNotSupportedExceptionForGetFullPath()
     {
         Mock<IStorageDriver> driver = new();
-        RemoteStorage storage = new(driver: driver.Object);
+        RemoteStorage storage = new(driver.Object);
         string scopeRelativePath = "Libraries/Anime/Folder";
 
         ConcreteBaseManager manager = new();
 
-        Func<string> act = () => manager.TestFolderRootPath(storage: storage, path: scopeRelativePath);
+        Func<string> act = () => manager.TestFolderRootPath(storage, scopeRelativePath);
 
         act.Should().NotThrow();
     }
@@ -85,46 +84,46 @@ public class BaseManagerStoragePathTests
     {
         LocalStorage localStorage = BuildLocalStorage();
         Mock<IStorageDriver> remoteDriver = new();
-        RemoteStorage remoteStorage = new(driver: remoteDriver.Object);
+        RemoteStorage remoteStorage = new(remoteDriver.Object);
 
         string folderPath = "Anime/Monogatari";
 
         ConcreteBaseManager manager = new();
-        string localResult = manager.TestFolderRootPath(storage: localStorage, path: folderPath);
-        string remoteResult = manager.TestFolderRootPath(storage: remoteStorage, path: folderPath);
+        string localResult = manager.TestFolderRootPath(localStorage, folderPath);
+        string remoteResult = manager.TestFolderRootPath(remoteStorage, folderPath);
 
-        localResult.Should().NotBe(unexpected: folderPath);
-        remoteResult.Should().Be(expected: folderPath);
+        localResult.Should().NotBe(folderPath);
+        remoteResult.Should().Be(folderPath);
     }
 
     [Fact]
     public void FolderRootPath_WithRemoteStorageAndComplexPath_ReturnsPathUnchanged()
     {
         Mock<IStorageDriver> driver = new();
-        RemoteStorage storage = new(driver: driver.Object);
+        RemoteStorage storage = new(driver.Object);
         string complexPath = "Music/Artists/Pink Floyd/Albums/The Wall/Disc 1";
 
         ConcreteBaseManager manager = new();
-        string result = manager.TestFolderRootPath(storage: storage, path: complexPath);
+        string result = manager.TestFolderRootPath(storage, complexPath);
 
-        result.Should().Be(expected: complexPath);
+        result.Should().Be(complexPath);
     }
 
     [Fact]
     public void FolderRootPath_RemoteStorageConsistentAcrossMultipleCalls()
     {
         Mock<IStorageDriver> remoteDriver = new();
-        RemoteStorage remoteStorage = new(driver: remoteDriver.Object);
+        RemoteStorage remoteStorage = new(remoteDriver.Object);
         string testPath = "Libraries/TestLibrary";
 
         ConcreteBaseManager manager = new();
-        string result1 = manager.TestFolderRootPath(storage: remoteStorage, path: testPath);
-        string result2 = manager.TestFolderRootPath(storage: remoteStorage, path: testPath);
-        string result3 = manager.TestFolderRootPath(storage: remoteStorage, path: testPath);
+        string result1 = manager.TestFolderRootPath(remoteStorage, testPath);
+        string result2 = manager.TestFolderRootPath(remoteStorage, testPath);
+        string result3 = manager.TestFolderRootPath(remoteStorage, testPath);
 
-        result1.Should().Be(expected: result2);
-        result2.Should().Be(expected: result3);
-        result1.Should().Be(expected: testPath);
+        result1.Should().Be(result2);
+        result2.Should().Be(result3);
+        result1.Should().Be(testPath);
     }
 
     [Fact]
@@ -132,17 +131,17 @@ public class BaseManagerStoragePathTests
     {
         LocalStorage localStorage = BuildLocalStorage();
         Mock<IStorageDriver> remoteDriver = new();
-        RemoteStorage remoteStorage = new(driver: remoteDriver.Object);
+        RemoteStorage remoteStorage = new(remoteDriver.Object);
 
         ConcreteBaseManager manager = new();
 
         string localFolder = "LocalMovies";
         string remoteFolder = "NfsMovies";
 
-        string localResult = manager.TestFolderRootPath(storage: localStorage, path: localFolder);
-        string remoteResult = manager.TestFolderRootPath(storage: remoteStorage, path: remoteFolder);
+        string localResult = manager.TestFolderRootPath(localStorage, localFolder);
+        string remoteResult = manager.TestFolderRootPath(remoteStorage, remoteFolder);
 
-        localResult.Should().Contain(expected: localFolder);
-        remoteResult.Should().Be(expected: remoteFolder);
+        localResult.Should().Contain(localFolder);
+        remoteResult.Should().Be(remoteFolder);
     }
 }

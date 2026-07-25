@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Users;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -61,30 +60,30 @@ public class ServerUserSyncService(IServerUserApiClient apiClient) : IServerUser
         CancellationToken cancellationToken = default
     )
     {
-        if (string.IsNullOrEmpty(value: accessToken))
+        if (string.IsNullOrEmpty(accessToken))
         {
             Logger.Setup(
-                message: "Skipping server-user sync — no auth token (will retry via DegradedModeRecovery / next scheduled sync)",
-                level: LogEventLevel.Warning
+                "Skipping server-user sync — no auth token (will retry via DegradedModeRecovery / next scheduled sync)",
+                LogEventLevel.Warning
             );
-            return new(Attempted: false, UpstreamUserCount: 0, RevokedCount: 0);
+            return new(false, 0, 0);
         }
 
         ServerUserDtoData[] serverUsers = await apiClient.GetServerUsersAsync(
-            accessToken: accessToken,
-            cancellationToken: cancellationToken
+            accessToken,
+            cancellationToken
         );
 
-        Logger.Setup(message: $"Found {serverUsers.Length} server users", level: LogEventLevel.Verbose);
+        Logger.Setup($"Found {serverUsers.Length} server users", LogEventLevel.Verbose);
 
         User[] incomingUsers = serverUsers
             // Skip rows whose UserId can't be parsed — a single bad row from the
             // upstream API used to abort the whole sync via FormatException,
             // leaving the server with no users at all.
-            .Where(predicate: serverUser => Guid.TryParse(input: serverUser.UserId, result: out _))
-            .Select(selector: serverUser => new User
+            .Where(serverUser => Guid.TryParse(serverUser.UserId, out _))
+            .Select(serverUser => new User
             {
-                Id = Guid.Parse(input: serverUser.UserId),
+                Id = Guid.Parse(serverUser.UserId),
                 Email = serverUser.Email,
                 Name = serverUser.Name,
                 Allowed = true,
@@ -105,24 +104,24 @@ public class ServerUserSyncService(IServerUserApiClient apiClient) : IServerUser
         // No local owner yet (pre-registration) means nothing is stale to protect,
         // so the check is skipped rather than blocking a legitimate first sync.
         Guid? localOwnerId = await dbContext
-            .Users.Where(predicate: u => u.Owner)
-            .Select(selector: u => (Guid?)u.Id)
-            .FirstOrDefaultAsync(cancellationToken: cancellationToken);
+            .Users.Where(u => u.Owner)
+            .Select(u => (Guid?)u.Id)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (localOwnerId.HasValue && incomingUsers.All(predicate: u => u.Id != localOwnerId.Value))
+        if (localOwnerId.HasValue && incomingUsers.All(u => u.Id != localOwnerId.Value))
         {
             Logger.Setup(
-                message: $"Server-user sync aborted — response ({incomingUsers.Length} user(s)) did not include the local owner despite with_self=true; treating as untrustworthy and skipping this cycle without any changes",
-                level: LogEventLevel.Warning
+                $"Server-user sync aborted — response ({incomingUsers.Length} user(s)) did not include the local owner despite with_self=true; treating as untrustworthy and skipping this cycle without any changes",
+                LogEventLevel.Warning
             );
-            return new(Attempted: false, UpstreamUserCount: incomingUsers.Length, RevokedCount: 0);
+            return new(false, incomingUsers.Length, 0);
         }
 
         await dbContext
-            .Users.UpsertRange(entities: incomingUsers)
-            .On(match: v => new { v.Id })
+            .Users.UpsertRange(incomingUsers)
+            .On(v => new { v.Id })
             .WhenMatched(
-                updater: (existing, incoming) =>
+                (existing, incoming) =>
                     new()
                     {
                         Id = incoming.Id,
@@ -141,13 +140,13 @@ public class ServerUserSyncService(IServerUserApiClient apiClient) : IServerUser
                         Owner = incoming.Owner,
                     }
             )
-            .RunAsync(token: cancellationToken);
+            .RunAsync(cancellationToken);
 
-        int revokedCount = await RevokeStaleUsersAsync(dbContext: dbContext, incomingUsers: incomingUsers, cancellationToken: cancellationToken);
+        int revokedCount = await RevokeStaleUsersAsync(dbContext, incomingUsers, cancellationToken);
 
-        await SeedLibraryAccessAsync(dbContext: dbContext, storage: storage, users: incomingUsers, cancellationToken: cancellationToken);
+        await SeedLibraryAccessAsync(dbContext, storage, incomingUsers, cancellationToken);
 
-        return new(Attempted: true, UpstreamUserCount: incomingUsers.Length, RevokedCount: revokedCount);
+        return new(true, incomingUsers.Length, revokedCount);
     }
 
     /// <summary>
@@ -161,13 +160,13 @@ public class ServerUserSyncService(IServerUserApiClient apiClient) : IServerUser
         CancellationToken cancellationToken
     )
     {
-        HashSet<Guid> incomingIds = incomingUsers.Select(selector: u => u.Id).ToHashSet();
+        HashSet<Guid> incomingIds = incomingUsers.Select(u => u.Id).ToHashSet();
 
         List<User> allowedNonOwners = await dbContext
-            .Users.Where(predicate: u => u.Allowed && !u.Owner)
-            .ToListAsync(cancellationToken: cancellationToken);
+            .Users.Where(u => u.Allowed && !u.Owner)
+            .ToListAsync(cancellationToken);
 
-        List<User> toRevoke = allowedNonOwners.Where(predicate: u => !incomingIds.Contains(item: u.Id)).ToList();
+        List<User> toRevoke = allowedNonOwners.Where(u => !incomingIds.Contains(u.Id)).ToList();
 
         if (toRevoke.Count == 0)
             return 0;
@@ -180,11 +179,11 @@ public class ServerUserSyncService(IServerUserApiClient apiClient) : IServerUser
             user.VideoTranscoding = false;
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken: cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         Logger.Setup(
-            message: $"Revoked local access for {toRevoke.Count} user(s) no longer present upstream",
-            level: LogEventLevel.Information
+            $"Revoked local access for {toRevoke.Count} user(s) no longer present upstream",
+            LogEventLevel.Information
         );
 
         return toRevoke.Count;
@@ -197,12 +196,12 @@ public class ServerUserSyncService(IServerUserApiClient apiClient) : IServerUser
         CancellationToken cancellationToken
     )
     {
-        if (users.Length == 0 || !storage.Exists(path: AppFiles.LibrariesSeedFile))
+        if (users.Length == 0 || !storage.Exists(AppFiles.LibrariesSeedFile))
             return;
 
         string librariesJson = await storage.ReadAllTextAsync(
-            path: AppFiles.LibrariesSeedFile,
-            ct: cancellationToken
+            AppFiles.LibrariesSeedFile,
+            cancellationToken
         );
         Library[] libraries = librariesJson.FromJson<Library[]>() ?? [];
 
@@ -212,14 +211,14 @@ public class ServerUserSyncService(IServerUserApiClient apiClient) : IServerUser
         foreach (User user in users)
         {
             List<LibraryUser> libraryUsers = libraries
-                .Select(selector: library => new LibraryUser { LibraryId = library.Id, UserId = user.Id })
+                .Select(library => new LibraryUser { LibraryId = library.Id, UserId = user.Id })
                 .ToList();
 
             await dbContext
-                .LibraryUser.UpsertRange(entities: libraryUsers)
-                .On(match: v => new { v.LibraryId, v.UserId })
-                .WhenMatched(updater: (lus, lui) => new() { LibraryId = lui.LibraryId, UserId = lui.UserId })
-                .RunAsync(token: cancellationToken);
+                .LibraryUser.UpsertRange(libraryUsers)
+                .On(v => new { v.LibraryId, v.UserId })
+                .WhenMatched((lus, lui) => new() { LibraryId = lui.LibraryId, UserId = lui.UserId })
+                .RunAsync(cancellationToken);
         }
     }
 }

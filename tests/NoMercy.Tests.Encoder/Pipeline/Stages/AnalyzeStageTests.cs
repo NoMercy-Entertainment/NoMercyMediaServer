@@ -28,48 +28,46 @@ public class AnalyzeStageTests
 
     public AnalyzeStageTests()
     {
-        _stage = new(analyzer: _analyzer.Object, storage: _storage.Object, logger: NullLogger<AnalyzeStage>.Instance);
+        _stage = new(_analyzer.Object, _storage.Object, NullLogger<AnalyzeStage>.Instance);
     }
 
     private static MediaInfo BuildMediaInfo() =>
         new(
-            FilePath: "/movies/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 2),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 7_200_000_000,
-            VideoStreams:
+            "/movies/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(2),
+            8000,
+            7_200_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: null,
-                    ColorTransfer: null,
-                    ColorSpace: null,
-                    IsDefault: true,
-                    BitRateKbps: 6000
+                    0,
+                    "h264",
+                    1920,
+                    1080,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    null,
+                    null,
+                    null,
+                    true,
+                    6000
                 ),
             ],
-            AudioStreams:
             [
                 new(
-                    Index: 1,
-                    Codec: "aac",
-                    Channels: 2,
-                    SampleRate: 48000,
-                    BitRateKbps: 192,
-                    Language: "en",
-                    IsDefault: true,
-                    IsForced: false
+                    1,
+                    "aac",
+                    2,
+                    48000,
+                    192,
+                    "en",
+                    true,
+                    false
                 ),
             ],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            []
         );
 
     // ------------------------------------------------------------------
@@ -80,24 +78,24 @@ public class AnalyzeStageTests
     public async Task FileExists_AnalysisSucceeds_ReturnsMediaInfo()
     {
         MediaInfo expected = BuildMediaInfo();
-        _storage.Setup(expression: s => s.Exists("/movies/test.mkv")).Returns(value: true);
+        _storage.Setup(s => s.Exists("/movies/test.mkv")).Returns(true);
         _analyzer
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.AnalyzeAsync(
                     "/movies/test.mkv",
                     It.IsAny<IStorage>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: expected);
+            .ReturnsAsync(expected);
 
-        StageResult result = await _stage.ExecuteAsync(inputPath: "/movies/test.mkv", context: _context, ct: default);
+        StageResult result = await _stage.ExecuteAsync("/movies/test.mkv", _context, default);
 
         result.Should().BeOfType<StageSuccess<MediaInfo>>();
         StageSuccess<MediaInfo> success = (StageSuccess<MediaInfo>)result;
-        success.Value.Should().Be(expected: expected);
-        success.Value.VideoStreams.Should().HaveCount(expected: 1);
-        success.Value.AudioStreams.Should().HaveCount(expected: 1);
+        success.Value.Should().Be(expected);
+        success.Value.VideoStreams.Should().HaveCount(1);
+        success.Value.AudioStreams.Should().HaveCount(1);
     }
 
     // ------------------------------------------------------------------
@@ -107,14 +105,14 @@ public class AnalyzeStageTests
     [Fact]
     public async Task FileMissing_ReturnsInputNotFoundFailure()
     {
-        _storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
+        _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
 
-        StageResult result = await _stage.ExecuteAsync(inputPath: "/missing/file.mkv", context: _context, ct: default);
+        StageResult result = await _stage.ExecuteAsync("/missing/file.mkv", _context, default);
 
         result.Should().BeOfType<StageFailure>();
         StageFailure failure = (StageFailure)result;
-        failure.Error.Kind.Should().Be(expected: EncodingErrorKind.InputNotFound);
-        failure.Error.StageName.Should().Be(expected: "Analyze");
+        failure.Error.Kind.Should().Be(EncodingErrorKind.InputNotFound);
+        failure.Error.StageName.Should().Be("Analyze");
         failure.Error.Recoverable.Should().BeFalse();
     }
 
@@ -125,20 +123,20 @@ public class AnalyzeStageTests
     [Fact]
     public async Task AnalyzerThrows_ReturnsInputCorruptFailure()
     {
-        _storage.Setup(expression: s => s.Exists("/corrupt.mkv")).Returns(value: true);
+        _storage.Setup(s => s.Exists("/corrupt.mkv")).Returns(true);
         _analyzer
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.AnalyzeAsync("/corrupt.mkv", It.IsAny<IStorage>(), It.IsAny<CancellationToken>())
             )
-            .ThrowsAsync(exception: new InvalidOperationException(message: "ffprobe failed: invalid data"));
+            .ThrowsAsync(new InvalidOperationException("ffprobe failed: invalid data"));
 
-        StageResult result = await _stage.ExecuteAsync(inputPath: "/corrupt.mkv", context: _context, ct: default);
+        StageResult result = await _stage.ExecuteAsync("/corrupt.mkv", _context, default);
 
         result.Should().BeOfType<StageFailure>();
         StageFailure failure = (StageFailure)result;
-        failure.Error.Kind.Should().Be(expected: EncodingErrorKind.InputCorrupt);
-        failure.Error.StageName.Should().Be(expected: "Analyze");
-        failure.Error.Message.Should().Contain(expected: "ffprobe failed");
+        failure.Error.Kind.Should().Be(EncodingErrorKind.InputCorrupt);
+        failure.Error.StageName.Should().Be("Analyze");
+        failure.Error.Message.Should().Contain("ffprobe failed");
     }
 
     // ------------------------------------------------------------------
@@ -148,21 +146,21 @@ public class AnalyzeStageTests
     [Fact]
     public async Task Cancellation_Propagates()
     {
-        _storage.Setup(expression: s => s.Exists("/movies/test.mkv")).Returns(value: true);
+        _storage.Setup(s => s.Exists("/movies/test.mkv")).Returns(true);
         _analyzer
-            .Setup(expression: a =>
+            .Setup(a =>
                 a.AnalyzeAsync(
                     "/movies/test.mkv",
                     It.IsAny<IStorage>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(exception: new OperationCanceledException());
+            .ThrowsAsync(new OperationCanceledException());
 
-        CancellationToken ct = new(canceled: true);
+        CancellationToken ct = new(true);
 
-        await Assert.ThrowsAsync<OperationCanceledException>(testCode: () =>
-            _stage.ExecuteAsync(inputPath: "/movies/test.mkv", context: _context, ct: ct)
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            _stage.ExecuteAsync("/movies/test.mkv", _context, ct)
         );
     }
 }

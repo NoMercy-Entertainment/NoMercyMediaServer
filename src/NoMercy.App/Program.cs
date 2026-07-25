@@ -29,15 +29,15 @@ internal class Program
         string iconPath = GetIconPath();
 
         string browserDataPath = GetBrowserDataPath();
-        ClearBrowserDataOnVersionChange(browserDataPath: browserDataPath);
+        ClearBrowserDataOnVersionChange(browserDataPath);
 
         // Set environment variable for URL before creating builder
         if (!Debugger.IsAttached)
         {
-            Environment.SetEnvironmentVariable(variable: "ASPNETCORE_URLS", value: "http://localhost:7625");
+            Environment.SetEnvironmentVariable("ASPNETCORE_URLS", "http://localhost:7625");
         }
 
-        InfiniFrameWebApplicationBuilder builder = InfiniFrameWebApplication.CreateBuilder(args: args);
+        InfiniFrameWebApplicationBuilder builder = InfiniFrameWebApplication.CreateBuilder(args);
 
         // InfiniFrame's SetBrowserControlInitParameters is platform-shaped: on Windows
         // (WebView2) it is a raw space-separated Chromium flag string, but on Linux
@@ -51,29 +51,29 @@ internal class Program
             : null;
 
         IInfiniFrameWindowBuilder window = builder
-            .Window.SetTemporaryFilesPath(path: browserDataPath)
+            .Window.SetTemporaryFilesPath(browserDataPath)
             .Center()
-            .SetTitle(title: windowTitle)
-            .SetMinSize(width: 1280 + 16, height: 720 + 39)
-            .SetSize(width: 1600 + 16, height: 900 + 39)
-            .SetResizable(resizable: true)
-            .SetIconFile(iconFilePath: iconPath)
-            .SetUseOsDefaultSize(useOsDefaultSize: false)
-            .SetMediaAutoplayEnabled(enable: true)
-            .SetMediaStreamEnabled(enable: true)
-            .SetBrowserControlInitParameters(parameters: browserControlInitParameters)
+            .SetTitle(windowTitle)
+            .SetMinSize(1280 + 16, 720 + 39)
+            .SetSize(1600 + 16, 900 + 39)
+            .SetResizable(true)
+            .SetIconFile(iconPath)
+            .SetUseOsDefaultSize(false)
+            .SetMediaAutoplayEnabled(true)
+            .SetMediaStreamEnabled(true)
+            .SetBrowserControlInitParameters(browserControlInitParameters)
             .RegisterFullScreenWebMessageHandler()
             .RegisterOpenExternalTargetWebMessageHandler()
             .RegisterTitleChangedWebMessageHandler()
             .RegisterWindowManagementWebMessageHandler()
             .RegisterWebMessageReceivedHandler(
-                handler: (sender, message) =>
+                (sender, message) =>
                 {
                     if (sender is not IInfiniFrameWindow infiniWindow)
                         return;
 
                     string response = $"Received message: \"{message}\"";
-                    infiniWindow.SendWebMessage(message: response);
+                    infiniWindow.SendWebMessage(response);
                 }
             );
 
@@ -87,7 +87,7 @@ internal class Program
                 break;
             }
 
-            if (args[i].StartsWith(value: "--route="))
+            if (args[i].StartsWith("--route="))
             {
                 route = args[i]["--route=".Length..];
                 break;
@@ -96,9 +96,9 @@ internal class Program
 
         // Set start URL with optional route
         if (Debugger.IsAttached)
-            window.SetStartUrl(url: $"https://app-dev.nomercy.tv{route}");
-        else if (!string.IsNullOrEmpty(value: route))
-            window.SetStartUrl(url: $"http://localhost:7625{route}");
+            window.SetStartUrl($"https://app-dev.nomercy.tv{route}");
+        else if (!string.IsNullOrEmpty(route))
+            window.SetStartUrl($"http://localhost:7625{route}");
 
         InfiniFrameWebApplication application = builder.Build();
 
@@ -106,40 +106,40 @@ internal class Program
 
         // Add /sso-callback handler for PKCE browser flow (non-setup mode)
         application.WebApp.Use(
-            middleware: async (context, next) =>
+            async (context, next) =>
             {
                 if (
                     context.Request.Path.Value?.Equals(
-                        value: "/sso-callback",
-                        comparisonType: StringComparison.OrdinalIgnoreCase
+                        "/sso-callback",
+                        StringComparison.OrdinalIgnoreCase
                     ) == true
                 )
                 {
-                    string? code = context.Request.Query[key: "code"];
-                    string? state = context.Request.Query[key: "state"];
-                    string? error = context.Request.Query[key: "error"];
-                    string? errorDescription = context.Request.Query[key: "error_description"];
+                    string? code = context.Request.Query["code"];
+                    string? state = context.Request.Query["state"];
+                    string? error = context.Request.Query["error"];
+                    string? errorDescription = context.Request.Query["error_description"];
 
                     int port = context.Request.Host.Port ?? 7625;
                     string redirectUri = $"http://localhost:{port}/sso-callback";
 
-                    if (!string.IsNullOrEmpty(value: error))
+                    if (!string.IsNullOrEmpty(error))
                     {
                         // The Keycloak callback carries attacker-controllable error /
                         // error_description params; HTML-encode before reflecting them.
-                        string msg = !string.IsNullOrEmpty(value: errorDescription)
-                            ? $"Authorization failed: {System.Net.WebUtility.HtmlEncode(value: errorDescription)}"
-                            : $"Authorization failed: {System.Net.WebUtility.HtmlEncode(value: error)}";
+                        string msg = !string.IsNullOrEmpty(errorDescription)
+                            ? $"Authorization failed: {System.Net.WebUtility.HtmlEncode(errorDescription)}"
+                            : $"Authorization failed: {System.Net.WebUtility.HtmlEncode(error)}";
                         await context.Response.WriteAsync(
-                            text: $"<html><body><h2>Authorization Failed</h2><p>{msg}</p></body></html>"
+                            $"<html><body><h2>Authorization Failed</h2><p>{msg}</p></body></html>"
                         );
                         return;
                     }
 
-                    if (string.IsNullOrEmpty(value: code) || string.IsNullOrEmpty(value: state))
+                    if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
                     {
                         await context.Response.WriteAsync(
-                            text: "<html><body><h2>Missing code or state</h2></body></html>"
+                            "<html><body><h2>Missing code or state</h2></body></html>"
                         );
                         return;
                     }
@@ -149,21 +149,21 @@ internal class Program
                     // Actually, AuthManager might need to be resolved from DI.
 
                     bool ok = await AuthManager.TryCompletePkceFromCallbackAsync(
-                        code: code,
-                        state: state,
-                        redirectUri: redirectUri,
-                        authTokenStore: context.RequestServices.GetService<IAuthTokenStore>()
+                        code,
+                        state,
+                        redirectUri,
+                        context.RequestServices.GetService<IAuthTokenStore>()
                     );
                     if (ok)
                     {
                         await context.Response.WriteAsync(
-                            text: "<html><body><h2>Authentication Successful</h2><p>You may close this tab.</p><script>try{window.close();}catch(e){}</script></body></html>"
+                            "<html><body><h2>Authentication Successful</h2><p>You may close this tab.</p><script>try{window.close();}catch(e){}</script></body></html>"
                         );
                     }
                     else
                     {
                         await context.Response.WriteAsync(
-                            text: "<html><body><h2>Authentication Failed</h2><p>Could not complete login. Please try again.</p></body></html>"
+                            "<html><body><h2>Authentication Failed</h2><p>Could not complete login. Please try again.</p></body></html>"
                         );
                     }
                     return;
@@ -176,19 +176,19 @@ internal class Program
         // (compression, caching, ETags) - replaces MapStaticAssets for embedded resources
         // Also injects the InfiniFrame.js script tag into HTML files at runtime
         application.WebApp.UseEmbeddedStaticAssets(
-            configure: options =>
+            options =>
             {
                 // Inject InfiniFrame script before </body> - required for InfiniFrame communication
-                options.InjectScripts.Add(item: "/_content/InfiniLore.InfiniFrame.Js/InfiniFrame.js");
+                options.InjectScripts.Add("/_content/InfiniLore.InfiniFrame.Js/InfiniFrame.js");
 
                 // Force media query re-evaluation after WebView2 viewport settles.
                 // WebView2 starts with a small initial viewport before InfiniFrame
                 // sizes the window, causing Ionic's mobile detection to misfire.
                 options.InjectScripts.Add(
-                    item: "<script>window.addEventListener('load',function(){setTimeout(function(){window.dispatchEvent(new Event('resize'))},100)})</script>"
+                    "<script>window.addEventListener('load',function(){setTimeout(function(){window.dispatchEvent(new Event('resize'))},100)})</script>"
                 );
             },
-            assembly: typeof(Program).Assembly
+            typeof(Program).Assembly
         );
 
         application.Run();
@@ -204,26 +204,26 @@ internal class Program
         else if (OperatingSystem.IsMacOS())
             iconName = "icon.icns";
         else
-            throw new PlatformNotSupportedException(message: "Unsupported OS platform");
+            throw new PlatformNotSupportedException("Unsupported OS platform");
 
         // Extract embedded icon to temp directory (InfiniFrame requires a file path)
-        string tempDir = Path.Combine(path1: Path.GetTempPath(), path2: "NoMercyApp");
-        Directory.CreateDirectory(path: tempDir);
-        string iconPath = Path.Combine(path1: tempDir, path2: iconName);
+        string tempDir = Path.Combine(Path.GetTempPath(), "NoMercyApp");
+        Directory.CreateDirectory(tempDir);
+        string iconPath = Path.Combine(tempDir, iconName);
 
-        if (!File.Exists(path: iconPath))
+        if (!File.Exists(iconPath))
         {
             Assembly assembly = typeof(Program).Assembly;
             string resourceName = $"NoMercy.App.Resources.AppIcon.{iconName}";
 
-            using Stream? stream = assembly.GetManifestResourceStream(name: resourceName);
+            using Stream? stream = assembly.GetManifestResourceStream(resourceName);
             if (stream == null)
                 throw new FileNotFoundException(
-                    message: $"Embedded icon resource not found: {resourceName}"
+                    $"Embedded icon resource not found: {resourceName}"
                 );
 
-            using FileStream fileStream = File.Create(path: iconPath);
-            stream.CopyTo(destination: fileStream);
+            using FileStream fileStream = File.Create(iconPath);
+            stream.CopyTo(fileStream);
         }
 
         return iconPath;
@@ -237,19 +237,19 @@ internal class Program
         string appDataPath =
             Environment.OSVersion.Platform == PlatformID.Unix
                 ? Path.Combine(
-                    path1: Environment.GetEnvironmentVariable(variable: "HOME") ?? "/home/current",
-                    path2: ".local/share"
+                    Environment.GetEnvironmentVariable("HOME") ?? "/home/current",
+                    ".local/share"
                 )
-                : Environment.GetFolderPath(folder: Environment.SpecialFolder.LocalApplicationData);
+                : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-        string baseDir = Path.Combine(path1: appDataPath, path2: "NoMercy", path3: "browser");
-        Directory.CreateDirectory(path: baseDir);
+        string baseDir = Path.Combine(appDataPath, "NoMercy", "browser");
+        Directory.CreateDirectory(baseDir);
         return baseDir;
     }
 
     // WebView2 subdirectories inside Default/ that hold login/session state — preserved across updates
     private static readonly HashSet<string> PreservedSubDirectories = new(
-        comparer: StringComparer.OrdinalIgnoreCase
+        StringComparer.OrdinalIgnoreCase
     )
     {
         "Session Storage",
@@ -271,7 +271,7 @@ internal class Program
 
     private static void ClearBrowserDataOnVersionChange(string browserDataPath)
     {
-        string versionFile = Path.Combine(path1: browserDataPath, path2: ".app-version");
+        string versionFile = Path.Combine(browserDataPath, ".app-version");
         string currentVersion =
             typeof(Program)
                 .Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
@@ -280,13 +280,13 @@ internal class Program
             ?? "0.0.0";
 
         string? previousVersion = null;
-        if (File.Exists(path: versionFile))
-            previousVersion = File.ReadAllText(path: versionFile).Trim();
+        if (File.Exists(versionFile))
+            previousVersion = File.ReadAllText(versionFile).Trim();
 
         if (previousVersion != currentVersion)
         {
-            ClearBrowserCache(browserDataPath: browserDataPath);
-            File.WriteAllText(path: versionFile, contents: currentVersion);
+            ClearBrowserCache(browserDataPath);
+            File.WriteAllText(versionFile, currentVersion);
         }
     }
 
@@ -294,32 +294,32 @@ internal class Program
     {
         // WebView2 stores profile data under EBWebView/Default/
         // Delete everything except session/login directories and files
-        foreach (string dir in Directory.GetDirectories(path: browserDataPath))
+        foreach (string dir in Directory.GetDirectories(browserDataPath))
         {
-            string dirName = Path.GetFileName(path: dir);
+            string dirName = Path.GetFileName(dir);
 
-            if (string.Equals(a: dirName, b: "EBWebView", comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(dirName, "EBWebView", StringComparison.OrdinalIgnoreCase))
             {
-                ClearWebViewProfile(ebWebViewPath: dir);
+                ClearWebViewProfile(dir);
                 continue;
             }
 
             try
             {
-                Directory.Delete(path: dir, recursive: true);
+                Directory.Delete(dir, true);
             }
             catch
             { /* locked or inaccessible — skip */
             }
         }
 
-        foreach (string file in Directory.GetFiles(path: browserDataPath))
+        foreach (string file in Directory.GetFiles(browserDataPath))
         {
-            if (Path.GetFileName(path: file) == ".app-version")
+            if (Path.GetFileName(file) == ".app-version")
                 continue;
             try
             {
-                File.Delete(path: file);
+                File.Delete(file);
             }
             catch
             { /* skip */
@@ -329,38 +329,38 @@ internal class Program
 
     private static void ClearWebViewProfile(string ebWebViewPath)
     {
-        foreach (string profileDir in Directory.GetDirectories(path: ebWebViewPath))
+        foreach (string profileDir in Directory.GetDirectories(ebWebViewPath))
         {
-            string profileName = Path.GetFileName(path: profileDir);
+            string profileName = Path.GetFileName(profileDir);
 
-            if (string.Equals(a: profileName, b: "Default", comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(profileName, "Default", StringComparison.OrdinalIgnoreCase))
             {
-                ClearProfileContents(profilePath: profileDir);
+                ClearProfileContents(profileDir);
                 continue;
             }
 
             try
             {
-                Directory.Delete(path: profileDir, recursive: true);
+                Directory.Delete(profileDir, true);
             }
             catch
             { /* skip */
             }
         }
 
-        foreach (string file in Directory.GetFiles(path: ebWebViewPath))
+        foreach (string file in Directory.GetFiles(ebWebViewPath))
         {
-            string fileName = Path.GetFileName(path: file);
+            string fileName = Path.GetFileName(file);
             if (
-                PreservedEbWebViewFiles.Any(predicate: p =>
-                    fileName.StartsWith(value: p, comparisonType: StringComparison.OrdinalIgnoreCase)
+                PreservedEbWebViewFiles.Any(p =>
+                    fileName.StartsWith(p, StringComparison.OrdinalIgnoreCase)
                 )
             )
                 continue;
 
             try
             {
-                File.Delete(path: file);
+                File.Delete(file);
             }
             catch
             { /* skip */
@@ -370,34 +370,34 @@ internal class Program
 
     private static void ClearProfileContents(string profilePath)
     {
-        foreach (string dir in Directory.GetDirectories(path: profilePath))
+        foreach (string dir in Directory.GetDirectories(profilePath))
         {
-            string dirName = Path.GetFileName(path: dir);
-            if (PreservedSubDirectories.Contains(item: dirName))
+            string dirName = Path.GetFileName(dir);
+            if (PreservedSubDirectories.Contains(dirName))
                 continue;
 
             try
             {
-                Directory.Delete(path: dir, recursive: true);
+                Directory.Delete(dir, true);
             }
             catch
             { /* skip */
             }
         }
 
-        foreach (string file in Directory.GetFiles(path: profilePath))
+        foreach (string file in Directory.GetFiles(profilePath))
         {
-            string fileName = Path.GetFileName(path: file);
+            string fileName = Path.GetFileName(file);
             if (
-                PreservedFilePrefixes.Any(predicate: prefix =>
-                    fileName.StartsWith(value: prefix, comparisonType: StringComparison.OrdinalIgnoreCase)
+                PreservedFilePrefixes.Any(prefix =>
+                    fileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
                 )
             )
                 continue;
 
             try
             {
-                File.Delete(path: file);
+                File.Delete(file);
             }
             catch
             { /* skip */

@@ -22,33 +22,33 @@ public sealed class PrivateNetworkAccessMiddlewareTests
         DefaultHttpContext context = new();
         context.Request.Method = method;
         if (requestPrivateNetwork is not null)
-            context.Request.Headers[key: "Access-Control-Request-Private-Network"] =
+            context.Request.Headers["Access-Control-Request-Private-Network"] =
                 requestPrivateNetwork;
 
-        PrivateNetworkAccessMiddleware middleware = new(next: _ => Task.CompletedTask);
-        await middleware.InvokeAsync(context: context);
+        PrivateNetworkAccessMiddleware middleware = new(_ => Task.CompletedTask);
+        await middleware.InvokeAsync(context);
         return context;
     }
 
     [Fact]
     public async Task Preflight_RequestingPrivateNetwork_GetsAllowHeader()
     {
-        HttpContext context = await Invoke(method: "OPTIONS", requestPrivateNetwork: "true");
+        HttpContext context = await Invoke("OPTIONS", "true");
 
         context
-            .Response.Headers[key: "Access-Control-Allow-Private-Network"]
+            .Response.Headers["Access-Control-Allow-Private-Network"]
             .ToString()
             .Should()
-            .Be(expected: "true");
+            .Be("true");
     }
 
     [Fact]
     public async Task Preflight_WithoutPrivateNetworkRequest_HasNoAllowHeader()
     {
-        HttpContext context = await Invoke(method: "OPTIONS", requestPrivateNetwork: null);
+        HttpContext context = await Invoke("OPTIONS", null);
 
         context
-            .Response.Headers.ContainsKey(key: "Access-Control-Allow-Private-Network")
+            .Response.Headers.ContainsKey("Access-Control-Allow-Private-Network")
             .Should()
             .BeFalse();
     }
@@ -58,10 +58,10 @@ public sealed class PrivateNetworkAccessMiddlewareTests
     {
         // A real GET carrying the request header (spoofed or stale) must not draw
         // the opt-in — the header only belongs on an actual preflight.
-        HttpContext context = await Invoke(method: "GET", requestPrivateNetwork: "true");
+        HttpContext context = await Invoke("GET", "true");
 
         context
-            .Response.Headers.ContainsKey(key: "Access-Control-Allow-Private-Network")
+            .Response.Headers.ContainsKey("Access-Control-Allow-Private-Network")
             .Should()
             .BeFalse();
     }

@@ -19,29 +19,29 @@ namespace NoMercy.Tests.OpticalMedia.Metadata;
 /// candidate list is empty — callers (DiscRipJob's auto-apply / pending-write
 /// branches) rely on this to distinguish "no match" from "a ranked match".
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class DiscIdentificationTests
 {
     private static DiscCandidate MakeCandidate(string title, double confidence) =>
         new(
-            Source: "tmdb",
-            StableId: "1",
-            Title: title,
-            Year: 2024,
-            PosterUrl: null,
-            BackdropUrl: null,
-            Confidence: confidence
+            "tmdb",
+            "1",
+            title,
+            2024,
+            null,
+            null,
+            confidence
         );
 
     [Fact]
     public void TopCandidate_EmptyCandidates_ReturnsNull()
     {
         DiscIdentification identification = new(
-            Kind: MediaKind.Movie,
-            Candidates: [],
-            TopConfidence: 0,
-            AutoApply: false,
-            NeedsManualAssignment: true
+            MediaKind.Movie,
+            [],
+            0,
+            false,
+            true
         );
 
         identification.TopCandidate.Should().BeNull();
@@ -50,17 +50,17 @@ public class DiscIdentificationTests
     [Fact]
     public void TopCandidate_NonEmptyCandidates_ReturnsFirstEntry()
     {
-        DiscCandidate first = MakeCandidate(title: "First", confidence: 0.95);
-        DiscCandidate second = MakeCandidate(title: "Second", confidence: 0.5);
+        DiscCandidate first = MakeCandidate("First", 0.95);
+        DiscCandidate second = MakeCandidate("Second", 0.5);
 
         DiscIdentification identification = new(
-            Kind: MediaKind.Movie,
-            Candidates: [first, second],
-            TopConfidence: 0.95,
-            AutoApply: true,
-            NeedsManualAssignment: false
+            MediaKind.Movie,
+            [first, second],
+            0.95,
+            true,
+            false
         );
 
-        identification.TopCandidate.Should().BeSameAs(expected: first);
+        identification.TopCandidate.Should().BeSameAs(first);
     }
 }

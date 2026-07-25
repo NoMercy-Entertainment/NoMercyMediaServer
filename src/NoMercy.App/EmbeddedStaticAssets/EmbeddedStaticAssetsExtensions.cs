@@ -35,9 +35,9 @@ public static class EmbeddedStaticAssetsExtensions
     )
     {
         return app.UseEmbeddedStaticAssets(
-            options: new EmbeddedStaticAssetsOptions(),
-            assembly: assembly,
-            embeddedResourceRoot: embeddedResourceRoot
+            new EmbeddedStaticAssetsOptions(),
+            assembly,
+            embeddedResourceRoot
         );
     }
 
@@ -58,9 +58,9 @@ public static class EmbeddedStaticAssetsExtensions
     {
         assembly ??= Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
 
-        ManifestEmbeddedFileProvider embeddedProvider = new(assembly: assembly, root: embeddedResourceRoot);
+        ManifestEmbeddedFileProvider embeddedProvider = new(assembly, embeddedResourceRoot);
 
-        app.UseMiddleware<EmbeddedStaticAssetsMiddleware>(args: [embeddedProvider, options]);
+        app.UseMiddleware<EmbeddedStaticAssetsMiddleware>([embeddedProvider, options]);
 
         return app;
     }
@@ -81,8 +81,8 @@ public static class EmbeddedStaticAssetsExtensions
     )
     {
         EmbeddedStaticAssetsOptions options = new();
-        configure(obj: options);
+        configure(options);
 
-        return app.UseEmbeddedStaticAssets(options: options, assembly: assembly, embeddedResourceRoot: embeddedResourceRoot);
+        return app.UseEmbeddedStaticAssets(options, assembly, embeddedResourceRoot);
     }
 }

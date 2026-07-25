@@ -75,10 +75,10 @@ public class DecodeAwareBundlePlannerTests
         );
 
     private static ResourceRequirement Gpu(string device = "gpu0") =>
-        new(GpuDeviceKey: device, GpuSlots: 1, CpuThreads: 2);
+        new(device, GpuSlots: 1, CpuThreads: 2);
 
     private static ResourceRequirement Cpu(int threads = 4) =>
-        new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: threads);
+        new(null, GpuSlots: 0, CpuThreads: threads);
 
     private static VideoOutputPlan CopyVideo(int index = 0) =>
         new(
@@ -161,7 +161,7 @@ public class DecodeAwareBundlePlannerTests
             VideoOutputs: videos,
             AudioOutputs: audios ?? [],
             SubtitleOutputs: [],
-            Thumbnails: hasThumbs ? new ThumbnailOutputPlan(Width: 160, Height: 90, IntervalSeconds: 10) : null
+            Thumbnails: hasThumbs ? new ThumbnailOutputPlan(160, 90, 10) : null
         );
 
     // ------------------------------------------------------------------ Layer 1: GroupByDecodeClass
@@ -169,50 +169,50 @@ public class DecodeAwareBundlePlannerTests
     [Fact]
     public void GroupByDecodeClass_CopyVideo_ClassifiedAsCopy()
     {
-        DecomposedTask[] tasks = [VideoTask(outputIndex: 0, encoderName: "copy")];
-        OutputPlan plan = PlanWith(videos: [CopyVideo()]);
+        DecomposedTask[] tasks = [VideoTask(0, "copy")];
+        OutputPlan plan = PlanWith([CopyVideo()]);
 
         IReadOnlyList<DecodeGroup> groups = DecodeAwareBundlePlanner.GroupByDecodeClass(
-            tasks: tasks,
-            plan: plan
+            tasks,
+            plan
         );
 
         groups.Should().ContainSingle();
-        groups[index: 0].Class.Should().Be(expected: DecodeClass.Copy);
-        groups[index: 0].VideoTaskIndexes.Should().BeEquivalentTo(expectation: [0]);
+        groups[0].Class.Should().Be(DecodeClass.Copy);
+        groups[0].VideoTaskIndexes.Should().BeEquivalentTo([0]);
     }
 
     [Fact]
     public void GroupByDecodeClass_PlainTranscode_ClassifiedAsTranscode()
     {
-        DecomposedTask[] tasks = [VideoTask(outputIndex: 0, encoderName: "libx264", resources: Cpu())];
-        OutputPlan plan = PlanWith(videos: [TranscodeVideo()]);
+        DecomposedTask[] tasks = [VideoTask(0, "libx264", Cpu())];
+        OutputPlan plan = PlanWith([TranscodeVideo()]);
 
         IReadOnlyList<DecodeGroup> groups = DecodeAwareBundlePlanner.GroupByDecodeClass(
-            tasks: tasks,
-            plan: plan
+            tasks,
+            plan
         );
 
         groups.Should().ContainSingle();
-        groups[index: 0].Class.Should().Be(expected: DecodeClass.Transcode);
-        groups[index: 0].TonemapChain.Should().BeNull();
+        groups[0].Class.Should().Be(DecodeClass.Transcode);
+        groups[0].TonemapChain.Should().BeNull();
     }
 
     [Fact]
     public void GroupByDecodeClass_TonemapRung_ClassifiedAsTonemapWithChain()
     {
         const string chain = "zscale=t=linear,tonemap=hable";
-        DecomposedTask[] tasks = [VideoTask(outputIndex: 0, encoderName: "libx264", resources: Cpu())];
-        OutputPlan plan = PlanWith(videos: [TonemapVideo(chain: chain)]);
+        DecomposedTask[] tasks = [VideoTask(0, "libx264", Cpu())];
+        OutputPlan plan = PlanWith([TonemapVideo(chain: chain)]);
 
         IReadOnlyList<DecodeGroup> groups = DecodeAwareBundlePlanner.GroupByDecodeClass(
-            tasks: tasks,
-            plan: plan
+            tasks,
+            plan
         );
 
         groups.Should().ContainSingle();
-        groups[index: 0].Class.Should().Be(expected: DecodeClass.Tonemap);
-        groups[index: 0].TonemapChain.Should().Be(expected: chain);
+        groups[0].Class.Should().Be(DecodeClass.Tonemap);
+        groups[0].TonemapChain.Should().Be(chain);
     }
 
     [Fact]
@@ -222,27 +222,26 @@ public class DecodeAwareBundlePlannerTests
         // plain Transcode, not Tonemap — kept distinct even though
         // FilterGraphAssembler's dedupe path could technically combine it
         // with an SDR-tonemap rung into one ffmpeg via a pre-tonemap split.
-        DecomposedTask[] tasks = [VideoTask(outputIndex: 0, encoderName: "libx265", resources: Cpu()), VideoTask(outputIndex: 1, encoderName: "libx264", resources: Cpu())];
-        OutputPlan plan = PlanWith(videos:
-        [
+        DecomposedTask[] tasks = [VideoTask(0, "libx265", Cpu()), VideoTask(1, "libx264", Cpu())];
+        OutputPlan plan = PlanWith([
             TranscodeVideo(encoder: "libx265"),
             TonemapVideo(encoder: "libx264"),
         ]);
 
         IReadOnlyList<DecodeGroup> groups = DecodeAwareBundlePlanner.GroupByDecodeClass(
-            tasks: tasks,
-            plan: plan
+            tasks,
+            plan
         );
 
-        groups.Should().HaveCount(expected: 2);
+        groups.Should().HaveCount(2);
         groups
             .Should()
-            .ContainSingle(predicate: g =>
+            .ContainSingle(g =>
                 g.Class == DecodeClass.Transcode && g.VideoTaskIndexes.SequenceEqual(new[] { 0 })
             );
         groups
             .Should()
-            .ContainSingle(predicate: g =>
+            .ContainSingle(g =>
                 g.Class == DecodeClass.Tonemap && g.VideoTaskIndexes.SequenceEqual(new[] { 1 })
             );
     }
@@ -254,20 +253,20 @@ public class DecodeAwareBundlePlannerTests
     {
         DecomposedTask[] tasks =
         [
-            VideoTask(outputIndex: 0, encoderName: "libx265", resources: Cpu()), // HDR-preserve
-            VideoTask(outputIndex: 1, encoderName: "libx264", resources: Cpu()), // SDR tonemap
-            AudioTask(outputIndex: 0), // copy audio
+            VideoTask(0, "libx265", Cpu()), // HDR-preserve
+            VideoTask(1, "libx264", Cpu()), // SDR tonemap
+            AudioTask(0), // copy audio
             ThumbnailsTask(),
         ];
         OutputPlan plan = PlanWith(
-            videos: [TranscodeVideo(encoder: "libx265"), TonemapVideo(encoder: "libx264")],
-            audios: [AudioOutput(action: StreamAction.Copy)],
+            [TranscodeVideo(encoder: "libx265"), TonemapVideo(encoder: "libx264")],
+            audios: [AudioOutput(StreamAction.Copy)],
             hasThumbs: true
         );
 
         DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
-            tasks: tasks,
-            plan: plan,
+            tasks,
+            plan,
             parentJobId: 1,
             groupTag: GroupTag,
             gpuCap: 8,
@@ -277,33 +276,33 @@ public class DecodeAwareBundlePlannerTests
         bundles
             .Should()
             .HaveCount(
-                expected: 2,
-                because: "the HDR-preserve rung and the SDR-tonemap rung are two separate decodes — "
-                         + "total decodes = 2, not 3"
+                2,
+                "the HDR-preserve rung and the SDR-tonemap rung are two separate decodes — "
+                    + "total decodes = 2, not 3"
             );
 
         // Bundle 0 is the 4K HDR master: it runs FIRST so native-HDR clients can
         // play immediately, and it carries the audio so that rendition is
         // playable with sound the moment it lands.
         DecomposedTask hdrBundle = bundles[0];
-        hdrBundle.VideoSliceIndexes.Should().BeEquivalentTo(expectation: [0]);
+        hdrBundle.VideoSliceIndexes.Should().BeEquivalentTo([0]);
         hdrBundle
             .IncludeThumbnails.Should()
-            .Be(expected: false, because: "the HDR master must not carry the sprite — it would sample raw HDR");
+            .Be(false, "the HDR master must not carry the sprite — it would sample raw HDR");
         hdrBundle
             .AudioSliceIndexes.Should()
-            .BeEquivalentTo(expectation: [0], because: "the 4K master carries the audio so it is playable first");
+            .BeEquivalentTo([0], "the 4K master carries the audio so it is playable first");
 
         // Bundle 1 is the SDR rung: it follows the master and carries the sprite,
         // which reuses its HDR→SDR tonemap for correct Rec.709 colour.
         DecomposedTask tonemapBundle = bundles[1];
-        tonemapBundle.VideoSliceIndexes.Should().BeEquivalentTo(expectation: [1]);
+        tonemapBundle.VideoSliceIndexes.Should().BeEquivalentTo([1]);
         tonemapBundle
             .IncludeThumbnails.Should()
-            .NotBe(unexpected: false, because: "the sprite rides the SDR-tonemap decode for correct Rec.709 color");
+            .NotBe(false, "the sprite rides the SDR-tonemap decode for correct Rec.709 color");
         tonemapBundle
             .AudioSliceIndexes.Should()
-            .BeEmpty(because: "copy audio rides the 4K master only, not the SDR bundle");
+            .BeEmpty("copy audio rides the 4K master only, not the SDR bundle");
     }
 
     // ------------------------------------------------------------------ (b) All-copy plan
@@ -311,12 +310,12 @@ public class DecodeAwareBundlePlannerTests
     [Fact]
     public void Plan_AllCopyPlan_RemuxBundleCarriesCopyVideo_SpriteIsOwnStandaloneBundle()
     {
-        DecomposedTask[] tasks = [VideoTask(outputIndex: 0, encoderName: "copy"), AudioTask(outputIndex: 0), ThumbnailsTask()];
-        OutputPlan plan = PlanWith(videos: [CopyVideo()], audios: [AudioOutput()], hasThumbs: true);
+        DecomposedTask[] tasks = [VideoTask(0, "copy"), AudioTask(0), ThumbnailsTask()];
+        OutputPlan plan = PlanWith([CopyVideo()], audios: [AudioOutput()], hasThumbs: true);
 
         DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
-            tasks: tasks,
-            plan: plan,
+            tasks,
+            plan,
             parentJobId: 1,
             groupTag: GroupTag,
             gpuCap: 8,
@@ -325,19 +324,19 @@ public class DecodeAwareBundlePlannerTests
 
         bundles
             .Should()
-            .HaveCount(expected: 2, because: "one zero-decode remux bundle plus one standalone sprite bundle");
+            .HaveCount(2, "one zero-decode remux bundle plus one standalone sprite bundle");
 
-        DecomposedTask remux = bundles.Single(predicate: b => b.VideoSliceIndexes!.Length > 0);
-        remux.VideoSliceIndexes.Should().BeEquivalentTo(expectation: [0]);
-        remux.AudioSliceIndexes.Should().BeEquivalentTo(expectation: [0]);
+        DecomposedTask remux = bundles.Single(b => b.VideoSliceIndexes!.Length > 0);
+        remux.VideoSliceIndexes.Should().BeEquivalentTo([0]);
+        remux.AudioSliceIndexes.Should().BeEquivalentTo([0]);
         remux
             .IncludeThumbnails.Should()
-            .BeFalse(because: "the sprite never rides the zero-decode remux bundle");
+            .BeFalse("the sprite never rides the zero-decode remux bundle");
 
-        DecomposedTask sprite = bundles.Single(predicate: b => b != remux);
+        DecomposedTask sprite = bundles.Single(b => b != remux);
         sprite.VideoSliceIndexes.Should().BeEmpty();
         sprite.AudioSliceIndexes.Should().BeEmpty();
-        sprite.IncludeThumbnails.Should().NotBe(unexpected: false, because: "this is the single standalone sprite unit");
+        sprite.IncludeThumbnails.Should().NotBe(false, "this is the single standalone sprite unit");
     }
 
     [Fact]
@@ -345,12 +344,12 @@ public class DecodeAwareBundlePlannerTests
     {
         // Edge case preserved from the pre-refactor bundler: an audio/
         // subtitle-only profile still needs one bundle so its streams run.
-        DecomposedTask[] tasks = [AudioTask(outputIndex: 0)];
-        OutputPlan plan = PlanWith(videos: [], audios: [AudioOutput(action: StreamAction.Transcode)]);
+        DecomposedTask[] tasks = [AudioTask(0)];
+        OutputPlan plan = PlanWith([], audios: [AudioOutput(StreamAction.Transcode)]);
 
         DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
-            tasks: tasks,
-            plan: plan,
+            tasks,
+            plan,
             parentJobId: 1,
             groupTag: GroupTag,
             gpuCap: 8,
@@ -359,15 +358,15 @@ public class DecodeAwareBundlePlannerTests
 
         bundles.Should().ContainSingle();
         bundles[0].VideoSliceIndexes.Should().BeEmpty();
-        bundles[0].AudioSliceIndexes.Should().BeEquivalentTo(expectation: [0]);
+        bundles[0].AudioSliceIndexes.Should().BeEquivalentTo([0]);
     }
 
     [Fact]
     public void Plan_NoTasksAtAll_ProducesNoBundles()
     {
         DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
-            tasks: [],
-            plan: PlanWith(videos: []),
+            [],
+            PlanWith([]),
             parentJobId: 1,
             groupTag: GroupTag,
             gpuCap: 8,
@@ -384,30 +383,30 @@ public class DecodeAwareBundlePlannerTests
     {
         DecomposedTask[] tasks =
         [
-            VideoTask(outputIndex: 0, encoderName: "libx264", resources: Cpu()),
-            VideoTask(outputIndex: 1, encoderName: "libx264", resources: Cpu()),
-            VideoTask(outputIndex: 2, encoderName: "libx264", resources: Cpu()),
+            VideoTask(0, "libx264", Cpu()),
+            VideoTask(1, "libx264", Cpu()),
+            VideoTask(2, "libx264", Cpu()),
             ThumbnailsTask(),
         ];
         OutputPlan plan = PlanWith(
-            videos: [TranscodeVideo(width: 1920, height: 1080), TranscodeVideo(width: 1280, height: 720), TranscodeVideo(width: 854, height: 480)],
+            [TranscodeVideo(1920, 1080), TranscodeVideo(1280, 720), TranscodeVideo(854, 480)],
             hasThumbs: true
         );
 
         DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
-            tasks: tasks,
-            plan: plan,
+            tasks,
+            plan,
             parentJobId: 1,
             groupTag: GroupTag,
             gpuCap: 8,
             cpuCap: 8
         );
 
-        bundles.Should().ContainSingle(because: "all three rungs share one decode — none of them tonemap");
-        bundles[0].VideoSliceIndexes.Should().BeEquivalentTo(expectation: [0, 1, 2]);
+        bundles.Should().ContainSingle("all three rungs share one decode — none of them tonemap");
+        bundles[0].VideoSliceIndexes.Should().BeEquivalentTo([0, 1, 2]);
         bundles[0]
             .IncludeThumbnails.Should()
-            .NotBe(unexpected: false, because: "the sprite rides the one transcode decode");
+            .NotBe(false, "the sprite rides the one transcode decode");
     }
 
     [Fact]
@@ -418,27 +417,26 @@ public class DecodeAwareBundlePlannerTests
         // when both fit comfortably under their own cap.
         DecomposedTask[] tasks =
         [
-            VideoTask(outputIndex: 0, encoderName: "hevc_nvenc", resources: Gpu()),
-            VideoTask(outputIndex: 1, encoderName: "hevc_nvenc", resources: Gpu()),
-            VideoTask(outputIndex: 2, encoderName: "libx264", resources: Cpu()),
+            VideoTask(0, "hevc_nvenc", Gpu()),
+            VideoTask(1, "hevc_nvenc", Gpu()),
+            VideoTask(2, "libx264", Cpu()),
         ];
-        OutputPlan plan = PlanWith(videos:
-        [
-            TranscodeVideo(width: 3840, height: 2160, encoder: "hevc_nvenc"),
-            TranscodeVideo(width: 1920, height: 1080, encoder: "hevc_nvenc"),
-            TranscodeVideo(width: 1920, height: 1080, encoder: "libx264"),
+        OutputPlan plan = PlanWith([
+            TranscodeVideo(3840, 2160, "hevc_nvenc"),
+            TranscodeVideo(1920, 1080, "hevc_nvenc"),
+            TranscodeVideo(1920, 1080, "libx264"),
         ]);
 
         DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
-            tasks: tasks,
-            plan: plan,
+            tasks,
+            plan,
             parentJobId: 1,
             groupTag: GroupTag,
             gpuCap: 8,
             cpuCap: 8
         );
 
-        bundles.Should().HaveCount(expected: 2);
+        bundles.Should().HaveCount(2);
     }
 
     // ------------------------------------------------------------------ (d) Capacity overflow
@@ -447,32 +445,32 @@ public class DecodeAwareBundlePlannerTests
     public void Plan_CapacityOverflow_SplitsIntoFullDecodeBundlesOnDecodeIndependentBoundaries()
     {
         DecomposedTask[] tasks = Enumerable
-            .Range(start: 0, count: 5)
-            .Select(selector: i => VideoTask(outputIndex: i, encoderName: "libx264", resources: Cpu()))
+            .Range(0, 5)
+            .Select(i => VideoTask(i, "libx264", Cpu()))
             .ToArray();
         OutputPlan plan = PlanWith(
-            videos: Enumerable.Range(start: 0, count: 5).Select(selector: i => TranscodeVideo(width: 1920 - i * 100, height: 1080)).ToArray()
+            Enumerable.Range(0, 5).Select(i => TranscodeVideo(1920 - i * 100, 1080)).ToArray()
         );
 
         DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
-            tasks: tasks,
-            plan: plan,
+            tasks,
+            plan,
             parentJobId: 1,
             groupTag: GroupTag,
             gpuCap: 8,
             cpuCap: 2
         );
 
-        bundles.Should().HaveCount(expected: 3, because: "ceil(5/2) = 3 capacity-bounded decode bundles");
+        bundles.Should().HaveCount(3, "ceil(5/2) = 3 capacity-bounded decode bundles");
         bundles
-            .SelectMany(selector: b => b.VideoSliceIndexes!)
+            .SelectMany(b => b.VideoSliceIndexes!)
             .Should()
-            .BeEquivalentTo(expectation: [0, 1, 2, 3, 4], because: "every rung still lands in exactly one bundle");
+            .BeEquivalentTo([0, 1, 2, 3, 4], "every rung still lands in exactly one bundle");
         bundles
-            .Select(selector: b => b.VideoSliceIndexes!.Length)
+            .Select(b => b.VideoSliceIndexes!.Length)
             .OrderDescending()
             .Should()
-            .BeEquivalentTo(expectation: [2, 2, 1]);
+            .BeEquivalentTo([2, 2, 1]);
     }
 
     // ------------------------------------------------------------------ (e) Copy audio/subtitle never spawn their own decode
@@ -480,12 +478,12 @@ public class DecodeAwareBundlePlannerTests
     [Fact]
     public void Plan_CopyAudioAndSubtitle_RideExistingDecodeGroup_NeverSpawnOwnDecode()
     {
-        DecomposedTask[] tasks = [VideoTask(outputIndex: 0, encoderName: "libx264", resources: Cpu()), AudioTask(outputIndex: 0), SubtitleTask(outputIndex: 0)];
-        OutputPlan plan = PlanWith(videos: [TranscodeVideo()], audios: [AudioOutput(action: StreamAction.Copy)]);
+        DecomposedTask[] tasks = [VideoTask(0, "libx264", Cpu()), AudioTask(0), SubtitleTask(0)];
+        OutputPlan plan = PlanWith([TranscodeVideo()], audios: [AudioOutput(StreamAction.Copy)]);
 
         DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
-            tasks: tasks,
-            plan: plan,
+            tasks,
+            plan,
             parentJobId: 1,
             groupTag: GroupTag,
             gpuCap: 8,
@@ -495,28 +493,28 @@ public class DecodeAwareBundlePlannerTests
         bundles
             .Should()
             .ContainSingle(
-                because: "copy audio/subtitle ride the one real decode instead of spawning their own"
+                "copy audio/subtitle ride the one real decode instead of spawning their own"
             );
-        bundles[0].AudioSliceIndexes.Should().BeEquivalentTo(expectation: [0]);
-        bundles[0].SubtitleSliceIndexes.Should().BeEquivalentTo(expectation: [0]);
+        bundles[0].AudioSliceIndexes.Should().BeEquivalentTo([0]);
+        bundles[0].SubtitleSliceIndexes.Should().BeEquivalentTo([0]);
     }
 
     [Fact]
     public void Plan_CopyVideoAlongsideTranscodeLadder_RidesTheDecodeGroupInsteadOfItsOwnBundle()
     {
-        DecomposedTask[] tasks = [VideoTask(outputIndex: 0, encoderName: "libx264", resources: Cpu()), VideoTask(outputIndex: 1, encoderName: "copy")];
-        OutputPlan plan = PlanWith(videos: [TranscodeVideo(), CopyVideo()]);
+        DecomposedTask[] tasks = [VideoTask(0, "libx264", Cpu()), VideoTask(1, "copy")];
+        OutputPlan plan = PlanWith([TranscodeVideo(), CopyVideo()]);
 
         DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
-            tasks: tasks,
-            plan: plan,
+            tasks,
+            plan,
             parentJobId: 1,
             groupTag: GroupTag,
             gpuCap: 8,
             cpuCap: 8
         );
 
-        bundles.Should().ContainSingle(because: "copy video rides the transcode decode for free");
-        bundles[0].VideoSliceIndexes.Should().BeEquivalentTo(expectation: [0, 1]);
+        bundles.Should().ContainSingle("copy video rides the transcode decode for free");
+        bundles[0].VideoSliceIndexes.Should().BeEquivalentTo([0, 1]);
     }
 }

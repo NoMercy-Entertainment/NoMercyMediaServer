@@ -31,13 +31,13 @@ public class PlanStageDisambiguationTests
         string playlistTemplate = "audio_:lang:_:codec:/playlist"
     ) =>
         new(
-            EncoderName: encoder,
-            BitrateKbps: 128,
-            Channels: 2,
-            SampleRate: 48000,
-            Action: StreamAction.Transcode,
-            Language: lang,
-            MapLabel: $"0:a:{sourceIdx}"
+            encoder,
+            128,
+            2,
+            48000,
+            StreamAction.Transcode,
+            lang,
+            $"0:a:{sourceIdx}"
         )
         {
             SegmentNameTemplate = segTemplate,
@@ -53,18 +53,18 @@ public class PlanStageDisambiguationTests
         string playlistTemplate = "video_:framesize:/playlist"
     ) =>
         new(
-            Width: width,
-            Height: height,
-            EncoderName: encoder,
-            Crf: 23,
-            BitrateKbps: 0,
-            Preset: "medium",
-            Profile: "main",
-            Level: "4.0",
-            TenBit: false,
-            PixelFormat: "yuv420p",
-            MapLabel: "[v]",
-            ExtraFlags: []
+            width,
+            height,
+            encoder,
+            23,
+            0,
+            "medium",
+            "main",
+            "4.0",
+            false,
+            "yuv420p",
+            "[v]",
+            []
         )
         {
             SegmentNameTemplate = segTemplate,
@@ -77,12 +77,12 @@ public class PlanStageDisambiguationTests
     [Fact]
     public void DisambiguateAudio_SingleLanguagePerCodec_PassesThrough()
     {
-        AudioOutputPlan[] plans = [Audio(lang: "eng", encoder: "aac", sourceIdx: 0), Audio(lang: "fra", encoder: "aac", sourceIdx: 1)];
+        AudioOutputPlan[] plans = [Audio("eng", "aac", 0), Audio("fra", "aac", 1)];
 
-        AudioOutputPlan[] result = PlanStageDisambiguation.DisambiguateAudio(plans: plans).ToArray();
+        AudioOutputPlan[] result = PlanStageDisambiguation.DisambiguateAudio(plans).ToArray();
 
-        result[0].SegmentNameTemplate.Should().Be(expected: plans[0].SegmentNameTemplate);
-        result[1].SegmentNameTemplate.Should().Be(expected: plans[1].SegmentNameTemplate);
+        result[0].SegmentNameTemplate.Should().Be(plans[0].SegmentNameTemplate);
+        result[1].SegmentNameTemplate.Should().Be(plans[1].SegmentNameTemplate);
     }
 
     [Fact]
@@ -90,45 +90,45 @@ public class PlanStageDisambiguationTests
     {
         // Two English AAC streams (e.g. commentary track + main) would collide
         // on audio_eng_aac/. Append source index suffix per stream.
-        AudioOutputPlan[] plans = [Audio(lang: "eng", encoder: "aac", sourceIdx: 0), Audio(lang: "eng", encoder: "aac", sourceIdx: 1)];
+        AudioOutputPlan[] plans = [Audio("eng", "aac", 0), Audio("eng", "aac", 1)];
 
-        AudioOutputPlan[] result = PlanStageDisambiguation.DisambiguateAudio(plans: plans).ToArray();
+        AudioOutputPlan[] result = PlanStageDisambiguation.DisambiguateAudio(plans).ToArray();
 
-        result[0].SegmentNameTemplate.Should().Contain(expected: "_0");
-        result[1].SegmentNameTemplate.Should().Contain(expected: "_1");
-        result[0].SegmentNameTemplate.Should().NotBe(unexpected: result[1].SegmentNameTemplate);
+        result[0].SegmentNameTemplate.Should().Contain("_0");
+        result[1].SegmentNameTemplate.Should().Contain("_1");
+        result[0].SegmentNameTemplate.Should().NotBe(result[1].SegmentNameTemplate);
     }
 
     [Fact]
     public void DisambiguateAudio_DifferentCodecsSameLanguage_PassThrough()
     {
         // Two English streams with DIFFERENT codecs land in different dirs already.
-        AudioOutputPlan[] plans = [Audio(lang: "eng", encoder: "aac", sourceIdx: 0), Audio(lang: "eng", encoder: "libfdk_aac", sourceIdx: 1)];
+        AudioOutputPlan[] plans = [Audio("eng", "aac", 0), Audio("eng", "libfdk_aac", 1)];
 
-        AudioOutputPlan[] result = PlanStageDisambiguation.DisambiguateAudio(plans: plans).ToArray();
+        AudioOutputPlan[] result = PlanStageDisambiguation.DisambiguateAudio(plans).ToArray();
 
         // 'lib' and 'libfdk_' prefixes are stripped to compare — these still collide
         // because both resolve to "aac" codec token. Disambiguates.
-        result[0].SegmentNameTemplate.Should().NotBe(unexpected: plans[0].SegmentNameTemplate);
+        result[0].SegmentNameTemplate.Should().NotBe(plans[0].SegmentNameTemplate);
     }
 
     [Fact]
     public void DisambiguateAudio_SegmentAndPlaylistBothDisambiguated()
     {
-        AudioOutputPlan[] plans = [Audio(lang: "eng", encoder: "aac", sourceIdx: 0), Audio(lang: "eng", encoder: "aac", sourceIdx: 1)];
+        AudioOutputPlan[] plans = [Audio("eng", "aac", 0), Audio("eng", "aac", 1)];
 
-        AudioOutputPlan[] result = PlanStageDisambiguation.DisambiguateAudio(plans: plans).ToArray();
+        AudioOutputPlan[] result = PlanStageDisambiguation.DisambiguateAudio(plans).ToArray();
 
         // Both directory AND filename suffix get the disambiguator — otherwise
         // .m4s segments still collide inside the same dir.
-        result[0].SegmentNameTemplate.Should().Contain(expected: "/").And.Contain(expected: "_0");
-        result[0].PlaylistNameTemplate.Should().Contain(expected: "/").And.Contain(expected: "_0");
+        result[0].SegmentNameTemplate.Should().Contain("/").And.Contain("_0");
+        result[0].PlaylistNameTemplate.Should().Contain("/").And.Contain("_0");
     }
 
     [Fact]
     public void DisambiguateAudio_EmptyInput_ReturnsEmpty()
     {
-        PlanStageDisambiguation.DisambiguateAudio(plans: []).Should().BeEmpty();
+        PlanStageDisambiguation.DisambiguateAudio([]).Should().BeEmpty();
     }
 
     // ── Video disambiguation ────────────────────────────────────────────────
@@ -136,12 +136,12 @@ public class PlanStageDisambiguationTests
     [Fact]
     public void DisambiguateVideo_DifferentResolutions_PassesThrough()
     {
-        VideoOutputPlan[] plans = [Video(width: 1920, height: 1080, encoder: "libx264"), Video(width: 1280, height: 720, encoder: "libx264")];
+        VideoOutputPlan[] plans = [Video(1920, 1080, "libx264"), Video(1280, 720, "libx264")];
 
-        VideoOutputPlan[] result = PlanStageDisambiguation.DisambiguateVideo(plans: plans);
+        VideoOutputPlan[] result = PlanStageDisambiguation.DisambiguateVideo(plans);
 
-        result[0].SegmentNameTemplate.Should().Be(expected: plans[0].SegmentNameTemplate);
-        result[1].SegmentNameTemplate.Should().Be(expected: plans[1].SegmentNameTemplate);
+        result[0].SegmentNameTemplate.Should().Be(plans[0].SegmentNameTemplate);
+        result[1].SegmentNameTemplate.Should().Be(plans[1].SegmentNameTemplate);
     }
 
     [Fact]
@@ -149,12 +149,12 @@ public class PlanStageDisambiguationTests
     {
         // EmitHdrAndSdr can produce H.264 1080p AND HEVC 1080p — they'd collide
         // on video_1920x1080/. Append codec family suffix.
-        VideoOutputPlan[] plans = [Video(width: 1920, height: 1080, encoder: "libx264"), Video(width: 1920, height: 1080, encoder: "libx265")];
+        VideoOutputPlan[] plans = [Video(1920, 1080, "libx264"), Video(1920, 1080, "libx265")];
 
-        VideoOutputPlan[] result = PlanStageDisambiguation.DisambiguateVideo(plans: plans);
+        VideoOutputPlan[] result = PlanStageDisambiguation.DisambiguateVideo(plans);
 
-        result[0].SegmentNameTemplate.Should().Contain(expected: "avc");
-        result[1].SegmentNameTemplate.Should().Contain(expected: "hevc");
+        result[0].SegmentNameTemplate.Should().Contain("avc");
+        result[1].SegmentNameTemplate.Should().Contain("hevc");
     }
 
     [Fact]
@@ -163,19 +163,19 @@ public class PlanStageDisambiguationTests
         // Different IsHdrOutput → different group keys → no collision.
         VideoOutputPlan[] plans =
         [
-            Video(width: 1920, height: 1080, encoder: "libx265", hdr: true),
-            Video(width: 1920, height: 1080, encoder: "libx265", hdr: false),
+            Video(1920, 1080, "libx265", true),
+            Video(1920, 1080, "libx265", false),
         ];
 
-        VideoOutputPlan[] result = PlanStageDisambiguation.DisambiguateVideo(plans: plans);
+        VideoOutputPlan[] result = PlanStageDisambiguation.DisambiguateVideo(plans);
 
-        result[0].SegmentNameTemplate.Should().Be(expected: plans[0].SegmentNameTemplate);
-        result[1].SegmentNameTemplate.Should().Be(expected: plans[1].SegmentNameTemplate);
+        result[0].SegmentNameTemplate.Should().Be(plans[0].SegmentNameTemplate);
+        result[1].SegmentNameTemplate.Should().Be(plans[1].SegmentNameTemplate);
     }
 
     [Fact]
     public void DisambiguateVideo_EmptyInput_ReturnsEmpty()
     {
-        PlanStageDisambiguation.DisambiguateVideo(plans: []).Should().BeEmpty();
+        PlanStageDisambiguation.DisambiguateVideo([]).Should().BeEmpty();
     }
 }

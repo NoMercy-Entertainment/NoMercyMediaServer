@@ -29,66 +29,66 @@ public class SqliteRetryingExecutionStrategyTests
     // GetType().Name to avoid a hard reference to Microsoft.Data.Sqlite, so a type with this
     // exact simple name (regardless of namespace) exercises the real matching logic without
     // needing to construct the real ADO exception type.
-    private sealed class SqliteException(string message) : Exception(message: message);
+    private sealed class SqliteException(string message) : Exception(message);
 
     [Fact]
     public void DefaultMaxRetryCount_IsBoundedToFour()
     {
         FieldInfo? field = typeof(SqliteRetryingExecutionStrategy).GetField(
-            name: "DefaultMaxRetryCount",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
+            "DefaultMaxRetryCount",
+            BindingFlags.NonPublic | BindingFlags.Static
         );
 
-        Assert.NotNull(@object: field);
-        Assert.Equal(expected: 4, actual: (int)field!.GetRawConstantValue()!);
+        Assert.NotNull(field);
+        Assert.Equal(4, (int)field!.GetRawConstantValue()!);
     }
 
     [Fact]
     public void DefaultMaxDelay_IsBoundedToFiveSeconds()
     {
         FieldInfo? field = typeof(SqliteRetryingExecutionStrategy).GetField(
-            name: "DefaultMaxDelay",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
+            "DefaultMaxDelay",
+            BindingFlags.NonPublic | BindingFlags.Static
         );
 
-        Assert.NotNull(@object: field);
-        TimeSpan value = (TimeSpan)field!.GetValue(obj: null)!;
-        Assert.Equal(expected: TimeSpan.FromSeconds(seconds: 5), actual: value);
+        Assert.NotNull(field);
+        TimeSpan value = (TimeSpan)field!.GetValue(null)!;
+        Assert.Equal(TimeSpan.FromSeconds(5), value);
     }
 
     [Fact]
     public void IsTransientSqliteError_True_ForLockedMessage()
     {
-        Exception ex = new SqliteException(message: "database is locked");
+        Exception ex = new SqliteException("database is locked");
 
-        Assert.True(condition: SqliteRetryingExecutionStrategy.IsTransientSqliteError(exception: ex));
+        Assert.True(SqliteRetryingExecutionStrategy.IsTransientSqliteError(ex));
     }
 
     [Fact]
     public void IsTransientSqliteError_True_WhenLockedExceptionIsNested()
     {
         Exception ex = new InvalidOperationException(
-            message: "wrapper",
-            innerException: new SqliteException(message: "database table is locked")
+            "wrapper",
+            new SqliteException("database table is locked")
         );
 
-        Assert.True(condition: SqliteRetryingExecutionStrategy.IsTransientSqliteError(exception: ex));
+        Assert.True(SqliteRetryingExecutionStrategy.IsTransientSqliteError(ex));
     }
 
     [Fact]
     public void IsTransientSqliteError_False_ForUnrelatedException()
     {
-        Exception ex = new InvalidOperationException(message: "not a lock error");
+        Exception ex = new InvalidOperationException("not a lock error");
 
-        Assert.False(condition: SqliteRetryingExecutionStrategy.IsTransientSqliteError(exception: ex));
+        Assert.False(SqliteRetryingExecutionStrategy.IsTransientSqliteError(ex));
     }
 
     [Fact]
     public void IsTransientSqliteError_False_ForSqliteExceptionWithUnrelatedMessage()
     {
-        Exception ex = new SqliteException(message: "no such table: Foo");
+        Exception ex = new SqliteException("no such table: Foo");
 
-        Assert.False(condition: SqliteRetryingExecutionStrategy.IsTransientSqliteError(exception: ex));
+        Assert.False(SqliteRetryingExecutionStrategy.IsTransientSqliteError(ex));
     }
 
     [Fact]
@@ -100,16 +100,16 @@ public class SqliteRetryingExecutionStrategyTests
         {
             attempts++;
             await Task.CompletedTask;
-            throw new SqliteException(message: "database is locked");
+            throw new SqliteException("database is locked");
         }
 
         // maxRetries: 1 keeps this test fast (one real backoff sleep) while still proving
         // the loop honors an explicit bound rather than retrying forever.
-        await Assert.ThrowsAsync<SqliteException>(testCode: () =>
-            SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(operation: Operation, maxRetries: 1)
+        await Assert.ThrowsAsync<SqliteException>(() =>
+            SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(Operation, 1)
         );
 
-        Assert.Equal(expected: 2, actual: attempts); // initial attempt + 1 retry
+        Assert.Equal(2, attempts); // initial attempt + 1 retry
     }
 
     [Fact]
@@ -122,17 +122,17 @@ public class SqliteRetryingExecutionStrategyTests
             attempts++;
             await Task.CompletedTask;
             if (attempts < 2)
-                throw new SqliteException(message: "database is locked");
+                throw new SqliteException("database is locked");
             return 42;
         }
 
         int result = await SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(
-            operation: Operation,
-            maxRetries: 3
+            Operation,
+            3
         );
 
-        Assert.Equal(expected: 42, actual: result);
-        Assert.Equal(expected: 2, actual: attempts);
+        Assert.Equal(42, result);
+        Assert.Equal(2, attempts);
     }
 
     [Fact]
@@ -144,13 +144,13 @@ public class SqliteRetryingExecutionStrategyTests
         {
             attempts++;
             await Task.CompletedTask;
-            throw new InvalidOperationException(message: "not transient");
+            throw new InvalidOperationException("not transient");
         }
 
-        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () =>
-            SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(operation: Operation, maxRetries: 3)
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(Operation, 3)
         );
 
-        Assert.Equal(expected: 1, actual: attempts);
+        Assert.Equal(1, attempts);
     }
 }

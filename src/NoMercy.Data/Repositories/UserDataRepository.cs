@@ -27,9 +27,9 @@ public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
-        IQueryable<UserData>? query = BuildQuery(context: context, userId: userId, type: type, intId: intId, ulidId: ulidId);
-        return query is null ? [] : await query.ToListAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        IQueryable<UserData>? query = BuildQuery(context, userId, type, intId, ulidId);
+        return query is null ? [] : await query.ToListAsync(ct);
     }
 
     public async Task<UserData?> GetUserDataSingleAsync(
@@ -40,9 +40,9 @@ public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
-        IQueryable<UserData>? query = BuildQuery(context: context, userId: userId, type: type, intId: intId, ulidId: ulidId);
-        return query is null ? null : await query.FirstOrDefaultAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        IQueryable<UserData>? query = BuildQuery(context, userId, type, intId, ulidId);
+        return query is null ? null : await query.FirstOrDefaultAsync(ct);
     }
 
     public async Task<int> DeleteUserDataAsync(
@@ -50,9 +50,9 @@ public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
-        context.UserData.RemoveRange(entities: userData);
-        return await context.SaveChangesAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        context.UserData.RemoveRange(userData);
+        return await context.SaveChangesAsync(ct);
     }
 
     public async Task<int> RemoveForItemAsync(
@@ -76,9 +76,9 @@ public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
         if (!hasId)
             return 0;
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
-        IQueryable<UserData>? query = BuildQuery(context: context, userId: userId, type: type, intId: intId, ulidId: ulidId);
-        return query is null ? 0 : await query.ExecuteDeleteAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        IQueryable<UserData>? query = BuildQuery(context, userId, type, intId, ulidId);
+        return query is null ? 0 : await query.ExecuteDeleteAsync(ct);
     }
 
     public async Task<int> HideFromContinueWatchingAsync(
@@ -86,16 +86,16 @@ public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
         CancellationToken ct = default
     )
     {
-        List<Ulid> ids = userData.Select(selector: data => data.Id).ToList();
+        List<Ulid> ids = userData.Select(data => data.Id).ToList();
         if (ids.Count == 0)
             return 0;
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context
-            .UserData.Where(predicate: data => ids.Contains(data.Id))
+            .UserData.Where(data => ids.Contains(data.Id))
             .ExecuteUpdateAsync(
-                setPropertyCalls: setters => setters.SetProperty(propertyExpression: data => data.RemovedFromContinueWatching, valueExpression: true),
-                cancellationToken: ct
+                setters => setters.SetProperty(data => data.RemovedFromContinueWatching, true),
+                ct
             );
     }
 
@@ -109,14 +109,14 @@ public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
     {
         IQueryable<UserData> query = context
             .UserData.AsNoTracking()
-            .Where(predicate: data => data.UserId.Equals(userId));
+            .Where(data => data.UserId.Equals(userId));
 
         return type switch
         {
-            MediaTypes.MovieMediaType => query.Where(predicate: data => data.MovieId == intId),
-            MediaTypes.TvMediaType => query.Where(predicate: data => data.TvId == intId),
-            MediaTypes.SpecialMediaType => query.Where(predicate: data => data.SpecialId == ulidId),
-            MediaTypes.CollectionMediaType => query.Where(predicate: data => data.CollectionId == intId),
+            MediaTypes.MovieMediaType => query.Where(data => data.MovieId == intId),
+            MediaTypes.TvMediaType => query.Where(data => data.TvId == intId),
+            MediaTypes.SpecialMediaType => query.Where(data => data.SpecialId == ulidId),
+            MediaTypes.CollectionMediaType => query.Where(data => data.CollectionId == intId),
             _ => null,
         };
     }

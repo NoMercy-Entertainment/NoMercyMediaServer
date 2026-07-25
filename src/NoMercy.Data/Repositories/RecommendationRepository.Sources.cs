@@ -13,8 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Data.Repositories;
 
@@ -25,16 +23,16 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         if (movieIds.Count == 0)
             return new();
 
         return await context
             .GenreMovie.AsNoTracking()
-            .Where(predicate: gm => movieIds.Contains(gm.MovieId))
-            .GroupBy(keySelector: gm => gm.MovieId)
-            .ToDictionaryAsync(keySelector: g => g.Key, elementSelector: g => g.Select(selector: gm => gm.GenreId).ToList(), cancellationToken: ct);
+            .Where(gm => movieIds.Contains(gm.MovieId))
+            .GroupBy(gm => gm.MovieId)
+            .ToDictionaryAsync(g => g.Key, g => g.Select(gm => gm.GenreId).ToList(), ct);
     }
 
     public async Task<Dictionary<int, List<int>>> GetGenresForTvIdsAsync(
@@ -42,16 +40,16 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         if (tvIds.Count == 0)
             return new();
 
         return await context
             .GenreTv.AsNoTracking()
-            .Where(predicate: gt => tvIds.Contains(gt.TvId))
-            .GroupBy(keySelector: gt => gt.TvId)
-            .ToDictionaryAsync(keySelector: g => g.Key, elementSelector: g => g.Select(selector: gt => gt.GenreId).ToList(), cancellationToken: ct);
+            .Where(gt => tvIds.Contains(gt.TvId))
+            .GroupBy(gt => gt.TvId)
+            .ToDictionaryAsync(g => g.Key, g => g.Select(gt => gt.GenreId).ToList(), ct);
     }
 
     public async Task<(List<Movie> Movies, string? ColorPalette)> GetSourceMoviesForMediaAsync(
@@ -60,45 +58,45 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         // Get distinct source movie IDs and grab color palette from the same query
         var recRows = await context
             .Recommendations.AsNoTracking()
-            .Where(predicate: r => r.MediaId == mediaId && r.MovieFromId != null)
-            .Where(predicate: r => r.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Select(selector: r => new { SourceId = r.MovieFromId!.Value, r._colorPalette })
-            .ToListAsync(cancellationToken: ct);
+            .Where(r => r.MediaId == mediaId && r.MovieFromId != null)
+            .Where(r => r.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Select(r => new { SourceId = r.MovieFromId!.Value, r._colorPalette })
+            .ToListAsync(ct);
 
         var simRows = await context
             .Similar.AsNoTracking()
-            .Where(predicate: s => s.MediaId == mediaId && s.MovieFromId != null)
-            .Where(predicate: s => s.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Select(selector: s => new { SourceId = s.MovieFromId!.Value, s._colorPalette })
-            .ToListAsync(cancellationToken: ct);
+            .Where(s => s.MediaId == mediaId && s.MovieFromId != null)
+            .Where(s => s.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Select(s => new { SourceId = s.MovieFromId!.Value, s._colorPalette })
+            .ToListAsync(ct);
 
-        var allRows = recRows.Concat(second: simRows).ToList();
+        var allRows = recRows.Concat(simRows).ToList();
         string? colorPalette = allRows
-            .FirstOrDefault(predicate: r => !string.IsNullOrEmpty(value: r._colorPalette))
+            .FirstOrDefault(r => !string.IsNullOrEmpty(r._colorPalette))
             ?._colorPalette;
-        List<int> sourceIds = allRows.Select(selector: r => r.SourceId).Distinct().ToList();
+        List<int> sourceIds = allRows.Select(r => r.SourceId).Distinct().ToList();
 
         if (sourceIds.Count == 0)
             return ([], colorPalette);
 
         List<Movie> movies = await context
             .Movies.AsNoTracking()
-            .Where(predicate: m => sourceIds.Contains(m.Id))
-            .Where(predicate: m => m.VideoFiles.Any())
-            .Include(navigationPropertyPath: m =>
+            .Where(m => sourceIds.Contains(m.Id))
+            .Where(m => m.VideoFiles.Any())
+            .Include(m =>
                 m.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
                     .ThenBy(i => i.Id)
             )
-            .Include(navigationPropertyPath: m => m.VideoFiles)
-            .Include(navigationPropertyPath: m => m.KeywordMovies)
-                .ThenInclude(navigationPropertyPath: km => km.Keyword)
-            .ToListAsync(cancellationToken: ct);
+            .Include(m => m.VideoFiles)
+            .Include(m => m.KeywordMovies)
+                .ThenInclude(km => km.Keyword)
+            .ToListAsync(ct);
 
         return (movies, colorPalette);
     }
@@ -109,45 +107,45 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         var recRows = await context
             .Recommendations.AsNoTracking()
-            .Where(predicate: r => r.MediaId == mediaId && r.TvFromId != null)
-            .Where(predicate: r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Select(selector: r => new { SourceId = r.TvFromId!.Value, r._colorPalette })
-            .ToListAsync(cancellationToken: ct);
+            .Where(r => r.MediaId == mediaId && r.TvFromId != null)
+            .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Select(r => new { SourceId = r.TvFromId!.Value, r._colorPalette })
+            .ToListAsync(ct);
 
         var simRows = await context
             .Similar.AsNoTracking()
-            .Where(predicate: s => s.MediaId == mediaId && s.TvFromId != null)
-            .Where(predicate: s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Select(selector: s => new { SourceId = s.TvFromId!.Value, s._colorPalette })
-            .ToListAsync(cancellationToken: ct);
+            .Where(s => s.MediaId == mediaId && s.TvFromId != null)
+            .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Select(s => new { SourceId = s.TvFromId!.Value, s._colorPalette })
+            .ToListAsync(ct);
 
-        var allRows = recRows.Concat(second: simRows).ToList();
+        var allRows = recRows.Concat(simRows).ToList();
         string? colorPalette = allRows
-            .FirstOrDefault(predicate: r => !string.IsNullOrEmpty(value: r._colorPalette))
+            .FirstOrDefault(r => !string.IsNullOrEmpty(r._colorPalette))
             ?._colorPalette;
-        List<int> sourceIds = allRows.Select(selector: r => r.SourceId).Distinct().ToList();
+        List<int> sourceIds = allRows.Select(r => r.SourceId).Distinct().ToList();
 
         if (sourceIds.Count == 0)
             return ([], colorPalette);
 
         List<Tv> tvShows = await context
             .Tvs.AsNoTracking()
-            .Where(predicate: t => sourceIds.Contains(t.Id))
-            .Where(predicate: t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
-            .Include(navigationPropertyPath: t =>
+            .Where(t => sourceIds.Contains(t.Id))
+            .Where(t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
+            .Include(t =>
                 t.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
                     .ThenBy(i => i.Id)
             )
-            .Include(navigationPropertyPath: t => t.Episodes)
-                .ThenInclude(navigationPropertyPath: e => e.VideoFiles)
-            .Include(navigationPropertyPath: t => t.KeywordTvs)
-                .ThenInclude(navigationPropertyPath: kt => kt.Keyword)
-            .ToListAsync(cancellationToken: ct);
+            .Include(t => t.Episodes)
+                .ThenInclude(e => e.VideoFiles)
+            .Include(t => t.KeywordTvs)
+                .ThenInclude(kt => kt.Keyword)
+            .ToListAsync(ct);
 
         return (tvShows, colorPalette);
     }
@@ -159,42 +157,42 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         List<int> targetKeywordIds = await context
             .KeywordMovie.AsNoTracking()
-            .Where(predicate: km => km.MovieId == movieId)
-            .Select(selector: km => km.KeywordId)
-            .ToListAsync(cancellationToken: ct);
+            .Where(km => km.MovieId == movieId)
+            .Select(km => km.KeywordId)
+            .ToListAsync(ct);
 
         if (targetKeywordIds.Count == 0)
             return [];
 
         List<int> matchingMovieIds = await context
             .KeywordMovie.AsNoTracking()
-            .Where(predicate: km => targetKeywordIds.Contains(km.KeywordId))
-            .Where(predicate: km => km.Movie.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(predicate: km => km.Movie.VideoFiles.Any())
-            .Where(predicate: km => !excludeIds.Contains(km.MovieId))
-            .Select(selector: km => km.MovieId)
+            .Where(km => targetKeywordIds.Contains(km.KeywordId))
+            .Where(km => km.Movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(km => km.Movie.VideoFiles.Any())
+            .Where(km => !excludeIds.Contains(km.MovieId))
+            .Select(km => km.MovieId)
             .Distinct()
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         if (matchingMovieIds.Count == 0)
             return [];
 
         return await context
             .Movies.AsNoTracking()
-            .Where(predicate: m => matchingMovieIds.Contains(m.Id))
-            .Include(navigationPropertyPath: m =>
+            .Where(m => matchingMovieIds.Contains(m.Id))
+            .Include(m =>
                 m.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
                     .ThenBy(i => i.Id)
             )
-            .Include(navigationPropertyPath: m => m.VideoFiles)
-            .Include(navigationPropertyPath: m => m.KeywordMovies)
-                .ThenInclude(navigationPropertyPath: km => km.Keyword)
-            .ToListAsync(cancellationToken: ct);
+            .Include(m => m.VideoFiles)
+            .Include(m => m.KeywordMovies)
+                .ThenInclude(km => km.Keyword)
+            .ToListAsync(ct);
     }
 
     public async Task<List<Tv>> GetKeywordTvSourcesForTvAsync(
@@ -204,43 +202,43 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         List<int> targetKeywordIds = await context
             .KeywordTv.AsNoTracking()
-            .Where(predicate: kt => kt.TvId == tvId)
-            .Select(selector: kt => kt.KeywordId)
-            .ToListAsync(cancellationToken: ct);
+            .Where(kt => kt.TvId == tvId)
+            .Select(kt => kt.KeywordId)
+            .ToListAsync(ct);
 
         if (targetKeywordIds.Count == 0)
             return [];
 
         List<int> matchingTvIds = await context
             .KeywordTv.AsNoTracking()
-            .Where(predicate: kt => targetKeywordIds.Contains(kt.KeywordId))
-            .Where(predicate: kt => kt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(predicate: kt => kt.Tv.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
-            .Where(predicate: kt => !excludeIds.Contains(kt.TvId))
-            .Select(selector: kt => kt.TvId)
+            .Where(kt => targetKeywordIds.Contains(kt.KeywordId))
+            .Where(kt => kt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(kt => kt.Tv.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
+            .Where(kt => !excludeIds.Contains(kt.TvId))
+            .Select(kt => kt.TvId)
             .Distinct()
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         if (matchingTvIds.Count == 0)
             return [];
 
         return await context
             .Tvs.AsNoTracking()
-            .Where(predicate: t => matchingTvIds.Contains(t.Id))
-            .Include(navigationPropertyPath: t =>
+            .Where(t => matchingTvIds.Contains(t.Id))
+            .Include(t =>
                 t.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
                     .ThenBy(i => i.Id)
             )
-            .Include(navigationPropertyPath: t => t.Episodes)
-                .ThenInclude(navigationPropertyPath: e => e.VideoFiles)
-            .Include(navigationPropertyPath: t => t.KeywordTvs)
-                .ThenInclude(navigationPropertyPath: kt => kt.Keyword)
-            .ToListAsync(cancellationToken: ct);
+            .Include(t => t.Episodes)
+                .ThenInclude(e => e.VideoFiles)
+            .Include(t => t.KeywordTvs)
+                .ThenInclude(kt => kt.Keyword)
+            .ToListAsync(ct);
     }
 
     public async Task<List<Movie>> GetCrossTypeMovieSourcesForTvAsync(
@@ -249,41 +247,41 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         List<int> tvKeywordIds = await context
             .KeywordTv.AsNoTracking()
-            .Where(predicate: kt => kt.TvId == tvId)
-            .Select(selector: kt => kt.KeywordId)
-            .ToListAsync(cancellationToken: ct);
+            .Where(kt => kt.TvId == tvId)
+            .Select(kt => kt.KeywordId)
+            .ToListAsync(ct);
 
         if (tvKeywordIds.Count == 0)
             return [];
 
         List<int> movieIds = await context
             .KeywordMovie.AsNoTracking()
-            .Where(predicate: km => tvKeywordIds.Contains(km.KeywordId))
-            .Where(predicate: km => km.Movie.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(predicate: km => km.Movie.VideoFiles.Any())
-            .Select(selector: km => km.MovieId)
+            .Where(km => tvKeywordIds.Contains(km.KeywordId))
+            .Where(km => km.Movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(km => km.Movie.VideoFiles.Any())
+            .Select(km => km.MovieId)
             .Distinct()
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         if (movieIds.Count == 0)
             return [];
 
         return await context
             .Movies.AsNoTracking()
-            .Where(predicate: m => movieIds.Contains(m.Id))
-            .Include(navigationPropertyPath: m =>
+            .Where(m => movieIds.Contains(m.Id))
+            .Include(m =>
                 m.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
                     .ThenBy(i => i.Id)
             )
-            .Include(navigationPropertyPath: m => m.VideoFiles)
-            .Include(navigationPropertyPath: m => m.KeywordMovies)
-                .ThenInclude(navigationPropertyPath: km => km.Keyword)
-            .ToListAsync(cancellationToken: ct);
+            .Include(m => m.VideoFiles)
+            .Include(m => m.KeywordMovies)
+                .ThenInclude(km => km.Keyword)
+            .ToListAsync(ct);
     }
 
     public async Task<List<Tv>> GetCrossTypeTvSourcesForMovieAsync(
@@ -292,41 +290,41 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         List<int> movieKeywordIds = await context
             .KeywordMovie.AsNoTracking()
-            .Where(predicate: km => km.MovieId == movieId)
-            .Select(selector: km => km.KeywordId)
-            .ToListAsync(cancellationToken: ct);
+            .Where(km => km.MovieId == movieId)
+            .Select(km => km.KeywordId)
+            .ToListAsync(ct);
 
         if (movieKeywordIds.Count == 0)
             return [];
 
         List<int> tvIds = await context
             .KeywordTv.AsNoTracking()
-            .Where(predicate: kt => movieKeywordIds.Contains(kt.KeywordId))
-            .Where(predicate: kt => kt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(predicate: kt => kt.Tv.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
-            .Select(selector: kt => kt.TvId)
+            .Where(kt => movieKeywordIds.Contains(kt.KeywordId))
+            .Where(kt => kt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(kt => kt.Tv.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
+            .Select(kt => kt.TvId)
             .Distinct()
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync(ct);
 
         if (tvIds.Count == 0)
             return [];
 
         return await context
             .Tvs.AsNoTracking()
-            .Where(predicate: t => tvIds.Contains(t.Id))
-            .Include(navigationPropertyPath: t =>
+            .Where(t => tvIds.Contains(t.Id))
+            .Include(t =>
                 t.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
                     .ThenBy(i => i.Id)
             )
-            .Include(navigationPropertyPath: t => t.Episodes)
-                .ThenInclude(navigationPropertyPath: e => e.VideoFiles)
-            .Include(navigationPropertyPath: t => t.KeywordTvs)
-                .ThenInclude(navigationPropertyPath: kt => kt.Keyword)
-            .ToListAsync(cancellationToken: ct);
+            .Include(t => t.Episodes)
+                .ThenInclude(e => e.VideoFiles)
+            .Include(t => t.KeywordTvs)
+                .ThenInclude(kt => kt.Keyword)
+            .ToListAsync(ct);
     }
 }

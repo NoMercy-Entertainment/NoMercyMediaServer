@@ -27,39 +27,39 @@ public static class FileNameParsers
 {
     private static string Pad(int number, int width)
     {
-        return number.ToString().PadLeft(totalWidth: width, paddingChar: '0');
+        return number.ToString().PadLeft(width, '0');
     }
 
     public static string CreateBaseFolder(TmdbTvShow show)
     {
         return "/"
-            + string.Concat(args: [show.Name.CleanFileName(), ".(", show.FirstAirDate.ParseYear(), ")"])
+            + string.Concat([show.Name.CleanFileName(), ".(", show.FirstAirDate.ParseYear(), ")"])
                 .CleanFileName();
     }
 
     public static string CreateBaseFolder(Tv show)
     {
         return "/"
-            + string.Concat(args: [show.Title.CleanFileName(), ".(", show.FirstAirDate.ParseYear(), ")"])
+            + string.Concat([show.Title.CleanFileName(), ".(", show.FirstAirDate.ParseYear(), ")"])
                 .CleanFileName();
     }
 
     public static string CreateBaseFolder(TmdbMovieDetails tmdbMovie)
     {
         return "/"
-            + string.Concat(args: [tmdbMovie.Title, ".(", tmdbMovie.ReleaseDate.ParseYear(), ")"])
+            + string.Concat([tmdbMovie.Title, ".(", tmdbMovie.ReleaseDate.ParseYear(), ")"])
                 .CleanFileName();
     }
 
     public static string CreateBaseFolder(Movie movie)
     {
         return "/"
-            + string.Concat(args: [movie.Title, ".(", movie.ReleaseDate.ParseYear(), ")"]).CleanFileName();
+            + string.Concat([movie.Title, ".(", movie.ReleaseDate.ParseYear(), ")"]).CleanFileName();
     }
 
     public static string CreateEpisodeFolder(TmdbEpisode data, TmdbTvShow show)
     {
-        return string.Concat(values: [show.Name, "S", Pad(number: data.SeasonNumber, width: 2), "E", Pad(number: data.EpisodeNumber, width: 2)]
+        return string.Concat([show.Name, "S", Pad(data.SeasonNumber, 2), "E", Pad(data.EpisodeNumber, 2)]
             )
             .CleanFileName();
     }
@@ -67,19 +67,19 @@ public static class FileNameParsers
     public static string CreateTitleSort(string title, DateTime? date = null)
     {
         // Step 1: Capitalize the first letter of the title
-        title = char.ToUpper(c: title[index: 0]) + title[1..];
+        title = char.ToUpper(title[0]) + title[1..];
 
         // Step 2: Remove leading "The", "An", and "A" from the title
-        title = Regex.Replace(input: title, pattern: "^The[\\s]*", replacement: "", options: RegexOptions.IgnoreCase);
-        title = Regex.Replace(input: title, pattern: "^An[\\s]{1,}", replacement: "", options: RegexOptions.IgnoreCase);
-        title = Regex.Replace(input: title, pattern: "^A[\\s]{1,}", replacement: "", options: RegexOptions.IgnoreCase);
+        title = Regex.Replace(title, "^The[\\s]*", "", RegexOptions.IgnoreCase);
+        title = Regex.Replace(title, "^An[\\s]{1,}", "", RegexOptions.IgnoreCase);
+        title = Regex.Replace(title, "^A[\\s]{1,}", "", RegexOptions.IgnoreCase);
 
         // Step 3: Replace ": " and " and the" with the parsed year (if available) or "."
         string replacement = date != null ? $".{date.ParseYear()}." : ".";
-        title = Regex.Replace(input: title, pattern: @":\s|\sand\sthe", replacement: replacement, options: RegexOptions.IgnoreCase);
+        title = Regex.Replace(title, @":\s|\sand\sthe", replacement, RegexOptions.IgnoreCase);
 
         // Step 4: Replace all "." with " "
-        title = title.Replace(oldValue: ".", newValue: " ");
+        title = title.Replace(".", " ");
 
         // Step 5: Convert the title to lowercase
         title = title.ToLower();
@@ -92,10 +92,10 @@ public static class FileNameParsers
         string? baseFolder = library.FolderLibraries.FirstOrDefault()?.Folder.Path;
         if (baseFolder is null)
             throw new InvalidOperationException(
-                message: $"Library '{library.Title}' has no folders assigned — cannot determine the destination folder for movie '{tmdbMovie.Title}'."
+                $"Library '{library.Title}' has no folders assigned — cannot determine the destination folder for movie '{tmdbMovie.Title}'."
             );
 
-        return string.Concat(str0: baseFolder, str1: "/", str2: CreateBaseFolder(tmdbMovie: tmdbMovie)).CleanFileName();
+        return string.Concat(baseFolder, "/", CreateBaseFolder(tmdbMovie)).CleanFileName();
     }
 
     public static string CreateMediaFolder(Library library, TmdbTvShow tmdbTv)
@@ -103,21 +103,21 @@ public static class FileNameParsers
         string? baseFolder = library.FolderLibraries.FirstOrDefault()?.Folder.Path;
         if (baseFolder is null)
             throw new InvalidOperationException(
-                message: $"Library '{library.Title}' has no folders assigned — cannot determine the destination folder for show '{tmdbTv.Name}'."
+                $"Library '{library.Title}' has no folders assigned — cannot determine the destination folder for show '{tmdbTv.Name}'."
             );
 
-        return string.Concat(str0: baseFolder, str1: "/", str2: CreateBaseFolder(show: tmdbTv)).CleanFileName();
+        return string.Concat(baseFolder, "/", CreateBaseFolder(tmdbTv)).CleanFileName();
     }
 
     public static string CreateFileName(TmdbMovieDetails tmdbMovie)
     {
-        return string.Concat(args: [tmdbMovie.Title, ".(", tmdbMovie.ReleaseDate.ParseYear(), ").NoMercy"])
+        return string.Concat([tmdbMovie.Title, ".(", tmdbMovie.ReleaseDate.ParseYear(), ").NoMercy"])
             .CleanFileName();
     }
 
     public static string CreateFileName(TmdbEpisode tmdbEpisode, TmdbTvShow tmdbTvShow)
     {
-        return string.Concat(values: [tmdbTvShow.Name, ".", Pad(number: tmdbEpisode.SeasonNumber, width: 2), "E", Pad(number: tmdbEpisode.EpisodeNumber, width: 2), ".", tmdbEpisode.Name, ".NoMercy"]
+        return string.Concat([tmdbTvShow.Name, ".", Pad(tmdbEpisode.SeasonNumber, 2), "E", Pad(tmdbEpisode.EpisodeNumber, 2), ".", tmdbEpisode.Name, ".NoMercy"]
             )
             .CleanFileName();
     }
@@ -126,16 +126,16 @@ public static class FileNameParsers
     {
         using MediaContext context = new();
         return context
-            .Libraries.Include(navigationPropertyPath: l => l.FolderLibraries)
-                .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Folder)
-            .SelectMany(selector: l => l.FolderLibraries)
-            .FirstOrDefault(predicate: m => folder.Contains(m.Folder.Path))
+            .Libraries.Include(l => l.FolderLibraries)
+                .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .SelectMany(l => l.FolderLibraries)
+            .FirstOrDefault(m => folder.Contains(m.Folder.Path))
             ?.Folder.Path;
     }
 
     public static string CreateBaseFolder(MusicBrainzRecordingAppends music)
     {
-        return string.Concat(arg0: music.ArtistCredit[0].Name[index: 0], arg1: "/", arg2: music.ArtistCredit[0].Name)
+        return string.Concat(music.ArtistCredit[0].Name[0], "/", music.ArtistCredit[0].Name)
             .CleanFileName();
     }
 }

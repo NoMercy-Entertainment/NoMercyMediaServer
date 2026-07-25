@@ -23,25 +23,25 @@ internal static class StartupManagerShared
     internal static string? ResolveLauncherPath()
     {
         // 1. Installer directory (set by the Launcher when it starts the server)
-        string? installDir = Environment.GetEnvironmentVariable(variable: "NOMERCY_INSTALL_DIR");
-        if (!string.IsNullOrEmpty(value: installDir))
+        string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
+        if (!string.IsNullOrEmpty(installDir))
         {
-            string candidate = Path.Combine(path1: installDir, path2: "NoMercyLauncher" + Info.ExecSuffix);
-            if (File.Exists(path: candidate))
+            string candidate = Path.Combine(installDir, "NoMercyLauncher" + Info.ExecSuffix);
+            if (File.Exists(candidate))
                 return candidate;
         }
 
         // 2. Same directory as the running server process
-        string? processDir = Path.GetDirectoryName(path: Environment.ProcessPath);
-        if (!string.IsNullOrEmpty(value: processDir))
+        string? processDir = Path.GetDirectoryName(Environment.ProcessPath);
+        if (!string.IsNullOrEmpty(processDir))
         {
-            string candidate = Path.Combine(path1: processDir, path2: "NoMercyLauncher" + Info.ExecSuffix);
-            if (File.Exists(path: candidate))
+            string candidate = Path.Combine(processDir, "NoMercyLauncher" + Info.ExecSuffix);
+            if (File.Exists(candidate))
                 return candidate;
         }
 
         // 3. Standard download location
-        if (File.Exists(path: AppFiles.LauncherExePath))
+        if (File.Exists(AppFiles.LauncherExePath))
             return AppFiles.LauncherExePath;
 
         return null;
@@ -52,7 +52,7 @@ internal static class StartupManagerShared
         // For single-file published apps, Assembly.Location returns empty string.
         // Use Process.MainModule or Environment.ProcessPath instead.
         string? processPath = Environment.ProcessPath;
-        if (!string.IsNullOrEmpty(value: processPath))
+        if (!string.IsNullOrEmpty(processPath))
             return processPath;
 
         return Assembly.GetExecutingAssembly().Location;

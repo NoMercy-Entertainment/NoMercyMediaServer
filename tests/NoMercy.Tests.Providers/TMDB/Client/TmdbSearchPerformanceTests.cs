@@ -23,8 +23,8 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Performance tests for TmdbSearchClient
 /// Tests response times and efficiency under various conditions
 /// </summary>
-[Trait(name: "Category", value: "Performance")]
-[Collection(name: "TmdbApi")]
+[Trait("Category", "Performance")]
+[Collection("TmdbApi")]
 public class TmdbSearchPerformanceTests : TmdbTestBase
 {
     #region Single Operation Performance Tests
@@ -38,13 +38,13 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
 
         // Act
         stopwatch.Start();
-        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query: "Inception");
+        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie("Inception");
         stopwatch.Stop();
 
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
-            .BeLessThan(expected: 5000, because: "because API calls should complete within 5 seconds");
+            .BeLessThan(5000, "because API calls should complete within 5 seconds");
         result.Should().NotBeNull();
     }
 
@@ -57,13 +57,13 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
 
         // Act
         stopwatch.Start();
-        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(query: "Breaking Bad");
+        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow("Breaking Bad");
         stopwatch.Stop();
 
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
-            .BeLessThan(expected: 5000, because: "because API calls should complete within 5 seconds");
+            .BeLessThan(5000, "because API calls should complete within 5 seconds");
         result.Should().NotBeNull();
     }
 
@@ -76,13 +76,13 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
 
         // Act
         stopwatch.Start();
-        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person(query: "Leonardo DiCaprio");
+        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person("Leonardo DiCaprio");
         stopwatch.Stop();
 
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
-            .BeLessThan(expected: 5000, because: "because API calls should complete within 5 seconds");
+            .BeLessThan(5000, "because API calls should complete within 5 seconds");
         result.Should().NotBeNull();
     }
 
@@ -95,13 +95,13 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
 
         // Act
         stopwatch.Start();
-        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi(query: "Marvel");
+        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi("Marvel");
         stopwatch.Stop();
 
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
-            .BeLessThan(expected: 5000, because: "because API calls should complete within 5 seconds");
+            .BeLessThan(5000, "because API calls should complete within 5 seconds");
         result.Should().NotBeNull();
     }
 
@@ -120,29 +120,29 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
         stopwatch.Start();
         Task[] tasks =
         [
-            client.Movie(query: "The Dark Knight"),
-            client.TvShow(query: "Game of Thrones"),
-            client.Person(query: "Brad Pitt"),
-            client.Multi(query: "Batman"),
-            client.Collection(query: "Fast"),
+            client.Movie("The Dark Knight"),
+            client.TvShow("Game of Thrones"),
+            client.Person("Brad Pitt"),
+            client.Multi("Batman"),
+            client.Collection("Fast"),
         ];
 
-        await Task.WhenAll(tasks: tasks);
+        await Task.WhenAll(tasks);
         stopwatch.Stop();
 
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
-            .BeLessThan(expected: 10000, because: "because concurrent API calls should leverage parallelism");
+            .BeLessThan(10000, "because concurrent API calls should leverage parallelism");
 
         // All tasks should complete successfully
         tasks
             .Should()
-            .AllSatisfy(expected: task =>
+            .AllSatisfy(task =>
                 task.Status.Should()
                     .Be(
-                        expected: TaskStatus.RanToCompletion,
-                        because: "because all searches should complete successfully"
+                        TaskStatus.RanToCompletion,
+                        "because all searches should complete successfully"
                     )
             );
     }
@@ -152,29 +152,29 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = new();
-        string[] queries = Enumerable.Range(start: 1, count: 20).Select(selector: i => $"test{i}").ToArray();
+        string[] queries = Enumerable.Range(1, 20).Select(i => $"test{i}").ToArray();
         Stopwatch stopwatch = new();
 
         // Act
         stopwatch.Start();
         Task<TmdbPaginatedResponse<TmdbMovie>?>[] tasks = queries
-            .Select(selector: q => client.Movie(query: q))
+            .Select(q => client.Movie(q))
             .ToArray();
-        await Task.WhenAll(tasks: tasks);
+        await Task.WhenAll(tasks);
         stopwatch.Stop();
 
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
             .BeLessThan(
-                expected: 15000,
-                because: "because high concurrency should still complete within reasonable time"
+                15000,
+                "because high concurrency should still complete within reasonable time"
             );
 
         double averageTime = stopwatch.ElapsedMilliseconds / (double)queries.Length;
         averageTime
             .Should()
-            .BeLessThan(expected: 1000, because: "because average time per request should be efficient");
+            .BeLessThan(1000, "because average time per request should be efficient");
     }
 
     #endregion
@@ -186,12 +186,12 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = new();
-        long initialMemory = GC.GetTotalMemory(forceFullCollection: true);
+        long initialMemory = GC.GetTotalMemory(true);
 
         // Act
         for (int i = 0; i < 10; i++)
         {
-            TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query: $"test movie {i}");
+            TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie($"test movie {i}");
             result.Should().NotBeNull();
         }
 
@@ -200,15 +200,15 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
         GC.WaitForPendingFinalizers();
         GC.Collect();
 
-        long finalMemory = GC.GetTotalMemory(forceFullCollection: true);
+        long finalMemory = GC.GetTotalMemory(true);
 
         // Assert
         long memoryIncrease = finalMemory - initialMemory;
         memoryIncrease
             .Should()
             .BeLessThan(
-                expected: 10 * 1024 * 1024, // 10MB
-                because: "because sequential operations should not cause significant memory increase"
+                10 * 1024 * 1024, // 10MB
+                "because sequential operations should not cause significant memory increase"
             );
     }
 
@@ -230,17 +230,17 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
 
         for (int i = 0; i < searchCount; i++)
         {
-            tasks.Add(item: client.Movie(query: $"query{i}"));
+            tasks.Add(client.Movie($"query{i}"));
         }
 
-        await Task.WhenAll(tasks: tasks);
+        await Task.WhenAll(tasks);
         stopwatch.Stop();
 
         // Assert
         double throughput = searchCount / (stopwatch.ElapsedMilliseconds / 1000.0);
         throughput
             .Should()
-            .BeGreaterThan(expected: 1.0, because: "because the client should handle at least 1 search per second");
+            .BeGreaterThan(1.0, "because the client should handle at least 1 search per second");
     }
 
     #endregion
@@ -256,13 +256,13 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
 
         // Act - Search for a very common term that will return many results
         stopwatch.Start();
-        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi(query: "the");
+        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi("the");
         stopwatch.Stop();
 
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
-            .BeLessThan(expected: 15000, because: "because even large result sets should be handled efficiently");
+            .BeLessThan(15000, "because even large result sets should be handled efficiently");
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
     }
@@ -280,12 +280,12 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
 
         // Act - First search
         Stopwatch stopwatch1 = Stopwatch.StartNew();
-        TmdbPaginatedResponse<TmdbMovie>? result1 = await client.Movie(query: query);
+        TmdbPaginatedResponse<TmdbMovie>? result1 = await client.Movie(query);
         stopwatch1.Stop();
 
         // Act - Second search (might be cached)
         Stopwatch stopwatch2 = Stopwatch.StartNew();
-        TmdbPaginatedResponse<TmdbMovie>? result2 = await client.Movie(query: query);
+        TmdbPaginatedResponse<TmdbMovie>? result2 = await client.Movie(query);
         stopwatch2.Stop();
 
         // Assert
@@ -294,8 +294,8 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
 
         // Note: This test assumes caching might be implemented
         // If no caching, both should still be within reasonable time
-        stopwatch1.ElapsedMilliseconds.Should().BeLessThan(expected: 5000);
-        stopwatch2.ElapsedMilliseconds.Should().BeLessThan(expected: 5000);
+        stopwatch1.ElapsedMilliseconds.Should().BeLessThan(5000);
+        stopwatch2.ElapsedMilliseconds.Should().BeLessThan(5000);
     }
 
     #endregion
@@ -312,18 +312,18 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
 
         // Act
         stopwatch.Start();
-        Task<TmdbPaginatedResponse<TmdbMovie>?> task1 = client1.Movie(query: "Interstellar");
-        Task<TmdbPaginatedResponse<TmdbTvShow>?> task2 = client2.TvShow(query: "Stranger Things");
+        Task<TmdbPaginatedResponse<TmdbMovie>?> task1 = client1.Movie("Interstellar");
+        Task<TmdbPaginatedResponse<TmdbTvShow>?> task2 = client2.TvShow("Stranger Things");
 
-        await Task.WhenAll(tasks: [task1, task2]);
+        await Task.WhenAll([task1, task2]);
         stopwatch.Stop();
 
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
             .BeLessThan(
-                expected: 8000,
-                because: "because multiple clients should not significantly impact each other"
+                8000,
+                "because multiple clients should not significantly impact each other"
             );
 
         (await task1).Should().NotBeNull();
@@ -349,7 +349,7 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
-            .BeLessThan(expected: 1000, because: "because client disposal should be fast");
+            .BeLessThan(1000, "because client disposal should be fast");
     }
 
     #endregion

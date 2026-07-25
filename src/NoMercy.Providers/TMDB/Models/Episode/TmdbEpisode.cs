@@ -15,33 +15,33 @@ namespace NoMercy.Providers.TMDB.Models.Episode;
 
 public class TmdbEpisode
 {
-    [JsonProperty(propertyName: "air_date")]
+    [JsonProperty("air_date")]
     public DateTime? AirDate { get; set; }
 
-    [JsonProperty(propertyName: "episode_number")]
+    [JsonProperty("episode_number")]
     public int EpisodeNumber { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "production_code")]
+    [JsonProperty("production_code")]
     public string? ProductionCode { get; set; }
 
-    [JsonProperty(propertyName: "season_number")]
+    [JsonProperty("season_number")]
     public int SeasonNumber { get; set; }
 
-    [JsonProperty(propertyName: "still_path")]
+    [JsonProperty("still_path")]
     public string? StillPath { get; set; }
 
-    [JsonProperty(propertyName: "vote_average")]
+    [JsonProperty("vote_average")]
     public float? VoteAverage { get; set; }
 
-    [JsonProperty(propertyName: "vote_count")]
+    [JsonProperty("vote_count")]
     public int VoteCount { get; set; }
 }

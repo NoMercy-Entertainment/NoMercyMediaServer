@@ -30,22 +30,22 @@ public class PluginBootScanTests : IDisposable
     public PluginBootScanTests()
     {
         _tempPluginsDir = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "nomercy-boot-scan-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "nomercy-boot-scan-" + Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(path: _tempPluginsDir);
+        Directory.CreateDirectory(_tempPluginsDir);
 
-        _echoPluginDir = Path.Combine(path1: _tempPluginsDir, path2: "Echo");
-        Directory.CreateDirectory(path: _echoPluginDir);
+        _echoPluginDir = Path.Combine(_tempPluginsDir, "Echo");
+        Directory.CreateDirectory(_echoPluginDir);
 
         _eventBus = new();
         _manager = new(
-            eventBus: _eventBus,
-            serviceProvider: new MinimalServiceProvider(),
-            logger: NullLogger<PluginManager>.Instance,
-            pluginsPath: _tempPluginsDir,
-            storage: TestStorageHelper.CreateStorage(rootPath: _tempPluginsDir),
-            driver: TestStorageHelper.CreateBackend()
+            _eventBus,
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            TestStorageHelper.CreateBackend()
         );
     }
 
@@ -61,8 +61,8 @@ public class PluginBootScanTests : IDisposable
 
         try
         {
-            if (Directory.Exists(path: _tempPluginsDir))
-                Directory.Delete(path: _tempPluginsDir, recursive: true);
+            if (Directory.Exists(_tempPluginsDir))
+                Directory.Delete(_tempPluginsDir, true);
         }
         catch (Exception) { }
     }
@@ -72,42 +72,42 @@ public class PluginBootScanTests : IDisposable
         // Navigate from the test bin dir to the Echo project's own output directory.
         // Echo must NOT be loaded into the default AssemblyLoadContext (no ProjectReference
         // copy) — loading it through PluginLoadContext requires clean isolation.
-        string testBinDir = Path.GetDirectoryName(path: typeof(PluginBootScanTests).Assembly.Location)!;
-        string repoRoot = Path.GetFullPath(path: Path.Combine(paths: [testBinDir, "..", "..", "..", "..", ".."]));
+        string testBinDir = Path.GetDirectoryName(typeof(PluginBootScanTests).Assembly.Location)!;
+        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
         // Mirror the test's own build configuration + TFM so this works under
         // both Debug (local) and Release (CI coverage) — hardcoding "Debug"
         // makes every Echo-staging test fail when CI builds Release.
-        string tfm = Path.GetFileName(path: testBinDir);
-        string configuration = Path.GetFileName(path: Path.GetDirectoryName(path: testBinDir)!);
-        return Path.Combine(paths: [repoRoot, "tests", "NoMercy.Plugin.Samples.Echo", "bin", configuration, tfm]
+        string tfm = Path.GetFileName(testBinDir);
+        string configuration = Path.GetFileName(Path.GetDirectoryName(testBinDir)!);
+        return Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Echo", "bin", configuration, tfm]
         );
     }
 
     private void StageEchoPlugin()
     {
         string binDir = GetEchoPluginBinDir();
-        string dllSrc = Path.Combine(path1: binDir, path2: "NoMercy.Plugin.Samples.Echo.dll");
-        string manifestSrc = Path.Combine(path1: binDir, path2: "plugin.json");
+        string dllSrc = Path.Combine(binDir, "NoMercy.Plugin.Samples.Echo.dll");
+        string manifestSrc = Path.Combine(binDir, "plugin.json");
 
-        if (!File.Exists(path: dllSrc))
+        if (!File.Exists(dllSrc))
             throw new FileNotFoundException(
-                message: $"Echo plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Echo first."
+                $"Echo plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Echo first."
             );
 
         // Copy DLL and all dependencies that the Echo assembly needs at runtime.
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.dll"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: _echoPluginDir, path2: Path.GetFileName(path: file)), overwrite: true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
+            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), true);
 
         // Copy the .deps.json — AssemblyDependencyResolver reads it to resolve the
         // plugin's dependencies. Without it the resolver constructor throws and the
         // plugin silently fails to load (results come back empty). This mirrors how
         // a real plugin package ships its DLL alongside its deps manifest.
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.deps.json"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: _echoPluginDir, path2: Path.GetFileName(path: file)), overwrite: true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
+            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), true);
 
         // Copy the plugin manifest.
-        if (File.Exists(path: manifestSrc))
-            File.Copy(sourceFileName: manifestSrc, destFileName: Path.Combine(path1: _echoPluginDir, path2: "plugin.json"), overwrite: true);
+        if (File.Exists(manifestSrc))
+            File.Copy(manifestSrc, Path.Combine(_echoPluginDir, "plugin.json"), true);
     }
 
     [Fact]
@@ -122,16 +122,16 @@ public class PluginBootScanTests : IDisposable
     public async Task LoadAllAsync_NonExistentPluginsDir_ReturnsEmptyWithoutThrowing()
     {
         string missing = Path.Combine(
-            path1: Path.GetTempPath(),
-            path2: "no-such-dir-" + Guid.NewGuid().ToString(format: "N")
+            Path.GetTempPath(),
+            "no-such-dir-" + Guid.NewGuid().ToString("N")
         );
         PluginManager manager = new(
-            eventBus: new InMemoryEventBus(),
-            serviceProvider: new MinimalServiceProvider(),
-            logger: NullLogger<PluginManager>.Instance,
-            pluginsPath: missing,
-            storage: TestStorageHelper.CreateStorage(rootPath: missing),
-            driver: TestStorageHelper.CreateBackend()
+            new InMemoryEventBus(),
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            missing,
+            TestStorageHelper.CreateStorage(missing),
+            TestStorageHelper.CreateBackend()
         );
 
         IReadOnlyList<PluginLoadResult> results = await manager.LoadAllAsync();
@@ -144,9 +144,9 @@ public class PluginBootScanTests : IDisposable
     public async Task LoadAllAsync_DirWithNoManifest_SkipsPlugin()
     {
         // Create a plugin dir without plugin.json — should be skipped.
-        string noManifestDir = Path.Combine(path1: _tempPluginsDir, path2: "NoManifest");
-        Directory.CreateDirectory(path: noManifestDir);
-        await File.WriteAllTextAsync(path: Path.Combine(path1: noManifestDir, path2: "something.dll"), contents: "garbage");
+        string noManifestDir = Path.Combine(_tempPluginsDir, "NoManifest");
+        Directory.CreateDirectory(noManifestDir);
+        await File.WriteAllTextAsync(Path.Combine(noManifestDir, "something.dll"), "garbage");
 
         IReadOnlyList<PluginLoadResult> results = await _manager.LoadAllAsync();
 
@@ -161,7 +161,7 @@ public class PluginBootScanTests : IDisposable
         IReadOnlyList<PluginLoadResult> results = await _manager.LoadAllAsync();
 
         results.Should().ContainSingle();
-        results[index: 0].Name.Should().Be(expected: "Echo");
+        results[0].Name.Should().Be("Echo");
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class PluginBootScanTests : IDisposable
         IReadOnlyList<PluginLoadResult> results = await _manager.LoadAllAsync();
 
         results.Should().ContainSingle();
-        results[index: 0].Version.Should().Be(expected: "0.1.0");
+        results[0].Version.Should().Be("0.1.0");
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public class PluginBootScanTests : IDisposable
         IReadOnlyList<PluginLoadResult> results = await _manager.LoadAllAsync();
 
         results.Should().ContainSingle();
-        results[index: 0].Instance.Should().NotBeNull();
+        results[0].Instance.Should().NotBeNull();
     }
 
     [Fact]
@@ -196,11 +196,11 @@ public class PluginBootScanTests : IDisposable
         IPlugin instance = results.Should().ContainSingle().Subject.Instance;
         IEncoderPlugin encoderPlugin = instance.Should().BeAssignableTo<IEncoderPlugin>().Subject;
 
-        EncodingProfile profile = encoderPlugin.GetProfile(info: new() { FilePath = "/test.mkv" })!;
+        EncodingProfile profile = encoderPlugin.GetProfile(new() { FilePath = "/test.mkv" })!;
 
         profile.Should().NotBeNull();
-        profile.VideoCodec.Should().Be(expected: "h264");
-        profile.AudioCodec.Should().Be(expected: "aac");
+        profile.VideoCodec.Should().Be("h264");
+        profile.AudioCodec.Should().Be("aac");
     }
 
     [Fact]
@@ -216,10 +216,10 @@ public class PluginBootScanTests : IDisposable
         // _tempPluginsDir) so the LoadAllAsync call below's own directory
         // rescan does not reprocess and re-enable it.
         string echoBinDir = GetEchoPluginBinDir();
-        string echoDllPath = Path.Combine(path1: echoBinDir, path2: "NoMercy.Plugin.Samples.Echo.dll");
-        await _manager.LoadPluginAssemblyAsync(assemblyPath: echoDllPath);
+        string echoDllPath = Path.Combine(echoBinDir, "NoMercy.Plugin.Samples.Echo.dll");
+        await _manager.LoadPluginAssemblyAsync(echoDllPath);
         PluginInfo activeBefore = _manager.GetInstalledPlugins().Should().ContainSingle().Subject;
-        await _manager.DisablePluginAsync(pluginId: activeBefore.Id);
+        await _manager.DisablePluginAsync(activeBefore.Id);
 
         IReadOnlyList<PluginLoadResult> results = await _manager.LoadAllAsync();
 
@@ -235,16 +235,16 @@ public class PluginBootScanTests : IDisposable
         // non-null Instance). Both plugins share the Echo assembly but use
         // different manifest ids so they occupy separate registry entries.
         StageEchoPlugin();
-        string disabledDir = Path.Combine(path1: _tempPluginsDir, path2: "EchoDisabled");
-        Directory.CreateDirectory(path: disabledDir);
+        string disabledDir = Path.Combine(_tempPluginsDir, "EchoDisabled");
+        Directory.CreateDirectory(disabledDir);
         string binDir = GetEchoPluginBinDir();
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.dll"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: disabledDir, path2: Path.GetFileName(path: file)), overwrite: true);
-        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.deps.json"))
-            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: disabledDir, path2: Path.GetFileName(path: file)), overwrite: true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
+            File.Copy(file, Path.Combine(disabledDir, Path.GetFileName(file)), true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
+            File.Copy(file, Path.Combine(disabledDir, Path.GetFileName(file)), true);
         File.WriteAllText(
-            path: Path.Combine(path1: disabledDir, path2: "plugin.json"),
-            contents: """
+            Path.Combine(disabledDir, "plugin.json"),
+            """
                       {
                         "id": "66666666-1111-2222-3333-444444444444",
                         "name": "EchoDisabled",
@@ -259,20 +259,20 @@ public class PluginBootScanTests : IDisposable
         IReadOnlyList<PluginLoadResult> results = await _manager.LoadAllAsync();
 
         results.Should().ContainSingle();
-        results[index: 0].Name.Should().Be(expected: "Echo");
+        results[0].Name.Should().Be("Echo");
         _manager
             .GetInstalledPlugins()
             .Should()
-            .Contain(predicate: p => p.Name == "EchoDisabled" && p.Status == PluginStatus.Disabled);
+            .Contain(p => p.Name == "EchoDisabled" && p.Status == PluginStatus.Disabled);
     }
 
     [Fact]
     public async Task LoadAllAsync_MalformedManifest_SkipsAndContinues()
     {
         // Bad manifest — should not throw; other plugins (if any) continue loading.
-        string badDir = Path.Combine(path1: _tempPluginsDir, path2: "Bad");
-        Directory.CreateDirectory(path: badDir);
-        await File.WriteAllTextAsync(path: Path.Combine(path1: badDir, path2: "plugin.json"), contents: "not json");
+        string badDir = Path.Combine(_tempPluginsDir, "Bad");
+        Directory.CreateDirectory(badDir);
+        await File.WriteAllTextAsync(Path.Combine(badDir, "plugin.json"), "not json");
 
         Func<Task> act = () => _manager.LoadAllAsync();
 

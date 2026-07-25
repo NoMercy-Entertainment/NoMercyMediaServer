@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbSharedTranslationData
 {
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string Overview { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "homepage")]
+    [JsonProperty("homepage")]
     public Uri? Homepage { get; set; }
 
-    [JsonProperty(propertyName: "tagline")]
+    [JsonProperty("tagline")]
     public string Tagline { get; set; } = string.Empty;
 }

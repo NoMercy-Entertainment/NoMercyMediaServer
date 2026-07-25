@@ -22,62 +22,62 @@ namespace NoMercy.Database.Models.Media;
 /// how much space it reclaimed (or spent). Writes happen from the encoding
 /// orchestrator on EncodingResult.Success == true.
 /// </summary>
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(CreatedAt))]
-[Index(propertyName: nameof(ProfileId))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(CreatedAt))]
+[Index(nameof(ProfileId))]
 public class EncodingHistory
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "input_path")]
-    [MaxLength(length: 4096)]
+    [JsonProperty("input_path")]
+    [MaxLength(4096)]
     public required string InputPath { get; set; }
 
-    [JsonProperty(propertyName: "output_path")]
-    [MaxLength(length: 4096)]
+    [JsonProperty("output_path")]
+    [MaxLength(4096)]
     public required string OutputPath { get; set; }
 
     /// <summary>Profile that produced this encode — denormalized so history
     /// survives profile deletion.</summary>
-    [JsonProperty(propertyName: "profile_id")]
+    [JsonProperty("profile_id")]
     public Ulid? ProfileId { get; set; }
 
-    [JsonProperty(propertyName: "profile_name")]
-    [MaxLength(length: 256)]
+    [JsonProperty("profile_name")]
+    [MaxLength(256)]
     public required string ProfileName { get; set; }
 
     /// <summary>FFmpeg encoder used (libx264, h264_nvenc, …).</summary>
-    [JsonProperty(propertyName: "encoder_used")]
-    [MaxLength(length: 64)]
+    [JsonProperty("encoder_used")]
+    [MaxLength(64)]
     public required string EncoderUsed { get; set; }
 
-    [JsonProperty(propertyName: "gpu_used")]
-    [MaxLength(length: 64)]
+    [JsonProperty("gpu_used")]
+    [MaxLength(64)]
     public string? GpuUsed { get; set; }
 
     /// <summary>Total wall-clock duration of the encode.</summary>
-    [JsonProperty(propertyName: "duration_seconds")]
+    [JsonProperty("duration_seconds")]
     public double DurationSeconds { get; set; }
 
-    [JsonProperty(propertyName: "input_size_bytes")]
+    [JsonProperty("input_size_bytes")]
     public long InputSizeBytes { get; set; }
 
-    [JsonProperty(propertyName: "output_size_bytes")]
+    [JsonProperty("output_size_bytes")]
     public long OutputSizeBytes { get; set; }
 
     /// <summary>output/input ratio; &lt; 1 means the encode reclaimed space.
     /// 0 when input size is unknown.</summary>
-    [JsonProperty(propertyName: "compression_ratio")]
+    [JsonProperty("compression_ratio")]
     public double CompressionRatio { get; set; }
 
-    [JsonProperty(propertyName: "average_speed")]
+    [JsonProperty("average_speed")]
     public double AverageSpeed { get; set; }
 
-    [JsonProperty(propertyName: "average_fps")]
+    [JsonProperty("average_fps")]
     public double AverageFps { get; set; }
 
-    [JsonProperty(propertyName: "created_at")]
+    [JsonProperty("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

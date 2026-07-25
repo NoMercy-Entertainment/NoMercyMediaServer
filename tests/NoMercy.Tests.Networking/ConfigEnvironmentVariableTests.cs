@@ -19,7 +19,7 @@ namespace NoMercy.Tests.Networking;
 /// Tests verifying that Config properties load from environment variables
 /// and that the client secret has been fully removed (public client with PKCE).
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ConfigEnvironmentVariableTests
 {
     [Fact]
@@ -27,38 +27,38 @@ public class ConfigEnvironmentVariableTests
     {
         // TokenClientSecret property should no longer exist — the Keycloak client
         // is now a public client using PKCE, so no client secret is needed.
-        PropertyInfo? prop = typeof(ExternalServicesConfig).GetProperty(name: "TokenClientSecret");
-        Assert.Null(@object: prop);
+        PropertyInfo? prop = typeof(ExternalServicesConfig).GetProperty("TokenClientSecret");
+        Assert.Null(prop);
     }
 
     [Fact]
     public void AuthBaseUrl_HasDefault()
     {
-        Assert.False(condition: string.IsNullOrEmpty(value: ExternalServicesConfig.Current.AuthBaseUrl));
+        Assert.False(string.IsNullOrEmpty(ExternalServicesConfig.Current.AuthBaseUrl));
     }
 
     [Fact]
     public void ApiBaseUrl_HasDefault()
     {
-        Assert.False(condition: string.IsNullOrEmpty(value: ExternalServicesConfig.Current.ApiBaseUrl));
+        Assert.False(string.IsNullOrEmpty(ExternalServicesConfig.Current.ApiBaseUrl));
     }
 
     [Fact]
     public void AppBaseUrl_HasDefault()
     {
-        Assert.False(condition: string.IsNullOrEmpty(value: ExternalServicesConfig.Current.AppBaseUrl));
+        Assert.False(string.IsNullOrEmpty(ExternalServicesConfig.Current.AppBaseUrl));
     }
 
     [Fact]
     public void ApiServerBaseUrl_DerivedFromApiBaseUrl()
     {
-        Assert.Contains(expectedSubstring: "v1/server/", actualString: ExternalServicesConfig.Current.ApiServerBaseUrl);
+        Assert.Contains("v1/server/", ExternalServicesConfig.Current.ApiServerBaseUrl);
     }
 
     [Fact]
     public void AuthBaseDevUrl_Removed()
     {
-        PropertyInfo? devUrlProp = typeof(ExternalServicesConfig).GetProperty(name: "AuthBaseDevUrl");
-        Assert.Null(@object: devUrlProp);
+        PropertyInfo? devUrlProp = typeof(ExternalServicesConfig).GetProperty("AuthBaseDevUrl");
+        Assert.Null(devUrlProp);
     }
 }

@@ -31,38 +31,38 @@ public class BitDepthPolicyResolverTests
         string pixelFormat10Bit = "yuv420p10le"
     ) =>
         new(
-            FfmpegEncoderName: ffmpegName,
-            EncoderInfo: new(
-                FfmpegName: ffmpegName,
-                RequiredVendor: null,
-                Presets: ["medium"],
-                Profiles: ["high"],
-                Levels: ["4.1"],
-                QualityRange: new(Min: 0, Max: 51, Default: 23),
-                SupportedRateControl: [RateControlMode.Crf],
-                Supports10Bit: supports10Bit,
-                SupportsHdr: supports10Bit,
-                MaxConcurrentSessions: int.MaxValue,
-                PixelFormat10Bit: pixelFormat10Bit,
-                VendorSpecificFlags: new()
+            ffmpegName,
+            new(
+                ffmpegName,
+                null,
+                ["medium"],
+                ["high"],
+                ["4.1"],
+                new(0, 51, 23),
+                [RateControlMode.Crf],
+                supports10Bit,
+                supports10Bit,
+                int.MaxValue,
+                pixelFormat10Bit,
+                new()
             ),
-            Device: null,
-            DefaultRateControl: RateControlMode.Crf
+            null,
+            RateControlMode.Crf
         );
 
     private static ResolvedCodec H264NvencNo10Bit() =>
-        BuildCodec(ffmpegName: "h264_nvenc", supports10Bit: false);
+        BuildCodec("h264_nvenc", false);
 
-    private static ResolvedCodec H264QsvNo10Bit() => BuildCodec(ffmpegName: "h264_qsv", supports10Bit: false);
+    private static ResolvedCodec H264QsvNo10Bit() => BuildCodec("h264_qsv", false);
 
     private static ResolvedCodec HevcVideoToolboxNo10Bit() =>
-        BuildCodec(ffmpegName: "hevc_videotoolbox", supports10Bit: false);
+        BuildCodec("hevc_videotoolbox", false);
 
     private static ResolvedCodec Libx264Sw() =>
-        BuildCodec(ffmpegName: "libx264", supports10Bit: false, pixelFormat10Bit: "yuv420p10le");
+        BuildCodec("libx264", false, "yuv420p10le");
 
     private static ResolvedCodec Libx265Sw() =>
-        BuildCodec(ffmpegName: "libx265", supports10Bit: true, pixelFormat10Bit: "yuv420p10le");
+        BuildCodec("libx265", true, "yuv420p10le");
 
     private static IDecisionLogSink MakeSink() => new ScopedDecisionLog();
 
@@ -70,32 +70,32 @@ public class BitDepthPolicyResolverTests
         _ => result;
 
     private static Func<VideoCodecType, ResolvedCodec> NoopReResolver() =>
-        _ => throw new InvalidOperationException(message: "softwareReResolver should not be called");
+        _ => throw new InvalidOperationException("softwareReResolver should not be called");
 
     // -----------------------------------------------------------------------
     // 1. 8-bit request → always 8-bit regardless of policy
     // -----------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: BitDepthPolicy.WarnAndDowngrade)]
-    [InlineData(data: BitDepthPolicy.Strict)]
-    [InlineData(data: BitDepthPolicy.PreferSoftware)]
-    [InlineData(data: BitDepthPolicy.SilentDowngrade)]
+    [InlineData(BitDepthPolicy.WarnAndDowngrade)]
+    [InlineData(BitDepthPolicy.Strict)]
+    [InlineData(BitDepthPolicy.PreferSoftware)]
+    [InlineData(BitDepthPolicy.SilentDowngrade)]
     public void EightBit_request_returns_8bit_yuv420p_regardless_of_policy(BitDepthPolicy policy)
     {
         IDecisionLogSink sink = MakeSink();
 
         BitDepthResolutionResult result = _resolver.Resolve(
-            requestedBitDepth: 8,
-            policy: policy,
-            codec: VideoCodecType.H264,
-            resolvedCodec: H264NvencNo10Bit(),
-            decisions: sink,
-            softwareReResolver: NoopReResolver()
+            8,
+            policy,
+            VideoCodecType.H264,
+            H264NvencNo10Bit(),
+            sink,
+            NoopReResolver()
         );
 
-        result.FinalBitDepth.Should().Be(expected: 8);
-        result.PixelFormat.Should().Be(expected: "yuv420p");
+        result.FinalBitDepth.Should().Be(8);
+        result.PixelFormat.Should().Be("yuv420p");
         result.Warnings.Should().BeEmpty();
         result.Failure.Should().BeNull();
         result.SwitchedToEncoder.Should().BeNull();
@@ -112,16 +112,16 @@ public class BitDepthPolicyResolverTests
         IDecisionLogSink sink = MakeSink();
 
         BitDepthResolutionResult result = _resolver.Resolve(
-            requestedBitDepth: 10,
-            policy: BitDepthPolicy.WarnAndDowngrade,
-            codec: VideoCodecType.H265,
-            resolvedCodec: codec,
-            decisions: sink,
-            softwareReResolver: NoopReResolver()
+            10,
+            BitDepthPolicy.WarnAndDowngrade,
+            VideoCodecType.H265,
+            codec,
+            sink,
+            NoopReResolver()
         );
 
-        result.FinalBitDepth.Should().Be(expected: 10);
-        result.PixelFormat.Should().Be(expected: "yuv420p10le");
+        result.FinalBitDepth.Should().Be(10);
+        result.PixelFormat.Should().Be("yuv420p10le");
         result.Warnings.Should().BeEmpty();
         result.Failure.Should().BeNull();
         result.SwitchedToEncoder.Should().BeNull();
@@ -137,23 +137,23 @@ public class BitDepthPolicyResolverTests
         IDecisionLogSink sink = MakeSink();
 
         BitDepthResolutionResult result = _resolver.Resolve(
-            requestedBitDepth: 10,
-            policy: BitDepthPolicy.WarnAndDowngrade,
-            codec: VideoCodecType.H264,
-            resolvedCodec: H264NvencNo10Bit(),
-            decisions: sink,
-            softwareReResolver: NoopReResolver()
+            10,
+            BitDepthPolicy.WarnAndDowngrade,
+            VideoCodecType.H264,
+            H264NvencNo10Bit(),
+            sink,
+            NoopReResolver()
         );
 
-        result.FinalBitDepth.Should().Be(expected: 8);
-        result.PixelFormat.Should().Be(expected: "yuv420p");
+        result.FinalBitDepth.Should().Be(8);
+        result.PixelFormat.Should().Be("yuv420p");
         result.Failure.Should().BeNull();
-        result.Warnings.Should().HaveCount(expected: 2);
-        result.Warnings.Should().Contain(predicate: w => w.Id == EncoderRuleId.BitDepthNoHardwareSupport);
-        result.Warnings.Should().Contain(predicate: w => w.Id == EncoderRuleId.BitDepthAutoDowngrade);
+        result.Warnings.Should().HaveCount(2);
+        result.Warnings.Should().Contain(w => w.Id == EncoderRuleId.BitDepthNoHardwareSupport);
+        result.Warnings.Should().Contain(w => w.Id == EncoderRuleId.BitDepthAutoDowngrade);
         result
             .Warnings.Should()
-            .AllSatisfy(expected: w => w.Severity.Should().Be(expected: EncoderRuleSeverity.Warning));
+            .AllSatisfy(w => w.Severity.Should().Be(EncoderRuleSeverity.Warning));
     }
 
     // -----------------------------------------------------------------------
@@ -166,19 +166,19 @@ public class BitDepthPolicyResolverTests
         IDecisionLogSink sink = MakeSink();
 
         BitDepthResolutionResult result = _resolver.Resolve(
-            requestedBitDepth: 10,
-            policy: BitDepthPolicy.Strict,
-            codec: VideoCodecType.H264,
-            resolvedCodec: H264NvencNo10Bit(),
-            decisions: sink,
-            softwareReResolver: NoopReResolver()
+            10,
+            BitDepthPolicy.Strict,
+            VideoCodecType.H264,
+            H264NvencNo10Bit(),
+            sink,
+            NoopReResolver()
         );
 
         result.Failure.Should().NotBeNull();
-        result.Failure!.HttpStatusCode.Should().Be(expected: 422);
-        result.Failure.Shape.Id.Should().Be(expected: EncoderRuleId.BitDepthStrictViolation);
+        result.Failure!.HttpStatusCode.Should().Be(422);
+        result.Failure.Shape.Id.Should().Be(EncoderRuleId.BitDepthStrictViolation);
         result.Warnings.Should().BeEmpty();
-        result.FinalBitDepth.Should().Be(expected: 0);
+        result.FinalBitDepth.Should().Be(0);
     }
 
     // -----------------------------------------------------------------------
@@ -189,20 +189,20 @@ public class BitDepthPolicyResolverTests
     public void PreferSoftware_switches_to_SW_handle_keeps_10bit()
     {
         IDecisionLogSink sink = MakeSink();
-        ResolvedCodec swCodec = BuildCodec(ffmpegName: "libx264", supports10Bit: true);
+        ResolvedCodec swCodec = BuildCodec("libx264", true);
 
         BitDepthResolutionResult result = _resolver.Resolve(
-            requestedBitDepth: 10,
-            policy: BitDepthPolicy.PreferSoftware,
-            codec: VideoCodecType.H264,
-            resolvedCodec: H264NvencNo10Bit(),
-            decisions: sink,
-            softwareReResolver: SwReResolver(result: swCodec)
+            10,
+            BitDepthPolicy.PreferSoftware,
+            VideoCodecType.H264,
+            H264NvencNo10Bit(),
+            sink,
+            SwReResolver(swCodec)
         );
 
-        result.FinalBitDepth.Should().Be(expected: 10);
-        result.SwitchedToEncoder.Should().Be(expected: "libx264");
-        result.PixelFormat.Should().Be(expected: "yuv420p10le");
+        result.FinalBitDepth.Should().Be(10);
+        result.SwitchedToEncoder.Should().Be("libx264");
+        result.PixelFormat.Should().Be("yuv420p10le");
         result.Warnings.Should().BeEmpty();
         result.Failure.Should().BeNull();
     }
@@ -217,22 +217,22 @@ public class BitDepthPolicyResolverTests
         ScopedDecisionLog sink = new();
 
         BitDepthResolutionResult result = _resolver.Resolve(
-            requestedBitDepth: 10,
-            policy: BitDepthPolicy.SilentDowngrade,
-            codec: VideoCodecType.H264,
-            resolvedCodec: H264NvencNo10Bit(),
-            decisions: sink,
-            softwareReResolver: NoopReResolver()
+            10,
+            BitDepthPolicy.SilentDowngrade,
+            VideoCodecType.H264,
+            H264NvencNo10Bit(),
+            sink,
+            NoopReResolver()
         );
 
-        result.FinalBitDepth.Should().Be(expected: 8);
-        result.PixelFormat.Should().Be(expected: "yuv420p");
+        result.FinalBitDepth.Should().Be(8);
+        result.PixelFormat.Should().Be("yuv420p");
         result.Warnings.Should().BeEmpty();
         result.Failure.Should().BeNull();
 
         sink.Snapshot()
             .Should()
-            .Contain(predicate: d =>
+            .Contain(d =>
                 d.Key == "plan.bit_depth"
                 && d.Message.Contains("SilentDowngrade", StringComparison.OrdinalIgnoreCase)
             );
@@ -243,11 +243,11 @@ public class BitDepthPolicyResolverTests
     // -----------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: [8, BitDepthPolicy.WarnAndDowngrade, false, "plan.bit_depth"])]
-    [InlineData(data: [10, BitDepthPolicy.WarnAndDowngrade, false, "plan.bit_depth"])]
-    [InlineData(data: [10, BitDepthPolicy.WarnAndDowngrade, true, "plan.bit_depth"])]
-    [InlineData(data: [10, BitDepthPolicy.Strict, false, "plan.bit_depth"])]
-    [InlineData(data: [10, BitDepthPolicy.SilentDowngrade, false, "plan.bit_depth"])]
+    [InlineData([8, BitDepthPolicy.WarnAndDowngrade, false, "plan.bit_depth"])]
+    [InlineData([10, BitDepthPolicy.WarnAndDowngrade, false, "plan.bit_depth"])]
+    [InlineData([10, BitDepthPolicy.WarnAndDowngrade, true, "plan.bit_depth"])]
+    [InlineData([10, BitDepthPolicy.Strict, false, "plan.bit_depth"])]
+    [InlineData([10, BitDepthPolicy.SilentDowngrade, false, "plan.bit_depth"])]
     public void Decision_log_emitted_for_each_branch(
         int requestedBitDepth,
         BitDepthPolicy policy,
@@ -256,36 +256,36 @@ public class BitDepthPolicyResolverTests
     )
     {
         ScopedDecisionLog sink = new();
-        ResolvedCodec codec = BuildCodec(ffmpegName: "h264_nvenc", supports10Bit: encoderSupports10Bit);
+        ResolvedCodec codec = BuildCodec("h264_nvenc", encoderSupports10Bit);
 
         _resolver.Resolve(
-            requestedBitDepth: requestedBitDepth,
-            policy: policy,
-            codec: VideoCodecType.H264,
-            resolvedCodec: codec,
-            decisions: sink,
-            softwareReResolver: NoopReResolver()
+            requestedBitDepth,
+            policy,
+            VideoCodecType.H264,
+            codec,
+            sink,
+            NoopReResolver()
         );
 
-        sink.Snapshot().Should().Contain(predicate: d => d.Key == expectedKey);
+        sink.Snapshot().Should().Contain(d => d.Key == expectedKey);
     }
 
     [Fact]
     public void Decision_log_emitted_for_PreferSoftware_branch()
     {
         ScopedDecisionLog sink = new();
-        ResolvedCodec swCodec = BuildCodec(ffmpegName: "libx264", supports10Bit: true);
+        ResolvedCodec swCodec = BuildCodec("libx264", true);
 
         _resolver.Resolve(
-            requestedBitDepth: 10,
-            policy: BitDepthPolicy.PreferSoftware,
-            codec: VideoCodecType.H264,
-            resolvedCodec: H264NvencNo10Bit(),
-            decisions: sink,
-            softwareReResolver: SwReResolver(result: swCodec)
+            10,
+            BitDepthPolicy.PreferSoftware,
+            VideoCodecType.H264,
+            H264NvencNo10Bit(),
+            sink,
+            SwReResolver(swCodec)
         );
 
-        sink.Snapshot().Should().Contain(predicate: d => d.Key == "plan.bit_depth_switched_to_software");
+        sink.Snapshot().Should().Contain(d => d.Key == "plan.bit_depth_switched_to_software");
     }
 
     // -----------------------------------------------------------------------
@@ -293,52 +293,52 @@ public class BitDepthPolicyResolverTests
     // -----------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: "h264_nvenc")]
-    [InlineData(data: "h264_qsv")]
-    [InlineData(data: "hevc_videotoolbox")]
+    [InlineData("h264_nvenc")]
+    [InlineData("h264_qsv")]
+    [InlineData("hevc_videotoolbox")]
     public void WarnAndDowngrade_fires_same_for_any_hw_encoder(string encoderName)
     {
-        ResolvedCodec codec = BuildCodec(ffmpegName: encoderName, supports10Bit: false);
+        ResolvedCodec codec = BuildCodec(encoderName, false);
         IDecisionLogSink sink = MakeSink();
 
         BitDepthResolutionResult result = _resolver.Resolve(
-            requestedBitDepth: 10,
-            policy: BitDepthPolicy.WarnAndDowngrade,
-            codec: VideoCodecType.H264,
-            resolvedCodec: codec,
-            decisions: sink,
-            softwareReResolver: NoopReResolver()
+            10,
+            BitDepthPolicy.WarnAndDowngrade,
+            VideoCodecType.H264,
+            codec,
+            sink,
+            NoopReResolver()
         );
 
-        result.FinalBitDepth.Should().Be(expected: 8);
-        result.Warnings.Should().Contain(predicate: w => w.Id == EncoderRuleId.BitDepthAutoDowngrade);
+        result.FinalBitDepth.Should().Be(8);
+        result.Warnings.Should().Contain(w => w.Id == EncoderRuleId.BitDepthAutoDowngrade);
         // The message contains the specific encoder name but the policy result is identical.
         result
             .Warnings.Should()
-            .Contain(predicate: w =>
+            .Contain(w =>
                 w.Id == EncoderRuleId.BitDepthAutoDowngrade && w.Message.Contains(encoderName)
             );
     }
 
     [Theory]
-    [InlineData(data: "h264_nvenc")]
-    [InlineData(data: "h264_qsv")]
-    [InlineData(data: "hevc_videotoolbox")]
+    [InlineData("h264_nvenc")]
+    [InlineData("h264_qsv")]
+    [InlineData("hevc_videotoolbox")]
     public void Strict_fires_same_for_any_hw_encoder(string encoderName)
     {
-        ResolvedCodec codec = BuildCodec(ffmpegName: encoderName, supports10Bit: false);
+        ResolvedCodec codec = BuildCodec(encoderName, false);
         IDecisionLogSink sink = MakeSink();
 
         BitDepthResolutionResult result = _resolver.Resolve(
-            requestedBitDepth: 10,
-            policy: BitDepthPolicy.Strict,
-            codec: VideoCodecType.H264,
-            resolvedCodec: codec,
-            decisions: sink,
-            softwareReResolver: NoopReResolver()
+            10,
+            BitDepthPolicy.Strict,
+            VideoCodecType.H264,
+            codec,
+            sink,
+            NoopReResolver()
         );
 
-        result.Failure!.HttpStatusCode.Should().Be(expected: 422);
-        result.Failure.Shape.Id.Should().Be(expected: EncoderRuleId.BitDepthStrictViolation);
+        result.Failure!.HttpStatusCode.Should().Be(422);
+        result.Failure.Shape.Id.Should().Be(EncoderRuleId.BitDepthStrictViolation);
     }
 }

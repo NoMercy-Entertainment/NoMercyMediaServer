@@ -22,23 +22,23 @@ public class SafePluginIdentityTests
     {
         WellBehavedPlugin plugin = new();
 
-        SafePluginIdentity identity = SafePluginIdentity.Read(instance: plugin, pluginType: plugin.GetType());
+        SafePluginIdentity identity = SafePluginIdentity.Read(plugin, plugin.GetType());
 
-        identity.Id.Should().Be(expected: WellBehavedPlugin.FixedId);
-        identity.Name.Should().Be(expected: "Well Behaved");
-        identity.Description.Should().Be(expected: "A normal plugin");
-        identity.Version.Should().Be(expected: new(major: 1, minor: 2, build: 3));
+        identity.Id.Should().Be(WellBehavedPlugin.FixedId);
+        identity.Name.Should().Be("Well Behaved");
+        identity.Description.Should().Be("A normal plugin");
+        identity.Version.Should().Be(new(1, 2, 3));
     }
 
     [Fact]
     public void Read_NullInstance_FallsBackToTypeName()
     {
-        SafePluginIdentity identity = SafePluginIdentity.Read(instance: null, pluginType: typeof(WellBehavedPlugin));
+        SafePluginIdentity identity = SafePluginIdentity.Read(null, typeof(WellBehavedPlugin));
 
-        identity.Id.Should().Be(expected: Guid.Empty);
-        identity.Name.Should().Be(expected: typeof(WellBehavedPlugin).FullName);
+        identity.Id.Should().Be(Guid.Empty);
+        identity.Name.Should().Be(typeof(WellBehavedPlugin).FullName);
         identity.Description.Should().BeEmpty();
-        identity.Version.Should().Be(expected: new(major: 0, minor: 0, build: 0));
+        identity.Version.Should().Be(new(0, 0, 0));
     }
 
     [Fact]
@@ -46,13 +46,13 @@ public class SafePluginIdentityTests
     {
         ThrowingPlugin plugin = new();
 
-        Func<SafePluginIdentity> act = () => SafePluginIdentity.Read(instance: plugin, pluginType: plugin.GetType());
+        Func<SafePluginIdentity> act = () => SafePluginIdentity.Read(plugin, plugin.GetType());
 
         SafePluginIdentity identity = act.Should().NotThrow().Subject;
-        identity.Id.Should().Be(expected: Guid.Empty);
-        identity.Name.Should().Be(expected: typeof(ThrowingPlugin).FullName);
+        identity.Id.Should().Be(Guid.Empty);
+        identity.Name.Should().Be(typeof(ThrowingPlugin).FullName);
         identity.Description.Should().BeEmpty();
-        identity.Version.Should().Be(expected: new(major: 0, minor: 0, build: 0));
+        identity.Version.Should().Be(new(0, 0, 0));
     }
 
     [Fact]
@@ -63,11 +63,11 @@ public class SafePluginIdentityTests
         // fallback, since every concrete, non-generic plugin type discovered
         // via Assembly.GetTypes() always has a non-null FullName.
         Type openGenericParameter = typeof(List<>).GetGenericArguments()[0];
-        openGenericParameter.FullName.Should().BeNull(because: "this is exactly the edge case under test");
+        openGenericParameter.FullName.Should().BeNull("this is exactly the edge case under test");
 
-        SafePluginIdentity identity = SafePluginIdentity.Read(instance: null, pluginType: openGenericParameter);
+        SafePluginIdentity identity = SafePluginIdentity.Read(null, openGenericParameter);
 
-        identity.Name.Should().Be(expected: openGenericParameter.Name);
+        identity.Name.Should().Be(openGenericParameter.Name);
     }
 
     [Fact]
@@ -81,22 +81,22 @@ public class SafePluginIdentityTests
         // is ever evaluated).
         NullReturningPlugin plugin = new();
 
-        SafePluginIdentity identity = SafePluginIdentity.Read(instance: plugin, pluginType: plugin.GetType());
+        SafePluginIdentity identity = SafePluginIdentity.Read(plugin, plugin.GetType());
 
-        identity.Id.Should().Be(expected: NullReturningPlugin.FixedId);
-        identity.Name.Should().Be(expected: "Null Returning");
+        identity.Id.Should().Be(NullReturningPlugin.FixedId);
+        identity.Name.Should().Be("Null Returning");
         identity.Description.Should().BeEmpty();
-        identity.Version.Should().Be(expected: new(major: 0, minor: 0, build: 0));
+        identity.Version.Should().Be(new(0, 0, 0));
     }
 
     private sealed class WellBehavedPlugin : IPlugin
     {
-        public static readonly Guid FixedId = Guid.Parse(input: "11111111-1111-1111-1111-111111111111");
+        public static readonly Guid FixedId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
         public string Name => "Well Behaved";
         public string Description => "A normal plugin";
         public Guid Id => FixedId;
-        public Version Version => new(major: 1, minor: 2, build: 3);
+        public Version Version => new(1, 2, 3);
 
         public void Initialize(IPluginContext context) { }
 
@@ -105,20 +105,20 @@ public class SafePluginIdentityTests
 
     private sealed class ThrowingPlugin : IPlugin
     {
-        public string Name => throw new InvalidOperationException(message: "name boom");
-        public string Description => throw new InvalidOperationException(message: "description boom");
-        public Guid Id => throw new InvalidOperationException(message: "id boom");
-        public Version Version => throw new InvalidOperationException(message: "version boom");
+        public string Name => throw new InvalidOperationException("name boom");
+        public string Description => throw new InvalidOperationException("description boom");
+        public Guid Id => throw new InvalidOperationException("id boom");
+        public Version Version => throw new InvalidOperationException("version boom");
 
         public void Initialize(IPluginContext context) =>
-            throw new InvalidOperationException(message: "init boom");
+            throw new InvalidOperationException("init boom");
 
-        public void Dispose() => throw new InvalidOperationException(message: "dispose boom");
+        public void Dispose() => throw new InvalidOperationException("dispose boom");
     }
 
     private sealed class NullReturningPlugin : IPlugin
     {
-        public static readonly Guid FixedId = Guid.Parse(input: "44444444-4444-4444-4444-444444444444");
+        public static readonly Guid FixedId = Guid.Parse("44444444-4444-4444-4444-444444444444");
 
         public string Name => "Null Returning";
         public string Description => null!;

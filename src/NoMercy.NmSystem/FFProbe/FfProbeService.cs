@@ -35,19 +35,19 @@ public class FfProbeService : IFfProbeService
     {
         try
         {
-            string json = await RunFfprobeWithRetry(file: file, ct: ct);
-            if (string.IsNullOrEmpty(value: json))
+            string json = await RunFfprobeWithRetry(file, ct);
+            if (string.IsNullOrEmpty(json))
                 return new() { ErrorData = ["ffprobe returned empty output"] };
 
             FfProbeRawResult? raw = json.FromJson<FfProbeRawResult>();
             if (raw is null)
                 return new() { ErrorData = ["Failed to parse ffprobe output"] };
 
-            return BuildFfProbeData(file: file, raw: raw);
+            return BuildFfProbeData(file, raw);
         }
         catch (Exception ex)
         {
-            Logger.App(message: $"FfProbe failed for: {file}: {ex.Message}", level: LogEventLevel.Warning);
+            Logger.App($"FfProbe failed for: {file}: {ex.Message}", LogEventLevel.Warning);
             return new() { ErrorData = [ex.Message] };
         }
     }
@@ -59,21 +59,21 @@ public class FfProbeService : IFfProbeService
     )
     {
         if (driver is LocalStorageDriver)
-            return await CreateAsync(file: file, ct: ct);
+            return await CreateAsync(file, ct);
 
         // HLS playlists reference segments by relative URI; ffprobe needs URL
         // context to fetch them. stdin pipe has none, so it hangs waiting
         // for segment data. Parse the playlist directly instead.
-        if (Path.GetExtension(path: file).Equals(value: ".m3u8", comparisonType: StringComparison.OrdinalIgnoreCase))
-            return await ParseHlsAsync(driver: driver, masterPath: file, ct: ct);
+        if (Path.GetExtension(file).Equals(".m3u8", StringComparison.OrdinalIgnoreCase))
+            return await ParseHlsAsync(driver, file, ct);
 
         try
         {
             // Fast path: pipe the file header through ffprobe stdin. Cheap for
             // faststart / streamable containers — ffprobe reads a few MB and
             // exits without pulling the whole file across the network.
-            string json = await RunFfprobeStdinWithRetry(driver: driver, file: file, ct: ct);
-            FfProbeRawResult? raw = string.IsNullOrEmpty(value: json)
+            string json = await RunFfprobeStdinWithRetry(driver, file, ct);
+            FfProbeRawResult? raw = string.IsNullOrEmpty(json)
                 ? null
                 : json.FromJson<FfProbeRawResult>();
 
@@ -87,13 +87,13 @@ public class FfProbeService : IFfProbeService
                 raw is null
                 || (raw.Format is null && (raw.Streams is null || raw.Streams.Length == 0))
             )
-                return await CreateFromStagedCopyAsync(driver: driver, file: file, ct: ct);
+                return await CreateFromStagedCopyAsync(driver, file, ct);
 
-            return BuildFfProbeData(file: file, raw: raw);
+            return BuildFfProbeData(file, raw);
         }
         catch (Exception ex)
         {
-            Logger.App(message: $"FfProbe failed for: {file}: {ex.Message}", level: LogEventLevel.Warning);
+            Logger.App($"FfProbe failed for: {file}: {ex.Message}", LogEventLevel.Warning);
             return new() { ErrorData = [ex.Message] };
         }
     }
@@ -111,23 +111,23 @@ public class FfProbeService : IFfProbeService
         // Staging streams the whole file over the network link, so gate it with
         // the same remote-concurrency cap the pipe probes use — otherwise a scan
         // full of legacy files would saturate the backend the cap protects.
-        bool remoteAcquired = await FfProbeThrottle.WaitRemoteAsync(timeout: TimeSpan.FromSeconds(seconds: 120), ct: ct);
+        bool remoteAcquired = await FfProbeThrottle.WaitRemoteAsync(TimeSpan.FromSeconds(120), ct);
         if (!remoteAcquired)
-            throw new TimeoutException(message: "Throttle timeout waiting for remote ffprobe slot");
+            throw new TimeoutException("Throttle timeout waiting for remote ffprobe slot");
 
         try
         {
-            await using LocalPathLease lease = await driver.AcquireLocalPathAsync(path: file, ct: ct);
+            await using LocalPathLease lease = await driver.AcquireLocalPathAsync(file, ct);
 
-            string json = await RunFfprobeWithRetry(file: lease.Path, ct: ct);
-            if (string.IsNullOrEmpty(value: json))
+            string json = await RunFfprobeWithRetry(lease.Path, ct);
+            if (string.IsNullOrEmpty(json))
                 return new() { ErrorData = ["ffprobe returned empty output"] };
 
             FfProbeRawResult? raw = json.FromJson<FfProbeRawResult>();
             if (raw is null)
                 return new() { ErrorData = ["Failed to parse ffprobe output"] };
 
-            return BuildFfProbeData(file: file, raw: raw);
+            return BuildFfProbeData(file, raw);
         }
         finally
         {
@@ -143,7 +143,7 @@ public class FfProbeService : IFfProbeService
     {
         try
         {
-            string masterText = await ReadAllTextAsync(driver: driver, path: masterPath, ct: ct);
+            string masterText = await ReadAllTextAsync(driver, masterPath, ct);
 
             FfProbeVideoStream? videoStream = null;
             FfProbeAudioStream? audioStream = null;
@@ -153,45 +153,45 @@ public class FfProbeService : IFfProbeService
             string? videoCodec = null;
             string? audioCodec = null;
 
-            string[] lines = masterText.Split(separator: '\n');
+            string[] lines = masterText.Split('\n');
             for (int i = 0; i < lines.Length; i++)
             {
-                string line = lines[i].TrimEnd(trimChar: '\r');
-                if (line.StartsWith(value: "#EXT-X-STREAM-INF", comparisonType: StringComparison.Ordinal))
+                string line = lines[i].TrimEnd('\r');
+                if (line.StartsWith("#EXT-X-STREAM-INF", StringComparison.Ordinal))
                 {
-                    Match res = Regex.Match(input: line, pattern: @"RESOLUTION=(\d+)x(\d+)");
+                    Match res = Regex.Match(line, @"RESOLUTION=(\d+)x(\d+)");
                     if (res.Success)
                     {
-                        width = int.Parse(s: res.Groups[groupnum: 1].Value);
-                        height = int.Parse(s: res.Groups[groupnum: 2].Value);
+                        width = int.Parse(res.Groups[1].Value);
+                        height = int.Parse(res.Groups[2].Value);
                     }
-                    Match codecs = Regex.Match(input: line, pattern: "CODECS=\"([^\"]+)\"");
+                    Match codecs = Regex.Match(line, "CODECS=\"([^\"]+)\"");
                     if (codecs.Success)
                     {
-                        string[] codecList = codecs.Groups[groupnum: 1].Value.Split(separator: ',');
+                        string[] codecList = codecs.Groups[1].Value.Split(',');
                         foreach (string codec in codecList)
                         {
                             string c = codec.Trim();
-                            if (c.StartsWith(value: "avc", comparisonType: StringComparison.OrdinalIgnoreCase))
+                            if (c.StartsWith("avc", StringComparison.OrdinalIgnoreCase))
                                 videoCodec = "h264";
                             else if (
-                                c.StartsWith(value: "hvc", comparisonType: StringComparison.OrdinalIgnoreCase)
-                                || c.StartsWith(value: "hev", comparisonType: StringComparison.OrdinalIgnoreCase)
+                                c.StartsWith("hvc", StringComparison.OrdinalIgnoreCase)
+                                || c.StartsWith("hev", StringComparison.OrdinalIgnoreCase)
                             )
                                 videoCodec = "hevc";
-                            else if (c.StartsWith(value: "av01", comparisonType: StringComparison.OrdinalIgnoreCase))
+                            else if (c.StartsWith("av01", StringComparison.OrdinalIgnoreCase))
                                 videoCodec = "av1";
-                            else if (c.StartsWith(value: "mp4a", comparisonType: StringComparison.OrdinalIgnoreCase))
+                            else if (c.StartsWith("mp4a", StringComparison.OrdinalIgnoreCase))
                                 audioCodec = "aac";
-                            else if (c.StartsWith(value: "opus", comparisonType: StringComparison.OrdinalIgnoreCase))
+                            else if (c.StartsWith("opus", StringComparison.OrdinalIgnoreCase))
                                 audioCodec = "opus";
                         }
                     }
 
                     if (i + 1 < lines.Length)
                     {
-                        string next = lines[i + 1].TrimEnd(trimChar: '\r').Trim();
-                        if (!string.IsNullOrEmpty(value: next) && !next.StartsWith(value: '#'))
+                        string next = lines[i + 1].TrimEnd('\r').Trim();
+                        if (!string.IsNullOrEmpty(next) && !next.StartsWith('#'))
                             variantUri = next;
                     }
                     break;
@@ -218,11 +218,11 @@ public class FfProbeService : IFfProbeService
             TimeSpan duration = TimeSpan.Zero;
             if (variantUri is not null)
             {
-                string masterDir = Path.GetDirectoryName(path: masterPath)!.Replace(oldChar: '\\', newChar: '/');
-                string variantPath = variantUri.StartsWith(value: '/')
+                string masterDir = Path.GetDirectoryName(masterPath)!.Replace('\\', '/');
+                string variantPath = variantUri.StartsWith('/')
                     ? variantUri
-                    : masterDir.TrimEnd(trimChar: '/') + "/" + variantUri;
-                duration = await SumExtinfDurationAsync(driver: driver, playlistPath: variantPath, ct: ct);
+                    : masterDir.TrimEnd('/') + "/" + variantUri;
+                duration = await SumExtinfDurationAsync(driver, variantPath, ct);
             }
 
             FfProbeFormat format = new() { Filename = masterPath, Duration = duration };
@@ -242,7 +242,7 @@ public class FfProbeService : IFfProbeService
         }
         catch (Exception ex)
         {
-            Logger.App(message: $"HLS parse failed for {masterPath}: {ex.Message}", level: LogEventLevel.Warning);
+            Logger.App($"HLS parse failed for {masterPath}: {ex.Message}", LogEventLevel.Warning);
             return new() { ErrorData = [ex.Message] };
         }
     }
@@ -253,30 +253,30 @@ public class FfProbeService : IFfProbeService
         CancellationToken ct
     )
     {
-        if (!driver.FileExists(path: playlistPath))
+        if (!driver.FileExists(playlistPath))
             return TimeSpan.Zero;
 
-        string text = await ReadAllTextAsync(driver: driver, path: playlistPath, ct: ct);
+        string text = await ReadAllTextAsync(driver, playlistPath, ct);
         double total = 0;
-        foreach (string raw in text.Split(separator: '\n'))
+        foreach (string raw in text.Split('\n'))
         {
-            string line = raw.TrimEnd(trimChar: '\r');
-            if (!line.StartsWith(value: "#EXTINF:", comparisonType: StringComparison.Ordinal))
+            string line = raw.TrimEnd('\r');
+            if (!line.StartsWith("#EXTINF:", StringComparison.Ordinal))
                 continue;
             string tail = line["#EXTINF:".Length..];
-            int comma = tail.IndexOf(value: ',');
+            int comma = tail.IndexOf(',');
             string num = comma >= 0 ? tail[..comma] : tail;
             if (
                 double.TryParse(
-                    s: num,
-                    style: NumberStyles.Float,
-                    provider: CultureInfo.InvariantCulture,
-                    result: out double secs
+                    num,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out double secs
                 )
             )
                 total += secs;
         }
-        return TimeSpan.FromSeconds(value: total);
+        return TimeSpan.FromSeconds(total);
     }
 
     private async Task<string> ReadAllTextAsync(
@@ -288,9 +288,9 @@ public class FfProbeService : IFfProbeService
         // HLS playlists are small; use the shared driver context (serialized
         // by the driver's own lock) instead of OpenReadIsolated to avoid
         // libnfs NFSv4 session contention across parallel scan workers.
-        await using Stream s = driver.OpenRead(path: path);
-        using StreamReader reader = new(stream: s);
-        return await reader.ReadToEndAsync(cancellationToken: ct);
+        await using Stream s = driver.OpenRead(path);
+        using StreamReader reader = new(s);
+        return await reader.ReadToEndAsync(ct);
     }
 
     private FfProbeData BuildFfProbeData(string file, FfProbeRawResult raw)
@@ -312,7 +312,7 @@ public class FfProbeService : IFfProbeService
             {
                 case "video":
                     videoStreams.Add(
-                        item: new()
+                        new()
                         {
                             Index = s.Index,
                             CodecName = s.CodecName,
@@ -322,17 +322,17 @@ public class FfProbeService : IFfProbeService
                             ColorSpace = s.ColorSpace,
                             ColorTransfer = s.ColorTransfer,
                             ColorPrimaries = s.ColorPrimaries,
-                            Language = s.Tags?.GetValueOrDefault(key: "language"),
+                            Language = s.Tags?.GetValueOrDefault("language"),
                         }
                     );
                     break;
                 case "audio":
                     audioStreams.Add(
-                        item: new()
+                        new()
                         {
                             Index = s.Index,
                             CodecName = s.CodecName,
-                            Language = s.Tags?.GetValueOrDefault(key: "language") ?? "und",
+                            Language = s.Tags?.GetValueOrDefault("language") ?? "und",
                             Channels = (int)(s.Channels ?? 0),
                             BitRate = s.BitRate ?? 0,
                             SampleRate = (int)(s.SampleRate ?? 0),
@@ -342,18 +342,18 @@ public class FfProbeService : IFfProbeService
                     break;
                 case "subtitle":
                     subtitleStreams.Add(
-                        item: new()
+                        new()
                         {
                             Index = s.Index,
                             CodecName = s.CodecName,
-                            Language = s.Tags?.GetValueOrDefault(key: "language") ?? "und",
+                            Language = s.Tags?.GetValueOrDefault("language") ?? "und",
                             Tags = s.Tags ?? new(),
                         }
                     );
                     break;
                 case "image":
                     imageStreams.Add(
-                        item: new()
+                        new()
                         {
                             Index = s.Index,
                             CodecName = s.CodecName,
@@ -370,13 +370,13 @@ public class FfProbeService : IFfProbeService
         {
             if (
                 double.TryParse(
-                    s: raw.Format.Duration,
-                    style: NumberStyles.Float,
-                    provider: CultureInfo.InvariantCulture,
-                    result: out double seconds
+                    raw.Format.Duration,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out double seconds
                 )
             )
-                duration = TimeSpan.FromSeconds(value: seconds);
+                duration = TimeSpan.FromSeconds(seconds);
         }
 
         FfProbeFormat format = new()
@@ -385,7 +385,7 @@ public class FfProbeService : IFfProbeService
             FormatName = raw.Format?.FormatName,
             FormatLongName = raw.Format?.FormatLongName,
             Duration = duration,
-            BitRate = long.TryParse(s: raw.Format?.BitRate, result: out long br) ? br : 0,
+            BitRate = long.TryParse(raw.Format?.BitRate, out long br) ? br : 0,
             Tags = raw.Format?.Tags,
         };
 
@@ -398,10 +398,10 @@ public class FfProbeService : IFfProbeService
             AudioStreams = audioStreams,
             SubtitleStreams = subtitleStreams,
             ImageStreams = imageStreams,
-            PrimaryVideoStream = videoStreams.Count > 0 ? videoStreams[index: 0] : null,
-            PrimaryAudioStream = audioStreams.Count > 0 ? audioStreams[index: 0] : null,
-            PrimarySubtitleStream = subtitleStreams.Count > 0 ? subtitleStreams[index: 0] : null,
-            PrimaryImageStream = imageStreams.Count > 0 ? imageStreams[index: 0] : null,
+            PrimaryVideoStream = videoStreams.Count > 0 ? videoStreams[0] : null,
+            PrimaryAudioStream = audioStreams.Count > 0 ? audioStreams[0] : null,
+            PrimarySubtitleStream = subtitleStreams.Count > 0 ? subtitleStreams[0] : null,
+            PrimaryImageStream = imageStreams.Count > 0 ? imageStreams[0] : null,
         };
     }
 
@@ -411,29 +411,29 @@ public class FfProbeService : IFfProbeService
         {
             try
             {
-                return await RunFfprobe(file: file, ct: ct);
+                return await RunFfprobe(file, ct);
             }
             catch (OperationCanceledException)
             {
                 Logger.App(
-                    message: $"ffprobe timed out for {file} (attempt {attempt}/{MaxRetries})",
-                    level: LogEventLevel.Warning
+                    $"ffprobe timed out for {file} (attempt {attempt}/{MaxRetries})",
+                    LogEventLevel.Warning
                 );
                 if (attempt < MaxRetries)
                 {
-                    await Task.Delay(millisecondsDelay: 500, cancellationToken: ct);
+                    await Task.Delay(500, ct);
                 }
             }
             catch (Exception ex)
             {
                 Logger.App(
-                    message: $"ffprobe failed for {file}: {ex.Message} (attempt {attempt}/{MaxRetries})",
-                    level: LogEventLevel.Warning
+                    $"ffprobe failed for {file}: {ex.Message} (attempt {attempt}/{MaxRetries})",
+                    LogEventLevel.Warning
                 );
                 if (attempt < MaxRetries)
                 {
-                    int delayMs = IsResourceExhaustionError(ex: ex) ? 2000 * attempt : 500;
-                    await Task.Delay(millisecondsDelay: delayMs, cancellationToken: ct);
+                    int delayMs = IsResourceExhaustionError(ex) ? 2000 * attempt : 500;
+                    await Task.Delay(delayMs, ct);
                 }
             }
         }
@@ -446,23 +446,23 @@ public class FfProbeService : IFfProbeService
         // Win32 ERROR_COMMITMENT_LIMIT (paging file too small) and similar resource errors
         return ex is Win32Exception win32Ex
             ? win32Ex.NativeErrorCode is 1455 or 8 // ERROR_COMMITMENT_LIMIT or ERROR_NOT_ENOUGH_MEMORY
-            : ex.Message.Contains(value: "paging file", comparisonType: StringComparison.OrdinalIgnoreCase)
-                || ex.Message.Contains(value: "wisselbestand", comparisonType: StringComparison.OrdinalIgnoreCase)
-                || ex.Message.Contains(value: "not enough memory", comparisonType: StringComparison.OrdinalIgnoreCase);
+            : ex.Message.Contains("paging file", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("wisselbestand", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("not enough memory", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<string> RunFfprobe(string file, CancellationToken ct)
     {
-        bool acquired = await FfProbeThrottle.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 60), ct: ct);
+        bool acquired = await FfProbeThrottle.WaitAsync(TimeSpan.FromSeconds(60), ct);
         if (!acquired)
-            throw new TimeoutException(message: "Throttle timeout waiting for ffprobe slot");
+            throw new TimeoutException("Throttle timeout waiting for ffprobe slot");
 
         Process? process = null;
         try
         {
-            using CancellationTokenSource timeoutCts = new(millisecondsDelay: ExecutionTimeoutMs);
+            using CancellationTokenSource timeoutCts = new(ExecutionTimeoutMs);
             using CancellationTokenSource linkedCts =
-                CancellationTokenSource.CreateLinkedTokenSource(token1: ct, token2: timeoutCts.Token);
+                CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
 
             process = new();
             process.StartInfo = new()
@@ -480,17 +480,17 @@ public class FfProbeService : IFfProbeService
 
             process.Start();
 
-            string stdOut = await process.StandardOutput.ReadToEndAsync(cancellationToken: linkedCts.Token);
+            string stdOut = await process.StandardOutput.ReadToEndAsync(linkedCts.Token);
 
-            bool exited = process.WaitForExit(milliseconds: ExecutionTimeoutMs);
+            bool exited = process.WaitForExit(ExecutionTimeoutMs);
             if (!exited)
             {
                 try
                 {
-                    process.Kill(entireProcessTree: true);
+                    process.Kill(true);
                 }
                 catch (InvalidOperationException) { }
-                throw new OperationCanceledException(message: "ffprobe did not exit within timeout");
+                throw new OperationCanceledException("ffprobe did not exit within timeout");
             }
 
             return stdOut;
@@ -512,7 +512,7 @@ public class FfProbeService : IFfProbeService
         {
             try
             {
-                return await RunFfprobeStdin(driver: driver, file: file, ct: ct);
+                return await RunFfprobeStdin(driver, file, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -524,21 +524,21 @@ public class FfProbeService : IFfProbeService
                 // can't seek, so retrying it against the same file is futile —
                 // return empty and let the caller stage a seekable local copy.
                 Logger.App(
-                    message: $"ffprobe stdin timed out for {file}; staging a local copy",
-                    level: LogEventLevel.Warning
+                    $"ffprobe stdin timed out for {file}; staging a local copy",
+                    LogEventLevel.Warning
                 );
                 return string.Empty;
             }
             catch (Exception ex)
             {
                 Logger.App(
-                    message: $"ffprobe stdin failed for {file}: {ex.Message} (attempt {attempt}/{MaxRetries})",
-                    level: LogEventLevel.Warning
+                    $"ffprobe stdin failed for {file}: {ex.Message} (attempt {attempt}/{MaxRetries})",
+                    LogEventLevel.Warning
                 );
                 if (attempt < MaxRetries)
                 {
-                    int delayMs = IsResourceExhaustionError(ex: ex) ? 2000 * attempt : 500;
-                    await Task.Delay(millisecondsDelay: delayMs, cancellationToken: ct);
+                    int delayMs = IsResourceExhaustionError(ex) ? 2000 * attempt : 500;
+                    await Task.Delay(delayMs, ct);
                 }
             }
         }
@@ -560,23 +560,23 @@ public class FfProbeService : IFfProbeService
         // the general limit so parallel readers don't saturate the NFS/SMB/S3
         // link and time each other out. Held for the whole probe, released in
         // finally alongside the general slot.
-        bool remoteAcquired = await FfProbeThrottle.WaitRemoteAsync(timeout: TimeSpan.FromSeconds(seconds: 120), ct: ct);
+        bool remoteAcquired = await FfProbeThrottle.WaitRemoteAsync(TimeSpan.FromSeconds(120), ct);
         if (!remoteAcquired)
-            throw new TimeoutException(message: "Throttle timeout waiting for remote ffprobe slot");
+            throw new TimeoutException("Throttle timeout waiting for remote ffprobe slot");
 
-        bool acquired = await FfProbeThrottle.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 60), ct: ct);
+        bool acquired = await FfProbeThrottle.WaitAsync(TimeSpan.FromSeconds(60), ct);
         if (!acquired)
         {
             FfProbeThrottle.ReleaseRemote();
-            throw new TimeoutException(message: "Throttle timeout waiting for ffprobe slot");
+            throw new TimeoutException("Throttle timeout waiting for ffprobe slot");
         }
 
         Process? process = null;
         try
         {
-            using CancellationTokenSource timeoutCts = new(millisecondsDelay: ExecutionTimeoutMs);
+            using CancellationTokenSource timeoutCts = new(ExecutionTimeoutMs);
             using CancellationTokenSource linkedCts =
-                CancellationTokenSource.CreateLinkedTokenSource(token1: ct, token2: timeoutCts.Token);
+                CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
 
             process = new();
             process.StartInfo = new()
@@ -600,8 +600,8 @@ public class FfProbeService : IFfProbeService
 
             process.Start();
 
-            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken: linkedCts.Token);
-            Task pumpTask = PumpStdinAsync(driver: driver, file: file, process: process, ct: linkedCts.Token);
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(linkedCts.Token);
+            Task pumpTask = PumpStdinAsync(driver, file, process, linkedCts.Token);
 
             // Observe the pump no matter which task settles first. If stdoutTask
             // faults/cancels (probe timeout) we must still await pumpTask, or its
@@ -616,18 +616,18 @@ public class FfProbeService : IFfProbeService
             }
             finally
             {
-                await ObservePumpAsync(pumpTask: pumpTask);
+                await ObservePumpAsync(pumpTask);
             }
 
-            bool exited = process.WaitForExit(milliseconds: ExecutionTimeoutMs);
+            bool exited = process.WaitForExit(ExecutionTimeoutMs);
             if (!exited)
             {
                 try
                 {
-                    process.Kill(entireProcessTree: true);
+                    process.Kill(true);
                 }
                 catch (InvalidOperationException) { }
-                throw new OperationCanceledException(message: "ffprobe did not exit within timeout");
+                throw new OperationCanceledException("ffprobe did not exit within timeout");
             }
 
             return stdOut;
@@ -673,7 +673,7 @@ public class FfProbeService : IFfProbeService
         Stream src;
         try
         {
-            src = driver.OpenReadIsolated(path: file);
+            src = driver.OpenReadIsolated(file);
         }
         catch
         {
@@ -696,12 +696,12 @@ public class FfProbeService : IFfProbeService
             {
                 while (!ct.IsCancellationRequested && !process.HasExited)
                 {
-                    int read = await src.ReadAsync(buffer: buffer.AsMemory(start: 0, length: BufferSize), cancellationToken: ct);
+                    int read = await src.ReadAsync(buffer.AsMemory(0, BufferSize), ct);
                     if (read == 0)
                         break;
-                    await stdin.WriteAsync(buffer: buffer.AsMemory(start: 0, length: read), cancellationToken: ct);
+                    await stdin.WriteAsync(buffer.AsMemory(0, read), ct);
                 }
-                await stdin.FlushAsync(cancellationToken: ct);
+                await stdin.FlushAsync(ct);
             }
             catch (IOException)
             {
@@ -725,72 +725,72 @@ public class FfProbeService : IFfProbeService
 // Internal JSON deserialization types for raw ffprobe output
 internal class FfProbeRawResult
 {
-    [JsonProperty(propertyName: "streams")]
+    [JsonProperty("streams")]
     public FfProbeRawStream[]? Streams { get; set; }
 
-    [JsonProperty(propertyName: "format")]
+    [JsonProperty("format")]
     public FfProbeRawFormat? Format { get; set; }
 }
 
 internal class FfProbeRawFormat
 {
-    [JsonProperty(propertyName: "filename")]
+    [JsonProperty("filename")]
     public string? Filename { get; set; }
 
-    [JsonProperty(propertyName: "format_name")]
+    [JsonProperty("format_name")]
     public string? FormatName { get; set; }
 
-    [JsonProperty(propertyName: "format_long_name")]
+    [JsonProperty("format_long_name")]
     public string? FormatLongName { get; set; }
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public string? Duration { get; set; }
 
-    [JsonProperty(propertyName: "bit_rate")]
+    [JsonProperty("bit_rate")]
     public string? BitRate { get; set; }
 
-    [JsonProperty(propertyName: "tags")]
+    [JsonProperty("tags")]
     public Dictionary<string, string>? Tags { get; set; }
 }
 
 internal class FfProbeRawStream
 {
-    [JsonProperty(propertyName: "index")]
+    [JsonProperty("index")]
     public int Index { get; set; }
 
-    [JsonProperty(propertyName: "codec_name")]
+    [JsonProperty("codec_name")]
     public string? CodecName { get; set; }
 
-    [JsonProperty(propertyName: "codec_type")]
+    [JsonProperty("codec_type")]
     public string? CodecType { get; set; }
 
-    [JsonProperty(propertyName: "width")]
+    [JsonProperty("width")]
     public int Width { get; set; }
 
-    [JsonProperty(propertyName: "height")]
+    [JsonProperty("height")]
     public int Height { get; set; }
 
-    [JsonProperty(propertyName: "pix_fmt")]
+    [JsonProperty("pix_fmt")]
     public string? PixFmt { get; set; }
 
-    [JsonProperty(propertyName: "color_space")]
+    [JsonProperty("color_space")]
     public string? ColorSpace { get; set; }
 
-    [JsonProperty(propertyName: "color_transfer")]
+    [JsonProperty("color_transfer")]
     public string? ColorTransfer { get; set; }
 
-    [JsonProperty(propertyName: "color_primaries")]
+    [JsonProperty("color_primaries")]
     public string? ColorPrimaries { get; set; }
 
-    [JsonProperty(propertyName: "channels")]
+    [JsonProperty("channels")]
     public long? Channels { get; set; }
 
-    [JsonProperty(propertyName: "bit_rate")]
+    [JsonProperty("bit_rate")]
     public long? BitRate { get; set; }
 
-    [JsonProperty(propertyName: "sample_rate")]
+    [JsonProperty("sample_rate")]
     public long? SampleRate { get; set; }
 
-    [JsonProperty(propertyName: "tags")]
+    [JsonProperty("tags")]
     public Dictionary<string, string>? Tags { get; set; }
 }

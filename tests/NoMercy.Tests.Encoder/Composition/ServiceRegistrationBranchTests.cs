@@ -40,13 +40,13 @@ public class ServiceRegistrationBranchTests
         ServiceCollection services = new();
         services.AddLogging();
         services.AddSingleton<IHostApplicationLifetime, TestHostLifetime>();
-        services.AddDbContextFactory<MediaContext>(optionsAction: o => o.UseInMemoryDatabase(databaseName: "test-media"));
-        services.AddDbContextFactory<AppDbContext>(optionsAction: o => o.UseInMemoryDatabase(databaseName: "test-app"));
-        services.AddNoMercyEncoder(configure: opts =>
+        services.AddDbContextFactory<MediaContext>(o => o.UseInMemoryDatabase("test-media"));
+        services.AddDbContextFactory<AppDbContext>(o => o.UseInMemoryDatabase("test-app"));
+        services.AddNoMercyEncoder(opts =>
         {
             opts.FfmpegPathOverride = "ffmpeg";
             opts.FfprobePathOverride = "ffprobe";
-            extra?.Invoke(obj: opts);
+            extra?.Invoke(opts);
         });
         return services.BuildServiceProvider();
     }
@@ -68,7 +68,7 @@ public class ServiceRegistrationBranchTests
         // remove a container option from the catalogue — pin the count.
         ServiceProvider provider = BuildProvider();
         IEnumerable<IOutputStrategy> strategies = provider.GetServices<IOutputStrategy>();
-        strategies.Should().HaveCount(expected: 8);
+        strategies.Should().HaveCount(8);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class ServiceRegistrationBranchTests
         // plus single-pass MKV/MP3/FLAC/OGG/AudioHLS.
         ServiceProvider provider = BuildProvider();
         IEnumerable<IEncodingStrategy> strategies = provider.GetServices<IEncodingStrategy>();
-        strategies.Should().HaveCount(expected: 11);
+        strategies.Should().HaveCount(11);
     }
 
     [Fact]
@@ -89,11 +89,11 @@ public class ServiceRegistrationBranchTests
         // LAST so the resolver picks vendor-specific scalers first.
         ServiceProvider provider = BuildProvider();
         List<IQualityScaler> scalers = provider.GetServices<IQualityScaler>().ToList();
-        scalers.Should().HaveCount(expected: 6);
+        scalers.Should().HaveCount(6);
         scalers[^1]
             .Should()
             .BeOfType<LinearQualityScaler>(
-                because: "linear scaler must be registered last so vendor-specific impls win in the resolver"
+                "linear scaler must be registered last so vendor-specific impls win in the resolver"
             );
     }
 
@@ -115,14 +115,14 @@ public class ServiceRegistrationBranchTests
         // Signing key set + CoordinatorUrl unset → coordinator mode. The
         // registry wraps the in-memory one with disk persistence so worker
         // identities survive a coordinator restart.
-        string tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-coord-test-{Guid.NewGuid():N}");
+        string tempDir = Path.Combine(Path.GetTempPath(), $"nm-coord-test-{Guid.NewGuid():N}");
         try
         {
-            ServiceProvider provider = BuildProvider(extra: opts =>
+            ServiceProvider provider = BuildProvider(opts =>
             {
                 opts.DistributedEncodingSigningKey = "32-byte-signing-key-for-cluster!";
                 // No CoordinatorUrl → this IS the coordinator.
-                opts.WorkerRegistryPath = Path.Combine(path1: tempDir, path2: "workers.json");
+                opts.WorkerRegistryPath = Path.Combine(tempDir, "workers.json");
             });
 
             IRemoteWorkerRegistry registry = provider.GetRequiredService<IRemoteWorkerRegistry>();
@@ -131,8 +131,8 @@ public class ServiceRegistrationBranchTests
         }
         finally
         {
-            if (Directory.Exists(path: tempDir))
-                Directory.Delete(path: tempDir, recursive: true);
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
         }
     }
 
@@ -181,7 +181,7 @@ public class ServiceRegistrationBranchTests
         IDeviceCapabilityRegistry first = provider.GetRequiredService<IDeviceCapabilityRegistry>();
         IDeviceCapabilityRegistry second = provider.GetRequiredService<IDeviceCapabilityRegistry>();
 
-        first.Should().BeSameAs(expected: second);
+        first.Should().BeSameAs(second);
         provider.GetRequiredService<IDeviceAwareVariantSelector>().Should().NotBeNull();
     }
 

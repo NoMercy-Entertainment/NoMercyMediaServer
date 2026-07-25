@@ -35,10 +35,10 @@ public class NoOpOpenSubtitlesProviderTests
         NoOpOpenSubtitlesProvider provider = new();
 
         IReadOnlyList<OpenSubtitlesSearchResult> results = await provider.SearchByHashAsync(
-            movieHash: "abcdef1234567890",
-            fileSize: 123456789L,
-            languages: ["eng", "fra"],
-            ct: CancellationToken.None
+            "abcdef1234567890",
+            123456789L,
+            ["eng", "fra"],
+            CancellationToken.None
         );
 
         results.Should().NotBeNull();
@@ -51,9 +51,9 @@ public class NoOpOpenSubtitlesProviderTests
         NoOpOpenSubtitlesProvider provider = new();
 
         IReadOnlyList<OpenSubtitlesSearchResult> results = await provider.SearchByFilenameAsync(
-            filename: "movie.mkv",
-            languages: ["eng"],
-            ct: CancellationToken.None
+            "movie.mkv",
+            ["eng"],
+            CancellationToken.None
         );
 
         results.Should().BeEmpty();
@@ -65,12 +65,12 @@ public class NoOpOpenSubtitlesProviderTests
         NoOpOpenSubtitlesProvider provider = new();
 
         IReadOnlyList<OpenSubtitlesSearchResult> results = await provider.SearchByTitleAsync(
-            title: "The Matrix",
-            season: null,
-            episode: null,
-            year: 1999,
-            languages: ["eng"],
-            ct: CancellationToken.None
+            "The Matrix",
+            null,
+            null,
+            1999,
+            ["eng"],
+            CancellationToken.None
         );
 
         results.Should().BeEmpty();
@@ -84,12 +84,12 @@ public class NoOpOpenSubtitlesProviderTests
         NoOpOpenSubtitlesProvider provider = new();
 
         IReadOnlyList<OpenSubtitlesSearchResult> results = await provider.SearchByTitleAsync(
-            title: "Breaking Bad",
-            season: 1,
-            episode: 5,
-            year: 2008,
-            languages: ["eng", "spa"],
-            ct: CancellationToken.None
+            "Breaking Bad",
+            1,
+            5,
+            2008,
+            ["eng", "spa"],
+            CancellationToken.None
         );
 
         results.Should().BeEmpty();
@@ -101,8 +101,8 @@ public class NoOpOpenSubtitlesProviderTests
         NoOpOpenSubtitlesProvider provider = new();
 
         byte[] payload = await provider.DownloadSubtitleAsync(
-            downloadUrl: "https://example.invalid/subtitle.srt.gz",
-            ct: CancellationToken.None
+            "https://example.invalid/subtitle.srt.gz",
+            CancellationToken.None
         );
 
         payload.Should().NotBeNull();
@@ -120,10 +120,10 @@ public class NoOpOpenSubtitlesProviderTests
         await cts.CancelAsync();
 
         IReadOnlyList<OpenSubtitlesSearchResult> results = await provider.SearchByHashAsync(
-            movieHash: "0",
-            fileSize: 0,
-            languages: [],
-            ct: cts.Token
+            "0",
+            0,
+            [],
+            cts.Token
         );
 
         results.Should().BeEmpty();

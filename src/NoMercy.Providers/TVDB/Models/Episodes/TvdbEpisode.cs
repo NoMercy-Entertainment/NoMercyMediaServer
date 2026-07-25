@@ -27,105 +27,105 @@ public class TvdbEpisodeTranslationResponse : TvdbResponse<TvdbTranslationData> 
 
 public class TvdbEpisode
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public long Id { get; set; }
 
-    [JsonProperty(propertyName: "seriesId")]
+    [JsonProperty("seriesId")]
     public long SeriesId { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
-    [JsonProperty(propertyName: "aired")]
+    [JsonProperty("aired")]
     public string? Aired { get; set; }
 
-    [JsonProperty(propertyName: "runtime")]
+    [JsonProperty("runtime")]
     public int? Runtime { get; set; }
 
-    [JsonProperty(propertyName: "nameTranslations")]
+    [JsonProperty("nameTranslations")]
     public string[] NameTranslations { get; set; } = [];
 
-    [JsonProperty(propertyName: "overviewTranslations")]
+    [JsonProperty("overviewTranslations")]
     public string[] OverviewTranslations { get; set; } = [];
 
-    [JsonProperty(propertyName: "overview")]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "image")]
+    [JsonProperty("image")]
     public Uri? Image { get; set; }
 
-    [JsonProperty(propertyName: "imageType")]
+    [JsonProperty("imageType")]
     public int? ImageType { get; set; }
 
-    [JsonProperty(propertyName: "isMovie")]
+    [JsonProperty("isMovie")]
     public int? IsMovie { get; set; }
 
-    [JsonProperty(propertyName: "seasons")]
+    [JsonProperty("seasons")]
     public Seasons.TvdbSeason[]? Seasons { get; set; }
 
-    [JsonProperty(propertyName: "number")]
+    [JsonProperty("number")]
     public int Number { get; set; }
 
-    [JsonProperty(propertyName: "seasonNumber")]
+    [JsonProperty("seasonNumber")]
     public int SeasonNumber { get; set; }
 
-    [JsonProperty(propertyName: "lastUpdated")]
+    [JsonProperty("lastUpdated")]
     public DateTimeOffset? LastUpdated { get; set; }
 
-    [JsonProperty(propertyName: "finaleType")]
+    [JsonProperty("finaleType")]
     public string? FinaleType { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public string? Year { get; set; }
 }
 
 public class TvdbEpisodeExtended : TvdbEpisode
 {
-    [JsonProperty(propertyName: "airsAfterSeason")]
+    [JsonProperty("airsAfterSeason")]
     public int? AirsAfterSeason { get; set; }
 
-    [JsonProperty(propertyName: "airsBeforeEpisode")]
+    [JsonProperty("airsBeforeEpisode")]
     public int? AirsBeforeEpisode { get; set; }
 
-    [JsonProperty(propertyName: "airsBeforeSeason")]
+    [JsonProperty("airsBeforeSeason")]
     public int? AirsBeforeSeason { get; set; }
 
-    [JsonProperty(propertyName: "awards")]
+    [JsonProperty("awards")]
     public TvdbAward[]? Awards { get; set; }
 
-    [JsonProperty(propertyName: "characters")]
+    [JsonProperty("characters")]
     public TvdbCharacter[]? Characters { get; set; }
 
-    [JsonProperty(propertyName: "companies")]
+    [JsonProperty("companies")]
     public TvdbCompany[]? Companies { get; set; }
 
-    [JsonProperty(propertyName: "contentRatings")]
+    [JsonProperty("contentRatings")]
     public TvdbContentRating[]? ContentRatings { get; set; }
 
-    [JsonProperty(propertyName: "networks")]
+    [JsonProperty("networks")]
     public TvdbCompany[]? Networks { get; set; }
 
-    [JsonProperty(propertyName: "nominations")]
+    [JsonProperty("nominations")]
     public string[]? Nominations { get; set; }
 
-    [JsonProperty(propertyName: "productionCode")]
+    [JsonProperty("productionCode")]
     public string? ProductionCode { get; set; }
 
-    [JsonProperty(propertyName: "remoteIds")]
+    [JsonProperty("remoteIds")]
     public TvdbRemoteId[]? RemoteIds { get; set; }
 
-    [JsonProperty(propertyName: "studios")]
+    [JsonProperty("studios")]
     public TvdbCompany[]? Studios { get; set; }
 
-    [JsonProperty(propertyName: "tagOptions")]
+    [JsonProperty("tagOptions")]
     public TvdbTagOption[]? TagOptions { get; set; }
 
-    [JsonProperty(propertyName: "trailers")]
+    [JsonProperty("trailers")]
     public TvdbTrailer[]? Trailers { get; set; }
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public TvdbTranslations? Translations { get; set; }
 
-    [JsonProperty(propertyName: "artworks")]
+    [JsonProperty("artworks")]
     public TvdbArtwork[]? Artworks { get; set; }
 }

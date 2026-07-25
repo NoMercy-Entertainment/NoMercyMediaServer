@@ -32,10 +32,10 @@ using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags(tags: "Media Movies")]
-[ApiVersion(version: 1.0)]
+[Tags("Media Movies")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/movie/{id:int}")] // match themoviedb.org API
+[Route("api/v{version:apiVersion}/movie/{id:int}")] // match themoviedb.org API
 public class MoviesController(
     IMovieRepository movieRepository,
     ILibraryRepository libraryRepository,
@@ -51,38 +51,38 @@ public class MoviesController(
     public async Task<IActionResult> Movie(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view movies");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view movies");
 
         string language = Language();
         string country = Country();
 
-        Movie? movie = await movieRepository.GetMovieDetailAsync(userId: userId, id: id, language: language, country: country, ct: ct);
+        Movie? movie = await movieRepository.GetMovieDetailAsync(userId, id, language, country, ct);
 
         if (movie is not null)
-            return Ok(value: new InfoResponseDto { Data = new(movie: movie, country: country) });
+            return Ok(new InfoResponseDto { Data = new(movie, country) });
 
         try
         {
             TmdbMovieAppends? movieAppends = await movieMetadataProvider.GetMovieAsync(
-                id: id,
-                language: language,
-                ct: ct
+                id,
+                language,
+                ct
             );
 
             if (movieAppends is null)
-                return NotFoundResponse(detail: "Movie not found");
+                return NotFoundResponse("Movie not found");
 
             if (movieAppends.Adult && !config.ShowAdultContent)
                 return UnauthorizedResponse(
-                    detail: "Movie is adult which is not allowed by the server configuration"
+                    "Movie is adult which is not allowed by the server configuration"
                 );
 
-            return Ok(value: new InfoResponseDto { Data = new(tmdbMovie: movieAppends, country: country) });
+            return Ok(new InfoResponseDto { Data = new(movieAppends, country) });
         }
         catch (Exception)
         {
-            return NotFoundResponse(detail: "Movie not found");
+            return NotFoundResponse("Movie not found");
         }
     }
 
@@ -90,36 +90,36 @@ public class MoviesController(
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
-        await movieRepository.DeleteAsync(id: id, ct: ct);
+        await movieRepository.DeleteAsync(id, ct);
 
         await eventBus.PublishAsync(
-            @event: new LibraryRefreshedEvent { QueryKey = ["movie", id.ToString()] }
+            new LibraryRefreshedEvent { QueryKey = ["movie", id.ToString()] }
         );
-        await eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["libraries"] });
-        await eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["home"] });
-        await eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["libraries"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["home"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
 
-        return Ok(value: new StatusResponseDto<string> { Status = "ok", Message = "Movie deleted" });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Movie deleted" });
     }
 
     [HttpGet]
-    [Route(template: "available")]
+    [Route("available")]
     public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view movies");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view movies");
 
         string language = Language();
         string country = Country();
 
-        bool available = await movieRepository.GetMovieAvailableAsync(userId: userId, id: id, ct: ct);
+        bool available = await movieRepository.GetMovieAvailableAsync(userId, id, ct);
 
         if (!available)
-            return NotFoundResponse(detail: "Movie not found");
+            return NotFoundResponse("Movie not found");
 
         return Ok(
-            value: new StatusResponseDto<AvailableResponseDto>
+            new StatusResponseDto<AvailableResponseDto>
             {
                 Data = new() { Available = true },
                 Status = "ok",
@@ -129,33 +129,33 @@ public class MoviesController(
     }
 
     [HttpGet]
-    [Route(template: "watch")]
+    [Route("watch")]
     public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view movies");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view movies");
 
         string language = Language();
         string country = Country();
 
         IEnumerable<VideoPlaylistResponseDto> playlist = (
-            await movieRepository.GetMoviePlaylistAsync(userId: userId, id: id, language: language, country: country, ct: ct)
-        ).Select(selector: movie => new VideoPlaylistResponseDto(
-            movie: movie,
-            playlistType: MediaTypes.MovieMediaType,
-            playlistId: id,
-            country: country
+            await movieRepository.GetMoviePlaylistAsync(userId, id, language, country, ct)
+        ).Select(movie => new VideoPlaylistResponseDto(
+            movie,
+            MediaTypes.MovieMediaType,
+            id,
+            country
         ));
 
         if (!playlist.Any())
-            return NotFoundResponse(detail: "Movie not found");
+            return NotFoundResponse("Movie not found");
 
-        return Ok(value: playlist);
+        return Ok(playlist);
     }
 
     [HttpPost]
-    [Route(template: "like")]
+    [Route("like")]
     public async Task<IActionResult> Like(
         int id,
         [FromBody] LikeRequestDto request,
@@ -163,16 +163,16 @@ public class MoviesController(
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to like movies");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to like movies");
 
-        bool success = await movieRepository.LikeMovieAsync(id: id, userId: userId, like: request.Value, ct: ct);
+        bool success = await movieRepository.LikeMovieAsync(id, userId, request.Value, ct);
 
         if (!success)
-            return UnprocessableEntityResponse(detail: "Movie not found");
+            return UnprocessableEntityResponse("Movie not found");
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "{0}: {1}",
@@ -182,7 +182,7 @@ public class MoviesController(
     }
 
     [HttpPost]
-    [Route(template: "watch-list")]
+    [Route("watch-list")]
     public async Task<IActionResult> AddToWatchList(
         int id,
         [FromBody] WatchListRequestDto request,
@@ -190,16 +190,16 @@ public class MoviesController(
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to manage watch list");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to manage watch list");
 
-        bool success = await movieRepository.AddToWatchListAsync(movieId: id, userId: userId, add: request.Add, ct: ct);
+        bool success = await movieRepository.AddToWatchListAsync(id, userId, request.Add, ct);
 
         if (!success)
-            return UnprocessableEntityResponse(detail: "Movie not found");
+            return UnprocessableEntityResponse("Movie not found");
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = request.Add
@@ -210,27 +210,27 @@ public class MoviesController(
     }
 
     [HttpPost]
-    [Route(template: "rescan")]
+    [Route("rescan")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        Movie? movie = await movieRepository.GetMovieForRescanAsync(id: id, ct: ct);
+        Movie? movie = await movieRepository.GetMovieForRescanAsync(id, ct);
 
         if (movie is null)
-            return UnprocessableEntityResponse(detail: "Movie not found");
+            return UnprocessableEntityResponse("Movie not found");
 
         try
         {
-            jobDispatcher.DispatchJob<FileRescanJob>(id: id, libraryId: movie.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(id, movie.LibraryId);
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
-            return InternalServerErrorResponse(detail: e.Message);
+            logger.LogError(e.Message);
+            return InternalServerErrorResponse(e.Message);
         }
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Rescanning {0} for files in the background",
@@ -240,27 +240,27 @@ public class MoviesController(
     }
 
     [HttpPost]
-    [Route(template: "refresh")]
+    [Route("refresh")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Refresh(int id, CancellationToken ct = default)
     {
-        Movie? movie = await movieRepository.GetMovieForRefreshAsync(id: id, ct: ct);
+        Movie? movie = await movieRepository.GetMovieForRefreshAsync(id, ct);
 
         if (movie is null)
-            return UnprocessableEntityResponse(detail: "Movie not found");
+            return UnprocessableEntityResponse("Movie not found");
 
         try
         {
-            jobDispatcher.DispatchJob<MovieImportJob>(id: id, libraryId: movie.Library.Id);
+            jobDispatcher.DispatchJob<MovieImportJob>(id, movie.Library.Id);
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
-            return InternalServerErrorResponse(detail: e.Message);
+            logger.LogError(e.Message);
+            return InternalServerErrorResponse(e.Message);
         }
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Refreshing {0} in the background",
@@ -270,7 +270,7 @@ public class MoviesController(
     }
 
     [HttpPost]
-    [Route(template: "add")]
+    [Route("add")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Add(
         int id,
@@ -282,35 +282,35 @@ public class MoviesController(
 
         if (libraryId is not null)
         {
-            library = await libraryRepository.GetLibraryByIdLiteAsync(id: libraryId.Value, ct: ct);
+            library = await libraryRepository.GetLibraryByIdLiteAsync(libraryId.Value, ct);
 
             if (library is null)
-                return NotFoundResponse(detail: "Library not found");
+                return NotFoundResponse("Library not found");
         }
         else
         {
             library = await libraryRepository.GetLibraryByTypeAsync(
-                type: MediaTypes.MovieMediaType,
-                fallbackType: null,
-                ct: ct
+                MediaTypes.MovieMediaType,
+                null,
+                ct
             );
 
             if (library is null)
-                return UnprocessableEntityResponse(detail: "No movie library found");
+                return UnprocessableEntityResponse("No movie library found");
         }
 
         try
         {
-            jobDispatcher.DispatchJob<MovieImportJob>(id: id, libraryId: library.Id);
+            jobDispatcher.DispatchJob<MovieImportJob>(id, library.Id);
         }
         catch (Exception e)
         {
-            logger.LogError(message: e.Message);
-            return InternalServerErrorResponse(detail: e.Message);
+            logger.LogError(e.Message);
+            return InternalServerErrorResponse(e.Message);
         }
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Adding {0} in the background",

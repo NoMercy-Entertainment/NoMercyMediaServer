@@ -22,10 +22,10 @@ public static class SourceContainerMapper
 {
     public static string Map(string formatName)
     {
-        if (string.IsNullOrWhiteSpace(value: formatName))
+        if (string.IsNullOrWhiteSpace(formatName))
             return "unknown";
 
-        string first = formatName.Split(separator: ',')[0].Trim().ToLowerInvariant();
+        string first = formatName.Split(',')[0].Trim().ToLowerInvariant();
 
         return first switch
         {

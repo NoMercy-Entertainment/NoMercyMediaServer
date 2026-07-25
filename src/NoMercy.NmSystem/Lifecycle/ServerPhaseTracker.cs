@@ -38,7 +38,7 @@ public sealed class ServerPhaseTracker : IServerPhaseTracker
         {
             if (_shared is null)
             {
-                _shared = new(logger: logger);
+                _shared = new(logger);
             }
             else if (logger is not null)
             {
@@ -75,9 +75,9 @@ public sealed class ServerPhaseTracker : IServerPhaseTracker
         {
             if (stage == BootStage.None || stage == BootStage.All)
                 continue;
-            if (!IsSingleFlag(stage: stage))
+            if (!IsSingleFlag(stage))
                 continue;
-            _stageSignals[key: stage] = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+            _stageSignals[stage] = new(TaskCreationOptions.RunContinuationsAsynchronously);
         }
     }
 
@@ -100,10 +100,10 @@ public sealed class ServerPhaseTracker : IServerPhaseTracker
 
     public void MarkComplete(BootStage stage)
     {
-        if (!IsSingleFlag(stage: stage))
+        if (!IsSingleFlag(stage))
             throw new ArgumentException(
-                message: $"MarkComplete requires a single flag, got {stage}. Call MarkComplete per stage.",
-                paramName: nameof(stage)
+                $"MarkComplete requires a single flag, got {stage}. Call MarkComplete per stage.",
+                nameof(stage)
             );
 
         TaskCompletionSource? tcs;
@@ -116,17 +116,17 @@ public sealed class ServerPhaseTracker : IServerPhaseTracker
                 return;
 
             _completed |= stage;
-            tcs = _stageSignals.GetValueOrDefault(key: stage);
+            tcs = _stageSignals.GetValueOrDefault(stage);
         }
 
-        _logger.LogInformation(message: "Boot stage complete: {Stage}", args: stage);
+        _logger.LogInformation("Boot stage complete: {Stage}", stage);
         tcs?.TrySetResult();
-        StageCompleted?.Invoke(obj: stage);
+        StageCompleted?.Invoke(stage);
     }
 
     public async Task WhenReachedAsync(BootStage stage, CancellationToken ct)
     {
-        if (IsComplete(stage: stage))
+        if (IsComplete(stage))
             return;
 
         List<Task> pending = [];
@@ -135,14 +135,14 @@ public sealed class ServerPhaseTracker : IServerPhaseTracker
             foreach ((BootStage flag, TaskCompletionSource signal) in _stageSignals)
             {
                 if ((stage & flag) == flag && (_completed & flag) != flag)
-                    pending.Add(item: signal.Task);
+                    pending.Add(signal.Task);
             }
         }
 
         if (pending.Count == 0)
             return;
 
-        await Task.WhenAll(tasks: pending).WaitAsync(cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+        await Task.WhenAll(pending).WaitAsync(ct).ConfigureAwait(false);
     }
 
     private static bool IsSingleFlag(BootStage stage)

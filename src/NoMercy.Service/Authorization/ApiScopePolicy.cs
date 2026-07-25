@@ -24,19 +24,19 @@ namespace NoMercy.Service.Authorization;
 public static class ApiScopePolicy
 {
     public static bool HasRequiredScope(ClaimsPrincipal user) =>
-        HasRequiredScope(scopeClaimValues: user.FindAll(type: "scope").Select(selector: claim => claim.Value));
+        HasRequiredScope(user.FindAll("scope").Select(claim => claim.Value));
 
     public static bool HasRequiredScope(IEnumerable<string> scopeClaimValues)
     {
         HashSet<string> scopes = scopeClaimValues
-            .SelectMany(selector: value =>
+            .SelectMany(value =>
                 value.Split(
-                    separator: ' ',
-                    options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+                    ' ',
+                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
                 )
             )
-            .ToHashSet(comparer: StringComparer.Ordinal);
+            .ToHashSet(StringComparer.Ordinal);
 
-        return scopes.Contains(item: "openid") || scopes.Contains(item: "profile");
+        return scopes.Contains("openid") || scopes.Contains("profile");
     }
 }

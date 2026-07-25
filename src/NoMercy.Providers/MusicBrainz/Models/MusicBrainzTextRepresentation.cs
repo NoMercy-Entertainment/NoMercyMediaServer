@@ -15,9 +15,9 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzTextRepresentation
 {
-    [JsonProperty(propertyName: "script")]
+    [JsonProperty("script")]
     public string Script { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "language")]
+    [JsonProperty("language")]
     public string Language { get; set; } = string.Empty;
 }

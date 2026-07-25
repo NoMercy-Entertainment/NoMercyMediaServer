@@ -26,23 +26,23 @@ public class TemplateResolverTests
     [Fact]
     public void Resolve_SingleToken_Replaced()
     {
-        string result = TemplateResolver.Resolve(template: ":type:_video.ts", values: new() { [key: "type"] = "video" });
-        result.Should().Be(expected: "video_video.ts");
+        string result = TemplateResolver.Resolve(":type:_video.ts", new() { ["type"] = "video" });
+        result.Should().Be("video_video.ts");
     }
 
     [Fact]
     public void Resolve_MultipleTokens_AllReplaced()
     {
         string result = TemplateResolver.Resolve(
-            template: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-            values: new()
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            new()
             {
-                [key: "type"] = "video",
-                [key: "framesize"] = "1920x1080",
-                [key: "colorrange"] = "SDR",
+                ["type"] = "video",
+                ["framesize"] = "1920x1080",
+                ["colorrange"] = "SDR",
             }
         );
-        result.Should().Be(expected: "video_1920x1080_SDR/video_1920x1080_SDR");
+        result.Should().Be("video_1920x1080_SDR/video_1920x1080_SDR");
     }
 
     [Fact]
@@ -52,28 +52,28 @@ public class TemplateResolverTests
         // the string is obviously broken on disk, which is a much louder
         // failure than silently dropping the token and producing two files
         // with the same name.
-        string result = TemplateResolver.Resolve(template: ":type:_:unknown:", values: new() { [key: "type"] = "video" });
-        result.Should().Be(expected: "video_:unknown:");
+        string result = TemplateResolver.Resolve(":type:_:unknown:", new() { ["type"] = "video" });
+        result.Should().Be("video_:unknown:");
     }
 
     [Fact]
     public void Resolve_EmptyTokens_ReturnsTemplate()
     {
-        string result = TemplateResolver.Resolve(template: ":type:_video", values: []);
-        result.Should().Be(expected: ":type:_video");
+        string result = TemplateResolver.Resolve(":type:_video", []);
+        result.Should().Be(":type:_video");
     }
 
     [Fact]
     public void VideoTokens_IncludesTypeAndFrameSize()
     {
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
-            width: 1920,
-            height: 1080,
-            isHdrOutput: false
+            1920,
+            1080,
+            false
         );
-        tokens[key: "type"].Should().Be(expected: "video");
-        tokens[key: "framesize"].Should().Be(expected: "1920x1080");
-        tokens[key: "colorrange"].Should().Be(expected: "SDR");
+        tokens["type"].Should().Be("video");
+        tokens["framesize"].Should().Be("1920x1080");
+        tokens["colorrange"].Should().Be("SDR");
     }
 
     [Fact]
@@ -84,11 +84,11 @@ public class TemplateResolverTests
         // 10-bit BT.709 anime master is SDR and must be labelled SDR; an
         // HDR-passthrough output gets HDR regardless of any other field.
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
-            width: 3840,
-            height: 2160,
-            isHdrOutput: true
+            3840,
+            2160,
+            true
         );
-        tokens[key: "colorrange"].Should().Be(expected: "HDR");
+        tokens["colorrange"].Should().Be("HDR");
     }
 
     [Fact]
@@ -98,38 +98,38 @@ public class TemplateResolverTests
         // colour depth alone never makes an output HDR — only the transfer
         // pipeline does. Caller passes isHdrOutput = false for these.
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
-            width: 1920,
-            height: 1080,
-            isHdrOutput: false
+            1920,
+            1080,
+            false
         );
-        tokens[key: "colorrange"].Should().Be(expected: "SDR");
+        tokens["colorrange"].Should().Be("SDR");
     }
 
     [Fact]
     public void AudioTokens_IncludesLanguageCodecChannels()
     {
         Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
-            language: "eng",
-            codecName: "eac3",
-            channels: 6
+            "eng",
+            "eac3",
+            6
         );
-        tokens[key: "type"].Should().Be(expected: "audio");
-        tokens[key: "language"].Should().Be(expected: "eng");
-        tokens[key: "codec"].Should().Be(expected: "eac3");
-        tokens[key: "channels"].Should().Be(expected: "6");
+        tokens["type"].Should().Be("audio");
+        tokens["language"].Should().Be("eng");
+        tokens["codec"].Should().Be("eac3");
+        tokens["channels"].Should().Be("6");
     }
 
     [Fact]
     public void SubtitleTokens_IncludesVariantAndFilename()
     {
         Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
-            language: "eng",
-            variant: "sign",
-            filename: "movie"
+            "eng",
+            "sign",
+            "movie"
         );
-        tokens[key: "language"].Should().Be(expected: "eng");
-        tokens[key: "variant"].Should().Be(expected: "sign");
-        tokens[key: "filename"].Should().Be(expected: "movie");
+        tokens["language"].Should().Be("eng");
+        tokens["variant"].Should().Be("sign");
+        tokens["filename"].Should().Be("movie");
     }
 
     [Fact]
@@ -138,25 +138,25 @@ public class TemplateResolverTests
         // The default video template from EncodingProfile:
         string template = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:";
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
-            width: 1280,
-            height: 720,
-            isHdrOutput: false
+            1280,
+            720,
+            false
         );
 
-        string resolved = TemplateResolver.Resolve(template: template, values: tokens);
+        string resolved = TemplateResolver.Resolve(template, tokens);
 
-        resolved.Should().Be(expected: "video_1280x720_SDR/video_1280x720_SDR");
+        resolved.Should().Be("video_1280x720_SDR/video_1280x720_SDR");
     }
 
     [Fact]
     public void Resolve_AudioTemplate_EndToEnd()
     {
         string template = ":type:_:language:_:codec:/:type:_:language:_:codec:";
-        Dictionary<string, string> tokens = TemplateResolver.AudioTokens(language: "jpn", codecName: "opus", channels: 2);
+        Dictionary<string, string> tokens = TemplateResolver.AudioTokens("jpn", "opus", 2);
 
-        string resolved = TemplateResolver.Resolve(template: template, values: tokens);
+        string resolved = TemplateResolver.Resolve(template, tokens);
 
-        resolved.Should().Be(expected: "audio_jpn_opus/audio_jpn_opus");
+        resolved.Should().Be("audio_jpn_opus/audio_jpn_opus");
     }
 
     // ── Brace syntax (V2 built-in preset form) ──────────────────────────────
@@ -166,20 +166,20 @@ public class TemplateResolverTests
     {
         // V2 built-in presets use {token} not :token:
         string result = TemplateResolver.Resolve(
-            template: "video/{label}",
-            values: new() { [key: "label"] = "1920x1080" }
+            "video/{label}",
+            new() { ["label"] = "1920x1080" }
         );
-        result.Should().Be(expected: "video/1920x1080");
+        result.Should().Be("video/1920x1080");
     }
 
     [Fact]
     public void Resolve_BraceSyntax_MultipleTokens_AllReplaced()
     {
         string result = TemplateResolver.Resolve(
-            template: "{type}_{label}/{type}_{label}",
-            values: new() { [key: "type"] = "video", [key: "label"] = "1280x720_SDR" }
+            "{type}_{label}/{type}_{label}",
+            new() { ["type"] = "video", ["label"] = "1280x720_SDR" }
         );
-        result.Should().Be(expected: "video_1280x720_SDR/video_1280x720_SDR");
+        result.Should().Be("video_1280x720_SDR/video_1280x720_SDR");
     }
 
     [Fact]
@@ -187,11 +187,11 @@ public class TemplateResolverTests
     {
         // Verbatim V2 brace-style audio preset template.
         string template = "audio/{lang}-{codec}";
-        Dictionary<string, string> tokens = TemplateResolver.AudioTokens(language: "eng", codecName: "aac", channels: 2);
+        Dictionary<string, string> tokens = TemplateResolver.AudioTokens("eng", "aac", 2);
 
-        string resolved = TemplateResolver.Resolve(template: template, values: tokens);
+        string resolved = TemplateResolver.Resolve(template, tokens);
 
-        resolved.Should().Be(expected: "audio/eng-aac");
+        resolved.Should().Be("audio/eng-aac");
     }
 
     [Fact]
@@ -200,10 +200,10 @@ public class TemplateResolverTests
         // Legacy + modern in the same template — both must resolve so we can
         // ship V2 presets while V1 rows still live in the DB.
         string result = TemplateResolver.Resolve(
-            template: ":type:_{label}",
-            values: new() { [key: "type"] = "video", [key: "label"] = "1080p" }
+            ":type:_{label}",
+            new() { ["type"] = "video", ["label"] = "1080p" }
         );
-        result.Should().Be(expected: "video_1080p");
+        result.Should().Be("video_1080p");
     }
 
     // ── HDR label suffix logic ──────────────────────────────────────────────
@@ -214,11 +214,11 @@ public class TemplateResolverTests
         // SDR variants append "_SDR" to disambiguate from HDR variants of
         // the same resolution that get the bare framesize.
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
-            width: 1920,
-            height: 795,
-            isHdrOutput: false
+            1920,
+            795,
+            false
         );
-        tokens[key: "label"].Should().Be(expected: "1920x795_SDR");
+        tokens["label"].Should().Be("1920x795_SDR");
     }
 
     [Fact]
@@ -228,23 +228,23 @@ public class TemplateResolverTests
         // where "1920x795/" is the HDR folder and "1920x795_SDR/" is the
         // tonemapped sibling.
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
-            width: 1920,
-            height: 795,
-            isHdrOutput: true
+            1920,
+            795,
+            true
         );
-        tokens[key: "label"].Should().Be(expected: "1920x795");
+        tokens["label"].Should().Be("1920x795");
     }
 
     [Fact]
     public void VideoTokens_ColorspaceAndColorrange_AreAliases()
     {
         // Both tokens carry the same value — templates can use either form.
-        Dictionary<string, string> sdr = TemplateResolver.VideoTokens(width: 1920, height: 1080, isHdrOutput: false);
-        sdr[key: "colorspace"].Should().Be(expected: sdr[key: "colorrange"]);
+        Dictionary<string, string> sdr = TemplateResolver.VideoTokens(1920, 1080, false);
+        sdr["colorspace"].Should().Be(sdr["colorrange"]);
 
-        Dictionary<string, string> hdr = TemplateResolver.VideoTokens(width: 3840, height: 2160, isHdrOutput: true);
-        hdr[key: "colorspace"].Should().Be(expected: "HDR");
-        hdr[key: "colorspace"].Should().Be(expected: hdr[key: "colorrange"]);
+        Dictionary<string, string> hdr = TemplateResolver.VideoTokens(3840, 2160, true);
+        hdr["colorspace"].Should().Be("HDR");
+        hdr["colorspace"].Should().Be(hdr["colorrange"]);
     }
 
     // ── Audio aliases ───────────────────────────────────────────────────────
@@ -254,9 +254,9 @@ public class TemplateResolverTests
     {
         // {lang} is the V2 brace-style alias for :language: — templates
         // written in either form must resolve identically.
-        Dictionary<string, string> tokens = TemplateResolver.AudioTokens(language: "jpn", codecName: "opus", channels: 2);
-        tokens[key: "language"].Should().Be(expected: "jpn");
-        tokens[key: "lang"].Should().Be(expected: "jpn");
+        Dictionary<string, string> tokens = TemplateResolver.AudioTokens("jpn", "opus", 2);
+        tokens["language"].Should().Be("jpn");
+        tokens["lang"].Should().Be("jpn");
     }
 
     // ── Subtitle tokens / variant-as-type alias ────────────────────────────
@@ -265,12 +265,12 @@ public class TemplateResolverTests
     public void SubtitleTokens_LangAlias_PresentAndMatchesLanguage()
     {
         Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
-            language: "fra",
-            variant: "full",
-            filename: "movie"
+            "fra",
+            "full",
+            "movie"
         );
-        tokens[key: "lang"].Should().Be(expected: "fra");
-        tokens[key: "language"].Should().Be(expected: "fra");
+        tokens["lang"].Should().Be("fra");
+        tokens["language"].Should().Be("fra");
     }
 
     [Fact]
@@ -282,26 +282,26 @@ public class TemplateResolverTests
         // "subtitles/{filename}.{lang}.{type}" works without per-variant
         // surgery.
         Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
-            language: "eng",
-            variant: "sign",
-            filename: "movie"
+            "eng",
+            "sign",
+            "movie"
         );
-        tokens[key: "type"].Should().Be(expected: "sign");
-        tokens[key: "variant"].Should().Be(expected: "sign");
+        tokens["type"].Should().Be("sign");
+        tokens["variant"].Should().Be("sign");
     }
 
     [Fact]
     public void Resolve_SubtitleTemplate_EndToEnd()
     {
         Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
-            language: "eng",
-            variant: "sdh",
-            filename: "Movie.2024"
+            "eng",
+            "sdh",
+            "Movie.2024"
         );
         string template = "subtitles/{filename}.{lang}.{type}.vtt";
 
-        string resolved = TemplateResolver.Resolve(template: template, values: tokens);
+        string resolved = TemplateResolver.Resolve(template, tokens);
 
-        resolved.Should().Be(expected: "subtitles/Movie.2024.eng.sdh.vtt");
+        resolved.Should().Be("subtitles/Movie.2024.eng.sdh.vtt");
     }
 }

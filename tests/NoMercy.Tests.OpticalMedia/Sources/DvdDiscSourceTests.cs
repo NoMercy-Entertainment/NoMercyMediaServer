@@ -20,7 +20,7 @@ using NoMercy.OpticalMedia.Sources.Dvd;
 
 namespace NoMercy.Tests.OpticalMedia.Sources;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class DvdDiscSourceTests
 {
     [Fact]
@@ -28,7 +28,7 @@ public class DvdDiscSourceTests
     {
         string stderr = "";
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().BeNull();
     }
@@ -38,11 +38,11 @@ public class DvdDiscSourceTests
     {
         string stderr = "libdvdcss: css authentication failed";
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "CSS");
-        result.Message.Should().Contain(expected: "CSS");
+        result!.Kind.Should().Be("CSS");
+        result.Message.Should().Contain("CSS");
     }
 
     [Fact]
@@ -50,10 +50,10 @@ public class DvdDiscSourceTests
     {
         string stderr = "libdvdcss: could not get a key for any title";
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "CSS");
+        result!.Kind.Should().Be("CSS");
     }
 
     [Fact]
@@ -61,11 +61,11 @@ public class DvdDiscSourceTests
     {
         string stderr = "libdvdread: region code mismatch";
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "RegionLock");
-        result.Message.Should().Contain(expected: "region");
+        result!.Kind.Should().Be("RegionLock");
+        result.Message.Should().Contain("region");
     }
 
     [Fact]
@@ -73,10 +73,10 @@ public class DvdDiscSourceTests
     {
         string stderr = "CSS AUTHENTICATION FAILED";
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "CSS");
+        result!.Kind.Should().Be("CSS");
     }
 
     [Fact]
@@ -88,10 +88,10 @@ public class DvdDiscSourceTests
             libdvdread: error - could not read block 100
             """;
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "CSS");
+        result!.Kind.Should().Be("CSS");
     }
 
     [Fact]
@@ -103,10 +103,10 @@ public class DvdDiscSourceTests
             Cannot read disc
             """;
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "RegionLock");
+        result!.Kind.Should().Be("RegionLock");
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class DvdDiscSourceTests
             Playback initialized
             """;
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().BeNull();
     }
@@ -128,11 +128,11 @@ public class DvdDiscSourceTests
     {
         string stderr = "Could not get a key for any title";
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Message.Should().Contain(expected: "key");
-        result.Message.Should().Contain(expected: "libdvdcss");
+        result!.Message.Should().Contain("key");
+        result.Message.Should().Contain("libdvdcss");
     }
 
     [Fact]
@@ -140,11 +140,11 @@ public class DvdDiscSourceTests
     {
         string stderr = "region code mismatch";
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Message.Should().Contain(expected: "region");
-        result.Message.Should().Contain(expected: "drive");
+        result!.Message.Should().Contain("region");
+        result.Message.Should().Contain("drive");
     }
 
     [Fact]
@@ -155,10 +155,10 @@ public class DvdDiscSourceTests
             libdvdread: region code mismatch
             """;
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().NotBeNull();
-        result!.Kind.Should().Be(expected: "CSS");
+        result!.Kind.Should().Be("CSS");
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class DvdDiscSourceTests
     {
         string stderr = "authentication issue";
 
-        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr: stderr);
+        DiscProtection? result = DvdDiscSource.ClassifyProtection(stderr);
 
         result.Should().BeNull();
     }
@@ -178,23 +178,23 @@ public class DvdDiscSourceTests
 /// <see cref="IProcessRunner"/> — no real libdvdread/ffmpeg subprocess or
 /// physical drive.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class DvdDiscSourceEndToEndTests
 {
     private static DvdDiscSource MakeSut(IProcessRunner? runner = null)
     {
         EncoderOptions options = new() { FfprobePathOverride = "ffprobe" };
         return new(
-            options: options,
-            processRunner: runner ?? Mock.Of<IProcessRunner>(),
-            logger: NullLogger<DvdDiscSource>.Instance
+            options,
+            runner ?? Mock.Of<IProcessRunner>(),
+            NullLogger<DvdDiscSource>.Instance
         );
     }
 
     [Fact]
     public void Type_IsDvd()
     {
-        MakeSut().Type.Should().Be(expected: OpticalDiscType.Dvd);
+        MakeSut().Type.Should().Be(OpticalDiscType.Dvd);
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class DvdDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .SetupSequence(expression: r =>
+            .SetupSequence(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -211,21 +211,21 @@ public class DvdDiscSourceEndToEndTests
                 )
             )
             .ReturnsAsync(
-                value: new ProcessResult(ExitCode: 0, StdOut: """{"format":{"duration":"600"}}""", StdErr: "", Duration: TimeSpan.Zero)
+                new ProcessResult(0, """{"format":{"duration":"600"}}""", "", TimeSpan.Zero)
             )
             .ReturnsAsync(
-                value: new ProcessResult(ExitCode: 0, StdOut: """{"format":{"duration":"5400"}}""", StdErr: "", Duration: TimeSpan.Zero)
+                new ProcessResult(0, """{"format":{"duration":"5400"}}""", "", TimeSpan.Zero)
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "Title 3 not found", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", "Title 3 not found", TimeSpan.Zero));
 
-        DvdDiscSource sut = MakeSut(runner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
 
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
-        info.Titles.Should().HaveCount(expected: 2);
+        info.Titles.Should().HaveCount(2);
         // Longest title (5400s) is flagged main feature and sorted first.
-        info.Titles[0].Duration.Should().Be(expected: TimeSpan.FromSeconds(seconds: 5400));
+        info.Titles[0].Duration.Should().Be(TimeSpan.FromSeconds(5400));
         info.Titles[0].IsMainFeature.Should().BeTrue();
         info.Titles[1].IsMainFeature.Should().BeFalse();
     }
@@ -235,7 +235,7 @@ public class DvdDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -243,16 +243,16 @@ public class DvdDiscSourceEndToEndTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "css authentication failed", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", "css authentication failed", TimeSpan.Zero));
 
-        DvdDiscSource sut = MakeSut(runner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
 
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
         info.Titles.Should().BeEmpty();
         info.Protection.Should().NotBeNull();
-        info.Protection!.Kind.Should().Be(expected: "CSS");
+        info.Protection!.Kind.Should().Be("CSS");
     }
 
     [Fact]
@@ -261,7 +261,7 @@ public class DvdDiscSourceEndToEndTests
         Mock<IProcessRunner> runner = new();
         string? capturedInputUrl = null;
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -270,18 +270,18 @@ public class DvdDiscSourceEndToEndTests
                 )
             )
             .Callback<string, string[], string?, CancellationToken>(
-                action: (_, args, _, _) => capturedInputUrl ??= args[^1]
+                (_, args, _, _) => capturedInputUrl ??= args[^1]
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "Title 1 not found", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", "Title 1 not found", TimeSpan.Zero));
 
-        DvdDiscSource sut = MakeSut(runner: runner.Object);
-        DiscDrive drive = new(Path: "dvd:/dev/sr0", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("dvd:/dev/sr0", "MOVIE", true, OpticalDiscType.Dvd);
 
-        await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        await sut.ProbeAsync(drive, CancellationToken.None);
 
         capturedInputUrl
             .Should()
-            .Be(expected: "dvd:/dev/sr0", because: "an already-prefixed path must be used verbatim");
+            .Be("dvd:/dev/sr0", "an already-prefixed path must be used verbatim");
     }
 
     [Fact]
@@ -289,7 +289,7 @@ public class DvdDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .SetupSequence(expression: r =>
+            .SetupSequence(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -297,15 +297,15 @@ public class DvdDiscSourceEndToEndTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "{ not valid json", StdErr: "", Duration: TimeSpan.Zero))
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "Title 2 not found", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, "{ not valid json", "", TimeSpan.Zero))
+            .ReturnsAsync(new ProcessResult(1, "", "Title 2 not found", TimeSpan.Zero));
 
-        DvdDiscSource sut = MakeSut(runner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
 
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
-        info.Titles.Should().BeEmpty(because: "the only title probed had malformed JSON and was skipped");
+        info.Titles.Should().BeEmpty("the only title probed had malformed JSON and was skipped");
     }
 
     [Fact]
@@ -313,7 +313,7 @@ public class DvdDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .SetupSequence(expression: r =>
+            .SetupSequence(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -321,13 +321,13 @@ public class DvdDiscSourceEndToEndTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero))
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "Title 2 not found", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero))
+            .ReturnsAsync(new ProcessResult(1, "", "Title 2 not found", TimeSpan.Zero));
 
-        DvdDiscSource sut = MakeSut(runner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
 
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
         info.Titles.Should().BeEmpty();
     }
@@ -337,7 +337,7 @@ public class DvdDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .SetupSequence(expression: r =>
+            .SetupSequence(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -345,13 +345,13 @@ public class DvdDiscSourceEndToEndTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "{}", StdErr: "", Duration: TimeSpan.Zero))
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "Title 2 not found", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, "{}", "", TimeSpan.Zero))
+            .ReturnsAsync(new ProcessResult(1, "", "Title 2 not found", TimeSpan.Zero));
 
-        DvdDiscSource sut = MakeSut(runner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
 
-        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
         info.Titles.Should().BeEmpty();
     }
@@ -367,7 +367,7 @@ public class DvdDiscSourceEndToEndTests
             """;
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -375,15 +375,15 @@ public class DvdDiscSourceEndToEndTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: json, StdErr: "", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, json, "", TimeSpan.Zero));
 
-        DvdDiscSource sut = MakeSut(runner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
 
-        DiscTitle title = await sut.ProbeTitleAsync(drive: drive, titleIndex: 5, ct: CancellationToken.None);
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 5, CancellationToken.None);
 
-        title.Index.Should().Be(expected: 5);
-        title.AudioStreams.Should().HaveCount(expected: 1);
+        title.Index.Should().Be(5);
+        title.AudioStreams.Should().HaveCount(1);
     }
 
     [Fact]
@@ -391,7 +391,7 @@ public class DvdDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -399,15 +399,15 @@ public class DvdDiscSourceEndToEndTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "read error", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(1, "", "read error", TimeSpan.Zero));
 
-        DvdDiscSource sut = MakeSut(runner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
 
-        DiscTitle title = await sut.ProbeTitleAsync(drive: drive, titleIndex: 7, ct: CancellationToken.None);
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 7, CancellationToken.None);
 
-        title.Index.Should().Be(expected: 7);
-        title.Duration.Should().Be(expected: TimeSpan.Zero);
+        title.Index.Should().Be(7);
+        title.Duration.Should().Be(TimeSpan.Zero);
     }
 
     [Fact]
@@ -415,7 +415,7 @@ public class DvdDiscSourceEndToEndTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -423,14 +423,14 @@ public class DvdDiscSourceEndToEndTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "{ not valid json", StdErr: "", Duration: TimeSpan.Zero));
+            .ReturnsAsync(new ProcessResult(0, "{ not valid json", "", TimeSpan.Zero));
 
-        DvdDiscSource sut = MakeSut(runner: runner.Object);
-        DiscDrive drive = new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.Dvd);
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
 
-        DiscTitle title = await sut.ProbeTitleAsync(drive: drive, titleIndex: 9, ct: CancellationToken.None);
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 9, CancellationToken.None);
 
-        title.Index.Should().Be(expected: 9);
-        title.Duration.Should().Be(expected: TimeSpan.Zero);
+        title.Index.Should().Be(9);
+        title.Duration.Should().Be(TimeSpan.Zero);
     }
 }

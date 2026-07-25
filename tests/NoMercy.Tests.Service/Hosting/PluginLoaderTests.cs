@@ -9,13 +9,10 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Hooks;
 using NoMercy.Service.Hosting;
-using Xunit;
 
 namespace NoMercy.Tests.Service.Hosting;
 
@@ -27,50 +24,50 @@ namespace NoMercy.Tests.Service.Hosting;
 /// plugin that only contributes a cron job without needing to "load" anything
 /// still gets wired up.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class PluginLoaderTests
 {
     private static PluginLoadResult FakeResult(string name, string version) =>
-        new(PluginId: Guid.NewGuid(), Name: name, Version: version, Instance: Mock.Of<IPlugin>());
+        new(Guid.NewGuid(), name, version, Mock.Of<IPlugin>());
 
     [Fact]
     public async Task LoadPlugins_ReturnsWhatPluginManagerLoads()
     {
-        List<PluginLoadResult> expected = [FakeResult(name: "Echo", version: "1.0.0")];
+        List<PluginLoadResult> expected = [FakeResult("Echo", "1.0.0")];
         Mock<IPluginManager> pluginManager = new();
         pluginManager
-            .Setup(expression: m => m.LoadAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: expected);
+            .Setup(m => m.LoadAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
         Mock<IPluginCronRegistrar> cronRegistrar = new();
 
         PluginLoader loader = new(
-            logger: NullLogger<PluginLoader>.Instance,
-            pluginManager: pluginManager.Object,
-            cronRegistrar: cronRegistrar.Object
+            NullLogger<PluginLoader>.Instance,
+            pluginManager.Object,
+            cronRegistrar.Object
         );
 
-        IReadOnlyList<PluginLoadResult> result = await loader.LoadPlugins(ct: CancellationToken.None);
+        IReadOnlyList<PluginLoadResult> result = await loader.LoadPlugins(CancellationToken.None);
 
-        result.Should().BeEquivalentTo(expectation: expected);
+        result.Should().BeEquivalentTo(expected);
     }
 
     [Fact]
     public async Task LoadPlugins_NoPluginsFound_ReturnsEmptyListWithoutThrowing()
     {
         Mock<IPluginManager> pluginManager = new();
-        pluginManager.Setup(expression: m => m.LoadAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(value: []);
+        pluginManager.Setup(m => m.LoadAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         Mock<IPluginCronRegistrar> cronRegistrar = new();
 
         PluginLoader loader = new(
-            logger: NullLogger<PluginLoader>.Instance,
-            pluginManager: pluginManager.Object,
-            cronRegistrar: cronRegistrar.Object
+            NullLogger<PluginLoader>.Instance,
+            pluginManager.Object,
+            cronRegistrar.Object
         );
 
-        IReadOnlyList<PluginLoadResult> result = await loader.LoadPlugins(ct: CancellationToken.None);
+        IReadOnlyList<PluginLoadResult> result = await loader.LoadPlugins(CancellationToken.None);
 
         result.Should().BeEmpty();
-        cronRegistrar.Verify(expression: r => r.RegisterAll(), times: Times.Once);
+        cronRegistrar.Verify(r => r.RegisterAll(), Times.Once);
     }
 
     [Fact]
@@ -78,35 +75,35 @@ public class PluginLoaderTests
     {
         Mock<IPluginManager> pluginManager = new();
         pluginManager
-            .Setup(expression: m => m.LoadAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: [FakeResult(name: "Sample", version: "2.0.0")]);
+            .Setup(m => m.LoadAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([FakeResult("Sample", "2.0.0")]);
         Mock<IPluginCronRegistrar> cronRegistrar = new();
 
         PluginLoader loader = new(
-            logger: NullLogger<PluginLoader>.Instance,
-            pluginManager: pluginManager.Object,
-            cronRegistrar: cronRegistrar.Object
+            NullLogger<PluginLoader>.Instance,
+            pluginManager.Object,
+            cronRegistrar.Object
         );
-        await loader.LoadPlugins(ct: CancellationToken.None);
+        await loader.LoadPlugins(CancellationToken.None);
 
-        cronRegistrar.Verify(expression: r => r.RegisterAll(), times: Times.Once);
+        cronRegistrar.Verify(r => r.RegisterAll(), Times.Once);
     }
 
     [Fact]
     public async Task LoadPlugins_PassesCancellationTokenThrough()
     {
         Mock<IPluginManager> pluginManager = new();
-        pluginManager.Setup(expression: m => m.LoadAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(value: []);
+        pluginManager.Setup(m => m.LoadAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         Mock<IPluginCronRegistrar> cronRegistrar = new();
         PluginLoader loader = new(
-            logger: NullLogger<PluginLoader>.Instance,
-            pluginManager: pluginManager.Object,
-            cronRegistrar: cronRegistrar.Object
+            NullLogger<PluginLoader>.Instance,
+            pluginManager.Object,
+            cronRegistrar.Object
         );
         using CancellationTokenSource cts = new();
 
-        await loader.LoadPlugins(ct: cts.Token);
+        await loader.LoadPlugins(cts.Token);
 
-        pluginManager.Verify(expression: m => m.LoadAllAsync(cts.Token), times: Times.Once);
+        pluginManager.Verify(m => m.LoadAllAsync(cts.Token), Times.Once);
     }
 }

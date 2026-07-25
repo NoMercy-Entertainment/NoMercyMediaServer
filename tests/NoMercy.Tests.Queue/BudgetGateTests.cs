@@ -34,7 +34,7 @@ public class BudgetGateTests : IDisposable
     public BudgetGateTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(context: _adapter);
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
@@ -48,62 +48,62 @@ public class BudgetGateTests : IDisposable
     [Fact]
     public void BudgetGate_WhenBudgetSaturated_TryAcquireCalledAndBudgetLogs()
     {
-        Mock<IResourceBudget> budget = new(behavior: MockBehavior.Loose);
+        Mock<IResourceBudget> budget = new(MockBehavior.Loose);
 
         // TryAcquire returns null → budget is saturated
         budget
-            .Setup(expression: b =>
+            .Setup(b =>
                 b.TryAcquire(
                     It.Is<ResourceRequirement>(r => r.GpuDeviceKey == "test-gpu"),
                     TimeSpan.Zero
                 )
             )
-            .Returns(value: (ResourceLease?)null);
+            .Returns((ResourceLease?)null);
 
         ResourceRequirementJob resourceJob = new()
         {
             QueueName = "encoder-gpu",
-            ResourceRequirement = new(GpuDeviceKey: "test-gpu", GpuSlots: 1, CpuThreads: 2),
+            ResourceRequirement = new("test-gpu", 1, 2),
         };
 
         QueueJob queueJob = new()
         {
             Queue = "encoder-gpu",
-            Payload = SerializationHelper.Serialize(obj: resourceJob),
+            Payload = SerializationHelper.Serialize(resourceJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
 
-        _context.QueueJobs.Add(entity: queueJob);
+        _context.QueueJobs.Add(queueJob);
         _context.SaveChanges();
 
         // Reserve the job manually (simulating what the worker does before gate check)
-        QueueJobModel? reserved = _jobQueue.ReserveJob(name: "encoder-gpu", currentJobId: null);
-        Assert.NotNull(@object: reserved);
+        QueueJobModel? reserved = _jobQueue.ReserveJob("encoder-gpu", null);
+        Assert.NotNull(reserved);
 
         // Simulate the gate check: try to acquire with the requirement from the job payload
-        ResourceRequirement? requirement = new(GpuDeviceKey: "test-gpu", GpuSlots: 1, CpuThreads: 2);
-        ResourceLease? lease = budget.Object.TryAcquire(requirement: requirement, timeout: TimeSpan.Zero);
+        ResourceRequirement? requirement = new("test-gpu", 1, 2);
+        ResourceLease? lease = budget.Object.TryAcquire(requirement, TimeSpan.Zero);
 
-        Assert.Null(@object: lease);
+        Assert.Null(lease);
 
         // When saturated, the worker calls ReleaseReservation — verify it re-queues the job
-        _jobQueue.ReleaseReservation(job: reserved, availableAfter: TimeSpan.FromSeconds(seconds: 5));
+        _jobQueue.ReleaseReservation(reserved, TimeSpan.FromSeconds(5));
 
         // Job should still exist (reservation released, not deleted)
         int jobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 1, actual: jobCount);
+        Assert.Equal(1, jobCount);
 
         // Verify TryAcquire was called with correct requirement
         budget.Verify(
-            expression: b =>
+            b =>
                 b.TryAcquire(
                     It.Is<ResourceRequirement>(r =>
                         r.GpuDeviceKey == "test-gpu" && r.GpuSlots == 1
                     ),
                     TimeSpan.Zero
                 ),
-            times: Times.Once
+            Times.Once
         );
     }
 
@@ -112,35 +112,35 @@ public class BudgetGateTests : IDisposable
     [Fact]
     public async Task BudgetGate_WhenBudgetAvailable_JobExecutedAndLeaseReleased()
     {
-        ResourceLease grantedLease = new(LeaseId: "lease-1", GpuDeviceKey: "test-gpu", GpuSlots: 1, CpuThreads: 2);
+        ResourceLease grantedLease = new("lease-1", "test-gpu", 1, 2);
 
-        Mock<IResourceBudget> budget = new(behavior: MockBehavior.Strict);
+        Mock<IResourceBudget> budget = new(MockBehavior.Strict);
 
         // TryAcquire returns a lease → budget available
         budget
-            .Setup(expression: b => b.TryAcquire(It.IsAny<ResourceRequirement>(), TimeSpan.Zero))
-            .Returns(value: grantedLease);
-        budget.Setup(expression: b => b.Release(grantedLease));
+            .Setup(b => b.TryAcquire(It.IsAny<ResourceRequirement>(), TimeSpan.Zero))
+            .Returns(grantedLease);
+        budget.Setup(b => b.Release(grantedLease));
 
         ResourceRequirementJob resourceJob = new()
         {
             QueueName = "encoder-gpu",
-            ResourceRequirement = new(GpuDeviceKey: "test-gpu", GpuSlots: 1, CpuThreads: 2),
+            ResourceRequirement = new("test-gpu", 1, 2),
         };
 
         QueueJob queueJob = new()
         {
             Queue = "encoder-gpu",
-            Payload = SerializationHelper.Serialize(obj: resourceJob),
+            Payload = SerializationHelper.Serialize(resourceJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
 
-        _context.QueueJobs.Add(entity: queueJob);
+        _context.QueueJobs.Add(queueJob);
         await _context.SaveChangesAsync();
 
         QueueWorker worker = new(
-            queue: _jobQueue,
+            _jobQueue,
             name: "encoder-gpu",
             resourceBudget: budget.Object,
             resourceAwareQueues: new HashSet<string> { "encoder-gpu", "encoder-cpu" }
@@ -148,11 +148,11 @@ public class BudgetGateTests : IDisposable
 
         // Cancel shortly after the job executes — the worker will process one job
         // then wait on WorkAvailable with the stop token, exiting cleanly.
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
 
         try
         {
-            await worker.StartAsync(stopToken: cts.Token);
+            await worker.StartAsync(cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -161,10 +161,10 @@ public class BudgetGateTests : IDisposable
 
         // Queue should be empty — job was deleted after success
         int jobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 0, actual: jobCount);
+        Assert.Equal(0, jobCount);
 
         // Budget.Release must have been called exactly once
-        budget.Verify(expression: b => b.Release(grantedLease), times: Times.Once);
+        budget.Verify(b => b.Release(grantedLease), Times.Once);
     }
 
     // ─── Queue routing: GPU task routes to encoder-gpu ───────────────────────
@@ -175,10 +175,10 @@ public class BudgetGateTests : IDisposable
         ResourceRequirementJob gpuJob = new()
         {
             QueueName = "encoder-gpu",
-            ResourceRequirement = new(GpuDeviceKey: "NVIDIA GeForce RTX 4090", GpuSlots: 1, CpuThreads: 2),
+            ResourceRequirement = new("NVIDIA GeForce RTX 4090", 1, 2),
         };
 
-        Assert.Equal(expected: "encoder-gpu", actual: gpuJob.QueueName);
+        Assert.Equal("encoder-gpu", gpuJob.QueueName);
     }
 
     // ─── Queue routing: CPU task routes to encoder-cpu ───────────────────────
@@ -189,10 +189,10 @@ public class BudgetGateTests : IDisposable
         ResourceRequirementJob cpuJob = new()
         {
             QueueName = "encoder-cpu",
-            ResourceRequirement = new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 4),
+            ResourceRequirement = new(null, 0, 4),
         };
 
-        Assert.Equal(expected: "encoder-cpu", actual: cpuJob.QueueName);
+        Assert.Equal("encoder-cpu", cpuJob.QueueName);
     }
 
     // ─── Worker passes through non-resource-aware queues without budget check ─
@@ -200,7 +200,7 @@ public class BudgetGateTests : IDisposable
     [Fact]
     public async Task NonResourceAwareQueue_BudgetNotConsulted_JobExecutes()
     {
-        Mock<IResourceBudget> budget = new(behavior: MockBehavior.Strict);
+        Mock<IResourceBudget> budget = new(MockBehavior.Strict);
 
         // No budget methods should be called for a non-resource-aware queue
         // (strict mock will throw if TryAcquire / Release are called unexpectedly)
@@ -210,23 +210,23 @@ public class BudgetGateTests : IDisposable
         QueueJob queueJob = new()
         {
             Queue = "library",
-            Payload = SerializationHelper.Serialize(obj: plainJob),
+            Payload = SerializationHelper.Serialize(plainJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
 
-        _context.QueueJobs.Add(entity: queueJob);
+        _context.QueueJobs.Add(queueJob);
         await _context.SaveChangesAsync();
 
         // Worker on "library" queue — budget is injected but must NOT be consulted.
         // Job is already in the DB; worker picks it up on the first ReserveJob call.
-        QueueWorker worker = new(queue: _jobQueue, name: "library", resourceBudget: budget.Object);
+        QueueWorker worker = new(_jobQueue, name: "library", resourceBudget: budget.Object);
 
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
 
         try
         {
-            await worker.StartAsync(stopToken: cts.Token);
+            await worker.StartAsync(cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -235,7 +235,7 @@ public class BudgetGateTests : IDisposable
 
         // Queue should be empty — job was deleted after successful execution
         int jobCount = _context.QueueJobs.Count();
-        Assert.Equal(expected: 0, actual: jobCount);
+        Assert.Equal(0, jobCount);
 
         // Strict mock verifies no unexpected budget calls
         budget.VerifyNoOtherCalls();

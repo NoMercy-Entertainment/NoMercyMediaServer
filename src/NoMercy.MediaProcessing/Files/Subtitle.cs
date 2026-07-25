@@ -15,15 +15,15 @@ namespace NoMercy.MediaProcessing.Files;
 
 public class Subtitle
 {
-    [JsonProperty(propertyName: "index")]
+    [JsonProperty("index")]
     public int Index { get; set; }
 
-    [JsonProperty(propertyName: "language")]
+    [JsonProperty("language")]
     public string Language { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "ext")]
+    [JsonProperty("ext")]
     public string Ext { get; set; } = string.Empty;
 }

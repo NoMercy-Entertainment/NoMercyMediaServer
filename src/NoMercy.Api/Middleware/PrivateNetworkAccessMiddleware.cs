@@ -31,15 +31,15 @@ public class PrivateNetworkAccessMiddleware(RequestDelegate next)
     public async Task InvokeAsync(HttpContext context)
     {
         if (
-            HttpMethods.IsOptions(method: context.Request.Method)
+            HttpMethods.IsOptions(context.Request.Method)
             && string.Equals(
-                a: context.Request.Headers[key: "Access-Control-Request-Private-Network"],
-                b: "true",
-                comparisonType: StringComparison.OrdinalIgnoreCase
+                context.Request.Headers["Access-Control-Request-Private-Network"],
+                "true",
+                StringComparison.OrdinalIgnoreCase
             )
         )
-            context.Response.Headers[key: "Access-Control-Allow-Private-Network"] = "true";
+            context.Response.Headers["Access-Control-Allow-Private-Network"] = "true";
 
-        await next(context: context);
+        await next(context);
     }
 }

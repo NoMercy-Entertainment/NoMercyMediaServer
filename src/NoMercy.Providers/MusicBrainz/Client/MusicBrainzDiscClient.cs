@@ -49,11 +49,11 @@ public sealed class MusicBrainzDiscClient : MusicBrainzBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "inc"] = string.Join(separator: "+", value: DefaultIncludes),
-            [key: "fmt"] = "json",
+            ["inc"] = string.Join("+", DefaultIncludes),
+            ["fmt"] = "json",
         };
 
-        return Get<DiscIdLookupResponse>(url: $"discid/{discId}", query: queryParams, priority: priority);
+        return Get<DiscIdLookupResponse>($"discid/{discId}", queryParams, priority);
     }
 
     /// <summary>
@@ -71,11 +71,11 @@ public sealed class MusicBrainzDiscClient : MusicBrainzBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            [key: "toc"] = tocString,
-            [key: "inc"] = string.Join(separator: "+", value: DefaultIncludes),
-            [key: "fmt"] = "json",
+            ["toc"] = tocString,
+            ["inc"] = string.Join("+", DefaultIncludes),
+            ["fmt"] = "json",
         };
 
-        return Get<DiscIdLookupResponse>(url: "discid/-", query: queryParams, priority: priority);
+        return Get<DiscIdLookupResponse>("discid/-", queryParams, priority);
     }
 }

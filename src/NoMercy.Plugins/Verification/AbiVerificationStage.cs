@@ -20,7 +20,7 @@ public class AbiVerificationStage : IPluginVerificationStage
 
     public (PluginStageOutcome Outcome, string? Message) Evaluate(PluginVerificationContext context)
     {
-        if (PluginAbi.IsCompatible(targetAbi: context.Manifest.TargetAbi))
+        if (PluginAbi.IsCompatible(context.Manifest.TargetAbi))
             return (PluginStageOutcome.Pass, null);
 
         return (

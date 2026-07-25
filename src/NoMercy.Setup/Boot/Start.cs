@@ -46,82 +46,82 @@ public class Start
             // CreateAppFolders runs first so the DataProtection keyring directory
             // exists (with restrictive perms on Unix) before TokenStore lazy-bootstraps
             // during the Configuration table read in UserSettings.
-            new(Name: "CreateAppFolders", Action: AppFiles.CreateAppFolders, CanDefer: false, Phase: 1),
+            new("CreateAppFolders", AppFiles.CreateAppFolders, false, 1),
             new(
-                Name: "UserSettings",
-                Action: async () =>
+                "UserSettings",
+                async () =>
                 {
-                    if (UserSettings.TryGetUserSettings(settings: out Dictionary<string, string> settings))
-                        UserSettings.ApplySettings(settings: settings);
+                    if (UserSettings.TryGetUserSettings(out Dictionary<string, string> settings))
+                        UserSettings.ApplySettings(settings);
                 },
-                CanDefer: false,
-                Phase: 1,
-                DependsOn: ["CreateAppFolders"]
+                false,
+                1,
+                ["CreateAppFolders"]
             ),
             // ── PHASE 2: BEST-EFFORT (network, with fallback) ──────────
             new(
-                Name: "NetworkProbe",
-                Action: async () =>
+                "NetworkProbe",
+                async () =>
                 {
                     hasNetwork = await NetworkProbe.CheckConnectivity();
                 },
-                CanDefer: false,
-                Phase: 2,
-                DependsOn: ["CreateAppFolders"]
+                false,
+                2,
+                ["CreateAppFolders"]
             ),
             // Auth is now handled by AuthManager (DI) via BootOrchestrator — not here.
             new(
-                Name: "Binaries",
+                "Binaries",
                 // LOCAL-ONLY: Start.cs is in NoMercy.Setup which cannot reference NoMercy.Providers (circular).
-                Action: () =>
+                () =>
                 {
                     IStorageDriver driver = new LocalStorageDriver();
-                    IStorage storage = new LocalStorage(driver: driver, guard: new(allowedRoots: [], driver: driver));
-                    return new Binaries(driver: driver, storage: storage).DownloadAll();
+                    IStorage storage = new LocalStorage(driver, new([], driver));
+                    return new Binaries(driver, storage).DownloadAll();
                 },
                 // CanDefer:true — a transient provisioning failure (GitHub rate limit,
                 // momentarily-empty release feed, network blip) must not permanently wedge
                 // BootStage.Binaries with no recovery path. DegradedModeRecovery retries
                 // provisioning with backoff and marks the stage once ffmpeg is on disk.
-                CanDefer: true,
-                Phase: 2,
-                DependsOn: ["NetworkProbe"]
+                true,
+                2,
+                ["NetworkProbe"]
             ),
             // ── PHASE 3: NETWORK-DEPENDENT (run if possible, degrade if not) ──
             new(
-                Name: "Networking",
-                Action: async () =>
+                "Networking",
+                async () =>
                 {
                     if (NetworkDiscovery is not null)
                         await NetworkDiscovery.DiscoverExternalIpAsync();
                 },
-                CanDefer: true,
-                Phase: 3,
-                DependsOn: ["NetworkProbe"]
+                true,
+                3,
+                ["NetworkProbe"]
             ),
             new(
-                Name: "ChromeCast",
-                Action: async () =>
+                "ChromeCast",
+                async () =>
                 {
                     if (ChromeCast is not null)
                         await ChromeCast.Init();
                 },
-                CanDefer: true,
-                Phase: 3,
-                DependsOn: ["NetworkProbe"]
+                true,
+                3,
+                ["NetworkProbe"]
             ),
             new(
-                Name: "DesktopIcon",
-                Action: () =>
-                    Task.Run(action: () =>
+                "DesktopIcon",
+                () =>
+                    Task.Run(() =>
                         DesktopIconCreator.CreateDesktopIcon(
-                            appName: AppFiles.ApplicationName,
-                            appPath: AppFiles.ServerExePath,
-                            iconPath: AppFiles.AppIcon
+                            AppFiles.ApplicationName,
+                            AppFiles.ServerExePath,
+                            AppFiles.AppIcon
                         )
                     ),
-                CanDefer: true,
-                Phase: 3
+                true,
+                3
             ),
             // Registration removed — BootOrchestrator handles it in Phase 3.
             // Having it here caused double registration + 5-minute cert retry loops.
@@ -132,8 +132,8 @@ public class Start
     {
         _allTasks = BuildStartupTasks();
 
-        List<StartupTask> phase1Tasks = _allTasks.Where(predicate: t => t.Phase == 1).ToList();
-        StartupTaskRunner runner = new(tasks: phase1Tasks);
+        List<StartupTask> phase1Tasks = _allTasks.Where(t => t.Phase == 1).ToList();
+        StartupTaskRunner runner = new(phase1Tasks);
 
         await runner.RunAll();
 
@@ -145,8 +145,8 @@ public class Start
         string? accessToken = null
     )
     {
-        List<StartupTask> remainingTasks = _allTasks.Where(predicate: t => t.Phase > 1).ToList();
-        StartupTaskRunner runner = new(tasks: remainingTasks, alreadyCompleted: _phase1Completed);
+        List<StartupTask> remainingTasks = _allTasks.Where(t => t.Phase > 1).ToList();
+        StartupTaskRunner runner = new(remainingTasks, _phase1Completed);
 
         await runner.RunAll();
 
@@ -156,51 +156,51 @@ public class Start
         IServerPhaseTracker? tracker = ServerPhaseTracker.Current;
         if (tracker is not null)
         {
-            if (runner.CompletedTasks.Contains(item: "Binaries"))
-                tracker.MarkComplete(stage: BootStage.Binaries);
-            if (runner.CompletedTasks.Contains(item: "Networking"))
-                tracker.MarkComplete(stage: BootStage.Network);
+            if (runner.CompletedTasks.Contains("Binaries"))
+                tracker.MarkComplete(BootStage.Binaries);
+            if (runner.CompletedTasks.Contains("Networking"))
+                tracker.MarkComplete(BootStage.Network);
         }
 
         if (runner.DeferredTasks.Count > 0)
         {
             IsDegradedMode = true;
             Logger.Setup(
-                message: "Some startup tasks were deferred — they will be retried in the background"
+                "Some startup tasks were deferred — they will be retried in the background"
             );
             Logger.Setup(
-                message: $"  Deferred tasks: {string.Join(separator: ", ", values: runner.DeferredTasks.Select(selector: t => t.Name))}"
+                $"  Deferred tasks: {string.Join(", ", runner.DeferredTasks.Select(t => t.Name))}"
             );
 
             DeferredTasks deferred = new()
             {
-                ApiKeysLoaded = !string.IsNullOrEmpty(value: ApiKeyStore.Current.TmdbToken),
+                ApiKeysLoaded = !string.IsNullOrEmpty(ApiKeyStore.Current.TmdbToken),
                 // Auth is handled by AuthManager/BootOrchestrator — check AccessToken directly.
-                Authenticated = !string.IsNullOrEmpty(value: accessToken),
-                NetworkDiscovered = runner.CompletedTasks.Contains(item: "Networking"),
+                Authenticated = !string.IsNullOrEmpty(accessToken),
+                NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
                 SeedsRun = true,
-                Registered = runner.CompletedTasks.Contains(item: "Register"),
-                BinariesReady = runner.CompletedTasks.Contains(item: "Binaries"),
+                Registered = runner.CompletedTasks.Contains("Register"),
+                BinariesReady = runner.CompletedTasks.Contains("Binaries"),
             };
             if (recovery is not null)
-                _ = Task.Run(function: () => recovery.StartRecoveryLoop(tasks: deferred));
+                _ = Task.Run(() => recovery.StartRecoveryLoop(deferred));
         }
 
         // Delay heavy initialization tasks to run in the background after server is ready
-        _ = Task.Run(function: async () =>
+        _ = Task.Run(async () =>
         {
             // Wait a bit for the server to fully start and be responsive
-            await Task.Delay(delay: TimeSpan.FromSeconds(seconds: 3));
+            await Task.Delay(TimeSpan.FromSeconds(3));
 
             // Hardware acceleration detection is handled by HardwareInitializationService
             // (registered via services.AddNoMercyEncoder() as IHostedService)
             Logger.Encoder(
-                message: "Hardware acceleration detection handled by V3 encoder startup service",
-                level: LogEventLevel.Debug
+                "Hardware acceleration detection handled by V3 encoder startup service",
+                LogEventLevel.Debug
             );
 
             // Start queue workers after a short delay
-            await Task.Delay(delay: TimeSpan.FromSeconds(seconds: 2));
+            await Task.Delay(TimeSpan.FromSeconds(2));
             if (QueueRunner.Current is not null)
             {
                 await QueueRunner.Current.Initialize();
@@ -208,8 +208,8 @@ public class Start
             else
             {
                 Logger.Setup(
-                    message: "QueueRunner.Current is null — skipping Initialize from InitRemaining (will be initialized after host restart)",
-                    level: LogEventLevel.Warning
+                    "QueueRunner.Current is null — skipping Initialize from InitRemaining (will be initialized after host restart)",
+                    LogEventLevel.Warning
                 );
             }
 

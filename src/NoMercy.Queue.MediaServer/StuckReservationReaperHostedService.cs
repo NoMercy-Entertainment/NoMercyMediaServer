@@ -64,14 +64,14 @@ namespace NoMercy.Queue.MediaServer;
 public sealed class StuckReservationReaperHostedService : BackgroundService
 {
     /// <summary>How often the reaper scans for stuck reservations.</summary>
-    internal static readonly TimeSpan DefaultInterval = TimeSpan.FromMinutes(minutes: 3);
+    internal static readonly TimeSpan DefaultInterval = TimeSpan.FromMinutes(3);
 
     /// <summary>
     /// How long an allow-listed queue's job may sit reserved before it is
     /// treated as stuck. These queues finish in seconds-to-minutes, so this is
     /// generous headroom, not a tight timeout.
     /// </summary>
-    internal static readonly TimeSpan DefaultCutoff = TimeSpan.FromMinutes(minutes: 20);
+    internal static readonly TimeSpan DefaultCutoff = TimeSpan.FromMinutes(20);
 
     /// <summary>
     /// The only queues the periodic reaper ever reclaims. Deliberately an
@@ -99,7 +99,7 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
         IServiceScopeFactory scopeFactory,
         ILogger<StuckReservationReaperHostedService> logger
     )
-        : this(scopeFactory: scopeFactory, logger: logger, interval: DefaultInterval, cutoff: DefaultCutoff) { }
+        : this(scopeFactory, logger, DefaultInterval, DefaultCutoff) { }
 
     internal StuckReservationReaperHostedService(
         IServiceScopeFactory scopeFactory,
@@ -116,11 +116,11 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using PeriodicTimer timer = new(period: _interval);
+        using PeriodicTimer timer = new(_interval);
 
-        while (await timer.WaitForNextTickAsync(cancellationToken: stoppingToken).ConfigureAwait(continueOnCapturedContext: false))
+        while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
         {
-            await ReapOnceAsync(cancellationToken: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+            await ReapOnceAsync(stoppingToken).ConfigureAwait(false);
         }
     }
 
@@ -135,11 +135,11 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
             using IServiceScope scope = _scopeFactory.CreateScope();
             IQueueContext context = scope.ServiceProvider.GetRequiredService<IQueueContext>();
 
-            DateTime cutoffUtc = DateTime.UtcNow.Subtract(value: _cutoff);
-            IReadOnlyList<QueueJobModel> reserved = context.GetReservedJobsOlderThan(cutoffUtc: cutoffUtc);
+            DateTime cutoffUtc = DateTime.UtcNow.Subtract(_cutoff);
+            IReadOnlyList<QueueJobModel> reserved = context.GetReservedJobsOlderThan(cutoffUtc);
 
             List<QueueJobModel> candidates = reserved
-                .Where(predicate: job => AllowedQueues.Contains(item: job.Queue))
+                .Where(job => AllowedQueues.Contains(job.Queue))
                 .ToList();
 
             if (candidates.Count == 0)
@@ -147,27 +147,27 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
 
             OrphanTriageResult result = await OrphanRecoveryTriage
                 .RunAsync(
-                    context: context,
-                    checkpointLookup: null,
-                    orphans: candidates,
-                    encoderQueues: Array.Empty<string>().ToHashSet(),
+                    context,
+                    null,
+                    candidates,
+                    Array.Empty<string>().ToHashSet(),
                     // Must NOT refund — see the class doc's convergence
                     // rationale. Repeated hangs cross the dead-letter
                     // threshold instead of looping forever.
-                    refundAttemptOnRequeue: false,
-                    deadLetterReasonFactory: BuildDeadLetterReason,
-                    onReclaimed: LogReclaim,
-                    cancellationToken: cancellationToken
+                    false,
+                    BuildDeadLetterReason,
+                    LogReclaim,
+                    cancellationToken
                 )
-                .ConfigureAwait(continueOnCapturedContext: false);
+                .ConfigureAwait(false);
 
             _logger.LogInformation(
-                message: "Stuck-reservation reaper: reclaimed {Total} job(s) reserved longer than {Cutoff}; {Failed} moved to FailedJobs, {Requeued} released for retry", args: [candidates.Count, _cutoff, result.Failed, result.Requeued]
+                "Stuck-reservation reaper: reclaimed {Total} job(s) reserved longer than {Cutoff}; {Failed} moved to FailedJobs, {Requeued} released for retry", [candidates.Count, _cutoff, result.Failed, result.Requeued]
             );
         }
         catch (Exception ex)
         {
-            _logger.LogError(exception: ex, message: "Stuck-reservation reaper pass failed; will retry next interval");
+            _logger.LogError(ex, "Stuck-reservation reaper pass failed; will retry next interval");
         }
     }
 
@@ -179,10 +179,10 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
         TimeSpan reservedFor = reservedAt.HasValue
             ? DateTime.UtcNow - reservedAt.Value
             : TimeSpan.Zero;
-        string jobType = JobPayloadTypeReader.ReadShortTypeName(payload: job.Payload);
+        string jobType = JobPayloadTypeReader.ReadShortTypeName(job.Payload);
 
         _logger.LogWarning(
-            message: "Stuck-reservation reaper: reclaimed job {JobId} ({JobType}) on queue {Queue} — reserved for {ReservedFor:g}, outcome: {Outcome}", args: [job.Id, jobType, job.Queue, reservedFor, outcome]
+            "Stuck-reservation reaper: reclaimed job {JobId} ({JobType}) on queue {Queue} — reserved for {ReservedFor:g}, outcome: {Outcome}", [job.Id, jobType, job.Queue, reservedFor, outcome]
         );
     }
 }

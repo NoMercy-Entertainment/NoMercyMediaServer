@@ -33,14 +33,14 @@ public class StartupTaskRunner
     {
         _tasks = tasks;
         foreach (string name in alreadyCompleted)
-            _completedTasks.Add(item: name);
+            _completedTasks.Add(name);
         ValidateDependencies();
     }
 
     private void ValidateDependencies()
     {
-        HashSet<string> taskNames = _tasks.Select(selector: t => t.Name).ToHashSet();
-        taskNames.UnionWith(other: _completedTasks);
+        HashSet<string> taskNames = _tasks.Select(t => t.Name).ToHashSet();
+        taskNames.UnionWith(_completedTasks);
 
         foreach (StartupTask task in _tasks)
         {
@@ -49,10 +49,10 @@ public class StartupTaskRunner
 
             foreach (string dep in task.DependsOn)
             {
-                if (!taskNames.Contains(item: dep))
+                if (!taskNames.Contains(dep))
                 {
                     throw new InvalidOperationException(
-                        message: $"Startup task '{task.Name}' depends on '{dep}' which does not exist"
+                        $"Startup task '{task.Name}' depends on '{dep}' which does not exist"
                     );
                 }
             }
@@ -64,10 +64,10 @@ public class StartupTaskRunner
 
         foreach (StartupTask task in _tasks)
         {
-            if (HasCycle(taskName: task.Name, visited: visited, inStack: inStack))
+            if (HasCycle(task.Name, visited, inStack))
             {
                 throw new InvalidOperationException(
-                    message: $"Circular dependency detected involving task '{task.Name}'"
+                    $"Circular dependency detected involving task '{task.Name}'"
                 );
             }
         }
@@ -75,33 +75,33 @@ public class StartupTaskRunner
 
     private bool HasCycle(string taskName, HashSet<string> visited, HashSet<string> inStack)
     {
-        if (inStack.Contains(item: taskName))
+        if (inStack.Contains(taskName))
             return true;
-        if (visited.Contains(item: taskName))
+        if (visited.Contains(taskName))
             return false;
 
-        visited.Add(item: taskName);
-        inStack.Add(item: taskName);
+        visited.Add(taskName);
+        inStack.Add(taskName);
 
-        StartupTask? task = _tasks.FirstOrDefault(predicate: t => t.Name == taskName);
+        StartupTask? task = _tasks.FirstOrDefault(t => t.Name == taskName);
         if (task?.DependsOn is not null)
         {
             foreach (string dep in task.DependsOn)
             {
-                if (HasCycle(taskName: dep, visited: visited, inStack: inStack))
+                if (HasCycle(dep, visited, inStack))
                     return true;
             }
         }
 
-        inStack.Remove(item: taskName);
+        inStack.Remove(taskName);
         return false;
     }
 
     public async Task RunAll()
     {
         IEnumerable<IGrouping<int, StartupTask>> phases = _tasks
-            .GroupBy(keySelector: t => t.Phase)
-            .OrderBy(keySelector: g => g.Key);
+            .GroupBy(t => t.Phase)
+            .OrderBy(g => g.Key);
 
         foreach (IGrouping<int, StartupTask> phase in phases)
         {
@@ -109,40 +109,40 @@ public class StartupTaskRunner
 
             foreach (StartupTask task in phaseTasks)
             {
-                if (!AreDependenciesMet(task: task))
+                if (!AreDependenciesMet(task))
                 {
                     if (task.CanDefer)
                     {
                         Logger.Setup(
-                            message: $"Startup task '{task.Name}' deferred — will retry in background"
+                            $"Startup task '{task.Name}' deferred — will retry in background"
                         );
-                        _deferredTasks.Add(item: task);
+                        _deferredTasks.Add(task);
                         continue;
                     }
 
                     throw new InvalidOperationException(
-                        message: $"Required startup task '{task.Name}' cannot run — "
-                                 + $"dependencies not met: {string.Join(separator: ", ", values: GetUnmetDependencies(task: task))}"
+                        $"Required startup task '{task.Name}' cannot run — "
+                                 + $"dependencies not met: {string.Join(", ", GetUnmetDependencies(task))}"
                     );
                 }
 
                 try
                 {
                     await task.Action.Invoke();
-                    _completedTasks.Add(item: task.Name);
+                    _completedTasks.Add(task.Name);
                 }
                 catch (Exception ex) when (task.CanDefer)
                 {
                     Logger.Setup(
-                        message: $"Startup task '{task.Name}' not ready: {ex.Message} — will retry in background"
+                        $"Startup task '{task.Name}' not ready: {ex.Message} — will retry in background"
                     );
-                    _deferredTasks.Add(item: task);
+                    _deferredTasks.Add(task);
                 }
                 catch (Exception ex) when (!task.CanDefer)
                 {
                     Logger.Setup(
-                        message: $"Required startup task '{task.Name}' failed: {ex.Message}",
-                        level: LogEventLevel.Fatal
+                        $"Required startup task '{task.Name}' failed: {ex.Message}",
+                        LogEventLevel.Fatal
                     );
                     throw;
                 }
@@ -154,7 +154,7 @@ public class StartupTaskRunner
     {
         if (task.DependsOn is null)
             return true;
-        return task.DependsOn.All(predicate: dep => _completedTasks.Contains(item: dep));
+        return task.DependsOn.All(dep => _completedTasks.Contains(dep));
     }
 
     // Internal (not private): the null-DependsOn guard below is unreachable via RunAll()
@@ -165,6 +165,6 @@ public class StartupTaskRunner
     {
         if (task.DependsOn is null)
             return [];
-        return task.DependsOn.Where(predicate: dep => !_completedTasks.Contains(item: dep));
+        return task.DependsOn.Where(dep => !_completedTasks.Contains(dep));
     }
 }

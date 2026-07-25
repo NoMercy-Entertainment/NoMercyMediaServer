@@ -75,7 +75,7 @@ public sealed class PgsBurnInFilterBuilder
     /// stream in <c>-map</c>.
     /// </returns>
     public PgsBurnInFilterChain Build(int videoStreamIndex, int subtitleStreamIndex) =>
-        Build(videoStreamIndex: videoStreamIndex, subtitleStreamIndex: subtitleStreamIndex, videoOutputCount: 1, includeThumbnails: false);
+        Build(videoStreamIndex, subtitleStreamIndex, 1, false);
 
     /// <summary>
     /// Builds the PGS overlay chain, splitting the composited output into one
@@ -91,7 +91,7 @@ public sealed class PgsBurnInFilterBuilder
         bool includeThumbnails
     )
     {
-        int consumers = Math.Max(val1: 1, val2: videoOutputCount) + (includeThumbnails ? 1 : 0);
+        int consumers = Math.Max(1, videoOutputCount) + (includeThumbnails ? 1 : 0);
 
         string overlay = $"[0:v:{videoStreamIndex}][0:s:{subtitleStreamIndex}]overlay=format=auto";
 
@@ -100,31 +100,31 @@ public sealed class PgsBurnInFilterBuilder
         if (consumers == 1)
         {
             return new(
-                FilterComplex: $"{overlay}[burned]",
-                MapLabel: "[burned]",
-                VideoLabels: ["[burned]"],
-                ThumbnailLabel: null
+                $"{overlay}[burned]",
+                "[burned]",
+                ["[burned]"],
+                null
             );
         }
 
         List<string> videoLabels = [];
-        for (int i = 0; i < Math.Max(val1: 1, val2: videoOutputCount); i++)
-            videoLabels.Add(item: $"[burned{i}]");
+        for (int i = 0; i < Math.Max(1, videoOutputCount); i++)
+            videoLabels.Add($"[burned{i}]");
 
         string? thumbnailLabel = includeThumbnails ? "[burnedthumbs]" : null;
 
         List<string> splitPads = [.. videoLabels];
         if (thumbnailLabel is not null)
-            splitPads.Add(item: thumbnailLabel);
+            splitPads.Add(thumbnailLabel);
 
-        string splitTargets = string.Concat(values: splitPads);
+        string splitTargets = string.Concat(splitPads);
         string filterComplex = $"{overlay},split={consumers}{splitTargets}";
 
         return new(
-            FilterComplex: filterComplex,
-            MapLabel: videoLabels[index: 0],
-            VideoLabels: videoLabels,
-            ThumbnailLabel: thumbnailLabel
+            filterComplex,
+            videoLabels[0],
+            videoLabels,
+            thumbnailLabel
         );
     }
 }

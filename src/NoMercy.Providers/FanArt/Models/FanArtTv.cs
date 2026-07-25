@@ -15,42 +15,42 @@ namespace NoMercy.Providers.FanArt.Models;
 
 public class FanArtTv
 {
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = "";
 
-    [JsonProperty(propertyName: "thetvdb_id")]
+    [JsonProperty("thetvdb_id")]
     public string TvdbId { get; set; } = "";
 
-    [JsonProperty(propertyName: "tvposter")]
+    [JsonProperty("tvposter")]
     public VideoImage? Poster { get; set; }
 
-    [JsonProperty(propertyName: "clearlogo")]
+    [JsonProperty("clearlogo")]
     public VideoImage? ClearLogo { get; set; }
 
-    [JsonProperty(propertyName: "seasonposter")]
+    [JsonProperty("seasonposter")]
     public VideoImage? SeasonPoster { get; set; }
 
-    [JsonProperty(propertyName: "hdtvlogo")]
+    [JsonProperty("hdtvlogo")]
     public VideoImage? HdLogo { get; set; }
 
-    [JsonProperty(propertyName: "tvthumb")]
+    [JsonProperty("tvthumb")]
     public VideoImage? Thumb { get; set; }
 
-    [JsonProperty(propertyName: "tvbanner")]
+    [JsonProperty("tvbanner")]
     public VideoImage? Banner { get; set; }
 
-    [JsonProperty(propertyName: "clearart")]
+    [JsonProperty("clearart")]
     public VideoImage? ClearArt { get; set; }
 
-    [JsonProperty(propertyName: "hdclearart")]
+    [JsonProperty("hdclearart")]
     public VideoImage? HdClearArt { get; set; }
 
-    [JsonProperty(propertyName: "seasonthumb")]
+    [JsonProperty("seasonthumb")]
     public VideoImage? SeasonThumb { get; set; }
 
-    [JsonProperty(propertyName: "characterart")]
+    [JsonProperty("characterart")]
     public VideoImage? CharacterArt { get; set; }
 
-    [JsonProperty(propertyName: "seasonbanner")]
+    [JsonProperty("seasonbanner")]
     public VideoImage? SeasonBanner { get; set; }
 }

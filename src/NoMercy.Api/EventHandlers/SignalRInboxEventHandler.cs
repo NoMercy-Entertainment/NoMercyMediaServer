@@ -31,16 +31,16 @@ public class SignalRInboxEventHandler : IDisposable
     {
         _logger = logger;
         _clientMessenger = clientMessenger;
-        _subscriptions.Add(item: eventBus.Subscribe<InboxItemDetectedEvent>(handler: OnItemDetected));
-        _subscriptions.Add(item: eventBus.Subscribe<InboxItemUpdatedEvent>(handler: OnItemUpdated));
+        _subscriptions.Add(eventBus.Subscribe<InboxItemDetectedEvent>(OnItemDetected));
+        _subscriptions.Add(eventBus.Subscribe<InboxItemUpdatedEvent>(OnItemUpdated));
     }
 
     internal async Task OnItemDetected(InboxItemDetectedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            name: "InboxItemAdded",
-            endpoint: "dashboardHub",
-            data: new
+            "InboxItemAdded",
+            "dashboardHub",
+            new
             {
                 @event.Id,
                 @event.DetectedType,
@@ -50,19 +50,19 @@ public class SignalRInboxEventHandler : IDisposable
         );
 
         _logger.LogInformation(
-            message: "Inbox item detected: {Id} ({DetectedType}, {Confidence})", args: [@event.Id, @event.DetectedType, @event.Confidence]
+            "Inbox item detected: {Id} ({DetectedType}, {Confidence})", [@event.Id, @event.DetectedType, @event.Confidence]
         );
     }
 
     internal async Task OnItemUpdated(InboxItemUpdatedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            name: "InboxItemUpdated",
-            endpoint: "dashboardHub",
-            data: new { @event.Id, @event.Status }
+            "InboxItemUpdated",
+            "dashboardHub",
+            new { @event.Id, @event.Status }
         );
 
-        _logger.LogInformation(message: "Inbox item updated: {Id} → {Status}", args: [@event.Id, @event.Status]);
+        _logger.LogInformation("Inbox item updated: {Id} → {Status}", [@event.Id, @event.Status]);
     }
 
     public void Dispose()

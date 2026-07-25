@@ -31,29 +31,27 @@ namespace NoMercy.Service.Seeds;
 
 public static class DatabaseSeeder
 {
-    internal static bool ShouldSeedMarvel { get; set; }
-
     /// <summary>
     /// Phase 1: Create database schema (migrations + EnsureCreated).
     /// Does NOT require authentication — safe to call before auth.
     /// </summary>
     public static async Task InitSchema(IStorage storage)
     {
-        Logger.Setup(message: "Initializing database schemas...");
+        Logger.Setup("Initializing database schemas...");
 
         // 1. AppDbContext first — auth tokens live here, needed before content DB
         AppDbContext appDbContext = new();
-        await Migrate(context: appDbContext);
-        await EnsureDatabaseCreated(context: appDbContext);
+        await Migrate(appDbContext);
+        await EnsureDatabaseCreated(appDbContext);
 
         // Migrate Configuration data from media.db to app.db (one-time on update)
-        await MigrateConfigurationData(appContext: appDbContext, storage: storage);
+        await MigrateConfigurationData(appDbContext, storage);
 
         // Resolve the server's stable identity BEFORE anything else reads
         // Info.DeviceId (auth, registration, DNS, certs). Must run after the
         // Configuration migration above so a pre-existing "device_identity_id"
         // or "ssl_certificate" row carried over from media.db is visible to it.
-        Info.SetResolvedDeviceId(id: DeviceIdentityResolver.ResolveAndPersist(db: appDbContext));
+        Info.SetResolvedDeviceId(DeviceIdentityResolver.ResolveAndPersist(appDbContext));
 
         // Decide the default DNS scheme (apex vs srv) exactly once, before
         // BootOrchestrator's Phase 3 registration reads RuntimeServerSettings
@@ -61,22 +59,22 @@ public static class DatabaseSeeder
         // same "prior registration" evidence (auth token / cert rows) the
         // migration above just made visible, and before Phase 2 auth mints a
         // brand-new token that would make a fresh install look pre-registered.
-        DnsSchemeResolver.ResolveAndPersist(db: appDbContext);
+        DnsSchemeResolver.ResolveAndPersist(appDbContext);
 
         await appDbContext.DisposeAsync();
 
         // 2. MediaContext — content and metadata
         MediaContext mediaDbContext = new();
-        await Migrate(context: mediaDbContext);
-        await EnsureDatabaseCreated(context: mediaDbContext);
+        await Migrate(mediaDbContext);
+        await EnsureDatabaseCreated(mediaDbContext);
 
         // 3. QueueContext — background jobs
         QueueContext queueDbContext = new();
-        await Migrate(context: queueDbContext);
-        await EnsureDatabaseCreated(context: queueDbContext);
+        await Migrate(queueDbContext);
+        await EnsureDatabaseCreated(queueDbContext);
 
         CronWorker.SignalDatabaseReady();
-        Logger.Setup(message: "Database schemas initialized");
+        Logger.Setup("Database schemas initialized");
     }
 
     private static async Task MigrateConfigurationData(AppDbContext appContext, IStorage storage)
@@ -87,13 +85,13 @@ public static class DatabaseSeeder
             return;
 
         string mediaDbPath = AppFiles.MediaDatabase;
-        if (!storage.Exists(path: mediaDbPath))
+        if (!storage.Exists(mediaDbPath))
             return;
 
         try
         {
             // Check if media.db has a Configuration table with rows
-            await using SqliteConnection checkConn = new(connectionString: $"Data Source={mediaDbPath}");
+            await using SqliteConnection checkConn = new($"Data Source={mediaDbPath}");
             await checkConn.OpenAsync();
 
             await using SqliteCommand checkCmd = checkConn.CreateCommand();
@@ -118,7 +116,7 @@ public static class DatabaseSeeder
 
             // Copy rows using ATTACH DATABASE on the app.db connection
             string appDbPath = AppFiles.AppDatabase;
-            await using SqliteConnection appConn = new(connectionString: $"Data Source={appDbPath}");
+            await using SqliteConnection appConn = new($"Data Source={appDbPath}");
             await appConn.OpenAsync();
 
             await using SqliteCommand attachCmd = appConn.CreateCommand();
@@ -137,13 +135,13 @@ public static class DatabaseSeeder
 
             await appConn.CloseAsync();
 
-            Logger.Setup(message: $"Migrated {copied} configuration rows from media.db to app.db");
+            Logger.Setup($"Migrated {copied} configuration rows from media.db to app.db");
         }
         catch (Exception ex)
         {
             Logger.Setup(
-                message: $"Configuration migration from media.db failed (non-fatal): {ex.Message}",
-                level: LogEventLevel.Warning
+                $"Configuration migration from media.db failed (non-fatal): {ex.Message}",
+                LogEventLevel.Warning
             );
         }
     }
@@ -160,12 +158,12 @@ public static class DatabaseSeeder
 
         Func<Task>[] offlineSeeds =
         [
-            () => appDbContext.Init(),
-            () => SeedSystemLocalDriver(mediaContext: mediaDbContext),
-            () => V1DriverBridgeSeed.RunAsync(context: mediaDbContext),
-            () => LibrariesSeed.Init(dbContext: mediaDbContext, storage: storage, storageDriver: storageDriver),
-            () => EncodingPresetsSeed.Init(context: mediaDbContext, storage: storage),
-            () => LoadDiskOverlaysAsync(context: mediaDbContext),
+            appDbContext.Init,
+            () => SeedSystemLocalDriver(mediaDbContext),
+            () => V1DriverBridgeSeed.RunAsync(mediaDbContext),
+            () => LibrariesSeed.Init(mediaDbContext, storage, storageDriver),
+            () => EncodingPresetsSeed.Init(mediaDbContext, storage),
+            () => LoadDiskOverlaysAsync(mediaDbContext),
         ];
 
         foreach (Func<Task> seed in offlineSeeds)
@@ -176,7 +174,7 @@ public static class DatabaseSeeder
             }
             catch (Exception ex)
             {
-                Logger.Setup(message: $"Offline seed failed: {ex.Message}", level: LogEventLevel.Warning);
+                Logger.Setup($"Offline seed failed: {ex.Message}", LogEventLevel.Warning);
             }
         }
     }
@@ -189,15 +187,15 @@ public static class DatabaseSeeder
     {
         MediaContext mediaDbContext = new();
 
-        await SeedOfflineData(storage: storage, storageDriver: storageDriver);
+        await SeedOfflineData(storage, storageDriver);
 
         Func<Task>[] seeds =
         [
-            () => LanguagesSeed.Init(dbContext: mediaDbContext),
-            () => CountriesSeed.Init(dbContext: mediaDbContext),
-            () => GenresSeed.Init(dbContext: mediaDbContext),
-            () => CertificationsSeed.Init(dbContext: mediaDbContext),
-            () => MusicGenresSeed.Init(dbContext: mediaDbContext),
+            () => LanguagesSeed.Init(mediaDbContext),
+            () => CountriesSeed.Init(mediaDbContext),
+            () => GenresSeed.Init(mediaDbContext),
+            () => CertificationsSeed.Init(mediaDbContext),
+            () => MusicGenresSeed.Init(mediaDbContext),
         ];
 
         foreach (Func<Task> seed in seeds)
@@ -208,57 +206,57 @@ public static class DatabaseSeeder
             }
             catch (Exception ex)
             {
-                Logger.Setup(message: $"Seed failed: {ex.Message}", level: LogEventLevel.Warning);
+                Logger.Setup($"Seed failed: {ex.Message}", LogEventLevel.Warning);
             }
         }
     }
 
     public static async Task LoadDiskOverlaysAsync(MediaContext context)
     {
-        string overlayDir = Path.Combine(path1: AppFiles.DataPath, path2: "profiles");
-        Directory.CreateDirectory(path: overlayDir);
+        string overlayDir = Path.Combine(AppFiles.DataPath, "profiles");
+        Directory.CreateDirectory(overlayDir);
 
-        DiskOverlayLoader.LoadResult overlay = DiskOverlayLoader.Load(directory: overlayDir);
+        DiskOverlayLoader.LoadResult overlay = DiskOverlayLoader.Load(overlayDir);
 
         foreach (string error in overlay.Errors)
-            Logger.Setup(message: $"Disk overlay load error: {error}", level: LogEventLevel.Warning);
+            Logger.Setup($"Disk overlay load error: {error}", LogEventLevel.Warning);
 
         foreach (DiskOverlayLoader.LoadedPreset entry in overlay.Loaded)
         {
             EncodingProfile p = entry.Profile;
             Database.Models.Media.EncodingPreset? existing =
-                await context.EncodingPresets.FirstOrDefaultAsync(predicate: x => x.Id == p.Id);
+                await context.EncodingPresets.FirstOrDefaultAsync(x => x.Id == p.Id);
 
             if (existing is null)
             {
                 context.EncodingPresets.Add(
-                    entity: new()
+                    new()
                     {
                         Id = p.Id,
                         Name = p.Name,
                         Description = entry.Description,
-                        ProfileJson = Newtonsoft.Json.JsonConvert.SerializeObject(value: p),
+                        ProfileJson = Newtonsoft.Json.JsonConvert.SerializeObject(p),
                         ParentPresetId = entry.ParentPresetId,
                         IsBuiltIn = false,
-                        Source = $"disk:{Path.GetFileName(path: entry.SourcePath)}",
+                        Source = $"disk:{Path.GetFileName(entry.SourcePath)}",
                     }
                 );
             }
             else if (existing.IsBuiltIn)
             {
                 Logger.Setup(
-                    message: $"Disk overlay '{entry.SourcePath}' has Ulid {p.Id} that collides with a built-in preset '{existing.Name}'. "
+                    $"Disk overlay '{entry.SourcePath}' has Ulid {p.Id} that collides with a built-in preset '{existing.Name}'. "
                              + "Built-ins are immutable; disk overlay rejected. Use a different Ulid to coexist.",
-                    level: LogEventLevel.Warning
+                    LogEventLevel.Warning
                 );
             }
             else
             {
                 existing.Name = p.Name;
                 existing.Description = entry.Description ?? existing.Description;
-                existing.ProfileJson = Newtonsoft.Json.JsonConvert.SerializeObject(value: p);
+                existing.ProfileJson = Newtonsoft.Json.JsonConvert.SerializeObject(p);
                 existing.ParentPresetId = entry.ParentPresetId;
-                existing.Source = $"disk:{Path.GetFileName(path: entry.SourcePath)}";
+                existing.Source = $"disk:{Path.GetFileName(entry.SourcePath)}";
             }
         }
 
@@ -273,7 +271,7 @@ public static class DatabaseSeeder
     /// </summary>
     public static async Task SeedSystemLocalDriver(MediaContext mediaContext)
     {
-        bool exists = await mediaContext.Drivers.AnyAsync(predicate: d => d.Id == Driver.SystemLocalDriverId);
+        bool exists = await mediaContext.Drivers.AnyAsync(d => d.Id == Driver.SystemLocalDriverId);
         if (exists)
             return;
 
@@ -287,10 +285,10 @@ public static class DatabaseSeeder
             UpdatedAt = DateTimeOffset.UtcNow,
         };
 
-        mediaContext.Drivers.Add(entity: systemLocalDriver);
+        mediaContext.Drivers.Add(systemLocalDriver);
         await mediaContext.SaveChangesAsync();
 
-        Logger.Setup(message: "Seeded system local driver", level: LogEventLevel.Verbose);
+        Logger.Setup("Seeded system local driver", LogEventLevel.Verbose);
     }
 
     /// <summary>
@@ -310,17 +308,17 @@ public static class DatabaseSeeder
         {
             MediaContext context = new();
             BundleSlugRenamer renamer = new(
-                slugMap: BuiltinPresetRenames.SlugRenames,
-                storageFactory: storageFactory,
-                context: context,
-                logger: logger
+                BuiltinPresetRenames.SlugRenames,
+                storageFactory,
+                context,
+                logger
             );
             await renamer.RunAsync();
-            Logger.Setup(message: "Bundle slug rename pass complete", level: LogEventLevel.Verbose);
+            Logger.Setup("Bundle slug rename pass complete", LogEventLevel.Verbose);
         }
         catch (Exception ex)
         {
-            Logger.Setup(message: $"Bundle slug rename pass failed: {ex.Message}", level: LogEventLevel.Warning);
+            Logger.Setup($"Bundle slug rename pass failed: {ex.Message}", LogEventLevel.Warning);
         }
     }
 
@@ -334,23 +332,10 @@ public static class DatabaseSeeder
 
         Func<Task>[] seeds =
         [
-            () => UsersSeed.Init(dbContext: mediaDbContext, storage: storage, accessToken: accessToken),
-            () => AssignOwnerToUnassignedLibraries(mediaContext: mediaDbContext),
-            () => UserCache.Current.InitializeAsync(context: mediaDbContext),
+            () => mediaDbContext.Init(storage, accessToken),
+            () => AssignOwnerToUnassignedLibraries(mediaDbContext),
+            () => UserCache.Current.InitializeAsync(mediaDbContext),
         ];
-
-        if (ShouldSeedMarvel)
-        {
-            try
-            {
-                await using MediaContext specialSeedContext = new();
-                await SpecialSeed.Init(context: specialSeedContext);
-            }
-            catch (Exception ex)
-            {
-                Logger.Setup(message: $"Special seed failed: {ex.Message}", level: LogEventLevel.Warning);
-            }
-        }
 
         foreach (Func<Task> seed in seeds)
         {
@@ -360,7 +345,7 @@ public static class DatabaseSeeder
             }
             catch (Exception ex)
             {
-                Logger.Setup(message: $"Auth seed failed: {ex.Message}", level: LogEventLevel.Warning);
+                Logger.Setup($"Auth seed failed: {ex.Message}", LogEventLevel.Warning);
             }
         }
     }
@@ -369,17 +354,17 @@ public static class DatabaseSeeder
     {
         try
         {
-            User? owner = await mediaContext.Users.FirstOrDefaultAsync(predicate: u => u.Owner);
+            User? owner = await mediaContext.Users.FirstOrDefaultAsync(u => u.Owner);
             if (owner is null)
                 return;
 
             List<Ulid> assignedLibraryIds = await mediaContext
-                .LibraryUser.Select(selector: lu => lu.LibraryId)
+                .LibraryUser.Select(lu => lu.LibraryId)
                 .Distinct()
                 .ToListAsync();
 
             List<Library> unassigned = await mediaContext
-                .Libraries.Where(predicate: l => !assignedLibraryIds.Contains(l.Id))
+                .Libraries.Where(l => !assignedLibraryIds.Contains(l.Id))
                 .ToListAsync();
 
             if (unassigned.Count == 0)
@@ -387,17 +372,17 @@ public static class DatabaseSeeder
 
             foreach (Library library in unassigned)
             {
-                mediaContext.LibraryUser.Add(entity: new(libraryId: library.Id, userId: owner.Id));
+                mediaContext.LibraryUser.Add(new(library.Id, owner.Id));
             }
 
             await mediaContext.SaveChangesAsync();
-            Logger.Setup(message: $"Assigned {unassigned.Count} libraries to owner {owner.Name}");
+            Logger.Setup($"Assigned {unassigned.Count} libraries to owner {owner.Name}");
         }
         catch (Exception ex)
         {
             Logger.Setup(
-                message: $"Failed to assign libraries to owner: {ex.Message}",
-                level: LogEventLevel.Warning
+                $"Failed to assign libraries to owner: {ex.Message}",
+                LogEventLevel.Warning
             );
         }
     }
@@ -420,7 +405,7 @@ public static class DatabaseSeeder
             using DbCommand command = connection.CreateCommand();
             command.CommandText =
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory'";
-            migrationTableExists = Convert.ToInt64(value: command.ExecuteScalar()) > 0;
+            migrationTableExists = Convert.ToInt64(command.ExecuteScalar()) > 0;
         }
         catch
         {
@@ -437,7 +422,7 @@ public static class DatabaseSeeder
         // GetPendingMigrations() reports them as pending.
         if (migrationTableExists)
         {
-            UnstampMigrationsMissingTables(context: context, contextName: contextName);
+            UnstampMigrationsMissingTables(context, contextName);
         }
 
         // Use pending list as the source of truth — count equality was too
@@ -449,20 +434,20 @@ public static class DatabaseSeeder
         if (pendingMigrations.Count == 0)
         {
             Logger.Setup(
-                message: $"{contextName}: Database is up to date ({availableMigrations.Count} migrations applied).",
-                level: LogEventLevel.Verbose
+                $"{contextName}: Database is up to date ({availableMigrations.Count} migrations applied).",
+                LogEventLevel.Verbose
             );
         }
         else
         {
             Logger.Setup(
-                message: $"{contextName}: Applying {pendingMigrations.Count} migration(s): {string.Join(separator: ", ", values: pendingMigrations)}",
-                level: LogEventLevel.Verbose
+                $"{contextName}: Applying {pendingMigrations.Count} migration(s): {string.Join(", ", pendingMigrations)}",
+                LogEventLevel.Verbose
             );
 
             string? dbPath = context.Database.GetDbConnection().DataSource;
-            if (!string.IsNullOrEmpty(value: dbPath))
-                DatabaseBackupService.BackupBeforeMigration(dbPath: dbPath, pendingMigrationCount: pendingMigrations.Count);
+            if (!string.IsNullOrEmpty(dbPath))
+                DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrations.Count);
 
             // Rows whose parent was deleted before cascade rules existed make EF's
             // SQLite table-rebuild migrations throw "FOREIGN KEY constraint failed"
@@ -473,24 +458,24 @@ public static class DatabaseSeeder
             try
             {
                 IReadOnlyDictionary<string, int> removedOrphans = ForeignKeyOrphanCleaner.Clean(
-                    connection: context.Database.GetDbConnection(),
-                    contextName: contextName
+                    context.Database.GetDbConnection(),
+                    contextName
                 );
                 if (removedOrphans.Count > 0)
                     Logger.Setup(
-                        message: $"{contextName}: Removed {removedOrphans.Values.Sum()} foreign-key-orphaned row(s) before migration: "
+                        $"{contextName}: Removed {removedOrphans.Values.Sum()} foreign-key-orphaned row(s) before migration: "
                                  + string.Join(
-                                     separator: ", ",
-                                     values: removedOrphans.Select(selector: entry => $"{entry.Key}={entry.Value}")
+                                     ", ",
+                                     removedOrphans.Select(entry => $"{entry.Key}={entry.Value}")
                                  ),
-                        level: LogEventLevel.Warning
+                        LogEventLevel.Warning
                     );
             }
             catch (Exception ex)
             {
                 Logger.Setup(
-                    message: $"{contextName}: Orphan pre-flight failed (non-fatal): {ex.Message}",
-                    level: LogEventLevel.Warning
+                    $"{contextName}: Orphan pre-flight failed (non-fatal): {ex.Message}",
+                    LogEventLevel.Warning
                 );
             }
 
@@ -498,44 +483,44 @@ public static class DatabaseSeeder
             {
                 context.Database.Migrate();
                 Logger.Setup(
-                    message: $"{contextName}: Migrations applied successfully.",
-                    level: LogEventLevel.Verbose
+                    $"{contextName}: Migrations applied successfully.",
+                    LogEventLevel.Verbose
                 );
             }
-            catch (Exception ex) when (ex.Message.Contains(value: "already exists"))
+            catch (Exception ex) when (ex.Message.Contains("already exists"))
             {
                 Logger.Setup(
-                    message: $"{contextName}: Tables already exist. Syncing migration history...",
-                    level: LogEventLevel.Verbose
+                    $"{contextName}: Tables already exist. Syncing migration history...",
+                    LogEventLevel.Verbose
                 );
                 SyncMigrationHistory(
-                    context: context,
-                    migrationTableExists: migrationTableExists,
-                    pendingMigrations: pendingMigrations,
-                    availableMigrations: availableMigrations
+                    context,
+                    migrationTableExists,
+                    pendingMigrations,
+                    availableMigrations
                 );
             }
-            catch (Exception ex) when (ex.Message.Contains(value: "FOREIGN KEY constraint failed"))
+            catch (Exception ex) when (ex.Message.Contains("FOREIGN KEY constraint failed"))
             {
                 IReadOnlyList<string> violations = ForeignKeyOrphanCleaner.DescribeViolations(
-                    connection: context.Database.GetDbConnection()
+                    context.Database.GetDbConnection()
                 );
                 Logger.Setup(
-                    message: $"{contextName}: Migration failed on a foreign-key constraint. "
+                    $"{contextName}: Migration failed on a foreign-key constraint. "
                              + (
                                  violations.Count > 0
-                                     ? $"Orphaned rows: {string.Join(separator: "; ", values: violations)}"
+                                     ? $"Orphaned rows: {string.Join("; ", violations)}"
                                      : "No pre-existing orphans remain — the violation is in a migration's own data step."
                              ),
-                    level: LogEventLevel.Fatal
+                    LogEventLevel.Fatal
                 );
                 throw;
             }
         }
 
         // Configure SQLite pragmas after schema exists
-        context.Database.ExecuteSqlRaw(sql: "PRAGMA journal_mode = WAL;");
-        context.Database.ExecuteSqlRaw(sql: "PRAGMA encoding = 'UTF-8'");
+        context.Database.ExecuteSqlRaw("PRAGMA journal_mode = WAL;");
+        context.Database.ExecuteSqlRaw("PRAGMA encoding = 'UTF-8'");
 
         return Task.CompletedTask;
     }
@@ -555,34 +540,34 @@ public static class DatabaseSeeder
     private static void UnstampMigrationsMissingTables(DbContext context, string contextName)
     {
         IReadOnlyDictionary<string, string> migrationTables = GetExpectedTablesPerMigration(
-            context: context
+            context
         );
         if (migrationTables.Count == 0)
             return;
 
-        HashSet<string> existingTables = GetExistingTables(context: context);
+        HashSet<string> existingTables = GetExistingTables(context);
         List<string> appliedMigrations = context.Database.GetAppliedMigrations().ToList();
 
         List<string> toUnstamp = [];
         foreach (string migrationId in appliedMigrations)
         {
-            if (!migrationTables.TryGetValue(key: migrationId, value: out string? expectedTable))
+            if (!migrationTables.TryGetValue(migrationId, out string? expectedTable))
                 continue;
-            if (string.IsNullOrEmpty(value: expectedTable))
+            if (string.IsNullOrEmpty(expectedTable))
                 continue;
-            if (existingTables.Contains(item: expectedTable))
+            if (existingTables.Contains(expectedTable))
                 continue;
 
-            toUnstamp.Add(item: migrationId);
+            toUnstamp.Add(migrationId);
         }
 
         if (toUnstamp.Count == 0)
             return;
 
         Logger.Setup(
-            message: $"{contextName}: Detected {toUnstamp.Count} stamped-but-missing migration(s), "
-                     + $"unstamping so they re-apply: {string.Join(separator: ", ", values: toUnstamp)}",
-            level: LogEventLevel.Warning
+            $"{contextName}: Detected {toUnstamp.Count} stamped-but-missing migration(s), "
+                     + $"unstamping so they re-apply: {string.Join(", ", toUnstamp)}",
+            LogEventLevel.Warning
         );
 
         foreach (string migrationId in toUnstamp)
@@ -590,15 +575,15 @@ public static class DatabaseSeeder
             try
             {
                 context.Database.ExecuteSqlRaw(
-                    sql: "DELETE FROM __EFMigrationsHistory WHERE MigrationId = {0}",
-                    parameters: migrationId
+                    "DELETE FROM __EFMigrationsHistory WHERE MigrationId = {0}",
+                    migrationId
                 );
             }
             catch (Exception ex)
             {
                 Logger.Setup(
-                    message: $"{contextName}: Could not unstamp {migrationId}: {ex.Message}",
-                    level: LogEventLevel.Warning
+                    $"{contextName}: Could not unstamp {migrationId}: {ex.Message}",
+                    LogEventLevel.Warning
                 );
             }
         }
@@ -621,22 +606,22 @@ public static class DatabaseSeeder
             // lookup for migrations whose primary table is the failure surface —
             // this list grows as new tables are added. The fallback is "unknown
             // migration" which we treat as safe (don't unstamp).
-            [key: "20260416210105_AddEncodingHistoryTable"] = "EncodingHistory",
-            [key: "20260417010426_AddEncodingPresetTable"] = "EncodingPresets",
-            [key: "20260417011900_AddContentSegmentTable"] = "ContentSegments",
+            ["20260416210105_AddEncodingHistoryTable"] = "EncodingHistory",
+            ["20260417010426_AddEncodingPresetTable"] = "EncodingPresets",
+            ["20260417011900_AddContentSegmentTable"] = "ContentSegments",
         };
 
         // Context-type filtering: only return entries whose migration name
         // appears in the context's migration set.
         HashSet<string> known = context.Database.GetMigrations().ToHashSet();
         return result
-            .Where(predicate: kv => known.Contains(item: kv.Key))
-            .ToDictionary(keySelector: kv => kv.Key, elementSelector: kv => kv.Value);
+            .Where(kv => known.Contains(kv.Key))
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
     }
 
     private static HashSet<string> GetExistingTables(DbContext context)
     {
-        HashSet<string> tables = new(comparer: StringComparer.OrdinalIgnoreCase);
+        HashSet<string> tables = new(StringComparer.OrdinalIgnoreCase);
 
         try
         {
@@ -648,7 +633,7 @@ public static class DatabaseSeeder
             command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table'";
             using DbDataReader reader = command.ExecuteReader();
             while (reader.Read())
-                tables.Add(item: reader.GetString(ordinal: 0));
+                tables.Add(reader.GetString(0));
         }
         catch
         {
@@ -672,13 +657,13 @@ public static class DatabaseSeeder
         if (!migrationTableExists)
         {
             context.Database.ExecuteSqlRaw(
-                sql: @"
+                @"
                 CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
                     MigrationId TEXT NOT NULL CONSTRAINT PK___EFMigrationsHistory PRIMARY KEY,
                     ProductVersion TEXT NOT NULL
                 );"
             );
-            Logger.Setup(message: "Migration history table created.", level: LogEventLevel.Verbose);
+            Logger.Setup("Migration history table created.", LogEventLevel.Verbose);
         }
 
         // Mark all relevant migrations as applied — use OR IGNORE to skip duplicates.
@@ -690,15 +675,15 @@ public static class DatabaseSeeder
             try
             {
                 context.Database.ExecuteSqlRaw(
-                    sql: "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})", parameters: [migration, version]
+                    "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})", [migration, version]
                 );
-                Logger.Setup(message: $"Added migration {migration} to history", level: LogEventLevel.Verbose);
+                Logger.Setup($"Added migration {migration} to history", LogEventLevel.Verbose);
             }
             catch
             {
                 Logger.Setup(
-                    message: $"Failed to add migration {migration} to history",
-                    level: LogEventLevel.Fatal
+                    $"Failed to add migration {migration} to history",
+                    LogEventLevel.Fatal
                 );
             }
         }
@@ -707,8 +692,8 @@ public static class DatabaseSeeder
     private static async Task EnsureDatabaseCreated(DbContext context)
     {
         Logger.Setup(
-            message: $"Ensuring database is created for {context.GetType().Name}",
-            level: LogEventLevel.Verbose
+            $"Ensuring database is created for {context.GetType().Name}",
+            LogEventLevel.Verbose
         );
         await context.Database.EnsureCreatedAsync();
     }

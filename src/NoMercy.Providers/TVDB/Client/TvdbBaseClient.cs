@@ -28,7 +28,7 @@ public class TvdbBaseClient : ExternalApiClient
     private readonly string _language;
 
     private static TvdbLoginResponse? Token { get; set; }
-    private static readonly SemaphoreSlim TokenLock = new(initialCount: 1, maxCount: 1);
+    private static readonly SemaphoreSlim TokenLock = new(1, 1);
 
     protected TvdbBaseClient()
     {
@@ -45,10 +45,10 @@ public class TvdbBaseClient : ExternalApiClient
     public new int Id { get; private set; }
 
     protected override string HttpClientName => HttpClientNames.Tvdb;
-    protected override Uri BaseUrl => new(uriString: "https://api4.thetvdb.com/v4/");
+    protected override Uri BaseUrl => new("https://api4.thetvdb.com/v4/");
     protected override int ConcurrentRequests => 50;
 
-    protected override void LogRequest(string url) => Logger.Tvdb(message: url, level: LogEventLevel.Verbose);
+    protected override void LogRequest(string url) => Logger.Tvdb(url, LogEventLevel.Verbose);
 
     private static int Max(int available, int wanted, int constraint)
     {
@@ -65,18 +65,18 @@ public class TvdbBaseClient : ExternalApiClient
             return false;
 
         // ExpiresAt is set to ~1 month after login. Refresh 5 min early.
-        return token.Data.ExpiresAt >= DateTime.UtcNow.AddMinutes(value: 5);
+        return token.Data.ExpiresAt >= DateTime.UtcNow.AddMinutes(5);
     }
 
     private async Task EnsureAuthenticatedAsync()
     {
-        if (IsTokenValid(token: Token))
+        if (IsTokenValid(Token))
             return;
 
         await TokenLock.WaitAsync();
         try
         {
-            if (IsTokenValid(token: Token))
+            if (IsTokenValid(Token))
                 return;
 
             Token = await LoginAsync();
@@ -89,29 +89,29 @@ public class TvdbBaseClient : ExternalApiClient
 
     private async Task<TvdbLoginResponse?> LoginAsync()
     {
-        if (string.IsNullOrEmpty(value: ApiKeyStore.Current.TvdbKey))
+        if (string.IsNullOrEmpty(ApiKeyStore.Current.TvdbKey))
         {
-            Logger.Tvdb(message: "TVDB API key not configured", level: LogEventLevel.Warning);
+            Logger.Tvdb("TVDB API key not configured", LogEventLevel.Warning);
             return null;
         }
 
         try
         {
-            HttpClient loginClient = HttpClientProvider.CreateClient(name: HttpClientNames.TvdbLogin);
+            HttpClient loginClient = HttpClientProvider.CreateClient(HttpClientNames.TvdbLogin);
             loginClient.BaseAddress ??= BaseUrl;
 
             using JsonContent content = JsonContent.Create(
-                inputValue: new { apikey = ApiKeyStore.Current.TvdbKey }
+                new { apikey = ApiKeyStore.Current.TvdbKey }
             );
-            using HttpRequestMessage request = new(method: HttpMethod.Post, requestUri: "login");
+            using HttpRequestMessage request = new(HttpMethod.Post, "login");
             request.Content = content;
 
-            using HttpResponseMessage response = await loginClient.SendAsync(request: request);
+            using HttpResponseMessage response = await loginClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
                 Logger.Tvdb(
-                    message: $"TVDB login failed: {(int)response.StatusCode} {response.ReasonPhrase}",
-                    level: LogEventLevel.Error
+                    $"TVDB login failed: {(int)response.StatusCode} {response.ReasonPhrase}",
+                    LogEventLevel.Error
                 );
                 return null;
             }
@@ -119,12 +119,12 @@ public class TvdbBaseClient : ExternalApiClient
             string body = await response.Content.ReadAsStringAsync();
             TvdbLoginResponse? login = body.FromJson<TvdbLoginResponse>();
             if (login is not null)
-                login.Data.ExpiresAt = DateTime.UtcNow.AddMonths(months: 1);
+                login.Data.ExpiresAt = DateTime.UtcNow.AddMonths(1);
             return login;
         }
         catch (Exception ex)
         {
-            Logger.Tvdb(message: $"TVDB login error: {ex.Message}", level: LogEventLevel.Error);
+            Logger.Tvdb($"TVDB login error: {ex.Message}", LogEventLevel.Error);
             return null;
         }
     }
@@ -142,40 +142,40 @@ public class TvdbBaseClient : ExternalApiClient
             return null;
 
         query ??= new();
-        string newUrl = QueryHelpers.AddQueryString(uri: url, queryString: query);
+        string newUrl = QueryHelpers.AddQueryString(url, query);
 
         if (!skipCache)
         {
-            (bool found, T? result) = await CacheController.ReadAsync<T>(url: newUrl);
+            (bool found, T? result) = await CacheController.ReadAsync<T>(newUrl);
             if (found)
                 return result;
         }
 
-        LogRequest(url: BaseUrl + newUrl);
+        LogRequest(BaseUrl + newUrl);
 
         try
         {
             string response = await RequestQueue.Enqueue(
-                task: () =>
+                () =>
                 {
                     if (Disposed)
                         throw new ObjectDisposedException(
-                            objectName: nameof(TvdbBaseClient),
-                            message: "Cannot access a disposed TVDB client."
+                            nameof(TvdbBaseClient),
+                            "Cannot access a disposed TVDB client."
                         );
-                    return SendAuthorizedAsync(url: newUrl);
+                    return SendAuthorizedAsync(newUrl);
                 },
-                url: newUrl,
-                priority: priority
+                newUrl,
+                priority
             );
 
             if (!skipCache)
-                await CacheController.Write(url: newUrl, data: response);
+                await CacheController.Write(newUrl, response);
             return response.FromJson<T>();
         }
         catch (ObjectDisposedException)
         {
-            Logger.Tvdb(message: $"TVDB client disposed during {newUrl}", level: LogEventLevel.Debug);
+            Logger.Tvdb($"TVDB client disposed during {newUrl}", LogEventLevel.Debug);
             return null;
         }
         catch (HttpRequestException ex)
@@ -185,20 +185,20 @@ public class TvdbBaseClient : ExternalApiClient
                         or HttpStatusCode.UnprocessableEntity
             )
         {
-            Logger.Tvdb(message: $"HTTP {ex.StatusCode} for {newUrl}", level: LogEventLevel.Debug);
+            Logger.Tvdb($"HTTP {ex.StatusCode} for {newUrl}", LogEventLevel.Debug);
             return null;
         }
     }
 
     private async Task<string> SendAuthorizedAsync(string url)
     {
-        using HttpRequestMessage request = new(method: HttpMethod.Get, requestUri: url);
+        using HttpRequestMessage request = new(HttpMethod.Get, url);
         if (Token is not null)
-            request.Headers.Authorization = new(scheme: "Bearer", parameter: Token.Data.Token);
-        if (!string.IsNullOrEmpty(value: _language))
-            request.Headers.Add(name: "Accept-Language", value: _language);
+            request.Headers.Authorization = new("Bearer", Token.Data.Token);
+        if (!string.IsNullOrEmpty(_language))
+            request.Headers.Add("Accept-Language", _language);
 
-        using HttpResponseMessage response = await Client.SendAsync(request: request);
+        using HttpResponseMessage response = await Client.SendAsync(request);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             // Token rotated/expired mid-flight — clear and let the next call re-login.
@@ -217,22 +217,22 @@ public class TvdbBaseClient : ExternalApiClient
         where T : class
     {
         List<T> list = [];
-        Dictionary<string, string?> first = query is null ? new() : new(dictionary: query);
-        TvdbPaginatedResponse<T>? page = await Get<TvdbPaginatedResponse<T>>(url: url, query: first);
+        Dictionary<string, string?> first = query is null ? new() : new(query);
+        TvdbPaginatedResponse<T>? page = await Get<TvdbPaginatedResponse<T>>(url, first);
         if (page is null)
             return list;
 
-        list.AddRange(collection: page.Data ?? []);
+        list.AddRange(page.Data ?? []);
         int pages = 1;
-        while (!string.IsNullOrEmpty(value: page?.Links?.Next) && pages < Max(available: int.MaxValue, wanted: limit, constraint: 500))
+        while (!string.IsNullOrEmpty(page?.Links?.Next) && pages < Max(int.MaxValue, limit, 500))
         {
-            Dictionary<string, string?> next = query is null ? new() : new(dictionary: query);
-            next[key: "page"] = (++pages).ToString();
-            page = await Get<TvdbPaginatedResponse<T>>(url: url, query: next);
+            Dictionary<string, string?> next = query is null ? new() : new(query);
+            next["page"] = (++pages).ToString();
+            page = await Get<TvdbPaginatedResponse<T>>(url, next);
             if (page is null)
                 break;
 
-            list.AddRange(collection: page.Data ?? []);
+            list.AddRange(page.Data ?? []);
         }
 
         return list;

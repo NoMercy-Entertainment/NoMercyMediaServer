@@ -16,6 +16,6 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonTaggedImages : TmdbPaginatedResponse<TmdbTaggedImage>
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 }

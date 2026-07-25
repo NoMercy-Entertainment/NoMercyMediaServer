@@ -34,7 +34,7 @@ public class ProfileValidatorCultureTests
 {
     private static EncodingProfile ProfileWithAutoLadder(AutoLadderConfig config) =>
         new(
-            Id: Ulid.NewUlid(),
+            Ulid.NewUlid(),
             Name: "culture-test",
             Container: Container.HlsFmp4,
             Video: null,
@@ -44,18 +44,18 @@ public class ProfileValidatorCultureTests
         );
 
     [Theory]
-    [InlineData(data: "de-DE")]
-    [InlineData(data: "nl-NL")]
-    [InlineData(data: "fr-FR")]
+    [InlineData("de-DE")]
+    [InlineData("nl-NL")]
+    [InlineData("fr-FR")]
     public void SourcePercentageError_StaysPeriodDecimalUnderCommaCulture(string culture)
     {
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(name: culture);
+            Thread.CurrentThread.CurrentCulture = new(culture);
 
             EncodingProfile profile = ProfileWithAutoLadder(
-                config: new()
+                new()
                 {
                     Tiers = LadderTiers.AppleHlsRecommended,
                     BitrateStrategy = BitrateStrategy.PercentOfSource,
@@ -63,10 +63,10 @@ public class ProfileValidatorCultureTests
                 }
             );
 
-            ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
+            ProfileValidationResult result = ProfileValidator.Validate(profile);
 
-            result.Errors.Should().Contain(predicate: e => e.Contains("250.5"));
-            result.Errors.Should().NotContain(predicate: e => e.Contains("250,5"));
+            result.Errors.Should().Contain(e => e.Contains("250.5"));
+            result.Errors.Should().NotContain(e => e.Contains("250,5"));
         }
         finally
         {
@@ -75,24 +75,24 @@ public class ProfileValidatorCultureTests
     }
 
     [Theory]
-    [InlineData(data: "de-DE")]
-    [InlineData(data: "nl-NL")]
-    [InlineData(data: "fr-FR")]
+    [InlineData("de-DE")]
+    [InlineData("nl-NL")]
+    [InlineData("fr-FR")]
     public void LowTierFramerateMultiplierError_StaysPeriodDecimalUnderCommaCulture(string culture)
     {
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(name: culture);
+            Thread.CurrentThread.CurrentCulture = new(culture);
 
             EncodingProfile profile = ProfileWithAutoLadder(
-                config: new() { Tiers = LadderTiers.AppleHlsRecommended, LowTierFramerateMultiplier = 1.5 }
+                new() { Tiers = LadderTiers.AppleHlsRecommended, LowTierFramerateMultiplier = 1.5 }
             );
 
-            ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
+            ProfileValidationResult result = ProfileValidator.Validate(profile);
 
-            result.Errors.Should().Contain(predicate: e => e.Contains("1.5"));
-            result.Errors.Should().NotContain(predicate: e => e.Contains("1,5"));
+            result.Errors.Should().Contain(e => e.Contains("1.5"));
+            result.Errors.Should().NotContain(e => e.Contains("1,5"));
         }
         finally
         {
@@ -101,26 +101,26 @@ public class ProfileValidatorCultureTests
     }
 
     [Theory]
-    [InlineData(data: "de-DE")]
-    [InlineData(data: "nl-NL")]
-    [InlineData(data: "fr-FR")]
+    [InlineData("de-DE")]
+    [InlineData("nl-NL")]
+    [InlineData("fr-FR")]
     public void LevelCapExceededError_LumaSamplesUseInvariantGrouping(string culture)
     {
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(name: culture);
+            Thread.CurrentThread.CurrentCulture = new(culture);
 
             // 1920 x 1080 x 240 = 497,664,000 luma samples/sec — H.264 Level 4.2
             // caps at 133,693,440, far below.
-            MediaInfo source = Source(width: 1920, height: 1080, fps: 240.0);
-            EncodingProfile profile = TranscodeProfile(codec: VideoCodecType.H264, level: "4.2");
+            MediaInfo source = Source(1920, 1080, 240.0);
+            EncodingProfile profile = TranscodeProfile(VideoCodecType.H264, "4.2");
 
-            ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
+            ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
 
             result.IsValid.Should().BeFalse();
-            result.Errors.Should().Contain(predicate: e => e.Contains("497,664,000"));
-            result.Errors.Should().NotContain(predicate: e => e.Contains("497.664.000"));
+            result.Errors.Should().Contain(e => e.Contains("497,664,000"));
+            result.Errors.Should().NotContain(e => e.Contains("497.664.000"));
         }
         finally
         {
@@ -130,61 +130,60 @@ public class ProfileValidatorCultureTests
 
     private static MediaInfo Source(int width, int height, double fps) =>
         new(
-            FilePath: "/media/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 2),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 7_200_000_000,
-            VideoStreams:
+            "/media/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(2),
+            8000,
+            7_200_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: width,
-                    Height: height,
-                    FrameRate: fps,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: null,
-                    ColorTransfer: null,
-                    ColorSpace: null,
-                    IsDefault: true,
-                    BitRateKbps: 8000,
-                    AverageFrameRate: fps
+                    0,
+                    "h264",
+                    width,
+                    height,
+                    fps,
+                    8,
+                    "yuv420p",
+                    null,
+                    null,
+                    null,
+                    true,
+                    8000,
+                    fps
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
     private static EncodingProfile TranscodeProfile(VideoCodecType codec, string level) =>
         new(
-            Id: Ulid.NewUlid(),
-            Name: "culture-test",
-            Container: Container.Mkv,
-            Video: new(
-                Policy: StreamPolicy.Transcode,
-                Codec: codec,
-                Width: 1920,
-                Height: 1080,
-                RateControl: RateControlMode.Crf,
-                Crf: 23,
-                BitrateKbps: 0,
-                MaxBitrateKbps: null,
-                BufferSizeKbps: null,
-                Preset: "medium",
-                CodecProfile: CodecProfile.High,
-                Level: level,
-                Tune: null,
-                BitDepth: 8,
-                PixelFormat: null,
-                KeyframeIntervalSeconds: 2,
-                ConvertHdrToSdr: false,
-                SegmentNameTemplate: "video/video",
-                PlaylistNameTemplate: "video/video"
+            Ulid.NewUlid(),
+            "culture-test",
+            Container.Mkv,
+            new(
+                StreamPolicy.Transcode,
+                codec,
+                1920,
+                1080,
+                RateControlMode.Crf,
+                23,
+                0,
+                null,
+                null,
+                "medium",
+                CodecProfile.High,
+                level,
+                null,
+                8,
+                null,
+                2,
+                false,
+                "video/video",
+                "video/video"
             ),
-            Audio: [],
-            Subtitles: []
+            [],
+            []
         );
 }

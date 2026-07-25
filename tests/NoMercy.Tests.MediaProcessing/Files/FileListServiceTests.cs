@@ -31,20 +31,20 @@ public class FileListServiceTests
     {
         Mock<IStorageDriver> driver = new();
         Mock<IStorage> storage = new();
-        storage.SetupGet(expression: s => s.Driver).Returns(value: driver.Object);
+        storage.SetupGet(s => s.Driver).Returns(driver.Object);
 
         List<StorageEntry> entries =
         [
-            new(Path: "Movies/Inception.2010.1080p.BluRay.mkv", IsDirectory: false, SizeBytes: 1000, LastModified: DateTimeOffset.UtcNow),
-            new(Path: "Movies/The.Matrix.1999.1080p.BluRay.mkv", IsDirectory: false, SizeBytes: 2000, LastModified: DateTimeOffset.UtcNow),
+            new("Movies/Inception.2010.1080p.BluRay.mkv", false, 1000, DateTimeOffset.UtcNow),
+            new("Movies/The.Matrix.1999.1080p.BluRay.mkv", false, 2000, DateTimeOffset.UtcNow),
         ];
         storage
-            .Setup(expression: s => s.List(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<bool>()))
-            .Returns(value: entries);
+            .Setup(s => s.List(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<bool>()))
+            .Returns(entries);
 
         Mock<IMediaIdentificationService> identification = new();
         identification
-            .Setup(expression: i =>
+            .Setup(i =>
                 i.IdentifyAsync(
                     It.IsAny<MovieFile>(),
                     It.IsAny<string>(),
@@ -55,13 +55,13 @@ public class FileListServiceTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: ((MovieOrEpisode match, string? imdbId)?)null);
+            .ReturnsAsync(((MovieOrEpisode match, string? imdbId)?)null);
 
         FileListService service = new(
-            storageDriver: driver.Object,
-            identification: identification.Object,
-            filenameParser: new FilenameParserPipeline(
-                adapters: new IFilenameParseAdapter[]
+            driver.Object,
+            identification.Object,
+            new FilenameParserPipeline(
+                new IFilenameParseAdapter[]
                 {
                     new EpisodePrefixAdapter(),
                     new EpisodeWordAdapter(),
@@ -69,15 +69,15 @@ public class FileListServiceTests
                     new MovieDetectorAdapter(),
                 }
             ),
-            logger: NullLogger<FileListService>.Instance
+            NullLogger<FileListService>.Instance
         );
 
-        List<FileItem> files = await service.GetFilesInDirectory(directoryPath: "Movies", libraryType: "movie", storage: storage.Object);
+        List<FileItem> files = await service.GetFilesInDirectory("Movies", "movie", storage.Object);
 
         // The fix: no file is dropped just because TMDB could not identify it.
-        Assert.Equal(expected: 2, actual: files.Count);
-        Assert.All(collection: files, action: file => Assert.False(condition: string.IsNullOrEmpty(value: file.Parsed?.Title)));
+        Assert.Equal(2, files.Count);
+        Assert.All(files, file => Assert.False(string.IsNullOrEmpty(file.Parsed?.Title)));
         // Unidentified => empty Match.
-        Assert.All(collection: files, action: file => Assert.True(condition: string.IsNullOrEmpty(value: file.Match.Title)));
+        Assert.All(files, file => Assert.True(string.IsNullOrEmpty(file.Match.Title)));
     }
 }

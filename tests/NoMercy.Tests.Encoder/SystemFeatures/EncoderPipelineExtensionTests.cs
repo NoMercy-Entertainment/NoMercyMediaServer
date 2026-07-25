@@ -23,16 +23,16 @@ public class EncoderPipelineExtensionTests
         // They must not be the same type.
         Type pipelineExtension = typeof(IEncoderPipelineExtension);
         Type? pluginsAbstractionsEncoderPlugin = Type.GetType(
-            typeName: "NoMercy.Plugins.Abstractions.IEncoderPlugin, NoMercy.Plugins.Abstractions"
+            "NoMercy.Plugins.Abstractions.IEncoderPlugin, NoMercy.Plugins.Abstractions"
         );
 
         // The encoder pipeline extension type must exist.
         pipelineExtension.Should().NotBeNull();
-        pipelineExtension.Name.Should().Be(expected: "IEncoderPipelineExtension");
+        pipelineExtension.Name.Should().Be("IEncoderPipelineExtension");
 
         // The abstractions type may not be loaded in this assembly context but
         // the names are demonstrably different — structural proof of disambiguation.
-        pipelineExtension.FullName.Should().NotBe(unexpected: "NoMercy.Plugins.Abstractions.IEncoderPlugin");
+        pipelineExtension.FullName.Should().NotBe("NoMercy.Plugins.Abstractions.IEncoderPlugin");
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class EncoderPipelineExtensionTests
         Type hookType = typeof(PipelineHook);
 
         hookType.Should().NotBeNull();
-        hookType.Namespace.Should().Be(expected: "NoMercy.Encoder.SystemFeatures");
+        hookType.Namespace.Should().Be("NoMercy.Encoder.SystemFeatures");
     }
 
     [Fact]
@@ -50,8 +50,8 @@ public class EncoderPipelineExtensionTests
     {
         PipelineStagePosition[] values = Enum.GetValues<PipelineStagePosition>();
 
-        values.Should().Contain(expected: PipelineStagePosition.Before);
-        values.Should().Contain(expected: PipelineStagePosition.After);
-        values.Should().Contain(expected: PipelineStagePosition.Replace);
+        values.Should().Contain(PipelineStagePosition.Before);
+        values.Should().Contain(PipelineStagePosition.After);
+        values.Should().Contain(PipelineStagePosition.Replace);
     }
 }

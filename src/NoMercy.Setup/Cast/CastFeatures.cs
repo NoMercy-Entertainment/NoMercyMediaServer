@@ -18,9 +18,9 @@ namespace NoMercy.Setup.Cast;
 /// </summary>
 public class CastFeatures
 {
-    [JsonProperty(propertyName: "debug", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("debug", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Debug { get; set; }
 
-    [JsonProperty(propertyName: "skip_auth", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("skip_auth", NullValueHandling = NullValueHandling.Ignore)]
     public bool? SkipAuth { get; set; }
 }

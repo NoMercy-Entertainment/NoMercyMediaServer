@@ -40,7 +40,7 @@ public class MovieImportJob : AbstractMediaJob
         IStorageDriver storageDriver,
         ILoggerFactory loggerFactory
     )
-        : base(storageFactory: storageFactory, storageDriver: storageDriver, loggerFactory: loggerFactory) { }
+        : base(storageFactory, storageDriver, loggerFactory) { }
 
     public override string QueueName => "import";
     public override int Priority => 5;
@@ -49,40 +49,40 @@ public class MovieImportJob : AbstractMediaJob
     {
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
-
-        MovieRepository movieRepository = new(context: context);
+        
+        MovieRepository movieRepository = new(context);
         MovieManager movieManager = new(
-            movieRepository: movieRepository,
-            jobDispatcher: jobDispatcher,
-            storageFactory: StorageFactory,
-            logger: LoggerFactory.CreateLogger<MovieManager>()
+            movieRepository,
+            jobDispatcher,
+            StorageFactory,
+            LoggerFactory.CreateLogger<MovieManager>()
         );
 
         Library? movieLibrary = await context
-            .Libraries.Where(predicate: f => f.Id == LibraryId)
-            .Include(navigationPropertyPath: f => f.FolderLibraries)
-                .ThenInclude(navigationPropertyPath: f => f.Folder)
+            .Libraries.Where(library => library.Id == LibraryId)
+            .Include(library => library.FolderLibraries)
+                .ThenInclude(folderLibrary => folderLibrary.Folder)
             .FirstOrDefaultAsync();
 
         if (movieLibrary is null)
         {
             Log.LogInformation(
-                message: "MovieImportJob: library {LibraryId} not found, skipping movie {Id}", args: [LibraryId, Id]
+                "MovieImportJob: library {LibraryId} not found, skipping movie {Id}", LibraryId, Id
             );
             return;
         }
 
-        bool wasEmpty = !await context.LibraryMovie.AnyAsync(predicate: lm => lm.LibraryId == LibraryId);
+        bool wasEmpty = !await context.LibraryMovie.AnyAsync(lm => lm.LibraryId == LibraryId);
 
-        TmdbMovieAppends? movieAppends = await movieManager.Add(id: Id, library: movieLibrary);
+        TmdbMovieAppends? movieAppends = await movieManager.Add(Id, movieLibrary);
         if (movieAppends == null)
         {
             await ImportFailureRecorder.RecordAsync(
-                context: context,
-                jobType: "MovieImportJob",
-                filePath: Id.ToString(),
-                libraryId: LibraryId,
-                errorMessage: "TMDB movie metadata fetch returned no result after retries."
+                context,
+                "MovieImportJob",
+                Id.ToString(),
+                LibraryId,
+                "TMDB movie metadata fetch returned no result after retries."
             );
             return;
         }
@@ -90,11 +90,11 @@ public class MovieImportJob : AbstractMediaJob
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                @event: new MediaAddedEvent
+                new MediaAddedEvent
                 {
                     MediaId = Id,
                     MediaType = "movie",
-                    Title = movieAppends.Title ?? $"Movie {Id}",
+                    Title = movieAppends.Title,
                     LibraryId = LibraryId,
                 }
             );
@@ -102,26 +102,26 @@ public class MovieImportJob : AbstractMediaJob
 
         if (movieAppends.BelongsToCollection != null)
             jobDispatcher.DispatchJob<CollectionImportJob>(
-                id: movieAppends.BelongsToCollection.Id,
-                libraryId: LibraryId
+                movieAppends.BelongsToCollection.Id,
+                LibraryId
             );
 
-        jobDispatcher.DispatchJob<FileRescanJob>(id: Id, library: movieLibrary);
+        jobDispatcher.DispatchJob<FileRescanJob>(Id, movieLibrary);
 
         Log.LogInformation(
-            message: "Movie {Id} added to library, extra data will be added in the background",
-            args: Id
+            "Movie {Id} added to library, extra data will be added in the background",
+            Id
         );
 
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                @event: new LibraryRefreshedEvent { QueryKey = ["base", "info", Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["base", "info", Id.ToString()] }
             );
 
             if (wasEmpty)
                 await EventBusProvider.Current.PublishAsync(
-                    @event: new LibraryRefreshedEvent { QueryKey = ["libraries"] }
+                    new LibraryRefreshedEvent { QueryKey = ["libraries"] }
                 );
         }
     }

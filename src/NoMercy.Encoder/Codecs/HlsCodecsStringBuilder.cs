@@ -49,7 +49,7 @@ public static class HlsCodecsStringBuilder
         double frameRate = 0
     )
     {
-        byte profileIdc = NormalizeH264Profile(profile: profile) switch
+        byte profileIdc = NormalizeH264Profile(profile) switch
         {
             "baseline" => 0x42,
             "main" => 0x4D,
@@ -68,9 +68,9 @@ public static class HlsCodecsStringBuilder
         // defaults to 4.0) on a 4K rung would emit avc1...28 (level 4.0) — a
         // level that cannot legally carry 4K, which players validating codec
         // support reject (hls.js: manifestIncompatibleCodecsError). Clamp UP.
-        byte levelIdc = ParseH264Level(level: level);
+        byte levelIdc = ParseH264Level(level);
         if (width > 0 && height > 0)
-            levelIdc = Math.Max(val1: levelIdc, val2: MinH264LevelIdc(width: width, height: height, frameRate: frameRate));
+            levelIdc = Math.Max(levelIdc, MinH264LevelIdc(width, height, frameRate));
 
         return $"avc1.{profileIdc:X2}{constraintByte:X2}{levelIdc:X2}";
     }
@@ -108,9 +108,9 @@ public static class HlsCodecsStringBuilder
         // a 4K rung advertising hvc1.2.4.L120.B0 is rejected by players that
         // validate the codec string. Clamp UP to the minimum the resolution +
         // frame rate require (a 3840×2160 rung resolves to at least L5.0 / 150).
-        int levelIdc = ParseHevcLevel(level: level, tenBit: tenBit);
+        int levelIdc = ParseHevcLevel(level, tenBit);
         if (width > 0 && height > 0)
-            levelIdc = Math.Max(val1: levelIdc, val2: MinHevcLevelIdc(width: width, height: height, frameRate: frameRate));
+            levelIdc = Math.Max(levelIdc, MinHevcLevelIdc(width, height, frameRate));
         string levelStr = $"L{levelIdc}";
 
         return $"hvc1.{profileIdc}.{compatFlags}.{levelStr}.B0";
@@ -136,10 +136,10 @@ public static class HlsCodecsStringBuilder
         double frameRate = 0
     )
     {
-        int levelIndex = ParseAv1LevelIndex(level: level, tenBit: tenBit);
+        int levelIndex = ParseAv1LevelIndex(level, tenBit);
         if (width > 0 && height > 0)
-            levelIndex = Math.Max(val1: levelIndex, val2: MinAv1LevelIndex(width: width, height: height, frameRate: frameRate));
-        string levelStr = levelIndex.ToString(format: "D2");
+            levelIndex = Math.Max(levelIndex, MinAv1LevelIndex(width, height, frameRate));
+        string levelStr = levelIndex.ToString("D2");
         string bitDepth = tenBit ? "10" : "08";
         return $"av01.0.{levelStr}M.{bitDepth}";
     }
@@ -191,18 +191,18 @@ public static class HlsCodecsStringBuilder
         double frameRate = 0
     )
     {
-        VideoCodecType? family = CodecFamilyClassifier.ClassifyVideo(encoderName: encoderName);
+        VideoCodecType? family = CodecFamilyClassifier.ClassifyVideo(encoderName);
 
         return family switch
         {
-            VideoCodecType.H264 => ForH264(profile: profile, level: level, width: width, height: height, frameRate: frameRate),
-            VideoCodecType.H265 => ForHevc(profile: profile, level: level, tenBit: tenBit, width: width, height: height, frameRate: frameRate),
-            VideoCodecType.Av1 => ForAv1(level: level, tenBit: tenBit, width: width, height: height, frameRate: frameRate),
+            VideoCodecType.H264 => ForH264(profile, level, width, height, frameRate),
+            VideoCodecType.H265 => ForHevc(profile, level, tenBit, width, height, frameRate),
+            VideoCodecType.Av1 => ForAv1(level, tenBit, width, height, frameRate),
             // VP9 — no RFC 6381 standardised short-form; use vp09 signaling
             VideoCodecType.Vp9 => $"vp09.00.41.{(tenBit ? "10" : "08")}",
             VideoCodecType.Copy => null,
             // Fallback: treat as H.264 High 4.0
-            _ => ForH264(profile: profile ?? "high", level: level ?? "4.0", width: width, height: height, frameRate: frameRate),
+            _ => ForH264(profile ?? "high", level ?? "4.0", width, height, frameRate),
         };
     }
 
@@ -230,7 +230,7 @@ public static class HlsCodecsStringBuilder
 
     private static string NormalizeH264Profile(string? profile)
     {
-        if (string.IsNullOrEmpty(value: profile))
+        if (string.IsNullOrEmpty(profile))
             return "high";
 
         return profile.ToLowerInvariant() switch
@@ -246,12 +246,12 @@ public static class HlsCodecsStringBuilder
 
     private static byte ParseH264Level(string? level)
     {
-        if (string.IsNullOrEmpty(value: level))
+        if (string.IsNullOrEmpty(level))
             return 0x28; // 4.0
 
         // Handle both "4.0" and "40" style input
-        string normalized = level.Replace(oldValue: ".", newValue: "");
-        if (int.TryParse(s: normalized, result: out int numeric))
+        string normalized = level.Replace(".", "");
+        if (int.TryParse(normalized, out int numeric))
             return (byte)numeric;
 
         return level switch
@@ -283,7 +283,7 @@ public static class HlsCodecsStringBuilder
     {
         // HEVC level_idc = level_value × 30
         // Common defaults: SDR → L3.1 (93), HDR10 → L4.0 (120)
-        if (string.IsNullOrEmpty(value: level))
+        if (string.IsNullOrEmpty(level))
             return tenBit ? 120 : 93;
 
         return level switch
@@ -407,7 +407,7 @@ public static class HlsCodecsStringBuilder
         // AV1 spec Table A.1 level index mapping.
         // Defaults are opinionated by bit depth: 10-bit content typically
         // targets 4K → level 5.3 (index 15); 8-bit defaults to 4.0 (index 8).
-        if (string.IsNullOrEmpty(value: level))
+        if (string.IsNullOrEmpty(level))
             return tenBit ? 15 : 8;
 
         return level switch

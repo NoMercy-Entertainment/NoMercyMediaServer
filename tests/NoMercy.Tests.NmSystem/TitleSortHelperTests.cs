@@ -9,101 +9,99 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Extensions;
-
 namespace NoMercy.Tests.NmSystem;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class TitleSortHelperTests
 {
     [Theory]
-    [InlineData(data: ["The Matrix", null, "matrix"])]
-    [InlineData(data: ["An Apple", null, "apple"])]
-    [InlineData(data: ["A Bridge", null, "bridge"])]
-    [InlineData(data: ["the matrix", null, "matrix"])]
-    [InlineData(data: ["THE MATRIX", null, "matrix"])]
+    [InlineData(["The Matrix", null, "matrix"])]
+    [InlineData(["An Apple", null, "apple"])]
+    [InlineData(["A Bridge", null, "bridge"])]
+    [InlineData(["the matrix", null, "matrix"])]
+    [InlineData(["THE MATRIX", null, "matrix"])]
     public void TitleSort_StripLeadingArticles(string title, int? year, string expected)
     {
-        string result = title.TitleSort(parseYear: year);
-        result.Should().Be(expected: expected);
+        string result = title.TitleSort(year);
+        result.Should().Be(expected);
     }
 
     [Theory]
-    [InlineData(data: ["Matrix", null, "matrix"])]
-    [InlineData(data: ["Bridge", null, "bridge"])]
-    [InlineData(data: ["Zebra", null, "zebra"])]
+    [InlineData(["Matrix", null, "matrix"])]
+    [InlineData(["Bridge", null, "bridge"])]
+    [InlineData(["Zebra", null, "zebra"])]
     public void TitleSort_NoArticle_JustLowercase(string title, int? year, string expected)
     {
-        string result = title.TitleSort(parseYear: year);
-        result.Should().Be(expected: expected);
+        string result = title.TitleSort(year);
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void TitleSort_WithYear_ContainsYearAndTitle()
     {
-        string result = "Title: Subtitle".TitleSort(parseYear: 2020);
-        result.Should().Contain(expected: "title");
-        result.Should().Contain(expected: "2020");
+        string result = "Title: Subtitle".TitleSort(2020);
+        result.Should().Contain("title");
+        result.Should().Contain("2020");
     }
 
     [Fact]
     public void TitleSort_WithYearNoColon_JustLowercase()
     {
-        string result = "Title".TitleSort(parseYear: 2020);
-        result.Should().Be(expected: "title");
+        string result = "Title".TitleSort(2020);
+        result.Should().Be("title");
     }
 
     [Fact]
     public void TitleSort_WithNullYear_IgnoresYear()
     {
-        string result = "Title: Subtitle".TitleSort(date: null);
-        result.Should().Contain(expected: "title");
+        string result = "Title: Subtitle".TitleSort(null);
+        result.Should().Contain("title");
     }
 
     [Fact]
     public void TitleSort_ArticleTheWithColon()
     {
-        string result = "The Title: Subtitle".TitleSort(parseYear: 2020);
-        result.Should().Contain(expected: "title");
-        result.Should().Contain(expected: "2020");
+        string result = "The Title: Subtitle".TitleSort(2020);
+        result.Should().Contain("title");
+        result.Should().Contain("2020");
     }
 
     [Fact]
     public void TitleSort_ArticleAnWithColon()
     {
-        string result = "An Apple: Tree".TitleSort(parseYear: 2021);
-        result.Should().Contain(expected: "apple");
-        result.Should().Contain(expected: "2021");
+        string result = "An Apple: Tree".TitleSort(2021);
+        result.Should().Contain("apple");
+        result.Should().Contain("2021");
     }
 
     [Theory]
-    [InlineData(data: ["", null])]
-    [InlineData(data: ["", 2020])]
+    [InlineData(["", null])]
+    [InlineData(["", 2020])]
     public void TitleSort_EmptyTitle_ReturnsEmpty(string title, int? year)
     {
-        string result = title.TitleSort(parseYear: year);
-        result.Should().Be(expected: "");
+        string result = title.TitleSort(year);
+        result.Should().Be("");
     }
 
     [Fact]
     public void TitleSort_WithValidYear_InjectsYear()
     {
-        string result = "Title: Subtitle".TitleSort(parseYear: 2000);
-        result.Should().Contain(expected: "2000");
+        string result = "Title: Subtitle".TitleSort(2000);
+        result.Should().Contain("2000");
     }
 
     [Fact]
     public void TitleSort_WithDatetime_UsesYearFromDate()
     {
-        DateTime date = new(year: 2019, month: 6, day: 15);
-        string result = "Film: Movie".TitleSort(date: date);
-        result.Should().Contain(expected: "2019");
+        DateTime date = new(2019, 6, 15);
+        string result = "Film: Movie".TitleSort(date);
+        result.Should().Contain("2019");
     }
 
     [Fact]
     public void TitleSort_LowercasesResult()
     {
-        string result = "Movie!Test".TitleSort(date: null);
-        result.Should().Be(expected: result.ToLowerInvariant());
+        string result = "Movie!Test".TitleSort(null);
+        result.Should().Be(result.ToLowerInvariant());
     }
 }

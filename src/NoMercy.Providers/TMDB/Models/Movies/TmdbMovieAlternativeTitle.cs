@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbMovieAlternativeTitle
 {
-    [JsonProperty(propertyName: "iso_3166_1")]
+    [JsonProperty("iso_3166_1")]
     public string? Iso31661 { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string? Title { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 }

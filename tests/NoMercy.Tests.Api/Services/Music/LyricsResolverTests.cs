@@ -29,7 +29,7 @@ namespace NoMercy.Tests.Api.Services.Music;
 /// never checked. A short in-memory backoff still stops the very next play
 /// from immediately re-running the same slow chain.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class LyricsResolverTests
 {
     private static Track MakeUncachedTrack() => new() { Id = Guid.NewGuid(), Name = "Track" };
@@ -42,18 +42,18 @@ public class LyricsResolverTests
     {
         Mock<IMusicRepository> repository = new();
         repository
-            .Setup(expression: r => r.GetTrackWithIncludesAsync(track.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: track);
+            .Setup(r => r.GetTrackWithIncludesAsync(track.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(track);
 
         Mock<ILyricsAggregator> aggregator = new();
 
         ServiceCollection services = new();
-        services.AddSingleton(implementationInstance: repository.Object);
+        services.AddSingleton(repository.Object);
         ServiceProvider provider = services.BuildServiceProvider();
 
         LyricsResolver resolver = transientBackoff is { } backoff
-            ? new(scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(), lyricsAggregator: aggregator.Object, transientBackoff: backoff)
-            : new(scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(), lyricsAggregator: aggregator.Object);
+            ? new(provider.GetRequiredService<IServiceScopeFactory>(), aggregator.Object, backoff)
+            : new(provider.GetRequiredService<IServiceScopeFactory>(), aggregator.Object);
 
         return (resolver, repository, aggregator);
     }
@@ -66,15 +66,15 @@ public class LyricsResolverTests
             LyricsResolver resolver,
             Mock<IMusicRepository> repository,
             Mock<ILyricsAggregator> aggregator
-        ) = MakeResolver(track: track);
-        aggregator.Setup(expression: a => a.SearchLyrics(track)).ReturnsAsync(value: LyricsFetchResult.NotFound);
+        ) = MakeResolver(track);
+        aggregator.Setup(a => a.SearchLyrics(track)).ReturnsAsync(LyricsFetchResult.NotFound);
 
-        Lyric[]? result = await resolver.ResolveAsync(trackId: track.Id);
+        Lyric[]? result = await resolver.ResolveAsync(track.Id);
 
         result.Should().BeNull();
         repository.Verify(
-            expression: r => r.UpdateTrackLyricsAsync(track, "[]", It.IsAny<CancellationToken>()),
-            times: Times.Once
+            r => r.UpdateTrackLyricsAsync(track, "[]", It.IsAny<CancellationToken>()),
+            Times.Once
         );
     }
 
@@ -86,22 +86,22 @@ public class LyricsResolverTests
             LyricsResolver resolver,
             Mock<IMusicRepository> repository,
             Mock<ILyricsAggregator> aggregator
-        ) = MakeResolver(track: track);
+        ) = MakeResolver(track);
         aggregator
-            .Setup(expression: a => a.SearchLyrics(track))
-            .ReturnsAsync(value: LyricsFetchResult.TransientFailure);
+            .Setup(a => a.SearchLyrics(track))
+            .ReturnsAsync(LyricsFetchResult.TransientFailure);
 
-        Lyric[]? result = await resolver.ResolveAsync(trackId: track.Id);
+        Lyric[]? result = await resolver.ResolveAsync(track.Id);
 
         result.Should().BeNull();
         repository.Verify(
-            expression: r =>
+            r =>
                 r.UpdateTrackLyricsAsync(
                     It.IsAny<Track>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 ),
-            times: Times.Never
+            Times.Never
         );
     }
 
@@ -110,20 +110,20 @@ public class LyricsResolverTests
     {
         Track track = MakeUncachedTrack();
         (LyricsResolver resolver, _, Mock<ILyricsAggregator> aggregator) = MakeResolver(
-            track: track,
-            transientBackoff: TimeSpan.FromMinutes(minutes: 2)
+            track,
+            TimeSpan.FromMinutes(2)
         );
         aggregator
-            .Setup(expression: a => a.SearchLyrics(track))
-            .ReturnsAsync(value: LyricsFetchResult.TransientFailure);
+            .Setup(a => a.SearchLyrics(track))
+            .ReturnsAsync(LyricsFetchResult.TransientFailure);
 
-        await resolver.ResolveAsync(trackId: track.Id);
-        await resolver.ResolveAsync(trackId: track.Id);
+        await resolver.ResolveAsync(track.Id);
+        await resolver.ResolveAsync(track.Id);
 
         // The second call landed inside the backoff window, so it must never
         // touch the aggregator (and therefore never re-hit the rate-limited
         // providers) a second time.
-        aggregator.Verify(expression: a => a.SearchLyrics(track), times: Times.Once);
+        aggregator.Verify(a => a.SearchLyrics(track), Times.Once);
     }
 
     [Fact]
@@ -131,18 +131,18 @@ public class LyricsResolverTests
     {
         Track track = MakeUncachedTrack();
         (LyricsResolver resolver, _, Mock<ILyricsAggregator> aggregator) = MakeResolver(
-            track: track,
-            transientBackoff: TimeSpan.FromMilliseconds(milliseconds: 20)
+            track,
+            TimeSpan.FromMilliseconds(20)
         );
         aggregator
-            .Setup(expression: a => a.SearchLyrics(track))
-            .ReturnsAsync(value: LyricsFetchResult.TransientFailure);
+            .Setup(a => a.SearchLyrics(track))
+            .ReturnsAsync(LyricsFetchResult.TransientFailure);
 
-        await resolver.ResolveAsync(trackId: track.Id);
-        await Task.Delay(delay: TimeSpan.FromMilliseconds(milliseconds: 100));
-        await resolver.ResolveAsync(trackId: track.Id);
+        await resolver.ResolveAsync(track.Id);
+        await Task.Delay(TimeSpan.FromMilliseconds(100));
+        await resolver.ResolveAsync(track.Id);
 
-        aggregator.Verify(expression: a => a.SearchLyrics(track), times: Times.Exactly(callCount: 2));
+        aggregator.Verify(a => a.SearchLyrics(track), Times.Exactly(2));
     }
 
     [Fact]
@@ -153,24 +153,24 @@ public class LyricsResolverTests
             LyricsResolver resolver,
             Mock<IMusicRepository> repository,
             Mock<ILyricsAggregator> aggregator
-        ) = MakeResolver(track: track);
+        ) = MakeResolver(track);
         LyricLine[] lines = [new() { Text = "line one" }];
         Lyric[] persisted = [new() { Text = "line one" }];
         aggregator
-            .Setup(expression: a => a.SearchLyrics(track))
-            .ReturnsAsync(value: LyricsFetchResult.Found(lines: lines, winner: "Lrclib-get"));
+            .Setup(a => a.SearchLyrics(track))
+            .ReturnsAsync(LyricsFetchResult.Found(lines, "Lrclib-get"));
         repository
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.UpdateTrackLyricsAsync(
                     track,
                     It.Is<string>(json => json.Contains("line one")),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: persisted);
+            .ReturnsAsync(persisted);
 
-        Lyric[]? result = await resolver.ResolveAsync(trackId: track.Id);
+        Lyric[]? result = await resolver.ResolveAsync(track.Id);
 
-        result.Should().BeEquivalentTo(expectation: persisted);
+        result.Should().BeEquivalentTo(persisted);
     }
 }

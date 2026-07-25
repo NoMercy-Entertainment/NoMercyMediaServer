@@ -22,10 +22,10 @@ using NoMercy.Storage;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
-[Tags(tags: "Dashboard Folders")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Folders")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "Moderator")]
-[Route(template: "api/v{version:apiVersion}/dashboard/folders", Order = 10)]
+[Route("api/v{version:apiVersion}/dashboard/folders", Order = 10)]
 public class FolderDriverController(
     IFolderRepository folderRepository,
     IDriverRepository driverRepository,
@@ -38,11 +38,11 @@ public class FolderDriverController(
     // -----------------------------------------------------------------------
 
     [HttpGet]
-    [Route(template: "drivers")]
+    [Route("drivers")]
     public IActionResult GetDriverTypes()
     {
 
-        return Ok(value: DriverTypeMetadata.All);
+        return Ok(DriverTypeMetadata.All);
     }
 
     // -----------------------------------------------------------------------
@@ -51,13 +51,13 @@ public class FolderDriverController(
     // -----------------------------------------------------------------------
 
     [HttpGet]
-    [Route(template: "{id:ulid}/driver")]
+    [Route("{id:ulid}/driver")]
     public async Task<IActionResult> GetDriver(Ulid id)
     {
 
-        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId: id);
+        Folder? folder = await folderRepository.GetFolderByIdAsync(id);
         if (folder is null)
-            return NotFoundResponse(detail: "Folder not found");
+            return NotFoundResponse("Folder not found");
 
         FolderDriverInfoDto info = new()
         {
@@ -67,7 +67,7 @@ public class FolderDriverController(
             Path = folder.Path,
         };
 
-        return Ok(value: info);
+        return Ok(info);
     }
 
     // -----------------------------------------------------------------------
@@ -80,31 +80,31 @@ public class FolderDriverController(
     // -----------------------------------------------------------------------
 
     [HttpPut]
-    [Route(template: "{id:ulid}/driver")]
+    [Route("{id:ulid}/driver")]
     public async Task<IActionResult> AssignDriver(Ulid id, [FromBody] FolderDriverAssignDto request)
     {
 
-        if (string.IsNullOrWhiteSpace(value: request.DriverId))
-            return BadRequestResponse(detail: "driver_id is required. Every folder must have a driver.");
+        if (string.IsNullOrWhiteSpace(request.DriverId))
+            return BadRequestResponse("driver_id is required. Every folder must have a driver.");
 
-        if (!Ulid.TryParse(base32: request.DriverId, ulid: out Ulid driverId))
-            return BadRequestResponse(detail: "driver_id is not a valid ULID.");
+        if (!Ulid.TryParse(request.DriverId, out Ulid driverId))
+            return BadRequestResponse("driver_id is not a valid ULID.");
 
-        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId: id);
+        Folder? folder = await folderRepository.GetFolderByIdAsync(id);
         if (folder is null)
-            return NotFoundResponse(detail: "Folder not found");
+            return NotFoundResponse("Folder not found");
 
-        bool exists = await driverRepository.DriverExistsAsync(id: driverId);
+        bool exists = await driverRepository.DriverExistsAsync(driverId);
         if (!exists)
-            return NotFoundResponse(detail: $"Driver '{request.DriverId}' not found.");
+            return NotFoundResponse($"Driver '{request.DriverId}' not found.");
 
         folder.DriverId = driverId;
         if (request.Path is not null)
             folder.Path = request.Path;
 
-        await folderRepository.UpdateFolderAsync(folder: folder);
+        await folderRepository.UpdateFolderAsync(folder);
 
-        storageFactory.Invalidate(folderId: id);
+        storageFactory.Invalidate(id);
 
         FolderDriverInfoDto info = new()
         {
@@ -114,6 +114,6 @@ public class FolderDriverController(
             Path = folder.Path,
         };
 
-        return Ok(value: info);
+        return Ok(info);
     }
 }

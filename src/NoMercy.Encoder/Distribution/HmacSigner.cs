@@ -25,17 +25,17 @@ namespace NoMercy.Encoder.Distribution;
 /// </summary>
 public sealed class HmacSigner(string secret)
 {
-    private readonly byte[] _key = Encoding.UTF8.GetBytes(s: secret);
+    private readonly byte[] _key = Encoding.UTF8.GetBytes(secret);
 
     /// <summary>
     /// Produces the base64-encoded HMAC-SHA256 signature for the given request primitives.
     /// </summary>
     public string Sign(string method, string path, long timestamp, byte[] body)
     {
-        string stringToSign = BuildStringToSign(method: method, path: path, timestamp: timestamp, body: body);
-        using HMACSHA256 hmac = new(key: _key);
-        byte[] hash = hmac.ComputeHash(buffer: Encoding.UTF8.GetBytes(s: stringToSign));
-        return Convert.ToBase64String(inArray: hash);
+        string stringToSign = BuildStringToSign(method, path, timestamp, body);
+        using HMACSHA256 hmac = new(_key);
+        byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(stringToSign));
+        return Convert.ToBase64String(hash);
     }
 
     /// <summary>
@@ -59,20 +59,20 @@ public sealed class HmacSigner(string secret)
         if (ageSeconds < 0 || ageSeconds > (long)replayWindow.TotalSeconds)
             return false;
 
-        string expected = Sign(method: method, path: path, timestamp: timestamp, body: body);
+        string expected = Sign(method, path, timestamp, body);
 
-        byte[] expectedBytes = Encoding.UTF8.GetBytes(s: expected);
-        byte[] actualBytes = Encoding.UTF8.GetBytes(s: signature);
+        byte[] expectedBytes = Encoding.UTF8.GetBytes(expected);
+        byte[] actualBytes = Encoding.UTF8.GetBytes(signature);
 
         if (expectedBytes.Length != actualBytes.Length)
             return false;
 
-        return CryptographicOperations.FixedTimeEquals(left: expectedBytes, right: actualBytes);
+        return CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
     }
 
     private static string BuildStringToSign(string method, string path, long timestamp, byte[] body)
     {
-        string bodyHash = Convert.ToBase64String(inArray: SHA256.HashData(source: body));
+        string bodyHash = Convert.ToBase64String(SHA256.HashData(body));
         return $"{method.ToUpperInvariant()}\n{path}\n{timestamp}\n{bodyHash}";
     }
 }

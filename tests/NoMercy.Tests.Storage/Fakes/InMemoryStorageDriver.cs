@@ -30,99 +30,99 @@ namespace NoMercy.Tests.Storage.Fakes;
 /// </summary>
 internal sealed class InMemoryStorageDriver : IStorageDriver
 {
-    private readonly Dictionary<string, byte[]> _files = new(comparer: StringComparer.Ordinal);
-    private readonly HashSet<string> _dirs = new(comparer: StringComparer.Ordinal) { string.Empty };
-    private readonly Dictionary<string, DateTime> _mtimes = new(comparer: StringComparer.Ordinal);
+    private readonly Dictionary<string, byte[]> _files = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _dirs = new(StringComparer.Ordinal) { string.Empty };
+    private readonly Dictionary<string, DateTime> _mtimes = new(StringComparer.Ordinal);
 
     public int MoveDirectoryCallCount { get; private set; }
 
-    private static string Key(string path) => path.Replace(oldChar: '\\', newChar: '/').Trim(trimChar: '/');
+    private static string Key(string path) => path.Replace('\\', '/').Trim('/');
 
     public void SeedFile(string path, byte[] content)
     {
-        string key = Key(path: path);
-        _files[key: key] = content;
-        _mtimes[key: key] = DateTime.UtcNow;
+        string key = Key(path);
+        _files[key] = content;
+        _mtimes[key] = DateTime.UtcNow;
     }
 
-    public void SeedDirectory(string path) => _dirs.Add(item: Key(path: path));
+    public void SeedDirectory(string path) => _dirs.Add(Key(path));
 
-    public bool FileExists(string path) => _files.ContainsKey(key: Key(path: path));
+    public bool FileExists(string path) => _files.ContainsKey(Key(path));
 
-    public bool DirectoryExists(string path) => _dirs.Contains(item: Key(path: path));
+    public bool DirectoryExists(string path) => _dirs.Contains(Key(path));
 
-    public void CreateDirectory(string path) => _dirs.Add(item: Key(path: path));
+    public void CreateDirectory(string path) => _dirs.Add(Key(path));
 
-    public void DeleteFile(string path) => _files.Remove(key: Key(path: path));
+    public void DeleteFile(string path) => _files.Remove(Key(path));
 
     public void DeleteDirectory(string path, bool recursive)
     {
-        string key = Key(path: path);
-        _dirs.Remove(item: key);
+        string key = Key(path);
+        _dirs.Remove(key);
         if (!recursive)
             return;
         string prefix = key.Length == 0 ? string.Empty : key + "/";
         foreach (
             string fileKey in _files
-                .Keys.Where(predicate: k => k.StartsWith(value: prefix, comparisonType: StringComparison.Ordinal))
+                .Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal))
                 .ToList()
         )
-            _files.Remove(key: fileKey);
+            _files.Remove(fileKey);
         foreach (
             string dirKey in _dirs
-                .Where(predicate: k => k.StartsWith(value: prefix, comparisonType: StringComparison.Ordinal))
+                .Where(k => k.StartsWith(prefix, StringComparison.Ordinal))
                 .ToList()
         )
-            _dirs.Remove(item: dirKey);
+            _dirs.Remove(dirKey);
     }
 
     public long GetFileSize(string path) =>
-        _files.TryGetValue(key: Key(path: path), value: out byte[]? bytes) ? bytes.Length : 0L;
+        _files.TryGetValue(Key(path), out byte[]? bytes) ? bytes.Length : 0L;
 
     public DateTime GetLastWriteTimeUtc(string path) =>
-        _mtimes.TryGetValue(key: Key(path: path), value: out DateTime t) ? t : DateTime.UnixEpoch;
+        _mtimes.TryGetValue(Key(path), out DateTime t) ? t : DateTime.UnixEpoch;
 
-    public DateTime GetCreationTimeUtc(string path) => GetLastWriteTimeUtc(path: path);
+    public DateTime GetCreationTimeUtc(string path) => GetLastWriteTimeUtc(path);
 
-    public DateTime GetLastAccessTimeUtc(string path) => GetLastWriteTimeUtc(path: path);
+    public DateTime GetLastAccessTimeUtc(string path) => GetLastWriteTimeUtc(path);
 
     public Stream OpenRead(string path)
     {
-        string key = Key(path: path);
-        if (!_files.TryGetValue(key: key, value: out byte[]? bytes))
-            throw new FileNotFoundException(message: $"no such object: {path}", fileName: path);
-        return new MemoryStream(buffer: bytes, writable: false);
+        string key = Key(path);
+        if (!_files.TryGetValue(key, out byte[]? bytes))
+            throw new FileNotFoundException($"no such object: {path}", path);
+        return new MemoryStream(bytes, false);
     }
 
     public Stream OpenWrite(string path, bool overwrite)
     {
-        string key = Key(path: path);
-        if (!overwrite && _files.ContainsKey(key: key))
-            throw new IOException(message: $"object already exists: {path}");
-        return new CommitOnDisposeStream(onCommit: bytes => SeedFile(path: key, content: bytes));
+        string key = Key(path);
+        if (!overwrite && _files.ContainsKey(key))
+            throw new IOException($"object already exists: {path}");
+        return new CommitOnDisposeStream(bytes => SeedFile(key, bytes));
     }
 
     public void MoveFile(string source, string destination)
     {
-        string from = Key(path: source);
-        string to = Key(path: destination);
-        if (!_files.TryGetValue(key: from, value: out byte[]? bytes))
-            throw new FileNotFoundException(message: $"no such object: {source}", fileName: source);
-        _files.Remove(key: from);
-        _files[key: to] = bytes;
-        _mtimes[key: to] = DateTime.UtcNow;
+        string from = Key(source);
+        string to = Key(destination);
+        if (!_files.TryGetValue(from, out byte[]? bytes))
+            throw new FileNotFoundException($"no such object: {source}", source);
+        _files.Remove(from);
+        _files[to] = bytes;
+        _mtimes[to] = DateTime.UtcNow;
     }
 
     public void CopyFile(string source, string destination, bool overwrite)
     {
-        string from = Key(path: source);
-        string to = Key(path: destination);
-        if (!_files.TryGetValue(key: from, value: out byte[]? bytes))
-            throw new FileNotFoundException(message: $"no such object: {source}", fileName: source);
-        if (!overwrite && _files.ContainsKey(key: to))
-            throw new IOException(message: $"object already exists: {destination}");
-        _files[key: to] = bytes.ToArray();
-        _mtimes[key: to] = DateTime.UtcNow;
+        string from = Key(source);
+        string to = Key(destination);
+        if (!_files.TryGetValue(from, out byte[]? bytes))
+            throw new FileNotFoundException($"no such object: {source}", source);
+        if (!overwrite && _files.ContainsKey(to))
+            throw new IOException($"object already exists: {destination}");
+        _files[to] = bytes.ToArray();
+        _mtimes[to] = DateTime.UtcNow;
     }
 
     public IEnumerable<string> EnumerateFileSystemEntries(
@@ -131,23 +131,23 @@ internal sealed class InMemoryStorageDriver : IStorageDriver
         SearchOption option
     )
     {
-        string prefix = Key(path: directory);
+        string prefix = Key(directory);
         string withSlash = prefix.Length == 0 ? string.Empty : prefix + "/";
 
         foreach (string fileKey in _files.Keys)
         {
-            if (!fileKey.StartsWith(value: withSlash, comparisonType: StringComparison.Ordinal))
+            if (!fileKey.StartsWith(withSlash, StringComparison.Ordinal))
                 continue;
             string remainder = fileKey[withSlash.Length..];
             if (remainder.Length == 0)
                 continue;
-            if (option == SearchOption.TopDirectoryOnly && remainder.Contains(value: '/'))
+            if (option == SearchOption.TopDirectoryOnly && remainder.Contains('/'))
                 continue;
             yield return fileKey;
         }
     }
 
-    public string GetFullPath(string path) => Key(path: path);
+    public string GetFullPath(string path) => Key(path);
 
     public string? ResolveLinkTarget(string path) => null;
 
@@ -156,10 +156,10 @@ internal sealed class InMemoryStorageDriver : IStorageDriver
     public void MoveDirectory(string source, string destination)
     {
         MoveDirectoryCallCount++;
-        string from = Key(path: source);
-        string to = Key(path: destination);
-        _dirs.Remove(item: from);
-        _dirs.Add(item: to);
+        string from = Key(source);
+        string to = Key(destination);
+        _dirs.Remove(from);
+        _dirs.Add(to);
     }
 
     /// <summary>
@@ -182,9 +182,9 @@ internal sealed class InMemoryStorageDriver : IStorageDriver
             if (disposing && !_committed)
             {
                 _committed = true;
-                _onCommit(obj: ToArray());
+                _onCommit(ToArray());
             }
-            base.Dispose(disposing: disposing);
+            base.Dispose(disposing);
         }
     }
 }

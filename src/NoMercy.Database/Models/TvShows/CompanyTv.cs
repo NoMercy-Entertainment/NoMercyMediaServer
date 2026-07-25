@@ -14,19 +14,19 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.TvShows;
 
-[PrimaryKey(propertyName: nameof(CompanyId), additionalPropertyNames: nameof(TvId))]
-[Index(propertyName: nameof(CompanyId), additionalPropertyNames: nameof(TvId), IsUnique = true)]
+[PrimaryKey(nameof(CompanyId), nameof(TvId))]
+[Index(nameof(CompanyId), nameof(TvId), IsUnique = true)]
 public class CompanyTv : Timestamps
 {
-    [JsonProperty(propertyName: "company_id")]
+    [JsonProperty("company_id")]
     public int CompanyId { get; set; }
 
-    [JsonProperty(propertyName: "company")]
+    [JsonProperty("company")]
     public Company Company { get; set; } = null!;
 
-    [JsonProperty(propertyName: "tvid")]
+    [JsonProperty("tvid")]
     public int TvId { get; set; }
 
-    [JsonProperty(propertyName: "tv")]
+    [JsonProperty("tv")]
     public Tv Tv { get; set; } = null!;
 }

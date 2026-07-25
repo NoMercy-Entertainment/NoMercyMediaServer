@@ -49,14 +49,14 @@ public class MovieManagerTests
 
         IStorageDriver storageDriver = new LocalStorageDriver();
         IStorageFactory storageFactory = new StorageFactory(
-            driver: storageDriver,
-            logger: NullLogger<StorageFactory>.Instance
+            storageDriver,
+            NullLogger<StorageFactory>.Instance
         );
         _movieManager = new(
-            movieRepository: _movieRepositoryMock.Object,
-            jobDispatcher: jobDispatcherMock.Object,
-            storageFactory: storageFactory,
-            logger: NullLogger<MovieManager>.Instance
+            _movieRepositoryMock.Object,
+            jobDispatcherMock.Object,
+            storageFactory,
+            NullLogger<MovieManager>.Instance
         );
         _movieAppends = mockDataProvider.MockMovieAppendsResponse()!;
         _library = new() { Id = new(), Title = "Test Library" };
@@ -67,26 +67,26 @@ public class MovieManagerTests
     public async Task AddMovieAsync_ShouldAddMovie()
     {
         // Arrange
-        _movieClientMock.Setup(expression: client => client.WithAllAppends(false)).ReturnsAsync(value: _movieAppends);
+        _movieClientMock.Setup(client => client.WithAllAppends(false)).ReturnsAsync(_movieAppends);
 
         Movie capturedMovie = null!;
 
         _movieRepositoryMock
-            .Setup(expression: repo => repo.Add(It.IsAny<Movie>()))
-            .Callback<Movie>(action: movie => capturedMovie = movie);
+            .Setup(repo => repo.Add(It.IsAny<Movie>()))
+            .Callback<Movie>(movie => capturedMovie = movie);
 
         // Act
-        await _movieManager.Add(id: _movieId, library: _library);
+        await _movieManager.Add(_movieId, _library);
 
         // Assert
-        _movieRepositoryMock.Verify(expression: repo => repo.Add(It.IsAny<Movie>()), times: Times.Once);
+        _movieRepositoryMock.Verify(repo => repo.Add(It.IsAny<Movie>()), Times.Once);
         _movieRepositoryMock.Verify(
-            expression: repo => repo.LinkToLibrary(_library, It.IsAny<Movie>()),
-            times: Times.Once
+            repo => repo.LinkToLibrary(_library, It.IsAny<Movie>()),
+            Times.Once
         );
-        Assert.NotNull(@object: capturedMovie);
-        Assert.Equal(expected: _movieId, actual: capturedMovie.Id);
-        Assert.Equal(expected: _movieAppends.Title, actual: capturedMovie.Title);
+        Assert.NotNull(capturedMovie);
+        Assert.Equal(_movieId, capturedMovie.Id);
+        Assert.Equal(_movieAppends.Title, capturedMovie.Title);
     }
 
     [Fact]
@@ -94,150 +94,150 @@ public class MovieManagerTests
     {
         Movie capturedMovie = null!;
         _movieRepositoryMock
-            .Setup(expression: repo => repo.Add(It.IsAny<Movie>()))
-            .Callback<Movie>(action: movie => capturedMovie = movie);
+            .Setup(repo => repo.Add(It.IsAny<Movie>()))
+            .Callback<Movie>(movie => capturedMovie = movie);
 
-        await _movieManager.Update(id: _movieId, library: _library);
+        await _movieManager.Update(_movieId, _library);
 
-        _movieRepositoryMock.Verify(expression: repo => repo.Add(It.IsAny<Movie>()), times: Times.Once);
-        Assert.NotNull(@object: capturedMovie);
-        Assert.Equal(expected: _movieId, actual: capturedMovie.Id);
+        _movieRepositoryMock.Verify(repo => repo.Add(It.IsAny<Movie>()), Times.Once);
+        Assert.NotNull(capturedMovie);
+        Assert.Equal(_movieId, capturedMovie.Id);
     }
 
     [Fact]
     public async Task RemoveMovieAsync_ShouldRemoveViaRepository()
     {
-        _movieRepositoryMock.Setup(expression: repo => repo.Remove(_movieId)).Returns(value: Task.CompletedTask);
+        _movieRepositoryMock.Setup(repo => repo.Remove(_movieId)).Returns(Task.CompletedTask);
 
-        await _movieManager.Remove(id: _movieId, library: _library);
+        await _movieManager.Remove(_movieId, _library);
 
-        _movieRepositoryMock.Verify(expression: repo => repo.Remove(_movieId), times: Times.Once);
+        _movieRepositoryMock.Verify(repo => repo.Remove(_movieId), Times.Once);
     }
 
     [Fact]
     public async Task StoreAlternativeTitles_ShouldStoreTitles()
     {
-        await _movieManager.StoreAlternativeTitles(movie: _movieAppends);
+        await _movieManager.StoreAlternativeTitles(_movieAppends);
 
         _movieRepositoryMock.Verify(
-            expression: m => m.StoreAlternativeTitles(It.IsAny<IEnumerable<AlternativeTitle>>()),
-            times: Times.Once
+            m => m.StoreAlternativeTitles(It.IsAny<IEnumerable<AlternativeTitle>>()),
+            Times.Once
         );
     }
 
     [Fact]
     public async Task StoreTranslations_ShouldStoreTranslations()
     {
-        await _movieManager.StoreTranslations(movie: _movieAppends);
+        await _movieManager.StoreTranslations(_movieAppends);
 
         _movieRepositoryMock.Verify(
-            expression: m => m.StoreTranslations(It.IsAny<IEnumerable<Translation>>()),
-            times: Times.Once
+            m => m.StoreTranslations(It.IsAny<IEnumerable<Translation>>()),
+            Times.Once
         );
     }
 
     [Fact]
     public async Task StoreContentRatings_ShouldStoreRatings()
     {
-        await _movieManager.StoreContentRatings(movie: _movieAppends);
+        await _movieManager.StoreContentRatings(_movieAppends);
 
         _movieRepositoryMock.Verify(
-            expression: m => m.StoreContentRatings(It.IsAny<IEnumerable<CertificationMovie>>()),
-            times: Times.Once
+            m => m.StoreContentRatings(It.IsAny<IEnumerable<CertificationMovie>>()),
+            Times.Once
         );
     }
 
     [Fact]
     public async Task StoreSimilar_ShouldStoreSimilarMovies()
     {
-        await _movieManager.StoreSimilar(movie: _movieAppends);
+        await _movieManager.StoreSimilar(_movieAppends);
 
         _movieRepositoryMock.Verify(
-            expression: m => m.StoreSimilar(It.IsAny<IEnumerable<Similar>>()),
-            times: Times.Once
+            m => m.StoreSimilar(It.IsAny<IEnumerable<Similar>>()),
+            Times.Once
         );
     }
 
     [Fact]
     public async Task StoreRecommendations_ShouldStoreRecommendations()
     {
-        await _movieManager.StoreRecommendations(movie: _movieAppends);
+        await _movieManager.StoreRecommendations(_movieAppends);
 
         _movieRepositoryMock.Verify(
-            expression: m => m.StoreRecommendations(It.IsAny<IEnumerable<Recommendation>>()),
-            times: Times.Once
+            m => m.StoreRecommendations(It.IsAny<IEnumerable<Recommendation>>()),
+            Times.Once
         );
     }
 
     [Fact]
     public async Task StoreVideos_ShouldStoreVideos()
     {
-        await _movieManager.StoreVideos(movie: _movieAppends);
+        await _movieManager.StoreVideos(_movieAppends);
 
-        _movieRepositoryMock.Verify(expression: m => m.StoreVideos(It.IsAny<IEnumerable<Media>>()), times: Times.Once);
+        _movieRepositoryMock.Verify(m => m.StoreVideos(It.IsAny<IEnumerable<Media>>()), Times.Once);
     }
 
     [Fact]
     public async Task StoreImages_ShouldStoreImages()
     {
-        await _movieManager.StoreImages(movie: _movieAppends);
+        await _movieManager.StoreImages(_movieAppends);
 
         _movieRepositoryMock.Verify(
-            expression: m => m.StoreImages(It.IsAny<IEnumerable<Image>>()),
-            times: Times.Exactly(callCount: 3)
+            m => m.StoreImages(It.IsAny<IEnumerable<Image>>()),
+            Times.Exactly(3)
         );
     }
 
     [Fact]
     public async Task StoreKeywords_ShouldStoreKeywords()
     {
-        await _movieManager.StoreKeywords(movie: _movieAppends);
+        await _movieManager.StoreKeywords(_movieAppends);
 
         _movieRepositoryMock.Verify(
-            expression: m => m.StoreKeywords(It.IsAny<IEnumerable<Keyword>>()),
-            times: Times.Once
+            m => m.StoreKeywords(It.IsAny<IEnumerable<Keyword>>()),
+            Times.Once
         );
         _movieRepositoryMock.Verify(
-            expression: m => m.LinkKeywordsToMovie(It.IsAny<IEnumerable<KeywordMovie>>()),
-            times: Times.Once
+            m => m.LinkKeywordsToMovie(It.IsAny<IEnumerable<KeywordMovie>>()),
+            Times.Once
         );
     }
 
     [Fact]
     public async Task StoreGenres_ShouldStoreGenres()
     {
-        await _movieManager.StoreGenres(movie: _movieAppends);
+        await _movieManager.StoreGenres(_movieAppends);
 
         _movieRepositoryMock.Verify(
-            expression: m => m.StoreGenres(It.IsAny<IEnumerable<GenreMovie>>()),
-            times: Times.Once
+            m => m.StoreGenres(It.IsAny<IEnumerable<GenreMovie>>()),
+            Times.Once
         );
     }
 
     [Fact]
     public async Task StoreWatchProviders_ShouldStoreWatchProviders()
     {
-        await _movieManager.StoreWatchProviders(movie: _movieAppends);
+        await _movieManager.StoreWatchProviders(_movieAppends);
 
         _movieRepositoryMock.Verify(
-            expression: m => m.StoreWatchProviders(It.IsAny<List<WatchProvider>>()),
-            times: Times.Once
+            m => m.StoreWatchProviders(It.IsAny<List<WatchProvider>>()),
+            Times.Once
         );
         _movieRepositoryMock.Verify(
-            expression: m => m.StoreWatchProviderMedias(It.IsAny<List<WatchProviderMedia>>()),
-            times: Times.Once
+            m => m.StoreWatchProviderMedias(It.IsAny<List<WatchProviderMedia>>()),
+            Times.Once
         );
     }
 
     [Fact]
     public async Task StoreCompanies_ShouldStoreCompanies()
     {
-        await _movieManager.StoreCompanies(movie: _movieAppends);
+        await _movieManager.StoreCompanies(_movieAppends);
 
-        _movieRepositoryMock.Verify(expression: m => m.StoreCompanies(It.IsAny<List<Company>>()), times: Times.Once);
+        _movieRepositoryMock.Verify(m => m.StoreCompanies(It.IsAny<List<Company>>()), Times.Once);
         _movieRepositoryMock.Verify(
-            expression: m => m.StoreCompanyMovies(It.IsAny<List<CompanyMovie>>()),
-            times: Times.Once
+            m => m.StoreCompanyMovies(It.IsAny<List<CompanyMovie>>()),
+            Times.Once
         );
     }
 }

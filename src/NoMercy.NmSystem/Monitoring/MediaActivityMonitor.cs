@@ -26,8 +26,8 @@ public class MediaActivityMonitor
 {
     private const long NeverTouched = 0;
 
-    private static readonly TimeSpan ActiveWindow = TimeSpan.FromSeconds(seconds: 20);
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(seconds: 1);
+    private static readonly TimeSpan ActiveWindow = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
 
     private long _lastTouchedTicks = NeverTouched;
 
@@ -36,7 +36,7 @@ public class MediaActivityMonitor
     /// </summary>
     public void Touch()
     {
-        Interlocked.Exchange(location1: ref _lastTouchedTicks, value: DateTime.UtcNow.Ticks);
+        Interlocked.Exchange(ref _lastTouchedTicks, DateTime.UtcNow.Ticks);
     }
 
     /// <summary>
@@ -47,11 +47,11 @@ public class MediaActivityMonitor
     {
         get
         {
-            long lastTouchedTicks = Interlocked.Read(location: ref _lastTouchedTicks);
+            long lastTouchedTicks = Interlocked.Read(ref _lastTouchedTicks);
             if (lastTouchedTicks == NeverTouched)
                 return false;
 
-            DateTime lastTouched = new(ticks: lastTouchedTicks, kind: DateTimeKind.Utc);
+            DateTime lastTouched = new(lastTouchedTicks, DateTimeKind.Utc);
             return DateTime.UtcNow - lastTouched < ActiveWindow;
         }
     }
@@ -73,7 +73,7 @@ public class MediaActivityMonitor
                 return;
 
             TimeSpan delay = remaining < PollInterval ? remaining : PollInterval;
-            await Task.Delay(delay: delay, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+            await Task.Delay(delay, ct).ConfigureAwait(false);
         }
     }
 }

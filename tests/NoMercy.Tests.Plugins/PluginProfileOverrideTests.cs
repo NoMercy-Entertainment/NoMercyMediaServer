@@ -18,7 +18,6 @@ using EncoderMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
 using EncoderProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using PluginMediaInfo = NoMercy.Plugins.Abstractions.MediaInfo;
 using PluginProfile = NoMercy.Plugins.Abstractions.EncodingProfile;
-using VideoStreamInfo = NoMercy.Encoder.Analysis.VideoStreamInfo;
 
 namespace NoMercy.Tests.Plugins;
 
@@ -33,9 +32,9 @@ public class PluginProfileOverrideTests
     public void PluginReturnsProfile_OverridesConfigured()
     {
         PluginProfileOverride sut = new(
-            pluginManager: new FakePluginManager(
-                plugins: new FakePlugin(
-                    result: new()
+            new FakePluginManager(
+                new FakePlugin(
+                    new()
                     {
                         Name = "Anime HEVC",
                         VideoCodec = "hevc",
@@ -48,41 +47,41 @@ public class PluginProfileOverrideTests
             )
         );
 
-        EncoderProfile result = sut.Apply(configured: Configured(), media: Source());
+        EncoderProfile result = sut.Apply(Configured(), Source());
 
-        result.Name.Should().Be(expected: "Anime HEVC", because: "the plugin's profile replaces the configured one");
-        result.Video!.Codec.Should().Be(expected: VideoCodecType.H265, because: "string codec mapped to the enum");
-        result.Video.Width.Should().Be(expected: 1920);
+        result.Name.Should().Be("Anime HEVC", "the plugin's profile replaces the configured one");
+        result.Video!.Codec.Should().Be(VideoCodecType.H265, "string codec mapped to the enum");
+        result.Video.Width.Should().Be(1920);
     }
 
     [Fact]
     public void NoPlugin_KeepsConfigured()
     {
-        PluginProfileOverride sut = new(pluginManager: new FakePluginManager());
+        PluginProfileOverride sut = new(new FakePluginManager());
         EncoderProfile configured = Configured();
 
-        sut.Apply(configured: configured, media: Source()).Should().BeSameAs(expected: configured);
+        sut.Apply(configured, Source()).Should().BeSameAs(configured);
     }
 
     [Fact]
     public void FirstPluginReturningNonNull_Wins()
     {
         PluginProfileOverride sut = new(
-            pluginManager: new FakePluginManager(plugins: [new FakePlugin(result: null), new FakePlugin(result: NamedProfile(name: "Winner")), new FakePlugin(result: NamedProfile(name: "Loser"))]
+            new FakePluginManager([new FakePlugin(null), new FakePlugin(NamedProfile("Winner")), new FakePlugin(NamedProfile("Loser"))]
             )
         );
 
-        sut.Apply(configured: Configured(), media: Source()).Name.Should().Be(expected: "Winner");
+        sut.Apply(Configured(), Source()).Name.Should().Be("Winner");
     }
 
     [Fact]
     public void SourceWithNoVideoStream_NullVideoFieldsAndDefaultIsHdr()
     {
         PluginProfileOverride sut = new(
-            pluginManager: new FakePluginManager(plugins: new FakePlugin(result: NamedProfile(name: "NoVideoSource")))
+            new FakePluginManager(new FakePlugin(NamedProfile("NoVideoSource")))
         );
 
-        sut.Apply(configured: Configured(), media: SourceWithNoVideoStream());
+        sut.Apply(Configured(), SourceWithNoVideoStream());
 
         // The override itself never reads the plugin's incoming MediaInfo back —
         // this only proves Apply completes without throwing when every video?.X
@@ -92,30 +91,30 @@ public class PluginProfileOverrideTests
     [Fact]
     public void SourceWithAudioStream_AudioFieldsPopulated()
     {
-        FakePlugin plugin = new(result: NamedProfile(name: "WithAudio"));
-        PluginProfileOverride sut = new(pluginManager: new FakePluginManager(plugins: plugin));
+        FakePlugin plugin = new(NamedProfile("WithAudio"));
+        PluginProfileOverride sut = new(new FakePluginManager(plugin));
 
-        sut.Apply(configured: Configured(), media: SourceWithAudioStream());
+        sut.Apply(Configured(), SourceWithAudioStream());
     }
 
     [Fact]
     public void SourceWithZeroOverallBitrate_BitrateFieldStaysNull()
     {
-        FakePlugin plugin = new(result: NamedProfile(name: "ZeroBitrate"));
-        PluginProfileOverride sut = new(pluginManager: new FakePluginManager(plugins: plugin));
+        FakePlugin plugin = new(NamedProfile("ZeroBitrate"));
+        PluginProfileOverride sut = new(new FakePluginManager(plugin));
 
         EncoderMediaInfo zeroBitrateSource = Source() with { OverallBitRateKbps = 0 };
 
-        sut.Apply(configured: Configured(), media: zeroBitrateSource);
+        sut.Apply(Configured(), zeroBitrateSource);
     }
 
     [Fact]
     public void PluginProfile_UnrecognizedAudioCodec_FallsBackToAac()
     {
         PluginProfileOverride sut = new(
-            pluginManager: new FakePluginManager(
-                plugins: new FakePlugin(
-                    result: new()
+            new FakePluginManager(
+                new FakePlugin(
+                    new()
                     {
                         Name = "Unrecognized",
                         VideoCodec = "h264",
@@ -125,47 +124,47 @@ public class PluginProfileOverrideTests
             )
         );
 
-        EncoderProfile result = sut.Apply(configured: Configured(), media: Source());
+        EncoderProfile result = sut.Apply(Configured(), Source());
 
-        result.Audio[0].Codec.Should().Be(expected: AudioCodecType.Aac);
+        result.Audio[0].Codec.Should().Be(AudioCodecType.Aac);
     }
 
     [Fact]
     public void PluginProfile_ExtraParametersPopulated_BecomeCustomArguments()
     {
         PluginProfileOverride sut = new(
-            pluginManager: new FakePluginManager(
-                plugins: new FakePlugin(
-                    result: new()
+            new FakePluginManager(
+                new FakePlugin(
+                    new()
                     {
                         Name = "WithExtras",
                         VideoCodec = "h264",
                         AudioCodec = "aac",
                         ExtraParameters = new Dictionary<string, string>
                         {
-                            [key: "x265-params"] = "crf=20",
+                            ["x265-params"] = "crf=20",
                         },
                     }
                 )
             )
         );
 
-        EncoderProfile result = sut.Apply(configured: Configured(), media: Source());
+        EncoderProfile result = sut.Apply(Configured(), Source());
 
         result
             .Video!.CustomArguments.Should()
-            .ContainKey(expected: "x265-params")
+            .ContainKey("x265-params")
             .WhoseValue.Should()
-            .Be(expected: "crf=20");
+            .Be("crf=20");
     }
 
     [Fact]
     public void PluginProfile_VideoAndAudioBitrateSet_UseVbrAndBitrateValues()
     {
         PluginProfileOverride sut = new(
-            pluginManager: new FakePluginManager(
-                plugins: new FakePlugin(
-                    result: new()
+            new FakePluginManager(
+                new FakePlugin(
+                    new()
                     {
                         Name = "WithBitrates",
                         VideoCodec = "h264",
@@ -177,41 +176,41 @@ public class PluginProfileOverrideTests
             )
         );
 
-        EncoderProfile result = sut.Apply(configured: Configured(), media: Source());
+        EncoderProfile result = sut.Apply(Configured(), Source());
 
-        result.Video!.RateControl.Should().Be(expected: Encoder.Profiles.RateControlMode.Vbr);
-        result.Video.BitrateKbps.Should().Be(expected: 4000);
-        result.Audio[0].BitrateKbps.Should().Be(expected: 192);
+        result.Video!.RateControl.Should().Be(Encoder.Profiles.RateControlMode.Vbr);
+        result.Video.BitrateKbps.Should().Be(4000);
+        result.Audio[0].BitrateKbps.Should().Be(192);
     }
 
     [Theory]
-    [InlineData(data: ["ts", Encoder.Profiles.Container.HlsTs])]
-    [InlineData(data: ["mpegts", Encoder.Profiles.Container.HlsTs])]
-    [InlineData(data: ["hls_ts", Encoder.Profiles.Container.HlsTs])]
-    [InlineData(data: ["m3u8", Encoder.Profiles.Container.HlsFmp4])]
-    [InlineData(data: ["hls", Encoder.Profiles.Container.HlsFmp4])]
-    [InlineData(data: ["fmp4", Encoder.Profiles.Container.HlsFmp4])]
-    [InlineData(data: ["hls_fmp4", Encoder.Profiles.Container.HlsFmp4])]
-    [InlineData(data: ["mkv", Encoder.Profiles.Container.Mkv])]
-    [InlineData(data: ["matroska", Encoder.Profiles.Container.Mkv])]
-    [InlineData(data: ["dash", Encoder.Profiles.Container.Dash])]
-    [InlineData(data: ["mpd", Encoder.Profiles.Container.Dash])]
-    [InlineData(data: ["mp3", Encoder.Profiles.Container.Mp3])]
-    [InlineData(data: ["flac", Encoder.Profiles.Container.Flac])]
-    [InlineData(data: ["ogg", Encoder.Profiles.Container.Ogg])]
-    [InlineData(data: ["oga", Encoder.Profiles.Container.Ogg])]
-    [InlineData(data: ["opus", Encoder.Profiles.Container.Ogg])]
-    [InlineData(data: ["MP4", Encoder.Profiles.Container.Mp4])]
-    [InlineData(data: ["something-unrecognized", Encoder.Profiles.Container.Mp4])]
+    [InlineData(["ts", Encoder.Profiles.Container.HlsTs])]
+    [InlineData(["mpegts", Encoder.Profiles.Container.HlsTs])]
+    [InlineData(["hls_ts", Encoder.Profiles.Container.HlsTs])]
+    [InlineData(["m3u8", Encoder.Profiles.Container.HlsFmp4])]
+    [InlineData(["hls", Encoder.Profiles.Container.HlsFmp4])]
+    [InlineData(["fmp4", Encoder.Profiles.Container.HlsFmp4])]
+    [InlineData(["hls_fmp4", Encoder.Profiles.Container.HlsFmp4])]
+    [InlineData(["mkv", Encoder.Profiles.Container.Mkv])]
+    [InlineData(["matroska", Encoder.Profiles.Container.Mkv])]
+    [InlineData(["dash", Encoder.Profiles.Container.Dash])]
+    [InlineData(["mpd", Encoder.Profiles.Container.Dash])]
+    [InlineData(["mp3", Encoder.Profiles.Container.Mp3])]
+    [InlineData(["flac", Encoder.Profiles.Container.Flac])]
+    [InlineData(["ogg", Encoder.Profiles.Container.Ogg])]
+    [InlineData(["oga", Encoder.Profiles.Container.Ogg])]
+    [InlineData(["opus", Encoder.Profiles.Container.Ogg])]
+    [InlineData(["MP4", Encoder.Profiles.Container.Mp4])]
+    [InlineData(["something-unrecognized", Encoder.Profiles.Container.Mp4])]
     public void PluginProfile_ContainerAlias_MapsToExpectedContainer(
         string containerAlias,
         Encoder.Profiles.Container expected
     )
     {
         PluginProfileOverride sut = new(
-            pluginManager: new FakePluginManager(
-                plugins: new FakePlugin(
-                    result: new()
+            new FakePluginManager(
+                new FakePlugin(
+                    new()
                     {
                         Name = "Container",
                         VideoCodec = "h264",
@@ -222,9 +221,9 @@ public class PluginProfileOverrideTests
             )
         );
 
-        EncoderProfile result = sut.Apply(configured: Configured(), media: Source());
+        EncoderProfile result = sut.Apply(Configured(), Source());
 
-        result.Container.Should().Be(expected: expected);
+        result.Container.Should().Be(expected);
     }
 
     private static PluginProfile NamedProfile(string name) =>
@@ -237,41 +236,40 @@ public class PluginProfileOverrideTests
 
     private static EncoderProfile Configured() =>
         new(
-            Id: Ulid.NewUlid(),
-            Name: "Configured Default",
-            Container: Encoder.Profiles.Container.HlsTs,
-            Video: null,
-            Audio: [],
-            Subtitles: []
+            Ulid.NewUlid(),
+            "Configured Default",
+            Encoder.Profiles.Container.HlsTs,
+            null,
+            [],
+            []
         );
 
     private static EncoderMediaInfo Source() =>
         new(
-            FilePath: "/media/x.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 90),
-            OverallBitRateKbps: 20000,
-            FileSizeBytes: 10_000_000_000,
-            VideoStreams:
+            "/media/x.mkv",
+            "matroska",
+            TimeSpan.FromMinutes(90),
+            20000,
+            10_000_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "hevc",
-                    Width: 3840,
-                    Height: 2160,
-                    FrameRate: 24.0,
-                    BitDepth: 10,
-                    PixelFormat: "yuv420p10le",
-                    ColorPrimaries: "bt2020",
-                    ColorTransfer: "smpte2084",
-                    ColorSpace: "bt2020nc",
-                    IsDefault: true,
-                    BitRateKbps: 18000
+                    0,
+                    "hevc",
+                    3840,
+                    2160,
+                    24.0,
+                    10,
+                    "yuv420p10le",
+                    "bt2020",
+                    "smpte2084",
+                    "bt2020nc",
+                    true,
+                    18000
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
     private static EncoderMediaInfo SourceWithNoVideoStream() =>
@@ -286,14 +284,14 @@ public class PluginProfileOverrideTests
             AudioStreams =
             [
                 new(
-                    Index: 0,
-                    Codec: "aac",
-                    Channels: 2,
-                    SampleRate: 48000,
-                    BitRateKbps: 192,
-                    Language: "eng",
-                    IsDefault: true,
-                    IsForced: false
+                    0,
+                    "aac",
+                    2,
+                    48000,
+                    192,
+                    "eng",
+                    true,
+                    false
                 ),
             ],
         };
@@ -303,7 +301,7 @@ public class PluginProfileOverrideTests
         public string Name => "fake";
         public string Description => "";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(major: 1, minor: 0);
+        public Version Version { get; } = new(1, 0);
 
         public void Initialize(IPluginContext context) { }
 
@@ -332,6 +330,6 @@ public class PluginProfileOverrideTests
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<PluginLoadResult>>(result: []);
+            Task.FromResult<IReadOnlyList<PluginLoadResult>>([]);
     }
 }

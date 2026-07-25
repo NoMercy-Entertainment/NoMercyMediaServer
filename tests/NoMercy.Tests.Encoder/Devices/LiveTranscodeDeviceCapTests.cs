@@ -25,28 +25,28 @@ public class LiveTranscodeDeviceCapTests
 
     private static ClientCapabilities MakeHiFiClient() =>
         new(
-            SupportedVideoCodecs: [VideoCodecType.H264, VideoCodecType.H265],
-            SupportedAudioCodecs: [],
-            SupportedContainers: [],
-            MaxWidth: 3840,
-            MaxHeight: 2160,
-            SupportsHdr: true,
-            Supports10Bit: true,
-            MaxBitrateKbps: 20000,
-            MaxAudioChannels: 8
+            [VideoCodecType.H264, VideoCodecType.H265],
+            [],
+            [],
+            3840,
+            2160,
+            true,
+            true,
+            20000,
+            8
         );
 
     private static ClientCapabilities MakeStereoClient() =>
         new(
-            SupportedVideoCodecs: [VideoCodecType.H264],
-            SupportedAudioCodecs: [],
-            SupportedContainers: [],
-            MaxWidth: 1920,
-            MaxHeight: 1080,
-            SupportsHdr: false,
-            Supports10Bit: false,
-            MaxBitrateKbps: 6000,
-            MaxAudioChannels: 2
+            [VideoCodecType.H264],
+            [],
+            [],
+            1920,
+            1080,
+            false,
+            false,
+            6000,
+            2
         );
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -57,10 +57,10 @@ public class LiveTranscodeDeviceCapTests
     public void NoCaps_ClientCapsUnchanged()
     {
         ClientCapabilities client = MakeHiFiClient();
-        ClientCapabilities result = _selector.ApplyDeviceCaps(client: client, deviceCaps: null);
+        ClientCapabilities result = _selector.ApplyDeviceCaps(client, null);
 
-        result.MaxAudioChannels.Should().Be(expected: 8);
-        result.MaxHeight.Should().Be(expected: 2160);
+        result.MaxAudioChannels.Should().Be(8);
+        result.MaxHeight.Should().Be(2160);
         result.SupportsHdr.Should().BeTrue();
     }
 
@@ -78,9 +78,9 @@ public class LiveTranscodeDeviceCapTests
             RamTier = DeviceRamTier.LowRam,
         };
 
-        ClientCapabilities result = _selector.ApplyDeviceCaps(client: client, deviceCaps: nokiaCaps);
+        ClientCapabilities result = _selector.ApplyDeviceCaps(client, nokiaCaps);
 
-        result.MaxAudioChannels.Should().Be(expected: 2);
+        result.MaxAudioChannels.Should().Be(2);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -98,9 +98,9 @@ public class LiveTranscodeDeviceCapTests
             RamTier = DeviceRamTier.HighRam,
         };
 
-        ClientCapabilities result = _selector.ApplyDeviceCaps(client: client, deviceCaps: phoneCaps);
+        ClientCapabilities result = _selector.ApplyDeviceCaps(client, phoneCaps);
 
-        result.MaxAudioChannels.Should().Be(expected: 8);
+        result.MaxAudioChannels.Should().Be(8);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ public class LiveTranscodeDeviceCapTests
         ClientCapabilities client = MakeHiFiClient(); // SupportsHdr = true
         DeviceCapabilities deviceCaps = new() { HdrSupport = false };
 
-        ClientCapabilities result = _selector.ApplyDeviceCaps(client: client, deviceCaps: deviceCaps);
+        ClientCapabilities result = _selector.ApplyDeviceCaps(client, deviceCaps);
 
         result.SupportsHdr.Should().BeFalse();
     }
@@ -128,9 +128,9 @@ public class LiveTranscodeDeviceCapTests
         ClientCapabilities client = MakeHiFiClient(); // MaxHeight = 2160
         DeviceCapabilities deviceCaps = new() { MaxVideoHeight = 1080 };
 
-        ClientCapabilities result = _selector.ApplyDeviceCaps(client: client, deviceCaps: deviceCaps);
+        ClientCapabilities result = _selector.ApplyDeviceCaps(client, deviceCaps);
 
-        result.MaxHeight.Should().Be(expected: 1080);
+        result.MaxHeight.Should().Be(1080);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -143,9 +143,9 @@ public class LiveTranscodeDeviceCapTests
         ClientCapabilities client = MakeStereoClient(); // MaxAudioChannels = 2
         DeviceCapabilities deviceCaps = new() { MaxAudioChannels = 6 };
 
-        ClientCapabilities result = _selector.ApplyDeviceCaps(client: client, deviceCaps: deviceCaps);
+        ClientCapabilities result = _selector.ApplyDeviceCaps(client, deviceCaps);
 
-        result.MaxAudioChannels.Should().Be(expected: 2); // client is more restrictive
+        result.MaxAudioChannels.Should().Be(2); // client is more restrictive
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -165,10 +165,10 @@ public class LiveTranscodeDeviceCapTests
             RamTier = DeviceRamTier.LowRam,
         };
 
-        ClientCapabilities result = _selector.ApplyDeviceCaps(client: client, deviceCaps: nokia);
+        ClientCapabilities result = _selector.ApplyDeviceCaps(client, nokia);
 
-        result.MaxAudioChannels.Should().Be(expected: 2);
-        result.MaxHeight.Should().Be(expected: 1080);
+        result.MaxAudioChannels.Should().Be(2);
+        result.MaxHeight.Should().Be(1080);
         result.SupportsHdr.Should().BeFalse();
     }
 }

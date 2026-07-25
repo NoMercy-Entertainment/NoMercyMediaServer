@@ -16,10 +16,10 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record SpecialResponseDto
 {
-    [JsonProperty(propertyName: "nextId")]
+    [JsonProperty("nextId")]
     public object NextId { get; set; } = null!;
 
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public SpecialResponseItemDto? Data { get; set; }
 
     public SpecialResponseDto(Special special)

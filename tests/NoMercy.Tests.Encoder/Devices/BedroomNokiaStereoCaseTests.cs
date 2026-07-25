@@ -38,21 +38,21 @@ public class BedroomNokiaStereoCaseTests
 
         VariantDescriptor[] variants =
         [
-            new(Index: 0, Height: 2160, Width: 3840, VideoCodec: "hevc", VideoBitrateKbps: 12000, AudioChannels: 6, AudioCodec: "eac3"),
-            new(Index: 1, Height: 1080, Width: 1920, VideoCodec: "h264", VideoBitrateKbps: 6000, AudioChannels: 6, AudioCodec: "ac3"),
-            new(Index: 2, Height: 720, Width: 1280, VideoCodec: "h264", VideoBitrateKbps: 3000, AudioChannels: 2, AudioCodec: "aac"),
+            new(0, 2160, 3840, "hevc", 12000, 6, "eac3"),
+            new(1, 1080, 1920, "h264", 6000, 6, "ac3"),
+            new(2, 720, 1280, "h264", 3000, 2, "aac"),
         ];
 
-        VariantSelection sel = _selector.Select(variants: variants, caps: nokia);
+        VariantSelection sel = _selector.Select(variants, nokia);
 
         // Variant 2 is stereo + aac + h264 + 720p — passes audio/codec/height filters.
         // But variant 2 is 3000 kbps. LowRam ceiling is 2000 kbps. So no variant fits → transcode.
         sel.VariantIndex.Should().BeNull();
-        sel.AudioConstraint.Should().Be(expected: new AudioConstraint(Channels: 2, Codec: "aac"));
+        sel.AudioConstraint.Should().Be(new AudioConstraint(2, "aac"));
         sel.VideoConstraint.Should().NotBeNull();
-        sel.VideoConstraint!.MaxHeight.Should().Be(expected: 1080);
-        sel.VideoConstraint.Codec.Should().BeOneOf(validValues: ["h264", "hevc"]);
-        sel.Reason.Should().Contain(expected: "LowRam");
+        sel.VideoConstraint!.MaxHeight.Should().Be(1080);
+        sel.VideoConstraint.Codec.Should().BeOneOf(["h264", "hevc"]);
+        sel.Reason.Should().Contain("LowRam");
     }
 
     [Fact]
@@ -69,14 +69,14 @@ public class BedroomNokiaStereoCaseTests
 
         VariantDescriptor[] variants =
         [
-            new(Index: 0, Height: 1080, Width: 1920, VideoCodec: "h264", VideoBitrateKbps: 6000, AudioChannels: 6, AudioCodec: "eac3"),
-            new(Index: 1, Height: 720, Width: 1280, VideoCodec: "h264", VideoBitrateKbps: 1500, AudioChannels: 2, AudioCodec: "aac"),
+            new(0, 1080, 1920, "h264", 6000, 6, "eac3"),
+            new(1, 720, 1280, "h264", 1500, 2, "aac"),
         ];
 
-        VariantSelection sel = _selector.Select(variants: variants, caps: nokia);
+        VariantSelection sel = _selector.Select(variants, nokia);
 
         // Variant 1 is 1500 kbps — below LowRam ceiling (2000 kbps), stereo aac h264 720p
-        sel.VariantIndex.Should().Be(expected: 1);
+        sel.VariantIndex.Should().Be(1);
         sel.AudioConstraint.Should().BeNull();
         sel.VideoConstraint.Should().BeNull();
     }
@@ -92,10 +92,10 @@ public class BedroomNokiaStereoCaseTests
             RamTier = DeviceRamTier.LowRam,
         };
 
-        VariantSelection sel = _selector.Select(variants: [], caps: nokia);
+        VariantSelection sel = _selector.Select([], nokia);
 
         sel.VariantIndex.Should().BeNull();
-        sel.Reason.Should().Contain(expected: "no variants available");
+        sel.Reason.Should().Contain("no variants available");
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public class BedroomNokiaStereoCaseTests
         };
 
         nokia.HdrSupport.Should().BeFalse();
-        nokia.DolbyVision.Should().Be(expected: DolbyVisionProfile.None);
+        nokia.DolbyVision.Should().Be(DolbyVisionProfile.None);
         nokia.PlayerBufferCapMb.Should().BeNull();
     }
 }

@@ -27,18 +27,18 @@ namespace NoMercy.Tests.Storage.Concurrency;
 /// rarely show because the in-memory operations finish before the next
 /// thread starts.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class NfsConcurrencyTests
 {
     private static NfsDriverConfig BuildConfig() =>
         new(
-            Server: "test.local",
-            Export: "/export",
-            Version: 4,
-            Uid: null,
-            Gid: null,
-            Port: 2049,
-            MountPort: null
+            "test.local",
+            "/export",
+            4,
+            null,
+            null,
+            2049,
+            null
         );
 
     private static (NfsStorageDriver driver, FaultyLibNfs lib) BuildDriverWithLatency(
@@ -46,8 +46,8 @@ public class NfsConcurrencyTests
     )
     {
         FaultyLibNfs lib = new() { ArtificialLatency = latency };
-        lib.SeedDir(path: "/");
-        NfsStorageDriver driver = new(config: BuildConfig(), libNfs: lib);
+        lib.SeedDir("/");
+        NfsStorageDriver driver = new(BuildConfig(), lib);
         return (driver, lib);
     }
 
@@ -55,22 +55,22 @@ public class NfsConcurrencyTests
     public void Parallel_FileExists_calls_serialize_through_driver_lock()
     {
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriverWithLatency(
-            latency: TimeSpan.FromMilliseconds(milliseconds: 2)
+            TimeSpan.FromMilliseconds(2)
         );
         try
         {
             for (int i = 0; i < 20; i++)
-                lib.Seed(path: $"/file_{i}.bin", content: [(byte)i]);
+                lib.Seed($"/file_{i}.bin", [(byte)i]);
 
             Parallel.For(
-                fromInclusive: 0,
-                toExclusive: 20,
-                parallelOptions: new() { MaxDegreeOfParallelism = 8 },
-                body: i => driver.FileExists(path: $"/file_{i}.bin").Should().BeTrue()
+                0,
+                20,
+                new() { MaxDegreeOfParallelism = 8 },
+                i => driver.FileExists($"/file_{i}.bin").Should().BeTrue()
             );
 
             lib.MaxConcurrentCalls.Should()
-                .Be(expected: 1, because: "driver _lock must serialize every libnfs call on the shared context");
+                .Be(1, "driver _lock must serialize every libnfs call on the shared context");
         }
         finally
         {
@@ -82,26 +82,26 @@ public class NfsConcurrencyTests
     public void Parallel_GetFileSize_calls_serialize_through_driver_lock()
     {
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriverWithLatency(
-            latency: TimeSpan.FromMilliseconds(milliseconds: 2)
+            TimeSpan.FromMilliseconds(2)
         );
         try
         {
             for (int i = 0; i < 20; i++)
-                lib.Seed(path: $"/f_{i}.bin", content: new byte[i + 1]);
+                lib.Seed($"/f_{i}.bin", new byte[i + 1]);
 
             long[] sizes = new long[20];
             Parallel.For(
-                fromInclusive: 0,
-                toExclusive: 20,
-                parallelOptions: new() { MaxDegreeOfParallelism = 8 },
-                body: i =>
+                0,
+                20,
+                new() { MaxDegreeOfParallelism = 8 },
+                i =>
                 {
-                    sizes[i] = driver.GetFileSize(path: $"/f_{i}.bin");
+                    sizes[i] = driver.GetFileSize($"/f_{i}.bin");
                 }
             );
 
-            sizes.Should().BeEquivalentTo(expectation: Enumerable.Range(start: 1, count: 20).Select(selector: n => (long)n));
-            lib.MaxConcurrentCalls.Should().Be(expected: 1);
+            sizes.Should().BeEquivalentTo(Enumerable.Range(1, 20).Select(n => (long)n));
+            lib.MaxConcurrentCalls.Should().Be(1);
         }
         finally
         {
@@ -113,27 +113,27 @@ public class NfsConcurrencyTests
     public void Parallel_OpenRead_streams_serialize_libnfs_calls()
     {
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriverWithLatency(
-            latency: TimeSpan.FromMilliseconds(milliseconds: 1)
+            TimeSpan.FromMilliseconds(1)
         );
         try
         {
-            byte[] payload = Enumerable.Range(start: 0, count: 256).Select(selector: n => (byte)n).ToArray();
+            byte[] payload = Enumerable.Range(0, 256).Select(n => (byte)n).ToArray();
             for (int i = 0; i < 8; i++)
-                lib.Seed(path: $"/p_{i}.bin", content: payload);
+                lib.Seed($"/p_{i}.bin", payload);
 
             byte[][] reads = new byte[8][];
             Parallel.For(
-                fromInclusive: 0,
-                toExclusive: 8,
-                parallelOptions: new() { MaxDegreeOfParallelism = 8 },
-                body: i =>
+                0,
+                8,
+                new() { MaxDegreeOfParallelism = 8 },
+                i =>
                 {
-                    using Stream s = driver.OpenRead(path: $"/p_{i}.bin");
+                    using Stream s = driver.OpenRead($"/p_{i}.bin");
                     byte[] buf = new byte[256];
                     int read = 0;
                     while (read < buf.Length)
                     {
-                        int n = s.Read(buffer: buf, offset: read, count: buf.Length - read);
+                        int n = s.Read(buf, read, buf.Length - read);
                         if (n == 0)
                             break;
                         read += n;
@@ -143,10 +143,10 @@ public class NfsConcurrencyTests
             );
 
             foreach (byte[] r in reads)
-                r.Should().BeEquivalentTo(expectation: payload);
+                r.Should().BeEquivalentTo(payload);
 
             lib.MaxConcurrentCalls.Should()
-                .Be(expected: 1, because: "shared-context Reads must serialize through _lock");
+                .Be(1, "shared-context Reads must serialize through _lock");
         }
         finally
         {
@@ -158,61 +158,61 @@ public class NfsConcurrencyTests
     public async Task Parallel_mixed_read_write_list_operations_do_not_corrupt_each_other()
     {
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriverWithLatency(
-            latency: TimeSpan.FromMilliseconds(milliseconds: 1)
+            TimeSpan.FromMilliseconds(1)
         );
         try
         {
             for (int i = 0; i < 10; i++)
-                lib.Seed(path: $"/r_{i}.bin", content: [(byte)i]);
+                lib.Seed($"/r_{i}.bin", [(byte)i]);
 
             int errors = 0;
-            Task readTask = Task.Run(action: () =>
+            Task readTask = Task.Run(() =>
             {
                 try
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        using Stream s = driver.OpenRead(path: $"/r_{i}.bin");
+                        using Stream s = driver.OpenRead($"/r_{i}.bin");
                         byte[] buf = new byte[1];
-                        _ = s.Read(buffer: buf, offset: 0, count: 1);
+                        _ = s.Read(buf, 0, 1);
                     }
                 }
                 catch
                 {
-                    Interlocked.Increment(location: ref errors);
+                    Interlocked.Increment(ref errors);
                 }
             });
-            Task writeTask = Task.Run(action: () =>
+            Task writeTask = Task.Run(() =>
             {
                 try
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        using Stream s = driver.OpenWrite(path: $"/w_{i}.bin", overwrite: true);
-                        s.Write(buffer: [(byte)i], offset: 0, count: 1);
+                        using Stream s = driver.OpenWrite($"/w_{i}.bin", true);
+                        s.Write([(byte)i], 0, 1);
                     }
                 }
                 catch
                 {
-                    Interlocked.Increment(location: ref errors);
+                    Interlocked.Increment(ref errors);
                 }
             });
-            Task statTask = Task.Run(action: () =>
+            Task statTask = Task.Run(() =>
             {
                 try
                 {
                     for (int i = 0; i < 10; i++)
-                        driver.FileExists(path: $"/r_{i}.bin");
+                        driver.FileExists($"/r_{i}.bin");
                 }
                 catch
                 {
-                    Interlocked.Increment(location: ref errors);
+                    Interlocked.Increment(ref errors);
                 }
             });
-            await Task.WhenAll(tasks: [readTask, writeTask, statTask]);
+            await Task.WhenAll([readTask, writeTask, statTask]);
 
-            errors.Should().Be(expected: 0, because: "no operation should fail under mixed concurrency");
-            lib.MaxConcurrentCalls.Should().Be(expected: 1);
+            errors.Should().Be(0, "no operation should fail under mixed concurrency");
+            lib.MaxConcurrentCalls.Should().Be(1);
         }
         finally
         {
@@ -224,29 +224,29 @@ public class NfsConcurrencyTests
     public void OpenReadIsolated_stamps_each_context_with_a_unique_client_identity()
     {
         FaultyLibNfs lib = new();
-        lib.SeedDir(path: "/");
-        byte[] payload = Enumerable.Range(start: 0, count: 64).Select(selector: n => (byte)n).ToArray();
+        lib.SeedDir("/");
+        byte[] payload = Enumerable.Range(0, 64).Select(n => (byte)n).ToArray();
         for (int i = 0; i < 4; i++)
-            lib.Seed(path: $"/iso_{i}.bin", content: payload);
+            lib.Seed($"/iso_{i}.bin", payload);
 
-        NfsStorageDriver driver = new(config: BuildConfig(), libNfs: lib);
+        NfsStorageDriver driver = new(BuildConfig(), lib);
         List<Stream> streams = [];
         try
         {
             for (int i = 0; i < 4; i++)
-                streams.Add(item: driver.OpenReadIsolated(path: $"/iso_{i}.bin"));
+                streams.Add(driver.OpenReadIsolated($"/iso_{i}.bin"));
 
             // Every context libnfs stamped — the main context plus one per
             // isolated read — must carry a DISTINCT NFSv4 client name. A shared
             // name folds them into a single open-owner on the server, and their
             // independent local open-seqid counters then collide as
             // NFS4ERR_BAD_SEQID the moment a parallel scan opens several at once.
-            lib.ClientNames.Should().HaveCountGreaterThanOrEqualTo(expected: 5); // 1 main + 4 isolated
+            lib.ClientNames.Should().HaveCountGreaterThanOrEqualTo(5); // 1 main + 4 isolated
             lib.ClientNames.Values.Distinct()
                 .Should()
                 .HaveCount(
-                    expected: lib.ClientNames.Count,
-                    because: "each isolated read context needs its own NFSv4 client identity"
+                    lib.ClientNames.Count,
+                    "each isolated read context needs its own NFSv4 client identity"
                 );
         }
         finally
@@ -261,20 +261,20 @@ public class NfsConcurrencyTests
     public void High_contention_stress_holds_lock_invariant()
     {
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriverWithLatency(
-            latency: TimeSpan.FromMilliseconds(milliseconds: 1)
+            TimeSpan.FromMilliseconds(1)
         );
         try
         {
             for (int i = 0; i < 50; i++)
-                lib.Seed(path: $"/s_{i}.bin", content: new byte[10]);
+                lib.Seed($"/s_{i}.bin", new byte[10]);
 
             // 16 worker threads, each doing 50 mixed ops — the kind of load the
             // scanner applies to a vault under a full library refresh.
             Parallel.For(
-                fromInclusive: 0,
-                toExclusive: 16,
-                parallelOptions: new() { MaxDegreeOfParallelism = 16 },
-                body: worker =>
+                0,
+                16,
+                new() { MaxDegreeOfParallelism = 16 },
+                worker =>
                 {
                     for (int i = 0; i < 50; i++)
                     {
@@ -282,19 +282,19 @@ public class NfsConcurrencyTests
                         switch (i % 4)
                         {
                             case 0:
-                                driver.FileExists(path: $"/s_{idx}.bin");
+                                driver.FileExists($"/s_{idx}.bin");
                                 break;
                             case 1:
-                                driver.GetFileSize(path: $"/s_{idx}.bin");
+                                driver.GetFileSize($"/s_{idx}.bin");
                                 break;
                             case 2:
-                                driver.GetLastWriteTimeUtc(path: $"/s_{idx}.bin");
+                                driver.GetLastWriteTimeUtc($"/s_{idx}.bin");
                                 break;
                             case 3:
-                                using (Stream s = driver.OpenRead(path: $"/s_{idx}.bin"))
+                                using (Stream s = driver.OpenRead($"/s_{idx}.bin"))
                                 {
                                     byte[] buf = new byte[10];
-                                    _ = s.Read(buffer: buf, offset: 0, count: 10);
+                                    _ = s.Read(buf, 0, 10);
                                 }
                                 break;
                         }
@@ -304,8 +304,8 @@ public class NfsConcurrencyTests
 
             lib.MaxConcurrentCalls.Should()
                 .Be(
-                    expected: 1,
-                    because: "even under 16-way contention the driver lock must keep the libnfs context single-threaded"
+                    1,
+                    "even under 16-way contention the driver lock must keep the libnfs context single-threaded"
                 );
         }
         finally

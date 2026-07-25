@@ -31,13 +31,13 @@ namespace NoMercy.Tests.Cli.Commands;
 /// call site hardcodes a 30s timeout, which a mock-driven unit test must never
 /// actually wait out.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class UpdateCommandWaitForExitTests
 {
     private static Task<bool> HasStoppedAsync(ICliClient client, CancellationToken ct) =>
         PrivateReflection.InvokeStaticAsync<bool>(
-            type: typeof(UpdateCommand),
-            methodName: "HasServerStoppedRespondingAsync", args: [client, ct]
+            typeof(UpdateCommand),
+            "HasServerStoppedRespondingAsync", [client, ct]
         );
 
     private static Task<bool> WaitForExitAsync(
@@ -46,8 +46,8 @@ public sealed class UpdateCommandWaitForExitTests
         CancellationToken ct
     ) =>
         PrivateReflection.InvokeStaticAsync<bool>(
-            type: typeof(UpdateCommand),
-            methodName: "WaitForServerExitAsync", args: [client, timeout, ct]
+            typeof(UpdateCommand),
+            "WaitForServerExitAsync", [client, timeout, ct]
         );
 
     [Fact]
@@ -55,10 +55,10 @@ public sealed class UpdateCommandWaitForExitTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: "still alive");
+            .Setup(c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("still alive");
 
-        bool result = await HasStoppedAsync(client: client.Object, ct: CancellationToken.None);
+        bool result = await HasStoppedAsync(client.Object, CancellationToken.None);
 
         result.Should().BeFalse();
     }
@@ -68,10 +68,10 @@ public sealed class UpdateCommandWaitForExitTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(exception: new HttpRequestException(message: "connection refused"));
+            .Setup(c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("connection refused"));
 
-        bool result = await HasStoppedAsync(client: client.Object, ct: CancellationToken.None);
+        bool result = await HasStoppedAsync(client.Object, CancellationToken.None);
 
         result.Should().BeTrue();
     }
@@ -84,10 +84,10 @@ public sealed class UpdateCommandWaitForExitTests
 
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(exception: new OperationCanceledException());
+            .Setup(c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
 
-        bool result = await HasStoppedAsync(client: client.Object, ct: cts.Token);
+        bool result = await HasStoppedAsync(client.Object, cts.Token);
 
         result.Should().BeFalse();
     }
@@ -97,13 +97,13 @@ public sealed class UpdateCommandWaitForExitTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(exception: new HttpRequestException(message: "connection refused"));
+            .Setup(c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("connection refused"));
 
         bool result = await WaitForExitAsync(
-            client: client.Object,
-            timeout: TimeSpan.FromSeconds(seconds: 30),
-            ct: CancellationToken.None
+            client.Object,
+            TimeSpan.FromSeconds(30),
+            CancellationToken.None
         );
 
         result.Should().BeTrue();
@@ -114,13 +114,13 @@ public sealed class UpdateCommandWaitForExitTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: "still alive");
+            .Setup(c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("still alive");
 
         bool result = await WaitForExitAsync(
-            client: client.Object,
-            timeout: TimeSpan.FromMilliseconds(milliseconds: 150),
-            ct: CancellationToken.None
+            client.Object,
+            TimeSpan.FromMilliseconds(150),
+            CancellationToken.None
         );
 
         result.Should().BeFalse();
@@ -134,10 +134,10 @@ public sealed class UpdateCommandWaitForExitTests
 
         Mock<ICliClient> client = new();
         client
-            .Setup(expression: c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: "still alive");
+            .Setup(c => c.GetRawAsync(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("still alive");
 
-        Func<Task> act = () => WaitForExitAsync(client: client.Object, timeout: TimeSpan.FromSeconds(seconds: 30), ct: cts.Token);
+        Func<Task> act = () => WaitForExitAsync(client.Object, TimeSpan.FromSeconds(30), cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }

@@ -16,20 +16,20 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class ReleaseEvent
 {
-    [JsonProperty(propertyName: "area")]
+    [JsonProperty("area")]
     public MusicBrainzArea MusicBrainzArea { get; set; } = new();
 
     // ReSharper disable once InconsistentNaming
-    [JsonProperty(propertyName: "date")]
+    [JsonProperty("date")]
     private string _date { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "dateTime")]
+    [JsonProperty("dateTime")]
     public DateTime? DateTime
     {
         get =>
-            !string.IsNullOrWhiteSpace(value: _date)
-            && !string.IsNullOrEmpty(value: _date)
-            && _date.TryParseToDateTime(dateTime: out DateTime dt)
+            !string.IsNullOrWhiteSpace(_date)
+            && !string.IsNullOrEmpty(_date)
+            && _date.TryParseToDateTime(out DateTime dt)
                 ? dt
                 : null;
         set => _date = value.ToString().OrEmpty();

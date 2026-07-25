@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Api;
 /// query-plan compilation), which a real user's first tap paid for directly. This service
 /// exercises each shape once against a Guid.Empty probe before any real client connects.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class MusicQueryWarmupServiceTests
 {
     private static (
@@ -36,52 +36,52 @@ public class MusicQueryWarmupServiceTests
     {
         Mock<IMusicRepository> repository = new();
         repository
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.GetPlaylistTracksAsync(
                     It.IsAny<Guid>(),
                     It.IsAny<Guid>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
         repository
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.GetAlbumTracksAsync(
                     It.IsAny<Guid>(),
                     It.IsAny<Guid>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
         repository
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.GetArtistTracksAsync(
                     It.IsAny<Guid>(),
                     It.IsAny<Guid>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
         repository
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.GetGenreTracksAsync(
                     It.IsAny<Guid>(),
                     It.IsAny<Guid>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(value: []);
+            .ReturnsAsync([]);
         repository
-            .Setup(expression: r => r.GetTrackAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (Track?)null);
+            .Setup(r => r.GetTrackAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Track?)null);
 
         ServiceCollection services = new();
-        services.AddSingleton(implementationInstance: repository.Object);
+        services.AddSingleton(repository.Object);
         ServiceProvider provider = services.BuildServiceProvider();
 
         MusicQueryWarmupService service = new(
-            scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(),
-            logger: NullLogger<MusicQueryWarmupService>.Instance
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<MusicQueryWarmupService>.Instance
         );
 
         return (service, repository);
@@ -92,27 +92,27 @@ public class MusicQueryWarmupServiceTests
     {
         (MusicQueryWarmupService service, Mock<IMusicRepository> repository) = MakeService();
 
-        await service.WarmupAsync(cancellationToken: CancellationToken.None);
+        await service.WarmupAsync(CancellationToken.None);
 
         repository.Verify(
-            expression: r => r.GetPlaylistTracksAsync(Guid.Empty, Guid.Empty, It.IsAny<CancellationToken>()),
-            times: Times.Once
+            r => r.GetPlaylistTracksAsync(Guid.Empty, Guid.Empty, It.IsAny<CancellationToken>()),
+            Times.Once
         );
         repository.Verify(
-            expression: r => r.GetAlbumTracksAsync(Guid.Empty, Guid.Empty, It.IsAny<CancellationToken>()),
-            times: Times.Once
+            r => r.GetAlbumTracksAsync(Guid.Empty, Guid.Empty, It.IsAny<CancellationToken>()),
+            Times.Once
         );
         repository.Verify(
-            expression: r => r.GetArtistTracksAsync(Guid.Empty, Guid.Empty, It.IsAny<CancellationToken>()),
-            times: Times.Once
+            r => r.GetArtistTracksAsync(Guid.Empty, Guid.Empty, It.IsAny<CancellationToken>()),
+            Times.Once
         );
         repository.Verify(
-            expression: r => r.GetGenreTracksAsync(Guid.Empty, Guid.Empty, It.IsAny<CancellationToken>()),
-            times: Times.Once
+            r => r.GetGenreTracksAsync(Guid.Empty, Guid.Empty, It.IsAny<CancellationToken>()),
+            Times.Once
         );
         repository.Verify(
-            expression: r => r.GetTrackAsync(Guid.Empty, It.IsAny<CancellationToken>()),
-            times: Times.Once
+            r => r.GetTrackAsync(Guid.Empty, It.IsAny<CancellationToken>()),
+            Times.Once
         );
     }
 
@@ -121,25 +121,25 @@ public class MusicQueryWarmupServiceTests
     {
         Mock<IMusicRepository> repository = new();
         repository
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.GetPlaylistTracksAsync(
                     It.IsAny<Guid>(),
                     It.IsAny<Guid>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(exception: new InvalidOperationException(message: "database unavailable"));
+            .ThrowsAsync(new InvalidOperationException("database unavailable"));
 
         ServiceCollection services = new();
-        services.AddSingleton(implementationInstance: repository.Object);
+        services.AddSingleton(repository.Object);
         ServiceProvider provider = services.BuildServiceProvider();
 
         MusicQueryWarmupService service = new(
-            scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(),
-            logger: NullLogger<MusicQueryWarmupService>.Instance
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<MusicQueryWarmupService>.Instance
         );
 
-        Func<Task> act = () => service.WarmupAsync(cancellationToken: CancellationToken.None);
+        Func<Task> act = () => service.WarmupAsync(CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }
@@ -153,32 +153,32 @@ public class MusicQueryWarmupServiceTests
         Mock<IMusicRepository> repository = new();
         TaskCompletionSource neverCompletes = new();
         repository
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.GetPlaylistTracksAsync(
                     It.IsAny<Guid>(),
                     It.IsAny<Guid>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(valueFunction: async () =>
+            .Returns(async () =>
             {
                 await neverCompletes.Task;
                 return [];
             });
 
         ServiceCollection services = new();
-        services.AddSingleton(implementationInstance: repository.Object);
+        services.AddSingleton(repository.Object);
         ServiceProvider provider = services.BuildServiceProvider();
 
         MusicQueryWarmupService service = new(
-            scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(),
-            logger: NullLogger<MusicQueryWarmupService>.Instance
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<MusicQueryWarmupService>.Instance
         );
 
-        Task startTask = service.StartAsync(cancellationToken: CancellationToken.None);
+        Task startTask = service.StartAsync(CancellationToken.None);
 
-        Task completedFirst = await Task.WhenAny(task1: startTask, task2: Task.Delay(millisecondsDelay: 500));
-        completedFirst.Should().BeSameAs(expected: startTask);
+        Task completedFirst = await Task.WhenAny(startTask, Task.Delay(500));
+        completedFirst.Should().BeSameAs(startTask);
 
         neverCompletes.TrySetResult();
     }

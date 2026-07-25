@@ -40,17 +40,17 @@ public static class FilterGraphPathEscaper
     /// </summary>
     public static string Escape(string path)
     {
-        ArgumentNullException.ThrowIfNull(argument: path);
+        ArgumentNullException.ThrowIfNull(path);
 
         // Normalise Windows separators first so the backslash-doubling
         // pass only sees intentional backslashes (none on a pure path).
-        string normalised = path.Replace(oldChar: '\\', newChar: '/');
+        string normalised = path.Replace('\\', '/');
 
         // Order is critical: \ -> \\ must precede escaping other chars.
         string escaped = normalised
-            .Replace(oldValue: "\\", newValue: @"\\") // \ -> \\ (no-op on normalised path)
-            .Replace(oldValue: "'", newValue: "\\'") // ' -> \' (apostrophe in filename)
-            .Replace(oldValue: ":", newValue: "\\:"); // : -> \: (drive letter / stream specifier)
+            .Replace("\\", @"\\") // \ -> \\ (no-op on normalised path)
+            .Replace("'", "\\'") // ' -> \' (apostrophe in filename)
+            .Replace(":", "\\:"); // : -> \: (drive letter / stream specifier)
 
         return $"'{escaped}'";
     }

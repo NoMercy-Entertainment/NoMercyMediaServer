@@ -35,10 +35,10 @@ using NoMercyQueue;
 namespace NoMercy.Api.Controllers.V1.Music;
 
 [ApiController]
-[ApiVersion(version: 1.0)]
-[Tags(tags: "Music Artists")]
+[ApiVersion(1.0)]
+[Tags("Music Artists")]
 [Authorize(Policy = "MediaAccess")]
-[Route(template: "api/v{version:apiVersion}/music/artists")]
+[Route("api/v{version:apiVersion}/music/artists")]
 public class ArtistsController : BaseController
 {
     private readonly IMusicRepository _musicRepository;
@@ -61,42 +61,42 @@ public class ArtistsController : BaseController
     }
 
     [HttpGet]
-    [Route(template: "/api/v{version:apiVersion}/music/artists/letter/{letter}")]
+    [Route("/api/v{version:apiVersion}/music/artists/letter/{letter}")]
     public async Task<IActionResult> Index(string letter, [FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view artists");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view artists");
 
         // Lolomo with the "all" marker (`_`) returns one carousel per first-letter
         // bucket in alphabetical order, with the symbol bucket (#) at the end.
         if (request.Version == "lolomo" && (letter == "_" || letter == "all"))
         {
-            List<ArtistCardDto> allCards = await _musicRepository.GetAllArtistCardsAsync(userId: userId);
+            List<ArtistCardDto> allCards = await _musicRepository.GetAllArtistCardsAsync(userId);
 
             List<ComponentEnvelope> items = [Component.Container()];
 
             IOrderedEnumerable<IGrouping<string, ArtistCardDto>> groups = allCards
-                .GroupBy(keySelector: a => BucketLetter(name: a.Name))
-                .OrderBy(keySelector: g => g.Key == "#" ? "zz" : g.Key);
+                .GroupBy(a => BucketLetter(a.Name))
+                .OrderBy(g => g.Key == "#" ? "zz" : g.Key);
 
             foreach (IGrouping<string, ArtistCardDto> group in groups)
             {
                 items.Add(
-                    item: Component
+                    Component
                         .Carousel()
-                        .WithId(id: $"artists-{group.Key.ToLowerInvariant()}")
-                        .WithTitle(title: $"Artists: {group.Key}".Localize())
-                        .WithItems(items: group.Select(selector: a => Component.MusicCard(data: new MusicCardData(artist: a))))
+                        .WithId($"artists-{group.Key.ToLowerInvariant()}")
+                        .WithTitle($"Artists: {group.Key}".Localize())
+                        .WithItems(group.Select(a => Component.MusicCard(new MusicCardData(a))))
                 );
             }
 
-            return Ok(value: ComponentResponse.From(components: items));
+            return Ok(ComponentResponse.From(items));
         }
 
         List<ArtistCardDto> artistCards = await _musicRepository.GetArtistCardsAsync(
-            userId: userId,
-            letter: letter
+            userId,
+            letter
         );
 
         string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
@@ -108,82 +108,82 @@ public class ArtistsController : BaseController
                 Component.Container(),
                 Component
                     .Carousel()
-                    .WithId(id: $"artists-{letter}")
-                    .WithTitle(title: $"Artists: {displayLetter}".Localize())
-                    .WithItems(items: artistCards.Select(selector: a => Component.MusicCard(data: new MusicCardData(artist: a)))),
+                    .WithId($"artists-{letter}")
+                    .WithTitle($"Artists: {displayLetter}".Localize())
+                    .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a)))),
             ];
 
-            return Ok(value: ComponentResponse.From(components: items));
+            return Ok(ComponentResponse.From(items));
         }
 
         ComponentEnvelope grid = Component
             .Grid()
-            .WithId(id: $"artists-{letter}")
-            .WithTitle(title: $"Artists: {displayLetter}".Localize())
-            .WithItems(items: artistCards.Select(selector: a => Component.MusicCard(data: new MusicCardData(artist: a))));
+            .WithId($"artists-{letter}")
+            .WithTitle($"Artists: {displayLetter}".Localize())
+            .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a))));
 
-        return Ok(value: ComponentResponse.From(component: grid));
+        return Ok(ComponentResponse.From(grid));
     }
 
     private static string BucketLetter(string name)
     {
-        if (string.IsNullOrEmpty(value: name))
+        if (string.IsNullOrEmpty(name))
             return "#";
-        char first = char.ToLowerInvariant(c: name[index: 0]);
+        char first = char.ToLowerInvariant(name[0]);
         return first is >= 'a' and <= 'z' ? first.ToString().ToUpperInvariant() : "#";
     }
 
     [HttpGet]
-    [Route(template: "{id:guid}")]
+    [Route("{id:guid}")]
     public async Task<IActionResult> Show(Guid id)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to view artists");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to view artists");
 
-        Artist? artist = await _musicRepository.GetArtistAsync(userId: userId, id: id);
+        Artist? artist = await _musicRepository.GetArtistAsync(userId, id);
 
         string country = Country();
 
         if (artist is null)
-            return NotFoundResponse(detail: "Artist not found");
+            return NotFoundResponse("Artist not found");
 
         // Fire-and-forget: enqueue serializes on the queue's global write lock, which
         // the busy encoder workers hold while touching the large queue DB. Awaiting it
         // inline made this read block for seconds. The palette is a background enrichment.
-        if (string.IsNullOrEmpty(value: artist._colorPalette) || artist._colorPalette == "{}")
-            _ = Task.Run(action: () =>
+        if (string.IsNullOrEmpty(artist._colorPalette) || artist._colorPalette == "{}")
+            _ = Task.Run(() =>
                 QueueRunner.Current?.Dispatcher.Dispatch(
-                    job: new ColorPaletteJob(entityType: "artist", entityId: artist.Id.ToString()),
-                    onQueue: "palette",
-                    priority: 1
+                    new ColorPaletteJob("artist", artist.Id.ToString()),
+                    "palette",
+                    1
                 )
             );
 
-        return Ok(value: new ArtistResponseDto { Data = new(artist: artist, userId: userId, country: country) });
+        return Ok(new ArtistResponseDto { Data = new(artist, userId, country) });
     }
 
     [HttpPost]
-    [Route(template: "{id:guid}/like")]
+    [Route("{id:guid}/like")]
     public async Task<IActionResult> Like(Guid id, [FromBody] LikeRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(principal: User))
-            return UnauthorizedResponse(detail: "You do not have permission to like artists");
+        if (!AuthPolicy.IsAllowed(User))
+            return UnauthorizedResponse("You do not have permission to like artists");
 
-        Artist? artist = await _musicRepository.GetArtistByIdAsync(id: id);
+        Artist? artist = await _musicRepository.GetArtistByIdAsync(id);
 
         if (artist is null)
-            return UnprocessableEntityResponse(detail: "Artist not found");
+            return UnprocessableEntityResponse("Artist not found");
 
-        await _musicRepository.LikeArtistAsync(userId: userId, artist: artist, liked: request.Value);
+        await _musicRepository.LikeArtistAsync(userId, artist, request.Value);
 
         await _eventBus.PublishAsync(
-            @event: new LibraryRefreshedEvent { QueryKey = ["music", "artist", artist.Id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "artist", artist.Id] }
         );
 
         await _eventBus.PublishAsync(
-            @event: new MusicItemLikedEvent
+            new MusicItemLikedEvent
             {
                 UserId = User.UserId(),
                 ItemId = artist.Id,
@@ -193,7 +193,7 @@ public class ArtistsController : BaseController
         );
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "{0} {1}",
@@ -203,12 +203,12 @@ public class ArtistsController : BaseController
     }
 
     [HttpPost]
-    [Route(template: "{id:guid}/rescan")]
+    [Route("{id:guid}/rescan")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(Guid id)
     {
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Rescan started",
@@ -218,16 +218,16 @@ public class ArtistsController : BaseController
     }
 
     [HttpDelete]
-    [Route(template: "{id:guid}")]
+    [Route("{id:guid}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Destroy(Guid id)
     {
-        bool deleted = await _musicRepository.DeleteArtistAsync(id: id);
+        bool deleted = await _musicRepository.DeleteArtistAsync(id);
 
-        await _eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["music", "artist"] });
+        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music", "artist"] });
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Data = (deleted ? "Artist deleted successfully" : "Artist not found").Localize(),
                 Status = "ok",
@@ -236,14 +236,14 @@ public class ArtistsController : BaseController
     }
 
     [HttpPatch]
-    [Route(template: "{id:guid}")]
+    [Route("{id:guid}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Edit(Guid id, [FromBody] UpdateMusicMetadataRequestDto request)
     {
-        Artist? artist = await _musicRepository.GetArtistForEditAsync(id: id);
+        Artist? artist = await _musicRepository.GetArtistForEditAsync(id);
 
         if (artist is null)
-            return NotFoundResponse(detail: "Artist not found");
+            return NotFoundResponse("Artist not found");
 
         string slug = artist.Name.ToSlug();
         string colorPalette = artist._colorPalette.OrEmpty();
@@ -251,43 +251,43 @@ public class ArtistsController : BaseController
 
         if (request.Cover is not null)
         {
-            Match coverMatch = Regex.Match(input: request.Cover, pattern: "data:image/(?<type>.+?),(?<data>.+)");
+            Match coverMatch = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)");
             if (!coverMatch.Success)
-                return BadRequestResponse(detail: "Cover must be a data:image/...;base64,... payload");
+                return BadRequestResponse("Cover must be a data:image/...;base64,... payload");
 
             byte[] binData;
             try
             {
-                binData = Convert.FromBase64String(s: coverMatch.Groups[groupname: "data"].Value);
+                binData = Convert.FromBase64String(coverMatch.Groups["data"].Value);
             }
             catch (FormatException)
             {
-                return BadRequestResponse(detail: "Cover payload is not valid base64");
+                return BadRequestResponse("Cover payload is not valid base64");
             }
 
             cover = $"/{slug}.jpg";
-            string filePath = Path.Combine(path1: AppFiles.ImagesPath, path2: "music", path3: slug + ".jpg");
+            string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
 
-            await using (FileStream stream = new(path: filePath, mode: FileMode.Create))
-                await stream.WriteAsync(buffer: binData);
+            await using (FileStream stream = new(filePath, FileMode.Create))
+                await stream.WriteAsync(binData);
 
-            colorPalette = await CoverArtImageManagerManager.ColorPalette(type: "cover", url: new(uriString: filePath));
+            colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
         }
 
         int result = await _musicRepository.UpdateArtistMetadataAsync(
-            id: id,
-            name: request.Name ?? artist.Name,
-            description: request.Description,
-            cover: cover,
-            colorPalette: colorPalette
+            id,
+            request.Name ?? artist.Name,
+            request.Description,
+            cover,
+            colorPalette
         );
 
         await _eventBus.PublishAsync(
-            @event: new LibraryRefreshedEvent { QueryKey = ["music", "artist", id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "artist", id] }
         );
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Data = (result > 0 ? "Artist updated successfully" : "No changes made").Localize(),
                 Status = "ok",
@@ -296,73 +296,73 @@ public class ArtistsController : BaseController
     }
 
     [HttpPost]
-    [Route(template: "{id:guid}/cover")]
-    [Consumes(contentType: "multipart/form-data")]
+    [Route("{id:guid}/cover")]
+    [Consumes("multipart/form-data")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Cover(Guid id, IFormFile image)
     {
-        Artist? artist = await _musicRepository.GetArtistWithLibraryFolderAsync(id: id);
+        Artist? artist = await _musicRepository.GetArtistWithLibraryFolderAsync(id);
 
         if (artist is null)
-            return NotFoundResponse(detail: "Artist not found");
+            return NotFoundResponse("Artist not found");
 
         string slug = artist.Name.ToSlug();
 
         IStorage folderStorage = _storageFactory.For(
-            folderId: artist.LibraryFolder.Id,
-            driverId: artist.LibraryFolder.DriverId,
-            subPath: string.Empty
+            artist.LibraryFolder.Id,
+            artist.LibraryFolder.DriverId,
+            string.Empty
         );
         // Resolve through the driver, not the IStorage facade: the facade's
         // GetFullPath is a LocalStorage-only escape hatch that throws on every
         // remote backend, so a facade call here 500'd cover uploads for
         // NFS / SMB / S3 / WebDAV libraries.
-        string libraryRootFolder = folderStorage.Driver.GetFullPath(path: artist.LibraryFolder.Path);
-        if (string.IsNullOrEmpty(value: libraryRootFolder))
-            return UnprocessableEntityResponse(detail: "Artist library folder not found");
+        string libraryRootFolder = folderStorage.Driver.GetFullPath(artist.LibraryFolder.Path);
+        if (string.IsNullOrEmpty(libraryRootFolder))
+            return UnprocessableEntityResponse("Artist library folder not found");
 
         // save to artist folder
         string filePath = Path.Combine(
-            path1: libraryRootFolder,
-            path2: artist.HostFolder.TrimStart(trimChar: '\\'),
-            path3: slug + ".jpg"
+            libraryRootFolder,
+            artist.HostFolder.TrimStart('\\'),
+            slug + ".jpg"
         );
-        _logger.LogInformation(message: filePath);
-        await using (FileStream stream = new(path: filePath, mode: FileMode.Create))
+        _logger.LogInformation(filePath);
+        await using (FileStream stream = new(filePath, FileMode.Create))
         {
-            await image.CopyToAsync(target: stream);
+            await image.CopyToAsync(stream);
         }
 
         // save to app images folder
-        string filePath2 = Path.Combine(path1: AppFiles.ImagesPath, path2: "music", path3: slug + ".jpg");
-        _logger.LogInformation(message: filePath2);
-        await using (FileStream stream = new(path: filePath2, mode: FileMode.Create))
+        string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
+        _logger.LogInformation(filePath2);
+        await using (FileStream stream = new(filePath2, FileMode.Create))
         {
-            await image.CopyToAsync(target: stream);
+            await image.CopyToAsync(stream);
         }
 
         string cover = $"/{slug}.jpg";
         string colorPalette = await CoverArtImageManagerManager.ColorPalette(
-            type: "cover",
-            url: new(uriString: filePath2)
+            "cover",
+            new(filePath2)
         );
 
-        await _musicRepository.UpdateArtistCoverAsync(id: id, cover: cover, colorPalette: colorPalette);
+        await _musicRepository.UpdateArtistCoverAsync(id, cover, colorPalette);
 
         await _eventBus.PublishAsync(
-            @event: new LibraryRefreshedEvent { QueryKey = ["music", "artist", artist.Id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "artist", artist.Id] }
         );
 
         artist._colorPalette = colorPalette;
 
         return Ok(
-            value: new StatusResponseDto<ImageUploadResponseDto>
+            new StatusResponseDto<ImageUploadResponseDto>
             {
                 Status = "ok",
                 Message = "Artist cover updated",
                 Data = new()
                 {
-                    Url = new(uriString: $"/images/music/{slug}.jpg", uriKind: UriKind.Relative),
+                    Url = new($"/images/music/{slug}.jpg", UriKind.Relative),
                     ColorPalette = artist.ColorPalette,
                 },
             }

@@ -18,29 +18,29 @@ internal static class Program
 {
     public static async Task<int> Main(string[] args)
     {
-        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p")
+        Option<string?> pipeOption = new("--pipe", "-p")
         {
             Description = "Named pipe (Windows) or Unix socket path to connect to",
         };
 
-        RootCommand rootCommand = new(description: "NoMercy MediaServer CLI");
-        rootCommand.Options.Add(item: pipeOption);
+        RootCommand rootCommand = new("NoMercy MediaServer CLI");
+        rootCommand.Options.Add(pipeOption);
 
         ICliClientFactory clientFactory = new CliClientFactory();
 
-        rootCommand.Subcommands.Add(item: StartCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
-        rootCommand.Subcommands.Add(item: StatusCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
-        rootCommand.Subcommands.Add(item: LogsCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
-        rootCommand.Subcommands.Add(item: StopCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
-        rootCommand.Subcommands.Add(item: RestartCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
-        rootCommand.Subcommands.Add(item: ConfigCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
-        rootCommand.Subcommands.Add(item: PluginCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
-        rootCommand.Subcommands.Add(item: QueueCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
-        rootCommand.Subcommands.Add(item: ResourcesCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
-        rootCommand.Subcommands.Add(item: AutoStartCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
-        rootCommand.Subcommands.Add(item: UpdateCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
+        rootCommand.Subcommands.Add(StartCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(StatusCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(LogsCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(StopCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(RestartCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(ConfigCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(PluginCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(QueueCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(ResourcesCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(AutoStartCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(UpdateCommand.Create(pipeOption, clientFactory));
 
-        ParseResult parseResult = rootCommand.Parse(args: args);
+        ParseResult parseResult = rootCommand.Parse(args);
         return await parseResult.InvokeAsync();
     }
 }

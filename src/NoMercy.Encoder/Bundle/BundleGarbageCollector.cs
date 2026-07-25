@@ -40,21 +40,21 @@ public class BundleGarbageCollector(
         List<BundleOrphan> orphans = [];
 
         IReadOnlyList<StorageEntry> allFiles = storage.List(
-            path: libraryRoot,
-            pattern: null,
-            recursive: true
+            libraryRoot,
+            null,
+            true
         );
 
         if (allFiles.Count == 0)
             return orphans;
 
         List<StorageEntry> blueprintFiles = allFiles
-            .Where(predicate: entry =>
+            .Where(entry =>
                 !entry.IsDirectory
                 && string.Equals(
-                    a: storage.GetName(path: entry.Path),
-                    b: MediaBlueprintWriter.FileName,
-                    comparisonType: StringComparison.OrdinalIgnoreCase
+                    storage.GetName(entry.Path),
+                    MediaBlueprintWriter.FileName,
+                    StringComparison.OrdinalIgnoreCase
                 )
             )
             .ToList();
@@ -62,33 +62,33 @@ public class BundleGarbageCollector(
         if (blueprintFiles.Count == 0)
             return orphans;
 
-        await using MediaContext db = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await using MediaContext db = await contextFactory.CreateDbContextAsync(ct);
         HashSet<string> knownPresetIds = db
             .EncodingPresets.AsNoTracking()
-            .Select(selector: p => p.Id.ToString())
-            .ToHashSet(comparer: StringComparer.OrdinalIgnoreCase);
+            .Select(p => p.Id.ToString())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (StorageEntry blueprintFile in blueprintFiles)
         {
-            MediaBlueprint? blueprint = await TryReadBlueprintAsync(path: blueprintFile.Path, ct: ct);
+            MediaBlueprint? blueprint = await TryReadBlueprintAsync(blueprintFile.Path, ct);
             if (blueprint is null)
                 continue;
 
-            string mediaFolder = storage.GetParent(path: blueprintFile.Path) ?? libraryRoot;
+            string mediaFolder = storage.GetParent(blueprintFile.Path) ?? libraryRoot;
 
             foreach (BlueprintEncode encode in blueprint.Encodes)
             {
-                if (knownPresetIds.Contains(item: encode.PresetId))
+                if (knownPresetIds.Contains(encode.PresetId))
                     continue;
 
                 orphans.Add(
-                    item: new(
-                        Path: string.IsNullOrEmpty(value: encode.OutputLocation)
+                    new(
+                        string.IsNullOrEmpty(encode.OutputLocation)
                             ? mediaFolder
                             : encode.OutputLocation,
-                        PresetSlug: encode.PresetSlug,
-                        PresetId: encode.PresetId,
-                        Reason: "preset deleted"
+                        encode.PresetSlug,
+                        encode.PresetId,
+                        "preset deleted"
                     )
                 );
             }
@@ -101,13 +101,13 @@ public class BundleGarbageCollector(
     {
         try
         {
-            byte[] bytes = await storage.ReadAsync(path: path, ct: ct);
-            return JsonConvert.DeserializeObject<MediaBlueprint>(value: Encoding.UTF8.GetString(bytes: bytes));
+            byte[] bytes = await storage.ReadAsync(path, ct);
+            return JsonConvert.DeserializeObject<MediaBlueprint>(Encoding.UTF8.GetString(bytes));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(
-                message: "Could not read blueprint at {Path}: {Message} — skipping", args: [path, ex.Message]
+                "Could not read blueprint at {Path}: {Message} — skipping", [path, ex.Message]
             );
             return null;
         }

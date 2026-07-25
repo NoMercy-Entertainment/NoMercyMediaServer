@@ -22,11 +22,11 @@ namespace NoMercy.Api.Services.Music;
 /// </summary>
 public static class MusicVolumeResolver
 {
-    public static int Clamp(int volume) => Math.Clamp(value: volume, min: 0, max: 100);
+    public static int Clamp(int volume) => Math.Clamp(volume, 0, 100);
 
     public static bool IsTargetActive(string targetDeviceId, string? activeDeviceId) =>
         activeDeviceId is not null
-        && activeDeviceId.Equals(value: targetDeviceId, comparisonType: StringComparison.OrdinalIgnoreCase);
+        && activeDeviceId.Equals(targetDeviceId, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Applies an already-clamped volume from SetDeviceVolumeCommand/ChangeVolumeCommand.
@@ -42,9 +42,9 @@ public static class MusicVolumeResolver
         int clampedVolume
     )
     {
-        state.DeviceVolumes[key: targetDeviceId] = clampedVolume;
+        state.DeviceVolumes[targetDeviceId] = clampedVolume;
 
-        if (IsTargetActive(targetDeviceId: targetDeviceId, activeDeviceId: activeDeviceId))
+        if (IsTargetActive(targetDeviceId, activeDeviceId))
             state.VolumePercentage = clampedVolume;
     }
 
@@ -62,7 +62,7 @@ public static class MusicVolumeResolver
         int? targetPersistedVolume
     )
     {
-        if (state.DeviceVolumes.TryGetValue(key: targetDeviceId, value: out int remembered))
+        if (state.DeviceVolumes.TryGetValue(targetDeviceId, out int remembered))
             return remembered;
 
         return targetPersistedVolume ?? Device.DefaultVolumePercent;

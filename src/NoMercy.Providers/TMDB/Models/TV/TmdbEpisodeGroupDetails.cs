@@ -16,27 +16,27 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbEpisodeGroupDetails
 {
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string Description { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "episode_count")]
+    [JsonProperty("episode_count")]
     public int EpisodeCount { get; set; }
 
-    [JsonProperty(propertyName: "group_count")]
+    [JsonProperty("group_count")]
     public int GroupCount { get; set; }
 
-    [JsonProperty(propertyName: "groups")]
+    [JsonProperty("groups")]
     public TmdbEpisodeGroup[] Groups { get; set; } = [];
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "network")]
+    [JsonProperty("network")]
     public TmdbNetwork? Network { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public int Type { get; set; }
 }

@@ -31,11 +31,11 @@ public class HardwareCapabilities(
 
     public bool SupportsHardwareEncoding(VideoCodecType codec)
     {
-        return Gpus.Any(predicate: g => g.SupportedCodecs.Contains(value: codec));
+        return Gpus.Any(g => g.SupportedCodecs.Contains(codec));
     }
 
     public GpuDevice? GetGpuForCodec(VideoCodecType codec)
     {
-        return Gpus.FirstOrDefault(predicate: g => g.SupportedCodecs.Contains(value: codec));
+        return Gpus.FirstOrDefault(g => g.SupportedCodecs.Contains(codec));
     }
 }

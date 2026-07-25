@@ -86,31 +86,31 @@ public static class OrphanRecoveryTriage
         foreach (QueueJobModel orphan in orphans)
         {
             DateTime? reservedAt = orphan.ReservedAt;
-            bool isEncoderJob = encoderQueues.Contains(item: orphan.Queue);
+            bool isEncoderJob = encoderQueues.Contains(orphan.Queue);
 
             if (isEncoderJob && checkpointLookup is not null)
             {
                 bool hasCheckpoint = await checkpointLookup
-                    .HasCheckpointAsync(jobPayload: orphan.Payload, ct: cancellationToken)
-                    .ConfigureAwait(continueOnCapturedContext: false);
+                    .HasCheckpointAsync(orphan.Payload, cancellationToken)
+                    .ConfigureAwait(false);
 
                 if (hasCheckpoint)
                 {
                     orphan.Attempts = 0;
                     orphan.ReservedAt = null;
-                    context.UpdateJob(job: orphan);
+                    context.UpdateJob(orphan);
                     resumable++;
-                    onReclaimed?.Invoke(arg1: orphan, arg2: reservedAt, arg3: "resumed-from-checkpoint");
+                    onReclaimed?.Invoke(orphan, reservedAt, "resumed-from-checkpoint");
                     continue;
                 }
             }
 
             if (orphan.Attempts > 1)
             {
-                string reason = deadLetterReasonFactory?.Invoke(arg: orphan) ?? InterruptedReason;
+                string reason = deadLetterReasonFactory?.Invoke(orphan) ?? InterruptedReason;
 
                 context.AddFailedJobAndRemoveJob(
-                    failedJob: new()
+                    new()
                     {
                         Uuid = Guid.NewGuid(),
                         Connection = "default",
@@ -119,25 +119,25 @@ public static class OrphanRecoveryTriage
                         Exception = reason,
                         FailedAt = DateTime.UtcNow,
                     },
-                    job: orphan
+                    orphan
                 );
                 failed++;
-                onReclaimed?.Invoke(arg1: orphan, arg2: reservedAt, arg3: "failed-exhausted");
+                onReclaimed?.Invoke(orphan, reservedAt, "failed-exhausted");
             }
             else
             {
                 if (refundAttemptOnRequeue)
-                    orphan.Attempts = (byte)Math.Max(val1: 0, val2: orphan.Attempts - 1);
+                    orphan.Attempts = (byte)Math.Max(0, orphan.Attempts - 1);
 
                 orphan.ReservedAt = null;
-                context.UpdateJob(job: orphan);
+                context.UpdateJob(orphan);
                 requeued++;
-                onReclaimed?.Invoke(arg1: orphan, arg2: reservedAt, arg3: "requeued");
+                onReclaimed?.Invoke(orphan, reservedAt, "requeued");
             }
         }
 
         context.SaveChanges();
 
-        return new(Failed: failed, Requeued: requeued, Resumable: resumable);
+        return new(failed, requeued, resumable);
     }
 }

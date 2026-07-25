@@ -21,14 +21,14 @@ namespace NoMercy.Tests.Database;
 public class PaletteJsonExtensionsTests
 {
     [Theory]
-    [InlineData(data: null)]
-    [InlineData(data: "")]
-    [InlineData(data: "{}")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("{}")]
     public void ToRaw_NullEmptyOrEmptyObject_ReturnsNull(string? json)
     {
         JToken? result = json.ToRaw();
 
-        Assert.Null(@object: result);
+        Assert.Null(result);
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public class PaletteJsonExtensionsTests
     {
         JToken? result = "{not valid json".ToRaw();
 
-        Assert.Null(@object: result);
+        Assert.Null(result);
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class PaletteJsonExtensionsTests
 
         JToken? result = json.ToRaw();
 
-        Assert.NotNull(@object: result);
-        Assert.Equal(expected: "#111111", actual: result![key: "poster"]![key: "dominant"]!.Value<string>());
+        Assert.NotNull(result);
+        Assert.Equal("#111111", result!["poster"]!["dominant"]!.Value<string>());
     }
 }

@@ -23,10 +23,10 @@ using NoMercy.Encoder.Codecs.Definitions;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
 [ApiController]
-[Tags(tags: "Dashboard Server Encoder Profiles")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Server Encoder Profiles")]
+[ApiVersion(1.0)]
 [Authorize]
-[Route(template: "api/v{version:apiVersion}/dashboard/encoderprofiles", Order = 10)]
+[Route("api/v{version:apiVersion}/dashboard/encoderprofiles", Order = 10)]
 public class EncoderController(
     IEncodingPresetRepository encodingPresetRepository,
     CodecRegistry codecRegistry
@@ -37,16 +37,16 @@ public class EncoderController(
     public async Task<IActionResult> Index()
     {
         List<EncodingPreset> encodingPresets = await encodingPresetRepository.ListAsync(
-            pageSize: int.MaxValue
+            int.MaxValue
         );
 
-        return Ok(value: new { data = encodingPresets });
+        return Ok(new { data = encodingPresets });
     }
 
     /// <remarks>
     /// Deprecated: Use POST /api/v1/encoder/profiles instead.
     /// </remarks>
-    [Obsolete(message: "Use POST /api/v1/encoder/profiles")]
+    [Obsolete("Use POST /api/v1/encoder/profiles")]
     [HttpPost]
     public Task<IActionResult> Create()
     {
@@ -56,52 +56,52 @@ public class EncoderController(
         // built-in preset clone. This stub returns 410 Gone so any client
         // still hitting the old route discovers the new path quickly.
         IActionResult result = StatusCode(
-            statusCode: StatusCodes.Status410Gone,
-            value: new
+            StatusCodes.Status410Gone,
+            new
             {
                 error = "endpoint_removed",
                 message = "POST /api/v1/encoder is removed. Use POST /api/v1/encoder/profiles/{parentId}/clone to create a profile from a built-in V2 preset.",
             }
         );
-        return Task.FromResult(result: result);
+        return Task.FromResult(result);
     }
 
     [HttpDelete]
-    [Route(template: "{id:ulid}")]
+    [Route("{id:ulid}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Destroy(Ulid id)
     {
         try
         {
-            bool removed = await encodingPresetRepository.DeleteAsync(id: id);
+            bool removed = await encodingPresetRepository.DeleteAsync(id);
             if (!removed)
-                return NotFoundResponse(detail: "Encoder profile not found");
+                return NotFoundResponse("Encoder profile not found");
 
-            return Ok(value: new StatusResponseDto<string> { Status = "ok", Data = "Profile removed" });
+            return Ok(new StatusResponseDto<string> { Status = "ok", Data = "Profile removed" });
         }
         catch (InvalidOperationException ex)
         {
-            return ConflictResponse(detail: ex.Message);
+            return ConflictResponse(ex.Message);
         }
     }
 
     [HttpGet]
-    [Route(template: "containers")]
+    [Route("containers")]
     [Authorize(Policy = "Moderator")]
     public IActionResult Containers()
     {
         ContainerDto[] containers =
         [
-            BuildContainer(label: "HLS (Streaming)", value: "m3u8", type: "hls", isDefault: true, registry: codecRegistry),
-            BuildContainer(label: "MKV (Matroska)", value: "mkv", type: "mkv", isDefault: false, registry: codecRegistry),
-            BuildContainer(label: "MP4", value: "mp4", type: "mp4", isDefault: false, registry: codecRegistry),
+            BuildContainer("HLS (Streaming)", "m3u8", "hls", true, codecRegistry),
+            BuildContainer("MKV (Matroska)", "mkv", "mkv", false, codecRegistry),
+            BuildContainer("MP4", "mp4", "mp4", false, codecRegistry),
         ];
 
-        return Ok(value: new DataResponseDto<ContainerDto[]> { Data = containers });
+        return Ok(new DataResponseDto<ContainerDto[]> { Data = containers });
     }
 
     [HttpGet]
-    [Route(template: "framesizes")]
+    [Route("framesizes")]
     [Authorize(Policy = "Moderator")]
     public IActionResult FrameSizes()
     {
@@ -151,7 +151,7 @@ public class EncoderController(
             },
         ];
 
-        return Ok(value: new DataResponseDto<VideoQualityDto[]> { Data = frameSizes });
+        return Ok(new DataResponseDto<VideoQualityDto[]> { Data = frameSizes });
     }
 
     private static ContainerDto BuildContainer(
@@ -171,10 +171,10 @@ public class EncoderController(
         ];
 
         VideoCodecDto[] videoCodecs = videoTypes
-            .Select(selector: vt =>
+            .Select(vt =>
             {
-                ICodecDefinition def = registry.GetVideoDefinition(codecType: vt);
-                EncoderInfo sw = def.Encoders.First(predicate: e => e.RequiredVendor is null);
+                ICodecDefinition def = registry.GetVideoDefinition(vt);
+                EncoderInfo sw = def.Encoders.First(e => e.RequiredVendor is null);
 
                 return new VideoCodecDto
                 {
@@ -183,9 +183,9 @@ public class EncoderController(
                     SimpleValue = vt.ToString().ToLowerInvariant(),
                     RequiresGpu = false,
                     IsDefault = vt == VideoCodecType.H264,
-                    AvailablePresets = sw.Presets.Select(selector: p => new LabelValueDto(s: p)).ToArray(),
+                    AvailablePresets = sw.Presets.Select(p => new LabelValueDto(p)).ToArray(),
                     AvailableVideoProfiles = sw
-                        .Profiles.Select(selector: p => new LabelValueDto(s: p))
+                        .Profiles.Select(p => new LabelValueDto(p))
                         .ToArray(),
                 };
             })
@@ -202,9 +202,9 @@ public class EncoderController(
         ];
 
         AudioCodecDto[] audioCodecs = audioTypes
-            .Select(selector: at =>
+            .Select(at =>
             {
-                AudioEncoderInfo enc = AudioCodecDefinitions.GetEncoder(codecType: at);
+                AudioEncoderInfo enc = AudioCodecDefinitions.GetEncoder(at);
                 return new AudioCodecDto
                 {
                     Name = at.ToString(),

@@ -28,47 +28,47 @@ public partial class FileManager
     {
         List<IVideo> videos = [];
 
-        if (!storage.Exists(path: hostFolder))
+        if (!storage.Exists(hostFolder))
             return videos;
 
         // V3 encoder creates directories like video_1920x1080/ with .m3u8 playlist inside
         foreach (
             StorageEntry dir in storage
-                .List(path: hostFolder, pattern: null, recursive: false)
-                .Where(predicate: e => e.IsDirectory && storage.GetName(path: e.Path).StartsWith(value: "video_"))
+                .List(hostFolder, null, false)
+                .Where(e => e.IsDirectory && storage.GetName(e.Path).StartsWith("video_"))
         )
         {
-            string dirName = storage.GetName(path: dir.Path);
-            Match match = VideoDirectoryRegex().Match(input: dirName);
+            string dirName = storage.GetName(dir.Path);
+            Match match = VideoDirectoryRegex().Match(dirName);
             if (!match.Success)
                 continue;
 
-            int width = int.Parse(s: match.Groups[groupname: "width"].Value);
-            int height = int.Parse(s: match.Groups[groupname: "height"].Value);
+            int width = int.Parse(match.Groups["width"].Value);
+            int height = int.Parse(match.Groups["height"].Value);
 
             // One directory listing serves both needs: locating the playlist and
             // summing the segment sizes. Over NFS each listing enumerates every
             // segment in the quality dir, so a second List here doubled the scan
             // cost per file for no new information.
-            IReadOnlyList<StorageEntry> dirEntries = storage.List(path: dir.Path, pattern: null, recursive: false);
+            IReadOnlyList<StorageEntry> dirEntries = storage.List(dir.Path, null, false);
 
-            StorageEntry? playlist = dirEntries.FirstOrDefault(predicate: e =>
+            StorageEntry? playlist = dirEntries.FirstOrDefault(e =>
                 !e.IsDirectory
-                && storage.GetName(path: e.Path).EndsWith(value: ".m3u8", comparisonType: StringComparison.OrdinalIgnoreCase)
+                && storage.GetName(e.Path).EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
             );
             if (playlist is null)
                 continue;
 
             string playlistPath = playlist.Path;
-            long dirSize = dirEntries.Where(predicate: e => !e.IsDirectory).Sum(selector: e => e.SizeBytes);
+            long dirSize = dirEntries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
 
             videos.Add(
-                item: new()
+                new()
                 {
                     Width = width,
                     Height = height,
-                    FileName = $"/{storage.GetName(path: dir.Path)}/{storage.GetName(path: playlistPath)}",
-                    FileHash = ComputeFileHash(storage: storage, filePath: playlistPath),
+                    FileName = $"/{storage.GetName(dir.Path)}/{storage.GetName(playlistPath)}",
+                    FileHash = ComputeFileHash(storage, playlistPath),
                     FileSize = dirSize,
                 }
             );
@@ -81,46 +81,46 @@ public partial class FileManager
     {
         List<IAudio> audioList = [];
 
-        if (!storage.Exists(path: hostFolder))
+        if (!storage.Exists(hostFolder))
             return audioList;
 
         // Encoder creates directories like audio_eng_aac/ with .m3u8 playlist inside
         foreach (
             StorageEntry dir in storage
-                .List(path: hostFolder, pattern: null, recursive: false)
-                .Where(predicate: e => e.IsDirectory && storage.GetName(path: e.Path).StartsWith(value: "audio_"))
+                .List(hostFolder, null, false)
+                .Where(e => e.IsDirectory && storage.GetName(e.Path).StartsWith("audio_"))
         )
         {
-            string dirName = storage.GetName(path: dir.Path);
-            Match match = AudioDirectoryRegex().Match(input: dirName);
+            string dirName = storage.GetName(dir.Path);
+            Match match = AudioDirectoryRegex().Match(dirName);
             if (!match.Success)
                 continue;
 
-            string language = match.Groups[groupname: "lang"].Value;
+            string language = match.Groups["lang"].Value;
             // Old-naming dirs (`audio_jpn`) carry no codec token — default to aac,
             // the group the master's video stream references (AUDIO="audio_aac").
-            string codec = match.Groups[groupname: "codec"].Success ? match.Groups[groupname: "codec"].Value : "aac";
+            string codec = match.Groups["codec"].Success ? match.Groups["codec"].Value : "aac";
 
             // Single listing for playlist lookup and size sum — see GetVideoHashList.
-            IReadOnlyList<StorageEntry> dirEntries = storage.List(path: dir.Path, pattern: null, recursive: false);
+            IReadOnlyList<StorageEntry> dirEntries = storage.List(dir.Path, null, false);
 
-            StorageEntry? playlist = dirEntries.FirstOrDefault(predicate: e =>
+            StorageEntry? playlist = dirEntries.FirstOrDefault(e =>
                 !e.IsDirectory
-                && storage.GetName(path: e.Path).EndsWith(value: ".m3u8", comparisonType: StringComparison.OrdinalIgnoreCase)
+                && storage.GetName(e.Path).EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
             );
             if (playlist is null)
                 continue;
 
             string playlistPath = playlist.Path;
-            long dirSize = dirEntries.Where(predicate: e => !e.IsDirectory).Sum(selector: e => e.SizeBytes);
+            long dirSize = dirEntries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
 
             audioList.Add(
-                item: new()
+                new()
                 {
                     Language = language,
                     Codec = codec,
-                    FileName = $"/{storage.GetName(path: dir.Path)}/{storage.GetName(path: playlistPath)}",
-                    FileHash = ComputeFileHash(storage: storage, filePath: playlistPath),
+                    FileName = $"/{storage.GetName(dir.Path)}/{storage.GetName(playlistPath)}",
+                    FileHash = ComputeFileHash(storage, playlistPath),
                     FileSize = dirSize,
                 }
             );
@@ -133,20 +133,20 @@ public partial class FileManager
     {
         List<ISubtitle> subtitles = [];
 
-        string subtitleFolder = storage.CombinePath(parent: hostFolder, child: "subtitles");
+        string subtitleFolder = storage.CombinePath(hostFolder, "subtitles");
 
-        if (!storage.Exists(path: subtitleFolder))
+        if (!storage.Exists(subtitleFolder))
             return subtitles;
 
         IReadOnlyList<StorageEntry> subtitleFiles = storage.List(
-            path: subtitleFolder,
-            pattern: null,
-            recursive: false
+            subtitleFolder,
+            null,
+            false
         );
-        foreach (StorageEntry subtitleEntry in subtitleFiles.Where(predicate: e => !e.IsDirectory))
+        foreach (StorageEntry subtitleEntry in subtitleFiles.Where(e => !e.IsDirectory))
         {
             Regex regex = SubtitleFileRegex();
-            Match match = regex.Match(input: subtitleEntry.Path);
+            Match match = regex.Match(subtitleEntry.Path);
 
             if (!match.Success)
                 continue;
@@ -157,15 +157,15 @@ public partial class FileManager
             // every text format (vtt, ass, srt, ssa, sub, webvtt). The bitmap
             // track's OCR sidecar carries the same {lang}.{type} and is hashed in
             // its place, so the track is still represented here.
-            string ext = match.Groups[groupname: "ext"].Value;
-            if (SubtitleClassifier.IsBitmapSidecarExtension(extension: ext))
+            string ext = match.Groups["ext"].Value;
+            if (SubtitleClassifier.IsBitmapSidecarExtension(ext))
                 continue;
 
             subtitles.Add(
-                item: new()
+                new()
                 {
-                    Language = match.Groups[groupname: "lang"].Value,
-                    Type = match.Groups[groupname: "type"].Value,
+                    Language = match.Groups["lang"].Value,
+                    Type = match.Groups["type"].Value,
                     // A client-facing sidecar URL, not a local disk path — must
                     // always join with '/' regardless of host OS. storage.CombinePath
                     // deliberately returns the driver-NATIVE separator (backslash for
@@ -173,8 +173,8 @@ public partial class FileManager
                     // which is correct for on-disk I/O but produced a mixed "/subtitles\file"
                     // FileName on a Windows-hosted install — a malformed URL the player
                     // would fail to resolve.
-                    FileName = $"/subtitles/{storage.GetName(path: path)}",
-                    FileHash = ComputeFileHash(storage: storage, filePath: path),
+                    FileName = $"/subtitles/{storage.GetName(path)}",
+                    FileHash = ComputeFileHash(storage, path),
                     FileSize = subtitleEntry.SizeBytes,
                     Codec = ext,
                 }
@@ -191,47 +191,47 @@ public partial class FileManager
     )
     {
         IEnumerable<IPreview> sprites = extraFiles
-            .Where(predicate: file => file.Kind == "sprite")
-            .Select(selector: file =>
+            .Where(file => file.Kind == "sprite")
+            .Select(file =>
             {
                 string spritePath = storage.CombinePath(
-                    parent: hostFolder,
-                    child: Path.GetFileName(path: file.File).OrEmpty()
+                    hostFolder,
+                    Path.GetFileName(file.File).OrEmpty()
                 );
                 return new IPreview
                 {
                     ImageFileName =
-                        "/" + (Path.GetFileName(path: file.File).OrEmpty()).Replace(oldValue: "\\", newValue: "/"),
-                    ImageFileSize = storage.SizeOrZero(path: spritePath),
-                    ImageFileHash = ComputeFileHash(storage: storage, filePath: spritePath),
+                        "/" + (Path.GetFileName(file.File).OrEmpty()).Replace("\\", "/"),
+                    ImageFileSize = storage.SizeOrZero(spritePath),
+                    ImageFileHash = ComputeFileHash(storage, spritePath),
                 };
             });
 
         IEnumerable<IPreview> times = extraFiles
-            .Where(predicate: file => file.Kind == "thumbnails")
-            .Select(selector: file =>
+            .Where(file => file.Kind == "thumbnails")
+            .Select(file =>
             {
                 string vttPath = storage.CombinePath(
-                    parent: hostFolder,
-                    child: Path.GetFileName(path: file.File).OrEmpty()
+                    hostFolder,
+                    Path.GetFileName(file.File).OrEmpty()
                 );
                 // Read + parse the VTT once — it was previously read twice, once
                 // per dimension, doubling the NFS round-trips for the thumbnail track.
-                (int Width, int Height) dimensions = GetImageDimensionsFromVtt(storage: storage, filePath: vttPath);
+                (int Width, int Height) dimensions = GetImageDimensionsFromVtt(storage, vttPath);
                 return new IPreview
                 {
                     Width = dimensions.Width,
                     Height = dimensions.Height,
-                    TimeFileName = "/" + (Path.GetFileName(path: file.File).OrEmpty()).Replace(oldValue: "\\", newValue: "/"),
-                    TimeFileSize = storage.SizeOrZero(path: vttPath),
-                    TimeFileHash = ComputeFileHash(storage: storage, filePath: vttPath),
+                    TimeFileName = "/" + (Path.GetFileName(file.File).OrEmpty()).Replace("\\", "/"),
+                    TimeFileSize = storage.SizeOrZero(vttPath),
+                    TimeFileHash = ComputeFileHash(storage, vttPath),
                 };
             });
 
         List<IPreview> previews = sprites
             .Zip(
-                second: times,
-                resultSelector: (sprite, time) =>
+                times,
+                (sprite, time) =>
                     new IPreview
                     {
                         Width = time.Width,
@@ -250,25 +250,25 @@ public partial class FileManager
 
     private List<IFont> GetFontHashList(IStorage storage, string hostFolder)
     {
-        string fontFolder = storage.CombinePath(parent: hostFolder, child: "fonts");
+        string fontFolder = storage.CombinePath(hostFolder, "fonts");
 
         List<IFont> fonts = [];
 
-        if (!storage.Exists(path: fontFolder))
+        if (!storage.Exists(fontFolder))
             return fonts;
 
-        IReadOnlyList<StorageEntry> fontFiles = storage.List(path: fontFolder, pattern: null, recursive: false);
-        foreach (StorageEntry fontEntry in fontFiles.Where(predicate: e => !e.IsDirectory))
+        IReadOnlyList<StorageEntry> fontFiles = storage.List(fontFolder, null, false);
+        foreach (StorageEntry fontEntry in fontFiles.Where(e => !e.IsDirectory))
         {
             string path = fontEntry.Path;
             fonts.Add(
-                item: new()
+                new()
                 {
                     // See the matching comment in GetSubtitleHashList: a client-facing
                     // sidecar URL must join with '/' regardless of host OS, never the
                     // driver-native separator storage.CombinePath deliberately returns.
-                    FileName = $"/fonts/{storage.GetName(path: path)}",
-                    FileHash = ComputeFileHash(storage: storage, filePath: path),
+                    FileName = $"/fonts/{storage.GetName(path)}",
+                    FileHash = ComputeFileHash(storage, path),
                     FileSize = fontEntry.SizeBytes,
                 }
             );
@@ -283,16 +283,16 @@ public partial class FileManager
         string file
     )
     {
-        string path = storage.CombinePath(parent: hostFolder, child: file);
+        string path = storage.CombinePath(hostFolder, file);
 
         List<IChapter> chapters = [];
 
-        List<IChapter>? parsedChapters = await ParseChaptersAsync(storage: storage, chapterFile: path);
+        List<IChapter>? parsedChapters = await ParseChaptersAsync(storage, path);
 
         foreach (IChapter parsedChapter in parsedChapters ?? [])
         {
             chapters.Add(
-                item: new()
+                new()
                 {
                     EndTime = parsedChapter.EndTime,
                     StartTime = parsedChapter.StartTime,
@@ -312,24 +312,24 @@ public partial class FileManager
         IStorage destinationStorage
     )
     {
-        if (!sourceStorage.Exists(path: sourceFolder))
-            throw new DirectoryNotFoundException(message: $"Source folder not found: {sourceFolder}");
+        if (!sourceStorage.Exists(sourceFolder))
+            throw new DirectoryNotFoundException($"Source folder not found: {sourceFolder}");
 
         bool sameBackend =
-            ReferenceEquals(objA: sourceStorage, objB: destinationStorage)
+            ReferenceEquals(sourceStorage, destinationStorage)
             || sourceStorage.Driver.GetType() == destinationStorage.Driver.GetType();
 
         if (sameBackend)
         {
-            sourceStorage.MoveDirectory(from: sourceFolder, to: destinationFolder);
-            Logger.App(message: $"Moved {sourceFolder} to {destinationFolder}");
+            sourceStorage.MoveDirectory(sourceFolder, destinationFolder);
+            Logger.App($"Moved {sourceFolder} to {destinationFolder}");
             return;
         }
 
         IReadOnlyList<StorageEntry> entries = sourceStorage.List(
-            path: sourceFolder,
-            pattern: null,
-            recursive: true
+            sourceFolder,
+            null,
+            true
         );
 
         foreach (StorageEntry entry in entries)
@@ -337,34 +337,34 @@ public partial class FileManager
             if (entry.IsDirectory)
                 continue;
 
-            string relativePath = entry.Path.StartsWith(value: sourceFolder, comparisonType: StringComparison.Ordinal)
-                ? entry.Path[sourceFolder.Length..].TrimStart(trimChars: ['/', '\\'])
+            string relativePath = entry.Path.StartsWith(sourceFolder, StringComparison.Ordinal)
+                ? entry.Path[sourceFolder.Length..].TrimStart(['/', '\\'])
                 : entry.Path;
 
             string destPath = string.Join(
-                separator: '/', value: [destinationFolder.TrimEnd(trimChar: '/'), relativePath.Replace(oldChar: '\\', newChar: '/')]
+                '/', [destinationFolder.TrimEnd('/'), relativePath.Replace('\\', '/')]
             );
 
-            string? parentDir = destinationStorage.GetParent(path: destPath);
-            if (!string.IsNullOrEmpty(value: parentDir))
-                destinationStorage.CreateDirectory(path: parentDir);
+            string? parentDir = destinationStorage.GetParent(destPath);
+            if (!string.IsNullOrEmpty(parentDir))
+                destinationStorage.CreateDirectory(parentDir);
 
-            await using Stream readStream = sourceStorage.OpenRead(path: entry.Path);
+            await using Stream readStream = sourceStorage.OpenRead(entry.Path);
             await using Stream writeStream = destinationStorage.OpenWrite(
-                path: destPath,
-                overwrite: true
+                destPath,
+                true
             );
-            await readStream.CopyToAsync(destination: writeStream);
+            await readStream.CopyToAsync(writeStream);
         }
 
-        sourceStorage.DeleteDirectory(path: sourceFolder, recursive: true);
+        sourceStorage.DeleteDirectory(sourceFolder, true);
 
-        Logger.App(message: $"Cross-backend move: {sourceFolder} to {destinationFolder}");
+        Logger.App($"Cross-backend move: {sourceFolder} to {destinationFolder}");
     }
 
     private static (int Width, int Height) GetImageDimensions(string filePath)
     {
-        ImageInfo info = Image.Identify(path: filePath);
+        ImageInfo info = Image.Identify(filePath);
 
         return (info.Width, info.Height);
     }
@@ -375,16 +375,16 @@ public partial class FileManager
     )
     {
         string vttContents = storage
-            .ReadAllTextAsync(path: filePath, ct: CancellationToken.None)
+            .ReadAllTextAsync(filePath, CancellationToken.None)
             .GetAwaiter()
             .GetResult();
         Regex regex = ImageDimensions();
-        Match match = regex.Match(input: vttContents);
+        Match match = regex.Match(vttContents);
 
         if (match.Success)
         {
-            int width = int.Parse(s: match.Groups[groupname: "width"].Value);
-            int height = int.Parse(s: match.Groups[groupname: "height"].Value);
+            int width = int.Parse(match.Groups["width"].Value);
+            int height = int.Parse(match.Groups["height"].Value);
             return (width, height);
         }
 
@@ -396,11 +396,11 @@ public partial class FileManager
         string chapterFile
     )
     {
-        await using Stream fileStream = storage.OpenRead(path: chapterFile);
-        using StreamReader reader = new(stream: fileStream);
+        await using Stream fileStream = storage.OpenRead(chapterFile);
+        using StreamReader reader = new(fileStream);
         string text = await reader.ReadToEndAsync();
 
-        List<IChapter> chapters = ParseChaptersVtt(text: text);
+        List<IChapter> chapters = ParseChaptersVtt(text);
         return chapters.Count == 0 ? null : chapters;
     }
 
@@ -412,28 +412,28 @@ public partial class FileManager
     internal static List<IChapter> ParseChaptersVtt(string text)
     {
         List<IChapter> chapters = [];
-        if (string.IsNullOrWhiteSpace(value: text))
+        if (string.IsNullOrWhiteSpace(text))
             return chapters;
 
-        string normalized = text.Replace(oldValue: "\r\n", newValue: "\n").Replace(oldValue: "\r", newValue: "\n");
-        string[] blocks = normalized.Split(separator: ["\n\n"], options: StringSplitOptions.None);
+        string normalized = text.Replace("\r\n", "\n").Replace("\r", "\n");
+        string[] blocks = normalized.Split(["\n\n"], StringSplitOptions.None);
 
         int index = 0;
         foreach (string rawBlock in blocks)
         {
             string block = rawBlock.Trim();
-            if (block.Length == 0 || block == "WEBVTT" || block.StartsWith(value: "WEBVTT"))
+            if (block.Length == 0 || block == "WEBVTT" || block.StartsWith("WEBVTT"))
                 continue;
-            if (block.StartsWith(value: "NOTE") || block.StartsWith(value: "STYLE") || block.StartsWith(value: "REGION"))
+            if (block.StartsWith("NOTE") || block.StartsWith("STYLE") || block.StartsWith("REGION"))
                 continue;
 
-            string[] lines = block.Split(separator: '\n');
+            string[] lines = block.Split('\n');
 
             int timingLineIndex = -1;
             Match? timing = null;
-            for (int lineIndex = 0; lineIndex < Math.Min(val1: 2, val2: lines.Length); lineIndex++)
+            for (int lineIndex = 0; lineIndex < Math.Min(2, lines.Length); lineIndex++)
             {
-                Match candidate = ChapterTimingRegex().Match(input: lines[lineIndex].Trim());
+                Match candidate = ChapterTimingRegex().Match(lines[lineIndex].Trim());
                 if (candidate.Success)
                 {
                     timingLineIndex = lineIndex;
@@ -445,8 +445,8 @@ public partial class FileManager
             if (timing is null)
                 continue;
 
-            int start = ParseVttTimestampMs(timestamp: timing.Groups[groupnum: 1].Value);
-            int end = ParseVttTimestampMs(timestamp: timing.Groups[groupnum: 2].Value);
+            int start = ParseVttTimestampMs(timing.Groups[1].Value);
+            int end = ParseVttTimestampMs(timing.Groups[2].Value);
             if (start < 0 || end < 0)
                 continue;
 
@@ -456,7 +456,7 @@ public partial class FileManager
                     : string.Empty;
 
             chapters.Add(
-                item: new()
+                new()
                 {
                     Id = index++,
                     StartTime = start,
@@ -466,7 +466,7 @@ public partial class FileManager
             );
         }
 
-        return NormalizeChapters(chapters: chapters);
+        return NormalizeChapters(chapters);
     }
 
     // A chapter list should span the whole item from 0. Some sources mark only
@@ -480,19 +480,19 @@ public partial class FileManager
         if (chapters.Count == 0)
             return chapters;
 
-        if (chapters[index: 0].StartTime > 0)
+        if (chapters[0].StartTime > 0)
             chapters.Insert(
-                index: 0,
-                item: new()
+                0,
+                new()
                 {
                     StartTime = 0,
-                    EndTime = chapters[index: 0].StartTime,
+                    EndTime = chapters[0].StartTime,
                     Title = "Start",
                 }
             );
 
         for (int i = 0; i < chapters.Count; i++)
-            chapters[index: i].Id = i;
+            chapters[i].Id = i;
 
         return chapters;
     }
@@ -501,7 +501,7 @@ public partial class FileManager
     // milliseconds. Returns -1 for unparseable input so the caller can skip it.
     private static int ParseVttTimestampMs(string timestamp)
     {
-        string[] parts = timestamp.Split(separator: ':');
+        string[] parts = timestamp.Split(':');
         double hours = 0;
         double minutes;
         double seconds;
@@ -510,22 +510,22 @@ public partial class FileManager
         {
             if (
                 !double.TryParse(
-                    s: parts[0],
-                    style: NumberStyles.Float,
-                    provider: CultureInfo.InvariantCulture,
-                    result: out hours
+                    parts[0],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out hours
                 )
                 || !double.TryParse(
-                    s: parts[1],
-                    style: NumberStyles.Float,
-                    provider: CultureInfo.InvariantCulture,
-                    result: out minutes
+                    parts[1],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out minutes
                 )
                 || !double.TryParse(
-                    s: parts[2],
-                    style: NumberStyles.Float,
-                    provider: CultureInfo.InvariantCulture,
-                    result: out seconds
+                    parts[2],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out seconds
                 )
             )
                 return -1;
@@ -534,16 +534,16 @@ public partial class FileManager
         {
             if (
                 !double.TryParse(
-                    s: parts[0],
-                    style: NumberStyles.Float,
-                    provider: CultureInfo.InvariantCulture,
-                    result: out minutes
+                    parts[0],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out minutes
                 )
                 || !double.TryParse(
-                    s: parts[1],
-                    style: NumberStyles.Float,
-                    provider: CultureInfo.InvariantCulture,
-                    result: out seconds
+                    parts[1],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out seconds
                 )
             )
                 return -1;
@@ -554,11 +554,11 @@ public partial class FileManager
         }
 
         double totalSeconds = hours * 3600 + minutes * 60 + seconds;
-        return (int)Math.Round(a: totalSeconds * 1000);
+        return (int)Math.Round(totalSeconds * 1000);
     }
 
     [GeneratedRegex(
-        pattern: @"^((?:\d{1,3}:)?\d{2}:\d{2}(?:\.\d{1,3})?)\s+-->\s+((?:\d{1,3}:)?\d{2}:\d{2}(?:\.\d{1,3})?)"
+        @"^((?:\d{1,3}:)?\d{2}:\d{2}(?:\.\d{1,3})?)\s+-->\s+((?:\d{1,3}:)?\d{2}:\d{2}(?:\.\d{1,3})?)"
     )]
     private static partial Regex ChapterTimingRegex();
 
@@ -566,43 +566,43 @@ public partial class FileManager
     {
         List<VideoTrack> tracks = [];
 
-        IReadOnlyList<StorageEntry> files = storage.List(path: hostFolder, pattern: null, recursive: false);
+        IReadOnlyList<StorageEntry> files = storage.List(hostFolder, null, false);
 
         // Index every thumb/sprite candidate first so we can pair a VTT with
         // a same-stem WEBP. Stale VTT files from a previous re-encode (e.g.
         // thumbs_320x178.vtt) used to be registered alongside the live sprite
         // (thumbs_320x180.webp), and the player followed the VTT's cues to a
         // non-existent webp — 404 every hover.
-        Dictionary<string, string> spriteByStem = new(comparer: StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> spriteByStem = new(StringComparer.OrdinalIgnoreCase);
         List<(string Name, string Stem)> vttCandidates = [];
 
-        foreach (StorageEntry entry in files.Where(predicate: e => !e.IsDirectory))
+        foreach (StorageEntry entry in files.Where(e => !e.IsDirectory))
         {
-            string name = storage.GetName(path: entry.Path);
-            string stem = storage.GetNameWithoutExtension(path: entry.Path);
+            string name = storage.GetName(entry.Path);
+            string stem = storage.GetNameWithoutExtension(entry.Path);
 
-            if (name.StartsWith(value: "chapter"))
-                tracks.Add(item: new() { File = "/" + name, Kind = "chapters" });
-            else if (name.StartsWith(value: "skipper"))
-                tracks.Add(item: new() { File = "/" + name, Kind = "skippers" });
+            if (name.StartsWith("chapter"))
+                tracks.Add(new() { File = "/" + name, Kind = "chapters" });
+            else if (name.StartsWith("skipper"))
+                tracks.Add(new() { File = "/" + name, Kind = "skippers" });
             else if (
                 (
-                    name.StartsWith(value: "sprite")
-                    || name.StartsWith(value: "preview")
-                    || name.StartsWith(value: "thumb")
-                ) && entry.Path.EndsWith(value: "vtt")
+                    name.StartsWith("sprite")
+                    || name.StartsWith("preview")
+                    || name.StartsWith("thumb")
+                ) && entry.Path.EndsWith("vtt")
             )
-                vttCandidates.Add(item: (name, stem));
+                vttCandidates.Add((name, stem));
             else if (
-                (name.StartsWith(value: "sprite") || name.StartsWith(value: "thumb"))
-                && entry.Path.EndsWith(value: "webp")
+                (name.StartsWith("sprite") || name.StartsWith("thumb"))
+                && entry.Path.EndsWith("webp")
             )
             {
-                spriteByStem[key: stem] = name;
-                tracks.Add(item: new() { File = "/" + name, Kind = "sprite" });
+                spriteByStem[stem] = name;
+                tracks.Add(new() { File = "/" + name, Kind = "sprite" });
             }
-            else if (name.StartsWith(value: "fonts"))
-                tracks.Add(item: new() { File = "/" + name, Kind = "fonts" });
+            else if (name.StartsWith("fonts"))
+                tracks.Add(new() { File = "/" + name, Kind = "fonts" });
         }
 
         // Only register VTTs whose basename has a matching sprite WEBP on
@@ -610,8 +610,8 @@ public partial class FileManager
         // at a different dimension and the old VTT wasn't cleaned up.
         foreach ((string name, string stem) in vttCandidates)
         {
-            if (spriteByStem.ContainsKey(key: stem))
-                tracks.Add(item: new() { File = "/" + name, Kind = "thumbnails" });
+            if (spriteByStem.ContainsKey(stem))
+                tracks.Add(new() { File = "/" + name, Kind = "thumbnails" });
         }
 
         return tracks;
@@ -619,56 +619,56 @@ public partial class FileManager
 
     private static List<Subtitle> GetSubtitles(IStorage storage, string hostFolder)
     {
-        string subtitleFolder = storage.CombinePath(parent: hostFolder, child: "subtitles");
+        string subtitleFolder = storage.CombinePath(hostFolder, "subtitles");
 
         List<Subtitle> subtitles = [];
 
-        if (!storage.Exists(path: subtitleFolder))
+        if (!storage.Exists(subtitleFolder))
             return subtitles;
 
         IReadOnlyList<StorageEntry> subtitleFiles = storage.List(
-            path: subtitleFolder,
-            pattern: null,
-            recursive: false
+            subtitleFolder,
+            null,
+            false
         );
 
         // First pass: index every .vtt by {lang}|{type} so we can spot bitmap subs
         // (.sup / .vob) whose OCR pass left no companion .vtt behind. Without this
         // an orphaned bitmap silently disappears from the API track list and the
         // operator has no signal the OCR failed.
-        HashSet<string> vttKeys = new(comparer: StringComparer.OrdinalIgnoreCase);
-        foreach (StorageEntry subtitleEntry in subtitleFiles.Where(predicate: e => !e.IsDirectory))
+        HashSet<string> vttKeys = new(StringComparer.OrdinalIgnoreCase);
+        foreach (StorageEntry subtitleEntry in subtitleFiles.Where(e => !e.IsDirectory))
         {
-            Match vttMatch = SubtitleFileRegex().Match(input: subtitleEntry.Path);
-            if (vttMatch.Success && vttMatch.Groups[groupname: "ext"].Value == "vtt")
-                vttKeys.Add(item: $"{vttMatch.Groups[groupname: "lang"].Value}|{vttMatch.Groups[groupname: "type"].Value}");
+            Match vttMatch = SubtitleFileRegex().Match(subtitleEntry.Path);
+            if (vttMatch.Success && vttMatch.Groups["ext"].Value == "vtt")
+                vttKeys.Add($"{vttMatch.Groups["lang"].Value}|{vttMatch.Groups["type"].Value}");
         }
 
-        foreach (StorageEntry subtitleEntry in subtitleFiles.Where(predicate: e => !e.IsDirectory))
+        foreach (StorageEntry subtitleEntry in subtitleFiles.Where(e => !e.IsDirectory))
         {
             Regex regex = SubtitleFileRegex();
-            Match match = regex.Match(input: subtitleEntry.Path);
+            Match match = regex.Match(subtitleEntry.Path);
 
             if (!match.Success)
                 continue;
 
             // Reject binary subtitle formats; accept every text format.
-            string ext = match.Groups[groupname: "ext"].Value;
-            if (SubtitleClassifier.IsBitmapSidecarExtension(extension: ext))
+            string ext = match.Groups["ext"].Value;
+            if (SubtitleClassifier.IsBitmapSidecarExtension(ext))
             {
-                string siblingKey = $"{match.Groups[groupname: "lang"].Value}|{match.Groups[groupname: "type"].Value}";
-                if (!vttKeys.Contains(item: siblingKey))
+                string siblingKey = $"{match.Groups["lang"].Value}|{match.Groups["type"].Value}";
+                if (!vttKeys.Contains(siblingKey))
                     Logger.App(
-                        message: $"Orphaned bitmap subtitle (no sibling .vtt): {Path.GetFileName(path: subtitleEntry.Path)} — OCR likely failed or never ran"
+                        $"Orphaned bitmap subtitle (no sibling .vtt): {Path.GetFileName(subtitleEntry.Path)} — OCR likely failed or never ran"
                     );
                 continue;
             }
 
             subtitles.Add(
-                item: new()
+                new()
                 {
-                    Language = match.Groups[groupname: "lang"].Value,
-                    Type = match.Groups[groupname: "type"].Value,
+                    Language = match.Groups["lang"].Value,
+                    Type = match.Groups["type"].Value,
                     Ext = ext,
                 }
             );

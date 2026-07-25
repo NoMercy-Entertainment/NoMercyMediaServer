@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record MkdirRequest
 {
-    [JsonProperty(propertyName: "parent")]
+    [JsonProperty("parent")]
     public string Parent { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 }

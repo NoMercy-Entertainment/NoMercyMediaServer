@@ -20,25 +20,25 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 
 namespace NoMercy.Tests.MediaProcessing.Jobs;
 
-[Collection(name: "EventBusProvider")]
+[Collection("EventBusProvider")]
 public class EventBusProgressObserverTests
 {
     // Helpers that read fields off the anonymous ProgressData object.
     private static object? GetField(object obj, string fieldName) =>
-        obj.GetType().GetProperty(name: fieldName)?.GetValue(obj: obj);
+        obj.GetType().GetProperty(fieldName)?.GetValue(obj);
 
     // Save and restore the static EventBusProvider._instance around a test body
     // so no state leaks regardless of ordering or test failure.
     private static IEventBus? GetCurrentInstance() =>
         (IEventBus?)
             typeof(EventBusProvider)
-                .GetField(name: "_instance", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
-                .GetValue(obj: null);
+                .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
+                .GetValue(null);
 
     private static void SetInstance(IEventBus? bus) =>
         typeof(EventBusProvider)
-            .GetField(name: "_instance", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
-            .SetValue(obj: null, value: bus);
+            .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
+            .SetValue(null, bus);
 
     [Fact]
     public void OnProgress_WhenEventBusNotConfigured_DoesNotThrow()
@@ -46,27 +46,27 @@ public class EventBusProgressObserverTests
         IEventBus? previous = GetCurrentInstance();
         try
         {
-            SetInstance(bus: null);
+            SetInstance(null);
 
-            EventBusProgressObserver observer = new(jobId: 1, title: "Test Movie");
+            EventBusProgressObserver observer = new(1, "Test Movie");
 
             EncodingProgress progress = new(
-                CorrelationId: "test-id",
-                PercentComplete: 50.0,
-                Elapsed: TimeSpan.FromSeconds(seconds: 10),
-                EstimatedRemaining: TimeSpan.FromSeconds(seconds: 10),
-                CurrentFps: 30.0,
-                CurrentSpeed: 1.0,
-                CurrentStage: "video",
-                CurrentOperation: "encode"
+                "test-id",
+                50.0,
+                TimeSpan.FromSeconds(10),
+                TimeSpan.FromSeconds(10),
+                30.0,
+                1.0,
+                "video",
+                "encode"
             );
 
-            Exception? ex = Record.Exception(testCode: () => observer.OnProgress(progress: progress));
-            Assert.Null(@object: ex);
+            Exception? ex = Record.Exception(() => observer.OnProgress(progress));
+            Assert.Null(ex);
         }
         finally
         {
-            SetInstance(bus: previous);
+            SetInstance(previous);
         }
     }
 
@@ -79,40 +79,40 @@ public class EventBusProgressObserverTests
             EncodingProgressBroadcastedEvent? captured = null;
             Mock<IEventBus> mockBus = new();
             mockBus
-                .Setup(expression: b =>
+                .Setup(b =>
                     b.PublishAsync(
                         It.IsAny<EncodingProgressBroadcastedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
                 .Callback<EncodingProgressBroadcastedEvent, CancellationToken>(
-                    action: (e, _) => captured = e
+                    (e, _) => captured = e
                 )
-                .Returns(value: Task.CompletedTask);
+                .Returns(Task.CompletedTask);
 
-            EventBusProvider.Configure(eventBus: mockBus.Object);
+            EventBusProvider.Configure(mockBus.Object);
 
-            EventBusProgressObserver observer = new(jobId: 42, title: "Action Movie");
-            observer.OnStageStarted(stageName: "VideoEncode");
+            EventBusProgressObserver observer = new(42, "Action Movie");
+            observer.OnStageStarted("VideoEncode");
 
             mockBus.Verify(
-                expression: b =>
+                b =>
                     b.PublishAsync(
                         It.IsAny<EncodingProgressBroadcastedEvent>(),
                         It.IsAny<CancellationToken>()
                     ),
-                times: Times.Once
+                Times.Once
             );
-            Assert.NotNull(@object: captured);
+            Assert.NotNull(captured);
             object progressData = captured.ProgressData;
-            Assert.Equal(expected: 42, actual: (int)GetField(obj: progressData, fieldName: "id")!);
-            Assert.Equal(expected: "encoding", actual: (string)GetField(obj: progressData, fieldName: "status")!);
-            Assert.Equal(expected: "Action Movie", actual: (string)GetField(obj: progressData, fieldName: "title")!);
-            Assert.Equal(expected: "Stage: VideoEncode", actual: (string)GetField(obj: progressData, fieldName: "message")!);
+            Assert.Equal(42, (int)GetField(progressData, "id")!);
+            Assert.Equal("encoding", (string)GetField(progressData, "status")!);
+            Assert.Equal("Action Movie", (string)GetField(progressData, "title")!);
+            Assert.Equal("Stage: VideoEncode", (string)GetField(progressData, "message")!);
         }
         finally
         {
-            SetInstance(bus: previous);
+            SetInstance(previous);
         }
     }
 
@@ -125,47 +125,47 @@ public class EventBusProgressObserverTests
             EncodingProgressBroadcastedEvent? captured = null;
             Mock<IEventBus> mockBus = new();
             mockBus
-                .Setup(expression: b =>
+                .Setup(b =>
                     b.PublishAsync(
                         It.IsAny<EncodingProgressBroadcastedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
                 .Callback<EncodingProgressBroadcastedEvent, CancellationToken>(
-                    action: (e, _) => captured = e
+                    (e, _) => captured = e
                 )
-                .Returns(value: Task.CompletedTask);
+                .Returns(Task.CompletedTask);
 
-            EventBusProvider.Configure(eventBus: mockBus.Object);
+            EventBusProvider.Configure(mockBus.Object);
 
-            EventBusProgressObserver observer = new(jobId: 7, title: "Documentary");
+            EventBusProgressObserver observer = new(7, "Documentary");
             EncodingError error = new(
-                Kind: EncodingErrorKind.ProcessCrashed,
-                Message: "FFmpeg crashed",
-                FfmpegStderr: null,
-                StageName: "VideoEncode",
-                Recoverable: false
+                EncodingErrorKind.ProcessCrashed,
+                "FFmpeg crashed",
+                null,
+                "VideoEncode",
+                false
             );
-            observer.OnError(error: error);
+            observer.OnError(error);
 
             mockBus.Verify(
-                expression: b =>
+                b =>
                     b.PublishAsync(
                         It.IsAny<EncodingProgressBroadcastedEvent>(),
                         It.IsAny<CancellationToken>()
                     ),
-                times: Times.Once
+                Times.Once
             );
-            Assert.NotNull(@object: captured);
+            Assert.NotNull(captured);
             object progressData = captured.ProgressData;
-            Assert.Equal(expected: 7, actual: (int)GetField(obj: progressData, fieldName: "id")!);
-            Assert.Equal(expected: "failed", actual: (string)GetField(obj: progressData, fieldName: "status")!);
-            Assert.Equal(expected: "Documentary", actual: (string)GetField(obj: progressData, fieldName: "title")!);
-            Assert.Equal(expected: "FFmpeg crashed", actual: (string)GetField(obj: progressData, fieldName: "message")!);
+            Assert.Equal(7, (int)GetField(progressData, "id")!);
+            Assert.Equal("failed", (string)GetField(progressData, "status")!);
+            Assert.Equal("Documentary", (string)GetField(progressData, "title")!);
+            Assert.Equal("FFmpeg crashed", (string)GetField(progressData, "message")!);
         }
         finally
         {
-            SetInstance(bus: previous);
+            SetInstance(previous);
         }
     }
 
@@ -173,12 +173,12 @@ public class EventBusProgressObserverTests
     public void OnProgress_WithRegistry_RegistersFirstSeenPid()
     {
         EncoderProcessRegistry registry = new();
-        EventBusProgressObserver observer = new(jobId: 42, title: "Test", registry: registry);
+        EventBusProgressObserver observer = new(42, title: "Test", registry: registry);
 
         EncodingProgress progress = new(
-            CorrelationId: "c",
+            "c",
             PercentComplete: 10.0,
-            Elapsed: TimeSpan.FromSeconds(seconds: 1),
+            Elapsed: TimeSpan.FromSeconds(1),
             EstimatedRemaining: null,
             CurrentFps: 24.0,
             CurrentSpeed: 1.0,
@@ -187,21 +187,21 @@ public class EventBusProgressObserverTests
             ProcessId: 9876
         );
 
-        observer.OnProgress(progress: progress);
+        observer.OnProgress(progress);
 
-        Assert.Contains(expected: 9876, collection: registry.GetProcessIds(jobId: 42));
+        Assert.Contains(9876, registry.GetProcessIds(42));
     }
 
     [Fact]
     public void OnProgress_IdempotentForSamePid_DoesNotGrowRegistry()
     {
         EncoderProcessRegistry registry = new();
-        EventBusProgressObserver observer = new(jobId: 42, title: "Test", registry: registry);
+        EventBusProgressObserver observer = new(42, title: "Test", registry: registry);
 
         EncodingProgress progress = new(
-            CorrelationId: "c",
+            "c",
             PercentComplete: 10.0,
-            Elapsed: TimeSpan.FromSeconds(seconds: 1),
+            Elapsed: TimeSpan.FromSeconds(1),
             EstimatedRemaining: null,
             CurrentFps: 24.0,
             CurrentSpeed: 1.0,
@@ -210,41 +210,41 @@ public class EventBusProgressObserverTests
             ProcessId: 9876
         );
 
-        observer.OnProgress(progress: progress);
-        observer.OnProgress(progress: progress);
-        observer.OnProgress(progress: progress);
+        observer.OnProgress(progress);
+        observer.OnProgress(progress);
+        observer.OnProgress(progress);
 
-        Assert.Single(collection: registry.GetProcessIds(jobId: 42));
+        Assert.Single(registry.GetProcessIds(42));
     }
 
     [Fact]
     public void OnCompleted_UnregistersJob()
     {
         EncoderProcessRegistry registry = new();
-        registry.Register(jobId: 42, processId: 9876);
+        registry.Register(42, 9876);
 
-        EventBusProgressObserver observer = new(jobId: 42, title: "Test", registry: registry);
+        EventBusProgressObserver observer = new(42, title: "Test", registry: registry);
         observer.OnCompleted();
 
-        Assert.Empty(collection: registry.GetProcessIds(jobId: 42));
+        Assert.Empty(registry.GetProcessIds(42));
     }
 
     [Fact]
     public void OnError_UnregistersJob()
     {
         EncoderProcessRegistry registry = new();
-        registry.Register(jobId: 42, processId: 9876);
+        registry.Register(42, 9876);
 
-        EventBusProgressObserver observer = new(jobId: 42, title: "Test", registry: registry);
+        EventBusProgressObserver observer = new(42, title: "Test", registry: registry);
         EncodingError error = new(
-            Kind: EncodingErrorKind.ProcessCrashed,
-            Message: "boom",
-            FfmpegStderr: null,
-            StageName: "Execute",
-            Recoverable: false
+            EncodingErrorKind.ProcessCrashed,
+            "boom",
+            null,
+            "Execute",
+            false
         );
-        observer.OnError(error: error);
+        observer.OnError(error);
 
-        Assert.Empty(collection: registry.GetProcessIds(jobId: 42));
+        Assert.Empty(registry.GetProcessIds(42));
     }
 }

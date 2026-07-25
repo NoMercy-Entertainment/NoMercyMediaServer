@@ -24,48 +24,48 @@ public enum MusicEventType
 
 public class EventPayload<T>
 {
-    [JsonProperty(propertyName: "events", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("events", NullValueHandling = NullValueHandling.Ignore)]
     public List<T> Events { get; set; } = [];
 }
 
 public class PlayerStateEventElement
 {
-    [JsonProperty(propertyName: "event")]
+    [JsonProperty("event")]
     public PlayerStateEvent Event { get; set; } = null!;
 
-    [JsonProperty(propertyName: "source")]
+    [JsonProperty("source")]
     public string Source { get; set; } = null!;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public MusicEventType Type { get; set; } = MusicEventType.Null;
 
-    [JsonProperty(propertyName: "user")]
+    [JsonProperty("user")]
     public User User { get; set; } = null!;
 }
 
 public class PlayerStateEvent
 {
-    [JsonProperty(propertyName: "event_id")]
+    [JsonProperty("event_id")]
     public int EventId { get; set; }
 
-    [JsonProperty(propertyName: "state")]
+    [JsonProperty("state")]
     public MusicPlayerState? State { get; set; }
 }
 
 public class BroadcastEventPayload
 {
-    [JsonProperty(propertyName: "deviceBroadcastStatus")]
+    [JsonProperty("deviceBroadcastStatus")]
     public DeviceBroadcastStatus DeviceBroadcastStatus { get; set; } = new();
 }
 
 public class DeviceBroadcastStatus
 {
-    [JsonProperty(propertyName: "timestamp")]
+    [JsonProperty("timestamp")]
     public long Timestamp { get; set; }
 
-    [JsonProperty(propertyName: "broadcast_status")]
+    [JsonProperty("broadcast_status")]
     public MusicEventType BroadcastStatus { get; set; } = MusicEventType.Null;
 
-    [JsonProperty(propertyName: "device_id")]
+    [JsonProperty("device_id")]
     public string DeviceId { get; set; } = null!;
 }

@@ -29,6 +29,6 @@ public class MusicGenreManager() : BaseManager, IMusicGenreManager
     {
         MusicGenre insert = new() { Id = genre.Id, Name = genre.Name };
 
-        return _musicGenreRepository!.Store(genre: insert);
+        return _musicGenreRepository!.Store(insert);
     }
 }

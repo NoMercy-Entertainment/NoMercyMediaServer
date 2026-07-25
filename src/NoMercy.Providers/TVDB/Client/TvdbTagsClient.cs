@@ -16,15 +16,15 @@ namespace NoMercy.Providers.TVDB.Client;
 public class TvdbTagsClient : TvdbBaseClient
 {
     public TvdbTagsClient(int id = 0, string language = "eng")
-        : base(id: id, language: language) { }
+        : base(id, language) { }
 
     public Task<TvdbTagOptionsResponse?> Options(bool? priority = false)
     {
-        return Get<TvdbTagOptionsResponse>(url: "tags/options", priority: priority);
+        return Get<TvdbTagOptionsResponse>("tags/options", priority: priority);
     }
 
     public Task<TvdbTagOptionResponse?> Details(bool? priority = false)
     {
-        return Get<TvdbTagOptionResponse>(url: "tags/options/" + Id, priority: priority);
+        return Get<TvdbTagOptionResponse>("tags/options/" + Id, priority: priority);
     }
 }

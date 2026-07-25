@@ -15,33 +15,33 @@ namespace NoMercy.Providers.TMDB.Models.Configuration;
 
 public class TmdbConfiguration
 {
-    [JsonProperty(propertyName: "images")]
+    [JsonProperty("images")]
     public TmdbImage TmdbImages { get; set; } = new();
 
-    [JsonProperty(propertyName: "change_keys")]
+    [JsonProperty("change_keys")]
     public string[] ChangeKeys { get; set; } = [];
 
     public class TmdbImage
     {
-        [JsonProperty(propertyName: "base_url")]
+        [JsonProperty("base_url")]
         public string BaseUrl { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "secure_base_url")]
+        [JsonProperty("secure_base_url")]
         public string SecureBaseUrl { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "backdrop_sizes")]
+        [JsonProperty("backdrop_sizes")]
         public string[] BackdropSizes { get; set; } = [];
 
-        [JsonProperty(propertyName: "logo_sizes")]
+        [JsonProperty("logo_sizes")]
         public string[] LogoSizes { get; set; } = [];
 
-        [JsonProperty(propertyName: "poster_sizes")]
+        [JsonProperty("poster_sizes")]
         public string[] PosterSizes { get; set; } = [];
 
-        [JsonProperty(propertyName: "profile_sizes")]
+        [JsonProperty("profile_sizes")]
         public string[] ProfileSizes { get; set; } = [];
 
-        [JsonProperty(propertyName: "still_sizes")]
+        [JsonProperty("still_sizes")]
         public string[] StillSizes { get; set; } = [];
     }
 }

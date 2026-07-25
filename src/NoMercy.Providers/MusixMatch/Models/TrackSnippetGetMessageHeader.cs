@@ -15,9 +15,9 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class TrackSnippetGetMessageHeader
 {
-    [JsonProperty(propertyName: "status_code")]
+    [JsonProperty("status_code")]
     public long StatusCode { get; set; }
 
-    [JsonProperty(propertyName: "execute_time")]
+    [JsonProperty("execute_time")]
     public double ExecuteTime { get; set; }
 }

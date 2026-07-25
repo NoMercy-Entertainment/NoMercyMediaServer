@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record CarouselResponseDto<T>
 {
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public IEnumerable<T> Data { get; set; } = [];
 }

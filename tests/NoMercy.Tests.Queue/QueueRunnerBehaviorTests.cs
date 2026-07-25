@@ -29,7 +29,7 @@ namespace NoMercy.Tests.Queue;
 /// makes "pause survives a restart" true), and increasing a queue's worker
 /// count actually raises the number of jobs it runs concurrently.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class QueueRunnerBehaviorTests
 {
     /// <summary>
@@ -41,17 +41,17 @@ public class QueueRunnerBehaviorTests
     {
         private readonly ConcurrentDictionary<string, string> _values = new();
 
-        public string? GetValue(string key) => _values.GetValueOrDefault(key: key);
+        public string? GetValue(string key) => _values.GetValueOrDefault(key);
 
-        public void SetValue(string key, string value) => _values[key: key] = value;
+        public void SetValue(string key, string value) => _values[key] = value;
 
         public Task SetValueAsync(string key, string value, Guid? modifiedBy = null)
         {
-            _values[key: key] = value;
+            _values[key] = value;
             return Task.CompletedTask;
         }
 
-        public bool HasKey(string key) => _values.ContainsKey(key: key);
+        public bool HasKey(string key) => _values.ContainsKey(key);
     }
 
     private static QueueRunner BuildRunner(
@@ -63,21 +63,21 @@ public class QueueRunnerBehaviorTests
     {
         QueueConfiguration configuration = new()
         {
-            WorkerCounts = new() { [key: queueName] = workerCount },
+            WorkerCounts = new() { [queueName] = workerCount },
         };
-        return new(queueContext: context, configuration: configuration, loggerFactory: NullLoggerFactory.Instance, configurationStore: configStore);
+        return new(context, configuration, NullLoggerFactory.Instance, configStore);
     }
 
     private static async Task WaitUntilAsync(Func<bool> predicate, string failureMessage)
     {
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
         while (!cts.IsCancellationRequested)
         {
             if (predicate())
                 return;
-            await Task.Delay(millisecondsDelay: 10);
+            await Task.Delay(10);
         }
-        throw new TimeoutException(message: failureMessage);
+        throw new TimeoutException(failureMessage);
     }
 
     [Fact]
@@ -86,31 +86,31 @@ public class QueueRunnerBehaviorTests
         const string queue = "pause-behavior";
         TestQueueContextAdapter context = new();
         InMemoryConfigurationStore configStore = new();
-        QueueRunner runner = BuildRunner(context: context, configStore: configStore, queueName: queue);
+        QueueRunner runner = BuildRunner(context, configStore, queue);
         await runner.Initialize();
 
-        await runner.Pause(name: queue);
+        await runner.Pause(queue);
 
-        runner.IsPaused(name: queue).Should().BeTrue();
-        configStore.GetValue(key: $"queue.{queue}.paused").Should().Be(expected: "true");
+        runner.IsPaused(queue).Should().BeTrue();
+        configStore.GetValue($"queue.{queue}.paused").Should().Be("true");
 
         runner.Queue.Enqueue(
-            queueJob: new QueueJobModel
+            new QueueJobModel
             {
                 Queue = queue,
                 Payload = SerializationHelper.Serialize(
-                    obj: new TestJob { Message = "should stay queued" }
+                    new TestJob { Message = "should stay queued" }
                 ),
                 AvailableAt = DateTime.UtcNow,
             }
         );
 
-        await Task.Delay(millisecondsDelay: 300);
+        await Task.Delay(300);
         context
             .Jobs.Should()
             .ContainSingle(
-                predicate: j => j.ReservedAt == null,
-                because: "a paused queue's worker must not reserve new work"
+                j => j.ReservedAt == null,
+                "a paused queue's worker must not reserve new work"
             );
 
         await runner.StopAll();
@@ -122,29 +122,29 @@ public class QueueRunnerBehaviorTests
         const string queue = "resume-behavior";
         TestQueueContextAdapter context = new();
         InMemoryConfigurationStore configStore = new();
-        QueueRunner runner = BuildRunner(context: context, configStore: configStore, queueName: queue);
+        QueueRunner runner = BuildRunner(context, configStore, queue);
         await runner.Initialize();
-        await runner.Pause(name: queue);
+        await runner.Pause(queue);
 
         runner.Queue.Enqueue(
-            queueJob: new QueueJobModel
+            new QueueJobModel
             {
                 Queue = queue,
                 Payload = SerializationHelper.Serialize(
-                    obj: new TestJob { Message = "runs after resume" }
+                    new TestJob { Message = "runs after resume" }
                 ),
                 AvailableAt = DateTime.UtcNow,
             }
         );
 
-        await runner.Resume(name: queue);
+        await runner.Resume(queue);
 
-        runner.IsPaused(name: queue).Should().BeFalse();
-        configStore.GetValue(key: $"queue.{queue}.paused").Should().Be(expected: "false");
+        runner.IsPaused(queue).Should().BeFalse();
+        configStore.GetValue($"queue.{queue}.paused").Should().Be("false");
 
         await WaitUntilAsync(
-            predicate: () => context.Jobs.Count == 0,
-            failureMessage: "resuming the queue must let its worker pick up and complete the queued job"
+            () => context.Jobs.Count == 0,
+            "resuming the queue must let its worker pick up and complete the queued job"
         );
 
         await runner.StopAll();
@@ -158,24 +158,24 @@ public class QueueRunnerBehaviorTests
         InMemoryConfigurationStore configStore = new();
         // Simulates the state left behind by a PREVIOUS QueueRunner instance
         // that was paused before the process exited.
-        configStore.SetValue(key: $"queue.{queue}.paused", value: "true");
+        configStore.SetValue($"queue.{queue}.paused", "true");
 
-        QueueRunner runner = BuildRunner(context: context, configStore: configStore, queueName: queue);
+        QueueRunner runner = BuildRunner(context, configStore, queue);
         await runner.Initialize();
 
-        runner.IsPaused(name: queue).Should().BeTrue();
+        runner.IsPaused(queue).Should().BeTrue();
 
         runner.Queue.Enqueue(
-            queueJob: new QueueJobModel
+            new QueueJobModel
             {
                 Queue = queue,
-                Payload = SerializationHelper.Serialize(obj: new TestJob { Message = "must not run" }),
+                Payload = SerializationHelper.Serialize(new TestJob { Message = "must not run" }),
                 AvailableAt = DateTime.UtcNow,
             }
         );
 
-        await Task.Delay(millisecondsDelay: 300);
-        context.Jobs.Should().ContainSingle(predicate: j => j.ReservedAt == null);
+        await Task.Delay(300);
+        context.Jobs.Should().ContainSingle(j => j.ReservedAt == null);
 
         await runner.StopAll();
     }
@@ -185,10 +185,10 @@ public class QueueRunnerBehaviorTests
     {
         TestQueueContextAdapter context = new();
         InMemoryConfigurationStore configStore = new();
-        QueueRunner runner = BuildRunner(context: context, configStore: configStore, queueName: "known-queue");
+        QueueRunner runner = BuildRunner(context, configStore, "known-queue");
         await runner.Initialize();
 
-        bool result = await runner.SetWorkerCount(name: "no-such-queue", max: 5, userId: null);
+        bool result = await runner.SetWorkerCount("no-such-queue", 5, null);
 
         result.Should().BeFalse();
         await runner.StopAll();
@@ -203,25 +203,25 @@ public class QueueRunnerBehaviorTests
         // Start with a single worker — if SetWorkerCount's increase never
         // took effect, only one of the three barrier-waiting jobs below
         // would ever run and this test would time out.
-        QueueRunner runner = BuildRunner(context: context, configStore: configStore, queueName: queue, workerCount: 1);
+        QueueRunner runner = BuildRunner(context, configStore, queue, workerCount: 1);
         await runner.Initialize();
 
-        bool changed = await runner.SetWorkerCount(name: queue, max: 3, userId: null);
+        bool changed = await runner.SetWorkerCount(queue, 3, null);
         changed.Should().BeTrue();
 
         string probeKey = Guid.NewGuid().ToString();
-        using CountdownEvent started = new(initialCount: 3);
-        using ManualResetEventSlim release = new(initialState: false);
-        ConcurrencyProbeJob.Probes[key: probeKey] = (started, release);
+        using CountdownEvent started = new(3);
+        using ManualResetEventSlim release = new(false);
+        ConcurrencyProbeJob.Probes[probeKey] = (started, release);
 
         for (int i = 0; i < 3; i++)
         {
             runner.Queue.Enqueue(
-                queueJob: new QueueJobModel
+                new QueueJobModel
                 {
                     Queue = queue,
                     Payload = SerializationHelper.Serialize(
-                        obj: new ConcurrencyProbeJob { ProbeKey = probeKey }
+                        new ConcurrencyProbeJob { ProbeKey = probeKey }
                     ),
                     AvailableAt = DateTime.UtcNow,
                 }
@@ -232,10 +232,10 @@ public class QueueRunnerBehaviorTests
         // unreserved behind earlier ones still blocked on the unreleased
         // gate below — the start-countdown only reaches zero if 3 jobs are
         // genuinely running AT ONCE.
-        bool allStarted = started.Wait(timeout: TimeSpan.FromSeconds(seconds: 10));
+        bool allStarted = started.Wait(TimeSpan.FromSeconds(10));
         allStarted
             .Should()
-            .BeTrue(because: "increasing the worker count to 3 must let 3 jobs run concurrently");
+            .BeTrue("increasing the worker count to 3 must let 3 jobs run concurrently");
         release.Set();
 
         await runner.StopAll();

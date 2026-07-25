@@ -19,19 +19,19 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record EmptyStateData
 {
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "message")]
+    [JsonProperty("message")]
     public string Message { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "icon")]
+    [JsonProperty("icon")]
     public string Icon { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "action", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public EmptyStateActionData? Action { get; set; }
 
-    [JsonProperty(propertyName: "auto_refresh", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("auto_refresh", NullValueHandling = NullValueHandling.Ignore)]
     public bool? AutoRefresh { get; set; }
 }
 
@@ -40,9 +40,9 @@ public record EmptyStateData
 /// </summary>
 public record EmptyStateActionData
 {
-    [JsonProperty(propertyName: "label")]
+    [JsonProperty("label")]
     public string Label { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "route")]
+    [JsonProperty("route")]
     public string Route { get; set; } = string.Empty;
 }

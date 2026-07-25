@@ -23,49 +23,49 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record MusicCardData
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = null!;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = null!;
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public string Link { get; set; } = null!;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "logo")]
+    [JsonProperty("logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "favorite")]
+    [JsonProperty("favorite")]
     public bool? Favorite { get; set; }
 
-    [JsonProperty(propertyName: "folder")]
+    [JsonProperty("folder")]
     public string? Folder { get; set; }
 
-    [JsonProperty(propertyName: "libraryID")]
+    [JsonProperty("libraryID")]
     public string? LibraryId { get; set; }
 
-    [JsonProperty(propertyName: "trackID")]
+    [JsonProperty("trackID")]
     public string? TrackId { get; set; }
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public long? Tracks { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int? Year { get; set; }
 
     public MusicCardData() { }
@@ -74,7 +74,7 @@ public record MusicCardData
     {
         Id = album.Id.ToString();
         Name = album.Name;
-        Cover = MusicCover.Url(cover: album.Cover);
+        Cover = MusicCover.Url(album.Cover);
         Type = "album";
         Link = $"/music/albums/{album.Id}";
         ColorPalette = album.ColorPalette;
@@ -87,7 +87,7 @@ public record MusicCardData
     {
         Id = artist.Id.ToString();
         Name = artist.Name;
-        Cover = MusicCover.Url(cover: artist.Cover);
+        Cover = MusicCover.Url(artist.Cover);
         Type = "artist";
         Link = $"/music/artists/{artist.Id}";
         ColorPalette = artist.ColorPalette;
@@ -101,7 +101,7 @@ public record MusicCardData
     {
         Id = playlist.Id.ToString();
         Name = playlist.Name;
-        Cover = MusicCover.Url(cover: playlist.Cover);
+        Cover = MusicCover.Url(playlist.Cover);
         Type = "playlist";
         Link = $"/music/playlists/{playlist.Id}";
         Tracks = playlist.Tracks.Count;
@@ -121,7 +121,7 @@ public record MusicCardData
     {
         Id = carousel.Id;
         Name = carousel.Name;
-        Cover = MusicCover.Url(cover: carousel.Cover);
+        Cover = MusicCover.Url(carousel.Cover);
         Type = carousel.Type;
         Link = carousel.Link.ToString();
         Tracks = carousel.Tracks;
@@ -132,7 +132,7 @@ public record MusicCardData
     {
         Id = carousel.Id;
         Name = carousel.Name.ToTitleCase();
-        Cover = MusicCover.Url(cover: carousel.Cover);
+        Cover = MusicCover.Url(carousel.Cover);
         Type = carousel.Type;
         Link = carousel.Link.ToString();
         Tracks = carousel.Tracks;
@@ -143,10 +143,10 @@ public record MusicCardData
     {
         Id = artist.Id.ToString();
         Name = artist.Name;
-        Cover = MusicCover.Url(cover: artist.Cover);
+        Cover = MusicCover.Url(artist.Cover);
         Type = "artist";
         Link = $"/music/artists/{artist.Id}";
-        ColorPalette = ColorPalette.FromJsonOrNull(json: artist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(artist.ColorPalette);
         Disambiguation = artist.Disambiguation;
         Description = artist.Description;
         Tracks = artist.TrackCount;
@@ -157,10 +157,10 @@ public record MusicCardData
     {
         Id = album.Id.ToString();
         Name = album.Name;
-        Cover = MusicCover.Url(cover: album.Cover);
+        Cover = MusicCover.Url(album.Cover);
         Type = "album";
         Link = $"/music/albums/{album.Id}";
-        ColorPalette = ColorPalette.FromJsonOrNull(json: album.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(album.ColorPalette);
         Year = album.Year;
         Tracks = album.TrackCount;
         LibraryId = album.LibraryId.ToString();
@@ -170,10 +170,10 @@ public record MusicCardData
     {
         Id = playlist.Id.ToString();
         Name = playlist.Name;
-        Cover = MusicCover.Url(cover: playlist.Cover);
+        Cover = MusicCover.Url(playlist.Cover);
         Type = "playlist";
         Link = $"/music/playlists/{playlist.Id}";
-        ColorPalette = ColorPalette.FromJsonOrNull(json: playlist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(playlist.ColorPalette);
         Tracks = playlist.TrackCount;
     }
 
@@ -192,46 +192,46 @@ public record MusicCardData
 /// </summary>
 public record MusicHomeCardData
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = null!;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = null!;
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public string Link { get; set; } = null!;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "favorite")]
+    [JsonProperty("favorite")]
     public bool? Favorite { get; set; }
 
-    [JsonProperty(propertyName: "folder")]
+    [JsonProperty("folder")]
     public string? Folder { get; set; }
 
-    [JsonProperty(propertyName: "libraryID")]
+    [JsonProperty("libraryID")]
     public string? LibraryId { get; set; }
 
-    [JsonProperty(propertyName: "trackID")]
+    [JsonProperty("trackID")]
     public string? TrackId { get; set; }
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public long? Tracks { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int? Year { get; set; }
 
     public MusicHomeCardData() { }
@@ -240,7 +240,7 @@ public record MusicHomeCardData
     {
         Id = album.Id.ToString();
         Name = album.Name;
-        Cover = MusicCover.Url(cover: album.Cover);
+        Cover = MusicCover.Url(album.Cover);
         Type = "album";
         Link = $"/music/albums/{album.Id}";
         ColorPalette = album.ColorPalette;
@@ -253,7 +253,7 @@ public record MusicHomeCardData
     {
         Id = artist.Id.ToString();
         Name = artist.Name;
-        Cover = MusicCover.Url(cover: artist.Cover);
+        Cover = MusicCover.Url(artist.Cover);
         Type = "artist";
         Link = $"/music/artists/{artist.Id}";
         ColorPalette = artist.ColorPalette;
@@ -267,7 +267,7 @@ public record MusicHomeCardData
     {
         Id = topMusic.Id;
         Name = topMusic.Name;
-        Cover = MusicCover.Url(cover: topMusic.Cover);
+        Cover = MusicCover.Url(topMusic.Cover);
         Type = topMusic.Type;
         Link = topMusic.Link.ToString();
         ColorPalette = topMusic.ColorPalette;
@@ -277,5 +277,5 @@ public record MusicHomeCardData
 file static class MusicCover
 {
     public static string? Url(string? cover) =>
-        string.IsNullOrEmpty(value: cover) ? null : $"/images/music{cover}";
+        string.IsNullOrEmpty(cover) ? null : $"/images/music{cover}";
 }

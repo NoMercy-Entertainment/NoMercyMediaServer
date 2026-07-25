@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record MetaDto
 {
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "logo")]
+    [JsonProperty("logo")]
     public LogoDto? Logo { get; set; } = new();
 }

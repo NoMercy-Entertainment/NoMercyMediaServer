@@ -24,32 +24,32 @@ public static partial class ServiceConfiguration
 {
     private static void ConfigureApi(IServiceCollection services)
     {
-        ConfigureApiVersioning(services: services);
+        ConfigureApiVersioning(services);
 
         // Add Controllers and JSON Options
         services
-            .AddControllers(configure: options =>
+            .AddControllers(options =>
             {
                 options.EnableEndpointRouting = true;
             })
-            .AddNewtonsoftJson(setupAction: options =>
+            .AddNewtonsoftJson(options =>
             {
                 options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
                 options.SerializerSettings.DateFormatHandling = DateFormatHandling.IsoDateFormat;
                 options.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
-                options.SerializerSettings.Converters.Add(item: new StringEnumConverter());
+                options.SerializerSettings.Converters.Add(new StringEnumConverter());
             });
 
-        services.Configure<HmacValidationOptions>(configureOptions: _ => { });
-        services.Configure<RouteOptions>(configureOptions: options =>
+        services.Configure<HmacValidationOptions>(_ => { });
+        services.Configure<RouteOptions>(options =>
         {
-            options.ConstraintMap.Add(key: "ulid", value: typeof(UlidRouteConstraint));
+            options.ConstraintMap.Add("ulid", typeof(UlidRouteConstraint));
         });
 
         // Add Other Services
         services.AddDirectoryBrowser();
         services.AddResponseCaching();
-        services.AddMvc(setupAction: option => option.EnableEndpointRouting = false);
+        services.AddMvc(option => option.EnableEndpointRouting = false);
         services.AddEndpointsApiExplorer();
 
         services.AddHttpContextAccessor();
@@ -61,23 +61,23 @@ public static partial class ServiceConfiguration
         >();
 
         services
-            .AddSignalR(configure: o =>
+            .AddSignalR(o =>
             {
                 o.EnableDetailedErrors = Config.IsDev;
                 o.MaximumReceiveMessageSize = 2 * 1024 * 1024; // 2MB — realistic max is ~1MB for large playlists
 
-                o.ClientTimeoutInterval = TimeSpan.FromSeconds(seconds: 30);
-                o.KeepAliveInterval = TimeSpan.FromSeconds(seconds: 15);
+                o.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+                o.KeepAliveInterval = TimeSpan.FromSeconds(15);
 
                 // Add error logging filter for invalid method calls and wrong arguments
                 o.AddFilter<HubErrorLoggingFilter>();
             })
-            .AddNewtonsoftJsonProtocol(configure: options =>
+            .AddNewtonsoftJsonProtocol(options =>
             {
                 options.PayloadSerializerSettings = JsonHelper.Settings;
             });
 
-        services.AddResponseCompression(configureOptions: options =>
+        services.AddResponseCompression(options =>
         {
             options.EnableForHttps = true;
             // Subtitle payloads (Aegisub karaoke + hand-drawn signs) reach
@@ -97,24 +97,24 @@ public static partial class ServiceConfiguration
             ];
         });
 
-        SwaggerConfiguration.AddSwagger(services: services);
+        SwaggerConfiguration.AddSwagger(services);
     }
 
     private static void ConfigureApiVersioning(IServiceCollection services)
     {
         services
-            .AddApiVersioning(setupAction: config =>
+            .AddApiVersioning(config =>
             {
                 config.ReportApiVersions = true;
                 config.AssumeDefaultVersionWhenUnspecified = true;
-                config.DefaultApiVersion = new(majorVersion: 1, minorVersion: 0);
+                config.DefaultApiVersion = new(1, 0);
                 config.UnsupportedApiVersionStatusCode = 418;
             })
-            .AddApiExplorer(setupAction: options =>
+            .AddApiExplorer(options =>
             {
                 options.GroupNameFormat = "'v'V";
                 options.SubstituteApiVersionInUrl = true;
-                options.DefaultApiVersion = new(majorVersion: 1, minorVersion: 0);
+                options.DefaultApiVersion = new(1, 0);
             });
     }
 }

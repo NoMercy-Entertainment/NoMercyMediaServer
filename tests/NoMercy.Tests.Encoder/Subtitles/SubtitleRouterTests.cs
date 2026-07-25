@@ -111,7 +111,7 @@ public class SubtitleRouterTests
         };
 
     [Theory]
-    [MemberData(memberName: nameof(SpecMatrix))]
+    [MemberData(nameof(SpecMatrix))]
     public void Resolve_returns_expected_action(
         SubtitleSourceType source,
         OutputFormat container,
@@ -119,32 +119,32 @@ public class SubtitleRouterTests
         SubtitleAction expected
     )
     {
-        SubtitleRouting routing = _router.Resolve(source: source, container: container, policy: policy);
-        routing.Action.Should().Be(expected: expected);
+        SubtitleRouting routing = _router.Resolve(source, container, policy);
+        routing.Action.Should().Be(expected);
     }
 
     [Theory]
-    [InlineData(data: OutputFormat.Mp3)]
-    [InlineData(data: OutputFormat.Flac)]
-    [InlineData(data: OutputFormat.Ogg)]
+    [InlineData(OutputFormat.Mp3)]
+    [InlineData(OutputFormat.Flac)]
+    [InlineData(OutputFormat.Ogg)]
     public void Resolve_audio_only_container_returns_None_with_reason(OutputFormat container)
     {
         SubtitleRouting textRouting = _router.Resolve(
-            source: SubtitleSourceType.Text,
-            container: container,
-            policy: SubtitlePolicy.Extract
+            SubtitleSourceType.Text,
+            container,
+            SubtitlePolicy.Extract
         );
         SubtitleRouting bitmapRouting = _router.Resolve(
-            source: SubtitleSourceType.Bitmap,
-            container: container,
-            policy: SubtitlePolicy.BurnIn
+            SubtitleSourceType.Bitmap,
+            container,
+            SubtitlePolicy.BurnIn
         );
 
-        textRouting.Action.Should().Be(expected: SubtitleAction.None);
-        textRouting.Reason.Should().Contain(expected: "no subtitle support");
+        textRouting.Action.Should().Be(SubtitleAction.None);
+        textRouting.Reason.Should().Contain("no subtitle support");
 
         // BurnIn doesn't sneak past the audio-only guard.
-        bitmapRouting.Action.Should().Be(expected: SubtitleAction.None);
+        bitmapRouting.Action.Should().Be(SubtitleAction.None);
     }
 
     [Fact]
@@ -152,22 +152,22 @@ public class SubtitleRouterTests
     {
         // BurnIn is policy-driven, not source-driven — text + hls + BurnIn still burns.
         SubtitleRouting routing = _router.Resolve(
-            source: SubtitleSourceType.Text,
-            container: OutputFormat.Hls,
-            policy: SubtitlePolicy.BurnIn
+            SubtitleSourceType.Text,
+            OutputFormat.Hls,
+            SubtitlePolicy.BurnIn
         );
-        routing.Action.Should().Be(expected: SubtitleAction.BurnIn);
+        routing.Action.Should().Be(SubtitleAction.BurnIn);
     }
 
     [Fact]
     public void Resolve_Omit_returns_None_for_any_container()
     {
         SubtitleRouting routing = _router.Resolve(
-            source: SubtitleSourceType.Text,
-            container: OutputFormat.Hls,
-            policy: SubtitlePolicy.Omit
+            SubtitleSourceType.Text,
+            OutputFormat.Hls,
+            SubtitlePolicy.Omit
         );
-        routing.Action.Should().Be(expected: SubtitleAction.None);
-        routing.Reason.Should().Contain(expected: "omitted by policy");
+        routing.Action.Should().Be(SubtitleAction.None);
+        routing.Reason.Should().Contain("omitted by policy");
     }
 }

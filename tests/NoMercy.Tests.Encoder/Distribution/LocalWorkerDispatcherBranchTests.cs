@@ -44,7 +44,7 @@ public class LocalWorkerDispatcherBranchTests
         Mock<IFfmpegExecutor> executor = new();
         int call = 0;
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -60,31 +60,31 @@ public class LocalWorkerDispatcherBranchTests
                 string?,
                 CancellationToken
             >(
-                valueFunction: (_, _, _, _, _) =>
+                (_, _, _, _, _) =>
                 {
                     int current = ++call;
                     if (current == 1)
-                        throw new InvalidOperationException(message: "disk unmounted mid-encode");
+                        throw new InvalidOperationException("disk unmounted mid-encode");
                     return Task.FromResult(
-                        result: new ExecutionResult(
+                        new ExecutionResult(
                             Success: true,
                             ExitCode: 0,
                             StdErr: "",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
+                            Duration: TimeSpan.FromSeconds(1),
                             Error: null
                         )
                     );
                 }
             );
 
-        LocalWorkerDispatcher dispatcher = NewDispatcher(executor: executor.Object);
-        EncodeTask[] tasks = [MakeTask(id: "t0", outputPath: "/out/a"), MakeTask(id: "t1", outputPath: "/out/b")];
+        LocalWorkerDispatcher dispatcher = NewDispatcher(executor.Object);
+        EncodeTask[] tasks = [MakeTask("t0", "/out/a"), MakeTask("t1", "/out/b")];
 
-        DispatchResult[] results = await dispatcher.DispatchAsync(tasks: tasks, ct: CancellationToken.None);
+        DispatchResult[] results = await dispatcher.DispatchAsync(tasks, CancellationToken.None);
 
         results[0].Success.Should().BeFalse();
-        results[0].Error.Should().Contain(expected: "disk unmounted");
-        results[0].Duration.Should().Be(expected: TimeSpan.Zero);
+        results[0].Error.Should().Contain("disk unmounted");
+        results[0].Duration.Should().Be(TimeSpan.Zero);
         results[1].Success.Should().BeTrue();
     }
 
@@ -95,12 +95,12 @@ public class LocalWorkerDispatcherBranchTests
     {
         Mock<ITaskProgressSink> sink = new();
         List<(string TaskId, EncodingProgress Progress)> reports = [];
-        sink.Setup(expression: s => s.Report(It.IsAny<string>(), It.IsAny<EncodingProgress>()))
-            .Callback<string, EncodingProgress>(action: (id, p) => reports.Add(item: (id, p)));
+        sink.Setup(s => s.Report(It.IsAny<string>(), It.IsAny<EncodingProgress>()))
+            .Callback<string, EncodingProgress>((id, p) => reports.Add((id, p)));
 
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -116,17 +116,17 @@ public class LocalWorkerDispatcherBranchTests
                 string?,
                 CancellationToken
             >(
-                valueFunction: (_, _, onProgress, _, _) =>
+                (_, _, onProgress, _, _) =>
                 {
                     // Simulate ffmpeg emitting two progress ticks.
-                    onProgress?.Invoke(obj: MakeProgress(fps: 24));
-                    onProgress?.Invoke(obj: MakeProgress(fps: 30));
+                    onProgress?.Invoke(MakeProgress(fps: 24));
+                    onProgress?.Invoke(MakeProgress(fps: 30));
                     return Task.FromResult(
-                        result: new ExecutionResult(
+                        new ExecutionResult(
                             Success: true,
                             ExitCode: 0,
                             StdErr: "",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
+                            Duration: TimeSpan.FromSeconds(1),
                             Error: null
                         )
                     );
@@ -134,18 +134,18 @@ public class LocalWorkerDispatcherBranchTests
             );
 
         LocalWorkerDispatcher dispatcher = new(
-            executor: executor.Object,
-            progressSink: sink.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            sink.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
-        await dispatcher.DispatchAsync(tasks: [MakeTask(id: "t-progress", outputPath: "/out/a")], ct: CancellationToken.None);
+        await dispatcher.DispatchAsync([MakeTask("t-progress", "/out/a")], CancellationToken.None);
 
-        reports.Should().HaveCount(expected: 2);
-        reports[index: 0].TaskId.Should().Be(expected: "t-progress");
-        reports[index: 0].Progress.CurrentFps.Should().Be(expected: 24);
-        reports[index: 1].TaskId.Should().Be(expected: "t-progress");
-        reports[index: 1].Progress.CurrentFps.Should().Be(expected: 30);
+        reports.Should().HaveCount(2);
+        reports[0].TaskId.Should().Be("t-progress");
+        reports[0].Progress.CurrentFps.Should().Be(24);
+        reports[1].TaskId.Should().Be("t-progress");
+        reports[1].Progress.CurrentFps.Should().Be(30);
     }
 
     [Fact]
@@ -154,12 +154,12 @@ public class LocalWorkerDispatcherBranchTests
         // ITaskProgressSink failures must NEVER fail the encode — they're
         // best-effort observability.
         Mock<ITaskProgressSink> sink = new();
-        sink.Setup(expression: s => s.Report(It.IsAny<string>(), It.IsAny<EncodingProgress>()))
-            .Throws(exception: new HttpRequestException(message: "coordinator unreachable"));
+        sink.Setup(s => s.Report(It.IsAny<string>(), It.IsAny<EncodingProgress>()))
+            .Throws(new HttpRequestException("coordinator unreachable"));
 
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -175,15 +175,15 @@ public class LocalWorkerDispatcherBranchTests
                 string?,
                 CancellationToken
             >(
-                valueFunction: (_, _, onProgress, _, _) =>
+                (_, _, onProgress, _, _) =>
                 {
-                    onProgress?.Invoke(obj: MakeProgress(fps: 30));
+                    onProgress?.Invoke(MakeProgress(fps: 30));
                     return Task.FromResult(
-                        result: new ExecutionResult(
+                        new ExecutionResult(
                             Success: true,
                             ExitCode: 0,
                             StdErr: "",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
+                            Duration: TimeSpan.FromSeconds(1),
                             Error: null
                         )
                     );
@@ -191,14 +191,14 @@ public class LocalWorkerDispatcherBranchTests
             );
 
         LocalWorkerDispatcher dispatcher = new(
-            executor: executor.Object,
-            progressSink: sink.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            sink.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         DispatchResult[] results = await dispatcher.DispatchAsync(
-            tasks: [MakeTask(id: "t0", outputPath: "/out/a")],
-            ct: CancellationToken.None
+            [MakeTask("t0", "/out/a")],
+            CancellationToken.None
         );
 
         // Encode still reports success even though the progress sink threw.
@@ -214,12 +214,12 @@ public class LocalWorkerDispatcherBranchTests
         // closure-over-loop-variable bug never returns.
         Mock<ITaskProgressSink> sink = new();
         List<(string TaskId, EncodingProgress Progress)> reports = [];
-        sink.Setup(expression: s => s.Report(It.IsAny<string>(), It.IsAny<EncodingProgress>()))
-            .Callback<string, EncodingProgress>(action: (id, p) => reports.Add(item: (id, p)));
+        sink.Setup(s => s.Report(It.IsAny<string>(), It.IsAny<EncodingProgress>()))
+            .Callback<string, EncodingProgress>((id, p) => reports.Add((id, p)));
 
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -235,15 +235,15 @@ public class LocalWorkerDispatcherBranchTests
                 string?,
                 CancellationToken
             >(
-                valueFunction: (_, _, onProgress, corrId, _) =>
+                (_, _, onProgress, corrId, _) =>
                 {
-                    onProgress?.Invoke(obj: MakeProgress(corrId: corrId ?? ""));
+                    onProgress?.Invoke(MakeProgress(corrId: corrId ?? ""));
                     return Task.FromResult(
-                        result: new ExecutionResult(
+                        new ExecutionResult(
                             Success: true,
                             ExitCode: 0,
                             StdErr: "",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
+                            Duration: TimeSpan.FromSeconds(1),
                             Error: null
                         )
                     );
@@ -251,17 +251,17 @@ public class LocalWorkerDispatcherBranchTests
             );
 
         LocalWorkerDispatcher dispatcher = new(
-            executor: executor.Object,
-            progressSink: sink.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            sink.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         await dispatcher.DispatchAsync(
-            tasks: [MakeTask(id: "alpha", outputPath: "/out/a"), MakeTask(id: "beta", outputPath: "/out/b"), MakeTask(id: "gamma", outputPath: "/out/c")],
-            ct: CancellationToken.None
+            [MakeTask("alpha", "/out/a"), MakeTask("beta", "/out/b"), MakeTask("gamma", "/out/c")],
+            CancellationToken.None
         );
 
-        reports.Select(selector: r => r.TaskId).Should().Equal(expected: ["alpha", "beta", "gamma"]);
+        reports.Select(r => r.TaskId).Should().Equal("alpha", "beta", "gamma");
     }
 
     // ── Error message formatting ────────────────────────────────────────────
@@ -271,7 +271,7 @@ public class LocalWorkerDispatcherBranchTests
     {
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -281,28 +281,28 @@ public class LocalWorkerDispatcherBranchTests
                 )
             )
             .ReturnsAsync(
-                value: new ExecutionResult(
+                new ExecutionResult(
                     Success: false,
                     ExitCode: 1,
                     StdErr: "no such file",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     Error: new(
-                        Kind: EncodingErrorKind.InputNotFound,
-                        Message: "input.mkv vanished",
-                        FfmpegStderr: null,
-                        StageName: "Execute",
+                        EncodingErrorKind.InputNotFound,
+                        "input.mkv vanished",
+                        null,
+                        "Execute",
                         Recoverable: false
                     )
                 )
             );
 
-        LocalWorkerDispatcher dispatcher = NewDispatcher(executor: executor.Object);
+        LocalWorkerDispatcher dispatcher = NewDispatcher(executor.Object);
         DispatchResult[] results = await dispatcher.DispatchAsync(
-            tasks: [MakeTask(id: "t0", outputPath: "/out/a")],
-            ct: CancellationToken.None
+            [MakeTask("t0", "/out/a")],
+            CancellationToken.None
         );
 
-        results[0].Error.Should().Be(expected: "InputNotFound: input.mkv vanished");
+        results[0].Error.Should().Be("InputNotFound: input.mkv vanished");
     }
 
     [Fact]
@@ -312,7 +312,7 @@ public class LocalWorkerDispatcherBranchTests
         // ErrorMessage helper's null check.
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -322,19 +322,19 @@ public class LocalWorkerDispatcherBranchTests
                 )
             )
             .ReturnsAsync(
-                value: new ExecutionResult(
+                new ExecutionResult(
                     Success: false,
                     ExitCode: 1,
                     StdErr: "",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     Error: null
                 )
             );
 
-        LocalWorkerDispatcher dispatcher = NewDispatcher(executor: executor.Object);
+        LocalWorkerDispatcher dispatcher = NewDispatcher(executor.Object);
         DispatchResult[] results = await dispatcher.DispatchAsync(
-            tasks: [MakeTask(id: "t0", outputPath: "/out/a")],
-            ct: CancellationToken.None
+            [MakeTask("t0", "/out/a")],
+            CancellationToken.None
         );
 
         results[0].Success.Should().BeFalse();
@@ -349,7 +349,7 @@ public class LocalWorkerDispatcherBranchTests
         TimeSpan capturedDuration = TimeSpan.MinValue;
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -365,34 +365,34 @@ public class LocalWorkerDispatcherBranchTests
                 string?,
                 CancellationToken
             >(
-                valueFunction: (_, dur, _, _, _) =>
+                (_, dur, _, _, _) =>
                 {
                     capturedDuration = dur;
                     return Task.FromResult(
-                        result: new ExecutionResult(
+                        new ExecutionResult(
                             Success: true,
                             ExitCode: 0,
                             StdErr: "",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
+                            Duration: TimeSpan.FromSeconds(1),
                             Error: null
                         )
                     );
                 }
             );
 
-        LocalWorkerDispatcher dispatcher = NewDispatcher(executor: executor.Object);
+        LocalWorkerDispatcher dispatcher = NewDispatcher(executor.Object);
         EncodeTask task = new(
             TaskId: "t0",
-            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: "/out/a",
             Type: EncodeTaskType.TimeChunk,
-            TimeRangeStart: TimeSpan.FromMinutes(minutes: 5),
-            TimeRangeDuration: TimeSpan.FromMinutes(minutes: 2)
+            TimeRangeStart: TimeSpan.FromMinutes(5),
+            TimeRangeDuration: TimeSpan.FromMinutes(2)
         );
 
-        await dispatcher.DispatchAsync(tasks: [task], ct: CancellationToken.None);
+        await dispatcher.DispatchAsync([task], CancellationToken.None);
 
-        capturedDuration.Should().Be(expected: TimeSpan.FromMinutes(minutes: 2));
+        capturedDuration.Should().Be(TimeSpan.FromMinutes(2));
     }
 
     [Fact]
@@ -401,7 +401,7 @@ public class LocalWorkerDispatcherBranchTests
         TimeSpan capturedDuration = TimeSpan.MinValue;
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -417,25 +417,25 @@ public class LocalWorkerDispatcherBranchTests
                 string?,
                 CancellationToken
             >(
-                valueFunction: (_, dur, _, _, _) =>
+                (_, dur, _, _, _) =>
                 {
                     capturedDuration = dur;
                     return Task.FromResult(
-                        result: new ExecutionResult(
+                        new ExecutionResult(
                             Success: true,
                             ExitCode: 0,
                             StdErr: "",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
+                            Duration: TimeSpan.FromSeconds(1),
                             Error: null
                         )
                     );
                 }
             );
 
-        LocalWorkerDispatcher dispatcher = NewDispatcher(executor: executor.Object);
-        await dispatcher.DispatchAsync(tasks: [MakeTask(id: "t0", outputPath: "/out/a")], ct: CancellationToken.None);
+        LocalWorkerDispatcher dispatcher = NewDispatcher(executor.Object);
+        await dispatcher.DispatchAsync([MakeTask("t0", "/out/a")], CancellationToken.None);
 
-        capturedDuration.Should().Be(expected: TimeSpan.Zero);
+        capturedDuration.Should().Be(TimeSpan.Zero);
     }
 
     // ── OperationCanceledException propagation ──────────────────────────────
@@ -447,7 +447,7 @@ public class LocalWorkerDispatcherBranchTests
         // catch arm does NOT swallow cancellation as a task failure.
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -456,12 +456,12 @@ public class LocalWorkerDispatcherBranchTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(exception: new OperationCanceledException());
+            .ThrowsAsync(new OperationCanceledException());
 
-        LocalWorkerDispatcher dispatcher = NewDispatcher(executor: executor.Object);
+        LocalWorkerDispatcher dispatcher = NewDispatcher(executor.Object);
 
         Func<Task> act = () =>
-            dispatcher.DispatchAsync(tasks: [MakeTask(id: "t0", outputPath: "/out/a")], ct: CancellationToken.None);
+            dispatcher.DispatchAsync([MakeTask("t0", "/out/a")], CancellationToken.None);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -469,7 +469,7 @@ public class LocalWorkerDispatcherBranchTests
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static LocalWorkerDispatcher NewDispatcher(IFfmpegExecutor executor) =>
-        new(executor: executor, logger: NullLogger<LocalWorkerDispatcher>.Instance);
+        new(executor, NullLogger<LocalWorkerDispatcher>.Instance);
 
     private static EncodingProgress MakeProgress(double fps = 0, string corrId = "x") =>
         new(
@@ -491,7 +491,7 @@ public class LocalWorkerDispatcherBranchTests
     private static EncodeTask MakeTask(string id, string outputPath) =>
         new(
             TaskId: id,
-            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: outputPath,
             Type: EncodeTaskType.QualityVariant
         );

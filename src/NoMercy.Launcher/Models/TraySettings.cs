@@ -15,10 +15,10 @@ namespace NoMercy.Launcher.Models;
 
 public class TraySettings
 {
-    [JsonProperty(propertyName: "show_on_startup")]
+    [JsonProperty("show_on_startup")]
     public bool ShowOnStartup { get; set; }
 
-    [JsonProperty(propertyName: "startup_arguments")]
+    [JsonProperty("startup_arguments")]
     public string StartupArguments { get; set; } = string.Empty;
 
     /// <summary>
@@ -26,6 +26,6 @@ public class TraySettings
     /// The installer update path reads this to decide whether to relaunch
     /// the launcher after a silent install.
     /// </summary>
-    [JsonProperty(propertyName: "auto_start")]
+    [JsonProperty("auto_start")]
     public bool AutoStart { get; set; }
 }

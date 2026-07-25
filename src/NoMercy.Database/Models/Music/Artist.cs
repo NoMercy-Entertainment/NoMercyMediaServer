@@ -17,82 +17,82 @@ using NoMercy.Database.Infrastructure;
 
 namespace NoMercy.Database.Models.Music;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(Name))]
-[Index(propertyName: nameof(TitleSort))]
-[Index(propertyName: nameof(LibraryId))]
-[Index(propertyName: nameof(FolderId))]
-[Index(propertyName: nameof(Country))]
-[Index(propertyName: nameof(Year))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(Name))]
+[Index(nameof(TitleSort))]
+[Index(nameof(LibraryId))]
+[Index(nameof(FolderId))]
+[Index(nameof(Country))]
+[Index(nameof(Year))]
 public class Artist : ColorPaletteTimeStamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = null!;
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [MaxLength(length: 4096)]
-    [JsonProperty(propertyName: "description")]
+    [MaxLength(4096)]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "titleSort")]
+    [JsonProperty("titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty(propertyName: "country")]
+    [JsonProperty("country")]
     public string? Country { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int? Year { get; set; }
 
-    [JsonProperty(propertyName: "folder")]
+    [JsonProperty("folder")]
     public string? Folder
     {
         get;
-        set => field = PathNormalizer.NormalizeNullable(value: value);
+        set => field = PathNormalizer.NormalizeNullable(value);
     }
 
-    [JsonProperty(propertyName: "host_folder")]
+    [JsonProperty("host_folder")]
     public string HostFolder
     {
         get;
-        set => field = PathNormalizer.Normalize(value: value);
+        set => field = PathNormalizer.Normalize(value);
     } = null!;
 
-    [JsonProperty(propertyName: "library_id")]
+    [JsonProperty("library_id")]
     public Ulid? LibraryId { get; set; }
     public Library Library { get; set; } = null!;
 
-    [JsonProperty(propertyName: "folder_id")]
+    [JsonProperty("folder_id")]
     public Ulid? FolderId { get; set; }
     public Folder LibraryFolder { get; set; } = null!;
 
-    [JsonProperty(propertyName: "artist_track")]
+    [JsonProperty("artist_track")]
     public ICollection<ArtistTrack> ArtistTrack { get; set; } = [];
 
-    [JsonProperty(propertyName: "album_artist")]
+    [JsonProperty("album_artist")]
     public ICollection<AlbumArtist> AlbumArtist { get; set; } = [];
 
-    [JsonProperty(propertyName: "artist_user")]
+    [JsonProperty("artist_user")]
     public ICollection<ArtistUser> ArtistUser { get; set; } = [];
 
-    [JsonProperty(propertyName: "artist_genre")]
+    [JsonProperty("artist_genre")]
     public ICollection<ArtistMusicGenre> ArtistMusicGenre { get; set; } = [];
 
-    [JsonProperty(propertyName: "artist_release")]
+    [JsonProperty("artist_release")]
     public ICollection<ArtistReleaseGroup> ArtistReleaseGroup { get; set; } = [];
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public ICollection<Translation> Translations { get; set; } = [];
 
-    [JsonProperty(propertyName: "images")]
+    [JsonProperty("images")]
     public ICollection<Image> Images { get; set; } = [];
 
     public Artist() { }

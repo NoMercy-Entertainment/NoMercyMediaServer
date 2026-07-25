@@ -17,6 +17,6 @@ public class TvdbSourcesClient : TvdbBaseClient
 {
     public Task<TvdbSourceTypesResponse?> Types(bool? priority = false)
     {
-        return Get<TvdbSourceTypesResponse>(url: "sources/types", priority: priority);
+        return Get<TvdbSourceTypesResponse>("sources/types", priority: priority);
     }
 }

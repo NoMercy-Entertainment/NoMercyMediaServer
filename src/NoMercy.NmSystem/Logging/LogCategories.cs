@@ -42,19 +42,19 @@ public static class LogCategories
 
     private static readonly Dictionary<string, string> ProviderDisplayNames = new()
     {
-        [key: "youtube"] = "YouTube",
-        [key: "acoustid"] = "AcoustID",
-        [key: "anidb"] = "AniDB",
-        [key: "audiodb"] = "AudioDB",
-        [key: "coverart"] = "CoverArt",
-        [key: "fanart"] = "Fanart",
-        [key: "fingerprint"] = "Fingerprint",
-        [key: "lrclib"] = "Lrclib",
-        [key: "moviedb"] = "TheMovieDB",
-        [key: "musicbrainz"] = "MusicBrainz",
-        [key: "musixmatch"] = "MusixMatch",
-        [key: "opensubs"] = "OpenSubs",
-        [key: "tvdb"] = "TheTVDB",
+        ["youtube"] = "YouTube",
+        ["acoustid"] = "AcoustID",
+        ["anidb"] = "AniDB",
+        ["audiodb"] = "AudioDB",
+        ["coverart"] = "CoverArt",
+        ["fanart"] = "Fanart",
+        ["fingerprint"] = "Fingerprint",
+        ["lrclib"] = "Lrclib",
+        ["moviedb"] = "TheMovieDB",
+        ["musicbrainz"] = "MusicBrainz",
+        ["musixmatch"] = "MusixMatch",
+        ["opensubs"] = "OpenSubs",
+        ["tvdb"] = "TheTVDB",
     };
 
     // Ordered longest/most-specific first so "moviedb" wins before "movie", etc.
@@ -94,14 +94,14 @@ public static class LogCategories
     private static readonly Dictionary<string, LogCategory> Map = Build();
 
     /// <summary>The fallback category used when nothing else matches.</summary>
-    public static LogCategory Default => Map[key: "app"];
+    public static LogCategory Default => Map["app"];
 
     /// <summary>Resolves a category by its key, falling back to <see cref="Default"/>.</summary>
     public static LogCategory Resolve(string? key)
     {
         if (
-            !string.IsNullOrEmpty(value: key)
-            && Map.TryGetValue(key: key.ToLowerInvariant(), value: out LogCategory? category)
+            !string.IsNullOrEmpty(key)
+            && Map.TryGetValue(key.ToLowerInvariant(), out LogCategory? category)
         )
             return category;
         return Default;
@@ -113,14 +113,14 @@ public static class LogCategories
     /// </summary>
     public static LogCategory ResolveSource(string? sourceContext)
     {
-        if (string.IsNullOrEmpty(value: sourceContext))
+        if (string.IsNullOrEmpty(sourceContext))
             return Default;
 
         string haystack = sourceContext.ToLowerInvariant();
         foreach ((string fragment, string key) in SourceFragments)
         {
-            if (haystack.Contains(value: fragment, comparisonType: StringComparison.Ordinal))
-                return Map[key: key];
+            if (haystack.Contains(fragment, StringComparison.Ordinal))
+                return Map[key];
         }
 
         return Default;
@@ -128,49 +128,49 @@ public static class LogCategories
 
     private static Dictionary<string, LogCategory> Build()
     {
-        Dictionary<string, LogCategory> map = new(comparer: StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, LogCategory> map = new(StringComparer.OrdinalIgnoreCase);
 
         void Add(string key, string display, string group, string dark, string light) =>
-            map[key: key] = new(Key: key, DisplayName: display, Group: group, DarkHex: dark, LightHex: light);
+            map[key] = new(key, display, group, dark, light);
 
         // Levels
-        Add(key: "debug", display: "Debug", group: "Level", dark: "#6c7086", light: "#8c8fa1");
-        Add(key: "verbose", display: "Verbose", group: "Level", dark: "#585b70", light: "#9ca0b0");
-        Add(key: "info", display: "Info", group: "Level", dark: "#cdd6f4", light: "#4c4f69");
-        Add(key: "warning", display: "Warning", group: "Level", dark: "#f9e2af", light: "#df8e1d");
-        Add(key: "error", display: "Error", group: "Level", dark: "#f38ba8", light: "#d20f39");
-        Add(key: "fatal", display: "Fatal", group: "Level", dark: "#ff5370", light: "#e64553");
+        Add("debug", "Debug", "Level", "#6c7086", "#8c8fa1");
+        Add("verbose", "Verbose", "Level", "#585b70", "#9ca0b0");
+        Add("info", "Info", "Level", "#cdd6f4", "#4c4f69");
+        Add("warning", "Warning", "Level", "#f9e2af", "#df8e1d");
+        Add("error", "Error", "Level", "#f38ba8", "#d20f39");
+        Add("fatal", "Fatal", "Level", "#ff5370", "#e64553");
 
         // System
-        Add(key: "app", display: "App", group: "System", dark: "#b4befe", light: "#7287fd");
-        Add(key: "access", display: "Access", group: "System", dark: "#cba6f7", light: "#8839ef");
-        Add(key: "configuration", display: "Configuration", group: "System", dark: "#89b4fa", light: "#1e66f5");
-        Add(key: "setup", display: "Setup", group: "System", dark: "#74c7ec", light: "#209fb5");
-        Add(key: "system", display: "System", group: "System", dark: "#89dceb", light: "#04a5e5");
-        Add(key: "service", display: "Service", group: "System", dark: "#94e2d5", light: "#179299");
-        Add(key: "auth", display: "Auth", group: "System", dark: "#f5c2e7", light: "#ea76cb");
-        Add(key: "register", display: "Register", group: "System", dark: "#f2cdcd", light: "#dd7878");
-        Add(key: "certificate", display: "Certificate", group: "System", dark: "#f5e0dc", light: "#dc8a78");
+        Add("app", "App", "System", "#b4befe", "#7287fd");
+        Add("access", "Access", "System", "#cba6f7", "#8839ef");
+        Add("configuration", "Configuration", "System", "#89b4fa", "#1e66f5");
+        Add("setup", "Setup", "System", "#74c7ec", "#209fb5");
+        Add("system", "System", "System", "#89dceb", "#04a5e5");
+        Add("service", "Service", "System", "#94e2d5", "#179299");
+        Add("auth", "Auth", "System", "#f5c2e7", "#ea76cb");
+        Add("register", "Register", "System", "#f2cdcd", "#dd7878");
+        Add("certificate", "Certificate", "System", "#f5e0dc", "#dc8a78");
 
         // Workers
-        Add(key: "queue", display: "Queue", group: "Workers", dark: "#fab387", light: "#fe640b");
-        Add(key: "encoder", display: "Encoder", group: "Workers", dark: "#eba0ac", light: "#e64553");
-        Add(key: "ripper", display: "Ripper", group: "Workers", dark: "#e5b0c5", light: "#b4377f");
+        Add("queue", "Queue", "Workers", "#fab387", "#fe640b");
+        Add("encoder", "Encoder", "Workers", "#eba0ac", "#e64553");
+        Add("ripper", "Ripper", "Workers", "#e5b0c5", "#b4377f");
 
         // Networking
-        Add(key: "http", display: "Http", group: "Networking", dark: "#a6e3a1", light: "#40a02b");
-        Add(key: "notify", display: "Notify", group: "Networking", dark: "#b5e8a0", light: "#5a9e1f");
-        Add(key: "ping", display: "Ping", group: "Networking", dark: "#94e2d5", light: "#0a7fa8");
-        Add(key: "socket", display: "Socket", group: "Networking", dark: "#7fc8f0", light: "#1e66f5");
-        Add(key: "request", display: "Request", group: "Networking", dark: "#89dceb", light: "#04a5e5");
+        Add("http", "Http", "Networking", "#a6e3a1", "#40a02b");
+        Add("notify", "Notify", "Networking", "#b5e8a0", "#5a9e1f");
+        Add("ping", "Ping", "Networking", "#94e2d5", "#0a7fa8");
+        Add("socket", "Socket", "Networking", "#7fc8f0", "#1e66f5");
+        Add("request", "Request", "Networking", "#89dceb", "#04a5e5");
 
         // Providers (deterministic hue ramp -> matches the approved swatch sheets)
         for (int i = 0; i < ProviderKeys.Length; i++)
         {
             double hue = (double)i / ProviderKeys.Length;
-            string dark = Hsl(hue: hue, lightness: 0.72, saturation: 0.55);
-            string light = Hsl(hue: hue, lightness: 0.42, saturation: 0.68);
-            Add(key: ProviderKeys[i], display: ProviderDisplayNames[key: ProviderKeys[i]], group: "Providers", dark: dark, light: light);
+            string dark = Hsl(hue, 0.72, 0.55);
+            string light = Hsl(hue, 0.42, 0.68);
+            Add(ProviderKeys[i], ProviderDisplayNames[ProviderKeys[i]], "Providers", dark, light);
         }
 
         return map;
@@ -185,16 +185,16 @@ public static class LogCategories
                 : lightness + saturation - lightness * saturation;
         double m1 = 2.0 * lightness - m2;
 
-        double r = Channel(m1: m1, m2: m2, hue: hue + 1.0 / 3.0);
-        double g = Channel(m1: m1, m2: m2, hue: hue);
-        double b = Channel(m1: m1, m2: m2, hue: hue - 1.0 / 3.0);
+        double r = Channel(m1, m2, hue + 1.0 / 3.0);
+        double g = Channel(m1, m2, hue);
+        double b = Channel(m1, m2, hue - 1.0 / 3.0);
 
         return string.Format(
-            provider: CultureInfo.InvariantCulture,
-            format: "#{0:x2}{1:x2}{2:x2}",
-            arg0: (int)Math.Round(a: r * 255.0),
-            arg1: (int)Math.Round(a: g * 255.0),
-            arg2: (int)Math.Round(a: b * 255.0)
+            CultureInfo.InvariantCulture,
+            "#{0:x2}{1:x2}{2:x2}",
+            (int)Math.Round(r * 255.0),
+            (int)Math.Round(g * 255.0),
+            (int)Math.Round(b * 255.0)
         );
     }
 

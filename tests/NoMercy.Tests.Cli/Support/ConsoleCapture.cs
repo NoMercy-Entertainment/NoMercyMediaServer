@@ -29,8 +29,8 @@ internal sealed class ConsoleCapture : IDisposable
     {
         _originalOut = Console.Out;
         _originalError = Console.Error;
-        Console.SetOut(newOut: _out);
-        Console.SetError(newError: _error);
+        Console.SetOut(_out);
+        Console.SetError(_error);
     }
 
     public string Out => _out.ToString();
@@ -39,8 +39,8 @@ internal sealed class ConsoleCapture : IDisposable
 
     public void Dispose()
     {
-        Console.SetOut(newOut: _originalOut);
-        Console.SetError(newError: _originalError);
+        Console.SetOut(_originalOut);
+        Console.SetError(_originalError);
         _out.Dispose();
         _error.Dispose();
     }

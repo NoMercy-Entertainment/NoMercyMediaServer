@@ -13,6 +13,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
@@ -21,16 +22,22 @@ using NoMercy.Data.DTOs.Specials;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags(tags: "Media Specials")]
-[ApiVersion(version: 1.0)]
+[Tags("Media Specials")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "MediaAccess")]
-[Route(template: "api/v{version:apiVersion}/specials")]
-public class SpecialController(ISpecialRepository specialRepository) : BaseController
+[Route("api/v{version:apiVersion}/specials")]
+public class SpecialController(
+    ISpecialRepository specialRepository,
+    IJobDispatcher jobDispatcher,
+    ILogger<SpecialController> logger
+    ) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index(
@@ -44,107 +51,107 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
         string country = Country();
 
         List<SpecialCardDto> specials = await specialRepository.GetSpecialCardsAsync(
-            userId: userId,
-            language: language,
-            take: request.Take,
-            page: request.Page,
-            ct: ct
+            userId,
+            language,
+            request.Take,
+            request.Page,
+            ct
         );
 
         if (request.Version != "lolomo")
         {
             List<CardData> cardItems = specials
-                .Select(selector: special => new CardData(dto: special, country: country))
+                .Select(special => new CardData(special, country))
                 .ToList();
 
             ComponentEnvelope response = Component
                 .Grid()
-                .WithItems(builders: cardItems.Select(selector: item => Component.Card().WithData(data: item)));
+                .WithItems(cardItems.Select(item => Component.Card().WithData(item)));
 
-            return Ok(value: ComponentResponse.From(component: response));
+            return Ok(ComponentResponse.From(response));
         }
 
         List<ComponentEnvelope> carousels = Letters
-            .Select(selector: letter =>
+            .Select(letter =>
             {
                 List<CardData> letterItems = specials
-                    .Select(selector: special => new CardData(dto: special, country: country))
-                    .Where(predicate: item => AlphaBucket.Matches(titleSort: item.TitleSort, bucket: letter))
+                    .Select(special => new CardData(special, country))
+                    .Where(item => AlphaBucket.Matches(item.TitleSort, letter))
                     .ToList();
 
                 return Component
                     .Carousel()
-                    .WithId(id: letter)
-                    .WithTitle(title: letter)
-                    .WithItems(builders: letterItems.Select(selector: item => Component.Card().WithData(data: item)))
+                    .WithId(letter)
+                    .WithTitle(letter)
+                    .WithItems(letterItems.Select(item => Component.Card().WithData(item)))
                     .Build();
             })
             .ToList();
 
-        ComponentEnvelope containerResponse = Component.Container().WithItems(items: carousels);
+        ComponentEnvelope containerResponse = Component.Container().WithItems(carousels);
 
-        return Ok(value: containerResponse);
+        return Ok(containerResponse);
     }
 
     [HttpGet]
-    [Route(template: "{id:ulid}")]
+    [Route("{id:ulid}")]
     public async Task<IActionResult> Show(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
 
         string country = Country();
 
-        SpecialDetailDto? detail = await specialRepository.GetSpecialDetailAsync(userId: userId, id: id, ct: ct);
+        SpecialDetailDto? detail = await specialRepository.GetSpecialDetailAsync(userId, id, ct);
 
         if (detail is null)
-            return NotFoundResponse(detail: "Special not found");
+            return NotFoundResponse("Special not found");
 
         IEnumerable<int> movieIds = detail
-            .Items.Where(predicate: item => item.MovieId is not null)
-            .Select(selector: item => item.MovieId ?? 0);
+            .Items.Where(item => item.MovieId is not null)
+            .Select(item => item.MovieId ?? 0);
 
         IEnumerable<int> tvIds = detail
-            .Items.Where(predicate: item => item.EpisodeId is not null)
-            .Select(selector: item => item.TvId)
+            .Items.Where(item => item.EpisodeId is not null)
+            .Select(item => item.TvId)
             .Distinct();
 
         SpecialItemProjections projections = await specialRepository.GetSpecialItemProjectionsAsync(
-            userId: userId,
-            movieIds: movieIds,
-            tvIds: tvIds,
-            country: country,
-            ct: ct
+            userId,
+            movieIds,
+            tvIds,
+            country,
+            ct
         );
 
         List<SpecialItemsDto> items =
         [
-            .. projections.Movies.Select(selector: projection => new SpecialItemsDto(movie: projection)),
-            .. projections.Tvs.Select(selector: projection => new SpecialItemsDto(tv: projection)),
+            .. projections.Movies.Select(projection => new SpecialItemsDto(projection)),
+            .. projections.Tvs.Select(projection => new SpecialItemsDto(projection)),
         ];
 
-        return Ok(value: new DataResponseDto<SpecialResponseItemDto> { Data = new(detail: detail, items: items) });
+        return Ok(new DataResponseDto<SpecialResponseItemDto> { Data = new(detail, items) });
     }
 
     [HttpGet]
-    [Route(template: "{id:ulid}/available")]
+    [Route("{id:ulid}/available")]
     public async Task<IActionResult> Available(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
 
-        Special? special = await specialRepository.GetSpecialAvailableAsync(userId: userId, id: id);
+        Special? special = await specialRepository.GetSpecialAvailableAsync(userId, id);
 
         bool hasFiles =
             special is not null
             && (
-                special.Items.Select(selector: movie => movie.Movie?.VideoFiles).Any()
-                || special.Items.Select(selector: movie => movie.Episode?.VideoFiles).Any()
+                special.Items.Select(movie => movie.Movie?.VideoFiles).Any()
+                || special.Items.Select(movie => movie.Episode?.VideoFiles).Any()
             );
 
         if (!hasFiles)
-            return NotFoundResponse(detail: "Special not found");
+            return NotFoundResponse("Special not found");
 
         return Ok(
-            value: new StatusResponseDto<AvailableResponseDto>
+            new StatusResponseDto<AvailableResponseDto>
             {
                 Data = new() { Available = true },
                 Status = "ok",
@@ -154,7 +161,7 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     }
 
     [HttpGet]
-    [Route(template: "{id:ulid}/watch")]
+    [Route("{id:ulid}/watch")]
     public async Task<IActionResult> Watch(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
@@ -163,40 +170,40 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
         string country = Country();
 
         Special? special = await specialRepository.GetSpecialPlaylistAsync(
-            userId: userId,
-            id: id,
-            language: language,
-            country: country,
-            ct: ct
+            userId,
+            id,
+            language,
+            country,
+            ct
         );
 
         if (special is null)
-            return NotFoundResponse(detail: "Special not found");
+            return NotFoundResponse("Special not found");
 
         VideoPlaylistResponseDto[] items = special
-            .Items.OrderBy(keySelector: item => item.Order)
+            .Items.OrderBy(item => item.Order)
             .Select(
-                selector: (item, index) =>
+                (item, index) =>
                     item.EpisodeId is not null
-                        ? new(episode: item.Episode ?? new Episode(), playlistType: "specials", playlistId: id, country: country, index: index)
+                        ? new(item.Episode ?? new Episode(), "specials", id, country, index)
                         : new VideoPlaylistResponseDto(
-                            movie: item.Movie ?? new Movie(),
-                            playlistType: "specials",
-                            playlistId: id,
-                            country: country,
-                            index: index
+                            item.Movie ?? new Movie(),
+                            "specials",
+                            id,
+                            country,
+                            index
                         )
             )
             .ToArray();
 
         if (items.Length == 0)
-            return NotFoundResponse(detail: "Special not found");
+            return NotFoundResponse("Special not found");
 
-        return Ok(value: items);
+        return Ok(items);
     }
 
     [HttpPost]
-    [Route(template: "{id:ulid}/like")]
+    [Route("{id:ulid}/like")]
     public async Task<IActionResult> Like(
         Ulid id,
         [FromBody] LikeRequestDto request,
@@ -205,13 +212,13 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     {
         Guid userId = User.UserId();
 
-        Special? special = await specialRepository.LikeSpecialAsync(id: id, userId: userId, like: request.Value, ct: ct);
+        Special? special = await specialRepository.LikeSpecialAsync(id, userId, request.Value, ct);
 
         if (special is null)
-            return NotFoundResponse(detail: "Special not found");
+            return NotFoundResponse("Special not found");
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "{0} {1}",
@@ -225,7 +232,7 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     }
 
     [HttpPost]
-    [Route(template: "{id:ulid}/watch-list")]
+    [Route("{id:ulid}/watch-list")]
     public async Task<IActionResult> AddToWatchList(
         Ulid id,
         [FromBody] WatchListRequestDto request,
@@ -234,18 +241,141 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     {
         Guid userId = User.UserId();
 
-        bool success = await specialRepository.AddToWatchListAsync(specialId: id, userId: userId, add: request.Add, ct: ct);
+        bool success = await specialRepository.AddToWatchListAsync(id, userId, request.Add, ct);
 
         if (!success)
-            return UnprocessableEntityResponse(detail: "Special not found");
+            return UnprocessableEntityResponse("Special not found");
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = request.Add
                     ? "Special added to watch list"
                     : "Special removed from watch list",
+            }
+        );
+    }
+    
+    [HttpPost]
+    [Route("{id:ulid}/rescan")]
+    [Authorize(Policy = "Moderator")]
+    public async Task<IActionResult> Rescan(Ulid id, CancellationToken ct = default)
+    {
+        Guid userId = User.UserId();
+        
+        Special? special = await specialRepository.GetSpecialWithTvAsync(userId, id, ct);
+
+        if (special is null)
+            return UnprocessableEntityResponse("Special not found");
+        
+        var movies = special.Items
+            .Where(item => item.MovieId is not null)
+            .Select(item => new
+            {
+                id = item.MovieId ?? 0,
+                libraryId = item.Movie!.LibraryId!
+            })
+            .ToList();
+
+        foreach (var movie in movies)
+        {
+            try
+            {
+                jobDispatcher.DispatchJob<FileRescanJob>(movie.id, movie.libraryId);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e.Message);
+                return InternalServerErrorResponse(e.Message);
+            }
+        }
+        
+        var tvs = special.Items
+            .Where(item => item.Episode is not null)
+            .Select(item => new
+            {
+                id = item.Episode?.TvId ?? 0,
+                libraryId = item.Episode?.Tv.LibraryId ?? Ulid.Empty
+            })
+            .GroupBy(item => new { item.id, item.libraryId })
+            .DistinctBy(group => new { group.Key.id, group.Key.libraryId })
+            .Select(group => group.Key)
+            .ToList();
+        
+        foreach (var tv in tvs)
+        {
+            try
+            {
+                jobDispatcher.DispatchJob<FileRescanJob>(tv.id, tv.libraryId);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e.Message);
+                return InternalServerErrorResponse(e.Message);
+            }
+        }
+
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Rescanning {0} for files in the background",
+                Args = [special.Title ?? "Unknown"],
+            }
+        );
+    }
+
+    // [HttpPost]
+    // [Route("{id:ulid}/refresh")]
+    // [Authorize(Policy = "Moderator")]
+    // public async Task<IActionResult> Refresh(Ulid id, CancellationToken ct = default)
+    // {
+    //     Special? special = await specialRepository.GetSpecialByIdAsync(id, ct);
+    //
+    //     if (special is null)
+    //         return UnprocessableEntityResponse("Special not found");
+    //
+    //     try
+    //     {
+    //         jobDispatcher.DispatchJob<MovieImportJob>(id, special.Library.Id);
+    //     }
+    //     catch (Exception e)
+    //     {
+    //         logger.LogError(e.Message);
+    //         return InternalServerErrorResponse(e.Message);
+    //     }
+    //
+    //     return Ok(
+    //         new StatusResponseDto<string>
+    //         {
+    //             Status = "ok",
+    //             Message = "Refreshing {0} in the background",
+    //             Args = [special.Title ?? "Unknown"],
+    //         }
+    //     );
+    // }
+
+    
+    [HttpPost]
+    [Route("seed")]
+    [Authorize(Policy = "Moderator")]
+    public async Task<IActionResult> Seed(CancellationToken ct = default)
+    {
+        try
+        {
+            jobDispatcher.DispatchJob<SpecialSeedFetchJob>();
+        }
+        catch (Exception e)
+        {
+            return InternalServerErrorResponse(e.Message);
+        }
+
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Seeding specials in the background",
             }
         );
     }

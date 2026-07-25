@@ -17,32 +17,32 @@ namespace NoMercyQueue.Sqlite;
 internal class QueueDbContext : DbContext
 {
     public QueueDbContext(DbContextOptions<QueueDbContext> options)
-        : base(options: options) { }
+        : base(options) { }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        base.ConfigureConventions(configurationBuilder: configurationBuilder);
-        configurationBuilder.Properties<string>().HaveMaxLength(maxLength: 256);
+        base.ConfigureConventions(configurationBuilder);
+        configurationBuilder.Properties<string>().HaveMaxLength(256);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
             .Model.GetEntityTypes()
-            .SelectMany(selector: t => t.GetProperties())
-            .Where(predicate: p => p.Name is "CreatedAt" or "UpdatedAt")
+            .SelectMany(t => t.GetProperties())
+            .Where(p => p.Name is "CreatedAt" or "UpdatedAt")
             .ToList()
-            .ForEach(action: p => p.SetDefaultValueSql(value: "CURRENT_TIMESTAMP"));
+            .ForEach(p => p.SetDefaultValueSql("CURRENT_TIMESTAMP"));
 
         modelBuilder
             .Model.GetEntityTypes()
-            .SelectMany(selector: t => t.GetForeignKeys())
+            .SelectMany(t => t.GetForeignKeys())
             .ToList()
-            .ForEach(action: p => p.DeleteBehavior = DeleteBehavior.Cascade);
+            .ForEach(p => p.DeleteBehavior = DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<QueueJobEntity>().Property(propertyExpression: j => j.Payload).HasMaxLength(maxLength: 4096);
+        modelBuilder.Entity<QueueJobEntity>().Property(j => j.Payload).HasMaxLength(4096);
 
-        base.OnModelCreating(modelBuilder: modelBuilder);
+        base.OnModelCreating(modelBuilder);
     }
 
     public DbSet<QueueJobEntity> QueueJobs { get; set; }

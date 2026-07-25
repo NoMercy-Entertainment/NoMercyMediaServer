@@ -34,7 +34,7 @@ public class PluginClaimsAugmentor(IPluginManager pluginManager, ILogger<PluginC
     // role/scope, and the standard registered JWT claims. A plugin may only contribute
     // its OWN custom claim types (e.g. "plan"); enforced here so it holds even if a
     // future caller other than OnTokenValidated ever consumes this augmentor's output.
-    private static readonly HashSet<string> ReservedClaimTypes = new(comparer: StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> ReservedClaimTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         ClaimTypes.NameIdentifier,
         ClaimTypes.Role,
@@ -48,7 +48,7 @@ public class PluginClaimsAugmentor(IPluginManager pluginManager, ILogger<PluginC
         "nbf",
     };
 
-    public TimeSpan PerPluginTimeout { get; init; } = TimeSpan.FromSeconds(seconds: 2);
+    public TimeSpan PerPluginTimeout { get; init; } = TimeSpan.FromSeconds(2);
 
     public async Task<IReadOnlyList<Claim>> CollectAdditionalClaimsAsync(string token, CancellationToken ct)
     {
@@ -58,35 +58,35 @@ public class PluginClaimsAugmentor(IPluginManager pluginManager, ILogger<PluginC
         foreach (IAuthPlugin plugin in pluginManager.GetPluginsOfType<IAuthPlugin>())
         {
             PluginCapabilities? capabilities = installed
-                .FirstOrDefault(predicate: info => info.Id == plugin.Id)
+                .FirstOrDefault(info => info.Id == plugin.Id)
                 ?.Capabilities;
 
-            if (!PluginCapabilityGuard.DeclaresHook(capabilities: capabilities, hook: PluginHookCapability.Auth))
+            if (!PluginCapabilityGuard.DeclaresHook(capabilities, PluginHookCapability.Auth))
                 continue;
 
-            using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token: ct);
-            timeoutCts.CancelAfter(delay: PerPluginTimeout);
+            using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(PerPluginTimeout);
 
             try
             {
-                AuthResult result = await plugin.AuthenticateAsync(token: token, ct: timeoutCts.Token);
+                AuthResult result = await plugin.AuthenticateAsync(token, timeoutCts.Token);
                 if (!result.IsAuthenticated)
                     continue;
 
                 foreach (KeyValuePair<string, string> claim in result.Claims)
                 {
-                    if (ReservedClaimTypes.Contains(item: claim.Key))
+                    if (ReservedClaimTypes.Contains(claim.Key))
                         continue;
 
-                    claims.Add(item: new Claim(type: claim.Key, value: claim.Value));
+                    claims.Add(new Claim(claim.Key, claim.Value));
                 }
             }
             catch (Exception ex)
             {
                 logger.LogWarning(
-                    exception: ex,
-                    message: "Auth plugin {Plugin} failed or timed out; ignoring its claims (auth is never weakened).",
-                    args: plugin.Id
+                    ex,
+                    "Auth plugin {Plugin} failed or timed out; ignoring its claims (auth is never weakened).",
+                    plugin.Id
                 );
             }
         }

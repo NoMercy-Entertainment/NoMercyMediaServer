@@ -16,55 +16,55 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record DriverDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "config")]
+    [JsonProperty("config")]
     public JObject? Config { get; set; }
 
-    [JsonProperty(propertyName: "credentials_configured")]
+    [JsonProperty("credentials_configured")]
     public bool CredentialsConfigured { get; set; }
 
     // True for the built-in system local driver — the web client uses this to
     // hide the driver from the manage-drivers UI while still resolving its id
     // for folder picking.
-    [JsonProperty(propertyName: "is_system")]
+    [JsonProperty("is_system")]
     public bool IsSystem { get; set; }
 
-    [JsonProperty(propertyName: "folder_count")]
+    [JsonProperty("folder_count")]
     public int FolderCount { get; set; }
 
-    [JsonProperty(propertyName: "created_at")]
+    [JsonProperty("created_at")]
     public DateTimeOffset CreatedAt { get; set; }
 
-    [JsonProperty(propertyName: "updated_at")]
+    [JsonProperty("updated_at")]
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
 public record CreateDriverRequestDto
 {
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "config")]
+    [JsonProperty("config")]
     public JObject? Config { get; set; }
 
-    [JsonProperty(propertyName: "credentials")]
+    [JsonProperty("credentials")]
     public DriverCredentialsDto? Credentials { get; set; }
 }
 
 public record UpdateDriverRequestDto
 {
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
     /// <summary>
@@ -72,28 +72,28 @@ public record UpdateDriverRequestDto
     /// Validation runs against the new type. Existing folders attached to
     /// this driver will resolve via the new backend on next access.
     /// </summary>
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "config")]
+    [JsonProperty("config")]
     public JObject? Config { get; set; }
 
-    [JsonProperty(propertyName: "credentials")]
+    [JsonProperty("credentials")]
     public DriverCredentialsDto? Credentials { get; set; }
 }
 
 public record DriverCredentialsDto
 {
-    [JsonProperty(propertyName: "access_key")]
+    [JsonProperty("access_key")]
     public string AccessKey { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "secret_key")]
+    [JsonProperty("secret_key")]
     public string SecretKey { get; set; } = string.Empty;
 }
 
 public record FolderDriverAssignDto
 {
-    [JsonProperty(propertyName: "driver_id")]
+    [JsonProperty("driver_id")]
     public string? DriverId { get; set; }
 
     /// <summary>
@@ -101,21 +101,21 @@ public record FolderDriverAssignDto
     /// folder path is preserved; when non-null (including empty string)
     /// it replaces the folder path.
     /// </summary>
-    [JsonProperty(propertyName: "path")]
+    [JsonProperty("path")]
     public string? Path { get; set; }
 }
 
 public record FolderDriverInfoDto
 {
-    [JsonProperty(propertyName: "driver_id")]
+    [JsonProperty("driver_id")]
     public string? DriverId { get; set; }
 
-    [JsonProperty(propertyName: "driver_name")]
+    [JsonProperty("driver_name")]
     public string? DriverName { get; set; }
 
-    [JsonProperty(propertyName: "driver_type")]
+    [JsonProperty("driver_type")]
     public string? DriverType { get; set; }
 
-    [JsonProperty(propertyName: "path")]
+    [JsonProperty("path")]
     public string Path { get; set; } = string.Empty;
 }

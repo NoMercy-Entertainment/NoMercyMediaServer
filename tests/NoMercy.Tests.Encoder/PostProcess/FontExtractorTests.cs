@@ -19,30 +19,30 @@ namespace NoMercy.Tests.Encoder.PostProcess;
 
 public class FontExtractorTests : IDisposable
 {
-    private readonly FontExtractor _extractor = new(storage: TestStorageFactory.CreateLocal());
+    private readonly FontExtractor _extractor = new(TestStorageFactory.CreateLocal());
     private readonly string _tempDir;
 
     public FontExtractorTests()
     {
-        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"FontExtractorTests_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempDir);
+        _tempDir = Path.Combine(Path.GetTempPath(), $"FontExtractorTests_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempDir))
-            Directory.Delete(path: _tempDir, recursive: true);
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
     }
 
     private static readonly IReadOnlyList<AttachmentInfo> TwoFonts =
     [
         new(
-            Index: 5,
-            Codec: "ttf",
-            Filename: "ChalkDust_0.ttf",
-            MimeType: "application/x-truetype-font"
+            5,
+            "ttf",
+            "ChalkDust_0.ttf",
+            "application/x-truetype-font"
         ),
-        new(Index: 6, Codec: "ttf", Filename: "Arial.ttf", MimeType: "application/x-truetype-font"),
+        new(6, "ttf", "Arial.ttf", "application/x-truetype-font"),
     ];
 
     // ------------------------------------------------------------------
@@ -53,14 +53,14 @@ public class FontExtractorTests : IDisposable
     public void BuildExtractionCommand_EmitsDumpFlagPerAttachment()
     {
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
-            ffmpegPath: "ffmpeg",
-            inputPath: "/input/movie.mkv",
-            outputDirectory: _tempDir,
-            attachments: TwoFonts
+            "ffmpeg",
+            "/input/movie.mkv",
+            _tempDir,
+            TwoFonts
         );
 
-        cmd.Arguments.Should().Contain(expected: "-dump_attachment:5");
-        cmd.Arguments.Should().Contain(expected: "-dump_attachment:6");
+        cmd.Arguments.Should().Contain("-dump_attachment:5");
+        cmd.Arguments.Should().Contain("-dump_attachment:6");
     }
 
     // ------------------------------------------------------------------
@@ -73,18 +73,18 @@ public class FontExtractorTests : IDisposable
     {
         IReadOnlyList<AttachmentInfo> attachments =
         [
-            new(Index: 6, Codec: "ttf", Filename: "CM Big Fat Paintbrush_0.ttf", MimeType: null),
+            new(6, "ttf", "CM Big Fat Paintbrush_0.ttf", null),
         ];
 
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
-            ffmpegPath: "ffmpeg",
-            inputPath: "/input/movie.mkv",
-            outputDirectory: _tempDir,
-            attachments: attachments
+            "ffmpeg",
+            "/input/movie.mkv",
+            _tempDir,
+            attachments
         );
 
-        cmd.Arguments.Should().Contain(expected: "CM_Big_Fat_Paintbrush_0.ttf");
-        cmd.Arguments.Should().NotContain(predicate: arg => arg.Contains(' '));
+        cmd.Arguments.Should().Contain("CM_Big_Fat_Paintbrush_0.ttf");
+        cmd.Arguments.Should().NotContain(arg => arg.Contains(' '));
     }
 
     // ------------------------------------------------------------------
@@ -96,22 +96,22 @@ public class FontExtractorTests : IDisposable
     {
         IReadOnlyList<AttachmentInfo> attachments =
         [
-            new(Index: 5, Codec: "ttf", Filename: "My Font.ttf", MimeType: null),
-            new(Index: 6, Codec: "ttf", Filename: "My@Font.ttf", MimeType: null),
+            new(5, "ttf", "My Font.ttf", null),
+            new(6, "ttf", "My@Font.ttf", null),
         ];
 
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
-            ffmpegPath: "ffmpeg",
-            inputPath: "/input/movie.mkv",
-            outputDirectory: _tempDir,
-            attachments: attachments
+            "ffmpeg",
+            "/input/movie.mkv",
+            _tempDir,
+            attachments
         );
 
         List<string> names = cmd
-            .Arguments.Where(predicate: a => a.EndsWith(value: ".ttf", comparisonType: StringComparison.OrdinalIgnoreCase))
+            .Arguments.Where(a => a.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase))
             .ToList();
         names.Should().OnlyHaveUniqueItems();
-        names.Should().HaveCount(expected: 2);
+        names.Should().HaveCount(2);
     }
 
     // ------------------------------------------------------------------
@@ -122,14 +122,14 @@ public class FontExtractorTests : IDisposable
     public void BuildExtractionCommand_WorkingDirectoryIsFontsSubdir()
     {
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
-            ffmpegPath: "ffmpeg",
-            inputPath: "/input/movie.mkv",
-            outputDirectory: _tempDir,
-            attachments: TwoFonts
+            "ffmpeg",
+            "/input/movie.mkv",
+            _tempDir,
+            TwoFonts
         );
 
-        string expectedFontDir = Path.Combine(path1: _tempDir, path2: "fonts");
-        cmd.WorkingDirectory.Should().Be(expected: expectedFontDir);
+        string expectedFontDir = Path.Combine(_tempDir, "fonts");
+        cmd.WorkingDirectory.Should().Be(expectedFontDir);
     }
 
     // ------------------------------------------------------------------
@@ -140,13 +140,13 @@ public class FontExtractorTests : IDisposable
     public void BuildExtractionCommand_UsesConfiguredFfmpegPath()
     {
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
-            ffmpegPath: "/usr/bin/ffmpeg",
-            inputPath: "/input/movie.mkv",
-            outputDirectory: _tempDir,
-            attachments: TwoFonts
+            "/usr/bin/ffmpeg",
+            "/input/movie.mkv",
+            _tempDir,
+            TwoFonts
         );
 
-        cmd.Executable.Should().Be(expected: "/usr/bin/ffmpeg");
+        cmd.Executable.Should().Be("/usr/bin/ffmpeg");
     }
 
     // ------------------------------------------------------------------
@@ -157,13 +157,13 @@ public class FontExtractorTests : IDisposable
     public void BuildExtractionCommand_ContainsInputPath()
     {
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
-            ffmpegPath: "ffmpeg",
-            inputPath: "/input/movie.mkv",
-            outputDirectory: _tempDir,
-            attachments: TwoFonts
+            "ffmpeg",
+            "/input/movie.mkv",
+            _tempDir,
+            TwoFonts
         );
 
-        cmd.Arguments.Should().Contain(expected: "/input/movie.mkv");
+        cmd.Arguments.Should().Contain("/input/movie.mkv");
     }
 
     // ------------------------------------------------------------------
@@ -175,14 +175,14 @@ public class FontExtractorTests : IDisposable
     {
         IReadOnlyList<AttachmentInfo> attachments =
         [
-            new(Index: 5, Codec: "ttf", Filename: "A.ttf", MimeType: null),
-            new(Index: 6, Codec: "otf", Filename: "B.otf", MimeType: null),
-            new(Index: 7, Codec: "ttf", Filename: "C.ttc", MimeType: null),
-            new(Index: 8, Codec: "bin", Filename: "grade.cube", MimeType: null),
-            new(Index: 9, Codec: "bin", Filename: null, MimeType: null),
+            new(5, "ttf", "A.ttf", null),
+            new(6, "otf", "B.otf", null),
+            new(7, "ttf", "C.ttc", null),
+            new(8, "bin", "grade.cube", null),
+            new(9, "bin", null, null),
         ];
 
-        _extractor.CountFontAttachments(attachments: attachments).Should().Be(expected: 3);
+        _extractor.CountFontAttachments(attachments).Should().Be(3);
     }
 
     // ------------------------------------------------------------------
@@ -192,27 +192,27 @@ public class FontExtractorTests : IDisposable
     [Fact]
     public async Task WriteFontManifestAsync_WithFontFiles_WritesCorrectJson()
     {
-        string fontDir = Path.Combine(path1: _tempDir, path2: "fonts");
-        Directory.CreateDirectory(path: fontDir);
-        await File.WriteAllTextAsync(path: Path.Combine(path1: fontDir, path2: "Font.ttf"), contents: "dummy");
-        await File.WriteAllTextAsync(path: Path.Combine(path1: fontDir, path2: "Another.otf"), contents: "dummy");
+        string fontDir = Path.Combine(_tempDir, "fonts");
+        Directory.CreateDirectory(fontDir);
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "Font.ttf"), "dummy");
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "Another.otf"), "dummy");
 
-        await _extractor.WriteFontManifestAsync(outputDirectory: _tempDir, ct: default);
+        await _extractor.WriteFontManifestAsync(_tempDir, default);
 
-        string manifestPath = Path.Combine(path1: _tempDir, path2: "fonts.json");
-        File.Exists(path: manifestPath).Should().BeTrue();
+        string manifestPath = Path.Combine(_tempDir, "fonts.json");
+        File.Exists(manifestPath).Should().BeTrue();
 
-        string json = await File.ReadAllTextAsync(path: manifestPath);
-        JArray entries = JArray.Parse(json: json);
-        entries.Should().HaveCount(expected: 2);
+        string json = await File.ReadAllTextAsync(manifestPath);
+        JArray entries = JArray.Parse(json);
+        entries.Should().HaveCount(2);
 
-        List<string> files = entries.Select(selector: e => e[key: "file"]!.Value<string>()!).ToList();
-        files.Should().Contain(expected: "fonts/Font.ttf");
-        files.Should().Contain(expected: "fonts/Another.otf");
+        List<string> files = entries.Select(e => e["file"]!.Value<string>()!).ToList();
+        files.Should().Contain("fonts/Font.ttf");
+        files.Should().Contain("fonts/Another.otf");
 
-        List<string> mimeTypes = entries.Select(selector: e => e[key: "mime_type"]!.Value<string>()!).ToList();
-        mimeTypes.Should().Contain(expected: "application/x-font-truetype");
-        mimeTypes.Should().Contain(expected: "application/x-font-opentype");
+        List<string> mimeTypes = entries.Select(e => e["mime_type"]!.Value<string>()!).ToList();
+        mimeTypes.Should().Contain("application/x-font-truetype");
+        mimeTypes.Should().Contain("application/x-font-opentype");
     }
 
     // ------------------------------------------------------------------
@@ -222,19 +222,19 @@ public class FontExtractorTests : IDisposable
     [Fact]
     public async Task WriteFontManifestAsync_WoffFonts_CorrectMimeTypes()
     {
-        string fontDir = Path.Combine(path1: _tempDir, path2: "fonts");
-        Directory.CreateDirectory(path: fontDir);
-        await File.WriteAllTextAsync(path: Path.Combine(path1: fontDir, path2: "Font.woff"), contents: "dummy");
-        await File.WriteAllTextAsync(path: Path.Combine(path1: fontDir, path2: "Font2.woff2"), contents: "dummy");
+        string fontDir = Path.Combine(_tempDir, "fonts");
+        Directory.CreateDirectory(fontDir);
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "Font.woff"), "dummy");
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "Font2.woff2"), "dummy");
 
-        await _extractor.WriteFontManifestAsync(outputDirectory: _tempDir, ct: default);
+        await _extractor.WriteFontManifestAsync(_tempDir, default);
 
-        string json = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "fonts.json"));
-        JArray entries = JArray.Parse(json: json);
+        string json = await File.ReadAllTextAsync(Path.Combine(_tempDir, "fonts.json"));
+        JArray entries = JArray.Parse(json);
 
-        List<string> mimeTypes = entries.Select(selector: e => e[key: "mime_type"]!.Value<string>()!).ToList();
-        mimeTypes.Should().Contain(expected: "font/woff");
-        mimeTypes.Should().Contain(expected: "font/woff2");
+        List<string> mimeTypes = entries.Select(e => e["mime_type"]!.Value<string>()!).ToList();
+        mimeTypes.Should().Contain("font/woff");
+        mimeTypes.Should().Contain("font/woff2");
     }
 
     // ------------------------------------------------------------------
@@ -244,13 +244,13 @@ public class FontExtractorTests : IDisposable
     [Fact]
     public async Task WriteFontManifestAsync_EmptyFontsDir_DeletesDirAndNoManifest()
     {
-        string fontDir = Path.Combine(path1: _tempDir, path2: "fonts");
-        Directory.CreateDirectory(path: fontDir);
+        string fontDir = Path.Combine(_tempDir, "fonts");
+        Directory.CreateDirectory(fontDir);
 
-        await _extractor.WriteFontManifestAsync(outputDirectory: _tempDir, ct: default);
+        await _extractor.WriteFontManifestAsync(_tempDir, default);
 
-        Directory.Exists(path: fontDir).Should().BeFalse();
-        File.Exists(path: Path.Combine(path1: _tempDir, path2: "fonts.json")).Should().BeFalse();
+        Directory.Exists(fontDir).Should().BeFalse();
+        File.Exists(Path.Combine(_tempDir, "fonts.json")).Should().BeFalse();
     }
 
     // ------------------------------------------------------------------
@@ -261,10 +261,10 @@ public class FontExtractorTests : IDisposable
     public async Task WriteFontManifestAsync_NoFontsDir_DoesNotThrow()
     {
         // fonts/ subdirectory never created
-        Func<Task> act = async () => await _extractor.WriteFontManifestAsync(outputDirectory: _tempDir, ct: default);
+        Func<Task> act = async () => await _extractor.WriteFontManifestAsync(_tempDir, default);
 
         await act.Should().NotThrowAsync();
-        File.Exists(path: Path.Combine(path1: _tempDir, path2: "fonts.json")).Should().BeFalse();
+        File.Exists(Path.Combine(_tempDir, "fonts.json")).Should().BeFalse();
     }
 
     // ------------------------------------------------------------------
@@ -274,17 +274,17 @@ public class FontExtractorTests : IDisposable
     [Fact]
     public async Task WriteFontManifestAsync_UnknownExtension_ExcludedFromFontsJson()
     {
-        string fontDir = Path.Combine(path1: _tempDir, path2: "fonts");
-        Directory.CreateDirectory(path: fontDir);
-        await File.WriteAllTextAsync(path: Path.Combine(path1: fontDir, path2: "font.ttf"), contents: "dummy");
-        await File.WriteAllTextAsync(path: Path.Combine(path1: fontDir, path2: "profile.icc"), contents: "dummy");
+        string fontDir = Path.Combine(_tempDir, "fonts");
+        Directory.CreateDirectory(fontDir);
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "font.ttf"), "dummy");
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "profile.icc"), "dummy");
 
-        await _extractor.WriteFontManifestAsync(outputDirectory: _tempDir, ct: default);
+        await _extractor.WriteFontManifestAsync(_tempDir, default);
 
-        string json = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "fonts.json"));
-        JArray entries = JArray.Parse(json: json);
-        entries.Should().HaveCount(expected: 1);
-        entries[index: 0][key: "file"]!.Value<string>().Should().Be(expected: "fonts/font.ttf");
+        string json = await File.ReadAllTextAsync(Path.Combine(_tempDir, "fonts.json"));
+        JArray entries = JArray.Parse(json);
+        entries.Should().HaveCount(1);
+        entries[0]["file"]!.Value<string>().Should().Be("fonts/font.ttf");
     }
 
     // ------------------------------------------------------------------
@@ -294,15 +294,15 @@ public class FontExtractorTests : IDisposable
     [Fact]
     public async Task WriteFontManifestAsync_CubeLut_MovedToLutsDir()
     {
-        string fontDir = Path.Combine(path1: _tempDir, path2: "fonts");
-        Directory.CreateDirectory(path: fontDir);
-        await File.WriteAllTextAsync(path: Path.Combine(path1: fontDir, path2: "YouTube_HDRtoSDR_1.cube"), contents: "LUT data");
+        string fontDir = Path.Combine(_tempDir, "fonts");
+        Directory.CreateDirectory(fontDir);
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "YouTube_HDRtoSDR_1.cube"), "LUT data");
 
-        await _extractor.WriteFontManifestAsync(outputDirectory: _tempDir, ct: default);
+        await _extractor.WriteFontManifestAsync(_tempDir, default);
 
-        File.Exists(path: Path.Combine(path1: _tempDir, path2: "luts", path3: "YouTube_HDRtoSDR_1.cube")).Should().BeTrue();
-        File.Exists(path: Path.Combine(path1: _tempDir, path2: "fonts", path3: "YouTube_HDRtoSDR_1.cube")).Should().BeFalse();
-        File.Exists(path: Path.Combine(path1: _tempDir, path2: "fonts.json")).Should().BeFalse();
+        File.Exists(Path.Combine(_tempDir, "luts", "YouTube_HDRtoSDR_1.cube")).Should().BeTrue();
+        File.Exists(Path.Combine(_tempDir, "fonts", "YouTube_HDRtoSDR_1.cube")).Should().BeFalse();
+        File.Exists(Path.Combine(_tempDir, "fonts.json")).Should().BeFalse();
     }
 
     // ------------------------------------------------------------------
@@ -312,20 +312,20 @@ public class FontExtractorTests : IDisposable
     [Fact]
     public async Task WriteFontManifestAsync_CubeLut_WritesLutsJson()
     {
-        string fontDir = Path.Combine(path1: _tempDir, path2: "fonts");
-        Directory.CreateDirectory(path: fontDir);
-        await File.WriteAllTextAsync(path: Path.Combine(path1: fontDir, path2: "YouTube_HDRtoSDR_1.cube"), contents: "LUT data");
+        string fontDir = Path.Combine(_tempDir, "fonts");
+        Directory.CreateDirectory(fontDir);
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "YouTube_HDRtoSDR_1.cube"), "LUT data");
 
-        await _extractor.WriteFontManifestAsync(outputDirectory: _tempDir, ct: default);
+        await _extractor.WriteFontManifestAsync(_tempDir, default);
 
-        string lutsJsonPath = Path.Combine(path1: _tempDir, path2: "luts.json");
-        File.Exists(path: lutsJsonPath).Should().BeTrue();
+        string lutsJsonPath = Path.Combine(_tempDir, "luts.json");
+        File.Exists(lutsJsonPath).Should().BeTrue();
 
-        string json = await File.ReadAllTextAsync(path: lutsJsonPath);
-        JArray entries = JArray.Parse(json: json);
-        entries.Should().HaveCount(expected: 1);
-        entries[index: 0][key: "file"]!.Value<string>().Should().Be(expected: "luts/YouTube_HDRtoSDR_1.cube");
-        entries[index: 0][key: "mime_type"]!.Value<string>().Should().Be(expected: "application/octet-stream");
+        string json = await File.ReadAllTextAsync(lutsJsonPath);
+        JArray entries = JArray.Parse(json);
+        entries.Should().HaveCount(1);
+        entries[0]["file"]!.Value<string>().Should().Be("luts/YouTube_HDRtoSDR_1.cube");
+        entries[0]["mime_type"]!.Value<string>().Should().Be("application/octet-stream");
     }
 
     // ------------------------------------------------------------------
@@ -335,21 +335,21 @@ public class FontExtractorTests : IDisposable
     [Fact]
     public async Task WriteFontManifestAsync_MixedContent_SeparatedCorrectly()
     {
-        string fontDir = Path.Combine(path1: _tempDir, path2: "fonts");
-        Directory.CreateDirectory(path: fontDir);
-        await File.WriteAllTextAsync(path: Path.Combine(path1: fontDir, path2: "Arial.ttf"), contents: "font data");
-        await File.WriteAllTextAsync(path: Path.Combine(path1: fontDir, path2: "Grading.cube"), contents: "LUT data");
+        string fontDir = Path.Combine(_tempDir, "fonts");
+        Directory.CreateDirectory(fontDir);
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "Arial.ttf"), "font data");
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "Grading.cube"), "LUT data");
 
-        await _extractor.WriteFontManifestAsync(outputDirectory: _tempDir, ct: default);
+        await _extractor.WriteFontManifestAsync(_tempDir, default);
 
-        string fontsJson = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "fonts.json"));
-        JArray fontEntries = JArray.Parse(json: fontsJson);
-        fontEntries.Should().HaveCount(expected: 1);
-        fontEntries[index: 0][key: "file"]!.Value<string>().Should().Be(expected: "fonts/Arial.ttf");
+        string fontsJson = await File.ReadAllTextAsync(Path.Combine(_tempDir, "fonts.json"));
+        JArray fontEntries = JArray.Parse(fontsJson);
+        fontEntries.Should().HaveCount(1);
+        fontEntries[0]["file"]!.Value<string>().Should().Be("fonts/Arial.ttf");
 
-        string lutsJson = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "luts.json"));
-        JArray lutEntries = JArray.Parse(json: lutsJson);
-        lutEntries.Should().HaveCount(expected: 1);
-        lutEntries[index: 0][key: "file"]!.Value<string>().Should().Be(expected: "luts/Grading.cube");
+        string lutsJson = await File.ReadAllTextAsync(Path.Combine(_tempDir, "luts.json"));
+        JArray lutEntries = JArray.Parse(lutsJson);
+        lutEntries.Should().HaveCount(1);
+        lutEntries[0]["file"]!.Value<string>().Should().Be("luts/Grading.cube");
     }
 }

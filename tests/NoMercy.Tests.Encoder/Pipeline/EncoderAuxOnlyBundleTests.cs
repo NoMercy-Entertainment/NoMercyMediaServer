@@ -30,7 +30,7 @@ public class EncoderAuxOnlyBundleTests
         bool partial = false
     ) =>
         new(
-            TaskId: "task-0",
+            "task-0",
             ParentJobId: 1,
             GroupTag: "group",
             Kind: kind,
@@ -52,7 +52,7 @@ public class EncoderAuxOnlyBundleTests
     {
         // What the coordinator dispatches when only the thumbnail strip is
         // missing: a Whole bundle covering no streams at all.
-        Is(task: Task(kind: EncodeTaskKind.Whole, video: [], audio: [], thumbs: true)).Should().BeTrue();
+        Is(Task(EncodeTaskKind.Whole, [], [], true)).Should().BeTrue();
     }
 
     [Fact]
@@ -60,20 +60,20 @@ public class EncoderAuxOnlyBundleTests
     {
         // Null slice indexes mean "every output" — the ordinary whole encode,
         // which must still write its master playlist.
-        Is(task: Task(kind: EncodeTaskKind.Whole)).Should().BeFalse();
+        Is(Task(EncodeTaskKind.Whole)).Should().BeFalse();
     }
 
     [Fact]
     public void BundleCarryingVideo_IsNotAuxOnly()
     {
-        Is(task: Task(kind: EncodeTaskKind.Whole, video: [0], audio: [])).Should().BeFalse();
+        Is(Task(EncodeTaskKind.Whole, [0], [])).Should().BeFalse();
     }
 
     [Fact]
     public void BundleCarryingAudio_IsNotAuxOnly()
     {
         // Audio alone still produces a variant playlist the master must list.
-        Is(task: Task(kind: EncodeTaskKind.Whole, video: [], audio: [0])).Should().BeFalse();
+        Is(Task(EncodeTaskKind.Whole, [], [0])).Should().BeFalse();
     }
 
     // ── Leaving the master alone: aux-only OR a partial top-up ───────────────
@@ -87,7 +87,7 @@ public class EncoderAuxOnlyBundleTests
         // The audio-only rebuild: video already on disk, only the audio rendition
         // regenerated. Its sliced plan has no video, so it must not rewrite the
         // master that still correctly lists both.
-        LeavesMaster(task: Task(kind: EncodeTaskKind.Whole, video: [], audio: [0], partial: true))
+        LeavesMaster(Task(EncodeTaskKind.Whole, video: [], audio: [0], partial: true))
             .Should()
             .BeTrue();
     }
@@ -95,7 +95,7 @@ public class EncoderAuxOnlyBundleTests
     [Fact]
     public void VideoOnlyPartialTopUp_LeavesTheMasterAlone()
     {
-        LeavesMaster(task: Task(kind: EncodeTaskKind.Whole, video: [0], audio: [], partial: true))
+        LeavesMaster(Task(EncodeTaskKind.Whole, video: [0], audio: [], partial: true))
             .Should()
             .BeTrue();
     }
@@ -103,7 +103,7 @@ public class EncoderAuxOnlyBundleTests
     [Fact]
     public void AuxOnlyBundle_LeavesTheMasterAlone_EvenWhenNotFlaggedPartial()
     {
-        LeavesMaster(task: Task(kind: EncodeTaskKind.Whole, video: [], audio: [], thumbs: true))
+        LeavesMaster(Task(EncodeTaskKind.Whole, [], [], true))
             .Should()
             .BeTrue();
     }
@@ -112,7 +112,7 @@ public class EncoderAuxOnlyBundleTests
     public void FullBundle_WritesTheMaster()
     {
         // Not a top-up and not aux-only: the ordinary full encode owns the master.
-        LeavesMaster(task: Task(kind: EncodeTaskKind.Whole, video: [0], audio: [0])).Should().BeFalse();
+        LeavesMaster(Task(EncodeTaskKind.Whole, [0], [0])).Should().BeFalse();
     }
 
     [Fact]
@@ -121,13 +121,13 @@ public class EncoderAuxOnlyBundleTests
         // Only Whole-kind bundles reach the finalize branch this guards; a
         // per-stream task already defers to the coordinator's FinalizeOnly pass,
         // and must not be mistaken for a bundle.
-        Is(task: Task(kind: EncodeTaskKind.Thumbnails, video: [], audio: [])).Should().BeFalse();
+        Is(Task(EncodeTaskKind.Thumbnails, [], [])).Should().BeFalse();
     }
 
     [Fact]
     public void NoTaskFilter_IsNotAuxOnly()
     {
         // A plain undecomposed encode has no filter at all.
-        Is(task: null).Should().BeFalse();
+        Is(null).Should().BeFalse();
     }
 }

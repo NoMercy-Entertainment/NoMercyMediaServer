@@ -9,11 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FluentAssertions;
+using NoMercy.Data.Data;
+using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.NmSystem.Domain;
-using NoMercy.Service.Seeds.Data;
-using NoMercy.Service.Seeds.Dto;
-using Xunit;
 
 namespace NoMercy.Tests.Service.Seeds;
 
@@ -25,13 +23,13 @@ namespace NoMercy.Tests.Service.Seeds;
 /// would seed a broken or incomplete collection with no compiler feedback —
 /// these tests pin the shape SpecialSeed actually depends on.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class McuSeedDataTests
 {
     [Fact]
     public void Special_HasAStableNonEmptyId()
     {
-        McuSeedData.Special.Id.Should().NotBe(unexpected: Ulid.Empty);
+        McuSeedData.Special.Id.Should().NotBe(Ulid.Empty);
     }
 
     [Fact]
@@ -58,18 +56,18 @@ public class McuSeedDataTests
             MediaTypes.AnimeMediaType,
         ];
 
-        foreach (SpecialItem item in McuSeedData.McuItems)
+        foreach (SpecialSeedItem item in McuSeedData.McuItems)
         {
             item.Title.Should().NotBeNullOrWhiteSpace();
-            item.Year.Should().BeGreaterThan(expected: 1900);
-            knownTypes.Should().Contain(expected: item.Type);
+            item.Year.Should().BeGreaterThan(1900);
+            knownTypes.Should().Contain(item.Type);
         }
     }
 
     [Fact]
     public void McuItems_IndicesAreUniqueAndSequential()
     {
-        int[] indices = McuSeedData.McuItems.Select(selector: item => item.Index).ToArray();
+        int[] indices = McuSeedData.McuItems.Select(item => item.Index).ToArray();
 
         indices.Should().OnlyHaveUniqueItems();
     }

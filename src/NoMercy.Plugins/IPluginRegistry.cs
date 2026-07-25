@@ -21,9 +21,9 @@ internal interface IPluginRegistry
 {
     LoadedPlugin this[Guid id] { set; }
 
-    bool TryGetValue(Guid id, [MaybeNullWhen(returnValue: false)] out LoadedPlugin plugin);
+    bool TryGetValue(Guid id, [MaybeNullWhen(false)] out LoadedPlugin plugin);
 
-    bool TryRemove(Guid id, [MaybeNullWhen(returnValue: false)] out LoadedPlugin plugin);
+    bool TryRemove(Guid id, [MaybeNullWhen(false)] out LoadedPlugin plugin);
 
     ICollection<LoadedPlugin> Values { get; }
 

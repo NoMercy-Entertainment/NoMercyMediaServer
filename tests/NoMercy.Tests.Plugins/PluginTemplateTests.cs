@@ -15,11 +15,11 @@ using Xunit;
 
 namespace NoMercy.Tests.Plugins;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class PluginTemplateTests
 {
     private static readonly string TemplateRoot = FindRepoPath(
-        relativePath: Path.Combine(path1: "templates", path2: "NoMercy.Plugin.Template")
+        Path.Combine("templates", "NoMercy.Plugin.Template")
     );
 
     // Walk up from the test assembly instead of a fixed ".." chain — the output
@@ -29,15 +29,15 @@ public class PluginTemplateTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(path1: dir, path2: relativePath);
-            if (Path.Exists(path: candidate))
+            string candidate = Path.Combine(dir, relativePath);
+            if (Path.Exists(candidate))
                 return candidate;
 
-            dir = Path.GetDirectoryName(path: dir)!;
+            dir = Path.GetDirectoryName(dir)!;
         }
 
         throw new FileNotFoundException(
-            message: $"Could not locate {relativePath} above {AppContext.BaseDirectory}"
+            $"Could not locate {relativePath} above {AppContext.BaseDirectory}"
         );
     }
 
@@ -52,171 +52,171 @@ public class PluginTemplateTests
     public void TemplateDirectory_Exists()
     {
         Directory
-            .Exists(path: TemplateRoot)
+            .Exists(TemplateRoot)
             .Should()
-            .BeTrue(because: $"Template directory should exist at {TemplateRoot}");
+            .BeTrue($"Template directory should exist at {TemplateRoot}");
     }
 
     [Fact]
     public void TemplateConfig_Exists_AndIsValidJson()
     {
-        string configPath = Path.Combine(path1: TemplateRoot, path2: ".template.config", path3: "template.json");
-        File.Exists(path: configPath).Should().BeTrue(because: "template.json must exist");
+        string configPath = Path.Combine(TemplateRoot, ".template.config", "template.json");
+        File.Exists(configPath).Should().BeTrue("template.json must exist");
 
-        string json = File.ReadAllText(path: configPath);
-        JsonDocument doc = JsonDocument.Parse(json: json);
+        string json = File.ReadAllText(configPath);
+        JsonDocument doc = JsonDocument.Parse(json);
         JsonElement root = doc.RootElement;
 
-        root.TryGetProperty(propertyName: "identity", value: out JsonElement identity).Should().BeTrue();
-        identity.GetString().Should().Be(expected: "NoMercy.Plugin.Template");
+        root.TryGetProperty("identity", out JsonElement identity).Should().BeTrue();
+        identity.GetString().Should().Be("NoMercy.Plugin.Template");
 
-        root.TryGetProperty(propertyName: "shortName", value: out JsonElement shortName).Should().BeTrue();
-        shortName.GetString().Should().Be(expected: "nomercy-plugin");
+        root.TryGetProperty("shortName", out JsonElement shortName).Should().BeTrue();
+        shortName.GetString().Should().Be("nomercy-plugin");
 
-        root.TryGetProperty(propertyName: "sourceName", value: out JsonElement sourceName).Should().BeTrue();
-        sourceName.GetString().Should().Be(expected: "NoMercy.Plugin.Template");
+        root.TryGetProperty("sourceName", out JsonElement sourceName).Should().BeTrue();
+        sourceName.GetString().Should().Be("NoMercy.Plugin.Template");
 
-        root.TryGetProperty(propertyName: "symbols", value: out JsonElement symbols).Should().BeTrue();
+        root.TryGetProperty("symbols", out JsonElement symbols).Should().BeTrue();
         symbols
-            .TryGetProperty(propertyName: "pluginId", value: out _)
+            .TryGetProperty("pluginId", out _)
             .Should()
-            .BeTrue(because: "template must generate a plugin GUID");
+            .BeTrue("template must generate a plugin GUID");
         symbols
-            .TryGetProperty(propertyName: "authorName", value: out _)
+            .TryGetProperty("authorName", out _)
             .Should()
-            .BeTrue(because: "template must accept an author name parameter");
+            .BeTrue("template must accept an author name parameter");
         symbols
-            .TryGetProperty(propertyName: "pluginDescription", value: out _)
+            .TryGetProperty("pluginDescription", out _)
             .Should()
-            .BeTrue(because: "template must accept a description parameter");
+            .BeTrue("template must accept a description parameter");
     }
 
     [Fact]
     public void PluginManifest_Exists_AndMatchesSchema()
     {
-        string manifestPath = Path.Combine(path1: TemplateRoot, path2: "plugin.json");
-        File.Exists(path: manifestPath).Should().BeTrue(because: "plugin.json must exist in template");
+        string manifestPath = Path.Combine(TemplateRoot, "plugin.json");
+        File.Exists(manifestPath).Should().BeTrue("plugin.json must exist in template");
 
-        string json = File.ReadAllText(path: manifestPath);
-        JsonDocument doc = JsonDocument.Parse(json: json);
+        string json = File.ReadAllText(manifestPath);
+        JsonDocument doc = JsonDocument.Parse(json);
         JsonElement root = doc.RootElement;
 
-        root.TryGetProperty(propertyName: "id", value: out _).Should().BeTrue(because: "manifest must have 'id'");
-        root.TryGetProperty(propertyName: "name", value: out _).Should().BeTrue(because: "manifest must have 'name'");
-        root.TryGetProperty(propertyName: "description", value: out _)
+        root.TryGetProperty("id", out _).Should().BeTrue("manifest must have 'id'");
+        root.TryGetProperty("name", out _).Should().BeTrue("manifest must have 'name'");
+        root.TryGetProperty("description", out _)
             .Should()
-            .BeTrue(because: "manifest must have 'description'");
-        root.TryGetProperty(propertyName: "version", value: out _).Should().BeTrue(because: "manifest must have 'version'");
-        root.TryGetProperty(propertyName: "assembly", value: out _).Should().BeTrue(because: "manifest must have 'assembly'");
+            .BeTrue("manifest must have 'description'");
+        root.TryGetProperty("version", out _).Should().BeTrue("manifest must have 'version'");
+        root.TryGetProperty("assembly", out _).Should().BeTrue("manifest must have 'assembly'");
 
-        string version = root.GetProperty(propertyName: "version").GetString()!;
-        Version.TryParse(input: version, result: out _).Should().BeTrue(because: "version must be a valid semver string");
+        string version = root.GetProperty("version").GetString()!;
+        Version.TryParse(version, out _).Should().BeTrue("version must be a valid semver string");
 
-        string assembly = root.GetProperty(propertyName: "assembly").GetString()!;
-        assembly.Should().EndWith(expected: ".dll", because: "assembly must be a .dll filename");
+        string assembly = root.GetProperty("assembly").GetString()!;
+        assembly.Should().EndWith(".dll", "assembly must be a .dll filename");
     }
 
     [Fact]
     public void PluginManifest_AssemblyName_MatchesCsprojName()
     {
-        string manifestPath = Path.Combine(path1: TemplateRoot, path2: "plugin.json");
-        string json = File.ReadAllText(path: manifestPath);
-        JsonDocument doc = JsonDocument.Parse(json: json);
-        string assembly = doc.RootElement.GetProperty(propertyName: "assembly").GetString()!;
+        string manifestPath = Path.Combine(TemplateRoot, "plugin.json");
+        string json = File.ReadAllText(manifestPath);
+        JsonDocument doc = JsonDocument.Parse(json);
+        string assembly = doc.RootElement.GetProperty("assembly").GetString()!;
 
-        string csprojPath = Path.Combine(path1: TemplateRoot, path2: "NoMercy.Plugin.Template.csproj");
-        File.Exists(path: csprojPath).Should().BeTrue(because: "csproj must exist");
+        string csprojPath = Path.Combine(TemplateRoot, "NoMercy.Plugin.Template.csproj");
+        File.Exists(csprojPath).Should().BeTrue("csproj must exist");
 
-        string expectedAssembly = Path.GetFileNameWithoutExtension(path: csprojPath) + ".dll";
-        assembly.Should().Be(expected: expectedAssembly, because: "plugin.json assembly must match the csproj name");
+        string expectedAssembly = Path.GetFileNameWithoutExtension(csprojPath) + ".dll";
+        assembly.Should().Be(expectedAssembly, "plugin.json assembly must match the csproj name");
     }
 
     [Fact]
     public void PluginManifest_ContainsPlaceholders()
     {
-        string manifestPath = Path.Combine(path1: TemplateRoot, path2: "plugin.json");
-        string json = File.ReadAllText(path: manifestPath);
+        string manifestPath = Path.Combine(TemplateRoot, "plugin.json");
+        string json = File.ReadAllText(manifestPath);
 
         json.Should()
             .Contain(
-                expected: "PLUGIN-GUID-PLACEHOLDER",
-                because: "manifest id must use the GUID placeholder for template substitution"
+                "PLUGIN-GUID-PLACEHOLDER",
+                "manifest id must use the GUID placeholder for template substitution"
             );
         json.Should()
             .Contain(
-                expected: "PLUGIN-DESCRIPTION-PLACEHOLDER",
-                because: "manifest description must use the description placeholder"
+                "PLUGIN-DESCRIPTION-PLACEHOLDER",
+                "manifest description must use the description placeholder"
             );
         json.Should()
-            .Contain(expected: "AUTHOR-NAME-PLACEHOLDER", because: "manifest author must use the author placeholder");
+            .Contain("AUTHOR-NAME-PLACEHOLDER", "manifest author must use the author placeholder");
     }
 
     [Fact]
     public void PluginClass_Exists_AndContainsPlaceholders()
     {
-        string pluginPath = Path.Combine(path1: TemplateRoot, path2: "Plugin.cs");
-        File.Exists(path: pluginPath).Should().BeTrue(because: "Plugin.cs must exist");
+        string pluginPath = Path.Combine(TemplateRoot, "Plugin.cs");
+        File.Exists(pluginPath).Should().BeTrue("Plugin.cs must exist");
 
-        string source = File.ReadAllText(path: pluginPath);
-        source.Should().Contain(expected: "IPlugin", because: "Plugin class must implement IPlugin");
+        string source = File.ReadAllText(pluginPath);
+        source.Should().Contain("IPlugin", "Plugin class must implement IPlugin");
         source
             .Should()
-            .Contain(expected: "PLUGIN-GUID-PLACEHOLDER", because: "Plugin class must use GUID placeholder");
-        source.Should().Contain(expected: "Initialize", because: "Plugin class must implement Initialize method");
-        source.Should().Contain(expected: "Dispose", because: "Plugin class must implement Dispose method");
+            .Contain("PLUGIN-GUID-PLACEHOLDER", "Plugin class must use GUID placeholder");
+        source.Should().Contain("Initialize", "Plugin class must implement Initialize method");
+        source.Should().Contain("Dispose", "Plugin class must implement Dispose method");
     }
 
     [Fact]
     public void PluginClass_ImplementsIPluginInterface()
     {
-        string pluginPath = Path.Combine(path1: TemplateRoot, path2: "Plugin.cs");
-        string source = File.ReadAllText(path: pluginPath);
+        string pluginPath = Path.Combine(TemplateRoot, "Plugin.cs");
+        string source = File.ReadAllText(pluginPath);
 
-        source.Should().Contain(expected: "string Name =>", because: "Plugin must have Name property");
-        source.Should().Contain(expected: "string Description =>", because: "Plugin must have Description property");
-        source.Should().Contain(expected: "Guid Id", because: "Plugin must have Id property");
-        source.Should().Contain(expected: "Version Version", because: "Plugin must have Version property");
+        source.Should().Contain("string Name =>", "Plugin must have Name property");
+        source.Should().Contain("string Description =>", "Plugin must have Description property");
+        source.Should().Contain("Guid Id", "Plugin must have Id property");
+        source.Should().Contain("Version Version", "Plugin must have Version property");
         source
             .Should()
             .Contain(
-                expected: "void Initialize(IPluginContext context)",
-                because: "Plugin must have Initialize method"
+                "void Initialize(IPluginContext context)",
+                "Plugin must have Initialize method"
             );
     }
 
     [Fact]
     public void Csproj_References_PluginAbstractions()
     {
-        string csprojPath = Path.Combine(path1: TemplateRoot, path2: "NoMercy.Plugin.Template.csproj");
-        string content = File.ReadAllText(path: csprojPath);
+        string csprojPath = Path.Combine(TemplateRoot, "NoMercy.Plugin.Template.csproj");
+        string content = File.ReadAllText(csprojPath);
 
         content
             .Should()
-            .Contain(expected: "NoMercy.Plugins.Abstractions", because: "csproj must reference plugin abstractions");
-        content.Should().Contain(expected: "net10.0", because: "csproj must target net10.0");
+            .Contain("NoMercy.Plugins.Abstractions", "csproj must reference plugin abstractions");
+        content.Should().Contain("net10.0", "csproj must target net10.0");
     }
 
     [Fact]
     public void Csproj_CopiesPluginManifest()
     {
-        string csprojPath = Path.Combine(path1: TemplateRoot, path2: "NoMercy.Plugin.Template.csproj");
-        string content = File.ReadAllText(path: csprojPath);
+        string csprojPath = Path.Combine(TemplateRoot, "NoMercy.Plugin.Template.csproj");
+        string content = File.ReadAllText(csprojPath);
 
-        content.Should().Contain(expected: "plugin.json", because: "csproj must include plugin.json");
-        content.Should().Contain(expected: "CopyToOutputDirectory", because: "plugin.json must be copied to output");
+        content.Should().Contain("plugin.json", "csproj must include plugin.json");
+        content.Should().Contain("CopyToOutputDirectory", "plugin.json must be copied to output");
     }
 
     [Fact]
     public void TemplatePackageCsproj_Exists()
     {
         string packageCsprojPath = FindRepoPath(
-            relativePath: Path.Combine(path1: "templates", path2: "NoMercy.Plugin.Templates.csproj")
+            Path.Combine("templates", "NoMercy.Plugin.Templates.csproj")
         );
-        File.Exists(path: packageCsprojPath).Should().BeTrue(because: "Template package csproj must exist");
+        File.Exists(packageCsprojPath).Should().BeTrue("Template package csproj must exist");
 
-        string content = File.ReadAllText(path: packageCsprojPath);
-        content.Should().Contain(expected: "PackageType>Template", because: "Must be a template package type");
-        content.Should().Contain(expected: "NoMercy.Plugin.Template", because: "Must include the template content");
+        string content = File.ReadAllText(packageCsprojPath);
+        content.Should().Contain("PackageType>Template", "Must be a template package type");
+        content.Should().Contain("NoMercy.Plugin.Template", "Must include the template content");
     }
 
     [Fact]
@@ -232,36 +232,36 @@ public class PluginTemplateTests
 
         foreach (string file in requiredFiles)
         {
-            string fullPath = Path.Combine(path1: TemplateRoot, path2: file);
-            File.Exists(path: fullPath).Should().BeTrue(because: $"Required template file '{file}' must exist");
+            string fullPath = Path.Combine(TemplateRoot, file);
+            File.Exists(fullPath).Should().BeTrue($"Required template file '{file}' must exist");
         }
     }
 
     [Fact]
     public void PluginManifest_HasTargetAbi()
     {
-        string manifestPath = Path.Combine(path1: TemplateRoot, path2: "plugin.json");
-        string json = File.ReadAllText(path: manifestPath);
-        JsonDocument doc = JsonDocument.Parse(json: json);
+        string manifestPath = Path.Combine(TemplateRoot, "plugin.json");
+        string json = File.ReadAllText(manifestPath);
+        JsonDocument doc = JsonDocument.Parse(json);
         JsonElement root = doc.RootElement;
 
-        root.TryGetProperty(propertyName: "targetAbi", value: out JsonElement targetAbi)
+        root.TryGetProperty("targetAbi", out JsonElement targetAbi)
             .Should()
-            .BeTrue(because: "manifest must have targetAbi");
+            .BeTrue("manifest must have targetAbi");
         targetAbi.GetString().Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
     public void PluginManifest_HasAutoEnabled()
     {
-        string manifestPath = Path.Combine(path1: TemplateRoot, path2: "plugin.json");
-        string json = File.ReadAllText(path: manifestPath);
-        JsonDocument doc = JsonDocument.Parse(json: json);
+        string manifestPath = Path.Combine(TemplateRoot, "plugin.json");
+        string json = File.ReadAllText(manifestPath);
+        JsonDocument doc = JsonDocument.Parse(json);
         JsonElement root = doc.RootElement;
 
-        root.TryGetProperty(propertyName: "autoEnabled", value: out JsonElement autoEnabled)
+        root.TryGetProperty("autoEnabled", out JsonElement autoEnabled)
             .Should()
-            .BeTrue(because: "manifest must have autoEnabled");
-        autoEnabled.ValueKind.Should().Be(expected: JsonValueKind.True, because: "autoEnabled should default to true");
+            .BeTrue("manifest must have autoEnabled");
+        autoEnabled.ValueKind.Should().Be(JsonValueKind.True, "autoEnabled should default to true");
     }
 }

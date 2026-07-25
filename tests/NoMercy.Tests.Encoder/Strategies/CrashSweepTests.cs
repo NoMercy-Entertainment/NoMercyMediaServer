@@ -19,7 +19,6 @@ using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Encoder.Storage;
 using Container = NoMercy.Encoder.Profiles.Container;
-using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.Tests.Encoder.Strategies;
 
@@ -43,41 +42,41 @@ public class CrashSweepTests : IDisposable
 
     public CrashSweepTests()
     {
-        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: $"CrashSweep_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path: _tempRoot);
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"CrashSweep_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempRoot);
 
-        _encoder = new(behavior: MockBehavior.Strict);
+        _encoder = new(MockBehavior.Strict);
         _checkpointStore = new();
         _storage = TestStorageFactory.CreateLocal();
 
         _strategy = new(
-            encoder: _encoder.Object,
-            checkpointStore: _checkpointStore.Object,
-            logger: NullLogger<HlsTwoPassStrategy>.Instance,
-            storage: _storage
+            _encoder.Object,
+            _checkpointStore.Object,
+            NullLogger<HlsTwoPassStrategy>.Instance,
+            _storage
         );
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(path: _tempRoot))
-            Directory.Delete(path: _tempRoot, recursive: true);
+        if (Directory.Exists(_tempRoot))
+            Directory.Delete(_tempRoot, true);
 
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
     public async Task Crash_DeletesPartialOutputFiles()
     {
-        string outputDir = Path.Combine(path1: _tempRoot, path2: "output");
-        Directory.CreateDirectory(path: outputDir);
+        string outputDir = Path.Combine(_tempRoot, "output");
+        Directory.CreateDirectory(outputDir);
 
         // Simulate a partial write: one segment file exists before the crash.
-        string partialSegment = Path.Combine(path1: outputDir, path2: "video_0.ts");
-        await File.WriteAllTextAsync(path: partialSegment, contents: "partial segment data");
+        string partialSegment = Path.Combine(outputDir, "video_0.ts");
+        await File.WriteAllTextAsync(partialSegment, "partial segment data");
 
         _encoder
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -85,46 +84,46 @@ public class CrashSweepTests : IDisposable
                 )
             )
             .ReturnsAsync(
-                value: new EncodingResult(
-                    Success: false,
-                    OutputPath: string.Empty,
-                    Duration: TimeSpan.Zero,
-                    Error: new(
-                        Kind: EncodingErrorKind.ProcessCrashed,
-                        Message: "ffmpeg crashed",
-                        FfmpegStderr: null,
-                        StageName: "Execute",
-                        Recoverable: true
+                new EncodingResult(
+                    false,
+                    string.Empty,
+                    TimeSpan.Zero,
+                    new(
+                        EncodingErrorKind.ProcessCrashed,
+                        "ffmpeg crashed",
+                        null,
+                        "Execute",
+                        true
                     ),
-                    Metrics: null
+                    null
                 )
             );
 
         _checkpointStore
-            .Setup(expression: s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (JobCheckpoint?)null);
+            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobCheckpoint?)null);
 
         EncodingRequest request = new(
-            InputPath: "/media/source.mkv",
-            OutputDirectory: outputDir,
-            Profile: new(
-                Id: Ulid.NewUlid(),
-                Name: "Test HLS",
-                Container: Container.HlsTs,
-                Video: null,
-                Audio: [],
-                Subtitles: []
+            "/media/source.mkv",
+            outputDir,
+            new(
+                Ulid.NewUlid(),
+                "Test HLS",
+                Container.HlsTs,
+                null,
+                [],
+                []
             )
         );
 
         EncodingResult result = await _strategy.EncodeAsync(
-            request: request,
-            progress: null,
-            ct: CancellationToken.None
+            request,
+            null,
+            CancellationToken.None
         );
 
         result.Success.Should().BeFalse();
-        File.Exists(path: partialSegment).Should().BeFalse(because: "crash sweep must delete partial segments");
+        File.Exists(partialSegment).Should().BeFalse("crash sweep must delete partial segments");
     }
 
     [Fact]
@@ -132,17 +131,17 @@ public class CrashSweepTests : IDisposable
     {
         // Crash checkpoint written by ExecuteStage must NOT be deleted by the
         // strategy's partial-sweep — orphan recovery needs it for resume.
-        string outputDir = Path.Combine(path1: _tempRoot, path2: "output");
-        Directory.CreateDirectory(path: outputDir);
+        string outputDir = Path.Combine(_tempRoot, "output");
+        Directory.CreateDirectory(outputDir);
 
-        string checkpointFile = Path.Combine(path1: outputDir, path2: ".checkpoint.json");
-        await File.WriteAllTextAsync(path: checkpointFile, contents: "{\"JobId\":\"abc\"}");
+        string checkpointFile = Path.Combine(outputDir, ".checkpoint.json");
+        await File.WriteAllTextAsync(checkpointFile, "{\"JobId\":\"abc\"}");
 
-        string partialSegment = Path.Combine(path1: outputDir, path2: "video_0.ts");
-        await File.WriteAllTextAsync(path: partialSegment, contents: "partial");
+        string partialSegment = Path.Combine(outputDir, "video_0.ts");
+        await File.WriteAllTextAsync(partialSegment, "partial");
 
         _encoder
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -150,57 +149,57 @@ public class CrashSweepTests : IDisposable
                 )
             )
             .ReturnsAsync(
-                value: new EncodingResult(
-                    Success: false,
-                    OutputPath: string.Empty,
-                    Duration: TimeSpan.Zero,
-                    Error: new(
-                        Kind: EncodingErrorKind.ProcessCrashed,
-                        Message: "crashed",
-                        FfmpegStderr: null,
-                        StageName: "Execute",
-                        Recoverable: true
+                new EncodingResult(
+                    false,
+                    string.Empty,
+                    TimeSpan.Zero,
+                    new(
+                        EncodingErrorKind.ProcessCrashed,
+                        "crashed",
+                        null,
+                        "Execute",
+                        true
                     ),
-                    Metrics: null
+                    null
                 )
             );
 
         _checkpointStore
-            .Setup(expression: s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (JobCheckpoint?)null);
+            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobCheckpoint?)null);
 
         EncodingRequest request = new(
-            InputPath: "/media/source.mkv",
-            OutputDirectory: outputDir,
-            Profile: new(
-                Id: Ulid.NewUlid(),
-                Name: "Test HLS",
-                Container: Container.HlsTs,
-                Video: null,
-                Audio: [],
-                Subtitles: []
+            "/media/source.mkv",
+            outputDir,
+            new(
+                Ulid.NewUlid(),
+                "Test HLS",
+                Container.HlsTs,
+                null,
+                [],
+                []
             )
         );
 
-        await _strategy.EncodeAsync(request: request, progress: null, ct: CancellationToken.None);
+        await _strategy.EncodeAsync(request, null, CancellationToken.None);
 
         // Checkpoint survives the sweep — the resume path needs it.
-        File.Exists(path: checkpointFile).Should().BeTrue(because: "crash checkpoint must survive the sweep");
+        File.Exists(checkpointFile).Should().BeTrue("crash checkpoint must survive the sweep");
         // The partial segment is swept.
-        File.Exists(path: partialSegment).Should().BeFalse();
+        File.Exists(partialSegment).Should().BeFalse();
     }
 
     [Fact]
     public async Task Success_DoesNotSweepOutputFiles()
     {
-        string outputDir = Path.Combine(path1: _tempRoot, path2: "output");
-        Directory.CreateDirectory(path: outputDir);
+        string outputDir = Path.Combine(_tempRoot, "output");
+        Directory.CreateDirectory(outputDir);
 
-        string finalSegment = Path.Combine(path1: outputDir, path2: "video_0.ts");
-        await File.WriteAllTextAsync(path: finalSegment, contents: "real segment data");
+        string finalSegment = Path.Combine(outputDir, "video_0.ts");
+        await File.WriteAllTextAsync(finalSegment, "real segment data");
 
         _encoder
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -208,34 +207,34 @@ public class CrashSweepTests : IDisposable
                 )
             )
             .ReturnsAsync(
-                value: new EncodingResult(
-                    Success: true,
-                    OutputPath: outputDir,
-                    Duration: TimeSpan.FromSeconds(seconds: 10),
-                    Error: null,
-                    Metrics: null
+                new EncodingResult(
+                    true,
+                    outputDir,
+                    TimeSpan.FromSeconds(10),
+                    null,
+                    null
                 )
             );
 
         _checkpointStore
-            .Setup(expression: s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (JobCheckpoint?)null);
+            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobCheckpoint?)null);
 
         EncodingRequest request = new(
-            InputPath: "/media/source.mkv",
-            OutputDirectory: outputDir,
-            Profile: new(
-                Id: Ulid.NewUlid(),
-                Name: "Test HLS",
-                Container: Container.HlsTs,
-                Video: null,
-                Audio: [],
-                Subtitles: []
+            "/media/source.mkv",
+            outputDir,
+            new(
+                Ulid.NewUlid(),
+                "Test HLS",
+                Container.HlsTs,
+                null,
+                [],
+                []
             )
         );
 
-        await _strategy.EncodeAsync(request: request, progress: null, ct: CancellationToken.None);
+        await _strategy.EncodeAsync(request, null, CancellationToken.None);
 
-        File.Exists(path: finalSegment).Should().BeTrue(because: "success must never delete output files");
+        File.Exists(finalSegment).Should().BeTrue("success must never delete output files");
     }
 }

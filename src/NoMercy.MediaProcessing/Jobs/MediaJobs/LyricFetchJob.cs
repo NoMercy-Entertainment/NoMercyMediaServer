@@ -23,17 +23,17 @@ public class LyricFetchJob : AbstractLyricJob
 
     public override async Task Handle()
     {
-        await Task.Delay(millisecondsDelay: 1000); // wait for
+        await Task.Delay(1000); // wait for
         await using MediaContext mediaContext = new();
-        RecordingRepository recordingRepository = new(context: mediaContext);
+        RecordingRepository recordingRepository = new(mediaContext);
 
-        LyricsFetchResult result = await new LyricsAggregator().SearchLyrics(track: Track);
+        LyricsFetchResult result = await new LyricsAggregator().SearchLyrics(Track);
         if (result.Lines is null)
             return;
 
         await recordingRepository.UpdateTrackLyricsAsync(
-            track: Track,
-            serializeObject: JsonConvert.SerializeObject(value: result.Lines)
+            Track,
+            JsonConvert.SerializeObject(result.Lines)
         );
     }
 }

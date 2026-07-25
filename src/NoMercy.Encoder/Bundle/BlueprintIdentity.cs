@@ -20,14 +20,14 @@ namespace NoMercy.Encoder.Bundle;
 /// </summary>
 public record BlueprintIdentity(
     /// <summary>"movie" | "episode".</summary>
-    [property: JsonProperty(propertyName: "type")] string Type,
-    [property: JsonProperty(propertyName: "tmdb_id")] long TmdbId,
+    [property: JsonProperty("type")] string Type,
+    [property: JsonProperty("tmdb_id")] long TmdbId,
     /// <summary>Present for episodes only; null for movies.</summary>
-    [property: JsonProperty(propertyName: "show")] BlueprintShow? Show,
+    [property: JsonProperty("show")] BlueprintShow? Show,
     /// <summary>Present for episodes only; null for movies.</summary>
-    [property: JsonProperty(propertyName: "season")] int? Season,
+    [property: JsonProperty("season")] int? Season,
     /// <summary>Present for episodes only; null for movies.</summary>
-    [property: JsonProperty(propertyName: "episode")] int? Episode,
-    [property: JsonProperty(propertyName: "title")] string Title,
-    [property: JsonProperty(propertyName: "year")] int? Year
+    [property: JsonProperty("episode")] int? Episode,
+    [property: JsonProperty("title")] string Title,
+    [property: JsonProperty("year")] int? Year
 );

@@ -17,17 +17,17 @@ namespace NoMercy.Encoder.Distribution;
 
 public class TaskSerializer : ITaskSerializer
 {
-    private static readonly TimeSpan MaxPayloadAge = TimeSpan.FromMinutes(minutes: 5);
+    private static readonly TimeSpan MaxPayloadAge = TimeSpan.FromMinutes(5);
 
     public string Serialize(EncodeTask task, byte[] signingKey)
     {
-        SignedPayload payload = new(Task: task, TimestampUtc: DateTime.UtcNow);
-        return SignAndWrap(payload: payload, signingKey: signingKey);
+        SignedPayload payload = new(task, DateTime.UtcNow);
+        return SignAndWrap(payload, signingKey);
     }
 
     public EncodeTask? Deserialize(string payload, byte[] signingKey)
     {
-        SignedPayload? signed = VerifyAndUnwrap<SignedPayload>(payload: payload, signingKey: signingKey);
+        SignedPayload? signed = VerifyAndUnwrap<SignedPayload>(payload, signingKey);
         if (signed is null)
             return null;
 
@@ -39,13 +39,13 @@ public class TaskSerializer : ITaskSerializer
 
     public string SerializeResult(DispatchResult result, byte[] signingKey)
     {
-        SignedResultPayload payload = new(Result: result, TimestampUtc: DateTime.UtcNow);
-        return SignAndWrap(payload: payload, signingKey: signingKey);
+        SignedResultPayload payload = new(result, DateTime.UtcNow);
+        return SignAndWrap(payload, signingKey);
     }
 
     public DispatchResult? DeserializeResult(string payload, byte[] signingKey)
     {
-        SignedResultPayload? signed = VerifyAndUnwrap<SignedResultPayload>(payload: payload, signingKey: signingKey);
+        SignedResultPayload? signed = VerifyAndUnwrap<SignedResultPayload>(payload, signingKey);
         if (signed is null)
             return null;
 
@@ -57,22 +57,22 @@ public class TaskSerializer : ITaskSerializer
 
     private static string SignAndWrap<T>(T payload, byte[] signingKey)
     {
-        string json = JsonConvert.SerializeObject(value: payload);
-        string signature = ComputeHmac(data: json, key: signingKey);
-        SignedEnvelope envelope = new(Payload: json, Signature: signature);
-        return JsonConvert.SerializeObject(value: envelope);
+        string json = JsonConvert.SerializeObject(payload);
+        string signature = ComputeHmac(json, signingKey);
+        SignedEnvelope envelope = new(json, signature);
+        return JsonConvert.SerializeObject(envelope);
     }
 
     private static T? VerifyAndUnwrap<T>(string payload, byte[] signingKey)
         where T : class
     {
-        if (string.IsNullOrEmpty(value: payload))
+        if (string.IsNullOrEmpty(payload))
             return null;
 
         SignedEnvelope? envelope;
         try
         {
-            envelope = JsonConvert.DeserializeObject<SignedEnvelope>(value: payload);
+            envelope = JsonConvert.DeserializeObject<SignedEnvelope>(payload);
         }
         catch (JsonException)
         {
@@ -81,21 +81,21 @@ public class TaskSerializer : ITaskSerializer
 
         if (envelope is null)
             return null;
-        if (string.IsNullOrEmpty(value: envelope.Payload) || string.IsNullOrEmpty(value: envelope.Signature))
+        if (string.IsNullOrEmpty(envelope.Payload) || string.IsNullOrEmpty(envelope.Signature))
             return null;
 
-        string expected = ComputeHmac(data: envelope.Payload, key: signingKey);
+        string expected = ComputeHmac(envelope.Payload, signingKey);
         if (
             !CryptographicOperations.FixedTimeEquals(
-                left: Encoding.UTF8.GetBytes(s: envelope.Signature),
-                right: Encoding.UTF8.GetBytes(s: expected)
+                Encoding.UTF8.GetBytes(envelope.Signature),
+                Encoding.UTF8.GetBytes(expected)
             )
         )
             return null;
 
         try
         {
-            return JsonConvert.DeserializeObject<T>(value: envelope.Payload);
+            return JsonConvert.DeserializeObject<T>(envelope.Payload);
         }
         catch (JsonException)
         {
@@ -105,9 +105,9 @@ public class TaskSerializer : ITaskSerializer
 
     private static string ComputeHmac(string data, byte[] key)
     {
-        using HMACSHA256 hmac = new(key: key);
-        byte[] hash = hmac.ComputeHash(buffer: Encoding.UTF8.GetBytes(s: data));
-        return Convert.ToBase64String(inArray: hash);
+        using HMACSHA256 hmac = new(key);
+        byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
+        return Convert.ToBase64String(hash);
     }
 
     private sealed record SignedPayload(EncodeTask Task, DateTime TimestampUtc);

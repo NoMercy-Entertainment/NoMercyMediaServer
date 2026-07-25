@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record InfoResponseDto
 {
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public InfoResponseItemDto? Data { get; set; }
 }

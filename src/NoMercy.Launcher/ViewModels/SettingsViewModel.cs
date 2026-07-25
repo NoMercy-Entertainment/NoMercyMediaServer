@@ -169,11 +169,11 @@ public class SettingsViewModel : INotifyPropertyChanged
     public async Task LoadConfigAsync(CancellationToken cancellationToken = default)
     {
         if (!_serverConnection.IsConnected)
-            await _serverConnection.ConnectAsync(cancellationToken: cancellationToken);
+            await _serverConnection.ConnectAsync(cancellationToken);
 
         ServerConfigResponse? config = await _serverConnection.GetAsync<ServerConfigResponse>(
-            path: "/manage/config",
-            cancellationToken: cancellationToken
+            "/manage/config",
+            cancellationToken
         );
 
         if (config is null)
@@ -200,8 +200,8 @@ public class SettingsViewModel : INotifyPropertyChanged
         try
         {
             bool success = await _serverConnection.PutAsync(
-                path: "/manage/config",
-                body: new
+                "/manage/config",
+                new
                 {
                     server_name = ConfigServerName,
                     library_workers = LibraryWorkers,
@@ -213,7 +213,7 @@ public class SettingsViewModel : INotifyPropertyChanged
                     file_workers = FileWorkers,
                     music_workers = MusicWorkers,
                 },
-                cancellationToken: cancellationToken
+                cancellationToken
             );
 
             ActionStatus = success ? "Configuration saved" : "Failed to save configuration";
@@ -228,6 +228,6 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(sender: this, e: new(propertyName: propertyName));
+        PropertyChanged?.Invoke(this, new(propertyName));
     }
 }

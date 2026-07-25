@@ -34,24 +34,24 @@ public sealed class DiscIdentificationService(
 
     public async Task<DiscIdentification> IdentifyAsync(DiscInfo disc, CancellationToken ct)
     {
-        IDiscIdentifier? identifier = Array.Find(array: _identifiers, match: id => id.CanHandle(type: disc.Type));
+        IDiscIdentifier? identifier = Array.Find(_identifiers, id => id.CanHandle(disc.Type));
 
         if (identifier is null)
         {
             logger.LogInformation(
-                message: "No IDiscIdentifier registered for disc type {Type} — returning NeedsManualAssignment",
-                args: disc.Type
+                "No IDiscIdentifier registered for disc type {Type} — returning NeedsManualAssignment",
+                disc.Type
             );
             return new(
-                Kind: MediaKind.Movie,
-                Candidates: [],
-                TopConfidence: 0,
-                AutoApply: false,
-                NeedsManualAssignment: true
+                MediaKind.Movie,
+                [],
+                0,
+                false,
+                true
             );
         }
 
-        return await identifier.IdentifyAsync(disc: disc, ct: ct);
+        return await identifier.IdentifyAsync(disc, ct);
     }
 
     /// <summary>
@@ -66,16 +66,16 @@ public sealed class DiscIdentificationService(
     )
     {
         VideoDiscIdentifier? videoIdentifier =
-            Array.Find(array: _identifiers, match: id => id is VideoDiscIdentifier) as VideoDiscIdentifier;
+            Array.Find(_identifiers, id => id is VideoDiscIdentifier) as VideoDiscIdentifier;
 
         if (videoIdentifier is null)
         {
             logger.LogInformation(
-                message: "SearchAsync called but no VideoDiscIdentifier is registered — returning empty"
+                "SearchAsync called but no VideoDiscIdentifier is registered — returning empty"
             );
             return [];
         }
 
-        return await videoIdentifier.SearchAsync(query: query, type: type, ct: ct);
+        return await videoIdentifier.SearchAsync(query, type, ct);
     }
 }

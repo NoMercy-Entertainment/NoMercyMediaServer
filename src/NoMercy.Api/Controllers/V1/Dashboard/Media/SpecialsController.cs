@@ -31,10 +31,10 @@ using NoMercy.Storage;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 [ApiController]
-[Tags(tags: "Dashboard Specials")]
-[ApiVersion(version: 1.0)]
+[Tags("Dashboard Specials")]
+[ApiVersion(1.0)]
 [Authorize(Policy = "Moderator")]
-[Route(template: "api/v{version:apiVersion}/dashboard/specials", Order = 11)]
+[Route("api/v{version:apiVersion}/dashboard/specials", Order = 11)]
 public class SpecialsController(
     // TODO: remove mediaContext once LibraryLogic accepts IDbContextFactory instead of MediaContext
     MediaContext mediaContext,
@@ -50,9 +50,9 @@ public class SpecialsController(
         List<Special> specials = await specialRepository.GetAllSpecialsAdminAsync();
 
         return Ok(
-            value: new SpecialsResponseDto
+            new SpecialsResponseDto
             {
-                Data = specials.Select(selector: special => new SpecialsResponseItemDto(special: special)),
+                Data = specials.Select(special => new SpecialsResponseItemDto(special)),
             }
         );
     }
@@ -64,10 +64,10 @@ public class SpecialsController(
 
         try
         {
-            Special special = await specialRepository.CreateSpecialAsync(userId: userId);
+            Special special = await specialRepository.CreateSpecialAsync(userId);
 
             return Ok(
-                value: new StatusResponseDto<Special>
+                new StatusResponseDto<Special>
                 {
                     Status = "ok",
                     Data = special,
@@ -78,21 +78,21 @@ public class SpecialsController(
         }
         catch (Exception)
         {
-            return InternalServerErrorResponse(detail: "Something went wrong creating the special");
+            return InternalServerErrorResponse("Something went wrong creating the special");
         }
     }
 
     [HttpGet]
-    [Route(template: "{id:ulid}")]
+    [Route("{id:ulid}")]
     public async Task<IActionResult> Show(Ulid id)
     {
-        Special? special = await specialRepository.GetSpecialByIdAsync(id: id);
+        Special? special = await specialRepository.GetSpecialByIdAsync(id);
 
         if (special is null)
-            return NotFoundResponse(detail: "Special not found");
+            return NotFoundResponse("Special not found");
 
         return Ok(
-            value: new StatusResponseDto<Special>
+            new StatusResponseDto<Special>
             {
                 Status = "ok",
                 Data = special,
@@ -103,25 +103,25 @@ public class SpecialsController(
     }
 
     [HttpPatch]
-    [Route(template: "{id:ulid}")]
+    [Route("{id:ulid}")]
     public async Task<IActionResult> Update(Ulid id, [FromBody] SpecialUpdateRequest request)
     {
         try
         {
             Special? special = await specialRepository.UpdateSpecialAsync(
-                id: id,
-                title: request.Title,
-                overview: request.Overview,
-                poster: request.Poster,
-                backdrop: request.Backdrop,
-                logo: request.Logo
+                id,
+                request.Title,
+                request.Overview,
+                request.Poster,
+                request.Backdrop,
+                request.Logo
             );
 
             if (special is null)
-                return NotFoundResponse(detail: "Special not found");
+                return NotFoundResponse("Special not found");
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Successfully updated {0} special.",
@@ -131,23 +131,23 @@ public class SpecialsController(
         }
         catch (Exception)
         {
-            return InternalServerErrorResponse(detail: "Something went wrong updating the special");
+            return InternalServerErrorResponse("Something went wrong updating the special");
         }
     }
 
     [HttpDelete]
-    [Route(template: "{id:ulid}")]
+    [Route("{id:ulid}")]
     public async Task<IActionResult> Delete(Ulid id)
     {
         try
         {
-            Special? special = await specialRepository.DeleteSpecialAsync(id: id);
+            Special? special = await specialRepository.DeleteSpecialAsync(id);
 
             if (special is null)
-                return NotFoundResponse(detail: "Special not found");
+                return NotFoundResponse("Special not found");
 
             return Ok(
-                value: new StatusResponseDto<string>
+                new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Successfully deleted {0} special.",
@@ -157,21 +157,21 @@ public class SpecialsController(
         }
         catch (Exception)
         {
-            return InternalServerErrorResponse(detail: "Something went wrong deleting the special");
+            return InternalServerErrorResponse("Something went wrong deleting the special");
         }
     }
 
     [HttpPatch]
-    [Route(template: "sort")]
+    [Route("sort")]
     public async Task<IActionResult> Sort([FromBody] LibrarySortRequest request)
     {
         List<Special> specials = await specialRepository.GetAllSpecialsSortableAsync();
 
         if (specials.Count == 0)
-            return NotFoundResponse(detail: "No specials exist");
+            return NotFoundResponse("No specials exist");
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Successfully sorted specials.",
@@ -181,18 +181,18 @@ public class SpecialsController(
     }
 
     [HttpPost]
-    [Route(template: "rescan")]
+    [Route("rescan")]
     public async Task<IActionResult> RescanAll()
     {
         List<Special> specialsList = await specialRepository.GetAllSpecialsForRescanAsync();
 
         if (specialsList.Count == 0)
-            return NotFoundResponse(detail: "No specials exist");
+            return NotFoundResponse("No specials exist");
 
         List<string?> titles = [];
 
         return Ok(
-            value: new StatusResponseDto<List<string?>>
+            new StatusResponseDto<List<string?>>
             {
                 Status = "ok",
                 Data = titles,
@@ -202,22 +202,22 @@ public class SpecialsController(
     }
 
     [HttpPost]
-    [Route(template: "{id:ulid}/rescan")]
+    [Route("{id:ulid}/rescan")]
     public async Task<IActionResult> Rescan(Ulid id)
     {
         // BLOCKER: LibraryLogic requires a raw MediaContext until it is refactored
         // to accept IDbContextFactory. Remove mediaContext from the ctor at that point.
         LibraryLogic specialLogic = new(
-            id: id,
-            mediaContext: mediaContext,
-            storageDriver: storageDriver,
-            storageFactory: storageFactory,
-            logger: libraryLogicLogger
+            id,
+            mediaContext,
+            storageDriver,
+            storageFactory,
+            libraryLogicLogger
         );
 
         if (await specialLogic.Process())
             return Ok(
-                value: new StatusResponseDto<List<dynamic>>
+                new StatusResponseDto<List<dynamic>>
                 {
                     Status = "ok",
                     Data = specialLogic.Titles,
@@ -226,17 +226,17 @@ public class SpecialsController(
                 }
             );
 
-        return NotFoundResponse(detail: "Special not found");
+        return NotFoundResponse("Special not found");
     }
 
     [HttpGet]
-    [Route(template: "{id:ulid}/items")]
+    [Route("{id:ulid}/items")]
     public async Task<IActionResult> GetItems(Ulid id)
     {
-        List<SpecialItem> items = await specialRepository.GetSpecialItemsAdminAsync(id: id);
+        List<SpecialItem> items = await specialRepository.GetSpecialItemsAdminAsync(id);
 
         List<SpecialItemResponseDto> result = items
-            .Select(selector: si =>
+            .Select(si =>
             {
                 if (si.MovieId is not null && si.Movie is not null)
                     return new()
@@ -276,34 +276,34 @@ public class SpecialsController(
 
                 return null;
             })
-            .Where(predicate: x => x is not null)
+            .Where(x => x is not null)
             .ToList()!;
 
-        return Ok(value: result);
+        return Ok(result);
     }
 
     [HttpPatch]
-    [Route(template: "{id:ulid}/items")]
+    [Route("{id:ulid}/items")]
     public async Task<IActionResult> UpdateItems(
         Ulid id,
         [FromBody] SpecialItemsUpdateRequest request
     )
     {
         List<SpecialItemReplacement> replacements = request
-            .Items.Select(selector: item => new SpecialItemReplacement(
-                MediaType: item.MediaType,
-                MediaId: item.MediaId,
-                Order: item.Order
+            .Items.Select(item => new SpecialItemReplacement(
+                item.MediaType,
+                item.MediaId,
+                item.Order
             ))
             .ToList();
 
-        bool found = await specialRepository.ReplaceSpecialItemsAsync(id: id, items: replacements);
+        bool found = await specialRepository.ReplaceSpecialItemsAsync(id, replacements);
 
         if (!found)
-            return NotFoundResponse(detail: $"Special {id} does not exist.");
+            return NotFoundResponse($"Special {id} does not exist.");
 
         return Ok(
-            value: new StatusResponseDto<string>
+            new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Successfully updated special items.",
@@ -312,20 +312,20 @@ public class SpecialsController(
     }
 
     [HttpGet]
-    [Route(template: "search")]
+    [Route("search")]
     public async Task<IActionResult> Search([FromQuery] string q, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(value: q) || q.Length < 2)
-            return Ok(value: Array.Empty<SpecialSearchResultDto>());
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            return Ok(Array.Empty<SpecialSearchResultDto>());
 
-        Task<List<Movie>> moviesTask = specialRepository.SearchMoviesAsync(query: q, take: 25, ct: ct);
-        Task<List<Episode>> episodesTask = specialRepository.SearchEpisodesAsync(query: q, take: 25, ct: ct);
+        Task<List<Movie>> moviesTask = specialRepository.SearchMoviesAsync(q, 25, ct);
+        Task<List<Episode>> episodesTask = specialRepository.SearchEpisodesAsync(q, 25, ct);
 
-        await Task.WhenAll(tasks: [moviesTask, episodesTask]);
+        await Task.WhenAll([moviesTask, episodesTask]);
 
         List<SpecialSearchResultDto> results =
         [
-            .. moviesTask.Result.Select(selector: m => new SpecialSearchResultDto
+            .. moviesTask.Result.Select(m => new SpecialSearchResultDto
             {
                 Id = m.Id,
                 MediaType = "movie",
@@ -339,7 +339,7 @@ public class SpecialsController(
                 EpisodeNumber = null,
                 Available = m.VideoFiles.Count > 0,
             }),
-            .. episodesTask.Result.Select(selector: e => new SpecialSearchResultDto
+            .. episodesTask.Result.Select(e => new SpecialSearchResultDto
             {
                 Id = e.Id,
                 MediaType = "episode",
@@ -355,128 +355,128 @@ public class SpecialsController(
             }),
         ];
 
-        return Ok(value: results);
+        return Ok(results);
     }
 
     [NotMapped]
     public class SpecialUpdateRequest
     {
-        [JsonProperty(propertyName: "id")]
+        [JsonProperty("id")]
         public Ulid Id { get; set; }
 
-        [JsonProperty(propertyName: "title")]
+        [JsonProperty("title")]
         public string? Title { get; set; }
 
-        [JsonProperty(propertyName: "overview")]
+        [JsonProperty("overview")]
         public string? Overview { get; set; }
 
-        [JsonProperty(propertyName: "poster")]
+        [JsonProperty("poster")]
         public string? Poster { get; set; }
 
-        [JsonProperty(propertyName: "backdrop")]
+        [JsonProperty("backdrop")]
         public string? Backdrop { get; set; }
 
-        [JsonProperty(propertyName: "logo")]
+        [JsonProperty("logo")]
         public string? Logo { get; set; }
     }
 
     [NotMapped]
     public class SpecialItemResponseDto
     {
-        [JsonProperty(propertyName: "id")]
+        [JsonProperty("id")]
         public string Id { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "order")]
+        [JsonProperty("order")]
         public int Order { get; set; }
 
-        [JsonProperty(propertyName: "media_type")]
+        [JsonProperty("media_type")]
         public string MediaType { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "media_id")]
+        [JsonProperty("media_id")]
         public int MediaId { get; set; }
 
-        [JsonProperty(propertyName: "title")]
+        [JsonProperty("title")]
         public string Title { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "overview")]
+        [JsonProperty("overview")]
         public string? Overview { get; set; }
 
-        [JsonProperty(propertyName: "still")]
+        [JsonProperty("still")]
         public string? Still { get; set; }
 
-        [JsonProperty(propertyName: "poster")]
+        [JsonProperty("poster")]
         public string? Poster { get; set; }
 
-        [JsonProperty(propertyName: "year")]
+        [JsonProperty("year")]
         public int? Year { get; set; }
 
-        [JsonProperty(propertyName: "show_title")]
+        [JsonProperty("show_title")]
         public string? ShowTitle { get; set; }
 
-        [JsonProperty(propertyName: "season_number")]
+        [JsonProperty("season_number")]
         public int? SeasonNumber { get; set; }
 
-        [JsonProperty(propertyName: "episode_number")]
+        [JsonProperty("episode_number")]
         public int? EpisodeNumber { get; set; }
 
-        [JsonProperty(propertyName: "available")]
+        [JsonProperty("available")]
         public bool Available { get; set; }
     }
 
     [NotMapped]
     public class SpecialSearchResultDto
     {
-        [JsonProperty(propertyName: "id")]
+        [JsonProperty("id")]
         public int Id { get; set; }
 
-        [JsonProperty(propertyName: "media_type")]
+        [JsonProperty("media_type")]
         public string MediaType { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "title")]
+        [JsonProperty("title")]
         public string Title { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "overview")]
+        [JsonProperty("overview")]
         public string? Overview { get; set; }
 
-        [JsonProperty(propertyName: "still")]
+        [JsonProperty("still")]
         public string? Still { get; set; }
 
-        [JsonProperty(propertyName: "poster")]
+        [JsonProperty("poster")]
         public string? Poster { get; set; }
 
-        [JsonProperty(propertyName: "year")]
+        [JsonProperty("year")]
         public int? Year { get; set; }
 
-        [JsonProperty(propertyName: "show_title")]
+        [JsonProperty("show_title")]
         public string? ShowTitle { get; set; }
 
-        [JsonProperty(propertyName: "season_number")]
+        [JsonProperty("season_number")]
         public int? SeasonNumber { get; set; }
 
-        [JsonProperty(propertyName: "episode_number")]
+        [JsonProperty("episode_number")]
         public int? EpisodeNumber { get; set; }
 
-        [JsonProperty(propertyName: "available")]
+        [JsonProperty("available")]
         public bool Available { get; set; }
     }
 
     [NotMapped]
     public class SpecialItemsUpdateRequest
     {
-        [JsonProperty(propertyName: "items")]
+        [JsonProperty("items")]
         public List<SpecialItemUpdateDto> Items { get; set; } = [];
     }
 
     [NotMapped]
     public class SpecialItemUpdateDto
     {
-        [JsonProperty(propertyName: "media_type")]
+        [JsonProperty("media_type")]
         public string MediaType { get; set; } = string.Empty;
 
-        [JsonProperty(propertyName: "media_id")]
+        [JsonProperty("media_id")]
         public int MediaId { get; set; }
 
-        [JsonProperty(propertyName: "order")]
+        [JsonProperty("order")]
         public int Order { get; set; }
     }
 }

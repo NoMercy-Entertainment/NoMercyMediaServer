@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Api;
 /// regressions where someone adds a new endpoint without registering it on
 /// both sides or forgets the Obsolete marker.
 /// </summary>
-[Trait(name: "Category", value: "Routes")]
+[Trait("Category", "Routes")]
 public class EncoderProfilesController_Routes_Test
 {
     // =========================================================================
@@ -36,8 +36,8 @@ public class EncoderProfilesController_Routes_Test
 
     private static IEnumerable<MethodInfo> PublicActions(Type controller) =>
         controller
-            .GetMethods(bindingAttr: BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Where(predicate: m => m.GetCustomAttributes<HttpMethodAttribute>().Any());
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(m => m.GetCustomAttributes<HttpMethodAttribute>().Any());
 
     /// <summary>
     /// Finds an action method that carries the given HTTP verb attribute whose
@@ -50,10 +50,10 @@ public class EncoderProfilesController_Routes_Test
         string routeSuffix
     )
     {
-        foreach (MethodInfo method in PublicActions(controller: controller))
+        foreach (MethodInfo method in PublicActions(controller))
         {
             HttpMethodAttribute? attr = method
-                .GetCustomAttributes(attributeType: httpVerbAttribute, inherit: false)
+                .GetCustomAttributes(httpVerbAttribute, false)
                 .Cast<HttpMethodAttribute>()
                 .FirstOrDefault();
 
@@ -64,9 +64,9 @@ public class EncoderProfilesController_Routes_Test
             string template = attr.Template ?? string.Empty;
             if (
                 string.Equals(
-                    a: StripConstraints(template: template),
-                    b: StripConstraints(template: routeSuffix),
-                    comparisonType: StringComparison.OrdinalIgnoreCase
+                    StripConstraints(template),
+                    StripConstraints(routeSuffix),
+                    StringComparison.OrdinalIgnoreCase
                 )
             )
                 return method;
@@ -82,7 +82,7 @@ public class EncoderProfilesController_Routes_Test
     /// detail this test doesn't guard.
     /// </summary>
     private static string StripConstraints(string template) =>
-        Regex.Replace(input: template, pattern: @"\{(\w+):[^}]+\}", replacement: "{$1}");
+        Regex.Replace(template, @"\{(\w+):[^}]+\}", "{$1}");
 
     private static void AssertEndpointExists(
         Type controller,
@@ -91,10 +91,10 @@ public class EncoderProfilesController_Routes_Test
         string description
     )
     {
-        MethodInfo? method = FindAction(controller: controller, httpVerbAttribute: httpVerb, routeSuffix: routeSuffix);
+        MethodInfo? method = FindAction(controller, httpVerb, routeSuffix);
         Assert.True(
-            condition: method is not null,
-            userMessage: $"Missing endpoint on {controller.Name}: {description} (route suffix: \"{routeSuffix}\")"
+            method is not null,
+            $"Missing endpoint on {controller.Name}: {description} (route suffix: \"{routeSuffix}\")"
         );
     }
 
@@ -105,16 +105,16 @@ public class EncoderProfilesController_Routes_Test
         string description
     )
     {
-        MethodInfo? method = FindAction(controller: controller, httpVerbAttribute: httpVerb, routeSuffix: routeSuffix);
+        MethodInfo? method = FindAction(controller, httpVerb, routeSuffix);
         Assert.True(
-            condition: method is not null,
-            userMessage: $"Endpoint not found on {controller.Name}: {description} — cannot check [Obsolete]"
+            method is not null,
+            $"Endpoint not found on {controller.Name}: {description} — cannot check [Obsolete]"
         );
 
         ObsoleteAttribute? obsolete = method!.GetCustomAttribute<ObsoleteAttribute>();
         Assert.True(
-            condition: obsolete is not null,
-            userMessage: $"Endpoint {controller.Name}.{method.Name} ({description}) is missing [Obsolete]"
+            obsolete is not null,
+            $"Endpoint {controller.Name}.{method.Name} ({description}) is missing [Obsolete]"
         );
     }
 
@@ -123,25 +123,25 @@ public class EncoderProfilesController_Routes_Test
     // =========================================================================
 
     [Theory]
-    [InlineData(data: [typeof(HttpGetAttribute), "", "GET / (index)"])]
-    [InlineData(data: [typeof(HttpGetAttribute), "{id}", "GET /{id}"])]
-    [InlineData(data: [typeof(HttpPostAttribute), "", "POST / (create)"])]
-    [InlineData(data: [typeof(HttpGetAttribute), "tags", "GET /tags"])]
-    [InlineData(data: [typeof(HttpGetAttribute), "{id}/resolve", "GET /{id}/resolve"])]
-    [InlineData(data: [typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}"])]
-    [InlineData(data: [typeof(HttpPostAttribute), "validate", "POST /validate"])]
-    [InlineData(data: [typeof(HttpPostAttribute), "{id}/preview", "POST /{id}/preview"])]
-    [InlineData(data: [typeof(HttpPutAttribute), "{id}", "PUT /{id}"])]
-    [InlineData(data: [typeof(HttpPostAttribute), "{parentId}/clone", "POST /{parentId}/clone"])]
-    [InlineData(data: [typeof(HttpPostAttribute), "import", "POST /import"])]
-    [InlineData(data: [typeof(HttpGetAttribute), "{id}/export", "GET /{id}/export"])]
+    [InlineData([typeof(HttpGetAttribute), "", "GET / (index)"])]
+    [InlineData([typeof(HttpGetAttribute), "{id}", "GET /{id}"])]
+    [InlineData([typeof(HttpPostAttribute), "", "POST / (create)"])]
+    [InlineData([typeof(HttpGetAttribute), "tags", "GET /tags"])]
+    [InlineData([typeof(HttpGetAttribute), "{id}/resolve", "GET /{id}/resolve"])]
+    [InlineData([typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}"])]
+    [InlineData([typeof(HttpPostAttribute), "validate", "POST /validate"])]
+    [InlineData([typeof(HttpPostAttribute), "{id}/preview", "POST /{id}/preview"])]
+    [InlineData([typeof(HttpPutAttribute), "{id}", "PUT /{id}"])]
+    [InlineData([typeof(HttpPostAttribute), "{parentId}/clone", "POST /{parentId}/clone"])]
+    [InlineData([typeof(HttpPostAttribute), "import", "POST /import"])]
+    [InlineData([typeof(HttpGetAttribute), "{id}/export", "GET /{id}/export"])]
     public void EncoderProfilesController_HasExpectedEndpoint(
         Type httpVerb,
         string routeSuffix,
         string description
     )
     {
-        AssertEndpointExists(controller: typeof(EncoderProfilesController), httpVerb: httpVerb, routeSuffix: routeSuffix, description: description);
+        AssertEndpointExists(typeof(EncoderProfilesController), httpVerb, routeSuffix, description);
     }
 
     // =========================================================================
@@ -149,19 +149,19 @@ public class EncoderProfilesController_Routes_Test
     // =========================================================================
 
     [Theory]
-    [InlineData(data: [typeof(HttpGetAttribute), "", "GET / (list)"])]
-    [InlineData(data: [typeof(HttpGetAttribute), "{id}", "GET /{id}"])]
-    [InlineData(data: [typeof(HttpPostAttribute), "", "POST / (create)"])]
-    [InlineData(data: [typeof(HttpPutAttribute), "{id}", "PUT /{id}"])]
-    [InlineData(data: [typeof(HttpGetAttribute), "tags", "GET /tags"])]
-    [InlineData(data: [typeof(HttpPostAttribute), "{id}/clone", "POST /{id}/clone"])]
-    [InlineData(data: [typeof(HttpGetAttribute), "{id}/resolve", "GET /{id}/resolve"])]
-    [InlineData(data: [typeof(HttpGetAttribute), "{id}/export", "GET /{id}/export"])]
-    [InlineData(data: [typeof(HttpPostAttribute), "import", "POST /import"])]
-    [InlineData(data: [typeof(HttpPostAttribute), "import-url", "POST /import-url"])]
-    [InlineData(data: [typeof(HttpPostAttribute), "validate", "POST /validate"])]
-    [InlineData(data: [typeof(HttpPostAttribute), "preview", "POST /preview"])]
-    [InlineData(data: [typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}"])]
+    [InlineData([typeof(HttpGetAttribute), "", "GET / (list)"])]
+    [InlineData([typeof(HttpGetAttribute), "{id}", "GET /{id}"])]
+    [InlineData([typeof(HttpPostAttribute), "", "POST / (create)"])]
+    [InlineData([typeof(HttpPutAttribute), "{id}", "PUT /{id}"])]
+    [InlineData([typeof(HttpGetAttribute), "tags", "GET /tags"])]
+    [InlineData([typeof(HttpPostAttribute), "{id}/clone", "POST /{id}/clone"])]
+    [InlineData([typeof(HttpGetAttribute), "{id}/resolve", "GET /{id}/resolve"])]
+    [InlineData([typeof(HttpGetAttribute), "{id}/export", "GET /{id}/export"])]
+    [InlineData([typeof(HttpPostAttribute), "import", "POST /import"])]
+    [InlineData([typeof(HttpPostAttribute), "import-url", "POST /import-url"])]
+    [InlineData([typeof(HttpPostAttribute), "validate", "POST /validate"])]
+    [InlineData([typeof(HttpPostAttribute), "preview", "POST /preview"])]
+    [InlineData([typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}"])]
     public void EncodingPresetsController_EndpointIsObsolete(
         Type httpVerb,
         string routeSuffix,
@@ -169,10 +169,10 @@ public class EncoderProfilesController_Routes_Test
     )
     {
         AssertEndpointObsolete(
-            controller: typeof(EncodingPresetsController),
-            httpVerb: httpVerb,
-            routeSuffix: routeSuffix,
-            description: description
+            typeof(EncodingPresetsController),
+            httpVerb,
+            routeSuffix,
+            description
         );
     }
 }

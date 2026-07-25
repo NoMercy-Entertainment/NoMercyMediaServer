@@ -26,7 +26,7 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation(message: "DriveMonitorWorker started");
+        logger.LogInformation("DriveMonitorWorker started");
 
         // BackgroundServiceExceptionBehavior defaults to StopHost since .NET 6
         // — letting MonitorAsync throw would tear the whole server down. Wrap
@@ -38,8 +38,8 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
             {
                 await foreach (
                     DriveEvent evt in driveMonitor
-                        .MonitorAsync(ct: stoppingToken)
-                        .WithCancellation(cancellationToken: stoppingToken)
+                        .MonitorAsync(stoppingToken)
+                        .WithCancellation(stoppingToken)
                 )
                 {
                     if (!EventBusProvider.IsConfigured)
@@ -55,18 +55,18 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
                     };
 
                     _ = EventBusProvider.Current.PublishAsync(
-                        @event: new DriveStateChangedEvent
+                        new DriveStateChangedEvent
                         {
                             DriveStateData = new(
-                                Method: methodName,
-                                Drive: evt.Drive.Path,
-                                VolumeLabel: evt.Drive.Label,
-                                HasDisc: evt.Drive.HasDisc,
-                                DiscType: evt.Drive.DiscType.ToString().ToLowerInvariant(),
-                                Timestamp: DateTime.UtcNow
+                                methodName,
+                                evt.Drive.Path,
+                                evt.Drive.Label,
+                                evt.Drive.HasDisc,
+                                evt.Drive.DiscType.ToString().ToLowerInvariant(),
+                                DateTime.UtcNow
                             ),
                         },
-                        ct: stoppingToken
+                        stoppingToken
                     );
                 }
                 break;
@@ -77,10 +77,10 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
             }
             catch (Exception ex)
             {
-                logger.LogWarning(exception: ex, message: "DriveMonitorWorker iteration failed; retrying in 5s");
+                logger.LogWarning(ex, "DriveMonitorWorker iteration failed; retrying in 5s");
                 try
                 {
-                    await Task.Delay(delay: TimeSpan.FromSeconds(seconds: 5), cancellationToken: stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -89,6 +89,6 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
             }
         }
 
-        logger.LogInformation(message: "DriveMonitorWorker stopped");
+        logger.LogInformation("DriveMonitorWorker stopped");
     }
 }

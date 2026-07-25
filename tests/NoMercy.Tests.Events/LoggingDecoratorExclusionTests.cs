@@ -39,32 +39,32 @@ public class LoggingDecoratorExclusionTests
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
         LoggingEventBusDecorator decorator = new(
-            inner: inner,
-            log: msg => logMessages.Add(item: msg),
-            excludedEventTypes: ["HighFrequencyEvent"]
+            inner,
+            msg => logMessages.Add(msg),
+            ["HighFrequencyEvent"]
         );
 
         List<HighFrequencyEvent> received = [];
         decorator.Subscribe<HighFrequencyEvent>(
-            handler: (evt, _) =>
+            (evt, _) =>
             {
-                received.Add(item: evt);
+                received.Add(evt);
                 return Task.CompletedTask;
             }
         );
 
-        await decorator.PublishAsync(@event: new HighFrequencyEvent { Tick = 1 });
-        await decorator.PublishAsync(@event: new HighFrequencyEvent { Tick = 2 });
+        await decorator.PublishAsync(new HighFrequencyEvent { Tick = 1 });
+        await decorator.PublishAsync(new HighFrequencyEvent { Tick = 2 });
 
-        logMessages.Should().BeEmpty(because: "excluded types must not be logged");
+        logMessages.Should().BeEmpty("excluded types must not be logged");
         received
             .Should()
             .HaveCount(
-                expected: 2,
-                because: "event must still be delivered to handlers even when excluded from logging"
+                2,
+                "event must still be delivered to handlers even when excluded from logging"
             );
-        received[index: 0].Tick.Should().Be(expected: 1);
-        received[index: 1].Tick.Should().Be(expected: 2);
+        received[0].Tick.Should().Be(1);
+        received[1].Tick.Should().Be(2);
     }
 
     [Fact]
@@ -73,17 +73,17 @@ public class LoggingDecoratorExclusionTests
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
         LoggingEventBusDecorator decorator = new(
-            inner: inner,
-            log: msg => logMessages.Add(item: msg),
-            excludedEventTypes: ["HighFrequencyEvent"]
+            inner,
+            msg => logMessages.Add(msg),
+            ["HighFrequencyEvent"]
         );
 
-        await decorator.PublishAsync(@event: new HighFrequencyEvent { Tick = 99 });
-        await decorator.PublishAsync(@event: new ImportantEvent { Message = "critical alert" });
+        await decorator.PublishAsync(new HighFrequencyEvent { Tick = 99 });
+        await decorator.PublishAsync(new ImportantEvent { Message = "critical alert" });
 
         logMessages.Should().ContainSingle();
-        logMessages[index: 0].Should().Contain(expected: "ImportantEvent");
-        logMessages[index: 0].Should().NotContain(unexpected: "HighFrequencyEvent");
+        logMessages[0].Should().Contain("ImportantEvent");
+        logMessages[0].Should().NotContain("HighFrequencyEvent");
     }
 
     [Fact]
@@ -92,24 +92,24 @@ public class LoggingDecoratorExclusionTests
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
         LoggingEventBusDecorator decorator = new(
-            inner: inner,
-            log: msg => logMessages.Add(item: msg),
-            excludedEventTypes: ["HighFrequencyEvent", "EncodingProgressUpdatedEvent"]
+            inner,
+            msg => logMessages.Add(msg),
+            ["HighFrequencyEvent", "EncodingProgressUpdatedEvent"]
         );
 
-        await decorator.PublishAsync(@event: new HighFrequencyEvent { Tick = 1 });
+        await decorator.PublishAsync(new HighFrequencyEvent { Tick = 1 });
         await decorator.PublishAsync(
-            @event: new EncodingProgressUpdatedEvent
+            new EncodingProgressUpdatedEvent
             {
                 JobId = 1,
                 Percentage = 50.0,
-                Elapsed = TimeSpan.FromMinutes(minutes: 1),
+                Elapsed = TimeSpan.FromMinutes(1),
             }
         );
-        await decorator.PublishAsync(@event: new ImportantEvent { Message = "kept" });
+        await decorator.PublishAsync(new ImportantEvent { Message = "kept" });
 
         logMessages.Should().ContainSingle();
-        logMessages[index: 0].Should().Contain(expected: "ImportantEvent");
+        logMessages[0].Should().Contain("ImportantEvent");
     }
 
     [Fact]
@@ -118,15 +118,15 @@ public class LoggingDecoratorExclusionTests
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
         LoggingEventBusDecorator decorator = new(
-            inner: inner,
-            log: msg => logMessages.Add(item: msg),
-            excludedEventTypes: []
+            inner,
+            msg => logMessages.Add(msg),
+            []
         );
 
-        await decorator.PublishAsync(@event: new HighFrequencyEvent { Tick = 1 });
-        await decorator.PublishAsync(@event: new ImportantEvent { Message = "msg" });
+        await decorator.PublishAsync(new HighFrequencyEvent { Tick = 1 });
+        await decorator.PublishAsync(new ImportantEvent { Message = "msg" });
 
-        logMessages.Should().HaveCount(expected: 2);
+        logMessages.Should().HaveCount(2);
     }
 
     [Fact]
@@ -134,12 +134,12 @@ public class LoggingDecoratorExclusionTests
     {
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
-        LoggingEventBusDecorator decorator = new(inner: inner, log: msg => logMessages.Add(item: msg), excludedEventTypes: null);
+        LoggingEventBusDecorator decorator = new(inner, msg => logMessages.Add(msg), null);
 
-        await decorator.PublishAsync(@event: new HighFrequencyEvent { Tick = 1 });
+        await decorator.PublishAsync(new HighFrequencyEvent { Tick = 1 });
 
         logMessages.Should().ContainSingle();
-        logMessages[index: 0].Should().Contain(expected: "HighFrequencyEvent");
+        logMessages[0].Should().Contain("HighFrequencyEvent");
     }
 
     [Fact]
@@ -150,27 +150,27 @@ public class LoggingDecoratorExclusionTests
         ILogger<InMemoryEventBus> logger =
             NullLoggerFactory.Instance.CreateLogger<InMemoryEventBus>();
 
-        InMemoryEventBus bus = new(logger: logger);
+        InMemoryEventBus bus = new(logger);
         List<string> executionOrder = [];
 
         bus.Subscribe<PlaybackStartedEvent>(
-            handler: (_, _) =>
+            (_, _) =>
             {
-                executionOrder.Add(item: "throws");
-                throw new InvalidOperationException(message: "simulated handler crash");
+                executionOrder.Add("throws");
+                throw new InvalidOperationException("simulated handler crash");
             }
         );
 
         bus.Subscribe<PlaybackStartedEvent>(
-            handler: (_, _) =>
+            (_, _) =>
             {
-                executionOrder.Add(item: "recovers");
+                executionOrder.Add("recovers");
                 return Task.CompletedTask;
             }
         );
 
         await bus.PublishAsync(
-            @event: new PlaybackStartedEvent
+            new PlaybackStartedEvent
             {
                 UserId = Guid.NewGuid(),
                 MediaId = 1,
@@ -178,9 +178,9 @@ public class LoggingDecoratorExclusionTests
             }
         );
 
-        executionOrder.Should().HaveCount(expected: 2, because: "both handlers ran — first threw, second recovered");
-        executionOrder[index: 0].Should().Be(expected: "throws");
-        executionOrder[index: 1].Should().Be(expected: "recovers");
+        executionOrder.Should().HaveCount(2, "both handlers ran — first threw, second recovered");
+        executionOrder[0].Should().Be("throws");
+        executionOrder[1].Should().Be("recovers");
     }
 
     [Fact]
@@ -189,10 +189,10 @@ public class LoggingDecoratorExclusionTests
         InMemoryEventBus bus = new();
         PlaybackStartedEvent? payloadSeen = null;
 
-        bus.Subscribe<PlaybackStartedEvent>(handler: (_, _) => throw new(message: "bang"));
+        bus.Subscribe<PlaybackStartedEvent>((_, _) => throw new("bang"));
 
         bus.Subscribe<PlaybackStartedEvent>(
-            handler: (evt, _) =>
+            (evt, _) =>
             {
                 payloadSeen = evt;
                 return Task.CompletedTask;
@@ -202,7 +202,7 @@ public class LoggingDecoratorExclusionTests
         Guid userId = Guid.NewGuid();
 
         await bus.PublishAsync(
-            @event: new PlaybackStartedEvent
+            new PlaybackStartedEvent
             {
                 UserId = userId,
                 MediaId = 42,
@@ -211,9 +211,9 @@ public class LoggingDecoratorExclusionTests
         );
 
         payloadSeen.Should().NotBeNull();
-        payloadSeen!.UserId.Should().Be(expected: userId);
-        payloadSeen.MediaId.Should().Be(expected: 42);
-        payloadSeen.MediaType.Should().Be(expected: "tv");
+        payloadSeen!.UserId.Should().Be(userId);
+        payloadSeen.MediaId.Should().Be(42);
+        payloadSeen.MediaType.Should().Be("tv");
     }
 
     [Fact]
@@ -221,14 +221,14 @@ public class LoggingDecoratorExclusionTests
     {
         InMemoryEventBus bus = new();
 
-        bus.Subscribe<ImportantEvent>(handler: (_, _) => throw new ApplicationException(message: "first"));
-        bus.Subscribe<ImportantEvent>(handler: (_, _) => throw new ApplicationException(message: "second"));
+        bus.Subscribe<ImportantEvent>((_, _) => throw new ApplicationException("first"));
+        bus.Subscribe<ImportantEvent>((_, _) => throw new ApplicationException("second"));
 
-        Func<Task> act = () => bus.PublishAsync(@event: new ImportantEvent { Message = "test" });
+        Func<Task> act = () => bus.PublishAsync(new ImportantEvent { Message = "test" });
 
         await act.Should()
             .NotThrowAsync(
-                because: "individual handler exceptions are swallowed by the bus; only OperationCanceledException propagates"
+                "individual handler exceptions are swallowed by the bus; only OperationCanceledException propagates"
             );
     }
 
@@ -240,27 +240,27 @@ public class LoggingDecoratorExclusionTests
         List<string> ran = [];
 
         bus.Subscribe<ImportantEvent>(
-            handler: (_, _) =>
+            (_, _) =>
             {
-                ran.Add(item: "first");
+                ran.Add("first");
                 cts.Cancel();
                 return Task.CompletedTask;
             }
         );
 
         bus.Subscribe<ImportantEvent>(
-            handler: (_, _) =>
+            (_, _) =>
             {
-                ran.Add(item: "second");
+                ran.Add("second");
                 return Task.CompletedTask;
             }
         );
 
         Func<Task> act = () =>
-            bus.PublishAsync(@event: new ImportantEvent { Message = "cancel-test" }, ct: cts.Token);
+            bus.PublishAsync(new ImportantEvent { Message = "cancel-test" }, cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
-        ran.Should().Equal(expected: "first");
-        ran.Should().NotContain(unexpected: "second");
+        ran.Should().Equal("first");
+        ran.Should().NotContain("second");
     }
 }

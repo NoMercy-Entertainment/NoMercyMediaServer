@@ -25,11 +25,11 @@ public class CollectionPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         return await db
-            .Collections.Where(predicate: c => c.Id == id)
-            .Select(selector: c => c._colorPalette)
-            .FirstOrDefaultAsync(cancellationToken: ct);
+            .Collections.Where(c => c.Id == id)
+            .Select(c => c._colorPalette)
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -38,21 +38,20 @@ public class CollectionPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
-        Collection? collection = await db.Collections.FirstOrDefaultAsync(predicate: c => c.Id == id, cancellationToken: ct);
+        int id = int.Parse(entityId);
+        Collection? collection = await db.Collections.FirstOrDefaultAsync(c => c.Id == id, ct);
         if (collection is null)
             return PaletteResult.NoImage();
         if (collection.Poster is null && collection.Backdrop is null)
             return PaletteResult.NoImage();
 
-        string json = await MovieDbImageManager.MultiColorPalette(items:
-        [
-            new(key: "poster", path: collection.Poster),
-            new(key: "backdrop", path: collection.Backdrop),
+        string json = await MovieDbImageManager.MultiColorPalette([
+            new("poster", collection.Poster),
+            new("backdrop", collection.Backdrop),
         ]);
-        return string.IsNullOrWhiteSpace(value: json)
+        return string.IsNullOrWhiteSpace(json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json: json);
+            : PaletteResult.Success(json);
     }
 
     public async Task PersistAsync(
@@ -62,9 +61,9 @@ public class CollectionPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         await db
-            .Collections.Where(predicate: c => c.Id == id)
-            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: c => c._colorPalette, valueExpression: json), cancellationToken: ct);
+            .Collections.Where(c => c.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c._colorPalette, json), ct);
     }
 }

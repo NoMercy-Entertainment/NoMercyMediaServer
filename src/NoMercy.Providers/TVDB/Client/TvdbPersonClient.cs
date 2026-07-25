@@ -17,41 +17,41 @@ namespace NoMercy.Providers.TVDB.Client;
 public class TvdbPersonClient : TvdbBaseClient
 {
     public TvdbPersonClient(int id = 0, string language = "eng")
-        : base(id: id, language: language) { }
+        : base(id, language) { }
 
     public Task<TvdbPersonResponse?> Details(bool? priority = false)
     {
-        return Get<TvdbPersonResponse>(url: "people/" + Id, priority: priority);
+        return Get<TvdbPersonResponse>("people/" + Id, priority: priority);
     }
 
     public Task<TvdbPersonExtendedResponse?> Extended(string? meta = null, bool? priority = false)
     {
         Dictionary<string, string?> query = new();
-        if (!string.IsNullOrEmpty(value: meta))
-            query[key: "meta"] = meta;
-        return Get<TvdbPersonExtendedResponse>(url: "people/" + Id + "/extended", query: query, priority: priority);
+        if (!string.IsNullOrEmpty(meta))
+            query["meta"] = meta;
+        return Get<TvdbPersonExtendedResponse>("people/" + Id + "/extended", query, priority);
     }
 
     public Task<TvdbPersonExtendedResponse?> WithAllAppends(bool? priority = false)
     {
-        return Extended(meta: "translations", priority: priority);
+        return Extended("translations", priority);
     }
 
     public Task<TvdbPersonTranslationResponse?> Translation(string language, bool? priority = false)
     {
         return Get<TvdbPersonTranslationResponse>(
-            url: $"people/{Id}/translations/{language}",
+            $"people/{Id}/translations/{language}",
             priority: priority
         );
     }
 
     public Task<TvdbPersonTypesResponse?> Types(bool? priority = false)
     {
-        return Get<TvdbPersonTypesResponse>(url: "people/types", priority: priority);
+        return Get<TvdbPersonTypesResponse>("people/types", priority: priority);
     }
 
     public Task<TvdbCharacterResponse?> Character(bool? priority = false)
     {
-        return Get<TvdbCharacterResponse>(url: "characters/" + Id, priority: priority);
+        return Get<TvdbCharacterResponse>("characters/" + Id, priority: priority);
     }
 }

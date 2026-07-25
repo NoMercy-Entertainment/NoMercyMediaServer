@@ -46,13 +46,13 @@ internal static class AnalyzerSyntaxHelpers
     /// </summary>
     internal static bool IsNamespaceOrDescendant(string candidate, string target)
     {
-        if (string.Equals(a: candidate, b: target, comparisonType: StringComparison.Ordinal))
+        if (string.Equals(candidate, target, StringComparison.Ordinal))
         {
             return true;
         }
 
         return candidate.Length > target.Length
-            && candidate[index: target.Length] == '.'
-            && candidate.StartsWith(value: target, comparisonType: StringComparison.Ordinal);
+            && candidate[target.Length] == '.'
+            && candidate.StartsWith(target, StringComparison.Ordinal);
     }
 }

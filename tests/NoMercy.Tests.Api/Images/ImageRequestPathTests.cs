@@ -22,30 +22,30 @@ namespace NoMercy.Tests.Api.Images;
 public class ImageRequestPathTests
 {
     [Theory]
-    [InlineData(data: ["poster.jpg", "poster.jpg"])]
-    [InlineData(data: ["abc123.png", "abc123.png"])]
-    [InlineData(data: ["../../etc/passwd", "passwd"])]
-    [InlineData(data: ["..\\..\\windows\\win.ini", "win.ini"])]
-    [InlineData(data: ["a/b/c.png", "c.png"])]
-    [InlineData(data: ["a\\b\\c.png", "c.png"])]
-    [InlineData(data: ["..", ""])]
-    [InlineData(data: ["foo/..", ""])]
-    [InlineData(data: [null, ""])]
-    [InlineData(data: ["", ""])]
+    [InlineData(["poster.jpg", "poster.jpg"])]
+    [InlineData(["abc123.png", "abc123.png"])]
+    [InlineData(["../../etc/passwd", "passwd"])]
+    [InlineData(["..\\..\\windows\\win.ini", "win.ini"])]
+    [InlineData(["a/b/c.png", "c.png"])]
+    [InlineData(["a\\b\\c.png", "c.png"])]
+    [InlineData(["..", ""])]
+    [InlineData(["foo/..", ""])]
+    [InlineData([null, ""])]
+    [InlineData(["", ""])]
     public void SanitizeSegment_ReducesToFinalComponent(string? input, string expected)
     {
-        Assert.Equal(expected: expected, actual: ImageRequestPath.SanitizeSegment(segment: input));
+        Assert.Equal(expected, ImageRequestPath.SanitizeSegment(input));
     }
 
     [Theory]
-    [InlineData(data: "../../etc/passwd")]
-    [InlineData(data: "..\\..\\x")]
-    [InlineData(data: "a/b/c")]
+    [InlineData("../../etc/passwd")]
+    [InlineData("..\\..\\x")]
+    [InlineData("a/b/c")]
     public void SanitizeSegment_OutputHasNoPathSeparators(string input)
     {
-        string result = ImageRequestPath.SanitizeSegment(segment: input);
+        string result = ImageRequestPath.SanitizeSegment(input);
 
-        Assert.DoesNotContain(expectedSubstring: "/", actualString: result);
-        Assert.DoesNotContain(expectedSubstring: "\\", actualString: result);
+        Assert.DoesNotContain("/", result);
+        Assert.DoesNotContain("\\", result);
     }
 }

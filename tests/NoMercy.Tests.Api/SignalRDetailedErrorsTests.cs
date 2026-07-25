@@ -17,7 +17,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait(name: "Category", value: "Integration")]
+[Trait("Category", "Integration")]
 public class SignalRDetailedErrorsTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -37,8 +37,8 @@ public class SignalRDetailedErrorsTests : IClassFixture<NoMercyApiFactory>
         >();
 
         Assert.False(
-            condition: hubOptions.Value.EnableDetailedErrors,
-            userMessage: "SignalR EnableDetailedErrors must be false in production to prevent stack trace leakage to clients"
+            hubOptions.Value.EnableDetailedErrors,
+            "SignalR EnableDetailedErrors must be false in production to prevent stack trace leakage to clients"
         );
     }
 
@@ -50,17 +50,17 @@ public class SignalRDetailedErrorsTests : IClassFixture<NoMercyApiFactory>
         >();
         long? maxSize = hubOptions.Value.MaximumReceiveMessageSize;
 
-        Assert.NotNull(value: maxSize);
+        Assert.NotNull(maxSize);
 
         long tenMb = 10L * 1024 * 1024;
         Assert.True(
-            condition: maxSize <= tenMb,
-            userMessage: $"SignalR MaximumReceiveMessageSize should be at most 10MB but was {maxSize / (1024 * 1024.0):F1}MB"
+            maxSize <= tenMb,
+            $"SignalR MaximumReceiveMessageSize should be at most 10MB but was {maxSize / (1024 * 1024.0):F1}MB"
         );
 
         Assert.True(
-            condition: maxSize >= 1024 * 1024,
-            userMessage: $"SignalR MaximumReceiveMessageSize should be at least 1MB but was {maxSize / 1024.0:F0}KB"
+            maxSize >= 1024 * 1024,
+            $"SignalR MaximumReceiveMessageSize should be at least 1MB but was {maxSize / 1024.0:F0}KB"
         );
     }
 }

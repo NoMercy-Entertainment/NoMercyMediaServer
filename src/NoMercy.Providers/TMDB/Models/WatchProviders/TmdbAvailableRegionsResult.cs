@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TMDB.Models.WatchProviders;
 
 public class TmdbAvailableRegionsResult
 {
-    [JsonProperty(propertyName: "iso_3166_1")]
+    [JsonProperty("iso_3166_1")]
     public string Iso31661 { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "english_name")]
+    [JsonProperty("english_name")]
     public string EnglishName { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "native_name")]
+    [JsonProperty("native_name")]
     public string? NativeName { get; set; }
 }

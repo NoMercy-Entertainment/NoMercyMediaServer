@@ -21,6 +21,6 @@ public class ImageRepository(MediaContext context) : IImageRepository
     {
         return context
             .Images.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: image => image.FilePath == filePath, cancellationToken: ct);
+            .FirstOrDefaultAsync(image => image.FilePath == filePath, ct);
     }
 }

@@ -16,85 +16,85 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.People;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(Name))]
-[Index(propertyName: nameof(TitleSort))]
-[Index(propertyName: nameof(ImdbId))]
-[Index(propertyName: nameof(BirthDay))]
-[Index(propertyName: nameof(Popularity))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(Name))]
+[Index(nameof(TitleSort))]
+[Index(nameof(ImdbId))]
+[Index(nameof(BirthDay))]
+[Index(nameof(Popularity))]
 public class Person : ColorPaletteTimeStamps
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "adult")]
+    [JsonProperty("adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty(propertyName: "also_known_as")]
+    [JsonProperty("also_known_as")]
     public string? AlsoKnownAs { get; set; }
 
-    [MaxLength(length: 4096)]
-    [JsonProperty(propertyName: "biography")]
+    [MaxLength(4096)]
+    [JsonProperty("biography")]
     public string? Biography { get; set; }
 
-    [JsonProperty(propertyName: "birthday")]
+    [JsonProperty("birthday")]
     public DateTime? BirthDay { get; set; }
 
-    [JsonProperty(propertyName: "deathday")]
+    [JsonProperty("deathday")]
     public DateTime? DeathDay { get; set; }
 
-    [JsonProperty(propertyName: "homepage")]
+    [JsonProperty("homepage")]
     public string? Homepage { get; set; }
 
-    [JsonProperty(propertyName: "imdb_id")]
+    [JsonProperty("imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty(propertyName: "known_for_department")]
+    [JsonProperty("known_for_department")]
     public string? KnownForDepartment { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "place_of_birth")]
+    [JsonProperty("place_of_birth")]
     public string? PlaceOfBirth { get; set; }
 
-    [JsonProperty(propertyName: "popularity")]
+    [JsonProperty("popularity")]
     public double Popularity { get; set; }
 
-    [JsonProperty(propertyName: "profile")]
+    [JsonProperty("profile")]
     public string? Profile { get; set; }
 
-    [JsonProperty(propertyName: "title_sort")]
+    [JsonProperty("title_sort")]
     public string TitleSort { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "casts")]
+    [JsonProperty("casts")]
     public ICollection<Cast> Casts { get; set; } = [];
 
-    [JsonProperty(propertyName: "crews")]
+    [JsonProperty("crews")]
     public ICollection<Crew> Crews { get; set; } = [];
 
-    [JsonProperty(propertyName: "images")]
+    [JsonProperty("images")]
     public ICollection<Image> Images { get; set; } = [];
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public ICollection<Translation> Translations { get; set; } = [];
 
-    [Column(name: "Gender")]
-    [JsonProperty(propertyName: "gender")]
+    [Column("Gender")]
+    [JsonProperty("gender")]
     [System.Text.Json.Serialization.JsonIgnore]
     public TmdbGender TmdbGender { get; set; }
 
     [NotMapped]
-    [JsonProperty(propertyName: "Gender")]
+    [JsonProperty("Gender")]
     public string Gender
     {
         get => TmdbGender.ToString();
-        set => TmdbGender = Enum.Parse<TmdbGender>(value: value);
+        set => TmdbGender = Enum.Parse<TmdbGender>(value);
     }
 
-    [Column(name: "ExternalIds")]
-    [JsonProperty(propertyName: "external_ids")]
+    [Column("ExternalIds")]
+    [JsonProperty("external_ids")]
     [System.Text.Json.Serialization.JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string? _externalIds { get; set; }
@@ -105,7 +105,7 @@ public class Person : ColorPaletteTimeStamps
         get =>
             _externalIds is null
                 ? null
-                : JsonConvert.DeserializeObject<TmdbPersonExternalIds>(value: _externalIds);
-        set => _externalIds = JsonConvert.SerializeObject(value: value);
+                : JsonConvert.DeserializeObject<TmdbPersonExternalIds>(_externalIds);
+        set => _externalIds = JsonConvert.SerializeObject(value);
     }
 }

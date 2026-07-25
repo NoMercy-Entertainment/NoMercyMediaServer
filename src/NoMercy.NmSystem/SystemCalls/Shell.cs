@@ -43,7 +43,7 @@ public static class Shell
         string executable,
         string arguments,
         ExecOptions? options = null
-    ) => ExecCoreAsync(executable: executable, configureArguments: psi => psi.Arguments = arguments, options: options);
+    ) => ExecCoreAsync(executable, psi => psi.Arguments = arguments, options);
 
     /// <summary>
     /// Runs <paramref name="executable"/> with each entry passed as a
@@ -59,13 +59,13 @@ public static class Shell
         ExecOptions? options = null
     ) =>
         ExecCoreAsync(
-            executable: executable,
-            configureArguments: psi =>
+            executable,
+            psi =>
             {
                 foreach (string argument in arguments)
-                    psi.ArgumentList.Add(item: argument);
+                    psi.ArgumentList.Add(argument);
             },
-            options: options
+            options
         );
 
     private static async Task<ExecResult> ExecCoreAsync(
@@ -78,7 +78,7 @@ public static class Shell
         using Process process = new();
 
         process.StartInfo.FileName = executable;
-        configureArguments(obj: process.StartInfo);
+        configureArguments(process.StartInfo);
         process.StartInfo.WorkingDirectory = options.WorkingDirectory.OrEmpty();
 
         if (options.CaptureStdOut)
@@ -99,7 +99,7 @@ public static class Shell
             process.StartInfo.RedirectStandardError = options.CaptureStdErr;
 
         foreach (KeyValuePair<string, string> envVar in options.EnvironmentVariables)
-            process.StartInfo.EnvironmentVariables[key: envVar.Key] = envVar.Value;
+            process.StartInfo.EnvironmentVariables[envVar.Key] = envVar.Value;
 
         StringBuilder outputBuilder = new();
         StringBuilder errorBuilder = new();
@@ -107,14 +107,14 @@ public static class Shell
         process.OutputDataReceived += (_, e) =>
         {
             if (e.Data != null)
-                outputBuilder.AppendLine(value: e.Data);
+                outputBuilder.AppendLine(e.Data);
         };
 
         if (options is { CaptureStdErr: true, MergeStdErrToOut: false })
             process.ErrorDataReceived += (_, e) =>
             {
                 if (e.Data != null)
-                    errorBuilder.AppendLine(value: e.Data);
+                    errorBuilder.AppendLine(e.Data);
             };
 
         try
@@ -122,7 +122,7 @@ public static class Shell
             process.Start();
 
             // Attach the started process as a child of this application so it is terminated when the parent exits.
-            ChildProcessManager.Attach(process: process);
+            ChildProcessManager.Attach(process);
 
             if (options.CaptureStdOut)
                 process.BeginOutputReadLine();
@@ -167,7 +167,7 @@ public static class Shell
     /// </summary>
     public static string EscapeShellArgument(string value)
     {
-        return "'" + value.Replace(oldValue: "'", newValue: "'\\''") + "'";
+        return "'" + value.Replace("'", "'\\''") + "'";
     }
 
     public static string ExecCommand(string command)
@@ -183,20 +183,20 @@ public static class Shell
                 CreateNoWindow = true,
             };
 
-            using Process? process = Process.Start(startInfo: psi);
+            using Process? process = Process.Start(psi);
             if (process != null)
             {
                 // Attach so the process is killed when the parent exits.
-                ChildProcessManager.Attach(process: process);
+                ChildProcessManager.Attach(process);
 
                 string output = process.StandardOutput.ReadToEnd().Trim();
                 process.WaitForExit();
-                return string.IsNullOrEmpty(value: output) ? "Unknown" : output;
+                return string.IsNullOrEmpty(output) ? "Unknown" : output;
             }
         }
         catch (Exception ex)
         {
-            Logger.Error(message: $"Error running command: {ex.Message}");
+            Logger.Error($"Error running command: {ex.Message}");
         }
 
         return "Unknown";
@@ -208,7 +208,7 @@ public static class Shell
         ExecOptions? options = null
     )
     {
-        return ExecAsync(executable: executable, arguments: arguments, options: options).GetAwaiter().GetResult();
+        return ExecAsync(executable, arguments, options).GetAwaiter().GetResult();
     }
 
     public static ExecResult ExecSync(
@@ -217,7 +217,7 @@ public static class Shell
         ExecOptions? options = null
     )
     {
-        return ExecAsync(executable: executable, arguments: arguments, options: options).GetAwaiter().GetResult();
+        return ExecAsync(executable, arguments, options).GetAwaiter().GetResult();
     }
 
     public static async Task<string> ExecStdOutAsync(
@@ -226,7 +226,7 @@ public static class Shell
         ExecOptions? options = null
     )
     {
-        return (await ExecAsync(executable: executable, arguments: arguments, options: options)).StandardOutput;
+        return (await ExecAsync(executable, arguments, options)).StandardOutput;
     }
 
     public static string ExecStdOutSync(
@@ -235,7 +235,7 @@ public static class Shell
         ExecOptions? options = null
     )
     {
-        return ExecSync(executable: executable, arguments: arguments, options: options).StandardOutput;
+        return ExecSync(executable, arguments, options).StandardOutput;
     }
 
     public static async Task<string> ExecStdErrAsync(
@@ -245,7 +245,7 @@ public static class Shell
     )
     {
         options ??= new() { CaptureStdErr = true, CaptureStdOut = false };
-        return (await ExecAsync(executable: executable, arguments: arguments, options: options)).StandardError;
+        return (await ExecAsync(executable, arguments, options)).StandardError;
     }
 
     public static string ExecStdErrSync(
@@ -255,7 +255,7 @@ public static class Shell
     )
     {
         options ??= new() { CaptureStdErr = true, CaptureStdOut = false };
-        return ExecSync(executable: executable, arguments: arguments, options: options).StandardError;
+        return ExecSync(executable, arguments, options).StandardError;
     }
 
     // Child process manager: attaches started processes so they are terminated when the parent exits.
@@ -273,27 +273,27 @@ public static class Shell
             if (process.HasExited)
                 return;
 
-            if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 try
                 {
                     EnsureJobObject();
                     // Assign the process to the job object
-                    bool assigned = AssignProcessToJobObject(hJob: _jobHandle, hProcess: process.Handle);
+                    bool assigned = AssignProcessToJobObject(_jobHandle, process.Handle);
                     // If assignment fails, there's not much we can do - fallback to ProcessExit handler
                     if (!assigned)
                     {
-                        RegisterFallback(process: process);
+                        RegisterFallback(process);
                     }
                 }
                 catch
                 {
-                    RegisterFallback(process: process);
+                    RegisterFallback(process);
                 }
             }
             else
             {
-                RegisterFallback(process: process);
+                RegisterFallback(process);
             }
         }
 
@@ -305,7 +305,7 @@ public static class Shell
                 try
                 {
                     if (!process.HasExited)
-                        process.Kill(entireProcessTree: true);
+                        process.Kill(true);
                 }
                 catch
                 { /* swallow exceptions */
@@ -327,9 +327,9 @@ public static class Shell
                 if (_jobHandle != IntPtr.Zero)
                     return;
 
-                _jobHandle = CreateJobObject(lpJobAttributes: IntPtr.Zero, lpName: null);
+                _jobHandle = CreateJobObject(IntPtr.Zero, null);
                 if (_jobHandle == IntPtr.Zero)
-                    throw new InvalidOperationException(message: "CreateJobObject failed.");
+                    throw new InvalidOperationException("CreateJobObject failed.");
 
                 JOBOBJECT_EXTENDED_LIMIT_INFORMATION info = new()
                 {
@@ -340,27 +340,27 @@ public static class Shell
                 };
 
                 int length = Marshal.SizeOf<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>();
-                IntPtr p = Marshal.AllocHGlobal(cb: length);
+                IntPtr p = Marshal.AllocHGlobal(length);
                 try
                 {
-                    Marshal.StructureToPtr(structure: info, ptr: p, fDeleteOld: false);
+                    Marshal.StructureToPtr(info, p, false);
                     if (
                         !SetInformationJobObject(
-                            hJob: _jobHandle,
-                            JobObjectInfoClass: JobObjectExtendedLimitInformation,
-                            lpJobObjectInfo: p,
-                            cbJobObjectInfoLength: (uint)length
+                            _jobHandle,
+                            JobObjectExtendedLimitInformation,
+                            p,
+                            (uint)length
                         )
                     )
                     {
-                        CloseHandle(hObject: _jobHandle);
+                        CloseHandle(_jobHandle);
                         _jobHandle = IntPtr.Zero;
-                        throw new InvalidOperationException(message: "SetInformationJobObject failed.");
+                        throw new InvalidOperationException("SetInformationJobObject failed.");
                     }
                 }
                 finally
                 {
-                    Marshal.FreeHGlobal(hglobal: p);
+                    Marshal.FreeHGlobal(p);
                 }
 
                 // Keep the job handle open for the lifetime of the process so that when this process exits,
@@ -371,7 +371,7 @@ public static class Shell
         private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
         private const int JobObjectExtendedLimitInformation = 9;
 
-        [StructLayout(layoutKind: LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential)]
         private struct JOBOBJECT_BASIC_LIMIT_INFORMATION
         {
             public long PerProcessUserTimeLimit;
@@ -385,7 +385,7 @@ public static class Shell
             public uint SchedulingClass;
         }
 
-        [StructLayout(layoutKind: LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential)]
         private struct IO_COUNTERS
         {
             public ulong ReadOperationCount;
@@ -396,7 +396,7 @@ public static class Shell
             public ulong OtherTransferCount;
         }
 
-        [StructLayout(layoutKind: LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential)]
         private struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION
         {
             public JOBOBJECT_BASIC_LIMIT_INFORMATION BasicLimitInformation;
@@ -407,10 +407,10 @@ public static class Shell
             public UIntPtr PeakJobMemoryUsed;
         }
 
-        [DllImport(dllName: "kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr CreateJobObject(IntPtr lpJobAttributes, string? lpName);
 
-        [DllImport(dllName: "kernel32.dll", SetLastError = true)]
+        [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool SetInformationJobObject(
             IntPtr hJob,
             int JobObjectInfoClass,
@@ -418,25 +418,25 @@ public static class Shell
             uint cbJobObjectInfoLength
         );
 
-        [DllImport(dllName: "kernel32.dll", SetLastError = true)]
+        [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool AssignProcessToJobObject(IntPtr hJob, IntPtr hProcess);
 
-        [DllImport(dllName: "kernel32.dll", SetLastError = true)]
+        [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CloseHandle(IntPtr hObject);
     }
 
     public static class ProcessHelper
     {
-        [System.Runtime.Versioning.SupportedOSPlatform(platformName: "windows")]
-        [DllImport(dllName: "kernel32.dll", SetLastError = true)]
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+        [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool AttachConsole(uint dwProcessId);
 
-        [System.Runtime.Versioning.SupportedOSPlatform(platformName: "windows")]
-        [DllImport(dllName: "kernel32.dll", SetLastError = true, ExactSpelling = true)]
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
         private static extern bool FreeConsole();
 
-        [System.Runtime.Versioning.SupportedOSPlatform(platformName: "windows")]
-        [DllImport(dllName: "kernel32.dll", SetLastError = true)]
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+        [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool GenerateConsoleCtrlEvent(
             CtrlTypes dwCtrlEvent,
             uint dwProcessGroupId
@@ -451,12 +451,12 @@ public static class Shell
         {
             if (!OperatingSystem.IsWindows())
                 throw new PlatformNotSupportedException(
-                    message: "SendCtrlC is only supported on Windows platforms."
+                    "SendCtrlC is only supported on Windows platforms."
                 );
 
-            if (AttachConsole(dwProcessId: (uint)process.Id))
+            if (AttachConsole((uint)process.Id))
             {
-                GenerateConsoleCtrlEvent(dwCtrlEvent: CtrlTypes.CTRL_C_EVENT, dwProcessGroupId: 0);
+                GenerateConsoleCtrlEvent(CtrlTypes.CTRL_C_EVENT, 0);
                 FreeConsole();
             }
         }
@@ -470,6 +470,6 @@ public static class Shell
         /// back to a ProcessExit tree-kill) and if the process already exited.
         /// </summary>
         public static void AttachToParentLifetime(Process process) =>
-            ChildProcessManager.Attach(process: process);
+            ChildProcessManager.Attach(process);
     }
 }

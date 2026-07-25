@@ -58,7 +58,7 @@ public record MovieMediaRef(
     string Title,
     int? Year,
     string? Description = null
-) : MediaItemRef(Type: Type, Id: Id, Title: Title, Year: Year);
+) : MediaItemRef(Type, Id, Title, Year);
 
 /// <summary>Episode-specific media reference carrying show/season/episode fields.</summary>
 public record EpisodeMediaRef(
@@ -74,4 +74,4 @@ public record EpisodeMediaRef(
     // existing named-argument callers keep compiling.
     long ShowTmdbId = 0,
     string? Description = null
-) : MediaItemRef(Type: Type, Id: Id, Title: Title, Year: Year);
+) : MediaItemRef(Type, Id, Title, Year);

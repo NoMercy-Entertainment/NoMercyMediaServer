@@ -15,24 +15,24 @@ namespace NoMercy.Cli.Models;
 
 internal class PluginResponse
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string Description { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "version")]
+    [JsonProperty("version")]
     public string Version { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "author")]
+    [JsonProperty("author")]
     public string Author { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "project_url")]
+    [JsonProperty("project_url")]
     public string? ProjectUrl { get; set; }
 }

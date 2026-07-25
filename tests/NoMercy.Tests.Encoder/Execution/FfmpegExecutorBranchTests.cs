@@ -47,51 +47,51 @@ public class FfmpegExecutorBranchTests
 
     public FfmpegExecutorBranchTests()
     {
-        _executor = new(processRunner: _processRunner.Object, logger: NullLogger<FfmpegExecutor>.Instance);
+        _executor = new(_processRunner.Object, NullLogger<FfmpegExecutor>.Instance);
     }
 
     // ── ClassifyError keyword table ──────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: ["No such file or directory", EncodingErrorKind.InputNotFound, false])]
-    [InlineData(data: ["Invalid data found when processing input", EncodingErrorKind.InputCorrupt, false])]
-    [InlineData(data: ["Codec not currently supported in container", EncodingErrorKind.CodecUnavailable, false])]
-    [InlineData(data: ["Encoder libx265 not found", EncodingErrorKind.CodecUnavailable, false])]
-    [InlineData(data: ["Device 'cuda' cannot allocate", EncodingErrorKind.HardwareFailure, true])]
-    [InlineData(data: ["No space left on device", EncodingErrorKind.DiskFull, false])]
-    [InlineData(data: ["Out of memory", EncodingErrorKind.HardwareFailure, true])]
-    [InlineData(data: ["Something we have never seen", EncodingErrorKind.ProcessCrashed, true])]
+    [InlineData(["No such file or directory", EncodingErrorKind.InputNotFound, false])]
+    [InlineData(["Invalid data found when processing input", EncodingErrorKind.InputCorrupt, false])]
+    [InlineData(["Codec not currently supported in container", EncodingErrorKind.CodecUnavailable, false])]
+    [InlineData(["Encoder libx265 not found", EncodingErrorKind.CodecUnavailable, false])]
+    [InlineData(["Device 'cuda' cannot allocate", EncodingErrorKind.HardwareFailure, true])]
+    [InlineData(["No space left on device", EncodingErrorKind.DiskFull, false])]
+    [InlineData(["Out of memory", EncodingErrorKind.HardwareFailure, true])]
+    [InlineData(["Something we have never seen", EncodingErrorKind.ProcessCrashed, true])]
     public async Task Classify_error_per_keyword_table(
         string stderr,
         EncodingErrorKind expectedKind,
         bool expectedRecoverable
     )
     {
-        SetupFailedRun(stderr: stderr);
+        SetupFailedRun(stderr);
 
         ExecutionResult result = await _executor.ExecuteAsync(
-            command: BuildSimpleCommand(),
-            inputDuration: TimeSpan.FromMinutes(minutes: 1)
+            BuildSimpleCommand(),
+            TimeSpan.FromMinutes(1)
         );
 
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        result.Error!.Kind.Should().Be(expected: expectedKind);
-        result.Error.Recoverable.Should().Be(expected: expectedRecoverable);
+        result.Error!.Kind.Should().Be(expectedKind);
+        result.Error.Recoverable.Should().Be(expectedRecoverable);
     }
 
     [Fact]
     public async Task Classify_keyword_match_is_case_insensitive()
     {
         // ClassifyError uses ToLowerInvariant — uppercase keywords must match.
-        SetupFailedRun(stderr: "ERROR: NO SUCH FILE OR DIRECTORY");
+        SetupFailedRun("ERROR: NO SUCH FILE OR DIRECTORY");
 
         ExecutionResult result = await _executor.ExecuteAsync(
-            command: BuildSimpleCommand(),
-            inputDuration: TimeSpan.FromMinutes(minutes: 1)
+            BuildSimpleCommand(),
+            TimeSpan.FromMinutes(1)
         );
 
-        result.Error!.Kind.Should().Be(expected: EncodingErrorKind.InputNotFound);
+        result.Error!.Kind.Should().Be(EncodingErrorKind.InputNotFound);
     }
 
     // ── Empty stderr default classification ─────────────────────────────────
@@ -99,14 +99,14 @@ public class FfmpegExecutorBranchTests
     [Fact]
     public async Task Empty_stderr_with_nonzero_exit_classifies_as_ProcessCrashed()
     {
-        SetupFailedRun(stderr: "");
+        SetupFailedRun("");
 
         ExecutionResult result = await _executor.ExecuteAsync(
-            command: BuildSimpleCommand(),
-            inputDuration: TimeSpan.FromMinutes(minutes: 1)
+            BuildSimpleCommand(),
+            TimeSpan.FromMinutes(1)
         );
 
-        result.Error!.Kind.Should().Be(expected: EncodingErrorKind.ProcessCrashed);
+        result.Error!.Kind.Should().Be(EncodingErrorKind.ProcessCrashed);
         result.Error.Recoverable.Should().BeTrue(); // ProcessCrashed is recoverable
     }
 
@@ -118,34 +118,34 @@ public class FfmpegExecutorBranchTests
         // Diagnostic value lives in the tail — the actual failure line comes
         // AFTER ffmpeg's banner spam, library version dumps, etc. We want the
         // executor to keep the most recent bytes, not the first 2000.
-        string head = new(c: 'A', count: 3000);
+        string head = new('A', 3000);
         string tail = "FATAL_LINE_AT_END";
         string stderr = head + tail;
 
-        SetupFailedRun(stderr: stderr);
+        SetupFailedRun(stderr);
 
         ExecutionResult result = await _executor.ExecuteAsync(
-            command: BuildSimpleCommand(),
-            inputDuration: TimeSpan.FromMinutes(minutes: 1)
+            BuildSimpleCommand(),
+            TimeSpan.FromMinutes(1)
         );
 
         result.Error!.FfmpegStderr.Should().NotBeNull();
-        result.Error.FfmpegStderr!.Length.Should().Be(expected: 2000);
-        result.Error.FfmpegStderr.Should().EndWith(expected: tail);
+        result.Error.FfmpegStderr!.Length.Should().Be(2000);
+        result.Error.FfmpegStderr.Should().EndWith(tail);
     }
 
     [Fact]
     public async Task Stderr_at_or_under_2000_chars_kept_in_full()
     {
-        string stderr = new(c: 'A', count: 2000);
-        SetupFailedRun(stderr: stderr);
+        string stderr = new('A', 2000);
+        SetupFailedRun(stderr);
 
         ExecutionResult result = await _executor.ExecuteAsync(
-            command: BuildSimpleCommand(),
-            inputDuration: TimeSpan.FromMinutes(minutes: 1)
+            BuildSimpleCommand(),
+            TimeSpan.FromMinutes(1)
         );
 
-        result.Error!.FfmpegStderr.Should().Be(expected: stderr);
+        result.Error!.FfmpegStderr.Should().Be(stderr);
     }
 
     // ── Average metrics edge cases ───────────────────────────────────────────
@@ -157,7 +157,7 @@ public class FfmpegExecutorBranchTests
         // the metric accumulator stays at sampleCount=0. Must NOT divide-by-zero
         // and yield NaN — the dashboard renders metrics as numbers.
         _processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -169,21 +169,21 @@ public class FfmpegExecutorBranchTests
                     It.IsAny<Action<int>?>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
 
         ExecutionResult result = await _executor.ExecuteAsync(
-            command: BuildSimpleCommand(),
-            inputDuration: TimeSpan.FromMinutes(minutes: 1)
+            BuildSimpleCommand(),
+            TimeSpan.FromMinutes(1)
         );
 
         result.Success.Should().BeTrue();
         result.Metrics.Should().NotBeNull();
-        result.Metrics!.AverageSpeed.Should().Be(expected: 0);
-        result.Metrics.AverageFps.Should().Be(expected: 0);
-        result.Metrics.PeakSpeed.Should().Be(expected: 0);
-        result.Metrics.PeakFps.Should().Be(expected: 0);
-        double.IsNaN(d: result.Metrics.AverageSpeed).Should().BeFalse();
-        double.IsNaN(d: result.Metrics.AverageFps).Should().BeFalse();
+        result.Metrics!.AverageSpeed.Should().Be(0);
+        result.Metrics.AverageFps.Should().Be(0);
+        result.Metrics.PeakSpeed.Should().Be(0);
+        result.Metrics.PeakFps.Should().Be(0);
+        double.IsNaN(result.Metrics.AverageSpeed).Should().BeFalse();
+        double.IsNaN(result.Metrics.AverageFps).Should().BeFalse();
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class FfmpegExecutorBranchTests
         // not a representative measurement). Speeds 1.0 + 3.0 average to 2.0,
         // fps 20 + 60 average to 40, peaks come from the higher sample.
         _processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -216,47 +216,47 @@ public class FfmpegExecutorBranchTests
                 CancellationToken,
                 Action<int>?
             >(
-                action: (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
+                (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
                 {
-                    onStdOut?.Invoke(obj: "frame=100");
-                    onStdOut?.Invoke(obj: "fps=20.0");
-                    onStdOut?.Invoke(obj: "out_time_us=10000000");
-                    onStdOut?.Invoke(obj: "total_size=512000");
-                    onStdOut?.Invoke(obj: "speed=1.0x");
-                    onStdOut?.Invoke(obj: "progress=continue");
+                    onStdOut?.Invoke("frame=100");
+                    onStdOut?.Invoke("fps=20.0");
+                    onStdOut?.Invoke("out_time_us=10000000");
+                    onStdOut?.Invoke("total_size=512000");
+                    onStdOut?.Invoke("speed=1.0x");
+                    onStdOut?.Invoke("progress=continue");
 
-                    onStdOut?.Invoke(obj: "frame=200");
-                    onStdOut?.Invoke(obj: "fps=60.0");
-                    onStdOut?.Invoke(obj: "out_time_us=20000000");
-                    onStdOut?.Invoke(obj: "total_size=1024000");
-                    onStdOut?.Invoke(obj: "speed=3.0x");
-                    onStdOut?.Invoke(obj: "progress=continue");
+                    onStdOut?.Invoke("frame=200");
+                    onStdOut?.Invoke("fps=60.0");
+                    onStdOut?.Invoke("out_time_us=20000000");
+                    onStdOut?.Invoke("total_size=1024000");
+                    onStdOut?.Invoke("speed=3.0x");
+                    onStdOut?.Invoke("progress=continue");
 
                     // Final wrap-up sample — excluded from averages by design.
-                    onStdOut?.Invoke(obj: "frame=210");
-                    onStdOut?.Invoke(obj: "fps=70.0");
-                    onStdOut?.Invoke(obj: "out_time_us=21000000");
-                    onStdOut?.Invoke(obj: "total_size=1100000");
-                    onStdOut?.Invoke(obj: "speed=5.0x");
-                    onStdOut?.Invoke(obj: "progress=end");
+                    onStdOut?.Invoke("frame=210");
+                    onStdOut?.Invoke("fps=70.0");
+                    onStdOut?.Invoke("out_time_us=21000000");
+                    onStdOut?.Invoke("total_size=1100000");
+                    onStdOut?.Invoke("speed=5.0x");
+                    onStdOut?.Invoke("progress=end");
                 }
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 2)));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(2)));
 
         ExecutionResult result = await _executor.ExecuteAsync(
-            command: BuildSimpleCommand(),
-            inputDuration: TimeSpan.FromSeconds(seconds: 20)
+            BuildSimpleCommand(),
+            TimeSpan.FromSeconds(20)
         );
 
         result.Success.Should().BeTrue();
-        result.Metrics!.AverageSpeed.Should().Be(expected: 2.0);
-        result.Metrics.AverageFps.Should().Be(expected: 40.0);
-        result.Metrics.PeakSpeed.Should().Be(expected: 3.0);
-        result.Metrics.PeakFps.Should().Be(expected: 60.0);
+        result.Metrics!.AverageSpeed.Should().Be(2.0);
+        result.Metrics.AverageFps.Should().Be(40.0);
+        result.Metrics.PeakSpeed.Should().Be(3.0);
+        result.Metrics.PeakFps.Should().Be(60.0);
         // TotalSizeBytes carries the LAST non-end sample's size because the
         // command in this test does not pass `pipe:1`. The end-of-stream
         // sample only updates lastTotalSize when hasProgressPipe is true.
-        result.Metrics.TotalSizeBytes.Should().Be(expected: 1024000);
+        result.Metrics.TotalSizeBytes.Should().Be(1024000);
     }
 
     // ── Progress callback shape ──────────────────────────────────────────────
@@ -267,7 +267,7 @@ public class FfmpegExecutorBranchTests
         // The onProgress=null path must short-circuit cleanly inside OnStdOut
         // — `if (onProgress is null) return;`.
         _processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -289,22 +289,22 @@ public class FfmpegExecutorBranchTests
                 CancellationToken,
                 Action<int>?
             >(
-                action: (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
+                (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
                 {
-                    onStdOut?.Invoke(obj: "frame=100");
-                    onStdOut?.Invoke(obj: "fps=30.0");
-                    onStdOut?.Invoke(obj: "out_time_us=30000000");
-                    onStdOut?.Invoke(obj: "speed=2.0x");
-                    onStdOut?.Invoke(obj: "progress=continue");
+                    onStdOut?.Invoke("frame=100");
+                    onStdOut?.Invoke("fps=30.0");
+                    onStdOut?.Invoke("out_time_us=30000000");
+                    onStdOut?.Invoke("speed=2.0x");
+                    onStdOut?.Invoke("progress=continue");
                 }
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
 
         Func<Task> act = () =>
             _executor.ExecuteAsync(
-                command: BuildSimpleCommand(),
-                inputDuration: TimeSpan.FromSeconds(seconds: 60),
-                onProgress: null
+                BuildSimpleCommand(),
+                TimeSpan.FromSeconds(60),
+                null
             );
         await act.Should().NotThrowAsync();
     }
@@ -316,7 +316,7 @@ public class FfmpegExecutorBranchTests
         // out_time past the documented duration — percent must clamp to 100.
         EncodingProgress? lastProgress = null;
         _processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -338,26 +338,26 @@ public class FfmpegExecutorBranchTests
                 CancellationToken,
                 Action<int>?
             >(
-                action: (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
+                (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
                 {
                     // Duration was set to 1 second, ffmpeg reports 5 seconds.
-                    onStdOut?.Invoke(obj: "frame=100");
-                    onStdOut?.Invoke(obj: "fps=30.0");
-                    onStdOut?.Invoke(obj: "out_time_us=5000000");
-                    onStdOut?.Invoke(obj: "speed=2.0x");
-                    onStdOut?.Invoke(obj: "progress=end");
+                    onStdOut?.Invoke("frame=100");
+                    onStdOut?.Invoke("fps=30.0");
+                    onStdOut?.Invoke("out_time_us=5000000");
+                    onStdOut?.Invoke("speed=2.0x");
+                    onStdOut?.Invoke("progress=end");
                 }
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
 
         await _executor.ExecuteAsync(
-            command: BuildSimpleCommand(),
-            inputDuration: TimeSpan.FromSeconds(seconds: 1),
-            onProgress: p => lastProgress = p
+            BuildSimpleCommand(),
+            TimeSpan.FromSeconds(1),
+            p => lastProgress = p
         );
 
         lastProgress.Should().NotBeNull();
-        lastProgress!.PercentComplete.Should().Be(expected: 100.0);
+        lastProgress!.PercentComplete.Should().Be(100.0);
     }
 
     [Fact]
@@ -366,7 +366,7 @@ public class FfmpegExecutorBranchTests
         // Live transcode / unknown source: duration=0 must NOT divide-by-zero.
         EncodingProgress? lastProgress = null;
         _processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -388,25 +388,25 @@ public class FfmpegExecutorBranchTests
                 CancellationToken,
                 Action<int>?
             >(
-                action: (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
+                (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
                 {
-                    onStdOut?.Invoke(obj: "frame=100");
-                    onStdOut?.Invoke(obj: "fps=30.0");
-                    onStdOut?.Invoke(obj: "out_time_us=5000000");
-                    onStdOut?.Invoke(obj: "speed=2.0x");
-                    onStdOut?.Invoke(obj: "progress=end");
+                    onStdOut?.Invoke("frame=100");
+                    onStdOut?.Invoke("fps=30.0");
+                    onStdOut?.Invoke("out_time_us=5000000");
+                    onStdOut?.Invoke("speed=2.0x");
+                    onStdOut?.Invoke("progress=end");
                 }
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
 
         await _executor.ExecuteAsync(
-            command: BuildSimpleCommand(),
-            inputDuration: TimeSpan.Zero,
-            onProgress: p => lastProgress = p
+            BuildSimpleCommand(),
+            TimeSpan.Zero,
+            p => lastProgress = p
         );
 
         lastProgress.Should().NotBeNull();
-        lastProgress!.PercentComplete.Should().Be(expected: 0);
+        lastProgress!.PercentComplete.Should().Be(0);
         lastProgress.EstimatedRemaining.Should().BeNull();
     }
 
@@ -417,7 +417,7 @@ public class FfmpegExecutorBranchTests
     {
         EncodingProgress? lastProgress = null;
         _processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -439,25 +439,25 @@ public class FfmpegExecutorBranchTests
                 CancellationToken,
                 Action<int>?
             >(
-                action: (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
+                (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
                 {
-                    onStdOut?.Invoke(obj: "frame=100");
-                    onStdOut?.Invoke(obj: "fps=30.0");
-                    onStdOut?.Invoke(obj: "out_time_us=10000000");
+                    onStdOut?.Invoke("frame=100");
+                    onStdOut?.Invoke("fps=30.0");
+                    onStdOut?.Invoke("out_time_us=10000000");
                     // no bitrate= line emitted
-                    onStdOut?.Invoke(obj: "speed=1.0x");
-                    onStdOut?.Invoke(obj: "progress=end");
+                    onStdOut?.Invoke("speed=1.0x");
+                    onStdOut?.Invoke("progress=end");
                 }
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 1)));
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(1)));
 
         await _executor.ExecuteAsync(
-            command: BuildSimpleCommand(),
-            inputDuration: TimeSpan.FromMinutes(minutes: 1),
-            onProgress: p => lastProgress = p
+            BuildSimpleCommand(),
+            TimeSpan.FromMinutes(1),
+            p => lastProgress = p
         );
 
-        lastProgress!.Bitrate.Should().Be(expected: "N/A");
+        lastProgress!.Bitrate.Should().Be("N/A");
         lastProgress.BitrateKbps.Should().BeNull();
     }
 
@@ -465,7 +465,7 @@ public class FfmpegExecutorBranchTests
 
     private void SetupFailedRun(string stderr) =>
         _processRunner
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -477,8 +477,8 @@ public class FfmpegExecutorBranchTests
                     It.IsAny<Action<int>?>()
                 )
             )
-            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: stderr, Duration: TimeSpan.FromSeconds(seconds: 1)));
+            .ReturnsAsync(new ProcessResult(1, "", stderr, TimeSpan.FromSeconds(1)));
 
     private static FfmpegCommand BuildSimpleCommand() =>
-        new(Executable: "ffmpeg", Arguments: ["-i", "/input.mkv", "/output.mp4"], WorkingDirectory: null);
+        new("ffmpeg", ["-i", "/input.mkv", "/output.mp4"], null);
 }

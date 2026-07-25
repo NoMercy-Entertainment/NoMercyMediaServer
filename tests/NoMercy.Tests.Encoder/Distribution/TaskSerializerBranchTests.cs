@@ -11,7 +11,6 @@
 
 using System.Text;
 using Newtonsoft.Json;
-using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Distribution;
 
 namespace NoMercy.Tests.Encoder.Distribution;
@@ -35,7 +34,7 @@ namespace NoMercy.Tests.Encoder.Distribution;
 public class TaskSerializerBranchTests
 {
     private readonly byte[] _signingKey = Encoding.UTF8.GetBytes(
-        s: "test-task-signing-key-32-bytes-!"
+        "test-task-signing-key-32-bytes-!"
     );
     private readonly TaskSerializer _serializer = new();
 
@@ -48,13 +47,13 @@ public class TaskSerializerBranchTests
         // own envelope shape, signed with the real key. The deserializer must
         // reject the timestamp even though the HMAC is valid.
         EncodeTask task = MakeTask();
-        DateTime staleTs = DateTime.UtcNow.AddMinutes(value: -6);
-        string inner = JsonConvert.SerializeObject(value: new { Task = task, TimestampUtc = staleTs });
-        string envelope = SignEnvelope(inner: inner);
+        DateTime staleTs = DateTime.UtcNow.AddMinutes(-6);
+        string inner = JsonConvert.SerializeObject(new { Task = task, TimestampUtc = staleTs });
+        string envelope = SignEnvelope(inner);
 
-        EncodeTask? result = _serializer.Deserialize(payload: envelope, signingKey: _signingKey);
+        EncodeTask? result = _serializer.Deserialize(envelope, _signingKey);
 
-        result.Should().BeNull(because: "expired payloads must not be accepted even with valid HMAC");
+        result.Should().BeNull("expired payloads must not be accepted even with valid HMAC");
     }
 
     [Fact]
@@ -63,11 +62,11 @@ public class TaskSerializerBranchTests
         // Anything ≤ 5 minutes old is accepted. Use 4 min 30s to dodge clock
         // jitter while still proving the boundary side.
         EncodeTask task = MakeTask();
-        DateTime nearLimit = DateTime.UtcNow.AddSeconds(value: -270);
-        string inner = JsonConvert.SerializeObject(value: new { Task = task, TimestampUtc = nearLimit });
-        string envelope = SignEnvelope(inner: inner);
+        DateTime nearLimit = DateTime.UtcNow.AddSeconds(-270);
+        string inner = JsonConvert.SerializeObject(new { Task = task, TimestampUtc = nearLimit });
+        string envelope = SignEnvelope(inner);
 
-        EncodeTask? result = _serializer.Deserialize(payload: envelope, signingKey: _signingKey);
+        EncodeTask? result = _serializer.Deserialize(envelope, _signingKey);
 
         result.Should().NotBeNull();
     }
@@ -75,14 +74,14 @@ public class TaskSerializerBranchTests
     [Fact]
     public void DeserializeResult_payload_older_than_five_minutes_returns_null()
     {
-        DispatchResult original = new(TaskId: "t0", Success: true, OutputPath: "/out", Duration: TimeSpan.FromSeconds(seconds: 1));
-        DateTime staleTs = DateTime.UtcNow.AddMinutes(value: -6);
+        DispatchResult original = new("t0", true, "/out", TimeSpan.FromSeconds(1));
+        DateTime staleTs = DateTime.UtcNow.AddMinutes(-6);
         string inner = JsonConvert.SerializeObject(
-            value: new { Result = original, TimestampUtc = staleTs }
+            new { Result = original, TimestampUtc = staleTs }
         );
-        string envelope = SignEnvelope(inner: inner);
+        string envelope = SignEnvelope(inner);
 
-        DispatchResult? result = _serializer.DeserializeResult(payload: envelope, signingKey: _signingKey);
+        DispatchResult? result = _serializer.DeserializeResult(envelope, _signingKey);
 
         result.Should().BeNull();
     }
@@ -92,25 +91,25 @@ public class TaskSerializerBranchTests
     [Fact]
     public void Deserialize_envelope_with_empty_payload_returns_null()
     {
-        string envelope = JsonConvert.SerializeObject(value: new { Payload = "", Signature = "x" });
+        string envelope = JsonConvert.SerializeObject(new { Payload = "", Signature = "x" });
 
-        _serializer.Deserialize(payload: envelope, signingKey: _signingKey).Should().BeNull();
+        _serializer.Deserialize(envelope, _signingKey).Should().BeNull();
     }
 
     [Fact]
     public void Deserialize_envelope_with_empty_signature_returns_null()
     {
-        string envelope = JsonConvert.SerializeObject(value: new { Payload = "{}", Signature = "" });
+        string envelope = JsonConvert.SerializeObject(new { Payload = "{}", Signature = "" });
 
-        _serializer.Deserialize(payload: envelope, signingKey: _signingKey).Should().BeNull();
+        _serializer.Deserialize(envelope, _signingKey).Should().BeNull();
     }
 
     [Fact]
     public void Deserialize_envelope_with_both_empty_returns_null()
     {
-        string envelope = JsonConvert.SerializeObject(value: new { Payload = "", Signature = "" });
+        string envelope = JsonConvert.SerializeObject(new { Payload = "", Signature = "" });
 
-        _serializer.Deserialize(payload: envelope, signingKey: _signingKey).Should().BeNull();
+        _serializer.Deserialize(envelope, _signingKey).Should().BeNull();
     }
 
     [Fact]
@@ -120,9 +119,9 @@ public class TaskSerializerBranchTests
         // is itself malformed JSON. The second deserialize step inside
         // VerifyAndUnwrap must catch the JsonException.
         const string brokenInnerJson = "not json at all";
-        string envelope = SignEnvelope(inner: brokenInnerJson);
+        string envelope = SignEnvelope(brokenInnerJson);
 
-        EncodeTask? result = _serializer.Deserialize(payload: envelope, signingKey: _signingKey);
+        EncodeTask? result = _serializer.Deserialize(envelope, _signingKey);
 
         result.Should().BeNull();
     }
@@ -136,34 +135,34 @@ public class TaskSerializerBranchTests
         // is the worker id and shows up unescaped in the JSON-escaped Payload
         // field of the outer envelope).
         DispatchResult original = new(
-            TaskId: "t0",
-            Success: true,
-            OutputPath: "/out/t0.ts",
-            Duration: TimeSpan.FromSeconds(seconds: 5),
-            Error: null,
-            WorkerId: "beast"
+            "t0",
+            true,
+            "/out/t0.ts",
+            TimeSpan.FromSeconds(5),
+            null,
+            "beast"
         );
 
-        string wire = _serializer.SerializeResult(result: original, signingKey: _signingKey);
-        string tampered = wire.Replace(oldValue: "beast", newValue: "evil-");
+        string wire = _serializer.SerializeResult(original, _signingKey);
+        string tampered = wire.Replace("beast", "evil-");
         // Sanity: ensure the replace actually changed the wire.
-        tampered.Should().NotBe(unexpected: wire);
+        tampered.Should().NotBe(wire);
 
-        DispatchResult? result = _serializer.DeserializeResult(payload: tampered, signingKey: _signingKey);
+        DispatchResult? result = _serializer.DeserializeResult(tampered, _signingKey);
 
-        result.Should().BeNull(because: "tampered DispatchResult must not be accepted");
+        result.Should().BeNull("tampered DispatchResult must not be accepted");
     }
 
     [Fact]
     public void DeserializeResult_MalformedJson_ReturnsNull()
     {
-        _serializer.DeserializeResult(payload: "not json", signingKey: _signingKey).Should().BeNull();
+        _serializer.DeserializeResult("not json", _signingKey).Should().BeNull();
     }
 
     [Fact]
     public void DeserializeResult_Empty_ReturnsNull()
     {
-        _serializer.DeserializeResult(payload: "", signingKey: _signingKey).Should().BeNull();
+        _serializer.DeserializeResult("", _signingKey).Should().BeNull();
     }
 
     // ── DispatchResult error round-trip ──────────────────────────────────────
@@ -172,20 +171,20 @@ public class TaskSerializerBranchTests
     public void RoundTrip_DispatchResult_with_error_message_preserves_error()
     {
         DispatchResult original = new(
-            TaskId: "t0",
-            Success: false,
-            OutputPath: "",
-            Duration: TimeSpan.FromMilliseconds(milliseconds: 123),
-            Error: "ffmpeg returned exit code 1",
-            WorkerId: null
+            "t0",
+            false,
+            "",
+            TimeSpan.FromMilliseconds(123),
+            "ffmpeg returned exit code 1",
+            null
         );
 
-        string wire = _serializer.SerializeResult(result: original, signingKey: _signingKey);
-        DispatchResult? decoded = _serializer.DeserializeResult(payload: wire, signingKey: _signingKey);
+        string wire = _serializer.SerializeResult(original, _signingKey);
+        DispatchResult? decoded = _serializer.DeserializeResult(wire, _signingKey);
 
         decoded.Should().NotBeNull();
         decoded!.Success.Should().BeFalse();
-        decoded.Error.Should().Be(expected: "ffmpeg returned exit code 1");
+        decoded.Error.Should().Be("ffmpeg returned exit code 1");
         decoded.WorkerId.Should().BeNull();
     }
 
@@ -199,39 +198,39 @@ public class TaskSerializerBranchTests
         // be replayed as-if-fresh by attaching it to a new request.
         EncodeTask task = MakeTask();
 
-        string wire1 = _serializer.Serialize(task: task, signingKey: _signingKey);
+        string wire1 = _serializer.Serialize(task, _signingKey);
         // Windows DateTime.UtcNow resolution can drift up to ~15.6ms — sleep
         // 50ms so the second timestamp reliably differs from the first.
-        Thread.Sleep(millisecondsTimeout: 50);
-        string wire2 = _serializer.Serialize(task: task, signingKey: _signingKey);
+        Thread.Sleep(50);
+        string wire2 = _serializer.Serialize(task, _signingKey);
 
-        wire1.Should().NotBe(unexpected: wire2);
+        wire1.Should().NotBe(wire2);
 
         // Both still decode successfully.
-        _serializer.Deserialize(payload: wire1, signingKey: _signingKey).Should().NotBeNull();
-        _serializer.Deserialize(payload: wire2, signingKey: _signingKey).Should().NotBeNull();
+        _serializer.Deserialize(wire1, _signingKey).Should().NotBeNull();
+        _serializer.Deserialize(wire2, _signingKey).Should().NotBeNull();
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static EncodeTask MakeTask(string id = "task-1") =>
         new(
-            TaskId: id,
-            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
-            OutputPath: $"/out/{id}",
-            Type: EncodeTaskType.QualityVariant
+            id,
+            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            $"/out/{id}",
+            EncodeTaskType.QualityVariant
         );
 
     private string SignEnvelope(string inner)
     {
-        string signature = ComputeHmac(data: inner, key: _signingKey);
-        return JsonConvert.SerializeObject(value: new { Payload = inner, Signature = signature });
+        string signature = ComputeHmac(inner, _signingKey);
+        return JsonConvert.SerializeObject(new { Payload = inner, Signature = signature });
     }
 
     private static string ComputeHmac(string data, byte[] key)
     {
-        using System.Security.Cryptography.HMACSHA256 hmac = new(key: key);
-        byte[] hash = hmac.ComputeHash(buffer: Encoding.UTF8.GetBytes(s: data));
-        return Convert.ToBase64String(inArray: hash);
+        using System.Security.Cryptography.HMACSHA256 hmac = new(key);
+        byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
+        return Convert.ToBase64String(hash);
     }
 }

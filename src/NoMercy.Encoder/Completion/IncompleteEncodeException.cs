@@ -11,4 +11,4 @@
 
 namespace NoMercy.Encoder.Completion;
 
-public sealed class IncompleteEncodeException(string message) : Exception(message: message);
+public sealed class IncompleteEncodeException(string message) : Exception(message);

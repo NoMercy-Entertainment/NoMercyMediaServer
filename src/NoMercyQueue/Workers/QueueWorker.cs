@@ -34,7 +34,7 @@ public class QueueWorker(
     BootStage readyStage = BootStage.All
 )
 {
-    private static readonly TimeSpan BudgetRetryDelay = TimeSpan.FromSeconds(seconds: 5);
+    private static readonly TimeSpan BudgetRetryDelay = TimeSpan.FromSeconds(5);
 
     private const int MaxTransientRetries = 5;
     private const int TransientRetryBaseMs = 3000;
@@ -61,7 +61,7 @@ public class QueueWorker(
     private int _saturationRetryCount;
     private const int SaturationLogInterval = 120; // Log every 10 minutes (120 * 5s)
 
-    private int CurrentIndex => runner?.GetWorkerIndex(name: name, queueWorker: this) ?? -1;
+    private int CurrentIndex => runner?.GetWorkerIndex(name, this) ?? -1;
 
     /// <summary>
     /// True while this worker holds a reserved job (between
@@ -84,11 +84,11 @@ public class QueueWorker(
         {
             // Per-worker poll-loop lines were ~one per worker thread; the single
             // "Queue workers spawned per queue" summary in QueueRunner covers this.
-            await phaseTracker.WhenReachedAsync(stage: readyStage, ct: stopToken).ConfigureAwait(continueOnCapturedContext: false);
+            await phaseTracker.WhenReachedAsync(readyStage, stopToken).ConfigureAwait(false);
         }
         else if (readinessGate is not null)
         {
-            await readinessGate.WaitForReadyAsync(ct: stopToken).ConfigureAwait(continueOnCapturedContext: false);
+            await readinessGate.WaitForReadyAsync(stopToken).ConfigureAwait(false);
         }
 
         if (stopToken.IsCancellationRequested)
@@ -102,15 +102,15 @@ public class QueueWorker(
             // the same NFS mount. Nothing is reserved or released here — this
             // runs BEFORE ReserveJob, so it never disturbs the resource-budget
             // gate or dequeue ordering below.
-            if (activityGate is not null && activityGate.ShouldDefer(queueName: name))
+            if (activityGate is not null && activityGate.ShouldDefer(name))
             {
-                if (stopToken.WaitHandle.WaitOne(timeout: activityGate.DeferInterval))
+                if (stopToken.WaitHandle.WaitOne(activityGate.DeferInterval))
                     break;
 
                 continue;
             }
 
-            QueueJobModel? job = queue.ReserveJob(name: name, currentJobId: _currentJobId);
+            QueueJobModel? job = queue.ReserveJob(name, _currentJobId);
 
             if (job != null)
             {
@@ -120,13 +120,13 @@ public class QueueWorker(
                 // again after a short delay.
                 ResourceLease? lease = null;
 
-                if (resourceBudget is not null && resourceAwareQueues?.Contains(item: name) == true)
+                if (resourceBudget is not null && resourceAwareQueues?.Contains(name) == true)
                 {
-                    BudgetAcquireOutcome outcome = TryAcquireBudget(job: job, lease: out lease);
+                    BudgetAcquireOutcome outcome = TryAcquireBudget(job, out lease);
 
                     if (
                         outcome == BudgetAcquireOutcome.GpuDeviceAbsent
-                        && TryDegradeToSoftware(job: job)
+                        && TryDegradeToSoftware(job)
                     )
                     {
                         // Job was re-planned onto its now-CPU queue with a
@@ -140,7 +140,7 @@ public class QueueWorker(
 
                     if (outcome != BudgetAcquireOutcome.Granted)
                     {
-                        queue.ReleaseReservation(job: job, availableAfter: BudgetRetryDelay);
+                        queue.ReleaseReservation(job, BudgetRetryDelay);
 
                         // Honor the full retry interval — using WorkAvailable
                         // here would let an unrelated Enqueue wake us up early
@@ -148,7 +148,7 @@ public class QueueWorker(
                         // through deferred jobs at DB-query rate when many
                         // are stacked up under headroom denial. WaitHandle on
                         // the stop token keeps the sleep cancellation-aware.
-                        if (stopToken.WaitHandle.WaitOne(timeout: BudgetRetryDelay))
+                        if (stopToken.WaitHandle.WaitOne(BudgetRetryDelay))
                             break;
 
                         continue;
@@ -159,31 +159,31 @@ public class QueueWorker(
 
                 try
                 {
-                    object jobWithArguments = SerializationHelper.Deserialize<object>(data: job.Payload);
+                    object jobWithArguments = SerializationHelper.Deserialize<object>(job.Payload);
 
                     if (jobWithArguments is IShouldQueue classInstance)
                     {
-                        ExecuteWithTransientRetry(job: classInstance, queueJob: job);
+                        ExecuteWithTransientRetry(classInstance, job);
 
-                        queue.DeleteJob(queueJob: job);
+                        queue.DeleteJob(job);
                         _currentJobId = null;
-                        OnWorkCompleted(e: EventArgs.Empty);
+                        OnWorkCompleted(EventArgs.Empty);
 
                         logger?.LogTrace(
-                            message: "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {ClassInstance} processed successfully", args: [name, CurrentIndex, job.Id, classInstance]
+                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {ClassInstance} processed successfully", [name, CurrentIndex, job.Id, classInstance]
                         );
                     }
                     else
                     {
                         string typeName = jobWithArguments.GetType().FullName ?? "null";
                         logger?.LogError(
-                            message: "QueueWorker {Name} - {CurrentIndex}: Job {JobId} deserialized to {TypeName} which does not implement IShouldQueue — rejecting", args: [name, CurrentIndex, job.Id, typeName]
+                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} deserialized to {TypeName} which does not implement IShouldQueue — rejecting", [name, CurrentIndex, job.Id, typeName]
                         );
 
                         queue.FailJob(
-                            queueJob: job,
-                            exception: new InvalidOperationException(
-                                message: $"Job payload deserialized to {typeName} which does not implement IShouldQueue"
+                            job,
+                            new InvalidOperationException(
+                                $"Job payload deserialized to {typeName} which does not implement IShouldQueue"
                             )
                         );
                         _currentJobId = null;
@@ -197,11 +197,11 @@ public class QueueWorker(
                     // also undoes the attempt increment from GetNextJob, so the
                     // job resumes cleanly on next boot instead of burning a retry
                     // or dead-lettering after a few restarts. Then exit the loop.
-                    queue.ReleaseReservation(job: job, availableAfter: TimeSpan.Zero);
+                    queue.ReleaseReservation(job, TimeSpan.Zero);
                     _currentJobId = null;
 
                     logger?.LogInformation(
-                        message: "QueueWorker {Name} - {CurrentIndex}: Job {JobId} interrupted by shutdown — released for retry", args: [name, CurrentIndex, job.Id]
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} interrupted by shutdown — released for retry", [name, CurrentIndex, job.Id]
                     );
                     break;
                 }
@@ -213,37 +213,37 @@ public class QueueWorker(
                     // case: this is shutdown, not a job fault — release the
                     // reservation for a clean retry on next boot instead of
                     // dead-lettering a job that never got to run.
-                    queue.ReleaseReservation(job: job, availableAfter: TimeSpan.Zero);
+                    queue.ReleaseReservation(job, TimeSpan.Zero);
                     _currentJobId = null;
 
                     logger?.LogInformation(
-                        message: "QueueWorker {Name} - {CurrentIndex}: Job {JobId} scope disposed by shutdown — released for retry", args: [name, CurrentIndex, job.Id]
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} scope disposed by shutdown — released for retry", [name, CurrentIndex, job.Id]
                     );
                     break;
                 }
                 catch (Exception ex)
                 {
-                    queue.FailJob(queueJob: job, exception: ex);
+                    queue.FailJob(job, ex);
 
                     _currentJobId = null;
 
                     logger?.LogError(
-                        message: "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {Payload} failed with error: {Error}", args: [name, CurrentIndex, job.Id, job.Payload, ex]
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {Payload} failed with error: {Error}", [name, CurrentIndex, job.Id, job.Payload, ex]
                     );
                 }
                 finally
                 {
                     if (lease is not null)
-                        resourceBudget?.Release(lease: lease);
+                        resourceBudget?.Release(lease);
                 }
             }
             else
             {
-                OnWorkCompleted(e: EventArgs.Empty);
+                OnWorkCompleted(EventArgs.Empty);
 
                 try
                 {
-                    queue.WorkAvailable.Wait(timeout: TimeSpan.FromSeconds(seconds: 5), cancellationToken: stopToken);
+                    queue.WorkAvailable.Wait(TimeSpan.FromSeconds(5), stopToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -279,13 +279,13 @@ public class QueueWorker(
         if (resourceBudget is null)
             return BudgetAcquireOutcome.Granted;
 
-        ResourceRequirement? requirement = ExtractRequirement(job: job);
+        ResourceRequirement? requirement = ExtractRequirement(job);
         if (requirement is null)
             return BudgetAcquireOutcome.Granted;
 
         try
         {
-            lease = resourceBudget.TryAcquire(requirement: requirement, timeout: TimeSpan.Zero);
+            lease = resourceBudget.TryAcquire(requirement, TimeSpan.Zero);
         }
         catch (Exception ex)
         {
@@ -296,7 +296,7 @@ public class QueueWorker(
             if (!_suppressBudgetSaturationLog)
             {
                 logger?.LogWarning(
-                    message: "[{Queue}] budget acquisition failed for job {JobId}: {Message}. Will retry every {Delay}s.", args: [name, job.Id, ex.Message, BudgetRetryDelay.TotalSeconds]
+                    "[{Queue}] budget acquisition failed for job {JobId}: {Message}. Will retry every {Delay}s.", [name, job.Id, ex.Message, BudgetRetryDelay.TotalSeconds]
                 );
                 _suppressBudgetSaturationLog = true;
             }
@@ -323,12 +323,12 @@ public class QueueWorker(
             if (shouldLog)
             {
                 int gpuAvailable = requirement.GpuDeviceKey is not null
-                    ? resourceBudget.AvailableGpuEncoderSlots(gpuDeviceKey: requirement.GpuDeviceKey)
+                    ? resourceBudget.AvailableGpuEncoderSlots(requirement.GpuDeviceKey)
                     : -1;
                 int cpuAvailable = resourceBudget.AvailableCpuThreads();
 
                 logger?.LogInformation(
-                    message: "[{Queue}] budget saturated for job {JobId} ({Requirement}) — GPU slots available: {Gpu}, CPU threads available: {Cpu}. Still retrying every {Delay}s.", args: [name, job.Id, requirement, gpuAvailable, cpuAvailable, BudgetRetryDelay.TotalSeconds]
+                    "[{Queue}] budget saturated for job {JobId} ({Requirement}) — GPU slots available: {Gpu}, CPU threads available: {Cpu}. Still retrying every {Delay}s.", [name, job.Id, requirement, gpuAvailable, cpuAvailable, BudgetRetryDelay.TotalSeconds]
                 );
                 _suppressBudgetSaturationLog = true;
             }
@@ -338,7 +338,7 @@ public class QueueWorker(
             // must degrade rather than loop here forever.
             if (
                 requirement.GpuDeviceKey is not null
-                && !resourceBudget.IsGpuDeviceRegistered(gpuDeviceKey: requirement.GpuDeviceKey)
+                && !resourceBudget.IsGpuDeviceRegistered(requirement.GpuDeviceKey)
             )
             {
                 return BudgetAcquireOutcome.GpuDeviceAbsent;
@@ -366,13 +366,13 @@ public class QueueWorker(
         object deserialized;
         try
         {
-            deserialized = SerializationHelper.Deserialize<object>(data: job.Payload);
+            deserialized = SerializationHelper.Deserialize<object>(job.Payload);
         }
         catch (Exception ex)
         {
             logger?.LogWarning(
-                exception: ex,
-                message: "[{Queue}] failed to deserialize job {JobId} while degrading an absent-GPU requirement", args: [name, job.Id]
+                ex,
+                "[{Queue}] failed to deserialize job {JobId} while degrading an absent-GPU requirement", [name, job.Id]
             );
             return false;
         }
@@ -388,14 +388,14 @@ public class QueueWorker(
         if (degraded is null)
             return false;
 
-        string newPayload = SerializationHelper.Serialize(obj: degraded);
+        string newPayload = SerializationHelper.Serialize(degraded);
 
         logger?.LogWarning(
-            message: "[{Queue}] job {JobId} requires GPU device '{GpuKey}' which is not present on this "
-                     + "host — degrading to software and rerouting to '{NewQueue}'.", args: [name, job.Id, gpuDeviceKey, degraded.QueueName]
+            "[{Queue}] job {JobId} requires GPU device '{GpuKey}' which is not present on this "
+                     + "host — degrading to software and rerouting to '{NewQueue}'.", [name, job.Id, gpuDeviceKey, degraded.QueueName]
         );
 
-        queue.Requeue(job: job, newQueue: degraded.QueueName, newPayload: newPayload);
+        queue.Requeue(job, degraded.QueueName, newPayload);
         return true;
     }
 
@@ -409,7 +409,7 @@ public class QueueWorker(
     {
         try
         {
-            object deserialized = SerializationHelper.Deserialize<object>(data: job.Payload);
+            object deserialized = SerializationHelper.Deserialize<object>(job.Payload);
             if (deserialized is IHasResourceRequirement carrier)
                 return carrier.ResourceRequirement;
         }
@@ -423,7 +423,7 @@ public class QueueWorker(
 
     protected virtual void OnWorkCompleted(EventArgs e)
     {
-        WorkCompleted.Invoke(sender: this, e: e);
+        WorkCompleted.Invoke(this, e);
     }
 
     /// <summary>
@@ -451,18 +451,18 @@ public class QueueWorker(
             // then re-apply the serialized job data. Upstream deserialization yields
             // a data-only instance; services are resolved from the per-job scope.
             IShouldQueue rebuilt = (IShouldQueue)
-                ActivatorUtilities.CreateInstance(provider: serviceProvider, instanceType: job.GetType());
-            SerializationHelper.Populate(data: queueJob.Payload, target: rebuilt);
+                ActivatorUtilities.CreateInstance(serviceProvider, job.GetType());
+            SerializationHelper.Populate(queueJob.Payload, rebuilt);
             job = rebuilt;
 
             // Back-compat: jobs not yet migrated to constructor injection still
             // receive their services via this post-construction hook.
             if (job is IJobStorageInjector injector)
-                injector.InjectStorageServices(serviceProvider: serviceProvider);
+                injector.InjectStorageServices(serviceProvider);
         }
 
         if (job is IJobIdReceiver idReceiver)
-            idReceiver.ReceiveJobId(jobId: (int)queueJob.Id);
+            idReceiver.ReceiveJobId((int)queueJob.Id);
 
         try
         {
@@ -474,15 +474,15 @@ public class QueueWorker(
                     return;
                 }
                 catch (Exception ex)
-                    when (IsTransientSqliteError(ex: ex) && attempt < MaxTransientRetries)
+                    when (IsTransientSqliteError(ex) && attempt < MaxTransientRetries)
                 {
-                    int delay = TransientRetryBaseMs + Random.Shared.Next(maxValue: TransientRetryJitterMs);
+                    int delay = TransientRetryBaseMs + Random.Shared.Next(TransientRetryJitterMs);
 
                     logger?.LogWarning(
-                        message: "QueueWorker {Name} - {CurrentIndex}: Job {JobId} hit transient SQLite error (attempt {Attempt}/{Max}), retrying in {Delay}ms", args: [name, CurrentIndex, queueJob.Id, attempt + 1, MaxTransientRetries, delay]
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} hit transient SQLite error (attempt {Attempt}/{Max}), retrying in {Delay}ms", [name, CurrentIndex, queueJob.Id, attempt + 1, MaxTransientRetries, delay]
                     );
 
-                    Thread.Sleep(millisecondsTimeout: delay);
+                    Thread.Sleep(delay);
                 }
             }
         }
@@ -500,7 +500,7 @@ public class QueueWorker(
 
             if (
                 typeName is "SqliteException"
-                && current.Message.Contains(value: "is locked", comparisonType: StringComparison.OrdinalIgnoreCase)
+                && current.Message.Contains("is locked", StringComparison.OrdinalIgnoreCase)
             )
             {
                 return true;
@@ -512,7 +512,7 @@ public class QueueWorker(
 
     public void Stop()
     {
-        logger?.LogInformation(message: "QueueWorker {Name} - {CurrentIndex}: stopped", args: [name, CurrentIndex]);
+        logger?.LogInformation("QueueWorker {Name} - {CurrentIndex}: stopped", [name, CurrentIndex]);
         _isRunning = false;
         _stopCts.Cancel();
     }
@@ -520,7 +520,7 @@ public class QueueWorker(
     public void StopWhenReady()
     {
         while (_currentJobId != null)
-            Thread.Sleep(millisecondsTimeout: 1000);
+            Thread.Sleep(1000);
 
         Stop();
     }
@@ -537,7 +537,7 @@ public class QueueWorker(
         if (_stopCts.IsCancellationRequested)
             _stopCts = new();
         _isRunning = true;
-        _runTask = Task.Run(function: async () =>
+        _runTask = Task.Run(async () =>
         {
             // If a prior loop is still winding down (Restart cancelled it while it
             // was mid-job), wait for it to exit before polling so two loops never
@@ -547,7 +547,7 @@ public class QueueWorker(
             {
                 try
                 {
-                    await previous.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 30));
+                    await previous.WaitAsync(TimeSpan.FromSeconds(30));
                 }
                 catch (Exception)
                 {
@@ -558,13 +558,13 @@ public class QueueWorker(
 
             try
             {
-                await StartAsync(stopToken: _stopCts.Token);
+                await StartAsync(_stopCts.Token);
             }
             catch (Exception ex)
             {
                 logger?.LogCritical(
-                    exception: ex,
-                    message: "QueueWorker {Name} - {CurrentIndex}: StartAsync crashed", args: [name, CurrentIndex]
+                    ex,
+                    "QueueWorker {Name} - {CurrentIndex}: StartAsync crashed", [name, CurrentIndex]
                 );
             }
         });

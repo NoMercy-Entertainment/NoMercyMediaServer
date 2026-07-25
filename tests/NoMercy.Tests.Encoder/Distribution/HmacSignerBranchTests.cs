@@ -30,28 +30,28 @@ namespace NoMercy.Tests.Encoder.Distribution;
 public class HmacSignerBranchTests
 {
     private const string Secret = "branch-test-signing-key-32-bytes!";
-    private static readonly TimeSpan Window = TimeSpan.FromMinutes(minutes: 5);
+    private static readonly TimeSpan Window = TimeSpan.FromMinutes(5);
 
     private static long Now() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
     // ── Method normalization ────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: ["POST", "post"])]
-    [InlineData(data: ["POST", "Post"])]
-    [InlineData(data: ["GET", "get"])]
-    [InlineData(data: ["DELETE", "delete"])]
-    [InlineData(data: ["PUT", "Put"])]
+    [InlineData(["POST", "post"])]
+    [InlineData(["POST", "Post"])]
+    [InlineData(["GET", "get"])]
+    [InlineData(["DELETE", "delete"])]
+    [InlineData(["PUT", "Put"])]
     public void Sign_method_is_normalized_to_uppercase(string upper, string mixed)
     {
-        HmacSigner signer = new(secret: Secret);
+        HmacSigner signer = new(Secret);
         long ts = Now();
-        byte[] body = Encoding.UTF8.GetBytes(s: "{}");
+        byte[] body = Encoding.UTF8.GetBytes("{}");
 
-        string upperSig = signer.Sign(method: upper, path: "/x", timestamp: ts, body: body);
-        string mixedSig = signer.Sign(method: mixed, path: "/x", timestamp: ts, body: body);
+        string upperSig = signer.Sign(upper, "/x", ts, body);
+        string mixedSig = signer.Sign(mixed, "/x", ts, body);
 
-        upperSig.Should().Be(expected: mixedSig);
+        upperSig.Should().Be(mixedSig);
     }
 
     [Fact]
@@ -59,12 +59,12 @@ public class HmacSignerBranchTests
     {
         // Sign with "post" but verify with "POST" — must succeed because the
         // method is normalized on both sides.
-        HmacSigner signer = new(secret: Secret);
+        HmacSigner signer = new(Secret);
         long ts = Now();
-        byte[] body = Encoding.UTF8.GetBytes(s: "{}");
+        byte[] body = Encoding.UTF8.GetBytes("{}");
 
-        string signature = signer.Sign(method: "post", path: "/x", timestamp: ts, body: body);
-        bool ok = signer.Verify(method: "POST", path: "/x", timestamp: ts, body: body, signature: signature, replayWindow: Window);
+        string signature = signer.Sign("post", "/x", ts, body);
+        bool ok = signer.Verify("POST", "/x", ts, body, signature, Window);
 
         ok.Should().BeTrue();
     }
@@ -76,14 +76,14 @@ public class HmacSignerBranchTests
     {
         // Path is NOT normalized — /api and /API produce different signatures.
         // Pin so a future "normalize" change is intentional.
-        HmacSigner signer = new(secret: Secret);
+        HmacSigner signer = new(Secret);
         long ts = Now();
-        byte[] body = Encoding.UTF8.GetBytes(s: "{}");
+        byte[] body = Encoding.UTF8.GetBytes("{}");
 
-        string lowerSig = signer.Sign(method: "GET", path: "/api", timestamp: ts, body: body);
-        string upperSig = signer.Sign(method: "GET", path: "/API", timestamp: ts, body: body);
+        string lowerSig = signer.Sign("GET", "/api", ts, body);
+        string upperSig = signer.Sign("GET", "/API", ts, body);
 
-        lowerSig.Should().NotBe(unexpected: upperSig);
+        lowerSig.Should().NotBe(upperSig);
     }
 
     // ── Length-mismatch signature ───────────────────────────────────────────
@@ -91,15 +91,15 @@ public class HmacSignerBranchTests
     [Fact]
     public void Verify_signature_with_wrong_length_returns_false()
     {
-        HmacSigner signer = new(secret: Secret);
+        HmacSigner signer = new(Secret);
         long ts = Now();
-        byte[] body = Encoding.UTF8.GetBytes(s: "{}");
+        byte[] body = Encoding.UTF8.GetBytes("{}");
 
-        string realSig = signer.Sign(method: "POST", path: "/x", timestamp: ts, body: body);
+        string realSig = signer.Sign("POST", "/x", ts, body);
         // Truncate one byte off the base64 string.
         string truncated = realSig[..^1];
 
-        bool ok = signer.Verify(method: "POST", path: "/x", timestamp: ts, body: body, signature: truncated, replayWindow: Window);
+        bool ok = signer.Verify("POST", "/x", ts, body, truncated, Window);
 
         ok.Should().BeFalse();
     }
@@ -107,14 +107,14 @@ public class HmacSignerBranchTests
     [Fact]
     public void Verify_signature_with_extra_chars_returns_false()
     {
-        HmacSigner signer = new(secret: Secret);
+        HmacSigner signer = new(Secret);
         long ts = Now();
-        byte[] body = Encoding.UTF8.GetBytes(s: "{}");
+        byte[] body = Encoding.UTF8.GetBytes("{}");
 
-        string realSig = signer.Sign(method: "POST", path: "/x", timestamp: ts, body: body);
+        string realSig = signer.Sign("POST", "/x", ts, body);
         string padded = realSig + "X";
 
-        bool ok = signer.Verify(method: "POST", path: "/x", timestamp: ts, body: body, signature: padded, replayWindow: Window);
+        bool ok = signer.Verify("POST", "/x", ts, body, padded, Window);
 
         ok.Should().BeFalse();
     }
@@ -125,25 +125,25 @@ public class HmacSignerBranchTests
     public void Different_bodies_yield_different_signatures()
     {
         // Body is part of the string-to-sign via SHA256(body) — pin it.
-        HmacSigner signer = new(secret: Secret);
+        HmacSigner signer = new(Secret);
         long ts = Now();
 
-        string sigA = signer.Sign(method: "POST", path: "/x", timestamp: ts, body: Encoding.UTF8.GetBytes(s: "{\"a\":1}"));
-        string sigB = signer.Sign(method: "POST", path: "/x", timestamp: ts, body: Encoding.UTF8.GetBytes(s: "{\"a\":2}"));
+        string sigA = signer.Sign("POST", "/x", ts, Encoding.UTF8.GetBytes("{\"a\":1}"));
+        string sigB = signer.Sign("POST", "/x", ts, Encoding.UTF8.GetBytes("{\"a\":2}"));
 
-        sigA.Should().NotBe(unexpected: sigB);
+        sigA.Should().NotBe(sigB);
     }
 
     [Fact]
     public void Empty_body_and_whitespace_body_yield_different_signatures()
     {
-        HmacSigner signer = new(secret: Secret);
+        HmacSigner signer = new(Secret);
         long ts = Now();
 
-        string sigEmpty = signer.Sign(method: "POST", path: "/x", timestamp: ts, body: []);
-        string sigSpace = signer.Sign(method: "POST", path: "/x", timestamp: ts, body: Encoding.UTF8.GetBytes(s: " "));
+        string sigEmpty = signer.Sign("POST", "/x", ts, []);
+        string sigSpace = signer.Sign("POST", "/x", ts, Encoding.UTF8.GetBytes(" "));
 
-        sigEmpty.Should().NotBe(unexpected: sigSpace);
+        sigEmpty.Should().NotBe(sigSpace);
     }
 
     // ── Replay window boundaries ────────────────────────────────────────────
@@ -151,13 +151,13 @@ public class HmacSignerBranchTests
     [Fact]
     public void Verify_age_zero_passes()
     {
-        HmacSigner signer = new(secret: Secret);
+        HmacSigner signer = new(Secret);
         long ts = Now();
-        byte[] body = Encoding.UTF8.GetBytes(s: "{}");
+        byte[] body = Encoding.UTF8.GetBytes("{}");
 
-        string sig = signer.Sign(method: "POST", path: "/x", timestamp: ts, body: body);
+        string sig = signer.Sign("POST", "/x", ts, body);
 
-        bool ok = signer.Verify(method: "POST", path: "/x", timestamp: ts, body: body, signature: sig, replayWindow: Window);
+        bool ok = signer.Verify("POST", "/x", ts, body, sig, Window);
 
         ok.Should().BeTrue();
     }
@@ -166,13 +166,13 @@ public class HmacSignerBranchTests
     public void Verify_age_at_exactly_window_size_passes()
     {
         // ageSeconds == window → still inside (the predicate is `> window`).
-        HmacSigner signer = new(secret: Secret);
+        HmacSigner signer = new(Secret);
         long ts = Now() - (long)Window.TotalSeconds;
-        byte[] body = Encoding.UTF8.GetBytes(s: "{}");
+        byte[] body = Encoding.UTF8.GetBytes("{}");
 
-        string sig = signer.Sign(method: "POST", path: "/x", timestamp: ts, body: body);
+        string sig = signer.Sign("POST", "/x", ts, body);
 
-        bool ok = signer.Verify(method: "POST", path: "/x", timestamp: ts, body: body, signature: sig, replayWindow: Window);
+        bool ok = signer.Verify("POST", "/x", ts, body, sig, Window);
 
         ok.Should().BeTrue();
     }
@@ -180,13 +180,13 @@ public class HmacSignerBranchTests
     [Fact]
     public void Verify_age_one_second_past_window_fails()
     {
-        HmacSigner signer = new(secret: Secret);
+        HmacSigner signer = new(Secret);
         long ts = Now() - (long)Window.TotalSeconds - 1;
-        byte[] body = Encoding.UTF8.GetBytes(s: "{}");
+        byte[] body = Encoding.UTF8.GetBytes("{}");
 
-        string sig = signer.Sign(method: "POST", path: "/x", timestamp: ts, body: body);
+        string sig = signer.Sign("POST", "/x", ts, body);
 
-        bool ok = signer.Verify(method: "POST", path: "/x", timestamp: ts, body: body, signature: sig, replayWindow: Window);
+        bool ok = signer.Verify("POST", "/x", ts, body, sig, Window);
 
         ok.Should().BeFalse();
     }

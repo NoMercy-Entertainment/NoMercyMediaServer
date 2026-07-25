@@ -35,21 +35,21 @@ public sealed class SmbDriverBuilder : IStorageDriverBuilder
         string subPath
     )
     {
-        if (string.IsNullOrWhiteSpace(value: driverConfigJson))
+        if (string.IsNullOrWhiteSpace(driverConfigJson))
             throw new ArgumentException(
-                message: $"driver_config is required for 'smb' (folder {folderId}). "
+                $"driver_config is required for 'smb' (folder {folderId}). "
                          + "Supply at minimum: host, share.",
-                paramName: nameof(driverConfigJson)
+                nameof(driverConfigJson)
             );
 
-        SmbDriverConfig config = SmbDriverConfig.Parse(json: driverConfigJson, folderId: folderId, logger: _logger);
+        SmbDriverConfig config = SmbDriverConfig.Parse(driverConfigJson, folderId, _logger);
 
         string? username = null;
         string? password = null;
         if (_credentialResolver is not null)
         {
             (string AccessKey, string SecretKey)? creds = _credentialResolver.Resolve(
-                credentialsRef: $"driver:{folderId}"
+                $"driver:{folderId}"
             );
             if (creds is not null)
             {
@@ -59,8 +59,8 @@ public sealed class SmbDriverBuilder : IStorageDriverBuilder
             else
             {
                 _logger.LogWarning(
-                    message: "No credentials found in store for SMB driver (folder {FolderId}); connecting with empty credentials",
-                    args: folderId
+                    "No credentials found in store for SMB driver (folder {FolderId}); connecting with empty credentials",
+                    folderId
                 );
             }
         }
@@ -68,13 +68,13 @@ public sealed class SmbDriverBuilder : IStorageDriverBuilder
         config = config with { Username = username, Password = password };
 
         // Fold the folder's sub-path into the share-relative BasePath.
-        if (!string.IsNullOrEmpty(value: subPath))
+        if (!string.IsNullOrEmpty(subPath))
         {
-            string combined = StorageFactory.JoinRoot(root: config.BasePath, subPath: subPath, driverType: "smb");
-            config = config with { BasePath = combined.Replace(oldChar: '\\', newChar: '/').Trim(trimChar: '/') };
+            string combined = StorageFactory.JoinRoot(config.BasePath, subPath, "smb");
+            config = config with { BasePath = combined.Replace('\\', '/').Trim('/') };
         }
 
-        SmbStorageDriver driver = new(config: config, log: _logger);
-        return new RemoteStorage(driver: driver);
+        SmbStorageDriver driver = new(config, _logger);
+        return new RemoteStorage(driver);
     }
 }

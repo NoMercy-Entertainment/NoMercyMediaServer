@@ -17,22 +17,22 @@ namespace NoMercy.Tests.Plugins;
 public class PluginAbiTests
 {
     [Theory]
-    [InlineData(data: [null, true])]
-    [InlineData(data: ["", true])]
-    [InlineData(data: ["10.0", true])]
-    [InlineData(data: ["10.1", false])]
-    [InlineData(data: ["9.0", false])]
-    [InlineData(data: ["9.5", false])]
-    [InlineData(data: ["11.0", false])]
-    [InlineData(data: ["not-a-version", false])]
+    [InlineData([null, true])]
+    [InlineData(["", true])]
+    [InlineData(["10.0", true])]
+    [InlineData(["10.1", false])]
+    [InlineData(["9.0", false])]
+    [InlineData(["9.5", false])]
+    [InlineData(["11.0", false])]
+    [InlineData(["not-a-version", false])]
     public void IsCompatible_AppliesMajorMatchMinorCeiling(string? targetAbi, bool expected)
     {
-        Assert.Equal(expected: expected, actual: PluginAbi.IsCompatible(targetAbi: targetAbi));
+        Assert.Equal(expected, PluginAbi.IsCompatible(targetAbi));
     }
 
     [Fact]
     public void Current_IsTenZero()
     {
-        Assert.Equal(expected: new Version(major: 10, minor: 0), actual: PluginAbi.Current);
+        Assert.Equal(new Version(10, 0), PluginAbi.Current);
     }
 }

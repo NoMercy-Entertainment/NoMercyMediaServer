@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Management;
 using NoMercy.Api.Middleware;
@@ -32,15 +33,13 @@ using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using NoMercyQueue;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
-
-using Microsoft.Extensions.Logging;
 namespace NoMercy.Api.Controllers;
 
 [ApiController]
-[Route(template: "manage")]
+[Route("manage")]
 [AllowAnonymous]
 [LocalhostOnly]
-[Tags(tags: "Management")]
+[Tags("Management")]
 public class ManagementController(
     ILogger<ManagementController> logger,
     ResourceMonitor resourceMonitor,
@@ -60,17 +59,17 @@ public class ManagementController(
     RuntimeServerSettings runtimeSettings
 ) : BaseController
 {
-    [HttpGet(template: "status")]
-    [ProducesResponseType(type: typeof(ManagementStatusDto), statusCode: StatusCodes.Status200OK)]
+    [HttpGet("status")]
+    [ProducesResponseType(typeof(ManagementStatusDto), StatusCodes.Status200OK)]
     public IActionResult GetStatus()
     {
-        Configuration? serverNameConfig = appContext.Configuration.FirstOrDefault(predicate: c =>
+        Configuration? serverNameConfig = appContext.Configuration.FirstOrDefault(c =>
             c.Key == "serverName"
         );
         string serverName = serverNameConfig?.Value ?? Environment.MachineName;
 
         return Ok(
-            value: new ManagementStatusDto
+            new ManagementStatusDto
             {
                 Status = bootStatus.IsStarted ? "running" : "starting",
                 ServerName = serverName,
@@ -98,8 +97,8 @@ public class ManagementController(
         );
     }
 
-    [HttpGet(template: "logs")]
-    [ProducesResponseType(type: typeof(List<LogEntry>), statusCode: StatusCodes.Status200OK)]
+    [HttpGet("logs")]
+    [ProducesResponseType(typeof(List<LogEntry>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetLogs(
         [FromQuery] int tail = 100,
         [FromQuery] string? types = null,
@@ -107,40 +106,40 @@ public class ManagementController(
     )
     {
         string[]? typeFilter = types?.Split(
-            separator: ',',
-            options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+            ',',
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
         );
         string[]? levelFilter = levels?.Split(
-            separator: ',',
-            options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+            ',',
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
         );
 
         List<LogEntry> logs = await Logger.GetLogs(
-            limit: tail,
-            filter: entry =>
+            tail,
+            entry =>
             {
                 bool typeMatch =
                     typeFilter is null
                     || typeFilter.Length == 0
-                    || typeFilter.Any(predicate: t =>
-                        string.Equals(a: t, b: entry.Type, comparisonType: StringComparison.OrdinalIgnoreCase)
+                    || typeFilter.Any(t =>
+                        string.Equals(t, entry.Type, StringComparison.OrdinalIgnoreCase)
                     );
                 bool levelMatch =
                     levelFilter is null
                     || levelFilter.Length == 0
                     || levelFilter.Contains(
-                        value: entry.Level.ToString(),
-                        comparer: StringComparer.OrdinalIgnoreCase
+                        entry.Level.ToString(),
+                        StringComparer.OrdinalIgnoreCase
                     );
 
                 return typeMatch && levelMatch;
             }
         );
 
-        return Ok(value: logs);
+        return Ok(logs);
     }
 
-    [HttpGet(template: "logs/stream")]
+    [HttpGet("logs/stream")]
     public async Task StreamLogs(
         [FromQuery] int backfill = 50,
         CancellationToken cancellationToken = default
@@ -150,11 +149,11 @@ public class ManagementController(
         Response.Headers.CacheControl = "no-cache";
         Response.Headers.Connection = "keep-alive";
 
-        await Response.StartAsync(cancellationToken: cancellationToken);
+        await Response.StartAsync(cancellationToken);
 
         // Bounded channel: drops oldest if client falls behind
         Channel<LogEntry> channel = Channel.CreateBounded<LogEntry>(
-            options: new BoundedChannelOptions(capacity: 500)
+            new BoundedChannelOptions(500)
             {
                 FullMode = BoundedChannelFullMode.DropOldest,
                 SingleReader = true,
@@ -162,7 +161,7 @@ public class ManagementController(
             }
         );
 
-        void OnLogEmitted(LogEntry entry) => channel.Writer.TryWrite(item: entry);
+        void OnLogEmitted(LogEntry entry) => channel.Writer.TryWrite(entry);
 
         // Subscribe before backfill so no events are lost during backfill writes
         Logger.LogEmitted += OnLogEmitted;
@@ -170,21 +169,21 @@ public class ManagementController(
         try
         {
             // Send backfill of recent log entries
-            List<LogEntry> recentLogs = await Logger.GetLogs(limit: backfill);
+            List<LogEntry> recentLogs = await Logger.GetLogs(backfill);
             foreach (LogEntry entry in recentLogs)
             {
-                string json = JsonConvert.SerializeObject(value: entry);
-                await Response.WriteAsync(text: $"data: {json}\n\n", cancellationToken: cancellationToken);
+                string json = JsonConvert.SerializeObject(entry);
+                await Response.WriteAsync($"data: {json}\n\n", cancellationToken);
             }
 
-            await Response.Body.FlushAsync(cancellationToken: cancellationToken);
+            await Response.Body.FlushAsync(cancellationToken);
 
             // Consume live events from the channel
-            await foreach (LogEntry entry in channel.Reader.ReadAllAsync(cancellationToken: cancellationToken))
+            await foreach (LogEntry entry in channel.Reader.ReadAllAsync(cancellationToken))
             {
-                string json = JsonConvert.SerializeObject(value: entry);
-                await Response.WriteAsync(text: $"data: {json}\n\n", cancellationToken: cancellationToken);
-                await Response.Body.FlushAsync(cancellationToken: cancellationToken);
+                string json = JsonConvert.SerializeObject(entry);
+                await Response.WriteAsync($"data: {json}\n\n", cancellationToken);
+                await Response.Body.FlushAsync(cancellationToken);
             }
         }
         catch (OperationCanceledException) { }
@@ -196,15 +195,15 @@ public class ManagementController(
         }
     }
 
-    [HttpGet(template: "activity")]
-    [ProducesResponseType(type: typeof(ManagementActivityDto), statusCode: StatusCodes.Status200OK)]
+    [HttpGet("activity")]
+    [ProducesResponseType(typeof(ManagementActivityDto), StatusCodes.Status200OK)]
     public IActionResult GetActivity()
     {
         int activeStreams = sessionManager.ActiveSessionCount;
 
         IReadOnlyDictionary<string, Thread> activeThreads = queueRunner.GetActiveWorkerThreads();
-        int activeEncodes = activeThreads.Count(predicate: t =>
-            t.Key.StartsWith(value: "encoder", comparisonType: StringComparison.OrdinalIgnoreCase)
+        int activeEncodes = activeThreads.Count(t =>
+            t.Key.StartsWith("encoder", StringComparison.OrdinalIgnoreCase)
         );
 
         // All encode jobs in V3 are split/resumable, so killing mid-encode is safe.
@@ -212,7 +211,7 @@ public class ManagementController(
         bool canInterruptSafely = activeStreams == 0;
 
         return Ok(
-            value: new ManagementActivityDto
+            new ManagementActivityDto
             {
                 ActiveStreams = activeStreams,
                 ActiveEncodes = activeEncodes,
@@ -221,34 +220,34 @@ public class ManagementController(
         );
     }
 
-    [HttpPost(template: "stop")]
+    [HttpPost("stop")]
     public IActionResult Stop()
     {
         appLifetime.StopApplication();
-        return Ok(value: new { status = "ok", message = "Server is shutting down" });
+        return Ok(new { status = "ok", message = "Server is shutting down" });
     }
 
-    [HttpPost(template: "restart")]
+    [HttpPost("restart")]
     public IActionResult Restart()
     {
         appLifetime.StopApplication();
-        return Ok(value: new { status = "ok", message = "Server is restarting" });
+        return Ok(new { status = "ok", message = "Server is restarting" });
     }
 
-    [HttpPost(template: "update")]
-    [ProducesResponseType(statusCode: StatusCodes.Status200OK)]
-    [ProducesResponseType(statusCode: StatusCodes.Status500InternalServerError)]
+    [HttpPost("update")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> DownloadUpdate()
     {
         try
         {
             string tempPath = AppFiles.ServerTempExePath;
 
-            if (storageDriver.FileExists(path: tempPath))
+            if (storageDriver.FileExists(tempPath))
             {
-                logger.LogInformation(message: "Update already staged, skipping download.");
+                logger.LogInformation("Update already staged, skipping download.");
                 return Ok(
-                    value: new
+                    new
                     {
                         status = "ok",
                         message = "Update already staged.",
@@ -257,18 +256,18 @@ public class ManagementController(
                 );
             }
 
-            string? onDiskVersion = Software.GetFileVersion(driver: storageDriver, exePath: AppFiles.ServerExePath);
+            string? onDiskVersion = Software.GetFileVersion(storageDriver, AppFiles.ServerExePath);
             string runningVersion = Software.GetReleaseVersion();
             if (
                 onDiskVersion is not null
-                && Version.TryParse(input: onDiskVersion, result: out Version? diskVer)
-                && Version.TryParse(input: runningVersion, result: out Version? runVer)
+                && Version.TryParse(onDiskVersion, out Version? diskVer)
+                && Version.TryParse(runningVersion, out Version? runVer)
                 && diskVer > runVer
             )
             {
-                logger.LogInformation(message: "Binary on disk is already {OnDiskVersion} (running {RunningVersion}), restart will apply the update.", args: [onDiskVersion, runningVersion]);
+                logger.LogInformation("Binary on disk is already {OnDiskVersion} (running {RunningVersion}), restart will apply the update.", [onDiskVersion, runningVersion]);
                 return Ok(
-                    value: new
+                    new
                     {
                         status = "ok",
                         message = $"Binary on disk is already {onDiskVersion}, restart needed.",
@@ -276,20 +275,20 @@ public class ManagementController(
                 );
             }
 
-            logger.LogInformation(message: "Downloading server update on demand...");
+            logger.LogInformation("Downloading server update on demand...");
             ServerUpdateResult result = await new Binaries(
-                driver: storageDriver,
-                storage: storage
+                storageDriver,
+                storage
             ).DownloadServerUpdate();
 
             switch (result)
             {
                 case ServerUpdateResult.AlreadyUpToDate:
-                    return Ok(value: new { status = "ok", message = "Server is already up to date." });
+                    return Ok(new { status = "ok", message = "Server is already up to date." });
 
                 case ServerUpdateResult.UseInstaller:
                     return Ok(
-                        value: new
+                        new
                         {
                             status = "ok",
                             message = "This is an installer deployment. Use the installer to update.",
@@ -300,7 +299,7 @@ public class ManagementController(
 
                 case ServerUpdateResult.RestartNeeded:
                     return Ok(
-                        value: new
+                        new
                         {
                             status = "ok",
                             message = "Binary on disk is already the latest version, restart needed to apply.",
@@ -309,22 +308,22 @@ public class ManagementController(
 
                 case ServerUpdateResult.NoAssetFound:
                     return InternalServerErrorResponse(
-                        detail: "No suitable update asset found for the current platform."
+                        "No suitable update asset found for the current platform."
                     );
 
                 case ServerUpdateResult.Downloaded:
-                    if (!storageDriver.FileExists(path: tempPath))
+                    if (!storageDriver.FileExists(tempPath))
                     {
-                        logger.LogError(message: "Server update staged file missing at {TempPath} after successful download", args: tempPath);
+                        logger.LogError("Server update staged file missing at {TempPath} after successful download", tempPath);
                         return InternalServerErrorResponse(
-                            detail: "Download completed but staged file not found. This may be caused by antivirus software quarantining the file."
+                            "Download completed but staged file not found. This may be caused by antivirus software quarantining the file."
                         );
                     }
 
-                    long fileSize = storageDriver.GetFileSize(path: tempPath);
-                    logger.LogInformation(message: "Server update staged at {TempPath} ({FileSize} bytes)", args: [tempPath, fileSize]);
+                    long fileSize = storageDriver.GetFileSize(tempPath);
+                    logger.LogInformation("Server update staged at {TempPath} ({FileSize} bytes)", [tempPath, fileSize]);
                     return Ok(
-                        value: new
+                        new
                         {
                             status = "ok",
                             message = "Update downloaded and staged.",
@@ -334,25 +333,25 @@ public class ManagementController(
                     );
 
                 default:
-                    return InternalServerErrorResponse(detail: "Unexpected update result.");
+                    return InternalServerErrorResponse("Unexpected update result.");
             }
         }
         catch (Exception e)
         {
-            logger.LogError(message: "Failed to download update: {Message}", args: e.Message);
-            return InternalServerErrorResponse(detail: "Failed to download update");
+            logger.LogError("Failed to download update: {Message}", e.Message);
+            return InternalServerErrorResponse("Failed to download update");
         }
     }
 
-    [HttpGet(template: "autostart")]
-    [ProducesResponseType(type: typeof(AutoStartDto), statusCode: StatusCodes.Status200OK)]
+    [HttpGet("autostart")]
+    [ProducesResponseType(typeof(AutoStartDto), StatusCodes.Status200OK)]
     public IActionResult GetAutoStart()
     {
-        return Ok(value: new AutoStartDto { Enabled = AutoStartupManager.IsEnabled() });
+        return Ok(new AutoStartDto { Enabled = AutoStartupManager.IsEnabled() });
     }
 
-    [HttpPost(template: "autostart")]
-    [ProducesResponseType(statusCode: StatusCodes.Status200OK)]
+    [HttpPost("autostart")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult SetAutoStart([FromBody] AutoStartDto request)
     {
         if (request.Enabled)
@@ -360,19 +359,19 @@ public class ManagementController(
         else
             AutoStartupManager.Remove();
 
-        return Ok(value: new AutoStartDto { Enabled = AutoStartupManager.IsEnabled() });
+        return Ok(new AutoStartDto { Enabled = AutoStartupManager.IsEnabled() });
     }
 
-    [HttpGet(template: "config")]
-    [ProducesResponseType(type: typeof(ManagementConfigDto), statusCode: StatusCodes.Status200OK)]
+    [HttpGet("config")]
+    [ProducesResponseType(typeof(ManagementConfigDto), StatusCodes.Status200OK)]
     public IActionResult GetConfig()
     {
-        Configuration? serverNameConfig = appContext.Configuration.FirstOrDefault(predicate: c =>
+        Configuration? serverNameConfig = appContext.Configuration.FirstOrDefault(c =>
             c.Key == "serverName"
         );
 
         return Ok(
-            value: new ManagementConfigDto
+            new ManagementConfigDto
             {
                 InternalPort = runtimeSettings.InternalServerPort,
                 ExternalPort = runtimeSettings.ExternalServerPort,
@@ -390,117 +389,117 @@ public class ManagementController(
         );
     }
 
-    [HttpPut(template: "config")]
-    [ProducesResponseType(statusCode: StatusCodes.Status200OK)]
+    [HttpPut("config")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateConfig([FromBody] ManagementConfigUpdateDto request)
     {
         if (request.LibraryWorkers is not null)
         {
             runtimeSettings.LibraryWorkers = new(
-                key: runtimeSettings.LibraryWorkers.Key,
-                value: (int)request.LibraryWorkers
+                runtimeSettings.LibraryWorkers.Key,
+                (int)request.LibraryWorkers
             );
             await queueRunner.SetWorkerCount(
-                name: runtimeSettings.LibraryWorkers.Key,
-                max: (int)request.LibraryWorkers,
-                userId: null
+                runtimeSettings.LibraryWorkers.Key,
+                (int)request.LibraryWorkers,
+                null
             );
         }
 
         if (request.ImportWorkers is not null)
         {
             runtimeSettings.ImportWorkers = new(
-                key: runtimeSettings.ImportWorkers.Key,
-                value: (int)request.ImportWorkers
+                runtimeSettings.ImportWorkers.Key,
+                (int)request.ImportWorkers
             );
             await queueRunner.SetWorkerCount(
-                name: runtimeSettings.ImportWorkers.Key,
-                max: (int)request.ImportWorkers,
-                userId: null
+                runtimeSettings.ImportWorkers.Key,
+                (int)request.ImportWorkers,
+                null
             );
         }
 
         if (request.ExtrasWorkers is not null)
         {
             runtimeSettings.ExtrasWorkers = new(
-                key: runtimeSettings.ExtrasWorkers.Key,
-                value: (int)request.ExtrasWorkers
+                runtimeSettings.ExtrasWorkers.Key,
+                (int)request.ExtrasWorkers
             );
             await queueRunner.SetWorkerCount(
-                name: runtimeSettings.ExtrasWorkers.Key,
-                max: (int)request.ExtrasWorkers,
-                userId: null
+                runtimeSettings.ExtrasWorkers.Key,
+                (int)request.ExtrasWorkers,
+                null
             );
         }
 
         if (request.EncoderWorkers is not null)
         {
             runtimeSettings.EncoderWorkers = new(
-                key: runtimeSettings.EncoderWorkers.Key,
-                value: (int)request.EncoderWorkers
+                runtimeSettings.EncoderWorkers.Key,
+                (int)request.EncoderWorkers
             );
             await queueRunner.SetWorkerCount(
-                name: runtimeSettings.EncoderWorkers.Key,
-                max: (int)request.EncoderWorkers,
-                userId: null
+                runtimeSettings.EncoderWorkers.Key,
+                (int)request.EncoderWorkers,
+                null
             );
         }
 
         if (request.CronWorkers is not null)
         {
             runtimeSettings.CronWorkers = new(
-                key: runtimeSettings.CronWorkers.Key,
-                value: (int)request.CronWorkers
+                runtimeSettings.CronWorkers.Key,
+                (int)request.CronWorkers
             );
             await queueRunner.SetWorkerCount(
-                name: runtimeSettings.CronWorkers.Key,
-                max: (int)request.CronWorkers,
-                userId: null
+                runtimeSettings.CronWorkers.Key,
+                (int)request.CronWorkers,
+                null
             );
         }
 
         if (request.ImageWorkers is not null)
         {
             runtimeSettings.ImageWorkers = new(
-                key: runtimeSettings.ImageWorkers.Key,
-                value: (int)request.ImageWorkers
+                runtimeSettings.ImageWorkers.Key,
+                (int)request.ImageWorkers
             );
             await queueRunner.SetWorkerCount(
-                name: runtimeSettings.ImageWorkers.Key,
-                max: (int)request.ImageWorkers,
-                userId: null
+                runtimeSettings.ImageWorkers.Key,
+                (int)request.ImageWorkers,
+                null
             );
         }
 
         if (request.FileWorkers is not null)
         {
             runtimeSettings.FileWorkers = new(
-                key: runtimeSettings.FileWorkers.Key,
-                value: (int)request.FileWorkers
+                runtimeSettings.FileWorkers.Key,
+                (int)request.FileWorkers
             );
             await queueRunner.SetWorkerCount(
-                name: runtimeSettings.FileWorkers.Key,
-                max: (int)request.FileWorkers,
-                userId: null
+                runtimeSettings.FileWorkers.Key,
+                (int)request.FileWorkers,
+                null
             );
         }
 
         if (request.MusicWorkers is not null)
         {
             runtimeSettings.MusicWorkers = new(
-                key: runtimeSettings.MusicWorkers.Key,
-                value: (int)request.MusicWorkers
+                runtimeSettings.MusicWorkers.Key,
+                (int)request.MusicWorkers
             );
             await queueRunner.SetWorkerCount(
-                name: runtimeSettings.MusicWorkers.Key,
-                max: (int)request.MusicWorkers,
-                userId: null
+                runtimeSettings.MusicWorkers.Key,
+                (int)request.MusicWorkers,
+                null
             );
         }
 
         if (request.ServerName is not null)
         {
-            Configuration? existing = await appContext.Configuration.FirstOrDefaultAsync(predicate: c =>
+            Configuration? existing = await appContext.Configuration.FirstOrDefaultAsync(c =>
                 c.Key == "serverName"
             );
 
@@ -511,24 +510,24 @@ public class ManagementController(
             else
             {
                 appContext.Configuration.Add(
-                    entity: new() { Key = "serverName", Value = request.ServerName }
+                    new() { Key = "serverName", Value = request.ServerName }
                 );
             }
 
             await appContext.SaveChangesAsync();
         }
 
-        return Ok(value: new { status = "ok", message = "Configuration updated" });
+        return Ok(new { status = "ok", message = "Configuration updated" });
     }
 
-    [HttpGet(template: "plugins")]
-    [ProducesResponseType(statusCode: StatusCodes.Status200OK)]
+    [HttpGet("plugins")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult GetPlugins()
     {
         IReadOnlyList<PluginInfo> plugins = pluginManager.GetInstalledPlugins();
 
         return Ok(
-            value: plugins.Select(selector: p => new
+            plugins.Select(p => new
             {
                 id = p.Id,
                 name = p.Name,
@@ -541,8 +540,8 @@ public class ManagementController(
         );
     }
 
-    [HttpGet(template: "queue")]
-    [ProducesResponseType(type: typeof(ManagementQueueStatusDto), statusCode: StatusCodes.Status200OK)]
+    [HttpGet("queue")]
+    [ProducesResponseType(typeof(ManagementQueueStatusDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetQueueStatus()
     {
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
@@ -554,16 +553,16 @@ public class ManagementController(
 
         Dictionary<string, ManagementWorkerStatusDto> workers = new();
         foreach (
-            IGrouping<string, KeyValuePair<string, Thread>> group in activeThreads.GroupBy(keySelector: t =>
-                t.Key.Split(separator: '-')[0]
+            IGrouping<string, KeyValuePair<string, Thread>> group in activeThreads.GroupBy(t =>
+                t.Key.Split('-')[0]
             )
         )
         {
-            workers[key: group.Key] = new() { ActiveThreads = group.Count() };
+            workers[group.Key] = new() { ActiveThreads = group.Count() };
         }
 
         return Ok(
-            value: new ManagementQueueStatusDto
+            new ManagementQueueStatusDto
             {
                 Workers = workers,
                 PendingJobs = pendingJobs,
@@ -572,8 +571,8 @@ public class ManagementController(
         );
     }
 
-    [HttpGet(template: "resources")]
-    [ProducesResponseType(statusCode: StatusCodes.Status200OK)]
+    [HttpGet("resources")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult GetResources()
     {
         try
@@ -582,7 +581,7 @@ public class ManagementController(
             List<ResourceMonitorDto> storage = StorageMonitor.Main();
 
             return Ok(
-                value: new
+                new
                 {
                     cpu = resource.Cpu,
                     gpu = resource.Gpu,
@@ -593,16 +592,16 @@ public class ManagementController(
         }
         catch (Exception)
         {
-            return InternalServerErrorResponse(detail: "Resource monitor failed");
+            return InternalServerErrorResponse("Resource monitor failed");
         }
     }
 
-    [HttpGet(template: "app/status")]
-    [ProducesResponseType(type: typeof(AppProcessStatusDto), statusCode: StatusCodes.Status200OK)]
+    [HttpGet("app/status")]
+    [ProducesResponseType(typeof(AppProcessStatusDto), StatusCodes.Status200OK)]
     public IActionResult GetAppStatus()
     {
         return Ok(
-            value: new AppProcessStatusDto
+            new AppProcessStatusDto
             {
                 Running = appProcessManager.IsRunning,
                 Pid = appProcessManager.ProcessId,
@@ -610,29 +609,29 @@ public class ManagementController(
         );
     }
 
-    [HttpPost(template: "app/start")]
-    [ProducesResponseType(statusCode: StatusCodes.Status200OK)]
-    [ProducesResponseType(statusCode: StatusCodes.Status409Conflict)]
-    [ProducesResponseType(statusCode: StatusCodes.Status500InternalServerError)]
+    [HttpPost("app/start")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public IActionResult StartApp()
     {
         if (appProcessManager.IsRunning)
-            return ConflictResponse(detail: "App is already running");
+            return ConflictResponse("App is already running");
 
         bool started = appProcessManager.Start();
 
         if (!started)
-            return InternalServerErrorResponse(detail: "Failed to start app — binary not found");
+            return InternalServerErrorResponse("Failed to start app — binary not found");
 
-        return Ok(value: new { status = "ok", message = "App started" });
+        return Ok(new { status = "ok", message = "App started" });
     }
 
-    [HttpPost(template: "app/stop")]
-    [ProducesResponseType(statusCode: StatusCodes.Status200OK)]
+    [HttpPost("app/stop")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult StopApp()
     {
         bool stopped = appProcessManager.Stop();
 
-        return Ok(value: new { status = "ok", message = stopped ? "App stopped" : "App was not running" });
+        return Ok(new { status = "ok", message = stopped ? "App stopped" : "App was not running" });
     }
 }

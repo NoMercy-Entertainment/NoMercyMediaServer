@@ -20,31 +20,31 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// <typeparam name="TData">The type of data this component displays.</typeparam>
 public record LeafProps<TData> : ILeafProps<TData>
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public dynamic Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty(propertyName: "next_id", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public dynamic? NextId { get; set; }
 
-    [JsonProperty(propertyName: "previous_id", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public dynamic? PreviousId { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public TData? Data { get; set; }
 
-    [JsonProperty(propertyName: "watch")]
+    [JsonProperty("watch")]
     public bool Watch { get; set; }
 
-    [JsonProperty(propertyName: "context_menu_items", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("context_menu_items", NullValueHandling = NullValueHandling.Ignore)]
     public IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
 
-    [JsonProperty(propertyName: "url", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public Uri? Url { get; set; }
 
-    [JsonProperty(propertyName: "properties", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
     public Dictionary<string, dynamic>? Properties { get; set; }
 }
 
@@ -78,7 +78,7 @@ public record MusicHomeCardProps : LeafProps<MusicHomeCardData>;
 /// </summary>
 public record TrackRowProps : LeafProps<TrackRowData>
 {
-    [JsonProperty(propertyName: "displayList", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("displayList", NullValueHandling = NullValueHandling.Ignore)]
     public IEnumerable<TrackRowData>? DisplayList { get; set; }
 }
 

@@ -33,31 +33,31 @@ namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 public class PlanStageBuiltinPresetMatrixTests
 {
     public static IEnumerable<object[]> Presets() =>
-        BuiltinPresets.All().Select(selector: preset => new object[] { preset.Name });
+        BuiltinPresets.All().Select(preset => new object[] { preset.Name });
 
     [Theory]
-    [MemberData(memberName: nameof(Presets))]
+    [MemberData(nameof(Presets))]
     public async Task BuiltinPreset_PlansWithoutThrowing(string presetName)
     {
-        EncodingProfile profile = BuiltinPresets.All().Single(predicate: preset => preset.Name == presetName);
+        EncodingProfile profile = BuiltinPresets.All().Single(preset => preset.Name == presetName);
         PlanStage stage = BuildStage();
 
-        ValidateInput input = new(Media: RichSource(), Profile: profile);
+        ValidateInput input = new(RichSource(), profile);
         StageResult result = await stage.ExecuteAsync(
-            input: input,
-            context: EncodingContext.Create(),
-            ct: CancellationToken.None
+            input,
+            EncodingContext.Create(),
+            CancellationToken.None
         );
 
         result
             .Should()
             .BeOfType<StageSuccess<ExecutionPlan>>(
-                because: $"builtin preset '{presetName}' must plan cleanly on a rich source"
+                $"builtin preset '{presetName}' must plan cleanly on a rich source"
             );
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
         if (profile.Video is not null && profile.Video.Policy != StreamPolicy.Omit)
-            plan.OutputPlan.VideoOutputs.Should().NotBeEmpty(because: $"'{presetName}' declares video");
+            plan.OutputPlan.VideoOutputs.Should().NotBeEmpty($"'{presetName}' declares video");
     }
 
     private static PlanStage BuildStage()
@@ -66,15 +66,15 @@ public class PlanStageBuiltinPresetMatrixTests
         Mock<IHardwareCapabilities> hardware = new();
         Mock<IFfmpegCapabilities> ffmpeg = new();
 
-        hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
-        hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
-        hardware.Setup(expression: h => h.Gpus).Returns(value: []);
-        hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
-        hardware.Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns(value: (GpuDevice?)null);
-        ffmpeg.Setup(expression: f => f.HasFilter(It.IsAny<string>())).Returns(value: true);
+        hardware.Setup(h => h.HasGpu).Returns(false);
+        hardware.Setup(h => h.CpuCores).Returns(8);
+        hardware.Setup(h => h.Gpus).Returns([]);
+        hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        hardware.Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns((GpuDevice?)null);
+        ffmpeg.Setup(f => f.HasFilter(It.IsAny<string>())).Returns(true);
 
         codecResolver
-            .Setup(expression: r =>
+            .Setup(r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -82,39 +82,39 @@ public class PlanStageBuiltinPresetMatrixTests
                 )
             )
             .Returns(
-                valueFunction: (VideoCodecType codec, IHardwareCapabilities _, EncoderPreference _) =>
+                (VideoCodecType codec, IHardwareCapabilities _, EncoderPreference _) =>
                     new(
-                        FfmpegEncoderName: SoftwareEncoderFor(codec: codec),
-                        EncoderInfo: new(
-                            FfmpegName: SoftwareEncoderFor(codec: codec),
-                            RequiredVendor: null,
-                            Presets: ["medium"],
-                            Profiles: ["main", "high", "main10"],
-                            Levels: ["4.1", "5.1"],
-                            QualityRange: new(Min: 0, Max: 51, Default: 23),
-                            SupportedRateControl: [RateControlMode.Crf],
-                            Supports10Bit: true,
-                            SupportsHdr: true,
-                            MaxConcurrentSessions: int.MaxValue,
-                            PixelFormat10Bit: "yuv420p10le",
-                            VendorSpecificFlags: new()
+                        SoftwareEncoderFor(codec),
+                        new(
+                            SoftwareEncoderFor(codec),
+                            null,
+                            ["medium"],
+                            ["main", "high", "main10"],
+                            ["4.1", "5.1"],
+                            new(0, 51, 23),
+                            [RateControlMode.Crf],
+                            true,
+                            true,
+                            int.MaxValue,
+                            "yuv420p10le",
+                            new()
                         ),
-                        Device: null,
-                        DefaultRateControl: RateControlMode.Crf
+                        null,
+                        RateControlMode.Crf
                     )
             );
 
         return new(
-            graphBuilder: new(),
-            groupingStrategy: new(),
-            costEstimator: new(),
-            codecResolver: codecResolver.Object,
-            hardware: hardware.Object,
-            tonemapSelector: new TonemapSelector(),
-            ffmpegCapabilities: ffmpeg.Object,
-            abrLadderGenerator: new AbrLadderGenerator(),
-            cropDetector: new NoOpCropDetector(),
-            logger: NullLogger<PlanStage>.Instance
+            new(),
+            new(),
+            new(),
+            codecResolver.Object,
+            hardware.Object,
+            new TonemapSelector(),
+            ffmpeg.Object,
+            new AbrLadderGenerator(),
+            new NoOpCropDetector(),
+            NullLogger<PlanStage>.Instance
         );
     }
 
@@ -130,45 +130,42 @@ public class PlanStageBuiltinPresetMatrixTests
 
     private static MediaInfo RichSource() =>
         new(
-            FilePath: "/media/rich.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 120),
-            OverallBitRateKbps: 50000,
-            FileSizeBytes: 40_000_000_000,
-            VideoStreams:
+            "/media/rich.mkv",
+            "matroska",
+            TimeSpan.FromMinutes(120),
+            50000,
+            40_000_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "hevc",
-                    Width: 3840,
-                    Height: 2160,
-                    FrameRate: 24.0,
-                    BitDepth: 10,
-                    PixelFormat: "yuv420p10le",
-                    ColorPrimaries: "bt2020",
-                    ColorTransfer: "smpte2084",
-                    ColorSpace: "bt2020nc",
-                    IsDefault: true,
-                    BitRateKbps: 45000
+                    0,
+                    "hevc",
+                    3840,
+                    2160,
+                    24.0,
+                    10,
+                    "yuv420p10le",
+                    "bt2020",
+                    "smpte2084",
+                    "bt2020nc",
+                    true,
+                    45000
                 ),
             ],
-            AudioStreams:
             [
                 new(
-                    Index: 1,
-                    Codec: "eac3",
-                    Channels: 6,
-                    SampleRate: 48000,
-                    BitRateKbps: 768,
-                    Language: "eng",
-                    IsDefault: true,
-                    IsForced: false
+                    1,
+                    "eac3",
+                    6,
+                    48000,
+                    768,
+                    "eng",
+                    true,
+                    false
                 ),
             ],
-            SubtitleStreams:
             [
-                new(Index: 2, Codec: "subrip", Language: "eng", IsDefault: true, IsForced: false),
+                new(2, "subrip", "eng", true, false),
             ],
-            Chapters: []
+            []
         );
 }

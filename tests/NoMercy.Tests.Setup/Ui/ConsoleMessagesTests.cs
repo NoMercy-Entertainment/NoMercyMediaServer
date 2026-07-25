@@ -30,7 +30,7 @@ namespace NoMercy.Tests.Setup.Ui;
 /// <c>SetupTerminalUiTests</c> for the equivalent, environment-dependent situation with
 /// <c>SetupTerminalUi</c>.
 /// </remarks>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ConsoleMessagesTests
 {
     [Fact]
@@ -57,7 +57,7 @@ public class ConsoleMessagesTests
         Task task = ConsoleMessages.ServerRunning();
 
         await task;
-        Assert.True(condition: task.IsCompletedSuccessfully);
+        Assert.True(task.IsCompletedSuccessfully);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class ConsoleMessagesTests
         Task task = ConsoleMessages.Welcome();
 
         await task;
-        Assert.True(condition: task.IsCompletedSuccessfully);
+        Assert.True(task.IsCompletedSuccessfully);
     }
 }
 

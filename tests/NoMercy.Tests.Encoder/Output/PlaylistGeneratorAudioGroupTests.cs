@@ -23,161 +23,152 @@ public class PlaylistGeneratorAudioGroupTests
     private string Generate(OutputPlan plan)
     {
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
-            keySelector: v => VideoVariantKey(video: v),
-            elementSelector: _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
+            v => VideoVariantKey(v),
+            _ => new VariantMetrics(5_000_000, 4_500_000)
         );
 
         Dictionary<string, VariantMetrics> audioMetrics = plan.AudioOutputs.ToDictionary(
-            keySelector: a => AudioVariantKey(audio: a),
-            elementSelector: _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
+            a => AudioVariantKey(a),
+            _ => new VariantMetrics(192_000, 180_000)
         );
 
         PlaylistGenerator generator = new();
-        return generator.GenerateMasterPlaylist(plan: plan, mediaTitle: MediaTitle, videoMetrics: videoMetrics, audioMetrics: audioMetrics);
+        return generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
     }
 
     private static string VideoVariantKey(VideoOutputPlan video) =>
         TemplateResolver.Resolve(
-            template: video.PlaylistNameTemplate,
-            values: TemplateResolver.VideoTokens(width: video.Width, height: video.Height, isHdrOutput: video.IsHdrOutput)
+            video.PlaylistNameTemplate,
+            TemplateResolver.VideoTokens(video.Width, video.Height, video.IsHdrOutput)
         );
 
     private static string AudioVariantKey(AudioOutputPlan audio) =>
         TemplateResolver.Resolve(
-            template: audio.PlaylistNameTemplate,
-            values: TemplateResolver.AudioTokens(language: audio.Language ?? "und", codecName: audio.CodecToken, channels: audio.Channels)
+            audio.PlaylistNameTemplate,
+            TemplateResolver.AudioTokens(audio.Language ?? "und", audio.CodecToken, audio.Channels)
         );
 
     [Fact]
     public void GenerateMasterPlaylist_VideoOnlyNoAudio_OmitsAudioGroupAndAudioAttribute()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
-            AudioOutputs: [],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            [],
+            null
         );
 
-        string master = Generate(plan: plan);
+        string master = Generate(plan);
 
-        master.Should().NotContain(unexpected: "#EXT-X-MEDIA:TYPE=AUDIO");
-        master.Should().NotContain(unexpected: "AUDIO=");
-        master.Should().Contain(expected: "CLOSED-CAPTIONS=NONE");
+        master.Should().NotContain("#EXT-X-MEDIA:TYPE=AUDIO");
+        master.Should().NotContain("AUDIO=");
+        master.Should().Contain("CLOSED-CAPTIONS=NONE");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_WithAudioRendition_EmitsAudioGroupAndAttribute()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
-            AudioOutputs:
             [
-                new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            null
         );
 
-        string master = Generate(plan: plan);
+        string master = Generate(plan);
 
-        master.Should().Contain(expected: "#EXT-X-MEDIA:TYPE=AUDIO");
-        master.Should().Contain(expected: "GROUP-ID=\"audio_aac\"");
-        master.Should().Contain(expected: "LANGUAGE=\"eng\"");
-        master.Should().Contain(expected: "AUDIO=\"audio_aac\"");
+        master.Should().Contain("#EXT-X-MEDIA:TYPE=AUDIO");
+        master.Should().Contain("GROUP-ID=\"audio_aac\"");
+        master.Should().Contain("LANGUAGE=\"eng\"");
+        master.Should().Contain("AUDIO=\"audio_aac\"");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_MultipleAudioCodecs_KeepsDistinctGroupIds()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
-            AudioOutputs:
             [
-                new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            null
         );
 
-        string master = Generate(plan: plan);
+        string master = Generate(plan);
 
-        master.Should().Contain(expected: "GROUP-ID=\"audio_aac\"");
-        master.Should().MatchRegex(regularExpression: @"AUDIO=""audio_aac""");
-        master.Should().NotContain(unexpected: "audio_opus");
-        master.Should().NotContain(unexpected: "audio_eac3");
+        master.Should().Contain("GROUP-ID=\"audio_aac\"");
+        master.Should().MatchRegex(@"AUDIO=""audio_aac""");
+        master.Should().NotContain("audio_opus");
+        master.Should().NotContain("audio_eac3");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_OpusAudio_UsesOpusGroupId()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
-            AudioOutputs:
             [
-                new(EncoderName: "libopus", BitrateKbps: 128, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0"),
+                new("libopus", 128, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            null
         );
 
-        string master = Generate(plan: plan);
+        string master = Generate(plan);
 
-        master.Should().Contain(expected: "GROUP-ID=\"audio_opus\"");
-        master.Should().MatchRegex(regularExpression: @"AUDIO=""audio_opus""");
+        master.Should().Contain("GROUP-ID=\"audio_opus\"");
+        master.Should().MatchRegex(@"AUDIO=""audio_opus""");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_Eac3Audio_UsesEac3GroupId()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
-            AudioOutputs:
             [
-                new(EncoderName: "eac3", BitrateKbps: 384, Channels: 6, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0"),
+                new("eac3", 384, 6, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            null
         );
 
-        string master = Generate(plan: plan);
+        string master = Generate(plan);
 
-        master.Should().Contain(expected: "GROUP-ID=\"audio_eac3\"");
-        master.Should().MatchRegex(regularExpression: @"AUDIO=""audio_eac3""");
+        master.Should().Contain("GROUP-ID=\"audio_eac3\"");
+        master.Should().MatchRegex(@"AUDIO=""audio_eac3""");
     }
 
     [Fact]
@@ -185,174 +176,164 @@ public class PlaylistGeneratorAudioGroupTests
     {
         PlaylistGenerator generator = new();
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
-            AudioOutputs:
             [
-                new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            null
         );
 
         Dictionary<string, VariantMetrics> vidMetrics = new()
         {
-            [key: VideoVariantKey(video: plan.VideoOutputs[0])] = new(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000),
+            [VideoVariantKey(plan.VideoOutputs[0])] = new(5_000_000, 4_500_000),
         };
 
         Dictionary<string, VariantMetrics> audMetrics = new()
         {
-            [key: AudioVariantKey(audio: plan.AudioOutputs[0])] = new(PeakBandwidth: 0, AverageBandwidth: 0),
+            [AudioVariantKey(plan.AudioOutputs[0])] = new(0, 0),
         };
 
-        string master = generator.GenerateMasterPlaylist(plan: plan, mediaTitle: MediaTitle, videoMetrics: vidMetrics, audioMetrics: audMetrics);
+        string master = generator.GenerateMasterPlaylist(plan, MediaTitle, vidMetrics, audMetrics);
 
-        master.Should().NotContain(unexpected: "#EXT-X-MEDIA:TYPE=AUDIO");
-        master.Should().NotContain(unexpected: "AUDIO=");
+        master.Should().NotContain("#EXT-X-MEDIA:TYPE=AUDIO");
+        master.Should().NotContain("AUDIO=");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_MultipleAudioLanguages_EachEmitsOwnMediaLine()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
-            AudioOutputs:
             [
-                new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0"),
-                new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "fra", MapLabel: "0:a:1"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "fra", "0:a:1"),
             ],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            null
         );
 
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
-            keySelector: v => VideoVariantKey(video: v),
-            elementSelector: _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
+            v => VideoVariantKey(v),
+            _ => new VariantMetrics(5_000_000, 4_500_000)
         );
 
         Dictionary<string, VariantMetrics> audioMetrics = new()
         {
-            [key: AudioVariantKey(audio: plan.AudioOutputs[0])] = new(PeakBandwidth: 192_000, AverageBandwidth: 180_000),
-            [key: AudioVariantKey(audio: plan.AudioOutputs[1])] = new(PeakBandwidth: 192_000, AverageBandwidth: 180_000),
+            [AudioVariantKey(plan.AudioOutputs[0])] = new(192_000, 180_000),
+            [AudioVariantKey(plan.AudioOutputs[1])] = new(192_000, 180_000),
         };
 
         PlaylistGenerator generator = new();
-        string master = generator.GenerateMasterPlaylist(plan: plan, mediaTitle: MediaTitle, videoMetrics: videoMetrics, audioMetrics: audioMetrics);
+        string master = generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
 
         int audioMediaCount = System.Text.RegularExpressions.Regex.Matches(
-            input: master,
-            pattern: "#EXT-X-MEDIA:TYPE=AUDIO"
+            master,
+            "#EXT-X-MEDIA:TYPE=AUDIO"
         ).Count;
-        audioMediaCount.Should().Be(expected: 2);
+        audioMediaCount.Should().Be(2);
 
-        master.Should().Contain(expected: "LANGUAGE=\"eng\"");
-        master.Should().Contain(expected: "LANGUAGE=\"fra\"");
+        master.Should().Contain("LANGUAGE=\"eng\"");
+        master.Should().Contain("LANGUAGE=\"fra\"");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_AudioCopyAction_IncludedInGroup()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
-            AudioOutputs:
             [
-                new(EncoderName: "aac", BitrateKbps: 0, Channels: 2, SampleRate: 48000, Action: StreamAction.Copy, Language: "eng", MapLabel: "0:a:0"),
+                new("aac", 0, 2, 48000, StreamAction.Copy, "eng", "0:a:0"),
             ],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            null
         );
 
-        string master = Generate(plan: plan);
+        string master = Generate(plan);
 
-        master.Should().Contain(expected: "#EXT-X-MEDIA:TYPE=AUDIO");
-        master.Should().Contain(expected: "GROUP-ID=\"audio_aac\"");
-        master.Should().Contain(expected: "LANGUAGE=\"eng\"");
+        master.Should().Contain("#EXT-X-MEDIA:TYPE=AUDIO");
+        master.Should().Contain("GROUP-ID=\"audio_aac\"");
+        master.Should().Contain("LANGUAGE=\"eng\"");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_AudioOtherAction_NotIncludedInGroup()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
-            AudioOutputs:
             [
-                new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Drop, Language: "eng", MapLabel: "0:a:0"),
+                new("aac", 192, 2, 48000, StreamAction.Drop, "eng", "0:a:0"),
             ],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            null
         );
 
-        string master = Generate(plan: plan);
+        string master = Generate(plan);
 
-        master.Should().NotContain(unexpected: "LANGUAGE=\"eng\"");
+        master.Should().NotContain("LANGUAGE=\"eng\"");
     }
 
     [Fact]
     public void GenerateMasterPlaylist_DefaultAudioFlag_FirstRenditionOnly()
     {
         OutputPlan plan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            OutputFormat.Hls,
             [
                 new(
-                    Width: 1920, Height: 1080, EncoderName: "libx264", Crf: 23, BitrateKbps: 8000, Preset: "medium", Profile: "high", Level: "4.0", TenBit: false,
-                    PixelFormat: "yuv420p", MapLabel: "[v0]", ExtraFlags: new()
+                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
+                    "yuv420p", "[v0]", new()
                 ),
             ],
-            AudioOutputs:
             [
-                new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0"),
-                new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "fra", MapLabel: "0:a:1"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "fra", "0:a:1"),
             ],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            [],
+            null
         );
 
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
-            keySelector: v => VideoVariantKey(video: v),
-            elementSelector: _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
+            v => VideoVariantKey(v),
+            _ => new VariantMetrics(5_000_000, 4_500_000)
         );
 
         Dictionary<string, VariantMetrics> audioMetrics = new()
         {
-            [key: AudioVariantKey(audio: plan.AudioOutputs[0])] = new(PeakBandwidth: 192_000, AverageBandwidth: 180_000),
-            [key: AudioVariantKey(audio: plan.AudioOutputs[1])] = new(PeakBandwidth: 192_000, AverageBandwidth: 180_000),
+            [AudioVariantKey(plan.AudioOutputs[0])] = new(192_000, 180_000),
+            [AudioVariantKey(plan.AudioOutputs[1])] = new(192_000, 180_000),
         };
 
         PlaylistGenerator generator = new();
-        string master = generator.GenerateMasterPlaylist(plan: plan, mediaTitle: MediaTitle, videoMetrics: videoMetrics, audioMetrics: audioMetrics);
+        string master = generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
 
-        int defaultCount = System.Text.RegularExpressions.Regex.Matches(input: master, pattern: "DEFAULT=YES").Count;
-        defaultCount.Should().Be(expected: 1);
+        int defaultCount = System.Text.RegularExpressions.Regex.Matches(master, "DEFAULT=YES").Count;
+        defaultCount.Should().Be(1);
 
-        master.Should().Contain(expected: "LANGUAGE=\"eng\",AUTOSELECT=YES,DEFAULT=YES");
-        master.Should().Contain(expected: "LANGUAGE=\"fra\",AUTOSELECT=YES,DEFAULT=NO");
+        master.Should().Contain("LANGUAGE=\"eng\",AUTOSELECT=YES,DEFAULT=YES");
+        master.Should().Contain("LANGUAGE=\"fra\",AUTOSELECT=YES,DEFAULT=NO");
     }
 }

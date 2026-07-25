@@ -35,10 +35,10 @@ public class EncodeReconciler : IEncodeReconciler
     {
         if (input.Force)
             return new(
-                Action: ReconciliationAction.Full,
-                MissingKinds: [],
-                NeedsSubtitleOcr: input.BitmapSubtitleStreamCount > 0,
-                Reason: "Force flag set on the job — reconciliation skipped, full re-encode."
+                ReconciliationAction.Full,
+                [],
+                input.BitmapSubtitleStreamCount > 0,
+                "Force flag set on the job — reconciliation skipped, full re-encode."
             );
 
         EncodingProfile profile = input.Profile;
@@ -49,7 +49,7 @@ public class EncodeReconciler : IEncodeReconciler
         bool needsOcr = desiredOcr && !hasValidOcr;
 
         if (input.IsSingleFileOutput)
-            return DecideSingleFile(profile: profile, existing: existing, needsOcr: needsOcr);
+            return DecideSingleFile(profile, existing, needsOcr);
 
         bool desiredVideo = profile.Video is not null || profile.Ladder?.Rungs is { Length: > 0 };
         bool desiredAudio = profile.Audio.Length > 0;
@@ -77,30 +77,30 @@ public class EncodeReconciler : IEncodeReconciler
         // pass never completed — nothing downstream of it can be trusted
         // as a reliable "top up only the gap" case, so fall back to a full
         // re-encode rather than guessing which rungs are actually intact.
-        if (desiredMasterPlaylist && !HasValidRootPlaylist(files: existing.BundleFiles))
+        if (desiredMasterPlaylist && !HasValidRootPlaylist(existing.BundleFiles))
             return new(
-                Action: ReconciliationAction.Full,
-                MissingKinds: [],
-                NeedsSubtitleOcr: needsOcr,
-                Reason: "Master playlist missing or invalid — encode output is structurally incomplete."
+                ReconciliationAction.Full,
+                [],
+                needsOcr,
+                "Master playlist missing or invalid — encode output is structurally incomplete."
             );
 
         List<EncodeTaskKind> missingKinds = [];
-        if (desiredVideo && !HasValidUnder(files: existing.BundleFiles, prefix: "video_"))
-            missingKinds.Add(item: EncodeTaskKind.Video);
-        if (desiredAudio && !HasValidUnder(files: existing.BundleFiles, prefix: "audio_"))
-            missingKinds.Add(item: EncodeTaskKind.Audio);
-        if (desiredSubtitle && !HasValidDeclaredSubtitle(files: existing.BundleFiles))
-            missingKinds.Add(item: EncodeTaskKind.Subtitle);
+        if (desiredVideo && !HasValidUnder(existing.BundleFiles, "video_"))
+            missingKinds.Add(EncodeTaskKind.Video);
+        if (desiredAudio && !HasValidUnder(existing.BundleFiles, "audio_"))
+            missingKinds.Add(EncodeTaskKind.Audio);
+        if (desiredSubtitle && !HasValidDeclaredSubtitle(existing.BundleFiles))
+            missingKinds.Add(EncodeTaskKind.Subtitle);
         // ThumbnailGenerator writes the sprite as `thumbs_{W}x{H}.webp` beside
         // its `thumbs_{W}x{H}.vtt`; the word "sprite" never appears on disk, so
         // matching it would report thumbnails missing on every re-dispatch.
-        if (desiredThumbnails && !HasValidNameContaining(files: existing.BundleFiles, fragment: "thumbs_"))
-            missingKinds.Add(item: EncodeTaskKind.Thumbnails);
-        if (desiredChapters && !HasValidNamed(files: existing.BundleFiles, exactFileName: "chapters.vtt"))
-            missingKinds.Add(item: EncodeTaskKind.Chapters);
+        if (desiredThumbnails && !HasValidNameContaining(existing.BundleFiles, "thumbs_"))
+            missingKinds.Add(EncodeTaskKind.Thumbnails);
+        if (desiredChapters && !HasValidNamed(existing.BundleFiles, "chapters.vtt"))
+            missingKinds.Add(EncodeTaskKind.Chapters);
 
-        return Finalize(profile: profile, storedFingerprint: existing.ProfileFingerprint, missingKinds: missingKinds, needsOcr: needsOcr);
+        return Finalize(profile, existing.ProfileFingerprint, missingKinds, needsOcr);
     }
 
     public async Task<ExistingOutputSnapshot> InspectAsync(
@@ -110,23 +110,23 @@ public class EncodeReconciler : IEncodeReconciler
         CancellationToken ct
     )
     {
-        string trimmedRoot = mediaRootPath.TrimEnd(trimChar: '/');
+        string trimmedRoot = mediaRootPath.TrimEnd('/');
 
         List<ExistingOutputEntry> files = [];
         try
         {
             string dirPrefix = trimmedRoot + "/";
             foreach (
-                StorageEntry entry in destinationStorage.List(path: trimmedRoot, pattern: "*", recursive: true)
+                StorageEntry entry in destinationStorage.List(trimmedRoot, "*", true)
             )
             {
                 if (entry.IsDirectory)
                     continue;
 
-                string rel = entry.Path.StartsWith(value: dirPrefix, comparisonType: StringComparison.OrdinalIgnoreCase)
+                string rel = entry.Path.StartsWith(dirPrefix, StringComparison.OrdinalIgnoreCase)
                     ? entry.Path[dirPrefix.Length..]
                     : entry.Path;
-                files.Add(item: new(RelativePath: rel, SizeBytes: entry.SizeBytes));
+                files.Add(new(rel, entry.SizeBytes));
             }
         }
         catch (Exception)
@@ -138,17 +138,17 @@ public class EncodeReconciler : IEncodeReconciler
             // exception remotely), so this is intentionally broad.
         }
 
-        int ocrCount = CountOcredBitmapSidecars(files: files);
+        int ocrCount = CountOcredBitmapSidecars(files);
 
         string? fingerprint = await TryReadBlueprintFingerprintAsync(
-            trimmedRoot: trimmedRoot,
-            presetId: presetId,
-            files: files,
-            destinationStorage: destinationStorage,
-            ct: ct
+            trimmedRoot,
+            presetId,
+            files,
+            destinationStorage,
+            ct
         );
 
-        return new(ProfileFingerprint: fingerprint, BundleFiles: files, ValidOcrSidecarCount: ocrCount);
+        return new(fingerprint, files, ocrCount);
     }
 
     /// <summary>
@@ -168,11 +168,11 @@ public class EncodeReconciler : IEncodeReconciler
         CancellationToken ct
     )
     {
-        ExistingOutputEntry? blueprintEntry = files.FirstOrDefault(predicate: f =>
+        ExistingOutputEntry? blueprintEntry = files.FirstOrDefault(f =>
             string.Equals(
-                a: Path.GetFileName(path: f.RelativePath),
-                b: MediaBlueprintWriter.FileName,
-                comparisonType: StringComparison.OrdinalIgnoreCase
+                Path.GetFileName(f.RelativePath),
+                MediaBlueprintWriter.FileName,
+                StringComparison.OrdinalIgnoreCase
             )
         );
 
@@ -182,15 +182,15 @@ public class EncodeReconciler : IEncodeReconciler
         try
         {
             byte[] bytes = await destinationStorage.ReadAsync(
-                path: $"{trimmedRoot}/{blueprintEntry.RelativePath}",
-                ct: ct
+                $"{trimmedRoot}/{blueprintEntry.RelativePath}",
+                ct
             );
             MediaBlueprint? blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(
-                value: Encoding.UTF8.GetString(bytes: bytes)
+                Encoding.UTF8.GetString(bytes)
             );
             return blueprint
-                ?.Encodes.FirstOrDefault(predicate: e =>
-                    string.Equals(a: e.PresetId, b: presetId, comparisonType: StringComparison.OrdinalIgnoreCase)
+                ?.Encodes.FirstOrDefault(e =>
+                    string.Equals(e.PresetId, presetId, StringComparison.OrdinalIgnoreCase)
                 )
                 ?.ProfileFingerprint;
         }
@@ -210,20 +210,20 @@ public class EncodeReconciler : IEncodeReconciler
         // populated (by extraction or by OCR) while the mp4/mkv this decision is
         // about is missing entirely.
         bool desiredAnyStream = profile.Video is not null || profile.Audio.Length > 0;
-        bool hasValidOutput = existing.BundleFiles.Any(predicate: f =>
+        bool hasValidOutput = existing.BundleFiles.Any(f =>
             f.IsValid
-            && !f.RelativePath.StartsWith(value: "subtitles/", comparisonType: StringComparison.OrdinalIgnoreCase)
+            && !f.RelativePath.StartsWith("subtitles/", StringComparison.OrdinalIgnoreCase)
         );
 
         if (desiredAnyStream && !hasValidOutput)
             return new(
-                Action: ReconciliationAction.Full,
-                MissingKinds: [],
-                NeedsSubtitleOcr: needsOcr,
-                Reason: "Single-file output missing or invalid — no partial concept for this container."
+                ReconciliationAction.Full,
+                [],
+                needsOcr,
+                "Single-file output missing or invalid — no partial concept for this container."
             );
 
-        return Finalize(profile: profile, storedFingerprint: existing.ProfileFingerprint, missingKinds: [], needsOcr: needsOcr);
+        return Finalize(profile, existing.ProfileFingerprint, [], needsOcr);
     }
 
     /// <summary>
@@ -241,38 +241,38 @@ public class EncodeReconciler : IEncodeReconciler
         bool needsOcr
     )
     {
-        bool fingerprintKnown = !string.IsNullOrEmpty(value: storedFingerprint);
+        bool fingerprintKnown = !string.IsNullOrEmpty(storedFingerprint);
         if (fingerprintKnown)
         {
-            string currentFingerprint = ProfileFingerprint.Compute(profile: profile);
-            if (!string.Equals(a: storedFingerprint, b: currentFingerprint, comparisonType: StringComparison.Ordinal))
+            string currentFingerprint = ProfileFingerprint.Compute(profile);
+            if (!string.Equals(storedFingerprint, currentFingerprint, StringComparison.Ordinal))
                 return new(
-                    Action: ReconciliationAction.Full,
-                    MissingKinds: [],
-                    NeedsSubtitleOcr: needsOcr,
-                    Reason: "Encoding profile changed since this output was produced."
+                    ReconciliationAction.Full,
+                    [],
+                    needsOcr,
+                    "Encoding profile changed since this output was produced."
                 );
         }
 
         if (missingKinds.Count == 0 && !needsOcr)
             return new(
-                Action: ReconciliationAction.Skip,
-                MissingKinds: [],
-                NeedsSubtitleOcr: false,
-                Reason: fingerprintKnown
+                ReconciliationAction.Skip,
+                [],
+                false,
+                fingerprintKnown
                     ? "All desired outputs present, valid, and match the current profile fingerprint."
                     : "All desired outputs present and valid; no fingerprint on record (legacy output) treated as same profile."
             );
 
-        List<string> gaps = missingKinds.Select(selector: kind => kind.ToString()).ToList();
+        List<string> gaps = missingKinds.Select(kind => kind.ToString()).ToList();
         if (needsOcr)
-            gaps.Add(item: "subtitle OCR sidecar");
+            gaps.Add("subtitle OCR sidecar");
 
         return new(
-            Action: ReconciliationAction.Partial,
-            MissingKinds: missingKinds,
-            NeedsSubtitleOcr: needsOcr,
-            Reason: $"Profile unchanged — re-running only: {string.Join(separator: ", ", values: gaps)}."
+            ReconciliationAction.Partial,
+            missingKinds,
+            needsOcr,
+            $"Profile unchanged — re-running only: {string.Join(", ", gaps)}."
         );
     }
 
@@ -287,34 +287,34 @@ public class EncodeReconciler : IEncodeReconciler
     /// </summary>
     internal static int CountOcredBitmapSidecars(IReadOnlyCollection<ExistingOutputEntry> files)
     {
-        HashSet<string> textKeys = new(comparer: StringComparer.OrdinalIgnoreCase);
+        HashSet<string> textKeys = new(StringComparer.OrdinalIgnoreCase);
         foreach (ExistingOutputEntry file in files)
         {
             if (
                 file.IsValid
-                && TryReadSubtitleKey(relativePath: file.RelativePath, extensions: TextSidecarExtensions, key: out string textKey)
+                && TryReadSubtitleKey(file.RelativePath, TextSidecarExtensions, out string textKey)
             )
-                textKeys.Add(item: textKey);
+                textKeys.Add(textKey);
         }
 
         // A bitmap track is only counted as OCR'd when a text sidecar carries the
         // same {lang}.{type} — the same pairing the library scan uses to decide
         // whether a bitmap subtitle is orphaned, and it reads bitmap-ness from
         // SubtitleClassifier so both agree on what a bitmap sidecar is.
-        return files.Count(predicate: f =>
+        return files.Count(f =>
             f.IsValid
-            && TryReadBitmapSubtitleKey(relativePath: f.RelativePath, key: out string bitmapKey)
-            && textKeys.Contains(item: bitmapKey)
+            && TryReadBitmapSubtitleKey(f.RelativePath, out string bitmapKey)
+            && textKeys.Contains(bitmapKey)
         );
     }
 
     private static bool TryReadBitmapSubtitleKey(string relativePath, out string key)
     {
         key = string.Empty;
-        string extension = Path.GetExtension(path: Path.GetFileName(path: relativePath));
+        string extension = Path.GetExtension(Path.GetFileName(relativePath));
 
-        return SubtitleClassifier.IsBitmapSidecarExtension(extension: extension)
-            && TryReadSubtitleKey(relativePath: relativePath, extensions: [extension], key: out key);
+        return SubtitleClassifier.IsBitmapSidecarExtension(extension)
+            && TryReadSubtitleKey(relativePath, [extension], out key);
     }
 
     /// <summary>
@@ -325,13 +325,13 @@ public class EncodeReconciler : IEncodeReconciler
     private static bool TryReadSubtitleKey(string relativePath, string[] extensions, out string key)
     {
         key = string.Empty;
-        string fileName = Path.GetFileName(path: relativePath);
-        string extension = Path.GetExtension(path: fileName);
+        string fileName = Path.GetFileName(relativePath);
+        string extension = Path.GetExtension(fileName);
 
-        if (!extensions.Contains(value: extension, comparer: StringComparer.OrdinalIgnoreCase))
+        if (!extensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
             return false;
 
-        string[] parts = Path.GetFileNameWithoutExtension(path: fileName).Split(separator: '.');
+        string[] parts = Path.GetFileNameWithoutExtension(fileName).Split('.');
         if (parts.Length < 2)
             return false;
 
@@ -343,8 +343,8 @@ public class EncodeReconciler : IEncodeReconciler
         IReadOnlyCollection<ExistingOutputEntry> files,
         string prefix
     ) =>
-        files.Any(predicate: f =>
-            f.IsValid && f.RelativePath.StartsWith(value: prefix, comparisonType: StringComparison.OrdinalIgnoreCase)
+        files.Any(f =>
+            f.IsValid && f.RelativePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
         );
 
     /// <summary>Whether the subtitle pass produced anything at all. An OCR
@@ -352,20 +352,20 @@ public class EncodeReconciler : IEncodeReconciler
     /// see <see cref="CountOcredBitmapSidecars"/>), and both mean the same thing
     /// here: the subtitle stage ran and left output.</summary>
     private static bool HasValidDeclaredSubtitle(IReadOnlyCollection<ExistingOutputEntry> files) =>
-        files.Any(predicate: f =>
-            f.IsValid && f.RelativePath.StartsWith(value: "subtitles/", comparisonType: StringComparison.OrdinalIgnoreCase)
+        files.Any(f =>
+            f.IsValid && f.RelativePath.StartsWith("subtitles/", StringComparison.OrdinalIgnoreCase)
         );
 
     private static bool HasValidNamed(
         IReadOnlyCollection<ExistingOutputEntry> files,
         string exactFileName
     ) =>
-        files.Any(predicate: f =>
+        files.Any(f =>
             f.IsValid
             && string.Equals(
-                a: Path.GetFileName(path: f.RelativePath),
-                b: exactFileName,
-                comparisonType: StringComparison.OrdinalIgnoreCase
+                Path.GetFileName(f.RelativePath),
+                exactFileName,
+                StringComparison.OrdinalIgnoreCase
             )
         );
 
@@ -373,18 +373,18 @@ public class EncodeReconciler : IEncodeReconciler
         IReadOnlyCollection<ExistingOutputEntry> files,
         string fragment
     ) =>
-        files.Any(predicate: f =>
+        files.Any(f =>
             f.IsValid
-            && Path.GetFileName(path: f.RelativePath)
-                .Contains(value: fragment, comparisonType: StringComparison.OrdinalIgnoreCase)
+            && Path.GetFileName(f.RelativePath)
+                .Contains(fragment, StringComparison.OrdinalIgnoreCase)
         );
 
     /// <summary>The master playlist sits directly at the media root, never
     /// inside a per-rung/kind subfolder.</summary>
     private static bool HasValidRootPlaylist(IReadOnlyCollection<ExistingOutputEntry> files) =>
-        files.Any(predicate: f =>
+        files.Any(f =>
             f.IsValid
-            && !f.RelativePath.Contains(value: '/')
-            && f.RelativePath.EndsWith(value: ".m3u8", comparisonType: StringComparison.OrdinalIgnoreCase)
+            && !f.RelativePath.Contains('/')
+            && f.RelativePath.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
         );
 }

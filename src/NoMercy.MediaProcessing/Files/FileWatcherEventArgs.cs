@@ -31,7 +31,7 @@ public class FileWatcherEventArgs
         FileSystemEventArgs = fileSystemEventArgs;
         Sender = sender;
         Root = (sender?.Path).OrEmpty();
-        Path = System.IO.Path.GetDirectoryName(path: fileSystemEventArgs.FullPath).OrEmpty();
+        Path = System.IO.Path.GetDirectoryName(fileSystemEventArgs.FullPath).OrEmpty();
         FullPath = fileSystemEventArgs.FullPath;
         OldFullPath = (fileSystemEventArgs as RenamedEventArgs)?.OldFullPath;
     }

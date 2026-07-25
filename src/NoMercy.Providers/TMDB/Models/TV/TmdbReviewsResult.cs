@@ -15,24 +15,24 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbReviewsResult
 {
-    [JsonProperty(propertyName: "author")]
+    [JsonProperty("author")]
     public string Author { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "author_details")]
+    [JsonProperty("author_details")]
     public TmdbAuthorDetails TmdbAuthorDetails { get; set; } = new();
 
-    [JsonProperty(propertyName: "content")]
+    [JsonProperty("content")]
     public string Content { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "created_at")]
+    [JsonProperty("created_at")]
     public DateTime? CreatedAt { get; set; }
 
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "updated_at")]
+    [JsonProperty("updated_at")]
     public DateTime? UpdatedAt { get; set; }
 
-    [JsonProperty(propertyName: "url")]
+    [JsonProperty("url")]
     public Uri? Url { get; set; }
 }

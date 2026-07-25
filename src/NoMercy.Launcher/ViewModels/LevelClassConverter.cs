@@ -17,15 +17,15 @@ namespace NoMercy.Launcher.ViewModels;
 public static class LevelColorConverter
 {
     public static FuncValueConverter<string, IBrush> Instance { get; } =
-        new(convert: level =>
+        new(level =>
             level?.ToLowerInvariant() switch
             {
-                "fatal" => new(color: Color.Parse(s: "#DC2626")),
-                "error" => new(color: Color.Parse(s: "#EF4444")),
-                "warning" => new(color: Color.Parse(s: "#EAB308")),
-                "debug" => new(color: Color.Parse(s: "#6B7280")),
-                "verbose" => new(color: Color.Parse(s: "#4B5563")),
-                _ => new SolidColorBrush(color: Color.Parse(s: "#D1D5DB")),
+                "fatal" => new(Color.Parse("#DC2626")),
+                "error" => new(Color.Parse("#EF4444")),
+                "warning" => new(Color.Parse("#EAB308")),
+                "debug" => new(Color.Parse("#6B7280")),
+                "verbose" => new(Color.Parse("#4B5563")),
+                _ => new SolidColorBrush(Color.Parse("#D1D5DB")),
             }
         );
 }
@@ -33,7 +33,7 @@ public static class LevelColorConverter
 public static class LevelWeightConverter
 {
     public static FuncValueConverter<string, FontWeight> Instance { get; } =
-        new(convert: level =>
+        new(level =>
             level?.ToLowerInvariant() switch
             {
                 "fatal" => FontWeight.Bold,
@@ -45,17 +45,17 @@ public static class LevelWeightConverter
 
 public static class LogColorConverter
 {
-    private static readonly SolidColorBrush DefaultBrush = new(color: Color.Parse(s: "#D1D5DB"));
+    private static readonly SolidColorBrush DefaultBrush = new(Color.Parse("#D1D5DB"));
 
     public static FuncValueConverter<string, IBrush> Instance { get; } =
-        new(convert: colorHex =>
+        new(colorHex =>
         {
-            if (string.IsNullOrEmpty(value: colorHex))
+            if (string.IsNullOrEmpty(colorHex))
                 return DefaultBrush;
 
             try
             {
-                return new SolidColorBrush(color: Color.Parse(s: colorHex));
+                return new SolidColorBrush(Color.Parse(colorHex));
             }
             catch
             {

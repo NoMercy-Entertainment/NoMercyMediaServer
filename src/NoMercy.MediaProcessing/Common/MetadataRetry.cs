@@ -39,18 +39,18 @@ public static class MetadataRetry
                 if (attempt > maxRetries)
                 {
                     Logger.App(
-                        message: $"Metadata fetch '{description}' failed after {maxRetries} retries: {ex.Message}",
-                        level: LogEventLevel.Error
+                        $"Metadata fetch '{description}' failed after {maxRetries} retries: {ex.Message}",
+                        LogEventLevel.Error
                     );
                     return null;
                 }
 
-                TimeSpan delay = TimeSpan.FromSeconds(value: Math.Pow(x: 2, y: attempt));
+                TimeSpan delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
                 Logger.App(
-                    message: $"Metadata fetch '{description}' attempt {attempt} failed ({ex.Message}); retrying in {delay.TotalSeconds:0}s",
-                    level: LogEventLevel.Warning
+                    $"Metadata fetch '{description}' attempt {attempt} failed ({ex.Message}); retrying in {delay.TotalSeconds:0}s",
+                    LogEventLevel.Warning
                 );
-                await Task.Delay(delay: delay);
+                await Task.Delay(delay);
             }
         }
 

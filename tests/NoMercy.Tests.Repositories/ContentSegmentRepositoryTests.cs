@@ -16,7 +16,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class ContentSegmentRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -25,7 +25,7 @@ public class ContentSegmentRepositoryTests : IDisposable
     public ContentSegmentRepositoryTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new(context: _context);
+        _repository = new(_context);
     }
 
     [Fact]
@@ -33,41 +33,41 @@ public class ContentSegmentRepositoryTests : IDisposable
     {
         ContentSegment seg = Build(episodeId: 62085, type: ContentSegmentType.Intro);
 
-        ContentSegment saved = await _repository.CreateAsync(segment: seg);
+        ContentSegment saved = await _repository.CreateAsync(seg);
 
-        Assert.NotEqual(expected: default, actual: saved.CreatedAt);
-        Assert.Equal(expected: saved.CreatedAt, actual: saved.UpdatedAt);
+        Assert.NotEqual(default, saved.CreatedAt);
+        Assert.Equal(saved.CreatedAt, saved.UpdatedAt);
 
-        ContentSegment? loaded = await _repository.GetByIdAsync(id: saved.Id);
-        Assert.NotNull(@object: loaded);
-        Assert.Equal(expected: 62085, actual: loaded!.EpisodeId);
+        ContentSegment? loaded = await _repository.GetByIdAsync(saved.Id);
+        Assert.NotNull(loaded);
+        Assert.Equal(62085, loaded!.EpisodeId);
     }
 
     [Fact]
     public async Task GetForEpisodeAsync_ReturnsOnlyMatchingEpisode_OrderedByStart()
     {
         await _repository.CreateAsync(
-            segment: Build(episodeId: 62085, type: ContentSegmentType.Outro, start: 1800, end: 1830)
+            Build(episodeId: 62085, type: ContentSegmentType.Outro, start: 1800, end: 1830)
         );
         await _repository.CreateAsync(
-            segment: Build(episodeId: 62085, type: ContentSegmentType.Intro, start: 5, end: 60)
+            Build(episodeId: 62085, type: ContentSegmentType.Intro, start: 5, end: 60)
         );
         await _repository.CreateAsync(
-            segment: Build(episodeId: 62086, type: ContentSegmentType.Intro, start: 10, end: 40)
+            Build(episodeId: 62086, type: ContentSegmentType.Intro, start: 10, end: 40)
         );
 
-        List<ContentSegment> forEpisode = await _repository.GetForEpisodeAsync(episodeId: 62085);
+        List<ContentSegment> forEpisode = await _repository.GetForEpisodeAsync(62085);
 
-        Assert.Equal(expected: 2, actual: forEpisode.Count);
-        Assert.Equal(expected: ContentSegmentType.Intro, actual: forEpisode[index: 0].SegmentType);
-        Assert.Equal(expected: ContentSegmentType.Outro, actual: forEpisode[index: 1].SegmentType);
+        Assert.Equal(2, forEpisode.Count);
+        Assert.Equal(ContentSegmentType.Intro, forEpisode[0].SegmentType);
+        Assert.Equal(ContentSegmentType.Outro, forEpisode[1].SegmentType);
     }
 
     [Fact]
     public async Task GetForMovieAsync_ReturnsOnlyMovieMatches()
     {
         await _repository.CreateAsync(
-            segment: Build(
+            Build(
                 episodeId: null,
                 movieId: 129,
                 type: ContentSegmentType.Credits,
@@ -75,53 +75,53 @@ public class ContentSegmentRepositoryTests : IDisposable
                 end: 6300
             )
         );
-        await _repository.CreateAsync(segment: Build(episodeId: 62085, type: ContentSegmentType.Intro));
+        await _repository.CreateAsync(Build(episodeId: 62085, type: ContentSegmentType.Intro));
 
-        List<ContentSegment> forMovie = await _repository.GetForMovieAsync(movieId: 129);
+        List<ContentSegment> forMovie = await _repository.GetForMovieAsync(129);
 
-        Assert.Single(collection: forMovie);
-        Assert.Equal(expected: ContentSegmentType.Credits, actual: forMovie[index: 0].SegmentType);
+        Assert.Single(forMovie);
+        Assert.Equal(ContentSegmentType.Credits, forMovie[0].SegmentType);
     }
 
     [Fact]
     public async Task UpdateAsync_UnknownId_ReturnsNull()
     {
-        ContentSegment? updated = await _repository.UpdateAsync(id: Ulid.NewUlid(), apply: _ => { });
-        Assert.Null(@object: updated);
+        ContentSegment? updated = await _repository.UpdateAsync(Ulid.NewUlid(), _ => { });
+        Assert.Null(updated);
     }
 
     [Fact]
     public async Task UpdateAsync_ChangesTimestamp()
     {
-        ContentSegment original = await _repository.CreateAsync(segment: Build(episodeId: 62085));
-        await Task.Delay(millisecondsDelay: 5);
+        ContentSegment original = await _repository.CreateAsync(Build(episodeId: 62085));
+        await Task.Delay(5);
 
         ContentSegment? updated = await _repository.UpdateAsync(
-            id: original.Id,
-            apply: s => s.Confidence = 0.5
+            original.Id,
+            s => s.Confidence = 0.5
         );
 
-        Assert.NotNull(@object: updated);
-        Assert.Equal(expected: 0.5, actual: updated!.Confidence);
-        Assert.True(condition: updated.UpdatedAt >= original.UpdatedAt);
+        Assert.NotNull(updated);
+        Assert.Equal(0.5, updated!.Confidence);
+        Assert.True(updated.UpdatedAt >= original.UpdatedAt);
     }
 
     [Fact]
     public async Task DeleteAsync_ExistingRow_Removes()
     {
-        ContentSegment seg = await _repository.CreateAsync(segment: Build(episodeId: 62085));
+        ContentSegment seg = await _repository.CreateAsync(Build(episodeId: 62085));
 
-        bool removed = await _repository.DeleteAsync(id: seg.Id);
+        bool removed = await _repository.DeleteAsync(seg.Id);
 
-        Assert.True(condition: removed);
-        Assert.Null(@object: await _repository.GetByIdAsync(id: seg.Id));
+        Assert.True(removed);
+        Assert.Null(await _repository.GetByIdAsync(seg.Id));
     }
 
     [Fact]
     public async Task DeleteAsync_UnknownId_ReturnsFalse()
     {
-        bool removed = await _repository.DeleteAsync(id: Ulid.NewUlid());
-        Assert.False(condition: removed);
+        bool removed = await _repository.DeleteAsync(Ulid.NewUlid());
+        Assert.False(removed);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class ContentSegmentRepositoryTests : IDisposable
     {
         // Manual edit stays.
         await _repository.CreateAsync(
-            segment: Build(
+            Build(
                 episodeId: 62085,
                 type: ContentSegmentType.Intro,
                 start: 0,
@@ -139,7 +139,7 @@ public class ContentSegmentRepositoryTests : IDisposable
         );
         // Old detector run — should be wiped and replaced.
         await _repository.CreateAsync(
-            segment: Build(
+            Build(
                 episodeId: 62085,
                 type: ContentSegmentType.Outro,
                 start: 1700,
@@ -166,34 +166,34 @@ public class ContentSegmentRepositoryTests : IDisposable
             ),
         ];
 
-        await _repository.ReplaceDetectorSegmentsForEpisodeAsync(episodeId: 62085, newSegments: fresh);
+        await _repository.ReplaceDetectorSegmentsForEpisodeAsync(62085, fresh);
 
-        List<ContentSegment> after = await _repository.GetForEpisodeAsync(episodeId: 62085);
+        List<ContentSegment> after = await _repository.GetForEpisodeAsync(62085);
 
         // Manual intro 0-30 must still be there.
         Assert.Contains(
-            collection: after,
-            filter: s => s is { Source: "manual", StartSeconds: 0, EndSeconds: 30 }
+            after,
+            s => s is { Source: "manual", StartSeconds: 0, EndSeconds: 30 }
         );
         // New detector rows from the replacement.
         Assert.Contains(
-            collection: after,
-            filter: s =>
+            after,
+            s =>
                 s is { Source: "detector", SegmentType: ContentSegmentType.Intro, StartSeconds: 10 }
         );
         Assert.Contains(
-            collection: after,
-            filter: s =>
+            after,
+            s =>
                 s is { Source: "detector", SegmentType: ContentSegmentType.Outro, StartSeconds: 1800 }
         );
         // Old detector row should be gone.
-        Assert.DoesNotContain(collection: after, filter: s => s is { Source: "detector", StartSeconds: 1700 });
+        Assert.DoesNotContain(after, s => s is { Source: "detector", StartSeconds: 1700 });
     }
 
     public void Dispose()
     {
         _context.Dispose();
-        GC.SuppressFinalize(obj: this);
+        GC.SuppressFinalize(this);
     }
 
     private static ContentSegment Build(

@@ -13,7 +13,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
-using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Pipeline;
@@ -37,8 +36,8 @@ public class MetadataMergerBuildStageIntegrationTests
 
     private static BuildStage CreateStage(IMetadataInjector injector, IMetadataMerger merger) =>
         new(
-            options: new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
-            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+            new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            fontExtractor: new FontExtractor(TestStorageFactory.CreateLocal()),
             subtitleExtractor: new SubtitleExtractor(),
             outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
             drmProcessors: [],
@@ -53,99 +52,93 @@ public class MetadataMergerBuildStageIntegrationTests
     /// </summary>
     private static ExecutionPlan BuildCopyMkvPlan() =>
         new(
-            Groups:
             [
                 new(
-                    GroupId: "g0",
-                    Nodes:
+                    "g0",
                     [
-                        new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new()),
-                        new(Id: "encode_0", Operation: OperationType.Encode, DependsOn: ["decode_0"], Parameters: new()),
+                        new("decode_0", OperationType.Decode, [], new()),
+                        new("encode_0", OperationType.Encode, ["decode_0"], new()),
                     ],
-                    DeviceId: null,
-                    GpuSlotsRequired: 0,
-                    CpuThreadsRequired: 2,
-                    RequiresGpu: false,
-                    Priority: 1
+                    null,
+                    0,
+                    2,
+                    false,
+                    1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
-            OutputPlan: new(
-                Format: OutputFormat.Mkv,
-                VideoOutputs:
+            TimeSpan.FromMinutes(90),
+            new(
+                OutputFormat.Mkv,
                 [
                     new(
-                        Width: 1920,
-                        Height: 1080,
-                        EncoderName: "copy",
-                        Crf: 0,
-                        BitrateKbps: 0,
-                        Preset: null,
-                        Profile: null,
-                        Level: null,
-                        TenBit: false,
-                        PixelFormat: "yuv420p",
-                        MapLabel: "0:v:0",
-                        ExtraFlags: new()
+                        1920,
+                        1080,
+                        "copy",
+                        0,
+                        0,
+                        null,
+                        null,
+                        null,
+                        false,
+                        "yuv420p",
+                        "0:v:0",
+                        new()
                     ),
                 ],
-                AudioOutputs:
                 [
                     new(
-                        EncoderName: "copy",
-                        BitrateKbps: 0,
-                        Channels: 0,
-                        SampleRate: 0,
-                        Action: StreamAction.Copy,
-                        Language: "eng",
-                        MapLabel: "0:a:0"
+                        "copy",
+                        0,
+                        0,
+                        0,
+                        StreamAction.Copy,
+                        "eng",
+                        "0:a:0"
                     ),
                 ],
-                SubtitleOutputs: [],
-                Thumbnails: null
+                [],
+                null
             )
         );
 
     private static MediaInfo BuildMediaInfo() =>
         new(
-            FilePath: "/movies/fight_club.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromMinutes(minutes: 139),
-            OverallBitRateKbps: 20000,
-            FileSizeBytes: 20_000_000_000,
-            VideoStreams:
+            "/movies/fight_club.mkv",
+            "matroska",
+            TimeSpan.FromMinutes(139),
+            20000,
+            20_000_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "hevc",
-                    Width: 1920,
-                    Height: 1080,
-                    FrameRate: 23.976,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: null,
-                    ColorTransfer: null,
-                    ColorSpace: null,
-                    IsDefault: true,
-                    BitRateKbps: 18000
+                    0,
+                    "hevc",
+                    1920,
+                    1080,
+                    23.976,
+                    8,
+                    "yuv420p",
+                    null,
+                    null,
+                    null,
+                    true,
+                    18000
                 ),
             ],
-            AudioStreams:
             [
                 // Source says "jpn" — DB will supply title override but NOT language
                 new(
-                    Index: 0,
-                    Codec: "truehd",
-                    Channels: 8,
-                    SampleRate: 48000,
-                    BitRateKbps: 5000,
-                    Language: "jpn",
-                    IsDefault: true,
-                    IsForced: false
+                    0,
+                    "truehd",
+                    8,
+                    48000,
+                    5000,
+                    "jpn",
+                    true,
+                    false
                 ),
             ],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            []
         );
 
     // -----------------------------------------------------------------------
@@ -161,36 +154,36 @@ public class MetadataMergerBuildStageIntegrationTests
 
         CapturingMetadataInjector injector = new();
         MetadataMerger merger = new();
-        BuildStage stage = CreateStage(injector: injector, merger: merger);
+        BuildStage stage = CreateStage(injector, merger);
 
         // DB track: language=eng (should be overridden by source), explicit title
         TrackMetadata dbTrack = new(
-            OutputIndex: 0,
-            Kind: "audio",
-            Language: "eng",
-            Title: "Japanese TrueHD 7.1",
-            IsDefault: true,
-            IsForced: false
+            0,
+            "audio",
+            "eng",
+            "Japanese TrueHD 7.1",
+            true,
+            false
         );
 
         // Source tracks injected via EncodingContext
         SourceTrackMetadata srcTrack = new(
-            OutputIndex: 0,
-            Kind: "audio",
-            Language: "jpn",
-            Title: null,
-            Comment: null,
-            IsDefault: true,
-            IsForced: false
+            0,
+            "audio",
+            "jpn",
+            null,
+            null,
+            true,
+            false
         );
 
         EncodingContext context = EncodingContext.Create() with
         {
             MediaItem = new MovieMediaRef(
-                Type: MediaType.Movie,
-                Id: 550,
-                Title: "Fight Club",
-                Year: 1999
+                MediaType.Movie,
+                550,
+                "Fight Club",
+                1999
             ),
             MediaInfo = BuildMediaInfo(),
             SourceTracks = [srcTrack],
@@ -200,13 +193,13 @@ public class MetadataMergerBuildStageIntegrationTests
 
         ExecutionPlan plan = BuildCopyMkvPlan();
         BuildInput input = new(
-            Plan: plan,
-            InputPath: "/movies/fight_club.mkv",
-            OutputDirectory: "/tmp/nmtest-output/fc",
-            MediaTitle: "Fight Club.NoMercy"
+            plan,
+            "/movies/fight_club.mkv",
+            "/tmp/nmtest-output/fc",
+            "Fight Club.NoMercy"
         );
 
-        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
 
@@ -215,10 +208,10 @@ public class MetadataMergerBuildStageIntegrationTests
         IReadOnlyList<TrackMetadata> tracks = injector.CapturedContext!.Tracks;
 
         tracks.Should().ContainSingle();
-        TrackMetadata merged = tracks[index: 0];
-        merged.Language.Should().Be(expected: "jpn", because: "source language must win over DB language");
-        merged.Title.Should().Be(expected: "Japanese TrueHD 7.1", because: "DB title must win when non-empty");
-        merged.IsDefault.Should().BeTrue(because: "DB IsDefault wins");
+        TrackMetadata merged = tracks[0];
+        merged.Language.Should().Be("jpn", "source language must win over DB language");
+        merged.Title.Should().Be("Japanese TrueHD 7.1", "DB title must win when non-empty");
+        merged.IsDefault.Should().BeTrue("DB IsDefault wins");
     }
 
     // -----------------------------------------------------------------------

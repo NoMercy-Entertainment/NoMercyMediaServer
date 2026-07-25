@@ -19,59 +19,59 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record AlbumResponseItemDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    [JsonProperty(propertyName: "cover")]
+    [JsonProperty("cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty(propertyName: "disambiguation")]
+    [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
-    [JsonProperty(propertyName: "color_palette")]
+    [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty(propertyName: "country")]
+    [JsonProperty("country")]
     public string? Country { get; set; }
 
-    [JsonProperty(propertyName: "description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
-    [JsonProperty(propertyName: "favorite")]
+    [JsonProperty("favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty(propertyName: "library_id")]
+    [JsonProperty("library_id")]
     public Ulid? LibraryId { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int? Year { get; set; }
 
-    [JsonProperty(propertyName: "artists")]
+    [JsonProperty("artists")]
     public IEnumerable<ArtistDto> Artists { get; set; }
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public IEnumerable<AlbumTrackDto> Tracks { get; set; }
 
-    [JsonProperty(propertyName: "images")]
+    [JsonProperty("images")]
     public IEnumerable<ImageDto> Images { get; set; }
 
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public IEnumerable<GenreDto> Genres { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
     public AlbumResponseItemDto(Album album, string? country = "US")
     {
         ColorPalette = album.ColorPalette;
-        Cover = !string.IsNullOrEmpty(value: album.Cover)
-            ? new Uri(uriString: $"/images/music{album.Cover}", uriKind: UriKind.Relative).ToString()
+        Cover = !string.IsNullOrEmpty(album.Cover)
+            ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = album.Disambiguation;
         Description = album.Description;
@@ -79,17 +79,17 @@ public record AlbumResponseItemDto
         Id = album.Id;
         LibraryId = album.LibraryId;
         Name = album.Name;
-        Link = new(uriString: $"/music/albums/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
         Type = "album";
 
         Artists = album
-            .AlbumArtist.DistinctBy(keySelector: trackArtist => trackArtist.ArtistId)
-            .Select(selector: albumArtist => new ArtistDto(albumArtist: albumArtist, country: country!));
+            .AlbumArtist.DistinctBy(trackArtist => trackArtist.ArtistId)
+            .Select(albumArtist => new ArtistDto(albumArtist, country!));
 
-        Genres = album.AlbumMusicGenre.Select(selector: musicGenre => new GenreDto(artistMusicGenre: musicGenre));
+        Genres = album.AlbumMusicGenre.Select(musicGenre => new GenreDto(musicGenre));
 
-        Images = album.Images.Select(selector: image => new ImageDto(media: image));
+        Images = album.Images.Select(image => new ImageDto(image));
 
-        Tracks = album.AlbumTrack.Select(selector: albumTrack => new AlbumTrackDto(albumTrack: albumTrack, country: country!));
+        Tracks = album.AlbumTrack.Select(albumTrack => new AlbumTrackDto(albumTrack, country!));
     }
 }

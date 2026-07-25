@@ -18,185 +18,185 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Database.Models.TvShows;
 
-[PrimaryKey(propertyName: nameof(Id))]
-[Index(propertyName: nameof(Title))]
-[Index(propertyName: nameof(TitleSort))]
-[Index(propertyName: nameof(LibraryId))]
-[Index(propertyName: nameof(ImdbId))]
-[Index(propertyName: nameof(TvdbId))]
-[Index(propertyName: nameof(FirstAirDate))]
-[Index(propertyName: nameof(LibraryId), additionalPropertyNames: nameof(TitleSort))]
-[Index(propertyName: nameof(CreatedAt))]
-[Index(propertyName: nameof(LibraryId), additionalPropertyNames: nameof(CreatedAt))]
+[PrimaryKey(nameof(Id))]
+[Index(nameof(Title))]
+[Index(nameof(TitleSort))]
+[Index(nameof(LibraryId))]
+[Index(nameof(ImdbId))]
+[Index(nameof(TvdbId))]
+[Index(nameof(FirstAirDate))]
+[Index(nameof(LibraryId), nameof(TitleSort))]
+[Index(nameof(CreatedAt))]
+[Index(nameof(LibraryId), nameof(CreatedAt))]
 public class Tv : ColorPaletteTimeStamps, IHasLibrary
 {
-    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
-    [JsonProperty(propertyName: "id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty(propertyName: "title")]
+    [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "titleSort")]
+    [JsonProperty("titleSort")]
     public string TitleSort { get; set; } = string.Empty;
 
-    [JsonProperty(propertyName: "have_episodes")]
+    [JsonProperty("have_episodes")]
     public int? HaveEpisodes { get; set; }
 
-    [JsonProperty(propertyName: "folder")]
+    [JsonProperty("folder")]
     public string? Folder
     {
         get;
-        set => field = PathNormalizer.NormalizeNullable(value: value);
+        set => field = PathNormalizer.NormalizeNullable(value);
     }
 
-    [JsonProperty(propertyName: "backdrop")]
+    [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty(propertyName: "duration")]
+    [JsonProperty("duration")]
     public int? Duration { get; set; }
 
-    [JsonProperty(propertyName: "first_air_date")]
+    [JsonProperty("first_air_date")]
     public DateTime? FirstAirDate { get; set; }
 
-    [JsonProperty(propertyName: "homepage")]
+    [JsonProperty("homepage")]
     public string? Homepage { get; set; }
 
-    [JsonProperty(propertyName: "imdb_id")]
+    [JsonProperty("imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty(propertyName: "in_production")]
+    [JsonProperty("in_production")]
     public bool? InProduction { get; set; }
 
-    [JsonProperty(propertyName: "last_episode_to_air")]
+    [JsonProperty("last_episode_to_air")]
     public int? LastEpisodeToAir { get; set; }
 
-    [JsonProperty(propertyName: "media_type")]
+    [JsonProperty("media_type")]
     public string? MediaType { get; set; }
 
-    [JsonProperty(propertyName: "next_episode_to_air")]
+    [JsonProperty("next_episode_to_air")]
     public int? NextEpisodeToAir { get; set; }
 
-    [JsonProperty(propertyName: "number_of_items")]
+    [JsonProperty("number_of_items")]
     public int NumberOfEpisodes { get; set; }
 
-    [JsonProperty(propertyName: "number_of_seasons")]
+    [JsonProperty("number_of_seasons")]
     public int? NumberOfSeasons { get; set; }
 
-    [JsonProperty(propertyName: "origin_country")]
+    [JsonProperty("origin_country")]
     public string? OriginCountry { get; set; }
 
-    [JsonProperty(propertyName: "original_language")]
+    [JsonProperty("original_language")]
     public string? OriginalLanguage { get; set; }
 
-    [MaxLength(length: 4096)]
-    [JsonProperty(propertyName: "overview")]
+    [MaxLength(4096)]
+    [JsonProperty("overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty(propertyName: "popularity")]
+    [JsonProperty("popularity")]
     public double? Popularity { get; set; }
 
-    [JsonProperty(propertyName: "poster")]
+    [JsonProperty("poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty(propertyName: "spoken_languages")]
+    [JsonProperty("spoken_languages")]
     public string? SpokenLanguages { get; set; }
 
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string? Status { get; set; }
 
-    [JsonProperty(propertyName: "tagline")]
+    [JsonProperty("tagline")]
     public string? Tagline { get; set; }
 
-    [JsonProperty(propertyName: "trailer")]
+    [JsonProperty("trailer")]
     public string? Trailer { get; set; }
 
-    [JsonProperty(propertyName: "tvdb_id")]
+    [JsonProperty("tvdb_id")]
     public int? TvdbId { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
-    [JsonProperty(propertyName: "vote_average")]
+    [JsonProperty("vote_average")]
     public double? VoteAverage { get; set; }
 
-    [JsonProperty(propertyName: "vote_count")]
+    [JsonProperty("vote_count")]
     public int? VoteCount { get; set; }
 
-    [JsonProperty(propertyName: "library_id")]
+    [JsonProperty("library_id")]
     public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;
 
-    [JsonProperty(propertyName: "alternative_titles")]
+    [JsonProperty("alternative_titles")]
     public ICollection<AlternativeTitle> AlternativeTitles { get; set; } = [];
 
-    [JsonProperty(propertyName: "casts")]
+    [JsonProperty("casts")]
     public ICollection<Cast> Cast { get; set; } = [];
 
-    [JsonProperty(propertyName: "certifications")]
+    [JsonProperty("certifications")]
     public ICollection<CertificationTv> CertificationTvs { get; set; } = [];
 
-    [JsonProperty(propertyName: "crews")]
+    [JsonProperty("crews")]
     public ICollection<Crew> Crew { get; set; } = [];
 
-    [JsonProperty(propertyName: "creators")]
+    [JsonProperty("creators")]
     public ICollection<Creator> Creators { get; set; } = [];
 
-    [JsonProperty(propertyName: "genres")]
+    [JsonProperty("genres")]
     public ICollection<GenreTv> GenreTvs { get; set; } = [];
 
-    [JsonProperty(propertyName: "keywords")]
+    [JsonProperty("keywords")]
     public ICollection<KeywordTv> KeywordTvs { get; set; } = [];
 
-    [JsonProperty(propertyName: "medias")]
+    [JsonProperty("medias")]
     public ICollection<Media.Media> Media { get; set; } = [];
 
-    [JsonProperty(propertyName: "images")]
+    [JsonProperty("images")]
     public ICollection<Image> Images { get; set; } = [];
 
-    [JsonProperty(propertyName: "seasons")]
+    [JsonProperty("seasons")]
     public ICollection<Season> Seasons { get; set; } = [];
 
-    [JsonProperty(propertyName: "translations")]
+    [JsonProperty("translations")]
     public ICollection<Translation> Translations { get; set; } = [];
 
-    [JsonProperty(propertyName: "user_data")]
+    [JsonProperty("user_data")]
     public ICollection<UserData> UserData { get; set; } = [];
 
-    [JsonProperty(propertyName: "episodes")]
+    [JsonProperty("episodes")]
     public ICollection<Episode> Episodes { get; set; } = [];
 
-    [InverseProperty(property: "TvFrom")]
+    [InverseProperty("TvFrom")]
     public ICollection<Recommendation> RecommendationFrom { get; set; } = [];
 
-    [InverseProperty(property: "TvTo")]
+    [InverseProperty("TvTo")]
     public ICollection<Recommendation> RecommendationTo { get; set; } = [];
 
-    [InverseProperty(property: "TvFrom")]
+    [InverseProperty("TvFrom")]
     public ICollection<Similar> SimilarFrom { get; set; } = [];
 
-    [InverseProperty(property: "TvTo")]
+    [InverseProperty("TvTo")]
     public ICollection<Similar> SimilarTo { get; set; } = [];
 
-    [JsonProperty(propertyName: "tv_user")]
+    [JsonProperty("tv_user")]
     public ICollection<TvUser> TvUser { get; set; } = [];
 
-    [JsonProperty(propertyName: "playback_preferences")]
+    [JsonProperty("playback_preferences")]
     public ICollection<PlaybackPreference> PlaybackPreferences { get; set; } = [];
 
-    [JsonProperty(propertyName: "watch_providers")]
+    [JsonProperty("watch_providers")]
     public ICollection<WatchProviderMedia> WatchProviderMedia { get; set; } = [];
 
-    [JsonProperty(propertyName: "networks")]
+    [JsonProperty("networks")]
     public ICollection<NetworkTv> NetworkTvs { get; set; } = [];
 
-    [JsonProperty(propertyName: "companies")]
+    [JsonProperty("companies")]
     public ICollection<CompanyTv> CompaniesTvs { get; set; } = [];
 
     public string CreateFolderName()
     {
         return "/"
-            + string.Concat(args: [Title.CleanFileName().Shorten(), ".(", FirstAirDate.ParseYear(), ")"])
+            + string.Concat([Title.CleanFileName().Shorten(), ".(", FirstAirDate.ParseYear(), ")"])
                 .CleanFileName();
     }
 }

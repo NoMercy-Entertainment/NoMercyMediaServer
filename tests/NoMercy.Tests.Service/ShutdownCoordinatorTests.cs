@@ -11,7 +11,6 @@
 
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Service.Hosting;
-using Xunit;
 
 namespace NoMercy.Tests.Service;
 
@@ -23,17 +22,17 @@ namespace NoMercy.Tests.Service;
 /// IsCancellationRequested guard). The Ctrl+C double-press path calls
 /// Environment.Exit and is deliberately not exercised.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class ShutdownCoordinatorTests
 {
-    private static ShutdownCoordinator Build() => new(logger: NullLogger<ShutdownCoordinator>.Instance);
+    private static ShutdownCoordinator Build() => new(NullLogger<ShutdownCoordinator>.Instance);
 
     [Fact]
     public void Token_BeforeShutdown_IsNotCancelled()
     {
         using ShutdownCoordinator sut = Build();
 
-        Assert.False(condition: sut.Token.IsCancellationRequested);
+        Assert.False(sut.Token.IsCancellationRequested);
     }
 
     [Fact]
@@ -43,7 +42,7 @@ public class ShutdownCoordinatorTests
 
         sut.RequestShutdown();
 
-        Assert.True(condition: sut.Token.IsCancellationRequested);
+        Assert.True(sut.Token.IsCancellationRequested);
     }
 
     [Fact]
@@ -52,10 +51,10 @@ public class ShutdownCoordinatorTests
         using ShutdownCoordinator sut = Build();
 
         sut.RequestShutdown();
-        Exception? second = Record.Exception(testCode: () => sut.RequestShutdown());
+        Exception? second = Record.Exception(() => sut.RequestShutdown());
 
-        Assert.Null(@object: second);
-        Assert.True(condition: sut.Token.IsCancellationRequested);
+        Assert.Null(second);
+        Assert.True(sut.Token.IsCancellationRequested);
     }
 
     [Fact]
@@ -63,8 +62,8 @@ public class ShutdownCoordinatorTests
     {
         ShutdownCoordinator sut = Build();
 
-        Exception? disposed = Record.Exception(testCode: () => sut.Dispose());
+        Exception? disposed = Record.Exception(() => sut.Dispose());
 
-        Assert.Null(@object: disposed);
+        Assert.Null(disposed);
     }
 }

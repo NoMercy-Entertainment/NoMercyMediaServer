@@ -30,7 +30,7 @@ namespace NoMercy.Tests.Encoder.Scenarios;
 public class DistributedComputeScenarioTests
 {
     private readonly byte[] _sharedKey = Encoding.UTF8.GetBytes(
-        s: "scenario-test-shared-key-32-bytes!"
+        "scenario-test-shared-key-32-bytes!"
     );
     private readonly TaskSerializer _serializer = new();
 
@@ -39,24 +39,24 @@ public class DistributedComputeScenarioTests
     {
         Mock<IFfmpegExecutor> executor = MakeSuccessExecutor();
         LocalWorkerDispatcher dispatcher = new(
-            executor: executor.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         EncodeTask[] tasks =
         [
-            MakeTask(id: "t0", type: EncodeTaskType.QualityVariant),
-            MakeTask(id: "t1", type: EncodeTaskType.QualityVariant),
-            MakeTask(id: "t2", type: EncodeTaskType.TimeChunk),
-            MakeTask(id: "t3", type: EncodeTaskType.TimeChunk),
+            MakeTask("t0", EncodeTaskType.QualityVariant),
+            MakeTask("t1", EncodeTaskType.QualityVariant),
+            MakeTask("t2", EncodeTaskType.TimeChunk),
+            MakeTask("t3", EncodeTaskType.TimeChunk),
         ];
 
-        DispatchResult[] results = await dispatcher.DispatchAsync(tasks: tasks, ct: CancellationToken.None);
+        DispatchResult[] results = await dispatcher.DispatchAsync(tasks, CancellationToken.None);
 
-        results.Should().HaveCount(expected: 4);
-        results.Should().AllSatisfy(expected: r => r.Success.Should().BeTrue());
-        HashSet<string> resultIds = results.Select(selector: r => r.TaskId).ToHashSet();
-        resultIds.Should().BeEquivalentTo(expectation: ["t0", "t1", "t2", "t3"]);
+        results.Should().HaveCount(4);
+        results.Should().AllSatisfy(r => r.Success.Should().BeTrue());
+        HashSet<string> resultIds = results.Select(r => r.TaskId).ToHashSet();
+        resultIds.Should().BeEquivalentTo(["t0", "t1", "t2", "t3"]);
     }
 
     [Fact]
@@ -64,69 +64,69 @@ public class DistributedComputeScenarioTests
     {
         Mock<IFfmpegExecutor> executor = MakeSuccessExecutor();
         LocalWorkerDispatcher local = new(
-            executor: executor.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         int beastReceived = 0;
         int laptopReceived = 0;
 
         IRemoteWorker beast = MakeDynamicWorker(
-            id: "beast",
-            slots: 8,
-            producer: t =>
+            "beast",
+            8,
+            t =>
             {
-                Interlocked.Increment(location: ref beastReceived);
+                Interlocked.Increment(ref beastReceived);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/beast/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "beast"
                 );
             }
         );
 
         IRemoteWorker laptop = MakeDynamicWorker(
-            id: "laptop",
-            slots: 2,
-            producer: t =>
+            "laptop",
+            2,
+            t =>
             {
-                Interlocked.Increment(location: ref laptopReceived);
+                Interlocked.Increment(ref laptopReceived);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/laptop/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "laptop"
                 );
             }
         );
 
         InMemoryRemoteWorkerRegistry registry = new();
-        registry.Register(worker: beast);
-        registry.Register(worker: laptop);
+        registry.Register(beast);
+        registry.Register(laptop);
 
         RemoteWorkerDispatcher dispatcher = new(
-            registry: registry,
-            assigner: new WorkerAssigner(),
-            localFallback: local,
-            logger: NullLogger<RemoteWorkerDispatcher>.Instance
+            registry,
+            new WorkerAssigner(),
+            local,
+            NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
         EncodeTask[] tasks = Enumerable
-            .Range(start: 0, count: 6)
-            .Select(selector: i => MakeTask(id: $"t{i}", type: EncodeTaskType.QualityVariant))
+            .Range(0, 6)
+            .Select(i => MakeTask($"t{i}", EncodeTaskType.QualityVariant))
             .ToArray();
 
-        DispatchResult[] results = await dispatcher.DispatchAsync(tasks: tasks, ct: CancellationToken.None);
+        DispatchResult[] results = await dispatcher.DispatchAsync(tasks, CancellationToken.None);
 
-        results.Should().HaveCount(expected: 6);
-        results.Should().AllSatisfy(expected: r => r.Success.Should().BeTrue());
-        (beastReceived + laptopReceived).Should().Be(expected: 6);
+        results.Should().HaveCount(6);
+        results.Should().AllSatisfy(r => r.Success.Should().BeTrue());
+        (beastReceived + laptopReceived).Should().Be(6);
         beastReceived
             .Should()
-            .BeGreaterThan(expected: laptopReceived, because: "higher-capacity worker should receive more tasks");
+            .BeGreaterThan(laptopReceived, "higher-capacity worker should receive more tasks");
     }
 
     [Fact]
@@ -134,45 +134,45 @@ public class DistributedComputeScenarioTests
     {
         Mock<IFfmpegExecutor> executor = MakeSuccessExecutor();
         LocalWorkerDispatcher local = new(
-            executor: executor.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         int remoteTaskCount = 0;
         IRemoteWorker remote = MakeDynamicWorker(
-            id: "remote-box",
-            slots: 4,
-            producer: t =>
+            "remote-box",
+            4,
+            t =>
             {
-                Interlocked.Increment(location: ref remoteTaskCount);
+                Interlocked.Increment(ref remoteTaskCount);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/remote/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "remote-box"
                 );
             }
         );
 
         InMemoryRemoteWorkerRegistry registry = new();
-        registry.Register(worker: remote);
+        registry.Register(remote);
 
         RemoteWorkerDispatcher dispatcher = new(
-            registry: registry,
-            assigner: new WorkerAssigner(),
-            localFallback: local,
-            logger: NullLogger<RemoteWorkerDispatcher>.Instance
+            registry,
+            new WorkerAssigner(),
+            local,
+            NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
-        EncodeTask[] tasks = [MakeTask(id: "single", type: EncodeTaskType.QualityVariant)];
+        EncodeTask[] tasks = [MakeTask("single", EncodeTaskType.QualityVariant)];
 
-        DispatchResult[] results = await dispatcher.DispatchAsync(tasks: tasks, ct: CancellationToken.None);
+        DispatchResult[] results = await dispatcher.DispatchAsync(tasks, CancellationToken.None);
 
-        results.Should().HaveCount(expected: 1);
+        results.Should().HaveCount(1);
         results[0].Success.Should().BeTrue();
-        results[0].WorkerId.Should().Be(expected: "remote-box");
-        remoteTaskCount.Should().Be(expected: 1);
+        results[0].WorkerId.Should().Be("remote-box");
+        remoteTaskCount.Should().Be(1);
     }
 
     [Fact]
@@ -180,157 +180,157 @@ public class DistributedComputeScenarioTests
     {
         Mock<IFfmpegExecutor> executor = MakeSuccessExecutor();
         LocalWorkerDispatcher local = new(
-            executor: executor.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         int zeroSlotsCalls = 0;
         Mock<IRemoteWorker> zeroCalls = new();
-        zeroCalls.SetupGet(expression: w => w.WorkerId).Returns(value: "no-slots");
-        zeroCalls.Setup(expression: w => w.GetAvailableBudget()).Returns(value: new ResourceBudgetSnapshot(AvailableGpuSlots: 0, AvailableCpuThreads: 0, GpuUtilization: 0));
+        zeroCalls.SetupGet(w => w.WorkerId).Returns("no-slots");
+        zeroCalls.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(0, 0, 0));
         zeroCalls
-            .Setup(expression: w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
-            .Callback(action: () => Interlocked.Increment(location: ref zeroSlotsCalls))
+            .Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .Callback(() => Interlocked.Increment(ref zeroSlotsCalls))
             .Returns(
-                valueFunction: (EncodeTask t, CancellationToken _) =>
+                (EncodeTask t, CancellationToken _) =>
                     Task.FromResult(
-                        result: new DispatchResult(
-                            TaskId: t.TaskId,
+                        new DispatchResult(
+                            t.TaskId,
                             Success: true,
                             OutputPath: "/out/t0",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
+                            Duration: TimeSpan.FromSeconds(1),
                             WorkerId: "no-slots"
                         )
                     )
             );
 
         InMemoryRemoteWorkerRegistry registry = new();
-        registry.Register(worker: zeroCalls.Object);
+        registry.Register(zeroCalls.Object);
 
         RemoteWorkerDispatcher dispatcher = new(
-            registry: registry,
-            assigner: new WorkerAssigner(),
-            localFallback: local,
-            logger: NullLogger<RemoteWorkerDispatcher>.Instance
+            registry,
+            new WorkerAssigner(),
+            local,
+            NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
-        EncodeTask[] tasks = [MakeTask(id: "t0", type: EncodeTaskType.QualityVariant)];
-        DispatchResult[] results = await dispatcher.DispatchAsync(tasks: tasks, ct: CancellationToken.None);
+        EncodeTask[] tasks = [MakeTask("t0", EncodeTaskType.QualityVariant)];
+        DispatchResult[] results = await dispatcher.DispatchAsync(tasks, CancellationToken.None);
 
-        results.Should().HaveCount(expected: 1);
+        results.Should().HaveCount(1);
         results[0].Success.Should().BeTrue();
         // Documented assigner contract: when the ONLY registered worker is
         // saturated (zero available slots) the assigner overloads it rather
         // than stranding the task — strict capacity enforcement is the
         // dispatcher/registry's job, not the assigner's. The guarantee here is
         // that the task is NOT stranded; it completes on the (only) worker.
-        zeroSlotsCalls.Should().Be(expected: 1, because: "a saturated sole worker is overloaded, not stranded");
+        zeroSlotsCalls.Should().Be(1, "a saturated sole worker is overloaded, not stranded");
 
         int withCapacityCalls = 0;
         Mock<IRemoteWorker> withCapacity = new();
-        withCapacity.SetupGet(expression: w => w.WorkerId).Returns(value: "has-slots");
+        withCapacity.SetupGet(w => w.WorkerId).Returns("has-slots");
         withCapacity
-            .Setup(expression: w => w.GetAvailableBudget())
-            .Returns(value: new ResourceBudgetSnapshot(AvailableGpuSlots: 0, AvailableCpuThreads: 4, GpuUtilization: 0));
+            .Setup(w => w.GetAvailableBudget())
+            .Returns(new ResourceBudgetSnapshot(0, 4, 0));
         withCapacity
-            .Setup(expression: w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
-            .Callback(action: () => Interlocked.Increment(location: ref withCapacityCalls))
+            .Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .Callback(() => Interlocked.Increment(ref withCapacityCalls))
             .Returns(
-                valueFunction: (EncodeTask t, CancellationToken _) =>
+                (EncodeTask t, CancellationToken _) =>
                     Task.FromResult(
-                        result: new DispatchResult(
-                            TaskId: t.TaskId,
+                        new DispatchResult(
+                            t.TaskId,
                             Success: true,
                             OutputPath: "/out/t1",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
+                            Duration: TimeSpan.FromSeconds(1),
                             WorkerId: "has-slots"
                         )
                     )
             );
 
-        registry.Register(worker: withCapacity.Object);
+        registry.Register(withCapacity.Object);
 
         results = await dispatcher.DispatchAsync(
-            tasks: [MakeTask(id: "t1", type: EncodeTaskType.QualityVariant)],
-            ct: CancellationToken.None
+            [MakeTask("t1", EncodeTaskType.QualityVariant)],
+            CancellationToken.None
         );
 
         results[0].Success.Should().BeTrue();
-        results[0].WorkerId.Should().Be(expected: "has-slots");
-        withCapacityCalls.Should().Be(expected: 1, because: "worker with capacity should be assigned");
+        results[0].WorkerId.Should().Be("has-slots");
+        withCapacityCalls.Should().Be(1, "worker with capacity should be assigned");
     }
 
     [Fact]
     public void TaskSerializer_RoundTrip_SerializeSignVerifyRecoveryTask()
     {
-        EncodeTask original = MakeTask(id: "round-trip", type: EncodeTaskType.QualityVariant);
+        EncodeTask original = MakeTask("round-trip", EncodeTaskType.QualityVariant);
 
-        string signed = _serializer.Serialize(task: original, signingKey: _sharedKey);
+        string signed = _serializer.Serialize(original, _sharedKey);
 
-        EncodeTask? recovered = _serializer.Deserialize(payload: signed, signingKey: _sharedKey);
+        EncodeTask? recovered = _serializer.Deserialize(signed, _sharedKey);
 
         recovered.Should().NotBeNull();
-        recovered!.TaskId.Should().Be(expected: "round-trip");
-        recovered.OutputPath.Should().Be(expected: "/out/round-trip");
-        recovered.Type.Should().Be(expected: EncodeTaskType.QualityVariant);
+        recovered!.TaskId.Should().Be("round-trip");
+        recovered.OutputPath.Should().Be("/out/round-trip");
+        recovered.Type.Should().Be(EncodeTaskType.QualityVariant);
     }
 
     [Fact]
     public void TaskSerializer_TamperedPayload_FailsHmacVerification()
     {
-        EncodeTask original = MakeTask(id: "tamper-test", type: EncodeTaskType.QualityVariant);
-        string signed = _serializer.Serialize(task: original, signingKey: _sharedKey);
+        EncodeTask original = MakeTask("tamper-test", EncodeTaskType.QualityVariant);
+        string signed = _serializer.Serialize(original, _sharedKey);
 
         int tamperIndex = signed.Length / 2;
         string tampered =
-            signed.Substring(startIndex: 0, length: tamperIndex) + "X" + signed.Substring(startIndex: tamperIndex + 1);
+            signed.Substring(0, tamperIndex) + "X" + signed.Substring(tamperIndex + 1);
 
-        EncodeTask? recovered = _serializer.Deserialize(payload: tampered, signingKey: _sharedKey);
+        EncodeTask? recovered = _serializer.Deserialize(tampered, _sharedKey);
 
-        recovered.Should().BeNull(because: "tampered payload should fail verification");
+        recovered.Should().BeNull("tampered payload should fail verification");
     }
 
     [Fact]
     public void ResultSerializer_RoundTrip_SerializeSignVerifyResult()
     {
         DispatchResult original = new(
-            TaskId: "result-rt",
+            "result-rt",
             Success: true,
             OutputPath: "/out/result",
-            Duration: TimeSpan.FromSeconds(seconds: 5),
+            Duration: TimeSpan.FromSeconds(5),
             WorkerId: "test-worker"
         );
 
-        string signed = _serializer.SerializeResult(result: original, signingKey: _sharedKey);
+        string signed = _serializer.SerializeResult(original, _sharedKey);
 
-        DispatchResult? recovered = _serializer.DeserializeResult(payload: signed, signingKey: _sharedKey);
+        DispatchResult? recovered = _serializer.DeserializeResult(signed, _sharedKey);
 
         recovered.Should().NotBeNull();
-        recovered!.TaskId.Should().Be(expected: "result-rt");
+        recovered!.TaskId.Should().Be("result-rt");
         recovered.Success.Should().BeTrue();
-        recovered.WorkerId.Should().Be(expected: "test-worker");
-        recovered.Duration.Should().Be(expected: TimeSpan.FromSeconds(seconds: 5));
+        recovered.WorkerId.Should().Be("test-worker");
+        recovered.Duration.Should().Be(TimeSpan.FromSeconds(5));
     }
 
     [Fact]
     public void ResultSerializer_TamperedResult_FailsHmacVerification()
     {
         DispatchResult original = new(
-            TaskId: "result-tamper",
+            "result-tamper",
             Success: true,
             OutputPath: "/out/r",
-            Duration: TimeSpan.FromSeconds(seconds: 1),
+            Duration: TimeSpan.FromSeconds(1),
             WorkerId: "w"
         );
-        string signed = _serializer.SerializeResult(result: original, signingKey: _sharedKey);
+        string signed = _serializer.SerializeResult(original, _sharedKey);
 
         int tamperIndex = signed.Length / 2;
         string tampered =
-            signed.Substring(startIndex: 0, length: tamperIndex) + "Z" + signed.Substring(startIndex: tamperIndex + 1);
+            signed.Substring(0, tamperIndex) + "Z" + signed.Substring(tamperIndex + 1);
 
-        DispatchResult? recovered = _serializer.DeserializeResult(payload: tampered, signingKey: _sharedKey);
+        DispatchResult? recovered = _serializer.DeserializeResult(tampered, _sharedKey);
 
-        recovered.Should().BeNull(because: "tampered result should fail verification");
+        recovered.Should().BeNull("tampered result should fail verification");
     }
 
     [Fact]
@@ -338,85 +338,85 @@ public class DistributedComputeScenarioTests
     {
         Mock<IFfmpegExecutor> executor = MakeSuccessExecutor();
         LocalWorkerDispatcher local = new(
-            executor: executor.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         InMemoryRemoteWorkerRegistry registry = new();
         RemoteWorkerDispatcher dispatcher = new(
-            registry: registry,
-            assigner: new WorkerAssigner(),
-            localFallback: local,
-            logger: NullLogger<RemoteWorkerDispatcher>.Instance
+            registry,
+            new WorkerAssigner(),
+            local,
+            NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
         EncodeTask[] tasks1 = Enumerable
-            .Range(start: 0, count: 2)
-            .Select(selector: i => MakeTask(id: $"round1-t{i}", type: EncodeTaskType.QualityVariant))
+            .Range(0, 2)
+            .Select(i => MakeTask($"round1-t{i}", EncodeTaskType.QualityVariant))
             .ToArray();
 
-        DispatchResult[] results1 = await dispatcher.DispatchAsync(tasks: tasks1, ct: CancellationToken.None);
-        results1.Should().AllSatisfy(expected: r => r.Success.Should().BeTrue());
+        DispatchResult[] results1 = await dispatcher.DispatchAsync(tasks1, CancellationToken.None);
+        results1.Should().AllSatisfy(r => r.Success.Should().BeTrue());
 
         int workerACount = 0;
         IRemoteWorker workerA = MakeDynamicWorker(
-            id: "a",
-            slots: 4,
-            producer: t =>
+            "a",
+            4,
+            t =>
             {
-                Interlocked.Increment(location: ref workerACount);
+                Interlocked.Increment(ref workerACount);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/a/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "a"
                 );
             }
         );
-        registry.Register(worker: workerA);
+        registry.Register(workerA);
 
         EncodeTask[] tasks2 = Enumerable
-            .Range(start: 0, count: 2)
-            .Select(selector: i => MakeTask(id: $"round2-t{i}", type: EncodeTaskType.QualityVariant))
+            .Range(0, 2)
+            .Select(i => MakeTask($"round2-t{i}", EncodeTaskType.QualityVariant))
             .ToArray();
 
-        DispatchResult[] results2 = await dispatcher.DispatchAsync(tasks: tasks2, ct: CancellationToken.None);
-        results2.Should().AllSatisfy(expected: r => r.Success.Should().BeTrue());
-        workerACount.Should().BeGreaterThan(expected: 0, because: "new worker should receive tasks");
+        DispatchResult[] results2 = await dispatcher.DispatchAsync(tasks2, CancellationToken.None);
+        results2.Should().AllSatisfy(r => r.Success.Should().BeTrue());
+        workerACount.Should().BeGreaterThan(0, "new worker should receive tasks");
 
         int workerBCount = 0;
         IRemoteWorker workerB = MakeDynamicWorker(
-            id: "b",
-            slots: 2,
-            producer: t =>
+            "b",
+            2,
+            t =>
             {
-                Interlocked.Increment(location: ref workerBCount);
+                Interlocked.Increment(ref workerBCount);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/b/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "b"
                 );
             }
         );
-        registry.Register(worker: workerB);
+        registry.Register(workerB);
 
         EncodeTask[] tasks3 = Enumerable
-            .Range(start: 0, count: 4)
-            .Select(selector: i => MakeTask(id: $"round3-t{i}", type: EncodeTaskType.QualityVariant))
+            .Range(0, 4)
+            .Select(i => MakeTask($"round3-t{i}", EncodeTaskType.QualityVariant))
             .ToArray();
 
-        DispatchResult[] results3 = await dispatcher.DispatchAsync(tasks: tasks3, ct: CancellationToken.None);
-        results3.Should().AllSatisfy(expected: r => r.Success.Should().BeTrue());
+        DispatchResult[] results3 = await dispatcher.DispatchAsync(tasks3, CancellationToken.None);
+        results3.Should().AllSatisfy(r => r.Success.Should().BeTrue());
         // The greedy capacity-weighted assigner may concentrate a small batch on
         // the fastest worker, so B is not guaranteed a share at this scale. The
         // invariant across the worker-count change is that NO task is lost:
         // 2 from round 2 (worker A only) + 4 from round 3.
         (workerACount + workerBCount)
             .Should()
-            .Be(expected: 6, because: "no task is lost when a worker is added mid-stream");
+            .Be(6, "no task is lost when a worker is added mid-stream");
     }
 
     [Fact]
@@ -424,8 +424,8 @@ public class DistributedComputeScenarioTests
     {
         Mock<IFfmpegExecutor> executor = MakeSuccessExecutor();
         LocalWorkerDispatcher local = new(
-            executor: executor.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         int workerACount = 0;
@@ -433,82 +433,82 @@ public class DistributedComputeScenarioTests
         int workerCCount = 0;
 
         IRemoteWorker a = MakeDynamicWorker(
-            id: "a",
-            slots: 4,
-            producer: t =>
+            "a",
+            4,
+            t =>
             {
-                Interlocked.Increment(location: ref workerACount);
+                Interlocked.Increment(ref workerACount);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/a/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "a"
                 );
             }
         );
 
         IRemoteWorker b = MakeDynamicWorker(
-            id: "b",
-            slots: 6,
-            producer: t =>
+            "b",
+            6,
+            t =>
             {
-                Interlocked.Increment(location: ref workerBCount);
+                Interlocked.Increment(ref workerBCount);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/b/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "b"
                 );
             }
         );
 
         IRemoteWorker c = MakeDynamicWorker(
-            id: "c",
-            slots: 2,
-            producer: t =>
+            "c",
+            2,
+            t =>
             {
-                Interlocked.Increment(location: ref workerCCount);
+                Interlocked.Increment(ref workerCCount);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/c/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "c"
                 );
             }
         );
 
         InMemoryRemoteWorkerRegistry registry = new();
-        registry.Register(worker: a);
-        registry.Register(worker: b);
-        registry.Register(worker: c);
+        registry.Register(a);
+        registry.Register(b);
+        registry.Register(c);
 
         RemoteWorkerDispatcher dispatcher = new(
-            registry: registry,
-            assigner: new WorkerAssigner(),
-            localFallback: local,
-            logger: NullLogger<RemoteWorkerDispatcher>.Instance
+            registry,
+            new WorkerAssigner(),
+            local,
+            NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
         EncodeTask[] tasks = Enumerable
-            .Range(start: 0, count: 12)
-            .Select(selector: i =>
+            .Range(0, 12)
+            .Select(i =>
                 MakeTask(
-                    id: $"t{i}",
-                    type: i % 2 == 0 ? EncodeTaskType.QualityVariant : EncodeTaskType.TimeChunk
+                    $"t{i}",
+                    i % 2 == 0 ? EncodeTaskType.QualityVariant : EncodeTaskType.TimeChunk
                 )
             )
             .ToArray();
 
-        DispatchResult[] results = await dispatcher.DispatchAsync(tasks: tasks, ct: CancellationToken.None);
+        DispatchResult[] results = await dispatcher.DispatchAsync(tasks, CancellationToken.None);
 
-        results.Should().HaveCount(expected: 12);
-        HashSet<string> resultIds = results.Select(selector: r => r.TaskId).ToHashSet();
-        resultIds.Should().HaveCount(expected: 12, because: "no duplicates");
-        resultIds.Should().BeEquivalentTo(expectation: tasks.Select(selector: t => t.TaskId));
-        (workerACount + workerBCount + workerCCount).Should().Be(expected: 12);
+        results.Should().HaveCount(12);
+        HashSet<string> resultIds = results.Select(r => r.TaskId).ToHashSet();
+        resultIds.Should().HaveCount(12, "no duplicates");
+        resultIds.Should().BeEquivalentTo(tasks.Select(t => t.TaskId));
+        (workerACount + workerBCount + workerCCount).Should().Be(12);
     }
 
     [Fact]
@@ -516,78 +516,78 @@ public class DistributedComputeScenarioTests
     {
         Mock<IFfmpegExecutor> executor = MakeSuccessExecutor();
         LocalWorkerDispatcher local = new(
-            executor: executor.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         int cpuOnlyCount = 0;
         int gpuBoxCount = 0;
 
         Mock<IRemoteWorker> cpuOnly = new();
-        cpuOnly.SetupGet(expression: w => w.WorkerId).Returns(value: "cpu-only");
-        cpuOnly.Setup(expression: w => w.GetAvailableBudget()).Returns(value: new ResourceBudgetSnapshot(AvailableGpuSlots: 0, AvailableCpuThreads: 8, GpuUtilization: 0));
+        cpuOnly.SetupGet(w => w.WorkerId).Returns("cpu-only");
+        cpuOnly.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(0, 8, 0));
         cpuOnly
-            .Setup(expression: w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
-            .Callback(action: () => Interlocked.Increment(location: ref cpuOnlyCount))
+            .Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .Callback(() => Interlocked.Increment(ref cpuOnlyCount))
             .Returns(
-                valueFunction: (EncodeTask _, CancellationToken __) =>
+                (EncodeTask _, CancellationToken __) =>
                     Task.FromResult(
-                        result: new DispatchResult(
-                            TaskId: "cpu-task",
+                        new DispatchResult(
+                            "cpu-task",
                             Success: true,
                             OutputPath: "/cpu/out",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
+                            Duration: TimeSpan.FromSeconds(1),
                             WorkerId: "cpu-only"
                         )
                     )
             );
 
         Mock<IRemoteWorker> gpuBox = new();
-        gpuBox.SetupGet(expression: w => w.WorkerId).Returns(value: "gpu-box");
-        gpuBox.Setup(expression: w => w.GetAvailableBudget()).Returns(value: new ResourceBudgetSnapshot(AvailableGpuSlots: 2, AvailableCpuThreads: 4, GpuUtilization: 0));
+        gpuBox.SetupGet(w => w.WorkerId).Returns("gpu-box");
+        gpuBox.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(2, 4, 0));
         gpuBox
-            .Setup(expression: w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
-            .Callback(action: () => Interlocked.Increment(location: ref gpuBoxCount))
+            .Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .Callback(() => Interlocked.Increment(ref gpuBoxCount))
             .Returns(
-                valueFunction: (EncodeTask _, CancellationToken __) =>
+                (EncodeTask _, CancellationToken __) =>
                     Task.FromResult(
-                        result: new DispatchResult(
-                            TaskId: "gpu-task",
+                        new DispatchResult(
+                            "gpu-task",
                             Success: true,
                             OutputPath: "/gpu/out",
-                            Duration: TimeSpan.FromSeconds(seconds: 1),
+                            Duration: TimeSpan.FromSeconds(1),
                             WorkerId: "gpu-box"
                         )
                     )
             );
 
-        FakeRegistry registry = new(workers: [cpuOnly.Object, gpuBox.Object]);
+        FakeRegistry registry = new([cpuOnly.Object, gpuBox.Object]);
 
         RemoteWorkerDispatcher dispatcher = new(
-            registry: registry,
-            assigner: new WorkerAssigner(),
-            localFallback: local,
-            logger: NullLogger<RemoteWorkerDispatcher>.Instance
+            registry,
+            new WorkerAssigner(),
+            local,
+            NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
         EncodeTask gpuTask = new(
-            TaskId: "gpu-req",
-            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
+            "gpu-req",
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: "/out/gpu-req",
             Type: EncodeTaskType.QualityVariant,
             RequiresGpu: true
         );
 
         DispatchResult[] results = await dispatcher.DispatchAsync(
-            tasks: [gpuTask],
-            ct: CancellationToken.None
+            [gpuTask],
+            CancellationToken.None
         );
 
-        results.Should().HaveCount(expected: 1);
+        results.Should().HaveCount(1);
         results[0].Success.Should().BeTrue();
-        results[0].WorkerId.Should().Be(expected: "gpu-box", because: "GPU task should route to GPU-capable worker");
-        gpuBoxCount.Should().Be(expected: 1);
-        cpuOnlyCount.Should().Be(expected: 0, because: "GPU task should not land on CPU-only worker");
+        results[0].WorkerId.Should().Be("gpu-box", "GPU task should route to GPU-capable worker");
+        gpuBoxCount.Should().Be(1);
+        cpuOnlyCount.Should().Be(0, "GPU task should not land on CPU-only worker");
     }
 
     [Fact]
@@ -596,7 +596,7 @@ public class DistributedComputeScenarioTests
         int localCount = 0;
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(expression: e =>
+            .Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -605,60 +605,60 @@ public class DistributedComputeScenarioTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Callback(action: () => Interlocked.Increment(location: ref localCount))
-            .Returns(valueFunction: () =>
+            .Callback(() => Interlocked.Increment(ref localCount))
+            .Returns(() =>
                 Task.FromResult(
-                    result: new ExecutionResult(
-                        Success: true,
-                        ExitCode: 0,
-                        StdErr: "",
-                        Duration: TimeSpan.FromSeconds(seconds: 1),
-                        Error: null
+                    new ExecutionResult(
+                        true,
+                        0,
+                        "",
+                        TimeSpan.FromSeconds(1),
+                        null
                     )
                 )
             );
 
         LocalWorkerDispatcher local = new(
-            executor: executor.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         Mock<IRemoteWorker> broken1 = new();
-        broken1.SetupGet(expression: w => w.WorkerId).Returns(value: "broken1");
-        broken1.Setup(expression: w => w.GetAvailableBudget()).Returns(value: new ResourceBudgetSnapshot(AvailableGpuSlots: 0, AvailableCpuThreads: 4, GpuUtilization: 0));
+        broken1.SetupGet(w => w.WorkerId).Returns("broken1");
+        broken1.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(0, 4, 0));
         broken1
-            .Setup(expression: w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
-            .Throws(exception: new HttpRequestException(message: "connection refused"));
+            .Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .Throws(new HttpRequestException("connection refused"));
 
         Mock<IRemoteWorker> broken2 = new();
-        broken2.SetupGet(expression: w => w.WorkerId).Returns(value: "broken2");
-        broken2.Setup(expression: w => w.GetAvailableBudget()).Returns(value: new ResourceBudgetSnapshot(AvailableGpuSlots: 0, AvailableCpuThreads: 4, GpuUtilization: 0));
+        broken2.SetupGet(w => w.WorkerId).Returns("broken2");
+        broken2.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(0, 4, 0));
         broken2
-            .Setup(expression: w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
             .Returns(
-                valueFunction: (EncodeTask _, CancellationToken __) =>
+                (EncodeTask _, CancellationToken __) =>
                     Task.FromResult(
-                        result: new DispatchResult(TaskId: "t0", Success: false, OutputPath: "", Duration: TimeSpan.Zero, Error: "OOM")
+                        new DispatchResult("t0", false, "", TimeSpan.Zero, "OOM")
                     )
             );
 
-        FakeRegistry registry = new(workers: [broken1.Object, broken2.Object]);
+        FakeRegistry registry = new([broken1.Object, broken2.Object]);
 
         RemoteWorkerDispatcher dispatcher = new(
-            registry: registry,
-            assigner: new WorkerAssigner(),
-            localFallback: local,
-            logger: NullLogger<RemoteWorkerDispatcher>.Instance
+            registry,
+            new WorkerAssigner(),
+            local,
+            NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
         DispatchResult[] results = await dispatcher.DispatchAsync(
-            tasks: [MakeTask(id: "fallback-test", type: EncodeTaskType.QualityVariant)],
-            ct: CancellationToken.None
+            [MakeTask("fallback-test", EncodeTaskType.QualityVariant)],
+            CancellationToken.None
         );
 
-        results.Should().HaveCount(expected: 1);
+        results.Should().HaveCount(1);
         results[0].Success.Should().BeTrue();
-        localCount.Should().Be(expected: 1, because: "task should fall back to local when all remote workers fail");
+        localCount.Should().Be(1, "task should fall back to local when all remote workers fail");
     }
 
     [Fact]
@@ -667,26 +667,26 @@ public class DistributedComputeScenarioTests
         InMemoryRemoteWorkerRegistry registry = new();
 
         Mock<IRemoteWorker> flaky = new();
-        flaky.SetupGet(expression: w => w.WorkerId).Returns(value: "flaky");
-        flaky.Setup(expression: w => w.GetAvailableBudget()).Returns(value: new ResourceBudgetSnapshot(AvailableGpuSlots: 0, AvailableCpuThreads: 4, GpuUtilization: 0));
+        flaky.SetupGet(w => w.WorkerId).Returns("flaky");
+        flaky.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(0, 4, 0));
         flaky
-            .Setup(expression: w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
             .Returns(
-                valueFunction: (EncodeTask _, CancellationToken __) =>
+                (EncodeTask _, CancellationToken __) =>
                     Task.FromResult(
-                        result: new DispatchResult(TaskId: "t0", Success: false, OutputPath: "", Duration: TimeSpan.Zero, Error: "failure")
+                        new DispatchResult("t0", false, "", TimeSpan.Zero, "failure")
                     )
             );
 
-        registry.Register(worker: flaky.Object);
+        registry.Register(flaky.Object);
 
-        registry.RecordTaskOutcome(workerId: "flaky", success: false);
-        registry.RecordTaskOutcome(workerId: "flaky", success: false);
-        registry.RecordTaskOutcome(workerId: "flaky", success: false);
+        registry.RecordTaskOutcome("flaky", false);
+        registry.RecordTaskOutcome("flaky", false);
+        registry.RecordTaskOutcome("flaky", false);
 
         IReadOnlyList<IRemoteWorker> active = registry.GetActiveWorkers();
 
-        active.Should().BeEmpty(because: "worker with 3 consecutive failures should be in cooldown");
+        active.Should().BeEmpty("worker with 3 consecutive failures should be in cooldown");
     }
 
     [Fact]
@@ -695,22 +695,22 @@ public class DistributedComputeScenarioTests
         InMemoryRemoteWorkerRegistry registry = new();
 
         Mock<IRemoteWorker> recovering = new();
-        recovering.SetupGet(expression: w => w.WorkerId).Returns(value: "recovering");
-        recovering.Setup(expression: w => w.GetAvailableBudget()).Returns(value: new ResourceBudgetSnapshot(AvailableGpuSlots: 0, AvailableCpuThreads: 4, GpuUtilization: 0));
+        recovering.SetupGet(w => w.WorkerId).Returns("recovering");
+        recovering.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(0, 4, 0));
 
-        registry.Register(worker: recovering.Object);
+        registry.Register(recovering.Object);
 
-        registry.RecordTaskOutcome(workerId: "recovering", success: false);
-        registry.RecordTaskOutcome(workerId: "recovering", success: false);
-        registry.RecordTaskOutcome(workerId: "recovering", success: false);
+        registry.RecordTaskOutcome("recovering", false);
+        registry.RecordTaskOutcome("recovering", false);
+        registry.RecordTaskOutcome("recovering", false);
 
         IReadOnlyList<IRemoteWorker> active = registry.GetActiveWorkers();
-        active.Should().BeEmpty(because: "in cooldown after 3 failures");
+        active.Should().BeEmpty("in cooldown after 3 failures");
 
-        registry.RecordTaskOutcome(workerId: "recovering", success: true);
+        registry.RecordTaskOutcome("recovering", true);
 
         active = registry.GetActiveWorkers();
-        active.Should().HaveCount(expected: 1, because: "success clears failure counter and exits cooldown");
+        active.Should().HaveCount(1, "success clears failure counter and exits cooldown");
     }
 
     [Fact]
@@ -718,81 +718,81 @@ public class DistributedComputeScenarioTests
     {
         Mock<IFfmpegExecutor> executor = MakeSuccessExecutor();
         LocalWorkerDispatcher local = new(
-            executor: executor.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         int fastCount = 0;
         int slowCount = 0;
 
         IRemoteWorker fast = MakeDynamicWorker(
-            id: "fast",
-            slots: 2,
-            producer: t =>
+            "fast",
+            2,
+            t =>
             {
-                Interlocked.Increment(location: ref fastCount);
+                Interlocked.Increment(ref fastCount);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/fast/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "fast"
                 );
             }
         );
 
         IRemoteWorker slow = MakeDynamicWorker(
-            id: "slow",
-            slots: 1,
-            producer: t =>
+            "slow",
+            1,
+            t =>
             {
-                Interlocked.Increment(location: ref slowCount);
+                Interlocked.Increment(ref slowCount);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/slow/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "slow"
                 );
             }
         );
 
         InMemoryRemoteWorkerRegistry registry = new();
-        registry.Register(worker: fast);
-        registry.Register(worker: slow);
+        registry.Register(fast);
+        registry.Register(slow);
 
         RemoteWorkerDispatcher dispatcher = new(
-            registry: registry,
-            assigner: new WorkerAssigner(),
-            localFallback: local,
-            logger: NullLogger<RemoteWorkerDispatcher>.Instance
+            registry,
+            new WorkerAssigner(),
+            local,
+            NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
         EncodeTask heavyTask = new(
-            TaskId: "heavy",
-            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
+            "heavy",
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: "/out/heavy",
             Type: EncodeTaskType.QualityVariant,
             EstimatedCostUnits: 8
         );
 
         EncodeTask lightTask = new(
-            TaskId: "light",
-            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
+            "light",
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: "/out/light",
             Type: EncodeTaskType.QualityVariant,
             EstimatedCostUnits: 1
         );
 
         DispatchResult[] results = await dispatcher.DispatchAsync(
-            tasks: [heavyTask, lightTask],
-            ct: CancellationToken.None
+            [heavyTask, lightTask],
+            CancellationToken.None
         );
 
-        results.Should().HaveCount(expected: 2);
-        results.Should().AllSatisfy(expected: r => r.Success.Should().BeTrue());
-        fastCount.Should().Be(expected: 1, because: "fast worker should get the heavy task");
-        slowCount.Should().Be(expected: 1, because: "slow worker should get remaining light task");
+        results.Should().HaveCount(2);
+        results.Should().AllSatisfy(r => r.Success.Should().BeTrue());
+        fastCount.Should().Be(1, "fast worker should get the heavy task");
+        slowCount.Should().Be(1, "slow worker should get remaining light task");
     }
 
     [Fact]
@@ -800,70 +800,70 @@ public class DistributedComputeScenarioTests
     {
         Mock<IFfmpegExecutor> executor = MakeSuccessExecutor();
         LocalWorkerDispatcher local = new(
-            executor: executor.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         int beastHasVariant = 0;
         int laptopHasVariant = 0;
 
         IRemoteWorker beast = MakeDynamicWorker(
-            id: "beast",
-            slots: 8,
-            producer: t =>
+            "beast",
+            8,
+            t =>
             {
                 if (t.Type == EncodeTaskType.QualityVariant)
-                    Interlocked.Increment(location: ref beastHasVariant);
+                    Interlocked.Increment(ref beastHasVariant);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/beast/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "beast"
                 );
             }
         );
 
         IRemoteWorker laptop = MakeDynamicWorker(
-            id: "laptop",
-            slots: 2,
-            producer: t =>
+            "laptop",
+            2,
+            t =>
             {
                 if (t.Type == EncodeTaskType.QualityVariant)
-                    Interlocked.Increment(location: ref laptopHasVariant);
+                    Interlocked.Increment(ref laptopHasVariant);
                 return new DispatchResult(
-                    TaskId: t.TaskId,
+                    t.TaskId,
                     Success: true,
                     OutputPath: $"/laptop/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(seconds: 1),
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "laptop"
                 );
             }
         );
 
         InMemoryRemoteWorkerRegistry registry = new();
-        registry.Register(worker: beast);
-        registry.Register(worker: laptop);
+        registry.Register(beast);
+        registry.Register(laptop);
 
         RemoteWorkerDispatcher dispatcher = new(
-            registry: registry,
-            assigner: new WorkerAssigner(),
-            localFallback: local,
-            logger: NullLogger<RemoteWorkerDispatcher>.Instance
+            registry,
+            new WorkerAssigner(),
+            local,
+            NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
         EncodeTask[] tasks =
         [
-            MakeTask(id: "chunk0", type: EncodeTaskType.TimeChunk),
-            MakeTask(id: "variant", type: EncodeTaskType.QualityVariant),
-            MakeTask(id: "chunk1", type: EncodeTaskType.TimeChunk),
+            MakeTask("chunk0", EncodeTaskType.TimeChunk),
+            MakeTask("variant", EncodeTaskType.QualityVariant),
+            MakeTask("chunk1", EncodeTaskType.TimeChunk),
         ];
 
-        DispatchResult[] results = await dispatcher.DispatchAsync(tasks: tasks, ct: CancellationToken.None);
+        DispatchResult[] results = await dispatcher.DispatchAsync(tasks, CancellationToken.None);
 
-        results.Should().HaveCount(expected: 3);
-        results.Should().AllSatisfy(expected: r => r.Success.Should().BeTrue());
-        beastHasVariant.Should().Be(expected: 1, because: "full variant (heaviest) should land on fastest worker");
+        results.Should().HaveCount(3);
+        results.Should().AllSatisfy(r => r.Success.Should().BeTrue());
+        beastHasVariant.Should().Be(1, "full variant (heaviest) should land on fastest worker");
     }
 
     [Fact]
@@ -871,16 +871,16 @@ public class DistributedComputeScenarioTests
     {
         Mock<IFfmpegExecutor> executor = MakeSuccessExecutor();
         LocalWorkerDispatcher local = new(
-            executor: executor.Object,
-            logger: NullLogger<LocalWorkerDispatcher>.Instance
+            executor.Object,
+            NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         InMemoryRemoteWorkerRegistry registry = new();
         RemoteWorkerDispatcher dispatcher = new(
-            registry: registry,
-            assigner: new WorkerAssigner(),
-            localFallback: local,
-            logger: NullLogger<RemoteWorkerDispatcher>.Instance
+            registry,
+            new WorkerAssigner(),
+            local,
+            NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
         for (int round = 0; round < 3; round++)
@@ -888,64 +888,64 @@ public class DistributedComputeScenarioTests
             if (round >= 1)
             {
                 IRemoteWorker w1 = MakeDynamicWorker(
-                    id: $"r{round}-w1",
-                    slots: 4,
-                    producer: t => new DispatchResult(
-                        TaskId: t.TaskId,
+                    $"r{round}-w1",
+                    4,
+                    t => new DispatchResult(
+                        t.TaskId,
                         Success: true,
                         OutputPath: $"/w1/{t.TaskId}",
-                        Duration: TimeSpan.FromSeconds(seconds: 1),
+                        Duration: TimeSpan.FromSeconds(1),
                         WorkerId: $"r{round}-w1"
                     )
                 );
-                registry.Register(worker: w1);
+                registry.Register(w1);
             }
 
             if (round >= 2)
             {
                 IRemoteWorker w2 = MakeDynamicWorker(
-                    id: $"r{round}-w2",
-                    slots: 2,
-                    producer: t => new DispatchResult(
-                        TaskId: t.TaskId,
+                    $"r{round}-w2",
+                    2,
+                    t => new DispatchResult(
+                        t.TaskId,
                         Success: true,
                         OutputPath: $"/w2/{t.TaskId}",
-                        Duration: TimeSpan.FromSeconds(seconds: 1),
+                        Duration: TimeSpan.FromSeconds(1),
                         WorkerId: $"r{round}-w2"
                     )
                 );
-                registry.Register(worker: w2);
+                registry.Register(w2);
             }
 
             EncodeTask[] tasks = Enumerable
                 .Range(
-                    start: 0,
-                    count: round == 0 ? 2
+                    0,
+                    round == 0 ? 2
                         : round == 1 ? 4
                         : 6
                 )
-                .Select(selector: i =>
+                .Select(i =>
                     MakeTask(
-                        id: $"r{round}-t{i}",
-                        type: i % 2 == 0 ? EncodeTaskType.QualityVariant : EncodeTaskType.TimeChunk
+                        $"r{round}-t{i}",
+                        i % 2 == 0 ? EncodeTaskType.QualityVariant : EncodeTaskType.TimeChunk
                     )
                 )
                 .ToArray();
 
             DispatchResult[] results = await dispatcher.DispatchAsync(
-                tasks: tasks,
-                ct: CancellationToken.None
+                tasks,
+                CancellationToken.None
             );
 
-            results.Should().HaveCount(expected: tasks.Length);
-            results.Should().AllSatisfy(expected: r => r.Success.Should().BeTrue());
-            HashSet<string> resultIds = results.Select(selector: r => r.TaskId).ToHashSet();
-            resultIds.Should().HaveCount(expected: tasks.Length, because: $"no duplicate results in round {round}");
+            results.Should().HaveCount(tasks.Length);
+            results.Should().AllSatisfy(r => r.Success.Should().BeTrue());
+            HashSet<string> resultIds = results.Select(r => r.TaskId).ToHashSet();
+            resultIds.Should().HaveCount(tasks.Length, $"no duplicate results in round {round}");
             resultIds
                 .Should()
                 .BeEquivalentTo(
-                    expectation: tasks.Select(selector: t => t.TaskId),
-                    because: $"all tasks completed in round {round}"
+                    tasks.Select(t => t.TaskId),
+                    $"all tasks completed in round {round}"
                 );
         }
     }
@@ -958,7 +958,7 @@ public class DistributedComputeScenarioTests
     private static Mock<IFfmpegExecutor> MakeSuccessExecutor()
     {
         Mock<IFfmpegExecutor> mock = new();
-        mock.Setup(expression: e =>
+        mock.Setup(e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -967,14 +967,14 @@ public class DistributedComputeScenarioTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(valueFunction: () =>
+            .Returns(() =>
                 Task.FromResult(
-                    result: new ExecutionResult(
-                        Success: true,
-                        ExitCode: 0,
-                        StdErr: string.Empty,
-                        Duration: TimeSpan.FromSeconds(seconds: 1),
-                        Error: null
+                    new ExecutionResult(
+                        true,
+                        0,
+                        string.Empty,
+                        TimeSpan.FromSeconds(1),
+                        null
                     )
                 )
             );
@@ -988,18 +988,18 @@ public class DistributedComputeScenarioTests
     )
     {
         Mock<IRemoteWorker> mock = new();
-        mock.SetupGet(expression: w => w.WorkerId).Returns(value: id);
-        mock.Setup(expression: w => w.GetAvailableBudget()).Returns(value: new ResourceBudgetSnapshot(AvailableGpuSlots: 0, AvailableCpuThreads: slots, GpuUtilization: 0));
-        mock.Setup(expression: w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
-            .Returns(valueFunction: (EncodeTask t, CancellationToken _) => Task.FromResult(result: producer(arg: t)));
+        mock.SetupGet(w => w.WorkerId).Returns(id);
+        mock.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(0, slots, 0));
+        mock.Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .Returns((EncodeTask t, CancellationToken _) => Task.FromResult(producer(t)));
         return mock.Object;
     }
 
     private static EncodeTask MakeTask(string id, EncodeTaskType type) =>
         new(
-            TaskId: id,
-            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
-            OutputPath: $"/out/{id}",
-            Type: type
+            id,
+            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            $"/out/{id}",
+            type
         );
 }

@@ -23,25 +23,25 @@ namespace NoMercy.Tests.Storage.Faults;
 /// asserts the operation succeeds via remount, and asserts the call count
 /// proves exactly one retry happened.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class NfsBroadRecoveryTests
 {
     private static NfsDriverConfig BuildConfig() =>
         new(
-            Server: "test.local",
-            Export: "/export",
-            Version: 4,
-            Uid: null,
-            Gid: null,
-            Port: 2049,
-            MountPort: null
+            "test.local",
+            "/export",
+            4,
+            null,
+            null,
+            2049,
+            null
         );
 
     private static (NfsStorageDriver driver, FaultyLibNfs lib) BuildDriver()
     {
         FaultyLibNfs lib = new();
-        lib.SeedDir(path: "/");
-        NfsStorageDriver driver = new(config: BuildConfig(), libNfs: lib);
+        lib.SeedDir("/");
+        NfsStorageDriver driver = new(BuildConfig(), lib);
         return (driver, lib);
     }
 
@@ -55,11 +55,11 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.Seed(path: "/file.bin", content: [1]);
-            lib.Faults[key: "Stat64:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Seed("/file.bin", [1]);
+            lib.Faults["Stat64:0"] = (-11, "NFS4ERR_EXPIRED");
 
-            driver.FileExists(path: "/file.bin").Should().BeTrue();
-            lib.CallCounts[key: "Stat64"].Should().Be(expected: 2);
+            driver.FileExists("/file.bin").Should().BeTrue();
+            lib.CallCounts["Stat64"].Should().Be(2);
         }
         finally
         {
@@ -73,8 +73,8 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            driver.FileExists(path: "/missing.bin").Should().BeFalse();
-            lib.CallCounts[key: "Stat64"].Should().Be(expected: 1, because: "no remount on plain NOENT");
+            driver.FileExists("/missing.bin").Should().BeFalse();
+            lib.CallCounts["Stat64"].Should().Be(1, "no remount on plain NOENT");
         }
         finally
         {
@@ -88,11 +88,11 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.SeedDir(path: "/sub");
-            lib.Faults[key: "Stat64:0"] = (-1, "NFS4ERR_BAD_SESSION");
+            lib.SeedDir("/sub");
+            lib.Faults["Stat64:0"] = (-1, "NFS4ERR_BAD_SESSION");
 
-            driver.DirectoryExists(path: "/sub").Should().BeTrue();
-            lib.CallCounts[key: "Stat64"].Should().Be(expected: 2);
+            driver.DirectoryExists("/sub").Should().BeTrue();
+            lib.CallCounts["Stat64"].Should().Be(2);
         }
         finally
         {
@@ -110,11 +110,11 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.Seed(path: "/file.bin", content: new byte[100]);
-            lib.Faults[key: "Stat64:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Seed("/file.bin", new byte[100]);
+            lib.Faults["Stat64:0"] = (-11, "NFS4ERR_EXPIRED");
 
-            driver.GetFileSize(path: "/file.bin").Should().Be(expected: 100);
-            lib.CallCounts[key: "Stat64"].Should().Be(expected: 2);
+            driver.GetFileSize("/file.bin").Should().Be(100);
+            lib.CallCounts["Stat64"].Should().Be(2);
         }
         finally
         {
@@ -128,11 +128,11 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.Seed(path: "/file.bin", content: [1]);
-            lib.Faults[key: "Stat64:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Seed("/file.bin", [1]);
+            lib.Faults["Stat64:0"] = (-11, "NFS4ERR_EXPIRED");
 
-            DateTime _ = driver.GetLastWriteTimeUtc(path: "/file.bin");
-            lib.CallCounts[key: "Stat64"].Should().Be(expected: 2);
+            DateTime _ = driver.GetLastWriteTimeUtc("/file.bin");
+            lib.CallCounts["Stat64"].Should().Be(2);
         }
         finally
         {
@@ -146,11 +146,11 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.Seed(path: "/file.bin", content: [1]);
-            lib.Faults[key: "Stat64:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Seed("/file.bin", [1]);
+            lib.Faults["Stat64:0"] = (-11, "NFS4ERR_EXPIRED");
 
-            DateTime _ = driver.GetCreationTimeUtc(path: "/file.bin");
-            lib.CallCounts[key: "Stat64"].Should().Be(expected: 2);
+            DateTime _ = driver.GetCreationTimeUtc("/file.bin");
+            lib.CallCounts["Stat64"].Should().Be(2);
         }
         finally
         {
@@ -164,11 +164,11 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.Seed(path: "/file.bin", content: [1]);
-            lib.Faults[key: "Stat64:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Seed("/file.bin", [1]);
+            lib.Faults["Stat64:0"] = (-11, "NFS4ERR_EXPIRED");
 
-            DateTime _ = driver.GetLastAccessTimeUtc(path: "/file.bin");
-            lib.CallCounts[key: "Stat64"].Should().Be(expected: 2);
+            DateTime _ = driver.GetLastAccessTimeUtc("/file.bin");
+            lib.CallCounts["Stat64"].Should().Be(2);
         }
         finally
         {
@@ -186,13 +186,13 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.Seed(path: "/file.bin", content: [1]);
-            lib.Faults[key: "Unlink:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Seed("/file.bin", [1]);
+            lib.Faults["Unlink:0"] = (-11, "NFS4ERR_EXPIRED");
 
-            driver.DeleteFile(path: "/file.bin");
+            driver.DeleteFile("/file.bin");
 
-            lib.CallCounts[key: "Unlink"].Should().Be(expected: 2);
-            lib.Files.Should().NotContainKey(unexpected: "/file.bin");
+            lib.CallCounts["Unlink"].Should().Be(2);
+            lib.Files.Should().NotContainKey("/file.bin");
         }
         finally
         {
@@ -206,13 +206,13 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.Seed(path: "/old.bin", content: [1, 2, 3]);
-            lib.Faults[key: "Rename:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Seed("/old.bin", [1, 2, 3]);
+            lib.Faults["Rename:0"] = (-11, "NFS4ERR_EXPIRED");
 
-            driver.MoveFile(source: "/old.bin", destination: "/new.bin");
+            driver.MoveFile("/old.bin", "/new.bin");
 
-            lib.CallCounts[key: "Rename"].Should().Be(expected: 2);
-            lib.Files.Should().NotContainKey(unexpected: "/old.bin").And.ContainKey(expected: "/new.bin");
+            lib.CallCounts["Rename"].Should().Be(2);
+            lib.Files.Should().NotContainKey("/old.bin").And.ContainKey("/new.bin");
         }
         finally
         {
@@ -226,12 +226,12 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.SeedDir(path: "/subdir");
-            lib.Faults[key: "RmDir:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.SeedDir("/subdir");
+            lib.Faults["RmDir:0"] = (-11, "NFS4ERR_EXPIRED");
 
-            driver.DeleteDirectory(path: "/subdir", recursive: false);
+            driver.DeleteDirectory("/subdir", false);
 
-            lib.CallCounts[key: "RmDir"].Should().Be(expected: 2);
+            lib.CallCounts["RmDir"].Should().Be(2);
         }
         finally
         {
@@ -245,11 +245,11 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.Faults[key: "MkDir:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Faults["MkDir:0"] = (-11, "NFS4ERR_EXPIRED");
 
-            driver.CreateDirectory(path: "/new_dir");
+            driver.CreateDirectory("/new_dir");
 
-            lib.CallCounts[key: "MkDir"].Should().Be(expected: 2);
+            lib.CallCounts["MkDir"].Should().Be(2);
         }
         finally
         {
@@ -267,14 +267,14 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.SeedDir(path: "/sub");
-            lib.Faults[key: "OpenDir:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.SeedDir("/sub");
+            lib.Faults["OpenDir:0"] = (-11, "NFS4ERR_EXPIRED");
 
             // ReadDir returns IntPtr.Zero in the fake (empty dir), so the result
             // list will be empty — but the important thing is OpenDir was retried.
-            driver.ListDirectories(relativePath: "/sub");
+            driver.ListDirectories("/sub");
 
-            lib.CallCounts[key: "OpenDir"].Should().Be(expected: 2);
+            lib.CallCounts["OpenDir"].Should().Be(2);
         }
         finally
         {
@@ -292,15 +292,15 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.Seed(path: "/file.bin", content: [1]);
-            lib.Faults[key: "Unlink:0"] = (-11, "NFS4ERR_EXPIRED");
-            lib.Faults[key: "Unlink:1"] = (-11, "NFS4ERR_EXPIRED");
-            lib.Faults[key: "Unlink:2"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Seed("/file.bin", [1]);
+            lib.Faults["Unlink:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Faults["Unlink:1"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Faults["Unlink:2"] = (-11, "NFS4ERR_EXPIRED");
 
-            Action act = () => driver.DeleteFile(path: "/file.bin");
+            Action act = () => driver.DeleteFile("/file.bin");
             act.Should().Throw<IOException>();
 
-            lib.CallCounts[key: "Unlink"].Should().Be(expected: 2);
+            lib.CallCounts["Unlink"].Should().Be(2);
         }
         finally
         {
@@ -314,14 +314,14 @@ public class NfsBroadRecoveryTests
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriver();
         try
         {
-            lib.Seed(path: "/old.bin", content: [1]);
-            lib.Faults[key: "Rename:0"] = (-11, "NFS4ERR_EXPIRED");
-            lib.Faults[key: "Rename:1"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Seed("/old.bin", [1]);
+            lib.Faults["Rename:0"] = (-11, "NFS4ERR_EXPIRED");
+            lib.Faults["Rename:1"] = (-11, "NFS4ERR_EXPIRED");
 
-            Action act = () => driver.MoveFile(source: "/old.bin", destination: "/new.bin");
+            Action act = () => driver.MoveFile("/old.bin", "/new.bin");
             act.Should().Throw<IOException>();
 
-            lib.CallCounts[key: "Rename"].Should().Be(expected: 2);
+            lib.CallCounts["Rename"].Should().Be(2);
         }
         finally
         {

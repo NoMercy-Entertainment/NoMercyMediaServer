@@ -14,16 +14,16 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Movies;
 
-[PrimaryKey(propertyName: nameof(MovieId), additionalPropertyNames: nameof(UserId))]
-[Index(propertyName: nameof(MovieId))]
-[Index(propertyName: nameof(UserId))]
+[PrimaryKey(nameof(MovieId), nameof(UserId))]
+[Index(nameof(MovieId))]
+[Index(nameof(UserId))]
 public class MovieUser
 {
-    [JsonProperty(propertyName: "movie_id")]
+    [JsonProperty("movie_id")]
     public int MovieId { get; set; }
     public Movie Movie { get; set; } = null!;
 
-    [JsonProperty(propertyName: "user_id")]
+    [JsonProperty("user_id")]
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 

@@ -21,12 +21,12 @@ public class CoverArtBaseClient : ExternalApiClient
     protected CoverArtBaseClient() { }
 
     protected CoverArtBaseClient(Guid id)
-        : base(id: id) { }
+        : base(id) { }
 
     protected override string HttpClientName => HttpClientNames.CoverArt;
-    protected override Uri BaseUrl => new(uriString: "https://coverartarchive.org/");
+    protected override Uri BaseUrl => new("https://coverartarchive.org/");
     protected override int ConcurrentRequests => 3;
     protected override int RequestIntervalMs => 1000;
 
-    protected override void LogRequest(string url) => Logger.CoverArt(message: url, level: LogEventLevel.Verbose);
+    protected override void LogRequest(string url) => Logger.CoverArt(url, LogEventLevel.Verbose);
 }

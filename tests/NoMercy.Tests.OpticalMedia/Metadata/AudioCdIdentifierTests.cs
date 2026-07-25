@@ -20,20 +20,19 @@ using NoMercy.Tests.OpticalMedia.Infrastructure;
 
 namespace NoMercy.Tests.OpticalMedia.Metadata;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class AudioCdIdentifierTests
 {
     private static DiscInfo MakeCdDisc(string label = "AUDIO_CD") =>
         new(
-            Type: OpticalDiscType.Cd,
-            DiscLabel: label,
-            Titles: [],
-            AudioTracks:
+            OpticalDiscType.Cd,
+            label,
+            [],
             [
-                new(Index: 1, Title: null, Artist: null, Duration: TimeSpan.FromSeconds(seconds: 180), SampleRate: 44100, Channels: 2),
-                new(Index: 2, Title: null, Artist: null, Duration: TimeSpan.FromSeconds(seconds: 210), SampleRate: 44100, Channels: 2),
+                new(1, null, null, TimeSpan.FromSeconds(180), 44100, 2),
+                new(2, null, null, TimeSpan.FromSeconds(210), 44100, 2),
             ],
-            TotalDuration: TimeSpan.FromSeconds(seconds: 390)
+            TimeSpan.FromSeconds(390)
         );
 
     private static AudioCdIdentifier MakeSut(
@@ -43,20 +42,20 @@ public class AudioCdIdentifierTests
     {
         tocReader ??= new NullTocReader();
         discClient ??= new();
-        return new(tocReader: tocReader, discClient: discClient, logger: NullLogger<AudioCdIdentifier>.Instance);
+        return new(tocReader, discClient, NullLogger<AudioCdIdentifier>.Instance);
     }
 
     // ── CanHandle ──────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(data: [OpticalDiscType.Cd, true])]
-    [InlineData(data: [OpticalDiscType.Dvd, false])]
-    [InlineData(data: [OpticalDiscType.BluRay, false])]
-    [InlineData(data: [OpticalDiscType.None, false])]
+    [InlineData([OpticalDiscType.Cd, true])]
+    [InlineData([OpticalDiscType.Dvd, false])]
+    [InlineData([OpticalDiscType.BluRay, false])]
+    [InlineData([OpticalDiscType.None, false])]
     public void CanHandle_ReturnsCorrectValueForDiscType(OpticalDiscType type, bool expectedResult)
     {
         AudioCdIdentifier sut = MakeSut();
-        sut.CanHandle(type: type).Should().Be(expected: expectedResult);
+        sut.CanHandle(type).Should().Be(expectedResult);
     }
 
     // ── TOC unavailable → NeedsManualAssignment ────────────────────────────
@@ -66,23 +65,23 @@ public class AudioCdIdentifierTests
     {
         Mock<ITocReader> tocMock = new();
         tocMock
-            .Setup(expression: r => r.ReadTocAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: (DiscToc?)null);
+            .Setup(r => r.ReadTocAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DiscToc?)null);
 
-        AudioCdIdentifier sut = MakeSut(tocReader: tocMock.Object);
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        AudioCdIdentifier sut = MakeSut(tocMock.Object);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
         result.NeedsManualAssignment.Should().BeTrue();
         result.AutoApply.Should().BeFalse();
         result.Candidates.Should().BeEmpty();
-        result.Kind.Should().Be(expected: MediaKind.Music);
+        result.Kind.Should().Be(MediaKind.Music);
     }
 
     [Fact]
     public async Task IdentifyAsync_WithNullTocReaderDefault_ReturnsNeedsManualAssignment()
     {
-        AudioCdIdentifier sut = MakeSut(tocReader: new NullTocReader());
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        AudioCdIdentifier sut = MakeSut(new NullTocReader());
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
         result.NeedsManualAssignment.Should().BeTrue();
     }
@@ -90,17 +89,17 @@ public class AudioCdIdentifierTests
     // ── VideoDiscIdentifier CanHandle ──────────────────────────────────────
 
     [Theory]
-    [InlineData(data: [OpticalDiscType.Dvd, true])]
-    [InlineData(data: [OpticalDiscType.BluRay, true])]
-    [InlineData(data: [OpticalDiscType.Cd, false])]
-    [InlineData(data: [OpticalDiscType.None, false])]
+    [InlineData([OpticalDiscType.Dvd, true])]
+    [InlineData([OpticalDiscType.BluRay, true])]
+    [InlineData([OpticalDiscType.Cd, false])]
+    [InlineData([OpticalDiscType.None, false])]
     public void VideoDiscIdentifier_CanHandle_CorrectDiscTypes(
         OpticalDiscType type,
         bool expectedResult
     )
     {
-        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
-        sut.CanHandle(type: type).Should().Be(expected: expectedResult);
+        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        sut.CanHandle(type).Should().Be(expectedResult);
     }
 
     // ── BuildTocString ──────────────────────────────────────────────────────
@@ -109,15 +108,15 @@ public class AudioCdIdentifierTests
     public void BuildTocString_FormatsFirstLastLeadOutAndTrackOffsetsWith150Pregap()
     {
         DiscToc toc = new(
-            FirstTrack: 1,
-            LastTrack: 2,
-            LeadOutOffsetSectors: 30000,
-            TrackOffsetsSectors: [150, 15150]
+            1,
+            2,
+            30000,
+            [150, 15150]
         );
 
-        string result = AudioCdIdentifier.BuildTocString(toc: toc);
+        string result = AudioCdIdentifier.BuildTocString(toc);
 
-        result.Should().Be(expected: "1+2+30150+300+15300");
+        result.Should().Be("1+2+30150+300+15300");
     }
 }
 
@@ -128,32 +127,32 @@ public class AudioCdIdentifierTests
 /// (no mock of the identifier itself) so the exact/fuzzy fallback, retry, and
 /// confidence-ranking logic all run for real.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
-[Collection(name: "HttpClientProvider")]
+[Trait("Category", "Unit")]
+[Collection("HttpClientProvider")]
 public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
 {
     public AudioCdIdentifierHttpTests()
-        : base(httpClientNames: [NoMercy.Providers.Helpers.HttpClientNames.MusicBrainz, NoMercy.Providers.Helpers.HttpClientNames.CoverArt]
+        : base([NoMercy.Providers.Helpers.HttpClientNames.MusicBrainz, NoMercy.Providers.Helpers.HttpClientNames.CoverArt]
         ) { }
 
     private static DiscInfo MakeCdDisc() =>
         new(
-            Type: OpticalDiscType.Cd,
-            DiscLabel: "AUDIO_CD",
-            Titles: [],
-            AudioTracks: [new(Index: 1, Title: null, Artist: null, Duration: TimeSpan.FromSeconds(seconds: 180), SampleRate: 44100, Channels: 2)],
-            TotalDuration: TimeSpan.FromSeconds(seconds: 180)
+            OpticalDiscType.Cd,
+            "AUDIO_CD",
+            [],
+            [new(1, null, null, TimeSpan.FromSeconds(180), 44100, 2)],
+            TimeSpan.FromSeconds(180)
         );
 
     private static DiscToc MakeToc(int leadOut) =>
-        new(FirstTrack: 1, LastTrack: 1, LeadOutOffsetSectors: leadOut, TrackOffsetsSectors: [150]);
+        new(1, 1, leadOut, [150]);
 
     private static Mock<ITocReader> MakeTocReader(DiscToc toc)
     {
         Mock<ITocReader> reader = new();
         reader
-            .Setup(expression: r => r.ReadTocAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(value: toc);
+            .Setup(r => r.ReadTocAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(toc);
         return reader;
     }
 
@@ -166,10 +165,10 @@ public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
     )
     {
         string tracksJson = string.Join(
-            separator: ",",
-            values: Enumerable
-                .Range(start: 1, count: trackCount)
-                .Select(selector: i =>
+            ",",
+            Enumerable
+                .Range(1, trackCount)
+                .Select(i =>
                     $$"""
                     {
                       "position": {{i}},
@@ -211,97 +210,97 @@ public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
     [Fact]
     public async Task IdentifyAsync_ExactMatch_ReturnsHighConfidenceCandidate()
     {
-        DiscToc toc = MakeToc(leadOut: 20000);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(20000);
+        string discId = MusicBrainzDiscId.Compute(toc);
         Guid releaseId = Guid.NewGuid();
 
         Handler.WhenGet(
-            pathContains: $"discid/{discId}",
-            responses: MockResponse.Json(
-                status: HttpStatusCode.OK,
-                body: ReleaseJson(releaseId: releaseId, title: "Test Album", artist: "Test Artist", hasFrontCover: true)
+            $"discid/{discId}",
+            MockResponse.Json(
+                HttpStatusCode.OK,
+                ReleaseJson(releaseId, "Test Album", "Test Artist", true)
             )
         );
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
-        result.Kind.Should().Be(expected: MediaKind.Music);
+        result.Kind.Should().Be(MediaKind.Music);
         result.NeedsManualAssignment.Should().BeFalse();
-        result.Candidates.Should().HaveCount(expected: 1);
-        result.Candidates[0].StableId.Should().Be(expected: releaseId.ToString());
-        result.Candidates[0].Title.Should().Contain(expected: "Test Album");
-        result.Candidates[0].Confidence.Should().BeApproximately(expectedValue: 0.97, precision: 0.001);
-        result.AutoApply.Should().BeTrue(because: "single exact match above the auto-apply threshold");
+        result.Candidates.Should().HaveCount(1);
+        result.Candidates[0].StableId.Should().Be(releaseId.ToString());
+        result.Candidates[0].Title.Should().Contain("Test Album");
+        result.Candidates[0].Confidence.Should().BeApproximately(0.97, 0.001);
+        result.AutoApply.Should().BeTrue("single exact match above the auto-apply threshold");
     }
 
     [Fact]
     public async Task IdentifyAsync_ExactMatch_BuildsTrackMappingWhenTrackCountMatches()
     {
-        DiscToc toc = MakeToc(leadOut: 20100);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(20100);
+        string discId = MusicBrainzDiscId.Compute(toc);
         Guid releaseId = Guid.NewGuid();
 
         Handler.WhenGet(
-            pathContains: $"discid/{discId}",
-            responses: MockResponse.Json(status: HttpStatusCode.OK, body: ReleaseJson(releaseId: releaseId, title: "Album", artist: "Artist", hasFrontCover: false))
+            $"discid/{discId}",
+            MockResponse.Json(HttpStatusCode.OK, ReleaseJson(releaseId, "Album", "Artist", false))
         );
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
-        result.Candidates[0].TrackMapping.Should().HaveCount(expected: 1);
-        result.Candidates[0].TrackMapping![0].TrackIndex.Should().Be(expected: 1);
+        result.Candidates[0].TrackMapping.Should().HaveCount(1);
+        result.Candidates[0].TrackMapping![0].TrackIndex.Should().Be(1);
     }
 
     [Fact]
     public async Task IdentifyAsync_ExactMatchEmpty_FallsBackToFuzzy_ReturnsFuzzyCandidate()
     {
-        DiscToc toc = MakeToc(leadOut: 20200);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(20200);
+        string discId = MusicBrainzDiscId.Compute(toc);
         Guid releaseId = Guid.NewGuid();
 
         Handler.WhenGet(
-            pathContains: $"discid/{discId}",
-            responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptyReleasesJson())
+            $"discid/{discId}",
+            MockResponse.Json(HttpStatusCode.OK, EmptyReleasesJson())
         );
         Handler.WhenGet(
-            pathContains: "discid/-",
-            responses: MockResponse.Json(
-                status: HttpStatusCode.OK,
-                body: ReleaseJson(releaseId: releaseId, title: "Fuzzy Album", artist: "Artist", hasFrontCover: false)
+            "discid/-",
+            MockResponse.Json(
+                HttpStatusCode.OK,
+                ReleaseJson(releaseId, "Fuzzy Album", "Artist", false)
             )
         );
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
         result.NeedsManualAssignment.Should().BeFalse();
-        result.Candidates.Should().HaveCount(expected: 1);
-        result.Candidates[0].StableId.Should().Be(expected: releaseId.ToString());
-        result.Candidates[0].Confidence.Should().BeApproximately(expectedValue: 0.70, precision: 0.001);
+        result.Candidates.Should().HaveCount(1);
+        result.Candidates[0].StableId.Should().Be(releaseId.ToString());
+        result.Candidates[0].Confidence.Should().BeApproximately(0.70, 0.001);
     }
 
     [Fact]
     public async Task IdentifyAsync_ExactLookupThrows_FallsBackToFuzzy()
     {
-        DiscToc toc = MakeToc(leadOut: 20300);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(20300);
+        string discId = MusicBrainzDiscId.Compute(toc);
         Guid releaseId = Guid.NewGuid();
 
         // 500 status: FromJson<T> is a "forgiving parse" (malformed JSON
@@ -312,48 +311,48 @@ public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
         // 429/502/503/504 are) — this is what AudioCdIdentifier's own
         // try/catch around the exact lookup exists to absorb.
         Handler.WhenGet(
-            pathContains: $"discid/{discId}",
-            responses: MockResponse.Status(status: HttpStatusCode.InternalServerError)
+            $"discid/{discId}",
+            MockResponse.Status(HttpStatusCode.InternalServerError)
         );
         Handler.WhenGet(
-            pathContains: "discid/-",
-            responses: MockResponse.Json(
-                status: HttpStatusCode.OK,
-                body: ReleaseJson(releaseId: releaseId, title: "Recovered Album", artist: "Artist", hasFrontCover: false)
+            "discid/-",
+            MockResponse.Json(
+                HttpStatusCode.OK,
+                ReleaseJson(releaseId, "Recovered Album", "Artist", false)
             )
         );
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
         result.NeedsManualAssignment.Should().BeFalse();
-        result.Candidates[0].StableId.Should().Be(expected: releaseId.ToString());
+        result.Candidates[0].StableId.Should().Be(releaseId.ToString());
     }
 
     [Fact]
     public async Task IdentifyAsync_BothLookupsReturnNoReleases_ReturnsNeedsManualAssignment()
     {
-        DiscToc toc = MakeToc(leadOut: 20400);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(20400);
+        string discId = MusicBrainzDiscId.Compute(toc);
 
         Handler.WhenGet(
-            pathContains: $"discid/{discId}",
-            responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptyReleasesJson())
+            $"discid/{discId}",
+            MockResponse.Json(HttpStatusCode.OK, EmptyReleasesJson())
         );
-        Handler.WhenGet(pathContains: "discid/-", responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptyReleasesJson()));
+        Handler.WhenGet("discid/-", MockResponse.Json(HttpStatusCode.OK, EmptyReleasesJson()));
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
         result.NeedsManualAssignment.Should().BeTrue();
         result.Candidates.Should().BeEmpty();
@@ -362,19 +361,19 @@ public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
     [Fact]
     public async Task IdentifyAsync_ExactMatchNotFound_FuzzyThrows_ReturnsNeedsManualAssignment()
     {
-        DiscToc toc = MakeToc(leadOut: 20500);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(20500);
+        string discId = MusicBrainzDiscId.Compute(toc);
 
-        Handler.WhenGet(pathContains: $"discid/{discId}", responses: MockResponse.Status(status: HttpStatusCode.NotFound));
-        Handler.WhenGet(pathContains: "discid/-", responses: MockResponse.Status(status: HttpStatusCode.InternalServerError));
+        Handler.WhenGet($"discid/{discId}", MockResponse.Status(HttpStatusCode.NotFound));
+        Handler.WhenGet("discid/-", MockResponse.Status(HttpStatusCode.InternalServerError));
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
         result.NeedsManualAssignment.Should().BeTrue();
     }
@@ -382,8 +381,8 @@ public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
     [Fact]
     public async Task IdentifyAsync_MultipleReleases_AppliesPerRankConfidencePenaltyAndOrdersDescending()
     {
-        DiscToc toc = MakeToc(leadOut: 20600);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(20600);
+        string discId = MusicBrainzDiscId.Compute(toc);
         Guid firstId = Guid.NewGuid();
         Guid secondId = Guid.NewGuid();
 
@@ -409,38 +408,38 @@ public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
               ]
             }
             """;
-        Handler.WhenGet(pathContains: $"discid/{discId}", responses: MockResponse.Json(status: HttpStatusCode.OK, body: json));
+        Handler.WhenGet($"discid/{discId}", MockResponse.Json(HttpStatusCode.OK, json));
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
-        result.Candidates.Should().HaveCount(expected: 2);
+        result.Candidates.Should().HaveCount(2);
         result
             .Candidates[0]
             .StableId.Should()
-            .Be(expected: firstId.ToString(), because: "rank 0 keeps the full exact-match confidence");
-        result.Candidates[0].Confidence.Should().BeApproximately(expectedValue: 0.97, precision: 0.001);
-        result.Candidates[1].StableId.Should().Be(expected: secondId.ToString());
+            .Be(firstId.ToString(), "rank 0 keeps the full exact-match confidence");
+        result.Candidates[0].Confidence.Should().BeApproximately(0.97, 0.001);
+        result.Candidates[1].StableId.Should().Be(secondId.ToString());
         result
             .Candidates[1]
             .Confidence.Should()
-            .BeApproximately(expectedValue: 0.92, precision: 0.001, because: "rank 1 is penalised by 0.05");
-        result.Candidates[0].Confidence.Should().BeGreaterThan(expected: result.Candidates[1].Confidence);
+            .BeApproximately(0.92, 0.001, "rank 1 is penalised by 0.05");
+        result.Candidates[0].Confidence.Should().BeGreaterThan(result.Candidates[1].Confidence);
         result
             .AutoApply.Should()
-            .BeFalse(because: "multiple releases never auto-apply regardless of confidence");
+            .BeFalse("multiple releases never auto-apply regardless of confidence");
     }
 
     [Fact]
     public async Task IdentifyAsync_TrackCountDoesNotMatchAnyMedium_NoTrackMappingBuilt()
     {
-        DiscToc toc = MakeToc(leadOut: 20700);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(20700);
+        string discId = MusicBrainzDiscId.Compute(toc);
         Guid releaseId = Guid.NewGuid();
 
         // track-count 5 never matches the 1-track disc used by MakeCdDisc.
@@ -458,15 +457,15 @@ public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
               ]
             }
             """;
-        Handler.WhenGet(pathContains: $"discid/{discId}", responses: MockResponse.Json(status: HttpStatusCode.OK, body: json));
+        Handler.WhenGet($"discid/{discId}", MockResponse.Json(HttpStatusCode.OK, json));
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
         result.Candidates[0].TrackMapping.Should().BeEmpty();
     }
@@ -474,51 +473,51 @@ public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
     [Fact]
     public async Task IdentifyAsync_CoverArtFound_PopulatesPosterUrl()
     {
-        DiscToc toc = MakeToc(leadOut: 20900);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(20900);
+        string discId = MusicBrainzDiscId.Compute(toc);
         Guid releaseId = Guid.NewGuid();
         const string imageUrl = "https://coverartarchive.org/release/x/front.jpg";
 
         Handler.WhenGet(
-            pathContains: $"discid/{discId}",
-            responses: MockResponse.Json(status: HttpStatusCode.OK, body: ReleaseJson(releaseId: releaseId, title: "Album", artist: "Artist", hasFrontCover: true))
+            $"discid/{discId}",
+            MockResponse.Json(HttpStatusCode.OK, ReleaseJson(releaseId, "Album", "Artist", true))
         );
         Handler.WhenGet(
-            pathContains: $"release/{releaseId}",
-            responses: MockResponse.Json(status: HttpStatusCode.OK, body: CoverArtJson(imageUrl: imageUrl))
+            $"release/{releaseId}",
+            MockResponse.Json(HttpStatusCode.OK, CoverArtJson(imageUrl))
         );
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
-        result.Candidates[0].PosterUrl.Should().Be(expected: imageUrl);
+        result.Candidates[0].PosterUrl.Should().Be(imageUrl);
     }
 
     [Fact]
     public async Task IdentifyAsync_CoverArtLookupFails_PosterUrlIsNull()
     {
-        DiscToc toc = MakeToc(leadOut: 21000);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(21000);
+        string discId = MusicBrainzDiscId.Compute(toc);
         Guid releaseId = Guid.NewGuid();
 
         Handler.WhenGet(
-            pathContains: $"discid/{discId}",
-            responses: MockResponse.Json(status: HttpStatusCode.OK, body: ReleaseJson(releaseId: releaseId, title: "Album", artist: "Artist", hasFrontCover: false))
+            $"discid/{discId}",
+            MockResponse.Json(HttpStatusCode.OK, ReleaseJson(releaseId, "Album", "Artist", false))
         );
-        Handler.WhenGet(pathContains: $"release/{releaseId}", responses: MockResponse.Status(status: HttpStatusCode.NotFound));
+        Handler.WhenGet($"release/{releaseId}", MockResponse.Status(HttpStatusCode.NotFound));
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
         result.Candidates[0].PosterUrl.Should().BeNull();
     }
@@ -532,26 +531,26 @@ public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
         // synchronous call to Get<T>, not an awaited result, the fault
         // surfaces at FetchCoverUrlAsync's `await coverClient.Cover()` and
         // must be absorbed by its own catch.
-        DiscToc toc = MakeToc(leadOut: 21100);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(21100);
+        string discId = MusicBrainzDiscId.Compute(toc);
         Guid releaseId = Guid.NewGuid();
 
         Handler.WhenGet(
-            pathContains: $"discid/{discId}",
-            responses: MockResponse.Json(status: HttpStatusCode.OK, body: ReleaseJson(releaseId: releaseId, title: "Album", artist: "Artist", hasFrontCover: false))
+            $"discid/{discId}",
+            MockResponse.Json(HttpStatusCode.OK, ReleaseJson(releaseId, "Album", "Artist", false))
         );
         Handler.WhenGet(
-            pathContains: $"release/{releaseId}",
-            responses: MockResponse.Status(status: HttpStatusCode.InternalServerError)
+            $"release/{releaseId}",
+            MockResponse.Status(HttpStatusCode.InternalServerError)
         );
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
         result.Candidates[0].PosterUrl.Should().BeNull();
     }
@@ -559,8 +558,8 @@ public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
     [Fact]
     public async Task IdentifyAsync_NoArtistCredit_TitleHasNoArtistPrefix()
     {
-        DiscToc toc = MakeToc(leadOut: 20800);
-        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        DiscToc toc = MakeToc(20800);
+        string discId = MusicBrainzDiscId.Compute(toc);
         Guid releaseId = Guid.NewGuid();
 
         string json = $$"""
@@ -577,16 +576,16 @@ public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
               ]
             }
             """;
-        Handler.WhenGet(pathContains: $"discid/{discId}", responses: MockResponse.Json(status: HttpStatusCode.OK, body: json));
+        Handler.WhenGet($"discid/{discId}", MockResponse.Json(HttpStatusCode.OK, json));
 
         AudioCdIdentifier sut = new(
-            tocReader: MakeTocReader(toc: toc).Object,
-            discClient: new MusicBrainzDiscClient(),
-            logger: NullLogger<AudioCdIdentifier>.Instance
+            MakeTocReader(toc).Object,
+            new MusicBrainzDiscClient(),
+            NullLogger<AudioCdIdentifier>.Instance
         );
 
-        DiscIdentification result = await sut.IdentifyAsync(disc: MakeCdDisc(), ct: CancellationToken.None);
+        DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
-        result.Candidates[0].Title.Should().Be(expected: "No Artist Album");
+        result.Candidates[0].Title.Should().Be("No Artist Album");
     }
 }

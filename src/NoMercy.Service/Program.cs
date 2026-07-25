@@ -24,15 +24,15 @@ public static class Program
         // Resolve renamed OpenSSL DLL for installer deployments where
         // libcrypto-3-x64.dll is renamed to nmossl-3-x64.dll to avoid
         // file locks from other applications on the system.
-        if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             AssemblyLoadContext.Default.ResolvingUnmanagedDll += (_, name) =>
             {
-                if (!name.Contains(value: "libcrypto", comparisonType: StringComparison.OrdinalIgnoreCase))
+                if (!name.Contains("libcrypto", StringComparison.OrdinalIgnoreCase))
                     return IntPtr.Zero;
 
-                string renamed = Path.Combine(path1: AppContext.BaseDirectory, path2: "nmossl-3-x64.dll");
-                if (File.Exists(path: renamed) && NativeLibrary.TryLoad(libraryPath: renamed, handle: out IntPtr handle))
+                string renamed = Path.Combine(AppContext.BaseDirectory, "nmossl-3-x64.dll");
+                if (File.Exists(renamed) && NativeLibrary.TryLoad(renamed, out IntPtr handle))
                     return handle;
 
                 return IntPtr.Zero;
@@ -42,7 +42,7 @@ public static class Program
         AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
         {
             Exception exception = (Exception)eventArgs.ExceptionObject;
-            Logger.App(message: "UnhandledException " + exception);
+            Logger.App("UnhandledException " + exception);
         };
 
         // Tasks that lose their last exception observer (fire-and-forget
@@ -52,21 +52,21 @@ public static class Program
         // at the source (see ChromeCastService.NeutralizeTimer).
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
-            Logger.App(message: "UnobservedTaskException " + e.Exception);
+            Logger.App("UnobservedTaskException " + e.Exception);
             e.SetObserved();
         };
 
         try
         {
             await Parser
-                .Default.ParseArguments<StartupOptions>(args: args)
-                .MapResult(parsedFunc: o => new ServerBootstrapper().RunAsync(options: o), notParsedFunc: ErrorParsingArguments);
+                .Default.ParseArguments<StartupOptions>(args)
+                .MapResult(o => new ServerBootstrapper().RunAsync(o), ErrorParsingArguments);
         }
         catch (StartupAbortException ex)
         {
-            Logger.App(message: $"Fatal startup error: {ex.Message}");
+            Logger.App($"Fatal startup error: {ex.Message}");
             Environment.ExitCode = 1;
-            Environment.Exit(exitCode: 1);
+            Environment.Exit(1);
         }
 
         static Task ErrorParsingArguments(IEnumerable<Error> errors)

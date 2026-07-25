@@ -52,20 +52,20 @@ public static class Date
 
     public static string ToHms(this int seconds)
     {
-        return TimeSpan.FromSeconds(seconds: seconds).ToString();
+        return TimeSpan.FromSeconds(seconds).ToString();
     }
 
     public static bool TryParseToDateTime(this string value, out DateTime dateTime)
     {
         return DateTime.TryParseExact(
-                s: value,
-                formats: ValidFormats,
-                provider: CultureInfo.InvariantCulture,
-                style: DateTimeStyles.None,
-                result: out dateTime
+                value,
+                ValidFormats,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out dateTime
             )
             || (
-                DateTime.TryParse(s: value, provider: DateTimeFormatInfo.InvariantInfo, result: out dateTime)
+                DateTime.TryParse(value, DateTimeFormatInfo.InvariantInfo, out dateTime)
                 && dateTime != default
             );
     }
@@ -73,53 +73,53 @@ public static class Date
     public static DateTime SubDays(this DateTime self, int days)
     {
         if (days < 0)
-            throw new ArgumentOutOfRangeException(paramName: nameof(days), message: "Days must be positive.");
-        return self.Subtract(value: new TimeSpan(days: days, hours: 0, minutes: 0, seconds: 0));
+            throw new ArgumentOutOfRangeException(nameof(days), "Days must be positive.");
+        return self.Subtract(new TimeSpan(days, 0, 0, 0));
     }
 
     public static int ParseYear(this DateTime? self)
     {
-        return string.IsNullOrEmpty(value: self.ToString()) ? 0 : _parseYear(dateString: self);
+        return string.IsNullOrEmpty(self.ToString()) ? 0 : _parseYear(self);
     }
 
     public static int ParseYear(this DateTime self)
     {
-        return string.IsNullOrEmpty(value: self.ToString(provider: CultureInfo.InvariantCulture))
+        return string.IsNullOrEmpty(self.ToString(CultureInfo.InvariantCulture))
             ? 0
-            : _parseYear(dateString: self);
+            : _parseYear(self);
     }
 
     public static string ToHis(this double time)
     {
-        return TimeSpan.FromSeconds(value: time).ToString(format: @"hh\:mm\:ss\.fff");
+        return TimeSpan.FromSeconds(time).ToString(@"hh\:mm\:ss\.fff");
     }
 
     public static string ToHis(this long time)
     {
-        return TimeSpan.FromSeconds(seconds: time).ToString(format: @"hh\:mm\:ss\.fff");
+        return TimeSpan.FromSeconds(time).ToString(@"hh\:mm\:ss\.fff");
     }
 
     public static string ToHumanTime(this int time)
     {
-        TimeSpan t = TimeSpan.FromSeconds(seconds: time);
+        TimeSpan t = TimeSpan.FromSeconds(time);
         if (t.TotalHours >= 1)
-            return t.ToString(format: @"hh\:mm\:ss");
-        return t.ToString(format: @"mm\:ss");
+            return t.ToString(@"hh\:mm\:ss");
+        return t.ToString(@"mm\:ss");
     }
 
     public static string ToHumanTime(this double time)
     {
-        TimeSpan t = TimeSpan.FromSeconds(value: time);
+        TimeSpan t = TimeSpan.FromSeconds(time);
         if (t.TotalHours >= 1)
-            return t.ToString(format: @"hh\:mm\:ss");
-        return t.ToString(format: @"mm\:ss");
+            return t.ToString(@"hh\:mm\:ss");
+        return t.ToString(@"mm\:ss");
     }
 
     public static string ToHumanTime(this long time)
     {
-        TimeSpan t = TimeSpan.FromSeconds(seconds: time);
+        TimeSpan t = TimeSpan.FromSeconds(time);
         if (t.TotalHours >= 1)
-            return t.ToString(format: @"hh\:mm\:ss");
-        return t.ToString(format: @"mm\:ss");
+            return t.ToString(@"hh\:mm\:ss");
+        return t.ToString(@"mm\:ss");
     }
 }

@@ -15,33 +15,33 @@ namespace NoMercy.Networking.Devices;
 
 public sealed record DeviceListItem
 {
-    [JsonProperty(propertyName: "device_id")]
+    [JsonProperty("device_id")]
     public required Ulid DeviceId { get; init; }
 
-    [JsonProperty(propertyName: "fingerprint")]
+    [JsonProperty("fingerprint")]
     public required string Fingerprint { get; init; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public required string Name { get; init; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public required string Type { get; init; }
 
-    [JsonProperty(propertyName: "online")]
+    [JsonProperty("online")]
     public bool Online { get; init; }
 
-    [JsonProperty(propertyName: "lan_ip")]
+    [JsonProperty("lan_ip")]
     public string? LanIp { get; init; }
 
-    [JsonProperty(propertyName: "last_seen_at")]
+    [JsonProperty("last_seen_at")]
     public DateTime? LastSeenAt { get; init; }
 
     // TV-side device-bus client reports app foreground + screen-on state.
     // Phone-side picker uses both flags to skip the Cast SDK CEC wake when
     // the panel is already on with our app on screen.
-    [JsonProperty(propertyName: "foreground")]
+    [JsonProperty("foreground")]
     public bool Foreground { get; init; }
 
-    [JsonProperty(propertyName: "screen_on")]
+    [JsonProperty("screen_on")]
     public bool ScreenOn { get; init; }
 }

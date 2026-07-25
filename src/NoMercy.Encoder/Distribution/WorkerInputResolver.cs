@@ -25,16 +25,16 @@ public class WorkerInputResolver(
         CancellationToken ct
     )
     {
-        EncodeTask? task = serializer.Deserialize(payload: payload, signingKey: signingKey);
+        EncodeTask? task = serializer.Deserialize(payload, signingKey);
         if (task is null)
         {
             logger.LogWarning(
-                message: "Worker rejected task payload — signature invalid or payload expired"
+                "Worker rejected task payload — signature invalid or payload expired"
             );
             return new();
         }
 
-        logger.LogInformation(message: "Worker executing task {TaskId} ({Type})", args: [task.TaskId, task.Type]);
+        logger.LogInformation("Worker executing task {TaskId} ({Type})", [task.TaskId, task.Type]);
 
         // Pull the source locally if the worker can't see the original
         // path on its own filesystem. Shared-storage installs return the
@@ -42,13 +42,13 @@ public class WorkerInputResolver(
         EncodeTask effectiveTask = task;
         try
         {
-            string localSourcePath = await sourceFetcher.EnsureLocalAsync(task: task, ct: ct);
+            string localSourcePath = await sourceFetcher.EnsureLocalAsync(task, ct);
             if (
-                !string.IsNullOrEmpty(value: localSourcePath)
-                && !string.Equals(a: localSourcePath, b: task.InputPath, comparisonType: StringComparison.Ordinal)
+                !string.IsNullOrEmpty(localSourcePath)
+                && !string.Equals(localSourcePath, task.InputPath, StringComparison.Ordinal)
             )
             {
-                effectiveTask = RewriteInputPath(task: task, localPath: localSourcePath);
+                effectiveTask = RewriteInputPath(task, localSourcePath);
             }
         }
         catch (OperationCanceledException)
@@ -57,7 +57,7 @@ public class WorkerInputResolver(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(exception: ex, message: "Source fetch failed for task {TaskId}", args: task.TaskId);
+            logger.LogWarning(ex, "Source fetch failed for task {TaskId}", task.TaskId);
             return new()
             {
                 Task = task,
@@ -69,7 +69,7 @@ public class WorkerInputResolver(
         return new() { Task = task, EffectiveTask = effectiveTask };
     }
 
-    public Task ReleaseAsync(EncodeTask task) => sourceFetcher.ReleaseAsync(task: task);
+    public Task ReleaseAsync(EncodeTask task) => sourceFetcher.ReleaseAsync(task);
 
     /// <summary>
     /// Rewrites the task's command arguments to swap the original input
@@ -80,12 +80,12 @@ public class WorkerInputResolver(
     /// </summary>
     private static EncodeTask RewriteInputPath(EncodeTask task, string localPath)
     {
-        if (string.IsNullOrEmpty(value: task.InputPath))
+        if (string.IsNullOrEmpty(task.InputPath))
             return task;
 
         string[] newArgs = task
-            .Command.Arguments.Select(selector: arg =>
-                string.Equals(a: arg, b: task.InputPath, comparisonType: StringComparison.Ordinal) ? localPath : arg
+            .Command.Arguments.Select(arg =>
+                string.Equals(arg, task.InputPath, StringComparison.Ordinal) ? localPath : arg
             )
             .ToArray();
 

@@ -26,19 +26,19 @@ public class MkvOutputStrategy(IStorage storage) : IOutputStrategy
         string outputDirectory
     )
     {
-        string outputPath = Path.Combine(path1: outputDirectory, path2: "output.mkv");
+        string outputPath = Path.Combine(outputDirectory, "output.mkv");
         List<string> mapStreams = [];
 
         foreach (VideoOutputPlan video in plan.VideoOutputs)
-            mapStreams.Add(item: video.MapLabel);
+            mapStreams.Add(video.MapLabel);
 
         foreach (AudioOutputPlan audio in plan.AudioOutputs)
             if (audio.Action is StreamAction.Copy or StreamAction.Transcode)
-                mapStreams.Add(item: audio.MapLabel);
+                mapStreams.Add(audio.MapLabel);
 
         foreach (SubtitleOutputPlan sub in plan.SubtitleOutputs)
             if (sub.Action is StreamAction.Copy)
-                mapStreams.Add(item: sub.MapLabel ?? $"0:s:{sub.SourceIndex}");
+                mapStreams.Add(sub.MapLabel ?? $"0:s:{sub.SourceIndex}");
 
         VideoOutputPlan? primaryVideo = plan.VideoOutputs.Length > 0 ? plan.VideoOutputs[0] : null;
         AudioOutputPlan? primaryAudio = plan.AudioOutputs.Length > 0 ? plan.AudioOutputs[0] : null;
@@ -46,15 +46,15 @@ public class MkvOutputStrategy(IStorage storage) : IOutputStrategy
         Dictionary<string, string>? extraFlags = null;
         if (
             primaryAudio?.Action == StreamAction.Transcode
-            && !string.IsNullOrEmpty(value: primaryAudio.AudioFilter)
+            && !string.IsNullOrEmpty(primaryAudio.AudioFilter)
         )
         {
-            extraFlags = new() { [key: "-af"] = primaryAudio.AudioFilter };
+            extraFlags = new() { ["-af"] = primaryAudio.AudioFilter };
         }
 
         builder.AddOutput(
-            output: new(
-                FilePath: outputPath,
+            new(
+                outputPath,
                 VideoCodec: primaryVideo?.EncoderName,
                 AudioCodec: primaryAudio?.Action == StreamAction.Copy
                     ? "copy"
@@ -83,13 +83,13 @@ public class MkvOutputStrategy(IStorage storage) : IOutputStrategy
     )
     {
         // Rename the generic output.mkv to the proper media title
-        string sourcePath = Path.Combine(path1: outputDirectory, path2: "output.mkv");
-        string targetPath = Path.Combine(path1: outputDirectory, path2: $"{mediaTitle}.mkv");
+        string sourcePath = Path.Combine(outputDirectory, "output.mkv");
+        string targetPath = Path.Combine(outputDirectory, $"{mediaTitle}.mkv");
 
-        if (storage.Exists(path: sourcePath) && sourcePath != targetPath)
+        if (storage.Exists(sourcePath) && sourcePath != targetPath)
         {
-            storage.Delete(path: targetPath);
-            storage.Move(from: sourcePath, to: targetPath);
+            storage.Delete(targetPath);
+            storage.Move(sourcePath, targetPath);
         }
 
         return Task.CompletedTask;

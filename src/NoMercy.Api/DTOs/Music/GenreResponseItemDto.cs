@@ -17,39 +17,39 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record GenreResponseItemDto
 {
-    [JsonProperty(propertyName: "id")]
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty(propertyName: "name")]
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    [JsonProperty(propertyName: "link")]
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
-    [JsonProperty(propertyName: "favorite")]
+    [JsonProperty("favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty(propertyName: "library_id")]
+    [JsonProperty("library_id")]
     public Ulid? LibraryId { get; set; }
 
-    [JsonProperty(propertyName: "year")]
+    [JsonProperty("year")]
     public int? Year { get; set; }
 
-    [JsonProperty(propertyName: "tracks")]
+    [JsonProperty("tracks")]
     public IEnumerable<GenreTrackDto> Tracks { get; set; }
 
-    [JsonProperty(propertyName: "type")]
+    [JsonProperty("type")]
     public string Type { get; set; }
 
     public GenreResponseItemDto(MusicGenre genre, string? country = "US")
     {
         Id = genre.Id;
         Name = genre.Name.ToTitleCase();
-        Link = new(uriString: $"/music/genres/{Id}", uriKind: UriKind.Relative);
+        Link = new($"/music/genres/{Id}", UriKind.Relative);
         Type = "genre";
         Tracks = genre
-            .MusicGenreTracks.Select(selector: genreTrack => new GenreTrackDto(genreTrack: genreTrack, country: country!))
-            .OrderBy(keySelector: genreTrack => genreTrack.Disc)
-            .ThenBy(keySelector: genreTrack => genreTrack.Track);
+            .MusicGenreTracks.Select(genreTrack => new GenreTrackDto(genreTrack, country!))
+            .OrderBy(genreTrack => genreTrack.Disc)
+            .ThenBy(genreTrack => genreTrack.Track);
     }
 }

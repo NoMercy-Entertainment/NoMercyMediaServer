@@ -9,11 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Extensions;
-
 namespace NoMercy.Tests.NmSystem;
 
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public class NullableExtensionsTests
 {
     [Fact]
@@ -21,7 +19,7 @@ public class NullableExtensionsTests
     {
         string? value = "test";
         string result = value.OrEmpty();
-        result.Should().Be(expected: "test");
+        result.Should().Be("test");
     }
 
     [Fact]
@@ -29,7 +27,7 @@ public class NullableExtensionsTests
     {
         string? value = null;
         string result = value.OrEmpty();
-        result.Should().Be(expected: string.Empty);
+        result.Should().Be(string.Empty);
     }
 
     [Fact]
@@ -37,7 +35,7 @@ public class NullableExtensionsTests
     {
         int[]? value = [1, 2, 3];
         int[] result = value.OrEmpty();
-        result.Should().Equal(elements: [1, 2, 3]);
+        result.Should().Equal([1, 2, 3]);
     }
 
     [Fact]
@@ -53,7 +51,7 @@ public class NullableExtensionsTests
     {
         List<string>? value = ["a", "b"];
         List<string> result = value.OrEmpty();
-        result.Should().Equal(expected: ["a", "b"]);
+        result.Should().Equal(["a", "b"]);
     }
 
     [Fact]
@@ -69,7 +67,7 @@ public class NullableExtensionsTests
     {
         IEnumerable<int>? value = new[] { 1, 2, 3 };
         IEnumerable<int> result = value.OrEmpty();
-        result.Should().Equal(elements: [1, 2, 3]);
+        result.Should().Equal([1, 2, 3]);
     }
 
     [Fact]
@@ -85,7 +83,7 @@ public class NullableExtensionsTests
     {
         string? value = "test";
         string? result = value.OrNull();
-        result.Should().Be(expected: "test");
+        result.Should().Be("test");
     }
 
     [Fact]
@@ -121,13 +119,13 @@ public class NullableExtensionsTests
     }
 
     [Theory]
-    [InlineData(data: "a")]
-    [InlineData(data: "  a  ")]
-    [InlineData(data: "abc")]
+    [InlineData("a")]
+    [InlineData("  a  ")]
+    [InlineData("abc")]
     public void OrNull_WithNonWhitespaceString_ReturnsString(string value)
     {
         string? input = value;
         string? result = input.OrNull();
-        result.Should().Be(expected: value);
+        result.Should().Be(value);
     }
 }

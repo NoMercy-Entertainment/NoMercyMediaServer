@@ -20,17 +20,17 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Authorization;
 
-[Trait(name: "Category", value: "Authorization")]
+[Trait("Category", "Authorization")]
 public sealed class AuthorizationPolicyTests : IDisposable
 {
-    private static readonly Guid KnownUserId = Guid.Parse(input: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-    private static readonly Guid UnknownUserId = Guid.Parse(input: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+    private static readonly Guid KnownUserId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static readonly Guid UnknownUserId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
     public AuthorizationPolicyTests()
     {
         UserCache.Current.Reset();
         UserCache.Current.AddUser(
-            user: new()
+            new()
             {
                 Id = KnownUserId,
                 Email = "known@nomercy.tv",
@@ -54,18 +54,18 @@ public sealed class AuthorizationPolicyTests : IDisposable
         services
             .AddAuthorizationBuilder()
             .AddPolicy(
-                name: "api",
-                configurePolicy: policy =>
+                "api",
+                policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(claimType: "scope", allowedValues: ["openid", "profile"]);
+                    policy.RequireClaim("scope", "openid", "profile");
                     policy.AddRequirements(
-                        requirements: new AssertionRequirement(handler: ctx =>
+                        new AssertionRequirement(ctx =>
                         {
-                            string? sub = ctx.User.FindFirstValue(claimType: ClaimTypes.NameIdentifier);
-                            if (!Guid.TryParse(input: sub, result: out Guid userId))
+                            string? sub = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier);
+                            if (!Guid.TryParse(sub, out Guid userId))
                                 return false;
-                            User? user = UserCache.Current.Users.FirstOrDefault(predicate: u =>
+                            User? user = UserCache.Current.Users.FirstOrDefault(u =>
                                 u.Id == userId
                             );
                             return user is not null;
@@ -83,14 +83,14 @@ public sealed class AuthorizationPolicyTests : IDisposable
         bool includeProfile
     )
     {
-        List<Claim> claims = [new(type: ClaimTypes.NameIdentifier, value: userId.ToString())];
+        List<Claim> claims = [new(ClaimTypes.NameIdentifier, userId.ToString())];
         if (includeOpenid)
-            claims.Add(item: new(type: "scope", value: "openid"));
+            claims.Add(new("scope", "openid"));
         if (includeProfile)
-            claims.Add(item: new(type: "scope", value: "profile"));
+            claims.Add(new("scope", "profile"));
 
-        ClaimsIdentity identity = new(claims: claims, authenticationType: "TestScheme");
-        return new(identity: identity);
+        ClaimsIdentity identity = new(claims, "TestScheme");
+        return new(identity);
     }
 
     [Fact]
@@ -98,12 +98,12 @@ public sealed class AuthorizationPolicyTests : IDisposable
     {
         IAuthorizationService authService = BuildAuthorizationService();
         ClaimsPrincipal principal = BuildPrincipal(
-            userId: KnownUserId,
+            KnownUserId,
             includeOpenid: true,
             includeProfile: true
         );
 
-        AuthorizationResult result = await authService.AuthorizeAsync(user: principal, policyName: "api");
+        AuthorizationResult result = await authService.AuthorizeAsync(principal, "api");
 
         result.Succeeded.Should().BeTrue();
     }
@@ -113,12 +113,12 @@ public sealed class AuthorizationPolicyTests : IDisposable
     {
         IAuthorizationService authService = BuildAuthorizationService();
         ClaimsPrincipal principal = BuildPrincipal(
-            userId: KnownUserId,
+            KnownUserId,
             includeOpenid: true,
             includeProfile: false
         );
 
-        AuthorizationResult result = await authService.AuthorizeAsync(user: principal, policyName: "api");
+        AuthorizationResult result = await authService.AuthorizeAsync(principal, "api");
 
         result.Succeeded.Should().BeTrue();
     }
@@ -128,12 +128,12 @@ public sealed class AuthorizationPolicyTests : IDisposable
     {
         IAuthorizationService authService = BuildAuthorizationService();
         ClaimsPrincipal principal = BuildPrincipal(
-            userId: KnownUserId,
+            KnownUserId,
             includeOpenid: false,
             includeProfile: true
         );
 
-        AuthorizationResult result = await authService.AuthorizeAsync(user: principal, policyName: "api");
+        AuthorizationResult result = await authService.AuthorizeAsync(principal, "api");
 
         result.Succeeded.Should().BeTrue();
     }
@@ -143,12 +143,12 @@ public sealed class AuthorizationPolicyTests : IDisposable
     {
         IAuthorizationService authService = BuildAuthorizationService();
         ClaimsPrincipal principal = BuildPrincipal(
-            userId: KnownUserId,
+            KnownUserId,
             includeOpenid: false,
             includeProfile: false
         );
 
-        AuthorizationResult result = await authService.AuthorizeAsync(user: principal, policyName: "api");
+        AuthorizationResult result = await authService.AuthorizeAsync(principal, "api");
 
         result.Succeeded.Should().BeFalse();
     }
@@ -158,12 +158,12 @@ public sealed class AuthorizationPolicyTests : IDisposable
     {
         IAuthorizationService authService = BuildAuthorizationService();
         ClaimsPrincipal principal = BuildPrincipal(
-            userId: UnknownUserId,
+            UnknownUserId,
             includeOpenid: true,
             includeProfile: true
         );
 
-        AuthorizationResult result = await authService.AuthorizeAsync(user: principal, policyName: "api");
+        AuthorizationResult result = await authService.AuthorizeAsync(principal, "api");
 
         result.Succeeded.Should().BeFalse();
     }
@@ -175,14 +175,14 @@ public sealed class AuthorizationPolicyTests : IDisposable
 
         List<Claim> claims =
         [
-            new(type: ClaimTypes.NameIdentifier, value: "not-a-guid"),
-            new(type: "scope", value: "openid"),
-            new(type: "scope", value: "profile"),
+            new(ClaimTypes.NameIdentifier, "not-a-guid"),
+            new("scope", "openid"),
+            new("scope", "profile"),
         ];
-        ClaimsIdentity identity = new(claims: claims, authenticationType: "TestScheme");
-        ClaimsPrincipal principal = new(identity: identity);
+        ClaimsIdentity identity = new(claims, "TestScheme");
+        ClaimsPrincipal principal = new(identity);
 
-        AuthorizationResult result = await authService.AuthorizeAsync(user: principal, policyName: "api");
+        AuthorizationResult result = await authService.AuthorizeAsync(principal, "api");
 
         result.Succeeded.Should().BeFalse();
     }
@@ -191,9 +191,9 @@ public sealed class AuthorizationPolicyTests : IDisposable
     public async Task ApiPolicy_Denies_WhenUnauthenticated()
     {
         IAuthorizationService authService = BuildAuthorizationService();
-        ClaimsPrincipal principal = new(identity: new ClaimsIdentity());
+        ClaimsPrincipal principal = new(new ClaimsIdentity());
 
-        AuthorizationResult result = await authService.AuthorizeAsync(user: principal, policyName: "api");
+        AuthorizationResult result = await authService.AuthorizeAsync(principal, "api");
 
         result.Succeeded.Should().BeFalse();
     }

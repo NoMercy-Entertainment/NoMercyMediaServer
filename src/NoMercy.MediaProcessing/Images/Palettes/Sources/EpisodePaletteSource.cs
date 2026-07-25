@@ -25,11 +25,11 @@ public class EpisodePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         return await db
-            .Episodes.Where(predicate: e => e.Id == id)
-            .Select(selector: e => e._colorPalette)
-            .FirstOrDefaultAsync(cancellationToken: ct);
+            .Episodes.Where(e => e.Id == id)
+            .Select(e => e._colorPalette)
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -38,17 +38,17 @@ public class EpisodePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
-        Episode? episode = await db.Episodes.FirstOrDefaultAsync(predicate: e => e.Id == id, cancellationToken: ct);
+        int id = int.Parse(entityId);
+        Episode? episode = await db.Episodes.FirstOrDefaultAsync(e => e.Id == id, ct);
         if (episode is null)
             return PaletteResult.NoImage();
         if (episode.Still is null)
             return PaletteResult.NoImage();
 
-        string json = await MovieDbImageManager.ColorPalette(type: "still", path: episode.Still);
-        return string.IsNullOrWhiteSpace(value: json)
+        string json = await MovieDbImageManager.ColorPalette("still", episode.Still);
+        return string.IsNullOrWhiteSpace(json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json: json);
+            : PaletteResult.Success(json);
     }
 
     public async Task PersistAsync(
@@ -58,9 +58,9 @@ public class EpisodePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         await db
-            .Episodes.Where(predicate: e => e.Id == id)
-            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: e => e._colorPalette, valueExpression: json), cancellationToken: ct);
+            .Episodes.Where(e => e.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e._colorPalette, json), ct);
     }
 }

@@ -27,8 +27,8 @@ public sealed class TypeSignatureDependsOnMissingAssemblyPlugin : IPlugin
 
     public string Name => "TypeSignatureDependsOnMissingAssembly";
     public string Description => "d";
-    public Guid Id => Guid.Parse(input: "55555555-0000-0000-0000-000000000005");
-    public Version Version { get; } = new(major: 0, minor: 1, build: 0);
+    public Guid Id => Guid.Parse("55555555-0000-0000-0000-000000000005");
+    public Version Version { get; } = new(0, 1, 0);
 
     public void Initialize(IPluginContext context) { }
 

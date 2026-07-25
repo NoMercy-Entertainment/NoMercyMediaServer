@@ -15,19 +15,19 @@ namespace NoMercy.Launcher.Services;
 
 public static class LauncherLog
 {
-    private static readonly string LogPath = Path.Combine(path1: AppFiles.AppPath, path2: "launcher.log");
+    private static readonly string LogPath = Path.Combine(AppFiles.AppPath, "launcher.log");
 
-    public static void Info(string message) => Write(level: "INFO", message: message);
+    public static void Info(string message) => Write("INFO", message);
 
     public static void Error(string message, Exception? ex = null) =>
-        Write(level: "ERROR", message: message + (ex is not null ? $" | {ex}" : ""));
+        Write("ERROR", message + (ex is not null ? $" | {ex}" : ""));
 
     private static void Write(string level, string message)
     {
         try
         {
             string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{level}] {message}";
-            File.AppendAllText(path: LogPath, contents: line + Environment.NewLine);
+            File.AppendAllText(LogPath, line + Environment.NewLine);
         }
         catch
         {

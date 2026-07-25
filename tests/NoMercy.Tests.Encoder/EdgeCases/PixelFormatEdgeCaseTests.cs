@@ -32,32 +32,31 @@ public class PixelFormatEdgeCaseTests
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
         _stage = new(
-            options: options,
-            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
-            subtitleExtractor: new SubtitleExtractor(),
-            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
-            drmProcessors: [],
-            logger: NullLogger<BuildStage>.Instance,
-            storage: TestStorageFactory.CreateLocal()
+            options,
+            new FontExtractor(TestStorageFactory.CreateLocal()),
+            new SubtitleExtractor(),
+            OutputStrategyFactoryTestHelper.Create(),
+            [],
+            NullLogger<BuildStage>.Instance,
+            TestStorageFactory.CreateLocal()
         );
     }
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
         new(
-            Groups:
             [
                 new(
-                    GroupId: "group_0",
-                    Nodes: [new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new())],
-                    DeviceId: null,
-                    GpuSlotsRequired: 0,
-                    CpuThreadsRequired: 4,
-                    RequiresGpu: false,
-                    Priority: 1
+                    "group_0",
+                    [new("decode_0", OperationType.Decode, [], new())],
+                    null,
+                    0,
+                    4,
+                    false,
+                    1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
-            OutputPlan: outputPlan
+            TimeSpan.FromMinutes(90),
+            outputPlan
         );
 
     private static VideoOutputPlan BuildVideoOutput(
@@ -69,180 +68,178 @@ public class PixelFormatEdgeCaseTests
         string pixelFormat = "yuv420p"
     ) =>
         new(
-            Width: width,
-            Height: height,
-            EncoderName: encoder,
-            Crf: 23,
-            BitrateKbps: 4000,
-            Preset: "medium",
-            Profile: tenBit ? "high10" : "high",
-            Level: "4.1",
-            TenBit: tenBit,
-            PixelFormat: pixelFormat,
-            MapLabel: mapLabel,
-            ExtraFlags: new()
+            width,
+            height,
+            encoder,
+            23,
+            4000,
+            "medium",
+            tenBit ? "high10" : "high",
+            "4.1",
+            tenBit,
+            pixelFormat,
+            mapLabel,
+            new()
         );
 
     private static AudioOutputPlan BuildAudioOutput() =>
         new(
-            EncoderName: "aac",
-            BitrateKbps: 192,
-            Channels: 2,
-            SampleRate: 48000,
-            Action: StreamAction.Transcode,
-            Language: "en",
-            MapLabel: "0:a:0"
+            "aac",
+            192,
+            2,
+            48000,
+            StreamAction.Transcode,
+            "en",
+            "0:a:0"
         );
 
     private static MediaInfo Build10BitMediaInfo(int width = 3840, int height = 2160) =>
         new(
-            FilePath: "/movies/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 2),
-            OverallBitRateKbps: 50000,
-            FileSizeBytes: 30_000_000_000,
-            VideoStreams:
+            "/movies/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(2),
+            50000,
+            30_000_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "hevc",
-                    Width: width,
-                    Height: height,
-                    FrameRate: 24.0,
-                    BitDepth: 10,
-                    PixelFormat: "yuv420p10le",
-                    ColorPrimaries: "bt709",
-                    ColorTransfer: "bt709",
-                    ColorSpace: "bt709",
-                    IsDefault: true,
-                    BitRateKbps: 45000
+                    0,
+                    "hevc",
+                    width,
+                    height,
+                    24.0,
+                    10,
+                    "yuv420p10le",
+                    "bt709",
+                    "bt709",
+                    "bt709",
+                    true,
+                    45000
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
     private static MediaInfo Build8BitMediaInfo(int width = 1920, int height = 1080) =>
         new(
-            FilePath: "/movies/test.mkv",
-            Format: "matroska",
-            Duration: TimeSpan.FromHours(hours: 2),
-            OverallBitRateKbps: 8000,
-            FileSizeBytes: 7_200_000_000,
-            VideoStreams:
+            "/movies/test.mkv",
+            "matroska",
+            TimeSpan.FromHours(2),
+            8000,
+            7_200_000_000,
             [
                 new(
-                    Index: 0,
-                    Codec: "h264",
-                    Width: width,
-                    Height: height,
-                    FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
-                    ColorPrimaries: "bt709",
-                    ColorTransfer: "bt709",
-                    ColorSpace: "bt709",
-                    IsDefault: true,
-                    BitRateKbps: 6000
+                    0,
+                    "h264",
+                    width,
+                    height,
+                    24.0,
+                    8,
+                    "yuv420p",
+                    "bt709",
+                    "bt709",
+                    "bt709",
+                    true,
+                    6000
                 ),
             ],
-            AudioStreams: [],
-            SubtitleStreams: [],
-            Chapters: []
+            [],
+            [],
+            []
         );
 
     [Fact]
     public async Task BuildStage_10BitSourceTo8BitProfile_OutputPixelFormatIsEightBit()
     {
         VideoOutputPlan output = BuildVideoOutput(
-            width: 1280,
-            height: 720,
-            mapLabel: "[v0]",
-            encoder: "libx264",
-            tenBit: false,
-            pixelFormat: "yuv420p"
+            1280,
+            720,
+            "[v0]",
+            "libx264",
+            false,
+            "yuv420p"
         );
 
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [output],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [output],
+            [BuildAudioOutput()],
+            [],
+            null
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: Build10BitMediaInfo(width: 3840, height: 2160)
+            EncodingContext.Create().CorrelationId,
+            Build10BitMediaInfo(3840, 2160)
         );
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
-        int filterComplexIdx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
         filterComplexIdx
             .Should()
             .BeGreaterThan(
-                expected: -1,
-                because: "scaling from 10-bit source to 8-bit target requires filter_complex"
+                -1,
+                "scaling from 10-bit source to 8-bit target requires filter_complex"
             );
 
         string filterValue = commands[0].Arguments[filterComplexIdx + 1];
         filterValue
             .Should()
             .Contain(
-                expected: "format=yuv420p",
-                because: "8-bit target must output yuv420p, not 10-bit p010 or p010le"
+                "format=yuv420p",
+                "8-bit target must output yuv420p, not 10-bit p010 or p010le"
             );
-        filterValue.Should().NotContain(unexpected: "p010", because: "8-bit target must not output 10-bit pixel format");
+        filterValue.Should().NotContain("p010", "8-bit target must not output 10-bit pixel format");
     }
 
     [Fact]
     public async Task BuildStage_OutputWithOddDimensions_MakeDimensionsEven()
     {
         VideoOutputPlan output = BuildVideoOutput(
-            width: 1279,
-            height: 719,
-            mapLabel: "[v0]",
-            encoder: "libx264",
-            tenBit: false,
-            pixelFormat: "yuv420p"
+            1279,
+            719,
+            "[v0]",
+            "libx264",
+            false,
+            "yuv420p"
         );
 
         OutputPlan outputPlan = new(
-            Format: OutputFormat.Hls,
-            VideoOutputs: [output],
-            AudioOutputs: [BuildAudioOutput()],
-            SubtitleOutputs: [],
-            Thumbnails: null
+            OutputFormat.Hls,
+            [output],
+            [BuildAudioOutput()],
+            [],
+            null
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
-        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
-            CorrelationId: EncodingContext.Create().CorrelationId,
-            MediaInfo: Build8BitMediaInfo(width: 1920, height: 1080)
+            EncodingContext.Create().CorrelationId,
+            Build8BitMediaInfo(1920, 1080)
         );
 
-        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
-        int filterComplexIdx = Array.IndexOf(array: commands[0].Arguments, value: "-filter_complex");
-        filterComplexIdx.Should().BeGreaterThan(expected: -1, because: "filter_complex must be present when scaling");
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
+        filterComplexIdx.Should().BeGreaterThan(-1, "filter_complex must be present when scaling");
 
         string filterValue = commands[0].Arguments[filterComplexIdx + 1];
 
         filterValue
             .Should()
-            .Contain(expected: "scale=1279:-2", because: "requested 1279 width must be preserved in scale filter");
+            .Contain("scale=1279:-2", "requested 1279 width must be preserved in scale filter");
 
-        filterValue.Should().NotContain(unexpected: "1279:719", because: "odd dimensions should not be preserved as-is");
+        filterValue.Should().NotContain("1279:719", "odd dimensions should not be preserved as-is");
     }
 }

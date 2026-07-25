@@ -9,13 +9,13 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.MusicBrainz.Models;
-using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.ReleaseGroups;
 
 public class ReleaseGroupManager(
@@ -30,27 +30,27 @@ public class ReleaseGroupManager(
         CoverArtImageManagerManager.CoverPalette? coverPalette
     )
     {
-        logger.LogTrace(message: "Storing Release Group: {Title}", args: releaseGroup.Title);
+        logger.LogTrace("Storing Release Group: {Title}", releaseGroup.Title);
 
         ReleaseGroup insert = new()
         {
             Id = releaseGroup.Id,
             Title = releaseGroup.Title,
-            Description = string.IsNullOrEmpty(value: releaseGroup.Disambiguation)
+            Description = string.IsNullOrEmpty(releaseGroup.Disambiguation)
                 ? null
                 : releaseGroup.Disambiguation,
             Year = releaseGroup.FirstReleaseDate.ParseYear(),
             LibraryId = id,
-            Disambiguation = string.IsNullOrEmpty(value: releaseGroup.Disambiguation)
+            Disambiguation = string.IsNullOrEmpty(releaseGroup.Disambiguation)
                 ? null
                 : releaseGroup.Disambiguation,
 
             Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
         };
 
-        await releaseGroupRepository.Store(releaseGroup: insert);
-        jobDispatcher.DispatchColorPaletteJob(entityType: "releasegroup", entityId: insert.Id.ToString());
+        await releaseGroupRepository.Store(insert);
+        jobDispatcher.DispatchColorPaletteJob("releasegroup", insert.Id.ToString());
 
-        logger.LogTrace(message: "Release Group {Title} stored", args: releaseGroup.Title);
+        logger.LogTrace("Release Group {Title} stored", releaseGroup.Title);
     }
 }

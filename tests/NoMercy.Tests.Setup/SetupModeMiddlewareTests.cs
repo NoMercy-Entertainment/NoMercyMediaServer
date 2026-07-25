@@ -32,16 +32,16 @@ public class SetupModeMiddlewareTests
         ServiceCollection services = new();
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(serviceProvider: provider);
+        TokenStore.Initialize(provider);
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
-        AppDbContext dbContext = new(options: optionsBuilder.Options);
+        optionsBuilder.UseSqlite("Data Source=:memory:");
+        AppDbContext dbContext = new(optionsBuilder.Options);
         dbContext.Database.OpenConnection();
         dbContext.Database.EnsureCreated();
 
-        AuthManager authManager = new(appContext: dbContext, driver: new LocalStorageDriver(), authTokenStore: new AuthTokenStore());
-        return new(state: state, authManager: authManager, serverRegistrationService: new FakeServerRegistrationService());
+        AuthManager authManager = new(dbContext, new LocalStorageDriver(), new AuthTokenStore());
+        return new(state, authManager, new FakeServerRegistrationService());
     }
 
     private static SetupModeMiddleware CreateMiddleware(
@@ -50,8 +50,8 @@ public class SetupModeMiddlewareTests
     )
     {
         next ??= _ => Task.CompletedTask;
-        SetupEndpoints setupEndpoints = CreateSetupEndpoints(state: state);
-        return new(next: next, setupState: state, setupEndpoints: setupEndpoints);
+        SetupEndpoints setupEndpoints = CreateSetupEndpoints(state);
+        return new(next, state, setupEndpoints);
     }
 
     private static DefaultHttpContext CreateContext(string path)
@@ -66,8 +66,8 @@ public class SetupModeMiddlewareTests
 
     private static async Task<string> ReadResponseBody(HttpContext context)
     {
-        context.Response.Body.Seek(offset: 0, origin: SeekOrigin.Begin);
-        using StreamReader reader = new(stream: context.Response.Body);
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        using StreamReader reader = new(context.Response.Body);
         return await reader.ReadToEndAsync();
     }
 
@@ -77,66 +77,66 @@ public class SetupModeMiddlewareTests
     public async Task NonSetupRoute_WhenSetupRequired_Returns503()
     {
         SetupState state = new();
-        SetupModeMiddleware middleware = CreateMiddleware(state: state);
-        DefaultHttpContext context = CreateContext(path: "/api/v1/libraries");
+        SetupModeMiddleware middleware = CreateMiddleware(state);
+        DefaultHttpContext context = CreateContext("/api/v1/libraries");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.Equal(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
     public async Task NonSetupRoute_WhenSetupRequired_ReturnsJsonBody()
     {
         SetupState state = new();
-        SetupModeMiddleware middleware = CreateMiddleware(state: state);
-        DefaultHttpContext context = CreateContext(path: "/api/v1/libraries");
+        SetupModeMiddleware middleware = CreateMiddleware(state);
+        DefaultHttpContext context = CreateContext("/api/v1/libraries");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        string body = await ReadResponseBody(context: context);
-        dynamic? data = JsonConvert.DeserializeObject<dynamic>(value: body);
+        string body = await ReadResponseBody(context);
+        dynamic? data = JsonConvert.DeserializeObject<dynamic>(body);
 
         Assert.NotNull(data);
-        Assert.Equal(expected: "setup_required", actual: (string)data!.status);
-        Assert.Equal(expected: "Server is in setup mode", actual: (string)data.message);
-        Assert.Equal(expected: "/setup", actual: (string)data.setup_url);
+        Assert.Equal("setup_required", (string)data!.status);
+        Assert.Equal("Server is in setup mode", (string)data.message);
+        Assert.Equal("/setup", (string)data.setup_url);
     }
 
     [Fact]
     public async Task NonSetupRoute_WhenSetupRequired_SetsJsonContentType()
     {
         SetupState state = new();
-        SetupModeMiddleware middleware = CreateMiddleware(state: state);
-        DefaultHttpContext context = CreateContext(path: "/api/v1/movies");
+        SetupModeMiddleware middleware = CreateMiddleware(state);
+        DefaultHttpContext context = CreateContext("/api/v1/movies");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.Equal(expected: "application/json", actual: context.Response.ContentType);
+        Assert.Equal("application/json", context.Response.ContentType);
     }
 
     [Fact]
     public async Task RootRoute_WhenSetupRequired_Returns503()
     {
         SetupState state = new();
-        SetupModeMiddleware middleware = CreateMiddleware(state: state);
-        DefaultHttpContext context = CreateContext(path: "/");
+        SetupModeMiddleware middleware = CreateMiddleware(state);
+        DefaultHttpContext context = CreateContext("/");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.Equal(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
     public async Task RandomPath_WhenSetupRequired_Returns503()
     {
         SetupState state = new();
-        SetupModeMiddleware middleware = CreateMiddleware(state: state);
-        DefaultHttpContext context = CreateContext(path: "/some/random/path");
+        SetupModeMiddleware middleware = CreateMiddleware(state);
+        DefaultHttpContext context = CreateContext("/some/random/path");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.Equal(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
@@ -145,18 +145,18 @@ public class SetupModeMiddlewareTests
         SetupState state = new();
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            state: state,
-            next: _ =>
+            state,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = CreateContext(path: "/api/v1/libraries");
+        DefaultHttpContext context = CreateContext("/api/v1/libraries");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.False(condition: nextCalled);
+        Assert.False(nextCalled);
     }
 
     // --- Setup required: setup routes pass through ---
@@ -167,19 +167,19 @@ public class SetupModeMiddlewareTests
         SetupState state = new();
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            state: state,
-            next: _ =>
+            state,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = CreateContext(path: "/setup");
+        DefaultHttpContext context = CreateContext("/setup");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.False(condition: nextCalled);
-        Assert.NotEqual(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
@@ -188,19 +188,19 @@ public class SetupModeMiddlewareTests
         SetupState state = new();
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            state: state,
-            next: _ =>
+            state,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = CreateContext(path: "/setup/status");
+        DefaultHttpContext context = CreateContext("/setup/status");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.False(condition: nextCalled);
-        Assert.NotEqual(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
@@ -209,19 +209,19 @@ public class SetupModeMiddlewareTests
         SetupState state = new();
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            state: state,
-            next: _ =>
+            state,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = CreateContext(path: "/setup/config");
+        DefaultHttpContext context = CreateContext("/setup/config");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.False(condition: nextCalled);
-        Assert.NotEqual(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
@@ -230,19 +230,19 @@ public class SetupModeMiddlewareTests
         SetupState state = new();
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            state: state,
-            next: _ =>
+            state,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = CreateContext(path: "/sso-callback");
+        DefaultHttpContext context = CreateContext("/sso-callback");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.False(condition: nextCalled);
-        Assert.NotEqual(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
@@ -251,18 +251,18 @@ public class SetupModeMiddlewareTests
         SetupState state = new();
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            state: state,
-            next: _ =>
+            state,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = CreateContext(path: "/health");
+        DefaultHttpContext context = CreateContext("/health");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.True(condition: nextCalled);
+        Assert.True(nextCalled);
     }
 
     // --- Setup complete: all routes pass through ---
@@ -275,18 +275,18 @@ public class SetupModeMiddlewareTests
 
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            state: state,
-            next: _ =>
+            state,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = CreateContext(path: "/api/v1/libraries");
+        DefaultHttpContext context = CreateContext("/api/v1/libraries");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.True(condition: nextCalled);
+        Assert.True(nextCalled);
     }
 
     [Fact]
@@ -295,12 +295,12 @@ public class SetupModeMiddlewareTests
         SetupState state = new();
         state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
 
-        SetupModeMiddleware middleware = CreateMiddleware(state: state);
-        DefaultHttpContext context = CreateContext(path: "/api/v1/libraries");
+        SetupModeMiddleware middleware = CreateMiddleware(state);
+        DefaultHttpContext context = CreateContext("/api/v1/libraries");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.NotEqual(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     // --- Trailing slash handling ---
@@ -311,19 +311,19 @@ public class SetupModeMiddlewareTests
         SetupState state = new();
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            state: state,
-            next: _ =>
+            state,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = CreateContext(path: "/setup/");
+        DefaultHttpContext context = CreateContext("/setup/");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.False(condition: nextCalled);
-        Assert.NotEqual(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     // --- Case insensitivity ---
@@ -334,19 +334,19 @@ public class SetupModeMiddlewareTests
         SetupState state = new();
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            state: state,
-            next: _ =>
+            state,
+            _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
             }
         );
-        DefaultHttpContext context = CreateContext(path: "/Setup");
+        DefaultHttpContext context = CreateContext("/Setup");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.False(condition: nextCalled);
-        Assert.NotEqual(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     // --- SignalR hubs blocked during setup ---
@@ -355,23 +355,23 @@ public class SetupModeMiddlewareTests
     public async Task SignalRHub_WhenSetupRequired_Returns503()
     {
         SetupState state = new();
-        SetupModeMiddleware middleware = CreateMiddleware(state: state);
-        DefaultHttpContext context = CreateContext(path: "/videoHub");
+        SetupModeMiddleware middleware = CreateMiddleware(state);
+        DefaultHttpContext context = CreateContext("/videoHub");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.Equal(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
     public async Task SwaggerRoute_WhenSetupRequired_Returns503()
     {
         SetupState state = new();
-        SetupModeMiddleware middleware = CreateMiddleware(state: state);
-        DefaultHttpContext context = CreateContext(path: "/swagger");
+        SetupModeMiddleware middleware = CreateMiddleware(state);
+        DefaultHttpContext context = CreateContext("/swagger");
 
-        await middleware.InvokeAsync(context: context);
+        await middleware.InvokeAsync(context);
 
-        Assert.Equal(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 }

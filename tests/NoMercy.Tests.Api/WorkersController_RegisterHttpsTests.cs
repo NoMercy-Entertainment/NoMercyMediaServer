@@ -31,7 +31,7 @@ namespace NoMercy.Tests.Api;
 /// </summary>
 public class WorkersController_RegisterHttpsTests
 {
-    private static readonly Guid OwnerUserId = Guid.Parse(input: "11111111-1111-1111-1111-111111111111");
+    private static readonly Guid OwnerUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     private static WorkersController BuildController()
     {
@@ -43,8 +43,8 @@ public class WorkersController_RegisterHttpsTests
         Mock<ITaskProgressStore> progressStore = new();
         Mock<IHttpClientFactory> httpFactory = new();
         httpFactory
-            .Setup(expression: f => f.CreateClient(It.IsAny<string>()))
-            .Returns(value: new HttpClient { BaseAddress = new(uriString: "http://example/") });
+            .Setup(f => f.CreateClient(It.IsAny<string>()))
+            .Returns(new HttpClient { BaseAddress = new("http://example/") });
 
         WorkersController controller = new(
             registry: registry,
@@ -62,9 +62,9 @@ public class WorkersController_RegisterHttpsTests
         DefaultHttpContext httpContext = new()
         {
             User = new(
-                identity: new ClaimsIdentity(
-                    claims: [new(type: ClaimTypes.NameIdentifier, value: OwnerUserId.ToString())],
-                    authenticationType: "test"
+                new ClaimsIdentity(
+                    [new(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
+                    "test"
                 )
             ),
         };
@@ -87,7 +87,7 @@ public class WorkersController_RegisterHttpsTests
         UserCache.Current.Reset();
 
         UserCache.Current.AddUser(
-            user: new()
+            new()
             {
                 Id = OwnerUserId,
                 Owner = true,
@@ -97,15 +97,15 @@ public class WorkersController_RegisterHttpsTests
     }
 
     [Theory]
-    [InlineData(data: "http://example.com")]
-    [InlineData(data: "http://10.0.0.5:7626")]
-    [InlineData(data: "http://192.168.1.50")]
+    [InlineData("http://example.com")]
+    [InlineData("http://10.0.0.5:7626")]
+    [InlineData("http://192.168.1.50")]
     public void Register_NonLoopback_Http_IsRejected(string baseUrl)
     {
         WorkersController controller = BuildController();
 
         IActionResult result = controller.Register(
-            request: new(
+            new(
                 WorkerId: "w-1",
                 BaseUrl: baseUrl,
                 CpuCores: 8,
@@ -118,19 +118,19 @@ public class WorkersController_RegisterHttpsTests
         // The controller maps invalid input through BadRequestResponse, which
         // returns a BadRequestObjectResult. We just need to confirm it isn't a
         // 200/OkObjectResult — the URL got rejected.
-        Assert.IsNotType<OkObjectResult>(@object: result);
+        Assert.IsNotType<OkObjectResult>(result);
     }
 
     [Theory]
-    [InlineData(data: "http://127.0.0.1:7626")]
-    [InlineData(data: "http://localhost:7626")]
-    [InlineData(data: "https://worker.example.com")]
+    [InlineData("http://127.0.0.1:7626")]
+    [InlineData("http://localhost:7626")]
+    [InlineData("https://worker.example.com")]
     public void Register_Loopback_Http_Or_Https_IsAccepted(string baseUrl)
     {
         WorkersController controller = BuildController();
 
         IActionResult result = controller.Register(
-            request: new(
+            new(
                 WorkerId: "w-1",
                 BaseUrl: baseUrl,
                 CpuCores: 8,
@@ -140,7 +140,7 @@ public class WorkersController_RegisterHttpsTests
             )
         );
 
-        Assert.IsType<OkObjectResult>(@object: result);
+        Assert.IsType<OkObjectResult>(result);
     }
 }
 #pragma warning restore CS0618

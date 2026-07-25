@@ -30,40 +30,40 @@ namespace NoMercy.Tests.Networking;
 /// actual internet access to stun.l.google.com / stun.cloudflare.com and is
 /// itemized as not unit-testable — see the coverage report.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class StunHolePunchStrategyTests
 {
     [Fact]
     public void Name_IsStunHolePunch()
     {
         StunHolePunchStrategy strategy = new(
-            logger: NullLogger<StunHolePunchStrategy>.Instance,
-            connectivityStatus: new ConnectivityStatus()
+            NullLogger<StunHolePunchStrategy>.Instance,
+            new ConnectivityStatus()
         );
 
-        Assert.Equal(expected: "StunHolePunch", actual: strategy.Name);
+        Assert.Equal("StunHolePunch", strategy.Name);
     }
 
     [Fact]
     public void Priority_IsTwo()
     {
         StunHolePunchStrategy strategy = new(
-            logger: NullLogger<StunHolePunchStrategy>.Instance,
-            connectivityStatus: new ConnectivityStatus()
+            NullLogger<StunHolePunchStrategy>.Instance,
+            new ConnectivityStatus()
         );
 
-        Assert.Equal(expected: 2, actual: strategy.Priority);
+        Assert.Equal(2, strategy.Priority);
     }
 
     [Fact]
     public void Type_IsStunHolePunch()
     {
         StunHolePunchStrategy strategy = new(
-            logger: NullLogger<StunHolePunchStrategy>.Instance,
-            connectivityStatus: new ConnectivityStatus()
+            NullLogger<StunHolePunchStrategy>.Instance,
+            new ConnectivityStatus()
         );
 
-        Assert.Equal(expected: ConnectivityType.StunHolePunch, actual: strategy.Type);
+        Assert.Equal(ConnectivityType.StunHolePunch, strategy.Type);
     }
 
     [Fact]
@@ -73,20 +73,20 @@ public sealed class StunHolePunchStrategyTests
         // its own `new UdpClient(localPort)` hits a real SocketException
         // (address already in use) — no mock, a genuine bind conflict.
         int originalPort = RuntimeServerSettings.Current.InternalServerPort;
-        UdpClient blocker = new(port: 0);
+        UdpClient blocker = new(0);
         int freePort = ((IPEndPoint)blocker.Client.LocalEndPoint!).Port;
 
         try
         {
             RuntimeServerSettings.Current.InternalServerPort = freePort - 1; // StunPort = InternalServerPort + 1
             StunHolePunchStrategy strategy = new(
-                logger: NullLogger<StunHolePunchStrategy>.Instance,
-                connectivityStatus: new ConnectivityStatus()
+                NullLogger<StunHolePunchStrategy>.Instance,
+                new ConnectivityStatus()
             );
 
-            bool result = await strategy.TryEstablishAsync(ct: CancellationToken.None);
+            bool result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-            Assert.False(condition: result);
+            Assert.False(result);
         }
         finally
         {
@@ -99,56 +99,56 @@ public sealed class StunHolePunchStrategyTests
     public async Task TeardownAsync_WhenNothingStarted_DoesNotThrow()
     {
         StunHolePunchStrategy strategy = new(
-            logger: NullLogger<StunHolePunchStrategy>.Instance,
-            connectivityStatus: new ConnectivityStatus()
+            NullLogger<StunHolePunchStrategy>.Instance,
+            new ConnectivityStatus()
         );
 
-        Exception? ex = await Record.ExceptionAsync(testCode: strategy.TeardownAsync);
+        Exception? ex = await Record.ExceptionAsync(strategy.TeardownAsync);
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
     public void Dispose_WhenNothingStarted_DoesNotThrow()
     {
         StunHolePunchStrategy strategy = new(
-            logger: NullLogger<StunHolePunchStrategy>.Instance,
-            connectivityStatus: new ConnectivityStatus()
+            NullLogger<StunHolePunchStrategy>.Instance,
+            new ConnectivityStatus()
         );
 
-        Exception? ex = Record.Exception(testCode: strategy.Dispose);
+        Exception? ex = Record.Exception(strategy.Dispose);
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
     public void Dispose_CalledTwice_DoesNotThrow()
     {
         StunHolePunchStrategy strategy = new(
-            logger: NullLogger<StunHolePunchStrategy>.Instance,
-            connectivityStatus: new ConnectivityStatus()
+            NullLogger<StunHolePunchStrategy>.Instance,
+            new ConnectivityStatus()
         );
 
-        Exception? ex = Record.Exception(testCode: () =>
+        Exception? ex = Record.Exception(() =>
         {
             strategy.Dispose();
             strategy.Dispose();
         });
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 
     [Fact]
     public async Task TeardownAsync_AfterDispose_DoesNotThrow()
     {
         StunHolePunchStrategy strategy = new(
-            logger: NullLogger<StunHolePunchStrategy>.Instance,
-            connectivityStatus: new ConnectivityStatus()
+            NullLogger<StunHolePunchStrategy>.Instance,
+            new ConnectivityStatus()
         );
         strategy.Dispose();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: strategy.TeardownAsync);
+        Exception? ex = await Record.ExceptionAsync(strategy.TeardownAsync);
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
     }
 }

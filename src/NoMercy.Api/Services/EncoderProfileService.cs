@@ -59,9 +59,9 @@ public class EncoderProfileService(
         Guid userId
     )
     {
-        if (string.IsNullOrWhiteSpace(value: name))
+        if (string.IsNullOrWhiteSpace(name))
         {
-            await TryLogFailureAsync(userId: userId, errorCode: "validation_error", message: "name is required");
+            await TryLogFailureAsync(userId, "validation_error", "name is required");
             return new()
             {
                 ErrorCode = "validation_error",
@@ -69,9 +69,9 @@ public class EncoderProfileService(
             };
         }
 
-        if (string.IsNullOrWhiteSpace(value: profileJson))
+        if (string.IsNullOrWhiteSpace(profileJson))
         {
-            await TryLogFailureAsync(userId: userId, errorCode: "validation_error", message: "profile_json is required");
+            await TryLogFailureAsync(userId, "validation_error", "profile_json is required");
             return new()
             {
                 ErrorCode = "validation_error",
@@ -79,7 +79,7 @@ public class EncoderProfileService(
             };
         }
 
-        EncodingPreset? existing = await presetRepository.GetByNameAsync(name: name);
+        EncodingPreset? existing = await presetRepository.GetByNameAsync(name);
         if (existing is not null)
             return new()
             {
@@ -98,13 +98,13 @@ public class EncoderProfileService(
             IsBuiltIn = false,
         };
 
-        EncodingPreset saved = await presetRepository.CreateAsync(preset: preset);
+        EncodingPreset saved = await presetRepository.CreateAsync(preset);
 
         await TryLogConfigAsync(
-            userId: userId,
-            configKey: $"encoder.profile.{saved.Id}",
-            oldValue: null,
-            newValue: new
+            userId,
+            $"encoder.profile.{saved.Id}",
+            null,
+            new
             {
                 id = saved.Id.ToString(),
                 name = saved.Name,
@@ -138,17 +138,17 @@ public class EncoderProfileService(
         string? sourcePath
     )
     {
-        if (string.IsNullOrWhiteSpace(value: profileJson))
+        if (string.IsNullOrWhiteSpace(profileJson))
         {
             return new()
             {
                 EarlyResponse = BuildPreviewErrorResponse(
-                    id: id,
-                    sourcePath: sourcePath,
-                    ruleId: EncoderRuleId.ImportSourceMissing,
-                    field: "profile_json",
-                    message: "profile_json is required.",
-                    suggestion: "Supply the full profile JSON in the profile_json field."
+                    id,
+                    sourcePath,
+                    EncoderRuleId.ImportSourceMissing,
+                    "profile_json",
+                    "profile_json is required.",
+                    "Supply the full profile JSON in the profile_json field."
                 ),
             };
         }
@@ -156,19 +156,19 @@ public class EncoderProfileService(
         EncodingProfile? profile;
         try
         {
-            profile = JsonConvert.DeserializeObject<EncodingProfile>(value: profileJson);
+            profile = JsonConvert.DeserializeObject<EncodingProfile>(profileJson);
         }
         catch (JsonException ex)
         {
             return new()
             {
                 EarlyResponse = BuildPreviewErrorResponse(
-                    id: id,
-                    sourcePath: sourcePath,
-                    ruleId: EncoderRuleId.ImportJsonMalformed,
-                    field: "profile_json",
-                    message: $"Profile JSON is malformed: {ex.Message}",
-                    suggestion: "Fix the JSON syntax error and resubmit."
+                    id,
+                    sourcePath,
+                    EncoderRuleId.ImportJsonMalformed,
+                    "profile_json",
+                    $"Profile JSON is malformed: {ex.Message}",
+                    "Fix the JSON syntax error and resubmit."
                 ),
             };
         }
@@ -178,12 +178,12 @@ public class EncoderProfileService(
             return new()
             {
                 EarlyResponse = BuildPreviewErrorResponse(
-                    id: id,
-                    sourcePath: sourcePath,
-                    ruleId: EncoderRuleId.ImportJsonMalformed,
-                    field: "profile_json",
-                    message: "Profile JSON deserialized to null — check the outer object is present.",
-                    suggestion: "Ensure the JSON root is an object, not null or an array."
+                    id,
+                    sourcePath,
+                    EncoderRuleId.ImportJsonMalformed,
+                    "profile_json",
+                    "Profile JSON deserialized to null — check the outer object is present.",
+                    "Ensure the JSON root is an object, not null or an array."
                 ),
             };
         }
@@ -218,71 +218,68 @@ public class EncoderProfileService(
         // --- 1. Resolve JSON source ------------------------------------------
         string profileJson;
 
-        if (!string.IsNullOrWhiteSpace(value: inlineProfileJson))
+        if (!string.IsNullOrWhiteSpace(inlineProfileJson))
         {
             profileJson = inlineProfileJson;
         }
-        else if (!string.IsNullOrWhiteSpace(value: url))
+        else if (!string.IsNullOrWhiteSpace(url))
         {
-            if (!url.StartsWith(value: "https://", comparisonType: StringComparison.OrdinalIgnoreCase))
+            if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
                 return new()
                 {
-                    ValidationError = ValidationEnvelope.FromRules(rules:
-                    [
+                    ValidationError = ValidationEnvelope.FromRules([
                         new(
-                            Id: EncoderRuleId.ImportHttpNotHttps,
-                            Severity: EncoderRuleSeverity.Error,
-                            Field: "url",
-                            Message: "Profile URLs must use HTTPS — plain HTTP is not permitted.",
-                            Fix: "Replace the URL scheme with https:// before importing."
+                            EncoderRuleId.ImportHttpNotHttps,
+                            EncoderRuleSeverity.Error,
+                            "url",
+                            "Profile URLs must use HTTPS — plain HTTP is not permitted.",
+                            "Replace the URL scheme with https:// before importing."
                         ),
                     ]),
                 };
             }
 
             HttpClient client = httpClientFactory.CreateClient();
-            client.Timeout = TimeSpan.FromSeconds(seconds: 15);
+            client.Timeout = TimeSpan.FromSeconds(15);
             client.MaxResponseContentBufferSize = 256 * 1024;
 
             HttpResponseMessage response;
             try
             {
-                using HttpRequestMessage httpReq = new(method: HttpMethod.Get, requestUri: url);
-                response = await client.SendAsync(request: httpReq, cancellationToken: ct);
+                using HttpRequestMessage httpReq = new(HttpMethod.Get, url);
+                response = await client.SendAsync(httpReq, ct);
                 response.EnsureSuccessStatusCode();
             }
             catch (Exception ex)
             {
                 return new()
                 {
-                    ValidationError = ValidationEnvelope.FromRules(rules:
-                    [
+                    ValidationError = ValidationEnvelope.FromRules([
                         new(
-                            Id: EncoderRuleId.ImportFetchFailed,
-                            Severity: EncoderRuleSeverity.Error,
-                            Field: "url",
-                            Message: $"Failed to fetch profile from URL: {ex.Message}",
-                            Fix: "Verify the URL is reachable and returns valid JSON."
+                            EncoderRuleId.ImportFetchFailed,
+                            EncoderRuleSeverity.Error,
+                            "url",
+                            $"Failed to fetch profile from URL: {ex.Message}",
+                            "Verify the URL is reachable and returns valid JSON."
                         ),
                     ]),
                 };
             }
 
-            profileJson = await response.Content.ReadAsStringAsync(cancellationToken: ct);
+            profileJson = await response.Content.ReadAsStringAsync(ct);
         }
         else
         {
             return new()
             {
-                ValidationError = ValidationEnvelope.FromRules(rules:
-                [
+                ValidationError = ValidationEnvelope.FromRules([
                     new(
-                        Id: EncoderRuleId.ImportSourceMissing,
-                        Severity: EncoderRuleSeverity.Error,
-                        Field: "profile_json",
-                        Message: "Either profile_json or url must be provided.",
-                        Fix: "Supply profile_json with the raw JSON or url with an HTTPS URL pointing to the profile."
+                        EncoderRuleId.ImportSourceMissing,
+                        EncoderRuleSeverity.Error,
+                        "profile_json",
+                        "Either profile_json or url must be provided.",
+                        "Supply profile_json with the raw JSON or url with an HTTPS URL pointing to the profile."
                     ),
                 ]),
             };
@@ -292,20 +289,19 @@ public class EncoderProfileService(
         EncodingProfile? profile;
         try
         {
-            profile = JsonConvert.DeserializeObject<EncodingProfile>(value: profileJson);
+            profile = JsonConvert.DeserializeObject<EncodingProfile>(profileJson);
         }
         catch (JsonException ex)
         {
             return new()
             {
-                ValidationError = ValidationEnvelope.FromRules(rules:
-                [
+                ValidationError = ValidationEnvelope.FromRules([
                     new(
-                        Id: EncoderRuleId.ImportJsonMalformed,
-                        Severity: EncoderRuleSeverity.Error,
-                        Field: "profile_json",
-                        Message: $"Profile JSON is malformed: {ex.Message}",
-                        Fix: "Fix the JSON syntax error and resubmit."
+                        EncoderRuleId.ImportJsonMalformed,
+                        EncoderRuleSeverity.Error,
+                        "profile_json",
+                        $"Profile JSON is malformed: {ex.Message}",
+                        "Fix the JSON syntax error and resubmit."
                     ),
                 ]),
             };
@@ -315,14 +311,13 @@ public class EncoderProfileService(
         {
             return new()
             {
-                ValidationError = ValidationEnvelope.FromRules(rules:
-                [
+                ValidationError = ValidationEnvelope.FromRules([
                     new(
-                        Id: EncoderRuleId.ImportJsonMalformed,
-                        Severity: EncoderRuleSeverity.Error,
-                        Field: "profile_json",
-                        Message: "Profile JSON deserialized to null — check the outer object is present.",
-                        Fix: "Ensure the JSON root is an object, not null or an array."
+                        EncoderRuleId.ImportJsonMalformed,
+                        EncoderRuleSeverity.Error,
+                        "profile_json",
+                        "Profile JSON deserialized to null — check the outer object is present.",
+                        "Ensure the JSON root is an object, not null or an array."
                     ),
                 ]),
             };
@@ -338,20 +333,20 @@ public class EncoderProfileService(
         if (hasSigning)
         {
             EncoderRule? rejection = signatureVerifier.Verify(
-                profileJson: profileJson,
-                fingerprint: string.Empty,
-                base64Signature: string.Empty,
-                keyLookup: fingerprint =>
+                profileJson,
+                string.Empty,
+                string.Empty,
+                fingerprint =>
                     mediaContext
                         .TrustedPublisherKeys.AsNoTracking()
-                        .FirstOrDefault(predicate: k => k.Fingerprint == fingerprint)
+                        .FirstOrDefault(k => k.Fingerprint == fingerprint)
             );
 
             if (rejection is not null)
             {
                 return new()
                 {
-                    ValidationError = ValidationEnvelope.FromRules(rules: [rejection]),
+                    ValidationError = ValidationEnvelope.FromRules([rejection]),
                 };
             }
         }
@@ -361,14 +356,13 @@ public class EncoderProfileService(
             {
                 return new()
                 {
-                    ValidationError = ValidationEnvelope.FromRules(rules:
-                    [
+                    ValidationError = ValidationEnvelope.FromRules([
                         new(
-                            Id: EncoderRuleId.ImportUnsignedRequiresFlag,
-                            Severity: EncoderRuleSeverity.Error,
-                            Field: "trust_unsigned",
-                            Message: "This profile has no publisher signature. Pass ?trust_unsigned=true to import it anyway.",
-                            Fix: "Add ?trust_unsigned=true to the request URL to accept unsigned profiles."
+                            EncoderRuleId.ImportUnsignedRequiresFlag,
+                            EncoderRuleSeverity.Error,
+                            "trust_unsigned",
+                            "This profile has no publisher signature. Pass ?trust_unsigned=true to import it anyway.",
+                            "Add ?trust_unsigned=true to the request URL to accept unsigned profiles."
                         ),
                     ]),
                 };
@@ -378,7 +372,7 @@ public class EncoderProfileService(
         // --- 4. Persist ------------------------------------------------------
         Ulid newId = Ulid.NewUlid();
         EncodingProfile importedProfile = profile with { Id = newId, IsBuiltin = false };
-        string savedJson = JsonConvert.SerializeObject(value: importedProfile);
+        string savedJson = JsonConvert.SerializeObject(importedProfile);
 
         EncodingPreset preset = new()
         {
@@ -389,13 +383,13 @@ public class EncoderProfileService(
             IsBuiltIn = false,
         };
 
-        EncodingPreset saved = await presetRepository.CreateAsync(preset: preset);
+        EncodingPreset saved = await presetRepository.CreateAsync(preset);
 
         await TryLogConfigAsync(
-            userId: userId,
-            configKey: $"encoder.profile.{saved.Id}",
-            oldValue: null,
-            newValue: new
+            userId,
+            $"encoder.profile.{saved.Id}",
+            null,
+            new
             {
                 id = saved.Id.ToString(),
                 name = saved.Name,
@@ -421,31 +415,30 @@ public class EncoderProfileService(
     )
     {
         return new(
-            ProfileId: id,
-            SourceVideoFileId: sourcePath ?? string.Empty,
-            SourceAnalysis: new(
-                Format: string.Empty,
-                DurationSeconds: 0,
-                FileSizeBytes: 0,
-                OverallBitRateKbps: 0,
-                VideoStreamCount: 0,
-                AudioStreamCount: 0,
-                SubtitleStreamCount: 0,
-                ChapterCount: 0,
-                AttachmentCount: 0,
-                HasDolbyVision: false,
-                PrimaryVideoCodec: null,
-                PrimaryVideoWidth: null,
-                PrimaryVideoHeight: null
+            id,
+            sourcePath ?? string.Empty,
+            new(
+                string.Empty,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                false,
+                null,
+                null,
+                null
             ),
-            PerStreamPlan: new(VideoStreams: [], AudioStreams: [], SubtitleStreams: []),
-            SourceWarnings:
+            new([], [], []),
             [
-                new(Id: ruleId, Severity: EncoderRuleSeverity.Error, Field: field, Message: message, Fix: suggestion),
+                new(ruleId, EncoderRuleSeverity.Error, field, message, suggestion),
             ],
-            EstimatedFps: 0,
-            EstimatedDurationSeconds: 0,
-            EncoderHandle: "auto"
+            0,
+            0,
+            "auto"
         );
     }
 
@@ -454,16 +447,16 @@ public class EncoderProfileService(
         try
         {
             await activityLogger.LogFailureAsync(
-                type: "failure.config_save",
-                userId: userId,
-                deviceId: Ulid.Empty,
-                errorCode: errorCode,
-                message: message
+                "failure.config_save",
+                userId,
+                Ulid.Empty,
+                errorCode,
+                message
             );
         }
         catch (Exception ex)
         {
-            logger.LogWarning(message: "Failed to log failure.config_save: {Message}", args: ex.Message);
+            logger.LogWarning("Failed to log failure.config_save: {Message}", ex.Message);
         }
     }
 
@@ -477,17 +470,17 @@ public class EncoderProfileService(
         try
         {
             await activityLogger.LogConfigurationAsync(
-                type: "config.encoder_default_changed",
-                userId: userId,
-                deviceId: Ulid.Empty,
-                configKey: configKey,
-                oldValue: oldValue,
-                newValue: newValue
+                "config.encoder_default_changed",
+                userId,
+                Ulid.Empty,
+                configKey,
+                oldValue,
+                newValue
             );
         }
         catch (Exception ex)
         {
-            logger.LogWarning(message: "Failed to log encoder profile config: {Message}", args: ex.Message);
+            logger.LogWarning("Failed to log encoder profile config: {Message}", ex.Message);
         }
     }
 }

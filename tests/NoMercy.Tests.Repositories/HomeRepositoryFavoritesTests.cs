@@ -15,7 +15,6 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.TvShows;
 using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
@@ -26,7 +25,7 @@ namespace NoMercy.Tests.Repositories;
 /// tables (MovieUser/TvUser/CollectionUser/SpecialUser) directly, the same
 /// rows the MoviesController.Like-style endpoints persist.
 /// </summary>
-[Trait(name: "Category", value: "Characterization")]
+[Trait("Category", "Characterization")]
 public class HomeRepositoryFavoritesTests : IDisposable
 {
     private const int CollectionId = 900001;
@@ -44,7 +43,7 @@ public class HomeRepositoryFavoritesTests : IDisposable
     {
         await using MediaContext context = await _factory.CreateDbContextAsync();
         context.Collections.Add(
-            entity: new()
+            new()
             {
                 Id = CollectionId,
                 Title = "Test Collection",
@@ -53,25 +52,25 @@ public class HomeRepositoryFavoritesTests : IDisposable
                 Parts = 1,
             }
         );
-        context.Specials.Add(entity: new() { Id = SpecialId, Title = "Test Special" });
+        context.Specials.Add(new() { Id = SpecialId, Title = "Test Special" });
         await context.SaveChangesAsync();
 
-        context.CollectionMovie.Add(entity: new(collectionId: CollectionId, movieId: 129));
-        context.SpecialItems.Add(entity: new() { SpecialId = SpecialId, MovieId = 129 });
+        context.CollectionMovie.Add(new(CollectionId, 129));
+        context.SpecialItems.Add(new() { SpecialId = SpecialId, MovieId = 129 });
         await context.SaveChangesAsync();
     }
 
     private async Task<FavoritesData> GetFavoritesAsync(Guid userId)
     {
         await using MediaContext context = await _factory.CreateDbContextAsync();
-        HomeRepository repository = new(context: context, contextFactory: _factory);
-        return await repository.GetFavoritesAsync(userId: userId, language: "en", country: "US");
+        HomeRepository repository = new(context, _factory);
+        return await repository.GetFavoritesAsync(userId, "en", "US");
     }
 
     [Fact]
     public async Task GetFavoritesAsync_ReturnsEmpty_WhenUserHasNoFavorites()
     {
-        FavoritesData favorites = await GetFavoritesAsync(userId: SeedConstants.UserId);
+        FavoritesData favorites = await GetFavoritesAsync(SeedConstants.UserId);
 
         favorites.Movies.Should().BeEmpty();
         favorites.TvShows.Should().BeEmpty();
@@ -86,22 +85,22 @@ public class HomeRepositoryFavoritesTests : IDisposable
 
         await using (MediaContext context = await _factory.CreateDbContextAsync())
         {
-            context.MovieUser.Add(entity: new(movieId: 129, userId: SeedConstants.UserId));
-            context.TvUser.Add(entity: new(tvId: 1399, userId: SeedConstants.UserId));
-            context.CollectionUser.Add(entity: new(collectionId: CollectionId, userId: SeedConstants.UserId));
-            context.SpecialUser.Add(entity: new(specialId: SpecialId, userId: SeedConstants.UserId));
+            context.MovieUser.Add(new(129, SeedConstants.UserId));
+            context.TvUser.Add(new(1399, SeedConstants.UserId));
+            context.CollectionUser.Add(new(CollectionId, SeedConstants.UserId));
+            context.SpecialUser.Add(new(SpecialId, SeedConstants.UserId));
             await context.SaveChangesAsync();
         }
 
-        FavoritesData favorites = await GetFavoritesAsync(userId: SeedConstants.UserId);
+        FavoritesData favorites = await GetFavoritesAsync(SeedConstants.UserId);
 
-        favorites.Movies.Should().ContainSingle(predicate: m => m.Id == 129);
-        favorites.TvShows.Should().ContainSingle(predicate: tv => tv.Id == 1399);
-        favorites.Collections.Should().ContainSingle(predicate: c => c.Id == CollectionId);
-        favorites.Specials.Should().ContainSingle(predicate: s => s.Id == SpecialId);
+        favorites.Movies.Should().ContainSingle(m => m.Id == 129);
+        favorites.TvShows.Should().ContainSingle(tv => tv.Id == 1399);
+        favorites.Collections.Should().ContainSingle(c => c.Id == CollectionId);
+        favorites.Specials.Should().ContainSingle(s => s.Id == SpecialId);
 
         // Unfavorited seed data (movie 680) must not leak into the result.
-        favorites.Movies.Should().NotContain(predicate: m => m.Id == 680);
+        favorites.Movies.Should().NotContain(m => m.Id == 680);
     }
 
     [Fact]
@@ -112,7 +111,7 @@ public class HomeRepositoryFavoritesTests : IDisposable
             // MovieUser.UserId is a required FK — the other user needs a row
             // of their own before they can favorite anything.
             context.Users.Add(
-                entity: new()
+                new()
                 {
                     Id = SeedConstants.OtherUserId,
                     Email = "other@nomercy.tv",
@@ -120,15 +119,15 @@ public class HomeRepositoryFavoritesTests : IDisposable
                     Allowed = true,
                 }
             );
-            context.MovieUser.Add(entity: new(movieId: 129, userId: SeedConstants.OtherUserId));
+            context.MovieUser.Add(new(129, SeedConstants.OtherUserId));
             await context.SaveChangesAsync();
         }
 
-        FavoritesData ownFavorites = await GetFavoritesAsync(userId: SeedConstants.UserId);
-        FavoritesData otherUsersFavorites = await GetFavoritesAsync(userId: SeedConstants.OtherUserId);
+        FavoritesData ownFavorites = await GetFavoritesAsync(SeedConstants.UserId);
+        FavoritesData otherUsersFavorites = await GetFavoritesAsync(SeedConstants.OtherUserId);
 
         ownFavorites.Movies.Should().BeEmpty();
-        otherUsersFavorites.Movies.Should().ContainSingle(predicate: m => m.Id == 129);
+        otherUsersFavorites.Movies.Should().ContainSingle(m => m.Id == 129);
     }
 
     [Fact]
@@ -136,13 +135,13 @@ public class HomeRepositoryFavoritesTests : IDisposable
     {
         await using (MediaContext context = await _factory.CreateDbContextAsync())
         {
-            context.MovieUser.Add(entity: new(movieId: 129, userId: SeedConstants.UserId));
+            context.MovieUser.Add(new(129, SeedConstants.UserId));
             await context.SaveChangesAsync();
         }
 
-        FavoritesData favorites = await GetFavoritesAsync(userId: SeedConstants.UserId);
+        FavoritesData favorites = await GetFavoritesAsync(SeedConstants.UserId);
 
-        Movie? movie = favorites.Movies.FirstOrDefault(predicate: m => m.Id == 129);
+        Movie? movie = favorites.Movies.FirstOrDefault(m => m.Id == 129);
         movie.Should().NotBeNull();
         movie!.VideoFiles.Should().NotBeEmpty();
     }

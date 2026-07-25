@@ -28,29 +28,29 @@ public class DiscRippingModelTests
     public void DiscDrive_BluRay_ConstructsCorrectly()
     {
         DiscDrive drive = new(
-            Path: "/dev/sr0",
-            Label: "THE_MATRIX",
-            HasDisc: true,
-            DiscType: OpticalDiscType.BluRay
+            "/dev/sr0",
+            "THE_MATRIX",
+            true,
+            OpticalDiscType.BluRay
         );
 
-        drive.Path.Should().Be(expected: "/dev/sr0");
-        drive.Label.Should().Be(expected: "THE_MATRIX");
+        drive.Path.Should().Be("/dev/sr0");
+        drive.Label.Should().Be("THE_MATRIX");
         drive.HasDisc.Should().BeTrue();
-        drive.DiscType.Should().Be(expected: OpticalDiscType.BluRay);
+        drive.DiscType.Should().Be(OpticalDiscType.BluRay);
     }
 
     [Fact]
     public void DiscDrive_Dvd_ConstructsCorrectly()
     {
         DiscDrive drive = new(
-            Path: "D:\\",
-            Label: "INCEPTION_D1",
-            HasDisc: true,
-            DiscType: OpticalDiscType.Dvd
+            "D:\\",
+            "INCEPTION_D1",
+            true,
+            OpticalDiscType.Dvd
         );
 
-        drive.DiscType.Should().Be(expected: OpticalDiscType.Dvd);
+        drive.DiscType.Should().Be(OpticalDiscType.Dvd);
         drive.HasDisc.Should().BeTrue();
     }
 
@@ -58,27 +58,27 @@ public class DiscRippingModelTests
     public void DiscDrive_Cd_ConstructsCorrectly()
     {
         DiscDrive drive = new(
-            Path: "/dev/sr1",
-            Label: "DARK_SIDE",
-            HasDisc: true,
-            DiscType: OpticalDiscType.Cd
+            "/dev/sr1",
+            "DARK_SIDE",
+            true,
+            OpticalDiscType.Cd
         );
 
-        drive.DiscType.Should().Be(expected: OpticalDiscType.Cd);
+        drive.DiscType.Should().Be(OpticalDiscType.Cd);
     }
 
     [Fact]
     public void DiscDrive_EmptyDrive_HasDiscFalse()
     {
         DiscDrive drive = new(
-            Path: "/dev/sr0",
-            Label: "",
-            HasDisc: false,
-            DiscType: OpticalDiscType.None
+            "/dev/sr0",
+            "",
+            false,
+            OpticalDiscType.None
         );
 
         drive.HasDisc.Should().BeFalse();
-        drive.DiscType.Should().Be(expected: OpticalDiscType.None);
+        drive.DiscType.Should().Be(OpticalDiscType.None);
     }
 
     // ---------------------------------------------------------------------------
@@ -90,11 +90,11 @@ public class DiscRippingModelTests
     {
         string[] names = Enum.GetNames<OpticalDiscType>();
 
-        names.Should().Contain(expected: "BluRay");
-        names.Should().Contain(expected: "Dvd");
-        names.Should().Contain(expected: "Cd");
-        names.Should().Contain(expected: "None");
-        names.Should().HaveCount(expected: 4);
+        names.Should().Contain("BluRay");
+        names.Should().Contain("Dvd");
+        names.Should().Contain("Cd");
+        names.Should().Contain("None");
+        names.Should().HaveCount(4);
     }
 
     // ---------------------------------------------------------------------------
@@ -102,23 +102,23 @@ public class DiscRippingModelTests
     // ---------------------------------------------------------------------------
 
     [Theory]
-    [InlineData(data: DriveEventType.DiscInserted)]
-    [InlineData(data: DriveEventType.DiscEjected)]
-    [InlineData(data: DriveEventType.DriveAdded)]
-    [InlineData(data: DriveEventType.DriveRemoved)]
+    [InlineData(DriveEventType.DiscInserted)]
+    [InlineData(DriveEventType.DiscEjected)]
+    [InlineData(DriveEventType.DriveAdded)]
+    [InlineData(DriveEventType.DriveRemoved)]
     public void DriveEvent_ConstructsCorrectly_ForEachEventType(DriveEventType eventType)
     {
         DiscDrive drive = new(
-            Path: "/dev/sr0",
-            Label: "TEST",
-            HasDisc: true,
-            DiscType: OpticalDiscType.BluRay
+            "/dev/sr0",
+            "TEST",
+            true,
+            OpticalDiscType.BluRay
         );
 
-        DriveEvent driveEvent = new(Type: eventType, Drive: drive);
+        DriveEvent driveEvent = new(eventType, drive);
 
-        driveEvent.Type.Should().Be(expected: eventType);
-        driveEvent.Drive.Should().Be(expected: drive);
+        driveEvent.Type.Should().Be(eventType);
+        driveEvent.Drive.Should().Be(drive);
     }
 
     // ---------------------------------------------------------------------------
@@ -130,83 +130,83 @@ public class DiscRippingModelTests
     {
         ChapterInfo[] chapters =
         [
-            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 20), Title: "Chapter 1"),
-            new(Start: TimeSpan.FromMinutes(minutes: 20), End: TimeSpan.FromMinutes(minutes: 40), Title: "Chapter 2"),
+            new(TimeSpan.Zero, TimeSpan.FromMinutes(20), "Chapter 1"),
+            new(TimeSpan.FromMinutes(20), TimeSpan.FromMinutes(40), "Chapter 2"),
         ];
 
         VideoStreamInfo[] videoStreams =
         [
             new(
-                Index: 0,
-                Codec: "hevc",
-                Width: 1920,
-                Height: 1080,
-                FrameRate: 23.976,
-                BitDepth: 10,
-                PixelFormat: "yuv420p10le",
-                ColorPrimaries: "bt2020",
-                ColorTransfer: "smpte2084",
-                ColorSpace: "bt2020nc",
-                IsDefault: true,
-                BitRateKbps: 25000
+                0,
+                "hevc",
+                1920,
+                1080,
+                23.976,
+                10,
+                "yuv420p10le",
+                "bt2020",
+                "smpte2084",
+                "bt2020nc",
+                true,
+                25000
             ),
         ];
 
         AudioStreamInfo[] audioStreams =
         [
             new(
-                Index: 1,
-                Codec: "truehd",
-                Channels: 8,
-                SampleRate: 48000,
-                BitRateKbps: 3000,
-                Language: "eng",
-                IsDefault: true,
-                IsForced: false
+                1,
+                "truehd",
+                8,
+                48000,
+                3000,
+                "eng",
+                true,
+                false
             ),
         ];
 
         SubtitleStreamInfo[] subtitles =
         [
             new(
-                Index: 2,
-                Codec: "hdmv_pgs_subtitle",
-                Language: "eng",
-                IsDefault: true,
-                IsForced: false
+                2,
+                "hdmv_pgs_subtitle",
+                "eng",
+                true,
+                false
             ),
         ];
 
         DiscTitle title = new(
-            Index: 0,
-            Name: "The Matrix",
-            Duration: TimeSpan.FromMinutes(minutes: 136),
-            VideoStreams: videoStreams,
-            AudioStreams: audioStreams,
-            Subtitles: subtitles,
-            Chapters: chapters,
-            EstimatedSizeBytes: 45_000_000_000L,
-            IsMainFeature: true
+            0,
+            "The Matrix",
+            TimeSpan.FromMinutes(136),
+            videoStreams,
+            audioStreams,
+            subtitles,
+            chapters,
+            45_000_000_000L,
+            true
         );
 
         DiscInfo disc = new(
-            Type: OpticalDiscType.BluRay,
-            DiscLabel: "THE_MATRIX",
-            Titles: [title],
-            AudioTracks: null,
-            TotalDuration: TimeSpan.FromMinutes(minutes: 136)
+            OpticalDiscType.BluRay,
+            "THE_MATRIX",
+            [title],
+            null,
+            TimeSpan.FromMinutes(136)
         );
 
-        disc.Type.Should().Be(expected: OpticalDiscType.BluRay);
-        disc.DiscLabel.Should().Be(expected: "THE_MATRIX");
-        disc.Titles.Should().HaveCount(expected: 1);
+        disc.Type.Should().Be(OpticalDiscType.BluRay);
+        disc.DiscLabel.Should().Be("THE_MATRIX");
+        disc.Titles.Should().HaveCount(1);
         disc.Titles[0].IsMainFeature.Should().BeTrue();
-        disc.Titles[0].Chapters.Should().HaveCount(expected: 2);
-        disc.Titles[0].VideoStreams.Should().HaveCount(expected: 1);
-        disc.Titles[0].AudioStreams.Should().HaveCount(expected: 1);
-        disc.Titles[0].Subtitles.Should().HaveCount(expected: 1);
-        disc.Titles[0].EstimatedSizeBytes.Should().Be(expected: 45_000_000_000L);
-        disc.TotalDuration.Should().Be(expected: TimeSpan.FromMinutes(minutes: 136));
+        disc.Titles[0].Chapters.Should().HaveCount(2);
+        disc.Titles[0].VideoStreams.Should().HaveCount(1);
+        disc.Titles[0].AudioStreams.Should().HaveCount(1);
+        disc.Titles[0].Subtitles.Should().HaveCount(1);
+        disc.Titles[0].EstimatedSizeBytes.Should().Be(45_000_000_000L);
+        disc.TotalDuration.Should().Be(TimeSpan.FromMinutes(136));
         disc.AudioTracks.Should().BeNull();
     }
 
@@ -220,37 +220,37 @@ public class DiscRippingModelTests
         DiscTrack[] tracks =
         [
             new(
-                Index: 0,
-                Title: "Breathe",
-                Artist: "Pink Floyd",
-                Duration: TimeSpan.FromSeconds(seconds: 169),
-                SampleRate: 44100,
-                Channels: 2
+                0,
+                "Breathe",
+                "Pink Floyd",
+                TimeSpan.FromSeconds(169),
+                44100,
+                2
             ),
             new(
-                Index: 1,
-                Title: "On the Run",
-                Artist: "Pink Floyd",
-                Duration: TimeSpan.FromSeconds(seconds: 233),
-                SampleRate: 44100,
-                Channels: 2
+                1,
+                "On the Run",
+                "Pink Floyd",
+                TimeSpan.FromSeconds(233),
+                44100,
+                2
             ),
         ];
 
         DiscInfo disc = new(
-            Type: OpticalDiscType.Cd,
-            DiscLabel: "DARK_SIDE_OF_THE_MOON",
-            Titles: [],
-            AudioTracks: tracks,
-            TotalDuration: TimeSpan.FromMinutes(minutes: 43)
+            OpticalDiscType.Cd,
+            "DARK_SIDE_OF_THE_MOON",
+            [],
+            tracks,
+            TimeSpan.FromMinutes(43)
         );
 
-        disc.Type.Should().Be(expected: OpticalDiscType.Cd);
-        disc.AudioTracks.Should().HaveCount(expected: 2);
-        disc.AudioTracks![0].Title.Should().Be(expected: "Breathe");
-        disc.AudioTracks![0].Artist.Should().Be(expected: "Pink Floyd");
-        disc.AudioTracks![0].SampleRate.Should().Be(expected: 44100);
-        disc.AudioTracks![0].Channels.Should().Be(expected: 2);
+        disc.Type.Should().Be(OpticalDiscType.Cd);
+        disc.AudioTracks.Should().HaveCount(2);
+        disc.AudioTracks![0].Title.Should().Be("Breathe");
+        disc.AudioTracks![0].Artist.Should().Be("Pink Floyd");
+        disc.AudioTracks![0].SampleRate.Should().Be(44100);
+        disc.AudioTracks![0].Channels.Should().Be(2);
         disc.Titles.Should().BeEmpty();
     }
 
@@ -262,35 +262,35 @@ public class DiscRippingModelTests
     public void DiscTitle_LongestTitle_CanBeIdentifiedAsMainFeature()
     {
         DiscTitle shortTitle = new(
-            Index: 0,
-            Name: "Trailer",
-            Duration: TimeSpan.FromMinutes(minutes: 2),
-            VideoStreams: [],
-            AudioStreams: [],
-            Subtitles: [],
-            Chapters: [],
-            EstimatedSizeBytes: 200_000_000L,
-            IsMainFeature: false
+            0,
+            "Trailer",
+            TimeSpan.FromMinutes(2),
+            [],
+            [],
+            [],
+            [],
+            200_000_000L,
+            false
         );
 
         DiscTitle mainFeature = new(
-            Index: 1,
-            Name: "Main Feature",
-            Duration: TimeSpan.FromMinutes(minutes: 120),
-            VideoStreams: [],
-            AudioStreams: [],
-            Subtitles: [],
-            Chapters: [],
-            EstimatedSizeBytes: 30_000_000_000L,
-            IsMainFeature: true
+            1,
+            "Main Feature",
+            TimeSpan.FromMinutes(120),
+            [],
+            [],
+            [],
+            [],
+            30_000_000_000L,
+            true
         );
 
         DiscTitle[] titles = [shortTitle, mainFeature];
 
-        DiscTitle longest = titles.MaxBy(keySelector: t => t.Duration)!;
+        DiscTitle longest = titles.MaxBy(t => t.Duration)!;
 
         longest.IsMainFeature.Should().BeTrue();
-        longest.Duration.Should().Be(expected: TimeSpan.FromMinutes(minutes: 120));
+        longest.Duration.Should().Be(TimeSpan.FromMinutes(120));
     }
 
     // ---------------------------------------------------------------------------
@@ -301,40 +301,40 @@ public class DiscRippingModelTests
     public void DiscCandidate_ConfidenceRange_IsValid()
     {
         DiscCandidate candidate = new(
-            Source: "tmdb",
-            StableId: "603",
-            Title: "The Matrix",
-            Year: 1999,
-            PosterUrl: "https://image.tmdb.org/t/p/w500/abc.jpg",
-            BackdropUrl: null,
-            Confidence: 0.95,
-            Type: MediaType.Movie
+            "tmdb",
+            "603",
+            "The Matrix",
+            1999,
+            "https://image.tmdb.org/t/p/w500/abc.jpg",
+            null,
+            0.95,
+            MediaType.Movie
         );
 
-        candidate.Confidence.Should().BeGreaterThanOrEqualTo(expected: 0.0);
-        candidate.Confidence.Should().BeLessThanOrEqualTo(expected: 1.0);
-        candidate.Source.Should().Be(expected: "tmdb");
-        candidate.Title.Should().Be(expected: "The Matrix");
-        candidate.Year.Should().Be(expected: 1999);
-        candidate.StableId.Should().Be(expected: "603");
-        candidate.Type.Should().Be(expected: MediaType.Movie);
+        candidate.Confidence.Should().BeGreaterThanOrEqualTo(0.0);
+        candidate.Confidence.Should().BeLessThanOrEqualTo(1.0);
+        candidate.Source.Should().Be("tmdb");
+        candidate.Title.Should().Be("The Matrix");
+        candidate.Year.Should().Be(1999);
+        candidate.StableId.Should().Be("603");
+        candidate.Type.Should().Be(MediaType.Movie);
     }
 
     [Fact]
     public void DiscCandidate_TvShow_TypeCorrect()
     {
         DiscCandidate candidate = new(
-            Source: "tvdb",
-            StableId: "81189",
-            Title: "Breaking Bad",
-            Year: 2008,
-            PosterUrl: null,
-            BackdropUrl: null,
-            Confidence: 0.88,
-            Type: MediaType.TvShow
+            "tvdb",
+            "81189",
+            "Breaking Bad",
+            2008,
+            null,
+            null,
+            0.88,
+            MediaType.TvShow
         );
 
-        candidate.Type.Should().Be(expected: MediaType.TvShow);
+        candidate.Type.Should().Be(MediaType.TvShow);
         candidate.PosterUrl.Should().BeNull();
     }
 
@@ -342,18 +342,18 @@ public class DiscRippingModelTests
     public void DiscCandidate_Music_TypeCorrect()
     {
         DiscCandidate candidate = new(
-            Source: "musicbrainz",
-            StableId: "a14a5a9f-3c8b-4f5d-bc3e-bb9f4e1e2a8c",
-            Title: "The Dark Side of the Moon",
-            Year: 1973,
-            PosterUrl: null,
-            BackdropUrl: null,
-            Confidence: 0.72,
-            Type: MediaType.Music
+            "musicbrainz",
+            "a14a5a9f-3c8b-4f5d-bc3e-bb9f4e1e2a8c",
+            "The Dark Side of the Moon",
+            1973,
+            null,
+            null,
+            0.72,
+            MediaType.Music
         );
 
-        candidate.Type.Should().Be(expected: MediaType.Music);
-        candidate.Confidence.Should().BeGreaterThanOrEqualTo(expected: 0.0).And.BeLessThanOrEqualTo(expected: 1.0);
+        candidate.Type.Should().Be(MediaType.Music);
+        candidate.Confidence.Should().BeGreaterThanOrEqualTo(0.0).And.BeLessThanOrEqualTo(1.0);
     }
 
     // ---------------------------------------------------------------------------
@@ -365,71 +365,71 @@ public class DiscRippingModelTests
     {
         AudioTrackSelection[] audioTracks =
         [
-            new(StreamIndex: 0, Include: true),
-            new(StreamIndex: 1, Include: false),
+            new(0, true),
+            new(1, false),
         ];
 
         SubtitleSelection[] subtitles =
         [
-            new(StreamIndex: 2, Include: true, Policy: SubtitlePolicy.Extract),
+            new(2, true, SubtitlePolicy.Extract),
         ];
 
-        Ulid libraryId = Ulid.Parse(base32: "01HMZXX9P3VK7BKFMTQ2AHKGWY");
-        Ulid folderId = Ulid.Parse(base32: "01HMZXX9P3VK7BKFMTQ2AHKGWZ");
+        Ulid libraryId = Ulid.Parse("01HMZXX9P3VK7BKFMTQ2AHKGWY");
+        Ulid folderId = Ulid.Parse("01HMZXX9P3VK7BKFMTQ2AHKGWZ");
 
         RipRequest request = new(
-            DrivePath: "/dev/sr0",
-            SelectedTitleIndices: [0, 1],
-            MetadataId: "tmdb:603",
-            Custom: null,
-            LibraryId: libraryId,
-            FolderId: folderId,
-            EncodingProfileId: "hd-streaming",
-            AudioTracks: audioTracks,
-            Subtitles: subtitles
+            "/dev/sr0",
+            [0, 1],
+            "tmdb:603",
+            null,
+            libraryId,
+            folderId,
+            "hd-streaming",
+            audioTracks,
+            subtitles
         );
 
-        request.DrivePath.Should().Be(expected: "/dev/sr0");
-        request.SelectedTitleIndices.Should().Equal(elements: [0, 1]);
-        request.MetadataId.Should().Be(expected: "tmdb:603");
+        request.DrivePath.Should().Be("/dev/sr0");
+        request.SelectedTitleIndices.Should().Equal([0, 1]);
+        request.MetadataId.Should().Be("tmdb:603");
         request.Custom.Should().BeNull();
-        request.LibraryId.Should().Be(expected: libraryId);
-        request.FolderId.Should().Be(expected: folderId);
-        request.EncodingProfileId.Should().Be(expected: "hd-streaming");
-        request.AudioTracks.Should().HaveCount(expected: 2);
-        request.Subtitles.Should().HaveCount(expected: 1);
+        request.LibraryId.Should().Be(libraryId);
+        request.FolderId.Should().Be(folderId);
+        request.EncodingProfileId.Should().Be("hd-streaming");
+        request.AudioTracks.Should().HaveCount(2);
+        request.Subtitles.Should().HaveCount(1);
         request.AudioTracks[0].Include.Should().BeTrue();
         request.AudioTracks[1].Include.Should().BeFalse();
-        request.Subtitles[0].Policy.Should().Be(expected: SubtitlePolicy.Extract);
+        request.Subtitles[0].Policy.Should().Be(SubtitlePolicy.Extract);
     }
 
     [Fact]
     public void RipRequest_WithCustomMetadataFallback_ConstructsCorrectly()
     {
         CustomMetadata custom = new(
-            Title: "My Home Movie",
-            Year: 2024,
-            Type: MediaType.Movie,
-            PosterUrl: null
+            "My Home Movie",
+            2024,
+            MediaType.Movie,
+            null
         );
 
         RipRequest request = new(
-            DrivePath: "E:\\",
-            SelectedTitleIndices: [0],
-            MetadataId: null,
-            Custom: custom,
-            LibraryId: Ulid.Parse(base32: "01HMZXX9P3VK7BKFMTQ2AHKGWY"),
-            FolderId: Ulid.Parse(base32: "01HMZXX9P3VK7BKFMTQ2AHKGWZ"),
-            EncodingProfileId: null,
-            AudioTracks: [],
-            Subtitles: []
+            "E:\\",
+            [0],
+            null,
+            custom,
+            Ulid.Parse("01HMZXX9P3VK7BKFMTQ2AHKGWY"),
+            Ulid.Parse("01HMZXX9P3VK7BKFMTQ2AHKGWZ"),
+            null,
+            [],
+            []
         );
 
         request.MetadataId.Should().BeNull();
         request.Custom.Should().NotBeNull();
-        request.Custom!.Title.Should().Be(expected: "My Home Movie");
-        request.Custom.Year.Should().Be(expected: 2024);
-        request.Custom.Type.Should().Be(expected: MediaType.Movie);
+        request.Custom!.Title.Should().Be("My Home Movie");
+        request.Custom.Year.Should().Be(2024);
+        request.Custom.Type.Should().Be(MediaType.Movie);
         request.Custom.PosterUrl.Should().BeNull();
         request.EncodingProfileId.Should().BeNull();
     }
@@ -441,12 +441,12 @@ public class DiscRippingModelTests
     [Fact]
     public void AudioTrackSelection_ConstructsCorrectly()
     {
-        AudioTrackSelection included = new(StreamIndex: 0, Include: true);
-        AudioTrackSelection excluded = new(StreamIndex: 1, Include: false);
+        AudioTrackSelection included = new(0, true);
+        AudioTrackSelection excluded = new(1, false);
 
-        included.StreamIndex.Should().Be(expected: 0);
+        included.StreamIndex.Should().Be(0);
         included.Include.Should().BeTrue();
-        excluded.StreamIndex.Should().Be(expected: 1);
+        excluded.StreamIndex.Should().Be(1);
         excluded.Include.Should().BeFalse();
     }
 
@@ -454,24 +454,24 @@ public class DiscRippingModelTests
     public void SubtitleSelection_ConstructsCorrectly_AllModes()
     {
         SubtitleSelection extract = new(
-            StreamIndex: 0,
-            Include: true,
-            Policy: SubtitlePolicy.Extract
+            0,
+            true,
+            SubtitlePolicy.Extract
         );
         SubtitleSelection burnIn = new(
-            StreamIndex: 1,
-            Include: true,
-            Policy: SubtitlePolicy.BurnIn
+            1,
+            true,
+            SubtitlePolicy.BurnIn
         );
         SubtitleSelection passThrough = new(
-            StreamIndex: 2,
-            Include: false,
-            Policy: SubtitlePolicy.Copy
+            2,
+            false,
+            SubtitlePolicy.Copy
         );
 
-        extract.Policy.Should().Be(expected: SubtitlePolicy.Extract);
-        burnIn.Policy.Should().Be(expected: SubtitlePolicy.BurnIn);
-        passThrough.Policy.Should().Be(expected: SubtitlePolicy.Copy);
+        extract.Policy.Should().Be(SubtitlePolicy.Extract);
+        burnIn.Policy.Should().Be(SubtitlePolicy.BurnIn);
+        passThrough.Policy.Should().Be(SubtitlePolicy.Copy);
         passThrough.Include.Should().BeFalse();
     }
 }

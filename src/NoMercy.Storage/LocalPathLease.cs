@@ -26,7 +26,7 @@ public sealed class LocalPathLease : IDisposable, IAsyncDisposable
 
     public LocalPathLease(string path, Func<ValueTask>? onDispose = null)
     {
-        Path = path ?? throw new ArgumentNullException(paramName: nameof(path));
+        Path = path ?? throw new ArgumentNullException(nameof(path));
         _onDispose = onDispose;
     }
 

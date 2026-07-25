@@ -43,7 +43,7 @@ public class RipperHub : ConnectionHub
         IDriveMonitor driveMonitor,
         DiscSourceFactory discSourceFactory
     )
-        : base(httpContextAccessor: httpContextAccessor, contextFactory: contextFactory, connectedClients: connectedClients, activityLogger: activityLogger)
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _logger = logger;
         _driveMonitor = driveMonitor;
@@ -52,18 +52,18 @@ public class RipperHub : ConnectionHub
 
     public override async Task OnConnectedAsync()
     {
-        User user = UserCacheService.GetUser(userId: Context.User.UserId())!;
+        User user = UserCacheService.GetUser(Context.User.UserId())!;
 
-        CurrentDevices.TryAdd(key: Context.ConnectionId, value: user.Id);
+        CurrentDevices.TryAdd(Context.ConnectionId, user.Id);
 
         await base.OnConnectedAsync();
-        _logger.LogDebug(message: "Ripper client connected");
+        _logger.LogDebug("Ripper client connected");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await base.OnDisconnectedAsync(exception: exception);
-        _logger.LogDebug(message: "Ripper client disconnected");
+        await base.OnDisconnectedAsync(exception);
+        _logger.LogDebug("Ripper client disconnected");
     }
 
     /// <summary>
@@ -75,17 +75,17 @@ public class RipperHub : ConnectionHub
     /// </summary>
     public async Task<object?> GetDriveState(string drivePath)
     {
-        if (!AuthPolicy.IsModerator(principal: Context.User))
+        if (!AuthPolicy.IsModerator(Context.User))
             return null;
 
-        if (string.IsNullOrWhiteSpace(value: drivePath))
+        if (string.IsNullOrWhiteSpace(drivePath))
             return null;
 
         DiscDrive? drive = _driveMonitor
             .GetDrives()
-            .FirstOrDefault(predicate: d =>
-                d.Path.TrimEnd(trimChars: ['\\', '/'])
-                    .Equals(value: drivePath.TrimEnd(trimChars: ['\\', '/']), comparisonType: StringComparison.OrdinalIgnoreCase)
+            .FirstOrDefault(d =>
+                d.Path.TrimEnd(['\\', '/'])
+                    .Equals(drivePath.TrimEnd(['\\', '/']), StringComparison.OrdinalIgnoreCase)
             );
 
         if (drive is null)
@@ -95,7 +95,7 @@ public class RipperHub : ConnectionHub
         {
             return new
             {
-                path = drive.Path.TrimEnd(trimChars: ['\\', '/']),
+                path = drive.Path.TrimEnd(['\\', '/']),
                 label = drive.Label.OrEmpty(),
                 open = true,
                 has_disc = false,
@@ -103,12 +103,12 @@ public class RipperHub : ConnectionHub
             };
         }
 
-        IDiscSource? source = _discSourceFactory.CreateFor(type: drive.DiscType);
+        IDiscSource? source = _discSourceFactory.CreateFor(drive.DiscType);
         if (source is null)
         {
             return new
             {
-                path = drive.Path.TrimEnd(trimChars: ['\\', '/']),
+                path = drive.Path.TrimEnd(['\\', '/']),
                 label = drive.Label.OrEmpty(),
                 open = false,
                 has_disc = true,
@@ -118,10 +118,10 @@ public class RipperHub : ConnectionHub
 
         try
         {
-            DiscInfo info = await source.ProbeAsync(drive: drive, ct: CancellationToken.None);
+            DiscInfo info = await source.ProbeAsync(drive, CancellationToken.None);
             return new
             {
-                path = drive.Path.TrimEnd(trimChars: ['\\', '/']),
+                path = drive.Path.TrimEnd(['\\', '/']),
                 label = (info.DiscTitle ?? info.DiscLabel ?? drive.Label).OrEmpty(),
                 open = false,
                 has_disc = true,
@@ -133,7 +133,7 @@ public class RipperHub : ConnectionHub
         {
             return new
             {
-                path = drive.Path.TrimEnd(trimChars: ['\\', '/']),
+                path = drive.Path.TrimEnd(['\\', '/']),
                 label = drive.Label.OrEmpty(),
                 open = false,
                 has_disc = true,

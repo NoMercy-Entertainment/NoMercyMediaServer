@@ -25,11 +25,11 @@ public class PersonPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         return await db
-            .People.Where(predicate: p => p.Id == id)
-            .Select(selector: p => p._colorPalette)
-            .FirstOrDefaultAsync(cancellationToken: ct);
+            .People.Where(p => p.Id == id)
+            .Select(p => p._colorPalette)
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -38,17 +38,17 @@ public class PersonPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
-        Person? person = await db.People.FirstOrDefaultAsync(predicate: p => p.Id == id, cancellationToken: ct);
+        int id = int.Parse(entityId);
+        Person? person = await db.People.FirstOrDefaultAsync(p => p.Id == id, ct);
         if (person is null)
             return PaletteResult.NoImage();
         if (person.Profile is null)
             return PaletteResult.NoImage();
 
-        string json = await MovieDbImageManager.ColorPalette(type: "profile", path: person.Profile);
-        return string.IsNullOrWhiteSpace(value: json)
+        string json = await MovieDbImageManager.ColorPalette("profile", person.Profile);
+        return string.IsNullOrWhiteSpace(json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json: json);
+            : PaletteResult.Success(json);
     }
 
     public async Task PersistAsync(
@@ -58,9 +58,9 @@ public class PersonPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(s: entityId);
+        int id = int.Parse(entityId);
         await db
-            .People.Where(predicate: p => p.Id == id)
-            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: p => p._colorPalette, valueExpression: json), cancellationToken: ct);
+            .People.Where(p => p.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p._colorPalette, json), ct);
     }
 }

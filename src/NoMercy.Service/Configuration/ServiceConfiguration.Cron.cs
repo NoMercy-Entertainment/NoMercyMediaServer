@@ -20,11 +20,11 @@ public static partial class ServiceConfiguration
 {
     private static void ConfigureCronJobs(IServiceCollection services)
     {
-        services.AddCronJob<CertificateRenewalCronJob>(jobType: "certificate-renewal");
-        services.AddCronJob<ActivityLogRetentionCronJob>(jobType: "activity-log-retention");
-        services.AddCronJob<TmdbChangesCronJob>(jobType: "tmdb-changes-sync");
-        services.AddCronJob<DeviceDropRuleCronJob>(jobType: "device-drop-rule-job");
-        services.AddCronJob<ServerUserSyncCronJob>(jobType: "server-user-sync");
-        services.AddCronJob<DatabaseBackupCronJob>(jobType: "database-backup");
+        services.AddCronJob<CertificateRenewalCronJob>("certificate-renewal");
+        services.AddCronJob<ActivityLogRetentionCronJob>("activity-log-retention");
+        services.AddCronJob<TmdbChangesCronJob>("tmdb-changes-sync");
+        services.AddCronJob<DeviceDropRuleCronJob>("device-drop-rule-job");
+        services.AddCronJob<ServerUserSyncCronJob>("server-user-sync");
+        services.AddCronJob<DatabaseBackupCronJob>("database-backup");
     }
 }

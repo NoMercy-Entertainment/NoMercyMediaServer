@@ -27,12 +27,12 @@ public class EncodingPresetsSeedTests
     {
         EncodingProfile[] presets = BuiltinPresets.All();
 
-        Assert.NotEmpty(collection: presets);
+        Assert.NotEmpty(presets);
         foreach (EncodingProfile preset in presets)
         {
-            Assert.NotEqual(expected: default, actual: preset.Id);
-            Assert.True(condition: preset.IsBuiltin, userMessage: $"{preset.Name} must be marked IsBuiltin");
-            Assert.False(condition: string.IsNullOrWhiteSpace(value: preset.Name));
+            Assert.NotEqual(default, preset.Id);
+            Assert.True(preset.IsBuiltin, $"{preset.Name} must be marked IsBuiltin");
+            Assert.False(string.IsNullOrWhiteSpace(preset.Name));
         }
     }
 
@@ -40,16 +40,16 @@ public class EncodingPresetsSeedTests
     public void AllBuiltInPresets_HaveUniqueIds()
     {
         EncodingProfile[] presets = BuiltinPresets.All();
-        Ulid[] ids = presets.Select(selector: p => p.Id).ToArray();
-        Assert.Equal(expected: ids.Length, actual: ids.Distinct().Count());
+        Ulid[] ids = presets.Select(p => p.Id).ToArray();
+        Assert.Equal(ids.Length, ids.Distinct().Count());
     }
 
     [Fact]
     public void AllBuiltInPresets_HaveUniqueNames()
     {
         EncodingProfile[] presets = BuiltinPresets.All();
-        string[] names = presets.Select(selector: p => p.Name).ToArray();
-        Assert.Equal(expected: names.Length, actual: names.Distinct().Count());
+        string[] names = presets.Select(p => p.Name).ToArray();
+        Assert.Equal(names.Length, names.Distinct().Count());
     }
 
     [Fact]
@@ -58,11 +58,11 @@ public class EncodingPresetsSeedTests
         EncodingProfile[] a = BuiltinPresets.All();
         EncodingProfile[] b = BuiltinPresets.All();
 
-        Assert.Equal(expected: a.Length, actual: b.Length);
+        Assert.Equal(a.Length, b.Length);
         for (int i = 0; i < a.Length; i++)
         {
-            Assert.Equal(expected: a[i].Id, actual: b[i].Id);
-            Assert.Equal(expected: a[i].Name, actual: b[i].Name);
+            Assert.Equal(a[i].Id, b[i].Id);
+            Assert.Equal(a[i].Name, b[i].Name);
         }
     }
 
@@ -73,10 +73,10 @@ public class EncodingPresetsSeedTests
 
         foreach (EncodingProfile preset in presets)
         {
-            ProfileValidationResult result = ProfileValidator.Validate(profile: preset);
+            ProfileValidationResult result = ProfileValidator.Validate(preset);
             Assert.True(
-                condition: result.IsValid,
-                userMessage: $"{preset.Name} failed validation: " + string.Join(separator: ", ", values: result.Errors)
+                result.IsValid,
+                $"{preset.Name} failed validation: " + string.Join(", ", result.Errors)
             );
         }
     }
@@ -91,12 +91,12 @@ public class EncodingPresetsSeedTests
     public void AnimePreset_CarriesAnimationTune()
     {
         EncodingProfile[] presets = BuiltinPresets.All();
-        EncodingProfile anime = presets.First(predicate: p => p.Name == "Anime 1080p HEVC 10-bit");
+        EncodingProfile anime = presets.First(p => p.Name == "Anime 1080p HEVC 10-bit");
 
-        Assert.NotNull(@object: anime.Video);
-        Assert.Equal(expected: "animation", actual: anime.Video!.Tune);
-        Assert.Equal(expected: VideoCodecType.H265, actual: anime.Video.Codec);
-        Assert.Equal(expected: 10, actual: anime.Video.BitDepth);
+        Assert.NotNull(anime.Video);
+        Assert.Equal("animation", anime.Video!.Tune);
+        Assert.Equal(VideoCodecType.H265, anime.Video.Codec);
+        Assert.Equal(10, anime.Video.BitDepth);
     }
 
     /// <summary>
@@ -110,19 +110,19 @@ public class EncodingPresetsSeedTests
         EncodingProfile[] presets = BuiltinPresets.All();
 
         foreach (
-            EncodingProfile preset in presets.Where(predicate: p =>
+            EncodingProfile preset in presets.Where(p =>
                 p.HdrPolicies == HdrPolicies.AlwaysPreserve
             )
         )
         {
-            Assert.NotNull(@object: preset.Video);
+            Assert.NotNull(preset.Video);
             Assert.True(
-                condition: preset.Video!.BitDepth >= 10,
-                userMessage: $"{preset.Name} preserves HDR but is {preset.Video.BitDepth}-bit"
+                preset.Video!.BitDepth >= 10,
+                $"{preset.Name} preserves HDR but is {preset.Video.BitDepth}-bit"
             );
             Assert.Contains(
-                expected: preset.Video.Codec,
-                collection: new[] { VideoCodecType.H265, VideoCodecType.Av1, VideoCodecType.Vp9 }
+                preset.Video.Codec,
+                new[] { VideoCodecType.H265, VideoCodecType.Av1, VideoCodecType.Vp9 }
             );
         }
     }
@@ -131,41 +131,41 @@ public class EncodingPresetsSeedTests
     public void MusicFlacPreset_IsAudioOnlyInFlac()
     {
         EncodingProfile[] presets = BuiltinPresets.All();
-        EncodingProfile music = presets.First(predicate: p => p.Name == "Music FLAC Lossless");
+        EncodingProfile music = presets.First(p => p.Name == "Music FLAC Lossless");
 
-        Assert.Null(@object: music.Video);
-        Assert.Empty(collection: music.Subtitles);
-        Assert.Single(collection: music.Audio);
-        Assert.Equal(expected: Container.Flac, actual: music.Container);
-        Assert.Equal(expected: AudioCodecType.Flac, actual: music.Audio[0].Codec);
+        Assert.Null(music.Video);
+        Assert.Empty(music.Subtitles);
+        Assert.Single(music.Audio);
+        Assert.Equal(Container.Flac, music.Container);
+        Assert.Equal(AudioCodecType.Flac, music.Audio[0].Codec);
     }
 
     [Fact]
     public void MusicMp3Preset_IsAudioOnlyInMp3()
     {
         EncodingProfile[] presets = BuiltinPresets.All();
-        EncodingProfile music = presets.First(predicate: p => p.Name == "Music MP3 320k");
+        EncodingProfile music = presets.First(p => p.Name == "Music MP3 320k");
 
-        Assert.Null(@object: music.Video);
-        Assert.Empty(collection: music.Subtitles);
-        Assert.Single(collection: music.Audio);
-        Assert.Equal(expected: Container.Mp3, actual: music.Container);
-        Assert.Equal(expected: AudioCodecType.Mp3, actual: music.Audio[0].Codec);
-        Assert.Equal(expected: 320, actual: music.Audio[0].BitrateKbps);
+        Assert.Null(music.Video);
+        Assert.Empty(music.Subtitles);
+        Assert.Single(music.Audio);
+        Assert.Equal(Container.Mp3, music.Container);
+        Assert.Equal(AudioCodecType.Mp3, music.Audio[0].Codec);
+        Assert.Equal(320, music.Audio[0].BitrateKbps);
     }
 
     [Fact]
     public void MusicAacPreset_IsAudioOnlyInAac()
     {
         EncodingProfile[] presets = BuiltinPresets.All();
-        EncodingProfile music = presets.First(predicate: p => p.Name == "Music AAC 256k");
+        EncodingProfile music = presets.First(p => p.Name == "Music AAC 256k");
 
-        Assert.Null(@object: music.Video);
-        Assert.Empty(collection: music.Subtitles);
-        Assert.Single(collection: music.Audio);
-        Assert.Equal(expected: Container.Aac, actual: music.Container);
-        Assert.Equal(expected: AudioCodecType.Aac, actual: music.Audio[0].Codec);
-        Assert.Equal(expected: 256, actual: music.Audio[0].BitrateKbps);
+        Assert.Null(music.Video);
+        Assert.Empty(music.Subtitles);
+        Assert.Single(music.Audio);
+        Assert.Equal(Container.Aac, music.Container);
+        Assert.Equal(AudioCodecType.Aac, music.Audio[0].Codec);
+        Assert.Equal(256, music.Audio[0].BitrateKbps);
     }
 
     /// <summary>
@@ -177,9 +177,9 @@ public class EncodingPresetsSeedTests
     public void ArchivePreset_CopiesAudioIntoMkv()
     {
         EncodingProfile[] presets = BuiltinPresets.All();
-        EncodingProfile archival = presets.First(predicate: p => p.Name == "HEVC Archive (Visually Lossless)");
+        EncodingProfile archival = presets.First(p => p.Name == "HEVC Archive (Visually Lossless)");
 
-        Assert.Equal(expected: Container.Mkv, actual: archival.Container);
-        Assert.All(collection: archival.Audio, action: a => Assert.Equal(expected: StreamPolicy.Copy, actual: a.Policy));
+        Assert.Equal(Container.Mkv, archival.Container);
+        Assert.All(archival.Audio, a => Assert.Equal(StreamPolicy.Copy, a.Policy));
     }
 }

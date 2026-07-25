@@ -59,7 +59,7 @@ public class AudioHlsOutputStrategyTests
     private static OutputOptions GetSingleOutput(FfmpegCommandBuilder builder)
     {
         // Build to introspect the registered outputs.
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
         cmd.Arguments.Should().NotBeNull();
         // The builder collects outputs; introspect via reflection-free path:
         // re-add a hook by re-running ConfigureOutput on a fresh builder.
@@ -74,24 +74,24 @@ public class AudioHlsOutputStrategyTests
     public void Format_ReturnsAudioHls()
     {
         AudioHlsOutputStrategy strategy = new();
-        strategy.Format.Should().Be(expected: OutputFormat.AudioHls);
+        strategy.Format.Should().Be(OutputFormat.AudioHls);
     }
 
     [Fact]
     public void GetOutputSubdirectories_Empty()
     {
         AudioHlsOutputStrategy strategy = new();
-        OutputPlan plan = PlanWith(audio: TranscodeAudio());
-        strategy.GetOutputSubdirectories(plan: plan).Should().BeEmpty();
+        OutputPlan plan = PlanWith(TranscodeAudio());
+        strategy.GetOutputSubdirectories(plan).Should().BeEmpty();
     }
 
     [Fact]
     public async Task FinalizeAsync_NoOp_CompletesImmediately()
     {
         AudioHlsOutputStrategy strategy = new();
-        OutputPlan plan = PlanWith(audio: TranscodeAudio());
+        OutputPlan plan = PlanWith(TranscodeAudio());
 
-        await strategy.FinalizeAsync(outputDirectory: "/out", plan: plan, mediaTitle: "Title", ct: CancellationToken.None);
+        await strategy.FinalizeAsync("/out", plan, "Title", CancellationToken.None);
         // Just verifying it doesn't throw.
     }
 
@@ -102,21 +102,21 @@ public class AudioHlsOutputStrategyTests
     {
         AudioHlsOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        OutputPlan plan = PlanWith(audio: TranscodeAudio(bitrateKbps: 192));
+        OutputPlan plan = PlanWith(TranscodeAudio(bitrateKbps: 192));
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/out");
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
+        strategy.ConfigureOutput(builder, plan, "/out");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
 
-        args.Should().Contain(expected: "-f hls");
-        args.Should().Contain(expected: "-hls_time 6");
-        args.Should().Contain(expected: "-hls_playlist_type vod");
-        args.Should().Contain(expected: "independent_segments");
-        args.Should().Contain(expected: "audio_%03d.aac");
-        args.Should().Contain(expected: "audio.m3u8");
-        args.Should().Contain(expected: "aac"); // codec
-        args.Should().Contain(expected: "-b:a 192k");
-        args.Should().Contain(expected: "-profile:a aac_low");
+        args.Should().Contain("-f hls");
+        args.Should().Contain("-hls_time 6");
+        args.Should().Contain("-hls_playlist_type vod");
+        args.Should().Contain("independent_segments");
+        args.Should().Contain("audio_%03d.aac");
+        args.Should().Contain("audio.m3u8");
+        args.Should().Contain("aac"); // codec
+        args.Should().Contain("-b:a 192k");
+        args.Should().Contain("-profile:a aac_low");
     }
 
     [Fact]
@@ -126,13 +126,13 @@ public class AudioHlsOutputStrategyTests
         // start. A valid MP3 audio-HLS profile must not carry it.
         AudioHlsOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        OutputPlan plan = PlanWith(audio: TranscodeAudio(encoderName: "libmp3lame"));
+        OutputPlan plan = PlanWith(TranscodeAudio(encoderName: "libmp3lame"));
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/out");
-        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
+        strategy.ConfigureOutput(builder, plan, "/out");
+        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
 
-        args.Should().Contain(expected: "libmp3lame");
-        args.Should().NotContain(unexpected: "-profile:a");
+        args.Should().Contain("libmp3lame");
+        args.Should().NotContain("-profile:a");
     }
 
     [Fact]
@@ -140,13 +140,13 @@ public class AudioHlsOutputStrategyTests
     {
         AudioHlsOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        OutputPlan plan = PlanWith(audio: TranscodeAudio(encoderName: "eac3"));
+        OutputPlan plan = PlanWith(TranscodeAudio(encoderName: "eac3"));
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/out");
-        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
+        strategy.ConfigureOutput(builder, plan, "/out");
+        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
 
-        args.Should().Contain(expected: "eac3");
-        args.Should().NotContain(unexpected: "-profile:a");
+        args.Should().Contain("eac3");
+        args.Should().NotContain("-profile:a");
     }
 
     [Fact]
@@ -163,14 +163,14 @@ public class AudioHlsOutputStrategyTests
             Language: "eng",
             MapLabel: "[a0]"
         );
-        OutputPlan plan = PlanWith(audio: audio);
+        OutputPlan plan = PlanWith(audio);
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/out");
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
+        strategy.ConfigureOutput(builder, plan, "/out");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
 
-        args.Should().Contain(expected: "-c:a copy");
-        args.Should().NotContain(unexpected: "aac_low"); // No profile flag on copy
+        args.Should().Contain("-c:a copy");
+        args.Should().NotContain("aac_low"); // No profile flag on copy
     }
 
     [Fact]
@@ -178,12 +178,12 @@ public class AudioHlsOutputStrategyTests
     {
         AudioHlsOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        OutputPlan plan = PlanWith(audio: TranscodeAudio(), segmentSeconds: 10);
+        OutputPlan plan = PlanWith(TranscodeAudio(), segmentSeconds: 10);
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/out");
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        strategy.ConfigureOutput(builder, plan, "/out");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
 
-        string.Join(separator: " ", value: cmd.Arguments).Should().Contain(expected: "-hls_time 10");
+        string.Join(" ", cmd.Arguments).Should().Contain("-hls_time 10");
     }
 
     [Fact]
@@ -191,13 +191,13 @@ public class AudioHlsOutputStrategyTests
     {
         AudioHlsOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        OutputPlan plan = PlanWith(audio: TranscodeAudio(), segmentSeconds: 0);
+        OutputPlan plan = PlanWith(TranscodeAudio(), segmentSeconds: 0);
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/out");
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        strategy.ConfigureOutput(builder, plan, "/out");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
 
         // Default = 6 seconds.
-        string.Join(separator: " ", value: cmd.Arguments).Should().Contain(expected: "-hls_time 6");
+        string.Join(" ", cmd.Arguments).Should().Contain("-hls_time 6");
     }
 
     [Fact]
@@ -205,12 +205,12 @@ public class AudioHlsOutputStrategyTests
     {
         AudioHlsOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        OutputPlan plan = PlanWith(audio: TranscodeAudio(audioFilter: "loudnorm=I=-16:LRA=11"));
+        OutputPlan plan = PlanWith(TranscodeAudio(audioFilter: "loudnorm=I=-16:LRA=11"));
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/out");
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        strategy.ConfigureOutput(builder, plan, "/out");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
 
-        string.Join(separator: " ", value: cmd.Arguments).Should().Contain(expected: "loudnorm=I=-16:LRA=11");
+        string.Join(" ", cmd.Arguments).Should().Contain("loudnorm=I=-16:LRA=11");
     }
 
     [Fact]
@@ -220,13 +220,13 @@ public class AudioHlsOutputStrategyTests
         FfmpegCommandBuilder builder = new();
         OutputPlan plan = PlanWith(audio: null);
 
-        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/out");
-        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
-        string args = string.Join(separator: " ", value: cmd.Arguments);
+        strategy.ConfigureOutput(builder, plan, "/out");
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
 
-        args.Should().Contain(expected: "audio.m3u8");
+        args.Should().Contain("audio.m3u8");
         // Stereo defaults so the encoder produces something sane even from
         // an empty plan.
-        args.Should().Contain(expected: "-ac 2");
+        args.Should().Contain("-ac 2");
     }
 }

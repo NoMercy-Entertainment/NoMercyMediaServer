@@ -22,21 +22,21 @@ public class PluginConsentServiceTests
     [Fact]
     public void IsBaseline_NullOrMediaUiOnly_IsBaseline()
     {
-        PluginConsentService service = new(store: new InMemoryConsentStore());
-        Assert.True(condition: service.IsBaseline(capabilities: null));
-        Assert.True(condition: service.IsBaseline(capabilities: Caps(hooks: ["mediaSource", "ui"])));
-        Assert.True(condition: service.IsBaseline(capabilities: Caps(hooks: "metadata")));
+        PluginConsentService service = new(new InMemoryConsentStore());
+        Assert.True(service.IsBaseline(null));
+        Assert.True(service.IsBaseline(Caps(["mediaSource", "ui"])));
+        Assert.True(service.IsBaseline(Caps("metadata")));
     }
 
     [Fact]
     public void IsBaseline_AuthOrNetworkOrRest_IsElevated()
     {
-        PluginConsentService service = new(store: new InMemoryConsentStore());
-        Assert.False(condition: service.IsBaseline(capabilities: Caps(hooks: "auth")));
-        Assert.False(condition: service.IsBaseline(capabilities: new() { Hooks = ["ui"], Rest = true }));
+        PluginConsentService service = new(new InMemoryConsentStore());
+        Assert.False(service.IsBaseline(Caps("auth")));
+        Assert.False(service.IsBaseline(new() { Hooks = ["ui"], Rest = true }));
         Assert.False(
-            condition: service.IsBaseline(
-                capabilities: new()
+            service.IsBaseline(
+                new()
                 {
                     Hooks = ["ui"],
                     Network = new() { Hosts = ["x"] },
@@ -48,23 +48,23 @@ public class PluginConsentServiceTests
     [Fact]
     public void Consent_RoundTrips()
     {
-        PluginConsentService service = new(store: new InMemoryConsentStore());
+        PluginConsentService service = new(new InMemoryConsentStore());
         Guid id = Guid.NewGuid();
-        Assert.False(condition: service.HasConsent(pluginId: id));
-        service.GrantConsent(pluginId: id);
-        Assert.True(condition: service.HasConsent(pluginId: id));
+        Assert.False(service.HasConsent(id));
+        service.GrantConsent(id);
+        Assert.True(service.HasConsent(id));
     }
 
     [Fact]
     public void RevokeConsent_RemovesGrantedConsent()
     {
-        PluginConsentService service = new(store: new InMemoryConsentStore());
+        PluginConsentService service = new(new InMemoryConsentStore());
         Guid id = Guid.NewGuid();
-        service.GrantConsent(pluginId: id);
-        Assert.True(condition: service.HasConsent(pluginId: id));
+        service.GrantConsent(id);
+        Assert.True(service.HasConsent(id));
 
-        service.RevokeConsent(pluginId: id);
+        service.RevokeConsent(id);
 
-        Assert.False(condition: service.HasConsent(pluginId: id));
+        Assert.False(service.HasConsent(id));
     }
 }

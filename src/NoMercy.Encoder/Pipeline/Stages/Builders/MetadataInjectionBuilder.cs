@@ -53,14 +53,14 @@ public static class MetadataInjectionBuilder
             return command;
 
         IReadOnlyList<TrackMetadata> tracks = ResolveTracksForInjection(
-            metadataMerger: metadataMerger,
-            context: context,
-            isCopyMode: isCopyMode
+            metadataMerger,
+            context,
+            isCopyMode
         );
 
-        MetadataInjectionContext ctx = new(Media: mediaItem, Tracks: tracks, AttachmentPaths: []);
+        MetadataInjectionContext ctx = new(mediaItem, tracks, []);
 
-        IReadOnlyList<string> metaArgs = metadataInjector.BuildArgs(ctx: ctx);
+        IReadOnlyList<string> metaArgs = metadataInjector.BuildArgs(ctx);
         if (metaArgs.Count == 0)
             return command;
 
@@ -68,9 +68,9 @@ public static class MetadataInjectionBuilder
         string[] original = command.Arguments;
         string[] updated = new string[original.Length + metaArgs.Count];
         int insertAt = original.Length - 1;
-        Array.Copy(sourceArray: original, destinationArray: updated, length: insertAt);
+        Array.Copy(original, updated, insertAt);
         for (int i = 0; i < metaArgs.Count; i++)
-            updated[insertAt + i] = metaArgs[index: i];
+            updated[insertAt + i] = metaArgs[i];
         updated[^1] = original[^1];
 
         return command with
@@ -101,6 +101,6 @@ public static class MetadataInjectionBuilder
         )
             return dbTracks;
 
-        return metadataMerger.Merge(source: context.SourceTracks, dbTracks: dbTracks);
+        return metadataMerger.Merge(context.SourceTracks, dbTracks);
     }
 }

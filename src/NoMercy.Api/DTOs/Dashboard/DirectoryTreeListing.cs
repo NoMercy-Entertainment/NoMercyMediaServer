@@ -16,15 +16,15 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record DirectoryTreeListing
 {
-    [JsonProperty(propertyName: "status")]
+    [JsonProperty("status")]
     public string Status { get; set; } = "ok";
 
-    [JsonProperty(propertyName: "path", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("path", NullValueHandling = NullValueHandling.Ignore)]
     public string? Path { get; set; }
 
-    [JsonProperty(propertyName: "parent")]
+    [JsonProperty("parent")]
     public string? Parent { get; set; }
 
-    [JsonProperty(propertyName: "data")]
+    [JsonProperty("data")]
     public List<DirectoryTree> Data { get; set; } = [];
 }

@@ -34,12 +34,12 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
         IResourceBudget budget
     )
     {
-        VideoStreamInfo? primaryVideo = input.VideoStreams.Count > 0 ? input.VideoStreams[index: 0] : null;
+        VideoStreamInfo? primaryVideo = input.VideoStreams.Count > 0 ? input.VideoStreams[0] : null;
         int sourceWidth = primaryVideo?.Width ?? 1920;
         int sourceHeight = primaryVideo?.Height ?? 1080;
 
-        VideoCodecType targetCodec = ResolveTargetCodec(client: client);
-        ResolvedCodec resolved = codecResolver.Resolve(codec: targetCodec, hardware: hardware);
+        VideoCodecType targetCodec = ResolveTargetCodec(client);
+        ResolvedCodec resolved = codecResolver.Resolve(targetCodec, hardware);
 
         string? deviceName = resolved.Device?.Name;
         bool isHardwareAccelerated = resolved.Device is not null;
@@ -53,14 +53,14 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
                 continue;
 
             qualities.Add(
-                item: BuildQuality(
-                    tierWidth: tierWidth,
-                    tierHeight: tierHeight,
-                    targetCodec: targetCodec,
-                    resolved: resolved,
-                    speeds: speeds,
-                    deviceName: deviceName,
-                    isHardwareAccelerated: isHardwareAccelerated
+                BuildQuality(
+                    tierWidth,
+                    tierHeight,
+                    targetCodec,
+                    resolved,
+                    speeds,
+                    deviceName,
+                    isHardwareAccelerated
                 )
             );
         }
@@ -72,14 +72,14 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
         {
             (int fallbackWidth, int fallbackHeight) = ResolutionTiers[^1];
             qualities.Add(
-                item: BuildQuality(
-                    tierWidth: fallbackWidth,
-                    tierHeight: fallbackHeight,
-                    targetCodec: targetCodec,
-                    resolved: resolved,
-                    speeds: speeds,
-                    deviceName: deviceName,
-                    isHardwareAccelerated: isHardwareAccelerated
+                BuildQuality(
+                    fallbackWidth,
+                    fallbackHeight,
+                    targetCodec,
+                    resolved,
+                    speeds,
+                    deviceName,
+                    isHardwareAccelerated
                 )
             );
         }
@@ -97,13 +97,13 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
         bool isHardwareAccelerated
     )
     {
-        int bitrateKbps = EstimateBitrateKbps(width: tierWidth, height: tierHeight);
+        int bitrateKbps = EstimateBitrateKbps(tierWidth, tierHeight);
 
         double speedMultiplier = speeds.GetSpeedMultiplier(
-            codec: targetCodec,
-            encoder: resolved.FfmpegEncoderName,
-            width: tierWidth,
-            deviceName: deviceName
+            targetCodec,
+            resolved.FfmpegEncoderName,
+            tierWidth,
+            deviceName
         );
 
         bool canRealtime = speedMultiplier >= 1.2;
@@ -112,16 +112,16 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
         string label = $"{tierHeight}p";
 
         return new(
-            Id: qualityId,
-            Label: label,
-            Width: tierWidth,
-            Height: tierHeight,
-            Codec: targetCodec,
-            BitrateKbps: bitrateKbps,
-            Encoder: resolved.FfmpegEncoderName,
-            IsHardwareAccelerated: isHardwareAccelerated,
-            ExpectedSpeed: speedMultiplier,
-            CanRealtime: canRealtime
+            qualityId,
+            label,
+            tierWidth,
+            tierHeight,
+            targetCodec,
+            bitrateKbps,
+            resolved.FfmpegEncoderName,
+            isHardwareAccelerated,
+            speedMultiplier,
+            canRealtime
         );
     }
 
@@ -132,33 +132,33 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
         IResourceBudget budget
     )
     {
-        LiveQuality[] candidates = GetAvailableQualities(input: input, client: client, speeds: speeds, budget: budget);
+        LiveQuality[] candidates = GetAvailableQualities(input, client, speeds, budget);
 
         // Filter by client capabilities
-        IEnumerable<LiveQuality> allowed = candidates.Where(predicate: q =>
+        IEnumerable<LiveQuality> allowed = candidates.Where(q =>
             q.Width <= client.MaxWidth
             && q.Height <= client.MaxHeight
             && (
                 client.SupportedVideoCodecs.Length == 0
-                || client.SupportedVideoCodecs.Contains(value: q.Codec)
+                || client.SupportedVideoCodecs.Contains(q.Codec)
             )
         );
 
         // Pick highest CanRealtime quality
         LiveQuality? optimal = allowed
-            .Where(predicate: q => q.CanRealtime)
-            .OrderByDescending(keySelector: q => q.Width)
-            .ThenByDescending(keySelector: q => q.Height)
+            .Where(q => q.CanRealtime)
+            .OrderByDescending(q => q.Width)
+            .ThenByDescending(q => q.Height)
             .FirstOrDefault();
 
         // No CanRealtime candidates → fall back to lowest resolution
         if (optimal is null)
         {
-            optimal = allowed.OrderBy(keySelector: q => q.Width).ThenBy(keySelector: q => q.Height).FirstOrDefault();
+            optimal = allowed.OrderBy(q => q.Width).ThenBy(q => q.Height).FirstOrDefault();
         }
 
         // Absolute fallback: use the single lowest tier from all candidates
-        optimal ??= candidates.OrderBy(keySelector: q => q.Width).ThenBy(keySelector: q => q.Height).First();
+        optimal ??= candidates.OrderBy(q => q.Width).ThenBy(q => q.Height).First();
 
         return optimal;
     }
@@ -208,7 +208,7 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
     {
         foreach (VideoCodecType codec in client.SupportedVideoCodecs)
         {
-            if (EncodableCodecs.Contains(value: codec))
+            if (EncodableCodecs.Contains(codec))
                 return codec;
         }
 

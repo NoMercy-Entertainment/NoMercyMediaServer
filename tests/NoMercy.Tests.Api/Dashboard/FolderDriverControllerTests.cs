@@ -21,7 +21,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
-[Trait(name: "Category", value: "FolderDriver")]
+[Trait("Category", "FolderDriver")]
 public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -43,55 +43,55 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task GetDriverTypes_ReturnsAllFiveEntries()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/folders/drivers");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/folders/drivers");
         string body = await response.Content.ReadAsStringAsync();
 
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected 200, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected 200, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(json: body);
+        JsonDocument json = JsonDocument.Parse(body);
         JsonElement root = json.RootElement;
 
-        Assert.Equal(expected: JsonValueKind.Array, actual: root.ValueKind);
-        Assert.Equal(expected: 5, actual: root.GetArrayLength());
+        Assert.Equal(JsonValueKind.Array, root.ValueKind);
+        Assert.Equal(5, root.GetArrayLength());
     }
 
     [Fact]
     public async Task GetDriverTypes_LocalIsAvailable_S3AndR2AreNot()
     {
-        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/folders/drivers");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/folders/drivers");
         string body = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(json: body);
+        JsonDocument json = JsonDocument.Parse(body);
 
         Dictionary<string, bool> availability = json
             .RootElement.EnumerateArray()
             .ToDictionary(
-                keySelector: e => e.GetProperty(propertyName: "type").GetString()!,
-                elementSelector: e => e.GetProperty(propertyName: "available").GetBoolean()
+                e => e.GetProperty("type").GetString()!,
+                e => e.GetProperty("available").GetBoolean()
             );
 
         // All five built-in driver types are now flagged as available;
         // the old smb entry was replaced by nfs.
-        Assert.True(condition: availability[key: "local"], userMessage: "local should be available");
-        Assert.True(condition: availability[key: "nfs"], userMessage: "nfs should be available");
-        Assert.True(condition: availability[key: "s3"], userMessage: "s3 should be available");
-        Assert.True(condition: availability[key: "r2"], userMessage: "r2 should be available");
-        Assert.True(condition: availability[key: "webdav"], userMessage: "webdav should be available");
-        Assert.False(condition: availability.ContainsKey(key: "smb"), userMessage: "smb is no longer a recognised driver type");
+        Assert.True(availability["local"], "local should be available");
+        Assert.True(availability["nfs"], "nfs should be available");
+        Assert.True(availability["s3"], "s3 should be available");
+        Assert.True(availability["r2"], "r2 should be available");
+        Assert.True(availability["webdav"], "webdav should be available");
+        Assert.False(availability.ContainsKey("smb"), "smb is no longer a recognised driver type");
     }
 
     [Fact]
     public async Task GetDriverTypes_Unauthenticated_Returns401Or403()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            requestUri: "/api/v1/dashboard/folders/drivers"
+            "/api/v1/dashboard/folders/drivers"
         );
 
         Assert.True(
-            condition: response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            userMessage: $"Expected 401 or 403, got {(int)response.StatusCode}"
+            response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
+            $"Expected 401 or 403, got {(int)response.StatusCode}"
         );
     }
 
@@ -103,19 +103,19 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task GetBackend_SeededFolder_ReturnsLocalDefault()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: $"/api/v1/dashboard/folders/{MovieFolderId}/driver"
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver"
         );
         string body = await response.Content.ReadAsStringAsync();
 
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected 200, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected 200, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(json: body);
+        JsonDocument json = JsonDocument.Parse(body);
         JsonElement root = json.RootElement;
 
-        Assert.Equal(expected: "local", actual: root.GetProperty(propertyName: "driver_type").GetString());
+        Assert.Equal("local", root.GetProperty("driver_type").GetString());
     }
 
     [Fact]
@@ -123,22 +123,22 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
     {
         Ulid unknownId = Ulid.NewUlid();
         HttpResponseMessage response = await _authed.GetAsync(
-            requestUri: $"/api/v1/dashboard/folders/{unknownId}/driver"
+            $"/api/v1/dashboard/folders/{unknownId}/driver"
         );
 
-        Assert.Equal(expected: HttpStatusCode.NotFound, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task GetBackend_Unauthenticated_Returns401Or403()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            requestUri: $"/api/v1/dashboard/folders/{MovieFolderId}/driver"
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver"
         );
 
         Assert.True(
-            condition: response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            userMessage: $"Expected 401 or 403, got {(int)response.StatusCode}"
+            response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
+            $"Expected 401 or 403, got {(int)response.StatusCode}"
         );
     }
 
@@ -153,27 +153,27 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
         object payload = new { driver_id = Driver.SystemLocalDriverId.ToString() };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
-            value: payload
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
+            payload
         );
         string body = await response.Content.ReadAsStringAsync();
 
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected 200, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected 200, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(json: body);
-        Assert.Equal(expected: "local", actual: json.RootElement.GetProperty(propertyName: "driver_type").GetString());
+        JsonDocument json = JsonDocument.Parse(body);
+        Assert.Equal("local", json.RootElement.GetProperty("driver_type").GetString());
 
         // Verify persisted in DB
         await using MediaContext ctx = new();
         Folder? folder = await ctx
             .Folders.AsNoTracking()
-            .FirstOrDefaultAsync(predicate: f => f.Id == MovieFolderId);
+            .FirstOrDefaultAsync(f => f.Id == MovieFolderId);
 
-        Assert.NotNull(@object: folder);
-        Assert.Equal(expected: Driver.SystemLocalDriverId, actual: folder!.DriverId);
+        Assert.NotNull(folder);
+        Assert.Equal(Driver.SystemLocalDriverId, folder!.DriverId);
     }
 
     [Fact]
@@ -187,14 +187,14 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
         };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
-            value: payload
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
+            payload
         );
         string body = await response.Content.ReadAsStringAsync();
 
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected 200, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected 200, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -204,11 +204,11 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
         object payload = new { driver_type = "ftp" };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
-            value: payload
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
+            payload
         );
 
-        Assert.Equal(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -221,11 +221,11 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
         };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
-            value: payload
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
+            payload
         );
 
-        Assert.Equal(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -234,11 +234,11 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
         object payload = new { driver_type = "nfs", driver_config = (object?)null };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
-            value: payload
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
+            payload
         );
 
-        Assert.Equal(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -247,11 +247,11 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
         object payload = new { driver_type = "s3", driver_config = new { region = "us-east-1" } };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
-            value: payload
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
+            payload
         );
 
-        Assert.Equal(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -264,11 +264,11 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
         object payload = new { driver_id = nonExistentDriverId.ToString() };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
-            value: payload
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
+            payload
         );
 
-        Assert.Equal(expected: HttpStatusCode.NotFound, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -280,24 +280,24 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
         object payload = new { driver_id = Driver.SystemLocalDriverId.ToString() };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
-            value: payload
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
+            payload
         );
         string body = await response.Content.ReadAsStringAsync();
 
         Assert.True(
-            condition: response.StatusCode == HttpStatusCode.OK,
-            userMessage: $"Expected 200, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected 200, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(json: body);
+        JsonDocument json = JsonDocument.Parse(body);
         JsonElement root = json.RootElement;
 
         Assert.Equal(
-            expected: Driver.SystemLocalDriverId.ToString(),
-            actual: root.GetProperty(propertyName: "driver_id").GetString()
+            Driver.SystemLocalDriverId.ToString(),
+            root.GetProperty("driver_id").GetString()
         );
-        Assert.Equal(expected: "local", actual: root.GetProperty(propertyName: "driver_type").GetString());
+        Assert.Equal("local", root.GetProperty("driver_type").GetString());
     }
 
     [Fact]
@@ -309,11 +309,11 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
         object payload = new { driver_id = Driver.SystemLocalDriverId.ToString() };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            requestUri: $"/api/v1/dashboard/folders/{unknownId}/driver",
-            value: payload
+            $"/api/v1/dashboard/folders/{unknownId}/driver",
+            payload
         );
 
-        Assert.Equal(expected: HttpStatusCode.NotFound, actual: response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -322,13 +322,13 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
         object payload = new { driver_type = "local" };
 
         HttpResponseMessage response = await _unauthed.PutAsJsonAsync(
-            requestUri: $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
-            value: payload
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
+            payload
         );
 
         Assert.True(
-            condition: response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            userMessage: $"Expected 401 or 403, got {(int)response.StatusCode}"
+            response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
+            $"Expected 401 or 403, got {(int)response.StatusCode}"
         );
     }
 }

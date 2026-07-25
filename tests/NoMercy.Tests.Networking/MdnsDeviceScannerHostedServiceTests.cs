@@ -24,7 +24,7 @@ namespace NoMercy.Tests.Networking;
 /// (see the coverage report) since it depends on live LAN multicast, not
 /// something a sandboxed unit test can assert on deterministically.
 /// </summary>
-[Trait(name: "Category", value: "Unit")]
+[Trait("Category", "Unit")]
 public sealed class MdnsDeviceScannerHostedServiceTests
 {
     private sealed class ThrowingDbContextFactory : IDbContextFactory<MediaContext>
@@ -36,19 +36,19 @@ public sealed class MdnsDeviceScannerHostedServiceTests
     public async Task StartAsync_WithAlreadyCancelledToken_StopsImmediately_WithoutThrowing()
     {
         MdnsDeviceScanner scanner = new(
-            contextFactory: new ThrowingDbContextFactory(),
-            logger: NullLogger<MdnsDeviceScanner>.Instance
+            new ThrowingDbContextFactory(),
+            NullLogger<MdnsDeviceScanner>.Instance
         );
         MdnsDeviceScannerHostedService hostedService = new(
-            scanner: scanner,
-            logger: NullLogger<MdnsDeviceScannerHostedService>.Instance
+            scanner,
+            NullLogger<MdnsDeviceScannerHostedService>.Instance
         );
         using CancellationTokenSource cts = new();
         cts.Cancel();
 
-        Exception? ex = await Record.ExceptionAsync(testCode: () => hostedService.StartAsync(cancellationToken: cts.Token));
+        Exception? ex = await Record.ExceptionAsync(() => hostedService.StartAsync(cts.Token));
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
 
         scanner.Dispose();
     }
@@ -57,22 +57,22 @@ public sealed class MdnsDeviceScannerHostedServiceTests
     public async Task StartAsync_ThenImmediateStop_DoesNotThrow()
     {
         MdnsDeviceScanner scanner = new(
-            contextFactory: new ThrowingDbContextFactory(),
-            logger: NullLogger<MdnsDeviceScanner>.Instance
+            new ThrowingDbContextFactory(),
+            NullLogger<MdnsDeviceScanner>.Instance
         );
         MdnsDeviceScannerHostedService hostedService = new(
-            scanner: scanner,
-            logger: NullLogger<MdnsDeviceScannerHostedService>.Instance
+            scanner,
+            NullLogger<MdnsDeviceScannerHostedService>.Instance
         );
         using CancellationTokenSource cts = new();
 
-        Task startTask = hostedService.StartAsync(cancellationToken: cts.Token);
+        Task startTask = hostedService.StartAsync(cts.Token);
         await cts.CancelAsync();
-        Exception? ex = await Record.ExceptionAsync(testCode: () => hostedService.StopAsync(cancellationToken: cts.Token));
+        Exception? ex = await Record.ExceptionAsync(() => hostedService.StopAsync(cts.Token));
 
-        Assert.Null(@object: ex);
+        Assert.Null(ex);
 
-        await Task.WhenAny(task1: startTask, task2: Task.Delay(millisecondsDelay: 1000));
+        await Task.WhenAny(startTask, Task.Delay(1000));
         scanner.Dispose();
     }
 }
