@@ -48,7 +48,8 @@ public class PlanStage(
     IBitDepthPolicyResolver? bitDepthPolicyResolver = null,
     IOutputNamingResolver? outputNamingResolver = null,
     ISubtitleAcquisitionService? subtitleAcquisitionService = null,
-    Composition.EncoderOptions? options = null
+    Composition.EncoderOptions? options = null,
+    IEncodeYieldProbe? encodeYieldProbe = null
 ) : IPipelineStage<ValidateInput, ExecutionPlan>, IPlanStage
 {
     public string Name => "Plan";
@@ -145,12 +146,24 @@ public class PlanStage(
             // resolvedCodecs and VideoOutputPlan stay aligned by index. Decisions
             // are suppressed here (NullDecisionLogSink) so the copy-vs-transcode
             // choice is logged exactly once, from BuildOutputPlanAsync.
+            // Measured once, then handed to both downgrade calls so they cannot
+            // reach different conclusions about the same file.
+            long? probedYieldKbps = await ProbeSmartCopyYieldAsync(
+                    videoOutputs,
+                    input.Media,
+                    profile,
+                    cropFilter,
+                    ct
+                )
+                .ConfigureAwait(false);
+
             videoOutputs = ApplySmartCopyDowngrade(
                 videoOutputs,
                 input.Media,
                 profile,
                 cropFilter,
-                NullDecisionLogSink.Instance
+                NullDecisionLogSink.Instance,
+                probedYieldKbps
             );
 
             ResolvedCodec[] resolvedCodecs;
@@ -258,6 +271,7 @@ public class PlanStage(
                     resolvedCodecs,
                     cropFilter,
                     context,
+                    probedYieldKbps,
                     ct
                 )
                 .ConfigureAwait(false);
@@ -375,12 +389,72 @@ public class PlanStage(
     /// downstream is "copy" and not a real encoder asked to re-encode a direct
     /// stream map.
     /// </summary>
+    /// <summary>
+    /// The share of the source bitrate a re-encode has to come in under before it
+    /// is judged worth doing. A measured yield close to the source buys nothing
+    /// once generation loss and GPU hours are counted, and the probe samples only
+    /// part of the file, so the gain has to be clear rather than marginal.
+    /// </summary>
+    private const double WorthReencodingBelowSourceShare = 0.7;
+
+    /// <summary>
+    /// Measures what the profile's settings would actually yield, but only when
+    /// the answer can change the outcome: the source must otherwise be about to
+    /// be stream-copied, and the target must be quality-targeted (CRF), since a
+    /// bitrate-targeted output already states its own size.
+    /// </summary>
+    private async Task<long?> ProbeSmartCopyYieldAsync(
+        VideoOutput[] videoOutputs,
+        MediaInfo media,
+        EncodingProfile profile,
+        string? cropFilter,
+        CancellationToken ct
+    )
+    {
+        if (encodeYieldProbe is null || media.VideoStreams.Count == 0 || cropFilter is not null)
+            return null;
+
+        if (profile.HdrPolicies == HdrPolicies.AlwaysTonemap)
+            return null;
+
+        VideoStreamInfo source = media.VideoStreams[0];
+        if (source.BitRateKbps <= 0)
+            return null;
+
+        VideoOutput? candidate = videoOutputs.FirstOrDefault(v =>
+            v.Policy == StreamPolicy.Transcode
+            && v.RateControl == Profiles.RateControlMode.Crf
+            && !(v.ConvertHdrToSdr && source.IsHdr)
+            && _streamActionResolver.ResolveVideo(source, v) == StreamAction.Copy
+            && ContainerCompatibility.SupportsVideo(profile.Container, v.Codec)
+        );
+
+        if (candidate is null)
+            return null;
+
+        return await encodeYieldProbe
+            .EstimateBitrateKbpsAsync(
+                media.FilePath,
+                new(
+                    candidate.Codec,
+                    candidate.Crf,
+                    candidate.Preset,
+                    candidate.Tune,
+                    candidate.PixelFormat
+                ),
+                media.Duration,
+                ct
+            )
+            .ConfigureAwait(false);
+    }
+
     private VideoOutput[] ApplySmartCopyDowngrade(
         VideoOutput[] videoOutputs,
         MediaInfo media,
         EncodingProfile profile,
         string? cropFilter,
-        IDecisionLogSink decisions
+        IDecisionLogSink decisions,
+        long? probedYieldKbps
     )
     {
         if (media.VideoStreams.Count == 0 || cropFilter is not null)
@@ -392,7 +466,7 @@ public class PlanStage(
         VideoStreamInfo source = media.VideoStreams[0];
 
         return videoOutputs
-            .Select(v => TryDowngradeToSmartCopy(v, source, profile, decisions))
+            .Select(v => TryDowngradeToSmartCopy(v, source, profile, decisions, probedYieldKbps))
             .ToArray();
     }
 
@@ -400,7 +474,8 @@ public class PlanStage(
         VideoOutput v,
         VideoStreamInfo source,
         EncodingProfile profile,
-        IDecisionLogSink decisions
+        IDecisionLogSink decisions,
+        long? probedYieldKbps
     )
     {
         if (v.Policy != StreamPolicy.Transcode)
@@ -414,6 +489,35 @@ public class PlanStage(
 
         if (!ContainerCompatibility.SupportsVideo(profile.Container, v.Codec))
             return v;
+
+        // Matching the target on codec, resolution and bit depth says the source
+        // is the right shape, not that it is the right size — a source can carry
+        // the same picture at several times the bitrate the profile would spend.
+        // Where that was measured, re-encoding is the whole point, so let it.
+        if (
+            probedYieldKbps is > 0
+            && source.BitRateKbps > 0
+            && probedYieldKbps < source.BitRateKbps * WorthReencodingBelowSourceShare
+        )
+        {
+            decisions.Add(
+                new(
+                    "plan",
+                    "plan.video_reencode_shrinks",
+                    $"Source {source.Codec} matches the target but carries "
+                        + $"{source.BitRateKbps} kbps where CRF {v.Crf} measured ~{probedYieldKbps} kbps "
+                        + "on this content — re-encoding instead of copying.",
+                    new
+                    {
+                        sourceKbps = source.BitRateKbps,
+                        probedKbps = probedYieldKbps,
+                        crf = v.Crf,
+                    }
+                )
+            );
+
+            return v;
+        }
 
         decisions.Add(
             new(
@@ -691,6 +795,7 @@ public class PlanStage(
         ResolvedCodec[] resolvedCodecs,
         string? cropFilter,
         EncodingContext context,
+        long? probedYieldKbps,
         CancellationToken ct
     )
     {
@@ -755,7 +860,8 @@ public class PlanStage(
             media,
             profile,
             cropFilter,
-            context.DecisionsOrNoOp
+            context.DecisionsOrNoOp,
+            probedYieldKbps
         );
 
         // Audio-only: skip video planning entirely when source has no video streams

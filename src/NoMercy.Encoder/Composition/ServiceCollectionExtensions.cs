@@ -261,6 +261,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISubtitleRouter, SubtitleRouter>();
         services.AddTransient<IWhisperTranscriber, WhisperTranscriber>();
         services.AddTransient<ICropDetector, CropDetector>();
+        services.AddTransient<IEncodeYieldProbe, EncodeYieldProbe>();
 
         // Self-sufficient default: ChromaprintFingerprinter defers to active
         // playback via MediaActivityMonitor. TryAdd so a host that also calls
