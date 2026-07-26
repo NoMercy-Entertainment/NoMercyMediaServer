@@ -41,4 +41,34 @@ internal class StatusResponse
 
     [JsonProperty("is_dev")]
     public bool IsDev { get; set; }
+
+    [JsonProperty("internal_address")]
+    public string? InternalAddress { get; set; }
+
+    [JsonProperty("external_address")]
+    public string? ExternalAddress { get; set; }
+
+    [JsonProperty("connectivity")]
+    public ConnectivityResponse? Connectivity { get; set; }
+}
+
+internal class ConnectivityResponse
+{
+    [JsonProperty("state")]
+    public string? State { get; set; }
+
+    [JsonProperty("transport")]
+    public string? Transport { get; set; }
+
+    [JsonProperty("mode")]
+    public string? Mode { get; set; }
+
+    [JsonProperty("nat_status")]
+    public string? NatStatus { get; set; }
+
+    [JsonProperty("tunnel_availability")]
+    public string? TunnelAvailability { get; set; }
+
+    [JsonProperty("port_forwarded")]
+    public bool PortForwarded { get; set; }
 }

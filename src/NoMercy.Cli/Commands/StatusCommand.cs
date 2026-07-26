@@ -48,11 +48,66 @@ internal static class StatusCommand
                 if (status.IsDev)
                     Console.WriteLine("Mode:         Development");
 
+                if (!string.IsNullOrEmpty(status.InternalAddress))
+                    Console.WriteLine($"Local:        {status.InternalAddress}");
+
+                // "Can people outside my network reach this?" is the question the server was
+                // answering internally every boot and telling nobody. It belongs here, in the
+                // first place anyone looks.
+                if (status.Connectivity is { } connectivity)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine($"Remote access: {DescribeState(connectivity)}");
+
+                    if (!string.IsNullOrEmpty(status.ExternalAddress))
+                        Console.WriteLine($"Remote URL:    {status.ExternalAddress}");
+
+                    if (
+                        !string.Equals(
+                            connectivity.Mode,
+                            "Auto",
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                        Console.WriteLine($"Pinned to:     {connectivity.Mode}");
+
+                    if (
+                        string.Equals(
+                            connectivity.TunnelAvailability,
+                            "CheckFailed",
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                        Console.WriteLine(
+                            "Tunnel:        could not be checked — the API was unreachable"
+                        );
+                }
+
                 return (int)ExitCode.Success;
             }
         );
 
         return command;
+    }
+
+    /// <summary>
+    /// Plain-language rendering of the connectivity state. The enum names are accurate but
+    /// mean nothing to someone trying to work out why a friend cannot connect.
+    /// </summary>
+    internal static string DescribeState(ConnectivityResponse connectivity)
+    {
+        return connectivity.State switch
+        {
+            "Tunneled" => "yes, through a Cloudflare tunnel",
+            "DirectAccess" => connectivity.PortForwarded
+                ? "yes, directly via port forwarding"
+                : "yes, directly (unverified port forward)",
+            "HolePunched" => "yes, via STUN hole punching",
+            "LocalOnly" => "no — reachable on this network only",
+            "Evaluating" => "still working it out",
+            "Starting" => "not evaluated yet",
+            _ => connectivity.State ?? "unknown",
+        };
     }
 
     internal static string FormatUptime(TimeSpan uptime)
