@@ -97,8 +97,14 @@ public class FileListServiceTitleCleanupTests
         return seen;
     }
 
+    /// <summary>
+    /// The absolute number is the one that resolves. Providers commonly model a long-running
+    /// show as a single season, so the release's "S02E01" has no row to match while absolute
+    /// 29 does — taking the marker instead lands on season 1 episode 1 and imports a
+    /// completely different episode.
+    /// </summary>
     [Fact]
-    public async Task AbsoluteNumberedRelease_SearchesTheShowName_NotTheEpisodeLabel()
+    public async Task AbsoluteNumberedRelease_KeepsTheAbsoluteEpisode_NotTheMarker()
     {
         List<MovieFile> parsed = await ParsedTitlesFor(
             "anime",
@@ -107,8 +113,24 @@ public class FileListServiceTitleCleanupTests
 
         parsed.Should().ContainSingle();
         parsed[0].Title.Should().Be("Sousou no Frieren");
-        parsed[0].Season.Should().Be(2);
-        parsed[0].Episode.Should().Be(1);
+        parsed[0].Episode.Should().Be(29);
+    }
+
+    /// <summary>
+    /// Without a competing absolute number the marker is all there is, so it must still be
+    /// read through a bracket — that is how these releases write it.
+    /// </summary>
+    [Fact]
+    public async Task BracketedMarkerAlone_IsReadAsSeasonAndEpisode()
+    {
+        List<MovieFile> parsed = await ParsedTitlesFor(
+            "anime",
+            "[Judas] Some Show (S03E07) [1080p][HEVC].mkv"
+        );
+
+        parsed.Should().ContainSingle();
+        parsed[0].Season.Should().Be(3);
+        parsed[0].Episode.Should().Be(7);
     }
 
     [Theory]
