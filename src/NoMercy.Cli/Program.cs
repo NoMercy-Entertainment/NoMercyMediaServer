@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.CommandLine;
+using System.Net.Sockets;
 using NoMercy.Cli.Commands;
 
 namespace NoMercy.Cli;
@@ -41,6 +42,49 @@ internal static class Program
         rootCommand.Subcommands.Add(UpdateCommand.Create(pipeOption, clientFactory));
 
         ParseResult parseResult = rootCommand.Parse(args);
-        return await parseResult.InvokeAsync();
+
+        try
+        {
+            // System.CommandLine's default handler catches everything and prints a raw .NET
+            // stack trace, which is how "the server is not running" ended up looking like the
+            // CLI itself had crashed. Turning it off lets the handler below classify the
+            // failure and return a meaningful exit code.
+            return await parseResult.InvokeAsync(
+                new InvocationConfiguration { EnableDefaultExceptionHandler = false }
+            );
+        }
+        catch (Exception ex) when (IsServerUnreachable(ex))
+        {
+            // Every command talks to the server over the management pipe/socket, and when
+            // nothing is listening the connect attempt throws straight out of the action.
+            // Unhandled, that printed a .NET stack trace — which reads like the CLI is broken
+            // rather than like the server simply is not running.
+            await Console.Error.WriteLineAsync(
+                "NoMercy MediaServer is not running, or is not reachable on its management socket."
+            );
+            await Console.Error.WriteLineAsync("Start it with: nomercy start");
+            return (int)ExitCode.ConnectionError;
+        }
+    }
+
+    /// <summary>
+    /// A failure to reach the management transport, as opposed to a genuine error from a
+    /// server that did answer. Timeouts count: connecting to an absent named pipe surfaces as
+    /// a cancelled operation rather than a refused connection.
+    /// </summary>
+    private static bool IsServerUnreachable(Exception ex)
+    {
+        for (Exception? current = ex; current is not null; current = current.InnerException)
+            if (
+                current
+                is HttpRequestException
+                    or SocketException
+                    or TimeoutException
+                    or OperationCanceledException
+                    or IOException
+            )
+                return true;
+
+        return false;
     }
 }

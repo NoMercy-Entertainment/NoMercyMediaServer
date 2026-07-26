@@ -20,6 +20,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Service.Seeds;
+using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
 using NoMercy.Setup.Ui;
@@ -210,6 +211,17 @@ public sealed class ServerBootstrapper
             // selector has it on the first TLS handshake.
             _ = app.Services.GetRequiredService<ICertificateService>();
             Start.Certificate!.LoadFromDb();
+
+            // AuthTokenStore is a per-container singleton and AuthManager is its only
+            // writer, so the fresh container starts with a null access token. Everything
+            // that waits on authentication then gives up permanently — ConnectivityManager
+            // waits 30s, logs "skipped — no authentication available" and returns without
+            // ever evaluating a transport, which on a tunnel-only connection means no
+            // remote access for the life of the process. ServerRunner's equivalent rebuild
+            // already does this; this branch did not.
+            AuthManager rebuiltAuthManager = app.Services.GetRequiredService<AuthManager>();
+            await rebuiltAuthManager.InitializeAsync();
+            rebuiltAuthManager.ScheduleBackgroundRefresh(shutdownCoordinator.Token);
 
             // SetupState is a per-container singleton. BootOrchestrator.RunAsync
             // already drove the OLD container's SetupState to Complete (that's

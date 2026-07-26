@@ -16,7 +16,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.Providers.MusicBrainz.Client;
-using NoMercy.Tests.OpticalMedia.Infrastructure;
+using NoMercy.Tests.Common.Providers;
 
 namespace NoMercy.Tests.OpticalMedia.Metadata;
 

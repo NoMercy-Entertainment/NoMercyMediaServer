@@ -14,7 +14,7 @@ using NoMercy.NmSystem.Configuration;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
-using NoMercy.Tests.Providers.Infrastructure;
+using NoMercy.Tests.Common.Providers;
 using NoMercy.Tests.Providers.TMDB.Mocks;
 
 namespace NoMercy.Tests.Providers.TMDB.Client;

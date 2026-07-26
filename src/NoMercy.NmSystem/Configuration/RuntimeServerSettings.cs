@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.NmSystem.Dto;
 using NoMercyQueue.Core;
 
 namespace NoMercy.NmSystem.Configuration;
@@ -58,6 +59,8 @@ public class RuntimeServerSettings
     public bool Swagger { get; set; } = true;
 
     public bool UseSynthesizedDns { get; set; }
+
+    public ConnectivityMode ConnectivityMode { get; set; } = ConnectivityMode.Auto;
 
     public bool? AllowAdultContent { get; set; }
 

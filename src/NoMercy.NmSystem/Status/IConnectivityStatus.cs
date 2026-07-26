@@ -21,6 +21,7 @@ public interface IConnectivityStatus
     int? StunPublicPort { get; set; }
 
     string? CloudflareTunnelToken { get; set; }
+    TunnelAvailability TunnelAvailability { get; set; }
 }
 
 public class ConnectivityStatus : IConnectivityStatus
@@ -31,4 +32,5 @@ public class ConnectivityStatus : IConnectivityStatus
     public int? StunPublicPort { get; set; }
 
     public string? CloudflareTunnelToken { get; set; }
+    public TunnelAvailability TunnelAvailability { get; set; } = TunnelAvailability.Unknown;
 }

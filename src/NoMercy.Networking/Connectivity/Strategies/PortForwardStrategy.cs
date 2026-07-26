@@ -26,47 +26,48 @@ public class PortForwardStrategy(
     public int Priority => 1;
     public ConnectivityType Type => ConnectivityType.PortForward;
 
-    public async Task<bool> TryEstablishAsync(CancellationToken ct)
+    public async Task<ConnectivityResult> TryEstablishAsync(CancellationToken ct)
     {
-        if (connectivityStatus.NatStatus == NatStatus.Open)
-        {
-            logger.LogInformation(
-                "NAT status is open, you can access your server from outside your local network."
-            );
-            return true;
-        }
-
-        // UPnP port mapping succeeded — trust it even if the self-connect test fails.
-        // Many routers don't support NAT hairpinning (connecting to your own external IP
-        // from inside the LAN), so the TCP test would fail despite the port being open
-        // to external clients.
-        if (connectivityStatus.NatStatus == NatStatus.Filtered)
-        {
-            logger.LogInformation("UPnP port mapping active — port forwarding confirmed via UPnP.");
-            connectivityStatus.PortForwarded = true;
-            connectivityStatus.NatStatus = NatStatus.Open;
-            return true;
-        }
-
-        // No UPnP — try direct TCP connect to external IP as a last resort
+        // Probe on every pass. A NatStatus of Open left over from an earlier evaluation
+        // describes the network the server used to be on, and a re-evaluation happens
+        // precisely because that network changed.
         connectivityStatus.PortForwarded = await networkDiscovery.IsPortOpenAsync();
+
         if (connectivityStatus.PortForwarded)
         {
             logger.LogInformation(
-                "Your server is port forwarded, you can access your server from outside your local network."
+                "Reached the server on its own external address — port forwarding confirmed."
             );
             connectivityStatus.NatStatus = NatStatus.Open;
-            return true;
+            return ConnectivityResult.Verified();
+        }
+
+        // A mapping the router accepted over UPnP is a claim, not proof. Routers routinely
+        // accept the SOAP call and drop the mapping, and routers that DO forward correctly
+        // often refuse to hairpin, which fails the probe above on a port that is genuinely
+        // open to the outside. Those two cases are indistinguishable from in here, so this
+        // counts only as a fallback: good enough to keep a working user working, never good
+        // enough to outrank a transport that can prove itself.
+        if (connectivityStatus.NatStatus == NatStatus.Filtered)
+        {
+            logger.LogInformation(
+                "UPnP reports a port mapping but it could not be confirmed from inside the network — treating port forwarding as unverified."
+            );
+            connectivityStatus.PortForwarded = true;
+            return ConnectivityResult.Assumed();
         }
 
         logger.LogDebug(
-            "Port forward check failed — router may not support NAT hairpinning, but external clients may still be able to connect."
+            "No port forward found — nothing answered on the external address and no UPnP mapping was made."
         );
-        return false;
+        return ConnectivityResult.Failed();
     }
 
     public Task TeardownAsync()
     {
+        // Nothing to stop, but the flag must not outlive the strategy: another transport
+        // winning while PortForwarded is still true reports a direct path that is not there.
+        connectivityStatus.PortForwarded = false;
         return Task.CompletedTask;
     }
 }

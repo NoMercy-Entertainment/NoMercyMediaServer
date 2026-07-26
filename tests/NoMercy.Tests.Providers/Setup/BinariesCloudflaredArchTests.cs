@@ -142,7 +142,7 @@ public class BinariesCloudflaredArchTests
     }
 
     [Fact]
-    public void DownloadCloudflared_Linux_Arm64_Downloads_Arm()
+    public void DownloadCloudflared_Linux_Arm64_Downloads_Arm64()
     {
         string method = ExtractDownloadCloudflaredMethod(GetSourceCode());
 
@@ -153,7 +153,11 @@ public class BinariesCloudflaredArchTests
         );
         RegexMatch match = pattern.Match(method);
         Assert.True(match.Success, "Could not find Linux Arm64 branch");
-        Assert.Equal("arm", match.Groups[1].Value);
+
+        // cloudflared-linux-arm is the 32-bit build. This assertion previously pinned the
+        // arm64 branch to it, which is how the mismatch survived — and on a Raspberry Pi or
+        // similar the tunnel is often the only remote transport available.
+        Assert.Equal("arm64", match.Groups[1].Value);
     }
 
     [Fact]

@@ -428,7 +428,8 @@ public class CertificateService : ICertificateService
         catch (Exception ex)
         {
             _logger.LogDebug(
-                "Skipping invalid SAN DNS name {DnsName} for self-signed cert: {Message}", [dnsName, ex.Message]
+                "Skipping invalid SAN DNS name {DnsName} for self-signed cert: {Message}",
+                [dnsName, ex.Message]
             );
         }
     }
@@ -544,6 +545,12 @@ public class CertificateService : ICertificateService
 
     private const int CertRetryDelaySeconds = 10;
 
+    // Per-request, not per-operation. The loop already retries maxRetries times with
+    // CertRetryDelaySeconds between attempts, and the API answers 202 immediately while
+    // issuance is still running, so a single request has no reason to take minutes. The old
+    // 10-minute value made one unresponsive attempt cost longer than the whole retry budget.
+    private static readonly TimeSpan CertRequestTimeout = TimeSpan.FromSeconds(30);
+
     public async Task RenewSslCertificate(string? accessToken, int maxRetries = 30)
     {
         if (ValidateSslCertificate())
@@ -569,7 +576,7 @@ public class CertificateService : ICertificateService
 
             HttpClient client = _httpClientFactory.CreateClient("cert-renewal");
             client.BaseAddress = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
-            client.Timeout = TimeSpan.FromMinutes(10);
+            client.Timeout = CertRequestTimeout;
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
             client.DefaultRequestHeaders.Authorization = new("Bearer", token);
 
@@ -590,7 +597,8 @@ public class CertificateService : ICertificateService
 
                     // null means 202 — cert not ready yet, wait and retry
                     _logger.LogInformation(
-                        "Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})", [CertRetryDelaySeconds, attempt, maxRetries]
+                        "Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})",
+                        [CertRetryDelaySeconds, attempt, maxRetries]
                     );
                     await DelayBetweenAttemptsAsync(
                         TimeSpan.FromSeconds(CertRetryDelaySeconds),
@@ -607,11 +615,21 @@ public class CertificateService : ICertificateService
                 }
                 catch (Exception ex)
                     when (attempt < maxRetries
-                        && (ex is HttpRequestException || ex is InvalidOperationException)
+                        // An HttpClient timeout surfaces as TaskCanceledException wrapping a
+                        // TimeoutException, which this filter did not match — so the single
+                        // most likely transient failure was the one thing that escaped the
+                        // retry loop, and on a first boot there is no existing certificate for
+                        // the outer handler to swallow it against.
+                        && ex
+                            is HttpRequestException
+                                or InvalidOperationException
+                                or TaskCanceledException
+                                or TimeoutException
                     )
                 {
                     _logger.LogInformation(
-                        "Certificate attempt failed: {Message}, retrying in {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})", [ex.Message, CertRetryDelaySeconds, attempt, maxRetries]
+                        "Certificate attempt failed: {Message}, retrying in {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})",
+                        [ex.Message, CertRetryDelaySeconds, attempt, maxRetries]
                     );
                     await DelayBetweenAttemptsAsync(
                         TimeSpan.FromSeconds(CertRetryDelaySeconds),

@@ -13,7 +13,7 @@ using System.Net;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
-using NoMercy.Tests.Providers.Infrastructure;
+using NoMercy.Tests.Common.Providers;
 
 namespace NoMercy.Tests.Providers.MusicBrainz.Client;
 

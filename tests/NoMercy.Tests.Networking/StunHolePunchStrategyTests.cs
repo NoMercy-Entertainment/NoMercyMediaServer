@@ -84,9 +84,9 @@ public sealed class StunHolePunchStrategyTests
                 new ConnectivityStatus()
             );
 
-            bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+            ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-            Assert.False(result);
+            Assert.False(result.Established);
         }
         finally
         {

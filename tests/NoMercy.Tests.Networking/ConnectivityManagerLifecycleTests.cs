@@ -62,7 +62,8 @@ public sealed class ConnectivityManagerLifecycleTests
         public int Priority => 1;
         public ConnectivityType Type => ConnectivityType.PortForward;
 
-        public Task<bool> TryEstablishAsync(CancellationToken ct) => Task.FromResult(succeeds);
+        public Task<ConnectivityResult> TryEstablishAsync(CancellationToken ct) =>
+            Task.FromResult(succeeds ? ConnectivityResult.Verified() : ConnectivityResult.Failed());
 
         public Task TeardownAsync()
         {
@@ -83,8 +84,116 @@ public sealed class ConnectivityManagerLifecycleTests
             tokenStore,
             discovery,
             strategies,
-            boot
+            boot,
+            new ConnectivityStatus()
         );
+    }
+
+    /// <summary>
+    /// Fails the first N attempts, then succeeds. Models the real case that stranded CGNAT
+    /// servers: cloudflared is still downloading when connectivity is first evaluated, so
+    /// the only viable transport cannot start yet.
+    /// </summary>
+    private sealed class EventuallySucceedingStrategy(int failuresBeforeSuccess)
+        : IConnectivityStrategy
+    {
+        public int Attempts { get; private set; }
+        public string Name => "EventuallySucceeding";
+        public int Priority => 1;
+        public ConnectivityType Type => ConnectivityType.CloudflareTunnel;
+
+        public Task<ConnectivityResult> TryEstablishAsync(CancellationToken ct)
+        {
+            Attempts++;
+            return Task.FromResult(
+                Attempts > failuresBeforeSuccess
+                    ? ConnectivityResult.Verified()
+                    : ConnectivityResult.Failed()
+            );
+        }
+
+        public Task TeardownAsync() => Task.CompletedTask;
+    }
+
+    private sealed class DyingStrategy : IConnectivityStrategy
+    {
+        public int Attempts { get; private set; }
+        public bool Alive { get; set; } = true;
+        public string Name => "Dying";
+        public int Priority => 1;
+        public ConnectivityType Type => ConnectivityType.CloudflareTunnel;
+        public bool IsStillEstablished => Alive;
+
+        public Task<ConnectivityResult> TryEstablishAsync(CancellationToken ct)
+        {
+            Attempts++;
+            Alive = true;
+            return Task.FromResult(ConnectivityResult.Verified());
+        }
+
+        public Task TeardownAsync() => Task.CompletedTask;
+    }
+
+    private static ConnectivityManager BuildSupervisedManager(
+        params IConnectivityStrategy[] strategies
+    )
+    {
+        BootStatus boot = new();
+        boot.MarkStarted();
+        AuthTokenStore tokenStore = new();
+        tokenStore.SetAccessToken("test-token");
+
+        return new(
+            NullLogger<ConnectivityManager>.Instance,
+            tokenStore,
+            new FastNetworkDiscovery(),
+            strategies,
+            boot,
+            new ConnectivityStatus(),
+            null,
+            TimeSpan.FromMilliseconds(10)
+        );
+    }
+
+    [Fact]
+    public async Task Supervision_RecoversWithoutARestart_WhenTheTransportOnlyWorksLater()
+    {
+        EventuallySucceedingStrategy strategy = new(failuresBeforeSuccess: 2);
+        ConnectivityManager manager = BuildSupervisedManager(strategy);
+
+        await manager.StartAsync(CancellationToken.None);
+
+        for (int i = 0; i < 200 && manager.CurrentState != ConnectivityState.Tunneled; i++)
+            await Task.Delay(20);
+
+        // Evaluating exactly once per process made a transient cause permanent: a server
+        // whose only transport was not ready yet stayed local-only for its whole uptime.
+        Assert.Equal(ConnectivityState.Tunneled, manager.CurrentState);
+        Assert.True(strategy.Attempts >= 3);
+
+        await manager.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Supervision_ReEstablishes_WhenAnActiveTransportDies()
+    {
+        DyingStrategy strategy = new();
+        ConnectivityManager manager = BuildSupervisedManager(strategy);
+
+        await manager.StartAsync(CancellationToken.None);
+        for (int i = 0; i < 200 && manager.CurrentState != ConnectivityState.Tunneled; i++)
+            await Task.Delay(20);
+
+        int attemptsWhenUp = strategy.Attempts;
+        strategy.Alive = false;
+
+        for (int i = 0; i < 200 && strategy.Attempts == attemptsWhenUp; i++)
+            await Task.Delay(20);
+
+        Assert.True(strategy.Attempts > attemptsWhenUp);
+        Assert.Equal(ConnectivityState.Tunneled, manager.CurrentState);
+
+        await manager.StopAsync(CancellationToken.None);
     }
 
     [Fact]

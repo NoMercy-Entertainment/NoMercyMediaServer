@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.Storage.Drivers.Local;
@@ -32,13 +33,13 @@ namespace NoMercy.Tests.Networking;
 [Trait("Category", "Unit")]
 public sealed class NetworkDiscoveryAddressBuildingTests
 {
-    private static NetworkDiscovery BuildDiscovery()
+    private static NetworkDiscovery BuildDiscovery(ConnectivityStatus? status = null)
     {
         return new(
             NullLogger<NetworkDiscovery>.Instance,
             new LocalStorageDriver(),
             new AuthTokenStore(),
-            new ConnectivityStatus(),
+            status ?? new ConnectivityStatus(),
             new()
         );
     }
@@ -62,6 +63,58 @@ public sealed class NetworkDiscoveryAddressBuildingTests
         string domain = discovery.InternalDomain;
 
         Assert.Equal($"192-168-1-50.{Info.DeviceId}.nomercy.tv", domain);
+    }
+
+    [Fact]
+    public void ExternalDomain_WhenTunneled_IsTheApexHost_WithNoIpLabel()
+    {
+        ConnectivityStatus status = new() { NatStatus = NatStatus.Tunneled };
+        NetworkDiscovery discovery = BuildDiscovery(status);
+        discovery.ExternalIp = "203.0.113.42";
+        RuntimeServerSettings.Current.UseSynthesizedDns = true;
+
+        // A tunnel terminates at the Cloudflare edge. The IP-derived host under the
+        // delegated srv subtree names a port forward a tunnelled server does not have, and
+        // it is not what the control plane publishes for it either.
+        Assert.Equal($"{Info.DeviceId}.nomercy.tv", discovery.ExternalDomain);
+        Assert.DoesNotContain("203-0-113-42", discovery.ExternalDomain);
+        Assert.DoesNotContain(".srv.", discovery.ExternalDomain);
+    }
+
+    [Fact]
+    public void ExternalAddress_WhenTunneled_CarriesNoPort()
+    {
+        ConnectivityStatus status = new() { NatStatus = NatStatus.Tunneled };
+        NetworkDiscovery discovery = BuildDiscovery(status);
+        discovery.ExternalIp = "203.0.113.42";
+        RuntimeServerSettings.Current.ExternalServerPort = 7627;
+
+        // The edge serves the tunnel on 443. Appending the port forward's port produces a
+        // URL nothing listens on.
+        Assert.Equal($"https://{Info.DeviceId}.nomercy.tv", discovery.ExternalAddress);
+        Assert.DoesNotContain(":7627", discovery.ExternalAddress);
+    }
+
+    [Fact]
+    public void ExternalDomain_WhenNotTunneled_KeepsTheIpDerivedHost()
+    {
+        ConnectivityStatus status = new() { NatStatus = NatStatus.Open };
+        NetworkDiscovery discovery = BuildDiscovery(status);
+        discovery.ExternalIp = "203.0.113.42";
+
+        Assert.Equal($"203-0-113-42.{Info.DeviceId}.nomercy.tv", discovery.ExternalDomain);
+    }
+
+    [Fact]
+    public void ExternalDomain_WhenTheExternalIpLookupFailed_HasNoEmptyLeadingLabel()
+    {
+        NetworkDiscovery discovery = BuildDiscovery();
+        discovery.ExternalIp = string.Empty;
+
+        // GetExternalIpAsync returns "" when every lookup failed. Passing that straight into
+        // the hostname builder produced ".<id>.nomercy.tv", which no resolver answers.
+        Assert.False(discovery.ExternalDomain.StartsWith('.'));
+        Assert.Equal($"0-0-0-0.{Info.DeviceId}.nomercy.tv", discovery.ExternalDomain);
     }
 
     [Fact]

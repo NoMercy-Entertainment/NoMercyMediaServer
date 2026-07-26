@@ -18,6 +18,7 @@ using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -246,16 +247,38 @@ public class ServerRegistrationService : IServerRegistrationService
             ServerTunnelAvailabilityResponse? data =
                 response.FromJson<ServerTunnelAvailabilityResponse>();
 
-            if (data is null || !data.Allowed || data.Token is null)
+            if (data is null)
+            {
+                _connectivityStatus.TunnelAvailability = TunnelAvailability.CheckFailed;
                 return;
+            }
+
+            if (!data.Allowed || data.Token is null)
+            {
+                // The API answers allowed:false both when no tunnel exists and while one is
+                // still being provisioned. Recording which it was is what lets the server say
+                // something true instead of guessing.
+                _connectivityStatus.TunnelAvailability =
+                    data.Token is null && data.Allowed
+                        ? TunnelAvailability.Provisioning
+                        : TunnelAvailability.NotProvisioned;
+                return;
+            }
 
             _connectivityStatus.CloudflareTunnelToken = data.Token;
+            _connectivityStatus.TunnelAvailability = TunnelAvailability.Available;
 
             Logger.Register("Cloudflare tunnel is available", LogEventLevel.Verbose);
         }
         catch (Exception ex)
         {
-            Logger.Register($"Tunnel check: {ex.Message}", LogEventLevel.Debug);
+            // A failed check is not the same as "you do not have a tunnel", and reporting it
+            // as one sent people looking at their billing instead of their connectivity.
+            _connectivityStatus.TunnelAvailability = TunnelAvailability.CheckFailed;
+            Logger.Register(
+                $"Tunnel availability check failed: {ex.Message}",
+                LogEventLevel.Warning
+            );
         }
     }
 

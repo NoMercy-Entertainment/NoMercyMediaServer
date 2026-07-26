@@ -76,18 +76,25 @@ public class NetworkingExternalIpTests
     [Fact]
     public void ExternalIp_Getter_ReturnsFallbackWhenNotPopulated()
     {
-        // The getter should return a safe fallback ("0.0.0.0"), not call async methods.
-        string sourceFile = FindSourceFile("src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
-        string source = File.ReadAllText(sourceFile);
-
-        string[] lines = source.Split('\n');
-        string? getterLine = lines.FirstOrDefault(l =>
-            l.Trim().StartsWith("get =>") && l.Contains("externalIp")
+        // Asserted on the getter's behaviour rather than on the source text it is spelled
+        // with. The previous version grepped this line for "??", so it failed the moment the
+        // same guarantee was expressed a different way — and it would have passed just as
+        // happily if the fallback had been a wrong value.
+        NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
+            new LocalStorageDriver(),
+            new AuthTokenStore(),
+            new ConnectivityStatus(),
+            new()
         );
 
-        Assert.NotNull(getterLine);
-        Assert.Contains("??", getterLine);
-        Assert.DoesNotContain("GetExternalIp()", getterLine);
+        Assert.Equal("0.0.0.0", discovery.ExternalIp);
+
+        discovery.ExternalIp = string.Empty;
+        Assert.Equal("0.0.0.0", discovery.ExternalIp);
+
+        discovery.ExternalIp = "203.0.113.42";
+        Assert.Equal("203.0.113.42", discovery.ExternalIp);
     }
 
     [Fact]

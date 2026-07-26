@@ -13,6 +13,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Status;
 
 namespace NoMercy.Networking.Connectivity;
@@ -31,6 +33,13 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
 
     private readonly IAuthTokenStore _authTokenStore;
     private readonly IBootStatus _bootStatus;
+    private readonly IConnectivityStatus _connectivityStatus;
+    private readonly Func<Task>? _tunnelAvailability;
+
+    // Collapses every supervision wait to a single short value. Set only by tests, which
+    // otherwise could not exercise the recovery path without sleeping through the real
+    // 30s-to-5min backoff.
+    private readonly TimeSpan? _delayOverride;
 
     private readonly ILogger<ConnectivityManager> _logger;
 
@@ -39,7 +48,10 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         IAuthTokenStore authTokenStore,
         INetworkDiscovery networkDiscovery,
         IEnumerable<IConnectivityStrategy> strategies,
-        IBootStatus bootStatus
+        IBootStatus bootStatus,
+        IConnectivityStatus connectivityStatus,
+        Func<Task>? tunnelAvailability = null,
+        TimeSpan? delayOverride = null
     )
     {
         _logger = logger;
@@ -47,6 +59,30 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         _networkDiscovery = networkDiscovery;
         _strategies = strategies.OrderBy(s => s.Priority);
         _bootStatus = bootStatus;
+        _connectivityStatus = connectivityStatus;
+        _tunnelAvailability = tunnelAvailability;
+        _delayOverride = delayOverride;
+    }
+
+    /// <summary>
+    /// Attempt order for the current evaluation. A tunnel is only ever provisioned by an
+    /// explicit act in the dashboard, and nobody assigns one to a server they want reached
+    /// some other way, so a token present means the operator already chose. Without this the
+    /// assignment is silently ignored on any server whose port forward happens to answer,
+    /// which is the whole reason assigning a proxy appeared to do nothing.
+    /// </summary>
+    private IEnumerable<IConnectivityStrategy> OrderedStrategies()
+    {
+        if (string.IsNullOrEmpty(_connectivityStatus.CloudflareTunnelToken))
+            return _strategies;
+
+        _logger.LogInformation(
+            "A Cloudflare tunnel is assigned to this server — trying it before the other transports"
+        );
+
+        return _strategies
+            .OrderBy(s => s.Type is ConnectivityType.CloudflareTunnel ? 0 : 1)
+            .ThenBy(s => s.Priority);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -88,6 +124,7 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
             await _networkDiscovery.DiscoverExternalIpAsync();
 
             await EvaluateAsync(cancellationToken);
+            await SuperviseAsync(cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -110,40 +147,183 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
             _activeStrategy = null;
         }
 
-        foreach (IConnectivityStrategy strategy in _strategies)
+        ConnectivityMode mode = RuntimeServerSettings.Current.ConnectivityMode;
+        if (mode is not ConnectivityMode.Auto)
+            _logger.LogInformation("Connectivity mode is pinned to {Mode}", mode);
+
+        if (mode is ConnectivityMode.LocalOnly)
+        {
+            SetState(ConnectivityState.LocalOnly);
+            return;
+        }
+
+        // Ask whether a tunnel has been provisioned BEFORE ranking anything. This used to
+        // happen inside the tunnel strategy, which sits last, so a server that never got
+        // that far never learned a tunnel had been assigned to it at all.
+        await RefreshTunnelAvailabilityAsync();
+
+        IConnectivityStrategy? unverified = null;
+
+        foreach (IConnectivityStrategy strategy in OrderedStrategies())
         {
             if (ct.IsCancellationRequested)
                 break;
 
+            if (!IsAllowedByMode(strategy, mode))
+            {
+                _logger.LogDebug(
+                    "Skipping {Name} — connectivity mode is pinned to {Mode}",
+                    [strategy.Name, mode]
+                );
+                continue;
+            }
+
             try
             {
                 _logger.LogInformation("Trying connectivity strategy: {Name}", strategy.Name);
-                bool success = await strategy.TryEstablishAsync(ct);
-                if (success)
+                ConnectivityResult result = await strategy.TryEstablishAsync(ct);
+
+                if (result is { Established: true, Confidence: ConnectivityConfidence.Verified })
                 {
-                    _activeStrategy = strategy;
-                    ConnectivityState newState = strategy.Type switch
-                    {
-                        ConnectivityType.PortForward => ConnectivityState.DirectAccess,
-                        ConnectivityType.StunHolePunch => ConnectivityState.HolePunched,
-                        ConnectivityType.CloudflareTunnel => ConnectivityState.Tunneled,
-                        _ => ConnectivityState.DirectAccess,
-                    };
-                    SetState(newState);
-                    _logger.LogInformation("Connectivity established via {Name}", strategy.Name);
+                    Activate(strategy);
                     return;
+                }
+
+                if (result.Established)
+                {
+                    // It reported success but could not prove it. Hold it as a fallback and
+                    // keep looking: an assigned tunnel that verifies itself is a better
+                    // answer than a port mapping nothing could confirm. Tear it down in the
+                    // meantime so no transport is left half-running.
+                    _logger.LogInformation(
+                        "Strategy {Name} succeeded but could not be verified — holding it as a fallback",
+                        strategy.Name
+                    );
+                    await strategy.TeardownAsync();
+                    unverified ??= strategy;
+                    continue;
                 }
 
                 _logger.LogDebug("Strategy {Name} did not succeed, trying next...", strategy.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Strategy {Name} failed: {Message}", [strategy.Name, ex.Message]);
+                _logger.LogWarning(
+                    "Strategy {Name} failed: {Message}",
+                    [strategy.Name, ex.Message]
+                );
             }
+        }
+
+        if (unverified is not null && !ct.IsCancellationRequested)
+        {
+            _logger.LogInformation(
+                "Nothing could prove remote reachability — falling back to {Name}",
+                unverified.Name
+            );
+            await unverified.TryEstablishAsync(ct);
+            Activate(unverified);
+            return;
         }
 
         SetState(ConnectivityState.LocalOnly);
         _logger.LogWarning("No remote connectivity strategy succeeded — server is local-only");
+    }
+
+    private static readonly TimeSpan[] RetryBackoff =
+    [
+        TimeSpan.FromSeconds(30),
+        TimeSpan.FromSeconds(60),
+        TimeSpan.FromMinutes(2),
+        TimeSpan.FromMinutes(5),
+    ];
+
+    private static readonly TimeSpan SupervisionInterval = TimeSpan.FromMinutes(1);
+
+    /// <summary>
+    /// Keeps trying after the first evaluation, and notices when an established transport
+    /// dies. Evaluating exactly once per process made every transient cause permanent: the
+    /// most common one is that cloudflared is still downloading when the first evaluation
+    /// runs, so the tunnel fails to start and a server with no other viable transport stays
+    /// local-only until somebody restarts it by hand.
+    /// </summary>
+    private async Task SuperviseAsync(CancellationToken ct)
+    {
+        int attempt = 0;
+
+        while (!ct.IsCancellationRequested)
+        {
+            if (CurrentState is ConnectivityState.LocalOnly)
+            {
+                TimeSpan delay =
+                    _delayOverride ?? RetryBackoff[Math.Min(attempt, RetryBackoff.Length - 1)];
+                attempt++;
+
+                _logger.LogInformation(
+                    "No remote connectivity — retrying in {Seconds}s",
+                    delay.TotalSeconds
+                );
+
+                await Task.Delay(delay, ct);
+                await EvaluateAsync(ct);
+                continue;
+            }
+
+            if (_activeStrategy is { IsStillEstablished: false })
+            {
+                _logger.LogWarning(
+                    "Connectivity via {Name} dropped — re-evaluating",
+                    _activeStrategy.Name
+                );
+                attempt = 0;
+                await EvaluateAsync(ct);
+                continue;
+            }
+
+            attempt = 0;
+            await Task.Delay(_delayOverride ?? SupervisionInterval, ct);
+        }
+    }
+
+    private async Task RefreshTunnelAvailabilityAsync()
+    {
+        if (_tunnelAvailability is null)
+            return;
+
+        try
+        {
+            await _tunnelAvailability();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug("Tunnel availability check failed: {Message}", ex.Message);
+        }
+    }
+
+    private static bool IsAllowedByMode(IConnectivityStrategy strategy, ConnectivityMode mode)
+    {
+        return mode switch
+        {
+            ConnectivityMode.PortForward => strategy.Type is ConnectivityType.PortForward,
+            ConnectivityMode.CloudflareTunnel => strategy.Type is ConnectivityType.CloudflareTunnel,
+            ConnectivityMode.LocalOnly => false,
+            _ => true,
+        };
+    }
+
+    private void Activate(IConnectivityStrategy strategy)
+    {
+        _activeStrategy = strategy;
+        SetState(
+            strategy.Type switch
+            {
+                ConnectivityType.PortForward => ConnectivityState.DirectAccess,
+                ConnectivityType.StunHolePunch => ConnectivityState.HolePunched,
+                ConnectivityType.CloudflareTunnel => ConnectivityState.Tunneled,
+                _ => ConnectivityState.DirectAccess,
+            }
+        );
+        _logger.LogInformation("Connectivity established via {Name}", strategy.Name);
     }
 
     private void SetState(ConnectivityState state)

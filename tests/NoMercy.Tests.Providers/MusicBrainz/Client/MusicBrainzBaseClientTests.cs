@@ -13,7 +13,7 @@ using System.Net;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
-using NoMercy.Tests.Providers.Infrastructure;
+using NoMercy.Tests.Common.Providers;
 
 namespace NoMercy.Tests.Providers.MusicBrainz.Client;
 
@@ -115,7 +115,11 @@ public sealed class MusicBrainzBaseClientTests : ProviderHttpHarness
         string path = Unique("artist");
         MusicBrainzArtist body = new() { Id = Guid.NewGuid(), Name = "Recovered After Retry" };
         Handler.WhenGet(
-            path, [MockResponse.Status(HttpStatusCode.TooManyRequests), MockResponse.Json(HttpStatusCode.OK, body)]
+            path,
+            [
+                MockResponse.Status(HttpStatusCode.TooManyRequests),
+                MockResponse.Json(HttpStatusCode.OK, body),
+            ]
         );
 
         using TestableClient client = new();

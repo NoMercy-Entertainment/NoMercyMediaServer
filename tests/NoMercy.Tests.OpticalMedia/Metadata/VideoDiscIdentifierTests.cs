@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Sources;
-using NoMercy.Tests.OpticalMedia.Infrastructure;
+using NoMercy.Tests.Common.Providers;
 
 namespace NoMercy.Tests.OpticalMedia.Metadata;
 

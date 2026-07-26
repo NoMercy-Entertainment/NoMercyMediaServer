@@ -14,7 +14,7 @@ using System.Reflection;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TVDB.Client;
 using NoMercy.Providers.TVDB.Models.Auth;
-using NoMercy.Tests.Providers.Infrastructure;
+using NoMercy.Tests.Common.Providers;
 
 namespace NoMercy.Tests.Providers.TVDB.Client;
 
@@ -162,7 +162,11 @@ public sealed class TvdbBaseClientHarnessTests : ProviderHttpHarness
         TvdbTokenAccess.Set(LoginBody("cached-token"));
         string path = Unique("series");
         Handler.WhenGet(
-            path, [MockResponse.Status(HttpStatusCode.TooManyRequests), MockResponse.Json(HttpStatusCode.OK, "\"recovered\"")]
+            path,
+            [
+                MockResponse.Status(HttpStatusCode.TooManyRequests),
+                MockResponse.Json(HttpStatusCode.OK, "\"recovered\""),
+            ]
         );
 
         using TestableClient client = new();

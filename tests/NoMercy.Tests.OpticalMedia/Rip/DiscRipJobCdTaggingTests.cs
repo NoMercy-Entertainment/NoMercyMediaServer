@@ -24,7 +24,7 @@ using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Storage;
-using NoMercy.Tests.OpticalMedia.Infrastructure;
+using NoMercy.Tests.Common.Providers;
 
 namespace NoMercy.Tests.OpticalMedia.Rip;
 

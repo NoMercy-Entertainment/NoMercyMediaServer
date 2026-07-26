@@ -11,6 +11,7 @@
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;
@@ -21,12 +22,36 @@ using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Networking.Connectivity.Strategies;
 
-public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
+public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
 {
     private readonly Func<Task>? _checkTunnelAvailability;
     private readonly IConnectivityStatus _connectivityStatus;
     private Process? _tunnelProcess;
     private bool _disposed;
+
+    private static readonly TimeSpan RegistrationTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// cloudflared logs a line per edge connection it registers. That line is the first
+    /// moment the tunnel can actually carry traffic, so it is what "the tunnel is up" has to
+    /// mean. Both the current and the older wording are matched so a cloudflared upgrade
+    /// cannot silently turn every tunnel into a timeout.
+    /// </summary>
+    [GeneratedRegex(
+        @"registered tunnel connection|connection .* registered",
+        RegexOptions.IgnoreCase
+    )]
+    private static partial Regex ConnectionRegisteredPattern();
+
+    [GeneratedRegex(@"\bERR\b|\bFTL\b|error|failed|unauthorized|expired", RegexOptions.IgnoreCase)]
+    private static partial Regex FailurePattern();
+
+    /// <summary>
+    /// cloudflared exits on a revoked token, a clock skew, or a network drop. Nothing noticed
+    /// before: the exit was logged and the manager kept reporting Tunneled for the rest of
+    /// the server's uptime while nothing was listening.
+    /// </summary>
+    public bool IsStillEstablished => _tunnelProcess is { HasExited: false };
 
     public string Name => "CloudflareTunnel";
     public int Priority => 3;
@@ -45,24 +70,66 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
         _connectivityStatus = connectivityStatus;
     }
 
-    public async Task<bool> TryEstablishAsync(CancellationToken ct)
+    public async Task<ConnectivityResult> TryEstablishAsync(CancellationToken ct)
     {
         if (_checkTunnelAvailability is not null)
             await _checkTunnelAvailability();
 
         if (string.IsNullOrEmpty(_connectivityStatus.CloudflareTunnelToken))
         {
+            switch (_connectivityStatus.TunnelAvailability)
+            {
+                case TunnelAvailability.CheckFailed:
+                    _logger.LogWarning(
+                        "Could not check whether a Cloudflare tunnel is available for this server — will retry."
+                    );
+                    return ConnectivityResult.Failed();
+
+                case TunnelAvailability.Provisioning:
+                    _logger.LogInformation(
+                        "A Cloudflare tunnel is being provisioned for this server — will retry once it is ready."
+                    );
+                    return ConnectivityResult.Failed();
+            }
+
+            _logger.LogInformation("No Cloudflare tunnel is set up for this server.");
+
+            // Port forwarding maps an EXTERNAL port to an internal one. The old wording read
+            // "forward port 7626 to 7627", which states the mapping backwards and sends people
+            // to configure their router in the wrong direction.
             _logger.LogInformation(
-                "You don't have access to our Cloudflare tunnel service, this is a paid feature."
-            );
-            _logger.LogInformation(
-                "You need to manually forward port {InternalServerPort} to {ExternalServerPort} if you want to use the server outside your local network", [RuntimeServerSettings.Current.InternalServerPort, RuntimeServerSettings.Current.ExternalServerPort]
+                "To reach this server from outside your network, forward external port {ExternalServerPort} on your router to this machine on port {InternalServerPort}, or have a tunnel assigned to it.",
+                [
+                    RuntimeServerSettings.Current.ExternalServerPort,
+                    RuntimeServerSettings.Current.InternalServerPort,
+                ]
             );
             _logger.LogInformation(
                 "For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide"
             );
-            return false;
+            return ConnectivityResult.Failed();
         }
+
+        // The binary is downloaded at runtime, sixth in a sequential queue that includes
+        // ffmpeg, so on an early boot it is routinely not there yet. Starting it anyway threw
+        // a Win32Exception that read like a generic failure; saying plainly that the download
+        // has not landed is the difference between "retry shortly" and "this is broken".
+        if (!File.Exists(AppFiles.CloudflareDPath))
+        {
+            _logger.LogInformation(
+                "Cloudflare tunnel is assigned but cloudflared is not installed yet at {Path} — will retry once the download finishes",
+                AppFiles.CloudflareDPath
+            );
+            return ConnectivityResult.Failed();
+        }
+
+        // A cloudflared from a previous run of this server can still be alive: a crash, a
+        // container kill or any non-graceful exit skips TeardownAsync, and the child keeps
+        // running. Starting a second one registers a second connector against the same
+        // tunnel, so every ungraceful restart permanently adds another set of edge
+        // connections, and an orphan carries the ingress config it started with — it can
+        // still be routing traffic to an origin this server has since moved.
+        ReapOrphanedTunnels();
 
         try
         {
@@ -85,24 +152,130 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                 EnableRaisingEvents = true,
             };
 
-            _tunnelProcess.OutputDataReceived += (_, args) => _logger.LogTrace(args.Data.OrEmpty());
-            _tunnelProcess.ErrorDataReceived += (_, args) => _logger.LogTrace(args.Data.OrEmpty());
-            _tunnelProcess.Exited += (_, args) =>
-                _logger.LogWarning("Cloudflare tunnel process exited: {Args}", args);
+            // A started process is not a working tunnel. cloudflared exits non-fatally on a
+            // revoked token, a clock skew or no egress, and reporting success on Start()
+            // left the server advertising a tunnel address nothing was listening on.
+            TaskCompletionSource<bool> registered = new(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
+
+            void Watch(string? line)
+            {
+                if (string.IsNullOrEmpty(line))
+                    return;
+
+                // cloudflared reports why it failed — bad token, clock skew, no egress — on
+                // these streams. At LogTrace none of it was ever written, so every tunnel
+                // failure looked identical and unexplained from the logs.
+                if (FailurePattern().IsMatch(line))
+                    _logger.LogWarning("cloudflared: {Line}", line);
+                else
+                    _logger.LogDebug("cloudflared: {Line}", line);
+
+                if (ConnectionRegisteredPattern().IsMatch(line))
+                    registered.TrySetResult(true);
+            }
+
+            _tunnelProcess.OutputDataReceived += (_, args) => Watch(args.Data);
+            _tunnelProcess.ErrorDataReceived += (_, args) => Watch(args.Data);
+            _tunnelProcess.Exited += (_, _) =>
+            {
+                _logger.LogWarning("Cloudflare tunnel process exited");
+                registered.TrySetResult(false);
+            };
 
             _tunnelProcess.Start();
             _tunnelProcess.BeginOutputReadLine();
             _tunnelProcess.BeginErrorReadLine();
 
+            using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(
+                ct
+            );
+            timeout.CancelAfter(RegistrationTimeout);
+
+            bool connected;
+            try
+            {
+                connected = await registered.Task.WaitAsync(timeout.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                connected = false;
+                _logger.LogWarning(
+                    "Cloudflare tunnel did not register a connection within {Seconds}s",
+                    RegistrationTimeout.TotalSeconds
+                );
+            }
+
+            if (!connected)
+            {
+                StopTunnel();
+                return ConnectivityResult.Failed();
+            }
+
             _connectivityStatus.NatStatus = NatStatus.Tunneled;
-            _logger.LogInformation("Cloudflare tunnel started successfully");
-            return true;
+            _logger.LogInformation("Cloudflare tunnel registered a connection");
+            return ConnectivityResult.Verified();
         }
         catch (Exception ex)
         {
             _logger.LogInformation("Failed to start Cloudflare tunnel: {Message}", ex.Message);
-            return false;
+            StopTunnel();
+            return ConnectivityResult.Failed();
         }
+    }
+
+    /// <summary>
+    /// Kills any cloudflared started from our own binary path that is not the process this
+    /// strategy currently owns. Matching on the executable path rather than the name alone
+    /// keeps a cloudflared the user runs for their own tunnels out of scope.
+    /// </summary>
+    internal void ReapOrphanedTunnels()
+    {
+        string ourPath;
+        try
+        {
+            ourPath = Path.GetFullPath(AppFiles.CloudflareDPath);
+        }
+        catch
+        {
+            return;
+        }
+
+        foreach (Process candidate in Process.GetProcessesByName("cloudflared"))
+            using (candidate)
+            {
+                try
+                {
+                    if (_tunnelProcess is not null && candidate.Id == _tunnelProcess.Id)
+                        continue;
+
+                    string? path = candidate.MainModule?.FileName;
+                    if (
+                        path is null
+                        || !string.Equals(
+                            Path.GetFullPath(path),
+                            ourPath,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                        continue;
+
+                    _logger.LogWarning(
+                        "Found an orphaned cloudflared from a previous run (pid {Pid}) — stopping it so this server registers one connector, not two",
+                        candidate.Id
+                    );
+
+                    candidate.Kill(true);
+                    candidate.WaitForExit(5000);
+                }
+                catch (Exception ex)
+                {
+                    // MainModule throws for processes we cannot inspect; that just means it
+                    // is not ours to reap.
+                    _logger.LogDebug("Skipped cloudflared pid inspection: {Message}", ex.Message);
+                }
+            }
     }
 
     public Task TeardownAsync()

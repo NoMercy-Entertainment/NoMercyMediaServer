@@ -22,6 +22,7 @@ using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Monitoring;
+using NoMercy.Networking.Connectivity;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;
@@ -33,6 +34,7 @@ using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using NoMercyQueue;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
+
 namespace NoMercy.Api.Controllers;
 
 [ApiController]
@@ -56,6 +58,8 @@ public class ManagementController(
     IDbContextFactory<QueueContext> queueContextFactory,
     IBootStatus bootStatus,
     IUpdateStatus updateStatus,
+    IConnectivityManager connectivityManager,
+    IConnectivityStatus connectivityStatus,
     RuntimeServerSettings runtimeSettings
 ) : BaseController
 {
@@ -88,6 +92,18 @@ public class ManagementController(
                 SetupPhase = setupState.CurrentPhase.ToString(),
                 InternalAddress = networkDiscovery.InternalAddress,
                 ExternalAddress = networkDiscovery.ExternalAddress,
+                // Connectivity was decided every boot and reported to nobody, so a server
+                // sitting local-only looked identical to a reachable one from every surface
+                // a user can actually see.
+                Connectivity = new()
+                {
+                    State = connectivityManager.CurrentState.ToString(),
+                    Transport = connectivityManager.ActiveStrategy.ToString(),
+                    Mode = runtimeSettings.ConnectivityMode.ToString(),
+                    NatStatus = connectivityStatus.NatStatus.ToString(),
+                    TunnelAvailability = connectivityStatus.TunnelAvailability.ToString(),
+                    PortForwarded = connectivityStatus.PortForwarded,
+                },
                 AppStatus = new()
                 {
                     Running = appProcessManager.IsRunning,
@@ -265,7 +281,10 @@ public class ManagementController(
                 && diskVer > runVer
             )
             {
-                logger.LogInformation("Binary on disk is already {OnDiskVersion} (running {RunningVersion}), restart will apply the update.", [onDiskVersion, runningVersion]);
+                logger.LogInformation(
+                    "Binary on disk is already {OnDiskVersion} (running {RunningVersion}), restart will apply the update.",
+                    [onDiskVersion, runningVersion]
+                );
                 return Ok(
                     new
                     {
@@ -314,14 +333,20 @@ public class ManagementController(
                 case ServerUpdateResult.Downloaded:
                     if (!storageDriver.FileExists(tempPath))
                     {
-                        logger.LogError("Server update staged file missing at {TempPath} after successful download", tempPath);
+                        logger.LogError(
+                            "Server update staged file missing at {TempPath} after successful download",
+                            tempPath
+                        );
                         return InternalServerErrorResponse(
                             "Download completed but staged file not found. This may be caused by antivirus software quarantining the file."
                         );
                     }
 
                     long fileSize = storageDriver.GetFileSize(tempPath);
-                    logger.LogInformation("Server update staged at {TempPath} ({FileSize} bytes)", [tempPath, fileSize]);
+                    logger.LogInformation(
+                        "Server update staged at {TempPath} ({FileSize} bytes)",
+                        [tempPath, fileSize]
+                    );
                     return Ok(
                         new
                         {

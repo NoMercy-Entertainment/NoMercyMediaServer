@@ -63,78 +63,100 @@ public sealed class PortForwardStrategyTests
     }
 
     [Fact]
-    public async Task TryEstablishAsync_WhenNatStatusIsOpen_ReturnsTrue_WithoutCheckingPort()
-    {
-        ConnectivityStatus status = new() { NatStatus = NatStatus.Open };
-        PortForwardStrategy strategy = BuildStrategy(status, portOpen: false);
-
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
-
-        Assert.True(result);
-        Assert.Equal(NatStatus.Open, status.NatStatus);
-    }
-
-    [Fact]
-    public async Task TryEstablishAsync_WhenNatStatusIsFiltered_SetsPortForwarded_AndPromotesToOpen()
-    {
-        ConnectivityStatus status = new() { NatStatus = NatStatus.Filtered };
-        PortForwardStrategy strategy = BuildStrategy(status, portOpen: false);
-
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
-
-        Assert.True(result);
-        Assert.True(status.PortForwarded);
-        Assert.Equal(NatStatus.Open, status.NatStatus);
-    }
-
-    [Fact]
-    public async Task TryEstablishAsync_WhenNatStatusIsNone_AndPortOpen_ReturnsTrueAndSetsOpen()
+    public async Task TryEstablishAsync_WhenTheProbeConnects_IsVerified()
     {
         ConnectivityStatus status = new() { NatStatus = NatStatus.None };
         PortForwardStrategy strategy = BuildStrategy(status, portOpen: true);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.True(result);
+        Assert.True(result.Established);
+        Assert.Equal(ConnectivityConfidence.Verified, result.Confidence);
         Assert.Equal(NatStatus.Open, status.NatStatus);
     }
 
     [Fact]
-    public async Task TryEstablishAsync_WhenNatStatusIsNone_AndPortClosed_ReturnsFalse()
+    public async Task TryEstablishAsync_WhenUpnpMappedButTheProbeFails_IsOnlyAssumed()
     {
-        ConnectivityStatus status = new() { NatStatus = NatStatus.None };
+        ConnectivityStatus status = new() { NatStatus = NatStatus.Filtered };
         PortForwardStrategy strategy = BuildStrategy(status, portOpen: false);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(result);
+        // A router that accepts the UPnP call and drops the mapping is indistinguishable
+        // from one that forwards correctly but will not hairpin. Reporting the first as
+        // established fact is what pinned servers to a port forward that did not exist.
+        Assert.True(result.Established);
+        Assert.Equal(ConnectivityConfidence.Assumed, result.Confidence);
     }
 
     [Fact]
-    public async Task TryEstablishAsync_WhenNatStatusIsClosed_AndPortClosed_ReturnsFalse()
+    public async Task TryEstablishAsync_WhenUpnpMappedButUnproven_DoesNotClaimNatIsOpen()
     {
-        ConnectivityStatus status = new() { NatStatus = NatStatus.Closed };
+        ConnectivityStatus status = new() { NatStatus = NatStatus.Filtered };
         PortForwardStrategy strategy = BuildStrategy(status, portOpen: false);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(result);
+        // NatStatus is reported to the API as stun_nat_type. Promoting an unconfirmed
+        // mapping to Open told the control plane the server was directly reachable.
+        Assert.Equal(NatStatus.Filtered, status.NatStatus);
     }
 
     [Fact]
-    public async Task TryEstablishAsync_WhenNatStatusIsFiltered_DoesNotCallIsPortOpen()
+    public async Task TryEstablishAsync_AlwaysProbes_EvenWhenAnEarlierPassLeftNatOpen()
     {
         TrackingNetworkDiscovery tracking = new();
-        ConnectivityStatus status = new() { NatStatus = NatStatus.Filtered };
+        ConnectivityStatus status = new() { NatStatus = NatStatus.Open };
         PortForwardStrategy strategy = new(
             tracking,
             status,
             NullLogger<PortForwardStrategy>.Instance
         );
 
-        await strategy.TryEstablishAsync(CancellationToken.None);
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(tracking.IsPortOpenCalled);
+        // A stale Open describes the network the server used to be on, and re-evaluation
+        // happens precisely because that network changed.
+        Assert.True(tracking.IsPortOpenCalled);
+        Assert.False(result.Established);
+    }
+
+    [Fact]
+    public async Task TryEstablishAsync_WhenNatStatusIsNone_AndPortClosed_Fails()
+    {
+        ConnectivityStatus status = new() { NatStatus = NatStatus.None };
+        PortForwardStrategy strategy = BuildStrategy(status, portOpen: false);
+
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
+
+        Assert.False(result.Established);
+        Assert.Equal(ConnectivityConfidence.None, result.Confidence);
+    }
+
+    [Fact]
+    public async Task TryEstablishAsync_WhenNatStatusIsClosed_AndPortClosed_Fails()
+    {
+        ConnectivityStatus status = new() { NatStatus = NatStatus.Closed };
+        PortForwardStrategy strategy = BuildStrategy(status, portOpen: false);
+
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
+
+        Assert.False(result.Established);
+    }
+
+    [Fact]
+    public async Task TeardownAsync_ClearsPortForwarded_SoAnotherTransportDoesNotInheritIt()
+    {
+        ConnectivityStatus status = new() { NatStatus = NatStatus.Filtered };
+        PortForwardStrategy strategy = BuildStrategy(status, portOpen: false);
+
+        await strategy.TryEstablishAsync(CancellationToken.None);
+        Assert.True(status.PortForwarded);
+
+        await strategy.TeardownAsync();
+
+        Assert.False(status.PortForwarded);
     }
 
     [Fact]

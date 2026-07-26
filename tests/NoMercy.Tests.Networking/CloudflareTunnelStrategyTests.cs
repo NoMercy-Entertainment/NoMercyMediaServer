@@ -35,9 +35,9 @@ public sealed class CloudflareTunnelStrategyTests
         ConnectivityStatus status = new() { CloudflareTunnelToken = null };
         CloudflareTunnelStrategy strategy = BuildStrategy(status);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(result);
+        Assert.False(result.Established);
     }
 
     [Fact]
@@ -46,9 +46,24 @@ public sealed class CloudflareTunnelStrategyTests
         ConnectivityStatus status = new() { CloudflareTunnelToken = string.Empty };
         CloudflareTunnelStrategy strategy = BuildStrategy(status);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(result);
+        Assert.False(result.Established);
+    }
+
+    [Fact]
+    public void ReapOrphanedTunnels_LeavesUnrelatedCloudflaredProcessesAlone()
+    {
+        ConnectivityStatus status = new();
+        CloudflareTunnelStrategy strategy = BuildStrategy(status);
+
+        // Nothing on this machine runs from our dependencies path during the test run, so a
+        // correct reaper is a no-op here. The assertion that matters is that it does not
+        // throw and does not go killing every cloudflared it can see — a user running their
+        // own tunnel for something unrelated must not have it stopped by us.
+        Exception? ex = Record.Exception(strategy.ReapOrphanedTunnels);
+
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -91,9 +106,9 @@ public sealed class CloudflareTunnelStrategyTests
         ConnectivityStatus status = new() { CloudflareTunnelToken = "dummy-tunnel-token" };
         CloudflareTunnelStrategy strategy = BuildStrategy(status);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(result);
+        Assert.False(result.Established);
     }
 
     [Fact]

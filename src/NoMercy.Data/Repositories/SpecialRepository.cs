@@ -43,14 +43,14 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .ThenInclude(item => item.Episode)
             .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
             .Include(special => special.Items)
-            .ThenInclude(item => item.Movie)
-            .ThenInclude(m =>
-                m!
-                    .CertificationMovies.Where(c => c.Certification.Iso31661 == "US")
-                    .OrderBy(c => c.CertificationId)
-                    .Take(1)
-            )
-            .ThenInclude(c => c.Certification)
+                .ThenInclude(item => item.Movie)
+                    .ThenInclude(m =>
+                        m!
+                            .CertificationMovies.Where(c => c.Certification.Iso31661 == "US")
+                            .OrderBy(c => c.CertificationId)
+                            .Take(1)
+                    )
+                        .ThenInclude(c => c.Certification)
             .OrderBy(special => special.TitleSort)
             .ThenBy(special => special.Id)
             .Skip(page * take)
@@ -742,17 +742,17 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .AsSplitQuery()
             .Where(special => special.Id == id)
             .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
-            .ThenInclude(specialItem => specialItem.Movie)
-            .ThenInclude(movie => movie!.VideoFiles)
-            .ThenInclude(file =>
-                file.UserData.Where(userData => userData.UserId.Equals(userId))
-            )
+                .ThenInclude(specialItem => specialItem.Movie)
+                    .ThenInclude(movie => movie!.VideoFiles)
+                        .ThenInclude(file =>
+                            file.UserData.Where(userData => userData.UserId.Equals(userId))
+                        )
             .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
-            .ThenInclude(specialItem => specialItem.Episode)
-            .ThenInclude(movie => movie!.VideoFiles)
-            .ThenInclude(file =>
-                file.UserData.Where(userData => userData.UserId.Equals(userId))
-            )
+                .ThenInclude(specialItem => specialItem.Episode)
+                    .ThenInclude(movie => movie!.VideoFiles)
+                        .ThenInclude(file =>
+                            file.UserData.Where(userData => userData.UserId.Equals(userId))
+                        )
             .Include(special =>
                 special.SpecialUser.Where(specialUser => specialUser.UserId.Equals(userId))
             )
@@ -770,20 +770,20 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .AsSplitQuery()
             .Where(special => special.Id == id)
             .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
-            .ThenInclude(specialItem => specialItem.Movie)
-            .ThenInclude(movie => movie!.VideoFiles)
-            .ThenInclude(file =>
-                file.UserData.Where(userData => userData.UserId.Equals(userId))
-            )
+                .ThenInclude(specialItem => specialItem.Movie)
+                    .ThenInclude(movie => movie!.VideoFiles)
+                        .ThenInclude(file =>
+                            file.UserData.Where(userData => userData.UserId.Equals(userId))
+                        )
             .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
-            .ThenInclude(specialItem => specialItem.Episode)
-            .ThenInclude(episode => episode!.Tv)
+                .ThenInclude(specialItem => specialItem.Episode)
+                    .ThenInclude(episode => episode!.Tv)
             .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
-            .ThenInclude(specialItem => specialItem.Episode)
-            .ThenInclude(movie => movie!.VideoFiles)
-            .ThenInclude(file =>
-                file.UserData.Where(userData => userData.UserId.Equals(userId))
-            )
+                .ThenInclude(specialItem => specialItem.Episode)
+                    .ThenInclude(movie => movie!.VideoFiles)
+                        .ThenInclude(file =>
+                            file.UserData.Where(userData => userData.UserId.Equals(userId))
+                        )
             .Include(special =>
                 special.SpecialUser.Where(specialUser => specialUser.UserId.Equals(userId))
             )
@@ -833,12 +833,15 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .ThenInclude(item => item.Episode)
             .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
             .Include(special => special.Items)
-            .ThenInclude(item => item.Movie)
-            .ThenInclude(m =>
-                m!
-                    .CertificationMovies.Where(c =>
-                        c.Certification.Iso31661 == "US"
-                        || c.Certification.Iso31661 == country
+                .ThenInclude(item => item.Movie)
+                    .ThenInclude(m =>
+                        m!
+                            .CertificationMovies.Where(c =>
+                                c.Certification.Iso31661 == "US"
+                                || c.Certification.Iso31661 == country
+                            )
+                            .OrderBy(c => c.CertificationId)
+                            .Take(1)
                     )
                     .OrderBy(c => c.CertificationId)
                     .Take(1)
@@ -867,14 +870,14 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .ThenInclude(item => item.Movie)
             .ThenInclude(m => m!.Translations.Where(t => t.Iso6391 == language))
             .Include(special => special.Items)
-            .ThenInclude(item => item.Movie)
-            .ThenInclude(m =>
-                m!
-                    .Images.Where(i => i.Type == "logo")
-                    .OrderByDescending(i => i.VoteAverage)
-                    .ThenBy(i => i.Id)
-                    .Take(1)
-            )
+                .ThenInclude(item => item.Movie)
+                    .ThenInclude(m =>
+                        m!
+                            .Images.Where(i => i.Type == "logo")
+                            .OrderByDescending(i => i.VoteAverage)
+                            .ThenBy(i => i.Id)
+                            .Take(1)
+                    )
             .Include(special => special.Items)
             .ThenInclude(item => item.Movie)
             .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
@@ -889,12 +892,15 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .ThenInclude(item => item.Movie)
             .ThenInclude(m => m!.MovieUser.Where(mu => mu.UserId == userId))
             .Include(special => special.Items)
-            .ThenInclude(item => item.Movie)
-            .ThenInclude(m =>
-                m!
-                    .CertificationMovies.Where(c =>
-                        c.Certification.Iso31661 == "US"
-                        || c.Certification.Iso31661 == country
+                .ThenInclude(item => item.Movie)
+                    .ThenInclude(m =>
+                        m!
+                            .CertificationMovies.Where(c =>
+                                c.Certification.Iso31661 == "US"
+                                || c.Certification.Iso31661 == country
+                            )
+                            .OrderBy(c => c.CertificationId)
+                            .Take(1)
                     )
                     .OrderBy(c => c.CertificationId)
                     .Take(1)
@@ -907,14 +913,14 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .ThenInclude(item => item.Episode)
             .ThenInclude(e => e!.Translations.Where(t => t.Iso6391 == language))
             .Include(special => special.Items)
-            .ThenInclude(item => item.Episode)
-            .ThenInclude(e =>
-                e!
-                    .Images.Where(i => i.Type == "logo")
-                    .OrderByDescending(i => i.VoteAverage)
-                    .ThenBy(i => i.Id)
-                    .Take(1)
-            )
+                .ThenInclude(item => item.Episode)
+                    .ThenInclude(e =>
+                        e!
+                            .Images.Where(i => i.Type == "logo")
+                            .OrderByDescending(i => i.VoteAverage)
+                            .ThenBy(i => i.Id)
+                            .Take(1)
+                    )
             .Include(special => special.Items)
             .ThenInclude(item => item.Episode)
             .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
@@ -928,30 +934,30 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .ThenInclude(e => e!.Tv)
             .ThenInclude(tv => tv.Translations.Where(t => t.Iso6391 == language))
             .Include(special => special.Items)
-            .ThenInclude(item => item.Episode)
-            .ThenInclude(e => e!.Tv)
-            .ThenInclude(tv =>
-                tv.Images.Where(i => i.Type == "logo")
-                    .OrderByDescending(i => i.VoteAverage)
-                    .ThenBy(i => i.Id)
-                    .Take(1)
-            )
+                .ThenInclude(item => item.Episode)
+                    .ThenInclude(e => e!.Tv)
+                        .ThenInclude(tv =>
+                            tv.Images.Where(i => i.Type == "logo")
+                                .OrderByDescending(i => i.VoteAverage)
+                                .ThenBy(i => i.Id)
+                                .Take(1)
+                        )
             .Include(special => special.Items)
             .ThenInclude(item => item.Episode)
             .ThenInclude(e => e!.Tv)
             .ThenInclude(tv => tv.TvUser.Where(tu => tu.UserId == userId))
             .Include(special => special.Items)
-            .ThenInclude(item => item.Episode)
-            .ThenInclude(e => e!.Tv)
-            .ThenInclude(tv =>
-                tv.CertificationTvs.Where(c =>
-                        c.Certification.Iso31661 == "US"
-                        || c.Certification.Iso31661 == country
-                    )
-                    .OrderBy(c => c.CertificationId)
-                    .Take(1)
-            )
-            .ThenInclude(c => c.Certification)
+                .ThenInclude(item => item.Episode)
+                    .ThenInclude(e => e!.Tv)
+                        .ThenInclude(tv =>
+                            tv.CertificationTvs.Where(c =>
+                                    c.Certification.Iso31661 == "US"
+                                    || c.Certification.Iso31661 == country
+                                )
+                                .OrderBy(c => c.CertificationId)
+                                .Take(1)
+                        )
+                            .ThenInclude(c => c.Certification)
             .FirstOrDefaultAsync(ct);
     }
 
@@ -1277,6 +1283,8 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .Movies.AsNoTracking()
             .Where(m => m.Title.ToLower().Contains(normalized))
             .Include(m => m.VideoFiles)
+            .OrderBy(m => m.Title)
+            .ThenBy(m => m.Id)
             .Take(take)
             .ToListAsync(ct);
     }

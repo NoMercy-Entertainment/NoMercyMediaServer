@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -180,9 +181,8 @@ public static class UserSettings
                                 new()
                                 {
                                     Key = setting.Key,
-                                    Value = RuntimeServerSettings
-                                        .Current
-                                        .InternalServerPort.ToString(),
+                                    Value =
+                                        RuntimeServerSettings.Current.InternalServerPort.ToString(),
                                 }
                             )
                             .On(c => c.Key)
@@ -207,9 +207,8 @@ public static class UserSettings
                                 new()
                                 {
                                     Key = setting.Key,
-                                    Value = RuntimeServerSettings
-                                        .Current
-                                        .ExternalServerPort.ToString(),
+                                    Value =
+                                        RuntimeServerSettings.Current.ExternalServerPort.ToString(),
                                 }
                             )
                             .On(c => c.Key)
@@ -274,6 +273,10 @@ public static class UserSettings
                     break;
                 case "allowAdultContent":
                     RuntimeServerSettings.Current.AllowAdultContent = setting.Value.ToBoolean();
+                    break;
+                case "connectivityMode":
+                    if (Enum.TryParse(setting.Value, true, out ConnectivityMode connectivityMode))
+                        RuntimeServerSettings.Current.ConnectivityMode = connectivityMode;
                     break;
             }
         }
