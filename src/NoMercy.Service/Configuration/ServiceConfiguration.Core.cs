@@ -297,6 +297,7 @@ public static partial class ServiceConfiguration
             sp.GetRequiredService<INetworkDiscovery>(),
             sp.GetServices<IConnectivityStrategy>(),
             sp.GetRequiredService<IBootStatus>(),
+            sp.GetRequiredService<IConnectivityStatus>(),
             () => sp.GetRequiredService<IServerRegistrationService>().GetTunnelAvailability()
         ));
         services.AddHostedService(sp =>

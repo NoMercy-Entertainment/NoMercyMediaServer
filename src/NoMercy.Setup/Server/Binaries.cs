@@ -1650,8 +1650,6 @@ public class Binaries
             return;
         }
 
-        await Downloader.DeleteSourceDownload(_storage, destinationPath);
-
         Asset? selectedAsset = null;
         bool needsExtraction = false;
 
@@ -1666,8 +1664,11 @@ public class Binaries
             && RuntimeInformation.ProcessArchitecture == Architecture.Arm64
         )
         {
+            // cloudflared-linux-arm is the 32-bit build. Picking it on arm64 leaves a binary
+            // that may not execute at all, and the tunnel is the only remote transport a
+            // CGNAT user has.
             selectedAsset = releaseInfo.Assets.FirstOrDefault(a =>
-                a.Name.Equals("cloudflared-linux-arm")
+                a.Name.Equals("cloudflared-linux-arm64")
             );
         }
         else if (

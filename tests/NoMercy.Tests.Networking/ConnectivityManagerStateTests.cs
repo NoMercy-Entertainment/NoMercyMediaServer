@@ -70,11 +70,20 @@ public sealed class ConnectivityManagerStateTests
 
     private static ConnectivityManager BuildManager(params IConnectivityStrategy[] strategies)
     {
-        return BuildManager(null, strategies);
+        return BuildManager(null, new ConnectivityStatus(), strategies);
     }
 
     private static ConnectivityManager BuildManager(
         Func<Task>? tunnelAvailability,
+        params IConnectivityStrategy[] strategies
+    )
+    {
+        return BuildManager(tunnelAvailability, new ConnectivityStatus(), strategies);
+    }
+
+    private static ConnectivityManager BuildManager(
+        Func<Task>? tunnelAvailability,
+        ConnectivityStatus connectivityStatus,
         params IConnectivityStrategy[] strategies
     )
     {
@@ -89,6 +98,7 @@ public sealed class ConnectivityManagerStateTests
             BuildNetworkDiscovery(),
             strategies,
             boot,
+            connectivityStatus,
             tunnelAvailability
         );
     }
@@ -345,6 +355,104 @@ public sealed class ConnectivityManagerStateTests
         await manager.EvaluateAsync(CancellationToken.None);
 
         Assert.True(strategy.WasAttempted);
+        Assert.Equal(ConnectivityState.DirectAccess, manager.CurrentState);
+    }
+
+    // ── An assigned tunnel is an instruction ────────────────────────────────
+
+    [Fact]
+    public async Task EvaluateAsync_WhenATunnelIsAssigned_ItIsTriedBeforePortForward()
+    {
+        List<string> order = [];
+        ConnectivityStatus status = new() { CloudflareTunnelToken = "assigned-token" };
+        ConnectivityManager manager = BuildManager(
+            null,
+            status,
+            new OrderTrackingStrategy("PortForward", 1, ConnectivityType.PortForward, order),
+            new OrderTrackingStrategy("Stun", 2, ConnectivityType.StunHolePunch, order),
+            new OrderTrackingStrategy(
+                "CloudflareTunnel",
+                3,
+                ConnectivityType.CloudflareTunnel,
+                order
+            )
+        );
+
+        await manager.EvaluateAsync(CancellationToken.None);
+
+        // Nobody provisions a tunnel for a server they want reached another way. Leaving it
+        // at priority 3 meant a port forward that answered silently overrode the choice made
+        // in the dashboard.
+        Assert.Equal("CloudflareTunnel", order[0]);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenATunnelIsAssigned_ItWinsOverAWorkingPortForward()
+    {
+        ConnectivityStatus status = new() { CloudflareTunnelToken = "assigned-token" };
+        StubStrategy portForward = new(
+            "PortForward",
+            1,
+            ConnectivityType.PortForward,
+            succeeds: true
+        );
+        StubStrategy tunnel = new(
+            "CloudflareTunnel",
+            3,
+            ConnectivityType.CloudflareTunnel,
+            succeeds: true
+        );
+        ConnectivityManager manager = BuildManager(null, status, portForward, tunnel);
+
+        await manager.EvaluateAsync(CancellationToken.None);
+
+        Assert.Equal(ConnectivityState.Tunneled, manager.CurrentState);
+        Assert.False(portForward.WasAttempted);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenNoTunnelIsAssigned_KeepsThePriorityOrder()
+    {
+        List<string> order = [];
+        ConnectivityManager manager = BuildManager(
+            null,
+            new ConnectivityStatus(),
+            new OrderTrackingStrategy("PortForward", 1, ConnectivityType.PortForward, order),
+            new OrderTrackingStrategy(
+                "CloudflareTunnel",
+                3,
+                ConnectivityType.CloudflareTunnel,
+                order
+            )
+        );
+
+        await manager.EvaluateAsync(CancellationToken.None);
+
+        Assert.Equal("PortForward", order[0]);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenAnAssignedTunnelFails_StillFallsBackToPortForward()
+    {
+        ConnectivityStatus status = new() { CloudflareTunnelToken = "assigned-token" };
+        StubStrategy tunnel = new(
+            "CloudflareTunnel",
+            3,
+            ConnectivityType.CloudflareTunnel,
+            succeeds: false
+        );
+        StubStrategy portForward = new(
+            "PortForward",
+            1,
+            ConnectivityType.PortForward,
+            succeeds: true
+        );
+        ConnectivityManager manager = BuildManager(null, status, portForward, tunnel);
+
+        await manager.EvaluateAsync(CancellationToken.None);
+
+        // Preferring the tunnel must not strand a server when the tunnel cannot come up.
+        Assert.True(tunnel.WasAttempted);
         Assert.Equal(ConnectivityState.DirectAccess, manager.CurrentState);
     }
 

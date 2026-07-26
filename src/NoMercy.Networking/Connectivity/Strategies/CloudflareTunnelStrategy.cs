@@ -43,6 +43,16 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
     )]
     private static partial Regex ConnectionRegisteredPattern();
 
+    [GeneratedRegex(@"\bERR\b|\bFTL\b|error|failed|unauthorized|expired", RegexOptions.IgnoreCase)]
+    private static partial Regex FailurePattern();
+
+    /// <summary>
+    /// cloudflared exits on a revoked token, a clock skew, or a network drop. Nothing noticed
+    /// before: the exit was logged and the manager kept reporting Tunneled for the rest of
+    /// the server's uptime while nothing was listening.
+    /// </summary>
+    public bool IsStillEstablished => _tunnelProcess is { HasExited: false };
+
     public string Name => "CloudflareTunnel";
     public int Priority => 3;
     public ConnectivityType Type => ConnectivityType.CloudflareTunnel;
@@ -67,18 +77,48 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
 
         if (string.IsNullOrEmpty(_connectivityStatus.CloudflareTunnelToken))
         {
+            switch (_connectivityStatus.TunnelAvailability)
+            {
+                case TunnelAvailability.CheckFailed:
+                    _logger.LogWarning(
+                        "Could not check whether a Cloudflare tunnel is available for this server — will retry."
+                    );
+                    return ConnectivityResult.Failed();
+
+                case TunnelAvailability.Provisioning:
+                    _logger.LogInformation(
+                        "A Cloudflare tunnel is being provisioned for this server — will retry once it is ready."
+                    );
+                    return ConnectivityResult.Failed();
+            }
+
+            _logger.LogInformation("No Cloudflare tunnel is set up for this server.");
+
+            // Port forwarding maps an EXTERNAL port to an internal one. The old wording read
+            // "forward port 7626 to 7627", which states the mapping backwards and sends people
+            // to configure their router in the wrong direction.
             _logger.LogInformation(
-                "You don't have access to our Cloudflare tunnel service, this is a paid feature."
-            );
-            _logger.LogInformation(
-                "You need to manually forward port {InternalServerPort} to {ExternalServerPort} if you want to use the server outside your local network",
+                "To reach this server from outside your network, forward external port {ExternalServerPort} on your router to this machine on port {InternalServerPort}, or have a tunnel assigned to it.",
                 [
-                    RuntimeServerSettings.Current.InternalServerPort,
                     RuntimeServerSettings.Current.ExternalServerPort,
+                    RuntimeServerSettings.Current.InternalServerPort,
                 ]
             );
             _logger.LogInformation(
                 "For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide"
+            );
+            return ConnectivityResult.Failed();
+        }
+
+        // The binary is downloaded at runtime, sixth in a sequential queue that includes
+        // ffmpeg, so on an early boot it is routinely not there yet. Starting it anyway threw
+        // a Win32Exception that read like a generic failure; saying plainly that the download
+        // has not landed is the difference between "retry shortly" and "this is broken".
+        if (!File.Exists(AppFiles.CloudflareDPath))
+        {
+            _logger.LogInformation(
+                "Cloudflare tunnel is assigned but cloudflared is not installed yet at {Path} — will retry once the download finishes",
+                AppFiles.CloudflareDPath
             );
             return ConnectivityResult.Failed();
         }
@@ -116,7 +156,13 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
                 if (string.IsNullOrEmpty(line))
                     return;
 
-                _logger.LogTrace(line);
+                // cloudflared reports why it failed — bad token, clock skew, no egress — on
+                // these streams. At LogTrace none of it was ever written, so every tunnel
+                // failure looked identical and unexplained from the logs.
+                if (FailurePattern().IsMatch(line))
+                    _logger.LogWarning("cloudflared: {Line}", line);
+                else
+                    _logger.LogDebug("cloudflared: {Line}", line);
 
                 if (ConnectionRegisteredPattern().IsMatch(line))
                     registered.TrySetResult(true);

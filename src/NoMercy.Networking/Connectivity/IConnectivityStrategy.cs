@@ -18,6 +18,14 @@ public interface IConnectivityStrategy
     Task<ConnectivityResult> TryEstablishAsync(CancellationToken ct);
     Task TeardownAsync();
     ConnectivityType Type { get; }
+
+    /// <summary>
+    /// Whether the transport this strategy established is still carrying traffic. Defaults
+    /// to true for strategies that hold no process or socket of their own; a strategy that
+    /// does owns the answer. Without it a transport could die minutes after being chosen and
+    /// the server would keep advertising it for the rest of its uptime.
+    /// </summary>
+    bool IsStillEstablished => true;
 }
 
 /// <summary>

@@ -33,7 +33,13 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
 
     private readonly IAuthTokenStore _authTokenStore;
     private readonly IBootStatus _bootStatus;
+    private readonly IConnectivityStatus _connectivityStatus;
     private readonly Func<Task>? _tunnelAvailability;
+
+    // Collapses every supervision wait to a single short value. Set only by tests, which
+    // otherwise could not exercise the recovery path without sleeping through the real
+    // 30s-to-5min backoff.
+    private readonly TimeSpan? _delayOverride;
 
     private readonly ILogger<ConnectivityManager> _logger;
 
@@ -43,7 +49,9 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         INetworkDiscovery networkDiscovery,
         IEnumerable<IConnectivityStrategy> strategies,
         IBootStatus bootStatus,
-        Func<Task>? tunnelAvailability = null
+        IConnectivityStatus connectivityStatus,
+        Func<Task>? tunnelAvailability = null,
+        TimeSpan? delayOverride = null
     )
     {
         _logger = logger;
@@ -51,7 +59,30 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         _networkDiscovery = networkDiscovery;
         _strategies = strategies.OrderBy(s => s.Priority);
         _bootStatus = bootStatus;
+        _connectivityStatus = connectivityStatus;
         _tunnelAvailability = tunnelAvailability;
+        _delayOverride = delayOverride;
+    }
+
+    /// <summary>
+    /// Attempt order for the current evaluation. A tunnel is only ever provisioned by an
+    /// explicit act in the dashboard, and nobody assigns one to a server they want reached
+    /// some other way, so a token present means the operator already chose. Without this the
+    /// assignment is silently ignored on any server whose port forward happens to answer,
+    /// which is the whole reason assigning a proxy appeared to do nothing.
+    /// </summary>
+    private IEnumerable<IConnectivityStrategy> OrderedStrategies()
+    {
+        if (string.IsNullOrEmpty(_connectivityStatus.CloudflareTunnelToken))
+            return _strategies;
+
+        _logger.LogInformation(
+            "A Cloudflare tunnel is assigned to this server — trying it before the other transports"
+        );
+
+        return _strategies
+            .OrderBy(s => s.Type is ConnectivityType.CloudflareTunnel ? 0 : 1)
+            .ThenBy(s => s.Priority);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -93,6 +124,7 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
             await _networkDiscovery.DiscoverExternalIpAsync();
 
             await EvaluateAsync(cancellationToken);
+            await SuperviseAsync(cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -132,7 +164,7 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
 
         IConnectivityStrategy? unverified = null;
 
-        foreach (IConnectivityStrategy strategy in _strategies)
+        foreach (IConnectivityStrategy strategy in OrderedStrategies())
         {
             if (ct.IsCancellationRequested)
                 break;
@@ -196,6 +228,61 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
 
         SetState(ConnectivityState.LocalOnly);
         _logger.LogWarning("No remote connectivity strategy succeeded — server is local-only");
+    }
+
+    private static readonly TimeSpan[] RetryBackoff =
+    [
+        TimeSpan.FromSeconds(30),
+        TimeSpan.FromSeconds(60),
+        TimeSpan.FromMinutes(2),
+        TimeSpan.FromMinutes(5),
+    ];
+
+    private static readonly TimeSpan SupervisionInterval = TimeSpan.FromMinutes(1);
+
+    /// <summary>
+    /// Keeps trying after the first evaluation, and notices when an established transport
+    /// dies. Evaluating exactly once per process made every transient cause permanent: the
+    /// most common one is that cloudflared is still downloading when the first evaluation
+    /// runs, so the tunnel fails to start and a server with no other viable transport stays
+    /// local-only until somebody restarts it by hand.
+    /// </summary>
+    private async Task SuperviseAsync(CancellationToken ct)
+    {
+        int attempt = 0;
+
+        while (!ct.IsCancellationRequested)
+        {
+            if (CurrentState is ConnectivityState.LocalOnly)
+            {
+                TimeSpan delay =
+                    _delayOverride ?? RetryBackoff[Math.Min(attempt, RetryBackoff.Length - 1)];
+                attempt++;
+
+                _logger.LogInformation(
+                    "No remote connectivity — retrying in {Seconds}s",
+                    delay.TotalSeconds
+                );
+
+                await Task.Delay(delay, ct);
+                await EvaluateAsync(ct);
+                continue;
+            }
+
+            if (_activeStrategy is { IsStillEstablished: false })
+            {
+                _logger.LogWarning(
+                    "Connectivity via {Name} dropped — re-evaluating",
+                    _activeStrategy.Name
+                );
+                attempt = 0;
+                await EvaluateAsync(ct);
+                continue;
+            }
+
+            attempt = 0;
+            await Task.Delay(_delayOverride ?? SupervisionInterval, ct);
+        }
     }
 
     private async Task RefreshTunnelAvailabilityAsync()

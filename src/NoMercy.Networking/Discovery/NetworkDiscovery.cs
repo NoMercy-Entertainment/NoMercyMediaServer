@@ -92,7 +92,11 @@ public class NetworkDiscovery : INetworkDiscovery
 
     public string ExternalIp
     {
-        get => _externalIp ?? "0.0.0.0";
+        // Empty is what GetExternalIpAsync returns when every lookup failed, and it used to
+        // reach the hostname builders verbatim, producing ".<id>.srv.nomercy.tv" — a name
+        // with an empty leading label that no resolver will ever answer. Collapse it to the
+        // same sentinel a missing value already used, which every caller already guards on.
+        get => string.IsNullOrEmpty(_externalIp) ? "0.0.0.0" : _externalIp;
         set
         {
             if (_externalIp == value)
@@ -114,16 +118,33 @@ public class NetworkDiscovery : INetworkDiscovery
         }
     }
 
+    private const string ApexDnsSuffix = "nomercy.tv";
+
     private static string DnsSuffix =>
-        RuntimeServerSettings.Current.UseSynthesizedDns ? "srv.nomercy.tv" : "nomercy.tv";
+        RuntimeServerSettings.Current.UseSynthesizedDns ? "srv." + ApexDnsSuffix : ApexDnsSuffix;
+
+    /// <summary>
+    /// A tunnel terminates at the Cloudflare edge, so the server is reached at its apex
+    /// hostname on 443 and the IP-derived host is meaningless. This mirrors what the control
+    /// plane publishes for a tunnelled server; without it the API said one address and the
+    /// server told SignalR, Chromecast and the management endpoint a different one, sending
+    /// clients to a port forward that a tunnelled server does not have.
+    /// </summary>
+    private bool IsTunneled => _connectivityStatus.NatStatus == NatStatus.Tunneled;
 
     public string InternalDomain => $"{InternalIp.SafeHost()}.{Info.DeviceId}.{DnsSuffix}";
     public string InternalAddress =>
         $"https://{InternalDomain}:{RuntimeServerSettings.Current.InternalServerPort}";
 
-    public string ExternalDomain => $"{ExternalIp.SafeHost()}.{Info.DeviceId}.{DnsSuffix}";
+    public string ExternalDomain =>
+        IsTunneled
+            ? $"{Info.DeviceId}.{ApexDnsSuffix}"
+            : $"{ExternalIp.SafeHost()}.{Info.DeviceId}.{DnsSuffix}";
+
     public string ExternalAddress =>
-        $"https://{ExternalDomain}:{RuntimeServerSettings.Current.ExternalServerPort}";
+        IsTunneled
+            ? $"https://{ExternalDomain}"
+            : $"https://{ExternalDomain}:{RuntimeServerSettings.Current.ExternalServerPort}";
 
     public string? ExternalAddressV6 =>
         ExternalIpV6 is not null
