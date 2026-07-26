@@ -826,7 +826,12 @@ public class SetupEndpoints
 
             if (Start.NetworkDiscovery is not null)
                 await Start.NetworkDiscovery.DiscoverExternalIpAsync();
-            using CancellationTokenSource registrationTimeoutCts = new(TimeSpan.FromMinutes(2));
+            // Init() is register + assign + certificate. Register and assign each retry five
+            // times on a 2/5/15/30/60s backoff, and the certificate poll runs up to 30 attempts
+            // 10s apart because issuance genuinely takes minutes. Capping the whole thing at
+            // two minutes cancelled healthy setups partway through and reported a timeout, so
+            // the ceiling now sits above the budget the steps themselves use.
+            using CancellationTokenSource registrationTimeoutCts = new(TimeSpan.FromMinutes(10));
             await _serverRegistrationService.Init().WaitAsync(registrationTimeoutCts.Token);
 
             _state.TransitionTo(SetupPhase.Registered);
@@ -839,8 +844,13 @@ public class SetupEndpoints
 
             if (Start.Certificate!.HasValidCertificate())
             {
+                // Built by NetworkDiscovery rather than assembled here: this hand-rolled form
+                // appended the port forward's port to an apex hostname, which a tunnelled
+                // server never serves, and it ignored the srv scheme entirely. Setup's closing
+                // screen was handing people a URL that could not load.
                 string serverUrl =
-                    $"https://{Info.DeviceId}.nomercy.tv:{RuntimeServerSettings.Current.ExternalServerPort}";
+                    Start.NetworkDiscovery?.ExternalAddress
+                    ?? $"https://{Info.DeviceId}.nomercy.tv:{RuntimeServerSettings.Current.ExternalServerPort}";
                 _state.SetServerUrl(serverUrl);
                 _state.TransitionTo(SetupPhase.CertificateAcquired);
                 _state.TransitionTo(SetupPhase.Complete);
