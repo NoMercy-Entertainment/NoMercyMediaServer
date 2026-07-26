@@ -254,7 +254,8 @@ public class EncodeTaskJob
             title: fileMetadata.Title,
             baseFolder: fileMetadata.Path,
             sharePath: fileMetadata.Path,
-            registry: processRegistry
+            registry: processRegistry,
+            backdrop: fileMetadata.ImgPath
         );
 
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -457,6 +458,7 @@ public class EncodeTaskJob
         string fileName = movie?.CreateFileName() ?? episode!.CreateFileName();
         string basePath = folderName;
         int baseId = movie?.Id ?? episode!.Id;
+        string? imgPath = movie?.Backdrop ?? episode?.Still;
 
         return new()
         {
@@ -465,6 +467,7 @@ public class EncodeTaskJob
             Title = title,
             FileName = fileName,
             Path = basePath,
+            ImgPath = imgPath,
             Id = baseId,
             MediaItem = MediaItemRefFactory.Create(movie, episode),
         };
@@ -478,6 +481,9 @@ public class EncodeTaskJob
         public string FileName { get; set; } = string.Empty;
         public string Path { get; set; } = string.Empty;
         public int Id { get; set; }
+
+        /// <summary>The item's own artwork, shown beside the job on the dashboard.</summary>
+        public string? ImgPath { get; set; }
 
         /// <summary>
         /// Identifies the movie/episode being encoded. PlanStage needs it to

@@ -597,9 +597,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         // returns Partial with missing kinds, only Skip/Full — so
         // filtering down to the missing kinds here never starves a
         // Whole-task (MKV/MP4) run of its only task.
-        if (
-            reconciliation is { Action: ReconciliationAction.Partial, MissingKinds.Count: > 0 }
-        )
+        if (reconciliation is { Action: ReconciliationAction.Partial, MissingKinds.Count: > 0 })
         {
             tasks = tasks.Where(task => reconciliation.MissingKinds.Contains(task.Kind)).ToArray();
             isPartialTopUp = true;
@@ -1828,7 +1826,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 .ToList(),
             hasGpu: false,
             isHdr: false,
-            registry: processRegistry
+            registry: processRegistry,
+            backdrop: fileMetadata.ImgPath
         );
 
         EncodingResult result = await orchestrator.EncodeAsync(

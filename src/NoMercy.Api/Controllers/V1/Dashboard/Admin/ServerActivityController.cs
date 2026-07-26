@@ -56,14 +56,18 @@ public class ServerActivityController(IActivityRepository activityRepository) : 
                 Time = activityLog.Time,
                 CreatedAt = activityLog.CreatedAt,
                 UpdatedAt = activityLog.UpdatedAt,
-                UserId = activityLog.UserId,
-                DeviceId = activityLog.DeviceId,
+                // A system event — an encode, a scheduled scan — has no user and no device.
+                // The ids stay on the wire as empty rather than null so that clients built
+                // against the old shape keep parsing; the names below are what a client
+                // actually renders, and blank is how it knows nobody did this.
+                UserId = activityLog.UserId ?? Guid.Empty,
+                DeviceId = activityLog.DeviceId ?? Ulid.Empty,
                 MediaId = activityLog.MediaId,
                 Success = activityLog.Success,
                 ErrorCode = activityLog.ErrorCode,
                 Metadata = activityLog.Metadata,
-                Device = activityLog.Device.Name,
-                User = activityLog.User.Name,
+                Device = activityLog.Device?.Name ?? string.Empty,
+                User = activityLog.User?.Name ?? string.Empty,
             })
             .ToArray();
 

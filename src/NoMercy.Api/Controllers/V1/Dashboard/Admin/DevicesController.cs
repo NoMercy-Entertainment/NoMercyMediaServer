@@ -38,7 +38,6 @@ public class DevicesController(
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-
         List<Device> devices = await deviceRepository.GetDevices();
 
         DevicesDto[] devicesDtos = devices
@@ -64,8 +63,8 @@ public class DevicesController(
                     Type = activityLog.Type,
                     Time = activityLog.Time,
                     CreatedAt = activityLog.CreatedAt,
-                    UserId = activityLog.UserId,
-                    DeviceId = activityLog.DeviceId.ToString(),
+                    UserId = activityLog.UserId ?? Guid.Empty,
+                    DeviceId = (activityLog.DeviceId ?? Ulid.Empty).ToString(),
                 }),
             })
             .ToArray();
@@ -76,14 +75,12 @@ public class DevicesController(
     [HttpPost]
     public IActionResult Create()
     {
-
         return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpDelete]
     public async Task<IActionResult> Destroy()
     {
-
         await deviceRepository.DeleteAllActivityLogsAsync();
 
         return Ok(new StatusResponseDto<object> { Status = "ok", Data = new { } });
@@ -92,7 +89,6 @@ public class DevicesController(
     [HttpDelete("offline")]
     public async Task<IActionResult> DestroyOffline()
     {
-
         List<Device> all = await deviceRepository.GetAllAsync();
 
         List<Device> offline = all.Where(d =>
@@ -130,7 +126,6 @@ public class DevicesController(
     [HttpDelete("{id}")]
     public async Task<IActionResult> DestroyOne(string id)
     {
-
         if (!Ulid.TryParse(id, out Ulid deviceId))
             return BadRequestResponse("Invalid device id");
 

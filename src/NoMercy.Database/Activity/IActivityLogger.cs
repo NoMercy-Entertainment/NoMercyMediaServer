@@ -9,6 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Database.Models.Users;
+
 namespace NoMercy.Database.Activity;
 
 public interface IActivityLogger
@@ -56,6 +58,26 @@ public interface IActivityLogger
         string errorCode,
         string message,
         Ulid? mediaId = null,
+        object? metadata = null,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Records something the server did on its own — an encode, a scheduled scan, a file the
+    /// watcher picked up.
+    /// </summary>
+    /// <remarks>
+    /// There is deliberately no user or device here. Attributing an automatic import to
+    /// whoever happened to be signed in would be a lie, and attributing it to a placeholder
+    /// account would make the log unreadable. These rows say what happened and leave who
+    /// blank, which is the truth.
+    /// </remarks>
+    Task LogSystemAsync(
+        ActivityCategory category,
+        string type,
+        Ulid? mediaId = null,
+        bool success = true,
+        string? errorCode = null,
         object? metadata = null,
         CancellationToken ct = default
     );

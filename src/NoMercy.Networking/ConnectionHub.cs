@@ -193,7 +193,17 @@ public class ConnectionHub : Hub
                     .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, true));
                 await mediaContext.SaveChangesAsync();
 
-                await ActivityLogger.LogConnectionAsync("connection.connected", user.Id, device.Id);
+                // Every hub derives from this one, so a single app opening video, music,
+                // dashboard, device and cast hubs used to write five identical "connected"
+                // rows a millisecond apart, and the activity log was mostly duplicates. The
+                // event worth recording is the device arriving, which is the first of those
+                // connections — the rest are the same device already here.
+                if (!IsDeviceAlreadyConnected(client.DeviceId))
+                    await ActivityLogger.LogConnectionAsync(
+                        "connection.connected",
+                        user.Id,
+                        device.Id
+                    );
             }
         }
 
@@ -203,6 +213,22 @@ public class ConnectionHub : Hub
         // that user's own connections — Clients.All leaked one user's device names/IPs
         // to every connected client and corrupted the Connect device-switcher state.
         await Clients.User(user.Id.ToString()).SendAsync("ConnectedDevicesState", Devices());
+    }
+
+    /// <summary>
+    /// Whether this device already holds another live hub connection.
+    /// </summary>
+    /// <remarks>
+    /// Called before adding on connect and after removing on disconnect, so in both cases a
+    /// false answer means the device is genuinely arriving or genuinely leaving rather than
+    /// opening its second hub or closing its fourth.
+    /// </remarks>
+    private bool IsDeviceAlreadyConnected(string deviceId)
+    {
+        if (string.IsNullOrEmpty(deviceId))
+            return false;
+
+        return ConnectedClients.Clients.Values.Any(existing => existing.DeviceId == deviceId);
     }
 
     private static void AlignClientWithPersistedDevice(Client client, Device? device)
@@ -237,15 +263,19 @@ public class ConnectionHub : Hub
                     .Devices.Where(x => x.DeviceId == device.DeviceId)
                     .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, false));
                 await mediaContext.SaveChangesAsync();
+            }
 
+            ConnectedClients.Clients.Remove(Context.ConnectionId, out _);
+
+            // Mirror of the connect side: the device has only actually left once its last
+            // hub connection is gone. Logging per closed connection turned one app closing
+            // into five "disconnected" rows.
+            if (device is not null && !IsDeviceAlreadyConnected(client.DeviceId))
                 await ActivityLogger.LogConnectionAsync(
                     "connection.disconnected",
                     client.Sub,
                     device.Id
                 );
-            }
-
-            ConnectedClients.Clients.Remove(Context.ConnectionId, out _);
 
             // Scope to the disconnecting client's own user (see OnConnectedAsync).
             await Clients

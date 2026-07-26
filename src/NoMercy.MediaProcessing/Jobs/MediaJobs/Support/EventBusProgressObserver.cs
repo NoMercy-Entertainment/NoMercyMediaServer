@@ -43,6 +43,12 @@ public class EventBusProgressObserver : IProgressObserver
     private readonly string _title;
     private readonly string _baseFolder;
     private readonly string _sharePath;
+
+    // The artwork the dashboard shows beside a running job. Live sprite capture used to fill
+    // that space and no longer exists, so `thumbnails` has published an empty string ever
+    // since — the item's own backdrop (or an episode's still) is what is left, and it is a
+    // better answer anyway: it says which title is encoding rather than which frame.
+    private readonly string? _backdrop;
     private readonly List<string> _videoStreams;
     private readonly List<string> _audioStreams;
     private readonly List<string> _subtitleStreams;
@@ -61,13 +67,15 @@ public class EventBusProgressObserver : IProgressObserver
         List<string>? subtitleStreams = null,
         bool hasGpu = false,
         bool isHdr = false,
-        IEncoderProcessRegistry? registry = null
+        IEncoderProcessRegistry? registry = null,
+        string? backdrop = null
     )
     {
         _jobId = jobId;
         _title = title;
         _baseFolder = baseFolder;
         _sharePath = sharePath;
+        _backdrop = backdrop;
         _videoStreams = videoStreams ?? [];
         _audioStreams = audioStreams ?? [];
         _subtitleStreams = subtitleStreams ?? [];
@@ -168,6 +176,7 @@ public class EventBusProgressObserver : IProgressObserver
                     audio_streams = _audioStreams,
                     subtitle_streams = _subtitleStreams,
                     thumbnails = "",
+                    backdrop = _backdrop,
                 },
             }
         );
@@ -219,6 +228,7 @@ public class EventBusProgressObserver : IProgressObserver
                     base_folder = _baseFolder,
                     share_path = _sharePath,
                     thumbnails = "",
+                    backdrop = _backdrop,
                     video_streams = _videoStreams,
                     audio_streams = _audioStreams,
                     subtitle_streams = _subtitleStreams,
