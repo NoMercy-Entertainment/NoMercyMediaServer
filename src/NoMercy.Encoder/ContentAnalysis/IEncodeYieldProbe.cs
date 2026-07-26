@@ -23,7 +23,16 @@ public record EncodeYieldTarget(
     int Crf,
     string? Preset,
     string? Tune,
-    string? PixelFormat
+    string? PixelFormat,
+    /// <summary>
+    /// The ffmpeg encoder the plan resolved, when it is already known. It matters
+    /// which one measures: a hardware encoder asked for the same quality number
+    /// spends noticeably more bitrate than the software one, so measuring x265
+    /// and then encoding with NVENC understates the result — enough that a source
+    /// could be judged worth re-encoding and come out larger. Null falls back to
+    /// the software encoder for the codec.
+    /// </summary>
+    string? EncoderName = null
 );
 
 /// <summary>

@@ -35,6 +35,15 @@ public class EncodeYieldProbe(
     // Below this the sample is too short for the measurement to mean anything.
     private static readonly TimeSpan MinimumSourceDuration = TimeSpan.FromSeconds(60);
 
+    private static readonly string[] HardwareEncoderMarkers =
+    [
+        "nvenc",
+        "qsv",
+        "amf",
+        "vaapi",
+        "videotoolbox",
+    ];
+
     private static readonly Dictionary<VideoCodecType, string> SoftwareEncoders = new()
     {
         [VideoCodecType.H264] = "libx264",
@@ -53,8 +62,17 @@ public class EncodeYieldProbe(
         if (sourceDuration < MinimumSourceDuration)
             return null;
 
-        if (!SoftwareEncoders.TryGetValue(target.Codec, out string? encoder))
+        string? encoder = target.EncoderName;
+        if (string.IsNullOrWhiteSpace(encoder) && !SoftwareEncoders.TryGetValue(target.Codec, out encoder))
             return null;
+
+        // Hardware encoders take the quality target on their own flag and reject
+        // the software preset and tune names outright, so the sample is built for
+        // whichever family is measuring. Getting this wrong does not misprice the
+        // encode, it fails the probe and silently falls back to copying.
+        bool isHardware = HardwareEncoderMarkers.Any(marker =>
+            encoder!.Contains(marker, StringComparison.OrdinalIgnoreCase)
+        );
 
         string samplePath = Path.Combine(
             Path.GetTempPath(),
@@ -85,18 +103,18 @@ public class EncodeYieldProbe(
                 "-sn",
                 "-dn",
                 "-c:v",
-                encoder,
-                "-crf",
+                encoder!,
+                isHardware ? "-cq" : "-crf",
                 target.Crf.ToString(),
             ];
 
-            if (!string.IsNullOrWhiteSpace(target.Preset))
+            if (!isHardware && !string.IsNullOrWhiteSpace(target.Preset))
             {
                 args.Add("-preset");
                 args.Add(target.Preset);
             }
 
-            if (!string.IsNullOrWhiteSpace(target.Tune))
+            if (!isHardware && !string.IsNullOrWhiteSpace(target.Tune))
             {
                 args.Add("-tune");
                 args.Add(target.Tune);
