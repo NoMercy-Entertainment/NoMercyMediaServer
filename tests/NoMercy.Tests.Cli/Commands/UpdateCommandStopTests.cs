@@ -12,6 +12,7 @@
 using System.CommandLine;
 using NoMercy.Cli;
 using NoMercy.Cli.Commands;
+using NoMercy.NmSystem.Information;
 using NoMercy.Tests.Cli.Support;
 using NoMercy.Tests.Common.Ipc;
 using Xunit;
@@ -30,6 +31,11 @@ public sealed class UpdateCommandStopTests
     [Fact]
     public async Task Stop_NotAcknowledged_PrintsError_AndReturnsServerError_WithoutWaiting()
     {
+        // The staged binary is verified before the server is stopped, so it has to exist for
+        // the run to reach the stop step at all.
+        Directory.CreateDirectory(AppFiles.BinariesPath);
+        File.WriteAllText(AppFiles.ServerTempExePath, "NEW");
+
         FakeManagementPipeServer server = new();
         Task<List<string>> requestsTask = server.RunSequenceAsync([
             stream =>
@@ -51,7 +57,15 @@ public sealed class UpdateCommandStopTests
         Option<string?> pipeOption = new("--pipe", "-p");
         RootCommand root = new("test");
         root.Options.Add(pipeOption);
-        root.Subcommands.Add(UpdateCommand.Create(pipeOption, new CliClientFactory()));
+        root.Subcommands.Add(
+            UpdateCommand.Create(
+                pipeOption,
+                new CliClientFactory(),
+                startServer: _ => true,
+                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9"),
+                awaitExit: (_, _) => Task.FromResult(true)
+            )
+        );
 
         using ConsoleCapture console = new();
         int exitCode = await root.Parse(["--pipe", server.PipeName, "update"]).InvokeAsync();

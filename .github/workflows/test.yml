@@ -189,6 +189,11 @@ jobs:
           echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
           echo "Fetched nomercy-ffmpeg $tag -> $dest"
 
+      # TMDB's own availability is excluded from the gate. These call the live API, so a bad
+      # minute at TMDB used to fail this job, which fails `test`, which blocks
+      # version_management, create_release and promote_docker_images — no user on any platform
+      # gets an update because a third party returned null. They still run, immediately below,
+      # where a failure is visible without holding a release hostage.
       - name: Run integration tests
         run: >
           dotnet test NoMercy.Server.sln
@@ -197,7 +202,34 @@ jobs:
           --verbosity minimal
           --logger trx
           --blame-hang-timeout 10m
-          --filter "Category=Integration"
+          --filter "Category=Integration&FullyQualifiedName!~NoMercy.Tests.Providers.TMDB"
+
+      - name: Run live TMDB API tests (reported, never blocking)
+        continue-on-error: true
+        run: >
+          dotnet test NoMercy.Server.sln
+          --configuration Debug
+          --no-restore
+          --verbosity minimal
+          --logger trx
+          --blame-hang-timeout 10m
+          --filter "Category=Integration&FullyQualifiedName~NoMercy.Tests.Providers.TMDB"
+
+      # A full build of this solution is ~9.5GB of output — ~7GB of it is tests/,
+      # because each of the 20 test projects copies the whole native dependency
+      # closure (SkiaSharp, Magick.NET) for EVERY runtime identifier: ~360MB of
+      # runtimes/ per project, of which the runner executes exactly one platform.
+      # Keeping the Debug tree while Release builds needs ~19GB on a ~14GB runner,
+      # which is what exhausted the disk: every step passed and then the runner
+      # died writing its own _diag log, surfacing as a failure with no failing
+      # step and no test output. The two configurations are never needed at once.
+      - name: Drop the Debug output before building Release
+        run: |
+          echo "before:"
+          df -h / | tail -1
+          find . -type d \( -path '*/bin/Debug' -o -path '*/obj/Debug' \) -prune -exec rm -rf {} + || true
+          echo "after:"
+          df -h / | tail -1
 
       # A full build of this solution is ~9.5GB of output — ~7GB of it is tests/,
       # because each of the 20 test projects copies the whole native dependency

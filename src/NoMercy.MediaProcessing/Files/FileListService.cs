@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using MovieFileLibrary;
 using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.NmSystem;
@@ -18,7 +19,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FFProbe;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Storage;
-using Microsoft.Extensions.Logging;
+
 namespace NoMercy.MediaProcessing.Files;
 
 /// <summary>
@@ -79,8 +80,10 @@ public class FileListService(
 
         if (audioFiles.Length > 0 && videoFiles.Length == 0)
         {
-            (int year, string albumName, _, _) =
-                MusicPathParser.Parse(directoryPath, directoryInfo.Name);
+            (int year, string albumName, _, _) = MusicPathParser.Parse(
+                directoryPath,
+                directoryInfo.Name
+            );
 
             await Parallel.ForEachAsync(
                 audioFiles,
@@ -180,8 +183,7 @@ public class FileListService(
             // name from the driver-relative directoryPath.
             string folderName = StoragePathHelpers.GetName(directoryPath);
 
-            (int year, string albumName, _, _) =
-                MusicPathParser.Parse(directoryPath, folderName);
+            (int year, string albumName, _, _) = MusicPathParser.Parse(directoryPath, folderName);
 
             await Parallel.ForEachAsync(
                 audioEntries,
@@ -277,17 +279,17 @@ public class FileListService(
 
         parsed.Title = StringExtensions
             .RemoveParenthesizedString()
-            .Replace(parsed.Title, string.Empty);
+            .Replace(parsed.Title, string.Empty)
+            .Trim();
 
         bool seasonExplicit = parsed.Season.HasValue;
 
         // Dated daily episode (yyyy.mm.dd): the air date is the key, so discard any
         // stray number that would otherwise be misread as an episode. The resolver
         // maps the date to the episode that aired that day.
-        DateOnly? airDate =
-            libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
-                ? DailyEpisodeParser.TryGetAirDate(rawFileName)
-                : null;
+        DateOnly? airDate = libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
+            ? DailyEpisodeParser.TryGetAirDate(rawFileName)
+            : null;
         if (airDate.HasValue)
         {
             parsed.Season = null;
@@ -311,7 +313,7 @@ public class FileListService(
             {
                 parsed.Season = folderSeason ?? 1;
                 parsed.Episode = int.Parse(numberMatch.Value);
-                parsed.Title = regex.Split(parsed.Title).FirstOrDefault();
+                parsed.Title = regex.Split(parsed.Title).FirstOrDefault()?.Trim();
             }
         }
 
@@ -417,7 +419,8 @@ public class FileListService(
 
         parsed.Title = StringExtensions
             .RemoveParenthesizedString()
-            .Replace(parsed.Title, string.Empty);
+            .Replace(parsed.Title, string.Empty)
+            .Trim();
 
         // Track whether the season came from the filename or was defaulted to 1.
         // This controls whether the absolute-index fallback is allowed in ResolveShowEpisodeAsync.
@@ -426,10 +429,9 @@ public class FileListService(
         // Dated daily episode (yyyy.mm.dd): the air date is the key, so discard any
         // stray number that would otherwise be misread as an episode. The resolver
         // maps the date to the episode that aired that day.
-        DateOnly? airDate =
-            libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
-                ? DailyEpisodeParser.TryGetAirDate(rawFileName)
-                : null;
+        DateOnly? airDate = libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
+            ? DailyEpisodeParser.TryGetAirDate(rawFileName)
+            : null;
         if (airDate.HasValue)
         {
             parsed.Season = null;
@@ -453,7 +455,7 @@ public class FileListService(
             {
                 parsed.Season = folderSeason ?? 1;
                 parsed.Episode = int.Parse(numberMatch.Value);
-                parsed.Title = regex.Split(parsed.Title).FirstOrDefault();
+                parsed.Title = regex.Split(parsed.Title).FirstOrDefault()?.Trim();
             }
         }
 

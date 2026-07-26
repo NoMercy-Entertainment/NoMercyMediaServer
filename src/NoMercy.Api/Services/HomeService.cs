@@ -23,6 +23,11 @@ namespace NoMercy.Api.Services;
 
 public class HomeService(IHomeRepository homeRepository, ILibraryRepository libraryRepository)
 {
+    /// <summary>
+    /// Render variant used by the mobile and TV clients, which build their own library rows.
+    /// </summary>
+    private const string LolomoVersion = "lolomo";
+
     public async Task<List<GenreRowDto<GenreRowItemDto>>> GetHomePageContent(
         Guid userId,
         string language,
@@ -124,7 +129,12 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
             };
     }
 
-    public async Task<ComponentResponse> GetHomeData(Guid userId, string language, string country)
+    public async Task<ComponentResponse> GetHomeData(
+        Guid userId,
+        string language,
+        string country,
+        string? version = null
+    )
     {
         // Phase 1: Run initial independent queries in parallel — repository owns each DbContext
         HomeParallelData parallelData = await homeRepository.GetHomeParallelDataAsync(
@@ -316,6 +326,17 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
                 libraryCarousels.Add(new(library.Id.ToString(), library.Title, moreLink, items));
             }
         }
+
+        // "Latest in {library}" belongs to the desktop home only; the lolomo clients lay
+        // their library rows out themselves, so these are duplicate content there. Same rule
+        // the Index endpoint already applies — this is the /home path, which the apps call.
+        //
+        // Cleared rather than skipped at render: the list also supplies the prev/next ids
+        // that chain the carousels together, and the code below already handles it being
+        // empty. Dropping only the render loop would leave that chain pointing at rows that
+        // were never emitted.
+        if (version == LolomoVersion)
+            libraryCarousels.Clear();
 
         // Build components
         List<ComponentEnvelope> components = [];

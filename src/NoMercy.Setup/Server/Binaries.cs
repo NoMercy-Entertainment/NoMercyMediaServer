@@ -36,6 +36,14 @@ public enum ServerUpdateResult
     Downloaded,
     AlreadyUpToDate,
     UseInstaller,
+
+    /// <summary>
+    /// Running inside a container, where the image is the unit of update. Swapping the binary
+    /// here cannot work: the downloaded file lands in the data volume, and stopping the server
+    /// ends PID 1, so the container restarts from the original image and the download is never
+    /// executed. Reporting it is the only honest outcome.
+    /// </summary>
+    UseContainerImage,
     RestartNeeded,
     NoAssetFound,
 }
@@ -1179,6 +1187,17 @@ public class Binaries
         {
             _binaryReport.Add($"Server = {currentVersion}");
             return ServerUpdateResult.AlreadyUpToDate;
+        }
+
+        // Container deployment: checked before the installer branch because a container never
+        // has NOMERCY_INSTALL_DIR set and would otherwise fall through to staging a binary that
+        // can never run.
+        if (Screen.IsDocker)
+        {
+            Logger.Setup(
+                $"Server update available: {currentVersion} -> {latestVersion} (pull the new container image to apply it)"
+            );
+            return ServerUpdateResult.UseContainerImage;
         }
 
         // Installer deployment: the installer handles updates, don't download to binaries path

@@ -10,7 +10,9 @@
 // -----------------------------------------------------------------------------
 
 using System.CommandLine;
+using System.Diagnostics;
 using Newtonsoft.Json;
+using NoMercy.Cli.Models;
 using NoMercy.NmSystem.FileSystem;
 using NoMercy.NmSystem.Information;
 
@@ -18,8 +20,29 @@ namespace NoMercy.Cli.Commands;
 
 internal static class UpdateCommand
 {
-    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
+    /// <summary>
+    /// <paramref name="startServer"/> and <paramref name="awaitVersion"/> are the two steps
+    /// that reach outside the process — launching the updated binary and waiting for it to
+    /// answer. They are injectable so the swap and rollback logic can be tested without
+    /// spawning a real server or waiting out a two-minute poll.
+    /// </summary>
+    public static Command Create(
+        Option<string?> pipeOption,
+        ICliClientFactory clientFactory,
+        Func<string, bool>? startServer = null,
+        Func<ICliClient, CancellationToken, Task<string?>>? awaitVersion = null,
+        Func<ICliClient, CancellationToken, Task<bool>>? awaitExit = null
+    )
     {
+        startServer ??= StartServer;
+        awaitVersion ??= (client, ct) =>
+            WaitForServerVersionAsync(client, TimeSpan.FromMinutes(2), ct);
+
+        // Detecting "the server has exited" depends on the management transport failing to
+        // connect, which a named pipe and a Unix socket signal differently. Injectable so the
+        // swap and rollback logic can be tested without depending on that difference.
+        awaitExit ??= (client, ct) => WaitForServerExitAsync(client, TimeSpan.FromSeconds(60), ct);
+
         Command command = new("update") { Description = "Download and stage a server update" };
 
         command.SetAction(
@@ -46,6 +69,36 @@ internal static class UpdateCommand
 
                 Console.WriteLine(downloadResponse.Message);
 
+                // Deployments where a binary swap is not the update mechanism. Saying so and
+                // stopping is the correct outcome; carrying on would stage a file that can
+                // never run, and in a container it would also take the server down with it.
+                if (downloadResponse.UseContainerImage)
+                {
+                    Console.WriteLine(
+                        "Pull the new container image to apply this update, then recreate the container."
+                    );
+                    return (int)ExitCode.Success;
+                }
+
+                if (downloadResponse.UseInstaller)
+                {
+                    Console.WriteLine("Run the installer to apply this update.");
+                    return (int)ExitCode.Success;
+                }
+
+                string tempPath = AppFiles.ServerTempExePath;
+                string currentPath = AppFiles.ServerExePath;
+
+                // Verified before the running server is touched. Stopping a healthy server for
+                // an update that turns out not to be staged is a self-inflicted outage.
+                if (!File.Exists(tempPath))
+                {
+                    await Console.Error.WriteLineAsync(
+                        "No staged update file found — the server is still running and untouched."
+                    );
+                    return (int)ExitCode.ServerError;
+                }
+
                 // Step 2: Stop the server
                 Console.WriteLine("Stopping server...");
                 bool stopped = await client.PostAsync(ApiRoutes.Stop, null, ct);
@@ -57,32 +110,71 @@ internal static class UpdateCommand
 
                 // Step 3: Wait for exit
                 Console.WriteLine("Waiting for server to exit...");
-                bool exited = await WaitForServerExitAsync(client, TimeSpan.FromSeconds(30), ct);
+                bool exited = await awaitExit(client, ct);
                 if (!exited)
                 {
+                    // Swapping under a live process is how an update half-applies: on Windows
+                    // the file is locked and the move throws, on Linux it succeeds while the old
+                    // binary keeps running, so which version comes back is down to timing.
                     await Console.Error.WriteLineAsync(
-                        "Warning: the server did not confirm it had stopped within 30s; "
-                            + "applying the update anyway."
+                        "The server did not stop within 60s. Nothing was changed — stop it and run "
+                            + "'nomercy update' again."
                     );
+                    return (int)ExitCode.Timeout;
                 }
 
-                // Step 4: Apply the file swap
-                string tempPath = AppFiles.ServerTempExePath;
-                string currentPath = AppFiles.ServerExePath;
+                // Step 4: Apply the swap, keeping the old binary until the new one is proven
+                string backupPath = currentPath + ".previous";
 
-                if (!File.Exists(tempPath))
+                try
                 {
-                    await Console.Error.WriteLineAsync("No staged update file found.");
+                    if (File.Exists(backupPath))
+                        File.Delete(backupPath);
+
+                    // Move, never delete: until the replacement is in place and starts, the
+                    // version that was working is the only thing standing between the user and
+                    // a server that no longer exists.
+                    if (File.Exists(currentPath))
+                        File.Move(currentPath, backupPath);
+
+                    File.Move(tempPath, currentPath);
+                    await FilePermissions.SetExecutionPermissions(currentPath);
+                }
+                catch (Exception ex)
+                {
+                    await Console.Error.WriteLineAsync($"Could not apply the update: {ex.Message}");
+                    RestoreBackup(backupPath, currentPath);
                     return (int)ExitCode.ServerError;
                 }
 
-                if (File.Exists(currentPath))
-                    File.Delete(currentPath);
+                Console.WriteLine("Update applied. Starting server...");
 
-                File.Move(tempPath, currentPath);
-                await FilePermissions.SetExecutionPermissions(currentPath);
+                if (!startServer(currentPath))
+                {
+                    await Console.Error.WriteLineAsync(
+                        "The updated server would not start — rolling back to the previous version."
+                    );
+                    RestoreBackup(backupPath, currentPath);
+                    startServer(currentPath);
+                    return (int)ExitCode.ServerError;
+                }
 
-                Console.WriteLine("Update applied. Start the server to use the new version.");
+                // "It said it worked" is not the same as "it is running the new version", and
+                // the difference is the entire complaint about updates.
+                string? runningVersion = await awaitVersion(client, ct);
+
+                if (runningVersion is null)
+                {
+                    await Console.Error.WriteLineAsync(
+                        "The updated server did not come back — rolling back."
+                    );
+                    RestoreBackup(backupPath, currentPath);
+                    startServer(currentPath);
+                    return (int)ExitCode.ServerError;
+                }
+
+                File.Delete(backupPath);
+                Console.WriteLine($"Server is running version {runningVersion}.");
                 return (int)ExitCode.Success;
             }
         );
@@ -145,6 +237,99 @@ internal static class UpdateCommand
         }
     }
 
+    /// <summary>
+    /// Puts the previous binary back after a failed swap or a failed start. Without it a
+    /// half-applied update leaves no server binary at all and no way back.
+    /// </summary>
+    private static void RestoreBackup(string backupPath, string currentPath)
+    {
+        try
+        {
+            if (!File.Exists(backupPath))
+                return;
+
+            if (File.Exists(currentPath))
+                File.Delete(currentPath);
+
+            File.Move(backupPath, currentPath);
+            Console.WriteLine("Previous version restored.");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(
+                $"Could not restore the previous version from {backupPath}: {ex.Message}"
+            );
+        }
+    }
+
+    private static bool StartServer(string executablePath)
+    {
+        try
+        {
+            ProcessStartInfo startInfo = new(executablePath)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = Path.GetDirectoryName(executablePath) ?? string.Empty,
+            };
+
+            return Process.Start(startInfo) is not null;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Could not start the server: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Polls until the server answers with a version, which is the only proof the update
+    /// actually took effect.
+    /// </summary>
+    private static async Task<string?> WaitForServerVersionAsync(
+        ICliClient client,
+        TimeSpan timeout,
+        CancellationToken ct
+    )
+    {
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(timeout);
+
+        while (!cts.IsCancellationRequested)
+        {
+            try
+            {
+                StatusResponse? status = await client.GetAsync<StatusResponse>(
+                    ApiRoutes.Status,
+                    cts.Token
+                );
+
+                if (!string.IsNullOrEmpty(status?.Version))
+                    return status.Version;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                // Still starting.
+            }
+
+            try
+            {
+                await Task.Delay(2000, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                ct.ThrowIfCancellationRequested();
+                return null;
+            }
+        }
+
+        return null;
+    }
+
     private class UpdateResponse
     {
         [JsonProperty("status")]
@@ -152,5 +337,11 @@ internal static class UpdateCommand
 
         [JsonProperty("message")]
         public string Message { get; set; } = string.Empty;
+
+        [JsonProperty("use_installer")]
+        public bool UseInstaller { get; set; }
+
+        [JsonProperty("use_container_image")]
+        public bool UseContainerImage { get; set; }
     }
 }
