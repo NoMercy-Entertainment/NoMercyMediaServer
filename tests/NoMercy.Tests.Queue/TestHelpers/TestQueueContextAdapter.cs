@@ -75,6 +75,7 @@ public class TestQueueContextAdapter : IQueueContext
         job.Payload = newPayload;
         job.AvailableAt = availableAt;
         job.ReservedAt = null;
+        job.Attempts = 0;
     }
 
     public void ResetAllReservedJobs()

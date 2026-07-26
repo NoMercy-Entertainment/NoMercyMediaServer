@@ -163,21 +163,27 @@ public class QueueWorker(
 
                     if (jobWithArguments is IShouldQueue classInstance)
                     {
-                        ExecuteWithTransientRetry(classInstance, job);
+                        IShouldQueue executed = ExecuteWithTransientRetry(classInstance, job);
 
-                        queue.DeleteJob(job);
+                        // A coordinator that rewrote its own row is still queued —
+                        // deleting it here would drop the encode mid-flight.
+                        if (executed is not ISelfRescheduling { RescheduledInPlace: true })
+                            queue.DeleteJob(job);
+
                         _currentJobId = null;
                         OnWorkCompleted(EventArgs.Empty);
 
                         logger?.LogTrace(
-                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {ClassInstance} processed successfully", [name, CurrentIndex, job.Id, classInstance]
+                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {ClassInstance} processed successfully",
+                            [name, CurrentIndex, job.Id, classInstance]
                         );
                     }
                     else
                     {
                         string typeName = jobWithArguments.GetType().FullName ?? "null";
                         logger?.LogError(
-                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} deserialized to {TypeName} which does not implement IShouldQueue — rejecting", [name, CurrentIndex, job.Id, typeName]
+                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} deserialized to {TypeName} which does not implement IShouldQueue — rejecting",
+                            [name, CurrentIndex, job.Id, typeName]
                         );
 
                         queue.FailJob(
@@ -201,7 +207,8 @@ public class QueueWorker(
                     _currentJobId = null;
 
                     logger?.LogInformation(
-                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} interrupted by shutdown — released for retry", [name, CurrentIndex, job.Id]
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} interrupted by shutdown — released for retry",
+                        [name, CurrentIndex, job.Id]
                     );
                     break;
                 }
@@ -217,7 +224,8 @@ public class QueueWorker(
                     _currentJobId = null;
 
                     logger?.LogInformation(
-                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} scope disposed by shutdown — released for retry", [name, CurrentIndex, job.Id]
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} scope disposed by shutdown — released for retry",
+                        [name, CurrentIndex, job.Id]
                     );
                     break;
                 }
@@ -228,7 +236,8 @@ public class QueueWorker(
                     _currentJobId = null;
 
                     logger?.LogError(
-                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {Payload} failed with error: {Error}", [name, CurrentIndex, job.Id, job.Payload, ex]
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {Payload} failed with error: {Error}",
+                        [name, CurrentIndex, job.Id, job.Payload, ex]
                     );
                 }
                 finally
@@ -296,7 +305,8 @@ public class QueueWorker(
             if (!_suppressBudgetSaturationLog)
             {
                 logger?.LogWarning(
-                    "[{Queue}] budget acquisition failed for job {JobId}: {Message}. Will retry every {Delay}s.", [name, job.Id, ex.Message, BudgetRetryDelay.TotalSeconds]
+                    "[{Queue}] budget acquisition failed for job {JobId}: {Message}. Will retry every {Delay}s.",
+                    [name, job.Id, ex.Message, BudgetRetryDelay.TotalSeconds]
                 );
                 _suppressBudgetSaturationLog = true;
             }
@@ -328,7 +338,15 @@ public class QueueWorker(
                 int cpuAvailable = resourceBudget.AvailableCpuThreads();
 
                 logger?.LogInformation(
-                    "[{Queue}] budget saturated for job {JobId} ({Requirement}) — GPU slots available: {Gpu}, CPU threads available: {Cpu}. Still retrying every {Delay}s.", [name, job.Id, requirement, gpuAvailable, cpuAvailable, BudgetRetryDelay.TotalSeconds]
+                    "[{Queue}] budget saturated for job {JobId} ({Requirement}) — GPU slots available: {Gpu}, CPU threads available: {Cpu}. Still retrying every {Delay}s.",
+                    [
+                        name,
+                        job.Id,
+                        requirement,
+                        gpuAvailable,
+                        cpuAvailable,
+                        BudgetRetryDelay.TotalSeconds,
+                    ]
                 );
                 _suppressBudgetSaturationLog = true;
             }
@@ -372,7 +390,8 @@ public class QueueWorker(
         {
             logger?.LogWarning(
                 ex,
-                "[{Queue}] failed to deserialize job {JobId} while degrading an absent-GPU requirement", [name, job.Id]
+                "[{Queue}] failed to deserialize job {JobId} while degrading an absent-GPU requirement",
+                [name, job.Id]
             );
             return false;
         }
@@ -392,7 +411,8 @@ public class QueueWorker(
 
         logger?.LogWarning(
             "[{Queue}] job {JobId} requires GPU device '{GpuKey}' which is not present on this "
-                     + "host — degrading to software and rerouting to '{NewQueue}'.", [name, job.Id, gpuDeviceKey, degraded.QueueName]
+                + "host — degrading to software and rerouting to '{NewQueue}'.",
+            [name, job.Id, gpuDeviceKey, degraded.QueueName]
         );
 
         queue.Requeue(job, degraded.QueueName, newPayload);
@@ -437,8 +457,11 @@ public class QueueWorker(
     /// storage services are resolved and set on the job, and the scope is disposed
     /// when the job completes (success or failure).
     /// </para>
+    /// <para>Returns the instance that actually ran. Under DI that is the rebuilt
+    /// job, not the one passed in, and post-run state the caller needs — see
+    /// <see cref="ISelfRescheduling"/> — lives only on the instance that ran.</para>
     /// </summary>
-    private void ExecuteWithTransientRetry(IShouldQueue job, QueueJobModel queueJob)
+    private IShouldQueue ExecuteWithTransientRetry(IShouldQueue job, QueueJobModel queueJob)
     {
         IServiceScope? scope = null;
 
@@ -471,7 +494,7 @@ public class QueueWorker(
                 try
                 {
                     job.Handle().GetAwaiter().GetResult();
-                    return;
+                    return job;
                 }
                 catch (Exception ex)
                     when (IsTransientSqliteError(ex) && attempt < MaxTransientRetries)
@@ -479,7 +502,8 @@ public class QueueWorker(
                     int delay = TransientRetryBaseMs + Random.Shared.Next(TransientRetryJitterMs);
 
                     logger?.LogWarning(
-                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} hit transient SQLite error (attempt {Attempt}/{Max}), retrying in {Delay}ms", [name, CurrentIndex, queueJob.Id, attempt + 1, MaxTransientRetries, delay]
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} hit transient SQLite error (attempt {Attempt}/{Max}), retrying in {Delay}ms",
+                        [name, CurrentIndex, queueJob.Id, attempt + 1, MaxTransientRetries, delay]
                     );
 
                     Thread.Sleep(delay);
@@ -512,7 +536,10 @@ public class QueueWorker(
 
     public void Stop()
     {
-        logger?.LogInformation("QueueWorker {Name} - {CurrentIndex}: stopped", [name, CurrentIndex]);
+        logger?.LogInformation(
+            "QueueWorker {Name} - {CurrentIndex}: stopped",
+            [name, CurrentIndex]
+        );
         _isRunning = false;
         _stopCts.Cancel();
     }
@@ -564,7 +591,8 @@ public class QueueWorker(
             {
                 logger?.LogCritical(
                     ex,
-                    "QueueWorker {Name} - {CurrentIndex}: StartAsync crashed", [name, CurrentIndex]
+                    "QueueWorker {Name} - {CurrentIndex}: StartAsync crashed",
+                    [name, CurrentIndex]
                 );
             }
         });
