@@ -41,7 +41,8 @@ public sealed class UpdateCommandDownloadTests
                 pipeOption,
                 new CliClientFactory(),
                 startServer: _ => true,
-                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9")
+                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9"),
+                awaitExit: (_, _) => Task.FromResult(true)
             )
         );
         return await root.Parse(["--pipe", pipeName, "update"]).InvokeAsync();
@@ -102,13 +103,7 @@ public sealed class UpdateCommandDownloadTests
                     "OK",
                     """{"status":"ok","message":"Downloaded 120MB"}"""
                 ),
-            stream => FakeManagementPipeServer.WriteResponseAsync(stream, 200, "OK", "true"), // The run continues past stop into the wait-for-exit poll once the
-            // two responders above are exhausted. Accepting that third
-            // connection and dropping it immediately (no response written)
-            // makes the client observe a fast connection failure instead of
-            // burning the real ~3s named-pipe connect timeout on a pipe name
-            // nothing is listening on.
-            _ => Task.CompletedTask,
+            stream => FakeManagementPipeServer.WriteResponseAsync(stream, 200, "OK", "true"),
         ]);
 
         using ConsoleCapture console = new();
@@ -119,7 +114,9 @@ public sealed class UpdateCommandDownloadTests
         _ = await RunAsync(server.PipeName);
 
         List<string> requests = await requestsTask;
-        requests.Should().HaveCount(3);
+        // Two, not three: the exit check is stubbed in this test, so the status poll the
+        // real command would make never happens.
+        requests.Should().HaveCount(2);
         requests[0].Should().StartWith("POST /manage/update");
         requests[1].Should().StartWith("POST /manage/stop");
         console.Out.Should().Contain("Downloading update...");

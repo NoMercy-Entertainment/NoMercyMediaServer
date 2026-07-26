@@ -91,7 +91,8 @@ public sealed class UpdateCommandFailureInjectionTests : IDisposable
                 pipeOption,
                 new CliClientFactory(),
                 startServer: _ => serverStarts,
-                awaitVersion: (_, _) => Task.FromResult(versionAfterStart)
+                awaitVersion: (_, _) => Task.FromResult(versionAfterStart),
+                awaitExit: (_, _) => Task.FromResult(true)
             )
         );
 

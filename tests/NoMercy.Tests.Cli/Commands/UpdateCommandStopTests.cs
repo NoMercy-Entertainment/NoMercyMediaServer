@@ -62,7 +62,8 @@ public sealed class UpdateCommandStopTests
                 pipeOption,
                 new CliClientFactory(),
                 startServer: _ => true,
-                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9")
+                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9"),
+                awaitExit: (_, _) => Task.FromResult(true)
             )
         );
 

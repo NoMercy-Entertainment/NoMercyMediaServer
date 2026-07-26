@@ -88,12 +88,15 @@ public sealed class UpdateCommandFileSwapTests : IDisposable
                 pipeOption,
                 new CliClientFactory(),
                 startServer: _ => true,
-                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9")
+                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9"),
+                awaitExit: (_, _) => Task.FromResult(true)
             )
         );
 
         int exitCode = await root.Parse(["--pipe", server.PipeName, "update"]).InvokeAsync();
-        await requestsTask;
+        // Not awaited: with the exit check stubbed the status-poll responder is never
+        // consumed, and waiting on it would just burn the fake server's accept timeout.
+        _ = requestsTask;
         return exitCode;
     }
 
@@ -122,7 +125,8 @@ public sealed class UpdateCommandFileSwapTests : IDisposable
                 pipeOption,
                 new CliClientFactory(),
                 startServer: _ => true,
-                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9")
+                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9"),
+                awaitExit: (_, _) => Task.FromResult(true)
             )
         );
 

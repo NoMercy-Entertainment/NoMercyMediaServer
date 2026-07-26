@@ -30,12 +30,18 @@ internal static class UpdateCommand
         Option<string?> pipeOption,
         ICliClientFactory clientFactory,
         Func<string, bool>? startServer = null,
-        Func<ICliClient, CancellationToken, Task<string?>>? awaitVersion = null
+        Func<ICliClient, CancellationToken, Task<string?>>? awaitVersion = null,
+        Func<ICliClient, CancellationToken, Task<bool>>? awaitExit = null
     )
     {
         startServer ??= StartServer;
         awaitVersion ??= (client, ct) =>
             WaitForServerVersionAsync(client, TimeSpan.FromMinutes(2), ct);
+
+        // Detecting "the server has exited" depends on the management transport failing to
+        // connect, which a named pipe and a Unix socket signal differently. Injectable so the
+        // swap and rollback logic can be tested without depending on that difference.
+        awaitExit ??= (client, ct) => WaitForServerExitAsync(client, TimeSpan.FromSeconds(60), ct);
 
         Command command = new("update") { Description = "Download and stage a server update" };
 
@@ -104,7 +110,7 @@ internal static class UpdateCommand
 
                 // Step 3: Wait for exit
                 Console.WriteLine("Waiting for server to exit...");
-                bool exited = await WaitForServerExitAsync(client, TimeSpan.FromSeconds(60), ct);
+                bool exited = await awaitExit(client, ct);
                 if (!exited)
                 {
                     // Swapping under a live process is how an update half-applies: on Windows
