@@ -87,7 +87,13 @@ public static partial class StringExtensions
     [GeneratedRegex(@"^S(\d{1,2})E(\d+)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchEpisodePrefix();
 
-    [GeneratedRegex(@"[\.\s\-_]S(\d{1,2})E(\d+)", RegexOptions.IgnoreCase)]
+    /// <summary>
+    /// S##E## preceded by a separator. Brackets count as separators because fansub
+    /// releases write the marker as "(S02E01)" or "[S01E05]"; without them such files fall
+    /// through to the generic detector, which reads the release's absolute episode number as
+    /// the episode and searches for a title that includes it.
+    /// </summary>
+    [GeneratedRegex(@"[\.\s\-_\(\[\{]S(\d{1,2})E(\d+)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchSeasonEpisode();
 
     [GeneratedRegex(@"\(.*?\)")]
@@ -108,29 +114,46 @@ public static partial class StringExtensions
     /// never matched, and internal separators are tolerated so dotted/hyphenated
     /// forms ("WEB-DL", "H.264", "DDP5.1") match the same as spaced forms.
     /// </summary>
-
     /// <summary>Resolution tags: 480p/720p/1080p/2160p (interlaced too), 4k/8k, uhd.</summary>
-    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:\d{3,4}[pi]|[48]k|uhd)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(
+        @"(?<![A-Za-z0-9])(?:\d{3,4}[pi]|[48]k|uhd)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
     public static partial Regex MatchResolutionTag();
 
     /// <summary>Source / medium tags (web-dl, web-rip, bluray, hdtv, dvd*, remux, streaming services, ...).</summary>
-    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:web[\s.\-]?dl|web[\s.\-]?rip|web[\s.\-]?hd|blu[\s.\-]?ray|bd[\s.\-]?rip|b[rd][\s.\-]?rip|hd[\s.\-]?tv|pd[\s.\-]?tv|dvd[\s.\-]?rip|hd[\s.\-]?rip|hd[\s.\-]?cam|uhd[\s.\-]?bd|remux|hd[\s.\-]?dvd|hd[\s.\-]?tc|ed[\s.\-]?tv|dvd[\s.\-]?scr|dvdscr|dsr|amzn|dsnp|atvp|hmax|hulu|nflx|hd[\s.\-]?light|sdtv|dvb|vod[\s.\-]?rip|tv[\s.\-]?rip|sat[\s.\-]?rip|dth[\s.\-]?rip|web[\s.\-]?cap|hd[\s.\-]?ts|telesync|telecine|workprint|ld[\s.\-]?rip|dvdr|ppv|screener)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(
+        @"(?<![A-Za-z0-9])(?:web[\s.\-]?dl|web[\s.\-]?rip|web[\s.\-]?hd|blu[\s.\-]?ray|bd[\s.\-]?rip|b[rd][\s.\-]?rip|hd[\s.\-]?tv|pd[\s.\-]?tv|dvd[\s.\-]?rip|hd[\s.\-]?rip|hd[\s.\-]?cam|uhd[\s.\-]?bd|remux|hd[\s.\-]?dvd|hd[\s.\-]?tc|ed[\s.\-]?tv|dvd[\s.\-]?scr|dvdscr|dsr|amzn|dsnp|atvp|hmax|hulu|nflx|hd[\s.\-]?light|sdtv|dvb|vod[\s.\-]?rip|tv[\s.\-]?rip|sat[\s.\-]?rip|dth[\s.\-]?rip|web[\s.\-]?cap|hd[\s.\-]?ts|telesync|telecine|workprint|ld[\s.\-]?rip|dvdr|ppv|screener)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
     public static partial Regex MatchSourceTag();
 
     /// <summary>Video codec tags (x264/5, h264/5, hevc, xvid, divx, avc, vc-1, wmv, mpeg(2), vp8/9).</summary>
-    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:x[\s.\-]?26[45]|h[\s.\-]?26[45]|hevc|xvid|divx|avc|vc[\s.\-]?1|wmv|mpeg2?|vp[89]|av1|vvc|h[\s.\-]?266|mpeg4)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(
+        @"(?<![A-Za-z0-9])(?:x[\s.\-]?26[45]|h[\s.\-]?26[45]|hevc|xvid|divx|avc|vc[\s.\-]?1|wmv|mpeg2?|vp[89]|av1|vvc|h[\s.\-]?266|mpeg4)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
     public static partial Regex MatchCodecTag();
 
     /// <summary>Audio tags (ddp5.1, eac3, dts(-hd/ma/es/x), truehd, atmos, aac, flac, ac3d, mp3).</summary>
-    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:ddp?[\s.\-]?\d(?:[\s.\-]?\d)?|e?ac[\s.\-]?3|dts(?:[\s.\-]?hd)?(?:[\s.\-]?ma)?|dts[\s.\-]?(?:es|x)|true[\s.\-]?hd|atmos|aac(?:[\s.\-]?\d(?:[\s.\-]?\d)?)?|flac|ac3d|eac3d|mp3|lpcm|dd\+|ddp\+)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(
+        @"(?<![A-Za-z0-9])(?:ddp?[\s.\-]?\d(?:[\s.\-]?\d)?|e?ac[\s.\-]?3|dts(?:[\s.\-]?hd)?(?:[\s.\-]?ma)?|dts[\s.\-]?(?:es|x)|true[\s.\-]?hd|atmos|aac(?:[\s.\-]?\d(?:[\s.\-]?\d)?)?|flac|ac3d|eac3d|mp3|lpcm|dd\+|ddp\+)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
     public static partial Regex MatchAudioTag();
 
     /// <summary>HDR / bit-depth tags (10bit, hdr10+, hdr, dovi, dolby vision, hlg).</summary>
-    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:\d{1,2}[\s.\-]?bit|hdr10\+?|hdr|do[\s.\-]?vi|dolby[\s.\-]?vision|hlg|sdr)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(
+        @"(?<![A-Za-z0-9])(?:\d{1,2}[\s.\-]?bit|hdr10\+?|hdr|do[\s.\-]?vi|dolby[\s.\-]?vision|hlg|sdr)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
     public static partial Regex MatchHdrTag();
 
     /// <summary>Release flags / editions (repack, multi, imax).</summary>
-    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:repack|multi|imax|dir[\s.\-]?fix|nfo[\s.\-]?fix|read[\s.\-]?nfo|proof[\s.\-]?fix|re[\s.\-]?rip)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(
+        @"(?<![A-Za-z0-9])(?:repack|multi|imax|dir[\s.\-]?fix|nfo[\s.\-]?fix|read[\s.\-]?nfo|proof[\s.\-]?fix|re[\s.\-]?rip)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
     public static partial Regex MatchFlagTag();
 
     /// <summary>The scene tag categories recognised by the per-category release regexes.</summary>
@@ -148,7 +171,11 @@ public static partial class StringExtensions
     /// Finds the earliest (left-most) scene tag of any category in <paramref name="text"/>,
     /// returning its start index plus the matched category/value, or -1 when none match.
     /// </summary>
-    private static int EarliestReleaseTag(string text, out ReleaseTagCategory category, out string value)
+    private static int EarliestReleaseTag(
+        string text,
+        out ReleaseTagCategory category,
+        out string value
+    )
     {
         int best = int.MaxValue;
         ReleaseTagCategory bestCat = default;
@@ -181,14 +208,20 @@ public static partial class StringExtensions
     /// release name, reporting the matched <paramref name="value"/> and its category.
     /// </summary>
     [Pure]
-    public static bool TryGetReleaseTag(this string raw, out string value, out ReleaseTagCategory category)
+    public static bool TryGetReleaseTag(
+        this string raw,
+        out string value,
+        out ReleaseTagCategory category
+    )
     {
         category = default;
         value = string.Empty;
         if (string.IsNullOrWhiteSpace(raw))
             return false;
 
-        string normalized = Regex.Replace(raw.Replace('.', ' ').Replace('_', ' '), @"\s+", " ").Trim();
+        string normalized = Regex
+            .Replace(raw.Replace('.', ' ').Replace('_', ' '), @"\s+", " ")
+            .Trim();
         return EarliestReleaseTag(normalized, out category, out value) >= 0;
     }
 
@@ -235,7 +268,8 @@ public static partial class StringExtensions
     /// <summary>Matches a "Season N" / "Series N" (and common localized) folder name.</summary>
     [GeneratedRegex(
         @"(?<![A-Za-z])(?:season|series|saison|staffel|temporada|stagione)[\s\.\-_]*0*(\d{1,3})(?![0-9])",
-        RegexOptions.IgnoreCase)]
+        RegexOptions.IgnoreCase
+    )]
     public static partial Regex MatchFolderSeasonWord();
 
     /// <summary>Matches a bare "S2" / "S02" folder name (whole string).</summary>
@@ -267,7 +301,6 @@ public static partial class StringExtensions
 
         return null;
     }
-
 
     [GeneratedRegex("/[^a-zA-Z0-9]/")]
     public static partial Regex IsAlphaNumeric();
