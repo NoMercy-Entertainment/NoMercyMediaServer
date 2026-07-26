@@ -270,7 +270,7 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
             ColorTransfer: stream.Value<string>("color_transfer"),
             ColorSpace: stream.Value<string>("color_space"),
             IsDefault: stream["disposition"]?.Value<int>("default") == 1,
-            BitRateKbps: ParseLong(stream, "bit_rate") / 1000,
+            BitRateKbps: ParseStreamBitrateKbps(stream),
             AverageFrameRate: avgFrameRate,
             RealFrameRate: realFrameRate,
             FieldOrder: stream.Value<string>("field_order"),
@@ -338,7 +338,7 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
             Codec: stream.Value<string>("codec_name") ?? "unknown",
             Channels: stream.Value<int>("channels"),
             SampleRate: stream.Value<int>("sample_rate"),
-            BitRateKbps: ParseLong(stream, "bit_rate") / 1000,
+            BitRateKbps: ParseStreamBitrateKbps(stream),
             Language: stream["tags"]?.Value<string>("language"),
             IsDefault: stream["disposition"]?.Value<int>("default") == 1,
             IsForced: stream["disposition"]?.Value<int>("forced") == 1
@@ -417,5 +417,98 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
     {
         string? val = token.Value<string>(key);
         return val is not null && long.TryParse(val, out long result) ? result : 0;
+    }
+
+    /// <summary>
+    /// A stream's bitrate, in kbps, from whichever place the muxer recorded it.
+    /// Matroska does not write <c>bit_rate</c> on its streams, so reading only
+    /// that field reports 0 kbps for most of a typical library — and 0 does not
+    /// read as "unknown" downstream, it reads as "no bits": the ABR ladder skips
+    /// its never-upsource and source-percentage rules, a bandwidth-capped client
+    /// is told any file fits, and smart-copy sees nothing to compare against.
+    /// mkvmerge records the real figure in the per-stream statistics tags, so
+    /// take BPS when it is there and derive it from byte count over duration
+    /// when it is not. 0 is returned only when the file genuinely says nothing.
+    /// </summary>
+    internal static long ParseStreamBitrateKbps(JToken stream)
+    {
+        long declared = ParseLong(stream, "bit_rate");
+        if (declared > 0)
+            return declared / 1000;
+
+        JToken? tags = stream["tags"];
+        if (tags is null)
+            return 0;
+
+        long bitsPerSecond = ParseTagLong(tags, "BPS");
+        if (bitsPerSecond > 0)
+            return bitsPerSecond / 1000;
+
+        long bytes = ParseTagLong(tags, "NUMBER_OF_BYTES");
+        double seconds = ParseTagDurationSeconds(tags, "DURATION");
+        if (bytes > 0 && seconds > 0)
+            return (long)(bytes * 8 / seconds / 1000);
+
+        return 0;
+    }
+
+    /// <summary>
+    /// Reads a statistics tag, tolerating the language-suffixed spelling
+    /// (<c>BPS-eng</c>) that mkvmerge writes when the track declares a language.
+    /// Tag names are matched case-insensitively; ffprobe preserves the case the
+    /// muxer used and that is not guaranteed to be upper.
+    /// </summary>
+    private static JToken? FindTag(JToken tags, string name)
+    {
+        foreach (JProperty property in tags.Children<JProperty>())
+        {
+            if (
+                property.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+                || property.Name.StartsWith(name + "-", StringComparison.OrdinalIgnoreCase)
+            )
+                return property.Value;
+        }
+
+        return null;
+    }
+
+    private static long ParseTagLong(JToken tags, string name)
+    {
+        string? val = FindTag(tags, name)?.Value<string>();
+        return val is not null && long.TryParse(val, out long result) ? result : 0;
+    }
+
+    /// <summary>Parses the <c>HH:MM:SS.fffffffff</c> form the statistics tags use.</summary>
+    private static double ParseTagDurationSeconds(JToken tags, string name)
+    {
+        string? val = FindTag(tags, name)?.Value<string>();
+        if (val is null)
+            return 0;
+
+        string[] parts = val.Split(':');
+        if (parts.Length != 3)
+            return 0;
+
+        return
+            double.TryParse(
+                parts[0],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double hours
+            )
+            && double.TryParse(
+                parts[1],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double minutes
+            )
+            && double.TryParse(
+                parts[2],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double seconds
+            )
+            ? hours * 3600 + minutes * 60 + seconds
+            : 0;
     }
 }
