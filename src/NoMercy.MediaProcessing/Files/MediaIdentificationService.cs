@@ -455,10 +455,17 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
                 continue;
             }
 
-            // Flatten all episodes across all groups, ordered by group order
+            // Flatten every group into one run, in the order each entry declares — the
+            // provider returns a group's episodes in curation order, not sequence.
+            //
+            // Specials are excluded. An absolute number counts the main run only, but these
+            // groups routinely lead with a Specials sub-group, and counting those first
+            // shifts every real episode by however many specials exist: with 25 of them in
+            // front, absolute 35 resolved to season 1 episode 10.
             List<TmdbEpisodeGroupEpisode> allEpisodes = groupDetails
                 .Groups.OrderBy(g => g.Order)
-                .SelectMany(g => g.Episodes)
+                .SelectMany(g => g.Episodes.OrderBy(episodeInGroup => episodeInGroup.Order))
+                .Where(episodeInGroup => episodeInGroup.SeasonNumber > 0)
                 .ToList();
 
             if (absoluteEpisodeNumber < 1 || absoluteEpisodeNumber > allEpisodes.Count)
@@ -472,7 +479,9 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
 
             TmdbEpisodeGroupEpisode target = allEpisodes[absoluteEpisodeNumber - 1];
             Logger.App(
-                $"Resolved absolute episode {absoluteEpisodeNumber} → S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via '{absoluteGroup.Name}'"
+                $"Episode {absoluteEpisodeNumber} counted straight through is "
+                    + $"S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} \"{target.Name}\", "
+                    + $"per the show's '{absoluteGroup.Name}' ordering"
             );
 
             // Look up the resolved episode in the DB
