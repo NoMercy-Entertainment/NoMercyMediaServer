@@ -17,10 +17,32 @@ namespace NoMercy.Tests.Repositories.Infrastructure;
 public class SqlCaptureInterceptor : DbCommandInterceptor
 {
     private readonly List<string> _capturedSql = [];
+    private readonly Lock _gate = new();
 
-    public IReadOnlyList<string> CapturedSql => _capturedSql;
+    // A repository method is free to fan its queries out over several contexts —
+    // the music start page runs three in parallel — and they all share this one
+    // interceptor, so every access has to be guarded. Reading hands back a copy
+    // so a caller can enumerate while queries are still landing.
+    public IReadOnlyList<string> CapturedSql
+    {
+        get
+        {
+            lock (_gate)
+                return _capturedSql.ToList();
+        }
+    }
 
-    public void Clear() => _capturedSql.Clear();
+    public void Clear()
+    {
+        lock (_gate)
+            _capturedSql.Clear();
+    }
+
+    private void Capture(string sql)
+    {
+        lock (_gate)
+            _capturedSql.Add(sql);
+    }
 
     public override InterceptionResult<DbDataReader> ReaderExecuting(
         DbCommand command,
@@ -28,7 +50,7 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         InterceptionResult<DbDataReader> result
     )
     {
-        _capturedSql.Add(command.CommandText);
+        Capture(command.CommandText);
         return base.ReaderExecuting(command, eventData, result);
     }
 
@@ -39,7 +61,7 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         CancellationToken cancellationToken = default
     )
     {
-        _capturedSql.Add(command.CommandText);
+        Capture(command.CommandText);
         return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
     }
 
@@ -49,7 +71,7 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         InterceptionResult<object> result
     )
     {
-        _capturedSql.Add(command.CommandText);
+        Capture(command.CommandText);
         return base.ScalarExecuting(command, eventData, result);
     }
 
@@ -60,7 +82,7 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         CancellationToken cancellationToken = default
     )
     {
-        _capturedSql.Add(command.CommandText);
+        Capture(command.CommandText);
         return base.ScalarExecutingAsync(command, eventData, result, cancellationToken);
     }
 
@@ -70,7 +92,7 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         InterceptionResult<int> result
     )
     {
-        _capturedSql.Add(command.CommandText);
+        Capture(command.CommandText);
         return base.NonQueryExecuting(command, eventData, result);
     }
 
@@ -81,7 +103,7 @@ public class SqlCaptureInterceptor : DbCommandInterceptor
         CancellationToken cancellationToken = default
     )
     {
-        _capturedSql.Add(command.CommandText);
+        Capture(command.CommandText);
         return base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
     }
 }

@@ -474,6 +474,8 @@ public partial class MusicRepository
         return ctx
             .ArtistUser.AsNoTracking()
             .Where(artistUser => artistUser.UserId == userId)
+            .OrderBy(artistUser => artistUser.Artist.Name)
+            .ThenBy(artistUser => artistUser.Artist.Id)
             .Select(artistUser => new ArtistCardDto
             {
                 Id = artistUser.Artist.Id,
@@ -500,6 +502,8 @@ public partial class MusicRepository
         return ctx
             .AlbumUser.AsNoTracking()
             .Where(albumUser => albumUser.UserId == userId)
+            .OrderBy(albumUser => albumUser.Album.Name)
+            .ThenBy(albumUser => albumUser.Album.Id)
             .Select(albumUser => new AlbumCardDto
             {
                 Id = albumUser.Album.Id,
@@ -520,6 +524,8 @@ public partial class MusicRepository
         return ctx
             .Playlists.AsNoTracking()
             .Where(playlist => playlist.UserId == userId)
+            .OrderBy(playlist => playlist.Name)
+            .ThenBy(playlist => playlist.Id)
             .Select(playlist => new PlaylistCardDto
             {
                 Id = playlist.Id,
