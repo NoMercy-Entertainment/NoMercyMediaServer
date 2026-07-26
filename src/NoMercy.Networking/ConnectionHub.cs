@@ -198,7 +198,11 @@ public class ConnectionHub : Hub
                 // rows a millisecond apart, and the activity log was mostly duplicates. The
                 // event worth recording is the device arriving, which is the first of those
                 // connections — the rest are the same device already here.
-                if (!IsDeviceAlreadyConnected(client.DeviceId))
+                //
+                // The claim has to be atomic rather than a scan of the connection map: those
+                // hubs connect concurrently, so each one would read the map before any of
+                // them had written to it and every one would think it was first.
+                if (ConnectedClients.RegisterDeviceConnection(client.DeviceId))
                     await ActivityLogger.LogConnectionAsync(
                         "connection.connected",
                         user.Id,
@@ -213,22 +217,6 @@ public class ConnectionHub : Hub
         // that user's own connections — Clients.All leaked one user's device names/IPs
         // to every connected client and corrupted the Connect device-switcher state.
         await Clients.User(user.Id.ToString()).SendAsync("ConnectedDevicesState", Devices());
-    }
-
-    /// <summary>
-    /// Whether this device already holds another live hub connection.
-    /// </summary>
-    /// <remarks>
-    /// Called before adding on connect and after removing on disconnect, so in both cases a
-    /// false answer means the device is genuinely arriving or genuinely leaving rather than
-    /// opening its second hub or closing its fourth.
-    /// </remarks>
-    private bool IsDeviceAlreadyConnected(string deviceId)
-    {
-        if (string.IsNullOrEmpty(deviceId))
-            return false;
-
-        return ConnectedClients.Clients.Values.Any(existing => existing.DeviceId == deviceId);
     }
 
     private static void AlignClientWithPersistedDevice(Client client, Device? device)
@@ -270,7 +258,9 @@ public class ConnectionHub : Hub
             // Mirror of the connect side: the device has only actually left once its last
             // hub connection is gone. Logging per closed connection turned one app closing
             // into five "disconnected" rows.
-            if (device is not null && !IsDeviceAlreadyConnected(client.DeviceId))
+            bool deviceLeft = ConnectedClients.ReleaseDeviceConnection(client.DeviceId);
+
+            if (device is not null && deviceLeft)
                 await ActivityLogger.LogConnectionAsync(
                     "connection.disconnected",
                     client.Sub,
