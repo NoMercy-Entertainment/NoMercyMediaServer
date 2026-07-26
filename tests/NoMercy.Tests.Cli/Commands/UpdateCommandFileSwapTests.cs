@@ -83,7 +83,14 @@ public sealed class UpdateCommandFileSwapTests : IDisposable
         Option<string?> pipeOption = new("--pipe", "-p");
         RootCommand root = new("test");
         root.Options.Add(pipeOption);
-        root.Subcommands.Add(UpdateCommand.Create(pipeOption, new CliClientFactory()));
+        root.Subcommands.Add(
+            UpdateCommand.Create(
+                pipeOption,
+                new CliClientFactory(),
+                startServer: _ => true,
+                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9")
+            )
+        );
 
         int exitCode = await root.Parse(["--pipe", server.PipeName, "update"]).InvokeAsync();
         await requestsTask;
@@ -91,13 +98,41 @@ public sealed class UpdateCommandFileSwapTests : IDisposable
     }
 
     [Fact]
-    public async Task NoStagedUpdateFile_PrintsError_AndReturnsServerError()
+    public async Task NoStagedUpdateFile_PrintsError_AndLeavesTheServerRunning()
     {
+        // Only the download is answered. With nothing staged the run must stop right there:
+        // taking a healthy server down for an update that was never staged is a self-inflicted
+        // outage, so the stop request is never sent.
+        FakeManagementPipeServer server = new();
+        Task<List<string>> requestsTask = server.RunSequenceAsync([
+            stream =>
+                FakeManagementPipeServer.WriteResponseAsync(
+                    stream,
+                    200,
+                    "OK",
+                    """{"status":"ok","message":"Downloaded"}"""
+                ),
+        ]);
+
+        Option<string?> pipeOption = new("--pipe", "-p");
+        RootCommand root = new("test");
+        root.Options.Add(pipeOption);
+        root.Subcommands.Add(
+            UpdateCommand.Create(
+                pipeOption,
+                new CliClientFactory(),
+                startServer: _ => true,
+                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9")
+            )
+        );
+
         using ConsoleCapture console = new();
-        int exitCode = await RunPastWaitForExitAsync();
+        int exitCode = await root.Parse(["--pipe", server.PipeName, "update"]).InvokeAsync();
+        List<string> requests = await requestsTask;
 
         exitCode.Should().Be((int)ExitCode.ServerError);
-        console.Error.Should().Contain("No staged update file found.");
+        console.Error.Should().Contain("No staged update file found");
+        requests.Should().HaveCount(1);
     }
 
     [Fact]

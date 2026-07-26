@@ -12,6 +12,7 @@
 using System.CommandLine;
 using NoMercy.Cli;
 using NoMercy.Cli.Commands;
+using NoMercy.NmSystem.Information;
 using NoMercy.Tests.Cli.Support;
 using NoMercy.Tests.Common.Ipc;
 using Xunit;
@@ -35,7 +36,14 @@ public sealed class UpdateCommandDownloadTests
         Option<string?> pipeOption = new("--pipe", "-p");
         RootCommand root = new("test");
         root.Options.Add(pipeOption);
-        root.Subcommands.Add(UpdateCommand.Create(pipeOption, new CliClientFactory()));
+        root.Subcommands.Add(
+            UpdateCommand.Create(
+                pipeOption,
+                new CliClientFactory(),
+                startServer: _ => true,
+                awaitVersion: (_, _) => Task.FromResult<string?>("9.9.9")
+            )
+        );
         return await root.Parse(["--pipe", pipeName, "update"]).InvokeAsync();
     }
 
@@ -80,6 +88,11 @@ public sealed class UpdateCommandDownloadTests
     [Fact]
     public async Task Download_Ok_PrintsMessage_AndProceedsToStop()
     {
+        // The staged binary is now verified before the running server is stopped, so it has to
+        // exist for the run to reach the stop step at all.
+        Directory.CreateDirectory(AppFiles.BinariesPath);
+        File.WriteAllText(AppFiles.ServerTempExePath, "NEW");
+
         FakeManagementPipeServer server = new();
         Task<List<string>> requestsTask = server.RunSequenceAsync([
             stream =>

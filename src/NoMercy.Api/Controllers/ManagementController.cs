@@ -305,6 +305,18 @@ public class ManagementController(
                 case ServerUpdateResult.AlreadyUpToDate:
                     return Ok(new { status = "ok", message = "Server is already up to date." });
 
+                case ServerUpdateResult.UseContainerImage:
+                    return Ok(
+                        new
+                        {
+                            status = "ok",
+                            message = "This server runs in a container. Pull the new image to update it — "
+                                + "a binary swap here cannot take effect.",
+                            use_container_image = true,
+                            latest_version = updateStatus.LatestVersion,
+                        }
+                    );
+
                 case ServerUpdateResult.UseInstaller:
                     return Ok(
                         new
