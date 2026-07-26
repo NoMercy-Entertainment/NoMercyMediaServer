@@ -35,5 +35,6 @@
     <ProjectReference Include="..\..\src\NoMercy.OpticalMedia\NoMercy.OpticalMedia.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Providers\NoMercy.Providers.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Storage\NoMercy.Storage.csproj" />
+    <ProjectReference Include="..\NoMercy.Tests.Common\NoMercy.Tests.Common.csproj" />
   </ItemGroup>
 </Project>

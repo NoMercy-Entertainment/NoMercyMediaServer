@@ -12,7 +12,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Providers.Helpers;
 
-namespace NoMercy.Tests.Providers.Infrastructure;
+namespace NoMercy.Tests.Common.Providers;
 
 /// <summary>
 /// Reusable request-mocking harness for the provider clients under
@@ -30,7 +30,10 @@ namespace NoMercy.Tests.Providers.Infrastructure;
 /// either overwrite each other's scripted routes or interleave requests onto
 /// the same rate limiter. Test classes built on this harness must therefore
 /// stay inside the ad-hoc <c>[Collection("HttpClientProvider")]</c> xUnit
-/// collection so they run serially against each other.
+/// collection so they run serially against each other. That applies to every
+/// suite using it, not just the provider tests: it lives here because the
+/// optical-media suite needs the same interception, and the trimmed copy it
+/// used to keep beside itself had already drifted away from this one.
 ///
 /// Response caching (<c>CacheController</c>) is keyed by URL and shared
 /// per-process on disk, so every scripted request must target a unique path —

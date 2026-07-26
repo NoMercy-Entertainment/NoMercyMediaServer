@@ -14,7 +14,7 @@ using System.Text;
 using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.NewtonSoftConverters;
 
-namespace NoMercy.Tests.Providers.Infrastructure;
+namespace NoMercy.Tests.Common.Providers;
 
 /// <summary>
 /// Immutable snapshot of an outgoing request. <see cref="ExternalApiClient"/>
@@ -168,7 +168,7 @@ public sealed class ScriptableHttpMessageHandler : HttpMessageHandler
             request
                 .Headers.Concat(
                     request.Content?.Headers
-                            ?? Enumerable.Empty<KeyValuePair<string, IEnumerable<string>>>()
+                        ?? Enumerable.Empty<KeyValuePair<string, IEnumerable<string>>>()
                 )
                 .ToDictionary(h => h.Key, h => h.Value)
         );
