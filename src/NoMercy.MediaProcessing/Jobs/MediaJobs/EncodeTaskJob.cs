@@ -249,7 +249,7 @@ public class EncodeTaskJob
 
         IEncoderProcessRegistry? processRegistry = _encoderProcessRegistry;
 
-        EventBusProgressObserver progressObserver = new(
+        using EventBusProgressObserver progressObserver = new(
             jobId: fileMetadata.Id,
             title: fileMetadata.Title,
             baseFolder: fileMetadata.Path,

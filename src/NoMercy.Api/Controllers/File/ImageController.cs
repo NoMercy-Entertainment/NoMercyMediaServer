@@ -31,6 +31,30 @@ public class ImageController(
     ILogger<ImageController> logger
 ) : BaseController
 {
+    /// <summary>
+    /// A miss must never be cached. The long-lived headers used to be written at
+    /// the top of the request, before anything had been resolved, so a 404 was
+    /// served with <c>max-age=2592000</c> — an image that simply had not been
+    /// fetched yet was recorded by every browser and image loader as "this does
+    /// not exist" for thirty days. Artwork for anything the server had not
+    /// already cached, an episode still among it, could then never appear no
+    /// matter how many times the page was reloaded.
+    /// </summary>
+    private IActionResult ImageMiss(string reason)
+    {
+        Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
+        Response.Headers["Pragma"] = "no-cache";
+        Response.Headers.Remove("Expires");
+
+        return NotFoundResponse(reason);
+    }
+
+    private void CacheForThirtyDays()
+    {
+        Response.Headers["Expires"] = DateTime.UtcNow.AddDays(30).ToString("R");
+        Response.Headers["Cache-Control"] = "public, max-age=2592000";
+    }
+
     [HttpGet]
     public async Task<IActionResult> Image(
         string type,
@@ -40,13 +64,11 @@ public class ImageController(
     {
         try
         {
-            Response.Headers.Append("Expires", DateTime.UtcNow.AddDays(30).ToString("R"));
-            Response.Headers.Append("Cache-Control", "public, max-age=2592000");
             Response.Headers.Append("Access-Control-Allow-Origin", "*");
 
             string folder = Path.Join(AppFiles.ImagesPath, ImageRequestPath.SanitizeSegment(type));
             if (!storage.Exists(folder))
-                return NotFoundResponse("Image folder not found");
+                return ImageMiss("Image folder not found");
 
             string safeSegment = ImageRequestPath.SanitizeSegment(path);
             string filePath = Path.Join(folder, safeSegment);
@@ -65,7 +87,9 @@ public class ImageController(
             }
 
             if (!storage.Exists(filePath))
-                return NotFoundResponse("Image not found");
+                return ImageMiss("Image not found");
+
+            CacheForThirtyDays();
 
             long originalFileSize = storage.Size(filePath);
             string originalMimeType = MimeUtility.GetMimeMapping(filePath);
@@ -121,7 +145,7 @@ public class ImageController(
         catch (Exception e)
         {
             logger.LogError(e.Message);
-            return NotFoundResponse("Image not found");
+            return ImageMiss("Image not found");
         }
     }
 

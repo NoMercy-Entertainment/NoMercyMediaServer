@@ -33,6 +33,7 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -249,6 +250,34 @@ public class TasksController(
                 trackById[track.Id] = track;
         }
 
+        // The child task is where the real work — and the real ordering — lives.
+        // A coordinator row is deleted and re-inserted on every poll, so neither
+        // its id nor its CreatedAt says anything about when its encode was
+        // dispatched or when it will run. Its child is enqueued once and never
+        // re-created, so the child's autoincrement id IS the execution order the
+        // runner will pick them up in.
+        List<QueueJob> childRows = queueContext
+            .QueueJobs.Where(j => j.Queue.StartsWith("encoder-"))
+            .OrderBy(j => j.Id)
+            .ToList();
+
+        HashSet<string> activeMediaIds = [];
+        Dictionary<string, int> executionOrder = [];
+
+        foreach (QueueJob child in childRows)
+        {
+            string? mediaId = child.Payload.FromJson<EncodeTaskJob>()?.Id?.ToString();
+            if (string.IsNullOrEmpty(mediaId))
+                continue;
+
+            // First child wins: a run dispatches its bundles in order, so the
+            // earliest one still queued is when this encode gets its turn.
+            executionOrder.TryAdd(mediaId, child.Id);
+
+            if (child.ReservedAt is not null)
+                activeMediaIds.Add(mediaId);
+        }
+
         QueueJobDto[] queueJobs = encoderJobs
             .Select(entry =>
             {
@@ -259,14 +288,14 @@ public class TasksController(
                     Priority = entry.Row.Priority,
                     PayloadId = j.Id,
                     Title = ResolveTitle(j, movieById, episodeById, trackById),
+                    Backdrop = ResolveArtwork(j, movieById, episodeById),
                     Type = j.GetType().Name,
-                    // Liveness comes from the row, never from the payload: the
-                    // payload is the snapshot serialized at enqueue time and is
-                    // never rewritten, so its Status is "pending" for a job's
-                    // whole life. Reading it left running encodes displayed as
-                    // pending and, because the catch-up broadcast below only
-                    // fires for "running", suppressed their progress entirely.
-                    Status = entry.Row.ReservedAt is not null ? "running" : "pending",
+                    Status = IsEncodeInFlight(
+                        entry.Row.ReservedAt,
+                        activeMediaIds.Contains(j.Id.ToString())
+                    )
+                        ? "running"
+                        : "pending",
                     InputFile = j.InputFile,
                     Profile = folderById
                         .GetValueOrDefault(j.FolderId)
@@ -275,22 +304,46 @@ public class TasksController(
                         ?.Preset?.Name,
                 };
             })
+            // Ordered here, not in SQL: both row columns SQL could sort on are
+            // rewritten on every coordinator poll. Priority still leads, because
+            // that is what the runner honours; within a priority the child id is
+            // the order the runner will actually pick them up in.
+            .OrderByDescending(dto => dto.Priority)
+            .ThenBy(dto => executionOrder.GetValueOrDefault(dto.PayloadId, int.MaxValue))
+            .ThenBy(dto => dto.Id)
             .ToArray();
 
-        // Broadcast current progress for running jobs — reuse already-resolved titles.
+        // Catch-up broadcast so a reloaded dashboard gets a card back for work
+        // already in flight. Keyed off the reservation rather than the reported
+        // status: a coordinator sleeping between poll wake-ups reports running
+        // but has no live encoder behind it, and a card for it would only flap
+        // in and out as the idle sweep collected it.
+        HashSet<int> reservedRowIds = encoderJobs
+            .Where(entry => entry.Row.ReservedAt is not null)
+            .Select(entry => entry.Row.Id)
+            .ToHashSet();
+
         if (EventBusProvider.IsConfigured)
         {
-            foreach (QueueJobDto dto in queueJobs.Where(dto => dto.Status == "running"))
+            foreach (QueueJobDto dto in queueJobs.Where(dto => reservedRowIds.Contains(dto.Id)))
             {
+                // Lower-case keys are the encoder-progress contract — every other
+                // producer on this channel emits them, and the serializer has no
+                // naming strategy, so an anonymous object with PascalCase members
+                // reached the dashboard as {Id, Status, Title}. Reading data.status
+                // off that gives undefined, which is not in-flight, so the card was
+                // never restored and the miss ran the handler's removal branch
+                // instead — one refetch per running row per poll, each refetch
+                // re-broadcasting the same unreadable payload.
                 _ = EventBusProvider.Current.PublishAsync(
                     new EncodingProgressBroadcastedEvent
                     {
                         ProgressData = new
                         {
-                            Id = dto.PayloadId,
-                            Status = "running",
-                            dto.Title,
-                            Message = "Encoding video",
+                            id = dto.PayloadId.ToInt(),
+                            status = "running",
+                            title = dto.Title,
+                            message = "Encoding video",
                         },
                     }
                 );
@@ -298,6 +351,42 @@ public class TasksController(
         }
 
         return Ok(new DataResponseDto<QueueJobDto[]> { Data = queueJobs });
+    }
+
+    /// <summary>
+    /// Whether an encode is actually being worked on, which is the line the
+    /// dashboard splits "encoding now" from "waiting" on.
+    ///
+    /// <para>Carrying coordinator state is not that line. A coordinator stamps
+    /// itself the moment it has decomposed and handed a bundle to the queue, and
+    /// with one encoder runner two dozen of those sit behind each other having
+    /// done nothing — calling them all in-flight said the whole season was
+    /// encoding at once. What does mean work is a runner holding a reservation:
+    /// either on the coordinator row itself, or on the child task that carries
+    /// the ffmpeg process (<paramref name="hasReservedChild"/>).</para>
+    /// </summary>
+    internal static bool IsEncodeInFlight(DateTime? reservedAt, bool hasReservedChild) =>
+        reservedAt is not null || hasReservedChild;
+
+    /// <summary>
+    /// The artwork for a queued encode — a movie's backdrop or an episode's still,
+    /// the same image the encoder's progress events carry once the job is running,
+    /// so the card does not change picture when it starts.
+    /// </summary>
+    private static string? ResolveArtwork(
+        VideoEncodeJob j,
+        Dictionary<int, Movie> movieById,
+        Dictionary<int, Episode> episodeById
+    )
+    {
+        int intId = j.Id.ToInt();
+        if (intId == 0)
+            return null;
+
+        if (movieById.TryGetValue(intId, out Movie? movie))
+            return movie.Backdrop;
+
+        return episodeById.TryGetValue(intId, out Episode? episode) ? episode.Still : null;
     }
 
     private static string ResolveTitle(
@@ -734,6 +823,15 @@ public class QueueJobDto
 
     [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The item's own artwork — a movie backdrop or an episode still. Carried on
+    /// the queue row, not only on progress events, so a card can show the title
+    /// it is about from the moment the job is queued rather than waiting for the
+    /// first frame of encoding to arrive.
+    /// </summary>
+    [JsonProperty("backdrop")]
+    public string? Backdrop { get; set; }
 
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
