@@ -102,4 +102,29 @@ public class HomeControllerTests : IClassFixture<NoMercyApiFactory>
             "Lolomo home page 0 must not include a 'Latest in {library}' row"
         );
     }
+
+    // The gate above covers the Index endpoint (/api/v1). The apps call /api/v1/home, which
+    // is a different action returning components rather than genre rows, and it honoured no
+    // version at all — so the rows the lolomo clients build themselves arrived duplicated.
+    [Fact]
+    public async Task Home_Lolomo_OmitsLatestInLibraryRow()
+    {
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/home?version=lolomo");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        string body = await response.Content.ReadAsStringAsync();
+        using JsonDocument document = JsonDocument.Parse(body);
+        JsonElement data = document.RootElement.GetProperty("data");
+
+        bool hasLatestInRow = data.EnumerateArray()
+            .Any(component =>
+                component.TryGetProperty("props", out JsonElement props)
+                && props.TryGetProperty("title", out JsonElement title)
+                && title.GetString() is not null
+                && title.GetString()!.StartsWith("Latest in ", StringComparison.Ordinal)
+            );
+
+        Assert.False(hasLatestInRow, "Lolomo /home must not include a 'Latest in {library}' row");
+    }
 }

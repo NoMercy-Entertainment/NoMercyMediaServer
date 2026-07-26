@@ -186,12 +186,16 @@ public partial class HomeController : BaseController
     [HttpGet("home")]
     [ResponseCache(NoStore = true)]
     [Authorize(Policy = "MediaAccess")]
-    public async Task<IActionResult> Home(CancellationToken ct = default)
+    public async Task<IActionResult> Home(
+        [FromQuery] PageRequestDto request,
+        CancellationToken ct = default
+    )
     {
         ComponentResponse result = await _homeService.GetHomeData(
             User.UserId(),
             Language(),
-            Country()
+            Country(),
+            request.Version
         );
 
         return Ok(result);
