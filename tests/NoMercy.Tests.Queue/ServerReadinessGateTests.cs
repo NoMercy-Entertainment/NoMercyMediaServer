@@ -94,15 +94,13 @@ public class ServerReadinessGateTests
     [Fact]
     public async Task AddSignal_AfterGateSealed_IsIgnored_DoesNotBlockResolution()
     {
-        FakeLifetime lifetime = new();
+        // Built against an already-started lifetime the gate seals inside its own
+        // constructor, which makes the signal below unambiguously late. Sealing off
+        // ApplicationStarted instead lands on a threadpool tick, and sleeping for that tick
+        // reads a loaded machine's scheduling delay as "the gate has not sealed" — the
+        // signal is then accepted, awaited, and never resolves.
+        FakeLifetime lifetime = new(alreadyStarted: true);
         ServerReadinessGate gate = new(lifetime, NullLogger<ServerReadinessGate>.Instance);
-
-        lifetime.FireStarted();
-        // Seal fires one async tick after ApplicationStarted (Task.Run in the
-        // ctor's callback) — give it a moment to actually seal before the late
-        // AddSignal, otherwise this would race the ctor's own registration
-        // window instead of testing the "too late" path.
-        await Task.Delay(150);
 
         TaskCompletionSource neverResolves = new();
         gate.AddSignal("too-late", neverResolves.Task);
