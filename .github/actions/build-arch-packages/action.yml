@@ -25,7 +25,20 @@ runs:
     - name: Pull Arch build container
       shell: bash
       run: |
-        docker pull archlinux:base-devel
+        # A single attempt makes the whole Arch package depend on Docker Hub answering on the
+        # first try. When it times out ("context deadline exceeded") the job fails, the release
+        # ships without an Arch package, and Arch users silently get no update for that version.
+        for attempt in 1 2 3 4 5; do
+          if docker pull archlinux:base-devel; then
+            exit 0
+          fi
+          delay=$((attempt * 15))
+          echo "docker pull failed (attempt ${attempt}/5), retrying in ${delay}s"
+          sleep "${delay}"
+        done
+
+        echo "::error::Could not pull archlinux:base-devel after 5 attempts"
+        exit 1
 
     - name: Stage Arch package sources
       shell: bash
