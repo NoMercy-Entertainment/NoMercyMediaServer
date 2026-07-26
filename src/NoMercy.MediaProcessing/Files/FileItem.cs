@@ -29,8 +29,11 @@ public class FileItem
     [JsonProperty("size")]
     public long Size { get; set; }
 
-    [JsonProperty("parsed")]
+    [JsonIgnore]
     public MovieFile? Parsed { get; set; }
+
+    [JsonProperty("parsed")]
+    public ParsedFileDto? ParsedForWire => ParsedFileDto.From(Parsed);
 
     [JsonProperty("match")]
     public MovieOrEpisode Match { get; set; } = new();
