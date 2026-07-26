@@ -204,6 +204,16 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
             }
         }
 
+        // The provider's absolute ordering is the authority on what an absolute number means,
+        // so it is asked before anything local is guessed at.
+        if (episode == null)
+            episode = await ResolveAbsoluteEpisodeAsync(ctx, show.Id, episodeNumber);
+
+        // Last resort: index the show's own episodes as if they were one flat run. Only
+        // correct when the provider publishes no absolute ordering and the show really is
+        // numbered straight through, so it must never run before the group lookup above —
+        // it returns a row for any number within range, which looks like a match and is
+        // usually the wrong episode.
         if (episode == null)
         {
             List<Episode> episodes = ctx
@@ -215,9 +225,6 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
 
             episode = episodes.ElementAtOrDefault(episodeNumber - 1);
         }
-
-        if (episode == null)
-            episode = await ResolveAbsoluteEpisodeAsync(ctx, show.Id, episodeNumber);
 
         // Try alternate search results for absolute-order anime (e.g. TMDB ranks live-action above anime)
         if (episode == null && shows!.Results.Count > 1)

@@ -38,6 +38,7 @@ public sealed partial class SeasonEpisodeAdapter : IFilenameParseAdapter
         // text before the marker ends in the absolute number plus the marker's own opening
         // bracket. Both would be searched for verbatim, and no provider knows a show by that
         // name, so a whole season comes back unidentified.
+        Match absolute = MatchTrailingAbsoluteEpisode().Match(showTitle);
         showTitle = MatchTrailingAbsoluteEpisode().Replace(showTitle, string.Empty);
         showTitle = showTitle.TrimEnd('-', '(', '[', '{', ' ').Trim();
 
@@ -45,6 +46,19 @@ public sealed partial class SeasonEpisodeAdapter : IFilenameParseAdapter
 
         if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;
+
+        // When the name carries both numberings, the absolute one wins and the season is left
+        // for the folder to decide. Providers routinely model a long-running show as one
+        // season, so its "S02E01" has no row to match while absolute 29 does — trusting the
+        // marker there resolves to season 1 episode 1 and imports the wrong episode entirely.
+        if (absolute.Success)
+            return new(context.Title)
+            {
+                Title = showTitle,
+                Episode = int.Parse(MatchNumbers().Match(absolute.Value).Value),
+                IsSeries = true,
+                IsSuccess = true,
+            };
 
         return new(context.Title)
         {
@@ -55,6 +69,9 @@ public sealed partial class SeasonEpisodeAdapter : IFilenameParseAdapter
             IsSuccess = true,
         };
     }
+
+    [GeneratedRegex(@"\d+")]
+    private static partial Regex MatchNumbers();
 
     /// <summary>
     /// A trailing " - 29 (" style absolute episode label, including the opening bracket of
