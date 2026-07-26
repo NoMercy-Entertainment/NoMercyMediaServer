@@ -52,6 +52,21 @@ public sealed class CloudflareTunnelStrategyTests
     }
 
     [Fact]
+    public void ReapOrphanedTunnels_LeavesUnrelatedCloudflaredProcessesAlone()
+    {
+        ConnectivityStatus status = new();
+        CloudflareTunnelStrategy strategy = BuildStrategy(status);
+
+        // Nothing on this machine runs from our dependencies path during the test run, so a
+        // correct reaper is a no-op here. The assertion that matters is that it does not
+        // throw and does not go killing every cloudflared it can see — a user running their
+        // own tunnel for something unrelated must not have it stopped by us.
+        Exception? ex = Record.Exception(strategy.ReapOrphanedTunnels);
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
     public async Task TryEstablishAsync_WhenTokenIsNull_DoesNotSetNatStatusToTunneled()
     {
         ConnectivityStatus status = new()

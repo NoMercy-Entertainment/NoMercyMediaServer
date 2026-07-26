@@ -123,6 +123,14 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
             return ConnectivityResult.Failed();
         }
 
+        // A cloudflared from a previous run of this server can still be alive: a crash, a
+        // container kill or any non-graceful exit skips TeardownAsync, and the child keeps
+        // running. Starting a second one registers a second connector against the same
+        // tunnel, so every ungraceful restart permanently adds another set of edge
+        // connections, and an orphan carries the ingress config it started with — it can
+        // still be routing traffic to an origin this server has since moved.
+        ReapOrphanedTunnels();
+
         try
         {
             _tunnelProcess = new()
@@ -215,6 +223,59 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
             StopTunnel();
             return ConnectivityResult.Failed();
         }
+    }
+
+    /// <summary>
+    /// Kills any cloudflared started from our own binary path that is not the process this
+    /// strategy currently owns. Matching on the executable path rather than the name alone
+    /// keeps a cloudflared the user runs for their own tunnels out of scope.
+    /// </summary>
+    internal void ReapOrphanedTunnels()
+    {
+        string ourPath;
+        try
+        {
+            ourPath = Path.GetFullPath(AppFiles.CloudflareDPath);
+        }
+        catch
+        {
+            return;
+        }
+
+        foreach (Process candidate in Process.GetProcessesByName("cloudflared"))
+            using (candidate)
+            {
+                try
+                {
+                    if (_tunnelProcess is not null && candidate.Id == _tunnelProcess.Id)
+                        continue;
+
+                    string? path = candidate.MainModule?.FileName;
+                    if (
+                        path is null
+                        || !string.Equals(
+                            Path.GetFullPath(path),
+                            ourPath,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                        continue;
+
+                    _logger.LogWarning(
+                        "Found an orphaned cloudflared from a previous run (pid {Pid}) — stopping it so this server registers one connector, not two",
+                        candidate.Id
+                    );
+
+                    candidate.Kill(true);
+                    candidate.WaitForExit(5000);
+                }
+                catch (Exception ex)
+                {
+                    // MainModule throws for processes we cannot inspect; that just means it
+                    // is not ours to reap.
+                    _logger.LogDebug("Skipped cloudflared pid inspection: {Message}", ex.Message);
+                }
+            }
     }
 
     public Task TeardownAsync()
