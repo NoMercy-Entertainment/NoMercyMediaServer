@@ -19,6 +19,7 @@ using Newtonsoft.Json;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.Networking.Http;
 
 namespace NoMercy.Api.Middleware;
 
@@ -120,7 +121,7 @@ public class AccessLogMiddleware
 
             _logger.LogInformation(
                 "Unknown: {RemoteIpAddress}: {Path} (No GUID)",
-                context.Connection.RemoteIpAddress,
+                context.ClientIp(),
                 path
             );
             await WriteProblemAsync(
@@ -144,7 +145,7 @@ public class AccessLogMiddleware
 
             _logger.LogInformation(
                 "Unknown: {RemoteIpAddress}: {Path} (Malformed or empty GUID)",
-                context.Connection.RemoteIpAddress,
+                context.ClientIp(),
                 path
             );
             await WriteProblemAsync(
@@ -181,7 +182,7 @@ public class AccessLogMiddleware
         {
             _logger.LogInformation(
                 "Unknown: {RemoteIpAddress}: {Path} (User not found)",
-                context.Connection.RemoteIpAddress,
+                context.ClientIp(),
                 path
             );
             await WriteProblemAsync(

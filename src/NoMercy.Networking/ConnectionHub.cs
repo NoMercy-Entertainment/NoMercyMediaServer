@@ -98,9 +98,7 @@ public class ConnectionHub : Hub
         Client client = new()
         {
             Sub = user.Id,
-            Ip =
-                _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString()
-                ?? "Unknown",
+            Ip = _httpContextAccessor.HttpContext?.ClientIp()?.ToString() ?? "Unknown",
             Socket = Clients.Caller,
             Endpoint = Endpoint,
             IsActive = true,
