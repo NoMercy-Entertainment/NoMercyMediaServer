@@ -34,6 +34,7 @@ using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
+using NoMercy.MediaProcessing.Jobs.SubtitleJobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -304,6 +305,18 @@ public class TasksController(
                         ?.Preset?.Name,
                 };
             })
+            // Maintenance work sharing the encoder queue — preview rebuilds and
+            // subtitle OCR. Reported as itself rather than dressed up as an
+            // encode: no media id, no artwork, no progress, just what it is and
+            // whether a runner has it. Hours of this can be queued at once, and a
+            // panel that shows none of it is telling the operator the server is
+            // idle while it works.
+            .Concat(
+                jobs.Where(row => ReadEncodeJob(row.Payload) is null)
+                    .Select(row => ReadMaintenanceJob(row))
+                    .Where(dto => dto is not null)
+                    .Select(dto => dto!)
+            )
             // Ordered here, not in SQL: both row columns SQL could sort on are
             // rewritten on every coordinator poll. Priority still leads, because
             // that is what the runner honours; within a priority the child id is
@@ -388,6 +401,52 @@ public class TasksController(
             // job type. Not this endpoint's problem to report.
             return null;
         }
+    }
+
+    /// <summary>
+    /// A queue row that is maintenance rather than an encode, described as
+    /// itself. Returns null for anything this endpoint has no name for, so an
+    /// unrecognised job stays out of the panel instead of appearing as a blank.
+    /// </summary>
+    internal static QueueJobDto? ReadMaintenanceJob(QueueJob row)
+    {
+        object? job;
+        try
+        {
+            job = SerializationHelper.Deserialize<object>(row.Payload);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+
+        (string kind, string title, string target) = job switch
+        {
+            SpriteSheetUpgradeJob sprite => ("preview", sprite.Title, sprite.HostFolder),
+            SubtitleOcrBackfillJob ocr => (
+                "subtitles",
+                $"{ocr.MediaTitle} ({ocr.Language})",
+                ocr.SupFileName
+            ),
+            _ => (string.Empty, string.Empty, string.Empty),
+        };
+
+        if (kind.Length == 0)
+            return null;
+
+        return new()
+        {
+            Id = row.Id,
+            Priority = row.Priority,
+            // The folder is this job's identity: it is what the work is about and
+            // it does not move, which is what a list key needs.
+            PayloadId = target,
+            Title = title,
+            Type = job!.GetType().Name,
+            Kind = kind,
+            Status = row.ReservedAt is not null ? "running" : "pending",
+            InputFile = target,
+        };
     }
 
     internal static bool IsEncodeInFlight(DateTime? reservedAt, bool hasReservedChild) =>
@@ -872,6 +931,21 @@ public class QueueJobDto
 
     [JsonProperty("priority")]
     public int Priority { get; set; }
+
+    /// <summary>
+    /// What kind of work this row is, when it is not an encode: <c>preview</c>
+    /// for a scrub-sheet rebuild, <c>subtitles</c> for an OCR backfill. Null on a
+    /// real encode, which is what every existing client already assumes it is
+    /// reading — so an older build ignores this and keeps working.
+    ///
+    /// <para>These share the encoder queue on purpose, so they must not be shown
+    /// as encodes: they have no media id, no artwork and no progress, and pushing
+    /// them through the encode shape produced cards for titles that did not
+    /// exist. Filtering them out instead went too far the other way — the server
+    /// spends hours on this work and the panel claimed nothing was running.</para>
+    /// </summary>
+    [JsonProperty("kind")]
+    public string? Kind { get; set; }
 }
 
 public class PatchQueueItemDto

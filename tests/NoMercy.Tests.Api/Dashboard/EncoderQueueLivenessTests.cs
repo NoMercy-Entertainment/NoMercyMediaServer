@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Api.Controllers.V1.Dashboard.Admin;
+using NoMercy.Database.Models.Queue;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Jobs.SubtitleJobs;
 using NoMercyQueue;
@@ -113,5 +114,85 @@ public class EncoderQueueLivenessTests
     public void AnUnreadablePayload_IsNotAnEncode()
     {
         TasksController.ReadEncodeJob("{ this is not json").Should().BeNull();
+    }
+
+    /// <summary>
+    /// Not being an encode is not the same as not being work. Hours of preview
+    /// rebuilds can sit on this queue, and a panel that shows none of them tells
+    /// the operator the server is idle while it is busy — which is the complaint
+    /// that started all of this.
+    /// </summary>
+    [Fact]
+    public void APreviewRebuild_IsReportedAsMaintenance()
+    {
+        SpriteSheetUpgradeJob job = new(
+            Ulid.NewUlid().ToString(),
+            Ulid.NewUlid().ToString(),
+            "Libraries/Anime/BLUE.LOCK.(2022)/BLUE.LOCK.S01E01",
+            "BLUE.LOCK.S01E01"
+        );
+
+        QueueJobDto? dto = TasksController.ReadMaintenanceJob(
+            new()
+            {
+                Id = 41,
+                Priority = 1,
+                Queue = "encoder",
+                Payload = SerializationHelper.Serialize(job),
+            }
+        );
+
+        dto.Should().NotBeNull();
+        dto!.Kind.Should().Be("preview");
+        dto.Title.Should().Be("BLUE.LOCK.S01E01");
+        dto.Status.Should().Be("pending", "no runner holds this row");
+        dto.PayloadId.Should()
+            .Be(
+                "Libraries/Anime/BLUE.LOCK.(2022)/BLUE.LOCK.S01E01",
+                "the folder is what this job is about and it does not move, so it is the list key"
+            );
+    }
+
+    [Fact]
+    public void AReservedMaintenanceRow_IsRunning()
+    {
+        SpriteSheetUpgradeJob job = new(
+            Ulid.NewUlid().ToString(),
+            Ulid.NewUlid().ToString(),
+            "Libraries/Anime/Frieren/S01E01",
+            "Frieren S01E01"
+        );
+
+        QueueJobDto? dto = TasksController.ReadMaintenanceJob(
+            new()
+            {
+                Id = 42,
+                Priority = 1,
+                Queue = "encoder",
+                Payload = SerializationHelper.Serialize(job),
+                ReservedAt = DateTime.UtcNow,
+            }
+        );
+
+        dto!.Status.Should().Be("running");
+    }
+
+    [Fact]
+    public void AnEncodeIsNotMaintenance()
+    {
+        VideoEncodeJob encode = new() { Id = "4114390", FolderId = Ulid.NewUlid() };
+
+        TasksController
+            .ReadMaintenanceJob(
+                new()
+                {
+                    Id = 43,
+                    Priority = 4,
+                    Queue = "encoder",
+                    Payload = SerializationHelper.Serialize(encode),
+                }
+            )
+            .Should()
+            .BeNull("an encode goes through the encode path, or it would appear twice");
     }
 }
