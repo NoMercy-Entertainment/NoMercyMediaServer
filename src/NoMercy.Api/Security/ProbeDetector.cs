@@ -67,10 +67,13 @@ public static class ProbeDetector
         "/etc/passwd",
     ];
 
-    // A browser misses assets for innocent reasons — a stale service worker, a
-    // deploy landing mid-session. Those 404s must never add up to a ban, so they
-    // are cleared before the generic rule sees them.
-    private static readonly string[] AssetExtensions =
+    // Everything this server legitimately hands out as a file. Static assets and
+    // media are served without ever matching a controller, so a refused one looks
+    // exactly like an unrouted request: a token expiring mid-episode would
+    // otherwise ban the viewer within seconds of segment retries, and a browser
+    // holding a stale bundle after a deploy would ban itself. Cleared before the
+    // generic rule sees them; the exploit rules above still run first.
+    private static readonly string[] ServedExtensions =
     [
         ".js",
         ".mjs",
@@ -89,6 +92,28 @@ public static class ProbeDetector
         ".svg",
         ".ico",
         ".webmanifest",
+        ".mp4",
+        ".m4s",
+        ".m4a",
+        ".m4v",
+        ".mkv",
+        ".webm",
+        ".ts",
+        ".m3u8",
+        ".mpd",
+        ".key",
+        ".mp3",
+        ".flac",
+        ".ogg",
+        ".opus",
+        ".aac",
+        ".wav",
+        ".vtt",
+        ".srt",
+        ".ass",
+        ".ssa",
+        ".sup",
+        ".nfo",
     ];
 
     public static ProbeVerdict Classify(RequestOutcome outcome)
@@ -101,7 +126,7 @@ public static class ProbeDetector
         if (ExploitFragments.Any(fragment => path.Contains(fragment, StringComparison.Ordinal)))
             return ProbeVerdict.KnownProbe;
 
-        if (AssetExtensions.Any(extension => path.EndsWith(extension, StringComparison.Ordinal)))
+        if (ServedExtensions.Any(extension => path.EndsWith(extension, StringComparison.Ordinal)))
             return ProbeVerdict.Clean;
 
         if (outcome.IsAuthenticated || outcome.EndpointMatched || outcome.StatusCode < 400)

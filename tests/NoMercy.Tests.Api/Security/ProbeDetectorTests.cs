@@ -102,6 +102,34 @@ public class ProbeDetectorTests
         verdict.Should().Be(ProbeVerdict.Clean);
     }
 
+    // Media is served by the static-file middleware, so it never matches a
+    // controller. Once a token expires mid-episode the player retries segments
+    // anonymously and every retry looks exactly like an unrouted refusal.
+    [Theory]
+    [InlineData("/01HQ8/Movies/Sintel/Sintel.m3u8")]
+    [InlineData("/01HQ8/Movies/Sintel/video_1080p/segment_042.ts")]
+    [InlineData("/01HQ8/Movies/Sintel/video_1080p/segment_042.m4s")]
+    [InlineData("/01HQ8/Movies/Sintel/Sintel.mp4")]
+    [InlineData("/01HQ8/Movies/Sintel/subtitles/eng.vtt")]
+    [InlineData("/01HQ8/Music/Derek Clegg/track.flac")]
+    [InlineData("/01HQ8/Movies/Sintel/hls.key")]
+    public void Classify_ExpiredTokenRetryingMedia_IsCleanAndNeverBansTheViewer(string path)
+    {
+        ProbeVerdict verdict = ProbeDetector.Classify(new(path, false, 401, false));
+
+        verdict.Should().Be(ProbeVerdict.Clean);
+    }
+
+    [Fact]
+    public void Classify_ExploitPathWithAServedExtension_IsStillAProbe()
+    {
+        ProbeVerdict verdict = ProbeDetector.Classify(
+            new("/wp-content/uploads/shell.png", false, 401, false)
+        );
+
+        verdict.Should().Be(ProbeVerdict.KnownProbe);
+    }
+
     [Fact]
     public void Weight_ScoresAKnownProbeFarAboveASuspiciousRequest()
     {
