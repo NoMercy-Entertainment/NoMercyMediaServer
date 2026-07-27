@@ -49,6 +49,15 @@ public record HomeCardData
     [JsonProperty("poster")]
     public string? Poster { get; set; }
 
+    /// <summary>
+    /// Whether <see cref="Poster" /> is one of TMDB's language-less prints, and so carries no
+    /// title of its own. A surface that leads with the poster puts the logo over it when there
+    /// is one and draws the title when there is not; over a poster that already reads its own
+    /// name it draws neither.
+    /// </summary>
+    [JsonProperty("poster_is_textless")]
+    public bool PosterIsTextless { get; set; }
+
     [JsonProperty("logo")]
     public string? Logo { get; set; }
 

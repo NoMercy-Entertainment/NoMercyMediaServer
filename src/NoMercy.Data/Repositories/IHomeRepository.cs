@@ -30,6 +30,21 @@ public record HomeParallelData(
 public record HomeTvsAndMoviesData(List<HomeTvCardDto> TvData, List<HomeMovieCardDto> MovieData);
 
 /// <summary>
+/// The artwork for the single title a home screen leads with.
+/// </summary>
+/// <param name="Poster">
+/// The poster to show. A language-less print when the title has one, otherwise the print for
+/// the caller's language and then the English one.
+/// </param>
+/// <param name="PosterIsTextless">
+/// Whether <paramref name="Poster" /> is a language-less print, i.e. carries no title of its
+/// own. Only true when a language-less row was actually found; a poster whose kind is unknown
+/// is reported as titled, because drawing a second title over one is the worse mistake.
+/// </param>
+/// <param name="Logo">The title's own lettering, in the caller's language or English.</param>
+public record HeroArtwork(string? Poster, bool PosterIsTextless, string? Logo);
+
+/// <summary>
 /// Raw entities behind a user's favorited video media, grouped by type. The
 /// controller maps each list to <c>NmCardDto</c> — the Data layer never
 /// references API-layer DTOs.
@@ -103,6 +118,13 @@ public interface IHomeRepository
         List<int> movieIds,
         string language,
         string country,
+        CancellationToken ct = default
+    );
+
+    Task<HeroArtwork> GetHeroArtworkAsync(
+        int id,
+        string mediaType,
+        string language,
         CancellationToken ct = default
     );
 }

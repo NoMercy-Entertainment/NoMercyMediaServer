@@ -694,8 +694,14 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             ct
         );
 
-        await Task.WhenAll([continueWatchingTask, genreItemsTask, librariesTask, animeCountTask, movieCountTask, tvCountTask]
-        );
+        await Task.WhenAll([
+            continueWatchingTask,
+            genreItemsTask,
+            librariesTask,
+            animeCountTask,
+            movieCountTask,
+            tvCountTask,
+        ]);
 
         return new(
             continueWatchingTask.Result,
@@ -739,5 +745,67 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
         await Task.WhenAll([tvDataTask, movieDataTask]);
 
         return new(tvDataTask.Result, movieDataTask.Result);
+    }
+
+    /// <summary>
+    /// Picks the poster and logo for the one title the home screen leads with.
+    /// </summary>
+    /// <remarks>
+    /// TMDB keeps a language-less print of most posters — the artwork with the title lettering
+    /// left off. That print plus the title's own logo is what a hero wants: the lettering is
+    /// then the real logo at the size and place we choose, and it can be in the viewer's own
+    /// language. A print that already carries its title cannot take either a logo or a drawn
+    /// title without saying the name twice, so the caller is told which kind it got.
+    ///
+    /// Deliberately a per-title lookup rather than a column on the carousel queries: a home
+    /// payload carries hundreds of cards and exactly one hero, and the widest title here has
+    /// nearly three hundred images. Three indexed single-row reads for the one card that needs
+    /// them costs less than a join every other card pays for and throws away.
+    /// </remarks>
+    public async Task<HeroArtwork> GetHeroArtworkAsync(
+        int id,
+        string mediaType,
+        string language,
+        CancellationToken ct = default
+    )
+    {
+        IQueryable<Image> images =
+            mediaType == MediaTypes.TvMediaType
+                ? context.Images.AsNoTracking().Where(image => image.TvId == id)
+                : context.Images.AsNoTracking().Where(image => image.MovieId == id);
+
+        string? logo = await PickForLanguageAsync(images, "logo", language, ct);
+
+        string? textlessPoster = await images
+            .Where(image => image.Type == "poster" && image.Iso6391 == null)
+            .OrderByDescending(image => image.VoteAverage)
+            .ThenBy(image => image.Id)
+            .Select(image => image.FilePath)
+            .FirstOrDefaultAsync(ct);
+
+        if (textlessPoster is not null)
+            return new(textlessPoster, true, logo);
+
+        return new(await PickForLanguageAsync(images, "poster", language, ct), false, logo);
+    }
+
+    /// <summary>
+    /// The best-voted image of a type in the caller's language, falling back to English.
+    /// </summary>
+    private static async Task<string?> PickForLanguageAsync(
+        IQueryable<Image> images,
+        string type,
+        string language,
+        CancellationToken ct
+    )
+    {
+        return await images
+            .Where(image => image.Type == type)
+            .Where(image => image.Iso6391 == language || image.Iso6391 == "en")
+            .OrderByDescending(image => image.Iso6391 == language)
+            .ThenByDescending(image => image.VoteAverage)
+            .ThenBy(image => image.Id)
+            .Select(image => image.FilePath)
+            .FirstOrDefaultAsync(ct);
     }
 }
