@@ -42,6 +42,56 @@ public static class QueueJobPlanMapper
         };
     }
 
+    /// <summary>
+    /// Several presets on one folder as the single encode they actually are.
+    ///
+    /// <para>The runner unions them into one coordinated run — shared analysis,
+    /// audio and subtitles, one master playlist listing every preset's
+    /// renditions — so listing one preset's outputs would describe a fraction
+    /// of the work. Duplicates across presets collapse for the same reason:
+    /// two presets that both want 1080p H.264 produce it once.</para>
+    ///
+    /// <para>The container is the first preset's. That is the primary in the
+    /// encoder's own merge, the one whose source-derived plan fields win.</para>
+    /// </summary>
+    public static QueueJobPlanDto Merge(IReadOnlyList<QueueJobPlanDto> plans)
+    {
+        if (plans.Count == 1)
+            return plans[0];
+
+        return new()
+        {
+            Container = plans.Count == 0 ? string.Empty : plans[0].Container,
+            Video = plans
+                .SelectMany(plan => plan.Video)
+                .DistinctBy(rendition => (rendition.Codec, rendition.Height))
+                .OrderByDescending(rendition => rendition.Height)
+                .ToArray(),
+            // A ceiling anywhere makes the whole list a ceiling: the source
+            // decides how much of it gets encoded either way.
+            VideoMode = plans.Any(plan => plan.VideoMode == QueueJobPlanDto.CappedVideo)
+                ? QueueJobPlanDto.CappedVideo
+                : QueueJobPlanDto.FixedVideo,
+            Audio = plans
+                .SelectMany(plan => plan.Audio)
+                .DistinctBy(track =>
+                    (
+                        track.Codec,
+                        track.Channels,
+                        track.BitrateKbps,
+                        string.Join(',', track.Languages)
+                    )
+                )
+                .ToArray(),
+            Subtitles = plans
+                .SelectMany(plan => plan.Subtitles)
+                .DistinctBy(subtitle =>
+                    (subtitle.Codec, subtitle.Policy, string.Join(',', subtitle.Languages))
+                )
+                .ToArray(),
+        };
+    }
+
     private static (PlannedVideoDto[] Renditions, string Mode) DescribeVideo(
         EncodingProfile profile
     )

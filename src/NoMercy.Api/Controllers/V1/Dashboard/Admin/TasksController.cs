@@ -90,9 +90,41 @@ public class TasksController(
     }
 
     /// <summary>
-    /// What the encode will produce, resolved from its preset once per preset
-    /// per request — a season's worth of episodes shares one preset, and
-    /// resolving it walks the inheritance chain and parses JSON each time.
+    /// The presets an encode will run with: every preset linked to its folder,
+    /// narrowed to one only when the job named it.
+    ///
+    /// <para>This is <see cref="VideoEncodeJob.HandleInitialRunAsync"/>'s own
+    /// rule, and it has to stay that way or the card describes work the encoder
+    /// is not doing. A folder carrying "4K HDR HEVC" and "1080p SDR HEVC"
+    /// produces both in one coordinated run, so naming either alone told half
+    /// the story. <c>IsDefault</c> selects nothing here — the encoder never
+    /// reads it. A named preset the folder does not link runs nothing at all,
+    /// which is an empty list rather than a fallback.</para>
+    /// </summary>
+    private static Ulid[] PresetsFor(VideoEncodeJob job, Dictionary<Ulid, Folder> folderById)
+    {
+        Ulid[] linked =
+            folderById
+                .GetValueOrDefault(job.FolderId)
+                ?.EncodingPresetFolders.Select(link => link.PresetId)
+                .ToArray()
+            ?? [];
+
+        if (job.PresetId is not Ulid named)
+            return linked;
+
+        return linked.Contains(named) ? [named] : [];
+    }
+
+    /// <summary>
+    /// What the encode will produce, resolved once per set of presets per
+    /// request — a season's worth of episodes shares one folder's presets, and
+    /// resolving each walks the inheritance chain and parses JSON.
+    ///
+    /// <para>Several presets are one merged answer, because they are one
+    /// coordinated encode: the runner shares the analysis, the audio and the
+    /// subtitles across them and writes a single master playlist listing every
+    /// preset's renditions.</para>
     ///
     /// <para>A preset that has been deleted, or whose chain no longer resolves,
     /// leaves the plan off the card rather than failing the whole panel: the
@@ -101,29 +133,36 @@ public class TasksController(
     /// once.</para>
     /// </summary>
     private static QueueJobPlanDto? ResolvePlan(
-        Ulid? presetId,
+        Ulid[] presetIds,
         IPresetLookup lookup,
-        Dictionary<Ulid, QueueJobPlanDto?> cache
+        Dictionary<string, QueueJobPlanDto?> cache
     )
     {
-        if (presetId is not Ulid id)
+        if (presetIds.Length == 0)
             return null;
 
-        if (cache.TryGetValue(id, out QueueJobPlanDto? cached))
+        string key = string.Join('|', presetIds);
+        if (cache.TryGetValue(key, out QueueJobPlanDto? cached))
             return cached;
 
         QueueJobPlanDto? plan;
         try
         {
-            plan = QueueJobPlanMapper.FromProfile(PresetResolver.Resolve(id, lookup));
+            plan = QueueJobPlanMapper.Merge(
+                presetIds
+                    .Select(id =>
+                        QueueJobPlanMapper.FromProfile(PresetResolver.Resolve(id, lookup))
+                    )
+                    .ToArray()
+            );
         }
         catch (Exception exception)
         {
-            Logger.Encoder($"Queue card plan unavailable for preset {id}: {exception.Message}");
+            Logger.Encoder($"Queue card plan unavailable for {key}: {exception.Message}");
             plan = null;
         }
 
-        cache[id] = plan;
+        cache[key] = plan;
         return plan;
     }
 
@@ -338,52 +377,20 @@ public class TasksController(
                 activeMediaIds.Add(mediaId);
         }
 
-        // Presets a job named for itself. The folder's own links are already
-        // loaded above; a job that carries a preset id can point at one the
-        // folder does not link, and that is the preset it will run with.
-        List<Ulid> namedPresetIds = encoderJobs
-            .Select(entry => entry.Job!.PresetId)
-            .Where(id => id.HasValue)
-            .Select(id => id!.Value)
-            .Distinct()
-            .ToList();
-
         Dictionary<Ulid, string> presetNameById = folders
             .SelectMany(folder => folder.EncodingPresetFolders)
             .Where(link => link.Preset is not null)
             .GroupBy(link => link.PresetId)
             .ToDictionary(group => group.Key, group => group.First().Preset!.Name);
 
-        if (namedPresetIds.Count > 0)
-        {
-            List<EncodingPreset> namedPresets = await mediaContext
-                .EncodingPresets.AsNoTracking()
-                .Where(preset => namedPresetIds.Contains(preset.Id))
-                .ToListAsync();
-
-            foreach (EncodingPreset preset in namedPresets)
-                presetNameById[preset.Id] = preset.Name;
-        }
-
         DbPresetLookup presetLookup = new(mediaContext);
-        Dictionary<Ulid, QueueJobPlanDto?> planByPresetId = [];
+        Dictionary<string, QueueJobPlanDto?> planByPresetSet = [];
 
         QueueJobDto[] queueJobs = encoderJobs
             .Select(entry =>
             {
                 VideoEncodeJob j = entry.Job!;
-
-                // What the job named, and the folder's default only when it
-                // named nothing. Reading the folder default either way put the
-                // wrong profile on every job dispatched against a non-default
-                // preset — and would have put the wrong plan there too.
-                Ulid? presetId =
-                    j.PresetId
-                    ?? folderById
-                        .GetValueOrDefault(j.FolderId)
-                        ?.EncodingPresetFolders.OrderByDescending(link => link.IsDefault)
-                        .FirstOrDefault()
-                        ?.PresetId;
+                Ulid[] presetIds = PresetsFor(j, folderById);
 
                 return new QueueJobDto
                 {
@@ -400,10 +407,16 @@ public class TasksController(
                         ? "running"
                         : "pending",
                     InputFile = j.InputFile,
-                    Profile = presetId is Ulid named
-                        ? presetNameById.GetValueOrDefault(named)
-                        : null,
-                    Plan = ResolvePlan(presetId, presetLookup, planByPresetId),
+                    Profile =
+                        presetIds.Length == 0
+                            ? null
+                            : string.Join(
+                                ", ",
+                                presetIds.Select(id =>
+                                    presetNameById.GetValueOrDefault(id, id.ToString())
+                                )
+                            ),
+                    Plan = ResolvePlan(presetIds, presetLookup, planByPresetSet),
                 };
             })
             .Concat(maintenanceJobs.Select(entry => entry.Dto))
