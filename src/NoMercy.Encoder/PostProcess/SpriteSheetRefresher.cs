@@ -15,6 +15,7 @@ using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.PostProcess;
@@ -34,6 +35,7 @@ public class SpriteSheetRefresher(
         string mediaFolder,
         int tileWidth,
         int intervalSeconds,
+        Action<EncodingProgress>? onProgress = null,
         CancellationToken ct = default
     )
     {
@@ -57,8 +59,11 @@ public class SpriteSheetRefresher(
         // The encoded rendition is already SDR, so no tone-map chain: this is the
         // one sprite path that can say that for certain, which is why it reads
         // the output instead of hunting down a source it may no longer have.
+        // The pipe costs a line of stderr parsing per second and buys the only
+        // numbers this run can produce, so it follows the caller: on when someone
+        // is listening, off when nobody is.
         FfmpegCommand command = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
+            .WithGlobalOptions(new(ProgressPipe: onProgress is not null, Overwrite: true))
             .AddInput(new(storage.GetFullPath(source)))
             .AddOutput(
                 new(
@@ -82,7 +87,12 @@ public class SpriteSheetRefresher(
             )
             .Build(options.FfmpegPath, storage.GetFullPath(mediaFolder));
 
-        ExecutionResult result = await executor.ExecuteAsync(command, media.Duration, ct: ct);
+        ExecutionResult result = await executor.ExecuteAsync(
+            command,
+            media.Duration,
+            onProgress,
+            ct: ct
+        );
         if (!result.Success)
             return null;
 

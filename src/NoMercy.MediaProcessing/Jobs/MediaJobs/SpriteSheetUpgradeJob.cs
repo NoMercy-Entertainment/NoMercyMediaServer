@@ -12,6 +12,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Events;
+using NoMercy.Events.Encoding;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
@@ -116,16 +118,24 @@ public class SpriteSheetUpgradeJob : IShouldQueue, IJobStorageInjector
 
         HlsDerivatives derivatives = new();
 
+        // Sampling a full-length title is minutes of ffmpeg. Without these the
+        // dashboard had two observable states for that whole stretch, "queued"
+        // and "gone", and a card that sat still for four minutes is
+        // indistinguishable from a queue that has stopped moving.
+        await PublishProgressAsync(0, "running");
+
         string? sheet = await _refresher.RefreshAsync(
             storage,
             HostFolder,
             derivatives.SpriteVttThumbnailWidth,
             derivatives.SpriteVttIntervalSeconds,
+            progress => _ = PublishProgressAsync(progress.PercentComplete, "running"),
             CancellationToken.None
         );
 
         if (sheet is null)
         {
+            await PublishProgressAsync(0, "failed");
             Logger.App(
                 $"[SpriteSheetUpgrade] {Title}: nothing playable to sample in {HostFolder}",
                 LogEventLevel.Warning
@@ -133,9 +143,38 @@ public class SpriteSheetUpgradeJob : IShouldQueue, IJobStorageInjector
             return;
         }
 
+        await PublishProgressAsync(100, "completed");
+
         Logger.App(
             $"[SpriteSheetUpgrade] {Title}: {string.Join(", ", undersized)} -> {sheet}",
             LogEventLevel.Information
+        );
+    }
+
+    /// <summary>
+    /// One progress message on the same channel an encode reports on.
+    ///
+    /// <para>Carries <c>target</c> because this job has no media id to be keyed
+    /// by — the queue row it belongs to is identified by its host folder, and
+    /// <c>id</c> stays 0 so a client reading the numeric key sees nothing rather
+    /// than something belonging to media 0. Lower-case keys because that is the
+    /// encoder-progress contract: the serializer has no naming strategy, so a
+    /// PascalCase member reaches the dashboard as an unreadable field.</para>
+    /// </summary>
+    private async Task PublishProgressAsync(double percent, string status)
+    {
+        await EventBusProvider.Current.PublishAsync(
+            new EncodingProgressBroadcastedEvent
+            {
+                ProgressData = new
+                {
+                    id = 0,
+                    target = HostFolder,
+                    status,
+                    title = Title,
+                    progress = Math.Clamp(percent, 0, 100),
+                },
+            }
         );
     }
 }
