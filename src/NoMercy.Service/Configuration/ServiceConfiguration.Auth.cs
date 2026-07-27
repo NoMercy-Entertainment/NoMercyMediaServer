@@ -17,6 +17,7 @@ using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.Authorization;
+using NoMercy.Networking.Http;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Hooks;
@@ -202,11 +203,13 @@ public static partial class ServiceConfiguration
                         IPluginClaimsAugmentor augmentor =
                             context.HttpContext.RequestServices.GetRequiredService<IPluginClaimsAugmentor>();
 
-                        string token = (context.SecurityToken as JsonWebToken)?.EncodedToken ?? string.Empty;
-                        IReadOnlyList<Claim> extraClaims = await augmentor.CollectAdditionalClaimsAsync(
-                            token,
-                            context.HttpContext.RequestAborted
-                        );
+                        string token =
+                            (context.SecurityToken as JsonWebToken)?.EncodedToken ?? string.Empty;
+                        IReadOnlyList<Claim> extraClaims =
+                            await augmentor.CollectAdditionalClaimsAsync(
+                                token,
+                                context.HttpContext.RequestAborted
+                            );
 
                         foreach (Claim claim in extraClaims)
                             if (!identity.HasClaim(claim.Type, claim.Value))
@@ -224,8 +227,7 @@ public static partial class ServiceConfiguration
                         string clientType = req.Query["client_type"].FirstOrDefault() ?? "unknown";
                         string clientDevice = req.Query["client_device"].FirstOrDefault() ?? "";
                         string clientOs = req.Query["client_os"].FirstOrDefault() ?? "";
-                        string remoteIp =
-                            context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                        string remoteIp = context.HttpContext.ClientIp()?.ToString() ?? "unknown";
 
                         // Build a human-readable client description
                         string client = !string.IsNullOrEmpty(clientDevice)

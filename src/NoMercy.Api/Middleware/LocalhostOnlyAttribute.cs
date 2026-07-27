@@ -12,6 +12,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using NoMercy.Networking.Http;
 
 namespace NoMercy.Api.Middleware;
 
@@ -27,7 +28,11 @@ public class LocalhostOnlyAttribute : Attribute, IAuthorizationFilter
         if (remoteIp is null)
             return;
 
-        bool isLocalhost = IPAddress.IsLoopback(remoteIp);
+        // A local relay (Cloudflare Tunnel's cloudflared, nginx, a container port
+        // mapping) connects from loopback on behalf of whoever is on the internet,
+        // so a loopback peer carrying a forwarding header is not a local caller —
+        // without this, the tunnel hands the management API to the whole internet.
+        bool isLocalhost = IPAddress.IsLoopback(remoteIp) && !context.HttpContext.IsProxied();
 
         if (!isLocalhost)
         {

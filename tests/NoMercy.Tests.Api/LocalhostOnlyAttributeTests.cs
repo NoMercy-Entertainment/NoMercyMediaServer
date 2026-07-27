@@ -69,9 +69,34 @@ public class LocalhostOnlyAttributeTests
         Assert.Null(context.Result);
     }
 
-    private static AuthorizationFilterContext CreateContext(IPAddress? remoteIp)
+    [Fact]
+    public void OnAuthorization_LoopbackThroughRelay_BlocksRequest()
+    {
+        // cloudflared terminates the tunnel locally and connects from 127.0.0.1,
+        // so without the forwarded-header check the management API would be
+        // reachable by anyone on the internet.
+        LocalhostOnlyAttribute attribute = new();
+        AuthorizationFilterContext context = CreateContext(
+            IPAddress.Loopback,
+            ("CF-Connecting-IP", "45.148.10.99")
+        );
+
+        attribute.OnAuthorization(context);
+
+        Assert.NotNull(context.Result);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(context.Result);
+        Assert.Equal(403, jsonResult.StatusCode);
+    }
+
+    private static AuthorizationFilterContext CreateContext(
+        IPAddress? remoteIp,
+        params (string Name, string Value)[] headers
+    )
     {
         DefaultHttpContext httpContext = new() { Connection = { RemoteIpAddress = remoteIp } };
+
+        foreach ((string name, string value) in headers)
+            httpContext.Request.Headers[name] = value;
 
         ActionContext actionContext = new(httpContext, new(), new());
 

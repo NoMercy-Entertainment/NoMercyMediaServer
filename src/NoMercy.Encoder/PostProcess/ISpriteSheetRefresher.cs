@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.PostProcess;
@@ -31,12 +32,19 @@ public interface ISpriteSheetRefresher
     /// <paramref name="mediaFolder"/> and removes the sheets it supersedes.
     /// Returns the new sheet's filename, or null when the folder holds nothing
     /// playable to sample.
+    ///
+    /// <para><paramref name="onProgress"/> is what a caller needs to say anything
+    /// about a run in flight. Sampling a full-length title is minutes of ffmpeg,
+    /// and without this the only two observable states were "queued" and "gone".
+    /// Supplying it also turns ffmpeg's progress pipe on; leaving it null keeps
+    /// the quiet run for callers with nowhere to put the numbers.</para>
     /// </summary>
     Task<string?> RefreshAsync(
         IStorage storage,
         string mediaFolder,
         int tileWidth,
         int intervalSeconds,
+        Action<EncodingProgress>? onProgress = null,
         CancellationToken ct = default
     );
 }

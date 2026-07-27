@@ -106,16 +106,29 @@ var result = rows.GroupBy(r => r.MediaId)
 Also avoid projecting nested `.ToList()` inside `.Select()` (e.g. `GenreIds = m.GenreMovies.Select(g => g.GenreId).ToList()`) — fetch join-table data in a separate query and combine client-side.
 
 ### FFmpeg Encoding Pipeline
-Uses fluent API pattern:
-```csharp
-var ffmpeg = new FfMpeg();
-var file = ffmpeg.Open("/path/to/media.mkv")
-    .AddContainer(new Hls())
-    .SetBasePath("/output/")
-    .ToFile("playlist.m3u8");
+Every encode runs six staged steps, each a separately injected interface in
+`src/NoMercy.Encoder/Pipeline/Stages/`:
+
+```
+Analyze → Validate → Plan → Build → Execute → Finalize
 ```
 
-Encoding inheritance: `BaseVideo` → `X264`/`X265`/`AV1`, `BaseAudio` → format-specific implementations
+- **Analyze** (`IAnalysisStage`) ffprobes the source into `MediaInfo`.
+- **Validate** (`IValidationStage`) rejects profiles that cannot succeed.
+- **Plan** (`IPlanStage`) turns profile + source into an `ExecutionPlan`, choosing
+  the encoder handle, GPU, filter chain, and ladder rungs.
+- **Build** (`IBuildStage`) turns the plan into `FfmpegCommand[]`.
+- **Execute** (`IExecutionStage`) runs ffmpeg and streams progress.
+- **Finalize** (`IFinalizeStage`) writes master playlists, chapters, and sidecars.
+
+`Pipeline/Encoder.cs` drives the sequence. `Orchestration/EncodingOrchestrator.cs`
+sits above it and picks an `IEncodingStrategy` per container family (HLS, DASH,
+MP4, MKV, audio-only) via `StrategyResolver` — plugin strategies register into the
+same DI enumerable and win over built-ins.
+
+Multi-task runs share one output directory, so only the coordinator runs
+Finalize (`EncodingOptions.FinalizeOnly`); per-stream slices stop after Execute
+to avoid racing the master playlist and font manifest.
 
 ### Real-time Communication
 - `VideoHub`: Video playback control, progress tracking, device sync

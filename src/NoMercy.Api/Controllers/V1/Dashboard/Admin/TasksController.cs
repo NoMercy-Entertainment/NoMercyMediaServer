@@ -20,6 +20,7 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Encoder;
@@ -30,6 +31,7 @@ using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -38,6 +40,7 @@ using NoMercy.MediaProcessing.Jobs.SubtitleJobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
+using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Queue.MediaServer;
 using NoMercyQueue;
 using MediaJobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
@@ -84,6 +87,83 @@ public class TasksController(
             .ToList();
 
         return Ok(list);
+    }
+
+    /// <summary>
+    /// The presets an encode will run with: every preset linked to its folder,
+    /// narrowed to one only when the job named it.
+    ///
+    /// <para>This is <see cref="VideoEncodeJob.HandleInitialRunAsync"/>'s own
+    /// rule, and it has to stay that way or the card describes work the encoder
+    /// is not doing. A folder carrying "4K HDR HEVC" and "1080p SDR HEVC"
+    /// produces both in one coordinated run, so naming either alone told half
+    /// the story. <c>IsDefault</c> selects nothing here — the encoder never
+    /// reads it. A named preset the folder does not link runs nothing at all,
+    /// which is an empty list rather than a fallback.</para>
+    /// </summary>
+    private static Ulid[] PresetsFor(VideoEncodeJob job, Dictionary<Ulid, Folder> folderById)
+    {
+        Ulid[] linked =
+            folderById
+                .GetValueOrDefault(job.FolderId)
+                ?.EncodingPresetFolders.Select(link => link.PresetId)
+                .ToArray()
+            ?? [];
+
+        if (job.PresetId is not Ulid named)
+            return linked;
+
+        return linked.Contains(named) ? [named] : [];
+    }
+
+    /// <summary>
+    /// What the encode will produce, resolved once per set of presets per
+    /// request — a season's worth of episodes shares one folder's presets, and
+    /// resolving each walks the inheritance chain and parses JSON.
+    ///
+    /// <para>Several presets are one merged answer, because they are one
+    /// coordinated encode: the runner shares the analysis, the audio and the
+    /// subtitles across them and writes a single master playlist listing every
+    /// preset's renditions.</para>
+    ///
+    /// <para>A preset that has been deleted, or whose chain no longer resolves,
+    /// leaves the plan off the card rather than failing the whole panel: the
+    /// queue is the answer this endpoint owes, and the plan is an extra on top
+    /// of it. The cache holds the null too, so a broken preset is attempted
+    /// once.</para>
+    /// </summary>
+    private static QueueJobPlanDto? ResolvePlan(
+        Ulid[] presetIds,
+        IPresetLookup lookup,
+        Dictionary<string, QueueJobPlanDto?> cache
+    )
+    {
+        if (presetIds.Length == 0)
+            return null;
+
+        string key = string.Join('|', presetIds);
+        if (cache.TryGetValue(key, out QueueJobPlanDto? cached))
+            return cached;
+
+        QueueJobPlanDto? plan;
+        try
+        {
+            plan = QueueJobPlanMapper.Merge(
+                presetIds
+                    .Select(id =>
+                        QueueJobPlanMapper.FromProfile(PresetResolver.Resolve(id, lookup))
+                    )
+                    .ToArray()
+            );
+        }
+        catch (Exception exception)
+        {
+            Logger.Encoder($"Queue card plan unavailable for {key}: {exception.Message}");
+            plan = null;
+        }
+
+        cache[key] = plan;
+        return plan;
     }
 
     /// <summary>
@@ -297,10 +377,21 @@ public class TasksController(
                 activeMediaIds.Add(mediaId);
         }
 
+        Dictionary<Ulid, string> presetNameById = folders
+            .SelectMany(folder => folder.EncodingPresetFolders)
+            .Where(link => link.Preset is not null)
+            .GroupBy(link => link.PresetId)
+            .ToDictionary(group => group.Key, group => group.First().Preset!.Name);
+
+        DbPresetLookup presetLookup = new(mediaContext);
+        Dictionary<string, QueueJobPlanDto?> planByPresetSet = [];
+
         QueueJobDto[] queueJobs = encoderJobs
             .Select(entry =>
             {
                 VideoEncodeJob j = entry.Job!;
+                Ulid[] presetIds = PresetsFor(j, folderById);
+
                 return new QueueJobDto
                 {
                     Id = entry.Row.Id,
@@ -316,11 +407,16 @@ public class TasksController(
                         ? "running"
                         : "pending",
                     InputFile = j.InputFile,
-                    Profile = folderById
-                        .GetValueOrDefault(j.FolderId)
-                        ?.EncodingPresetFolders.OrderByDescending(link => link.IsDefault)
-                        .FirstOrDefault()
-                        ?.Preset?.Name,
+                    Profile =
+                        presetIds.Length == 0
+                            ? null
+                            : string.Join(
+                                ", ",
+                                presetIds.Select(id =>
+                                    presetNameById.GetValueOrDefault(id, id.ToString())
+                                )
+                            ),
+                    Plan = ResolvePlan(presetIds, presetLookup, planByPresetSet),
                 };
             })
             .Concat(maintenanceJobs.Select(entry => entry.Dto))
@@ -1014,6 +1110,14 @@ public class QueueJobDto
 
     [JsonProperty("profile")]
     public string? Profile { get; set; }
+
+    /// <summary>
+    /// What this encode is going to produce, from the preset it will run with.
+    /// Null on maintenance rows, and on an encode whose preset no longer
+    /// resolves — a client shows the rest of the card either way.
+    /// </summary>
+    [JsonProperty("plan")]
+    public QueueJobPlanDto? Plan { get; set; }
 
     [JsonProperty("priority")]
     public int Priority { get; set; }
