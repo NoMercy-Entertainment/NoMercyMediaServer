@@ -421,6 +421,10 @@ public static partial class ServiceConfiguration
         >();
         services.AddSingleton<
             MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            MediaProcessing.Files.Parsing.Adapters.SeasonSpecialAdapter
+        >();
+        services.AddSingleton<
+            MediaProcessing.Files.Parsing.IFilenameParseAdapter,
             MediaProcessing.Files.Parsing.Adapters.CrossFormatAdapter
         >();
         services.AddSingleton<

@@ -17,8 +17,15 @@ namespace NoMercy.MediaProcessing.Files.Parsing.Adapters;
 
 /// <summary>
 /// Specials / season-zero content that is labelled rather than numbered: anime
-/// markers (OVA, ONA, OAD, SP##, NCOP, NCED) and the words "Special(s)"/"Extra(s)".
-/// Maps to season 0; the trailing number (if any) becomes the episode, else 1.
+/// markers (OVA, ONA, OAD, SP##, NCOP, NCED) and the words
+/// "Special(s)"/"Extra(s)"/"Movie(s)". Maps to season 0; the trailing number (if
+/// any) becomes the episode, else 1.
+/// <para>
+/// A series' films are season-zero content, not episodes — "Overlord - Movie 1"
+/// used to reach the absolute-number matcher, which read the film index as an
+/// absolute episode and landed the two compilation films on top of the season's
+/// real first and second episodes.
+/// </para>
 /// <para>
 /// Restricted to anime/TV libraries and ordered after every explicit episode
 /// matcher, so a real "S00E05" or "Special.S01E01" is already claimed upstream.
@@ -34,8 +41,9 @@ public sealed partial class SpecialsAdapter : IFilenameParseAdapter
     public int Order => 40;
 
     [GeneratedRegex(
-        @"(?<![A-Za-z0-9])(?:(?<word>specials?|extras?)|(?<anime>ova|ona|oad|ncop|nced|sp))(?:[\s\.\-_]*(?<num>\d{1,3}))?(?![A-Za-z0-9])",
-        RegexOptions.IgnoreCase)]
+        @"(?<![A-Za-z0-9])(?:(?<word>specials?|extras?|movies?)|(?<anime>ova|ona|oad|ncop|nced|sp))(?:[\s\.\-_]*(?<num>\d{1,3}))?(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
     private static partial Regex SpecialMarker();
 
     public MovieFile? TryParse(ParseContext context)
@@ -50,8 +58,17 @@ public sealed partial class SpecialsAdapter : IFilenameParseAdapter
         if (!match.Success)
             return null;
 
-        string title = context
-            .CleanedFileName[..match.Index]
+        string beforeMarker = context.CleanedFileName[..match.Index];
+
+        // A BD batch puts the season between the show name and the marker
+        // ("Overlord - S01 NCOP"), and everything before the marker is the title,
+        // so the show reached the providers as "Overlord - S01" and matched
+        // nothing.
+        Match seasonTag = StringExtensions.MatchSeasonTag().Match(beforeMarker);
+        if (seasonTag is { Success: true, Index: > 0 })
+            beforeMarker = beforeMarker[..seasonTag.Index];
+
+        string title = beforeMarker
             .Replace('.', ' ')
             .Replace('_', ' ')
             .TrimEnd('-', ' ')
@@ -72,9 +89,7 @@ public sealed partial class SpecialsAdapter : IFilenameParseAdapter
         if (string.IsNullOrWhiteSpace(title) || title.Length <= 1)
             return null;
 
-        int episode = match.Groups["num"].Success
-            ? int.Parse(match.Groups["num"].Value)
-            : 1;
+        int episode = match.Groups["num"].Success ? int.Parse(match.Groups["num"].Value) : 1;
 
         return new(context.Title)
         {
