@@ -20,6 +20,7 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Encoder;
@@ -30,6 +31,7 @@ using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -38,6 +40,7 @@ using NoMercy.MediaProcessing.Jobs.SubtitleJobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
+using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Queue.MediaServer;
 using NoMercyQueue;
 using MediaJobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
@@ -84,6 +87,44 @@ public class TasksController(
             .ToList();
 
         return Ok(list);
+    }
+
+    /// <summary>
+    /// What the encode will produce, resolved from its preset once per preset
+    /// per request — a season's worth of episodes shares one preset, and
+    /// resolving it walks the inheritance chain and parses JSON each time.
+    ///
+    /// <para>A preset that has been deleted, or whose chain no longer resolves,
+    /// leaves the plan off the card rather than failing the whole panel: the
+    /// queue is the answer this endpoint owes, and the plan is an extra on top
+    /// of it. The cache holds the null too, so a broken preset is attempted
+    /// once.</para>
+    /// </summary>
+    private static QueueJobPlanDto? ResolvePlan(
+        Ulid? presetId,
+        IPresetLookup lookup,
+        Dictionary<Ulid, QueueJobPlanDto?> cache
+    )
+    {
+        if (presetId is not Ulid id)
+            return null;
+
+        if (cache.TryGetValue(id, out QueueJobPlanDto? cached))
+            return cached;
+
+        QueueJobPlanDto? plan;
+        try
+        {
+            plan = QueueJobPlanMapper.FromProfile(PresetResolver.Resolve(id, lookup));
+        }
+        catch (Exception exception)
+        {
+            Logger.Encoder($"Queue card plan unavailable for preset {id}: {exception.Message}");
+            plan = null;
+        }
+
+        cache[id] = plan;
+        return plan;
     }
 
     /// <summary>
@@ -297,10 +338,53 @@ public class TasksController(
                 activeMediaIds.Add(mediaId);
         }
 
+        // Presets a job named for itself. The folder's own links are already
+        // loaded above; a job that carries a preset id can point at one the
+        // folder does not link, and that is the preset it will run with.
+        List<Ulid> namedPresetIds = encoderJobs
+            .Select(entry => entry.Job!.PresetId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+
+        Dictionary<Ulid, string> presetNameById = folders
+            .SelectMany(folder => folder.EncodingPresetFolders)
+            .Where(link => link.Preset is not null)
+            .GroupBy(link => link.PresetId)
+            .ToDictionary(group => group.Key, group => group.First().Preset!.Name);
+
+        if (namedPresetIds.Count > 0)
+        {
+            List<EncodingPreset> namedPresets = await mediaContext
+                .EncodingPresets.AsNoTracking()
+                .Where(preset => namedPresetIds.Contains(preset.Id))
+                .ToListAsync();
+
+            foreach (EncodingPreset preset in namedPresets)
+                presetNameById[preset.Id] = preset.Name;
+        }
+
+        DbPresetLookup presetLookup = new(mediaContext);
+        Dictionary<Ulid, QueueJobPlanDto?> planByPresetId = [];
+
         QueueJobDto[] queueJobs = encoderJobs
             .Select(entry =>
             {
                 VideoEncodeJob j = entry.Job!;
+
+                // What the job named, and the folder's default only when it
+                // named nothing. Reading the folder default either way put the
+                // wrong profile on every job dispatched against a non-default
+                // preset — and would have put the wrong plan there too.
+                Ulid? presetId =
+                    j.PresetId
+                    ?? folderById
+                        .GetValueOrDefault(j.FolderId)
+                        ?.EncodingPresetFolders.OrderByDescending(link => link.IsDefault)
+                        .FirstOrDefault()
+                        ?.PresetId;
+
                 return new QueueJobDto
                 {
                     Id = entry.Row.Id,
@@ -316,11 +400,10 @@ public class TasksController(
                         ? "running"
                         : "pending",
                     InputFile = j.InputFile,
-                    Profile = folderById
-                        .GetValueOrDefault(j.FolderId)
-                        ?.EncodingPresetFolders.OrderByDescending(link => link.IsDefault)
-                        .FirstOrDefault()
-                        ?.Preset?.Name,
+                    Profile = presetId is Ulid named
+                        ? presetNameById.GetValueOrDefault(named)
+                        : null,
+                    Plan = ResolvePlan(presetId, presetLookup, planByPresetId),
                 };
             })
             .Concat(maintenanceJobs.Select(entry => entry.Dto))
@@ -1014,6 +1097,14 @@ public class QueueJobDto
 
     [JsonProperty("profile")]
     public string? Profile { get; set; }
+
+    /// <summary>
+    /// What this encode is going to produce, from the preset it will run with.
+    /// Null on maintenance rows, and on an encode whose preset no longer
+    /// resolves — a client shows the rest of the card either way.
+    /// </summary>
+    [JsonProperty("plan")]
+    public QueueJobPlanDto? Plan { get; set; }
 
     [JsonProperty("priority")]
     public int Priority { get; set; }
