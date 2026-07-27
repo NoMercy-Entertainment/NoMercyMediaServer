@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -10,6 +10,9 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Api.Controllers.V1.Dashboard.Admin;
+using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Jobs.SubtitleJobs;
+using NoMercyQueue;
 using Xunit;
 
 namespace NoMercy.Tests.Api.Dashboard;
@@ -33,12 +36,82 @@ public class EncoderQueueLivenessTests
     [Fact]
     public void ReservedCoordinatorRow_IsInFlight()
     {
-        TasksController.IsEncodeInFlight(DateTime.UtcNow, hasReservedChild: false).Should().BeTrue();
+        TasksController
+            .IsEncodeInFlight(DateTime.UtcNow, hasReservedChild: false)
+            .Should()
+            .BeTrue();
     }
 
     [Fact]
     public void DecomposedButWaitingForARunner_IsStillQueued()
     {
         TasksController.IsEncodeInFlight(null, hasReservedChild: false).Should().BeFalse();
+    }
+
+    [Fact]
+    public void AnEncodePayload_IsReadAsAnEncode()
+    {
+        VideoEncodeJob encode = new()
+        {
+            Id = "4114390",
+            FolderId = Ulid.NewUlid(),
+            LibraryId = Ulid.NewUlid(),
+            InputFile = "/Anime/Blue Lock/S01E19.mkv",
+        };
+
+        VideoEncodeJob? read = TasksController.ReadEncodeJob(SerializationHelper.Serialize(encode));
+
+        read.Should().NotBeNull();
+        read!.Id.ToString().Should().Be("4114390");
+        read.InputFile.Should().Be("/Anime/Blue Lock/S01E19.mkv");
+    }
+
+    /// <summary>
+    /// The encoder queue is shared with maintenance work, on purpose — a preview
+    /// rebuild is ffmpeg and must not run alongside an encode. Those jobs carry a
+    /// FolderId of their own, so deserializing them straight into a
+    /// <see cref="VideoEncodeJob"/> produced something that looked like an encode
+    /// with a real profile and no title, id, artwork or file: a card for a title
+    /// that does not exist.
+    /// </summary>
+    [Fact]
+    public void APreviewRebuildPayload_IsNotAnEncode()
+    {
+        SpriteSheetUpgradeJob maintenance = new(
+            Ulid.NewUlid().ToString(),
+            Ulid.NewUlid().ToString(),
+            "/Anime/Frieren/S00E01",
+            "Frieren S00E01"
+        );
+
+        TasksController
+            .ReadEncodeJob(SerializationHelper.Serialize(maintenance))
+            .Should()
+            .BeNull("a preview rebuild is not an encode and must not reach the encode panel");
+    }
+
+    [Fact]
+    public void AnOcrBackfillPayload_IsNotAnEncode()
+    {
+        SubtitleOcrBackfillJob maintenance = new(
+            Ulid.NewUlid().ToString(),
+            Ulid.NewUlid().ToString(),
+            "/Anime/Frieren/S01E01",
+            "eng.full.sup",
+            "Frieren S01E01",
+            "eng",
+            "full"
+        );
+
+        TasksController
+            .ReadEncodeJob(SerializationHelper.Serialize(maintenance))
+            .Should()
+            .BeNull("the OCR backfill shares the encoder queue and is not an encode either");
+    }
+
+    [Fact]
+    public void AnUnreadablePayload_IsNotAnEncode()
+    {
+        TasksController.ReadEncodeJob("{ this is not json").Should().BeNull();
     }
 }

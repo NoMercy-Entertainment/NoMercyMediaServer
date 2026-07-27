@@ -174,7 +174,7 @@ public class TasksController(
         // preceding row's id, priority and reservation.
         List<QueueJobEntry> encoderJobs = jobs.Select(row => new QueueJobEntry(
                 row,
-                row.Payload.FromJson<VideoEncodeJob>()
+                ReadEncodeJob(row.Payload)
             ))
             .Where(entry => entry.Job is not null)
             .ToList();
@@ -365,6 +365,31 @@ public class TasksController(
     /// either on the coordinator row itself, or on the child task that carries
     /// the ffmpeg process (<paramref name="hasReservedChild"/>).</para>
     /// </summary>
+    /// <summary>
+    /// The encode behind a queue row, or null when that row is not an encode.
+    ///
+    /// <para>The <c>encoder</c> queue is shared: subtitle OCR backfills and preview
+    /// rebuilds run there too, deliberately, so maintenance work never competes with
+    /// an encode for the same hardware. Deserializing straight into
+    /// <see cref="VideoEncodeJob"/> did not reject those — they carry a
+    /// <c>FolderId</c> of their own, so the result was a card with a real profile
+    /// and nothing else: no title, no id, no artwork, no file. Payloads record
+    /// their own type, so ask for it rather than assume it.</para>
+    /// </summary>
+    internal static VideoEncodeJob? ReadEncodeJob(string payload)
+    {
+        try
+        {
+            return SerializationHelper.Deserialize<object>(payload) as VideoEncodeJob;
+        }
+        catch (Exception)
+        {
+            // A payload written by a build that has since renamed or removed the
+            // job type. Not this endpoint's problem to report.
+            return null;
+        }
+    }
+
     internal static bool IsEncodeInFlight(DateTime? reservedAt, bool hasReservedChild) =>
         reservedAt is not null || hasReservedChild;
 

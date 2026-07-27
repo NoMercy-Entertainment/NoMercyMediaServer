@@ -67,16 +67,40 @@ public class SpriteSheetUpgradeJob : IShouldQueue, IJobStorageInjector
 
     public async Task Handle()
     {
+        // Every branch below that gives up says why. A previous version returned
+        // silently on each of them, so a hundred-odd jobs failing on a missing
+        // dependency read exactly like a hundred-odd jobs finding nothing to do —
+        // the only trace was a row in FailedJobs nobody was looking at.
         if (_refresher is null || _storageFactory is null)
+        {
+            Logger.App(
+                $"[SpriteSheetUpgrade] {Title}: sprite services unavailable in this scope",
+                LogEventLevel.Warning
+            );
             return;
-        if (!Ulid.TryParse(FolderId, out Ulid folderId))
+        }
+
+        if (
+            !Ulid.TryParse(FolderId, out Ulid folderId)
+            || !Ulid.TryParse(DriverId, out Ulid driverId)
+        )
+        {
+            Logger.App(
+                $"[SpriteSheetUpgrade] {Title}: unreadable folder/driver id ({FolderId}/{DriverId})",
+                LogEventLevel.Warning
+            );
             return;
-        if (!Ulid.TryParse(DriverId, out Ulid driverId))
-            return;
+        }
 
         IStorage storage = _storageFactory.For(folderId, driverId, string.Empty);
         if (!storage.Exists(HostFolder))
+        {
+            Logger.App(
+                $"[SpriteSheetUpgrade] {Title}: {HostFolder} is gone",
+                LogEventLevel.Warning
+            );
             return;
+        }
 
         IReadOnlyList<string> undersized = SpriteSheet.SelectUndersized(
             storage
@@ -85,6 +109,8 @@ public class SpriteSheetUpgradeJob : IShouldQueue, IJobStorageInjector
                 .Select(entry => storage.GetName(entry.Path))
         );
 
+        // The only quiet exit worth keeping: another pass already widened this
+        // sheet, which is the expected outcome of re-queuing across scans.
         if (undersized.Count == 0)
             return;
 

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Microsoft.Extensions.Options;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
@@ -20,10 +19,13 @@ using NoMercy.Storage;
 namespace NoMercy.Encoder.PostProcess;
 
 /// <inheritdoc />
+// EncoderOptions is registered as a configured singleton, not through the options
+// pattern. Asking for IOptions<EncoderOptions> resolves — with a default-constructed
+// instance that carries no ffmpeg path, so every run threw before reaching ffmpeg.
 public class SpriteSheetRefresher(
     IMediaAnalyzer analyzer,
     IFfmpegExecutor executor,
-    IOptions<EncoderOptions> options
+    EncoderOptions options
 ) : ISpriteSheetRefresher
 {
     public async Task<string?> RefreshAsync(
@@ -69,7 +71,7 @@ public class SpriteSheetRefresher(
                     }
                 )
             )
-            .Build(options.Value.FfmpegPath, storage.GetFullPath(mediaFolder));
+            .Build(options.FfmpegPath, storage.GetFullPath(mediaFolder));
 
         ExecutionResult result = await executor.ExecuteAsync(command, media.Duration, ct: ct);
         if (!result.Success)
