@@ -132,7 +132,7 @@ public class EncoderQueueLivenessTests
             "BLUE.LOCK.S01E01"
         );
 
-        QueueJobDto? dto = TasksController.ReadMaintenanceJob(
+        MaintenanceJob? entry = TasksController.ReadMaintenanceJob(
             new()
             {
                 Id = 41,
@@ -142,15 +142,92 @@ public class EncoderQueueLivenessTests
             }
         );
 
-        dto.Should().NotBeNull();
-        dto!.Kind.Should().Be("preview");
-        dto.Title.Should().Be("BLUE.LOCK.S01E01");
-        dto.Status.Should().Be("pending", "no runner holds this row");
-        dto.PayloadId.Should()
+        entry.Should().NotBeNull();
+        entry!.Dto.Kind.Should().Be("preview");
+        entry.Dto.Title.Should().Be("BLUE.LOCK.S01E01");
+        entry.Dto.Status.Should().Be("pending", "no runner holds this row");
+        entry
+            .Dto.PayloadId.Should()
             .Be(
                 "Libraries/Anime/BLUE.LOCK.(2022)/BLUE.LOCK.S01E01",
                 "the folder is what this job is about and it does not move, so it is the list key"
             );
+        entry
+            .HostFolder.Should()
+            .Be(
+                "Libraries/Anime/BLUE.LOCK.(2022)/BLUE.LOCK.S01E01",
+                "the folder is the key the title and the still are resolved by"
+            );
+    }
+
+    /// <summary>
+    /// The job payload knows a folder name and nothing else. Left at that, the
+    /// card is a grey frame over a filename for work that can hold the server for
+    /// hours — so the folder is resolved back to the file it belongs to and the
+    /// card gets the same title and still an encode of that episode would show.
+    /// </summary>
+    [Fact]
+    public void AMaintenanceCard_TakesTheTitleAndStillOfTheEpisode()
+    {
+        QueueJobDto dto = new() { Title = "BLUE.LOCK.S01E01", Kind = "preview" };
+
+        TasksController.ApplyMediaDetails(
+            dto,
+            new()
+            {
+                HostFolder = "Libraries/Anime/BLUE.LOCK.(2022)/BLUE.LOCK.S01E01",
+                Episode = new()
+                {
+                    Title = "Dream",
+                    SeasonNumber = 1,
+                    EpisodeNumber = 1,
+                    Still = "/still.jpg",
+                    Tv = new() { Title = "BLUE LOCK" },
+                },
+            }
+        );
+
+        dto.Title.Should().Be("BLUE LOCK S01E01 Dream NoMercy");
+        dto.Backdrop.Should()
+            .Be("/still.jpg", "an empty frame is what the card looked like before");
+    }
+
+    [Fact]
+    public void AMaintenanceCardForAFilm_TakesTheMovieBackdrop()
+    {
+        QueueJobDto dto = new() { Title = "The.Punisher.One.Last.Kill", Kind = "preview" };
+
+        TasksController.ApplyMediaDetails(
+            dto,
+            new()
+            {
+                HostFolder = "Libraries/Marvels/Films/The.Punisher.One.Last.Kill.(2026)",
+                Movie = new()
+                {
+                    Title = "The Punisher: One Last Kill",
+                    ReleaseDate = new(2026, 1, 1),
+                    Backdrop = "/backdrop.jpg",
+                },
+            }
+        );
+
+        dto.Title.Should().Be("The Punisher: One Last Kill (2026) NoMercy");
+        dto.Backdrop.Should().Be("/backdrop.jpg");
+    }
+
+    /// <summary>
+    /// A file the library has no metadata for keeps the folder name the job
+    /// carried. Naming the folder beats naming nothing.
+    /// </summary>
+    [Fact]
+    public void AMaintenanceCardWithNoMetadataBehindIt_KeepsTheFolderName()
+    {
+        QueueJobDto dto = new() { Title = "BLUE.LOCK.S01E01", Kind = "preview" };
+
+        TasksController.ApplyMediaDetails(dto, new() { HostFolder = "Libraries/Anime/Orphan" });
+
+        dto.Title.Should().Be("BLUE.LOCK.S01E01");
+        dto.Backdrop.Should().BeNull();
     }
 
     [Fact]
@@ -163,7 +240,7 @@ public class EncoderQueueLivenessTests
             "Frieren S01E01"
         );
 
-        QueueJobDto? dto = TasksController.ReadMaintenanceJob(
+        MaintenanceJob? entry = TasksController.ReadMaintenanceJob(
             new()
             {
                 Id = 42,
@@ -174,7 +251,7 @@ public class EncoderQueueLivenessTests
             }
         );
 
-        dto!.Status.Should().Be("running");
+        entry!.Dto.Status.Should().Be("running");
     }
 
     [Fact]

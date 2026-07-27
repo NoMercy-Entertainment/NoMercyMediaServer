@@ -173,12 +173,30 @@ public class TasksController(
         // that fails to deserialize is dropped here, so indexing the unfiltered
         // row list by the parsed list's position would hand every later job the
         // preceding row's id, priority and reservation.
-        List<QueueJobEntry> encoderJobs = jobs.Select(row => new QueueJobEntry(
+        //
+        // Parsed once and then split. Deserializing again to find the rows that
+        // are not encodes cost a second pass over every payload on the queue,
+        // and this endpoint is polled.
+        List<QueueJobEntry> parsedJobs = jobs.Select(row => new QueueJobEntry(
                 row,
                 ReadEncodeJob(row.Payload)
             ))
-            .Where(entry => entry.Job is not null)
             .ToList();
+
+        List<QueueJobEntry> encoderJobs = parsedJobs.Where(entry => entry.Job is not null).ToList();
+
+        // Maintenance work sharing the encoder queue — preview rebuilds and
+        // subtitle OCR — reported as itself rather than dressed up as an encode.
+        // Hours of this can be queued at once, and a panel that shows none of it
+        // is telling the operator the server is idle while it works.
+        List<MaintenanceJob> maintenanceJobs = parsedJobs
+            .Where(entry => entry.Job is null)
+            .Select(entry => ReadMaintenanceJob(entry.Row))
+            .Where(entry => entry is not null)
+            .Select(entry => entry!)
+            .ToList();
+
+        await EnrichMaintenanceJobsAsync(maintenanceJobs);
 
         // Parse each job id once — Id is either an int (movie/episode) or a Guid (track).
         List<int> movieOrEpisodeIds = [];
@@ -305,18 +323,7 @@ public class TasksController(
                         ?.Preset?.Name,
                 };
             })
-            // Maintenance work sharing the encoder queue — preview rebuilds and
-            // subtitle OCR. Reported as itself rather than dressed up as an
-            // encode: no media id, no artwork, no progress, just what it is and
-            // whether a runner has it. Hours of this can be queued at once, and a
-            // panel that shows none of it is telling the operator the server is
-            // idle while it works.
-            .Concat(
-                jobs.Where(row => ReadEncodeJob(row.Payload) is null)
-                    .Select(row => ReadMaintenanceJob(row))
-                    .Where(dto => dto is not null)
-                    .Select(dto => dto!)
-            )
+            .Concat(maintenanceJobs.Select(entry => entry.Dto))
             // Ordered here, not in SQL: both row columns SQL could sort on are
             // rewritten on every coordinator poll. Priority still leads, because
             // that is what the runner honours; within a priority the child id is
@@ -407,8 +414,12 @@ public class TasksController(
     /// A queue row that is maintenance rather than an encode, described as
     /// itself. Returns null for anything this endpoint has no name for, so an
     /// unrecognised job stays out of the panel instead of appearing as a blank.
+    ///
+    /// <para>The title here is the one the job carries — a folder name. It is a
+    /// fallback: <see cref="EncoderQueue"/> replaces it with the library's own
+    /// title, and adds the still, for every folder it can resolve.</para>
     /// </summary>
-    internal static QueueJobDto? ReadMaintenanceJob(QueueJob row)
+    internal static MaintenanceJob? ReadMaintenanceJob(QueueJob row)
     {
         object? job;
         try
@@ -420,26 +431,33 @@ public class TasksController(
             return null;
         }
 
-        (string kind, string title, string target) = job switch
+        (string kind, string title, string target, string hostFolder) = job switch
         {
-            SpriteSheetUpgradeJob sprite => ("preview", sprite.Title, sprite.HostFolder),
+            SpriteSheetUpgradeJob sprite => (
+                "preview",
+                sprite.Title,
+                sprite.HostFolder,
+                sprite.HostFolder
+            ),
             SubtitleOcrBackfillJob ocr => (
                 "subtitles",
                 $"{ocr.MediaTitle} ({ocr.Language})",
-                ocr.SupFileName
+                ocr.SupFileName,
+                ocr.HostFolder
             ),
-            _ => (string.Empty, string.Empty, string.Empty),
+            _ => (string.Empty, string.Empty, string.Empty, string.Empty),
         };
 
         if (kind.Length == 0)
             return null;
 
-        return new()
+        QueueJobDto dto = new()
         {
             Id = row.Id,
             Priority = row.Priority,
-            // The folder is this job's identity: it is what the work is about and
-            // it does not move, which is what a list key needs.
+            // What the work is about and what does not move, which is what a list
+            // key needs. Two OCR passes over one folder differ by their sup file,
+            // so that is the key there; a preview rebuild is one per folder.
             PayloadId = target,
             Title = title,
             Type = job!.GetType().Name,
@@ -447,6 +465,67 @@ public class TasksController(
             Status = row.ReservedAt is not null ? "running" : "pending",
             InputFile = target,
         };
+
+        return new(dto, hostFolder);
+    }
+
+    /// <summary>
+    /// Gives every maintenance row the title and the still of the file it is
+    /// about. The job payload only carries a folder name, and a card built from
+    /// that alone is a grey frame over a filename — for work that can occupy the
+    /// server for hours. The folder is already the unique key of a
+    /// <see cref="VideoFile"/>, so the picture and the proper title are one
+    /// query away.
+    /// </summary>
+    private async Task EnrichMaintenanceJobsAsync(List<MaintenanceJob> maintenanceJobs)
+    {
+        List<string> hostFolders = maintenanceJobs
+            .Select(entry => entry.HostFolder)
+            .Where(folder => folder.Length > 0)
+            .Distinct()
+            .ToList();
+
+        if (hostFolders.Count == 0)
+            return;
+
+        List<VideoFile> files = await mediaContext
+            .VideoFiles.AsNoTracking()
+            .Where(file => hostFolders.Contains(file.HostFolder))
+            .Include(file => file.Episode)
+                .ThenInclude(episode => episode!.Tv)
+            .Include(file => file.Movie)
+            .ToListAsync();
+
+        Dictionary<string, VideoFile> fileByFolder = [];
+        foreach (VideoFile file in files)
+            fileByFolder.TryAdd(file.HostFolder, file);
+
+        foreach (MaintenanceJob entry in maintenanceJobs)
+        {
+            if (fileByFolder.TryGetValue(entry.HostFolder, out VideoFile? file))
+                ApplyMediaDetails(entry.Dto, file);
+        }
+    }
+
+    /// <summary>
+    /// Puts the library's own title and still onto a maintenance card. A file with
+    /// neither an episode nor a movie behind it keeps the folder name the job
+    /// carried: a card naming the folder still beats a card naming nothing.
+    /// </summary>
+    internal static void ApplyMediaDetails(QueueJobDto dto, VideoFile file)
+    {
+        if (file.Episode is { Tv: not null })
+        {
+            dto.Title = file.Episode.CreateTitle();
+            dto.Backdrop = file.Episode.Still;
+            return;
+        }
+
+        if (file.Movie is not null)
+        {
+            dto.Title = file.Movie.CreateTitle();
+            dto.Backdrop = file.Movie.Backdrop;
+        }
     }
 
     internal static bool IsEncodeInFlight(DateTime? reservedAt, bool hasReservedChild) =>
@@ -896,6 +975,13 @@ public class TasksController(
 /// describes the work that was requested.
 /// </summary>
 internal sealed record QueueJobEntry(QueueJob Row, VideoEncodeJob? Job);
+
+/// <summary>
+/// A maintenance row described as itself, alongside the media folder it works on.
+/// The folder is kept separate from the DTO because it is not part of the
+/// contract — it is the key the title and the still are looked up by.
+/// </summary>
+internal sealed record MaintenanceJob(QueueJobDto Dto, string HostFolder);
 
 public class QueueJobDto
 {
