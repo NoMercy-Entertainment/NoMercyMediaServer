@@ -262,7 +262,11 @@ public static partial class StringExtensions
         if (year is { Success: true, Index: > 0 })
             title = title[..year.Index];
 
-        return title.TrimEnd('-', '.', '_', ' ').Trim();
+        // Cutting at the year's index splits a parenthesised one down the middle,
+        // so "Dororo (2019) - 01" left the show named "Dororo (" — which matches
+        // nothing at any provider. A title never legitimately ends on an opening
+        // bracket.
+        return title.TrimEnd('-', '.', '_', ' ', '(', '[', '{').Trim();
     }
 
     /// <summary>Matches a "Season N" / "Series N" (and common localized) folder name.</summary>
