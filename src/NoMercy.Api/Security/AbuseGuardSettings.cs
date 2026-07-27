@@ -34,11 +34,13 @@ public class AbuseGuardSettings(IConfigurationStore configurationStore) : IAbuse
 
     public TimeSpan MaxBanDuration => TimeSpan.FromMinutes(ReadInt(MaxBanMinutesKey, 10080));
 
+    public string AllowlistText => configurationStore.GetValue(AllowlistKey) ?? string.Empty;
+
     public IReadOnlyList<IpRange> Allowlist
     {
         get
         {
-            string? raw = configurationStore.GetValue(AllowlistKey);
+            string raw = AllowlistText;
             if (string.IsNullOrWhiteSpace(raw))
                 return [];
 

@@ -9,24 +9,18 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Api.Security;
+using Newtonsoft.Json;
 
-public interface IAbuseGuardSettings
+namespace NoMercy.Api.DTOs.Security;
+
+public class BanRequest
 {
-    bool Enabled { get; }
+    [JsonProperty("address")]
+    public string Address { get; set; } = string.Empty;
 
-    int MaxScore { get; }
+    [JsonProperty("minutes")]
+    public int Minutes { get; set; }
 
-    TimeSpan Window { get; }
-
-    TimeSpan BanDuration { get; }
-
-    TimeSpan MaxBanDuration { get; }
-
-    IReadOnlyList<IpRange> Allowlist { get; }
-
-    /// <summary>The allowlist exactly as it was typed, for round-tripping into the dashboard.</summary>
-    string AllowlistText { get; }
-
-    Task SetAsync(string key, string value, CancellationToken ct);
+    [JsonProperty("reason")]
+    public string? Reason { get; set; }
 }
