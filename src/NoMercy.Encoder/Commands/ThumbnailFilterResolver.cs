@@ -9,6 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Encoder.PostProcess;
+
 namespace NoMercy.Encoder.Commands;
 
 /// <summary>
@@ -30,9 +32,28 @@ public static class ThumbnailFilterResolver
         int width,
         bool sourceIsHdr,
         string? tonemapChain
+    ) => Resolve(intervalSeconds, width, sourceIsHdr, tonemapChain, padToCells: null);
+
+    /// <summary>
+    /// <paramref name="padToCells"/> appends that many black frames to the end of
+    /// the sampled stream. Paired with a cut at the same count and a stated
+    /// column count, it leaves the sheet's grid exactly full — which is the only
+    /// way to keep the leftover cells from coming out green. See
+    /// <see cref="SpriteGrid"/>. Null leaves the stream alone.
+    /// </summary>
+    public static string Resolve(
+        int intervalSeconds,
+        int width,
+        bool sourceIsHdr,
+        string? tonemapChain,
+        int? padToCells
     )
     {
         string baseFilter = $"format=yuvj420p,fps=1/{intervalSeconds},scale={width}:-2";
+
+        if (padToCells is > 0)
+            baseFilter += $",tpad=stop={padToCells}:stop_mode=add:color=black";
+
         if (!sourceIsHdr)
             return baseFilter;
 

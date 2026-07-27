@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Text;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
@@ -48,6 +49,11 @@ public class SpriteSheetRefresher(
         string sheetName = $"thumbs_{tileWidth}x{tileHeight}.webp";
         string vttName = $"thumbs_{tileWidth}x{tileHeight}.vtt";
 
+        // Pin the grid and fill it exactly. Left to itself the muxer leaves the
+        // tail of the last row untouched, which comes out green rather than
+        // blank — see SpriteGrid.
+        SpriteGrid grid = SpriteGrid.For(media.Duration, intervalSeconds);
+
         // The encoded rendition is already SDR, so no tone-map chain: this is the
         // one sprite path that can say that for certain, which is why it reads
         // the output instead of hunting down a source it may no longer have.
@@ -64,9 +70,12 @@ public class SpriteSheetRefresher(
                             intervalSeconds,
                             tileWidth,
                             sourceIsHdr: false,
-                            tonemapChain: null
+                            tonemapChain: null,
+                            padToCells: grid.CellCount
                         ),
+                        ["-frames:v"] = grid.CellCount.ToString(),
                         ["-f"] = "spritevtt",
+                        ["-sprite_columns"] = grid.Columns.ToString(),
                         ["-vtt_filename"] = vttName,
                     }
                 )
@@ -77,8 +86,39 @@ public class SpriteSheetRefresher(
         if (!result.Success)
             return null;
 
+        await TrimPaddingCuesAsync(storage, mediaFolder, vttName, media.Duration, ct);
         RemoveSupersededSheets(storage, mediaFolder, keep: sheetName);
         return sheetName;
+    }
+
+    /// <summary>
+    /// Removes the cues covering the padding tiles. Failure here is not worth
+    /// discarding a good sheet over: the tiles it would have hidden sit past the
+    /// end of the film, so only the TV strip would show them.
+    /// </summary>
+    private static async Task TrimPaddingCuesAsync(
+        IStorage storage,
+        string mediaFolder,
+        string vttName,
+        TimeSpan duration,
+        CancellationToken ct
+    )
+    {
+        string vttPath = storage.CombinePath(mediaFolder, vttName);
+
+        try
+        {
+            if (!storage.Exists(vttPath))
+                return;
+
+            byte[] raw = await storage.ReadAsync(vttPath, ct);
+            string trimmed = SpriteVttTrimmer.Trim(Encoding.UTF8.GetString(raw), duration);
+            await storage.WriteAsync(vttPath, Encoding.UTF8.GetBytes(trimmed), ct);
+        }
+        catch (Exception)
+        {
+            // Nothing to recover: the sheet is already written and correct.
+        }
     }
 
     /// <summary>
