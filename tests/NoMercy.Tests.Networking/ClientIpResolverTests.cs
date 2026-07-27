@@ -135,4 +135,35 @@ public class ClientIpResolverTests
 
         context.IsProxied().Should().BeFalse();
     }
+
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("10.4.4.4")]
+    [InlineData("192.168.1.50")]
+    [InlineData("172.20.0.9")]
+    [InlineData("100.100.0.1")]
+    [InlineData("169.254.1.1")]
+    [InlineData("fd00::1")]
+    [InlineData("fe80::1")]
+    public void IsPrivateNetwork_TrueForRangesOnlyAnOperatorControls(string address)
+    {
+        ClientIpResolver.IsPrivateNetwork(IPAddress.Parse(address)).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("203.0.113.77")]
+    [InlineData("8.8.8.8")]
+    [InlineData("172.32.0.1")]
+    [InlineData("100.128.0.1")]
+    [InlineData("2a02::1")]
+    public void IsPrivateNetwork_FalseForPublicAddresses(string address)
+    {
+        ClientIpResolver.IsPrivateNetwork(IPAddress.Parse(address)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsPrivateNetwork_FalseForNoAddressAtAll()
+    {
+        ClientIpResolver.IsPrivateNetwork(null).Should().BeFalse();
+    }
 }

@@ -9,22 +9,16 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Database.Models.Users;
+namespace NoMercy.Tests.Api.Security;
 
-public enum ActivityCategory
+// A sliding window is only testable if the clock can be moved. Hand-rolled
+// rather than pulling in Microsoft.Extensions.TimeProvider.Testing for the one
+// method these tests need.
+public class TestTimeProvider(DateTimeOffset start) : TimeProvider
 {
-    Auth = 1,
-    Connection = 2,
-    Playback = 3,
-    Configuration = 4,
-    Failure = 5,
+    private DateTimeOffset _now = start;
 
-    /// <summary>Work the encoder did: a job starting, finishing, or giving up.</summary>
-    Encoder = 6,
+    public override DateTimeOffset GetUtcNow() => _now;
 
-    /// <summary>Content arriving or leaving: scans, and files being imported.</summary>
-    Library = 7,
-
-    /// <summary>Defensive action the server took by itself: an address banned or released.</summary>
-    Security = 8,
+    public void Advance(TimeSpan amount) => _now = _now.Add(amount);
 }
