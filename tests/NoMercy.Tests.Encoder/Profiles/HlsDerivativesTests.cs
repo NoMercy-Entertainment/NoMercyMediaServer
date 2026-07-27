@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Tests.Encoder.Profiles;
@@ -28,7 +29,7 @@ public class HlsDerivativesTests
         d.SpriteVttIntervalSeconds.Should().Be(10);
         d.SpriteVttColumns.Should().Be(5);
         d.SpriteVttRows.Should().Be(5);
-        d.SpriteVttThumbnailWidth.Should().Be(160);
+        d.SpriteVttThumbnailWidth.Should().Be(SpriteSheet.MinimumWidth);
         d.GenerateChapters.Should().BeTrue();
         d.GenerateFontsJson.Should().BeTrue();
         d.GenerateIFramePlaylists.Should().BeFalse();

@@ -13,6 +13,7 @@ using System.Text;
 using Newtonsoft.Json;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Encoder.Decomposition;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
@@ -92,10 +93,15 @@ public class EncodeReconciler : IEncodeReconciler
             missingKinds.Add(EncodeTaskKind.Audio);
         if (desiredSubtitle && !HasValidDeclaredSubtitle(existing.BundleFiles))
             missingKinds.Add(EncodeTaskKind.Subtitle);
-        // ThumbnailGenerator writes the sprite as `thumbs_{W}x{H}.webp` beside
-        // its `thumbs_{W}x{H}.vtt`; the word "sprite" never appears on disk, so
-        // matching it would report thumbnails missing on every re-dispatch.
-        if (desiredThumbnails && !HasValidNameContaining(existing.BundleFiles, "thumbs_"))
+        // The sprite lands as `thumbs_{W}x{H}.webp` beside its matching `.vtt`;
+        // the word "sprite" never appears on disk, so matching that would report
+        // thumbnails missing on every re-dispatch. Present is not the whole test
+        // either — a sheet rendered at a narrower tile than the profile now asks
+        // for is a gap, and it costs one sprite pass to close rather than a
+        // re-encode.
+        if (
+            desiredThumbnails && !HasAdequateSprite(existing.BundleFiles, DesiredTileWidth(profile))
+        )
             missingKinds.Add(EncodeTaskKind.Thumbnails);
         if (desiredChapters && !HasValidNamed(existing.BundleFiles, "chapters.vtt"))
             missingKinds.Add(EncodeTaskKind.Chapters);
@@ -241,7 +247,12 @@ public class EncodeReconciler : IEncodeReconciler
         bool needsOcr
     )
     {
-        bool fingerprintKnown = !string.IsNullOrEmpty(storedFingerprint);
+        // A fingerprint an older scheme wrote cannot be compared against one
+        // computed now — unreadable, not different. It falls in with "no
+        // fingerprint on record" below, which is the same deliberate call: a
+        // server upgrade must never re-encode a library it has no evidence
+        // against.
+        bool fingerprintKnown = ProfileFingerprint.IsComparable(storedFingerprint);
         if (fingerprintKnown)
         {
             string currentFingerprint = ProfileFingerprint.Compute(profile);
@@ -369,14 +380,19 @@ public class EncodeReconciler : IEncodeReconciler
             )
         );
 
-    private static bool HasValidNameContaining(
+    /// <summary>The tile width this profile wants, from an explicit Thumbnails
+    /// config if it has one and otherwise from its HLS derivatives — the same
+    /// order <c>ThumbnailPlanBuilder</c> resolves it in.</summary>
+    private static int DesiredTileWidth(EncodingProfile profile) =>
+        profile.Thumbnails?.Width
+        ?? (profile.HlsDerivatives ?? new HlsDerivatives()).SpriteVttThumbnailWidth;
+
+    private static bool HasAdequateSprite(
         IReadOnlyCollection<ExistingOutputEntry> files,
-        string fragment
+        int desiredWidth
     ) =>
         files.Any(f =>
-            f.IsValid
-            && Path.GetFileName(f.RelativePath)
-                .Contains(fragment, StringComparison.OrdinalIgnoreCase)
+            f.IsValid && SpriteSheet.ReadTileWidth(Path.GetFileName(f.RelativePath)) >= desiredWidth
         );
 
     /// <summary>The master playlist sits directly at the media root, never

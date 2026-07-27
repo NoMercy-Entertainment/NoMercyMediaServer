@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -47,7 +47,10 @@ public class ProfileFingerprintTests
     {
         string fingerprint = ProfileFingerprint.Compute(Build(Ulid.NewUlid(), 6));
 
-        fingerprint.Should().MatchRegex("^[0-9a-f]{64}$");
+        // The tag names what the hash covers, so a stored fingerprint states
+        // what it measured and one from an older coverage is recognisably not
+        // comparable rather than merely different.
+        fingerprint.Should().MatchRegex("^streams:[0-9a-f]{64}$");
     }
 
     private static EncodingProfile Build(Ulid id, int segmentDurationSeconds) =>

@@ -16,7 +16,9 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Output;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Subtitles;
+using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Jobs.SubtitleJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -137,6 +139,7 @@ public partial class FileManager
         List<Subtitle> subtitles = GetSubtitles(storage, hostFolder);
 
         DispatchOrphanedBitmapOcrBackfill(storage, folder, hostFolder);
+        DispatchUndersizedSpriteUpgrade(storage, folder, hostFolder);
 
         List<VideoTrack> tracks = GetExtraFiles(storage, hostFolder);
 
@@ -260,6 +263,57 @@ public partial class FileManager
                 LogEventLevel.Information
             );
         }
+    }
+
+    /// <summary>
+    /// Queues a preview rebuild for a title whose sprite sheet was rendered at a
+    /// narrower tile than the server produces now. Titles encoded when the tile
+    /// was 160 wide show a scrub preview blown up several times over on a
+    /// television; the sheet is a sidecar, so this costs one short ffmpeg pass
+    /// and not a frame of re-encoded video.
+    ///
+    /// <para>Runs as a low-priority <see cref="SpriteSheetUpgradeJob"/> for the
+    /// same reason the OCR backfill does — sampling a whole title is far too
+    /// slow for the scan thread. The job re-checks the folder before doing
+    /// anything, so re-queuing on every scan until it lands is harmless.</para>
+    /// </summary>
+    private static void DispatchUndersizedSpriteUpgrade(
+        IStorage storage,
+        Folder folder,
+        string hostFolder
+    )
+    {
+        QueueJobDispatcher? dispatcher = QueueRunner.Current?.Dispatcher;
+        if (dispatcher is null)
+            return;
+
+        IReadOnlyList<string> undersized = SpriteSheet.SelectUndersized(
+            storage
+                .List(hostFolder, null, recursive: false)
+                .Where(entry => !entry.IsDirectory)
+                .Select(entry => storage.GetName(entry.Path))
+        );
+
+        if (undersized.Count == 0)
+            return;
+
+        string title = storage.GetName(hostFolder);
+
+        dispatcher.Dispatch(
+            new SpriteSheetUpgradeJob(
+                folder.Id.ToString(),
+                folder.DriverId.ToString(),
+                hostFolder,
+                title
+            ),
+            "encoder",
+            1
+        );
+
+        Logger.App(
+            $"[SpriteSheetUpgrade] queued preview rebuild for {title} ({string.Join(", ", undersized)})",
+            LogEventLevel.Information
+        );
     }
 
     /// <summary>

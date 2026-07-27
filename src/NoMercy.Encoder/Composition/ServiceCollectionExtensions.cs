@@ -294,6 +294,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IFontExtractor, FontExtractor>();
         services.AddTransient<IChapterWriter, ChapterWriter>();
         services.AddTransient<IThumbnailGenerator, ThumbnailGenerator>();
+        services.AddTransient<ISpriteSheetRefresher, SpriteSheetRefresher>();
         services.AddTransient<IHlsVariantAnalyzer, HlsVariantAnalyzer>();
         services.AddTransient<IAbrLadderGenerator, AbrLadderGenerator>();
         services.AddSingleton<ILadderGenerator, LadderGenerator>();

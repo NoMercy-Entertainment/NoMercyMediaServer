@@ -18,6 +18,7 @@ using NoMercy.Database;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Startup;
 
@@ -893,13 +894,26 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
         // copy playlist encoded.
         if (caseName == "HlsFmp4CopyVideoWithSprite")
         {
-            string spritePath = Path.Combine(outputDir, "thumbs_160x90.webp");
-            string vttPath = Path.Combine(outputDir, "thumbs_160x90.vtt");
-
-            File.Exists(spritePath)
+            // Found by pattern rather than by a spelled-out name: the height in
+            // that name follows the source's aspect, so pinning the literal ties
+            // this oracle to one test clip's shape. The width is asserted
+            // separately, because that is the part the profile decides.
+            string[] sheets = Directory.GetFiles(outputDir, "thumbs_*.webp");
+            sheets
                 .Should()
-                .BeTrue(
-                    $"the separate sprite command must produce {spritePath} for a copy-video HLS plan"
+                .ContainSingle(
+                    "the separate sprite command must produce exactly one sheet for a copy-video HLS plan"
+                );
+
+            string spritePath = sheets[0];
+            string vttPath = Path.ChangeExtension(spritePath, ".vtt");
+
+            SpriteSheet
+                .ReadTileWidth(Path.GetFileName(spritePath))
+                .Should()
+                .Be(
+                    SpriteSheet.MinimumWidth,
+                    "the sheet must be rendered at the profile's tile width"
                 );
             File.Exists(vttPath)
                 .Should()

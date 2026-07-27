@@ -74,10 +74,9 @@ public class EncodeReconcilerDecideTests
     public void Decide_TreatsTheRealSpriteFilenameAsPresent_WhenThumbnailsComeFromTheGenerateSpriteVttDefault()
     {
         // The preset leaves Thumbnails null and inherits GenerateSpriteVtt, which
-        // is how every HLS preset here gets its sprite. ThumbnailGenerator writes
-        // that sprite as thumbs_{W}x{H}.webp at the default 160px width, so an
-        // output carrying thumbs_160x90.webp is complete and must not re-run the
-        // thumbnail pass.
+        // is how every HLS preset here gets its sprite. The sprite lands as
+        // thumbs_{W}x{H}.webp at the default tile width, so an output carrying
+        // that pair is complete and must not re-run the thumbnail pass.
         EncodingProfile profile = MakeHlsProfile();
         profile.Thumbnails.Should().BeNull("this preset relies on the sprite default");
 
@@ -116,6 +115,62 @@ public class EncodeReconcilerDecideTests
         decision.Action.Should().Be(ReconciliationAction.Partial);
         decision.MissingKinds.Should().Contain(EncodeTaskKind.Thumbnails);
         decision.MissingKinds.Should().NotContain(EncodeTaskKind.Video);
+    }
+
+    [Fact]
+    public void Decide_ReturnsPartialThumbnails_WhenTheSpriteWasRenderedAtANarrowerTileThanTheProfileWants()
+    {
+        // A title encoded when the tile was 160 wide. Everything is present, so
+        // presence alone would call this complete and leave a preview that is
+        // blown up several times over on a television. The sheet is a sidecar:
+        // the answer is one sprite pass, never a re-encode.
+        EncodingProfile profile = MakeHlsProfile();
+        List<ExistingOutputEntry> withOldSprite = AllPresentFiles()
+            .Where(f => !f.RelativePath.StartsWith("thumbs_", StringComparison.Ordinal))
+            .Append(new("thumbs_160x90.webp", 298_000))
+            .Append(new("thumbs_160x90.vtt", 4_000))
+            .ToList();
+
+        ReconciliationDecision decision = _reconciler.Decide(
+            new(
+                profile,
+                IsSingleFileOutput: false,
+                BitmapSubtitleStreamCount: 0,
+                new(ProfileFingerprint.Compute(profile), withOldSprite, ValidOcrSidecarCount: 0)
+            )
+        );
+
+        decision.Action.Should().Be(ReconciliationAction.Partial);
+        decision.MissingKinds.Should().Contain(EncodeTaskKind.Thumbnails);
+        decision
+            .MissingKinds.Should()
+            .NotContain(EncodeTaskKind.Video, "a preview upgrade must never re-encode video");
+        decision.MissingKinds.Should().NotContain(EncodeTaskKind.Audio);
+    }
+
+    [Fact]
+    public void Decide_ReturnsSkip_WhenAFingerprintFromAnOlderCoverageIsOnRecord_UpgradeSafety()
+    {
+        // Every output produced before the fingerprint narrowed to encoded
+        // streams carries a bare hash. It measured something else, so it cannot
+        // be compared — and reading "cannot compare" as "profile changed" would
+        // re-encode an operator's whole library the moment they upgrade.
+        EncodingProfile profile = MakeHlsProfile();
+
+        ReconciliationDecision decision = _reconciler.Decide(
+            new(
+                profile,
+                IsSingleFileOutput: false,
+                BitmapSubtitleStreamCount: 0,
+                new(
+                    "9f2c7a1e6b40d3518c7de9a0f4b28c6d15e3a7920b4c8de6f1a35c9207b8e4d6a",
+                    AllPresentFiles(),
+                    ValidOcrSidecarCount: 0
+                )
+            )
+        );
+
+        decision.Action.Should().Be(ReconciliationAction.Skip);
     }
 
     [Fact]
@@ -164,9 +219,14 @@ public class EncodeReconcilerDecideTests
     [Fact]
     public void Decide_ReturnsFull_WhenTheProfileFingerprintDiffers()
     {
+        // The preset was edited in place: same id, different settings. The stored
+        // fingerprint is a real one — comparable, and different — which is what
+        // separates this from an unreadable fingerprint that must be let through.
         EncodingProfile profile = MakeHlsProfile();
+        EncodingProfile asItWasEncoded = profile with { Container = Container.HlsTs };
+
         ExistingOutputSnapshot existing = new(
-            "stale-fingerprint-from-before-the-preset-was-edited",
+            ProfileFingerprint.Compute(asItWasEncoded),
             AllPresentFiles(),
             ValidOcrSidecarCount: 0
         );
@@ -389,9 +449,9 @@ public class EncodeReconcilerDecideTests
         AllPresentFiles().Where(f => f.RelativePath != "chapters.vtt").ToList();
 
     // Names here mirror what the encoder actually writes. The sprite pair in
-    // particular comes from ThumbnailGenerator's `thumbs_{W}x{H}` shape at the
-    // default 160px width — inventing a name that merely matches the reconciler
-    // would prove nothing about a real output directory.
+    // particular carries the `thumbs_{W}x{H}` shape at the current default tile
+    // width — inventing a name that merely matches the reconciler would prove
+    // nothing about a real output directory.
     private static List<ExistingOutputEntry> AllPresentFiles() =>
         [
             new("web-1080p_master.m3u8", 500),
@@ -399,8 +459,8 @@ public class EncodeReconcilerDecideTests
             new("audio_eng_aac/audio_eng_aac.m3u8", 200),
             new("subtitles/eng.vtt", 150),
             new("chapters.vtt", 80),
-            new("thumbs_160x90.webp", 298_000),
-            new("thumbs_160x90.vtt", 4_000),
+            new("thumbs_320x180.webp", 298_000),
+            new("thumbs_320x180.vtt", 4_000),
         ];
 
     private static EncodingProfile MakeHlsProfile() =>

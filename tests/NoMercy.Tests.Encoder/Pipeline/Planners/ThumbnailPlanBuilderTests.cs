@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -13,6 +13,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Stages;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Planners;
@@ -111,7 +112,7 @@ public class ThumbnailPlanBuilderTests
         ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
 
         plan.Should().NotBeNull("a remux/copy profile can still sprite via a separate command");
-        plan!.Width.Should().Be(160);
+        plan!.Width.Should().Be(SpriteSheet.MinimumWidth);
         plan.IntervalSeconds.Should().Be(10);
     }
 

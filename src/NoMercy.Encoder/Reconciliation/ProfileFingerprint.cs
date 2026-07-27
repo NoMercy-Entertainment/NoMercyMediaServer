@@ -35,6 +35,32 @@ namespace NoMercy.Encoder.Reconciliation;
 /// </summary>
 public static class ProfileFingerprint
 {
+    /// <summary>
+    /// Names what the hash below covers, and is written into the fingerprint so
+    /// a stored one says what it measured. A value carrying a different name (or
+    /// none) measured something else and cannot be compared against this — that
+    /// is "unreadable", not "different", and <c>EncodeReconciler</c> treats it
+    /// exactly as it treats no fingerprint at all: as the same profile. Without
+    /// that, the first server upgrade to touch the hash would re-encode an
+    /// operator's entire library.
+    /// </summary>
+    private const string CoverageTag = "streams";
+
+    /// <summary>
+    /// Profile fields that shape a sidecar artifact rather than an encoded
+    /// stream. They are deliberately outside the fingerprint: whether a sprite
+    /// sheet is current is answered by looking at the sheet on disk, and a
+    /// preview-tile size has no business deciding whether the video has to be
+    /// encoded again.
+    /// </summary>
+    private static readonly string[] DerivativeGeometryFields =
+    [
+        CamelCase(nameof(HlsDerivatives.SpriteVttThumbnailWidth)),
+        CamelCase(nameof(HlsDerivatives.SpriteVttIntervalSeconds)),
+        CamelCase(nameof(HlsDerivatives.SpriteVttColumns)),
+        CamelCase(nameof(HlsDerivatives.SpriteVttRows)),
+    ];
+
     private static readonly JsonSerializer CanonicalSerializer = JsonSerializer.Create(
         new JsonSerializerSettings
         {
@@ -47,11 +73,34 @@ public static class ProfileFingerprint
     public static string Compute(EncodingProfile profile)
     {
         JToken raw = JToken.FromObject(profile, CanonicalSerializer);
+        StripDerivativeGeometry(raw);
         JToken canonical = Canonicalize(raw);
         string json = canonical.ToString(Formatting.None);
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
-        return Convert.ToHexString(hash).ToLowerInvariant();
+        return $"{CoverageTag}:{Convert.ToHexString(hash).ToLowerInvariant()}";
     }
+
+    /// <summary>
+    /// Whether a stored fingerprint measured the same thing this one does, and
+    /// can therefore be compared against it — see <see cref="CoverageTag"/>.
+    /// </summary>
+    public static bool IsComparable(string? storedFingerprint) =>
+        storedFingerprint?.StartsWith($"{CoverageTag}:", StringComparison.Ordinal) == true;
+
+    private static void StripDerivativeGeometry(JToken raw)
+    {
+        if (
+            raw is not JObject root
+            || root[CamelCase(nameof(EncodingProfile.HlsDerivatives))] is not JObject derivatives
+        )
+            return;
+
+        foreach (string field in DerivativeGeometryFields)
+            derivatives.Remove(field);
+    }
+
+    private static string CamelCase(string propertyName) =>
+        char.ToLowerInvariant(propertyName[0]) + propertyName[1..];
 
     private static JToken Canonicalize(JToken token)
     {
