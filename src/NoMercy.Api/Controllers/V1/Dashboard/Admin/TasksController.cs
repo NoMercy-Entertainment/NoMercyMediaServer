@@ -33,6 +33,8 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
+using NoMercy.MediaProcessing.Jobs.SubtitleJobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -171,12 +173,30 @@ public class TasksController(
         // that fails to deserialize is dropped here, so indexing the unfiltered
         // row list by the parsed list's position would hand every later job the
         // preceding row's id, priority and reservation.
-        List<QueueJobEntry> encoderJobs = jobs.Select(row => new QueueJobEntry(
+        //
+        // Parsed once and then split. Deserializing again to find the rows that
+        // are not encodes cost a second pass over every payload on the queue,
+        // and this endpoint is polled.
+        List<QueueJobEntry> parsedJobs = jobs.Select(row => new QueueJobEntry(
                 row,
-                row.Payload.FromJson<VideoEncodeJob>()
+                ReadEncodeJob(row.Payload)
             ))
-            .Where(entry => entry.Job is not null)
             .ToList();
+
+        List<QueueJobEntry> encoderJobs = parsedJobs.Where(entry => entry.Job is not null).ToList();
+
+        // Maintenance work sharing the encoder queue — preview rebuilds and
+        // subtitle OCR — reported as itself rather than dressed up as an encode.
+        // Hours of this can be queued at once, and a panel that shows none of it
+        // is telling the operator the server is idle while it works.
+        List<MaintenanceJob> maintenanceJobs = parsedJobs
+            .Where(entry => entry.Job is null)
+            .Select(entry => ReadMaintenanceJob(entry.Row))
+            .Where(entry => entry is not null)
+            .Select(entry => entry!)
+            .ToList();
+
+        await EnrichMaintenanceJobsAsync(maintenanceJobs);
 
         // Parse each job id once — Id is either an int (movie/episode) or a Guid (track).
         List<int> movieOrEpisodeIds = [];
@@ -249,6 +269,34 @@ public class TasksController(
                 trackById[track.Id] = track;
         }
 
+        // The child task is where the real work — and the real ordering — lives.
+        // A coordinator row is deleted and re-inserted on every poll, so neither
+        // its id nor its CreatedAt says anything about when its encode was
+        // dispatched or when it will run. Its child is enqueued once and never
+        // re-created, so the child's autoincrement id IS the execution order the
+        // runner will pick them up in.
+        List<QueueJob> childRows = queueContext
+            .QueueJobs.Where(j => j.Queue.StartsWith("encoder-"))
+            .OrderBy(j => j.Id)
+            .ToList();
+
+        HashSet<string> activeMediaIds = [];
+        Dictionary<string, int> executionOrder = [];
+
+        foreach (QueueJob child in childRows)
+        {
+            string? mediaId = child.Payload.FromJson<EncodeTaskJob>()?.Id?.ToString();
+            if (string.IsNullOrEmpty(mediaId))
+                continue;
+
+            // First child wins: a run dispatches its bundles in order, so the
+            // earliest one still queued is when this encode gets its turn.
+            executionOrder.TryAdd(mediaId, child.Id);
+
+            if (child.ReservedAt is not null)
+                activeMediaIds.Add(mediaId);
+        }
+
         QueueJobDto[] queueJobs = encoderJobs
             .Select(entry =>
             {
@@ -259,14 +307,14 @@ public class TasksController(
                     Priority = entry.Row.Priority,
                     PayloadId = j.Id,
                     Title = ResolveTitle(j, movieById, episodeById, trackById),
+                    Backdrop = ResolveArtwork(j, movieById, episodeById),
                     Type = j.GetType().Name,
-                    // Liveness comes from the row, never from the payload: the
-                    // payload is the snapshot serialized at enqueue time and is
-                    // never rewritten, so its Status is "pending" for a job's
-                    // whole life. Reading it left running encodes displayed as
-                    // pending and, because the catch-up broadcast below only
-                    // fires for "running", suppressed their progress entirely.
-                    Status = entry.Row.ReservedAt is not null ? "running" : "pending",
+                    Status = IsEncodeInFlight(
+                        entry.Row.ReservedAt,
+                        activeMediaIds.Contains(j.Id.ToString())
+                    )
+                        ? "running"
+                        : "pending",
                     InputFile = j.InputFile,
                     Profile = folderById
                         .GetValueOrDefault(j.FolderId)
@@ -275,22 +323,47 @@ public class TasksController(
                         ?.Preset?.Name,
                 };
             })
+            .Concat(maintenanceJobs.Select(entry => entry.Dto))
+            // Ordered here, not in SQL: both row columns SQL could sort on are
+            // rewritten on every coordinator poll. Priority still leads, because
+            // that is what the runner honours; within a priority the child id is
+            // the order the runner will actually pick them up in.
+            .OrderByDescending(dto => dto.Priority)
+            .ThenBy(dto => executionOrder.GetValueOrDefault(dto.PayloadId, int.MaxValue))
+            .ThenBy(dto => dto.Id)
             .ToArray();
 
-        // Broadcast current progress for running jobs — reuse already-resolved titles.
+        // Catch-up broadcast so a reloaded dashboard gets a card back for work
+        // already in flight. Keyed off the reservation rather than the reported
+        // status: a coordinator sleeping between poll wake-ups reports running
+        // but has no live encoder behind it, and a card for it would only flap
+        // in and out as the idle sweep collected it.
+        HashSet<int> reservedRowIds = encoderJobs
+            .Where(entry => entry.Row.ReservedAt is not null)
+            .Select(entry => entry.Row.Id)
+            .ToHashSet();
+
         if (EventBusProvider.IsConfigured)
         {
-            foreach (QueueJobDto dto in queueJobs.Where(dto => dto.Status == "running"))
+            foreach (QueueJobDto dto in queueJobs.Where(dto => reservedRowIds.Contains(dto.Id)))
             {
+                // Lower-case keys are the encoder-progress contract — every other
+                // producer on this channel emits them, and the serializer has no
+                // naming strategy, so an anonymous object with PascalCase members
+                // reached the dashboard as {Id, Status, Title}. Reading data.status
+                // off that gives undefined, which is not in-flight, so the card was
+                // never restored and the miss ran the handler's removal branch
+                // instead — one refetch per running row per poll, each refetch
+                // re-broadcasting the same unreadable payload.
                 _ = EventBusProvider.Current.PublishAsync(
                     new EncodingProgressBroadcastedEvent
                     {
                         ProgressData = new
                         {
-                            Id = dto.PayloadId,
-                            Status = "running",
-                            dto.Title,
-                            Message = "Encoding video",
+                            id = dto.PayloadId.ToInt(),
+                            status = "running",
+                            title = dto.Title,
+                            message = "Encoding video",
                         },
                     }
                 );
@@ -298,6 +371,185 @@ public class TasksController(
         }
 
         return Ok(new DataResponseDto<QueueJobDto[]> { Data = queueJobs });
+    }
+
+    /// <summary>
+    /// Whether an encode is actually being worked on, which is the line the
+    /// dashboard splits "encoding now" from "waiting" on.
+    ///
+    /// <para>Carrying coordinator state is not that line. A coordinator stamps
+    /// itself the moment it has decomposed and handed a bundle to the queue, and
+    /// with one encoder runner two dozen of those sit behind each other having
+    /// done nothing — calling them all in-flight said the whole season was
+    /// encoding at once. What does mean work is a runner holding a reservation:
+    /// either on the coordinator row itself, or on the child task that carries
+    /// the ffmpeg process (<paramref name="hasReservedChild"/>).</para>
+    /// </summary>
+    /// <summary>
+    /// The encode behind a queue row, or null when that row is not an encode.
+    ///
+    /// <para>The <c>encoder</c> queue is shared: subtitle OCR backfills and preview
+    /// rebuilds run there too, deliberately, so maintenance work never competes with
+    /// an encode for the same hardware. Deserializing straight into
+    /// <see cref="VideoEncodeJob"/> did not reject those — they carry a
+    /// <c>FolderId</c> of their own, so the result was a card with a real profile
+    /// and nothing else: no title, no id, no artwork, no file. Payloads record
+    /// their own type, so ask for it rather than assume it.</para>
+    /// </summary>
+    internal static VideoEncodeJob? ReadEncodeJob(string payload)
+    {
+        try
+        {
+            return SerializationHelper.Deserialize<object>(payload) as VideoEncodeJob;
+        }
+        catch (Exception)
+        {
+            // A payload written by a build that has since renamed or removed the
+            // job type. Not this endpoint's problem to report.
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// A queue row that is maintenance rather than an encode, described as
+    /// itself. Returns null for anything this endpoint has no name for, so an
+    /// unrecognised job stays out of the panel instead of appearing as a blank.
+    ///
+    /// <para>The title here is the one the job carries — a folder name. It is a
+    /// fallback: <see cref="EncoderQueue"/> replaces it with the library's own
+    /// title, and adds the still, for every folder it can resolve.</para>
+    /// </summary>
+    internal static MaintenanceJob? ReadMaintenanceJob(QueueJob row)
+    {
+        object? job;
+        try
+        {
+            job = SerializationHelper.Deserialize<object>(row.Payload);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+
+        (string kind, string title, string target, string hostFolder) = job switch
+        {
+            SpriteSheetUpgradeJob sprite => (
+                "preview",
+                sprite.Title,
+                sprite.HostFolder,
+                sprite.HostFolder
+            ),
+            SubtitleOcrBackfillJob ocr => (
+                "subtitles",
+                $"{ocr.MediaTitle} ({ocr.Language})",
+                ocr.SupFileName,
+                ocr.HostFolder
+            ),
+            _ => (string.Empty, string.Empty, string.Empty, string.Empty),
+        };
+
+        if (kind.Length == 0)
+            return null;
+
+        QueueJobDto dto = new()
+        {
+            Id = row.Id,
+            Priority = row.Priority,
+            // What the work is about and what does not move, which is what a list
+            // key needs. Two OCR passes over one folder differ by their sup file,
+            // so that is the key there; a preview rebuild is one per folder.
+            PayloadId = target,
+            Title = title,
+            Type = job!.GetType().Name,
+            Kind = kind,
+            Status = row.ReservedAt is not null ? "running" : "pending",
+            InputFile = target,
+        };
+
+        return new(dto, hostFolder);
+    }
+
+    /// <summary>
+    /// Gives every maintenance row the title and the still of the file it is
+    /// about. The job payload only carries a folder name, and a card built from
+    /// that alone is a grey frame over a filename — for work that can occupy the
+    /// server for hours. The folder is already the unique key of a
+    /// <see cref="VideoFile"/>, so the picture and the proper title are one
+    /// query away.
+    /// </summary>
+    private async Task EnrichMaintenanceJobsAsync(List<MaintenanceJob> maintenanceJobs)
+    {
+        List<string> hostFolders = maintenanceJobs
+            .Select(entry => entry.HostFolder)
+            .Where(folder => folder.Length > 0)
+            .Distinct()
+            .ToList();
+
+        if (hostFolders.Count == 0)
+            return;
+
+        List<VideoFile> files = await mediaContext
+            .VideoFiles.AsNoTracking()
+            .Where(file => hostFolders.Contains(file.HostFolder))
+            .Include(file => file.Episode)
+                .ThenInclude(episode => episode!.Tv)
+            .Include(file => file.Movie)
+            .ToListAsync();
+
+        Dictionary<string, VideoFile> fileByFolder = [];
+        foreach (VideoFile file in files)
+            fileByFolder.TryAdd(file.HostFolder, file);
+
+        foreach (MaintenanceJob entry in maintenanceJobs)
+        {
+            if (fileByFolder.TryGetValue(entry.HostFolder, out VideoFile? file))
+                ApplyMediaDetails(entry.Dto, file);
+        }
+    }
+
+    /// <summary>
+    /// Puts the library's own title and still onto a maintenance card. A file with
+    /// neither an episode nor a movie behind it keeps the folder name the job
+    /// carried: a card naming the folder still beats a card naming nothing.
+    /// </summary>
+    internal static void ApplyMediaDetails(QueueJobDto dto, VideoFile file)
+    {
+        if (file.Episode is { Tv: not null })
+        {
+            dto.Title = file.Episode.CreateTitle();
+            dto.Backdrop = file.Episode.Still;
+            return;
+        }
+
+        if (file.Movie is not null)
+        {
+            dto.Title = file.Movie.CreateTitle();
+            dto.Backdrop = file.Movie.Backdrop;
+        }
+    }
+
+    internal static bool IsEncodeInFlight(DateTime? reservedAt, bool hasReservedChild) =>
+        reservedAt is not null || hasReservedChild;
+
+    /// <summary>
+    /// The artwork for a queued encode — a movie's backdrop or an episode's still,
+    /// the same image the encoder's progress events carry once the job is running,
+    /// so the card does not change picture when it starts.
+    /// </summary>
+    private static string? ResolveArtwork(
+        VideoEncodeJob j,
+        Dictionary<int, Movie> movieById,
+        Dictionary<int, Episode> episodeById
+    )
+    {
+        int intId = j.Id.ToInt();
+        if (intId == 0)
+            return null;
+
+        if (movieById.TryGetValue(intId, out Movie? movie))
+            return movie.Backdrop;
+
+        return episodeById.TryGetValue(intId, out Episode? episode) ? episode.Still : null;
     }
 
     private static string ResolveTitle(
@@ -724,6 +976,13 @@ public class TasksController(
 /// </summary>
 internal sealed record QueueJobEntry(QueueJob Row, VideoEncodeJob? Job);
 
+/// <summary>
+/// A maintenance row described as itself, alongside the media folder it works on.
+/// The folder is kept separate from the DTO because it is not part of the
+/// contract — it is the key the title and the still are looked up by.
+/// </summary>
+internal sealed record MaintenanceJob(QueueJobDto Dto, string HostFolder);
+
 public class QueueJobDto
 {
     [JsonProperty("id")]
@@ -734,6 +993,15 @@ public class QueueJobDto
 
     [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The item's own artwork — a movie backdrop or an episode still. Carried on
+    /// the queue row, not only on progress events, so a card can show the title
+    /// it is about from the moment the job is queued rather than waiting for the
+    /// first frame of encoding to arrive.
+    /// </summary>
+    [JsonProperty("backdrop")]
+    public string? Backdrop { get; set; }
 
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
@@ -749,6 +1017,21 @@ public class QueueJobDto
 
     [JsonProperty("priority")]
     public int Priority { get; set; }
+
+    /// <summary>
+    /// What kind of work this row is, when it is not an encode: <c>preview</c>
+    /// for a scrub-sheet rebuild, <c>subtitles</c> for an OCR backfill. Null on a
+    /// real encode, which is what every existing client already assumes it is
+    /// reading — so an older build ignores this and keeps working.
+    ///
+    /// <para>These share the encoder queue on purpose, so they must not be shown
+    /// as encodes: they have no media id, no artwork and no progress, and pushing
+    /// them through the encode shape produced cards for titles that did not
+    /// exist. Filtering them out instead went too far the other way — the server
+    /// spends hours on this work and the panel claimed nothing was running.</para>
+    /// </summary>
+    [JsonProperty("kind")]
+    public string? Kind { get; set; }
 }
 
 public class PatchQueueItemDto

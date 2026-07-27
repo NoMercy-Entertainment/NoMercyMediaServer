@@ -16,6 +16,7 @@ using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Tests.Encoder.Storage;
 
@@ -312,7 +313,7 @@ public class TwoPassStrategyBaseDecomposeTests
             VideoOutputs: [],
             AudioOutputs: [],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         DecomposedTask[] thumbs = Build()
@@ -449,7 +450,7 @@ public class TwoPassStrategyBaseDecomposeTests
                 ),
             ],
             SubtitleOutputs: [Subtitle("eng", 0)],
-            Thumbnails: new(160, 90, 10),
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10)),
             Chapters: [new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "Intro")],
             GenerateChapterThumbs: true
         );

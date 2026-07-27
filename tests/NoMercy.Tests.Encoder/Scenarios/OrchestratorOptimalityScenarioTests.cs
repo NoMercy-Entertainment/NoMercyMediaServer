@@ -16,6 +16,7 @@ using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -134,7 +135,7 @@ public class OrchestratorOptimalityScenarioTests
         int width = 160,
         int height = 90,
         int interval = 10
-    ) => new(width, height, interval);
+    ) => new(width, height, interval, SpriteGrid.For(TimeSpan.FromHours(2), interval));
 
     private static OutputPlan MakePlan(
         OutputFormat format,

@@ -157,19 +157,40 @@ public class ActivityLogger : IActivityLogger
             ct
         );
 
+    public Task LogSystemAsync(
+        ActivityCategory category,
+        string type,
+        Ulid? mediaId = null,
+        bool success = true,
+        string? errorCode = null,
+        object? metadata = null,
+        CancellationToken ct = default
+    ) =>
+        WriteAsync(
+            new()
+            {
+                Category = category,
+                Type = type,
+                Time = DateTime.UtcNow,
+                MediaId = mediaId,
+                Success = success,
+                ErrorCode = errorCode,
+                Metadata = Serialize(metadata),
+            },
+            ct
+        );
+
     private async Task WriteAsync(ActivityLog row, CancellationToken ct)
     {
-        // Drop rows that would violate the FK constraints rather than retry-and-log-noise.
-        // Auth callbacks fall back to Ulid.Empty / Guid.Empty when the device or user
-        // can't be resolved (e.g. failed login, device-less OAuth redirect). Those IDs
-        // don't match any Devices/Users row, so the FK fails on every retry.
-        if (row.DeviceId == Ulid.Empty || row.UserId == Guid.Empty)
-        {
-            _logger.LogDebug(
-                "Skipping activity log {Type}: missing DeviceId or UserId (device={DeviceId}, user={UserId})", [row.Type, row.DeviceId, row.UserId]
-            );
-            return;
-        }
+        // Empty is what the callers reach for when they could not resolve a device or user —
+        // a failed login, a device-less OAuth redirect, or anything the server did on its own.
+        // No such row exists to point at, so the FK would fail on every retry. Null says the
+        // same thing and the column accepts it, which is how a system event gets recorded at
+        // all rather than being quietly dropped.
+        if (row.DeviceId == Ulid.Empty)
+            row.DeviceId = null;
+        if (row.UserId == Guid.Empty)
+            row.UserId = null;
 
         for (int attempt = 1; attempt <= MaxRetries; attempt++)
         {
@@ -187,14 +208,16 @@ public class ActivityLogger : IActivityLogger
                 // shows up in the structured-log JSON; the @x exception field is
                 // dropped by the upstream enricher pipeline.
                 _logger.LogWarning(
-                    "Activity log write failed (attempt {Attempt}/{Max}) for {Type}: {ErrorChain}; retrying", [attempt, MaxRetries, row.Type, FlattenError(ex)]
+                    "Activity log write failed (attempt {Attempt}/{Max}) for {Type}: {ErrorChain}; retrying",
+                    [attempt, MaxRetries, row.Type, FlattenError(ex)]
                 );
                 await Task.Delay(RetryDelay, ct);
             }
             catch (Exception ex)
             {
                 _logger.LogError(
-                    "Activity log write failed after {Max} attempts; dropping row {Type}: {ErrorChain}", [MaxRetries, row.Type, FlattenError(ex)]
+                    "Activity log write failed after {Max} attempts; dropping row {Type}: {ErrorChain}",
+                    [MaxRetries, row.Type, FlattenError(ex)]
                 );
                 return;
             }

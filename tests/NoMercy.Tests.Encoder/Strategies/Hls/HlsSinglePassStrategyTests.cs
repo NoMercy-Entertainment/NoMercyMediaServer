@@ -15,6 +15,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Tests.Encoder.Storage;
@@ -276,7 +277,7 @@ public class HlsSinglePassStrategyTests
             VideoOutputs: [Video()],
             AudioOutputs: [],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         DecomposedTask[] thumbs = strategy

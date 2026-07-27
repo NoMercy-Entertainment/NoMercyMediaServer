@@ -55,8 +55,11 @@ public class MediaContext : DbContext
         if (Config.IsDev)
             options.EnableSensitiveDataLogging();
 
-        options.AddInterceptors([new EntityBaseUpdatedAtInterceptor(), new SqliteNormalizeSearchInterceptor(), new SqliteConnectionInterceptor()]
-        );
+        options.AddInterceptors([
+            new EntityBaseUpdatedAtInterceptor(),
+            new SqliteNormalizeSearchInterceptor(),
+            new SqliteConnectionInterceptor(),
+        ]);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -319,14 +322,23 @@ public class MediaContext : DbContext
             .HasForeignKey(d => d.OwnerUserId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        // ActivityLog is owned by its device — a connection history entry is
-        // meaningless once the device is deleted.  DeviceId is non-nullable, so
-        // SetNull is not an option; Cascade is the only correct behaviour here.
+        // A device-attributed entry is meaningless once the device is gone, so those still
+        // cascade. The FK is optional now: system events — an encode, a scheduled scan — have
+        // no device at all, and those rows must survive on their own.
         modelBuilder
             .Entity<ActivityLog>()
             .HasOne(al => al.Device)
             .WithMany(d => d.ActivityLogs)
             .HasForeignKey(al => al.DeviceId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<ActivityLog>()
+            .HasOne(al => al.User)
+            .WithMany()
+            .HasForeignKey(al => al.UserId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<EncodingPresetFolder>(b =>

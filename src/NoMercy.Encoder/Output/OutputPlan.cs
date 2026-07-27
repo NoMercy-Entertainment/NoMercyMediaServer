@@ -14,6 +14,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using DrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
@@ -172,4 +173,9 @@ public record SubtitleOutputPlan(
     Dictionary<string, string>? ExtraFlags = null
 );
 
-public record ThumbnailOutputPlan(int Width, int Height, int IntervalSeconds);
+/// <summary>
+/// <paramref name="Grid"/> is the tile layout the sheet is pinned to. Stated
+/// rather than left to the muxer, because a grid the frames do not fill exactly
+/// ends in a block of green — see <see cref="SpriteGrid"/>.
+/// </summary>
+public record ThumbnailOutputPlan(int Width, int Height, int IntervalSeconds, SpriteGrid Grid);

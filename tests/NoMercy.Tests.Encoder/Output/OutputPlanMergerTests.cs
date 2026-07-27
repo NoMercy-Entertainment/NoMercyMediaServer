@@ -13,6 +13,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.PostProcess;
 
 namespace NoMercy.Tests.Encoder.Output;
 
@@ -89,7 +90,7 @@ public class OutputPlanMergerTests
             VideoOutputs: [MakeVideo(3840, 2160, isHdrOutput: true)],
             AudioOutputs: [MakeAudio("eng")],
             SubtitleOutputs: [MakeSubtitle("eng")],
-            Thumbnails: new(160, 68, 10),
+            Thumbnails: new(160, 68, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10)),
             Chapters: [new(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Chapter 1")]
         );
         OutputPlan sdr1080P = new(
@@ -206,7 +207,12 @@ public class OutputPlanMergerTests
     public void Merge_SharedFields_ComeFromThePrimaryPlanOnly()
     {
         SubtitleOutputPlan primarySubtitle = MakeSubtitle("eng");
-        ThumbnailOutputPlan primaryThumbnails = new(160, 68, 10);
+        ThumbnailOutputPlan primaryThumbnails = new(
+            160,
+            68,
+            10,
+            SpriteGrid.For(TimeSpan.FromHours(2), 10)
+        );
         ChapterInfo[] primaryChapters = [new(TimeSpan.Zero, TimeSpan.FromMinutes(1), "Ch1")];
 
         OutputPlan primary = new(
@@ -226,7 +232,7 @@ public class OutputPlanMergerTests
             // across presets; duplicating them would double the OCR/extract
             // work this merge exists to avoid.
             SubtitleOutputs: [MakeSubtitle("jpn"), MakeSubtitle("kor")],
-            Thumbnails: new(320, 180, 5),
+            Thumbnails: new(320, 180, 5, SpriteGrid.For(TimeSpan.FromHours(2), 5)),
             Chapters: [new(TimeSpan.Zero, TimeSpan.FromMinutes(2), "Other")]
         );
 

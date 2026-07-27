@@ -18,4 +18,10 @@ public enum ActivityCategory
     Playback = 3,
     Configuration = 4,
     Failure = 5,
+
+    /// <summary>Work the encoder did: a job starting, finishing, or giving up.</summary>
+    Encoder = 6,
+
+    /// <summary>Content arriving or leaving: scans, and files being imported.</summary>
+    Library = 7,
 }

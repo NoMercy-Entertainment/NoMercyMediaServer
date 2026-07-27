@@ -48,6 +48,14 @@ public static class EventHandlerExtensions
             );
         });
 
+        services.AddSingleton<ActivityEventHandler>(sp =>
+            new(
+                sp.GetRequiredService<ILogger<ActivityEventHandler>>(),
+                sp.GetRequiredService<IEventBus>(),
+                sp.GetRequiredService<NoMercy.Database.Activity.IActivityLogger>()
+            )
+        );
+
         services.AddSingleton<SignalRLibraryScanEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
@@ -178,6 +186,7 @@ public static class EventHandlerExtensions
         // Resolve handlers to trigger their construction and event subscriptions
         serviceProvider.GetRequiredService<SignalRPlaybackEventHandler>();
         serviceProvider.GetRequiredService<SignalREncodingEventHandler>();
+        serviceProvider.GetRequiredService<ActivityEventHandler>();
         serviceProvider.GetRequiredService<SignalRLibraryScanEventHandler>();
         serviceProvider.GetRequiredService<SignalRLibraryRefreshEventHandler>();
         serviceProvider.GetRequiredService<FileWatcherEventHandler>();

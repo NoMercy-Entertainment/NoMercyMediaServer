@@ -180,7 +180,7 @@ public class VideoPlaylistResponseDtoTests
     }
 
     [Fact]
-    public void Ctor_SpriteKindTrack_IsExposedAsThumbnails()
+    public void Ctor_SpriteKindTrack_StaysSprite()
     {
         Movie movie = BuildMovieWithCertification(
             "US",
@@ -189,8 +189,8 @@ public class VideoPlaylistResponseDtoTests
 
         VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        Assert.Contains(dto.Tracks, track => track.Kind == "thumbnails");
-        Assert.DoesNotContain(dto.Tracks, track => track.Kind == "sprite");
+        Assert.Contains(dto.Tracks, track => track.Kind == "sprite");
+        Assert.DoesNotContain(dto.Tracks, track => track.Kind == "thumbnails");
     }
 
     [Fact]
@@ -208,8 +208,12 @@ public class VideoPlaylistResponseDtoTests
     }
 
     [Fact]
-    public void Ctor_SpriteAndThumbnailsBothPresent_DedupesToSingleVttThumbnailsTrack()
+    public void Ctor_SpriteAndThumbnailsBothPresent_BothReachTheClient()
     {
+        // The pair is the feature: the Android and TV players read the sheet from
+        // the sprite track and the cue times from the thumbnails track, and show no
+        // previews at all unless they have both. Dropping either half here is what
+        // silently removed scrub previews from every title that had them.
         Movie movie = BuildMovieWithCertification(
             "US",
             [
@@ -220,13 +224,15 @@ public class VideoPlaylistResponseDtoTests
 
         VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        VideoTrack track = Assert.Single(dto.Tracks, t => t.Kind == "thumbnails");
-        Assert.EndsWith(".vtt", track.File);
+        Assert.EndsWith(".webp", Assert.Single(dto.Tracks, t => t.Kind == "sprite").File);
+        Assert.EndsWith(".vtt", Assert.Single(dto.Tracks, t => t.Kind == "thumbnails").File);
     }
 
     [Fact]
-    public void Ctor_TwoSpriteTracksNeitherIsVtt_DedupesToFirstOccurringTrack()
+    public void Ctor_MultipleSpriteTracks_AllSurvive()
     {
+        // A title rendered at more than one preview dimension has a sheet per size.
+        // Choosing one for the client is the client's business, not the payload's.
         Movie movie = BuildMovieWithCertification(
             "US",
             [
@@ -247,17 +253,12 @@ public class VideoPlaylistResponseDtoTests
 
         VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        VideoTrack track = Assert.Single(dto.Tracks, t => t.Kind == "thumbnails");
-        Assert.EndsWith("/first.webp", track.File);
+        dto.Tracks.Should().HaveCount(2).And.OnlyContain(t => t.Kind == "sprite");
     }
 
     [Fact]
-    public void Ctor_TwoThumbnailTracksAlongsideUnrelatedKind_DedupesThumbnailsAndKeepsUnrelated()
+    public void Ctor_PreviewTracksAlongsideUnrelatedKind_LeaveTheUnrelatedKindAlone()
     {
-        // Exercises the final filter's "track.Kind != thumbnails" short-circuit
-        // (true for the unrelated "audio" track, kept unconditionally) alongside
-        // the "track == keep" comparison it otherwise has to fall through to for
-        // every thumbnails candidate.
         Movie movie = BuildMovieWithCertification(
             "US",
             [
@@ -269,7 +270,8 @@ public class VideoPlaylistResponseDtoTests
 
         VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
 
-        dto.Tracks.Should().ContainSingle(t => t.Kind == "thumbnails");
+        dto.Tracks.Should().HaveCount(3);
+        dto.Tracks.Count(t => t.Kind == "sprite").Should().Be(2);
         dto.Tracks.Should().ContainSingle(t => t.Kind == "audio");
     }
 

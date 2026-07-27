@@ -2,7 +2,7 @@
 > **Work in progress — use with caution.** This repository is under active development and not yet stable.
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-media-server/master/assets/icons/logo.png" style="width: auto;height: 240px;">
+<img src="https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-media-server/master/assets/icons/logo.png" style="width: auto;">
 </p>
 
 <h1 align="center">NoMercy MediaServer</h1>

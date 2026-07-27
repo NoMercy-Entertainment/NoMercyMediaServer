@@ -193,7 +193,21 @@ public class ConnectionHub : Hub
                     .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, true));
                 await mediaContext.SaveChangesAsync();
 
-                await ActivityLogger.LogConnectionAsync("connection.connected", user.Id, device.Id);
+                // Every hub derives from this one, so a single app opening video, music,
+                // dashboard, device and cast hubs used to write five identical "connected"
+                // rows a millisecond apart, and the activity log was mostly duplicates. The
+                // event worth recording is the device arriving, which is the first of those
+                // connections — the rest are the same device already here.
+                //
+                // The claim has to be atomic rather than a scan of the connection map: those
+                // hubs connect concurrently, so each one would read the map before any of
+                // them had written to it and every one would think it was first.
+                if (ConnectedClients.RegisterDeviceConnection(client.DeviceId))
+                    await ActivityLogger.LogConnectionAsync(
+                        "connection.connected",
+                        user.Id,
+                        device.Id
+                    );
             }
         }
 
@@ -237,15 +251,21 @@ public class ConnectionHub : Hub
                     .Devices.Where(x => x.DeviceId == device.DeviceId)
                     .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, false));
                 await mediaContext.SaveChangesAsync();
+            }
 
+            ConnectedClients.Clients.Remove(Context.ConnectionId, out _);
+
+            // Mirror of the connect side: the device has only actually left once its last
+            // hub connection is gone. Logging per closed connection turned one app closing
+            // into five "disconnected" rows.
+            bool deviceLeft = ConnectedClients.ReleaseDeviceConnection(client.DeviceId);
+
+            if (device is not null && deviceLeft)
                 await ActivityLogger.LogConnectionAsync(
                     "connection.disconnected",
                     client.Sub,
                     device.Id
                 );
-            }
-
-            ConnectedClients.Clients.Remove(Context.ConnectionId, out _);
 
             // Scope to the disconnecting client's own user (see OnConnectedAsync).
             await Clients

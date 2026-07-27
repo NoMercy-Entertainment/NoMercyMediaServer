@@ -47,11 +47,15 @@ public class ActivityLog : Timestamps
     [JsonProperty("metadata")]
     public string? Metadata { get; set; }
 
+    // Nullable because not everything worth logging is something a person did. An encode
+    // starting, a scheduled scan finishing, a file the watcher imported on its own — these
+    // have no device and no user, and a log that cannot hold them can only ever describe
+    // half of what the server does.
     [JsonProperty("device_id")]
-    public Ulid DeviceId { get; set; }
-    public Device Device { get; set; } = null!;
+    public Ulid? DeviceId { get; set; }
+    public Device? Device { get; set; }
 
     [JsonProperty("user_id")]
-    public Guid UserId { get; set; }
-    public User User { get; set; } = null!;
+    public Guid? UserId { get; set; }
+    public User? User { get; set; }
 }

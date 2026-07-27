@@ -9,6 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Encoder.PostProcess;
+
 namespace NoMercy.Encoder.Profiles;
 
 public record HlsDerivatives
@@ -18,7 +20,13 @@ public record HlsDerivatives
     public int SpriteVttIntervalSeconds { get; init; } = 10;
     public int SpriteVttColumns { get; init; } = 5;
     public int SpriteVttRows { get; init; } = 5;
-    public int SpriteVttThumbnailWidth { get; init; } = 160;
+
+    /// <summary>
+    /// Tile width for the scrub-preview sheet. Height follows the source's own
+    /// aspect, so a 2.39:1 film and a 16:9 episode both keep their shape.
+    /// See <see cref="SpriteSheet.MinimumWidth"/> for why this number.
+    /// </summary>
+    public int SpriteVttThumbnailWidth { get; init; } = SpriteSheet.MinimumWidth;
     public bool GenerateChapters { get; init; } = true;
     public bool GenerateFontsJson { get; init; } = true;
     public bool GenerateIFramePlaylists { get; init; }

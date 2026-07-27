@@ -346,21 +346,7 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
         {
             components.Add(
                 Component
-                    .HomeCard(
-                        new()
-                        {
-                            Id = homeCardItem.Id,
-                            Title = homeCardItem.Title,
-                            Overview = homeCardItem.Overview,
-                            Backdrop = homeCardItem.Backdrop,
-                            Poster = homeCardItem.Poster,
-                            Logo = homeCardItem.Logo,
-                            Year = homeCardItem.Year,
-                            ColorPalette = homeCardItem.ColorPalette,
-                            Link = homeCardItem.Link,
-                            MediaType = homeCardItem.Type,
-                        }
-                    )
+                    .HomeCard(await BuildHeroAsync(homeCardItem, language))
                     .WithUpdate("pageLoad", "/home/card")
                     .Build()
             );
@@ -519,32 +505,54 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
             .Randomize()
             .FirstOrDefault();
 
+        HomeCardData hero =
+            homeCardItem != null ? await BuildHeroAsync(homeCardItem, language) : new();
+
         return new()
         {
             Data =
             [
                 Component
-                    .HomeCard(
-                        homeCardItem != null
-                            ? new()
-                            {
-                                Id = homeCardItem.Id,
-                                Title = homeCardItem.Title,
-                                Overview = homeCardItem.Overview,
-                                Backdrop = homeCardItem.Backdrop,
-                                Poster = homeCardItem.Poster,
-                                Logo = homeCardItem.Logo,
-                                Year = homeCardItem.Year,
-                                ColorPalette = homeCardItem.ColorPalette,
-                                Link = homeCardItem.Link,
-                                MediaType = homeCardItem.Type,
-                            }
-                            : new HomeCardData()
-                    )
+                    .HomeCard(hero)
                     .WithUpdate("pageLoad", "/home/card")
                     .WithReplacing(replaceId)
                     .Build(),
             ],
+        };
+    }
+
+    /// <summary>
+    /// Turns the picked title into the home hero, with the artwork a hero wants rather than the
+    /// artwork a grid card wants.
+    /// </summary>
+    /// <remarks>
+    /// A carousel card carries the poster TMDB nominates for the title, which normally has the
+    /// name printed on it — right for a card an inch wide with its title underneath, wrong for
+    /// a hero that writes the name itself. Both hero endpoints go through here so the two
+    /// cannot answer the same question differently; the card's own artwork stays as the floor
+    /// for a title that has no image rows at all.
+    /// </remarks>
+    private async Task<HomeCardData> BuildHeroAsync(CardData item, string language)
+    {
+        object? id = item.Id;
+
+        HeroArtwork? artwork = id is int mediaId
+            ? await homeRepository.GetHeroArtworkAsync(mediaId, item.Type, language)
+            : null;
+
+        return new()
+        {
+            Id = item.Id,
+            Title = item.Title,
+            Overview = item.Overview,
+            Backdrop = item.Backdrop,
+            Poster = artwork?.Poster ?? item.Poster,
+            PosterIsTextless = artwork?.PosterIsTextless ?? false,
+            Logo = artwork?.Logo ?? item.Logo,
+            Year = item.Year,
+            ColorPalette = item.ColorPalette,
+            Link = item.Link,
+            MediaType = item.Type,
         };
     }
 

@@ -39,6 +39,11 @@ public interface IQueueContext : IDisposable
     /// Used by coordinator jobs that need to persist phase state and re-queue
     /// themselves without removing and re-inserting (which would trip the
     /// deduplication check in <see cref="JobQueue.Enqueue"/>).
+    /// <para>Attempts resets to zero: a coordinator advancing to its next phase
+    /// is new work on the same row, not a retry of failed work. Reservation
+    /// increments the counter, so a row that polls in place would otherwise
+    /// cross <c>maxAttempts</c> after three wake-ups and quietly stop being
+    /// reservable — the encode would hang with no error anywhere.</para>
     /// </summary>
     void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt);
 

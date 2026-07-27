@@ -326,7 +326,7 @@ public class BuildStageFilterGraphTests
             VideoOutputs: [sdrRung],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(320, 180, 10)
+            Thumbnails: new(320, 180, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -466,7 +466,7 @@ public class BuildStageFilterGraphTests
             VideoOutputs: [hdrRung, sdrRung],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(320, 180, 10)
+            Thumbnails: new(320, 180, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);

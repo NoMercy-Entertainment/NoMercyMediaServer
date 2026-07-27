@@ -61,8 +61,11 @@ public class DeviceRepository(MediaContext context) : IDeviceRepository
     {
         // Deletes ActivityLog rows whose Device is owned by the caller.
         // Does NOT delete the Device rows themselves — only clears the log history.
+        //
+        // Device is optional: a system event — an encode, a scheduled scan — has none, and
+        // those belong to no user, so clearing one owner's history must leave them alone.
         return context
-            .ActivityLogs.Where(log => log.Device.OwnerUserId == ownerUserId)
+            .ActivityLogs.Where(log => log.Device != null && log.Device.OwnerUserId == ownerUserId)
             .ExecuteDeleteAsync();
     }
 

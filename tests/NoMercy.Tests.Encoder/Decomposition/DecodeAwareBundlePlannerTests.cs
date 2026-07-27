@@ -13,6 +13,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.PostProcess;
 
 namespace NoMercy.Tests.Encoder.Decomposition;
 
@@ -161,7 +162,9 @@ public class DecodeAwareBundlePlannerTests
             VideoOutputs: videos,
             AudioOutputs: audios ?? [],
             SubtitleOutputs: [],
-            Thumbnails: hasThumbs ? new ThumbnailOutputPlan(160, 90, 10) : null
+            Thumbnails: hasThumbs
+                ? new ThumbnailOutputPlan(160, 90, 10, SpriteGrid.For(TimeSpan.FromMinutes(24), 10))
+                : null
         );
 
     // ------------------------------------------------------------------ Layer 1: GroupByDecodeClass

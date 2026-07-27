@@ -11,6 +11,7 @@
 
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Output;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
@@ -69,7 +70,12 @@ public static class ThumbnailPlanBuilder
                     )
                 );
 
-                thumbPlan = new(thumbConfig.Width, thumbHeight, thumbConfig.IntervalSeconds);
+                thumbPlan = new(
+                    thumbConfig.Width,
+                    thumbHeight,
+                    thumbConfig.IntervalSeconds,
+                    SpriteGrid.For(media.Duration, thumbConfig.IntervalSeconds)
+                );
             }
         }
         return thumbPlan;

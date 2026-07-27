@@ -432,6 +432,13 @@ public class PlanStage(
         if (candidate is null)
             return null;
 
+        // Measure with the encoder that will actually run. A hardware encoder
+        // asked for the same quality number spends materially more bitrate than
+        // the software one, so measuring x265 and then encoding with NVENC would
+        // understate the output — far enough that a source could be judged worth
+        // re-encoding and then come out larger than it started.
+        string? encoderName = ResolvePlannedEncoderName(candidate.Codec, profile);
+
         return await encodeYieldProbe
             .EstimateBitrateKbpsAsync(
                 media.FilePath,
@@ -440,12 +447,40 @@ public class PlanStage(
                     candidate.Crf,
                     candidate.Preset,
                     candidate.Tune,
-                    candidate.PixelFormat
+                    candidate.PixelFormat,
+                    encoderName
                 ),
                 media.Duration,
                 ct
             )
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The ffmpeg encoder this plan will select for a codec, resolved the same
+    /// way the codec pass resolves it. Null when it cannot be determined, which
+    /// leaves the probe on the software encoder for that codec.
+    /// </summary>
+    private string? ResolvePlannedEncoderName(VideoCodecType codec, EncodingProfile profile)
+    {
+        if (hardwarePreferenceResolver is null)
+            return null;
+
+        List<string> availableEncoderNames = ffmpegCapabilities
+            .AvailableEncoders.Where(encoderName =>
+                IsHardwareEncoderSelectable(encoderName, hardware)
+            )
+            .ToList();
+
+        HardwareResolutionResult resolution = hardwarePreferenceResolver.Resolve(
+            codec,
+            profile.HardwarePreference,
+            availableEncoderNames,
+            speedIndex ?? new SpeedIndex(new()),
+            NullDecisionLogSink.Instance
+        );
+
+        return resolution.Failure is null ? resolution.EncoderHandle : null;
     }
 
     private VideoOutput[] ApplySmartCopyDowngrade(

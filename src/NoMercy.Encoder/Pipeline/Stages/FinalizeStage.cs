@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Text;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Bundle;
@@ -16,6 +17,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Reconciliation;
@@ -153,7 +155,11 @@ public class FinalizeStage(
             }
 
             // Sprite VTT, thumbnail track, original-filename tag, and metadata.json
-            // sidecar are all produced upstream in BuildStage. No finalize-stage work.
+            // sidecar are all produced upstream in BuildStage — except for the cues
+            // covering the black tiles the grid was padded out with, which only
+            // exist once the sheet has been written.
+            await TrimSpritePaddingCuesAsync(input, context, effectiveStorage, ct);
+
             //
             // The opt-in flags below have no implementation yet. Fail loudly instead
             // of silently ignoring a profile that set them, so callers get a clear
@@ -220,6 +226,57 @@ public class FinalizeStage(
                     Name,
                     false
                 )
+            );
+        }
+    }
+
+    /// <summary>
+    /// Drops the cues pointing at the sheet's padding tiles.
+    ///
+    /// <para>The grid is deliberately over-estimated, so the last few tiles are
+    /// black frames past the end of the film. They cost nothing in the scrub bar,
+    /// which only ever asks for a time inside the film — but a television draws
+    /// the whole cue list as a filmstrip, and there the padding shows as black
+    /// frames tacked onto the end.</para>
+    ///
+    /// <para>Best-effort: the sheet is already written and correct, and a VTT that
+    /// still lists its padding is a cosmetic fault on one surface. It is not worth
+    /// failing a finished encode over.</para>
+    /// </summary>
+    private async Task TrimSpritePaddingCuesAsync(
+        FinalizeInput input,
+        EncodingContext context,
+        IStorage effectiveStorage,
+        CancellationToken ct
+    )
+    {
+        if (input.Plan.Thumbnails is not { } thumbs || context.MediaInfo is null)
+            return;
+
+        string vttPath = effectiveStorage.CombinePath(
+            input.OutputDirectory,
+            $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt"
+        );
+
+        try
+        {
+            if (!effectiveStorage.Exists(vttPath))
+                return;
+
+            byte[] raw = await effectiveStorage.ReadAsync(vttPath, ct);
+            string trimmed = SpriteVttTrimmer.Trim(
+                Encoding.UTF8.GetString(raw),
+                context.MediaInfo.Duration
+            );
+
+            await effectiveStorage.WriteAsync(vttPath, Encoding.UTF8.GetBytes(trimmed), ct);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "[{CorrelationId}] Could not trim the scrub preview's padding cues; the sheet is fine, the filmstrip will show a few black tiles past the end",
+                context.CorrelationId
             );
         }
     }

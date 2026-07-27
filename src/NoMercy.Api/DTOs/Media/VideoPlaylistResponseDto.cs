@@ -436,32 +436,17 @@ public class VideoPlaylistResponseDto
     }
 
     /// <summary>
-    /// Presents scrub-bar preview tracks the way every client looks for them.
-    /// A track stored as <c>sprite</c> is exposed as <c>thumbnails</c>: the video
-    /// player resolves previews with <c>tracks.find(t =&gt; t.kind === 'thumbnails')</c>
-    /// and has no <c>sprite</c> branch, so an unmapped track silently yields no
-    /// previews at all. When more than one track resolves to <c>thumbnails</c> only
-    /// one survives — the <c>.vtt</c> cue file if there is one, since that is what
-    /// the player parses, otherwise the first. A single preview track, and every
-    /// other kind, passes through untouched.
+    /// Presents scrub-bar preview tracks as the two things they are.
+    /// <para>A preview is a <c>.webp</c> sheet of frames plus a <c>.vtt</c> naming the
+    /// region of that sheet for each moment, and the scanner stores them as
+    /// <c>sprite</c> and <c>thumbnails</c> respectively. This used to relabel the
+    /// sheet as <c>thumbnails</c> too and then drop all but one, which deleted the
+    /// sheet from the payload: the Android and TV players read both kinds and give
+    /// up without the image, so previews disappeared wherever a title had both —
+    /// most of the library. Relabelling never helped the web player either, since
+    /// what it gained was a <c>.webp</c> where it parses cue text.</para>
+    /// <para>Kept as a named step rather than inlined: the pairing is the contract
+    /// clients depend on, and it is worth stating that both halves go out.</para>
     /// </summary>
-    private static List<VideoTrack> NormalizePreviewTracks(List<VideoTrack> tracks)
-    {
-        foreach (VideoTrack track in tracks)
-        {
-            if (track.Kind == "sprite")
-                track.Kind = "thumbnails";
-        }
-
-        List<VideoTrack> previews = tracks.Where(track => track.Kind == "thumbnails").ToList();
-        if (previews.Count < 2)
-            return tracks;
-
-        VideoTrack keep =
-            previews.FirstOrDefault(track =>
-                track.File.EndsWith(".vtt", StringComparison.OrdinalIgnoreCase)
-            ) ?? previews[0];
-
-        return tracks.Where(track => track.Kind != "thumbnails" || track == keep).ToList();
-    }
+    private static List<VideoTrack> NormalizePreviewTracks(List<VideoTrack> tracks) => tracks;
 }

@@ -37,12 +37,33 @@ internal static class EventBusFireAndForget
     }
 }
 
-public class EventBusProgressObserver : IProgressObserver
+public class EventBusProgressObserver : IProgressObserver, IDisposable
 {
+    // The dashboard drops a card that has gone quiet, on the assumption that a
+    // live encode never stops talking. Only ffmpeg talks that often: a stage
+    // announces itself once and then works in silence, and Plan in particular
+    // runs crop detection and the encode-yield probe back to back — twenty-odd
+    // seconds on a 24-minute source. Every one of those stages outlived the
+    // card it had just created, so the panel went blank precisely while the
+    // server was busy. This re-states the current stage until it ends, which
+    // also gives the card a running clock instead of a frozen label.
+    private static readonly TimeSpan StageHeartbeatInterval = TimeSpan.FromSeconds(3);
+
+    private readonly Lock _stageLock = new();
+    private Timer? _stageHeartbeat;
+    private string? _currentStage;
+    private DateTime _currentStageStartedAt;
+
     private readonly int _jobId;
     private readonly string _title;
     private readonly string _baseFolder;
     private readonly string _sharePath;
+
+    // The artwork the dashboard shows beside a running job. Live sprite capture used to fill
+    // that space and no longer exists, so `thumbnails` has published an empty string ever
+    // since — the item's own backdrop (or an episode's still) is what is left, and it is a
+    // better answer anyway: it says which title is encoding rather than which frame.
+    private readonly string? _backdrop;
     private readonly List<string> _videoStreams;
     private readonly List<string> _audioStreams;
     private readonly List<string> _subtitleStreams;
@@ -61,13 +82,15 @@ public class EventBusProgressObserver : IProgressObserver
         List<string>? subtitleStreams = null,
         bool hasGpu = false,
         bool isHdr = false,
-        IEncoderProcessRegistry? registry = null
+        IEncoderProcessRegistry? registry = null,
+        string? backdrop = null
     )
     {
         _jobId = jobId;
         _title = title;
         _baseFolder = baseFolder;
         _sharePath = sharePath;
+        _backdrop = backdrop;
         _videoStreams = videoStreams ?? [];
         _audioStreams = audioStreams ?? [];
         _subtitleStreams = subtitleStreams ?? [];
@@ -113,11 +136,58 @@ public class EventBusProgressObserver : IProgressObserver
 
     public void OnStageStarted(string stageName)
     {
+        BeginStageHeartbeat(stageName);
         Publish(status: "encoding", message: $"Stage: {stageName}");
+    }
+
+    private void BeginStageHeartbeat(string stageName)
+    {
+        lock (_stageLock)
+        {
+            _currentStage = stageName;
+            _currentStageStartedAt = DateTime.UtcNow;
+
+            _stageHeartbeat ??= new(
+                _ => PublishStageHeartbeat(),
+                null,
+                Timeout.InfiniteTimeSpan,
+                Timeout.InfiniteTimeSpan
+            );
+            _stageHeartbeat.Change(StageHeartbeatInterval, StageHeartbeatInterval);
+        }
+    }
+
+    private void StopStageHeartbeat()
+    {
+        lock (_stageLock)
+        {
+            _currentStage = null;
+            _stageHeartbeat?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    private void PublishStageHeartbeat()
+    {
+        string stageName;
+        TimeSpan elapsed;
+
+        lock (_stageLock)
+        {
+            if (_currentStage is null)
+                return;
+            stageName = _currentStage;
+            elapsed = DateTime.UtcNow - _currentStageStartedAt;
+        }
+
+        Publish(status: "encoding", message: $"Stage: {stageName} ({elapsed.TotalSeconds:F0}s)");
     }
 
     public void OnProgress(EncodingProgress progress)
     {
+        // ffmpeg reports on its own cadence; the stage heartbeat would only
+        // interleave stale "Stage: Encode" lines with live percentages.
+        StopStageHeartbeat();
+
         // Register the ffmpeg PID on first observation so pause/resume can find it.
         if (
             _registry is not null
@@ -168,6 +238,7 @@ public class EventBusProgressObserver : IProgressObserver
                     audio_streams = _audioStreams,
                     subtitle_streams = _subtitleStreams,
                     thumbnails = "",
+                    backdrop = _backdrop,
                 },
             }
         );
@@ -175,6 +246,9 @@ public class EventBusProgressObserver : IProgressObserver
 
     public void OnStageCompleted(string stageName, TimeSpan duration)
     {
+        StopStageHeartbeat();
+
+
         // This message rides the same SignalR "ProgressData" payload as the raw
         // numeric fields below — keep it period-decimal regardless of host locale.
         Publish(
@@ -185,6 +259,7 @@ public class EventBusProgressObserver : IProgressObserver
 
     public void OnCompleted()
     {
+        StopStageHeartbeat();
         _registry?.UnregisterJob(_jobId);
         // Stay in the "encoding" inflight set so the dashboard card stays
         // visible while VideoEncodeJob runs the post-processing phases
@@ -195,8 +270,21 @@ public class EventBusProgressObserver : IProgressObserver
 
     public void OnError(EncodingError error)
     {
+        StopStageHeartbeat();
         _registry?.UnregisterJob(_jobId);
         Publish(status: "failed", message: error.Message);
+    }
+
+    public void Dispose()
+    {
+        lock (_stageLock)
+        {
+            _currentStage = null;
+            _stageHeartbeat?.Dispose();
+            _stageHeartbeat = null;
+        }
+
+        GC.SuppressFinalize(this);
     }
 
     private void Publish(string status, string message)
@@ -219,6 +307,7 @@ public class EventBusProgressObserver : IProgressObserver
                     base_folder = _baseFolder,
                     share_path = _sharePath,
                     thumbnails = "",
+                    backdrop = _backdrop,
                     video_streams = _videoStreams,
                     audio_streams = _audioStreams,
                     subtitle_streams = _subtitleStreams,

@@ -72,7 +72,11 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 /// the database and the job payload. No <see cref="MediaContext"/> or object references
 /// survive across <see cref="Handle"/> invocations.</para>
 /// </summary>
-public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInjector
+public class VideoEncodeJob
+    : AbstractEncoderJob,
+        IJobIdReceiver,
+        IJobStorageInjector,
+        ISelfRescheduling
 {
     private IEncodingOrchestrator? _encodingOrchestrator;
     private IHardwareBenchmark? _hardwareBenchmark;
@@ -132,6 +136,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     private int _selfJobId;
 
     public void ReceiveJobId(int jobId) => _selfJobId = jobId;
+
+    /// <summary>
+    /// Set once this handler has rewritten its own queue row for the next phase.
+    /// The worker reads it to decide whether the row is finished work it should
+    /// delete, or a live coordinator waiting on its next wake-up.
+    /// </summary>
+    public bool RescheduledInPlace { get; private set; }
 
     public override async Task Handle()
     {
@@ -597,9 +608,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         // returns Partial with missing kinds, only Skip/Full — so
         // filtering down to the missing kinds here never starves a
         // Whole-task (MKV/MP4) run of its only task.
-        if (
-            reconciliation is { Action: ReconciliationAction.Partial, MissingKinds.Count: > 0 }
-        )
+        if (reconciliation is { Action: ReconciliationAction.Partial, MissingKinds.Count: > 0 })
         {
             tasks = tasks.Where(task => reconciliation.MissingKinds.Contains(task.Kind)).ToArray();
             isPartialTopUp = true;
@@ -1619,15 +1628,26 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         return PollInterval + TimeSpan.FromSeconds(offsetSeconds);
     }
 
+    /// <summary>
+    /// Persists the coordinator's next phase and schedules the wake-up that will
+    /// run it. The encode keeps ONE queue row from dispatch to finalize: the
+    /// payload is rewritten in place, so the row's ID, creation time and queue
+    /// position all survive every wake-up.
+    ///
+    /// <para>This used to enqueue a successor row and let the worker delete the
+    /// original, which minted a fresh autoincrement ID roughly twice a minute.
+    /// That ID is what the dashboard prints, what list keys are built from, and
+    /// what the queue is ordered by — so a season of episodes renumbered and
+    /// reshuffled itself on every poll. Carrying the original creation time onto
+    /// the successor fixed the ordering but not the renumbering; only keeping the
+    /// row fixes both, and it stops the next thing that reaches for a job ID from
+    /// finding a value that will not hold still.</para>
+    /// </summary>
     private void ReEnqueueSelf(CoordinatorState newState, TimeSpan? availableAfter = null)
     {
         // Bump WakeSequence so the serialized payload differs from the row this
         // worker is currently processing. JobQueue.Enqueue dedups by Payload, and
-        // ReEnqueueSelf is invoked from inside Handle BEFORE the worker calls
-        // DeleteJob on the original — without this nonce, identical-state
-        // wake-ups (e.g. WaitChildren polling the same bundle) collide with the
-        // still-reserved original and get silently dropped, killing the
-        // coordinator after one tick.
+        // the fallback path below still goes through it.
         CoordinatorState bumped = newState with
         {
             WakeSequence = newState.WakeSequence + 1,
@@ -1644,21 +1664,31 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             Coordinator = bumped,
         };
 
-        QueueJobDispatcher dispatcher = GetDispatcher();
         JobQueue queue =
             QueueRunner.Current?.Queue
             ?? throw new InvalidOperationException(
                 "QueueRunner.Current.Queue is null — queue not initialized"
             );
 
-        // Dispatch as a new top-level coordinator job (no parent ID).
-        // The different Coordinator payload means deduplication won't block it.
+        string payload = SerializationHelper.Serialize(continueJob);
         TimeSpan delay = availableAfter ?? NextPollDelay();
+
+        if (_selfJobId > 0)
+        {
+            queue.UpdateJobPayload(_selfJobId, payload, delay);
+            RescheduledInPlace = true;
+            return;
+        }
+
+        // No row to rewrite: this instance was never handed a queue-job ID, which
+        // means it is not running under the worker (a direct in-process call, or a
+        // test). Enqueueing keeps that path working; it just doesn't get a stable
+        // ID, and nothing in that path is asking for one.
         queue.Enqueue(
             new()
             {
                 Queue = QueueName,
-                Payload = SerializationHelper.Serialize(continueJob),
+                Payload = payload,
                 Priority = Priority,
                 AvailableAt = DateTime.UtcNow + delay,
             }
@@ -1812,7 +1842,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     {
         IEncoderProcessRegistry? processRegistry = _encoderProcessRegistry;
 
-        EventBusProgressObserver progressObserver = new(
+        using EventBusProgressObserver progressObserver = new(
             jobId: fileMetadata.Id,
             title: fileMetadata.Title,
             baseFolder: fileMetadata.Path,
@@ -1828,7 +1858,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 .ToList(),
             hasGpu: false,
             isHdr: false,
-            registry: processRegistry
+            registry: processRegistry,
+            backdrop: fileMetadata.ImgPath
         );
 
         EncodingResult result = await orchestrator.EncodeAsync(

@@ -177,6 +177,80 @@ public class ActivityLoggerTests : IDisposable
     }
 
     [Fact]
+    public async Task LogSystemAsync_records_work_that_had_no_user_or_device()
+    {
+        IDbContextFactory<MediaContext> factory = CreateFactory();
+        ActivityLogger logger = new(
+            factory,
+            NullLogger<ActivityLogger>.Instance,
+            hubBroadcaster: null
+        );
+
+        await logger.LogSystemAsync(
+            ActivityCategory.Encoder,
+            "encoder.completed",
+            metadata: new { output = "Frieren - S01E29.mkv", duration_seconds = 812 }
+        );
+
+        await using MediaContext ctx = await factory.CreateDbContextAsync();
+        ActivityLog row = ctx.ActivityLogs.Single();
+        row.Category.Should().Be(ActivityCategory.Encoder);
+        row.Type.Should().Be("encoder.completed");
+        row.UserId.Should().BeNull();
+        row.DeviceId.Should().BeNull();
+        row.Success.Should().BeTrue();
+        row.Metadata.Should().Contain("\"output\":\"Frieren - S01E29.mkv\"");
+    }
+
+    [Fact]
+    public async Task LogSystemAsync_carries_failure_details()
+    {
+        IDbContextFactory<MediaContext> factory = CreateFactory();
+        ActivityLogger logger = new(
+            factory,
+            NullLogger<ActivityLogger>.Instance,
+            hubBroadcaster: null
+        );
+
+        await logger.LogSystemAsync(
+            ActivityCategory.Failure,
+            "encoder.failed",
+            success: false,
+            errorCode: "InvalidOperationException",
+            metadata: new { message = "ffmpeg exited with 1" }
+        );
+
+        await using MediaContext ctx = await factory.CreateDbContextAsync();
+        ActivityLog row = ctx.ActivityLogs.Single();
+        row.Success.Should().BeFalse();
+        row.ErrorCode.Should().Be("InvalidOperationException");
+    }
+
+    /// <summary>
+    /// Callers that could not resolve a device or user used to pass Empty, and the whole row was
+    /// thrown away rather than risk a foreign key that pointed at nothing. Empty now means "no
+    /// one", which is a fact the column can hold — so the event survives instead of vanishing.
+    /// </summary>
+    [Fact]
+    public async Task Empty_ids_are_stored_as_absent_rather_than_dropping_the_row()
+    {
+        IDbContextFactory<MediaContext> factory = CreateFactory();
+        ActivityLogger logger = new(
+            factory,
+            NullLogger<ActivityLogger>.Instance,
+            hubBroadcaster: null
+        );
+
+        await logger.LogAuthAsync("auth.login", Guid.Empty, Ulid.Empty, success: false);
+
+        await using MediaContext ctx = await factory.CreateDbContextAsync();
+        ActivityLog row = ctx.ActivityLogs.Single();
+        row.Type.Should().Be("auth.login");
+        row.UserId.Should().BeNull();
+        row.DeviceId.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Successful_write_invokes_hub_broadcaster()
     {
         IDbContextFactory<MediaContext> factory = CreateFactory();

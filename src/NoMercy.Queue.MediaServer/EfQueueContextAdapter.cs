@@ -218,6 +218,7 @@ public class EfQueueContextAdapter : IQueueContext
             entity.Payload = newPayload;
             entity.ReservedAt = null;
             entity.AvailableAt = availableAt;
+            entity.Attempts = 0;
             context.SaveChanges();
             context.ChangeTracker.Clear();
         });

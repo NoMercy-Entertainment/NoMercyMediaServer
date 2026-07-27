@@ -4056,7 +4056,6 @@ namespace NoMercy.Database.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("DeviceId")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ErrorCode")
@@ -4087,7 +4086,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -6003,14 +6002,12 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Users.Device", "Device")
                         .WithMany("ActivityLogs")
                         .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Device");
 

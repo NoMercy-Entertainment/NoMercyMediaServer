@@ -23,7 +23,9 @@ using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
+using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Files;
@@ -78,7 +80,8 @@ public class ServerController(
     IFolderRepository folderRepository,
     IImageRepository imageRepository,
     IAuthTokenStore authTokenStore,
-    IAudioFingerprinter audioFingerprinter
+    IAudioFingerprinter audioFingerprinter,
+    IActivityLogger activityLogger
 ) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
@@ -268,6 +271,16 @@ public class ServerController(
                 };
                 jobDispatcher.Dispatch(job, job.QueueName, job.Priority);
             }
+
+            // Logged as its own type rather than the watcher's, because the question the
+            // activity log gets asked about a new file is "did someone add that, or did the
+            // server find it".
+            await activityLogger.LogSystemAsync(
+                ActivityCategory.Library,
+                "library.content_added_manually",
+                metadata: new { library = library.Title, files = request.Files.Count() }
+            );
+
             return Ok(request);
         }
         catch (Exception e)
