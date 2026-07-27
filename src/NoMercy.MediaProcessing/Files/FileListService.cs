@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -35,10 +35,14 @@ public class FileListService(
     ILogger<FileListService> logger
 ) : IFileListService
 {
+    // Everything below the folder you point at, not just its top level. A show
+    // keeps its episodes in per-season folders, so listing one level deep meant
+    // picking a season, triaging it, going back, picking the next — for every
+    // season of every show. One folder is the whole show.
     public FileInfo[] GetVideoFilesInDirectory(string directoryPath)
     {
         return storageDriver
-            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.TopDirectoryOnly)
+            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.AllDirectories)
             .Where(p => !storageDriver.DirectoryExists(p))
             .Where(p =>
             {
@@ -52,7 +56,7 @@ public class FileListService(
     public FileInfo[] GetAudioFilesInDirectory(string directoryPath)
     {
         return storageDriver
-            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.TopDirectoryOnly)
+            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.AllDirectories)
             .Where(p => !storageDriver.DirectoryExists(p))
             .Where(p =>
             {
@@ -68,8 +72,6 @@ public class FileListService(
 
     public async Task<List<FileItem>> GetFilesInDirectory(string directoryPath, string libraryType)
     {
-        DirectoryInfo directoryInfo = new(directoryPath);
-
         FileInfo[] videoFiles = GetVideoFilesInDirectory(directoryPath);
 
         FileInfo[] audioFiles = GetAudioFilesInDirectory(directoryPath);
@@ -80,24 +82,30 @@ public class FileListService(
 
         if (audioFiles.Length > 0 && videoFiles.Length == 0)
         {
-            (int year, string albumName, _, _) = MusicPathParser.Parse(
-                directoryPath,
-                directoryInfo.Name
-            );
-
+            // An album is a folder, so the album name comes from each track's own
+            // folder rather than the one being browsed. Reading it from the browse
+            // root was fine while listing stopped at one level; now that it
+            // descends, pointing at an artist would have stamped the first
+            // album's name across their whole discography.
             await Parallel.ForEachAsync(
                 audioFiles,
                 SystemParallelism.Options,
-                (file, _) =>
+                (file, _cancellation) =>
                 {
+                    string albumFolder = file.DirectoryName ?? directoryPath;
+                    (int year, string albumName, _, _) = MusicPathParser.Parse(
+                        albumFolder,
+                        Path.GetFileName(albumFolder)
+                    );
+
                     fileList.Add(
                         new()
                         {
                             Size = file.Length,
                             Mode = (int)file.Attributes,
-                            Name = Path.Combine(directoryPath, file.Name),
-                            Parent = directoryPath,
-                            Parsed = new(directoryPath)
+                            Name = Path.Combine(albumFolder, file.Name),
+                            Parent = albumFolder,
+                            Parsed = new(albumFolder)
                             {
                                 Title =
                                     albumName + " - " + Path.GetFileNameWithoutExtension(file.Name),
@@ -106,7 +114,7 @@ public class FileListService(
                                 IsSuccess = true,
                             },
                             Match = new() { Title = albumName },
-                            Path = Path.Combine(directoryPath, file.FullName),
+                            Path = file.FullName,
                         }
                     );
                     return ValueTask.CompletedTask;
@@ -149,7 +157,7 @@ public class FileListService(
         IReadOnlyList<StorageEntry> allEntries = storage.List(
             directoryPath,
             pattern: null,
-            recursive: false
+            recursive: true
         );
 
         StorageEntry[] videoEntries = allEntries
@@ -179,26 +187,27 @@ public class FileListService(
 
         if (audioEntries.Length > 0 && videoEntries.Length == 0)
         {
-            // Use the same audio pattern as the local path, but derive folder
-            // name from the driver-relative directoryPath.
-            string folderName = StoragePathHelpers.GetName(directoryPath);
-
-            (int year, string albumName, _, _) = MusicPathParser.Parse(directoryPath, folderName);
-
+            // Same as the local path: an album is a folder, so each track's album
+            // is read from the folder the track is in, not the one being browsed.
             await Parallel.ForEachAsync(
                 audioEntries,
                 SystemParallelism.Options,
-                (entry, _) =>
+                (entry, _cancellation) =>
                 {
-                    string name = StoragePathHelpers.GetName(entry.Path);
+                    string albumFolder = StoragePathHelpers.GetParent(entry.Path) ?? directoryPath;
+                    (int year, string albumName, _, _) = MusicPathParser.Parse(
+                        albumFolder,
+                        StoragePathHelpers.GetName(albumFolder)
+                    );
+
                     fileList.Add(
                         new()
                         {
                             Size = entry.SizeBytes,
                             Mode = 0,
                             Name = entry.Path,
-                            Parent = directoryPath,
-                            Parsed = new(directoryPath)
+                            Parent = albumFolder,
+                            Parsed = new(albumFolder)
                             {
                                 Title =
                                     albumName
