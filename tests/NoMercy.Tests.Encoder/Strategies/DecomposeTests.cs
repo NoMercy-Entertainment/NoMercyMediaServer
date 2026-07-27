@@ -16,6 +16,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Hls;
@@ -143,7 +144,7 @@ public class DecomposeTests
             .ToArray();
 
         ThumbnailOutputPlan? thumbnails = hasThumbnails
-            ? new ThumbnailOutputPlan(160, 68, 10)
+            ? new ThumbnailOutputPlan(160, 68, 10, SpriteGrid.For(TimeSpan.FromMinutes(24), 10))
             : null;
 
         return new(

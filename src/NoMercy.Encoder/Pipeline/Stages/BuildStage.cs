@@ -187,11 +187,14 @@ public class BuildStage(
             // narrows the plan to what this batch should emit (resource cap
             // enforcement — see VideoEncodeJob.DispatchDecomposedAsync).
             bool isPerStreamSlice =
-                input is { TaskFilter:
-                    { Kind: EncodeTaskKind.Video
-                        or EncodeTaskKind.Audio
-                        or EncodeTaskKind.Subtitle
-                        or EncodeTaskKind.Thumbnails
+                input is
+                {
+                    TaskFilter:
+                    {
+                        Kind: EncodeTaskKind.Video
+                            or EncodeTaskKind.Audio
+                            or EncodeTaskKind.Subtitle
+                            or EncodeTaskKind.Thumbnails
                     },
                     Pass: EncodingPass.Single
                 };
@@ -418,9 +421,17 @@ public class BuildStage(
                                             thumbs.IntervalSeconds,
                                             thumbs.Width,
                                             sourceIsHdr,
-                                            thumbnailTonemapChain
+                                            thumbnailTonemapChain,
+                                            padToCells: thumbs.Grid.CellCount
                                         ),
+                                        // The pad, the cut and the column count are
+                                        // one decision in three flags: state the
+                                        // columns, feed exactly enough frames to fill
+                                        // them, and the muxer has no empty cell left
+                                        // to render green.
+                                        ["-frames:v"] = thumbs.Grid.CellCount.ToString(),
                                         ["-f"] = "spritevtt",
+                                        ["-sprite_columns"] = thumbs.Grid.Columns.ToString(),
                                         ["-vtt_filename"] =
                                             $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",
                                     }
@@ -443,7 +454,13 @@ public class BuildStage(
                             MapStreams: [thumbnailMapLabel],
                             ExtraFlags: new()
                             {
+                                // The filtergraph branch already padded the stream
+                                // out to the grid; cut it there and name the columns
+                                // so the muxer lays it out exactly, with no partial
+                                // last row to leave green.
+                                ["-frames:v"] = thumbs.Grid.CellCount.ToString(),
                                 ["-f"] = "spritevtt",
+                                ["-sprite_columns"] = thumbs.Grid.Columns.ToString(),
                                 ["-vtt_filename"] = $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",
                             }
                         )

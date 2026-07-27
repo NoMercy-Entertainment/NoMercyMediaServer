@@ -177,7 +177,7 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [BuildCopyVideoOutput()],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -204,7 +204,7 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [BuildCopyVideoOutput()],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -238,7 +238,7 @@ public class BuildStageThumbnailCopyTests
     [Fact]
     public async Task CopyVideoPlan_SpriteFilenamesMatchInlineTranscodePathNaming()
     {
-        ThumbnailOutputPlan thumbs = new(160, 90, 10);
+        ThumbnailOutputPlan thumbs = new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10));
 
         OutputPlan copyPlan = new(
             Format: OutputFormat.Hls,
@@ -292,7 +292,7 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [BuildTranscodeVideoOutput()],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -330,7 +330,7 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -358,7 +358,7 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -389,7 +389,7 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [],
             AudioOutputs: [],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -423,7 +423,7 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [BuildCopyVideoOutput()],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -457,7 +457,7 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [BuildCopyVideoOutput()],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -488,7 +488,7 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -504,5 +504,138 @@ public class BuildStageThumbnailCopyTests
         int vfIdx = Array.IndexOf(sprite.Arguments, "-vf");
         vfIdx.Should().BeGreaterThan(-1);
         sprite.Arguments[vfIdx + 1].Should().Contain("tonemap");
+    }
+
+    // ── The grid, on both sprite paths ───────────────────────────────────────
+    // The muxer sizes the sheet from however many frames it gets and leaves the
+    // tail of the last row untouched; on a YUV canvas untouched is saturated
+    // green, not blank (nomercy-ffmpeg#40). The fix is to leave it no empty cell:
+    // state the columns, pad the stream with real black frames, cut at exactly
+    // the cell count. That has to hold on BOTH paths — the standalone command a
+    // copy plan uses, and the inline filtergraph a transcode uses — because a
+    // library ends up with a mixture of the two.
+
+    [Fact]
+    public async Task CopyVideoPlan_SpriteFillsTheGridWithBlack()
+    {
+        SpriteGrid grid = SpriteGrid.For(TimeSpan.FromHours(2), 10);
+
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildCopyVideoOutput()],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10, grid)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        FfmpegCommand sprite = ((StageSuccess<FfmpegCommand[]>)result).Value.First(c =>
+            c.Arguments.Contains("spritevtt")
+        );
+
+        int vfIdx = Array.IndexOf(sprite.Arguments, "-vf");
+        sprite
+            .Arguments[vfIdx + 1]
+            .Should()
+            .Contain(
+                $"tpad=stop={grid.CellCount}:stop_mode=add:color=black",
+                "the surplus cells have to be filled by us, since the muxer fills them green"
+            );
+
+        int framesIdx = Array.IndexOf(sprite.Arguments, "-frames:v");
+        framesIdx.Should().BeGreaterThan(-1, "an uncut stream overruns the grid it was padded to");
+        sprite.Arguments[framesIdx + 1].Should().Be(grid.CellCount.ToString());
+
+        int columnsIdx = Array.IndexOf(sprite.Arguments, "-sprite_columns");
+        columnsIdx
+            .Should()
+            .BeGreaterThan(-1, "an inferred column count is what leaves a partial last row");
+        sprite.Arguments[columnsIdx + 1].Should().Be(grid.Columns.ToString());
+    }
+
+    [Fact]
+    public async Task TranscodeVideoPlan_SpriteFillsTheGridWithBlack()
+    {
+        SpriteGrid grid = SpriteGrid.For(TimeSpan.FromHours(2), 10);
+
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildTranscodeVideoOutput()],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10, grid)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        FfmpegCommand main = ((StageSuccess<FfmpegCommand[]>)result).Value[0];
+
+        int filterIdx = Array.IndexOf(main.Arguments, "-filter_complex");
+        main.Arguments[filterIdx + 1]
+            .Should()
+            .Contain(
+                $"tpad=stop={grid.CellCount}:stop_mode=add:color=black",
+                "the inline path went green for exactly as long as it lacked this"
+            );
+
+        int framesIdx = Array.IndexOf(main.Arguments, "-frames:v");
+        framesIdx.Should().BeGreaterThan(-1);
+        main.Arguments[framesIdx + 1].Should().Be(grid.CellCount.ToString());
+
+        int columnsIdx = Array.IndexOf(main.Arguments, "-sprite_columns");
+        columnsIdx.Should().BeGreaterThan(-1);
+        main.Arguments[columnsIdx + 1].Should().Be(grid.Columns.ToString());
+    }
+
+    /// <summary>
+    /// An HDR ladder tonemaps once and branches the sprite off the shared [sdr]
+    /// intermediate, which is a third filter path — separate from the legacy
+    /// per-branch one above and from the standalone command a copy plan uses.
+    /// It built its thumbnail filter by hand rather than through the resolver,
+    /// so it is the branch a padding fix is most likely to miss.
+    /// </summary>
+    [Fact]
+    public async Task SharedTonemapPlan_SpriteOffTheSdrIntermediateStillFillsTheGrid()
+    {
+        SpriteGrid grid = SpriteGrid.For(TimeSpan.FromHours(2), 10);
+        const string Tonemap = "zscale=t=linear:npl=100,tonemap=tonemap=hable:desat=0";
+
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                BuildTranscodeVideoOutput() with
+                {
+                    ConvertHdrToSdr = true,
+                    TonemapFilterChain = Tonemap,
+                },
+            ],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10, grid)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildHdrMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        FfmpegCommand main = ((StageSuccess<FfmpegCommand[]>)result).Value[0];
+
+        int filterIdx = Array.IndexOf(main.Arguments, "-filter_complex");
+        string graph = main.Arguments[filterIdx + 1];
+
+        graph.Should().Contain("[sdr]", "this is the shared-tonemap branch, not the legacy one");
+        graph
+            .Should()
+            .Contain($"tpad=stop={grid.CellCount}:stop_mode=add:color=black")
+            .And.Contain("[thumbs]");
     }
 }

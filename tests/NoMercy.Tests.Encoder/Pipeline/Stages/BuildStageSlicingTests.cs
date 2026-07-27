@@ -14,6 +14,7 @@ using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
@@ -69,7 +70,7 @@ public class BuildStageSlicingTests
             VideoOutputs: [Video(1920, 1080, 0), Video(1280, 720, 1)],
             AudioOutputs: [Audio("eng", 0), Audio("fra", 1)],
             SubtitleOutputs: [Subtitle(0), Subtitle(1)],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
     private static DecomposedTask Task(

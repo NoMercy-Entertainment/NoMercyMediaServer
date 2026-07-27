@@ -141,6 +141,40 @@ public class ThumbnailPlanBuilderTests
         plan.Should().BeNull();
     }
 
+    /// <summary>
+    /// The grid is what keeps the sheet from ending in a green block, so a plan
+    /// that omits it is the bug. It has to hold every frame the film produces:
+    /// over-estimating costs a few black tiles past the end, under-estimating
+    /// cuts real thumbnails off it.
+    /// </summary>
+    [Fact]
+    public void APlan_CarriesAGridBigEnoughForTheWholeFilm()
+    {
+        MediaInfo media = BuildMediaWithVideo();
+        EncodingProfile profile = BuildProfile(BuildVideoOutput(StreamPolicy.Transcode));
+
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
+
+        plan.Should().NotBeNull();
+
+        int mostFramesPossible = (int)(media.Duration.TotalSeconds / plan!.IntervalSeconds) + 1;
+        plan.Grid.CellCount.Should().BeGreaterThanOrEqualTo(mostFramesPossible);
+        plan.Grid.CellCount.Should()
+            .Be(plan.Grid.Columns * plan.Grid.Rows, "a partial last row is what comes out green");
+    }
+
+    [Fact]
+    public void AShortTitle_StillGetsAUsableGrid()
+    {
+        MediaInfo media = BuildMediaWithVideo() with { Duration = TimeSpan.FromSeconds(75) };
+        EncodingProfile profile = BuildProfile(BuildVideoOutput(StreamPolicy.Transcode));
+
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
+
+        plan!.Grid.Columns.Should().BeGreaterThan(0);
+        plan.Grid.Rows.Should().BeGreaterThan(0);
+    }
+
     [Fact]
     public void AudioOnlyMedia_ReturnsNull()
     {

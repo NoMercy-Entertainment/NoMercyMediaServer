@@ -333,9 +333,21 @@ public static class FilterGraphAssembler
             {
                 ThumbnailOutputPlan thumbs = plan.Thumbnails!;
                 string thumbInput = sdrSplitCount == 1 ? sdrInputForSingleConsumer : "thumbsrc";
+
+                // Already tonemapped — this branch comes off [sdr] — so the
+                // resolver is asked for the plain chain. It is asked rather than
+                // hand-rolled here so the grid padding cannot be added to one
+                // sprite path and forgotten on the other, which is exactly how
+                // the encode path kept producing green while the rebuild did not.
                 fg.AddFilter(
                     thumbInput,
-                    $"format=yuvj420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
+                    ThumbnailFilterResolver.Resolve(
+                        thumbs.IntervalSeconds,
+                        thumbs.Width,
+                        sourceIsHdr: false,
+                        tonemapChain: null,
+                        padToCells: thumbs.Grid.CellCount
+                    ),
                     "thumbs"
                 );
             }
@@ -381,7 +393,8 @@ public static class FilterGraphAssembler
                         thumbs.IntervalSeconds,
                         thumbs.Width,
                         sourceIsHdr,
-                        thumbnailTonemapChain
+                        thumbnailTonemapChain,
+                        padToCells: thumbs.Grid.CellCount
                     ),
                     "thumbs"
                 );
@@ -416,7 +429,8 @@ public static class FilterGraphAssembler
     {
         bool needsCrop = !string.IsNullOrWhiteSpace(video.CropFilter);
         bool needsTonemap =
-            !tonemapAlreadyApplied && video is { ConvertHdrToSdr: true, TonemapFilterChain: not null };
+            !tonemapAlreadyApplied
+            && video is { ConvertHdrToSdr: true, TonemapFilterChain: not null };
         bool needsScale = video.Width != sourceWidth || video.Height != sourceHeight;
         bool needs8BitConversion = !tonemapAlreadyApplied && sourceIs10Bit && !video.TenBit;
         bool needsBurnIn = burnInExpr is not null;

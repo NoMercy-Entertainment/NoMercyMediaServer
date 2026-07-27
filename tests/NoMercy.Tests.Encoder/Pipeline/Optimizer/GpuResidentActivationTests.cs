@@ -13,6 +13,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Optimizer;
+using NoMercy.Encoder.PostProcess;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Optimizer;
 
@@ -55,7 +56,7 @@ public class GpuResidentActivationTests
     {
         OutputPlan withThumbs = EligiblePlan() with
         {
-            Thumbnails = new(320, 180, 10),
+            Thumbnails = new(320, 180, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10)),
         };
         GpuResidentActivation
             .Resolve(true, true, GpuVendor.Nvidia, withThumbs, HasCuda)
