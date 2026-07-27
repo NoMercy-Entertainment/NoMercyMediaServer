@@ -32,8 +32,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/security", Order = 10)]
-public class SecurityController(IAbuseGuard abuseGuard, IAbuseGuardSettings abuseGuardSettings)
-    : BaseController
+public class SecurityController(
+    IAbuseGuard abuseGuard,
+    IAbuseGuardSettings abuseGuardSettings,
+    IBlocklistFeedSettings blocklistFeedSettings
+) : BaseController
 {
     [HttpGet]
     [Route("bans")]
@@ -85,6 +88,30 @@ public class SecurityController(IAbuseGuard abuseGuard, IAbuseGuardSettings abus
             return NotFoundResponse("No ban found for that address.");
 
         return Ok(new StatusResponseDto<object> { Status = "ok", Data = new { address } });
+    }
+
+    [HttpGet]
+    [Route("blocklist-url")]
+    [Authorize(Policy = "Moderator")]
+    public async Task<IActionResult> BlocklistUrl(CancellationToken ct)
+    {
+        string token = await blocklistFeedSettings.EnsureTokenAsync(ct);
+
+        return Ok(
+            new StatusResponseDto<object> { Status = "ok", Data = new { url = FeedUrl(token) } }
+        );
+    }
+
+    [HttpPost]
+    [Route("blocklist-url/rotate")]
+    [Authorize(Policy = "Moderator")]
+    public async Task<IActionResult> RotateBlocklistUrl(CancellationToken ct)
+    {
+        string token = await blocklistFeedSettings.RotateTokenAsync(ct);
+
+        return Ok(
+            new StatusResponseDto<object> { Status = "ok", Data = new { url = FeedUrl(token) } }
+        );
     }
 
     [HttpGet]
@@ -189,4 +216,7 @@ public class SecurityController(IAbuseGuard abuseGuard, IAbuseGuardSettings abus
 
         return Settings();
     }
+
+    private string FeedUrl(string token) =>
+        $"{Request.Scheme}://{Request.Host}/security/blocklist/{token}";
 }

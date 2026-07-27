@@ -623,6 +623,7 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IIpBanRepository, IpBanRepository>();
         services.AddSingleton<IAbuseGuardSettings, AbuseGuardSettings>();
         services.AddSingleton<IAbuseGuard, AbuseGuard>();
+        services.AddSingleton<IBlocklistFeedSettings, BlocklistFeedSettings>();
 
         // Subtitle acquisition — OpenSubtitlesProvider lives in MediaProcessing so
         // it can reference both NoMercy.Encoder (interface) and NoMercy.Providers (XML-RPC).
