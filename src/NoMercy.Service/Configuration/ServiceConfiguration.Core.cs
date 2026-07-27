@@ -12,13 +12,16 @@
 using I18N.DotNet;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NoMercy.Api.Hubs;
+using NoMercy.Api.Security;
 using NoMercy.Api.Services;
 using NoMercy.Api.WebSockets;
 using NoMercy.Authorization;
 using NoMercy.Data.Activity;
 using NoMercy.Data.Repositories;
 using NoMercy.Data.Resolvers;
+using NoMercy.Data.Security;
 using NoMercy.Database;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Startup;
@@ -615,6 +618,11 @@ public static partial class ServiceConfiguration
             sp.GetRequiredService<IActivityLogger>()
         );
         services.AddSignalREventHandlers();
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IIpBanRepository, IpBanRepository>();
+        services.AddSingleton<IAbuseGuardSettings, AbuseGuardSettings>();
+        services.AddSingleton<IAbuseGuard, AbuseGuard>();
 
         // Subtitle acquisition — OpenSubtitlesProvider lives in MediaProcessing so
         // it can reference both NoMercy.Encoder (interface) and NoMercy.Providers (XML-RPC).

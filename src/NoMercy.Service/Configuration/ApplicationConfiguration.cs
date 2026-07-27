@@ -92,6 +92,11 @@ public static class ApplicationConfiguration
         app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
         app.UseMiddleware<EncoderRuntimeExceptionMiddleware>();
 
+        // Wraps routing so the outcome check can see whether an endpoint matched.
+        // A path that never routed and was then refused is a path this server does
+        // not serve, which is exactly what a vulnerability scanner asks for.
+        app.UseMiddleware<AbuseGuardMiddleware>();
+
         if (app.ApplicationServices.GetRequiredService<ICertificateService>().HasValidCertificate())
         {
             app.UseHsts();
