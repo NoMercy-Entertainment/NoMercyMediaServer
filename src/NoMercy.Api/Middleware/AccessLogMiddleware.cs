@@ -47,6 +47,9 @@ public class AccessLogMiddleware
         "/transcode",
         "/manage",
         "/health",
+        // Pulled by a firewall on a schedule, with a path token as its only
+        // credential — a 401 from here would break the feed.
+        "/security/blocklist",
         // SignalR hubs — base path AND /negotiate handshake AND polling
         // fallbacks all share the prefix; exact-match misses /negotiate.
         "/videoHub",

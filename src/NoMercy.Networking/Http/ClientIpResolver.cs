@@ -124,7 +124,12 @@ public static class ClientIpResolver
         return null;
     }
 
-    private static bool IsTrustedProxy(IPAddress? address)
+    /// <summary>
+    /// True for loopback and every range that can only exist inside a network
+    /// someone runs themselves. These are the addresses a ban would be wrong
+    /// about: the owner, their LAN, or their own relay.
+    /// </summary>
+    public static bool IsPrivateNetwork(IPAddress? address)
     {
         IPAddress? normalized = Normalize(address);
         if (normalized is null)
@@ -151,6 +156,8 @@ public static class ClientIpResolver
             || normalized.IsIPv6UniqueLocal
             || normalized.IsIPv6SiteLocal;
     }
+
+    private static bool IsTrustedProxy(IPAddress? address) => IsPrivateNetwork(address);
 
     private static IPAddress? Normalize(IPAddress? address)
     {

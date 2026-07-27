@@ -9,22 +9,23 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Database.Models.Users;
+using NoMercyQueue.Core.Interfaces;
 
-public enum ActivityCategory
+namespace NoMercy.Tests.Api.Security;
+
+public class FakeConfigurationStore : IConfigurationStore
 {
-    Auth = 1,
-    Connection = 2,
-    Playback = 3,
-    Configuration = 4,
-    Failure = 5,
+    private readonly Dictionary<string, string> _values = [];
 
-    /// <summary>Work the encoder did: a job starting, finishing, or giving up.</summary>
-    Encoder = 6,
+    public string? GetValue(string key) => _values.GetValueOrDefault(key);
 
-    /// <summary>Content arriving or leaving: scans, and files being imported.</summary>
-    Library = 7,
+    public void SetValue(string key, string value) => _values[key] = value;
 
-    /// <summary>Defensive action the server took by itself: an address banned or released.</summary>
-    Security = 8,
+    public Task SetValueAsync(string key, string value, Guid? modifiedBy = null)
+    {
+        _values[key] = value;
+        return Task.CompletedTask;
+    }
+
+    public bool HasKey(string key) => _values.ContainsKey(key);
 }

@@ -9,22 +9,21 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Database.Models.Users;
+using NoMercy.Database.Models.Security;
 
-public enum ActivityCategory
+namespace NoMercy.Data.Security;
+
+public interface IIpBanRepository
 {
-    Auth = 1,
-    Connection = 2,
-    Playback = 3,
-    Configuration = 4,
-    Failure = 5,
+    Task<List<IpBan>> ActiveAsync(DateTime now, CancellationToken ct);
 
-    /// <summary>Work the encoder did: a job starting, finishing, or giving up.</summary>
-    Encoder = 6,
+    Task<IpBan?> FindActiveAsync(string address, DateTime now, CancellationToken ct);
 
-    /// <summary>Content arriving or leaving: scans, and files being imported.</summary>
-    Library = 7,
+    Task<int> PriorBanCountAsync(string address, CancellationToken ct);
 
-    /// <summary>Defensive action the server took by itself: an address banned or released.</summary>
-    Security = 8,
+    Task<IpBan> UpsertAsync(IpBan ban, CancellationToken ct);
+
+    Task<bool> RemoveAsync(string address, CancellationToken ct);
+
+    Task<int> PurgeExpiredAsync(DateTime cutoff, CancellationToken ct);
 }

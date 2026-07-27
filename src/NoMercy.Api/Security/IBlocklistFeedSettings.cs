@@ -9,22 +9,13 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Database.Models.Users;
+namespace NoMercy.Api.Security;
 
-public enum ActivityCategory
+public interface IBlocklistFeedSettings
 {
-    Auth = 1,
-    Connection = 2,
-    Playback = 3,
-    Configuration = 4,
-    Failure = 5,
+    Task<string> EnsureTokenAsync(CancellationToken ct);
 
-    /// <summary>Work the encoder did: a job starting, finishing, or giving up.</summary>
-    Encoder = 6,
+    Task<string> RotateTokenAsync(CancellationToken ct);
 
-    /// <summary>Content arriving or leaving: scans, and files being imported.</summary>
-    Library = 7,
-
-    /// <summary>Defensive action the server took by itself: an address banned or released.</summary>
-    Security = 8,
+    Task<bool> VerifyAsync(string? presented, CancellationToken ct);
 }

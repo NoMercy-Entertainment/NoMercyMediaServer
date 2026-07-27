@@ -9,22 +9,27 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Database.Models.Users;
+using Newtonsoft.Json;
 
-public enum ActivityCategory
+namespace NoMercy.Api.DTOs.Security;
+
+public class AbuseGuardSettingsDto
 {
-    Auth = 1,
-    Connection = 2,
-    Playback = 3,
-    Configuration = 4,
-    Failure = 5,
+    [JsonProperty("enabled")]
+    public bool Enabled { get; set; }
 
-    /// <summary>Work the encoder did: a job starting, finishing, or giving up.</summary>
-    Encoder = 6,
+    [JsonProperty("max_score")]
+    public int MaxScore { get; set; }
 
-    /// <summary>Content arriving or leaving: scans, and files being imported.</summary>
-    Library = 7,
+    [JsonProperty("window_minutes")]
+    public int WindowMinutes { get; set; }
 
-    /// <summary>Defensive action the server took by itself: an address banned or released.</summary>
-    Security = 8,
+    [JsonProperty("ban_minutes")]
+    public int BanMinutes { get; set; }
+
+    [JsonProperty("max_ban_minutes")]
+    public int MaxBanMinutes { get; set; }
+
+    [JsonProperty("allowlist")]
+    public string Allowlist { get; set; } = string.Empty;
 }

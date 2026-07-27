@@ -9,22 +9,24 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Database.Models.Users;
+namespace NoMercy.Api.Security;
 
-public enum ActivityCategory
+public interface IAbuseGuardSettings
 {
-    Auth = 1,
-    Connection = 2,
-    Playback = 3,
-    Configuration = 4,
-    Failure = 5,
+    bool Enabled { get; }
 
-    /// <summary>Work the encoder did: a job starting, finishing, or giving up.</summary>
-    Encoder = 6,
+    int MaxScore { get; }
 
-    /// <summary>Content arriving or leaving: scans, and files being imported.</summary>
-    Library = 7,
+    TimeSpan Window { get; }
 
-    /// <summary>Defensive action the server took by itself: an address banned or released.</summary>
-    Security = 8,
+    TimeSpan BanDuration { get; }
+
+    TimeSpan MaxBanDuration { get; }
+
+    IReadOnlyList<IpRange> Allowlist { get; }
+
+    /// <summary>The allowlist exactly as it was typed, for round-tripping into the dashboard.</summary>
+    string AllowlistText { get; }
+
+    Task SetAsync(string key, string value, CancellationToken ct);
 }
