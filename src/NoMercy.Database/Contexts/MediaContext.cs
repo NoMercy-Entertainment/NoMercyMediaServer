@@ -14,6 +14,7 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using NoMercy.Database.Models.Encoder;
+using NoMercy.Database.Models.Security;
 using NoMercy.Database.Models.Storage;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
@@ -402,6 +403,7 @@ public class MediaContext : DbContext
     public virtual DbSet<Episode> Episodes { get; init; }
     public virtual DbSet<FolderLibrary> FolderLibrary { get; init; }
     public virtual DbSet<Folder> Folders { get; init; }
+    public DbSet<IpBan> IpBans => Set<IpBan>();
     public virtual DbSet<GenreMovie> GenreMovie { get; init; }
     public virtual DbSet<GenreTv> GenreTv { get; init; }
     public virtual DbSet<Genre> Genres { get; init; }
