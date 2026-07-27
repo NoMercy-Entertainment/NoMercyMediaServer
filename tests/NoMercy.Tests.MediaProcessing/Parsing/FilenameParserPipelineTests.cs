@@ -31,6 +31,7 @@ public class FilenameParserPipelineTests
             new EpisodeWordAdapter(),
             new CrossFormatAdapter(),
             new SeasonEpisodeAdapter(),
+            new SeasonSpecialAdapter(),
             new AnimeAbsoluteAdapter(),
             new EpisodeShortFormAdapter(),
             new SpecialsAdapter(),
@@ -411,9 +412,98 @@ public class FilenameParserPipelineTests
         FirstMatchingAdapter(context).Should().Be("specials");
     }
 
+    // ---------------------------------------------------------------------------
+    // Season-scoped specials: "SxxSyy" — season xx's special yy. Judas, Erai-raws
+    // and most BD batch releases number extras this way, and nothing recognised
+    // it: the name fell through every adapter to the movie detector, which
+    // returned no season and no episode, and the caller's last-resort "first
+    // number in the title" rule then read the SEASON digits as the episode. Every
+    // special in a season therefore arrived as SxxE01 — eight files claiming one
+    // episode, each overwriting the last.
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData(["[Judas] Overlord - S01S01.mkv", "Overlord", 1])]
+    [InlineData(["[Judas] Overlord - S01S08.mkv", "Overlord", 8])]
+    [InlineData(["[Judas] Overlord - S02S13.mkv", "Overlord", 13])]
+    [InlineData(["[Judas] Overlord - S03S02.mkv", "Overlord", 2])]
+    public void Season_scoped_specials_are_season_zero(string file, string title, int episode)
+    {
+        ParseContext context = Context(file, libraryType: "anime");
+        MovieFile result = Pipeline().Parse(context);
+        result.IsSeries.Should().BeTrue();
+        result.Title.Should().Be(title);
+        result.Season.Should().Be(0);
+        result.Episode.Should().Be(episode);
+        FirstMatchingAdapter(context).Should().Be("season-special");
+    }
+
+    [Fact]
+    public void Season_scoped_specials_do_not_collide_on_one_episode()
+    {
+        int[] episodes =
+        [
+            .. new[] { 1, 2, 3 }.Select(n =>
+                Pipeline()
+                    .Parse(Context($"[Judas] Overlord - S01S0{n}.mkv", libraryType: "anime"))
+                    .Episode
+                ?? 0
+            ),
+        ];
+
+        episodes.Should().Equal(1, 2, 3);
+    }
+
+    [Theory]
+    // A real episode marker keeps its own meaning, and a show whose name merely
+    // contains the letter S next to digits is not a special.
+    [InlineData("[Judas] Overlord - S01E01.mkv")]
+    [InlineData("The.Office.US.S03E12.720p.mkv")]
+    [InlineData("Bleach.S00E05.1080p.mkv")]
+    public void Season_scoped_specials_do_not_over_classify(string file) =>
+        new SeasonSpecialAdapter().TryParse(Context(file, libraryType: "anime")).Should().BeNull();
+
+    [Fact]
+    public void Season_scoped_specials_skipped_for_movie_libraries() =>
+        new SeasonSpecialAdapter()
+            .TryParse(Context("[Judas] Overlord - S01S01.mkv", libraryType: "movie"))
+            .Should()
+            .BeNull();
+
+    [Theory]
+    // The season tag sits between the show name and the marker in a BD batch
+    // ("Overlord - S01 NCOP"), and the title was taken as everything before the
+    // marker — so the show went out to the providers as "Overlord - S01", which
+    // matches nothing.
+    [InlineData("[Judas] Overlord - S01 NCOP.mkv")]
+    [InlineData("[Judas] Overlord - S02 NCED.mkv")]
+    public void Labelled_specials_drop_the_season_tag_from_the_title(string file)
+    {
+        MovieFile result = Pipeline().Parse(Context(file, libraryType: "anime"));
+        result.Title.Should().Be("Overlord");
+        result.Season.Should().Be(0);
+    }
+
+    [Theory]
+    // A series' films are season-zero content. They used to reach the
+    // absolute-number matcher, which read the film index as an absolute episode
+    // and landed both compilation films on top of the season's real episodes 1
+    // and 2.
+    [InlineData(["[Judas] Overlord - Movie 1.mkv", "Overlord", 1])]
+    [InlineData(["[Judas] Overlord - Movie 2.mkv", "Overlord", 2])]
+    public void Series_films_are_season_zero(string file, string title, int episode)
+    {
+        ParseContext context = Context(file, libraryType: "anime");
+        MovieFile result = Pipeline().Parse(context);
+        result.Title.Should().Be(title);
+        result.Season.Should().Be(0);
+        result.Episode.Should().Be(episode);
+        FirstMatchingAdapter(context).Should().Be("specials");
+    }
+
     [Theory]
     // word markers never steal a real title, substrings never match
     [InlineData("Special.mkv")]
+    [InlineData("Movie.mkv")]
     [InlineData("Extras.mkv")]
     [InlineData("Spectre.2015.1080p.mkv")]
     [InlineData("Casanova.1981.mkv")]
