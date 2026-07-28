@@ -130,7 +130,8 @@ public static class EventHandlerExtensions
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IAuthTokenStore authTokenStore = sp.GetRequiredService<IAuthTokenStore>();
             NotificationSink notificationSink = sp.GetRequiredService<NotificationSink>();
-            return new(eventBus, authTokenStore, notificationSink);
+            ConnectedClients connectedClients = sp.GetRequiredService<ConnectedClients>();
+            return new(eventBus, authTokenStore, notificationSink, connectedClients);
         });
 
         services.AddSingleton<DriveMonitorEventHandler>(sp =>
