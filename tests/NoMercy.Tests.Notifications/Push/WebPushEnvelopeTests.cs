@@ -20,6 +20,9 @@ namespace NoMercy.Tests.Notifications.Push;
 
 public class WebPushEnvelopeTests
 {
+    private const int RecordSize = 4096;
+    private const int MaxPlaintextLength = RecordSize - 16 - 1; // rs minus AEAD tag minus padding delimiter
+
     private sealed record Vector(
         string Plaintext,
         string UserAgentPublicKey,
@@ -48,8 +51,8 @@ public class WebPushEnvelopeTests
     {
         Vector vector = LoadVector();
         WebPushEnvelope envelope = new(
-            fixedSalt: WebPushEnvelope.DecodeBase64Url(vector.ExpectedCiphertext)[..16],
-            fixedServerKey: WebPushEnvelope.DecodeBase64Url(vector.ApplicationServerPrivateKey)
+            fixedSalt: Base64UrlCodec.Decode(vector.ExpectedCiphertext)[..16],
+            fixedServerKey: Base64UrlCodec.Decode(vector.ApplicationServerPrivateKey)
         );
 
         byte[] sealedBody = envelope.Seal(
@@ -58,7 +61,7 @@ public class WebPushEnvelopeTests
             vector.AuthSecret
         );
 
-        Assert.Equal(vector.ExpectedCiphertext, WebPushEnvelope.EncodeBase64Url(sealedBody));
+        Assert.Equal(vector.ExpectedCiphertext, Base64UrlCodec.Encode(sealedBody));
     }
 
     [Fact]
@@ -82,7 +85,7 @@ public class WebPushEnvelopeTests
     }
 
     [Fact]
-    public void Seal_Rejects_A_Public_Key_That_Is_Not_On_The_Curve()
+    public void Seal_Rejects_A_Public_Key_With_The_Wrong_Length_Or_Prefix()
     {
         WebPushEnvelope envelope = new();
 
@@ -92,10 +95,54 @@ public class WebPushEnvelopeTests
     }
 
     [Fact]
+    public void Seal_Rejects_A_Well_Formed_Point_That_Is_Not_On_The_Curve()
+    {
+        WebPushEnvelope envelope = new();
+
+        byte[] offCurvePoint = new byte[65];
+        offCurvePoint[0] = 0x04;
+        Array.Fill(offCurvePoint, (byte)0x01, 1, 32);
+        Array.Fill(offCurvePoint, (byte)0x02, 33, 32);
+
+        Assert.Throws<CryptographicException>(() =>
+            envelope.Seal(
+                "x"u8.ToArray(),
+                Base64UrlCodec.Encode(offCurvePoint),
+                "AAAAAAAAAAAAAAAAAAAAAA"
+            )
+        );
+    }
+
+    [Fact]
+    public void Seal_Accepts_The_Largest_Payload_That_Still_Fits_One_Record()
+    {
+        Vector vector = LoadVector();
+        WebPushEnvelope envelope = new();
+        byte[] plaintext = new byte[MaxPlaintextLength];
+
+        byte[] sealedBody = envelope.Seal(plaintext, vector.UserAgentPublicKey, vector.AuthSecret);
+
+        // header (salt 16 + rs 4 + idlen 1 + as_public 65 = 86) + one full rs-sized record
+        Assert.Equal(86 + RecordSize, sealedBody.Length);
+    }
+
+    [Fact]
+    public void Seal_Rejects_A_Payload_One_Byte_Too_Large_For_One_Record()
+    {
+        Vector vector = LoadVector();
+        WebPushEnvelope envelope = new();
+        byte[] plaintext = new byte[MaxPlaintextLength + 1];
+
+        Assert.Throws<ArgumentException>(() =>
+            envelope.Seal(plaintext, vector.UserAgentPublicKey, vector.AuthSecret)
+        );
+    }
+
+    [Fact]
     public void Tampering_The_Last_Byte_Makes_Unsealing_Throw_Instead_Of_Returning_Partial_Plaintext()
     {
         Vector vector = LoadVector();
-        byte[] validBody = WebPushEnvelope.DecodeBase64Url(vector.ExpectedCiphertext);
+        byte[] validBody = Base64UrlCodec.Decode(vector.ExpectedCiphertext);
 
         byte[] recovered = UnsealAsTheDeviceWould(validBody, vector);
         Assert.Equal(vector.Plaintext, Encoding.UTF8.GetString(recovered));
@@ -122,9 +169,9 @@ public class WebPushEnvelopeTests
         byte[] ciphertext = ciphertextAndTag[..^16];
         byte[] tag = ciphertextAndTag[^16..];
 
-        byte[] receiverPrivate = WebPushEnvelope.DecodeBase64Url(vector.UserAgentPrivateKey);
-        byte[] receiverPublic = WebPushEnvelope.DecodeBase64Url(vector.UserAgentPublicKey);
-        byte[] authSecret = WebPushEnvelope.DecodeBase64Url(vector.AuthSecret);
+        byte[] receiverPrivate = Base64UrlCodec.Decode(vector.UserAgentPrivateKey);
+        byte[] receiverPublic = Base64UrlCodec.Decode(vector.UserAgentPublicKey);
+        byte[] authSecret = Base64UrlCodec.Decode(vector.AuthSecret);
 
         using ECDiffieHellman receiverKey = ImportPrivateScalar(receiverPrivate);
         using ECDiffieHellman senderKey = ImportPublicPoint(senderPublic);

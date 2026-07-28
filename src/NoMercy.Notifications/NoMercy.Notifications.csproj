@@ -8,4 +8,10 @@
   <PropertyGroup>
     <IsTestProject>false</IsTestProject>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="NoMercy.Tests.Notifications" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+  </ItemGroup>
 </Project>

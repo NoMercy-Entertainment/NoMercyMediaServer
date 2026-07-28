@@ -9,30 +9,71 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Buffers.Binary;
 using System.Formats.Asn1;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace NoMercy.Notifications.Push;
 
-/// <summary>
-/// The salt and server key are injectable only so the RFC 8291 example can be
-/// reproduced exactly. Production always takes the random path.
-/// </summary>
-public class WebPushEnvelope(byte[]? fixedSalt = null, byte[]? fixedServerKey = null)
-    : IWebPushEnvelope
+public class WebPushEnvelope : IWebPushEnvelope
 {
     private const int SaltLength = 16;
     private const int KeyLength = 16;
     private const int NonceLength = 12;
     private const int TagLength = 16;
     private const int RecordSize = 4096;
+    private const int PaddingDelimiterLength = 1;
+    private const int MaxPlaintextLength = RecordSize - TagLength - PaddingDelimiterLength;
     private const string P256CurveOid = "1.2.840.10045.3.1.7";
+
+    private static readonly BigInteger P256Prime = new(
+        Convert.FromHexString("FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF"),
+        isUnsigned: true,
+        isBigEndian: true
+    );
+
+    private static readonly BigInteger P256B = new(
+        Convert.FromHexString("5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B"),
+        isUnsigned: true,
+        isBigEndian: true
+    );
+
+    private readonly byte[]? _fixedSalt;
+    private readonly byte[]? _fixedServerKey;
+
+    public WebPushEnvelope()
+        : this(null, null) { }
+
+    /// <summary>
+    /// Internal on purpose. A reused salt under a fixed server key is
+    /// catastrophic for AES-GCM — the same key and nonce across two records
+    /// leaks the XOR of both plaintexts and the authentication key. This seam
+    /// exists only so the RFC 8291 vector can be reproduced in tests; production
+    /// always takes the parameterless constructor and the random path.
+    /// </summary>
+    internal WebPushEnvelope(byte[]? fixedSalt, byte[]? fixedServerKey)
+    {
+        _fixedSalt = fixedSalt;
+        _fixedServerKey = fixedServerKey;
+    }
 
     public byte[] Seal(byte[] plaintext, string p256dhBase64Url, string authBase64Url)
     {
-        byte[] userAgentPublic = DecodeBase64Url(p256dhBase64Url);
-        byte[] authSecret = DecodeBase64Url(authBase64Url);
+        if (plaintext.Length > MaxPlaintextLength)
+        {
+            throw new ArgumentException(
+                $"Plaintext is {plaintext.Length} bytes, but RFC 8188's single "
+                    + $"{RecordSize}-byte record (minus the padding delimiter and the "
+                    + $"AEAD tag) holds at most {MaxPlaintextLength} bytes. A push message "
+                    + "cannot span multiple records.",
+                nameof(plaintext)
+            );
+        }
+
+        byte[] userAgentPublic = Base64UrlCodec.Decode(p256dhBase64Url);
+        byte[] authSecret = Base64UrlCodec.Decode(authBase64Url);
 
         using ECDiffieHellman serverKey = CreateServerKey();
         byte[] serverPublic = ExportUncompressedPoint(serverKey);
@@ -40,7 +81,7 @@ public class WebPushEnvelope(byte[]? fixedSalt = null, byte[]? fixedServerKey = 
         using ECDiffieHellman userAgentKey = ImportPublicPoint(userAgentPublic);
         byte[] sharedSecret = serverKey.DeriveRawSecretAgreement(userAgentKey.PublicKey);
 
-        byte[] salt = fixedSalt ?? RandomNumberGenerator.GetBytes(SaltLength);
+        byte[] salt = _fixedSalt ?? RandomNumberGenerator.GetBytes(SaltLength);
 
         byte[] prkInfo = BuildKeyInfo(userAgentPublic, serverPublic);
         byte[] ikm = HKDF.DeriveKey(
@@ -50,6 +91,7 @@ public class WebPushEnvelope(byte[]? fixedSalt = null, byte[]? fixedServerKey = 
             authSecret,
             prkInfo
         );
+        CryptographicOperations.ZeroMemory(sharedSecret);
 
         byte[] contentKey = HKDF.DeriveKey(
             HashAlgorithmName.SHA256,
@@ -65,25 +107,34 @@ public class WebPushEnvelope(byte[]? fixedSalt = null, byte[]? fixedServerKey = 
             salt,
             Encoding.ASCII.GetBytes("Content-Encoding: nonce\0")
         );
+        CryptographicOperations.ZeroMemory(ikm);
 
-        byte[] padded = new byte[plaintext.Length + 1];
+        byte[] padded = new byte[plaintext.Length + PaddingDelimiterLength];
         plaintext.CopyTo(padded, 0);
         padded[^1] = 0x02;
 
         byte[] ciphertext = new byte[padded.Length];
         byte[] tag = new byte[TagLength];
-        using (AesGcm aes = new(contentKey, TagLength))
+        try
         {
-            aes.Encrypt(nonce, padded, ciphertext, tag);
+            using (AesGcm aes = new(contentKey, TagLength))
+            {
+                aes.Encrypt(nonce, padded, ciphertext, tag);
+            }
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(contentKey);
+            CryptographicOperations.ZeroMemory(padded);
         }
 
         return BuildBody(salt, serverPublic, ciphertext, tag);
     }
 
     private ECDiffieHellman CreateServerKey() =>
-        fixedServerKey is null
+        _fixedServerKey is null
             ? ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256)
-            : ImportPrivateScalar(fixedServerKey);
+            : ImportPrivateScalar(_fixedServerKey);
 
     /// <summary>
     /// .NET has no direct API to compute a P-256 public point from a raw private
@@ -119,15 +170,44 @@ public class WebPushEnvelope(byte[]? fixedSalt = null, byte[]? fixedServerKey = 
             throw new CryptographicException("Public key is not an uncompressed P-256 point");
         }
 
+        byte[] x = uncompressed[1..33];
+        byte[] y = uncompressed[33..65];
+        EnsureOnP256Curve(x, y);
+
         ECDiffieHellman key = ECDiffieHellman.Create();
         key.ImportParameters(
             new ECParameters
             {
                 Curve = ECCurve.NamedCurves.nistP256,
-                Q = new ECPoint { X = uncompressed[1..33], Y = uncompressed[33..65] },
+                Q = new ECPoint { X = x, Y = y },
             }
         );
         return key;
+    }
+
+    /// <summary>
+    /// Whether the underlying platform provider rejects an off-curve point on
+    /// import is not portable — confirmed to throw on Windows/CNG, unconfirmed
+    /// elsewhere — and an unvalidated point here is the classic invalid-curve
+    /// attack against Web Push. Checking y^2 = x^3 - 3x + b (mod p) ourselves
+    /// makes rejection independent of which OS this runs on.
+    /// </summary>
+    private static void EnsureOnP256Curve(byte[] x, byte[] y)
+    {
+        BigInteger xCoordinate = new(x, isUnsigned: true, isBigEndian: true);
+        BigInteger yCoordinate = new(y, isUnsigned: true, isBigEndian: true);
+
+        BigInteger left = BigInteger.ModPow(yCoordinate, 2, P256Prime);
+        BigInteger right =
+            (
+                (BigInteger.ModPow(xCoordinate, 3, P256Prime) - 3 * xCoordinate + P256B) % P256Prime
+                + P256Prime
+            ) % P256Prime;
+
+        if (left != right)
+        {
+            throw new CryptographicException("Public key point is not on the P-256 curve");
+        }
     }
 
     private static byte[] ExportUncompressedPoint(ECDiffieHellman key)
@@ -152,27 +232,16 @@ public class WebPushEnvelope(byte[]? fixedSalt = null, byte[]? fixedServerKey = 
 
     private static byte[] BuildBody(byte[] salt, byte[] serverPublic, byte[] ciphertext, byte[] tag)
     {
+        Span<byte> recordSize = stackalloc byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(recordSize, RecordSize);
+
         using MemoryStream body = new();
         body.Write(salt);
-        body.Write(
-            BitConverter.IsLittleEndian
-                ? BitConverter.GetBytes(RecordSize).Reverse().ToArray()
-                : BitConverter.GetBytes(RecordSize)
-        );
+        body.Write(recordSize);
         body.WriteByte((byte)serverPublic.Length);
         body.Write(serverPublic);
         body.Write(ciphertext);
         body.Write(tag);
         return body.ToArray();
     }
-
-    public static byte[] DecodeBase64Url(string value)
-    {
-        string padded = value.Replace('-', '+').Replace('_', '/');
-        padded += new string('=', (4 - (padded.Length % 4)) % 4);
-        return Convert.FromBase64String(padded);
-    }
-
-    public static string EncodeBase64Url(byte[] value) =>
-        Convert.ToBase64String(value).Replace('+', '-').Replace('/', '_').TrimEnd('=');
 }
