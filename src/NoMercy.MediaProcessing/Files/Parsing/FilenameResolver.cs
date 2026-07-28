@@ -74,6 +74,18 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
 
         string cleanedFileName = VersionSuffix().Replace(withoutGroups, string.Empty).Trim();
 
+        // The tracker that repackaged a release stamps its address on the front:
+        // "www.Torrenting.com.-.Show.Name.S01E02". The show is everything after
+        // it, and left on, the search is for a name no catalogue holds.
+        //
+        // An address is matched by BEING one rather than by being on a list. The
+        // parsers this corpus came from kept sixty-odd literal tracker tags and
+        // needed a new entry for every site that ever appeared; the ones written
+        // in brackets are already gone with every other bracket, and what
+        // survives is exactly the unbracketed address.
+        cleanedFileName = LeadingSeparator()
+            .Replace(TrackerAddress().Replace(cleanedFileName, string.Empty), string.Empty);
+
         MovieFile parsed = pipeline.Parse(
             new()
             {
@@ -386,6 +398,28 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
     private static partial Regex ReleaseGroup();
 
     /// <summary>
+    /// A web address at the very front, with the punctuation a tracker packs
+    /// around it.
+    /// <para>The <c>www.</c> is required, and that is the whole guard. A bare
+    /// host pattern would read "Back.to.the.Future" as the domain "Back.to" and
+    /// cut the show's name in half — plenty of titles are dotted words ending in
+    /// something that is also a top-level domain.</para>
+    /// </summary>
+    [GeneratedRegex(
+        @"^[\s.\-_]*www\.[A-Za-z0-9.\-]+?\.[A-Za-z]{2,6}(?![A-Za-z0-9])[\s.\-_]*",
+        RegexOptions.IgnoreCase
+    )]
+    private static partial Regex TrackerAddress();
+
+    /// <summary>
+    /// The " - " a tracker leaves behind once its bracketed address is gone.
+    /// <para>Whitespace and a dash only, so this rule adds nothing to what
+    /// already happens to a leading dot further down.</para>
+    /// </summary>
+    [GeneratedRegex(@"^\s*[-–—]?\s*")]
+    private static partial Regex LeadingSeparator();
+
+    /// <summary>
     /// The absolute-episode form a fansub release uses: the show, a spaced
     /// dash, then the number. Its presence is what makes a trailing number in
     /// the title an episode marker rather than part of the name.
@@ -463,9 +497,9 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
         // for a title — "Season 2/S02E06 The Tower is Tall.mkv" — was handed
         // "Season 2" as the show's name and searched for under it.
         if (directoryName.TryGetFolderSeason().HasValue)
-            directoryName = Path.GetDirectoryName(directoryName?.TrimEnd('/', '\\'));
+            directoryName = directoryName?.ParentSegment();
 
-        string? folderName = Path.GetFileName(directoryName);
+        string folderName = directoryName?.LeafSegment() ?? "";
         if (string.IsNullOrWhiteSpace(folderName))
             return "";
 

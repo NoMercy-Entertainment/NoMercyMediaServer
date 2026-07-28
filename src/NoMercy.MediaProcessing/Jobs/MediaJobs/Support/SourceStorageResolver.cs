@@ -52,12 +52,31 @@ public static class SourceStorageResolver
         if (sourceDriverId.HasValue)
             return storageFactory.For(sourceDriverId.Value, sourceDriverId.Value, string.Empty);
 
-        string? sourceDirectory = Path.GetDirectoryName(inputFile);
+        string? sourceDirectory = DirectoryOf(inputFile);
 
         if (string.IsNullOrEmpty(sourceDirectory) || IsUnderRoot(folder.Path, inputFile))
             return destinationStorage;
 
         return storageFactory.For(folder.Id, folder.DriverId, sourceDirectory);
+    }
+
+    /// <summary>
+    /// The directory part of <paramref name="path"/>, treating BOTH separators
+    /// as separators.
+    /// <para><see cref="Path.GetDirectoryName(string)"/> cannot: on Linux a
+    /// backslash is an ordinary filename character, so a Windows or UNC path
+    /// arriving at a Linux server reads as one long file name with no directory
+    /// at all. The resolver then falls back to the destination storage — which
+    /// is the exact failure this class exists to prevent, reappearing only on
+    /// the platform most servers run on.</para>
+    /// <para>These paths come from a picker on a Windows box or from a NAS
+    /// share, so the separator is part of the data and not a property of the
+    /// machine reading it.</para>
+    /// </summary>
+    internal static string? DirectoryOf(string path)
+    {
+        int lastSeparator = path.LastIndexOfAny(['/', '\\']);
+        return lastSeparator <= 0 ? null : path[..lastSeparator];
     }
 
     /// <summary>

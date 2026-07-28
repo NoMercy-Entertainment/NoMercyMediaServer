@@ -276,6 +276,33 @@ public static partial class StringExtensions
         return title.TrimEnd('-', '.', '_', ' ', '(', '[', '{').Trim();
     }
 
+    /// <summary>
+    /// The last segment of <paramref name="path"/>, treating BOTH separators as
+    /// separators.
+    /// <para><see cref="Path.GetFileName(string)"/> cannot: on Linux a backslash
+    /// is an ordinary filename character, so "C:\Shows\Bleach\Season 2" is one
+    /// segment there and the season folder stops being recognised as one. The
+    /// paths reaching this come from a Windows picker or a NAS share as often as
+    /// from the local disk, so the separator is data rather than a property of
+    /// the machine reading it.</para>
+    /// </summary>
+    [Pure]
+    public static string LeafSegment(this string path)
+    {
+        string trimmed = path.TrimEnd('/', '\\');
+        int lastSeparator = trimmed.LastIndexOfAny(['/', '\\']);
+        return lastSeparator < 0 ? trimmed : trimmed[(lastSeparator + 1)..];
+    }
+
+    /// <summary>Everything before <see cref="LeafSegment"/>, or empty at the root.</summary>
+    [Pure]
+    public static string ParentSegment(this string path)
+    {
+        string trimmed = path.TrimEnd('/', '\\');
+        int lastSeparator = trimmed.LastIndexOfAny(['/', '\\']);
+        return lastSeparator <= 0 ? string.Empty : trimmed[..lastSeparator];
+    }
+
     /// <summary>Matches a "Season N" / "Series N" (and common localized) folder name.</summary>
     [GeneratedRegex(
         @"(?<![A-Za-z])(?:season|series|saison|staffel|temporada|stagione)[\s\.\-_]*0*([0-9]{1,3})(?![0-9])",
@@ -298,7 +325,7 @@ public static partial class StringExtensions
         if (string.IsNullOrWhiteSpace(directory))
             return null;
 
-        string folder = Path.GetFileName(directory.TrimEnd('/', '\\'));
+        string folder = directory.LeafSegment();
         if (string.IsNullOrEmpty(folder))
             folder = directory;
 

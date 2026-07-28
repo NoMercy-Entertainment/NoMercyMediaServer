@@ -349,6 +349,30 @@ public class FilenameResolverCorpusTests
         result.Episode.Should().Be(episode);
     }
 
+    // ---------------------------------------------------------------------------
+    // The tracker that repackaged a release stamps its own address on the front.
+    // It is not part of the show's name, and a search for "www Torrenting com -
+    // Show Name" answers with whatever scores least badly.
+    //
+    // Only an address is cut, and only at the front. A hardcoded list of tracker
+    // tags is what the old parsers kept, and it needs a new entry every time a
+    // site appears; an address is recognisable by being one.
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("www.Torrenting.com.-.Show.Name.S01E02.mkv", "Show Name")]
+    [InlineData("[ www.TorrentDay.com ] - Show.Name.S01E02.mkv", "Show Name")]
+    [InlineData(".www.Cpasbien.pw.Show.Name.S01E02.mkv", "Show Name")]
+    [InlineData("{ www.SceneTime.com } - Show.Name.S01E02.mkv", "Show Name")]
+    public void A_tracker_address_is_not_part_of_the_show_name(string file, string title) =>
+        Resolve(file).Title.Should().Be(title);
+
+    [Theory]
+    [InlineData("Back.to.the.Future.S01E02.mkv", "Back to the Future")]
+    [InlineData("Halt.and.Catch.Fire.S01E02.mkv", "Halt and Catch Fire")]
+    [InlineData("Bob.Hearts.Abishola.S01E02.mkv", "Bob Hearts Abishola")]
+    public void A_title_that_merely_looks_domain_shaped_is_left_alone(string file, string title) =>
+        Resolve(file).Title.Should().Be(title);
+
     [Fact]
     public void A_part_glued_to_a_word_is_not_a_part_marker()
     {
