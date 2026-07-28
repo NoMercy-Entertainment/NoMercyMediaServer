@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -43,6 +43,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Queue.MediaServer;
 using NoMercyQueue;
+using NoMercyQueue.Core;
 using MediaJobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
@@ -749,7 +750,8 @@ public class TasksController(
                 }
             );
 
-        await QueueRunner.Current.Pause("encoder");
+        foreach (string queue in EncoderQueueFamily)
+            await QueueRunner.Current.Pause(queue);
         return Ok(
             new StatusResponseDto<string> { Message = "Encoder queue paused", Status = "success" }
         );
@@ -769,11 +771,28 @@ public class TasksController(
                 }
             );
 
-        await QueueRunner.Current.Resume("encoder");
+        foreach (string queue in EncoderQueueFamily)
+            await QueueRunner.Current.Resume(queue);
         return Ok(
             new StatusResponseDto<string> { Message = "Encoder queue resumed", Status = "success" }
         );
     }
+
+    /// <summary>
+    /// Every queue an encode occupies, because pausing is a promise about the
+    /// machine and not about one table.
+    /// <para>Pausing only <c>encoder</c> stopped the coordinators and left the
+    /// queues their children run on untouched — and the children are what spawn
+    /// ffmpeg. The dashboard reported the queue paused while two ffmpeg
+    /// processes carried on at a third of the CPU, which is the opposite of what
+    /// the button says.</para>
+    /// </summary>
+    private static readonly string[] EncoderQueueFamily =
+    [
+        QueueNames.Encoder,
+        QueueNames.EncoderGpu,
+        QueueNames.EncoderCpu,
+    ];
 
     /// <summary>Source-of-truth paused state for the encoder queue. The
     /// dashboard reads this on every queue refresh so its pause/resume
@@ -784,7 +803,8 @@ public class TasksController(
     [Route("queue/status")]
     public IActionResult EncoderQueueStatus()
     {
-        bool paused = QueueRunner.Current?.IsPaused("encoder") ?? false;
+        QueueRunner? runner = QueueRunner.Current;
+        bool paused = runner is not null && EncoderQueueFamily.All(queue => runner.IsPaused(queue));
         return Ok(new { paused });
     }
 
