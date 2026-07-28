@@ -117,7 +117,11 @@ public class InlineEncodeMediaItemWiringTests
         );
         methodStart.Should().BeGreaterThan(0, "RunSinglePresetEncodeAsync must exist");
 
-        string window = ExtractMethodWindow(source, methodStart, maxChars: 8000);
+        // The brace scan is what bounds this window; the cap is only a guard
+        // against pathological input. At 8000 it truncated the method it was
+        // meant to inspect, so adding one constructor argument above the
+        // assertion failed a test about something else entirely.
+        string window = ExtractMethodWindow(source, methodStart, maxChars: 40_000);
 
         int requestStart = window.IndexOf(
             "EncodingRequest request = new(",
@@ -203,7 +207,11 @@ public class InlineEncodeMediaItemWiringTests
         );
         methodStart.Should().BeGreaterThan(0, "HandleFinalizeAsync must exist");
 
-        string window = ExtractMethodWindow(source, methodStart, maxChars: 8000);
+        // The brace scan is what bounds this window; the cap is only a guard
+        // against pathological input. At 8000 it truncated the method it was
+        // meant to inspect, so adding one constructor argument above the
+        // assertion failed a test about something else entirely.
+        string window = ExtractMethodWindow(source, methodStart, maxChars: 40_000);
 
         window
             .Should()

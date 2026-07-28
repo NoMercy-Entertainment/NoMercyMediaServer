@@ -69,7 +69,13 @@ public sealed class FileManagerGetFilesTests : IDisposable
         Mock<IFileRepository> repoMock = new();
         Mock<IStorageDriver> driverMock = new();
         Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
-        return new(repoMock.Object, factory, driverMock.Object, mediaAnalyzerMock.Object);
+        return new(
+            repoMock.Object,
+            factory,
+            driverMock.Object,
+            mediaAnalyzerMock.Object,
+            TestFilenameParser.Default
+        );
     }
 
     private Folder BuildFolderOnRealStorage(out IStorage storage)

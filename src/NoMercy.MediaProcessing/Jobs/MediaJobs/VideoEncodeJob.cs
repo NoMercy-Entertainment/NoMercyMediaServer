@@ -36,6 +36,7 @@ using NoMercy.Encoder.Subtitles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Domain;
@@ -83,6 +84,7 @@ public class VideoEncodeJob
     private IHardwareCapabilities? _hardwareCapabilities;
     private IEncoderProcessRegistry? _encoderProcessRegistry;
     private IMediaAnalyzer? _mediaAnalyzer;
+    private IFilenameParserPipeline? _filenameParser;
     private ISubtitleOcrEngine? _subtitleOcrEngine;
     private IEncodeReconciler? _encodeReconciler;
 
@@ -100,6 +102,7 @@ public class VideoEncodeJob
         _hardwareCapabilities = serviceProvider.GetRequiredService<IHardwareCapabilities>();
         _encoderProcessRegistry = serviceProvider.GetRequiredService<IEncoderProcessRegistry>();
         _mediaAnalyzer = serviceProvider.GetRequiredService<IMediaAnalyzer>();
+        _filenameParser = serviceProvider.GetRequiredService<IFilenameParserPipeline>();
         _subtitleOcrEngine = serviceProvider.GetRequiredService<ISubtitleOcrEngine>();
         _encodeReconciler = serviceProvider.GetRequiredService<IEncodeReconciler>();
         _shutdownToken =
@@ -168,7 +171,8 @@ public class VideoEncodeJob
             fileRepository,
             StorageFactory,
             StorageDriver,
-            _mediaAnalyzer!
+            _mediaAnalyzer!,
+            _filenameParser!
         );
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
@@ -996,7 +1000,8 @@ public class VideoEncodeJob
             fileRepository,
             StorageFactory,
             StorageDriver,
-            _mediaAnalyzer!
+            _mediaAnalyzer!,
+            _filenameParser!
         );
 
         await using LibraryRepository libraryRepository = new(context, StorageDriver);
@@ -1613,20 +1618,21 @@ public class VideoEncodeJob
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// ±5s jitter prevents N concurrent coordinators from waking in
-    /// lockstep — a season with 12 episodes used to burst-poll all 12
-    /// in ~100ms every 5s. Jitter spreads them across the poll window.
+    /// Every waiting coordinator sleeps for the SAME interval, so a queue of
+    /// them stays in the order it was dispatched in.
+    /// <para>
+    /// This used to add ±5s of random jitter to spread the wake-ups out. The
+    /// reserve query takes the first job whose <c>AvailableAt</c> has passed,
+    /// ordered by priority then position — but with a different random offset
+    /// written onto every row on every wake-up, one job is eligible at a time
+    /// and WHICH one is a dice roll. The ordering never got to decide anything:
+    /// a season dispatched E01…E13 encoded in whatever sequence the jitter
+    /// happened to produce, and re-rolled it on every poll. A shared delay costs
+    /// one burst of cheap "are my children done" reads per interval, which is
+    /// what the interval itself was already widened to make affordable.
+    /// </para>
     /// </summary>
-    private static readonly TimeSpan PollJitterRange = TimeSpan.FromSeconds(5);
-
-    private static readonly Random PollJitterRng = new();
-
-    private static TimeSpan NextPollDelay()
-    {
-        double offsetSeconds =
-            (PollJitterRng.NextDouble() * 2.0 - 1.0) * PollJitterRange.TotalSeconds;
-        return PollInterval + TimeSpan.FromSeconds(offsetSeconds);
-    }
+    private static TimeSpan NextPollDelay() => PollInterval;
 
     /// <summary>
     /// Persists the coordinator's next phase and schedules the wake-up that will

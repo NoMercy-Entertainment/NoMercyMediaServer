@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Events;
+using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.Storage;
 
@@ -34,17 +35,20 @@ public class LibraryScanJob : AbstractMediaJob
         IStorageFactory storageFactory,
         IStorageDriver storageDriver,
         ILoggerFactory loggerFactory,
-        IMediaAnalyzer mediaAnalyzer
+        IMediaAnalyzer mediaAnalyzer,
+        IFilenameParserPipeline filenameParser
     )
         : base(storageFactory, storageDriver, loggerFactory)
     {
         _mediaAnalyzer = mediaAnalyzer;
+        _filenameParser = filenameParser;
     }
 
     // Private field, not a [JsonIgnore] public property — SerializationHelper.Populate
     // (Newtonsoft) only re-hydrates public members, so this survives the queue's
     // rebuild-then-populate cycle (see QueueWorker.ExecuteWithTransientRetry) untouched.
     private readonly IMediaAnalyzer _mediaAnalyzer = null!;
+    private readonly IFilenameParserPipeline _filenameParser = null!;
 
     public override string QueueName => "library";
     public override int Priority => 10;
@@ -64,6 +68,7 @@ public class LibraryScanJob : AbstractMediaJob
             StorageDriver,
             StorageFactory,
             _mediaAnalyzer,
+            _filenameParser,
             LoggerFactory.CreateLogger<LibraryManager>(),
             eventBus
         );

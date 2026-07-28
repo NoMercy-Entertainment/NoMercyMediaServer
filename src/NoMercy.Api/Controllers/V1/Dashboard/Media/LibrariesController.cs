@@ -32,6 +32,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.Storage;
@@ -58,6 +59,7 @@ public class LibrariesController(
     IStorageFactory storageFactory,
     IDefaultEncodingPresetLinker defaultEncodingPresetLinker,
     IMediaAnalyzer mediaAnalyzer,
+    IFilenameParserPipeline filenameParser,
     ILogger<LibrariesController> logger
 ) : BaseController
 {
@@ -899,7 +901,8 @@ public class LibrariesController(
                 fileRepository,
                 storageFactory,
                 storageDriver,
-                mediaAnalyzer
+                mediaAnalyzer,
+                filenameParser
             );
 
             await fileManager.MoveToLibraryFolder(request.Id, folder);

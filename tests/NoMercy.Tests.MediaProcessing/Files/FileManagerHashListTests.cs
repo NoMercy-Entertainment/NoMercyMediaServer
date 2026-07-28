@@ -48,7 +48,8 @@ public sealed class FileManagerHashListTests : IDisposable
             repoMock.Object,
             factoryMock.Object,
             driverMock.Object,
-            mediaAnalyzerMock.Object
+            mediaAnalyzerMock.Object,
+            TestFilenameParser.Default
         );
     }
 
