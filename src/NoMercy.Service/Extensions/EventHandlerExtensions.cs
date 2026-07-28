@@ -18,6 +18,9 @@ using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Inbox;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.Networking.Messaging;
+using NoMercy.NmSystem.Auth;
+using NoMercy.Notifications.Push;
+using NoMercy.Notifications.Transports;
 using NoMercy.Storage;
 
 namespace NoMercy.Service.Extensions;
@@ -108,6 +111,28 @@ public static class EventHandlerExtensions
             return new(eventBus, clientMessenger);
         });
 
+        services.AddSingleton<IWebPushEnvelope, WebPushEnvelope>();
+        services.AddSingleton<PushKeyClient>();
+        services.AddSingleton<IPushKeyClient>(sp => new CachingPushKeyClient(
+            sp.GetRequiredService<PushKeyClient>()
+        ));
+        services.AddSingleton<IPushRelayClient, PushRelayClient>();
+        services.AddSingleton<IPushDispatcher, PushDispatcher>();
+        services.AddSingleton<IPushDispatchQueue, PushDispatchQueue>();
+        services.AddSingleton<INotificationTransport, SignalRNotificationTransport>();
+        services.AddSingleton<INotificationTransport, PushNotificationTransport>();
+        services.AddSingleton<NotificationDispatcher>();
+        services.AddSingleton<NotificationSink>();
+        services.AddHostedService<PushDispatchWorker>();
+
+        services.AddSingleton<PushNotificationEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            IAuthTokenStore authTokenStore = sp.GetRequiredService<IAuthTokenStore>();
+            NotificationSink notificationSink = sp.GetRequiredService<NotificationSink>();
+            return new(eventBus, authTokenStore, notificationSink);
+        });
+
         services.AddSingleton<DriveMonitorEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
@@ -193,6 +218,7 @@ public static class EventHandlerExtensions
         serviceProvider.GetRequiredService<FolderPathEventHandler>();
         serviceProvider.GetRequiredService<MusicLikeEventHandler>();
         serviceProvider.GetRequiredService<SignalRNotificationEventHandler>();
+        serviceProvider.GetRequiredService<PushNotificationEventHandler>();
         serviceProvider.GetRequiredService<DriveMonitorEventHandler>();
         serviceProvider.GetRequiredService<CastEventHandler>();
         serviceProvider.GetRequiredService<UserPermissionsEventHandler>();

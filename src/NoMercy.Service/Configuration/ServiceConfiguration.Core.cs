@@ -441,6 +441,14 @@ public static partial class ServiceConfiguration
         >();
         services.AddSingleton<
             MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            MediaProcessing.Files.Parsing.Adapters.SeasonPackAdapter
+        >();
+        services.AddSingleton<
+            MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            MediaProcessing.Files.Parsing.Adapters.PartAdapter
+        >();
+        services.AddSingleton<
+            MediaProcessing.Files.Parsing.IFilenameParseAdapter,
             MediaProcessing.Files.Parsing.Adapters.MovieDetectorAdapter
         >();
         services.AddSingleton<

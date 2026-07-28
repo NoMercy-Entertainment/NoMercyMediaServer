@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -124,7 +124,7 @@ public class OrphanJobRecoveryCheckpointTests
     // ── Without checkpoint — original behaviour preserved ──────────────────
 
     [Fact]
-    public async Task StartAsync_EncoderOrphanWithPriorAttemptsNoCheckpoint_MovedToFailedJobs()
+    public async Task StartAsync_EncoderOrphanInterruptedTooOftenNoCheckpoint_MovedToFailedJobs()
     {
         Mock<IOrphanCheckpointLookup> lookup = new();
         lookup
@@ -141,6 +141,7 @@ public class OrphanJobRecoveryCheckpointTests
             Payload = "{\"OutputDirectory\":\"/media/output\"}",
             Priority = 5,
             Attempts = 2,
+            Interruptions = OrphanRecoveryTriage.MaxInterruptions - 1,
             ReservedAt = DateTime.UtcNow.AddMinutes(-5),
             AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
@@ -158,7 +159,7 @@ public class OrphanJobRecoveryCheckpointTests
     // ── Non-encoder queue — checkpoint lookup not consulted ────────────────
 
     [Fact]
-    public async Task StartAsync_NonEncoderOrphanWithPriorAttempts_MovedToFailedJobs_LookupNotCalled()
+    public async Task StartAsync_NonEncoderOrphanInterruptedTooOften_MovedToFailedJobs_LookupNotCalled()
     {
         Mock<IOrphanCheckpointLookup> lookup = new();
         lookup
@@ -175,6 +176,7 @@ public class OrphanJobRecoveryCheckpointTests
             Payload = "{\"Id\":\"job-lib\"}",
             Priority = 5,
             Attempts = 2,
+            Interruptions = OrphanRecoveryTriage.MaxInterruptions - 1,
             ReservedAt = DateTime.UtcNow.AddMinutes(-5),
             AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
@@ -196,7 +198,7 @@ public class OrphanJobRecoveryCheckpointTests
     // ── No IOrphanCheckpointLookup registered — original behaviour ──────────
 
     [Fact]
-    public async Task StartAsync_NoLookupRegistered_EncoderOrphanWithAttempts_MovedToFailed()
+    public async Task StartAsync_NoLookupRegistered_EncoderOrphanInterruptedTooOften_MovedToFailed()
     {
         (OrphanJobRecoveryHostedService service, TestQueueContextAdapter context) = BuildService(
             lookup: null
@@ -208,6 +210,7 @@ public class OrphanJobRecoveryCheckpointTests
             Payload = "{\"OutputDirectory\":\"/media/output\"}",
             Priority = 5,
             Attempts = 2,
+            Interruptions = OrphanRecoveryTriage.MaxInterruptions - 1,
             ReservedAt = DateTime.UtcNow.AddMinutes(-5),
             AvailableAt = DateTime.UtcNow.AddHours(-1),
         };

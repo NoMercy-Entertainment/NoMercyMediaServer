@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -43,6 +43,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Queue.MediaServer;
 using NoMercyQueue;
+using NoMercyQueue.Core;
 using MediaJobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
@@ -749,7 +750,10 @@ public class TasksController(
                 }
             );
 
-        await QueueRunner.Current.Pause("encoder");
+        foreach (string queue in EncoderQueueFamily)
+            await QueueRunner.Current.Pause(queue);
+
+        SuspendRunningEncodes();
         return Ok(
             new StatusResponseDto<string> { Message = "Encoder queue paused", Status = "success" }
         );
@@ -769,10 +773,61 @@ public class TasksController(
                 }
             );
 
-        await QueueRunner.Current.Resume("encoder");
+        ResumeRunningEncodes();
+
+        foreach (string queue in EncoderQueueFamily)
+            await QueueRunner.Current.Resume(queue);
         return Ok(
             new StatusResponseDto<string> { Message = "Encoder queue resumed", Status = "success" }
         );
+    }
+
+    /// <summary>
+    /// Every queue an encode occupies, because pausing is a promise about the
+    /// machine and not about one table.
+    /// <para>Pausing only <c>encoder</c> stopped the coordinators and left the
+    /// queues their children run on untouched — and the children are what spawn
+    /// ffmpeg. The dashboard reported the queue paused while two ffmpeg
+    /// processes carried on at a third of the CPU, which is the opposite of what
+    /// the button says.</para>
+    /// </summary>
+    private static readonly string[] EncoderQueueFamily =
+    [
+        QueueNames.Encoder,
+        QueueNames.EncoderGpu,
+        QueueNames.EncoderCpu,
+    ];
+
+    /// <summary>
+    /// Suspends every ffmpeg the encoder currently has running.
+    /// <para>Stopping the workers only stops the NEXT job being reserved. An
+    /// encode already inside ffmpeg carried on, and a single file can be an
+    /// hour of it — so "paused" meant the machine stayed at full tilt and the
+    /// operator watched a task complete two hundred seconds after they asked
+    /// for quiet. Pause has to reach the process, which is what the per-task
+    /// pause on this controller has always done; this is the same mechanism
+    /// applied to everything at once.</para>
+    /// <para>Suspended, not killed. The process keeps its place and its partial
+    /// output, so resuming continues the encode rather than starting it
+    /// again.</para>
+    /// </summary>
+    private void SuspendRunningEncodes()
+    {
+        foreach (int jobId in processRegistry.ActiveJobIds)
+        foreach (int processId in processRegistry.GetProcessIds(jobId))
+            processThrottle.Suspend(processId);
+    }
+
+    /// <summary>
+    /// Wakes what <see cref="SuspendRunningEncodes"/> put to sleep. Runs before
+    /// the workers restart so a resumed encode is never racing a newly reserved
+    /// one for the same hardware.
+    /// </summary>
+    private void ResumeRunningEncodes()
+    {
+        foreach (int jobId in processRegistry.ActiveJobIds)
+        foreach (int processId in processRegistry.GetProcessIds(jobId))
+            processThrottle.Resume(processId);
     }
 
     /// <summary>Source-of-truth paused state for the encoder queue. The
@@ -784,7 +839,8 @@ public class TasksController(
     [Route("queue/status")]
     public IActionResult EncoderQueueStatus()
     {
-        bool paused = QueueRunner.Current?.IsPaused("encoder") ?? false;
+        QueueRunner? runner = QueueRunner.Current;
+        bool paused = runner is not null && EncoderQueueFamily.All(queue => runner.IsPaused(queue));
         return Ok(new { paused });
     }
 

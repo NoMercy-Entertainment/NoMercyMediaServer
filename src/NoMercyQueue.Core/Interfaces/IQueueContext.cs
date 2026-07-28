@@ -47,8 +47,32 @@ public interface IQueueContext : IDisposable
     /// </summary>
     void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt);
 
+    /// <summary>
+    /// Releases every reservation in the queue, called once as the runner comes
+    /// up. Nothing is executing at that moment, so a row still marked reserved
+    /// is one whose worker died with the last process.
+    /// <para>The attempt that reservation charged is refunded and
+    /// <c>Interruptions</c> goes up instead. A job interrupted by a restart, a
+    /// kill or a power cut never got to fail, and charging it an attempt
+    /// retired healthy work three restarts later with nothing written anywhere
+    /// to say why. Only the failure paths — an exception out of the handler, a
+    /// reservation left hanging while the server keeps running — spend
+    /// attempts.</para>
+    /// </summary>
     void ResetAllReservedJobs();
     IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc);
+
+    /// <summary>
+    /// Returns the rows <see cref="GetNextJob"/> can never hand out again: not
+    /// reserved, so nothing is running them, and already at or past
+    /// <paramref name="maxAttempts"/>, so the reserve predicate excludes them.
+    /// <para>Such a row is invisible to every other recovery path — the orphan
+    /// passes only look at rows that ARE reserved — so without this it stays in
+    /// the queue forever, holding whatever position it was dispatched into. A
+    /// season that lost one episode to a restart shows that episode at the head
+    /// of the queue for the rest of the server's life.</para>
+    /// </summary>
+    IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts, byte maxInterruptions);
 
     /// <summary>
     /// Returns true when the specified parent job ID is present in the

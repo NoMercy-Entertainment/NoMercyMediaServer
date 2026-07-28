@@ -1,8 +1,10 @@
-// -----------------------------------------------------------------------------
-//  Copyright (c) NoMercy Entertainment. All rights reserved.
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
-//  This file is part of NoMercy and is proprietary and confidential.
-//  Unauthorized copying, distribution, or use is prohibited. See LICENSE.
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
@@ -246,8 +248,12 @@ public class QueueEngineEndToEndTests : IDisposable
     /// EfQueueContextAdapter, not the in-memory-list stub.
     /// </summary>
     [Fact]
-    public async Task OrphanRecovery_StuckJobWithRepeatAttempts_MovedToFailedJobsViaRealAdapter()
+    public async Task OrphanRecovery_StuckJobInterruptedTooOftenMovedToFailedJobsViaRealAdapter()
     {
+        // Attempts alone can no longer retire a boot orphan: the process
+        // going away is not the job failing, so the attempt is refunded. Only
+        // a job that has been interrupted its whole budget of times — the one
+        // that takes the host down every run — is dead-lettered here.
         QueueJob orphan = new()
         {
             Queue = QueueNames.Library,
@@ -255,6 +261,7 @@ public class QueueEngineEndToEndTests : IDisposable
             AvailableAt = DateTime.UtcNow.AddHours(-2),
             ReservedAt = DateTime.UtcNow.AddMinutes(-10),
             Attempts = 2,
+            Interruptions = OrphanRecoveryTriage.MaxInterruptions - 1,
         };
         _context.QueueJobs.Add(orphan);
         await _context.SaveChangesAsync();
@@ -275,11 +282,11 @@ public class QueueEngineEndToEndTests : IDisposable
         _context
             .QueueJobs.Count()
             .Should()
-            .Be(0, "orphaned job with prior attempts must be removed from QueueJobs");
+            .Be(0, "an orphan out of interruptions must be removed from QueueJobs");
         _context
             .FailedJobs.Count()
             .Should()
-            .Be(1, "orphaned job with prior attempts must be moved to FailedJobs");
+            .Be(1, "an orphan out of interruptions must be moved to FailedJobs");
 
         FailedJob failed = _context.FailedJobs.Single();
         failed.Queue.Should().Be(QueueNames.Library);

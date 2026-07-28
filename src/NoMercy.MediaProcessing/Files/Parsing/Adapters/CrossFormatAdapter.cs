@@ -11,6 +11,7 @@
 
 using System.Text.RegularExpressions;
 using MovieFileLibrary;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.MediaProcessing.Files.Parsing.Adapters;
@@ -29,9 +30,26 @@ public sealed class CrossFormatAdapter : IFilenameParseAdapter
         if (!match.Success)
             return null;
 
-        // A cross-format match at the very start is the title itself (e.g. the
-        // film "4x4"); a genuine SxExx tag is always preceded by the show title.
-        if (match.Index == 0)
+        // A cross-format match at the very start is usually the title itself —
+        // "4x4" is a film and a series, "3x3" is a fansub group.
+        //
+        // A file named for nothing but its marker ("1x02 Ep Name.mkv") is
+        // ordinary in a series library though, with the show's name on the
+        // folder; that is the same shape as "S01E02 Ep Name.mkv", which the
+        // prefix adapter has always accepted. What separates the two is the
+        // padding: a marker written without a title to introduce it carries the
+        // convention that makes it readable as one, and a single-digit "4x4"
+        // never does.
+        if (
+            match.Index == 0
+            && (
+                match.Groups[2].Length < 2
+                || (
+                    context.LibraryType != MediaTypes.AnimeMediaType
+                    && context.LibraryType != MediaTypes.TvMediaType
+                )
+            )
+        )
             return null;
 
         string showTitle = context

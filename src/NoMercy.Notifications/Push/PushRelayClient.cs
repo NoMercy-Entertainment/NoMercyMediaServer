@@ -1,0 +1,111 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
+
+namespace NoMercy.Notifications.Push;
+
+public class PushRelayClient : IPushRelayClient
+{
+    // Relative to ExternalServicesConfig.ApiServerBaseUrl, which already ends
+    // in /v1/server/ — a leading "server/" here resolves to /v1/server/server/
+    // and 404s on every dispatch.
+    internal const string Endpoint = "push/dispatch";
+
+    private sealed class RequestBody
+    {
+        [JsonPropertyName("channel")]
+        public required string Channel { get; init; }
+
+        [JsonPropertyName("entries")]
+        public required List<RequestEntry> Entries { get; init; }
+
+        // Absent (not merely null) unless a caller actually has a ref: the
+        // relay tells "no audience field" (unfiltered) apart from an emptied
+        // one (filters to nobody) by presence, not by value.
+        [JsonPropertyName("audience")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Audience { get; init; }
+    }
+
+    private sealed class RequestEntry
+    {
+        [JsonPropertyName("subscription_id")]
+        public required long SubscriptionId { get; init; }
+
+        [JsonPropertyName("ciphertext")]
+        public required string Ciphertext { get; init; }
+    }
+
+    public async Task DispatchAsync(
+        string channel,
+        IReadOnlyList<PushRelayEntry> entries,
+        string accessToken,
+        string? audience = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        GenericHttpClient client = PushRelayHttpClient.ForServer(accessToken);
+
+        using StringContent content = new(
+            BuildRequestBody(channel, entries, audience),
+            Encoding.UTF8,
+            "application/json"
+        );
+
+        await client.SendAndReadAsync(
+            HttpMethod.Post,
+            BuildEndpoint(Info.DeviceId),
+            content,
+            null,
+            cancellationToken
+        );
+    }
+
+    /// <summary>
+    /// GenericHttpClient.SendAndReadAsync silently drops the HttpContent
+    /// whenever a non-empty queryParams dictionary is also supplied (it takes
+    /// the queryParams overload, which never attaches content). The "id" query
+    /// param has to travel on the URL itself so both the body and the
+    /// auth-carrying id survive the call.
+    /// </summary>
+    internal static string BuildEndpoint(Guid deviceId) =>
+        $"{Endpoint}?id={Uri.EscapeDataString(deviceId.ToString())}";
+
+    internal static string BuildRequestBody(
+        string channel,
+        IReadOnlyList<PushRelayEntry> entries,
+        string? audience = null
+    )
+    {
+        RequestBody requestBody = new()
+        {
+            Channel = channel,
+            Entries = entries
+                .Select(entry => new RequestEntry
+                {
+                    SubscriptionId = entry.SubscriptionId,
+                    Ciphertext = entry.Ciphertext,
+                })
+                .ToList(),
+            // Normalising "" to null here, not just at the call site, is what
+            // makes the fail-closed relay behaviour unreachable from this
+            // client no matter which layer a future caller forgets to check.
+            Audience = string.IsNullOrEmpty(audience) ? null : audience,
+        };
+
+        return JsonSerializer.Serialize(requestBody);
+    }
+}

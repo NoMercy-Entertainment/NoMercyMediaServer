@@ -43,7 +43,7 @@ public sealed partial class SeasonSpecialAdapter : IFilenameParseAdapter
     // SP / OVA / OAD precede the bare S in the alternation so "S07SP01" is read
     // as season 7's SP 1 rather than backtracking through a season-then-S match.
     [GeneratedRegex(
-        @"(?<![A-Za-z0-9])S(?<season>\d{1,2})[\s\.\-_]*(?:SP|OVA|OAD|S)(?<special>\d{1,3})(?![A-Za-z0-9])",
+        @"(?<![A-Za-z0-9])S(?<season>[0-9]{1,2})[\s\.\-_]*(?:SP|OVA|OAD|S)(?<special>[0-9]{1,3})(?![A-Za-z0-9])",
         RegexOptions.IgnoreCase
     )]
     private static partial Regex SeasonSpecialMarker();
@@ -60,7 +60,7 @@ public sealed partial class SeasonSpecialAdapter : IFilenameParseAdapter
     /// </para>
     /// </summary>
     [GeneratedRegex(
-        @"(?<![A-Za-z0-9])S(?<season>\d{1,2})E(?<special>\d{1,3})\.\d(?![0-9A-Za-z.])",
+        @"(?<![A-Za-z0-9])S(?<season>[0-9]{1,2})E(?<special>[0-9]{1,3})\.[0-9](?![0-9A-Za-z.])",
         RegexOptions.IgnoreCase
     )]
     private static partial Regex FractionalEpisode();

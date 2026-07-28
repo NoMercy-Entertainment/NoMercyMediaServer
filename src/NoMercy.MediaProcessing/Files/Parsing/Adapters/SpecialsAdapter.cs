@@ -41,10 +41,32 @@ public sealed partial class SpecialsAdapter : IFilenameParseAdapter
     public int Order => 40;
 
     [GeneratedRegex(
-        @"(?<![A-Za-z0-9])(?:(?<word>specials?|extras?|movies?)|(?<anime>ova|ona|oad|ncop|nced|sp))(?:[\s\.\-_]*(?<num>\d{1,3}))?(?![A-Za-z0-9])",
+        @"(?<![A-Za-z0-9])(?:(?<word>specials?|extras?|movies?)|(?<anime>ova|ona|oad|ncop|nced|sp))(?:[\s\.\-_]*(?<num>[0-9]{1,3}))?(?![A-Za-z0-9])",
         RegexOptions.IgnoreCase
     )]
     private static partial Regex SpecialMarker();
+
+    /// <summary>
+    /// The number a release writes as a word rather than beside the marker —
+    /// "Movie.Part1", "Movie - Disc 2".
+    /// </summary>
+    [GeneratedRegex(
+        @"^[\s\.\-_]*(?:part|pt|disc|disk|vol(?:ume)?)[\s\.\-_]*(?<num>[0-9]{1,3})(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
+    private static partial Regex NumberedByWord();
+
+    /// <summary>
+    /// A marker with no number of its own is the FIRST such special — unless the
+    /// release numbered it by word instead: "Fatal Fury - Movie.Part1" and
+    /// "...Movie.Part2" both defaulted to one, so the second film was filed on
+    /// top of the first.
+    /// </summary>
+    private static int NumberAfterMarker(string afterMarker)
+    {
+        Match numbered = NumberedByWord().Match(afterMarker);
+        return numbered.Success ? int.Parse(numbered.Groups["num"].Value) : 1;
+    }
 
     public MovieFile? TryParse(ParseContext context)
     {
@@ -89,7 +111,9 @@ public sealed partial class SpecialsAdapter : IFilenameParseAdapter
         if (string.IsNullOrWhiteSpace(title) || title.Length <= 1)
             return null;
 
-        int episode = match.Groups["num"].Success ? int.Parse(match.Groups["num"].Value) : 1;
+        int episode = match.Groups["num"].Success
+            ? int.Parse(match.Groups["num"].Value)
+            : NumberAfterMarker(context.CleanedFileName[(match.Index + match.Length)..]);
 
         return new(context.Title)
         {

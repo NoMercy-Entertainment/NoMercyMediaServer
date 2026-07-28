@@ -243,6 +243,23 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
             }
         }
 
+        // The scene's unpunctuated season+episode: "Show.Name.102" is season one
+        // episode two, and "the.event.401" is season four episode one.
+        //
+        // The same three digits are an absolute episode number in a fansub
+        // release — "BLEACH - 154" is the hundred and fifty-fourth episode, not
+        // season one's fifty-fourth — and nothing in the NAME tells the two
+        // conventions apart. What tells them apart is the show, which the parser
+        // does not know and this does. So every absolute reading above is tried
+        // first and the split is taken only once they have all failed: only when
+        // the whole number cannot be an episode of THIS show is it two numbers.
+        //
+        // Being last in the ladder is the whole guard. Reading it earlier is how
+        // a long-running show's episode 310 becomes its season three episode ten,
+        // which is a real episode and therefore a silent, permanent mismatch.
+        if (episode == null && !seasonExplicit)
+            episode = ResolveSceneSplitEpisode(ctx, show.Id, episodeNumber);
+
         if (episode == null)
         {
             TmdbEpisodeClient episodeClient = new(show.Id, seasonNumber, episodeNumber);
@@ -294,6 +311,34 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         };
 
         return (match, episode.ImdbId);
+    }
+
+    /// <summary>
+    /// Reads a bare number as the scene's joined season and episode — 102 is
+    /// season one episode two, 1109 is season eleven episode nine — and returns
+    /// the episode only when the show actually has it.
+    /// <para>
+    /// The lookup IS the check. A split that names no real episode is not a
+    /// weaker match, it is evidence the number was never two numbers, so
+    /// nothing is returned and the caller carries on.
+    /// </para>
+    /// </summary>
+    private static Episode? ResolveSceneSplitEpisode(MediaContext ctx, int showId, int number)
+    {
+        if (number < 100)
+            return null;
+
+        int seasonNumber = number / 100;
+        int episodeNumber = number % 100;
+
+        if (episodeNumber == 0)
+            return null;
+
+        return ctx
+            .Episodes.AsNoTracking()
+            .Where(item => item.TvId == showId)
+            .Where(item => item.SeasonNumber == seasonNumber)
+            .FirstOrDefault(item => item.EpisodeNumber == episodeNumber);
     }
 
     private async Task<(MovieOrEpisode match, string? imdbId)?> ResolveMovieMatchAsync(

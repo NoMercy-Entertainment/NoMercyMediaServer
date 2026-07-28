@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -206,9 +206,13 @@ public class VideoEncodeJob
 
         IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
 
-        IStorage sourceStorage = SourceDriverId.HasValue
-            ? StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty)
-            : destinationStorage;
+        IStorage sourceStorage = SourceStorageResolver.Resolve(
+            StorageFactory,
+            SourceDriverId,
+            InputFile,
+            folder,
+            destinationStorage
+        );
 
         // Resolve every selected preset and reconcile it against what's
         // already on disk BEFORE dispatching anything. This is what lets a
@@ -849,11 +853,28 @@ public class VideoEncodeJob
     {
         await using MediaContext context = new();
 
-        List<string> completedTaskIds = await context
+        // Success matters, not just arrival. This used to read every outcome
+        // row for the group as proof its task was finished, so a child that
+        // died still satisfied the wait: the coordinator advanced to Finalize,
+        // deleted its own queue row, and the encode disappeared leaving nothing
+        // in FailedJobs and nothing in the log. Twenty-nine files went that way
+        // in a single night, and the only reason they were ever found was
+        // counting Success=0 rows against a queue that reported itself healthy.
+        List<EncodeTaskOutcome> outcomes = await context
             .EncodeTaskOutcomes.AsNoTracking()
             .Where(o => o.GroupTag == state.GroupTag)
-            .Select(o => o.TaskId)
             .ToListAsync();
+
+        EncodeTaskOutcome? failedTask = outcomes.Find(outcome => !outcome.Success);
+        if (failedTask is not null)
+        {
+            throw new InvalidOperationException(
+                $"Encode task {failedTask.TaskId} failed: "
+                    + $"{failedTask.ErrorMessage ?? "no error recorded"}"
+            );
+        }
+
+        List<string> completedTaskIds = outcomes.Select(outcome => outcome.TaskId).ToList();
 
         // Sequential bundle dispatch: when Bundles[] is set on state, only
         // the CURRENT bundle's BundledTaskIds need to be complete to advance.
@@ -1059,11 +1080,15 @@ public class VideoEncodeJob
             return;
         }
 
-        IStorage sourceStorage = SourceDriverId.HasValue
-            ? StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty)
-            : StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
-
         IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
+
+        IStorage sourceStorage = SourceStorageResolver.Resolve(
+            StorageFactory,
+            SourceDriverId,
+            InputFile,
+            folder,
+            destinationStorage
+        );
 
         // Pre-flight check: ensure the shared tempDir exists and contains at least
         // some expected output before proceeding to FinalizeOnly.

@@ -132,6 +132,9 @@ namespace NoMercy.Database.Migrations.Queue
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<byte>("Interruptions")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("ParentJobId")
                         .HasColumnType("INTEGER");
 

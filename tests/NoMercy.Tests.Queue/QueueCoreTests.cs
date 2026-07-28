@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -606,6 +606,17 @@ public class QueueCoreTests
 
         public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) =>
             _jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
+
+        public IReadOnlyList<QueueJobModel> GetStrandedJobs(
+            byte maxAttempts,
+            byte maxInterruptions
+        ) =>
+            _jobs
+                .Where(j =>
+                    j.ReservedAt == null
+                    && (j.Attempts >= maxAttempts || j.Interruptions >= maxInterruptions)
+                )
+                .ToList();
 
         public void AddFailedJob(FailedJobModel failedJob)
         {

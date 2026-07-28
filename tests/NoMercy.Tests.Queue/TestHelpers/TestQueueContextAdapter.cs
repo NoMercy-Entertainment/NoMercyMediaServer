@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -80,15 +80,26 @@ public class TestQueueContextAdapter : IQueueContext
 
     public void ResetAllReservedJobs()
     {
-        foreach (QueueJobModel job in Jobs)
+        foreach (QueueJobModel job in Jobs.Where(j => j.ReservedAt != null))
         {
             job.ReservedAt = null;
+            job.Attempts = (byte)Math.Max(0, job.Attempts - 1);
+            job.Interruptions = (byte)Math.Min(byte.MaxValue, job.Interruptions + 1);
         }
     }
 
     public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc)
     {
         return Jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
+    }
+
+    public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts, byte maxInterruptions)
+    {
+        return Jobs.Where(j =>
+                j.ReservedAt == null
+                && (j.Attempts >= maxAttempts || j.Interruptions >= maxInterruptions)
+            )
+            .ToList();
     }
 
     public void AddFailedJob(FailedJobModel failedJob)

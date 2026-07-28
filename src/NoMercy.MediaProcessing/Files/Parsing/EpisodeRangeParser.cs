@@ -31,16 +31,18 @@ public static partial class EpisodeRangeParser
     private const int MaxSpan = 50;
 
     [GeneratedRegex(
-        @"(?<![A-Za-z0-9])S(\d{1,2})E(\d{1,4})((?:[\s._]*E\d{1,4})*)(?:[\s._-]*-[\s._-]*E?(\d{1,4}))?",
-        RegexOptions.IgnoreCase)]
+        @"(?<![A-Za-z0-9])S([0-9]{1,2})E([0-9]{1,4})((?:[\s._]*E[0-9]{1,4})*)(?:[\s._-]*-[\s._-]*E?([0-9]{1,4}))?",
+        RegexOptions.IgnoreCase
+    )]
     private static partial Regex SeasonEpisodeRange();
 
     [GeneratedRegex(
-        @"(?<![A-Za-z0-9])(\d{1,2})x(\d{1,3})((?:x\d{1,3})*)(?:[\s._-]*-[\s._-]*(?:\d{1,2}x)?(\d{1,3}))?",
-        RegexOptions.IgnoreCase)]
+        @"(?<![A-Za-z0-9])([0-9]{1,2})x([0-9]{1,3})((?:x[0-9]{1,3})*)(?:[\s._-]*-[\s._-]*(?:[0-9]{1,2}x)?([0-9]{1,3}))?",
+        RegexOptions.IgnoreCase
+    )]
     private static partial Regex CrossEpisodeRange();
 
-    [GeneratedRegex(@"\d{1,4}")]
+    [GeneratedRegex(@"[0-9]{1,4}")]
     private static partial Regex Numbers();
 
     /// <summary>
@@ -55,15 +57,19 @@ public static partial class EpisodeRangeParser
             return [firstEpisode];
 
         Match m = SeasonEpisodeRange().Match(name);
-        if (m.Success
+        if (
+            m.Success
             && int.Parse(m.Groups[1].Value) == season
-            && int.Parse(m.Groups[2].Value) == firstEpisode)
+            && int.Parse(m.Groups[2].Value) == firstEpisode
+        )
             return Build(firstEpisode, m.Groups[3].Value, m.Groups[4]);
 
         Match c = CrossEpisodeRange().Match(name);
-        if (c.Success
+        if (
+            c.Success
             && int.Parse(c.Groups[1].Value) == season
-            && int.Parse(c.Groups[2].Value) == firstEpisode)
+            && int.Parse(c.Groups[2].Value) == firstEpisode
+        )
             return Build(firstEpisode, c.Groups[3].Value, c.Groups[4]);
 
         return [firstEpisode];

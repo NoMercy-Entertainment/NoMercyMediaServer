@@ -200,7 +200,8 @@ public partial class MusicLogic : IAsyncDisposable
         // return;
         else
             _logger.LogDebug(
-                "Processing release: {Title} with id: {Id}", [release.Title, release.Id]
+                "Processing release: {Title} with id: {Id}",
+                [release.Title, release.Id]
             );
 
         if (await StoreRelease(mediaContext, releaseAppends, mediaFile) is null)
@@ -1095,7 +1096,7 @@ public partial class MusicLogic : IAsyncDisposable
     }
 
     [GeneratedRegex(
-        @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]?\s?(?<album>.*)?)"
+        @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>[0-9]{4})\]?\s?(?<album>.*)?)"
     )]
     private static partial Regex PathRegex();
 }

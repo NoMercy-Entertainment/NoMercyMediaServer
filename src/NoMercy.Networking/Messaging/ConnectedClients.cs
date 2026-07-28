@@ -19,6 +19,26 @@ public class ConnectedClients
     public ConcurrentDictionary<string, Client> Clients { get; } = new();
 
     /// <summary>
+    /// The live connections a user holds on one hub, and the single definition of
+    /// "reachable over SignalR" that <see cref="ClientMessenger.SendTo" /> and every
+    /// reachability check share.
+    /// </summary>
+    /// <remarks>
+    /// A client registers one connection per hub, so matching on the user alone
+    /// reports a user on <c>musicHub</c> as reachable on <c>videoHub</c> and the send
+    /// then hits nothing. <see cref="Client.Endpoint" /> is stored with the leading
+    /// slash SignalR routes on, which the caller's hub name does not carry.
+    /// </remarks>
+    public List<KeyValuePair<string, Client>> ConnectionsFor(Guid userId, string hub) =>
+        [
+            .. Clients.Where(connection =>
+                connection.Value.Sub.Equals(userId) && connection.Value.Endpoint == "/" + hub
+            ),
+        ];
+
+    public bool IsReachable(Guid userId, string hub) => ConnectionsFor(userId, hub).Count > 0;
+
+    /// <summary>
     /// How many live hub connections each device currently holds.
     /// </summary>
     /// <remarks>

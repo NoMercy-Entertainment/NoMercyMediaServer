@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -16,7 +16,12 @@ using NoMercyQueue.Core.Models;
 
 namespace NoMercyQueue;
 
-public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQueue>? logger = null)
+public class JobQueue(
+    IQueueContext context,
+    byte maxAttempts = 3,
+    ILogger<JobQueue>? logger = null,
+    byte maxInterruptions = 10
+)
 {
     private const int MaxDbRetryAttempts = 5;
     private const int BaseRetryDelayMs = 2000;
@@ -154,6 +159,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                     };
 
                     context.AddFailedJobAndRemoveJob(failedJob, queueJob);
+                    FailParentChain(queueJob, "job.child_failed");
                 }
                 else
                 {
@@ -179,6 +185,119 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             {
                 logger?.LogError(e, "Failed to record job failure for {JobId}", queueJob.Id);
             }
+        }
+    }
+
+    /// <summary>
+    /// Dead-letters every row the reserve query can never hand out again —
+    /// unreserved and already at <c>maxAttempts</c> — and returns how many were
+    /// removed.
+    /// <para>Nothing else in the engine can see these rows. The reserve
+    /// predicate skips them by definition and both orphan passes only scan rows
+    /// that are still RESERVED, so a row that burns its last attempt without
+    /// going through <see cref="FailJob"/> stays in the queue forever. A
+    /// mid-encode restart does exactly that: the boot pass clears
+    /// <c>ReservedAt</c> and leaves <c>Attempts</c> where it was, so three
+    /// restarts over the life of one encode strand its row silently — no
+    /// failure recorded, no log line, and it keeps the queue position it was
+    /// dispatched into. That is what put a season's first episode permanently
+    /// at the head of the encoder queue while the rest of the season encoded
+    /// past it.</para>
+    /// </summary>
+    public int FailStrandedJobs()
+    {
+        try
+        {
+            lock (_writeLock)
+            {
+                IReadOnlyList<QueueJobModel> stranded = context.GetStrandedJobs(
+                    maxAttempts,
+                    maxInterruptions
+                );
+                if (stranded.Count == 0)
+                    return 0;
+
+                foreach (QueueJobModel job in stranded)
+                {
+                    FailedJobModel failedJob = new()
+                    {
+                        Uuid = Guid.NewGuid(),
+                        Connection = "default",
+                        Queue = job.Queue,
+                        Payload = job.Payload,
+                        ParentJobId = job.Id,
+                        Exception =
+                            $"{{\"Message\":\"Stranded: {job.Attempts} attempts and {job.Interruptions} interruptions used, never released\"}}",
+                        FailedAt = DateTime.UtcNow,
+                    };
+
+                    context.AddFailedJobAndRemoveJob(failedJob, job);
+                    FailParentChain(job, "job.child_stranded");
+
+                    logger?.LogWarning(
+                        "Dead-lettered stranded job {JobId} on queue {Queue} — {Attempts} attempts used and no reservation held",
+                        job.Id,
+                        job.Queue,
+                        job.Attempts
+                    );
+                }
+
+                context.SaveChanges();
+                return stranded.Count;
+            }
+        }
+        catch (Exception e)
+        {
+            logger?.LogError(e, "Failed to sweep stranded jobs");
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Dead-letters the coordinator that dispatched <paramref name="job"/>, and
+    /// its coordinator in turn.
+    /// <para>Parent-to-child propagation already existed — <c>ReserveJob</c>
+    /// skips a child whose parent has failed. The other direction did not, and
+    /// a coordinator has no other way to learn that a child is never coming: it
+    /// waits on rows in <c>EncodeTaskOutcomes</c>, and a child that dies writes
+    /// none. So it re-queued itself every poll interval forever, holding its
+    /// place at the head of the queue and reporting itself as merely
+    /// queued.</para>
+    /// <para>Called with <c>_writeLock</c> held; the caller commits.</para>
+    /// </summary>
+    private void FailParentChain(QueueJobModel job, string reason)
+    {
+        int? parentId = job.ParentJobId;
+        HashSet<int> seen = [job.Id];
+
+        while (parentId.HasValue && seen.Add(parentId.Value))
+        {
+            QueueJobModel? parent = context.FindJob(parentId.Value);
+            if (parent is null)
+                return;
+
+            context.AddFailedJobAndRemoveJob(
+                new()
+                {
+                    Uuid = Guid.NewGuid(),
+                    Connection = "default",
+                    Queue = parent.Queue,
+                    Payload = parent.Payload,
+                    ParentJobId = parent.Id,
+                    Exception = $"{{\"Message\":\"{reason} (job {job.Id})\"}}",
+                    FailedAt = DateTime.UtcNow,
+                },
+                parent
+            );
+
+            logger?.LogWarning(
+                "Dead-lettered coordinator {ParentId} on queue {Queue} — its child {JobId} will never complete",
+                parent.Id,
+                parent.Queue,
+                job.Id
+            );
+
+            parentId = parent.ParentJobId;
         }
     }
 

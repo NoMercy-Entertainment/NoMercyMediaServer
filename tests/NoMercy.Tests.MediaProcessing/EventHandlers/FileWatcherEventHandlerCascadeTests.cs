@@ -86,6 +86,13 @@ internal sealed class FileWatcherTestQueueContext : IQueueContext
     public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) =>
         Jobs.Where(j => j.ReservedAt < cutoffUtc).ToList();
 
+    public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts, byte maxInterruptions) =>
+        Jobs.Where(j =>
+                j.ReservedAt == null
+                && (j.Attempts >= maxAttempts || j.Interruptions >= maxInterruptions)
+            )
+            .ToList();
+
     public bool IsParentFailed(int parentJobId) => false;
 
     public void AddFailedJob(FailedJobModel failedJob) { }

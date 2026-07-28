@@ -52,7 +52,7 @@ public static partial class StringExtensions
         return Regex.Replace(text, @"[^a-zA-Z0-9\s.-]", "");
     }
 
-    [GeneratedRegex(@"(1(8|9)|20)\d{2}(?!p|i|(1(8|9)|20)\d{2}|\W(1(8|9)|20)\d{2})")]
+    [GeneratedRegex(@"(1(8|9)|20)[0-9]{2}(?!p|i|(1(8|9)|20)[0-9]{2}|\W(1(8|9)|20)[0-9]{2})")]
     public static partial Regex MatchYearRegex();
 
     public static string? TryGetYear(this string str)
@@ -65,7 +65,7 @@ public static partial class StringExtensions
     public static partial Regex RemoveBracketedString();
 
     /// <summary>Matches a [tmdb-1234] hint embedded in a filename.</summary>
-    [GeneratedRegex(@"\[tmdb-(\d+)\]", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\[tmdb-([0-9]+)\]", RegexOptions.IgnoreCase)]
     public static partial Regex MatchTmdbHint();
 
     /// <summary>
@@ -78,13 +78,20 @@ public static partial class StringExtensions
         return m.Success ? int.Parse(m.Groups[1].Value) : null;
     }
 
-    [GeneratedRegex(@"\d+")]
+    /// <summary>
+    /// ASCII digits only, here and in every other numbering pattern. <c>\d</c>
+    /// matches any Unicode decimal digit and <c>int.Parse</c> reads none of
+    /// them, so a real release — "First Season 「アタックオブ朹町２丁目…」" —
+    /// matched the fullwidth ２ and threw <c>FormatException</c> out of the
+    /// scan. One such file in a library stopped the whole import.
+    /// </summary>
+    [GeneratedRegex(@"[0-9]+")]
     public static partial Regex MatchNumbers();
 
-    [GeneratedRegex(@"[\.\s\-_]S\d{1,2}(?:E\d+)?(?:[\.\s\-_]|$)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"[\.\s\-_]S[0-9]{1,2}(?:E[0-9]+)?(?:[\.\s\-_]|$)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchSeasonTag();
 
-    [GeneratedRegex(@"^S(\d{1,2})E(\d+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^S([0-9]{1,2})E([0-9]+)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchEpisodePrefix();
 
     /// <summary>
@@ -93,16 +100,16 @@ public static partial class StringExtensions
     /// through to the generic detector, which reads the release's absolute episode number as
     /// the episode and searches for a title that includes it.
     /// </summary>
-    [GeneratedRegex(@"[\.\s\-_\(\[\{]S(\d{1,2})E(\d+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"[\.\s\-_\(\[\{]S([0-9]{1,2})E([0-9]+)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchSeasonEpisode();
 
     [GeneratedRegex(@"\(.*?\)")]
     public static partial Regex RemoveParenthesizedString();
 
-    [GeneratedRegex(@"[\-\.\s]+Episode\s*(\d+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"[\-\.\s]+Episode\s*([0-9]+)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchEpisodeWord();
 
-    [GeneratedRegex(@"(?<![A-Za-z0-9])(\d{1,2})[xX×](\d{1,3})(?![0-9])")]
+    [GeneratedRegex(@"(?<![A-Za-z0-9])([0-9]{1,2})[xX×]([0-9]{1,3})(?![0-9])")]
     public static partial Regex MatchCrossFormatEpisode();
 
     /// <summary>
@@ -269,15 +276,42 @@ public static partial class StringExtensions
         return title.TrimEnd('-', '.', '_', ' ', '(', '[', '{').Trim();
     }
 
+    /// <summary>
+    /// The last segment of <paramref name="path"/>, treating BOTH separators as
+    /// separators.
+    /// <para><see cref="Path.GetFileName(string)"/> cannot: on Linux a backslash
+    /// is an ordinary filename character, so "C:\Shows\Bleach\Season 2" is one
+    /// segment there and the season folder stops being recognised as one. The
+    /// paths reaching this come from a Windows picker or a NAS share as often as
+    /// from the local disk, so the separator is data rather than a property of
+    /// the machine reading it.</para>
+    /// </summary>
+    [Pure]
+    public static string LeafSegment(this string path)
+    {
+        string trimmed = path.TrimEnd('/', '\\');
+        int lastSeparator = trimmed.LastIndexOfAny(['/', '\\']);
+        return lastSeparator < 0 ? trimmed : trimmed[(lastSeparator + 1)..];
+    }
+
+    /// <summary>Everything before <see cref="LeafSegment"/>, or empty at the root.</summary>
+    [Pure]
+    public static string ParentSegment(this string path)
+    {
+        string trimmed = path.TrimEnd('/', '\\');
+        int lastSeparator = trimmed.LastIndexOfAny(['/', '\\']);
+        return lastSeparator <= 0 ? string.Empty : trimmed[..lastSeparator];
+    }
+
     /// <summary>Matches a "Season N" / "Series N" (and common localized) folder name.</summary>
     [GeneratedRegex(
-        @"(?<![A-Za-z])(?:season|series|saison|staffel|temporada|stagione)[\s\.\-_]*0*(\d{1,3})(?![0-9])",
+        @"(?<![A-Za-z])(?:season|series|saison|staffel|temporada|stagione)[\s\.\-_]*0*([0-9]{1,3})(?![0-9])",
         RegexOptions.IgnoreCase
     )]
     public static partial Regex MatchFolderSeasonWord();
 
     /// <summary>Matches a bare "S2" / "S02" folder name (whole string).</summary>
-    [GeneratedRegex(@"^[Ss]0*(\d{1,3})$")]
+    [GeneratedRegex(@"^[Ss]0*([0-9]{1,3})$")]
     public static partial Regex MatchSeasonFolderShort();
 
     /// <summary>
@@ -291,7 +325,7 @@ public static partial class StringExtensions
         if (string.IsNullOrWhiteSpace(directory))
             return null;
 
-        string folder = Path.GetFileName(directory.TrimEnd('/', '\\'));
+        string folder = directory.LeafSegment();
         if (string.IsNullOrEmpty(folder))
             folder = directory;
 

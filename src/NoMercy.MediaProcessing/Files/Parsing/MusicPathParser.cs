@@ -21,14 +21,21 @@ namespace NoMercy.MediaProcessing.Files.Parsing;
 /// </summary>
 public static partial class MusicPathParser
 {
-    [GeneratedRegex(@"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]|\[(?<releaseType>Singles)\])\s?(?<album>.*)?")]
+    [GeneratedRegex(
+        @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>[0-9]{4})\]|\[(?<releaseType>Singles)\])\s?(?<album>.*)?"
+    )]
     public static partial Regex MatchAlbumPath();
 
-    [GeneratedRegex(@"\[\d{4}\]\s?")]
+    [GeneratedRegex(@"\[[0-9]{4}\]\s?")]
     public static partial Regex MatchYearTag();
 
     /// <summary>Parsed album metadata. Year is 0 when absent.</summary>
-    public readonly record struct MusicAlbumInfo(int Year, string AlbumName, string? Artist, string? ReleaseType);
+    public readonly record struct MusicAlbumInfo(
+        int Year,
+        string AlbumName,
+        string? Artist,
+        string? ReleaseType
+    );
 
     /// <summary>
     /// Parses <paramref name="directoryPath"/>. When the path does not match the
@@ -39,16 +46,16 @@ public static partial class MusicPathParser
     {
         Match match = MatchAlbumPath().Match(directoryPath);
 
-        int year = match.Groups["year"].Success
-            ? int.Parse(match.Groups["year"].Value)
-            : 0;
+        int year = match.Groups["year"].Success ? int.Parse(match.Groups["year"].Value) : 0;
 
         string albumName = match.Groups["album"].Success
             ? match.Groups["album"].Value
             : MatchYearTag().Replace(folderName, string.Empty);
 
         string? artist = match.Groups["artist"].Success ? match.Groups["artist"].Value : null;
-        string? releaseType = match.Groups["releaseType"].Success ? match.Groups["releaseType"].Value : null;
+        string? releaseType = match.Groups["releaseType"].Success
+            ? match.Groups["releaseType"].Value
+            : null;
 
         return new(year, albumName, artist, releaseType);
     }

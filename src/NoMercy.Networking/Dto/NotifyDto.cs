@@ -23,4 +23,7 @@ public class NotifyDto
 
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
+
+    [JsonProperty("route")]
+    public string? Route { get; set; }
 }

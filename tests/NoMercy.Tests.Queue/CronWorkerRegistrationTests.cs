@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -251,6 +251,11 @@ public class CronWorkerRegistrationTests
         public void ResetAllReservedJobs() { }
 
         public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) => [];
+
+        public IReadOnlyList<QueueJobModel> GetStrandedJobs(
+            byte maxAttempts,
+            byte maxInterruptions
+        ) => [];
 
         public void AddFailedJob(FailedJobModel failedJob) { }
 
