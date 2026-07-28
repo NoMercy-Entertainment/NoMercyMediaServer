@@ -20,6 +20,7 @@ using NoMercy.MediaProcessing.Jobs;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Auth;
 using NoMercy.Notifications.Push;
+using NoMercy.Notifications.Transports;
 using NoMercy.Storage;
 
 namespace NoMercy.Service.Extensions;
@@ -118,6 +119,9 @@ public static class EventHandlerExtensions
         services.AddSingleton<IPushRelayClient, PushRelayClient>();
         services.AddSingleton<IPushDispatcher, PushDispatcher>();
         services.AddSingleton<IPushDispatchQueue, PushDispatchQueue>();
+        services.AddSingleton<INotificationTransport, SignalRNotificationTransport>();
+        services.AddSingleton<INotificationTransport, PushNotificationTransport>();
+        services.AddSingleton<NotificationDispatcher>();
         services.AddSingleton<NotificationSink>();
         services.AddHostedService<PushDispatchWorker>();
 

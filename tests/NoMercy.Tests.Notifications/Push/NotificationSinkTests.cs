@@ -11,6 +11,7 @@
 
 using Moq;
 using NoMercy.Notifications.Push;
+using NoMercy.Notifications.Transports;
 using Xunit;
 
 namespace NoMercy.Tests.Notifications.Push;
@@ -21,7 +22,7 @@ public class NotificationSinkTests
     public void A_Notification_Is_Handed_To_The_Queue_Under_Its_Channel_Slug()
     {
         Mock<IPushDispatchQueue> queue = new();
-        NotificationSink sink = new(queue.Object);
+        NotificationSink sink = new(queue.Object, new NotificationDispatcher([]));
 
         sink.Notify(
             "encode-finished",
@@ -40,5 +41,40 @@ public class NotificationSinkTests
                 ),
             Times.Once
         );
+    }
+
+    [Fact]
+    public async Task NotifyUserAsync_HandsTheNotificationToTheDispatcher()
+    {
+        Guid userId = Guid.NewGuid();
+        Mock<INotificationTransport> transport = new();
+        transport.SetupGet(t => t.Name).Returns("SignalR");
+        transport
+            .Setup(t => t.CanReachAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        UserNotification? delivered = null;
+        transport
+            .Setup(t => t.DeliverAsync(It.IsAny<UserNotification>(), It.IsAny<CancellationToken>()))
+            .Callback<UserNotification, CancellationToken>(
+                (notification, _) => delivered = notification
+            )
+            .Returns(Task.CompletedTask);
+
+        NotificationSink sink = new(
+            new Mock<IPushDispatchQueue>().Object,
+            new NotificationDispatcher([transport.Object])
+        );
+
+        await sink.NotifyUserAsync(
+            userId,
+            "user-notification",
+            new PushPayload("Title", "Body", null),
+            CancellationToken.None
+        );
+
+        Assert.NotNull(delivered);
+        Assert.Equal(userId, delivered!.UserId);
+        Assert.Equal("user-notification", delivered.Channel);
     }
 }

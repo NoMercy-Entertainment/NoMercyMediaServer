@@ -9,12 +9,24 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Notifications.Transports;
+
 namespace NoMercy.Notifications.Push;
 
-public class NotificationSink(IPushDispatchQueue queue)
+public class NotificationSink(IPushDispatchQueue queue, NotificationDispatcher dispatcher)
 {
     public void Notify(string channel, PushPayload payload, string accessToken)
     {
         queue.Enqueue(new(channel, payload, accessToken));
+    }
+
+    public Task NotifyUserAsync(
+        Guid userId,
+        string channel,
+        PushPayload payload,
+        CancellationToken ct
+    )
+    {
+        return dispatcher.DispatchAsync(new(userId, channel, payload), ct);
     }
 }
