@@ -11,7 +11,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
@@ -19,6 +18,10 @@ namespace NoMercy.Notifications.Push;
 
 public class PushKeyClient : IPushKeyClient
 {
+    // Relative to ExternalServicesConfig.ApiServerBaseUrl, which already ends
+    // in /v1/server/.
+    internal const string Endpoint = "push/keys";
+
     private sealed class Envelope
     {
         [JsonPropertyName("subscriptions")]
@@ -44,12 +47,11 @@ public class PushKeyClient : IPushKeyClient
     {
         Dictionary<string, string> queryParams = new() { ["id"] = Info.DeviceId.ToString() };
 
-        GenericHttpClient client = new(ExternalServicesConfig.Current.ApiServerBaseUrl, 10, 0);
-        client.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, accessToken);
+        GenericHttpClient client = PushRelayHttpClient.ForServer(accessToken);
 
         string response = await client.SendAndReadAsync(
             HttpMethod.Get,
-            "push/keys",
+            Endpoint,
             null,
             queryParams,
             cancellationToken

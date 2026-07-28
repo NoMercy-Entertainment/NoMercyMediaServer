@@ -12,7 +12,6 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
@@ -20,6 +19,11 @@ namespace NoMercy.Notifications.Push;
 
 public class PushRelayClient : IPushRelayClient
 {
+    // Relative to ExternalServicesConfig.ApiServerBaseUrl, which already ends
+    // in /v1/server/ — a leading "server/" here resolves to /v1/server/server/
+    // and 404s on every dispatch.
+    internal const string Endpoint = "push/dispatch";
+
     private sealed class RequestBody
     {
         [JsonPropertyName("channel")]
@@ -45,16 +49,7 @@ public class PushRelayClient : IPushRelayClient
         CancellationToken cancellationToken = default
     )
     {
-        GenericHttpClient client = new(ExternalServicesConfig.Current.ApiServerBaseUrl, 10, 0);
-        client.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, accessToken);
-
-        // GenericHttpClient.SendAndReadAsync silently drops the HttpContent
-        // whenever a non-empty queryParams dictionary is also supplied (it
-        // takes the queryParams overload, which never attaches content). The
-        // "id" query param has to travel on the URL itself so both the body
-        // and the auth-carrying id survive the call.
-        string endpoint =
-            $"server/push/dispatch?id={Uri.EscapeDataString(Info.DeviceId.ToString())}";
+        GenericHttpClient client = PushRelayHttpClient.ForServer(accessToken);
 
         using StringContent content = new(
             BuildRequestBody(channel, entries),
@@ -62,8 +57,24 @@ public class PushRelayClient : IPushRelayClient
             "application/json"
         );
 
-        await client.SendAndReadAsync(HttpMethod.Post, endpoint, content, null, cancellationToken);
+        await client.SendAndReadAsync(
+            HttpMethod.Post,
+            BuildEndpoint(Info.DeviceId),
+            content,
+            null,
+            cancellationToken
+        );
     }
+
+    /// <summary>
+    /// GenericHttpClient.SendAndReadAsync silently drops the HttpContent
+    /// whenever a non-empty queryParams dictionary is also supplied (it takes
+    /// the queryParams overload, which never attaches content). The "id" query
+    /// param has to travel on the URL itself so both the body and the
+    /// auth-carrying id survive the call.
+    /// </summary>
+    internal static string BuildEndpoint(Guid deviceId) =>
+        $"{Endpoint}?id={Uri.EscapeDataString(deviceId.ToString())}";
 
     internal static string BuildRequestBody(string channel, IReadOnlyList<PushRelayEntry> entries)
     {

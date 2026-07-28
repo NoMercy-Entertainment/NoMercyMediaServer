@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Text.Json;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.Notifications.Push;
 using Xunit;
 
@@ -17,6 +18,40 @@ namespace NoMercy.Tests.Notifications.Push;
 
 public class PushRelayClientTests
 {
+    private static readonly Guid DeviceId = Guid.Parse("2f6d1a4e-0000-4000-8000-0000000000ff");
+
+    /// <summary>
+    /// The endpoint is relative to a base URL that already ends in
+    /// /v1/server/, so a "server/" prefix here silently resolves to
+    /// /v1/server/server/push/dispatch. Every dispatch 404s, and
+    /// <see cref="PushDispatcher"/> swallows the failure, so nothing anywhere
+    /// says so. This assertion is the only thing that does.
+    /// </summary>
+    [Fact]
+    public void The_Dispatch_Endpoint_Resolves_Onto_The_Server_Base_Without_Doubling_It()
+    {
+        Uri baseUri = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
+
+        Uri resolved = new(baseUri, PushRelayClient.BuildEndpoint(DeviceId));
+
+        Assert.Equal($"{baseUri.AbsolutePath}push/dispatch", resolved.AbsolutePath);
+    }
+
+    [Fact]
+    public void The_Dispatch_Endpoint_Is_The_Relay_Route_On_The_Production_Base()
+    {
+        Uri resolved = new(
+            new Uri("https://api.nomercy.tv/v1/server/"),
+            PushRelayClient.BuildEndpoint(DeviceId)
+        );
+
+        Assert.Equal(
+            "https://api.nomercy.tv/v1/server/push/dispatch",
+            resolved.GetLeftPart(UriPartial.Path)
+        );
+        Assert.Equal($"?id={DeviceId}", resolved.Query);
+    }
+
     [Fact]
     public void BuildRequestBody_Uses_The_Hyphenated_Channel_And_Snake_Case_Entry_Fields()
     {
