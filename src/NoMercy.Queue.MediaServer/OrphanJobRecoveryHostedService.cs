@@ -84,10 +84,12 @@ public class OrphanJobRecoveryHostedService(
                     checkpointLookup,
                     orphans,
                     EncoderQueues.ToHashSet(),
-                    // Boot-pass behavior is unchanged: nothing was running when
-                    // the host came up, so a genuine first-time orphan gets its
-                    // attempt refunded for one free clean retry.
-                    refundAttemptOnRequeue: true,
+                    // Nothing was running when the host came up, so every
+                    // reservation found here belongs to a worker that no longer
+                    // exists. That is the process dying, not the job failing:
+                    // the attempt goes back and only the interruption count
+                    // moves.
+                    interrupted: true,
                     deadLetterReasonFactory: null,
                     onReclaimed: null,
                     cancellationToken: cancellationToken

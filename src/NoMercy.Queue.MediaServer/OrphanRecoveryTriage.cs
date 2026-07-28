@@ -37,25 +37,42 @@ public static class OrphanRecoveryTriage
     public const string InterruptedReason = "job.interrupted_no_checkpoint";
 
     /// <summary>
+    /// How many times a job may lose its worker to the process dying before it
+    /// is retired anyway.
+    /// <para>Set high on purpose. Restarts are routine — a development session
+    /// or an update run can easily interrupt the same long encode several times
+    /// — and none of them say anything about the job. This threshold exists for
+    /// one case only: a job that crashes the process every time it runs would
+    /// otherwise be re-queued by every boot pass forever, and take the server
+    /// down with it each time.</para>
+    /// </summary>
+    public const byte MaxInterruptions = 10;
+
+    /// <summary>
     /// Triages <paramref name="orphans"/> in place and persists the outcome via
     /// <paramref name="context"/>. <paramref name="encoderQueues"/> identifies
     /// which of the orphan's <c>Queue</c> values are encoder queues — only
     /// those consult <paramref name="checkpointLookup"/> for a resumable crash
     /// checkpoint; every other queue follows the plain attempt-budget path.
     /// </summary>
-    /// <param name="refundAttemptOnRequeue">
-    /// When a non-dead-lettered orphan is requeued (the <c>Attempts &lt;= 1</c>
-    /// branch), whether to refund the attempt it burned by decrementing
-    /// <c>Attempts</c> back down (the boot-pass behavior: a crash gets exactly
-    /// one free clean retry, since nothing else could have caused that
-    /// reservation). The periodic reaper must NOT refund — <c>ReserveJob</c>
-    /// only ever increments <c>Attempts</c> on reservation, so refunding on
-    /// every periodic pass would hold a repeatedly-hanging job at
-    /// <c>Attempts == 1</c> forever: it never crosses the
-    /// <c>Attempts &gt; 1</c> dead-letter threshold below and re-duplicates
-    /// its work every reaper interval without bound. Leaving <c>Attempts</c>
-    /// untouched here means the NEXT reservation's normal increment carries it
-    /// over that threshold within a couple of reclaims.
+    /// <param name="interrupted">
+    /// Whether the reservations being reclaimed were lost to the process going
+    /// away rather than to anything the jobs did. True for the boot pass:
+    /// nothing was running when the host came up, so every reservation it finds
+    /// belongs to a worker that no longer exists — a restart, a kill, a power
+    /// cut. Those jobs never got to fail, so the attempt <c>ReserveJob</c>
+    /// charged them on reservation is refunded and only
+    /// <see cref="QueueJobModel.Interruptions"/> goes up; a job is retired on
+    /// that count alone, and only after <see cref="MaxInterruptions"/> of them,
+    /// which is the case of a job that takes the process down with it every
+    /// time it runs.
+    /// <para>False for the periodic reaper. The host is up and the worker is
+    /// alive; a reservation older than the cutoff means the JOB is wedged, and
+    /// that is a real failure. Attempts stays where it is so the next
+    /// reservation's normal increment carries a repeat-hanging job over the
+    /// dead-letter threshold within a couple of reclaims — refunding there
+    /// would hold it at <c>Attempts == 1</c> forever, re-duplicating its work
+    /// every interval without bound.</para>
     /// </param>
     /// <param name="deadLetterReasonFactory">
     /// Produces the <c>FailedJobModel.Exception</c> string for a dead-lettered
@@ -73,7 +90,7 @@ public static class OrphanRecoveryTriage
         IOrphanCheckpointLookup? checkpointLookup,
         IReadOnlyList<QueueJobModel> orphans,
         IReadOnlySet<string> encoderQueues,
-        bool refundAttemptOnRequeue,
+        bool interrupted,
         Func<QueueJobModel, string>? deadLetterReasonFactory = null,
         Action<QueueJobModel, DateTime?, string>? onReclaimed = null,
         CancellationToken cancellationToken = default
@@ -105,7 +122,23 @@ public static class OrphanRecoveryTriage
                 }
             }
 
-            if (orphan.Attempts > 1)
+            // An interrupted job is charged an interruption, never an attempt.
+            // ReserveJob increments Attempts the moment it hands a job out, so
+            // a job whose worker vanished is holding a charge for work it never
+            // got to do — and three restarts during one long encode would
+            // otherwise retire a perfectly good file with nothing recorded
+            // anywhere to say why.
+            if (interrupted)
+            {
+                orphan.Interruptions = (byte)Math.Min(byte.MaxValue, orphan.Interruptions + 1);
+                orphan.Attempts = (byte)Math.Max(0, orphan.Attempts - 1);
+            }
+
+            bool exhausted = interrupted
+                ? orphan.Interruptions >= MaxInterruptions
+                : orphan.Attempts > 1;
+
+            if (exhausted)
             {
                 string reason = deadLetterReasonFactory?.Invoke(orphan) ?? InterruptedReason;
 
@@ -126,9 +159,6 @@ public static class OrphanRecoveryTriage
             }
             else
             {
-                if (refundAttemptOnRequeue)
-                    orphan.Attempts = (byte)Math.Max(0, orphan.Attempts - 1);
-
                 orphan.ReservedAt = null;
                 context.UpdateJob(orphan);
                 requeued++;

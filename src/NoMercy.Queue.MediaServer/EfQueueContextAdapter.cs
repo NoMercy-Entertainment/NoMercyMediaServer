@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -117,6 +117,7 @@ public class EfQueueContextAdapter : IQueueContext
                 Queue = job.Queue,
                 Payload = job.Payload,
                 Attempts = job.Attempts,
+                Interruptions = job.Interruptions,
                 ReservedAt = job.ReservedAt,
                 AvailableAt = job.AvailableAt,
                 CreatedAt = job.CreatedAt,
@@ -200,6 +201,7 @@ public class EfQueueContextAdapter : IQueueContext
             entity.Priority = job.Priority;
             entity.Queue = job.Queue;
             entity.Attempts = job.Attempts;
+            entity.Interruptions = job.Interruptions;
             entity.ReservedAt = job.ReservedAt;
             entity.AvailableAt = job.AvailableAt;
             context.SaveChanges();
@@ -228,9 +230,11 @@ public class EfQueueContextAdapter : IQueueContext
     {
         Execute(context =>
         {
-            foreach (QueueJob job in context.QueueJobs)
+            foreach (QueueJob job in context.QueueJobs.Where(j => j.ReservedAt != null))
             {
                 job.ReservedAt = null;
+                job.Attempts = (byte)Math.Max(0, job.Attempts - 1);
+                job.Interruptions = (byte)Math.Min(byte.MaxValue, job.Interruptions + 1);
             }
             context.SaveChanges();
             context.ChangeTracker.Clear();
@@ -249,13 +253,16 @@ public class EfQueueContextAdapter : IQueueContext
         });
     }
 
-    public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts)
+    public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts, byte maxInterruptions)
     {
         return Execute(context =>
         {
             List<QueueJob> rows = context
                 .QueueJobs.AsNoTracking()
-                .Where(j => j.ReservedAt == null && j.Attempts >= maxAttempts)
+                .Where(j =>
+                    j.ReservedAt == null
+                    && (j.Attempts >= maxAttempts || j.Interruptions >= maxInterruptions)
+                )
                 .ToList();
             return rows.Select(ToModel).ToList();
         });
@@ -471,6 +478,7 @@ public class EfQueueContextAdapter : IQueueContext
             Queue = entity.Queue,
             Payload = entity.Payload,
             Attempts = entity.Attempts,
+            Interruptions = entity.Interruptions,
             ReservedAt = entity.ReservedAt,
             AvailableAt = entity.AvailableAt,
             CreatedAt = entity.CreatedAt,

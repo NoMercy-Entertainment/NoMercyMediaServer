@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -40,7 +40,7 @@ public class OrphanJobRecoveryHostedServiceTests
     }
 
     [Fact]
-    public async Task StartAsync_OrphanWithRepeatAttempts_MovedToFailedJobs()
+    public async Task StartAsync_OrphanInterruptedTooOften_MovedToFailedJobs()
     {
         (OrphanJobRecoveryHostedService service, TestQueueContextAdapter context) = BuildService();
         QueueJobModel orphan = new()
@@ -49,6 +49,7 @@ public class OrphanJobRecoveryHostedServiceTests
             Payload = "{\"id\":\"job-1\"}",
             Priority = 5,
             Attempts = 2,
+            Interruptions = OrphanRecoveryTriage.MaxInterruptions - 1,
             ReservedAt = DateTime.UtcNow.AddMinutes(-5),
             AvailableAt = DateTime.UtcNow.AddHours(-1),
         };

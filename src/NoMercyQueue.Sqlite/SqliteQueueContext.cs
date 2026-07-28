@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -59,6 +59,7 @@ public class SqliteQueueContext : IQueueContext
             Queue = job.Queue,
             Payload = job.Payload,
             Attempts = job.Attempts,
+            Interruptions = job.Interruptions,
             ReservedAt = job.ReservedAt,
             AvailableAt = job.AvailableAt,
             CreatedAt = job.CreatedAt,
@@ -131,6 +132,7 @@ public class SqliteQueueContext : IQueueContext
         entity.Priority = job.Priority;
         entity.Queue = job.Queue;
         entity.Attempts = job.Attempts;
+        entity.Interruptions = job.Interruptions;
         entity.ReservedAt = job.ReservedAt;
         entity.AvailableAt = job.AvailableAt;
         SaveAndClear();
@@ -151,9 +153,11 @@ public class SqliteQueueContext : IQueueContext
 
     public void ResetAllReservedJobs()
     {
-        foreach (QueueJobEntity job in _context.QueueJobs)
+        foreach (QueueJobEntity job in _context.QueueJobs.Where(j => j.ReservedAt != null))
         {
             job.ReservedAt = null;
+            job.Attempts = (byte)Math.Max(0, job.Attempts - 1);
+            job.Interruptions = (byte)Math.Min(byte.MaxValue, job.Interruptions + 1);
         }
         SaveAndClear();
     }
@@ -171,6 +175,7 @@ public class SqliteQueueContext : IQueueContext
                 Queue = e.Queue,
                 Payload = e.Payload,
                 Attempts = e.Attempts,
+                Interruptions = e.Interruptions,
                 ReservedAt = e.ReservedAt,
                 AvailableAt = e.AvailableAt,
                 CreatedAt = e.CreatedAt,
@@ -180,11 +185,14 @@ public class SqliteQueueContext : IQueueContext
             .ToList();
     }
 
-    public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts)
+    public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts, byte maxInterruptions)
     {
         return _context
             .QueueJobs.AsNoTracking()
-            .Where(j => j.ReservedAt == null && j.Attempts >= maxAttempts)
+            .Where(j =>
+                j.ReservedAt == null
+                && (j.Attempts >= maxAttempts || j.Interruptions >= maxInterruptions)
+            )
             .ToList()
             .Select(e => new QueueJobModel
             {
@@ -193,6 +201,7 @@ public class SqliteQueueContext : IQueueContext
                 Queue = e.Queue,
                 Payload = e.Payload,
                 Attempts = e.Attempts,
+                Interruptions = e.Interruptions,
                 ReservedAt = e.ReservedAt,
                 AvailableAt = e.AvailableAt,
                 CreatedAt = e.CreatedAt,
@@ -380,6 +389,7 @@ public class SqliteQueueContext : IQueueContext
             Queue = entity.Queue,
             Payload = entity.Payload,
             Attempts = entity.Attempts,
+            Interruptions = entity.Interruptions,
             ReservedAt = entity.ReservedAt,
             AvailableAt = entity.AvailableAt,
             CreatedAt = entity.CreatedAt,

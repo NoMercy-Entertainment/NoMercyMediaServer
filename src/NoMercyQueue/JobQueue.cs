@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -16,7 +16,12 @@ using NoMercyQueue.Core.Models;
 
 namespace NoMercyQueue;
 
-public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQueue>? logger = null)
+public class JobQueue(
+    IQueueContext context,
+    byte maxAttempts = 3,
+    ILogger<JobQueue>? logger = null,
+    byte maxInterruptions = 10
+)
 {
     private const int MaxDbRetryAttempts = 5;
     private const int BaseRetryDelayMs = 2000;
@@ -205,7 +210,10 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         {
             lock (_writeLock)
             {
-                IReadOnlyList<QueueJobModel> stranded = context.GetStrandedJobs(maxAttempts);
+                IReadOnlyList<QueueJobModel> stranded = context.GetStrandedJobs(
+                    maxAttempts,
+                    maxInterruptions
+                );
                 if (stranded.Count == 0)
                     return 0;
 
@@ -219,7 +227,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                         Payload = job.Payload,
                         ParentJobId = job.Id,
                         Exception =
-                            $"{{\"Message\":\"Stranded: {job.Attempts} attempts used, never released\"}}",
+                            $"{{\"Message\":\"Stranded: {job.Attempts} attempts and {job.Interruptions} interruptions used, never released\"}}",
                         FailedAt = DateTime.UtcNow,
                     };
 

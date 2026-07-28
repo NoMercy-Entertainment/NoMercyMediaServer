@@ -27,6 +27,7 @@ internal class QueueJobEntity
     [MaxLength(4096)]
     public required string Payload { get; set; }
     public byte Attempts { get; set; }
+    public byte Interruptions { get; set; }
     public DateTime? ReservedAt { get; set; }
     public DateTime AvailableAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

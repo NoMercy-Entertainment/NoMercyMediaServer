@@ -154,10 +154,11 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
                     checkpointLookup: null,
                     candidates,
                     encoderQueues: Array.Empty<string>().ToHashSet(),
-                    // Must NOT refund — see the class doc's convergence
-                    // rationale. Repeated hangs cross the dead-letter
-                    // threshold instead of looping forever.
-                    refundAttemptOnRequeue: false,
+                    // The host is up and the worker is alive, so a reservation
+                    // this old means the JOB is wedged. That is a real failure
+                    // and it keeps its attempt — see the class doc's
+                    // convergence rationale.
+                    interrupted: false,
                     deadLetterReasonFactory: BuildDeadLetterReason,
                     onReclaimed: LogReclaim,
                     cancellationToken: cancellationToken

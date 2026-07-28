@@ -31,7 +31,8 @@ namespace NoMercy.Database.Models.Queue;
 // Queue and ReservedAt turns it into a SEARCH and lets the trailing columns satisfy
 // the ORDER BY. Measured 2741ms -> 87ms on a copy of a real 2.5GB queue.db.
 [Index(
-    nameof(Queue), [nameof(ReservedAt), nameof(Priority), nameof(CreatedAt), nameof(Id)],
+    nameof(Queue),
+    [nameof(ReservedAt), nameof(Priority), nameof(CreatedAt), nameof(Id)],
     IsDescending = new[] { false, false, true, false, false }
 )]
 public class QueueJob
@@ -45,6 +46,16 @@ public class QueueJob
     [MaxLength(4096)]
     public required string Payload { get; set; }
     public byte Attempts { get; set; } = 0;
+
+    /// <summary>
+    /// How many times this job lost its worker to the process going away rather
+    /// than to anything the job did — a restart, a kill, a power cut.
+    /// <para>Separate from <see cref="Attempts"/> on purpose: an interrupted job
+    /// never got to fail, so charging it an attempt retires work that was only
+    /// ever unlucky. It is still counted, because a job that takes the process
+    /// down with it every time it runs would otherwise retry forever.</para>
+    /// </summary>
+    public byte Interruptions { get; set; } = 0;
     public DateTime? ReservedAt { get; set; }
     public DateTime AvailableAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
