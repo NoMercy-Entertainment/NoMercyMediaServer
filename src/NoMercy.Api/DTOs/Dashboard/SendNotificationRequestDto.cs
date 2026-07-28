@@ -26,4 +26,7 @@ public record SendNotificationRequestDto
 
     [JsonProperty("type")]
     public string? Type { get; set; }
+
+    [JsonProperty("route")]
+    public string? Route { get; set; }
 }

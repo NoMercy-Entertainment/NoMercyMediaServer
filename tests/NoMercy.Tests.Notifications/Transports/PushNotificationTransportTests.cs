@@ -21,6 +21,9 @@ public class PushNotificationTransportTests
 {
     private static readonly byte[] SealedBytes = [9, 8, 7];
 
+    private static UserNotification ANotification(Guid userId) =>
+        new(userId, "videoHub", "encode-finished", new PushPayload("Done", "body", null));
+
     private static Mock<IAuthTokenStore> TokenStore(string accessToken = "token")
     {
         Mock<IAuthTokenStore> tokenStore = new();
@@ -54,7 +57,10 @@ public class PushNotificationTransportTests
             TokenStore().Object
         );
 
-        bool reachable = await transport.CanReachAsync(Guid.NewGuid(), CancellationToken.None);
+        bool reachable = await transport.CanReachAsync(
+            ANotification(Guid.NewGuid()),
+            CancellationToken.None
+        );
 
         Assert.False(reachable);
         relay.Verify(
@@ -86,7 +92,10 @@ public class PushNotificationTransportTests
             TokenStore().Object
         );
 
-        bool reachable = await transport.CanReachAsync(userId, CancellationToken.None);
+        bool reachable = await transport.CanReachAsync(
+            ANotification(userId),
+            CancellationToken.None
+        );
 
         Assert.True(reachable);
     }
@@ -138,13 +147,7 @@ public class PushNotificationTransportTests
             TokenStore().Object
         );
 
-        UserNotification notification = new(
-            targetUser,
-            "encode-finished",
-            new PushPayload("Done", "body", null)
-        );
-
-        await transport.DeliverAsync(notification, CancellationToken.None);
+        await transport.DeliverAsync(ANotification(targetUser), CancellationToken.None);
 
         Assert.Equal("ref-target", capturedAudience);
         Assert.NotNull(capturedEntries);
@@ -170,10 +173,7 @@ public class PushNotificationTransportTests
             TokenStore().Object
         );
 
-        await transport.DeliverAsync(
-            new(Guid.NewGuid(), "encode-finished", new PushPayload("Done", "body", null)),
-            CancellationToken.None
-        );
+        await transport.DeliverAsync(ANotification(Guid.NewGuid()), CancellationToken.None);
 
         relay.Verify(
             r =>
@@ -210,10 +210,7 @@ public class PushNotificationTransportTests
             TokenStore().Object
         );
 
-        await transport.DeliverAsync(
-            new(targetUser, "encode-finished", new PushPayload("Done", "body", null)),
-            CancellationToken.None
-        );
+        await transport.DeliverAsync(ANotification(targetUser), CancellationToken.None);
 
         relay.Verify(
             r =>

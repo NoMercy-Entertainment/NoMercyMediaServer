@@ -36,7 +36,7 @@ public sealed class NotificationDispatcher
             bool reachable;
             try
             {
-                reachable = await transport.CanReachAsync(notification.UserId, ct);
+                reachable = await transport.CanReachAsync(notification, ct);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

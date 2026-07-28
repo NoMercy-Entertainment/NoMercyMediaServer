@@ -21,7 +21,10 @@ public sealed class UserNotifiedEvent : EventBase
     public string Hub { get; init; } = "videoHub";
 
     // Null (default) keeps the existing broadcast-to-everyone behavior. When set,
-    // SignalRNotificationEventHandler routes the "Notify" push to only this user's
-    // live connection(s) instead of every connected client.
+    // the notification is dispatched to that one user over whichever transport
+    // can currently reach them instead of to every connected client.
     public Guid? UserId { get; init; }
+
+    // In-app navigation target a client opens when the notification is tapped.
+    public string? Route { get; init; }
 }

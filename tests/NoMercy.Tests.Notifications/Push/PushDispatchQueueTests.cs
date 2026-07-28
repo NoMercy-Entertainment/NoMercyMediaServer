@@ -11,6 +11,7 @@
 
 using Moq;
 using NoMercy.Notifications.Push;
+using NoMercy.Notifications.Transports;
 using Xunit;
 
 namespace NoMercy.Tests.Notifications.Push;
@@ -51,7 +52,7 @@ public class PushDispatchQueueTests
                 return release.Task;
             });
 
-        PushDispatchQueue queue = new(dispatcher.Object);
+        PushDispatchQueue queue = new(dispatcher.Object, new NotificationDispatcher([]));
         using CancellationTokenSource cts = new();
         Task drain = queue.DrainAsync(cts.Token);
 
@@ -97,7 +98,7 @@ public class PushDispatchQueueTests
             .Callback(() => delivered.TrySetResult())
             .Returns(Task.CompletedTask);
 
-        PushDispatchQueue queue = new(dispatcher.Object);
+        PushDispatchQueue queue = new(dispatcher.Object, new NotificationDispatcher([]));
         using CancellationTokenSource cts = new();
         Task drain = queue.DrainAsync(cts.Token);
 
@@ -151,7 +152,7 @@ public class PushDispatchQueueTests
                 return Task.CompletedTask;
             });
 
-        PushDispatchQueue queue = new(dispatcher.Object);
+        PushDispatchQueue queue = new(dispatcher.Object, new NotificationDispatcher([]));
         using CancellationTokenSource cts = new();
         Task drain = queue.DrainAsync(cts.Token);
 
@@ -162,5 +163,74 @@ public class PushDispatchQueueTests
         Assert.False(drain.IsCompleted);
 
         await cts.CancelAsync();
+    }
+
+    /// <summary>
+    /// A request carrying a UserId is one person's notification, and the
+    /// channel-wide dispatcher would seal it for every subscriber this server
+    /// can see. It has to leave through the transports instead, which pick
+    /// SignalR or a user-filtered push.
+    /// </summary>
+    [Fact]
+    public async Task Drain_Routes_A_User_Request_Through_The_Transports_Not_The_Channel_Dispatcher()
+    {
+        Guid userId = Guid.NewGuid();
+        TaskCompletionSource delivered = new();
+        UserNotification? captured = null;
+
+        Mock<INotificationTransport> transport = new();
+        transport.SetupGet(t => t.Name).Returns("Push");
+        transport
+            .Setup(t =>
+                t.CanReachAsync(It.IsAny<UserNotification>(), It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync(true);
+        transport
+            .Setup(t => t.DeliverAsync(It.IsAny<UserNotification>(), It.IsAny<CancellationToken>()))
+            .Callback<UserNotification, CancellationToken>(
+                (notification, _) =>
+                {
+                    captured = notification;
+                    delivered.TrySetResult();
+                }
+            )
+            .Returns(Task.CompletedTask);
+
+        Mock<IPushDispatcher> channelDispatcher = new();
+
+        PushDispatchQueue queue = new(
+            channelDispatcher.Object,
+            new NotificationDispatcher([transport.Object])
+        );
+        using CancellationTokenSource cts = new();
+        Task drain = queue.DrainAsync(cts.Token);
+
+        queue.Enqueue(
+            new(
+                "user-notification",
+                new PushPayload("Done", "body", null),
+                "token",
+                UserId: userId,
+                Hub: "musicHub"
+            )
+        );
+
+        await delivered.Task.WaitAsync(Patience);
+        await cts.CancelAsync();
+
+        Assert.NotNull(captured);
+        Assert.Equal(userId, captured!.UserId);
+        Assert.Equal("musicHub", captured.Hub);
+        channelDispatcher.Verify(
+            d =>
+                d.DispatchAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<PushPayload>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Never
+        );
     }
 }

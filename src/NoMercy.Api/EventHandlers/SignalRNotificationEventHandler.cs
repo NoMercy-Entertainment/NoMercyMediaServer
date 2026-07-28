@@ -27,19 +27,23 @@ public class SignalRNotificationEventHandler : IDisposable
         _subscriptions.Add(eventBus.Subscribe<UserNotifiedEvent>(OnUserNotification));
     }
 
+    // Broadcast only. A notification aimed at one user goes through
+    // NotificationDispatcher, which picks SignalR or push so the user is told
+    // exactly once; delivering it here as well would be the second copy.
     internal async Task OnUserNotification(UserNotifiedEvent @event, CancellationToken ct)
     {
+        if (@event.UserId is not null)
+            return;
+
         NotifyDto payload = new()
         {
             Title = @event.Title,
             Message = @event.Message,
             Type = @event.Type,
+            Route = @event.Route,
         };
 
-        if (@event.UserId is { } userId)
-            await _clientMessenger.SendTo("Notify", @event.Hub, userId, payload);
-        else
-            await _clientMessenger.SendToAll("Notify", @event.Hub, payload);
+        await _clientMessenger.SendToAll("Notify", @event.Hub, payload);
     }
 
     public void Dispose()

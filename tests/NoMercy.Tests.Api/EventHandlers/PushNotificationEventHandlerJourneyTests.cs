@@ -42,9 +42,8 @@ public class PushNotificationEventHandlerJourneyTests
         AuthTokenStore authTokenStore = new();
         authTokenStore.SetAccessToken(accessToken);
 
-        NotificationSink sink = new(queueMock.Object, new NotificationDispatcher([]));
-        ConnectedClients connectedClients = new();
-        PushNotificationEventHandler handler = new(bus, authTokenStore, sink, connectedClients);
+        NotificationSink sink = new(queueMock.Object);
+        PushNotificationEventHandler handler = new(bus, authTokenStore, sink);
         return (bus, queueMock, handler);
     }
 
@@ -200,19 +199,14 @@ public class PushNotificationEventHandlerJourneyTests
             });
 
         InMemoryEventBus bus = new();
-        PushDispatchQueue queue = new(dispatcherMock.Object);
+        PushDispatchQueue queue = new(dispatcherMock.Object, new NotificationDispatcher([]));
         AuthTokenStore authTokenStore = new();
         authTokenStore.SetAccessToken("server-access-token");
 
         using CancellationTokenSource cts = new();
         Task drain = queue.DrainAsync(cts.Token);
 
-        using PushNotificationEventHandler _ = new(
-            bus,
-            authTokenStore,
-            new(queue, new NotificationDispatcher([])),
-            new ConnectedClients()
-        );
+        using PushNotificationEventHandler _ = new(bus, authTokenStore, new(queue));
 
         await bus.PublishAsync(AnEncodeFinishing());
         await entered.Task.WaitAsync(Patience);
@@ -251,16 +245,11 @@ public class PushNotificationEventHandlerJourneyTests
         AuthTokenStore authTokenStore = new();
         authTokenStore.SetAccessToken("server-access-token");
 
-        PushDispatchQueue queue = new(dispatcherMock.Object);
+        PushDispatchQueue queue = new(dispatcherMock.Object, new NotificationDispatcher([]));
         using CancellationTokenSource cts = new();
         Task drain = queue.DrainAsync(cts.Token);
 
-        using PushNotificationEventHandler pushHandler = new(
-            bus,
-            authTokenStore,
-            new(queue, new NotificationDispatcher([])),
-            new ConnectedClients()
-        );
+        using PushNotificationEventHandler pushHandler = new(bus, authTokenStore, new(queue));
 
         Mock<NoMercy.Networking.Messaging.IClientMessenger> messengerMock = new(
             MockBehavior.Strict
@@ -288,16 +277,40 @@ public class PushNotificationEventHandlerJourneyTests
         await cts.CancelAsync();
     }
 
-    private static (
-        InMemoryEventBus bus,
-        SignalRNotificationEventHandler signalRHandler,
-        PushNotificationEventHandler pushHandler,
-        Mock<ISingleClientProxy> socket,
-        Mock<IPushRelayClient> relay
-    ) BuildUserNotifiedChain(Guid userId, bool connected)
+    private sealed class UserNotifiedChain : IDisposable
+    {
+        public required InMemoryEventBus Bus { get; init; }
+        public required SignalRNotificationEventHandler SignalRHandler { get; init; }
+        public required PushNotificationEventHandler PushHandler { get; init; }
+        public required Mock<ISingleClientProxy> Socket { get; init; }
+        public required Mock<IPushRelayClient> Relay { get; init; }
+        public required TaskCompletionSource Settled { get; init; }
+        public required CancellationTokenSource Drain { get; init; }
+
+        public void Dispose()
+        {
+            SignalRHandler.Dispose();
+            PushHandler.Dispose();
+            Drain.Cancel();
+            Drain.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// The whole per-user path as it is wired in production: the real bus, the
+    /// real queue and worker loop, the real dispatcher, and both real
+    /// transports. Only the socket and the relay HTTP call are stood in for,
+    /// because those are what the guarantee is stated about.
+    /// </summary>
+    private static UserNotifiedChain BuildUserNotifiedChain(
+        Guid userId,
+        bool connected,
+        string hub = "videoHub"
+    )
     {
         InMemoryEventBus bus = new();
         ConnectedClients connectedClients = new();
+        TaskCompletionSource settled = new();
 
         Mock<ISingleClientProxy> socket = new();
         socket
@@ -308,6 +321,7 @@ public class PushNotificationEventHandlerJourneyTests
                     It.IsAny<CancellationToken>()
                 )
             )
+            .Callback(() => settled.TrySetResult())
             .Returns(Task.CompletedTask);
 
         if (connected)
@@ -318,7 +332,7 @@ public class PushNotificationEventHandlerJourneyTests
                 {
                     Sub = userId,
                     Socket = socket.Object,
-                    Endpoint = "/videoHub",
+                    Endpoint = "/" + hub,
                 }
             );
         }
@@ -353,6 +367,7 @@ public class PushNotificationEventHandlerJourneyTests
                     It.IsAny<CancellationToken>()
                 )
             )
+            .Callback(() => settled.TrySetResult())
             .Returns(Task.CompletedTask);
 
         INotificationTransport signalRTransport = new SignalRNotificationTransport(
@@ -364,43 +379,54 @@ public class PushNotificationEventHandlerJourneyTests
             relay.Object,
             authTokenStore
         );
-        NotificationDispatcher dispatcher = new([signalRTransport, pushTransport]);
-        NotificationSink sink = new(new Mock<IPushDispatchQueue>().Object, dispatcher);
 
-        PushNotificationEventHandler pushHandler = new(bus, authTokenStore, sink, connectedClients);
+        PushDispatchQueue queue = new(
+            new Mock<IPushDispatcher>().Object,
+            new NotificationDispatcher([signalRTransport, pushTransport])
+        );
+        CancellationTokenSource drain = new();
+        _ = queue.DrainAsync(drain.Token);
 
-        return (bus, signalRHandler, pushHandler, socket, relay);
+        NotificationSink sink = new(queue);
+        PushNotificationEventHandler pushHandler = new(bus, authTokenStore, sink);
+
+        return new()
+        {
+            Bus = bus,
+            SignalRHandler = signalRHandler,
+            PushHandler = pushHandler,
+            Socket = socket,
+            Relay = relay,
+            Settled = settled,
+            Drain = drain,
+        };
     }
+
+    private static UserNotifiedEvent ANotificationFor(Guid userId, string hub = "videoHub") =>
+        new()
+        {
+            Title = "Encoding finished",
+            Message = "Idiocracy finished encoding",
+            Type = "info",
+            Hub = hub,
+            Route = "/movie/1",
+            UserId = userId,
+        };
 
     [Fact]
     public async Task UserNotified_ConnectedUser_ProducesExactlyOneSignalRMessage_AndNoPush()
     {
         Guid userId = Guid.NewGuid();
-        (
-            InMemoryEventBus bus,
-            SignalRNotificationEventHandler signalRHandler,
-            PushNotificationEventHandler pushHandler,
-            Mock<ISingleClientProxy> socket,
-            Mock<IPushRelayClient> relay
-        ) = BuildUserNotifiedChain(userId, connected: true);
-        using SignalRNotificationEventHandler _ = signalRHandler;
-        using PushNotificationEventHandler __ = pushHandler;
+        using UserNotifiedChain chain = BuildUserNotifiedChain(userId, connected: true);
 
-        await bus.PublishAsync(
-            new UserNotifiedEvent
-            {
-                Title = "Encoding finished",
-                Message = "Idiocracy finished encoding",
-                Type = "info",
-                UserId = userId,
-            }
-        );
+        await chain.Bus.PublishAsync(ANotificationFor(userId));
+        await chain.Settled.Task.WaitAsync(Patience);
 
-        socket.Verify(
+        chain.Socket.Verify(
             s => s.SendCoreAsync("Notify", It.IsAny<object?[]>(), It.IsAny<CancellationToken>()),
             Times.Once
         );
-        relay.Verify(
+        chain.Relay.Verify(
             r =>
                 r.DispatchAsync(
                     It.IsAny<string>(),
@@ -413,31 +439,25 @@ public class PushNotificationEventHandlerJourneyTests
         );
     }
 
+    /// <summary>
+    /// A user connected to a different hub is not reachable on the target one:
+    /// suppressing their push on the strength of that connection and then
+    /// sending to zero sockets is the silent drop this path must not have.
+    /// </summary>
     [Fact]
-    public async Task UserNotified_DisconnectedUser_ProducesExactlyOnePush_WithAudience_AndNoSignalR()
+    public async Task UserNotified_UserConnectedToAnotherHub_StillGetsThePush()
     {
         Guid userId = Guid.NewGuid();
-        (
-            InMemoryEventBus bus,
-            SignalRNotificationEventHandler signalRHandler,
-            PushNotificationEventHandler pushHandler,
-            Mock<ISingleClientProxy> socket,
-            Mock<IPushRelayClient> relay
-        ) = BuildUserNotifiedChain(userId, connected: false);
-        using SignalRNotificationEventHandler _ = signalRHandler;
-        using PushNotificationEventHandler __ = pushHandler;
-
-        await bus.PublishAsync(
-            new UserNotifiedEvent
-            {
-                Title = "Encoding finished",
-                Message = "Idiocracy finished encoding",
-                Type = "info",
-                UserId = userId,
-            }
+        using UserNotifiedChain chain = BuildUserNotifiedChain(
+            userId,
+            connected: true,
+            hub: "musicHub"
         );
 
-        socket.Verify(
+        await chain.Bus.PublishAsync(ANotificationFor(userId, hub: "videoHub"));
+        await chain.Settled.Task.WaitAsync(Patience);
+
+        chain.Socket.Verify(
             s =>
                 s.SendCoreAsync(
                     It.IsAny<string>(),
@@ -446,7 +466,7 @@ public class PushNotificationEventHandlerJourneyTests
                 ),
             Times.Never
         );
-        relay.Verify(
+        chain.Relay.Verify(
             r =>
                 r.DispatchAsync(
                     "user-notification",
@@ -457,5 +477,112 @@ public class PushNotificationEventHandlerJourneyTests
                 ),
             Times.Once
         );
+    }
+
+    [Fact]
+    public async Task UserNotified_DisconnectedUser_ProducesExactlyOnePush_WithAudience_AndNoSignalR()
+    {
+        Guid userId = Guid.NewGuid();
+        using UserNotifiedChain chain = BuildUserNotifiedChain(userId, connected: false);
+
+        await chain.Bus.PublishAsync(ANotificationFor(userId));
+        await chain.Settled.Task.WaitAsync(Patience);
+
+        chain.Socket.Verify(
+            s =>
+                s.SendCoreAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<object?[]>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Never
+        );
+        chain.Relay.Verify(
+            r =>
+                r.DispatchAsync(
+                    "user-notification",
+                    It.IsAny<IReadOnlyList<PushRelayEntry>>(),
+                    "server-access-token",
+                    "ref-" + userId,
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Once
+        );
+    }
+
+    /// <summary>
+    /// The per-user case runs through the same queue as the broadcast one, so
+    /// the publisher never waits on nomercy.tv. With the relay call inline,
+    /// POST /dashboard/notifications/send blocks for the full HTTP timeout of a
+    /// server that cannot currently reach NoMercy.
+    /// </summary>
+    [Fact]
+    public async Task UserNotified_PublishDoesNotWaitForTheRelay_EvenWhenItNeverAnswers()
+    {
+        Guid userId = Guid.NewGuid();
+        TaskCompletionSource entered = new();
+        TaskCompletionSource relayNeverAnswers = new();
+
+        InMemoryEventBus bus = new();
+        AuthTokenStore authTokenStore = new();
+        authTokenStore.SetAccessToken("server-access-token");
+
+        Mock<IPushKeyClient> keyClient = new();
+        keyClient
+            .Setup(client => client.GetKeysAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new(1, "p256dh", "auth", "ref-" + userId, userId)]);
+
+        Mock<IWebPushEnvelope> envelope = new();
+        envelope
+            .Setup(e => e.Seal(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns([9, 8, 7]);
+
+        Mock<IPushRelayClient> relay = new();
+        relay
+            .Setup(r =>
+                r.DispatchAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IReadOnlyList<PushRelayEntry>>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(() =>
+            {
+                entered.TrySetResult();
+                return relayNeverAnswers.Task;
+            });
+
+        INotificationTransport pushTransport = new PushNotificationTransport(
+            keyClient.Object,
+            envelope.Object,
+            relay.Object,
+            authTokenStore
+        );
+
+        PushDispatchQueue queue = new(
+            new Mock<IPushDispatcher>().Object,
+            new NotificationDispatcher([pushTransport])
+        );
+        using CancellationTokenSource cts = new();
+        _ = queue.DrainAsync(cts.Token);
+
+        using PushNotificationEventHandler handler = new(bus, authTokenStore, new(queue));
+
+        await bus.PublishAsync(ANotificationFor(userId));
+        await entered.Task.WaitAsync(Patience);
+
+        Task laterPublishes = Task.WhenAll(
+            bus.PublishAsync(ANotificationFor(userId)),
+            bus.PublishAsync(ANotificationFor(userId)),
+            bus.PublishAsync(ANotificationFor(userId))
+        );
+
+        Assert.True(laterPublishes.IsCompletedSuccessfully);
+        Assert.False(relayNeverAnswers.Task.IsCompleted);
+
+        relayNeverAnswers.SetResult();
+        await cts.CancelAsync();
     }
 }

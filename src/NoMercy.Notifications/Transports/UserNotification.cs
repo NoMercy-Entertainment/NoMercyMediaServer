@@ -13,4 +13,4 @@ using NoMercy.Notifications.Push;
 
 namespace NoMercy.Notifications.Transports;
 
-public sealed record UserNotification(Guid UserId, string Channel, PushPayload Payload);
+public sealed record UserNotification(Guid UserId, string Hub, string Channel, PushPayload Payload);

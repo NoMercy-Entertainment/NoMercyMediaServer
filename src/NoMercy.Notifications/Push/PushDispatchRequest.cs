@@ -11,9 +11,14 @@
 
 namespace NoMercy.Notifications.Push;
 
+// A set UserId turns this into a one-person notification, delivered by the
+// transport that can currently reach them. Absent, it stays the channel-wide
+// push every subscriber of the channel receives.
 public record PushDispatchRequest(
     string Channel,
     PushPayload Payload,
     string AccessToken,
-    string? Audience = null
+    string? Audience = null,
+    Guid? UserId = null,
+    string? Hub = null
 );

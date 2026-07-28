@@ -11,6 +11,7 @@
 
 using System.Threading.Channels;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Notifications.Transports;
 
 namespace NoMercy.Notifications.Push;
 
@@ -25,7 +26,10 @@ namespace NoMercy.Notifications.Push;
 /// must not wake up to an hour of stale notifications, and it must not have
 /// spent that hour growing a queue in memory.
 /// </summary>
-public class PushDispatchQueue(IPushDispatcher dispatcher) : IPushDispatchQueue
+public class PushDispatchQueue(
+    IPushDispatcher dispatcher,
+    NotificationDispatcher notificationDispatcher
+) : IPushDispatchQueue
 {
     private const int Capacity = 256;
 
@@ -49,13 +53,7 @@ public class PushDispatchQueue(IPushDispatcher dispatcher) : IPushDispatchQueue
         {
             try
             {
-                await dispatcher.DispatchAsync(
-                    request.Channel,
-                    request.Payload,
-                    request.AccessToken,
-                    request.Audience,
-                    cancellationToken
-                );
+                await DeliverAsync(request, cancellationToken);
             }
             // An HttpClient timeout surfaces as a TaskCanceledException, which
             // is an OperationCanceledException. Letting it out would end the
@@ -65,5 +63,24 @@ public class PushDispatchQueue(IPushDispatcher dispatcher) : IPushDispatchQueue
                 Logger.Notify($"Push dispatch to channel {request.Channel} timed out");
             }
         }
+    }
+
+    private Task DeliverAsync(PushDispatchRequest request, CancellationToken cancellationToken)
+    {
+        if (request.UserId is { } userId)
+        {
+            return notificationDispatcher.DispatchAsync(
+                new(userId, request.Hub ?? string.Empty, request.Channel, request.Payload),
+                cancellationToken
+            );
+        }
+
+        return dispatcher.DispatchAsync(
+            request.Channel,
+            request.Payload,
+            request.AccessToken,
+            request.Audience,
+            cancellationToken
+        );
     }
 }

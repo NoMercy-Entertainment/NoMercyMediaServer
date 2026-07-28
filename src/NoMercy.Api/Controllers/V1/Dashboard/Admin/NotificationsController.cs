@@ -34,13 +34,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 // at broadcast time do not receive it retroactively.
 //
 // POST /api/v1/dashboard/notifications/send
-// Same pipeline, scoped to a single user via UserNotifiedEvent.UserId ->
-// IClientMessenger.SendTo (already the mechanism DeviceHub/ConnectionHub use
-// for per-user pushes — NoMercyUserIdProvider maps a SignalR connection to
-// Guid.ToString(), and ConnectedClients is the live-connection registry both
-// SendTo and this "connected" check read from). Also real-time only: a user
-// with no live connection on the target hub simply doesn't receive it, same
-// as broadcast.
+// Same event, scoped to a single user via UserNotifiedEvent.UserId, from where
+// NotificationDispatcher picks one transport: the live socket when the user has
+// one on the target hub, an encrypted push relayed by nomercy.tv when they do
+// not. The "connected" flag reports which of the two it will be, and reads the
+// same ConnectedClients registry the SignalR transport delivers through.
 // -----------------------------------------------------------------------------
 
 [ApiController]
@@ -121,9 +119,7 @@ public class NotificationsController(
             ? DefaultNotificationType
             : request.Type;
 
-        bool connected = connectedClients.Clients.Values.Any(client =>
-            client.Sub == request.UserId && client.Endpoint == "/" + DefaultNotificationHub
-        );
+        bool connected = connectedClients.IsReachable(request.UserId, DefaultNotificationHub);
 
         await eventBus.PublishAsync(
             new UserNotifiedEvent
@@ -132,6 +128,7 @@ public class NotificationsController(
                 Message = request.Body,
                 Type = type,
                 UserId = request.UserId,
+                Route = request.Route,
             }
         );
 

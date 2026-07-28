@@ -15,7 +15,7 @@ public interface INotificationTransport
 {
     string Name { get; }
 
-    Task<bool> CanReachAsync(Guid userId, CancellationToken ct);
+    Task<bool> CanReachAsync(UserNotification notification, CancellationToken ct);
 
     Task DeliverAsync(UserNotification notification, CancellationToken ct);
 }

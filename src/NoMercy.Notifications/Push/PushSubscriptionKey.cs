@@ -11,10 +11,6 @@
 
 namespace NoMercy.Notifications.Push;
 
-// UserRef and UserId are both optional and trail every other member so every
-// shorter call site that predates them (tests included) keeps compiling and
-// behaving the same: a key with no UserId simply cannot be matched to a
-// local user, and a key with no UserRef cannot be dispatched to alone.
 public record PushSubscriptionKey(
     long Id,
     string P256dh,

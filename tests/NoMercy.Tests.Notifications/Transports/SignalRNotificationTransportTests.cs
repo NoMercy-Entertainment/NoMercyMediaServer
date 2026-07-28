@@ -11,6 +11,7 @@
 
 using Microsoft.AspNetCore.SignalR;
 using Moq;
+using NoMercy.Networking.Dto;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.Notifications.Push;
@@ -21,7 +22,11 @@ namespace NoMercy.Tests.Notifications.Transports;
 
 public class SignalRNotificationTransportTests
 {
-    private static Client ConnectedClientFor(Guid userId, out Mock<ISingleClientProxy> socket)
+    private static Client ConnectedClientFor(
+        Guid userId,
+        out Mock<ISingleClientProxy> socket,
+        string hub = "videoHub"
+    )
     {
         socket = new Mock<ISingleClientProxy>();
         socket
@@ -34,11 +39,29 @@ public class SignalRNotificationTransportTests
             )
             .Returns(Task.CompletedTask);
 
-        return new Client { Sub = userId, Socket = socket.Object };
+        return new Client
+        {
+            Sub = userId,
+            Socket = socket.Object,
+            Endpoint = "/" + hub,
+        };
     }
 
+    private static UserNotification ANotification(
+        Guid userId,
+        string hub = "videoHub",
+        string? route = "/movie/1",
+        string? category = "info"
+    ) =>
+        new(
+            userId,
+            hub,
+            "user-notification",
+            new PushPayload("Done", "Idiocracy finished encoding", route, category)
+        );
+
     [Fact]
-    public async Task CanReachAsync_UserWithLiveConnection_IsReachable()
+    public async Task CanReachAsync_UserWithLiveConnectionOnTheTargetHub_IsReachable()
     {
         Guid userId = Guid.NewGuid();
         ConnectedClients connectedClients = new();
@@ -46,7 +69,10 @@ public class SignalRNotificationTransportTests
 
         SignalRNotificationTransport transport = new(connectedClients);
 
-        bool reachable = await transport.CanReachAsync(userId, CancellationToken.None);
+        bool reachable = await transport.CanReachAsync(
+            ANotification(userId),
+            CancellationToken.None
+        );
 
         Assert.True(reachable);
     }
@@ -59,7 +85,36 @@ public class SignalRNotificationTransportTests
 
         SignalRNotificationTransport transport = new(connectedClients);
 
-        bool reachable = await transport.CanReachAsync(Guid.NewGuid(), CancellationToken.None);
+        bool reachable = await transport.CanReachAsync(
+            ANotification(Guid.NewGuid()),
+            CancellationToken.None
+        );
+
+        Assert.False(reachable);
+    }
+
+    /// <summary>
+    /// Delivery only ever reaches the connections a user holds on the target
+    /// hub. Reporting a user connected to musicHub as reachable on videoHub
+    /// suppresses their push and then sends to nothing, which is the one
+    /// outcome — neither transport — the dispatcher exists to rule out.
+    /// </summary>
+    [Fact]
+    public async Task CanReachAsync_UserConnectedToADifferentHubOnly_IsNotReachable()
+    {
+        Guid userId = Guid.NewGuid();
+        ConnectedClients connectedClients = new();
+        connectedClients.Clients.TryAdd(
+            "conn-music",
+            ConnectedClientFor(userId, out _, hub: "musicHub")
+        );
+
+        SignalRNotificationTransport transport = new(connectedClients);
+
+        bool reachable = await transport.CanReachAsync(
+            ANotification(userId, hub: "videoHub"),
+            CancellationToken.None
+        );
 
         Assert.False(reachable);
     }
@@ -83,21 +138,14 @@ public class SignalRNotificationTransportTests
         connectedClients.Clients.TryAdd("conn-other", otherClient);
 
         SignalRNotificationTransport transport = new(connectedClients);
-        UserNotification notification = new(
-            targetUser,
-            "encode-finished",
-            new PushPayload("Done", "Idiocracy finished encoding", "/movie/1")
-        );
 
-        await transport.DeliverAsync(notification, CancellationToken.None);
+        await transport.DeliverAsync(ANotification(targetUser), CancellationToken.None);
 
         targetSocket.Verify(
             s =>
                 s.SendCoreAsync(
-                    "UserNotification",
-                    It.Is<object?[]>(args =>
-                        args.Length == 1 && Equals(args[0], notification.Payload)
-                    ),
+                    It.IsAny<string>(),
+                    It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
             Times.Once
@@ -111,6 +159,88 @@ public class SignalRNotificationTransportTests
                 ),
             Times.Never
         );
+    }
+
+    [Fact]
+    public async Task DeliverAsync_DoesNotReachTheUsersConnectionsOnOtherHubs()
+    {
+        Guid userId = Guid.NewGuid();
+
+        ConnectedClients connectedClients = new();
+        connectedClients.Clients.TryAdd(
+            "conn-video",
+            ConnectedClientFor(userId, out Mock<ISingleClientProxy> videoSocket)
+        );
+        connectedClients.Clients.TryAdd(
+            "conn-music",
+            ConnectedClientFor(userId, out Mock<ISingleClientProxy> musicSocket, hub: "musicHub")
+        );
+
+        SignalRNotificationTransport transport = new(connectedClients);
+
+        await transport.DeliverAsync(
+            ANotification(userId, hub: "videoHub"),
+            CancellationToken.None
+        );
+
+        videoSocket.Verify(
+            s =>
+                s.SendCoreAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<object?[]>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Once
+        );
+        musicSocket.Verify(
+            s =>
+                s.SendCoreAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<object?[]>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Never
+        );
+    }
+
+    /// <summary>
+    /// "Notify" carrying a NotifyDto is the shipped contract nomercy-app-web's
+    /// socketClient renders as a toast. This transport and
+    /// SignalRNotificationEventHandler both feed it, and a client must not be
+    /// able to tell which one produced the message it received.
+    /// </summary>
+    [Fact]
+    public async Task DeliverAsync_EmitsTheShippedNotifyEvent_WithTheShippedPayloadShape()
+    {
+        Guid userId = Guid.NewGuid();
+
+        ConnectedClients connectedClients = new();
+        connectedClients.Clients.TryAdd(
+            "conn-1",
+            ConnectedClientFor(userId, out Mock<ISingleClientProxy> socket)
+        );
+
+        SignalRNotificationTransport transport = new(connectedClients);
+
+        object?[]? captured = null;
+        socket
+            .Setup(s =>
+                s.SendCoreAsync("Notify", It.IsAny<object?[]>(), It.IsAny<CancellationToken>())
+            )
+            .Callback<string, object?[], CancellationToken>((_, args, _) => captured = args)
+            .Returns(Task.CompletedTask);
+
+        await transport.DeliverAsync(
+            ANotification(userId, route: "/movie/1", category: "info"),
+            CancellationToken.None
+        );
+
+        Assert.NotNull(captured);
+        NotifyDto payload = Assert.IsType<NotifyDto>(Assert.Single(captured!));
+        Assert.Equal("Done", payload.Title);
+        Assert.Equal("Idiocracy finished encoding", payload.Message);
+        Assert.Equal("info", payload.Type);
+        Assert.Equal("/movie/1", payload.Route);
     }
 
     [Fact]
@@ -131,16 +261,16 @@ public class SignalRNotificationTransportTests
         ConnectedClients connectedClients = new();
         connectedClients.Clients.TryAdd(
             "conn-1",
-            new Client { Sub = userId, Socket = socket.Object }
+            new Client
+            {
+                Sub = userId,
+                Socket = socket.Object,
+                Endpoint = "/videoHub",
+            }
         );
 
         SignalRNotificationTransport transport = new(connectedClients);
-        UserNotification notification = new(
-            userId,
-            "encode-finished",
-            new PushPayload("Done", "body", null)
-        );
 
-        await transport.DeliverAsync(notification, CancellationToken.None);
+        await transport.DeliverAsync(ANotification(userId), CancellationToken.None);
     }
 }

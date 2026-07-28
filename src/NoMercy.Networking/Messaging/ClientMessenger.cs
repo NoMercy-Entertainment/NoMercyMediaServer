@@ -38,7 +38,8 @@ public class ClientMessenger(ConnectedClients connectedClients, ILogger<ClientMe
         ];
 
         logger.LogDebug(
-            "SendToAll({Name}, {Endpoint}): {Count} target connection(s)", [name, endpoint, targets.Count]
+            "SendToAll({Name}, {Endpoint}): {Count} target connection(s)",
+            [name, endpoint, targets.Count]
         );
 
         await Task.WhenAll(
@@ -48,15 +49,14 @@ public class ClientMessenger(ConnectedClients connectedClients, ILogger<ClientMe
 
     public async Task SendTo(string name, string endpoint, Guid userId, object? data = null)
     {
-        List<KeyValuePair<string, Client>> targets =
-        [
-            .. connectedClients.Clients.Where(client =>
-                client.Value.Sub.Equals(userId) && client.Value.Endpoint == "/" + endpoint
-            ),
-        ];
+        List<KeyValuePair<string, Client>> targets = connectedClients.ConnectionsFor(
+            userId,
+            endpoint
+        );
 
         logger.LogDebug(
-            "SendTo({Name}, {Endpoint}, {UserId}): {Count} target connection(s)", [name, endpoint, userId, targets.Count]
+            "SendTo({Name}, {Endpoint}, {UserId}): {Count} target connection(s)",
+            [name, endpoint, userId, targets.Count]
         );
 
         await Task.WhenAll(
@@ -85,13 +85,15 @@ public class ClientMessenger(ConnectedClients connectedClients, ILogger<ClientMe
                 await client.Socket.SendAsync(name, cts.Token);
 
             logger.LogDebug(
-                "Send {Name} to connection {ConnectionId} (device {DeviceId}) completed in {ElapsedMilliseconds}ms", [name, connectionId, client.DeviceId, stopwatch.ElapsedMilliseconds]
+                "Send {Name} to connection {ConnectionId} (device {DeviceId}) completed in {ElapsedMilliseconds}ms",
+                [name, connectionId, client.DeviceId, stopwatch.ElapsedMilliseconds]
             );
         }
         catch (Exception ex)
         {
             logger.LogDebug(
-                "Send {Name} to connection {ConnectionId} (device {DeviceId}) failed after {ElapsedMilliseconds}ms: {Message}", [name, connectionId, client.DeviceId, stopwatch.ElapsedMilliseconds, ex.Message]
+                "Send {Name} to connection {ConnectionId} (device {DeviceId}) failed after {ElapsedMilliseconds}ms: {Message}",
+                [name, connectionId, client.DeviceId, stopwatch.ElapsedMilliseconds, ex.Message]
             );
         }
     }

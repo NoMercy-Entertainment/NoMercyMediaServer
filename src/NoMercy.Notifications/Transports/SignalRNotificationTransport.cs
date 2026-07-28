@@ -10,49 +10,59 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.AspNetCore.SignalR;
+using NoMercy.Networking.Dto;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Notifications.Transports;
 
-// Reaches over the SAME connection registry every hub already writes to
-// (NoMercy.Networking.Messaging.ConnectedClients, populated by
-// ConnectionHub.OnConnectedAsync/OnDisconnectedAsync). There is no second
-// presence tracker here: a user is "reachable" exactly when that registry
-// already holds a live connection for them, on any hub.
 public sealed class SignalRNotificationTransport(ConnectedClients connectedClients)
     : INotificationTransport
 {
-    private const string EventName = "UserNotification";
+    // The already-shipped wire contract: nomercy-app-web's socketClient listens
+    // for "notify" and renders a toast from a NotifyDto. A client must not be
+    // able to tell whether this transport or SignalRNotificationEventHandler
+    // produced the message.
+    private const string EventName = "Notify";
 
     public string Name => "SignalR";
 
-    public Task<bool> CanReachAsync(Guid userId, CancellationToken ct)
+    public Task<bool> CanReachAsync(UserNotification notification, CancellationToken ct)
     {
-        bool reachable = connectedClients.Clients.Values.Any(client => client.Sub == userId);
-        return Task.FromResult(reachable);
+        return Task.FromResult(connectedClients.IsReachable(notification.UserId, notification.Hub));
     }
 
     public async Task DeliverAsync(UserNotification notification, CancellationToken ct)
     {
-        List<Client> targets =
-        [
-            .. connectedClients.Clients.Values.Where(client => client.Sub == notification.UserId),
-        ];
+        List<KeyValuePair<string, Client>> targets = connectedClients.ConnectionsFor(
+            notification.UserId,
+            notification.Hub
+        );
 
-        await Task.WhenAll(targets.Select(client => SendOneAsync(client, notification, ct)));
+        NotifyDto payload = new()
+        {
+            Title = notification.Payload.Title,
+            Message = notification.Payload.Body,
+            Type = notification.Payload.Category ?? string.Empty,
+            Route = notification.Payload.Route,
+        };
+
+        await Task.WhenAll(
+            targets.Select(target => SendOneAsync(target.Value, notification, payload, ct))
+        );
     }
 
     private static async Task SendOneAsync(
         Client client,
         UserNotification notification,
+        NotifyDto payload,
         CancellationToken ct
     )
     {
         try
         {
-            await client.Socket.SendAsync(EventName, notification.Payload, ct);
+            await client.Socket.SendAsync(EventName, payload, ct);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

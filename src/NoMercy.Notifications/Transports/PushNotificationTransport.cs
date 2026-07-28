@@ -32,9 +32,9 @@ public sealed class PushNotificationTransport(
 {
     public string Name => "Push";
 
-    public async Task<bool> CanReachAsync(Guid userId, CancellationToken ct)
+    public async Task<bool> CanReachAsync(UserNotification notification, CancellationToken ct)
     {
-        PushSubscriptionKey[] keys = await KeysForAsync(userId, ct);
+        PushSubscriptionKey[] keys = await KeysForAsync(notification.UserId, ct);
         return keys.Length > 0;
     }
 

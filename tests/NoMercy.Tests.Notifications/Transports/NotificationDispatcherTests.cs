@@ -19,7 +19,12 @@ namespace NoMercy.Tests.Notifications.Transports;
 public class NotificationDispatcherTests
 {
     private static UserNotification ANotification(Guid? userId = null) =>
-        new(userId ?? Guid.NewGuid(), "encode-finished", new PushPayload("Done", "body", null));
+        new(
+            userId ?? Guid.NewGuid(),
+            "videoHub",
+            "encode-finished",
+            new PushPayload("Done", "body", null)
+        );
 
     private static Mock<INotificationTransport> FakeTransport(
         string name,
@@ -34,13 +39,17 @@ public class NotificationDispatcherTests
         if (canReachThrows is not null)
         {
             transport
-                .Setup(t => t.CanReachAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .Setup(t =>
+                    t.CanReachAsync(It.IsAny<UserNotification>(), It.IsAny<CancellationToken>())
+                )
                 .ThrowsAsync(canReachThrows());
         }
         else
         {
             transport
-                .Setup(t => t.CanReachAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .Setup(t =>
+                    t.CanReachAsync(It.IsAny<UserNotification>(), It.IsAny<CancellationToken>())
+                )
                 .ReturnsAsync(reachable);
         }
 
