@@ -40,9 +40,12 @@ public class PushDispatcher(
 
             byte[] plaintext = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload));
 
+            // STANDARD base64, not base64url: the shipped relay decodes the
+            // ciphertext with base64_decode($ciphertext, true), which rejects
+            // the '-' and '_' of base64url and drops the send silently.
             List<PushRelayEntry> entries = keys.Select(key => new PushRelayEntry(
                     key.Id,
-                    Base64UrlCodec.Encode(envelope.Seal(plaintext, key.P256dh, key.Auth))
+                    Convert.ToBase64String(envelope.Seal(plaintext, key.P256dh, key.Auth))
                 ))
                 .ToList();
 

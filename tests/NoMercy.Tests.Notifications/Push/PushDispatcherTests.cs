@@ -17,7 +17,10 @@ namespace NoMercy.Tests.Notifications.Push;
 
 public class PushDispatcherTests
 {
-    private static readonly byte[] SealedBytes = [1, 2, 3, 250, 251, 252];
+    // 0xFA 0xFB 0xFC 0xFF 0xBF encode to '+' and '/' under the standard
+    // alphabet and to '-' and '_' under base64url, so the two encodings of
+    // this array differ and a test that decodes it can tell them apart.
+    private static readonly byte[] SealedBytes = [1, 2, 3, 250, 251, 252, 255, 191];
 
     private static PushSubscriptionKey[] TwoDevices() =>
         [new(1, "BJ1V", "c2Vj"), new(2, "BJ2W", "dGhy")];
@@ -82,7 +85,7 @@ public class PushDispatcherTests
     }
 
     [Fact]
-    public async Task DispatchAsync_Posts_Base64Url_Of_Exactly_The_Sealed_Bytes()
+    public async Task DispatchAsync_Posts_Standard_Base64_Of_Exactly_The_Sealed_Bytes()
     {
         Mock<IPushKeyClient> keys = new();
         keys.Setup(client => client.GetKeysAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -115,14 +118,15 @@ public class PushDispatcherTests
         PushRelayEntry entry = Assert.Single(captured!);
         Assert.Equal(1, entry.SubscriptionId);
 
-        byte[] decoded = Base64UrlCodec.Decode(entry.Ciphertext);
-        Assert.Equal(SealedBytes, decoded);
+        // The relay decodes with base64_decode($ciphertext, true) — strict,
+        // standard alphabet. Decoding the same way here and comparing bytes is
+        // the only assertion that fails if the sender ever moves back to
+        // base64url, which no test on the relay side can see.
+        Assert.NotEqual(Base64UrlCodec.Encode(SealedBytes), Convert.ToBase64String(SealedBytes));
 
-        // The sealed body carries bytes that are not valid standard-base64
-        // alphabet-safe without padding (0xFA/0xFB/0xFC produce '+'/'/' in
-        // standard base64) — asserting inequality with Convert.ToBase64String
-        // pins that the wire format is base64url, not standard base64.
-        Assert.NotEqual(Convert.ToBase64String(SealedBytes), entry.Ciphertext);
+        byte[] decoded = Convert.FromBase64String(entry.Ciphertext);
+        Assert.Equal(SealedBytes, decoded);
+        Assert.Equal(Convert.ToBase64String(SealedBytes), entry.Ciphertext);
     }
 
     [Fact]
