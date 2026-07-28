@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -64,11 +64,7 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
         //
         // The year is already out (TryGetYear ran on its own copy above), so
         // dropping "(2019)" here costs nothing.
-        string withoutGroups = ParenthesisedGroup()
-            .Replace(
-                StringExtensions.RemoveBracketedString().Replace(rawFileName, string.Empty),
-                RemoveUnlessItNamesTheEpisode
-            );
+        string withoutGroups = ReleaseGroup().Replace(rawFileName, RemoveUnlessItNamesTheEpisode);
 
         // A group the extension strip cut the closing half off. Left in, its
         // digits are still on the table for whichever adapter looks first.
@@ -193,9 +189,17 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
         // Dated daily episode (yyyy.mm.dd): the air date is the key, so any stray
         // number that would be misread as an episode goes. The resolver maps the
         // date to the episode that aired that day.
-        DateOnly? airDate = libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
-            ? DailyEpisodeParser.TryGetAirDate(rawFileName)
-            : null;
+        //
+        // A name carrying BOTH — "Show Name - S06E01 - 2009-12-20 - Ep Name" —
+        // is not a daily episode. The date is the air date printed in the title
+        // and the marker is the key, so reading the date as the key threw S06E01
+        // away and the file arrived unmatched.
+        DateOnly? airDate =
+            libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
+            && !TitleEpisodeMarker().IsMatch(rawFileName)
+            && !StringExtensions.MatchCrossFormatEpisode().IsMatch(rawFileName)
+                ? DailyEpisodeParser.TryGetAirDate(rawFileName)
+                : null;
         if (airDate.HasValue)
         {
             parsed.Season = null;
@@ -347,37 +351,51 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
     /// title. Anything from there on describes the episode, not the show.
     /// </summary>
     [GeneratedRegex(
-        @"(?<![A-Za-z0-9])S\d{1,4}[\s._-]*E\d{1,4}(?![A-Za-z0-9])",
+        @"(?<![A-Za-z0-9])S[0-9]{1,4}[\s._-]*E[0-9]{1,4}(?![A-Za-z0-9])",
         RegexOptions.IgnoreCase
     )]
     private static partial Regex TitleEpisodeMarker();
 
     /// <summary>
-    /// Drops a parenthesised group unless the group is where the release put
-    /// the season and episode.
+    /// Drops a bracketed or parenthesised group unless the group is where the
+    /// release put the season and episode.
     /// <para>Most groups are the technical block — resolution, codec, source,
     /// CRC — and every one of them is full of digits an adapter would happily
     /// read as an episode. But "[Judas] Blue Lock - 05 (S01E05) [1080p]" puts
     /// the marker itself in parentheses, so removing them all threw the answer
     /// away along with the noise.</para>
+    /// <para>The cross-format spelling of the same marker, "Show Name [05x12] Ep
+    /// Name", is kept only when the group is not the FIRST thing in the name.
+    /// The leading group is the fansub tag, and a tag reads as a marker often
+    /// enough to matter: "[3x3] Spice and Wolf - 01 RAW" would be season 3
+    /// episode 3 of Spice and Wolf, which is neither the show's numbering nor
+    /// the episode in the file.</para>
     /// </summary>
-    private static string RemoveUnlessItNamesTheEpisode(Match group) =>
-        TitleEpisodeMarker().IsMatch(group.Value) ? group.Value : string.Empty;
+    private static string RemoveUnlessItNamesTheEpisode(Match group)
+    {
+        if (TitleEpisodeMarker().IsMatch(group.Value))
+            return group.Value;
 
-    [GeneratedRegex(@"\([^()]*\)")]
-    private static partial Regex ParenthesisedGroup();
+        return group.Index > 0 && StringExtensions.MatchCrossFormatEpisode().IsMatch(group.Value)
+            ? group.Value
+            : string.Empty;
+    }
+
+    /// <summary>A bracketed or parenthesised block, innermost pair only.</summary>
+    [GeneratedRegex(@"\[[^\[\]]*\]|\([^()]*\)|\{[^{}]*\}")]
+    private static partial Regex ReleaseGroup();
 
     /// <summary>
     /// The absolute-episode form a fansub release uses: the show, a spaced
     /// dash, then the number. Its presence is what makes a trailing number in
     /// the title an episode marker rather than part of the name.
     /// </summary>
-    [GeneratedRegex(@"[\s._]-[\s._]\d{1,4}(?![0-9])")]
+    [GeneratedRegex(@"[\s._]-[\s._][0-9]{1,4}(?![0-9])")]
     private static partial Regex AbsoluteEpisodeForm();
 
     /// <summary>A number sitting at the very end of a title, with the separator
     /// a release puts before it.</summary>
-    [GeneratedRegex(@"[\s._-]+(?<number>\d{1,4})\s*$")]
+    [GeneratedRegex(@"[\s._-]+(?<number>[0-9]{1,4})\s*$")]
     private static partial Regex TrailingNumber();
 
     /// <summary>
@@ -431,7 +449,7 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
     [GeneratedRegex(
         @"(?:[\s._-]+(?:raw|dvd|dvdrip|bd|bdrip|blu-?ray|hdtv|web-?rip|web-?dl|ts|"
             + @"x26[45]|h\.?26[45]|hevc|avc|xvid|divx|aac|flac|ac3|dts|mp3|"
-            + @"\d{3,4}p|\d{3,4}x\d{3,4}|hi10p?|10bit|8bit|"
+            + @"[0-9]{3,4}p|[0-9]{3,4}x[0-9]{3,4}|hi10p?|10bit|8bit|"
             + @"jap|jpn|eng|ita|multi|dual[\s._-]*audio|sub(?:bed|s)?|dub(?:bed|s)?|"
             + @"uncensored|censored|remux|batch|complete))+\s*$",
         RegexOptions.IgnoreCase
@@ -440,6 +458,13 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
 
     internal static string TitleFromFolder(string? directoryName)
     {
+        // A "Season 2" folder names a season, not a show. In the standard layout
+        // the show is the folder above it, and a file that leans on its folder
+        // for a title — "Season 2/S02E06 The Tower is Tall.mkv" — was handed
+        // "Season 2" as the show's name and searched for under it.
+        if (directoryName.TryGetFolderSeason().HasValue)
+            directoryName = Path.GetDirectoryName(directoryName?.TrimEnd('/', '\\'));
+
         string? folderName = Path.GetFileName(directoryName);
         if (string.IsNullOrWhiteSpace(folderName))
             return "";
@@ -466,9 +491,6 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
         return folderTitle;
     }
 
-    [GeneratedRegex(@"\d+")]
-    private static partial Regex MatchNumbers();
-
     /// <summary>
     /// A re-release marks its version on the episode number itself — "Dororo
     /// (2019) - 01v2", "Detective Conan - 678v2". The suffix glues to the digits,
@@ -476,11 +498,11 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
     /// the episode was lost entirely. Anchored to a preceding digit, so a title
     /// that merely contains a v ("NieR-Automata Ver1.1a") is untouched.
     /// </summary>
-    [GeneratedRegex(@"(?<=\d)v\d{1,2}(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<=[0-9])v[0-9]{1,2}(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
     private static partial Regex VersionSuffix();
 
     /// <summary>A MakeMKV-style disc track suffix — "…Volume 1_t12".</summary>
-    [GeneratedRegex(@"_t\d{2}$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"_t[0-9]{2}$", RegexOptions.IgnoreCase)]
     private static partial Regex DiscTrackMarker();
 
     /// <summary>

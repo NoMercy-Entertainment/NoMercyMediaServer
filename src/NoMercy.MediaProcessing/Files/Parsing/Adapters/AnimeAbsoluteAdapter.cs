@@ -28,8 +28,16 @@ public sealed partial class AnimeAbsoluteAdapter : IFilenameParseAdapter
     public string Name => "anime-absolute";
     public int Order => 50;
 
-    [GeneratedRegex(@"(?<![A-Za-z0-9])(\d{1,4})(?![A-Za-z0-9])")]
+    [GeneratedRegex(@"(?<![A-Za-z0-9])([0-9]{1,4})(?![A-Za-z0-9])")]
     private static partial Regex StandaloneNumber();
+
+    /// <summary>
+    /// A hyphen-joined run of numbers — the "03-04" of "Show Name - 03-04 - Ep
+    /// Name", the "001-013" of a batch. The run names a span, and a span starts
+    /// at its first number.
+    /// </summary>
+    [GeneratedRegex(@"(?<![A-Za-z0-9])([0-9]{1,4})(?:-[0-9]{1,4})+(?![A-Za-z0-9])")]
+    private static partial Regex NumberRun();
 
     public MovieFile? TryParse(ParseContext context)
     {
@@ -51,6 +59,21 @@ public sealed partial class AnimeAbsoluteAdapter : IFilenameParseAdapter
 
         if (episode is null)
             return null;
+
+        // The last number wins because the trailing one is the episode and the
+        // leading ones are the show's name ("Mob Psycho 100 - 07"). A range
+        // breaks that: both halves are trailing, so "Show Name - 03-04 - Ep
+        // Name" took 04. The file holds episodes three AND four, so it was
+        // filed as the second one — episode three then reads as missing and
+        // episode four as a duplicate of a file that is not it.
+        foreach (Match run in NumberRun().Matches(context.CleanedFileName))
+        {
+            if (episode.Index < run.Index || episode.Index >= run.Index + run.Length)
+                continue;
+
+            episode = run;
+            break;
+        }
 
         string showTitle = context
             .CleanedFileName[..episode.Index]

@@ -47,6 +47,8 @@ public class FilenameResolverCorpusTests
                     new AnimeAbsoluteAdapter(),
                     new EpisodeShortFormAdapter(),
                     new SpecialsAdapter(),
+                    new SeasonPackAdapter(),
+                    new PartAdapter(),
                     new MovieDetectorAdapter(),
                 }
             )
@@ -276,5 +278,87 @@ public class FilenameResolverCorpusTests
         )
             .Title.Should()
             .Be("ARIA The Animation");
+    }
+
+    // ---------------------------------------------------------------------------
+    // A hyphen-joined pair of numbers is a SPAN, and a span starts at its first
+    // number. The last number used to win, because the trailing number is the
+    // episode and the leading ones are the show's name — which holds until both
+    // are trailing. A file covering episodes three and four was filed as four,
+    // so three read as missing and four read as a duplicate of a file that is
+    // not it.
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("Show Name - 03-04 - Ep Name.mkv", 3)]
+    [InlineData("[Group] Show Name - 01-02 [1080p].mkv", 1)]
+    [InlineData("[ShinBunBu-Subs] Bleach - 02-03 (CX 1280x720 x264 AAC).mkv", 2)]
+    public void A_range_resolves_to_the_first_episode_it_covers(string file, int episode) =>
+        Resolve(file).Episode.Should().Be(episode);
+
+    [Fact]
+    public void A_single_trailing_number_is_still_the_episode() =>
+        Resolve("[Group] Fairy Tail - 175 [1080p].mkv").Episode.Should().Be(175);
+
+    // ---------------------------------------------------------------------------
+    // Season-scoped material with no episode of its own. The season number was
+    // the only number in the name, so it was read as the episode and the file
+    // took that slot in season one — on top of whatever real episode lived
+    // there. Code Geass season two's trailer was season one, episode two.
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("Code Geass Season 2 Trailer [DVDrip][h264][RUS].mkv", "Code Geass", 2)]
+    [InlineData(
+        "[RiviAxt] Code Geass Hangyaku no Lelouch Season 2 Short Preview.mkv",
+        "Code Geass Hangyaku no Lelouch",
+        2
+    )]
+    [InlineData(
+        "[Exiled-Destiny]_UFO_Ultramaiden_Valkyrie_Season_1_Recap_(AC7BFBCF).mkv",
+        "UFO Ultramaiden Valkyrie",
+        1
+    )]
+    public void A_season_with_no_episode_claims_no_episode(string file, string title, int season)
+    {
+        MovieFile result = Resolve(file);
+        result.Title.Should().Be(title);
+        result.Season.Should().Be(season);
+        result.Episode.Should().BeNull();
+    }
+
+    [Fact]
+    public void A_season_marker_beside_a_real_episode_is_not_a_season_pack()
+    {
+        // The five is still there after the season marker is taken out, so the
+        // five is the episode and the marker is only context.
+        MovieFile result = Resolve("[Judas] Blue Lock S01 - 05 [1080p].mkv");
+        result.Episode.Should().Be(5);
+    }
+
+    // ---------------------------------------------------------------------------
+    // A special numbered by word rather than beside its marker. "Movie.Part1"
+    // and "Movie.Part2" both defaulted to one, so the second film was written
+    // over the first at S00E01.
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("Fatal.Fury.-.The.Motion.Picture.-.Movie.Part1.(DVDMux).mkv", 1)]
+    [InlineData("Fatal.Fury.-.The.Motion.Picture.-.Movie.Part2.(DVDMux).mkv", 2)]
+    public void A_special_numbered_by_word_keeps_its_own_number(string file, int episode)
+    {
+        MovieFile result = Resolve(file);
+        result.Season.Should().Be(0);
+        result.Episode.Should().Be(episode);
+    }
+
+    [Fact]
+    public void A_part_glued_to_a_word_is_not_a_part_marker()
+    {
+        // "part3" here is inside the episode's Japanese title, and the real
+        // marker is the 第11話 before it. A marker glued to the end of a word is
+        // not a marker — in any script, which is why the boundary is every
+        // letter rather than the ASCII ones.
+        MovieFile result = Resolve(
+            "(アニメ) スケッチブック ～full color's～ 第11話 「風邪の日と、ねこねこpart3」(1280x720 x264 AAC).mkv"
+        );
+        result.Episode.Should().Be(11);
     }
 }

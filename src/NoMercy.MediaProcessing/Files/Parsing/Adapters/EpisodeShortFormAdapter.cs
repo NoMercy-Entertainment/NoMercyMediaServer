@@ -28,8 +28,9 @@ public sealed partial class EpisodeShortFormAdapter : IFilenameParseAdapter
     public int Order => 35;
 
     [GeneratedRegex(
-        @"(?<![A-Za-z0-9])(?:S(\d{1,2})[\.\s\-_]?)?E(?:p|pisode)?[\.\s]?(\d{1,3})(?![A-Za-z0-9])",
-        RegexOptions.IgnoreCase)]
+        @"(?<![A-Za-z0-9])(?:S([0-9]{1,2})[\.\s\-_]?)?E(?:p|pisode)?[\.\s]?([0-9]{1,3})(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
     private static partial Regex ShortForm();
 
     public MovieFile? TryParse(ParseContext context)
