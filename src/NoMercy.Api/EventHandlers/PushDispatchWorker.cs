@@ -9,12 +9,19 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Notifications.Push;
+using Microsoft.Extensions.Hosting;
+using NoMercy.Notifications.Push;
 
-public class NotificationSink(IPushDispatchQueue queue)
+namespace NoMercy.Api.EventHandlers;
+
+public class PushDispatchWorker(IPushDispatchQueue queue) : BackgroundService
 {
-    public void Notify(string channel, PushPayload payload, string accessToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        queue.Enqueue(new(channel, payload, accessToken));
+        try
+        {
+            await queue.DrainAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) { }
     }
 }

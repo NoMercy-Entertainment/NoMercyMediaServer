@@ -11,10 +11,4 @@
 
 namespace NoMercy.Notifications.Push;
 
-public class NotificationSink(IPushDispatchQueue queue)
-{
-    public void Notify(string channel, PushPayload payload, string accessToken)
-    {
-        queue.Enqueue(new(channel, payload, accessToken));
-    }
-}
+public record PushDispatchRequest(string Channel, PushPayload Payload, string AccessToken);

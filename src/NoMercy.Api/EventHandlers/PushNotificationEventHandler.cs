@@ -11,20 +11,22 @@
 
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
-using NoMercy.Events.Library;
 using NoMercy.NmSystem.Auth;
 using NoMercy.Notifications.Push;
 
 namespace NoMercy.Api.EventHandlers;
 
-// A second, independent sink beside the SignalR*EventHandler classes: it
-// subscribes to the same real server events they already broadcast on, and
-// hands each one to NotificationSink under its channel slug. It never touches
-// IClientMessenger, so a push failure cannot affect the live SignalR path —
-// IEventBus.PublishAsync (InMemoryEventBus) invokes every subscriber of an
-// event independently and catches per-subscriber, so one throwing subscriber
-// never stops another. PushDispatcher already swallows its own failures, so
-// this class has nothing left to guard beyond a missing access token.
+/// <summary>
+/// A second, independent sink beside the SignalR*EventHandler classes. It
+/// never touches IClientMessenger, and it hands off to a queue rather than
+/// awaiting the relay, so neither a push failure nor an unreachable
+/// nomercy.tv can affect the live SignalR path or the publisher.
+///
+/// Only events that describe something a person asked to be told about belong
+/// here. LibraryRefreshedEvent does not: it is a cache-invalidation signal
+/// carrying a QueryKey, published from dozens of sites and several times per
+/// single user action, including every continue-watching edit.
+/// </summary>
 public class PushNotificationEventHandler : IDisposable
 {
     private readonly IAuthTokenStore _authTokenStore;
@@ -41,36 +43,34 @@ public class PushNotificationEventHandler : IDisposable
         _notificationSink = notificationSink;
         _subscriptions.Add(eventBus.Subscribe<EncodingCompletedEvent>(OnEncodingCompleted));
         _subscriptions.Add(eventBus.Subscribe<EncodingFailedEvent>(OnEncodingFailed));
-        _subscriptions.Add(eventBus.Subscribe<LibraryRefreshedEvent>(OnLibraryRefreshed));
     }
 
-    internal Task OnEncodingCompleted(EncodingCompletedEvent @event, CancellationToken ct) =>
-        NotifyAsync(
+    internal Task OnEncodingCompleted(EncodingCompletedEvent @event, CancellationToken _)
+    {
+        Notify(
             "encode-finished",
             new(
                 "Encoding finished",
                 $"{Path.GetFileName(@event.OutputPath)} finished encoding",
                 null
-            ),
-            ct
+            )
         );
+        return Task.CompletedTask;
+    }
 
-    internal Task OnEncodingFailed(EncodingFailedEvent @event, CancellationToken ct) =>
-        NotifyAsync("encode-failed", new("Encoding failed", @event.ErrorMessage, null), ct);
+    internal Task OnEncodingFailed(EncodingFailedEvent @event, CancellationToken _)
+    {
+        Notify("encode-failed", new("Encoding failed", @event.ErrorMessage, null));
+        return Task.CompletedTask;
+    }
 
-    internal Task OnLibraryRefreshed(LibraryRefreshedEvent @event, CancellationToken ct) =>
-        NotifyAsync(
-            "library-updated",
-            new("Library updated", "Your library was refreshed", null),
-            ct
-        );
-
-    private Task NotifyAsync(string channel, PushPayload payload, CancellationToken ct)
+    private void Notify(string channel, PushPayload payload)
     {
         string? accessToken = _authTokenStore.AccessToken;
-        return accessToken is null
-            ? Task.CompletedTask
-            : _notificationSink.NotifyAsync(channel, payload, accessToken, ct);
+        if (accessToken is null)
+            return;
+
+        _notificationSink.Notify(channel, payload, accessToken);
     }
 
     public void Dispose()

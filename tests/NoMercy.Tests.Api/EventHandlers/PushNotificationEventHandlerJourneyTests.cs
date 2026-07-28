@@ -23,73 +23,67 @@ namespace NoMercy.Tests.Api.EventHandlers;
 
 public class PushNotificationEventHandlerJourneyTests
 {
+    private static readonly TimeSpan Patience = TimeSpan.FromSeconds(5);
+
     private static (
         InMemoryEventBus bus,
-        Mock<IPushDispatcher> pushMock,
+        Mock<IPushDispatchQueue> queueMock,
         PushNotificationEventHandler handler
     ) BuildChain(string? accessToken = "server-access-token")
     {
         InMemoryEventBus bus = new();
-        Mock<IPushDispatcher> pushMock = new();
-        pushMock
-            .Setup(dispatcher =>
-                dispatcher.DispatchAsync(
-                    It.IsAny<string>(),
-                    It.IsAny<PushPayload>(),
-                    It.IsAny<string>(),
-                    It.IsAny<CancellationToken>()
-                )
-            )
-            .Returns(Task.CompletedTask);
+        Mock<IPushDispatchQueue> queueMock = new();
 
         AuthTokenStore authTokenStore = new();
         authTokenStore.SetAccessToken(accessToken);
 
-        NotificationSink sink = new(pushMock.Object);
+        NotificationSink sink = new(queueMock.Object);
         PushNotificationEventHandler handler = new(bus, authTokenStore, sink);
-        return (bus, pushMock, handler);
+        return (bus, queueMock, handler);
     }
 
+    private static EncodingCompletedEvent AnEncodeFinishing(
+        string outputPath = "/output/movie/Idiocracy.m3u8"
+    ) =>
+        new()
+        {
+            JobId = 33,
+            OutputPath = outputPath,
+            Duration = TimeSpan.FromMinutes(90),
+        };
+
     [Fact]
-    public async Task EncodingCompleted_PublishViaRealBus_ReachesDispatcher_WithEncodeFinishedChannel()
+    public async Task EncodingCompleted_PublishViaRealBus_ReachesTheQueue_WithEncodeFinishedChannel()
     {
         (
             InMemoryEventBus bus,
-            Mock<IPushDispatcher> pushMock,
+            Mock<IPushDispatchQueue> queueMock,
             PushNotificationEventHandler handler
         ) = BuildChain();
         using PushNotificationEventHandler _ = handler;
 
-        await bus.PublishAsync(
-            new EncodingCompletedEvent
-            {
-                JobId = 33,
-                OutputPath = "/output/movie/Idiocracy.m3u8",
-                Duration = TimeSpan.FromMinutes(90),
-            }
-        );
+        await bus.PublishAsync(AnEncodeFinishing());
 
-        pushMock.Verify(
-            dispatcher =>
-                dispatcher.DispatchAsync(
-                    "encode-finished",
-                    It.Is<PushPayload>(payload =>
-                        payload.Title == "Encoding finished"
-                        && payload.Body == "Idiocracy.m3u8 finished encoding"
-                    ),
-                    "server-access-token",
-                    It.IsAny<CancellationToken>()
+        queueMock.Verify(
+            queue =>
+                queue.Enqueue(
+                    It.Is<PushDispatchRequest>(request =>
+                        request.Channel == "encode-finished"
+                        && request.Payload.Title == "Encoding finished"
+                        && request.Payload.Body == "Idiocracy.m3u8 finished encoding"
+                        && request.AccessToken == "server-access-token"
+                    )
                 ),
             Times.Once
         );
     }
 
     [Fact]
-    public async Task EncodingFailed_PublishViaRealBus_ReachesDispatcher_WithEncodeFailedChannel()
+    public async Task EncodingFailed_PublishViaRealBus_ReachesTheQueue_WithEncodeFailedChannel()
     {
         (
             InMemoryEventBus bus,
-            Mock<IPushDispatcher> pushMock,
+            Mock<IPushDispatchQueue> queueMock,
             PushNotificationEventHandler handler
         ) = BuildChain();
         using PushNotificationEventHandler _ = handler;
@@ -103,43 +97,39 @@ public class PushNotificationEventHandlerJourneyTests
             }
         );
 
-        pushMock.Verify(
-            dispatcher =>
-                dispatcher.DispatchAsync(
-                    "encode-failed",
-                    It.Is<PushPayload>(payload =>
-                        payload.Title == "Encoding failed"
-                        && payload.Body == "FFmpeg exited with code 1"
-                    ),
-                    "server-access-token",
-                    It.IsAny<CancellationToken>()
+        queueMock.Verify(
+            queue =>
+                queue.Enqueue(
+                    It.Is<PushDispatchRequest>(request =>
+                        request.Channel == "encode-failed"
+                        && request.Payload.Title == "Encoding failed"
+                        && request.Payload.Body == "FFmpeg exited with code 1"
+                    )
                 ),
             Times.Once
         );
     }
 
+    /// <summary>
+    /// LibraryRefreshedEvent is a cache-invalidation signal carrying a
+    /// QueryKey. It is published from dozens of call sites and fires several
+    /// times for one user action, including every continue-watching edit, so
+    /// wiring it to push means every member's devices buzz on every scrub.
+    /// </summary>
     [Fact]
-    public async Task LibraryRefreshed_PublishViaRealBus_ReachesDispatcher_WithLibraryUpdatedChannel()
+    public async Task LibraryRefreshed_IsACacheSignal_AndPushesNothing()
     {
         (
             InMemoryEventBus bus,
-            Mock<IPushDispatcher> pushMock,
+            Mock<IPushDispatchQueue> queueMock,
             PushNotificationEventHandler handler
         ) = BuildChain();
         using PushNotificationEventHandler _ = handler;
 
         await bus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["movies", 1] });
+        await bus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["continue", 1] });
 
-        pushMock.Verify(
-            dispatcher =>
-                dispatcher.DispatchAsync(
-                    "library-updated",
-                    It.IsAny<PushPayload>(),
-                    "server-access-token",
-                    It.IsAny<CancellationToken>()
-                ),
-            Times.Once
-        );
+        queueMock.Verify(queue => queue.Enqueue(It.IsAny<PushDispatchRequest>()), Times.Never);
     }
 
     [Fact]
@@ -147,30 +137,14 @@ public class PushNotificationEventHandlerJourneyTests
     {
         (
             InMemoryEventBus bus,
-            Mock<IPushDispatcher> pushMock,
+            Mock<IPushDispatchQueue> queueMock,
             PushNotificationEventHandler handler
         ) = BuildChain(accessToken: null);
         using PushNotificationEventHandler _ = handler;
 
-        await bus.PublishAsync(
-            new EncodingCompletedEvent
-            {
-                JobId = 1,
-                OutputPath = "/output/x.m3u8",
-                Duration = TimeSpan.FromMinutes(1),
-            }
-        );
+        await bus.PublishAsync(AnEncodeFinishing());
 
-        pushMock.Verify(
-            dispatcher =>
-                dispatcher.DispatchAsync(
-                    It.IsAny<string>(),
-                    It.IsAny<PushPayload>(),
-                    It.IsAny<string>(),
-                    It.IsAny<CancellationToken>()
-                ),
-            Times.Never
-        );
+        queueMock.Verify(queue => queue.Enqueue(It.IsAny<PushDispatchRequest>()), Times.Never);
     }
 
     [Fact]
@@ -178,31 +152,70 @@ public class PushNotificationEventHandlerJourneyTests
     {
         (
             InMemoryEventBus bus,
-            Mock<IPushDispatcher> pushMock,
+            Mock<IPushDispatchQueue> queueMock,
             PushNotificationEventHandler handler
         ) = BuildChain();
 
         handler.Dispose();
 
-        await bus.PublishAsync(
-            new EncodingCompletedEvent
-            {
-                JobId = 1,
-                OutputPath = "/output/x.m3u8",
-                Duration = TimeSpan.FromMinutes(1),
-            }
-        );
+        await bus.PublishAsync(AnEncodeFinishing());
 
-        pushMock.Verify(
-            dispatcher =>
+        queueMock.Verify(queue => queue.Enqueue(It.IsAny<PushDispatchRequest>()), Times.Never);
+    }
+
+    /// <summary>
+    /// InMemoryEventBus awaits its subscribers one after another. With the
+    /// relay call inline, an unreachable nomercy.tv adds its full HTTP timeout
+    /// to every publish, and a request that publishes four events waits four
+    /// times over — on a self-hosted server that has to stay fully usable
+    /// whether or not it can reach NoMercy.
+    /// </summary>
+    [Fact]
+    public async Task PublishDoesNotWaitForTheRelay_EvenWhenItNeverAnswers()
+    {
+        TaskCompletionSource entered = new();
+        TaskCompletionSource relayNeverAnswers = new();
+
+        Mock<IPushDispatcher> dispatcherMock = new();
+        dispatcherMock
+            .Setup(dispatcher =>
                 dispatcher.DispatchAsync(
                     It.IsAny<string>(),
                     It.IsAny<PushPayload>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
-                ),
-            Times.Never
+                )
+            )
+            .Returns(() =>
+            {
+                entered.TrySetResult();
+                return relayNeverAnswers.Task;
+            });
+
+        InMemoryEventBus bus = new();
+        PushDispatchQueue queue = new(dispatcherMock.Object);
+        AuthTokenStore authTokenStore = new();
+        authTokenStore.SetAccessToken("server-access-token");
+
+        using CancellationTokenSource cts = new();
+        Task drain = queue.DrainAsync(cts.Token);
+
+        using PushNotificationEventHandler _ = new(bus, authTokenStore, new(queue));
+
+        await bus.PublishAsync(AnEncodeFinishing());
+        await entered.Task.WaitAsync(Patience);
+
+        Task laterPublishes = Task.WhenAll(
+            bus.PublishAsync(AnEncodeFinishing("/output/movie/Gattaca.m3u8")),
+            bus.PublishAsync(AnEncodeFinishing("/output/movie/Primer.m3u8")),
+            bus.PublishAsync(AnEncodeFinishing("/output/movie/Coherence.m3u8"))
         );
+
+        Assert.True(laterPublishes.IsCompletedSuccessfully);
+        Assert.False(relayNeverAnswers.Task.IsCompleted);
+
+        relayNeverAnswers.SetResult();
+        await cts.CancelAsync();
     }
 
     [Fact]
@@ -210,8 +223,8 @@ public class PushNotificationEventHandlerJourneyTests
     {
         InMemoryEventBus bus = new();
 
-        Mock<IPushDispatcher> pushMock = new();
-        pushMock
+        Mock<IPushDispatcher> dispatcherMock = new();
+        dispatcherMock
             .Setup(dispatcher =>
                 dispatcher.DispatchAsync(
                     It.IsAny<string>(),
@@ -224,9 +237,12 @@ public class PushNotificationEventHandlerJourneyTests
 
         AuthTokenStore authTokenStore = new();
         authTokenStore.SetAccessToken("server-access-token");
-        NotificationSink sink = new(pushMock.Object);
 
-        using PushNotificationEventHandler pushHandler = new(bus, authTokenStore, sink);
+        PushDispatchQueue queue = new(dispatcherMock.Object);
+        using CancellationTokenSource cts = new();
+        Task drain = queue.DrainAsync(cts.Token);
+
+        using PushNotificationEventHandler pushHandler = new(bus, authTokenStore, new(queue));
 
         Mock<NoMercy.Networking.Messaging.IClientMessenger> messengerMock = new(
             MockBehavior.Strict
@@ -243,30 +259,14 @@ public class PushNotificationEventHandlerJourneyTests
             messengerMock.Object
         );
 
-        await bus.PublishAsync(
-            new EncodingCompletedEvent
-            {
-                JobId = 1,
-                OutputPath = "/output/x.m3u8",
-                Duration = TimeSpan.FromMinutes(1),
-            }
-        );
-
-        pushMock.Verify(
-            dispatcher =>
-                dispatcher.DispatchAsync(
-                    "encode-finished",
-                    It.IsAny<PushPayload>(),
-                    "server-access-token",
-                    It.IsAny<CancellationToken>()
-                ),
-            Times.Once
-        );
+        await bus.PublishAsync(AnEncodeFinishing("/output/x.m3u8"));
 
         messengerMock.Verify(
             messenger =>
                 messenger.SendToAll("EncodingCompleted", "dashboardHub", It.IsAny<object>()),
             Times.Once
         );
+
+        await cts.CancelAsync();
     }
 }

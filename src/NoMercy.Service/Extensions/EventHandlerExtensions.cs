@@ -110,10 +110,6 @@ public static class EventHandlerExtensions
             return new(eventBus, clientMessenger);
         });
 
-        // Encrypted push — a second sink beside the SignalR handlers above.
-        // CachingPushKeyClient wraps the real SaaS-calling PushKeyClient so a
-        // burst of events (an encode finishing while a library refresh also
-        // fires) does not hit api.nomercy.tv once per event.
         services.AddSingleton<IWebPushEnvelope, WebPushEnvelope>();
         services.AddSingleton<PushKeyClient>();
         services.AddSingleton<IPushKeyClient>(sp => new CachingPushKeyClient(
@@ -121,7 +117,9 @@ public static class EventHandlerExtensions
         ));
         services.AddSingleton<IPushRelayClient, PushRelayClient>();
         services.AddSingleton<IPushDispatcher, PushDispatcher>();
+        services.AddSingleton<IPushDispatchQueue, PushDispatchQueue>();
         services.AddSingleton<NotificationSink>();
+        services.AddHostedService<PushDispatchWorker>();
 
         services.AddSingleton<PushNotificationEventHandler>(sp =>
         {

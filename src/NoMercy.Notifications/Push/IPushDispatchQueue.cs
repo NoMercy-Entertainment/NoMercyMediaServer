@@ -11,10 +11,18 @@
 
 namespace NoMercy.Notifications.Push;
 
-public class NotificationSink(IPushDispatchQueue queue)
+public interface IPushDispatchQueue
 {
-    public void Notify(string channel, PushPayload payload, string accessToken)
-    {
-        queue.Enqueue(new(channel, payload, accessToken));
-    }
+    /// <summary>
+    /// Accepts a notification for later delivery and returns immediately.
+    /// Never blocks, never throws, and never reaches the network on the
+    /// caller's thread.
+    /// </summary>
+    void Enqueue(PushDispatchRequest request);
+
+    /// <summary>
+    /// Delivers queued notifications one at a time until cancelled. Runs on a
+    /// single background worker, never on an event publisher.
+    /// </summary>
+    Task DrainAsync(CancellationToken cancellationToken);
 }

@@ -27,20 +27,30 @@ namespace NoMercy.Notifications.Push;
 /// the TTL is not a single-caller scenario: the refresh is guarded by a lock
 /// rather than trusting the last caller wins, otherwise two concurrent
 /// misses would each fetch the same key set from the SaaS.
+///
+/// A failed fetch gets its own short TTL. Without one, an unreachable SaaS
+/// means every event that follows pays the full HTTP timeout again, which is
+/// exactly the storm the cache exists to prevent. The cache also keys on the
+/// access token, so a re-auth serves the new principal's keys immediately
+/// rather than the previous token's for the rest of the TTL.
 /// </summary>
 public class CachingPushKeyClient(
     IPushKeyClient inner,
     TimeSpan? ttl = null,
-    TimeProvider? timeProvider = null
+    TimeProvider? timeProvider = null,
+    TimeSpan? failureTtl = null
 ) : IPushKeyClient
 {
     private static readonly TimeSpan DefaultTtl = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan DefaultFailureTtl = TimeSpan.FromMinutes(1);
 
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     private readonly TimeSpan _ttl = ttl ?? DefaultTtl;
+    private readonly TimeSpan _failureTtl = failureTtl ?? DefaultFailureTtl;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     private PushSubscriptionKey[] _cached = [];
+    private string? _cachedToken;
     private DateTimeOffset _expiresAt = DateTimeOffset.MinValue;
 
     public async Task<PushSubscriptionKey[]> GetKeysAsync(
@@ -48,14 +58,16 @@ public class CachingPushKeyClient(
         CancellationToken cancellationToken = default
     )
     {
-        if (_timeProvider.GetUtcNow() < _expiresAt)
+        if (IsFresh(accessToken))
             return _cached;
 
         await _refreshLock.WaitAsync(cancellationToken);
         try
         {
-            if (_timeProvider.GetUtcNow() < _expiresAt)
+            if (IsFresh(accessToken))
                 return _cached;
+
+            _cachedToken = accessToken;
 
             try
             {
@@ -65,7 +77,7 @@ public class CachingPushKeyClient(
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 _cached = [];
-                _expiresAt = DateTimeOffset.MinValue;
+                _expiresAt = _timeProvider.GetUtcNow() + _failureTtl;
             }
 
             return _cached;
@@ -75,4 +87,7 @@ public class CachingPushKeyClient(
             _refreshLock.Release();
         }
     }
+
+    private bool IsFresh(string accessToken) =>
+        _cachedToken == accessToken && _timeProvider.GetUtcNow() < _expiresAt;
 }

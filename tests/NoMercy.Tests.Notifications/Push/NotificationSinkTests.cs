@@ -18,24 +18,25 @@ namespace NoMercy.Tests.Notifications.Push;
 public class NotificationSinkTests
 {
     [Fact]
-    public async Task A_Notification_Reaches_Both_The_Hub_And_Push()
+    public void A_Notification_Is_Handed_To_The_Queue_Under_Its_Channel_Slug()
     {
-        Mock<IPushDispatcher> push = new();
-        NotificationSink sink = new(push.Object);
+        Mock<IPushDispatchQueue> queue = new();
+        NotificationSink sink = new(queue.Object);
 
-        await sink.NotifyAsync(
+        sink.Notify(
             "encode-finished",
             new PushPayload("Done", "Idiocracy finished encoding", "/movie/1"),
             "token"
         );
 
-        push.Verify(
-            dispatcher =>
-                dispatcher.DispatchAsync(
-                    "encode-finished",
-                    It.IsAny<PushPayload>(),
-                    "token",
-                    It.IsAny<CancellationToken>()
+        queue.Verify(
+            q =>
+                q.Enqueue(
+                    It.Is<PushDispatchRequest>(request =>
+                        request.Channel == "encode-finished"
+                        && request.AccessToken == "token"
+                        && request.Payload.Body == "Idiocracy finished encoding"
+                    )
                 ),
             Times.Once
         );
