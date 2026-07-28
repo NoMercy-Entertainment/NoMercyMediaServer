@@ -78,7 +78,8 @@ public sealed class FileManagerFindFilesTests
             repoMock.Object,
             factoryMock.Object,
             driverMock.Object,
-            mediaAnalyzerMock.Object
+            mediaAnalyzerMock.Object,
+            TestFilenameParser.Default
         );
     }
 

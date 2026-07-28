@@ -19,6 +19,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Events;
 using NoMercy.Events.Library;
+using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Domain;
 using NoMercy.Storage;
@@ -37,17 +38,20 @@ public class FileRescanJob : AbstractMediaJob
         IStorageFactory storageFactory,
         IStorageDriver storageDriver,
         ILoggerFactory loggerFactory,
-        IMediaAnalyzer mediaAnalyzer
+        IMediaAnalyzer mediaAnalyzer,
+        IFilenameParserPipeline filenameParser
     )
         : base(storageFactory, storageDriver, loggerFactory)
     {
         _mediaAnalyzer = mediaAnalyzer;
+        _filenameParser = filenameParser;
     }
 
     // Private field, not a [JsonIgnore] public property — SerializationHelper.Populate
     // (Newtonsoft) only re-hydrates public members, so this survives the queue's
     // rebuild-then-populate cycle (see QueueWorker.ExecuteWithTransientRetry) untouched.
     private readonly IMediaAnalyzer _mediaAnalyzer = null!;
+    private readonly IFilenameParserPipeline _filenameParser = null!;
 
     public override string QueueName => "file";
     public override int Priority => 10;
@@ -55,7 +59,8 @@ public class FileRescanJob : AbstractMediaJob
     public override async Task Handle()
     {
         Log.LogInformation(
-            "[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}", [Id, LibraryId]
+            "[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}",
+            [Id, LibraryId]
         );
 
         await using MediaContext context = new();
@@ -69,6 +74,7 @@ public class FileRescanJob : AbstractMediaJob
             StorageDriver,
             StorageFactory,
             _mediaAnalyzer,
+            _filenameParser,
             LoggerFactory.CreateLogger<LibraryManager>()
         );
 

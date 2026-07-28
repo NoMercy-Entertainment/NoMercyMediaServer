@@ -24,6 +24,8 @@ using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Factory;
 
+using NoMercy.Tests.MediaProcessing.Files;
+
 namespace NoMercy.Tests.MediaProcessing.Libraries;
 
 public class LibraryManagerEventTests : IDisposable
@@ -93,6 +95,7 @@ public class LibraryManagerEventTests : IDisposable
             driver,
             storageFactory,
             MediaAnalyzer,
+            TestFilenameParser.Default,
             NullLogger<LibraryManager>.Instance,
             bus
         );
@@ -145,6 +148,7 @@ public class LibraryManagerEventTests : IDisposable
             driver,
             storageFactory,
             MediaAnalyzer,
+            TestFilenameParser.Default,
             NullLogger<LibraryManager>.Instance,
             bus
         );
@@ -189,6 +193,7 @@ public class LibraryManagerEventTests : IDisposable
             driver,
             storageFactory,
             MediaAnalyzer,
+            TestFilenameParser.Default,
             NullLogger<LibraryManager>.Instance
         );
 
@@ -231,6 +236,7 @@ public class LibraryManagerEventTests : IDisposable
             driver,
             storageFactory,
             MediaAnalyzer,
+            TestFilenameParser.Default,
             NullLogger<LibraryManager>.Instance,
             bus
         );
@@ -278,6 +284,7 @@ public class LibraryManagerEventTests : IDisposable
             driver,
             storageFactory,
             MediaAnalyzer,
+            TestFilenameParser.Default,
             NullLogger<LibraryManager>.Instance,
             bus
         );

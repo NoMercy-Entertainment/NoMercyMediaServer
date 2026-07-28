@@ -77,7 +77,8 @@ public sealed class FileManagerPathsTests : IDisposable
             repoMock.Object,
             (factoryMock ?? new()).Object,
             (driverMock ?? new()).Object,
-            mediaAnalyzerMock.Object
+            mediaAnalyzerMock.Object,
+            TestFilenameParser.Default
         );
     }
 

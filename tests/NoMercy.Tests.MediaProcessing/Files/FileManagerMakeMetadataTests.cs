@@ -54,7 +54,13 @@ public sealed class FileManagerMakeMetadataTests : IDisposable
         Mock<IFileRepository> repoMock = new();
         Mock<IStorageFactory> factoryMock = new();
         Mock<IStorageDriver> driverMock = new();
-        return new(repoMock.Object, factoryMock.Object, driverMock.Object, _mediaAnalyzer.Object);
+        return new(
+            repoMock.Object,
+            factoryMock.Object,
+            driverMock.Object,
+            _mediaAnalyzer.Object,
+            TestFilenameParser.Default
+        );
     }
 
     private static IStorage BuildLocalStorage()

@@ -11,6 +11,7 @@
 
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
+using MovieFileLibrary;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
@@ -18,6 +19,7 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Events;
 using NoMercy.Events.Library;
+using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -31,11 +33,66 @@ public partial class FileManager(
     IFileRepository fileRepository,
     IStorageFactory storageFactory,
     IStorageDriver storageDriver,
-    IMediaAnalyzer mediaAnalyzer
+    IMediaAnalyzer mediaAnalyzer,
+    IFilenameParserPipeline filenameParser
 ) : IFileManager
 {
+    private readonly FilenameResolver _resolver = new(filenameParser);
+
     private IStorage StorageFor(Folder folder) =>
         storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+
+    /// <summary>
+    /// Re-reads what every scanned name MEANS through the same resolver the file
+    /// list uses.
+    /// <para>
+    /// The scan derives season and episode with its own detector plus a local
+    /// regex, so a rescan saw none of the naming the file list had learned to
+    /// read: a version suffix ("- 01v2") hid the episode entirely, a
+    /// season-scoped special ("S01OVA05") landed on a real episode of season one,
+    /// a half episode ("S01E21.5") took the whole episode's place, and a title
+    /// was cut in half at its own year ("Fairy Tail ("). Two parsers answering
+    /// one question is the defect; the scan owns the IO, this owns the meaning.
+    /// </para>
+    /// <para>
+    /// Music keeps the scan's own result — its disc and track numbers come from
+    /// the file's tags, which a name parser knows nothing about.
+    /// </para>
+    /// </summary>
+    private void ReResolveNames(string libraryType)
+    {
+        if (libraryType == MediaTypes.MusicMediaType)
+            return;
+
+        foreach (MediaFolderExtend folder in Files)
+        foreach (MediaFile file in folder.Files ?? [])
+        {
+            if (file.Parsed is null)
+                continue;
+
+            MovieFile resolved = _resolver
+                .Resolve(
+                    Path.GetFileName(file.Path),
+                    Path.GetDirectoryName(file.Path),
+                    file.Path,
+                    libraryType
+                )
+                .Parsed;
+
+            file.Parsed = new()
+            {
+                Title = resolved.Title,
+                Year = resolved.Year,
+                Season = resolved.Season,
+                Episode = resolved.Episode,
+                IsSeries = resolved.IsSeries,
+                IsSuccess = resolved.IsSuccess,
+                FilePath = file.Parsed.FilePath,
+                DiscNumber = file.Parsed.DiscNumber,
+                TrackNumber = file.Parsed.TrackNumber,
+            };
+        }
+    }
 
     private int Id { get; set; }
     private Movie? Movie { get; set; }
@@ -66,6 +123,8 @@ public partial class FileManager(
             if (!files.IsEmpty)
                 Files.AddRange(files);
         }
+
+        ReResolveNames(library.Type);
 
         // How many playable files the scan actually resolved. Logged next to the
         // per-type candidate count so an empty result is distinguishable from a

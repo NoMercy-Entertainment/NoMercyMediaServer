@@ -117,7 +117,13 @@ public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
     {
         Mock<IStorageDriver> driverMock = new();
         Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
-        return new(repoMock.Object, factory, driverMock.Object, mediaAnalyzerMock.Object);
+        return new(
+            repoMock.Object,
+            factory,
+            driverMock.Object,
+            mediaAnalyzerMock.Object,
+            TestFilenameParser.Default
+        );
     }
 
     [Fact]

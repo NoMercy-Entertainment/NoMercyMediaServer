@@ -20,6 +20,7 @@ using NoMercy.Events.Library;
 using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem;
@@ -41,6 +42,7 @@ public class LibraryManager(
     IStorageDriver storageDriver,
     IStorageFactory storageFactory,
     IMediaAnalyzer mediaAnalyzer,
+    IFilenameParserPipeline filenameParser,
     ILogger<LibraryManager> logger,
     IEventBus? eventBus = null
 ) : BaseManager, ILibraryManager
@@ -268,7 +270,8 @@ public class LibraryManager(
         );
 
         logger.LogInformation(
-            "Found {Count} new subfolders (skipped {Count2} existing)", [newFolders.Count, rootFolders.Count - newFolders.Count]
+            "Found {Count} new subfolders (skipped {Count2} existing)",
+            [newFolders.Count, rootFolders.Count - newFolders.Count]
         );
         return newFolders.Count;
     }
@@ -327,7 +330,8 @@ public class LibraryManager(
         );
 
         logger.LogInformation(
-            "Found {Count} new subfolders (skipped {Count2} existing)", [newFolders.Count, rootFolders.Count - newFolders.Count]
+            "Found {Count} new subfolders (skipped {Count2} existing)",
+            [newFolders.Count, rootFolders.Count - newFolders.Count]
         );
         return newFolders.Count;
     }
@@ -535,7 +539,13 @@ public class LibraryManager(
         }
 
         FileRepository fileRepository = new(mediaContext, storageDriver);
-        FileManager fileManager = new(fileRepository, storageFactory, storageDriver, mediaAnalyzer);
+        FileManager fileManager = new(
+            fileRepository,
+            storageFactory,
+            storageDriver,
+            mediaAnalyzer,
+            filenameParser
+        );
 
         _ = await fileManager.FindFiles(id, library);
 
