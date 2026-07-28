@@ -35,6 +35,8 @@ public class FileListService(
     ILogger<FileListService> logger
 ) : IFileListService
 {
+    private readonly FilenameResolver resolver = new(filenameParser);
+
     // Everything below the folder you point at, not just its top level. A show
     // keeps its episodes in per-season folders, so listing one level deep meant
     // picking a season, triaging it, going back, picking the next — for every
@@ -254,20 +256,6 @@ public class FileListService(
         string fileName = StoragePathHelpers.GetName(entryPath);
         string? directoryName = StoragePathHelpers.GetParent(entryPath);
 
-        // Build a synthetic FileInfo-like object using storage metadata so the
-        // parsing helpers stay unchanged. We do not touch raw System.IO here.
-        string rawFileName = StoragePathHelpers.GetNameWithoutExtension(entryPath);
-
-        int? overrideTmdbId = rawFileName.TryGetTmdbHint();
-
-        string cleanedForYear = StringExtensions
-            .RemoveBracketedString()
-            .Replace(rawFileName, string.Empty);
-        string? extractedYear = cleanedForYear.TryGetYear();
-
-        string title = entryPath.Replace("v2", "");
-        title = StringExtensions.RemoveBracketedString().Replace(title, string.Empty);
-
         // Filelist runs FOR EVERY FILE the user wants to triage; ffprobe over
         // a non-seekable stdin pipe scans to EOF on container formats whose
         // duration lives at end-of-file (mp4 mvhd, etc.) — 30 s/file on NFS.
@@ -280,59 +268,18 @@ public class FileListService(
                 ? await FfProbe.CreateAsync(entryPath)
                 : new();
 
-        MovieFile parsed = ParseVideoFileName(fileName, directoryName, title, libraryType);
-
-        parsed.Year = extractedYear ?? parsed.Year;
+        ResolvedName resolved = resolver.Resolve(fileName, directoryName, entryPath, libraryType);
+        MovieFile parsed = resolved.Parsed;
         if (parsed.Title == null)
             return true;
-
-        parsed.Title = StringExtensions
-            .RemoveParenthesizedString()
-            .Replace(parsed.Title, string.Empty)
-            .Trim();
-
-        bool seasonExplicit = parsed.Season.HasValue;
-
-        // Dated daily episode (yyyy.mm.dd): the air date is the key, so discard any
-        // stray number that would otherwise be misread as an episode. The resolver
-        // maps the date to the episode that aired that day.
-        DateOnly? airDate = libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
-            ? DailyEpisodeParser.TryGetAirDate(rawFileName)
-            : null;
-        if (airDate.HasValue)
-        {
-            parsed.Season = null;
-            parsed.Episode = null;
-        }
-
-        // Plex-style layout: when the file omits the season but lives in a
-        // "Season N" folder, take the season from the folder instead of
-        // blindly defaulting to 1. seasonExplicit is intentionally left as the
-        // filename-derived value so the absolute-index fallback stays available.
-        int? folderSeason = directoryName.TryGetFolderSeason();
-
-        if (!airDate.HasValue && parsed is { Episode: not null, Season: null })
-            parsed.Season = folderSeason ?? 1;
-
-        if (!airDate.HasValue && !parsed.Season.HasValue && !parsed.Episode.HasValue)
-        {
-            Regex regex = StringExtensions.MatchNumbers();
-            Match numberMatch = regex.Match(parsed.Title);
-            if (numberMatch.Success)
-            {
-                parsed.Season = folderSeason ?? 1;
-                parsed.Episode = int.Parse(numberMatch.Value);
-                parsed.Title = regex.Split(parsed.Title).FirstOrDefault()?.Trim();
-            }
-        }
 
         (MovieOrEpisode episodeMatch, string? imdbId)? result = await identification.IdentifyAsync(
             parsed,
             libraryType,
             ffprobeData.Format.Duration,
-            overrideTmdbId,
-            seasonExplicit,
-            airDate
+            resolved.OverrideTmdbId,
+            resolved.SeasonExplicit,
+            resolved.AirDate
         );
 
         MovieOrEpisode match = new();
@@ -406,75 +353,25 @@ public class FileListService(
         ConcurrentBag<FileItem> fileList
     )
     {
-        string rawFileName = Path.GetFileNameWithoutExtension(file.Name);
-
-        // Check for a [tmdb-1234] hint baked into the filename, e.g. "[tmdb-553604]Spring (2019).mkv"
-        int? overrideTmdbId = rawFileName.TryGetTmdbHint();
-
-        string cleanedForYear = StringExtensions
-            .RemoveBracketedString()
-            .Replace(rawFileName, string.Empty);
-        string? extractedYear = cleanedForYear.TryGetYear();
-
-        string title = file.FullName.Replace("v2", "");
-        title = StringExtensions.RemoveBracketedString().Replace(title, string.Empty);
-
         FfProbeData ffprobeData = await FfProbe.CreateAsync(file.FullName);
-        MovieFile parsed = ParseVideoFileName(file, title, libraryType);
 
-        parsed.Year = extractedYear ?? parsed.Year;
+        ResolvedName resolved = resolver.Resolve(
+            file.Name,
+            file.DirectoryName,
+            file.FullName,
+            libraryType
+        );
+        MovieFile parsed = resolved.Parsed;
         if (parsed.Title == null)
             return true;
-
-        parsed.Title = StringExtensions
-            .RemoveParenthesizedString()
-            .Replace(parsed.Title, string.Empty)
-            .Trim();
-
-        // Track whether the season came from the filename or was defaulted to 1.
-        // This controls whether the absolute-index fallback is allowed in ResolveShowEpisodeAsync.
-        bool seasonExplicit = parsed.Season.HasValue;
-
-        // Dated daily episode (yyyy.mm.dd): the air date is the key, so discard any
-        // stray number that would otherwise be misread as an episode. The resolver
-        // maps the date to the episode that aired that day.
-        DateOnly? airDate = libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
-            ? DailyEpisodeParser.TryGetAirDate(rawFileName)
-            : null;
-        if (airDate.HasValue)
-        {
-            parsed.Season = null;
-            parsed.Episode = null;
-        }
-
-        // Plex-style layout: when the file omits the season but lives in a
-        // "Season N" folder, take the season from the folder instead of
-        // blindly defaulting to 1. seasonExplicit is intentionally left as the
-        // filename-derived value so the absolute-index fallback stays available.
-        int? folderSeason = file.DirectoryName.TryGetFolderSeason();
-
-        if (!airDate.HasValue && parsed is { Episode: not null, Season: null })
-            parsed.Season = folderSeason ?? 1;
-
-        if (!airDate.HasValue && !parsed.Season.HasValue && !parsed.Episode.HasValue)
-        {
-            Regex regex = StringExtensions.MatchNumbers();
-            Match numberMatch = regex.Match(parsed.Title);
-            if (numberMatch.Success)
-            {
-                parsed.Season = folderSeason ?? 1;
-                parsed.Episode = int.Parse(numberMatch.Value);
-                parsed.Title = regex.Split(parsed.Title).FirstOrDefault()?.Trim();
-            }
-        }
 
         (MovieOrEpisode episodeMatch, string? imdbId)? result = await identification.IdentifyAsync(
             parsed,
             libraryType,
             ffprobeData.Format.Duration,
-            overrideTmdbId,
-            seasonExplicit,
-            airDate
+            resolved.OverrideTmdbId,
+            resolved.SeasonExplicit,
+            resolved.AirDate
         );
 
         MovieOrEpisode match = new();
@@ -486,61 +383,6 @@ public class FileListService(
         fileList.Add(BuildFileItem(file, parsed, match, ffprobeData));
 
         return result != null;
-    }
-
-    private MovieFile ParseVideoFileName(FileInfo file, string title, string libraryType) =>
-        ParseVideoFileName(file.Name, file.DirectoryName, title, libraryType);
-
-    private MovieFile ParseVideoFileName(
-        string fileNameWithExt,
-        string? directoryName,
-        string title,
-        string libraryType
-    )
-    {
-        string cleanedFileName = StringExtensions
-            .RemoveBracketedString()
-            .Replace(Path.GetFileNameWithoutExtension(fileNameWithExt), string.Empty)
-            .Trim();
-
-        return filenameParser.Parse(
-            new()
-            {
-                FileNameWithExtension = fileNameWithExt,
-                DirectoryName = directoryName,
-                Title = title,
-                CleanedFileName = cleanedFileName,
-                FolderTitle = ExtractTitleFromFolder(directoryName),
-                LibraryType = libraryType,
-            }
-        );
-    }
-
-    private static string ExtractTitleFromFolder(string? directoryName)
-    {
-        string? folderName = Path.GetFileName(directoryName);
-        if (string.IsNullOrWhiteSpace(folderName))
-            return "";
-
-        string cleaned = StringExtensions.RemoveBracketedString().Replace(folderName, string.Empty);
-        cleaned = StringExtensions.RemoveParenthesizedString().Replace(cleaned, string.Empty);
-
-        Match seasonTag = StringExtensions.MatchSeasonTag().Match(cleaned);
-        if (seasonTag is { Success: true, Index: > 0 })
-            cleaned = cleaned[..seasonTag.Index];
-
-        string folderTitle = cleaned
-            .Replace('.', ' ')
-            .Replace('_', ' ')
-            .TrimEnd('-', '.', '_', ' ')
-            .Trim();
-
-        // Strip trailing year from folder-derived title (year is captured separately by TryGetYear)
-        Match yearInFolder = StringExtensions.MatchYearRegex().Match(folderTitle);
-        if (yearInFolder.Success)
-            folderTitle = folderTitle[..yearInFolder.Index].TrimEnd('-', '.', '_', ' ');
-
-        return folderTitle;
     }
 
     private static FileItem BuildFileItem(
