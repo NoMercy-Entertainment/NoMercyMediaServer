@@ -12,6 +12,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NoMercyQueue;
 using NoMercyQueue.Core;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
@@ -132,6 +133,8 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
     {
         try
         {
+            SweepStrandedJobs();
+
             using IServiceScope scope = _scopeFactory.CreateScope();
             IQueueContext context = scope.ServiceProvider.GetRequiredService<IQueueContext>();
 
@@ -172,6 +175,33 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Stuck-reservation reaper pass failed; will retry next interval");
+        }
+    }
+
+    /// <summary>
+    /// Clears rows that are unreserved and out of attempts. Unlike the
+    /// reservation reclaim below this needs no allow-list and no cutoff: an
+    /// unreserved row is provably not executing, and one at <c>maxAttempts</c>
+    /// can never be reserved again, so removing it cannot race a running job on
+    /// any queue — the encoder queues included.
+    /// <para>Runs on the queue runner's own <see cref="JobQueue"/> rather than a
+    /// scoped one: that instance owns the write lock every other queue mutation
+    /// takes, and a second instance over a second context would delete rows
+    /// outside it.</para>
+    /// </summary>
+    private void SweepStrandedJobs()
+    {
+        JobQueue? queue = QueueRunner.Current?.Queue;
+        if (queue is null)
+            return;
+
+        int stranded = queue.FailStrandedJobs();
+        if (stranded > 0)
+        {
+            _logger.LogWarning(
+                "Stuck-reservation reaper: dead-lettered {Stranded} stranded job(s) that had used every attempt without holding a reservation",
+                stranded
+            );
         }
     }
 

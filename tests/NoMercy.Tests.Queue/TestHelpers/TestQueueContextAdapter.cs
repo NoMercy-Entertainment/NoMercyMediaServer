@@ -91,6 +91,11 @@ public class TestQueueContextAdapter : IQueueContext
         return Jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
     }
 
+    public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts)
+    {
+        return Jobs.Where(j => j.ReservedAt == null && j.Attempts >= maxAttempts).ToList();
+    }
+
     public void AddFailedJob(FailedJobModel failedJob)
     {
         failedJob.Id = _nextFailedJobId++;

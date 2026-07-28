@@ -180,6 +180,28 @@ public class SqliteQueueContext : IQueueContext
             .ToList();
     }
 
+    public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts)
+    {
+        return _context
+            .QueueJobs.AsNoTracking()
+            .Where(j => j.ReservedAt == null && j.Attempts >= maxAttempts)
+            .ToList()
+            .Select(e => new QueueJobModel
+            {
+                Id = e.Id,
+                Priority = e.Priority,
+                Queue = e.Queue,
+                Payload = e.Payload,
+                Attempts = e.Attempts,
+                ReservedAt = e.ReservedAt,
+                AvailableAt = e.AvailableAt,
+                CreatedAt = e.CreatedAt,
+                ParentJobId = e.ParentJobId,
+                GroupTag = e.GroupTag,
+            })
+            .ToList();
+    }
+
     public bool IsParentFailed(int parentJobId)
     {
         return _context.FailedJobs.AsNoTracking().Any(f => f.ParentJobId == parentJobId);

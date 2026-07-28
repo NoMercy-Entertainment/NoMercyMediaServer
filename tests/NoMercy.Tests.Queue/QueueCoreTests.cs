@@ -607,6 +607,9 @@ public class QueueCoreTests
         public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) =>
             _jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
 
+        public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts) =>
+            _jobs.Where(j => j.ReservedAt == null && j.Attempts >= maxAttempts).ToList();
+
         public void AddFailedJob(FailedJobModel failedJob)
         {
             failedJob.Id = _nextFailedId++;

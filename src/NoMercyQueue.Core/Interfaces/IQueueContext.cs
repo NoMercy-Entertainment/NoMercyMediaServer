@@ -51,6 +51,18 @@ public interface IQueueContext : IDisposable
     IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc);
 
     /// <summary>
+    /// Returns the rows <see cref="GetNextJob"/> can never hand out again: not
+    /// reserved, so nothing is running them, and already at or past
+    /// <paramref name="maxAttempts"/>, so the reserve predicate excludes them.
+    /// <para>Such a row is invisible to every other recovery path — the orphan
+    /// passes only look at rows that ARE reserved — so without this it stays in
+    /// the queue forever, holding whatever position it was dispatched into. A
+    /// season that lost one episode to a restart shows that episode at the head
+    /// of the queue for the rest of the server's life.</para>
+    /// </summary>
+    IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts);
+
+    /// <summary>
     /// Returns true when the specified parent job ID is present in the
     /// <see cref="FailedJobModel"/> table — indicating that child jobs with this
     /// <paramref name="parentJobId"/> should be skipped (marked as failed-by-parent).

@@ -249,6 +249,18 @@ public class EfQueueContextAdapter : IQueueContext
         });
     }
 
+    public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts)
+    {
+        return Execute(context =>
+        {
+            List<QueueJob> rows = context
+                .QueueJobs.AsNoTracking()
+                .Where(j => j.ReservedAt == null && j.Attempts >= maxAttempts)
+                .ToList();
+            return rows.Select(ToModel).ToList();
+        });
+    }
+
     public void AddFailedJob(FailedJobModel failedJob)
     {
         Execute(context =>

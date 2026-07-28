@@ -218,6 +218,8 @@ public class ServiceCollectionExtensionsTests
 
         public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) => [];
 
+        public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts) => [];
+
         public void AddFailedJob(FailedJobModel failedJob) { }
 
         public void RemoveFailedJob(FailedJobModel failedJob) { }
