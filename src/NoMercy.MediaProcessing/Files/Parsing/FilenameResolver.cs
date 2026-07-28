@@ -81,6 +81,36 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
             .Replace(parsed.Title, string.Empty)
             .Trim();
 
+        // The episode marker is not part of the show's name. Left on, the title
+        // that goes to a provider is "Never-Ending Summer - S01E19" — a search
+        // string no catalogue holds, answered with whatever scores least badly.
+        // The number-only shape ("- 175") was already trimmed; this is the same
+        // rule for the shape that spells the season out.
+        Match episodeMarker = TitleEpisodeMarker().Match(parsed.Title);
+        if (episodeMarker is { Success: true, Index: > 0 })
+            parsed.Title = parsed.Title[..episodeMarker.Index].TrimEnd(' ', '-', '.', '_');
+
+        // A file named for its ROLE rather than its show carries no title at
+        // all. "Opening 06", "Ending 18", "Menu - 01", "NCED - 01",
+        // "OVA-Water Slider" — every one of those is a word describing what the
+        // file is inside a release, and the show name is in the folder holding
+        // it.
+        //
+        // Handing that word to a provider as though it were a title is how
+        // "Ending 18.mkv" became episode 19 of Never-Ending Summer, "Menu -
+        // 01.mkv" became Great British Menu, "Opening 06.mkv" became an episode
+        // of Opening Act, and "NCED - 01.mkv" became Flavor, NC. A search will
+        // always return something; that is exactly why it must not be asked.
+        if (IsRoleWordRatherThanTitle(parsed.Title))
+        {
+            string folderTitle = TitleFromFolder(directoryName);
+
+            // No title in the name and none in the folder either means nobody
+            // knows what this is. Unmatched is a file the operator can place;
+            // a confident wrong answer is one they have to find first.
+            parsed.Title = folderTitle.Length > 0 ? folderTitle : null;
+        }
+
         // Whether the season came from the name or was defaulted, which is what
         // decides if the absolute-index fallback stays available downstream.
         bool seasonExplicit = parsed.Season.HasValue;
@@ -148,6 +178,96 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
         // operator instead of quietly taking someone else's slot.
         return new(parsed, overrideTmdbId, seasonExplicit, airDate);
     }
+
+    /// <summary>
+    /// Words that describe a file's place in a release rather than name a show:
+    /// the creditless sequences, the disc furniture, the promos and the extras.
+    /// <para>Deliberately matched only when the word is ALL that is left of the
+    /// title. "Opening Act" and "Great British Menu" are real shows and stay
+    /// real shows; it is the file called nothing but <c>Opening 06</c> that has
+    /// no title to give.</para>
+    /// </summary>
+    private static readonly HashSet<string> RoleWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "op",
+        "ed",
+        "opening",
+        "ending",
+        "ncop",
+        "nced",
+        "nc",
+        "creditless",
+        "textless",
+        "clean",
+        "ova",
+        "oav",
+        "oad",
+        "menu",
+        "preview",
+        "previews",
+        "trailer",
+        "trailers",
+        "promo",
+        "promos",
+        "pv",
+        "cm",
+        "sp",
+        "special",
+        "specials",
+        "extra",
+        "extras",
+        "bonus",
+        "credits",
+        "intro",
+        "outro",
+        "teaser",
+        "recap",
+        "digest",
+        "interview",
+        "commentary",
+        "disc",
+        "disk",
+        "part",
+        "chapter",
+        "title",
+        "untitled",
+        "video",
+        "track",
+    };
+
+    /// <summary>
+    /// Whether <paramref name="title"/> is a role word (or nothing but numbers)
+    /// once the numbering and separators a release puts around it are removed.
+    /// </summary>
+    private static bool IsRoleWordRatherThanTitle(string title)
+    {
+        string stripped = RoleWordNoise().Replace(title, " ").Trim();
+
+        if (stripped.Length == 0)
+            return true;
+
+        string[] words = stripped.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        return words.Length > 0 && words.All(RoleWords.Contains);
+    }
+
+    /// <summary>
+    /// The numbering and punctuation a release wraps a role word in — the
+    /// "- 01" of "NCED - 01", the "06" of "Opening 06", the hyphen in
+    /// "OVA-Water Slider".
+    /// </summary>
+    [GeneratedRegex(@"[\d\.\-_\[\]\(\)#]+")]
+    private static partial Regex RoleWordNoise();
+
+    /// <summary>
+    /// An explicit season/episode marker sitting inside what was taken for the
+    /// title. Anything from there on describes the episode, not the show.
+    /// </summary>
+    [GeneratedRegex(
+        @"(?<![A-Za-z0-9])S\d{1,4}[\s._-]*E\d{1,4}(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
+    private static partial Regex TitleEpisodeMarker();
 
     internal static string TitleFromFolder(string? directoryName)
     {

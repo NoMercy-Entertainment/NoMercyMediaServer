@@ -160,4 +160,52 @@ public class FilenameResolverCorpusTests
     {
         Resolve(file).Title.Should().Be(title);
     }
+
+    // ---------------------------------------------------------------------------
+    // A file named for its ROLE in a release has no title in it, and the show it
+    // belongs to is the folder holding it. Searching a provider for the role word
+    // instead is how a creditless ending became an episode of a romance series
+    // and a disc menu became an episode of a cooking show — a search always
+    // returns something, which is why it must not be asked.
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("Opening 06.mkv")] // matched "Opening Act" S01E06
+    [InlineData("Ending 18.mkv")] // matched "Never-Ending Summer" S01E19
+    [InlineData("Menu - 01.mkv")] // matched "Great British Menu" S01E01
+    [InlineData("NCED - 01.mkv")] // matched "Flavor, NC" S01E01
+    [InlineData("NCOP.mkv")]
+    [InlineData("Creditless Opening 2.mkv")]
+    [InlineData("- 03 -.mkv")]
+    public void A_file_named_for_its_role_takes_the_title_from_its_folder(string file)
+    {
+        MovieFile result = Resolve(file, @"E:\Anime\Bocchi the Rock!");
+
+        result
+            .Title.Should()
+            .Be(
+                "Bocchi the Rock!",
+                "the show is the folder — the name only says what the file is inside the release"
+            );
+    }
+
+    [Fact]
+    public void A_role_word_with_no_folder_to_fall_back_on_stays_unmatched()
+    {
+        // Nobody knows what this is. An unmatched file is one the operator can
+        // place; a confident wrong answer is one they have to find first.
+        Resolve("Opening 06.mkv", string.Empty).Title.Should().BeNull();
+    }
+
+    [Theory]
+    // The guard. These are real shows whose names ARE those words, and a file
+    // that names its show keeps it. The rule only fires when the role word is
+    // the whole of what was found.
+    [InlineData(["Opening Act - S01E06 - Tanner & Brad Paisley.mkv", "Opening Act"])]
+    [InlineData(["Great British Menu - S07E02 - Scotland Fish.mkv", "Great British Menu"])]
+    [InlineData(["Never-Ending Summer - S01E19 - Episode 19.mkv", "Never-Ending Summer"])]
+    [InlineData(["Special A - S01E01 - Hello.mkv", "Special A"])]
+    public void A_show_whose_name_contains_a_role_word_keeps_its_name(string file, string title)
+    {
+        Resolve(file, @"E:\TV.Shows\Whatever").Title.Should().Be(title);
+    }
 }
