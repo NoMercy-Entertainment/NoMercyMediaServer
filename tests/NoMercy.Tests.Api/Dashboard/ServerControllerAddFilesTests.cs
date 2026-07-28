@@ -124,7 +124,67 @@ public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, I
             .OnlyContain(
                 p => p.Contains("VideoEncodeJob"),
                 "manual add-files is a deliberate import that always encodes the explicit source "
-                         + "file — AutoEncodeOnScan gates only the automatic scan path, not this endpoint"
+                    + "file — AutoEncodeOnScan gates only the automatic scan path, not this endpoint"
+            );
+    }
+
+    [Fact]
+    public async Task AddFiles_TwoFilesResolvedToTheSameEpisode_QueuesOnlyTheFirst()
+    {
+        // Two encodes on one media id are two ffmpeg runs writing the same
+        // output directory, and the one that finishes last wins — the operator
+        // gets a file whose name describes the other one. It reached the library
+        // as a show's creditless opening and its ending both matching the
+        // episode the show actually has, and again as a dual-audio pair.
+        //
+        // The match is made by the file list and arrives here inside the
+        // request, so once a collision is dispatched no parser fix can reach it.
+        // The rule is the id, not the name: nothing here knows what NCOP means.
+        object body = new
+        {
+            library_id = _manualLibraryId.ToString(),
+            folder_id = _folderId.ToString(),
+            source_driver_id = (string?)null,
+            // Listed the way the picker actually lists them: sorted by name, so
+            // NCED and NCOP both arrive BEFORE the episode they collided with.
+            // Keeping "whichever came first" would queue the opening titles and
+            // throw away the episode.
+            files = new[]
+            {
+                new { path = "manual/Show - NCED - Ending.mkv", id = "920001" },
+                new { path = "manual/Show - NCOP - Opening.mkv", id = "920001" },
+                new { path = "manual/Show - S01E01 - Real Episode.mkv", id = "920001" },
+                new { path = "manual/Show - S01E02 - Next Episode.mkv", id = "920002" },
+            },
+        };
+
+        HttpResponseMessage response = await _authed.PostAsync(
+            "/api/v1/dashboard/server/addfiles",
+            JsonBody(body)
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        List<string> payloads = QueryPayloadsContaining(_manualLibraryId.ToString());
+
+        payloads
+            .Should()
+            .HaveCount(2, "one encode per episode — four files claimed two episodes between them");
+        payloads
+            .Should()
+            .ContainSingle(
+                p => p.Contains("Real Episode"),
+                "the file that spells out S01E01 keeps the episode, even though two files that "
+                    + "only guessed at it were listed ahead of it"
+            );
+        payloads
+            .Should()
+            .ContainSingle(p => p.Contains("Next Episode"), "an uncontested episode is unaffected");
+        payloads
+            .Should()
+            .NotContain(
+                p => p.Contains("NCOP") || p.Contains("NCED"),
+                "a second file cannot be queued onto an episode another file already claimed"
             );
     }
 

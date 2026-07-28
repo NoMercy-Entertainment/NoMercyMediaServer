@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -60,7 +61,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/server", Order = 10)]
-public class ServerController(
+public partial class ServerController(
     ILogger<ServerController> logger,
     ResourceMonitor resourceMonitor,
     IUpdateChecker updateChecker,
@@ -126,6 +127,23 @@ public class ServerController(
             }
         );
     }
+
+    /// <summary>
+    /// Whether the file name states which episode it is, rather than leaving it
+    /// to be inferred. <c>S01E01</c>, <c>1x01</c> and a bare <c>- 175 -</c>
+    /// absolute index all count.
+    /// <para>Used only to break a tie between files that resolved to the same
+    /// episode. It is not a parser and does not need to be: the question is
+    /// which of two candidates said out loud what it belongs to.</para>
+    /// </summary>
+    private static bool DeclaresEpisode(string fileName) =>
+        ExplicitEpisodeMarker().IsMatch(fileName);
+
+    [GeneratedRegex(
+        @"(?<![A-Za-z0-9])(?:S\d{1,4}[\s._-]*E\d{1,4}|\d{1,2}x\d{1,3}|-[\s._]*\d{1,4}[\s._]*-)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
+    private static partial Regex ExplicitEpisodeMarker();
 
     [HttpPost]
     [Route("start")]
@@ -255,7 +273,49 @@ public class ServerController(
             // gates only the automatic file-watcher path (AutoEncodeSubscriber),
             // never this manual import. A configured EncodePresetId narrows the
             // encode to that one preset; a null value keeps the folder's presets.
-            foreach (AddFile file in request.Files)
+            // One episode, one encode. Two files that resolved to the same media
+            // id are two encodes racing for one output directory, and the loser
+            // is whichever finishes first — the operator ends up with one of
+            // them under a name that describes the other.
+            //
+            // The match is decided by the file list and travels here inside the
+            // request, so no parser fix can reach a collision once it has been
+            // dispatched. Catching it at the only place encodes are created is
+            // what makes it a rule rather than a list of naming conventions:
+            // creditless openings sharing an episode with the episode itself, a
+            // dual-audio pair, a disc menu, a special the provider does not
+            // list. None of those need to be recognised by name to be stopped.
+            //
+            // Which one wins is not "whichever was listed first". The picker
+            // sorts by name, and a show's NCED and NCOP both sort ahead of its
+            // S01E01, so taking the first arrival would drop the real episode
+            // and keep its opening titles. A file that spells out the episode it
+            // belongs to is claiming it; one that does not is a guess, and a
+            // guess never beats a declaration.
+            List<AddFile> selected = [];
+            List<string> collided = [];
+
+            foreach (IGrouping<string, AddFile> claim in request.Files.GroupBy(f => $"{f.Id}"))
+            {
+                if (claim.Key.Length == 0)
+                {
+                    selected.AddRange(claim);
+                    continue;
+                }
+
+                AddFile winner =
+                    claim.FirstOrDefault(f => DeclaresEpisode(Path.GetFileName(f.Path)))
+                    ?? claim.First();
+
+                selected.Add(winner);
+                collided.AddRange(
+                    claim
+                        .Where(f => !ReferenceEquals(f, winner))
+                        .Select(f => Path.GetFileName(f.Path))
+                );
+            }
+
+            foreach (AddFile file in selected)
             {
                 string filePath =
                     isRemoteDriver || isRemoteSource ? file.Path : Path.GetFullPath(file.Path);
@@ -270,6 +330,18 @@ public class ServerController(
                     PresetId = library.EncodePresetId,
                 };
                 jobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+            }
+
+            // Never silently. A file that was selected and did not get queued is
+            // the operator's to place, and a count they cannot see reads as an
+            // import that covered everything.
+            if (collided.Count > 0)
+            {
+                logger.LogWarning(
+                    "Add files: {Count} file(s) skipped because another selected file already claimed the same episode — {Files}",
+                    collided.Count,
+                    string.Join(", ", collided)
+                );
             }
 
             // Logged as its own type rather than the watcher's, because the question the
