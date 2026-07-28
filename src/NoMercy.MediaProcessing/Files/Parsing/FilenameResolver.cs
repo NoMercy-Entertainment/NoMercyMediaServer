@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -53,12 +53,30 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
             .RemoveBracketedString()
             .Replace(pathForTitle.Replace("v2", ""), string.Empty);
 
-        string cleanedFileName = VersionSuffix()
+        // Everything the release put in brackets or parentheses goes before any
+        // adapter reads a number out of this. Only the square brackets used to
+        // be stripped, so the parenthesised technical block stayed — and it is
+        // full of digits. "H2O ~FOOTPRINTS IN THE SAND~ 03 RAW (1280x720
+        // DivX6.61).avi" was filed as episode 61, taken from the codec version;
+        // "Hatenkou Yuugi 03 RAW (D-KBS_704x396 24fps DivX6.7).avi" as episode
+        // 7. The real episode number was sitting in plain sight before the
+        // word RAW in both.
+        //
+        // The year is already out (TryGetYear ran on its own copy above), so
+        // dropping "(2019)" here costs nothing.
+        string withoutGroups = ParenthesisedGroup()
             .Replace(
                 StringExtensions.RemoveBracketedString().Replace(rawFileName, string.Empty),
-                string.Empty
-            )
-            .Trim();
+                RemoveUnlessItNamesTheEpisode
+            );
+
+        // A group the extension strip cut the closing half off. Left in, its
+        // digits are still on the table for whichever adapter looks first.
+        int unclosedGroup = FirstUnclosedGroup(withoutGroups);
+        if (unclosedGroup > 0)
+            withoutGroups = withoutGroups[..unclosedGroup];
+
+        string cleanedFileName = VersionSuffix().Replace(withoutGroups, string.Empty).Trim();
 
         MovieFile parsed = pipeline.Parse(
             new()
@@ -89,6 +107,63 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
         Match episodeMarker = TitleEpisodeMarker().Match(parsed.Title);
         if (episodeMarker is { Success: true, Index: > 0 })
             parsed.Title = parsed.Title[..episodeMarker.Index].TrimEnd(' ', '-', '.', '_');
+
+        // An opening bracket with nothing closing it. The paired-group strip
+        // cannot touch it, so the whole tail rides into the title:
+        // "H2O ~FOOTPRINTS IN THE SAND~ 03 RAW (1280x720 DivX6.61).avi" was
+        // searched for as "...RAW (1280x720 DivX6", because dropping the
+        // extension cut the closing paren off first.
+        int unclosed = FirstUnclosedGroup(parsed.Title);
+        if (unclosed > 0)
+            parsed.Title = parsed.Title[..unclosed].Trim();
+
+        // A creditless marker sitting mid-title, where the show's name IS in
+        // the file: "Air TV - Creditless Opening (DVD)(AT)", "Kanon - Fan DVD -
+        // Full Opening (GFE)". The show is everything before the marker, and
+        // everything from it on describes the extra.
+        //
+        // Only the unambiguous release words are cut on. Bare "Opening",
+        // "Ending" and "Menu" are NOT in here on purpose — Opening Act, Great
+        // British Menu and Never-Ending Summer are real shows, and this rule
+        // would rename them.
+        Match creditless = CreditlessMarkerInTitle().Match(parsed.Title);
+        if (creditless is { Success: true, Index: > 0 })
+            parsed.Title = parsed.Title[..creditless.Index].TrimEnd(' ', '-', '.', '_', ',');
+
+        // Release vocabulary that survived to the end of the title: the source,
+        // the codec, the resolution, the language tag. Measured against 10,329
+        // real release names, 253 titles still carried one — "CLANNAD 06 raw",
+        // "Inukami Creditless Ending HKG DVD" — and every one is a search string
+        // with a word in it no catalogue has ever heard the show called.
+        parsed.Title = TrailingReleaseNoise().Replace(parsed.Title, string.Empty).Trim();
+
+        // The episode number, still on the end of the title once the group that
+        // used to follow it is gone: "Show Name - 12".
+        //
+        // Only when the name never spelled out a season anywhere. "Psycho-Pass
+        // 2 - S01E02" says S01E02 out loud, so its trailing 2 belongs to the
+        // show and matching the episode number is a coincidence — stripping it
+        // renamed the show. A name with no marker anywhere else is the one
+        // whose trailing number IS the marker.
+        if (
+            !TitleEpisodeMarker().IsMatch(rawFileName) && AbsoluteEpisodeForm().IsMatch(rawFileName)
+        )
+        {
+            Match trailingEpisode = TrailingNumber().Match(parsed.Title);
+
+            if (trailingEpisode.Success)
+                parsed.Title = parsed.Title[..trailingEpisode.Index].TrimEnd(' ', '-', '.', '_');
+        }
+
+        // A bracket with no partner takes its debris into the title. Real
+        // example: "AW-Raw]_One_Piece_310_SD.WS_(704x396)[6AF865BD].avi" was
+        // searched for as "AW-Raw] One Piece", because only balanced pairs are
+        // stripped and this one opens outside the name entirely.
+        int orphanClose = parsed.Title.IndexOfAny([']', ')', '}']);
+        if (orphanClose >= 0 && parsed.Title.IndexOfAny(['[', '(', '{']) > orphanClose)
+            parsed.Title = parsed.Title[(orphanClose + 1)..].Trim();
+        else if (orphanClose >= 0 && !parsed.Title.Contains('[') && !parsed.Title.Contains('('))
+            parsed.Title = parsed.Title[(orphanClose + 1)..].Trim();
 
         // A file named for its ROLE rather than its show carries no title at
         // all. "Opening 06", "Ending 18", "Menu - 01", "NCED - 01",
@@ -241,6 +316,14 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
     /// </summary>
     private static bool IsRoleWordRatherThanTitle(string title)
     {
+        // Not one letter or digit anywhere. Real corpus case: a directory
+        // listing's tree drawing survived as the whole title —
+        // "│      [00][SG][ARIA_The_Animation][00][XVID][BIG5].avi" searched for
+        // "│", because the show's actual name only ever appears inside brackets
+        // and every bracket had been stripped. 41 files in one archive.
+        if (!title.Any(char.IsLetterOrDigit))
+            return true;
+
         string stripped = RoleWordNoise().Replace(title, " ").Trim();
 
         if (stripped.Length == 0)
@@ -268,6 +351,92 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
         RegexOptions.IgnoreCase
     )]
     private static partial Regex TitleEpisodeMarker();
+
+    /// <summary>
+    /// Drops a parenthesised group unless the group is where the release put
+    /// the season and episode.
+    /// <para>Most groups are the technical block — resolution, codec, source,
+    /// CRC — and every one of them is full of digits an adapter would happily
+    /// read as an episode. But "[Judas] Blue Lock - 05 (S01E05) [1080p]" puts
+    /// the marker itself in parentheses, so removing them all threw the answer
+    /// away along with the noise.</para>
+    /// </summary>
+    private static string RemoveUnlessItNamesTheEpisode(Match group) =>
+        TitleEpisodeMarker().IsMatch(group.Value) ? group.Value : string.Empty;
+
+    [GeneratedRegex(@"\([^()]*\)")]
+    private static partial Regex ParenthesisedGroup();
+
+    /// <summary>
+    /// The absolute-episode form a fansub release uses: the show, a spaced
+    /// dash, then the number. Its presence is what makes a trailing number in
+    /// the title an episode marker rather than part of the name.
+    /// </summary>
+    [GeneratedRegex(@"[\s._]-[\s._]\d{1,4}(?![0-9])")]
+    private static partial Regex AbsoluteEpisodeForm();
+
+    /// <summary>A number sitting at the very end of a title, with the separator
+    /// a release puts before it.</summary>
+    [GeneratedRegex(@"[\s._-]+(?<number>\d{1,4})\s*$")]
+    private static partial Regex TrailingNumber();
+
+    /// <summary>
+    /// Index of an opening bracket that is never closed, or -1 when every group
+    /// is balanced. Only the outermost unclosed one matters: everything from it
+    /// to the end of the string was meant to be a group and is not a title.
+    /// </summary>
+    private static int FirstUnclosedGroup(string title)
+    {
+        int depth = 0;
+        int firstOpenAtTopLevel = -1;
+
+        for (int index = 0; index < title.Length; index++)
+        {
+            char current = title[index];
+
+            if (current is '(' or '[' or '{')
+            {
+                if (depth == 0)
+                    firstOpenAtTopLevel = index;
+                depth++;
+            }
+            else if (current is ')' or ']' or '}')
+            {
+                if (depth > 0)
+                    depth--;
+            }
+        }
+
+        return depth > 0 ? firstOpenAtTopLevel : -1;
+    }
+
+    /// <summary>
+    /// The release words that mean "this is the sequence without its credits".
+    /// Unambiguous by design: no show is called Creditless or Textless, so
+    /// cutting the title here cannot rename a real one.
+    /// </summary>
+    [GeneratedRegex(
+        @"(?<![A-Za-z0-9])(?:creditless|textless|non-?credit(?:s|less)?|"
+            + @"NC(?:OP|ED)|clean[\s._-]+(?:OP|ED|opening|ending))(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase
+    )]
+    private static partial Regex CreditlessMarkerInTitle();
+
+    /// <summary>
+    /// Release vocabulary clinging to the end of a title — source, codec,
+    /// resolution, language. Anchored to the end and allowed to repeat, so
+    /// "Inukami Creditless Ending HKG DVD" loses the tail without "Air TV"
+    /// losing the TV that is part of the show's name.
+    /// </summary>
+    [GeneratedRegex(
+        @"(?:[\s._-]+(?:raw|dvd|dvdrip|bd|bdrip|blu-?ray|hdtv|web-?rip|web-?dl|ts|"
+            + @"x26[45]|h\.?26[45]|hevc|avc|xvid|divx|aac|flac|ac3|dts|mp3|"
+            + @"\d{3,4}p|\d{3,4}x\d{3,4}|hi10p?|10bit|8bit|"
+            + @"jap|jpn|eng|ita|multi|dual[\s._-]*audio|sub(?:bed|s)?|dub(?:bed|s)?|"
+            + @"uncensored|censored|remux|batch|complete))+\s*$",
+        RegexOptions.IgnoreCase
+    )]
+    private static partial Regex TrailingReleaseNoise();
 
     internal static string TitleFromFolder(string? directoryName)
     {

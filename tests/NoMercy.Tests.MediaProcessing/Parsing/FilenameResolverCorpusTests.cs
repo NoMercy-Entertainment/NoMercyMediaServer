@@ -208,4 +208,73 @@ public class FilenameResolverCorpusTests
     {
         Resolve(file, @"E:\TV.Shows\Whatever").Title.Should().Be(title);
     }
+
+    // ---------------------------------------------------------------------------
+    // Everything below came out of a sweep of 10,329 real release names — the
+    // archived nyaa.se listings for torrent ids 1–10,000. These are not invented
+    // shapes; each one is a file somebody actually released, and each was
+    // resolved wrongly before the rule beneath it existed.
+    // ---------------------------------------------------------------------------
+
+    [Theory]
+    // The technical block a release puts in parentheses is full of digits, and
+    // only square brackets were ever stripped before an adapter read a number.
+    // So the codec's own version became the episode: DivX6.61 -> episode 61,
+    // DivX6.7 -> episode 7. The real number was in plain sight before "RAW".
+    [InlineData(["H2O ~FOOTPRINTS IN THE SAND~ 03 RAW (1280x720 DivX6.61).avi", 3])]
+    [InlineData(["Hatenkou Yuugi 03 RAW (D-KBS_704x396 24fps DivX6.7).avi", 3])]
+    [InlineData(["CLANNAD 06 raw(BS-i DivX6.6 1280x720).avi", 6])]
+    public void A_codec_version_is_not_an_episode_number(string file, int episode)
+    {
+        Resolve(file).Episode.Should().Be(episode);
+    }
+
+    [Theory]
+    // What the same three files should be CALLED. A title carrying the source,
+    // the codec or the resolution is a search string no catalogue holds.
+    [InlineData([
+        "H2O ~FOOTPRINTS IN THE SAND~ 03 RAW (1280x720 DivX6.61).avi",
+        "H2O ~FOOTPRINTS IN THE SAND~",
+    ])]
+    [InlineData(["Hatenkou Yuugi 03 RAW (D-KBS_704x396 24fps DivX6.7).avi", "Hatenkou Yuugi"])]
+    [InlineData(["CLANNAD 06 raw(BS-i DivX6.6 1280x720).avi", "CLANNAD"])]
+    public void A_title_does_not_keep_the_release_it_came_from(string file, string title)
+    {
+        Resolve(file).Title.Should().Be(title);
+    }
+
+    [Fact]
+    public void A_bracket_with_no_opening_half_does_not_ride_into_the_title()
+    {
+        // The group opens before the file name starts, so nothing pairs with the
+        // "]" and the paired-group strip cannot see it. Searched for as
+        // "AW-Raw] One Piece".
+        MovieFile result = Resolve("AW-Raw]_One_Piece_310_SD.WS_(704x396)[6AF865BD].avi");
+
+        result.Title.Should().Be("One Piece");
+        result.Episode.Should().Be(310);
+    }
+
+    [Fact]
+    public void A_creditless_marker_ends_the_title_rather_than_joining_it()
+    {
+        // The show IS named here, unlike the bare "NCED - 01" shape — it is just
+        // followed by what the file is. Everything from the marker on describes
+        // the extra, not the show.
+        Resolve("Air TV - Creditless Opening (DVD)(AT).avi").Title.Should().Be("Air TV");
+    }
+
+    [Fact]
+    public void A_name_that_is_only_punctuation_falls_back_to_the_folder()
+    {
+        // A directory listing's tree drawing, kept as a file name. The show's
+        // real name appears only inside brackets, and every bracket is stripped,
+        // so "│" was the entire title on 41 files in one archive.
+        Resolve(
+            "│      [00][SG][ARIA_The_Animation][00][XVID][BIG5].avi",
+            @"E:\Anime\ARIA The Animation"
+        )
+            .Title.Should()
+            .Be("ARIA The Animation");
+    }
 }
