@@ -19,8 +19,14 @@ namespace NoMercy.Tests.MediaProcessing.Parsing;
 /// What the file list actually produces for a name — the adapters plus the
 /// folder-season and trailing-number rules that run around them.
 /// <para>
-/// Every name here is a real one, taken from a sweep of 11,539 files across the
-/// library. Each group is a class of name that used to resolve to the wrong
+/// Every name here is a real one, taken from a sweep of the 11,539 video paths
+/// in the encode-campaign ledger — an inventory of source files, most of which
+/// are not in a library. It is a corpus of real-world naming, not a statement
+/// about the library's contents, and only the NAMES were run: no file was read
+/// and no provider was asked.
+/// </para>
+/// <para>
+/// Each group is a class of name that used to resolve to the wrong
 /// place, and each group is followed by the names that must NOT move: these
 /// rules read numbers out of release names, and a rule that is one character too
 /// greedy quietly files a real episode as a special.
