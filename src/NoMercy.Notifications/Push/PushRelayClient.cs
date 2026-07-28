@@ -31,6 +31,13 @@ public class PushRelayClient : IPushRelayClient
 
         [JsonPropertyName("entries")]
         public required List<RequestEntry> Entries { get; init; }
+
+        // Absent (not merely null) unless a caller actually has a ref: the
+        // relay tells "no audience field" (unfiltered) apart from an emptied
+        // one (filters to nobody) by presence, not by value.
+        [JsonPropertyName("audience")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Audience { get; init; }
     }
 
     private sealed class RequestEntry
@@ -46,13 +53,14 @@ public class PushRelayClient : IPushRelayClient
         string channel,
         IReadOnlyList<PushRelayEntry> entries,
         string accessToken,
+        string? audience = null,
         CancellationToken cancellationToken = default
     )
     {
         GenericHttpClient client = PushRelayHttpClient.ForServer(accessToken);
 
         using StringContent content = new(
-            BuildRequestBody(channel, entries),
+            BuildRequestBody(channel, entries, audience),
             Encoding.UTF8,
             "application/json"
         );
@@ -76,7 +84,11 @@ public class PushRelayClient : IPushRelayClient
     internal static string BuildEndpoint(Guid deviceId) =>
         $"{Endpoint}?id={Uri.EscapeDataString(deviceId.ToString())}";
 
-    internal static string BuildRequestBody(string channel, IReadOnlyList<PushRelayEntry> entries)
+    internal static string BuildRequestBody(
+        string channel,
+        IReadOnlyList<PushRelayEntry> entries,
+        string? audience = null
+    )
     {
         RequestBody requestBody = new()
         {
@@ -88,6 +100,10 @@ public class PushRelayClient : IPushRelayClient
                     Ciphertext = entry.Ciphertext,
                 })
                 .ToList(),
+            // Normalising "" to null here, not just at the call site, is what
+            // makes the fail-closed relay behaviour unreachable from this
+            // client no matter which layer a future caller forgets to check.
+            Audience = string.IsNullOrEmpty(audience) ? null : audience,
         };
 
         return JsonSerializer.Serialize(requestBody);

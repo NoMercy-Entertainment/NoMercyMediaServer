@@ -78,6 +78,76 @@ public class PushDispatcherTests
                     "encode-finished",
                     It.Is<IReadOnlyList<PushRelayEntry>>(entries => entries.Count == 2),
                     "token",
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task DispatchAsync_Forwards_The_Given_Audience_To_The_Relay()
+    {
+        Mock<IPushKeyClient> keys = new();
+        keys.Setup(client => client.GetKeysAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TwoDevices());
+
+        Mock<IWebPushEnvelope> envelope = new();
+        envelope
+            .Setup(e => e.Seal(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(SealedBytes);
+
+        Mock<IPushRelayClient> relay = new();
+        PushDispatcher dispatcher = new(keys.Object, envelope.Object, relay.Object);
+
+        await dispatcher.DispatchAsync(
+            "encode-finished",
+            new PushPayload("Done", "body", null),
+            "token",
+            "user-ref-abc"
+        );
+
+        relay.Verify(
+            r =>
+                r.DispatchAsync(
+                    "encode-finished",
+                    It.IsAny<IReadOnlyList<PushRelayEntry>>(),
+                    "token",
+                    "user-ref-abc",
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task DispatchAsync_Passes_No_Audience_Through_When_The_Caller_Does_Not_Target_One_Person()
+    {
+        Mock<IPushKeyClient> keys = new();
+        keys.Setup(client => client.GetKeysAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TwoDevices());
+
+        Mock<IWebPushEnvelope> envelope = new();
+        envelope
+            .Setup(e => e.Seal(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(SealedBytes);
+
+        Mock<IPushRelayClient> relay = new();
+        PushDispatcher dispatcher = new(keys.Object, envelope.Object, relay.Object);
+
+        await dispatcher.DispatchAsync(
+            "encode-finished",
+            new PushPayload("Done", "body", null),
+            "token"
+        );
+
+        relay.Verify(
+            r =>
+                r.DispatchAsync(
+                    "encode-finished",
+                    It.IsAny<IReadOnlyList<PushRelayEntry>>(),
+                    "token",
+                    null,
                     It.IsAny<CancellationToken>()
                 ),
             Times.Once
@@ -102,11 +172,12 @@ public class PushDispatcherTests
                     It.IsAny<string>(),
                     It.IsAny<IReadOnlyList<PushRelayEntry>>(),
                     It.IsAny<string>(),
+                    It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Callback<string, IReadOnlyList<PushRelayEntry>, string, CancellationToken>(
-                (_, entries, _, _) => captured = entries
+            .Callback<string, IReadOnlyList<PushRelayEntry>, string, string?, CancellationToken>(
+                (_, entries, _, _, _) => captured = entries
             )
             .Returns(Task.CompletedTask);
 
@@ -151,6 +222,7 @@ public class PushDispatcherTests
                     It.IsAny<string>(),
                     It.IsAny<IReadOnlyList<PushRelayEntry>>(),
                     It.IsAny<string>(),
+                    It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
             Times.Never
@@ -176,6 +248,7 @@ public class PushDispatcherTests
                     It.IsAny<string>(),
                     It.IsAny<IReadOnlyList<PushRelayEntry>>(),
                     It.IsAny<string>(),
+                    It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 )
             )

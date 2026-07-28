@@ -25,6 +25,7 @@ public class PushDispatcher(
         string channel,
         PushPayload payload,
         string accessToken,
+        string? audience = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -49,7 +50,13 @@ public class PushDispatcher(
                 ))
                 .ToList();
 
-            await relayClient.DispatchAsync(channel, entries, accessToken, cancellationToken);
+            await relayClient.DispatchAsync(
+                channel,
+                entries,
+                accessToken,
+                audience,
+                cancellationToken
+            );
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

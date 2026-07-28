@@ -11,4 +11,9 @@
 
 namespace NoMercy.Notifications.Push;
 
-public record PushDispatchRequest(string Channel, PushPayload Payload, string AccessToken);
+public record PushDispatchRequest(
+    string Channel,
+    PushPayload Payload,
+    string AccessToken,
+    string? Audience = null
+);

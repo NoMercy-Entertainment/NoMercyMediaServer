@@ -46,6 +46,17 @@ public class PushKeyClientTests
         Assert.Equal(7, keys[0].Id);
         Assert.Equal("BJ1V", keys[0].P256dh);
         Assert.Equal("c2Vj", keys[0].Auth);
+        Assert.Null(keys[0].UserRef);
+    }
+
+    [Fact]
+    public void ParseResponse_Reads_The_User_Ref()
+    {
+        PushSubscriptionKey[] keys = PushKeyClient.ParseResponse(
+            """{"subscriptions":[{"id":7,"p256dh":"BJ1V","auth":"c2Vj","user_ref":"abc123"}]}"""
+        );
+
+        Assert.Equal("abc123", keys[0].UserRef);
     }
 
     [Fact]

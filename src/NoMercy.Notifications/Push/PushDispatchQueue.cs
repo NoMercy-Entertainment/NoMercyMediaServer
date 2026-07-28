@@ -53,6 +53,7 @@ public class PushDispatchQueue(IPushDispatcher dispatcher) : IPushDispatchQueue
                     request.Channel,
                     request.Payload,
                     request.AccessToken,
+                    request.Audience,
                     cancellationToken
                 );
             }

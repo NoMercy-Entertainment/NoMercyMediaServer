@@ -13,10 +13,15 @@ namespace NoMercy.Notifications.Push;
 
 public interface IPushRelayClient
 {
+    // audience is optional and MUST be omitted from the wire body rather than
+    // sent as "" when the caller has no ref: the relay treats an empty
+    // audience as "narrow to nobody" and drops every entry, which is not the
+    // same thing as the unfiltered broadcast that a null audience means.
     Task DispatchAsync(
         string channel,
         IReadOnlyList<PushRelayEntry> entries,
         string accessToken,
+        string? audience = null,
         CancellationToken cancellationToken = default
     );
 }

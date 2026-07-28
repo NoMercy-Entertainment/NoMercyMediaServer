@@ -11,4 +11,7 @@
 
 namespace NoMercy.Notifications.Push;
 
-public record PushSubscriptionKey(long Id, string P256dh, string Auth);
+// UserRef is optional and trails every other member so every 3-arg call site
+// that predates it (tests included) keeps compiling and behaving the same:
+// a key with no UserRef simply cannot be grouped by owner.
+public record PushSubscriptionKey(long Id, string P256dh, string Auth, string? UserRef = null);

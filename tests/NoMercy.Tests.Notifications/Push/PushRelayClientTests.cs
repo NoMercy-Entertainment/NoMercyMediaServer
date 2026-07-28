@@ -78,4 +78,42 @@ public class PushRelayClientTests
         using JsonDocument document = JsonDocument.Parse(body);
         Assert.Equal(2, document.RootElement.GetProperty("entries").GetArrayLength());
     }
+
+    [Fact]
+    public void BuildRequestBody_Omits_Audience_When_Not_Supplied()
+    {
+        string body = PushRelayClient.BuildRequestBody("encode-finished", [new(7, "c2VhbGVk")]);
+
+        using JsonDocument document = JsonDocument.Parse(body);
+
+        Assert.False(document.RootElement.TryGetProperty("audience", out _));
+    }
+
+    /// <summary>
+    /// An empty string is not "no audience" to the relay — it fails closed and
+    /// drops every entry — so this client must never let one reach the wire.
+    /// </summary>
+    [Fact]
+    public void BuildRequestBody_Omits_Audience_When_Given_An_Empty_String()
+    {
+        string body = PushRelayClient.BuildRequestBody("encode-finished", [new(7, "c2VhbGVk")], "");
+
+        using JsonDocument document = JsonDocument.Parse(body);
+
+        Assert.False(document.RootElement.TryGetProperty("audience", out _));
+    }
+
+    [Fact]
+    public void BuildRequestBody_Includes_The_Given_Audience()
+    {
+        string body = PushRelayClient.BuildRequestBody(
+            "encode-finished",
+            [new(7, "c2VhbGVk")],
+            "user-ref-abc"
+        );
+
+        using JsonDocument document = JsonDocument.Parse(body);
+
+        Assert.Equal("user-ref-abc", document.RootElement.GetProperty("audience").GetString());
+    }
 }

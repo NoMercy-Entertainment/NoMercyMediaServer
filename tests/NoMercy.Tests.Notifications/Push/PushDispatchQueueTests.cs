@@ -41,6 +41,7 @@ public class PushDispatchQueueTests
                     It.IsAny<string>(),
                     It.IsAny<PushPayload>(),
                     It.IsAny<string>(),
+                    It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
@@ -67,6 +68,7 @@ public class PushDispatchQueueTests
                     It.IsAny<string>(),
                     It.IsAny<PushPayload>(),
                     It.IsAny<string>(),
+                    It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
             Times.Once
@@ -88,6 +90,7 @@ public class PushDispatchQueueTests
                     "encode-failed",
                     It.IsAny<PushPayload>(),
                     "token",
+                    It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
@@ -109,6 +112,7 @@ public class PushDispatchQueueTests
                     "encode-failed",
                     It.IsAny<PushPayload>(),
                     "token",
+                    It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
             Times.Once
@@ -133,6 +137,7 @@ public class PushDispatchQueueTests
                     It.IsAny<string>(),
                     It.IsAny<PushPayload>(),
                     It.IsAny<string>(),
+                    It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 )
             )

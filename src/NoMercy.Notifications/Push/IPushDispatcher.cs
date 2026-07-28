@@ -13,10 +13,15 @@ namespace NoMercy.Notifications.Push;
 
 public interface IPushDispatcher
 {
+    // audience is optional and carries straight through to
+    // IPushRelayClient.DispatchAsync: absent means every one of this
+    // server's subscribers on the channel, present narrows delivery to one
+    // person's devices.
     Task DispatchAsync(
         string channel,
         PushPayload payload,
         string accessToken,
+        string? audience = null,
         CancellationToken cancellationToken = default
     );
 }
