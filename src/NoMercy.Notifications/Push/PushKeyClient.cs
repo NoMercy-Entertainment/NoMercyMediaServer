@@ -41,6 +41,9 @@ public class PushKeyClient : IPushKeyClient
 
         [JsonPropertyName("user_ref")]
         public string? UserRef { get; init; }
+
+        [JsonPropertyName("user_id")]
+        public string? UserId { get; init; }
     }
 
     public async Task<PushSubscriptionKey[]> GetKeysAsync(
@@ -88,7 +91,10 @@ public class PushKeyClient : IPushKeyClient
                 entry.Id,
                 entry.P256dh!,
                 entry.Auth!,
-                entry.UserRef
+                entry.UserRef,
+                entry.UserId is not null && Guid.TryParse(entry.UserId, out Guid userId)
+                    ? userId
+                    : null
             ))
             .ToArray();
     }
