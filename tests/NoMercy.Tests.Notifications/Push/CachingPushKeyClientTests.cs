@@ -68,6 +68,25 @@ public class CachingPushKeyClientTests
     }
 
     [Fact]
+    public async Task GetKeysAsync_Collapses_Concurrent_Misses_Into_One_Inner_Call()
+    {
+        TaskCompletionSource<PushSubscriptionKey[]> gate = new();
+        FakePushKeyClient fake = new(() => gate.Task);
+        CachingPushKeyClient cache = new(fake);
+
+        Task<PushSubscriptionKey[]> first = cache.GetKeysAsync("token");
+        Task<PushSubscriptionKey[]> second = cache.GetKeysAsync("token");
+
+        gate.SetResult(SampleKeys);
+
+        PushSubscriptionKey[] firstResult = await first;
+        PushSubscriptionKey[] secondResult = await second;
+
+        Assert.Equal(1, fake.CallCount);
+        Assert.Same(firstResult, secondResult);
+    }
+
+    [Fact]
     public async Task GetKeysAsync_Retries_On_The_Next_Call_After_A_Failure()
     {
         int attempt = 0;

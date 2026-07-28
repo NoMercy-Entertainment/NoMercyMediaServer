@@ -19,6 +19,12 @@ namespace NoMercy.Notifications.Push;
 /// currently reach nomercy.tv must keep encoding, streaming, and everything
 /// else — it just skips sending that one push. A caller-driven cancellation
 /// is not "the SaaS is unreachable" and is left to propagate.
+///
+/// <see cref="PushDispatcher"/> can be invoked concurrently by unrelated
+/// event producers (two notifications finishing at once), so a miss under
+/// the TTL is not a single-caller scenario: the refresh is guarded by a lock
+/// rather than trusting the last caller wins, otherwise two concurrent
+/// misses would each fetch the same key set from the SaaS.
 /// </summary>
 public class CachingPushKeyClient(
     IPushKeyClient inner,
@@ -30,6 +36,7 @@ public class CachingPushKeyClient(
 
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     private readonly TimeSpan _ttl = ttl ?? DefaultTtl;
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     private PushSubscriptionKey[] _cached = [];
     private DateTimeOffset _expiresAt = DateTimeOffset.MinValue;
@@ -42,17 +49,28 @@ public class CachingPushKeyClient(
         if (_timeProvider.GetUtcNow() < _expiresAt)
             return _cached;
 
+        await _refreshLock.WaitAsync(cancellationToken);
         try
         {
-            _cached = await inner.GetKeysAsync(accessToken, cancellationToken);
-            _expiresAt = _timeProvider.GetUtcNow() + _ttl;
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            _cached = [];
-            _expiresAt = DateTimeOffset.MinValue;
-        }
+            if (_timeProvider.GetUtcNow() < _expiresAt)
+                return _cached;
 
-        return _cached;
+            try
+            {
+                _cached = await inner.GetKeysAsync(accessToken, cancellationToken);
+                _expiresAt = _timeProvider.GetUtcNow() + _ttl;
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _cached = [];
+                _expiresAt = DateTimeOffset.MinValue;
+            }
+
+            return _cached;
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
     }
 }
