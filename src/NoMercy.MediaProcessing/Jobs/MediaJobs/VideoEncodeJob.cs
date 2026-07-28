@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -206,7 +206,13 @@ public class VideoEncodeJob
 
         IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
 
-        IStorage sourceStorage = ResolveSourceStorage(folder, destinationStorage);
+        IStorage sourceStorage = SourceStorageResolver.Resolve(
+            StorageFactory,
+            SourceDriverId,
+            InputFile,
+            folder,
+            destinationStorage
+        );
 
         // Resolve every selected preset and reconcile it against what's
         // already on disk BEFORE dispatching anything. This is what lets a
@@ -1059,7 +1065,13 @@ public class VideoEncodeJob
 
         IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
 
-        IStorage sourceStorage = ResolveSourceStorage(folder, destinationStorage);
+        IStorage sourceStorage = SourceStorageResolver.Resolve(
+            StorageFactory,
+            SourceDriverId,
+            InputFile,
+            folder,
+            destinationStorage
+        );
 
         // Pre-flight check: ensure the shared tempDir exists and contains at least
         // some expected output before proceeding to FinalizeOnly.
@@ -1700,52 +1712,6 @@ public class VideoEncodeJob
         // while bundles encode) and even at Verbose it floods the console. The
         // companion wake-up trace was already dropped for the same reason; real
         // phase transitions emit their own descriptive lines.
-    }
-
-    /// <summary>
-    /// The storage the source file is READ through, which is not always the one
-    /// the output is written to.
-    /// <para>A remote source names its own driver and always has. What did not
-    /// work was the ordinary local case: the dashboard's add-content picker
-    /// browses the whole machine, so a file can perfectly well be encoded from
-    /// an intake folder into a library that lives somewhere else entirely.
-    /// Falling back to the destination storage scoped every one of those reads
-    /// to the LIBRARY root, and the path guard — correctly — refused a source
-    /// that was not under it. An entire archive queued out of an intake folder
-    /// failed with <c>output.path_not_allowed</c> naming its own source file,
-    /// before ffmpeg was ever invoked.</para>
-    /// <para>A source already inside the library keeps using the destination
-    /// storage, so the common case allocates nothing new and the guard still
-    /// bounds it to the folder it belongs to.</para>
-    /// </summary>
-    private IStorage ResolveSourceStorage(Folder folder, IStorage destinationStorage)
-    {
-        if (SourceDriverId.HasValue)
-            return StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty);
-
-        string? sourceDirectory = Path.GetDirectoryName(InputFile);
-
-        if (string.IsNullOrEmpty(sourceDirectory) || IsUnderRoot(folder.Path, InputFile))
-            return destinationStorage;
-
-        return StorageFactory.For(folder.Id, folder.DriverId, sourceDirectory);
-    }
-
-    /// <summary>
-    /// Whether <paramref name="path"/> sits inside <paramref name="root"/>,
-    /// comparing the way the filesystem does rather than the way the strings
-    /// happen to be spelled: separators differ between the folder record and
-    /// the picker's output, and Windows does not care about case.
-    /// </summary>
-    private static bool IsUnderRoot(string? root, string path)
-    {
-        if (string.IsNullOrWhiteSpace(root))
-            return false;
-
-        string normalizedRoot = root.Replace('\\', '/').TrimEnd('/');
-        string normalizedPath = path.Replace('\\', '/');
-
-        return normalizedPath.StartsWith(normalizedRoot + "/", StringComparison.OrdinalIgnoreCase);
     }
 
     private EncodeTaskJob BuildChildJob(DecomposedTask task, Ulid presetId) =>

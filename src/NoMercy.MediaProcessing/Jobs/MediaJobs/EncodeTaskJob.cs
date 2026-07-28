@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -159,9 +159,13 @@ public class EncodeTaskJob
 
         IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
 
-        IStorage sourceStorage = SourceDriverId.HasValue
-            ? StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty)
-            : destinationStorage;
+        IStorage sourceStorage = SourceStorageResolver.Resolve(
+            StorageFactory,
+            SourceDriverId,
+            InputFile,
+            folder,
+            destinationStorage
+        );
 
         EncodingRequest request = new(
             InputPath: InputFile,
