@@ -110,6 +110,19 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
             return new(parsed, overrideTmdbId, seasonExplicit, airDate);
         }
 
+        // A creditless opening or ending — NCOP, NCED, and the textless and
+        // "clean" spellings of the same thing — is the sequence with the credits
+        // taken off, not an episode. It carries no episode number of its own, so
+        // the only numbers in the name belong to the season and the version, and
+        // every one of them was read as episode one: a show's NCOP and its NCED
+        // both landed on S00E01 and each overwrote the other.
+        if (CreditlessSequenceMarker().IsMatch(cleanedFileName))
+        {
+            parsed.Season = null;
+            parsed.Episode = null;
+            return new(parsed, overrideTmdbId, seasonExplicit, airDate);
+        }
+
         // Plex-style layout: a file that omits the season but lives in a
         // "Season N" folder takes the season from the folder rather than
         // defaulting to 1. seasonExplicit deliberately keeps the name-derived
@@ -119,17 +132,20 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
         if (parsed is { Episode: not null, Season: null })
             parsed.Season = folderSeason ?? 1;
 
-        if (parsed is { Season: null, Episode: null })
-        {
-            Match numberMatch = MatchNumbers().Match(parsed.Title);
-            if (numberMatch.Success)
-            {
-                parsed.Season = folderSeason ?? 1;
-                parsed.Episode = int.Parse(numberMatch.Value);
-                parsed.Title = MatchNumbers().Split(parsed.Title).FirstOrDefault()?.Trim();
-            }
-        }
-
+        // A name with no episode marker has no episode. This used to reach into
+        // the TITLE for the first number it could find and call that the episode,
+        // which is where every mismatch this parser has produced came from: a
+        // creditless opening and its matching ending both landing on episode one
+        // and overwriting each other, a disc's tracks all claiming their volume's
+        // first episode, a show's specials collapsing onto the same slot. The
+        // titles alone would have been enough to distrust it — "Mob Psycho 100"
+        // is not episode 100 and "86" is not episode 86.
+        //
+        // A real bare-number episode ("Fairy Tail - 175") never reached here;
+        // the absolute-index adapter claims those, and this ran only once every
+        // adapter had already declined. So there was nothing left for it to be
+        // right about, and a file it cannot place now says so and goes to the
+        // operator instead of quietly taking someone else's slot.
         return new(parsed, overrideTmdbId, seasonExplicit, airDate);
     }
 
@@ -177,6 +193,19 @@ public sealed partial class FilenameResolver(IFilenameParserPipeline pipeline)
     /// <summary>A MakeMKV-style disc track suffix — "…Volume 1_t12".</summary>
     [GeneratedRegex(@"_t\d{2}$", RegexOptions.IgnoreCase)]
     private static partial Regex DiscTrackMarker();
+
+    /// <summary>
+    /// A creditless opening or ending. NC is the common prefix (NCOP / NCED),
+    /// and the same sequences ship as "Textless OP" or "Clean ED" often enough
+    /// to be worth matching. The boundaries are what keep this off real titles:
+    /// without them "NCOP" matches inside a word and "clean" matches any show
+    /// with Clean in its name.
+    /// </summary>
+    [GeneratedRegex(
+        @"(?<![A-Za-z0-9])(?:NC(?:OP|ED)|(?:textless|clean|creditless)[\s\._-]*(?:OP|ED|opening|ending))(?![A-Za-z])",
+        RegexOptions.IgnoreCase
+    )]
+    private static partial Regex CreditlessSequenceMarker();
 }
 
 /// <param name="OverrideTmdbId">A [tmdb-1234] hint from the name, which outranks any search.</param>
