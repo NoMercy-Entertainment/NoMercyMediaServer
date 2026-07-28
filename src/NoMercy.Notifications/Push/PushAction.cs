@@ -13,14 +13,8 @@ using System.Text.Json.Serialization;
 
 namespace NoMercy.Notifications.Push;
 
-public record PushPayload(
+public record PushAction(
+    [property: JsonPropertyName("Id")] string Id,
     [property: JsonPropertyName("Title")] string Title,
-    [property: JsonPropertyName("Body")] string Body,
-    [property: JsonPropertyName("Route")] string? Route,
-    [property: JsonPropertyName("Category")] string? Category = null,
-    IReadOnlyList<PushAction>? Actions = null
-)
-{
-    [JsonPropertyName("Actions")]
-    public IReadOnlyList<PushAction> Actions { get; init; } = Actions ?? [];
-}
+    [property: JsonPropertyName("Route")] string? Route
+);

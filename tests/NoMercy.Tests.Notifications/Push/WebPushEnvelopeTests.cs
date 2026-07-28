@@ -138,6 +138,49 @@ public class WebPushEnvelopeTests
         );
     }
 
+    /// <summary>
+    /// A realistic action set (approve/deny/view, the shape a device-approval or
+    /// cast-request notification actually sends) still fits one aes128gcm record.
+    /// Sealing throws on overflow and PushDispatchQueue swallows that exception,
+    /// so a payload that stops fitting here would silently never arrive.
+    /// </summary>
+    [Fact]
+    public void Seal_Accepts_A_PushPayload_With_A_Realistic_Number_Of_Actions()
+    {
+        Vector vector = LoadVector();
+        WebPushEnvelope envelope = new();
+
+        PushPayload payload = new(
+            "New device sign-in request",
+            "A new device is requesting access to your account. Approve or deny.",
+            "/security/devices",
+            "security-new-device",
+            [
+                new PushAction(
+                    "approve",
+                    "Approve",
+                    "/security/devices/approve/3f9a7c2e-1234-4a3b-9abc-1234567890ab"
+                ),
+                new PushAction(
+                    "deny",
+                    "Deny",
+                    "/security/devices/deny/3f9a7c2e-1234-4a3b-9abc-1234567890ab"
+                ),
+                new PushAction(
+                    "view",
+                    "View details",
+                    "/security/devices/3f9a7c2e-1234-4a3b-9abc-1234567890ab"
+                ),
+            ]
+        );
+
+        byte[] plaintext = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload));
+
+        byte[] sealedBody = envelope.Seal(plaintext, vector.UserAgentPublicKey, vector.AuthSecret);
+
+        Assert.NotEmpty(sealedBody);
+    }
+
     [Fact]
     public void Tampering_The_Last_Byte_Makes_Unsealing_Throw_Instead_Of_Returning_Partial_Plaintext()
     {
