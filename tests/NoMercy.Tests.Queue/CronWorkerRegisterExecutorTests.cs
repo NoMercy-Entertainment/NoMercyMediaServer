@@ -54,7 +54,7 @@ public class CronWorkerRegisterExecutorTests
         Assert.Equal(executor.CronExpression, scheduled.CronExpression);
         Assert.True(scheduled.IsEnabled);
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await cronWorker.StopAsync(cts.Token);
     }
 
@@ -96,7 +96,7 @@ public class CronWorkerRegisterExecutorTests
             "The instance executor itself must run — proves the runner is genuinely live, not merely registered."
         );
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await cronWorker.StopAsync(cts.Token);
     }
 

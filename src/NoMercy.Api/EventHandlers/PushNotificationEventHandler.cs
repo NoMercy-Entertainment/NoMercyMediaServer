@@ -11,7 +11,9 @@
 
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
+using NoMercy.Events.Library;
 using NoMercy.Events.Media;
+using NoMercy.Events.Plugins;
 using NoMercy.NmSystem.Auth;
 using NoMercy.Notifications.Push;
 
@@ -39,9 +41,26 @@ public class PushNotificationEventHandler : IDisposable
     {
         _authTokenStore = authTokenStore;
         _notificationSink = notificationSink;
+        _subscriptions.Add(eventBus.Subscribe<EncodingStartedEvent>(OnEncodingStarted));
         _subscriptions.Add(eventBus.Subscribe<EncodingCompletedEvent>(OnEncodingCompleted));
         _subscriptions.Add(eventBus.Subscribe<EncodingFailedEvent>(OnEncodingFailed));
+        _subscriptions.Add(eventBus.Subscribe<MediaAddedEvent>(OnMediaAdded));
+        _subscriptions.Add(eventBus.Subscribe<LibraryScanCompletedEvent>(OnLibraryScanCompleted));
+        _subscriptions.Add(eventBus.Subscribe<PluginErrorOccurredEvent>(OnPluginError));
         _subscriptions.Add(eventBus.Subscribe<UserNotifiedEvent>(OnUserNotified));
+    }
+
+    internal Task OnEncodingStarted(EncodingStartedEvent @event, CancellationToken _)
+    {
+        Notify(
+            "encode-started",
+            new(
+                "Encoding started",
+                $"{Path.GetFileName(@event.InputPath)} started encoding with {@event.ProfileName}",
+                null
+            )
+        );
+        return Task.CompletedTask;
     }
 
     internal Task OnEncodingCompleted(EncodingCompletedEvent @event, CancellationToken _)
@@ -70,6 +89,40 @@ public class PushNotificationEventHandler : IDisposable
                 Image: PushArtworkUrl.Build(@event.BackdropPath, PushArtworkUrl.BackdropWidth),
                 Icon: PushArtworkUrl.Build(@event.PosterPath, PushArtworkUrl.PosterWidth)
             )
+        );
+        return Task.CompletedTask;
+    }
+
+    // The one channel here that is about content rather than operations, so it
+    // routes to the item itself: "/movie/123" is the shape every client's nav
+    // host already understands.
+    internal Task OnMediaAdded(MediaAddedEvent @event, CancellationToken _)
+    {
+        Notify(
+            "media-added",
+            new("New in your library", @event.Title, $"/{@event.MediaType}/{@event.MediaId}")
+        );
+        return Task.CompletedTask;
+    }
+
+    internal Task OnLibraryScanCompleted(LibraryScanCompletedEvent @event, CancellationToken _)
+    {
+        Notify(
+            "library-scan-complete",
+            new(
+                "Library scan finished",
+                $"{@event.LibraryName} scanned, {@event.ItemsFound} item(s) found",
+                "/libraries"
+            )
+        );
+        return Task.CompletedTask;
+    }
+
+    internal Task OnPluginError(PluginErrorOccurredEvent @event, CancellationToken _)
+    {
+        Notify(
+            "plugin-error",
+            new($"{@event.PluginName} failed", @event.ErrorMessage, "/dashboard/plugins")
         );
         return Task.CompletedTask;
     }

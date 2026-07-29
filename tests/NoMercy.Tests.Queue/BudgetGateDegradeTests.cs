@@ -88,7 +88,7 @@ public class BudgetGateDegradeTests : IDisposable
             resourceAwareQueues: new HashSet<string> { "encoder-gpu", "encoder-cpu" }
         );
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
 
         try
         {

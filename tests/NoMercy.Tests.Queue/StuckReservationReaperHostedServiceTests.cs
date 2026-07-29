@@ -307,7 +307,7 @@ public class StuckReservationReaperHostedServiceTests
         };
         context.AddJob(stuck);
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         Task executeTask = service.StartAsync(cts.Token);
 
         using CancellationTokenSource waitCts = new(TimeSpan.FromSeconds(5));
