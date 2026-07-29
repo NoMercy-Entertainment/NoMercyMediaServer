@@ -75,6 +75,7 @@ jobs:
           find ./artifacts -name "*-linux-x64" -exec cp {} ./output/ \;
           find ./artifacts -name "*-windows-x64.exe" -exec cp {} ./output/ \;
           find ./artifacts -name "*-macos-x64" -exec cp {} ./output/ \;
+          find ./artifacts -name "*-macos-arm64" -exec cp {} ./output/ \;
 
           # Copy Linux packages to release
           find ./artifacts -path "*/deb-packages/*" -name "*.deb" -exec cp {} ./output/ \;
