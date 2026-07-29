@@ -29,7 +29,8 @@ internal sealed class PluginLifecycleManager(
     string pluginsPath,
     IStorage storage,
     IPluginRegistry registry,
-    PluginLoader loader
+    PluginLoader loader,
+    IPluginContextFactory contextFactory
 )
 {
     private readonly IEventBus _eventBus = eventBus;
@@ -39,6 +40,7 @@ internal sealed class PluginLifecycleManager(
     private readonly IStorage _storage = storage;
     private readonly IPluginRegistry _registry = registry;
     private readonly PluginLoader _loader = loader;
+    private readonly IPluginContextFactory _contextFactory = contextFactory;
 
     public async Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
@@ -68,12 +70,10 @@ internal sealed class PluginLifecycleManager(
                     _storage.CreateDirectory(dataFolder);
                 }
 
-                PluginContext context = new(
-                    _eventBus,
-                    _serviceProvider,
-                    _logger,
+                IPluginContext context = _contextFactory.Create(
+                    pluginId,
                     dataFolder,
-                    _storage,
+                    _logger,
                     loaded.Info.Capabilities
                 );
                 loaded.Instance.Initialize(context);

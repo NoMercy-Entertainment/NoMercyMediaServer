@@ -19,4 +19,28 @@ public static class PluginHookCapability
     public const string Auth = "auth";
     public const string Encoder = "encoder";
     public const string Ui = "ui";
+
+    /// <summary>
+    /// Writing to and deleting from a user's library.
+    /// <para>
+    /// Its own constant rather than a flag on an existing one, so that
+    /// declaring it is a visible line in the manifest. Elevated by definition —
+    /// see <see cref="Elevated"/> — so it can never arrive through a baseline
+    /// auto-enable, and the owner is asked every time.
+    /// </para>
+    /// <para>The grant it needs is per-library: see
+    /// <see cref="PluginGrantKind.LibraryWrite"/>.</para>
+    /// </summary>
+    public const string LibraryWrite = "libraryWrite";
+
+    /// <summary>
+    /// Hooks that can never be baseline, whatever else a plugin declares.
+    /// <para>Consent classification asks whether every declared hook is
+    /// harmless. A hook that can delete a user's media is not, so it is named
+    /// here rather than left to the absence of an entry in the baseline set —
+    /// the next hook added to that set would otherwise silently become
+    /// auto-enabled.</para>
+    /// </summary>
+    public static IReadOnlySet<string> Elevated { get; } =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { LibraryWrite, Auth, Encoder };
 }

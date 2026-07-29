@@ -16,19 +16,71 @@ namespace NoMercy.Plugins.Network;
 public class PluginNetworkDeniedException(string host)
     : Exception($"Plugin network access to host '{host}' is not permitted by its capabilities.");
 
+/// <summary>
+/// The one place outbound plugin traffic is checked.
+/// <para>
+/// It reads the union of the manifest's static hosts and whatever the owner has
+/// granted since. The manifest can only name what was known at package time,
+/// and a plugin whose endpoints are user configuration has nothing honest to
+/// put there — so the enforcement point stays exactly here and the list behind
+/// it is allowed to grow, rather than the plugin being pushed into building its
+/// own <c>HttpClient</c> and leaving the trust model altogether.
+/// </para>
+/// </summary>
 public class PluginNetworkAllowlistHandler : DelegatingHandler
 {
-    private readonly List<Regex> _patterns;
+    private readonly IReadOnlyList<string> _manifestHosts;
+    private readonly Func<IReadOnlyList<string>>? _grantedHosts;
 
-    public PluginNetworkAllowlistHandler(IReadOnlyList<string> allowedHosts)
+    public PluginNetworkAllowlistHandler(
+        IReadOnlyList<string> allowedHosts,
+        Func<IReadOnlyList<string>>? grantedHosts = null
+    )
     {
-        _patterns = allowedHosts.Select(ToPattern).ToList();
+        _manifestHosts = allowedHosts;
+
+        // Read through a delegate rather than captured up front: a grant made
+        // after the plugin started has to take effect without a restart, or the
+        // owner grants a host and nothing happens.
+        _grantedHosts = grantedHosts;
     }
 
-    private static Regex ToPattern(string host)
+    /// <summary>
+    /// Compiles one host pattern.
+    /// <para>
+    /// <c>*</c> matches within a single label and <c>**</c> crosses dots, which
+    /// is the distinction the old single-glob form could not make:
+    /// <c>*.example.com</c> matched <c>a.example.com</c> but not
+    /// <c>a.b.example.com</c>, and a bare <c>*</c> matched only a hostname with
+    /// no dots in it at all — so there was no way to write "any host", and the
+    /// only way to talk to one was to leave.
+    /// </para>
+    /// </summary>
+    internal static Regex ToPattern(string host)
     {
-        string escaped = Regex.Escape(host).Replace("\\*", "[^.]+");
+        // Marked before escaping, with control characters no hostname contains
+        // and Regex.Escape leaves alone. Escaping first would turn both glob
+        // widths into the same "\*" and the distinction would be gone.
+        const string crossesDots = "";
+        const string withinLabel = "";
+
+        string marked = host.Replace("**", crossesDots).Replace("*", withinLabel);
+
+        string escaped = Regex
+            .Escape(marked)
+            .Replace(crossesDots, ".+")
+            .Replace(withinLabel, "[^.]+");
+
         return new($"^{escaped}$", RegexOptions.IgnoreCase);
+    }
+
+    private bool IsAllowed(string host)
+    {
+        if (_manifestHosts.Any(pattern => ToPattern(pattern).IsMatch(host)))
+            return true;
+
+        IReadOnlyList<string> granted = _grantedHosts?.Invoke() ?? [];
+        return granted.Any(pattern => ToPattern(pattern).IsMatch(host));
     }
 
     protected override Task<HttpResponseMessage> SendAsync(
@@ -37,7 +89,7 @@ public class PluginNetworkAllowlistHandler : DelegatingHandler
     )
     {
         string host = request.RequestUri?.Host ?? string.Empty;
-        if (!_patterns.Any(pattern => pattern.IsMatch(host)))
+        if (!IsAllowed(host))
             throw new PluginNetworkDeniedException(host);
 
         return base.SendAsync(request, cancellationToken);

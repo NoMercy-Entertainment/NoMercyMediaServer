@@ -33,7 +33,8 @@ internal sealed class PluginLoader(
     IStorage storage,
     IPluginRegistry registry,
     IPluginVerifier verifier,
-    IPluginConsentService consentService
+    IPluginConsentService consentService,
+    IPluginContextFactory contextFactory
 )
 {
     private readonly IEventBus _eventBus = eventBus;
@@ -44,6 +45,7 @@ internal sealed class PluginLoader(
     private readonly IPluginRegistry _registry = registry;
     private readonly IPluginVerifier _verifier = verifier;
     private readonly IPluginConsentService _consentService = consentService;
+    private readonly IPluginContextFactory _contextFactory = contextFactory;
 
     internal async Task LoadPluginFromManifestAsync(
         string manifestPath,
@@ -176,12 +178,10 @@ internal sealed class PluginLoader(
                             _storage.CreateDirectory(dataFolder);
                         }
 
-                        PluginContext context = new(
-                            _eventBus,
-                            _serviceProvider,
-                            _logger,
+                        IPluginContext context = _contextFactory.Create(
+                            instance.Id,
                             dataFolder,
-                            _storage,
+                            _logger,
                             manifest.Capabilities
                         );
 
@@ -407,12 +407,11 @@ internal sealed class PluginLoader(
                         await _storage.CreateDirectoryAsync(dataFolder, ct);
                     }
 
-                    PluginContext context = new(
-                        _eventBus,
-                        _serviceProvider,
-                        _logger,
+                    IPluginContext context = _contextFactory.Create(
+                        instance.Id,
                         dataFolder,
-                        _storage
+                        _logger,
+                        capabilities: null
                     );
 
                     instance.Initialize(context);

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
@@ -40,7 +41,8 @@ public class PluginManager : IPluginManager, IDisposable
         IStorage storage,
         IStorageDriver driver,
         IPluginVerifier? verifier = null,
-        IPluginConsentService? consentService = null
+        IPluginConsentService? consentService = null,
+        IPluginContextFactory? contextFactory = null
     )
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -62,6 +64,25 @@ public class PluginManager : IPluginManager, IDisposable
                 )
             );
         _registry = new PluginRegistry();
+
+        // Built here only when DI did not supply one, which is the test and
+        // direct-construction path. Its protector is ephemeral, so a secret
+        // written through it does not survive a restart — that is the safe
+        // failure, because the alternative default is a secret on disk in the
+        // clear. The server's registration always passes the real factory.
+        IPluginContextFactory factory =
+            contextFactory
+            ?? new PluginContextFactory(
+                _eventBus,
+                _serviceProvider,
+                _storage,
+                new ConfigPluginGrantStore(PlatformConfiguration()),
+                new EphemeralDataProtectionProvider(),
+                new NullPluginLibraryQuery(),
+                new NullPluginLibraryWriterFactory(),
+                PlatformConfiguration()
+            );
+
         _loader = new(
             _eventBus,
             _serviceProvider,
@@ -70,7 +91,8 @@ public class PluginManager : IPluginManager, IDisposable
             _storage,
             _registry,
             _verifier,
-            _consentService
+            _consentService,
+            factory
         );
         _lifecycle = new(
             _eventBus,
@@ -79,9 +101,13 @@ public class PluginManager : IPluginManager, IDisposable
             _pluginsPath,
             _storage,
             _registry,
-            _loader
+            _loader,
+            factory
         );
     }
+
+    private PluginConfiguration PlatformConfiguration() =>
+        new(Path.Combine(_pluginsPath, "data", "platform"), _storage);
 
     public IReadOnlyList<PluginInfo> GetInstalledPlugins()
     {
