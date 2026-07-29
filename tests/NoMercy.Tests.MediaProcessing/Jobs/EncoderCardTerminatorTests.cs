@@ -100,6 +100,56 @@ public class EncoderCardTerminatorTests
         }
     }
 
+    /// <summary>
+    /// The two artwork parameters are optional so every pre-metadata failure
+    /// site (which never resolved a movie/episode) keeps compiling unchanged;
+    /// when a caller does have them, they must reach the failed event verbatim
+    /// so PushNotificationEventHandler can build an Image/Icon from them.
+    /// </summary>
+    [Fact]
+    public async Task PublishFailedAsync_WithArtwork_CarriesPosterAndBackdropOnTheFailedEvent()
+    {
+        IEventBus? previous = GetCurrentInstance();
+        try
+        {
+            EncodingFailedEvent? failed = null;
+
+            Mock<IEventBus> bus = new();
+            bus.Setup(b =>
+                    b.PublishAsync(
+                        It.IsAny<EncodingStageChangedEvent>(),
+                        It.IsAny<CancellationToken>()
+                    )
+                )
+                .Returns(Task.CompletedTask);
+            bus.Setup(b =>
+                    b.PublishAsync(It.IsAny<EncodingFailedEvent>(), It.IsAny<CancellationToken>())
+                )
+                .Callback<EncodingFailedEvent, CancellationToken>((e, _) => failed = e)
+                .Returns(Task.CompletedTask);
+
+            EventBusProvider.Configure(bus.Object);
+
+            await EncoderCardTerminator.PublishFailedAsync(
+                jobId: 88062,
+                title: "Idiocracy",
+                inputPath: "/media/movies/idiocracy.mkv",
+                message: "finalize-only pass failed with no details",
+                exceptionType: "FinalizeFailed",
+                posterPath: "/poster123.jpg",
+                backdropPath: "/backdrop123.jpg"
+            );
+
+            failed.Should().NotBeNull();
+            failed!.PosterPath.Should().Be("/poster123.jpg");
+            failed.BackdropPath.Should().Be("/backdrop123.jpg");
+        }
+        finally
+        {
+            SetInstance(previous);
+        }
+    }
+
     [Fact]
     public async Task PublishFailedAsync_WhenEventBusNotConfigured_DoesNotThrow()
     {

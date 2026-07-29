@@ -27,4 +27,10 @@ public sealed class UserNotifiedEvent : EventBase
 
     // In-app navigation target a client opens when the notification is tapped.
     public string? Route { get; init; }
+
+    // Backdrop/still and poster paths for the movie, episode or album this
+    // notification is about, when the publisher has one. Null for admin
+    // free-text broadcasts/sends and any notice with no natural artwork.
+    public string? BackdropPath { get; init; }
+    public string? PosterPath { get; init; }
 }

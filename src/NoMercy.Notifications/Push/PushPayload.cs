@@ -18,7 +18,9 @@ public record PushPayload(
     [property: JsonPropertyName("Body")] string Body,
     [property: JsonPropertyName("Route")] string? Route,
     [property: JsonPropertyName("Category")] string? Category = null,
-    IReadOnlyList<PushAction>? Actions = null
+    IReadOnlyList<PushAction>? Actions = null,
+    [property: JsonPropertyName("Image")] string? Image = null,
+    [property: JsonPropertyName("Icon")] string? Icon = null
 )
 {
     [JsonPropertyName("Actions")]

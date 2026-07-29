@@ -162,4 +162,72 @@ public class WebPushAndroidInteropTests
         string expectedJson = JsonSerializer.Serialize(payload);
         Assert.Equal(expectedJson, Encoding.UTF8.GetString(recovered));
     }
+
+    /// <summary>
+    /// Image/Icon ride the same sealed body as every other field. This proves
+    /// the URLs survive ECDH derivation, AES-128-GCM encryption and the
+    /// Android-faithful decrypt byte-for-byte — not just that
+    /// JsonSerializer round-trips them in memory.
+    /// </summary>
+    [Fact]
+    public async Task PushDispatcher_Produces_A_Body_The_Android_Unsealer_Can_Open_With_Artwork_Urls_Intact()
+    {
+        Vector vector = LoadVector();
+
+        Mock<IPushKeyClient> keys = new();
+        keys.Setup(client => client.GetKeysAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new PushSubscriptionKey(1, vector.UserAgentPublicKey, vector.AuthSecret),
+            ]);
+
+        IReadOnlyList<PushRelayEntry>? captured = null;
+        Mock<IPushRelayClient> relay = new();
+        relay
+            .Setup(r =>
+                r.DispatchAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IReadOnlyList<PushRelayEntry>>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Callback<string, IReadOnlyList<PushRelayEntry>, string, string?, CancellationToken>(
+                (_, entries, _, _, _) => captured = entries
+            )
+            .Returns(Task.CompletedTask);
+
+        PushDispatcher dispatcher = new(keys.Object, new WebPushEnvelope(), relay.Object);
+        PushPayload payload = new(
+            "Encoding finished",
+            "Idiocracy finished encoding",
+            "/movie/1",
+            Image: "https://app.nomercy.tv/tmdb-images/backdrop123.jpg?width=500",
+            Icon: "https://app.nomercy.tv/tmdb-images/poster123.jpg?width=200"
+        );
+
+        await dispatcher.DispatchAsync("encode-finished", payload, "token");
+
+        PushRelayEntry entry = Assert.Single(captured!);
+        byte[] sealedBody = Convert.FromBase64String(entry.Ciphertext);
+
+        byte[] recovered = DeviceSideUnseal.Unseal(
+            sealedBody,
+            vector.UserAgentPrivateKey,
+            vector.UserAgentPublicKey,
+            vector.AuthSecret
+        );
+
+        JsonDocument document = JsonDocument.Parse(Encoding.UTF8.GetString(recovered));
+        JsonElement root = document.RootElement;
+
+        Assert.Equal(
+            "https://app.nomercy.tv/tmdb-images/backdrop123.jpg?width=500",
+            root.GetProperty("Image").GetString()
+        );
+        Assert.Equal(
+            "https://app.nomercy.tv/tmdb-images/poster123.jpg?width=200",
+            root.GetProperty("Icon").GetString()
+        );
+    }
 }

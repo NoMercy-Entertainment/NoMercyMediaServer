@@ -141,4 +141,50 @@ public class PushPayloadTests
         JsonElement second = actions[1];
         Assert.Equal(JsonValueKind.Null, second.GetProperty("Route").ValueKind);
     }
+
+    /// <summary>
+    /// Every existing caller before artwork existed builds a payload without
+    /// Image/Icon. Both must still serialize as explicit JSON null — never
+    /// omitted, and never an empty string or other placeholder a client's
+    /// image loader would try and fail to fetch.
+    /// </summary>
+    [Fact]
+    public void A_Payload_With_No_Artwork_Serializes_Image_And_Icon_As_Json_Null_Not_Omitted()
+    {
+        PushPayload payload = new("Encoding finished", "Idiocracy finished encoding", "/movie/1");
+
+        string json = JsonSerializer.Serialize(payload);
+        JsonDocument document = JsonDocument.Parse(json);
+        JsonElement root = document.RootElement;
+
+        Assert.True(root.TryGetProperty("Image", out JsonElement image));
+        Assert.Equal(JsonValueKind.Null, image.ValueKind);
+        Assert.True(root.TryGetProperty("Icon", out JsonElement icon));
+        Assert.Equal(JsonValueKind.Null, icon.ValueKind);
+    }
+
+    [Fact]
+    public void A_Payload_With_Artwork_Carries_The_Image_And_Icon_Urls_On_The_Wire()
+    {
+        PushPayload payload = new(
+            "Encoding finished",
+            "Idiocracy finished encoding",
+            "/movie/1",
+            Image: "https://app.nomercy.tv/tmdb-images/backdrop123.jpg?width=500",
+            Icon: "https://app.nomercy.tv/tmdb-images/poster123.jpg?width=200"
+        );
+
+        string json = JsonSerializer.Serialize(payload);
+        JsonDocument document = JsonDocument.Parse(json);
+        JsonElement root = document.RootElement;
+
+        Assert.Equal(
+            "https://app.nomercy.tv/tmdb-images/backdrop123.jpg?width=500",
+            root.GetProperty("Image").GetString()
+        );
+        Assert.Equal(
+            "https://app.nomercy.tv/tmdb-images/poster123.jpg?width=200",
+            root.GetProperty("Icon").GetString()
+        );
+    }
 }
