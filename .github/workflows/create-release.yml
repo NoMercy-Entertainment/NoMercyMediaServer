@@ -279,6 +279,18 @@ jobs:
 
           echo "Squash merged dev into master as v$NEW_VERSION"
 
+      # The contract a third-party plugin is written against. A plugin living
+      # outside this repository cannot use a ProjectReference, so without a
+      # published package its author is copying a DLL out of somebody's build
+      # and every contract added here is invisible until they do.
+      - name: Pack the plugin contract
+        run: |
+          # Events too: Abstractions depends on it, and a package whose
+          # dependency cannot be restored is a package nobody can use.
+          for project in NoMercy.Events NoMercy.Plugins.Abstractions; do
+            dotnet pack "src/$project/$project.csproj"               --configuration Release               -p:Version=${{ inputs.version }}               --output ./output
+          done
+
       - name: Create Release and Upload Assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

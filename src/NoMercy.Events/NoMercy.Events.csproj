@@ -10,6 +10,29 @@
     <IsTestProject>false</IsTestProject>
   </PropertyGroup>
 
+  <!--
+    Packed alongside NoMercy.Plugins.Abstractions, which depends on it: a
+    package whose dependency cannot be restored is a package nobody can use.
+    It is also half the plugin contract in its own right — PluginMessageEvent
+    is the envelope a plugin publishes through, and IEventBus is on the
+    context — which is why both are in the shared-assembly set and why a plugin
+    needs this exact assembly rather than a copy of it.
+  -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>NoMercy.Events</PackageId>
+    <Authors>NoMercy Entertainment</Authors>
+    <Description>The event contract shared between NoMercy MediaServer and its plugins.</Description>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageProjectUrl>https://github.com/NoMercy-Entertainment/nomercy-media-server</PackageProjectUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Ulid" />
