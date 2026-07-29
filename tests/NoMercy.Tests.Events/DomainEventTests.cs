@@ -190,6 +190,78 @@ public class DomainEventTests
     }
 
     [Fact]
+    public void EncodingCompletedEvent_ArtworkPathsAreOptional_AndCarryThroughWhenSet()
+    {
+        EncodingCompletedEvent withoutArtwork = new()
+        {
+            JobId = 1,
+            OutputPath = "/output/x.m3u8",
+            Duration = TimeSpan.Zero,
+        };
+        withoutArtwork.PosterPath.Should().BeNull();
+        withoutArtwork.BackdropPath.Should().BeNull();
+
+        EncodingCompletedEvent withArtwork = new()
+        {
+            JobId = 1,
+            OutputPath = "/output/x.m3u8",
+            Duration = TimeSpan.Zero,
+            PosterPath = "/poster123.jpg",
+            BackdropPath = "/backdrop123.jpg",
+        };
+        withArtwork.PosterPath.Should().Be("/poster123.jpg");
+        withArtwork.BackdropPath.Should().Be("/backdrop123.jpg");
+    }
+
+    [Fact]
+    public void EncodingFailedEvent_ArtworkPathsAreOptional_AndCarryThroughWhenSet()
+    {
+        EncodingFailedEvent withoutArtwork = new()
+        {
+            JobId = 1,
+            InputPath = "/input/test.mkv",
+            ErrorMessage = "Unknown error",
+        };
+        withoutArtwork.PosterPath.Should().BeNull();
+        withoutArtwork.BackdropPath.Should().BeNull();
+
+        EncodingFailedEvent withArtwork = new()
+        {
+            JobId = 1,
+            InputPath = "/input/test.mkv",
+            ErrorMessage = "Unknown error",
+            PosterPath = "/poster123.jpg",
+            BackdropPath = "/backdrop123.jpg",
+        };
+        withArtwork.PosterPath.Should().Be("/poster123.jpg");
+        withArtwork.BackdropPath.Should().Be("/backdrop123.jpg");
+    }
+
+    [Fact]
+    public void UserNotifiedEvent_ArtworkPathsAreOptional_AndCarryThroughWhenSet()
+    {
+        UserNotifiedEvent withoutArtwork = new()
+        {
+            Title = "New device sign-in request",
+            Message = "A new device is requesting access to your account.",
+            Type = "security-new-device",
+        };
+        withoutArtwork.PosterPath.Should().BeNull();
+        withoutArtwork.BackdropPath.Should().BeNull();
+
+        UserNotifiedEvent withArtwork = new()
+        {
+            Title = "Encoding finished",
+            Message = "Idiocracy finished encoding",
+            Type = "info",
+            PosterPath = "/poster123.jpg",
+            BackdropPath = "/backdrop123.jpg",
+        };
+        withArtwork.PosterPath.Should().Be("/poster123.jpg");
+        withArtwork.BackdropPath.Should().Be("/backdrop123.jpg");
+    }
+
+    [Fact]
     public void UserAuthenticatedEvent_SetsAllProperties()
     {
         Guid userId = Guid.NewGuid();

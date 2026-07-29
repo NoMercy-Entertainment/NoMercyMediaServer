@@ -33,7 +33,9 @@ internal sealed class PluginLoader(
     IStorage storage,
     IPluginRegistry registry,
     IPluginVerifier verifier,
-    IPluginConsentService consentService
+    IPluginConsentService consentService,
+    IPluginContextFactory contextFactory,
+    PluginHostOptions? hostOptions = null
 )
 {
     private readonly IEventBus _eventBus = eventBus;
@@ -44,6 +46,45 @@ internal sealed class PluginLoader(
     private readonly IPluginRegistry _registry = registry;
     private readonly IPluginVerifier _verifier = verifier;
     private readonly IPluginConsentService _consentService = consentService;
+    private readonly IPluginContextFactory _contextFactory = contextFactory;
+
+    // The configured shared-assembly set, or the built-in one. Passing it here
+    // is what makes PluginHostOptions.SharedAssemblies mean anything: the type
+    // existed and documented itself as bindable from configuration, and every
+    // load context was constructed without it, so the set was a hardcoded six
+    // entries and adding one needed a code change.
+    private readonly IReadOnlySet<string> _sharedAssemblies = (
+        hostOptions ?? new PluginHostOptions()
+    ).SharedAssemblies;
+
+    /// <summary>
+    /// Whether the plugin's own assembly carries an
+    /// <see cref="IPluginServiceRegistrator"/>. Only that assembly is examined,
+    /// so a plugin is not judged by what its dependencies happen to contain.
+    /// </summary>
+    private static bool DeclaresServiceRegistrator(IPlugin? instance)
+    {
+        if (instance is null)
+            return false;
+
+        try
+        {
+            return instance
+                .GetType()
+                .Assembly.GetExportedTypes()
+                .Any(type =>
+                    typeof(IPluginServiceRegistrator).IsAssignableFrom(type)
+                    && type is { IsAbstract: false, IsInterface: false }
+                );
+        }
+        catch (Exception)
+        {
+            // A plugin whose exported types cannot be walked (a missing
+            // dependency behind one of them) is not a plugin that registers
+            // services well enough to promise anything about.
+            return false;
+        }
+    }
 
     internal async Task LoadPluginFromManifestAsync(
         string manifestPath,
@@ -126,7 +167,7 @@ internal sealed class PluginLoader(
                 return;
             }
 
-            PluginLoadContext loadContext = new(absoluteAssemblyPath);
+            PluginLoadContext loadContext = new(absoluteAssemblyPath, _sharedAssemblies);
 
             try
             {
@@ -176,13 +217,13 @@ internal sealed class PluginLoader(
                             _storage.CreateDirectory(dataFolder);
                         }
 
-                        PluginContext context = new(
-                            _eventBus,
-                            _serviceProvider,
-                            _logger,
+                        IPluginContext context = _contextFactory.Create(
+                            instance.Id,
                             dataFolder,
-                            _storage,
-                            manifest.Capabilities
+                            _logger,
+                            manifest.Capabilities,
+                            instance.Name,
+                            instance.Version
                         );
 
                         try
@@ -230,6 +271,11 @@ internal sealed class PluginLoader(
                         verification.Verified,
                         verification.Trusted
                     );
+
+                    // Decides whether enabling this later can take full effect
+                    // without a restart, so it is read from the assembly rather
+                    // than taken on trust from the manifest.
+                    info.ContributesServices = DeclaresServiceRegistrator(instance);
 
                     IPlugin? storedInstance =
                         initialStatus == PluginStatus.Active ? instance : null;
@@ -348,7 +394,7 @@ internal sealed class PluginLoader(
             // Windows tolerates it. Constructing outside the try let that escape
             // and abort discovery of every other plugin — guard it so a bad
             // assembly is skipped and reported, not fatal.
-            loadContext = new(absoluteAssemblyPath);
+            loadContext = new(absoluteAssemblyPath, _sharedAssemblies);
         }
         catch (Exception loadContextEx)
         {
@@ -407,12 +453,13 @@ internal sealed class PluginLoader(
                         await _storage.CreateDirectoryAsync(dataFolder, ct);
                     }
 
-                    PluginContext context = new(
-                        _eventBus,
-                        _serviceProvider,
-                        _logger,
+                    IPluginContext context = _contextFactory.Create(
+                        instance.Id,
                         dataFolder,
-                        _storage
+                        _logger,
+                        capabilities: null,
+                        instance.Name,
+                        instance.Version
                     );
 
                     instance.Initialize(context);

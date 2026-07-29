@@ -11,6 +11,7 @@
 
 using Microsoft.Extensions.Logging;
 using NoMercy.Events;
+using NoMercy.Events.Plugins;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Network;
 using NoMercy.Storage;
@@ -25,21 +26,60 @@ public class PluginContext : IPluginContext
     public string DataFolderPath { get; }
     public IPluginConfiguration Configuration { get; }
     public HttpClient HttpClient { get; }
+    public Guid PluginId { get; }
+    public IPluginSecretStore Secrets { get; }
+    public IPluginLibraryQuery Library { get; }
+    public IPluginLibraryWriter? LibraryWriter { get; }
+    public IPluginGrants Grants { get; }
 
     public PluginContext(
+        Guid pluginId,
         IEventBus eventBus,
         IServiceProvider services,
         ILogger logger,
         string dataFolderPath,
         IStorage storage,
-        PluginCapabilities? capabilities = null
+        IPluginSecretStore secrets,
+        IPluginLibraryQuery library,
+        IPluginGrants grants,
+        IPluginLibraryWriter? libraryWriter = null,
+        PluginCapabilities? capabilities = null,
+        Func<IReadOnlyList<string>>? grantedHosts = null,
+        string? pluginName = null,
+        Version? pluginVersion = null
     )
     {
+        PluginId = pluginId;
         EventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         Services = services ?? throw new ArgumentNullException(nameof(services));
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         DataFolderPath = dataFolderPath ?? throw new ArgumentNullException(nameof(dataFolderPath));
         Configuration = new PluginConfiguration(dataFolderPath, storage);
-        HttpClient = PluginHttpClientFactory.Create(capabilities);
+        Secrets = secrets ?? throw new ArgumentNullException(nameof(secrets));
+        Library = library ?? throw new ArgumentNullException(nameof(library));
+        Grants = grants ?? throw new ArgumentNullException(nameof(grants));
+
+        // Null when the plugin never declared the capability or the owner
+        // granted no library. A plugin can check for it instead of calling and
+        // catching.
+        LibraryWriter = libraryWriter;
+
+        HttpClient = PluginHttpClientFactory.Create(
+            capabilities,
+            grantedHosts,
+            pluginId,
+            pluginName,
+            pluginVersion
+        );
+    }
+
+    public Task PublishAsync<T>(string name, T payload, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        // The envelope, not the plugin's own event class: a type declared in a
+        // collectible load context has an identity no host subscriber can name,
+        // so publishing one reaches nobody.
+        return EventBus.PublishAsync(PluginMessageEvent.From(PluginId, name, payload), ct);
     }
 }

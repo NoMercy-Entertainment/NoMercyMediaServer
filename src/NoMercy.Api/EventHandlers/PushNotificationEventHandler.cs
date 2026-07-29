@@ -51,7 +51,9 @@ public class PushNotificationEventHandler : IDisposable
             new(
                 "Encoding finished",
                 $"{Path.GetFileName(@event.OutputPath)} finished encoding",
-                null
+                null,
+                Image: PushArtworkUrl.Build(@event.BackdropPath, PushArtworkUrl.BackdropWidth),
+                Icon: PushArtworkUrl.Build(@event.PosterPath, PushArtworkUrl.PosterWidth)
             )
         );
         return Task.CompletedTask;
@@ -59,7 +61,16 @@ public class PushNotificationEventHandler : IDisposable
 
     internal Task OnEncodingFailed(EncodingFailedEvent @event, CancellationToken _)
     {
-        Notify("encode-failed", new("Encoding failed", @event.ErrorMessage, null));
+        Notify(
+            "encode-failed",
+            new(
+                "Encoding failed",
+                @event.ErrorMessage,
+                null,
+                Image: PushArtworkUrl.Build(@event.BackdropPath, PushArtworkUrl.BackdropWidth),
+                Icon: PushArtworkUrl.Build(@event.PosterPath, PushArtworkUrl.PosterWidth)
+            )
+        );
         return Task.CompletedTask;
     }
 
@@ -74,7 +85,14 @@ public class PushNotificationEventHandler : IDisposable
             userId,
             @event.Hub,
             UserNotificationChannel,
-            new(@event.Title, @event.Message, @event.Route, @event.Type),
+            new(
+                @event.Title,
+                @event.Message,
+                @event.Route,
+                @event.Type,
+                Image: PushArtworkUrl.Build(@event.BackdropPath, PushArtworkUrl.BackdropWidth),
+                Icon: PushArtworkUrl.Build(@event.PosterPath, PushArtworkUrl.PosterWidth)
+            ),
             _authTokenStore.AccessToken ?? string.Empty
         );
 

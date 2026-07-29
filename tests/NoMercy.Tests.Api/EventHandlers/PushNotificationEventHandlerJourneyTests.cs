@@ -83,6 +83,70 @@ public class PushNotificationEventHandlerJourneyTests
         );
     }
 
+    /// <summary>
+    /// The event already carries the movie/episode artwork the encoder job
+    /// resolved (FileMetadata.PosterPath/ImgPath); the handler's only job is to
+    /// turn those bare TMDB paths into the same absolute, phone-reachable URL
+    /// the web/KMP clients build themselves — not to look anything up itself.
+    /// </summary>
+    [Fact]
+    public async Task EncodingCompleted_WithArtwork_CarriesImageAndIconOnThePayload()
+    {
+        (
+            InMemoryEventBus bus,
+            Mock<IPushDispatchQueue> queueMock,
+            PushNotificationEventHandler handler
+        ) = BuildChain();
+        using PushNotificationEventHandler _ = handler;
+
+        await bus.PublishAsync(
+            new EncodingCompletedEvent
+            {
+                JobId = 33,
+                OutputPath = "/output/movie/Idiocracy.m3u8",
+                Duration = TimeSpan.FromMinutes(90),
+                PosterPath = "/poster123.jpg",
+                BackdropPath = "/backdrop123.jpg",
+            }
+        );
+
+        queueMock.Verify(
+            queue =>
+                queue.Enqueue(
+                    It.Is<PushDispatchRequest>(request =>
+                        request.Payload.Image != null
+                        && request.Payload.Image.EndsWith("/tmdb-images/backdrop123.jpg?width=500")
+                        && request.Payload.Icon != null
+                        && request.Payload.Icon.EndsWith("/tmdb-images/poster123.jpg?width=200")
+                    )
+                ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task EncodingCompleted_WithoutArtwork_LeavesImageAndIconNull()
+    {
+        (
+            InMemoryEventBus bus,
+            Mock<IPushDispatchQueue> queueMock,
+            PushNotificationEventHandler handler
+        ) = BuildChain();
+        using PushNotificationEventHandler _ = handler;
+
+        await bus.PublishAsync(AnEncodeFinishing());
+
+        queueMock.Verify(
+            queue =>
+                queue.Enqueue(
+                    It.Is<PushDispatchRequest>(request =>
+                        request.Payload.Image == null && request.Payload.Icon == null
+                    )
+                ),
+            Times.Once
+        );
+    }
+
     [Fact]
     public async Task EncodingFailed_PublishViaRealBus_ReachesTheQueue_WithEncodeFailedChannel()
     {

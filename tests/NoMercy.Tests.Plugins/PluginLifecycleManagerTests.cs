@@ -57,7 +57,8 @@ public class PluginLifecycleManagerTests : IDisposable
             TestStorageHelper.CreateStorage(_tempDir),
             _registry,
             new PluginVerifier(),
-            new PluginConsentService(new InMemoryConsentStore())
+            new PluginConsentService(new InMemoryConsentStore()),
+            TestPluginPlatform.ContextFactory(_eventBus, TestStorageHelper.CreateStorage(_tempDir))
         );
 
         _lifecycle = new(
@@ -67,7 +68,8 @@ public class PluginLifecycleManagerTests : IDisposable
             _tempDir,
             TestStorageHelper.CreateStorage(_tempDir),
             _registry,
-            loader
+            loader,
+            TestPluginPlatform.ContextFactory(_eventBus, TestStorageHelper.CreateStorage(_tempDir))
         );
     }
 

@@ -15,13 +15,32 @@ namespace NoMercy.Plugins.Network;
 
 public static class PluginHttpClientFactory
 {
-    public static HttpClient Create(PluginCapabilities? capabilities)
+    /// <param name="grantedHosts">
+    /// Read on every request rather than captured once, so a host the owner
+    /// grants after the plugin has started takes effect without a restart.
+    /// </param>
+    public static HttpClient Create(
+        PluginCapabilities? capabilities,
+        Func<IReadOnlyList<string>>? grantedHosts = null,
+        Guid pluginId = default,
+        string? pluginName = null,
+        Version? pluginVersion = null
+    )
     {
         IReadOnlyList<string> hosts = capabilities?.Network?.Hosts ?? [];
-        PluginNetworkAllowlistHandler handler = new(hosts)
+
+        // Allowlist outermost so a denied host never reaches the socket, with
+        // the user agent stamped on the way past.
+        PluginUserAgentHandler userAgent = new(pluginId, pluginName, pluginVersion)
         {
             InnerHandler = new SocketsHttpHandler(),
         };
+
+        PluginNetworkAllowlistHandler handler = new(hosts, grantedHosts)
+        {
+            InnerHandler = userAgent,
+        };
+
         return new(handler);
     }
 }

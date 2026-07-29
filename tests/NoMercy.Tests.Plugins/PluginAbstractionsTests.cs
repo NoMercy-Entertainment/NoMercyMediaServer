@@ -14,6 +14,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Events;
 using NoMercy.Events.Playback;
+using NoMercy.Events.Plugins;
+using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
 using Xunit;
 
@@ -165,6 +167,11 @@ public class PluginAbstractionsTests
         public string DataFolderPath { get; }
         public IPluginConfiguration Configuration { get; }
         public HttpClient HttpClient { get; }
+        public Guid PluginId { get; }
+        public IPluginSecretStore Secrets { get; }
+        public IPluginLibraryQuery Library { get; }
+        public IPluginLibraryWriter? LibraryWriter => null;
+        public IPluginGrants Grants { get; }
 
         public TestPluginContext(IEventBus eventBus, string dataFolder = "/tmp/plugin-test")
         {
@@ -174,6 +181,54 @@ public class PluginAbstractionsTests
             DataFolderPath = dataFolder;
             Configuration = new NullPluginConfiguration();
             HttpClient = new(new HttpClientHandler());
+            PluginId = Guid.Empty;
+            Secrets = new InMemorySecretStore();
+            Library = new NullPluginLibraryQuery();
+            Grants = new DenyingGrants();
+        }
+
+        public Task PublishAsync<T>(string name, T payload, CancellationToken ct = default) =>
+            EventBus.PublishAsync(PluginMessageEvent.From(PluginId, name, payload), ct);
+
+        private sealed class DenyingGrants : IPluginGrants
+        {
+            public Task<bool> HasAsync(string kind, string value, CancellationToken ct = default) =>
+                Task.FromResult(false);
+
+            public Task<IReadOnlyList<string>> GetAsync(
+                string kind,
+                CancellationToken ct = default
+            ) => Task.FromResult<IReadOnlyList<string>>([]);
+
+            public Task RequestAsync(
+                string kind,
+                string value,
+                string reason,
+                CancellationToken ct = default
+            ) => Task.CompletedTask;
+        }
+
+        private sealed class InMemorySecretStore : IPluginSecretStore
+        {
+            private readonly Dictionary<string, string> _values = [];
+
+            public Task<string?> GetAsync(string key, CancellationToken ct = default) =>
+                Task.FromResult(_values.GetValueOrDefault(key));
+
+            public Task SetAsync(string key, string value, CancellationToken ct = default)
+            {
+                _values[key] = value;
+                return Task.CompletedTask;
+            }
+
+            public Task DeleteAsync(string key, CancellationToken ct = default)
+            {
+                _values.Remove(key);
+                return Task.CompletedTask;
+            }
+
+            public Task<IReadOnlyList<string>> KeysAsync(CancellationToken ct = default) =>
+                Task.FromResult<IReadOnlyList<string>>(_values.Keys.ToList());
         }
 
         private sealed class MinimalServiceProvider : IServiceProvider

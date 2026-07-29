@@ -14,4 +14,15 @@ namespace NoMercy.Plugins.Hooks;
 public interface IPluginCronRegistrar
 {
     void RegisterAll();
+
+    /// <summary>
+    /// Stops and releases every executor registered for one plugin.
+    /// <para>
+    /// The counterpart to registration, and load-bearing: an executor holds the
+    /// plugin instance, so leaving one behind keeps the plugin's collectible
+    /// load context alive after it is disabled and its files locked on Windows.
+    /// A plugin declaring several jobs leaves several.
+    /// </para>
+    /// </summary>
+    void UnregisterPlugin(Guid pluginId);
 }

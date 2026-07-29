@@ -18,4 +18,10 @@ public sealed class EncodingCompletedEvent : EventBase
     public required int JobId { get; init; }
     public required string OutputPath { get; init; }
     public required TimeSpan Duration { get; init; }
+
+    // Movie backdrop or episode still, and movie/show poster, as already
+    // resolved for this encode. Null when the job never reached that lookup
+    // (e.g. a pre-metadata failure) or the title carries no artwork.
+    public string? BackdropPath { get; init; }
+    public string? PosterPath { get; init; }
 }

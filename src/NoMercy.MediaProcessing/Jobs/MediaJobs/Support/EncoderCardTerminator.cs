@@ -31,7 +31,9 @@ public static class EncoderCardTerminator
         string title,
         string inputPath,
         string message,
-        string exceptionType
+        string exceptionType,
+        string? posterPath = null,
+        string? backdropPath = null
     )
     {
         if (!EventBusProvider.IsConfigured)
@@ -54,6 +56,8 @@ public static class EncoderCardTerminator
                 InputPath = inputPath,
                 ErrorMessage = message,
                 ExceptionType = exceptionType,
+                PosterPath = posterPath,
+                BackdropPath = backdropPath,
             }
         );
     }

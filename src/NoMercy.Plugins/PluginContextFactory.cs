@@ -1,0 +1,80 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
+using NoMercy.Events;
+using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Capabilities;
+using NoMercy.Storage;
+
+namespace NoMercy.Plugins;
+
+/// <summary>
+/// Assembles a plugin's context, applying the trust decisions in one place.
+/// </summary>
+public class PluginContextFactory(
+    IEventBus eventBus,
+    IServiceProvider services,
+    IStorage storage,
+    IPluginGrantStore grantStore,
+    IDataProtectionProvider protectionProvider,
+    IPluginLibraryQuery libraryQuery,
+    IPluginLibraryWriterFactory libraryWriterFactory,
+    IPluginConfiguration platformConfiguration
+) : IPluginContextFactory
+{
+    public IPluginContext Create(
+        Guid pluginId,
+        string dataFolderPath,
+        ILogger logger,
+        PluginCapabilities? capabilities,
+        string? pluginName = null,
+        Version? pluginVersion = null
+    )
+    {
+        PluginSecretStore secrets = new(pluginId, protectionProvider, platformConfiguration);
+        PluginGrants grants = new(pluginId, grantStore);
+
+        // A writer only exists when the plugin asked for the capability AND the
+        // owner granted at least one library. Declaring it is not holding it —
+        // the manifest states an intention and the grant is the permission.
+        IPluginLibraryWriter? writer = null;
+        if (PluginCapabilityGuard.DeclaresHook(capabilities, PluginHookCapability.LibraryWrite))
+            writer = libraryWriterFactory.CreateFor(pluginId);
+
+        return new PluginContext(
+            pluginId,
+            eventBus,
+            services,
+            logger,
+            dataFolderPath,
+            storage,
+            secrets,
+            libraryQuery,
+            grants,
+            writer,
+            capabilities,
+            () => grantStore.Granted(pluginId, PluginGrantKind.NetworkHost),
+            pluginName,
+            pluginVersion
+        );
+    }
+}
+
+/// <summary>
+/// Builds the writer for one plugin, or null when the owner has granted it no
+/// library to write to.
+/// </summary>
+public interface IPluginLibraryWriterFactory
+{
+    IPluginLibraryWriter? CreateFor(Guid pluginId);
+}

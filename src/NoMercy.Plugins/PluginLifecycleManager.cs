@@ -29,7 +29,10 @@ internal sealed class PluginLifecycleManager(
     string pluginsPath,
     IStorage storage,
     IPluginRegistry registry,
-    PluginLoader loader
+    PluginLoader loader,
+    IPluginContextFactory contextFactory,
+    IPluginAssemblyTracker? assemblyTracker = null,
+    Action<Guid>? releaseScheduledWork = null
 )
 {
     private readonly IEventBus _eventBus = eventBus;
@@ -39,6 +42,9 @@ internal sealed class PluginLifecycleManager(
     private readonly IStorage _storage = storage;
     private readonly IPluginRegistry _registry = registry;
     private readonly PluginLoader _loader = loader;
+    private readonly IPluginContextFactory _contextFactory = contextFactory;
+    private readonly IPluginAssemblyTracker? _assemblyTracker = assemblyTracker;
+    private readonly Action<Guid>? _releaseScheduledWork = releaseScheduledWork;
 
     public async Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
@@ -68,13 +74,13 @@ internal sealed class PluginLifecycleManager(
                     _storage.CreateDirectory(dataFolder);
                 }
 
-                PluginContext context = new(
-                    _eventBus,
-                    _serviceProvider,
-                    _logger,
+                IPluginContext context = _contextFactory.Create(
+                    pluginId,
                     dataFolder,
-                    _storage,
-                    loaded.Info.Capabilities
+                    _logger,
+                    loaded.Info.Capabilities,
+                    loaded.Instance.Name,
+                    loaded.Instance.Version
                 );
                 loaded.Instance.Initialize(context);
                 PluginLifecycle.Transition(loaded.Info, PluginStatus.Active);
@@ -132,6 +138,11 @@ internal sealed class PluginLifecycleManager(
             return Task.CompletedTask;
         }
 
+        // Before Dispose, because a cron executor holds the instance: leaving
+        // one registered keeps the plugin's load context alive for the rest of
+        // the process, and with it the lock on its files.
+        _releaseScheduledWork?.Invoke(pluginId);
+
         loaded.Instance?.Dispose();
         PluginLifecycle.Transition(loaded.Info, PluginStatus.Disabled);
 
@@ -145,8 +156,18 @@ internal sealed class PluginLifecycleManager(
             throw new InvalidOperationException($"Plugin {pluginId} is not installed.");
         }
 
+        _releaseScheduledWork?.Invoke(pluginId);
+
         loaded.Instance?.Dispose();
-        loaded.LoadContext?.Unload();
+
+        if (loaded.LoadContext is not null)
+        {
+            // Tracked before the unload is asked for, so whether it actually
+            // went can be answered later by looking.
+            _assemblyTracker?.TrackUnload(pluginId, loaded.Info.AssemblyPath);
+            loaded.LoadContext.Unload();
+        }
+
         PluginLifecycle.Transition(loaded.Info, PluginStatus.Deleted);
 
         if (loaded.Info.AssemblyPath is not null)

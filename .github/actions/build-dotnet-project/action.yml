@@ -161,6 +161,37 @@ runs:
           $TRIMMED_FLAG \
           --output ./output
         
+        # macOS on Apple Silicon.
+        #
+        # Apple Silicon shipped in 2020 and every Mac sold since is arm64. The
+        # x64 build runs under Rosetta where Rosetta is installed and not at all
+        # where it is not, and the ffmpeg fork already ships arm64 — the server
+        # was the piece holding it back.
+        #
+        # Its own output directory, because both publishes produce a file called
+        # $PROJECT_NAME: into the same directory the second silently overwrites
+        # the first and the asset labelled arm64 is x64.
+        echo "Building for macOS (arm64)..."
+        dotnet publish "$PROJECT_PATH" \
+          --configuration Release \
+          --runtime osx-arm64 \
+          --self-contained true \
+          /p:PublishSingleFile=true \
+          /p:IncludeNativeLibrariesForSelfExtract=true \
+          /p:IncludeAllContentForSelfExtract=true \
+          /p:EnableCompressionInSingleFile=true \
+          /p:DebugType=None \
+          /p:DebugSymbols=false \
+          /p:PublishReadyToRun=false \
+          /p:OutputFileName="$PROJECT_NAME" \
+          $TRIMMED_FLAG \
+          --output ./output-osx-arm64
+
+        # The x64 asset keeps its exact name. The packages repo and the download
+        # URLs on nomercy-tv pin these filenames, so arm64 is an addition and
+        # never a rename.
+        mv "./output-osx-arm64/$PROJECT_NAME" "./output/$PROJECT_NAME-macos-arm64"
+
         echo "Build completed for all platforms!"
 
     - name: Create macOS App Bundle
@@ -199,7 +230,15 @@ runs:
         # Keep the raw binary for other uses
         mv "./output/$PROJECT_NAME" "./output/$PROJECT_NAME-macos-x64"
 
-        echo "macOS App Bundle created successfully!"
+        # The same bundle for Apple Silicon. The layout is already built, so the
+        # binary inside it is swapped and it is tarred again — an arm64 Mac
+        # should get a .app like everyone else, not only a raw binary.
+        cp "./output/$PROJECT_NAME-macos-arm64" \
+           "./output/$PROJECT_NAME.app/Contents/MacOS/$PROJECT_NAME"
+        chmod +x "./output/$PROJECT_NAME.app/Contents/MacOS/$PROJECT_NAME"
+        tar -czf "./output/$PROJECT_NAME-macos-arm64.tar.gz" -C ./output "$PROJECT_NAME.app"
+
+        echo "macOS App Bundles created successfully!"
 
     - name: Rename macOS CLI binary
       if: inputs.project == 'Cli'

@@ -284,7 +284,9 @@ public class VideoEncodeJob
                 fileMetadata.Title,
                 InputFile,
                 ex.Message,
-                ex.GetType().Name
+                ex.GetType().Name,
+                fileMetadata.PosterPath,
+                fileMetadata.ImgPath
             );
 
             throw;
@@ -392,7 +394,9 @@ public class VideoEncodeJob
                 fileMetadata.Title,
                 InputFile,
                 ex.Message,
-                ex.GetType().Name
+                ex.GetType().Name,
+                fileMetadata.PosterPath,
+                fileMetadata.ImgPath
             );
 
             throw;
@@ -1059,7 +1063,9 @@ public class VideoEncodeJob
                 fileMetadata.Title,
                 InputFile,
                 $"{failedCount} rung(s) failed",
-                "FinalizeChildFailed"
+                "FinalizeChildFailed",
+                fileMetadata.PosterPath,
+                fileMetadata.ImgPath
             );
 
             (IReadOnlyList<string> failedDescriptors, string? lastError) = SummarizeFailures(
@@ -1296,7 +1302,9 @@ public class VideoEncodeJob
                         fileMetadata.Title,
                         InputFile,
                         err,
-                        "FinalizeFailed"
+                        "FinalizeFailed",
+                        fileMetadata.PosterPath,
+                        fileMetadata.ImgPath
                     );
 
                     return;
@@ -1341,6 +1349,8 @@ public class VideoEncodeJob
                     JobId = fileMetadata.Id,
                     OutputPath = fileMetadata.Path ?? string.Empty,
                     Duration = TimeSpan.Zero,
+                    PosterPath = fileMetadata.PosterPath,
+                    BackdropPath = fileMetadata.ImgPath,
                 }
             );
         }
@@ -1943,6 +1953,8 @@ public class VideoEncodeJob
                     JobId = fileMetadata.Id,
                     OutputPath = result.OutputPath,
                     Duration = stopwatch.Elapsed,
+                    PosterPath = fileMetadata.PosterPath,
+                    BackdropPath = fileMetadata.ImgPath,
                 }
             );
         }
@@ -2179,6 +2191,8 @@ public class VideoEncodeJob
                     JobId = fileMetadata.Id,
                     OutputPath = fileMetadata.Path ?? string.Empty,
                     Duration = TimeSpan.Zero,
+                    PosterPath = fileMetadata.PosterPath,
+                    BackdropPath = fileMetadata.ImgPath,
                 }
             );
         }
@@ -2320,6 +2334,7 @@ public class VideoEncodeJob
         string basePath = folderName;
         int baseId = movie?.Id ?? episode!.Id;
         string? imgPath = movie?.Backdrop ?? episode?.Still;
+        string? posterPath = movie?.Poster ?? episode?.Tv.Poster;
         MediaItemRef mediaItem = MediaItemRefFactory.Create(movie, episode);
 
         return new()
@@ -2331,6 +2346,7 @@ public class VideoEncodeJob
             Path = basePath,
             Id = baseId,
             ImgPath = imgPath,
+            PosterPath = posterPath,
             MediaItem = mediaItem,
         };
     }
@@ -2375,6 +2391,7 @@ public class VideoEncodeJob
         public string Path { get; set; } = string.Empty;
         public int Id { get; set; }
         public string? ImgPath { get; set; }
+        public string? PosterPath { get; set; }
 
         /// <summary>
         /// The resolved movie/episode reference for reconstruction-metadata
