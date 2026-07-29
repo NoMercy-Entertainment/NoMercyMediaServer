@@ -43,7 +43,9 @@ public class PluginManager : IPluginManager, IDisposable
         IPluginVerifier? verifier = null,
         IPluginConsentService? consentService = null,
         IPluginContextFactory? contextFactory = null,
-        PluginHostOptions? hostOptions = null
+        PluginHostOptions? hostOptions = null,
+        IPluginAssemblyTracker? assemblyTracker = null,
+        Action<Guid>? releaseScheduledWork = null
     )
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -104,7 +106,9 @@ public class PluginManager : IPluginManager, IDisposable
             _storage,
             _registry,
             _loader,
-            factory
+            factory,
+            assemblyTracker,
+            releaseScheduledWork
         );
     }
 

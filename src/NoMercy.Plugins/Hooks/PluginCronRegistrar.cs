@@ -59,4 +59,24 @@ public class PluginCronRegistrar(IPluginManager pluginManager, CronWorker cronWo
                 cronWorker.RegisterExecutor(new PluginCronExecutor(plugin, job));
         }
     }
+
+    public void UnregisterPlugin(Guid pluginId)
+    {
+        // Both shapes, because a plugin's job list is read from the instance
+        // and the instance may already be gone by the time it is disabled. The
+        // names are derivable from the id alone, so removal does not depend on
+        // the plugin still being there to ask.
+        cronWorker.RemoveExecutor($"plugin:{pluginId}");
+
+        foreach (
+            IScheduledTaskPlugin plugin in pluginManager.GetPluginsOfType<IScheduledTaskPlugin>()
+        )
+        {
+            if (plugin.Id != pluginId)
+                continue;
+
+            foreach (PluginScheduledJob job in plugin.Jobs)
+                cronWorker.RemoveExecutor($"plugin:{pluginId}:{job.Name}");
+        }
+    }
 }

@@ -188,7 +188,8 @@ public class CronWorker : BackgroundService
                 if (job.NextRun.HasValue && currentTime >= job.NextRun.Value)
                 {
                     _logger.LogDebug(
-                        "Executing cron job: {JobName} (Scheduled: {NextRun}, Current: {CurrentTime})", [job.Name, job.NextRun, currentTime]
+                        "Executing cron job: {JobName} (Scheduled: {NextRun}, Current: {CurrentTime})",
+                        [job.Name, job.NextRun, currentTime]
                     );
 
                     bool success = await ExecuteJob(job, currentTime, cancellationToken);
@@ -205,13 +206,15 @@ public class CronWorker : BackgroundService
                     if (success)
                     {
                         _logger.LogDebug(
-                            "Successfully executed cron job: {JobName}. Next run: {NextRun}", [job.Name, job.NextRun]
+                            "Successfully executed cron job: {JobName}. Next run: {NextRun}",
+                            [job.Name, job.NextRun]
                         );
                     }
                     else
                     {
                         _logger.LogWarning(
-                            "Cron job {JobName} failed; rescheduling for {NextRun}", [job.Name, job.NextRun]
+                            "Cron job {JobName} failed; rescheduling for {NextRun}",
+                            [job.Name, job.NextRun]
                         );
                     }
 
@@ -254,7 +257,8 @@ public class CronWorker : BackgroundService
             if (!_registeredJobs.TryGetValue(job.JobType, out Type? jobExecutorType))
             {
                 _logger.LogWarning(
-                    "Job type {JobType} not registered for job {JobName}", [job.JobType, job.Name]
+                    "Job type {JobType} not registered for job {JobName}",
+                    [job.JobType, job.Name]
                 );
                 return false;
             }
@@ -282,7 +286,8 @@ public class CronWorker : BackgroundService
             // exception detail, leaving the operator no way to diagnose.
             _logger.LogError(
                 ex,
-                "Failed to execute cron job: {JobName} — {ErrorType}: {ErrorMessage}", [job.Name, ex.GetType().Name, ex.Message]
+                "Failed to execute cron job: {JobName} — {ErrorType}: {ErrorMessage}",
+                [job.Name, ex.GetType().Name, ex.Message]
             );
             return false;
         }
@@ -374,6 +379,32 @@ public class CronWorker : BackgroundService
         StartJobWorker(job);
     }
 
+    /// <summary>
+    /// Stops an instance-registered executor and lets go of it.
+    /// <para>
+    /// Registration is what a plugin's cron work hangs off, so without a way
+    /// back out the worker keeps a reference to the plugin instance forever.
+    /// That keeps the plugin's collectible load context alive after it is
+    /// disabled, which on Windows means its files stay locked and it cannot be
+    /// updated or removed without stopping the server.
+    /// </para>
+    /// </summary>
+    public void RemoveExecutor(string jobName)
+    {
+        if (!_instanceExecutors.Remove(jobName))
+            return;
+
+        // Keyed by JobType, which for an instance executor is its JobName.
+        if (_jobCancellationTokens.Remove(jobName, out CancellationTokenSource? cts))
+        {
+            cts.Cancel();
+            cts.Dispose();
+        }
+
+        _jobTasks.Remove(jobName);
+        _codeDefinedJobs.RemoveAll(job => job.Name == jobName);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         foreach (CronJobRegistration registration in _registrations)
@@ -460,7 +491,8 @@ public class CronWorker : BackgroundService
                 else
                 {
                     _logger.LogWarning(
-                        "Database job {JobName} has unregistered job type: {JobType}", [job.Name, job.JobType]
+                        "Database job {JobName} has unregistered job type: {JobType}",
+                        [job.Name, job.JobType]
                     );
                 }
             }

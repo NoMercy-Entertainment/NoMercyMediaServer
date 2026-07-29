@@ -46,7 +46,13 @@ public static class PluginServiceCollectionExtensions
         services.AddDataProtection();
 
         services.AddSingleton<IPluginVerifier, PluginVerifier>();
-        services.AddSingleton<IPluginRestartAdvisor, PluginRestartAdvisor>();
+        PluginAssemblyTracker assemblyTracker = new();
+        services.AddSingleton<IPluginAssemblyTracker>(assemblyTracker);
+
+        // An instance, not a type: RegisterPluginServicesFromManifests runs
+        // before the provider is built and has to record into the same object
+        // the running server later reads.
+        services.AddSingleton<IPluginRestartAdvisor>(new PluginRestartAdvisor(assemblyTracker));
 
         // Bound so a deployment can add a shared framework package without a
         // code change, which is what the type always said it was for.
@@ -118,7 +124,11 @@ public static class PluginServiceCollectionExtensions
                 verifier,
                 consentService,
                 sp.GetRequiredService<IPluginContextFactory>(),
-                sp.GetRequiredService<IOptions<PluginHostOptions>>().Value
+                sp.GetRequiredService<IOptions<PluginHostOptions>>().Value,
+                sp.GetRequiredService<IPluginAssemblyTracker>(),
+                // Resolved lazily: the cron registrar depends on the manager,
+                // so taking it as a constructor argument here would be a cycle.
+                pluginId => sp.GetService<IPluginCronRegistrar>()?.UnregisterPlugin(pluginId)
             );
         });
 
@@ -134,6 +144,17 @@ public static class PluginServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// The advisor instance already put in the collection by
+    /// <see cref="AddPluginSystem"/>, read back before the provider exists.
+    /// Null when plugin services were registered without it, which is not an
+    /// error — the advisor simply has nothing to record.
+    /// </summary>
+    private static IPluginRestartAdvisor? RestartAdvisorIn(IServiceCollection services) =>
+        services
+            .FirstOrDefault(descriptor => descriptor.ServiceType == typeof(IPluginRestartAdvisor))
+            ?.ImplementationInstance as IPluginRestartAdvisor;
 
     private static IStorage PluginStorage(IServiceProvider sp, string pluginsPath)
     {
@@ -214,14 +235,28 @@ public static class PluginServiceCollectionExtensions
                             && t is { IsAbstract: false, IsInterface: false }
                         );
 
+                    bool registeredAny = false;
+
                     foreach (Type registratorType in registratorTypes)
                     {
                         if (
                             Activator.CreateInstance(registratorType)
                             is IPluginServiceRegistrator registrator
                         )
+                        {
                             registrator.RegisterServices(services);
+                            registeredAny = true;
+                        }
                     }
+
+                    // This pass is the only moment a plugin's services can reach
+                    // the container. Recording that it happened is what lets the
+                    // advisor tell an owner that toggling THIS plugin later
+                    // needs no restart — without it, every service-contributing
+                    // plugin reports "restart required" forever, including the
+                    // ones that were here all along.
+                    if (registeredAny)
+                        RestartAdvisorIn(services)?.MarkRegisteredAtStartup(manifest.Id);
                 }
                 finally
                 {

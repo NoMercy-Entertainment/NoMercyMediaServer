@@ -33,7 +33,7 @@ public interface IPluginRestartAdvisor
     void MarkRegisteredAtStartup(Guid pluginId);
 }
 
-public class PluginRestartAdvisor : IPluginRestartAdvisor
+public class PluginRestartAdvisor(IPluginAssemblyTracker? tracker = null) : IPluginRestartAdvisor
 {
     private readonly HashSet<Guid> _registeredAtStartup = [];
     private readonly Lock _gate = new();
@@ -74,11 +74,14 @@ public class PluginRestartAdvisor : IPluginRestartAdvisor
 
             case PluginOperation.Uninstall:
             case PluginOperation.Update:
-                // Removing or replacing means touching files, and a collectible
-                // context that has not actually unloaded still holds them. It
-                // is best-effort by design, so this is reported rather than
-                // promised either way.
-                reasons |= PluginRestartReason.AssemblyStillLoaded;
+                // Only when the assembly really is still resident. Unload is
+                // best-effort, so this is looked up rather than assumed — a
+                // clean uninstall should be told it was clean, and saying
+                // "restart required" after every one is how an owner learns to
+                // ignore the message.
+                if (tracker?.IsStillLoaded(plugin.Id) ?? true)
+                    reasons |= PluginRestartReason.AssemblyStillLoaded;
+
                 break;
         }
 
