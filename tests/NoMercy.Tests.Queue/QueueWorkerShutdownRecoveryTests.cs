@@ -40,12 +40,29 @@ namespace NoMercy.Tests.Queue;
 [Trait("Category", "Unit")]
 public class QueueWorkerShutdownRecoveryTests
 {
+    /// <summary>
+    /// How long a background worker is given to get to a job.
+    /// <para>
+    /// Five seconds is generous on a developer's machine and tight on a shared
+    /// CI runner, where the worker competes with every other test in the
+    /// assembly for two cores. That produced a timeout with no assertion behind
+    /// it — the reservation was coming, the window closed first — and a test
+    /// that fails under load is one people learn to re-run instead of read.
+    /// </para>
+    /// <para>
+    /// Raising it costs nothing when things are working: every wait here
+    /// returns the moment its condition holds, so the happy path is unchanged
+    /// and only a genuine hang pays the full window.
+    /// </para>
+    /// </summary>
+    private static TimeSpan WaitWindow => QueueTestTiming.WaitWindow;
+
     private static async Task<QueueJobModel> WaitUntilReservedAsync(
         TestQueueContextAdapter context,
         string payload
     )
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(WaitWindow);
         while (!cts.IsCancellationRequested)
         {
             QueueJobModel? job = context.Jobs.FirstOrDefault(j =>
@@ -60,7 +77,7 @@ public class QueueWorkerShutdownRecoveryTests
 
     private static async Task WaitUntilAsync(Func<bool> predicate, string failureMessage)
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(WaitWindow);
         while (!cts.IsCancellationRequested)
         {
             if (predicate())
@@ -166,7 +183,7 @@ public class QueueWorkerShutdownRecoveryTests
         await WaitUntilAsync(
             () => context.FailedJobs.Any(f => f.Payload == payload),
             "An OperationCanceledException thrown with no shutdown in progress must still "
-                            + "count toward the attempt budget and eventually dead-letter."
+                + "count toward the attempt budget and eventually dead-letter."
         );
 
         context.Jobs.Should().NotContain(j => j.Payload == payload);
@@ -189,7 +206,7 @@ public class QueueWorkerShutdownRecoveryTests
         await WaitUntilAsync(
             () => context.FailedJobs.Any(f => f.Payload == payload),
             "An ObjectDisposedException thrown with no shutdown in progress must still "
-                            + "count toward the attempt budget and eventually dead-letter."
+                + "count toward the attempt budget and eventually dead-letter."
         );
 
         context.Jobs.Should().NotContain(j => j.Payload == payload);

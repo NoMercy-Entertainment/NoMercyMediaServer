@@ -148,7 +148,7 @@ public class BudgetGateTests : IDisposable
 
         // Cancel shortly after the job executes — the worker will process one job
         // then wait on WorkAvailable with the stop token, exiting cleanly.
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
 
         try
         {
@@ -222,7 +222,7 @@ public class BudgetGateTests : IDisposable
         // Job is already in the DB; worker picks it up on the first ReserveJob call.
         QueueWorker worker = new(_jobQueue, "library", resourceBudget: budget.Object);
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
 
         try
         {

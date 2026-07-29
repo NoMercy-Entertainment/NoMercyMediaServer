@@ -70,7 +70,7 @@ public class QueueRunnerBehaviorTests
 
     private static async Task WaitUntilAsync(Func<bool> predicate, string failureMessage)
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         while (!cts.IsCancellationRequested)
         {
             if (predicate())

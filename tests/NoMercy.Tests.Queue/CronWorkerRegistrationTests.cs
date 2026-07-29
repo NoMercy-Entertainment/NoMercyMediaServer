@@ -51,7 +51,7 @@ public class CronWorkerRegistrationTests
         cronWorker.RegisterJob<TestCronJobA>("test-job-a", "Test Job A Duplicate", "0 0 * * *");
 
         // StopAsync should complete cleanly — no orphaned tasks from duplicate
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await cronWorker.StopAsync(cts.Token);
     }
 
@@ -64,7 +64,7 @@ public class CronWorkerRegistrationTests
         cronWorker.RegisterJobWithSchedule<TestCronJobA>("test-job-a", provider);
         cronWorker.RegisterJobWithSchedule<TestCronJobA>("test-job-a", provider);
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await cronWorker.StopAsync(cts.Token);
     }
 
@@ -77,7 +77,7 @@ public class CronWorkerRegistrationTests
         cronWorker.RegisterJob<TestCronJobA>("test-job-a", "Test Job A", "0 0 * * *");
         cronWorker.RegisterJob<TestCronJobB>("test-job-b", "Test Job B", "0 12 * * *");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await cronWorker.StopAsync(cts.Token);
     }
 
@@ -91,7 +91,7 @@ public class CronWorkerRegistrationTests
         cronWorker.RegisterJob<TestCronJobA>("test-job-a", "Test Job A Dup", "0 0 * * *");
         cronWorker.RegisterJob<TestCronJobB>("test-job-b", "Test Job B", "0 12 * * *");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await cronWorker.StopAsync(cts.Token);
     }
 
@@ -140,7 +140,7 @@ public class CronWorkerRegistrationTests
             "The good cron job after an unresolvable one must still be registered."
         );
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await cronWorker.StopAsync(cts.Token);
     }
 

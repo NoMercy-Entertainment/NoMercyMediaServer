@@ -147,7 +147,7 @@ public class ServiceCollectionExtensionsTests
         scheduled.Name.Should().Be("extension-test-job");
         scheduled.CronExpression.Should().Be("0 3 * * *");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await cronWorker.StopAsync(cts.Token);
     }
 
@@ -189,7 +189,7 @@ public class ServiceCollectionExtensionsTests
                     .GetValue(cronWorker)!;
         registeredJobs.Should().ContainKey("extension-static-call");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await cronWorker.StopAsync(cts.Token);
     }
 

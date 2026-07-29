@@ -103,7 +103,7 @@ public class CronWorkerDatabaseJobTests
 
         GetJobCancellationTokens(worker).Should().ContainKey("registered-type");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await worker.StopAsync(cts.Token);
     }
 
@@ -137,7 +137,7 @@ public class CronWorkerDatabaseJobTests
                 "a DB row whose JobType was never registered this boot must not start a worker"
             );
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await worker.StopAsync(cts.Token);
     }
 
@@ -174,7 +174,7 @@ public class CronWorkerDatabaseJobTests
             .Should()
             .BeEmpty("a disabled cron job row must never start a worker");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(QueueTestTiming.WaitWindow);
         await worker.StopAsync(cts.Token);
     }
 }
