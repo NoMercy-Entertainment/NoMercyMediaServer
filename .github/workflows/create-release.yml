@@ -93,6 +93,27 @@ jobs:
           echo "=== Release artifacts ==="
           ls -la ./output/
 
+      # The contract a third-party plugin is written against. A plugin living
+      # outside this repository cannot use a ProjectReference, so without a
+      # published package its author is copying a DLL out of somebody's build
+      # and every contract added here is invisible until they do.
+      #
+      # Before the checksum step, so the packages are hashed and listed like
+      # every other asset, and before the master push, so a failure here costs
+      # a red job rather than a version bump with nothing behind it.
+      - name: Set up .NET for packing
+        uses: ./.github/actions/setup-dotnet
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Pack the plugin contract
+        run: |
+          # Events too: Abstractions depends on it, and a package whose
+          # dependency cannot be restored is a package nobody can use.
+          for project in NoMercy.Events NoMercy.Plugins.Abstractions; do
+            dotnet pack "src/$project/$project.csproj"               --configuration Release               -p:Version=${{ inputs.version }}               --output ./output
+          done
+
       - name: Generate SHA-256 checksums and release-info.json
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
@@ -278,18 +299,6 @@ jobs:
           git push origin master
 
           echo "Squash merged dev into master as v$NEW_VERSION"
-
-      # The contract a third-party plugin is written against. A plugin living
-      # outside this repository cannot use a ProjectReference, so without a
-      # published package its author is copying a DLL out of somebody's build
-      # and every contract added here is invisible until they do.
-      - name: Pack the plugin contract
-        run: |
-          # Events too: Abstractions depends on it, and a package whose
-          # dependency cannot be restored is a package nobody can use.
-          for project in NoMercy.Events NoMercy.Plugins.Abstractions; do
-            dotnet pack "src/$project/$project.csproj"               --configuration Release               -p:Version=${{ inputs.version }}               --output ./output
-          done
 
       - name: Create Release and Upload Assets
         env:
