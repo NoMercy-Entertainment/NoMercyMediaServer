@@ -19,6 +19,7 @@ using NoMercy.Api.Services;
 using NoMercy.Api.WebSockets;
 using NoMercy.Authorization;
 using NoMercy.Data.Activity;
+using NoMercy.Data.Plugins;
 using NoMercy.Data.Repositories;
 using NoMercy.Data.Resolvers;
 using NoMercy.Data.Security;
@@ -619,6 +620,10 @@ public static partial class ServiceConfiguration
         services.AddHostedService<MusicQueryWarmupService>();
 
         services.AddPluginSystem(AppFiles.PluginsPath);
+
+        // The real library, replacing the platform's null objects. Separate
+        // call because NoMercy.Plugins must not reference the database.
+        services.AddPluginLibraryAccess();
         services.RegisterPluginServicesFromManifests(AppFiles.PluginsPath);
 
         services.AddVideoHubServices();

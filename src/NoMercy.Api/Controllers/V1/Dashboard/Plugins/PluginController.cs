@@ -19,6 +19,7 @@ using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Capabilities;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Plugins;
 
@@ -27,12 +28,15 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Plugins;
 [ApiVersion(1.0)]
 [Authorize(Policy = "Owner")]
 [Route("api/v{version:apiVersion}/dashboard/plugins", Order = 10)]
-public class PluginController(IPluginManager pluginManager) : BaseController
+public class PluginController(
+    IPluginManager pluginManager,
+    IPluginConsentService consentService,
+    IPluginGrantStore grantStore
+) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
     {
-
         IReadOnlyList<PluginInfo> plugins = pluginManager.GetInstalledPlugins();
 
         return Ok(
@@ -46,7 +50,6 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [HttpGet("{id:guid}")]
     public IActionResult Show(Guid id)
     {
-
         PluginInfo? plugin = pluginManager.GetInstalledPlugins().FirstOrDefault(p => p.Id == id);
         if (plugin is null)
             return NotFoundResponse("Plugin not found");
@@ -54,10 +57,120 @@ public class PluginController(IPluginManager pluginManager) : BaseController
         return Ok(new DataResponseDto<PluginInfoDto> { Data = new(plugin) });
     }
 
+    /// <summary>
+    /// Records the owner's consent to a plugin's declared capabilities, then
+    /// enables it.
+    /// <para>
+    /// An elevated plugin — anything declaring rest, ws, network or an elevated
+    /// hook — installs disabled and cannot enable itself. That part was right;
+    /// what was missing is this. <c>GrantConsent</c> existed with no caller, so
+    /// "installs disabled pending consent" was a dead end rather than a state
+    /// with a way out, and every plugin needing outbound access was stuck at
+    /// first run.
+    /// </para>
+    /// </summary>
+    [HttpPost("{id:guid}/consent")]
+    public async Task<IActionResult> Consent(Guid id, [FromBody] PluginConsentRequestDto? request)
+    {
+        PluginInfo? plugin = pluginManager.GetInstalledPlugins().FirstOrDefault(p => p.Id == id);
+        if (plugin is null)
+            return NotFoundResponse("Plugin not found");
+
+        consentService.GrantConsent(id);
+
+        // Grants named in the same call, so consenting to a plugin that needs a
+        // library or a host is one decision for the owner rather than three
+        // prompts they learn to click through.
+        foreach (PluginGrantDto grant in request?.Grants ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(grant.Kind) || string.IsNullOrWhiteSpace(grant.Value))
+                continue;
+
+            grantStore.Grant(id, grant.Kind, grant.Value);
+        }
+
+        try
+        {
+            await pluginManager.EnablePluginAsync(id);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFoundResponse(ex.Message);
+        }
+
+        return Ok(
+            new StatusResponseDto<string> { Status = "ok", Message = "Plugin consent granted" }
+        );
+    }
+
+    /// <summary>Withdraws consent and disables the plugin.</summary>
+    [HttpDelete("{id:guid}/consent")]
+    public async Task<IActionResult> RevokeConsent(Guid id)
+    {
+        consentService.RevokeConsent(id);
+
+        foreach (string kind in AllGrantKinds)
+        foreach (string value in grantStore.Granted(id, kind))
+            grantStore.Revoke(id, kind, value);
+
+        try
+        {
+            await pluginManager.DisablePluginAsync(id);
+        }
+        catch (InvalidOperationException)
+        {
+            // Already gone or never loaded. The consent record is what this
+            // route is responsible for, and that is now withdrawn.
+        }
+
+        return Ok(
+            new StatusResponseDto<string> { Status = "ok", Message = "Plugin consent revoked" }
+        );
+    }
+
+    /// <summary>Everything plugins have asked the owner for and not yet been given.</summary>
+    [HttpGet("grants/pending")]
+    public IActionResult PendingGrants() =>
+        Ok(
+            new DataResponseDto<IEnumerable<PluginGrantRequestDto>>
+            {
+                Data = grantStore
+                    .PendingRequests()
+                    .Select(request => new PluginGrantRequestDto(request)),
+            }
+        );
+
+    /// <summary>Answers one pending request. Denying clears it rather than recording a denial.</summary>
+    [HttpPost("{id:guid}/grants")]
+    public IActionResult ResolveGrant(Guid id, [FromBody] PluginGrantDecisionDto decision)
+    {
+        if (string.IsNullOrWhiteSpace(decision.Kind) || string.IsNullOrWhiteSpace(decision.Value))
+            return UnprocessableEntityResponse("A grant needs both a kind and a value");
+
+        if (decision.Granted)
+            grantStore.Grant(id, decision.Kind, decision.Value);
+        else
+            grantStore.ClearRequest(id, decision.Kind, decision.Value);
+
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = decision.Granted ? "Grant given" : "Grant denied",
+            }
+        );
+    }
+
+    private static readonly string[] AllGrantKinds =
+    [
+        PluginGrantKind.Capability,
+        PluginGrantKind.NetworkHost,
+        PluginGrantKind.LibraryWrite,
+    ];
+
     [HttpPost("{id:guid}/enable")]
     public async Task<IActionResult> Enable(Guid id)
     {
-
         try
         {
             await pluginManager.EnablePluginAsync(id);
@@ -79,7 +192,6 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [HttpPost("{id:guid}/disable")]
     public async Task<IActionResult> Disable(Guid id)
     {
-
         try
         {
             await pluginManager.DisablePluginAsync(id);
@@ -101,7 +213,6 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Uninstall(Guid id)
     {
-
         try
         {
             await pluginManager.UninstallPluginAsync(id);
@@ -124,7 +235,6 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [Route("credentials")]
     public IActionResult Credentials()
     {
-
         UserPass? aniDb = CredentialManager.Credential("AniDb");
 
         if (aniDb == null)
@@ -144,7 +254,6 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [Route("credentials")]
     public IActionResult Credentials([FromBody] AniDbCredentialsRequestDto requestDto)
     {
-
         UserPass? aniDb = CredentialManager.Credential(requestDto.Key);
         CredentialManager.SetCredentials(
             requestDto.Key,

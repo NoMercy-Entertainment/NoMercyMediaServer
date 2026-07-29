@@ -21,14 +21,26 @@ public static class PluginHttpClientFactory
     /// </param>
     public static HttpClient Create(
         PluginCapabilities? capabilities,
-        Func<IReadOnlyList<string>>? grantedHosts = null
+        Func<IReadOnlyList<string>>? grantedHosts = null,
+        Guid pluginId = default,
+        string? pluginName = null,
+        Version? pluginVersion = null
     )
     {
         IReadOnlyList<string> hosts = capabilities?.Network?.Hosts ?? [];
-        PluginNetworkAllowlistHandler handler = new(hosts, grantedHosts)
+
+        // Allowlist outermost so a denied host never reaches the socket, with
+        // the user agent stamped on the way past.
+        PluginUserAgentHandler userAgent = new(pluginId, pluginName, pluginVersion)
         {
             InnerHandler = new SocketsHttpHandler(),
         };
+
+        PluginNetworkAllowlistHandler handler = new(hosts, grantedHosts)
+        {
+            InnerHandler = userAgent,
+        };
+
         return new(handler);
     }
 }

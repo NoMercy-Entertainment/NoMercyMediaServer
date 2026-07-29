@@ -30,6 +30,8 @@ public interface IPluginContextFactory
         Guid pluginId,
         string dataFolderPath,
         ILogger logger,
-        PluginCapabilities? capabilities
+        PluginCapabilities? capabilities,
+        string? pluginName = null,
+        Version? pluginVersion = null
     );
 }

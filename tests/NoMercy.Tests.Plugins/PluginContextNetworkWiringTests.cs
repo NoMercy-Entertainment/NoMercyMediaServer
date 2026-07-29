@@ -38,13 +38,12 @@ public class PluginContextNetworkWiringTests
         MinimalServiceProvider services = new();
         ILogger logger = NullLogger.Instance;
 
-        return new(
+        return TestPluginPlatform.Context(
             eventBus,
-            services,
-            logger,
             tempDir,
             TestStorageHelper.CreateStorage(tempDir),
-            capabilities
+            services: services,
+            capabilities: capabilities
         );
     }
 

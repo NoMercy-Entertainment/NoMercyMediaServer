@@ -10,8 +10,12 @@
 // -----------------------------------------------------------------------------
 
 using System.Reflection;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
@@ -34,7 +38,27 @@ public static class PluginServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginsPath);
 
+        // The platform stores plugin secrets, so it needs data protection and
+        // says so rather than assuming the host got there first. The call is
+        // additive: where the host also configures it — persisting the key ring
+        // to disk — that configuration still applies, and a host that forgets
+        // gets a working platform instead of a resolve failure at plugin load.
+        services.AddDataProtection();
+
         services.AddSingleton<IPluginVerifier, PluginVerifier>();
+
+        // Bound so a deployment can add a shared framework package without a
+        // code change, which is what the type always said it was for.
+        //
+        // Read through the provider rather than BindConfiguration: a host with
+        // no IConfiguration registered — a test, an embedded use — must still
+        // get a working platform rather than a resolve failure at plugin load.
+        services
+            .AddOptions<PluginHostOptions>()
+            .Configure<IServiceProvider>(
+                (options, sp) =>
+                    sp.GetService<IConfiguration>()?.GetSection("Plugins:Host").Bind(options)
+            );
 
         services.AddSingleton<IPluginConsentStore>(sp =>
         {
@@ -49,6 +73,31 @@ public static class PluginServiceCollectionExtensions
         });
 
         services.AddSingleton<IPluginConsentService, PluginConsentService>();
+
+        // Grants live beside consent, in the same platform-scoped store and
+        // never in a plugin's own folder: a plugin must not be able to edit the
+        // record of what it was allowed to do.
+        services.AddSingleton<IPluginGrantStore>(sp => new ConfigPluginGrantStore(
+            PlatformConfiguration(sp, pluginsPath)
+        ));
+
+        // The library contracts default to the null objects declared in this
+        // project. The host replaces them with the real ones — see
+        // AddPluginLibraryAccess, called from the composition root, which is the
+        // only place that may reference the database.
+        services.TryAddSingleton<IPluginLibraryQuery, NullPluginLibraryQuery>();
+        services.TryAddSingleton<IPluginLibraryWriterFactory, NullPluginLibraryWriterFactory>();
+
+        services.AddSingleton<IPluginContextFactory>(sp => new PluginContextFactory(
+            sp.GetRequiredService<IEventBus>(),
+            sp,
+            PluginStorage(sp, pluginsPath),
+            sp.GetRequiredService<IPluginGrantStore>(),
+            sp.GetRequiredService<IDataProtectionProvider>(),
+            sp.GetRequiredService<IPluginLibraryQuery>(),
+            sp.GetRequiredService<IPluginLibraryWriterFactory>(),
+            PlatformConfiguration(sp, pluginsPath)
+        ));
 
         services.AddSingleton<IPluginManager>(sp =>
         {
@@ -66,7 +115,9 @@ public static class PluginServiceCollectionExtensions
                 storage,
                 driver,
                 verifier,
-                consentService
+                consentService,
+                sp.GetRequiredService<IPluginContextFactory>(),
+                sp.GetRequiredService<IOptions<PluginHostOptions>>().Value
             );
         });
 
@@ -82,6 +133,21 @@ public static class PluginServiceCollectionExtensions
 
         return services;
     }
+
+    private static IStorage PluginStorage(IServiceProvider sp, string pluginsPath)
+    {
+        IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
+        return new LocalStorage(driver, new([pluginsPath], driver));
+    }
+
+    private static IPluginConfiguration PlatformConfiguration(
+        IServiceProvider sp,
+        string pluginsPath
+    ) =>
+        new PluginConfiguration(
+            Path.Combine(pluginsPath, "data", "platform"),
+            PluginStorage(sp, pluginsPath)
+        );
 
     public static void RegisterPluginServices(
         this IServiceCollection services,

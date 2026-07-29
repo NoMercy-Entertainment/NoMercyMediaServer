@@ -44,7 +44,9 @@ public class PluginContext : IPluginContext
         IPluginGrants grants,
         IPluginLibraryWriter? libraryWriter = null,
         PluginCapabilities? capabilities = null,
-        Func<IReadOnlyList<string>>? grantedHosts = null
+        Func<IReadOnlyList<string>>? grantedHosts = null,
+        string? pluginName = null,
+        Version? pluginVersion = null
     )
     {
         PluginId = pluginId;
@@ -62,7 +64,13 @@ public class PluginContext : IPluginContext
         // catching.
         LibraryWriter = libraryWriter;
 
-        HttpClient = PluginHttpClientFactory.Create(capabilities, grantedHosts);
+        HttpClient = PluginHttpClientFactory.Create(
+            capabilities,
+            grantedHosts,
+            pluginId,
+            pluginName,
+            pluginVersion
+        );
     }
 
     public Task PublishAsync<T>(string name, T payload, CancellationToken ct = default)

@@ -42,7 +42,8 @@ public class PluginManager : IPluginManager, IDisposable
         IStorageDriver driver,
         IPluginVerifier? verifier = null,
         IPluginConsentService? consentService = null,
-        IPluginContextFactory? contextFactory = null
+        IPluginContextFactory? contextFactory = null,
+        PluginHostOptions? hostOptions = null
     )
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -92,7 +93,8 @@ public class PluginManager : IPluginManager, IDisposable
             _registry,
             _verifier,
             _consentService,
-            factory
+            factory,
+            hostOptions
         );
         _lifecycle = new(
             _eventBus,

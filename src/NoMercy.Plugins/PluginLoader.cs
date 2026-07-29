@@ -34,7 +34,8 @@ internal sealed class PluginLoader(
     IPluginRegistry registry,
     IPluginVerifier verifier,
     IPluginConsentService consentService,
-    IPluginContextFactory contextFactory
+    IPluginContextFactory contextFactory,
+    PluginHostOptions? hostOptions = null
 )
 {
     private readonly IEventBus _eventBus = eventBus;
@@ -46,6 +47,15 @@ internal sealed class PluginLoader(
     private readonly IPluginVerifier _verifier = verifier;
     private readonly IPluginConsentService _consentService = consentService;
     private readonly IPluginContextFactory _contextFactory = contextFactory;
+
+    // The configured shared-assembly set, or the built-in one. Passing it here
+    // is what makes PluginHostOptions.SharedAssemblies mean anything: the type
+    // existed and documented itself as bindable from configuration, and every
+    // load context was constructed without it, so the set was a hardcoded six
+    // entries and adding one needed a code change.
+    private readonly IReadOnlySet<string> _sharedAssemblies = (
+        hostOptions ?? new PluginHostOptions()
+    ).SharedAssemblies;
 
     internal async Task LoadPluginFromManifestAsync(
         string manifestPath,
@@ -128,7 +138,7 @@ internal sealed class PluginLoader(
                 return;
             }
 
-            PluginLoadContext loadContext = new(absoluteAssemblyPath);
+            PluginLoadContext loadContext = new(absoluteAssemblyPath, _sharedAssemblies);
 
             try
             {
@@ -182,7 +192,9 @@ internal sealed class PluginLoader(
                             instance.Id,
                             dataFolder,
                             _logger,
-                            manifest.Capabilities
+                            manifest.Capabilities,
+                            instance.Name,
+                            instance.Version
                         );
 
                         try
@@ -348,7 +360,7 @@ internal sealed class PluginLoader(
             // Windows tolerates it. Constructing outside the try let that escape
             // and abort discovery of every other plugin — guard it so a bad
             // assembly is skipped and reported, not fatal.
-            loadContext = new(absoluteAssemblyPath);
+            loadContext = new(absoluteAssemblyPath, _sharedAssemblies);
         }
         catch (Exception loadContextEx)
         {
@@ -411,7 +423,9 @@ internal sealed class PluginLoader(
                         instance.Id,
                         dataFolder,
                         _logger,
-                        capabilities: null
+                        capabilities: null,
+                        instance.Name,
+                        instance.Version
                     );
 
                     instance.Initialize(context);

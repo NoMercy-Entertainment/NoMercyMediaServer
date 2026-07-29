@@ -20,7 +20,36 @@ namespace NoMercy.Plugins;
 /// </summary>
 public record PluginHostOptions
 {
-    public IReadOnlySet<string> SharedAssemblies { get; init; } = DefaultSharedAssemblies;
+    /// <summary>
+    /// Extra assemblies to share, added to <see cref="DefaultSharedAssemblies"/>
+    /// rather than replacing them.
+    /// <para>
+    /// This is the bindable one, and it is a <see cref="List{T}"/> for that
+    /// reason: configuration binding cannot populate an
+    /// <see cref="IReadOnlySet{T}"/>, so the property that documented itself as
+    /// bindable could never actually have been bound. Additive because a
+    /// deployment adding one package should not have to restate the six the
+    /// platform requires, and would break the boundary if it forgot one.
+    /// </para>
+    /// </summary>
+    public List<string> AdditionalSharedAssemblies { get; init; } = [];
+
+    private readonly IReadOnlySet<string>? _sharedAssemblies;
+
+    /// <summary>
+    /// Everything whose type identity crosses the host/plugin boundary: the
+    /// built-in set plus whatever was configured.
+    /// </summary>
+    public IReadOnlySet<string> SharedAssemblies
+    {
+        get =>
+            _sharedAssemblies
+            ?? new HashSet<string>(
+                DefaultSharedAssemblies.Concat(AdditionalSharedAssemblies),
+                StringComparer.OrdinalIgnoreCase
+            );
+        init => _sharedAssemblies = value;
+    }
 
     /// <summary>The built-in shared-assembly set used when none is configured.</summary>
     public static IReadOnlySet<string> DefaultSharedAssemblies { get; } =

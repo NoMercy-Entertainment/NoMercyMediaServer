@@ -43,7 +43,20 @@ public class PluginCronRegistrar(IPluginManager pluginManager, CronWorker cronWo
             )
                 continue;
 
-            cronWorker.RegisterExecutor(new PluginCronExecutor(plugin));
+            // Each declared job on its own schedule, so the server's job list
+            // shows the real work instead of one opaque entry, and an expensive
+            // cycle can be timed and disabled apart from a cheap one. A plugin
+            // that declares none keeps its single expression exactly as before.
+            IReadOnlyList<PluginScheduledJob> jobs = plugin.Jobs;
+
+            if (jobs.Count == 0)
+            {
+                cronWorker.RegisterExecutor(new PluginCronExecutor(plugin));
+                continue;
+            }
+
+            foreach (PluginScheduledJob job in jobs)
+                cronWorker.RegisterExecutor(new PluginCronExecutor(plugin, job));
         }
     }
 }

@@ -407,12 +407,11 @@ public class PluginManagerTests : IDisposable
         ILogger logger = NullLogger.Instance;
         string dataFolder = _tempPluginsDir;
 
-        PluginContext context = new(
+        PluginContext context = TestPluginPlatform.Context(
             bus,
-            services,
-            logger,
             dataFolder,
-            TestStorageHelper.CreateStorage(dataFolder)
+            TestStorageHelper.CreateStorage(dataFolder),
+            services: services
         );
 
         context.EventBus.Should().BeSameAs(bus);
@@ -426,11 +425,15 @@ public class PluginManagerTests : IDisposable
     {
         Action act = () =>
             new PluginContext(
+                Guid.Empty,
                 null!,
                 new MinimalServiceProvider(),
                 NullLogger.Instance,
                 _tempPluginsDir,
-                TestStorageHelper.CreateStorage(_tempPluginsDir)
+                TestStorageHelper.CreateStorage(_tempPluginsDir),
+                TestPluginPlatform.Secrets(),
+                new NullPluginLibraryQuery(),
+                TestPluginPlatform.Grants()
             );
         act.Should().Throw<ArgumentNullException>().WithParameterName("eventBus");
     }
@@ -440,11 +443,15 @@ public class PluginManagerTests : IDisposable
     {
         Action act = () =>
             new PluginContext(
+                Guid.Empty,
                 new InMemoryEventBus(),
                 null!,
                 NullLogger.Instance,
                 _tempPluginsDir,
-                TestStorageHelper.CreateStorage(_tempPluginsDir)
+                TestStorageHelper.CreateStorage(_tempPluginsDir),
+                TestPluginPlatform.Secrets(),
+                new NullPluginLibraryQuery(),
+                TestPluginPlatform.Grants()
             );
         act.Should().Throw<ArgumentNullException>().WithParameterName("services");
     }
@@ -454,11 +461,15 @@ public class PluginManagerTests : IDisposable
     {
         Action act = () =>
             new PluginContext(
+                Guid.Empty,
                 new InMemoryEventBus(),
                 new MinimalServiceProvider(),
                 null!,
                 _tempPluginsDir,
-                TestStorageHelper.CreateStorage(_tempPluginsDir)
+                TestStorageHelper.CreateStorage(_tempPluginsDir),
+                TestPluginPlatform.Secrets(),
+                new NullPluginLibraryQuery(),
+                TestPluginPlatform.Grants()
             );
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
@@ -468,11 +479,15 @@ public class PluginManagerTests : IDisposable
     {
         Action act = () =>
             new PluginContext(
+                Guid.Empty,
                 new InMemoryEventBus(),
                 new MinimalServiceProvider(),
                 NullLogger.Instance,
                 null!,
-                TestStorageHelper.CreateStorage(_tempPluginsDir)
+                TestStorageHelper.CreateStorage(_tempPluginsDir),
+                TestPluginPlatform.Secrets(),
+                new NullPluginLibraryQuery(),
+                TestPluginPlatform.Grants()
             );
         act.Should().Throw<ArgumentNullException>().WithParameterName("dataFolderPath");
     }

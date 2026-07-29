@@ -74,7 +74,9 @@ internal sealed class PluginLifecycleManager(
                     pluginId,
                     dataFolder,
                     _logger,
-                    loaded.Info.Capabilities
+                    loaded.Info.Capabilities,
+                    loaded.Instance.Name,
+                    loaded.Instance.Version
                 );
                 loaded.Instance.Initialize(context);
                 PluginLifecycle.Transition(loaded.Info, PluginStatus.Active);

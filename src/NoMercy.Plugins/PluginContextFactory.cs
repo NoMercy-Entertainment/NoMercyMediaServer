@@ -36,7 +36,9 @@ public class PluginContextFactory(
         Guid pluginId,
         string dataFolderPath,
         ILogger logger,
-        PluginCapabilities? capabilities
+        PluginCapabilities? capabilities,
+        string? pluginName = null,
+        Version? pluginVersion = null
     )
     {
         PluginSecretStore secrets = new(pluginId, protectionProvider, platformConfiguration);
@@ -61,7 +63,9 @@ public class PluginContextFactory(
             grants,
             writer,
             capabilities,
-            () => grantStore.Granted(pluginId, PluginGrantKind.NetworkHost)
+            () => grantStore.Granted(pluginId, PluginGrantKind.NetworkHost),
+            pluginName,
+            pluginVersion
         );
     }
 }
