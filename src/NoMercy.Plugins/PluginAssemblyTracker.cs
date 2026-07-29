@@ -10,63 +10,99 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
 
 namespace NoMercy.Plugins;
 
 /// <summary>
-/// Whether a plugin's assembly has actually gone.
+/// Whether a plugin's files can be replaced yet.
 /// <para>
-/// <c>AssemblyLoadContext.Unload()</c> asks; it does not promise. The context
-/// only goes when nothing references anything inside it, and the collection is
-/// asynchronous, so "did it unload" is a question that can only be answered by
-/// looking rather than by having called Unload.
+/// The question an owner is really asking before an update or an uninstall is
+/// not "did the load context unload" — it is "can these files be changed". The
+/// first is a proxy for the second, and the second can simply be measured: open
+/// the assembly for writing with no sharing and see whether the operating
+/// system allows it.
 /// </para>
 /// <para>
-/// It matters because the answer is what an owner is told. Assuming it is still
-/// loaded means saying "restart required" after every uninstall, including the
-/// ones that were clean; assuming it unloaded means promising a file is
-/// replaceable when Windows still has it locked.
+/// Measuring it directly is also the only way to answer without forcing a
+/// garbage collection. Weak-reference-plus-collect is the documented way to
+/// observe an unload, and <c>GC.Collect</c> is banned in this codebase for a
+/// good reason: it stops every thread, which on a media server means playback
+/// stutters. A file-lock probe costs one failed open.
+/// </para>
+/// <para>
+/// On Linux nothing locks, so the answer is that the file is replaceable, which
+/// is true — a running plugin there can be overwritten and the change takes
+/// effect on the next start.
 /// </para>
 /// </summary>
 public interface IPluginAssemblyTracker
 {
-    /// <summary>Watches a load context that has just been asked to unload.</summary>
-    void TrackUnload(Guid pluginId, object loadContext);
+    /// <summary>Records where a plugin's assembly lives, at unload time.</summary>
+    void TrackUnload(Guid pluginId, string? assemblyPath);
 
     /// <summary>
-    /// Whether anything of <paramref name="pluginId"/> is still resident.
-    /// <para>False for a plugin never tracked: nothing was unloaded, so nothing
-    /// is lingering.</para>
+    /// Whether anything of <paramref name="pluginId"/> still holds its files.
+    /// <para>False for a plugin never tracked, and false once its files are
+    /// gone: in both cases there is nothing left to be blocked on.</para>
     /// </summary>
     bool IsStillLoaded(Guid pluginId);
 }
 
 public class PluginAssemblyTracker : IPluginAssemblyTracker
 {
-    private readonly ConcurrentDictionary<Guid, WeakReference> _unloading = new();
+    private readonly ConcurrentDictionary<Guid, string> _unloading = new();
 
-    public void TrackUnload(Guid pluginId, object loadContext) =>
-        _unloading[pluginId] = new(loadContext, trackResurrection: true);
+    public void TrackUnload(Guid pluginId, string? assemblyPath)
+    {
+        if (!string.IsNullOrWhiteSpace(assemblyPath))
+            _unloading[pluginId] = assemblyPath;
+    }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public bool IsStillLoaded(Guid pluginId)
     {
-        if (!_unloading.TryGetValue(pluginId, out WeakReference? reference))
+        if (!_unloading.TryGetValue(pluginId, out string? assemblyPath))
             return false;
 
-        // A collect before looking. Without it the answer is "yes" for every
-        // context that simply has not been collected yet, which is the
-        // pessimistic answer this exists to stop giving.
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
+        if (!File.Exists(assemblyPath))
+        {
+            // Already deleted, so nothing is holding it. Stop tracking.
+            _unloading.TryRemove(pluginId, out _);
+            return false;
+        }
 
-        if (reference.IsAlive)
+        if (IsLocked(assemblyPath))
             return true;
 
-        // Gone for good; stop holding the entry.
         _unloading.TryRemove(pluginId, out _);
         return false;
+    }
+
+    /// <summary>
+    /// Whether the file cannot be opened for writing exclusively, which is
+    /// exactly the condition that makes replacing or deleting it fail.
+    /// </summary>
+    private static bool IsLocked(string path)
+    {
+        try
+        {
+            using FileStream stream = new(
+                path,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.None
+            );
+            return false;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Windows reports a still-resident assembly this way rather than as
+            // an IOException, which is the same distinction the uninstall path
+            // already had to learn.
+            return true;
+        }
     }
 }

@@ -164,7 +164,7 @@ internal sealed class PluginLifecycleManager(
         {
             // Tracked before the unload is asked for, so whether it actually
             // went can be answered later by looking.
-            _assemblyTracker?.TrackUnload(pluginId, loaded.LoadContext);
+            _assemblyTracker?.TrackUnload(pluginId, loaded.Info.AssemblyPath);
             loaded.LoadContext.Unload();
         }
 

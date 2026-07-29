@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Runtime.CompilerServices;
 using FluentAssertions;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
@@ -18,100 +17,127 @@ using Xunit;
 namespace NoMercy.Tests.Plugins;
 
 /// <summary>
-/// Whether a plugin can be replaced without stopping the server comes down to
-/// whether its load context actually went. Anything still referencing into it
-/// keeps it — and the answer the owner is given depends on looking rather than
-/// on having called Unload.
+/// Before an update or an uninstall the owner is really asking whether the
+/// plugin's files can be changed. That is measured directly rather than
+/// inferred from whether the load context unloaded — the proxy needs a forced
+/// garbage collection to observe, and stopping every thread on a media server
+/// is how playback stutters.
 /// </summary>
-public class PluginAssemblyTrackerTests
+public class PluginAssemblyTrackerTests : IDisposable
 {
     private static readonly Guid PluginId = Guid.Parse("99999999-9999-9999-9999-999999999999");
 
-    [Fact]
-    public void A_plugin_that_was_never_unloaded_is_not_lingering()
+    private readonly string _directory = Path.Combine(
+        Path.GetTempPath(),
+        "nomercy-tracker-" + Guid.NewGuid().ToString("N")
+    );
+
+    private readonly string _assemblyPath;
+
+    public PluginAssemblyTrackerTests()
     {
-        // Nothing was asked to unload, so nothing is hanging around. Reporting
-        // "still loaded" here would make every fresh install claim it needs a
-        // restart.
+        Directory.CreateDirectory(_directory);
+        _assemblyPath = Path.Combine(_directory, "Probe.dll");
+        File.WriteAllText(_assemblyPath, "not really an assembly");
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            Directory.Delete(_directory, recursive: true);
+        }
+        catch (IOException) { }
+
+        GC.SuppressFinalize(this);
+    }
+
+    [Fact]
+    public void A_plugin_that_was_never_unloaded_is_not_blocking_anything()
+    {
+        // Nothing was asked to unload, so nothing is in the way. Reporting
+        // otherwise would make every fresh install claim it needs a restart.
+        new PluginAssemblyTracker()
+            .IsStillLoaded(PluginId)
+            .Should()
+            .BeFalse();
+    }
+
+    [Fact]
+    public void A_file_nothing_holds_is_replaceable()
+    {
         PluginAssemblyTracker tracker = new();
+        tracker.TrackUnload(PluginId, _assemblyPath);
 
         tracker.IsStillLoaded(PluginId).Should().BeFalse();
     }
 
     [Fact]
-    public void A_context_nothing_references_is_reported_gone()
+    public void A_file_something_still_has_open_is_reported_held()
     {
+        // The case that matters, and the one a leftover cron executor or event
+        // subscription produces: the process still has the assembly open, so
+        // replacing it would fail.
         PluginAssemblyTracker tracker = new();
-        TrackAndDrop(tracker);
+        tracker.TrackUnload(PluginId, _assemblyPath);
 
-        tracker.IsStillLoaded(PluginId).Should().BeFalse();
-    }
-
-    [Fact]
-    public void A_context_something_still_holds_is_reported_resident()
-    {
-        // The case that matters: one live reference is enough, which is exactly
-        // what a leftover cron executor or event subscription is.
-        PluginAssemblyTracker tracker = new();
-        object held = new();
-
-        tracker.TrackUnload(PluginId, held);
+        using FileStream held = new(_assemblyPath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
         tracker.IsStillLoaded(PluginId).Should().BeTrue();
-        GC.KeepAlive(held);
     }
 
     [Fact]
-    public void An_uninstall_that_unloaded_cleanly_needs_no_restart()
+    public void A_file_already_gone_blocks_nothing()
     {
         PluginAssemblyTracker tracker = new();
-        TrackAndDrop(tracker);
+        tracker.TrackUnload(PluginId, _assemblyPath);
+        File.Delete(_assemblyPath);
 
-        PluginRestartRequirement requirement = new PluginRestartAdvisor(tracker).Evaluate(
-            new()
-            {
-                Id = PluginId,
-                Name = "Probe",
-                Description = "",
-                Version = new(1, 0, 0),
-                Status = PluginStatus.Deleted,
-            },
-            PluginOperation.Uninstall
-        );
-
-        requirement.Required.Should().BeFalse();
+        tracker.IsStillLoaded(PluginId).Should().BeFalse();
     }
 
     [Fact]
-    public void An_uninstall_whose_assembly_is_pinned_says_so()
+    public void A_path_that_was_never_recorded_blocks_nothing()
     {
         PluginAssemblyTracker tracker = new();
-        object held = new();
-        tracker.TrackUnload(PluginId, held);
+        tracker.TrackUnload(PluginId, null);
+
+        tracker.IsStillLoaded(PluginId).Should().BeFalse();
+    }
+
+    [Fact]
+    public void An_uninstall_whose_files_are_free_needs_no_restart()
+    {
+        PluginAssemblyTracker tracker = new();
+        tracker.TrackUnload(PluginId, _assemblyPath);
 
         new PluginRestartAdvisor(tracker)
-            .Evaluate(
-                new()
-                {
-                    Id = PluginId,
-                    Name = "Probe",
-                    Description = "",
-                    Version = new(1, 0, 0),
-                    Status = PluginStatus.Deleted,
-                },
-                PluginOperation.Uninstall
-            )
-            .Reasons.Should()
-            .HaveFlag(PluginRestartReason.AssemblyStillLoaded);
-
-        GC.KeepAlive(held);
+            .Evaluate(Plugin(), PluginOperation.Uninstall)
+            .Required.Should()
+            .BeFalse();
     }
 
-    /// <summary>
-    /// Tracks an object that goes out of scope on return, in its own frame so
-    /// no local in the caller keeps it alive.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void TrackAndDrop(PluginAssemblyTracker tracker) =>
-        tracker.TrackUnload(PluginId, new object());
+    [Fact]
+    public void An_uninstall_whose_files_are_held_says_so()
+    {
+        PluginAssemblyTracker tracker = new();
+        tracker.TrackUnload(PluginId, _assemblyPath);
+
+        using FileStream held = new(_assemblyPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        new PluginRestartAdvisor(tracker)
+            .Evaluate(Plugin(), PluginOperation.Uninstall)
+            .Reasons.Should()
+            .HaveFlag(PluginRestartReason.AssemblyStillLoaded);
+    }
+
+    private static PluginInfo Plugin() =>
+        new()
+        {
+            Id = PluginId,
+            Name = "Probe",
+            Description = "",
+            Version = new(1, 0, 0),
+            Status = PluginStatus.Deleted,
+        };
 }
