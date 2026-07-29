@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Formats.Asn1;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -199,92 +198,17 @@ public class WebPushEnvelopeTests
     }
 
     /// <summary>
-    /// A from-scratch receiver-side decrypt that shares no code with
-    /// WebPushEnvelope.Seal, so the tamper assertion above proves AES-GCM's tag
-    /// rejects a modified body — not merely that Seal agrees with itself.
+    /// Delegates to <see cref="DeviceSideUnseal"/>, the from-scratch receiver-side
+    /// decrypt ported from the Android client's WebPushUnsealer.kt, so the tamper
+    /// assertion above proves AES-GCM's tag rejects a modified body against the
+    /// same algorithm the real device runs — not merely that Seal agrees with
+    /// itself.
     /// </summary>
-    private static byte[] UnsealAsTheDeviceWould(byte[] body, Vector vector)
-    {
-        byte[] salt = body[..16];
-        int keyIdLength = body[20];
-        byte[] senderPublic = body[21..(21 + keyIdLength)];
-        byte[] ciphertextAndTag = body[(21 + keyIdLength)..];
-        byte[] ciphertext = ciphertextAndTag[..^16];
-        byte[] tag = ciphertextAndTag[^16..];
-
-        byte[] receiverPrivate = Base64UrlCodec.Decode(vector.UserAgentPrivateKey);
-        byte[] receiverPublic = Base64UrlCodec.Decode(vector.UserAgentPublicKey);
-        byte[] authSecret = Base64UrlCodec.Decode(vector.AuthSecret);
-
-        using ECDiffieHellman receiverKey = ImportPrivateScalar(receiverPrivate);
-        using ECDiffieHellman senderKey = ImportPublicPoint(senderPublic);
-        byte[] sharedSecret = receiverKey.DeriveRawSecretAgreement(senderKey.PublicKey);
-
-        byte[] label = Encoding.ASCII.GetBytes("WebPush: info\0");
-        byte[] prkInfo = new byte[label.Length + receiverPublic.Length + senderPublic.Length];
-        label.CopyTo(prkInfo, 0);
-        receiverPublic.CopyTo(prkInfo, label.Length);
-        senderPublic.CopyTo(prkInfo, label.Length + receiverPublic.Length);
-
-        byte[] ikm = HKDF.DeriveKey(
-            HashAlgorithmName.SHA256,
-            sharedSecret,
-            32,
-            authSecret,
-            prkInfo
+    private static byte[] UnsealAsTheDeviceWould(byte[] body, Vector vector) =>
+        DeviceSideUnseal.Unseal(
+            body,
+            vector.UserAgentPrivateKey,
+            vector.UserAgentPublicKey,
+            vector.AuthSecret
         );
-        byte[] contentKey = HKDF.DeriveKey(
-            HashAlgorithmName.SHA256,
-            ikm,
-            16,
-            salt,
-            Encoding.ASCII.GetBytes("Content-Encoding: aes128gcm\0")
-        );
-        byte[] nonce = HKDF.DeriveKey(
-            HashAlgorithmName.SHA256,
-            ikm,
-            12,
-            salt,
-            Encoding.ASCII.GetBytes("Content-Encoding: nonce\0")
-        );
-
-        byte[] padded = new byte[ciphertext.Length];
-        using (AesGcm aes = new(contentKey, 16))
-        {
-            aes.Decrypt(nonce, ciphertext, tag, padded);
-        }
-
-        return padded[..^1];
-    }
-
-    private static ECDiffieHellman ImportPrivateScalar(byte[] d)
-    {
-        AsnWriter writer = new(AsnEncodingRules.DER);
-        using (writer.PushSequence())
-        {
-            writer.WriteInteger(1);
-            writer.WriteOctetString(d);
-            using (writer.PushSequence(new Asn1Tag(TagClass.ContextSpecific, 0, true)))
-            {
-                writer.WriteObjectIdentifier("1.2.840.10045.3.1.7");
-            }
-        }
-
-        ECDiffieHellman key = ECDiffieHellman.Create();
-        key.ImportECPrivateKey(writer.Encode(), out _);
-        return key;
-    }
-
-    private static ECDiffieHellman ImportPublicPoint(byte[] uncompressed)
-    {
-        ECDiffieHellman key = ECDiffieHellman.Create();
-        key.ImportParameters(
-            new ECParameters
-            {
-                Curve = ECCurve.NamedCurves.nistP256,
-                Q = new ECPoint { X = uncompressed[1..33], Y = uncompressed[33..65] },
-            }
-        );
-        return key;
-    }
 }
