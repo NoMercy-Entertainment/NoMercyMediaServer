@@ -57,6 +57,35 @@ internal sealed class PluginLoader(
         hostOptions ?? new PluginHostOptions()
     ).SharedAssemblies;
 
+    /// <summary>
+    /// Whether the plugin's own assembly carries an
+    /// <see cref="IPluginServiceRegistrator"/>. Only that assembly is examined,
+    /// so a plugin is not judged by what its dependencies happen to contain.
+    /// </summary>
+    private static bool DeclaresServiceRegistrator(IPlugin? instance)
+    {
+        if (instance is null)
+            return false;
+
+        try
+        {
+            return instance
+                .GetType()
+                .Assembly.GetExportedTypes()
+                .Any(type =>
+                    typeof(IPluginServiceRegistrator).IsAssignableFrom(type)
+                    && type is { IsAbstract: false, IsInterface: false }
+                );
+        }
+        catch (Exception)
+        {
+            // A plugin whose exported types cannot be walked (a missing
+            // dependency behind one of them) is not a plugin that registers
+            // services well enough to promise anything about.
+            return false;
+        }
+    }
+
     internal async Task LoadPluginFromManifestAsync(
         string manifestPath,
         CancellationToken ct = default
@@ -242,6 +271,11 @@ internal sealed class PluginLoader(
                         verification.Verified,
                         verification.Trusted
                     );
+
+                    // Decides whether enabling this later can take full effect
+                    // without a restart, so it is read from the assembly rather
+                    // than taken on trust from the manifest.
+                    info.ContributesServices = DeclaresServiceRegistrator(instance);
 
                     IPlugin? storedInstance =
                         initialStatus == PluginStatus.Active ? instance : null;

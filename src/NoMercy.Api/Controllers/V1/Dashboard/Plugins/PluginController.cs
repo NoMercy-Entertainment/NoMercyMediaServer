@@ -18,6 +18,7 @@ using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Capabilities;
 
@@ -31,7 +32,8 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Plugins;
 public class PluginController(
     IPluginManager pluginManager,
     IPluginConsentService consentService,
-    IPluginGrantStore grantStore
+    IPluginGrantStore grantStore,
+    IPluginRestartAdvisor restartAdvisor
 ) : BaseController
 {
     [HttpGet]
@@ -42,7 +44,11 @@ public class PluginController(
         return Ok(
             new DataResponseDto<IEnumerable<PluginInfoDto>>
             {
-                Data = plugins.Select(p => new PluginInfoDto(p)),
+                Data = plugins.Select(p => new PluginInfoDto(
+                    p,
+                    restartAdvisor.Evaluate(p, PluginOperation.Enable),
+                    AwaitingConsent(p)
+                )),
             }
         );
     }
@@ -54,7 +60,16 @@ public class PluginController(
         if (plugin is null)
             return NotFoundResponse("Plugin not found");
 
-        return Ok(new DataResponseDto<PluginInfoDto> { Data = new(plugin) });
+        return Ok(
+            new DataResponseDto<PluginInfoDto>
+            {
+                Data = new(
+                    plugin,
+                    restartAdvisor.Evaluate(plugin, PluginOperation.Enable),
+                    AwaitingConsent(plugin)
+                ),
+            }
+        );
     }
 
     /// <summary>
@@ -160,6 +175,13 @@ public class PluginController(
             }
         );
     }
+
+    /// <summary>
+    /// An elevated plugin with no recorded consent is waiting on the owner, not
+    /// failing. The dashboard needs to tell those two apart.
+    /// </summary>
+    private bool AwaitingConsent(PluginInfo plugin) =>
+        !consentService.IsBaseline(plugin.Capabilities) && !consentService.HasConsent(plugin.Id);
 
     private static readonly string[] AllGrantKinds =
     [
@@ -296,10 +318,40 @@ public record PluginInfoDto
     [JsonProperty("project_url")]
     public string? ProjectUrl { get; init; }
 
+    /// <summary>
+    /// What the plugin declared it needs. The owner is being asked to consent
+    /// to this, so it has to be visible before they do.
+    /// </summary>
+    [JsonProperty("capabilities")]
+    public PluginCapabilities? Capabilities { get; init; }
+
+    /// <summary>Whether an elevated plugin is waiting on the owner rather than broken.</summary>
+    [JsonProperty("awaiting_consent")]
+    public bool AwaitingConsent { get; init; }
+
+    /// <summary>
+    /// Whether enabling this needs the server restarted, and why. Empty means
+    /// it takes effect immediately, which is the usual answer and the one worth
+    /// stating — an owner told nothing either way restarts after everything.
+    /// </summary>
+    [JsonProperty("restart_required")]
+    public bool RestartRequired { get; init; }
+
+    [JsonProperty("restart_reasons")]
+    public IReadOnlyList<string> RestartReasons { get; init; } = [];
+
     public PluginInfoDto() { }
 
-    public PluginInfoDto(PluginInfo info)
+    public PluginInfoDto(
+        PluginInfo info,
+        PluginRestartRequirement? restart = null,
+        bool awaitingConsent = false
+    )
     {
+        Capabilities = info.Capabilities;
+        AwaitingConsent = awaitingConsent;
+        RestartRequired = restart?.Required ?? false;
+        RestartReasons = restart?.Explain() ?? [];
         Id = info.Id;
         Name = info.Name;
         Description = info.Description;

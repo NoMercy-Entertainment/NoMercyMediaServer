@@ -46,6 +46,7 @@ public static class PluginServiceCollectionExtensions
         services.AddDataProtection();
 
         services.AddSingleton<IPluginVerifier, PluginVerifier>();
+        services.AddSingleton<IPluginRestartAdvisor, PluginRestartAdvisor>();
 
         // Bound so a deployment can add a shared framework package without a
         // code change, which is what the type always said it was for.

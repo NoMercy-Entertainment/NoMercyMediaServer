@@ -26,4 +26,12 @@ public class PluginInfo
     public bool Verified { get; init; }
     public bool Trusted { get; init; }
     public PluginCapabilities? Capabilities { get; init; }
+
+    /// <summary>
+    /// Whether the assembly carries an <see cref="IPluginServiceRegistrator"/>.
+    /// <para>Decided at load rather than guessed from the manifest, because it
+    /// is what determines whether enabling this plugin can take full effect
+    /// without a restart — the host's container is sealed once built.</para>
+    /// </summary>
+    public bool ContributesServices { get; set; }
 }
