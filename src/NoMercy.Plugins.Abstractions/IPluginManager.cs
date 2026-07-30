@@ -25,6 +25,27 @@ public interface IPluginManager
         CancellationToken ct = default
     ) => InstallPluginAsync(packageUrl, ct);
 
+    /// <summary>
+    /// Installs a plugin from a packaged archive: a zip carrying the plugin's
+    /// folder, manifest and every file it ships with.
+    /// <para>
+    /// The bare-assembly overloads above copy one file, which throws away the
+    /// plugin.json beside it and every dependency the plugin brought. That is
+    /// fine for a plugin that is one self-contained dll and wrong for every
+    /// other one, which is why real plugins are published as archives.
+    /// </para>
+    /// <para>
+    /// Defaulted to a refusal rather than silently doing nothing: an
+    /// implementation that cannot unpack an archive must say so, not accept the
+    /// call and leave the caller thinking a plugin was installed.
+    /// </para>
+    /// </summary>
+    Task InstallPluginArchiveAsync(
+        string archivePath,
+        string? expectedChecksum = null,
+        CancellationToken ct = default
+    ) => throw new NotSupportedException("This plugin manager cannot install from an archive.");
+
     Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default);
     Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default);
     Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default);

@@ -167,7 +167,14 @@ public class PluginRepositoryController(
             AppFiles.TempPath,
             $"plugin-fetch-{Guid.NewGuid():N}"
         );
-        string stagedPath = Path.Combine(stagingDirectory, $"{entry.Name}.dll");
+        // The catalogue names the artifact, and a plugin that ships more than a
+        // single assembly publishes an archive. Staging it under the wrong
+        // extension would hand a zip to the assembly loader.
+        bool isArchive = target.DownloadUrl.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+        string stagedPath = Path.Combine(
+            stagingDirectory,
+            $"{entry.Name}{(isArchive ? ".zip" : ".dll")}"
+        );
 
         try
         {
@@ -183,7 +190,10 @@ public class PluginRepositoryController(
             // The checksum the catalogue published, enforced before anything is
             // copied into the plugins folder. A repository that publishes none
             // installs unverified, and the dashboard says so before you pick it.
-            await pluginManager.InstallPluginAsync(stagedPath, target.Checksum, ct);
+            if (isArchive)
+                await pluginManager.InstallPluginArchiveAsync(stagedPath, target.Checksum, ct);
+            else
+                await pluginManager.InstallPluginAsync(stagedPath, target.Checksum, ct);
         }
         catch (PluginVerificationException ex)
         {

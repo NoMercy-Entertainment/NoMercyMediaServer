@@ -42,6 +42,7 @@ public class PluginController(
 {
     private const long MaximumUploadBytes = 64L * 1024 * 1024;
     private const string PluginAssemblyExtension = ".dll";
+    private const string PluginArchiveExtension = ".zip";
 
     [HttpGet]
     public IActionResult Index()
@@ -267,8 +268,16 @@ public class PluginController(
         if (string.IsNullOrWhiteSpace(fileName))
             return UnprocessableEntityResponse("The uploaded file has no name");
 
-        if (!fileName.EndsWith(PluginAssemblyExtension, StringComparison.OrdinalIgnoreCase))
-            return UnprocessableEntityResponse("A plugin is installed from its .dll");
+        bool isArchive = fileName.EndsWith(
+            PluginArchiveExtension,
+            StringComparison.OrdinalIgnoreCase
+        );
+
+        if (
+            !isArchive
+            && !fileName.EndsWith(PluginAssemblyExtension, StringComparison.OrdinalIgnoreCase)
+        )
+            return UnprocessableEntityResponse("A plugin is installed from its .zip or its .dll");
 
         string stagingDirectory = Path.Combine(
             AppFiles.TempPath,
@@ -285,7 +294,13 @@ public class PluginController(
                 await file.CopyToAsync(destination, ct);
             }
 
-            await pluginManager.InstallPluginAsync(stagedPath, ct);
+            // An archive carries the manifest and everything the plugin ships
+            // with; a bare assembly is one file and no manifest at all. They are
+            // different installs, not one install with a flag.
+            if (isArchive)
+                await pluginManager.InstallPluginArchiveAsync(stagedPath, null, ct);
+            else
+                await pluginManager.InstallPluginAsync(stagedPath, ct);
 
             return Ok(
                 new StatusResponseDto<string>

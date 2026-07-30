@@ -579,21 +579,15 @@
   </Entry>
   <Entry>
     <Key>Invalid backend_type 'floppy'. Allowed values: local, smb, nfs, s3, r2.</Key>
-    <Value lang="nl"
-      >Ongeldige backend_type 'floppy'. Toegestane waarden: local, smb, nfs, s3, r2.</Value
-    >
+    <Value lang="nl">Ongeldige backend_type 'floppy'. Toegestane waarden: local, smb, nfs, s3, r2.</Value>
   </Entry>
   <Entry>
     <Key>driver_config.endpoint is required for 'r2' (set to your R2 endpoint URL).</Key>
-    <Value lang="nl"
-      >driver_config.endpoint is vereist voor 'r2' (stel uw R2 eindpunt-URL in).</Value
-    >
+    <Value lang="nl">driver_config.endpoint is vereist voor 'r2' (stel uw R2 eindpunt-URL in).</Value>
   </Entry>
   <Entry>
     <Key>Invalid driver_type 'banana'. Allowed values: local, smb, nfs, s3, r2, webdav.</Key>
-    <Value lang="nl"
-      >Ongeldige driver_type 'banana'. Toegestane waarden: local, smb, nfs, s3, r2, webdav.</Value
-    >
+    <Value lang="nl">Ongeldige driver_type 'banana'. Toegestane waarden: local, smb, nfs, s3, r2, webdav.</Value>
   </Entry>
   <Entry>
     <Key>config.rootPath must be a non-empty string for 'local'.</Key>
@@ -645,15 +639,11 @@
   </Entry>
   <Entry>
     <Key>Movie is adult which is not allowed by the server configuration</Key>
-    <Value lang="nl"
-      >Film is voor volwassenen wat niet is toegestaan door de serverconfiguratie</Value
-    >
+    <Value lang="nl">Film is voor volwassenen wat niet is toegestaan door de serverconfiguratie</Value>
   </Entry>
   <Entry>
     <Key>Person is adult which is not allowed by the server configuration</Key>
-    <Value lang="nl"
-      >Persoon is voor volwassenen wat niet is toegestaan door de serverconfiguratie</Value
-    >
+    <Value lang="nl">Persoon is voor volwassenen wat niet is toegestaan door de serverconfiguratie</Value>
   </Entry>
   <Entry>
     <Key>Albums: #</Key>
@@ -766,6 +756,70 @@
   <Entry>
     <Key>You do not have permission to view the inbox</Key>
     <Value lang="nl">Je hebt geen toestemming om het postvak IN te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>Internal Server Error.</Key>
+    <Value lang="nl">Interne serverfout.</Value>
+  </Entry>
+  <Entry>
+    <Key>Not Found.</Key>
+    <Value lang="nl">Niet gevonden.</Value>
+  </Entry>
+  <Entry>
+    <Key>Found {0} subtitle(s)</Key>
+    <Value lang="nl">Gevonden {0} ondertitel(s)</Value>
+  </Entry>
+  <Entry>
+    <Key>Gone.</Key>
+    <Value lang="nl">Niet meer beschikbaar.</Value>
+  </Entry>
+  <Entry>
+    <Key>Live session has ended or expired</Key>
+    <Value lang="nl">Livesessie is beëindigd of verlopen</Value>
+  </Entry>
+  <Entry>
+    <Key>Video file not found or you lack access</Key>
+    <Value lang="nl">Videobestand niet gevonden of je hebt geen toegang</Value>
+  </Entry>
+  <Entry>
+    <Key>Conflict.</Key>
+    <Value lang="nl">Conflict.</Value>
+  </Entry>
+  <Entry>
+    <Key>Bad Request.</Key>
+    <Value lang="nl">Ongeldig verzoek.</Value>
+  </Entry>
+  <Entry>
+    <Key>Invalid id for the requested type</Key>
+    <Value lang="nl">Ongeldige id voor het gevraagde type</Value>
+  </Entry>
+  <Entry>
+    <Key>Image not found</Key>
+    <Value lang="nl">Image not found</Value>
+  </Entry>
+  <Entry>
+    <Key>Seeding specials in the background</Key>
+    <Value lang="nl">Seeding specials in the background</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums: E</Key>
+    <Value lang="nl">Albums: E</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums: S</Key>
+    <Value lang="nl">Albums: S</Value>
+  </Entry>
+  <Entry>
+    <Key>Repository added</Key>
+    <Value lang="nl">Repository added</Value>
+  </Entry>
+  <Entry>
+    <Key>Repositories refreshed</Key>
+    <Value lang="nl">Repositories refreshed</Value>
+  </Entry>
+  <Entry>
+    <Key>Plugin installed successfully</Key>
+    <Value lang="nl">Plugin installed successfully</Value>
   </Entry>
   <Entry>
     <Key>Internal Server Error.</Key>

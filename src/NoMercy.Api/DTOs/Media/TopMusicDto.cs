@@ -86,16 +86,10 @@ public record TopMusicDto
         Name = item.Name;
         ColorPalette = ColorPalette.FromJsonOrNull(item.ColorPalette);
         Type = item.Type;
-        Link = item.Type switch
-        {
-            "artist" => new($"/music/artists/{Id}", UriKind.Relative),
-            "album" => new($"/music/albums/{Id}", UriKind.Relative),
-            "playlist" => new($"/music/playlists/{Id}", UriKind.Relative),
-            _ => new($"/music/{Id}", UriKind.Relative),
-        };
+        Link = item.Link;
         Cover = item.Cover;
         Cover = Cover is not null
-            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            ? new Uri(Cover, UriKind.Relative).ToString()
             : null;
     }
 }

@@ -36,6 +36,7 @@ public class ArtistCardDto
     public string? Folder { get; set; }
     public int TrackCount { get; set; }
     public string? ThumbImagePath { get; set; }
+    public Uri Link { get; set; } = null!;
 }
 
 public class AlbumCardDto
@@ -53,6 +54,7 @@ public class AlbumCardDto
     public string? TranslatedDescription { get; set; }
     public string? BackgroundImagePath { get; set; }
     public string? BackgroundImageColorPalette { get; set; }
+    public Uri Link { get; set; } = null!;
 }
 
 public class PlaylistCardDto
@@ -63,6 +65,7 @@ public class PlaylistCardDto
     public string? Description { get; set; }
     public string ColorPalette { get; set; } = string.Empty;
     public int TrackCount { get; set; }
+    public Uri Link { get; set; } = null!;
 }
 
 public class MusicGenreCardDto
@@ -70,6 +73,7 @@ public class MusicGenreCardDto
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;
     public int TrackCount { get; set; }
+    public Uri Link { get; set; } = null!;
 }
 
 public class TopMusicItemDto
@@ -79,6 +83,7 @@ public class TopMusicItemDto
     public string? Cover { get; set; }
     public string ColorPalette { get; set; } = string.Empty;
     public string Type { get; set; } = null!;
+    public Uri Link { get; set; } = null!;
 }
 
 public class SearchTrackCardDto
@@ -96,6 +101,7 @@ public class SearchTrackCardDto
     public int? Quality { get; set; }
     public DateTime UpdatedAt { get; set; }
     public bool Favorite { get; set; }
+    public Uri Link { get; set; } = null!;
     public string? AlbumId { get; set; }
     public string? AlbumName { get; set; }
     public string? AlbumCover { get; set; }
@@ -110,10 +116,12 @@ public class SearchTrackArtistDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;
+    public Uri Link { get; set; } = null!;
 }
 
 public class SearchTrackAlbumDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;
+    public Uri Link { get; set; } = null!;
 }
