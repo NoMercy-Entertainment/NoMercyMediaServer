@@ -217,6 +217,8 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         "GET api/v{version:apiVersion}/person/{id:int} [People.Show]",
         "GET api/v{version:apiVersion}/playlists [UserPlaylists.Index]",
         "GET api/v{version:apiVersion}/playlists/{id:guid} [UserPlaylists.Show]",
+        "GET api/v{version:apiVersion}/plugins/ui [PluginUi.Discover]",
+        "GET api/v{version:apiVersion}/plugins/{id:guid}/view [PluginUi.View]",
         "GET api/v{version:apiVersion}/search/music [Search.SearchMusic]",
         "GET api/v{version:apiVersion}/search/music/tv [Search.SearchTvMusic]",
         "GET api/v{version:apiVersion}/search/video [Search.SearchVideo]",

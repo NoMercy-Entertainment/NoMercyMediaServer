@@ -57,6 +57,14 @@ public interface IPluginContext
     IPluginGrants Grants { get; }
 
     /// <summary>
+    /// Pushing to this plugin's subscribed clients. Present whatever the
+    /// capabilities say — a plugin without <c>ws</c> simply has no subscribers,
+    /// and reaching nobody is a better answer than a null a plugin has to
+    /// branch on for a channel that is part of its contract.
+    /// </summary>
+    IPluginHubContext Hub { get; }
+
+    /// <summary>
     /// Raises <paramref name="name"/> on the server's event bus in an envelope
     /// the host can subscribe to. A plugin's own event class cannot cross the
     /// load-context boundary; this can.

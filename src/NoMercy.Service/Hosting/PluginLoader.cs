@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Api.Plugins;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Hooks;
 
@@ -19,16 +20,19 @@ public class PluginLoader : IPluginLoader
     private readonly ILogger<PluginLoader> _logger;
     private readonly IPluginManager _pluginManager;
     private readonly IPluginCronRegistrar _cronRegistrar;
+    private readonly PluginApplicationPartRegistrar _partRegistrar;
 
     public PluginLoader(
         ILogger<PluginLoader> logger,
         IPluginManager pluginManager,
-        IPluginCronRegistrar cronRegistrar
+        IPluginCronRegistrar cronRegistrar,
+        PluginApplicationPartRegistrar partRegistrar
     )
     {
         _logger = logger;
         _pluginManager = pluginManager;
         _cronRegistrar = cronRegistrar;
+        _partRegistrar = partRegistrar;
     }
 
     public async Task<IReadOnlyList<PluginLoadResult>> LoadPlugins(CancellationToken ct)
@@ -40,11 +44,17 @@ public class PluginLoader : IPluginLoader
         foreach (PluginLoadResult pluginResult in loadedPlugins)
         {
             _logger.LogInformation(
-                "Plugin loaded: {Name} {Version} ({PluginId})", [pluginResult.Name, pluginResult.Version, pluginResult.PluginId]
+                "Plugin loaded: {Name} {Version} ({PluginId})",
+                [pluginResult.Name, pluginResult.Version, pluginResult.PluginId]
             );
         }
 
         _cronRegistrar.RegisterAll();
+
+        // Plugins load after the container is built, which is long after MVC
+        // fixed its route table. Without this a plugin's controllers exist and
+        // are unreachable, which reads as an installed plugin doing nothing.
+        _partRegistrar.AttachAll(_pluginManager);
 
         return loadedPlugins;
     }

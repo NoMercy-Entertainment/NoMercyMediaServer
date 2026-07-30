@@ -275,6 +275,20 @@ public static class ApplicationConfiguration
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
+
+            // One hub for every plugin, not one per plugin. A plugin installed
+            // after boot has no way to get an endpoint mapped for it, and a
+            // client should not open a connection per plugin either; both are
+            // solved by subscribing to a group on this one.
+            endpoints.MapHub<PluginHub>(
+                "/pluginHub",
+                options =>
+                {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.CloseOnAuthenticationExpiration = true;
+                }
+            );
         });
     }
 

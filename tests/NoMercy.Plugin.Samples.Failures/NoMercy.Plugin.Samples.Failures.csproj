@@ -23,7 +23,16 @@
     <!-- A dependency deliberately NOT in PluginHostOptions.DefaultSharedAssemblies —
          forces PluginLoadContext.Load() to actually resolve and load a bundled,
          non-shared assembly via AssemblyDependencyResolver instead of every
-         dependency being intercepted by the shared-assembly short-circuit. -->
+         dependency being intercepted by the shared-assembly short-circuit.
+
+         This was Newtonsoft.Json until Newtonsoft joined the shared set, which
+         is the one thing that makes this fixture stop testing anything: the
+         short-circuit would answer first and the resolver branch would never
+         run. Polly is here because nothing in the platform shares it.
+
+         Newtonsoft stays for the other fixtures, which stage this assembly
+         without its dependencies to force a load failure. -->
+    <PackageReference Include="Polly" />
     <PackageReference Include="Newtonsoft.Json" />
   </ItemGroup>
   <ItemGroup>

@@ -17,6 +17,7 @@ using NoMercy.Events.Playback;
 using NoMercy.Events.Plugins;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Hub;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -172,6 +173,7 @@ public class PluginAbstractionsTests
         public IPluginLibraryQuery Library { get; }
         public IPluginLibraryWriter? LibraryWriter => null;
         public IPluginGrants Grants { get; }
+        public IPluginHubContext Hub { get; } = new NullPluginHubContext();
 
         public TestPluginContext(IEventBus eventBus, string dataFolder = "/tmp/plugin-test")
         {

@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Capabilities;
+using NoMercy.Plugins.Hub;
 using NoMercy.Storage;
 
 namespace NoMercy.Plugins;
@@ -29,7 +30,8 @@ public class PluginContextFactory(
     IDataProtectionProvider protectionProvider,
     IPluginLibraryQuery libraryQuery,
     IPluginLibraryWriterFactory libraryWriterFactory,
-    IPluginConfiguration platformConfiguration
+    IPluginConfiguration platformConfiguration,
+    IPluginHubContextFactory hubContextFactory
 ) : IPluginContextFactory
 {
     public IPluginContext Create(
@@ -65,7 +67,8 @@ public class PluginContextFactory(
             capabilities,
             () => grantStore.Granted(pluginId, PluginGrantKind.NetworkHost),
             pluginName,
-            pluginVersion
+            pluginVersion,
+            hubContextFactory.For(pluginId)
         );
     }
 }

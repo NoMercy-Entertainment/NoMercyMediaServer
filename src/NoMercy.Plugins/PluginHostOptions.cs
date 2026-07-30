@@ -56,10 +56,17 @@ public record PluginHostOptions
         new HashSet<string>
         {
             "NoMercy.Plugins.Abstractions",
+            "NoMercy.Plugins.Mvc",
             "NoMercy.Events",
             "Microsoft.Extensions.Logging.Abstractions",
             "Microsoft.Extensions.Logging",
             "Microsoft.Extensions.DependencyInjection.Abstractions",
             "Microsoft.Extensions.DependencyInjection",
+            // A plugin annotating its own DTOs with [JsonProperty] gets those
+            // attributes from its own copy of Newtonsoft otherwise, and the
+            // host's formatter does not recognise attributes from a different
+            // assembly identity — the response then silently ships camelCase
+            // where every client expects snake_case.
+            "Newtonsoft.Json",
         };
 }

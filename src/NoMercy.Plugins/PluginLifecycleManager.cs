@@ -126,7 +126,7 @@ internal sealed class PluginLifecycleManager(
         }
     }
 
-    public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default)
+    public async Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
         if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
         {
@@ -135,7 +135,7 @@ internal sealed class PluginLifecycleManager(
 
         if (loaded.Info.Status == PluginStatus.Disabled)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         // Before Dispose, because a cron executor holds the instance: leaving
@@ -146,10 +146,19 @@ internal sealed class PluginLifecycleManager(
         loaded.Instance?.Dispose();
         PluginLifecycle.Transition(loaded.Info, PluginStatus.Disabled);
 
-        return Task.CompletedTask;
+        // Enabling announced itself and this did not, so a plugin's routes and
+        // its hub handler stayed registered after the owner turned it off.
+        await _eventBus.PublishAsync(
+            new PluginDisabledEvent
+            {
+                PluginId = pluginId.ToString(),
+                PluginName = loaded.Info.Name,
+            },
+            ct
+        );
     }
 
-    public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default)
+    public async Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default)
     {
         if (!_registry.TryRemove(pluginId, out LoadedPlugin? loaded))
         {
@@ -198,6 +207,14 @@ internal sealed class PluginLifecycleManager(
             }
         }
 
-        return Task.CompletedTask;
+        await _eventBus.PublishAsync(
+            new PluginDisabledEvent
+            {
+                PluginId = pluginId.ToString(),
+                PluginName = loaded.Info.Name,
+                Uninstalled = true,
+            },
+            ct
+        );
     }
 }
