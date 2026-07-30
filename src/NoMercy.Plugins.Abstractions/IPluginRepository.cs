@@ -13,6 +13,13 @@ namespace NoMercy.Plugins.Abstractions;
 
 public interface IPluginRepository
 {
+    /// <summary>
+    /// Loads whatever was persisted. Defaulted: an implementation that keeps no
+    /// state on disk has nothing to do here, and one written before this member
+    /// existed keeps compiling.
+    /// </summary>
+    Task LoadAsync(CancellationToken ct = default) => Task.CompletedTask;
+
     IReadOnlyList<PluginRepositoryInfo> GetRepositories();
     Task AddRepositoryAsync(string name, string url, CancellationToken ct = default);
     Task RemoveRepositoryAsync(string name, CancellationToken ct = default);

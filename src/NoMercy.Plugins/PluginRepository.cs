@@ -75,6 +75,11 @@ public class PluginRepository : IPluginRepository
         return repository;
     }
 
+    public Task LoadAsync(CancellationToken ct = default)
+    {
+        return LoadRepositoriesFromDiskAsync(ct);
+    }
+
     public IReadOnlyList<PluginRepositoryInfo> GetRepositories()
     {
         lock (_lock)
@@ -148,7 +153,8 @@ public class PluginRepository : IPluginRepository
             catch (Exception ex)
             {
                 _logger.LogWarning(
-                    "Failed to refresh repository '{Name}' ({Url}): {Error}", [repo.Name, repo.Url, ex.Message]
+                    "Failed to refresh repository '{Name}' ({Url}): {Error}",
+                    [repo.Name, repo.Url, ex.Message]
                 );
             }
         }
@@ -223,12 +229,18 @@ public class PluginRepository : IPluginRepository
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to fetch repository '{Name}' ({Url}): {Error}", [name, url, ex.Message]
+                "Failed to fetch repository '{Name}' ({Url}): {Error}",
+                [name, url, ex.Message]
             );
         }
     }
 
-    private async Task LoadRepositoriesFromDiskAsync(CancellationToken ct)
+    /// <summary>
+    /// Reads the persisted repository list. Public because the container builds
+    /// this singleton synchronously and the file read is async: startup calls
+    /// this once, rather than the resolve blocking a thread on disk.
+    /// </summary>
+    public async Task LoadRepositoriesFromDiskAsync(CancellationToken ct = default)
     {
         if (!_storage.Exists(_repositoriesFilePath))
         {
@@ -249,7 +261,8 @@ public class PluginRepository : IPluginRepository
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to load repositories from {Path}: {Error}", [_repositoriesFilePath, ex.Message]
+                "Failed to load repositories from {Path}: {Error}",
+                [_repositoriesFilePath, ex.Message]
             );
         }
     }
@@ -276,7 +289,8 @@ public class PluginRepository : IPluginRepository
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to save repositories to {Path}: {Error}", [_repositoriesFilePath, ex.Message]
+                "Failed to save repositories to {Path}: {Error}",
+                [_repositoriesFilePath, ex.Message]
             );
         }
     }

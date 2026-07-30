@@ -21,23 +21,31 @@ public class PluginLoader : IPluginLoader
     private readonly IPluginManager _pluginManager;
     private readonly IPluginCronRegistrar _cronRegistrar;
     private readonly PluginApplicationPartRegistrar _partRegistrar;
+    private readonly IPluginRepository _repository;
 
     public PluginLoader(
         ILogger<PluginLoader> logger,
         IPluginManager pluginManager,
         IPluginCronRegistrar cronRegistrar,
-        PluginApplicationPartRegistrar partRegistrar
+        PluginApplicationPartRegistrar partRegistrar,
+        IPluginRepository repository
     )
     {
         _logger = logger;
         _pluginManager = pluginManager;
         _cronRegistrar = cronRegistrar;
         _partRegistrar = partRegistrar;
+        _repository = repository;
     }
 
     public async Task<IReadOnlyList<PluginLoadResult>> LoadPlugins(CancellationToken ct)
     {
         _logger.LogInformation("Loading plugins...");
+
+        // Before the plugins themselves: the catalogue is what an update check
+        // reads, and a dashboard that opens to an empty repository list reads as
+        // "you never added one".
+        await _repository.LoadAsync(ct);
 
         IReadOnlyList<PluginLoadResult> loadedPlugins = await _pluginManager.LoadAllAsync(ct);
 
