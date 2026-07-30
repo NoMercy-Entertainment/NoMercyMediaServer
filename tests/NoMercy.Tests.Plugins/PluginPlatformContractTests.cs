@@ -348,3 +348,65 @@ public class PluginHostOptionsTests
         options.SharedAssemblies.Should().BeEquivalentTo(["Only.This"]);
     }
 }
+
+/// <summary>
+/// Hubs, action filters and the UI endpoints all need one plugin by id on a
+/// request path. The accessors were added to <see cref="IPluginManager"/> with
+/// defaults so that an existing implementer — including a third party's test
+/// double — keeps compiling and still answers correctly.
+/// </summary>
+public class PluginManagerLookupTests
+{
+    private sealed class ListOnlyManager(params PluginInfo[] installed) : IPluginManager
+    {
+        public IReadOnlyList<PluginInfo> GetInstalledPlugins() => installed;
+
+        public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<PluginLoadResult>>([]);
+
+        public IEnumerable<T> GetPluginsOfType<T>()
+            where T : IPlugin => [];
+    }
+
+    private static PluginInfo Plugin(Guid id) =>
+        new()
+        {
+            Id = id,
+            Name = "n",
+            Description = "d",
+            Version = new(1, 0, 0),
+            Status = PluginStatus.Active,
+            Capabilities = new() { Rest = true },
+        };
+
+    [Fact]
+    public void An_implementer_that_never_heard_of_the_accessor_still_answers()
+    {
+        Guid id = Guid.NewGuid();
+
+        IPluginManager manager = new ListOnlyManager(Plugin(id));
+
+        manager.GetPluginInfo(id)!.Capabilities!.Rest.Should().BeTrue();
+    }
+
+    [Fact]
+    public void An_unknown_id_is_null_rather_than_a_throw()
+    {
+        IPluginManager manager = new ListOnlyManager(Plugin(Guid.NewGuid()));
+
+        manager.GetPluginInfo(Guid.NewGuid()).Should().BeNull();
+        manager.GetPluginInstance(Guid.NewGuid()).Should().BeNull();
+    }
+}

@@ -16,6 +16,7 @@ using NoMercy.Events;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Capabilities;
+using NoMercy.Plugins.Hub;
 using NoMercy.Storage;
 
 namespace NoMercy.Tests.Plugins;
@@ -92,7 +93,8 @@ public static class TestPluginPlatform
             new EphemeralDataProtectionProvider(),
             library ?? new NullPluginLibraryQuery(),
             writerFactory ?? new NullPluginLibraryWriterFactory(),
-            new InMemoryPluginConfiguration()
+            new InMemoryPluginConfiguration(),
+            new NullPluginHubContextFactory()
         );
 
     private sealed class EmptyServiceProvider : IServiceProvider

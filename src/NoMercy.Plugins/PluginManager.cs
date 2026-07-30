@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Capabilities;
+using NoMercy.Plugins.Hub;
 using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
 
@@ -83,7 +84,8 @@ public class PluginManager : IPluginManager, IDisposable
                 new EphemeralDataProtectionProvider(),
                 new NullPluginLibraryQuery(),
                 new NullPluginLibraryWriterFactory(),
-                PlatformConfiguration()
+                PlatformConfiguration(),
+                new NullPluginHubContextFactory()
             );
 
         _loader = new(
@@ -310,6 +312,9 @@ public class PluginManager : IPluginManager, IDisposable
 
         return null;
     }
+
+    public PluginInfo? GetPluginInfo(Guid pluginId) =>
+        _registry.TryGetValue(pluginId, out LoadedPlugin? loaded) ? loaded.Info : null;
 
     public IEnumerable<T> GetPluginsOfType<T>()
         where T : IPlugin

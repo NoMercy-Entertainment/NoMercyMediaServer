@@ -21,6 +21,7 @@ using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Capabilities;
 using NoMercy.Plugins.Hooks;
+using NoMercy.Plugins.Hub;
 using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -95,6 +96,13 @@ public static class PluginServiceCollectionExtensions
         services.TryAddSingleton<IPluginLibraryQuery, NullPluginLibraryQuery>();
         services.TryAddSingleton<IPluginLibraryWriterFactory, NullPluginLibraryWriterFactory>();
 
+        services.AddSingleton<IPluginHubRouter, PluginHubRouter>();
+
+        // The real one needs IHubContext<PluginHub>, which only exists where the
+        // hub is mapped. TryAdd so the web host's registration wins and every
+        // other host still gets a plugin platform that loads.
+        services.TryAddSingleton<IPluginHubContextFactory, NullPluginHubContextFactory>();
+
         services.AddSingleton<IPluginContextFactory>(sp => new PluginContextFactory(
             sp.GetRequiredService<IEventBus>(),
             sp,
@@ -103,7 +111,8 @@ public static class PluginServiceCollectionExtensions
             sp.GetRequiredService<IDataProtectionProvider>(),
             sp.GetRequiredService<IPluginLibraryQuery>(),
             sp.GetRequiredService<IPluginLibraryWriterFactory>(),
-            PlatformConfiguration(sp, pluginsPath)
+            PlatformConfiguration(sp, pluginsPath),
+            sp.GetRequiredService<IPluginHubContextFactory>()
         ));
 
         services.AddSingleton<IPluginManager>(sp =>

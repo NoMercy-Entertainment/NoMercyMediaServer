@@ -61,6 +61,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.NmSystem.Wallpaper;
 using NoMercy.OpticalMedia.Composition;
 using NoMercy.Plugins;
+using NoMercy.Plugins.Hub;
 using NoMercy.Providers.AniDb.Client;
 using NoMercy.Providers.Lyrics;
 using NoMercy.Providers.TMDB.Client;
@@ -619,12 +620,21 @@ public static partial class ServiceConfiguration
         services.AddHostedService<PaletteBackfillStartupService>();
         services.AddHostedService<MusicQueryWarmupService>();
 
+        // Before AddPluginSystem, so its null-object fallback stays a no-op.
+        // This host maps /pluginHub, so a plugin's Hub.PushAsync reaches real
+        // subscribers here rather than silently succeeding.
+        services.AddSingleton<IPluginHubContextFactory, PluginHubContextFactory>();
+
         services.AddPluginSystem(AppFiles.PluginsPath);
 
         // The real library, replacing the platform's null objects. Separate
         // call because NoMercy.Plugins must not reference the database.
         services.AddPluginLibraryAccess();
         services.RegisterPluginServicesFromManifests(AppFiles.PluginsPath);
+
+        // Attaches and detaches a plugin's controllers as it is enabled and
+        // disabled, so neither takes a restart.
+        services.AddHostedService<PluginRouteSubscriber>();
 
         services.AddVideoHubServices();
         services.AddMusicHubServices();

@@ -36,4 +36,15 @@ public interface IPluginManager
     // Loaded plugin instances implementing T (e.g. IEncoderPlugin). Empty when none.
     IEnumerable<T> GetPluginsOfType<T>()
         where T : IPlugin;
+
+    // A single plugin's registration. Hubs, action filters and the UI endpoints
+    // all need one plugin by id on a request path; scanning the whole installed
+    // list for it is the shape those call sites had to use before. The default
+    // does exactly that scan so existing implementers keep compiling.
+    PluginInfo? GetPluginInfo(Guid pluginId) =>
+        GetInstalledPlugins().FirstOrDefault(info => info.Id == pluginId);
+
+    // The live instance, for the platform endpoints that have to call into a
+    // plugin (IUiPlugin.GetViewAsync). Null when nothing is loaded under that id.
+    IPlugin? GetPluginInstance(Guid pluginId) => null;
 }

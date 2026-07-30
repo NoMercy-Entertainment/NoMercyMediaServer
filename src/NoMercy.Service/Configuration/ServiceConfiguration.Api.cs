@@ -27,7 +27,7 @@ public static partial class ServiceConfiguration
         ConfigureApiVersioning(services);
 
         // Add Controllers and JSON Options
-        services
+        IMvcBuilder mvc = services
             .AddControllers(options =>
             {
                 options.EnableEndpointRouting = true;
@@ -39,6 +39,8 @@ public static partial class ServiceConfiguration
                 options.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
                 options.SerializerSettings.Converters.Add(new StringEnumConverter());
             });
+
+        ConfigurePluginMvc(services, mvc);
 
         services.Configure<HmacValidationOptions>(_ => { });
         services.Configure<RouteOptions>(options =>
@@ -55,10 +57,7 @@ public static partial class ServiceConfiguration
         services.AddHttpContextAccessor();
         // Align SignalR per-user routing with Device.OwnerUserId so per-user
         // pushes never leak across accounts.
-        services.AddSingleton<
-            IUserIdProvider,
-            Api.Hubs.NoMercyUserIdProvider
-        >();
+        services.AddSingleton<IUserIdProvider, Api.Hubs.NoMercyUserIdProvider>();
 
         services
             .AddSignalR(o =>

@@ -25,15 +25,11 @@ public class PluginCronRegistrar(IPluginManager pluginManager, CronWorker cronWo
 {
     public void RegisterAll()
     {
-        IReadOnlyList<PluginInfo> installed = pluginManager.GetInstalledPlugins();
-
         foreach (
             IScheduledTaskPlugin plugin in pluginManager.GetPluginsOfType<IScheduledTaskPlugin>()
         )
         {
-            PluginCapabilities? capabilities = installed
-                .FirstOrDefault(info => info.Id == plugin.Id)
-                ?.Capabilities;
+            PluginCapabilities? capabilities = pluginManager.GetPluginInfo(plugin.Id)?.Capabilities;
 
             if (
                 !PluginCapabilityGuard.DeclaresHook(

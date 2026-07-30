@@ -87,16 +87,31 @@ public class PluginLoadContextTests
     [Fact]
     public void Load_NonSharedBundledDependency_ResolvesAndLoadsIt()
     {
-        // Newtonsoft.Json is bundled alongside the Failures fixture assembly
-        // specifically because it is NOT in PluginHostOptions.DefaultSharedAssemblies —
-        // the only way to reach the resolver's "found a path" branch is a real,
+        // Polly is bundled alongside the Failures fixture assembly specifically
+        // because it is NOT in PluginHostOptions.DefaultSharedAssemblies — the
+        // only way to reach the resolver's "found a path" branch is a real,
         // non-shared dependency the plugin's own .deps.json actually declares.
         using ExposedPluginLoadContext context = new(GetFailuresPluginDllPath());
 
-        Assembly? resolved = context.InvokeLoad(new AssemblyName("Newtonsoft.Json"));
+        Assembly? resolved = context.InvokeLoad(new AssemblyName("Polly"));
 
         resolved.Should().NotBeNull();
-        resolved!.GetName().Name.Should().Be("Newtonsoft.Json");
+        resolved!.GetName().Name.Should().Be("Polly");
+    }
+
+    [Fact]
+    public void Load_NewtonsoftIsSharedSoTheHostsCopyWins()
+    {
+        // A plugin annotating its own DTOs with [JsonProperty] from its private
+        // copy of Newtonsoft produces attributes the host's formatter does not
+        // recognise, and the response then ships camelCase where every client
+        // reads snake_case. Deferring to the default context is what prevents
+        // that, so it is pinned rather than left to the set's contents.
+        PluginHostOptions.DefaultSharedAssemblies.Should().Contain("Newtonsoft.Json");
+
+        using ExposedPluginLoadContext context = new(GetFailuresPluginDllPath());
+
+        context.InvokeLoad(new AssemblyName("Newtonsoft.Json")).Should().BeNull();
     }
 
     [Fact]

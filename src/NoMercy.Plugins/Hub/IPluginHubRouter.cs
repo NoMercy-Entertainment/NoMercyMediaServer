@@ -1,0 +1,42 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using NoMercy.Plugins.Abstractions;
+
+namespace NoMercy.Plugins.Hub;
+
+/// <summary>
+/// Which plugin a hub message belongs to, and whether it is allowed to arrive.
+/// <para>
+/// One hub multiplexes every plugin rather than each plugin mapping its own
+/// endpoint: a client opens one connection, and a plugin that is disabled
+/// mid-session stops receiving without anything being unmapped.
+/// </para>
+/// </summary>
+public interface IPluginHubRouter
+{
+    void Register(IPluginHubHandler handler);
+
+    void Unregister(Guid pluginId);
+
+    /// <summary>
+    /// Hands the message to the plugin's handler, or drops it. Dropped when no
+    /// handler is registered, when the plugin is not active, or when it never
+    /// declared the <c>ws</c> capability — a plugin does not get a live channel
+    /// it did not ask the owner for.
+    /// </summary>
+    Task<bool> RouteAsync(
+        Guid pluginId,
+        PluginHubMessage message,
+        IPluginHubClient client,
+        CancellationToken ct
+    );
+}

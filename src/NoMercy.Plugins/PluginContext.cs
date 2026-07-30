@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Events.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Hub;
 using NoMercy.Plugins.Network;
 using NoMercy.Storage;
 
@@ -31,6 +32,7 @@ public class PluginContext : IPluginContext
     public IPluginLibraryQuery Library { get; }
     public IPluginLibraryWriter? LibraryWriter { get; }
     public IPluginGrants Grants { get; }
+    public IPluginHubContext Hub { get; }
 
     public PluginContext(
         Guid pluginId,
@@ -46,7 +48,8 @@ public class PluginContext : IPluginContext
         PluginCapabilities? capabilities = null,
         Func<IReadOnlyList<string>>? grantedHosts = null,
         string? pluginName = null,
-        Version? pluginVersion = null
+        Version? pluginVersion = null,
+        IPluginHubContext? hub = null
     )
     {
         PluginId = pluginId;
@@ -63,6 +66,10 @@ public class PluginContext : IPluginContext
         // granted no library. A plugin can check for it instead of calling and
         // catching.
         LibraryWriter = libraryWriter;
+
+        // Never null: outside the web host there is no hub to map, and a plugin
+        // calling Hub.PushAsync there should reach nobody rather than crash.
+        Hub = hub ?? new NullPluginHubContext();
 
         HttpClient = PluginHttpClientFactory.Create(
             capabilities,

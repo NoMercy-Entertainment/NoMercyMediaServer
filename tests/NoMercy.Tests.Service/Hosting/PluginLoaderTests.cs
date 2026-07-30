@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.Logging.Abstractions;
+using NoMercy.Api.Plugins;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Hooks;
 using NoMercy.Service.Hosting;
@@ -30,6 +31,9 @@ public class PluginLoaderTests
     private static PluginLoadResult FakeResult(string name, string version) =>
         new(Guid.NewGuid(), name, version, Mock.Of<IPlugin>());
 
+    private static PluginApplicationPartRegistrar PartRegistrar() =>
+        new(new(), NullLogger<PluginApplicationPartRegistrar>.Instance);
+
     [Fact]
     public async Task LoadPlugins_ReturnsWhatPluginManagerLoads()
     {
@@ -43,7 +47,8 @@ public class PluginLoaderTests
         PluginLoader loader = new(
             NullLogger<PluginLoader>.Instance,
             pluginManager.Object,
-            cronRegistrar.Object
+            cronRegistrar.Object,
+            PartRegistrar()
         );
 
         IReadOnlyList<PluginLoadResult> result = await loader.LoadPlugins(CancellationToken.None);
@@ -61,7 +66,8 @@ public class PluginLoaderTests
         PluginLoader loader = new(
             NullLogger<PluginLoader>.Instance,
             pluginManager.Object,
-            cronRegistrar.Object
+            cronRegistrar.Object,
+            PartRegistrar()
         );
 
         IReadOnlyList<PluginLoadResult> result = await loader.LoadPlugins(CancellationToken.None);
@@ -82,7 +88,8 @@ public class PluginLoaderTests
         PluginLoader loader = new(
             NullLogger<PluginLoader>.Instance,
             pluginManager.Object,
-            cronRegistrar.Object
+            cronRegistrar.Object,
+            PartRegistrar()
         );
         await loader.LoadPlugins(CancellationToken.None);
 
@@ -98,7 +105,8 @@ public class PluginLoaderTests
         PluginLoader loader = new(
             NullLogger<PluginLoader>.Instance,
             pluginManager.Object,
-            cronRegistrar.Object
+            cronRegistrar.Object,
+            PartRegistrar()
         );
         using CancellationTokenSource cts = new();
 
