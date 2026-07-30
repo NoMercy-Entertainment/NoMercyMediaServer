@@ -300,7 +300,7 @@ public sealed class DynamicStaticFilesMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_NoRangeStreamableMedia_ForcesPartialContentProbeChunk()
+    public async Task InvokeAsync_NoRangeStreamableMedia_ServesWholeFile()
     {
         using RegisteredFolder folder = new();
         byte[] content = new byte[2 * 1024 * 1024];
@@ -315,9 +315,56 @@ public sealed class DynamicStaticFilesMiddlewareTests
 
         await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
 
+        // A caller that sent no Range asked for the whole representation. Answering
+        // 206 with a probe chunk hands a truncated file to every intermediary that
+        // fetches without a Range, and a CDN then replays that chunk for every
+        // range the player asks for afterwards.
+        context.Response.StatusCode.Should().Be(200);
+        context.Response.ContentLength.Should().Be(content.Length);
+        context.Response.Headers.AcceptRanges.ToString().Should().Be("bytes");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_OpenEndedRangeFromZero_StillServesProbeChunk()
+    {
+        using RegisteredFolder folder = new();
+        byte[] content = new byte[2 * 1024 * 1024];
+        Mock<IStorage> storage = CreateStorage(size: content.Length, content: content);
+        (
+            DynamicStaticFilesMiddleware middleware,
+            Mock<IStorageFactory> storageFactory,
+            MediaActivityMonitor activityMonitor,
+            _
+        ) = CreateMiddleware(storage.Object);
+        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4", "bytes=0-");
+
+        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+
+        // Browsers open media with `bytes=0-`, so the fast start survives where it
+        // was actually meant to apply.
         context.Response.StatusCode.Should().Be(206);
         context.Response.ContentLength.Should().Be(1024 * 1024);
         context.Response.Headers.ContentRange.ToString().Should().StartWith("bytes 0-1048575/");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_OpenEndedRangeFromOffset_ServesFromThatOffset()
+    {
+        using RegisteredFolder folder = new();
+        byte[] content = new byte[2 * 1024 * 1024];
+        Mock<IStorage> storage = CreateStorage(size: content.Length, content: content);
+        (
+            DynamicStaticFilesMiddleware middleware,
+            Mock<IStorageFactory> storageFactory,
+            MediaActivityMonitor activityMonitor,
+            _
+        ) = CreateMiddleware(storage.Object);
+        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4", "bytes=1048576-");
+
+        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+
+        context.Response.StatusCode.Should().Be(206);
+        context.Response.Headers.ContentRange.ToString().Should().StartWith("bytes 1048576-2097151/");
     }
 
     [Fact]

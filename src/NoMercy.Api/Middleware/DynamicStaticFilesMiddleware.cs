@@ -302,10 +302,16 @@ public class DynamicStaticFilesMiddleware(
             out StringValues rangeValue
         );
 
-        // Force partial content for streamable media files or when range is requested.
-        // For non-streamable + no range, stream the whole file via the storage facade.
-        if (!hasRangeRequest && !isStreamableMedia)
+        // A request that carries no Range asks for the whole representation, and
+        // only a 200 may answer it. Replying 206 with a probe chunk truncates the
+        // file for anything that fetches without a Range — a CDN filling its cache
+        // does exactly that, then serves that first megabyte back for every range
+        // the player asks for afterwards, so playback never advances past it.
+        // Browsers open media with `bytes=0-` regardless, so the probe-chunk
+        // fast start below still applies where it was meant to.
+        if (!hasRangeRequest)
         {
+            context.Response.Headers.AcceptRanges = "bytes";
             context.Response.ContentLength = fileLength;
             await using Stream wholeStream = storage.OpenRead(relativePath);
             await wholeStream.CopyToAsync(context.Response.Body);
@@ -325,7 +331,6 @@ public class DynamicStaticFilesMiddleware(
         // the connection automatically; ExoPlayer does not).
         const long initialProbeChunkSize = 1024 * 1024;
 
-        if (hasRangeRequest)
         {
             string?[] ranges = rangeValue.ToString().Replace("bytes=", "").Split('-');
 
@@ -362,12 +367,6 @@ public class DynamicStaticFilesMiddleware(
                 // sequential readFully across MP4 atoms.
                 end = fileLength - 1;
             }
-        }
-        else
-        {
-            // Streamable media without range request — serve initial chunk so the
-            // browser can start playback before the full file streams in.
-            end = Math.Min(start + initialProbeChunkSize - 1, fileLength - 1);
         }
 
         // Clamp an explicit end that runs past EOF, then reject any range that is

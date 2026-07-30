@@ -813,4 +813,8 @@
     <Key>Repositories refreshed</Key>
     <Value lang="nl">Repositories refreshed</Value>
   </Entry>
+  <Entry>
+    <Key>Plugin installed successfully</Key>
+    <Value lang="nl">Plugin installed successfully</Value>
+  </Entry>
 </I18N>

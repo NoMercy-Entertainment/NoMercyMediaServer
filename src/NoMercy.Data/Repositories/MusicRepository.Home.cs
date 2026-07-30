@@ -412,6 +412,7 @@ public partial class MusicRepository
                 Cover = g.Key.Cover,
                 ColorPalette = g.Key.ColorPalette,
                 Type = "artist",
+                Link = new($"/music/artists/{g.Key.Id}", UriKind.Relative),
             });
     }
 
@@ -437,6 +438,7 @@ public partial class MusicRepository
                 Cover = g.Key.Cover,
                 ColorPalette = g.Key.ColorPalette,
                 Type = "album",
+                Link = new($"/music/albums/{g.Key.Id}", UriKind.Relative),
             });
     }
 
@@ -463,6 +465,7 @@ public partial class MusicRepository
                 Cover = g.Key.Cover,
                 ColorPalette = g.Key.ColorPalette,
                 Type = "playlist",
+                Link = new($"/music/playlists/{g.Key.Id}", UriKind.Relative),
             });
     }
 
@@ -487,6 +490,7 @@ public partial class MusicRepository
                 LibraryId = artistUser.Artist.LibraryId,
                 Folder = artistUser.Artist.Folder,
                 TrackCount = artistUser.Artist.ArtistTrack.Count(),
+                Link = new($"/music/artists/{artistUser.Artist.Id}", UriKind.Relative),
                 ThumbImagePath = artistUser
                     .Artist.Images.Where(image => image.Type == "thumb")
                     .Select(image => image.FilePath)
@@ -516,6 +520,7 @@ public partial class MusicRepository
                 Folder = albumUser.Album.Folder,
                 Year = albumUser.Album.Year,
                 TrackCount = albumUser.Album.AlbumTrack.Count(),
+                Link = new($"/music/albums/{albumUser.Album.Id}", UriKind.Relative),
             });
     }
 
@@ -534,6 +539,7 @@ public partial class MusicRepository
                 Description = playlist.Description,
                 ColorPalette = playlist._colorPalette ?? string.Empty,
                 TrackCount = playlist.Tracks.Count(),
+                Link = new($"/music/playlists/{playlist.Id}", UriKind.Relative),
             });
     }
 
@@ -555,6 +561,7 @@ public partial class MusicRepository
                 LibraryId = artist.LibraryId,
                 Folder = artist.Folder,
                 TrackCount = artist.ArtistTrack.Count(),
+                Link = new($"/music/artists/{artist.Id}", UriKind.Relative),
                 ThumbImagePath = artist
                     .Images.Where(image => image.Type == "thumb")
                     .Select(image => image.FilePath)
@@ -574,6 +581,7 @@ public partial class MusicRepository
                 Id = genre.Id,
                 Name = genre.Name,
                 TrackCount = genre.MusicGenreTracks.Count(),
+                Link = new($"/music/genres/{genre.Id}", UriKind.Relative),
             });
     }
 
@@ -596,6 +604,7 @@ public partial class MusicRepository
                 Folder = album.Folder,
                 Year = album.Year,
                 TrackCount = album.AlbumTrack.Count(),
+                Link = new($"/music/albums/{album.Id}", UriKind.Relative),
             });
     }
 
