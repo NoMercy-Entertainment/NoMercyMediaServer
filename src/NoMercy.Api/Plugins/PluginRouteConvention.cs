@@ -43,7 +43,12 @@ public class PluginRouteConvention(IPluginAssemblyCatalog catalog) : IApplicatio
             // plugin controller would share one template, so two plugins each
             // defining "status" would be an ambiguous match, and a client could
             // reach one plugin's controller through another plugin's path.
-            AttributeRouteModel prefix = new(new RouteAttribute($"api/plugins/{owner}"));
+            // Versioned like every other endpoint the clients call. Left
+            // unversioned the plugin surface could never be versioned later
+            // without breaking plugins already in the field.
+            AttributeRouteModel prefix = new(
+                new RouteAttribute($"api/v{{version:apiVersion}}/plugins/{owner}")
+            );
 
             // Carried as a route value so the base class can read it. Sourced
             // from the assembly the controller came from, never from the URL,
