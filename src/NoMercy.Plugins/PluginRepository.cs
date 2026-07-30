@@ -240,10 +240,32 @@ public class PluginRepository : IPluginRepository
     /// this singleton synchronously and the file read is async: startup calls
     /// this once, rather than the resolve blocking a thread on disk.
     /// </summary>
+    /// <summary>
+    /// The index every server reads unless its owner removes it. Seeded on a
+    /// server that has never had a repository list, rather than hard-coded into
+    /// lookups: it lands in the same file every other repository lives in, so
+    /// removing it is the ordinary Remove and it stays removed.
+    /// </summary>
+    private static readonly PluginRepositoryInfo DefaultRepository = new()
+    {
+        Name = "NoMercy Plugins",
+        Url =
+            "https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-plugins/master/index.json",
+    };
+
     public async Task LoadRepositoriesFromDiskAsync(CancellationToken ct = default)
     {
         if (!_storage.Exists(_repositoriesFilePath))
         {
+            lock (_lock)
+            {
+                if (_repositories.Count == 0)
+                {
+                    _repositories.Add(DefaultRepository);
+                }
+            }
+
+            await SaveRepositoriesToDiskAsync(ct);
             return;
         }
 
