@@ -89,7 +89,6 @@ public class PluginInstallEndpointTests
     }
 
     [Theory]
-    [InlineData("plugin.zip")]
     [InlineData("plugin.exe")]
     [InlineData("plugin")]
     [InlineData("plugin.dll.txt")]
@@ -137,6 +136,53 @@ public class PluginInstallEndpointTests
         _pluginManager.Verify(
             manager => manager.InstallPluginAsync(staged!, It.IsAny<CancellationToken>()),
             Times.Once
+        );
+    }
+
+    /// <summary>
+    /// An archive is a different install from a bare assembly, not the same one
+    /// with a flag: it carries the manifest and every file the plugin ships
+    /// with, so it must reach the archive path rather than the assembly path.
+    /// </summary>
+    [Fact]
+    public async Task Install_Archive_GoesToTheArchiveInstall()
+    {
+        string? staged = null;
+
+        _storageDriver
+            .Setup(driver => driver.OpenWrite(It.IsAny<string>(), true))
+            .Callback<string, bool>((path, _) => staged = path)
+            .Returns(new MemoryStream());
+
+        _pluginManager
+            .Setup(manager =>
+                manager.InstallPluginArchiveAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.CompletedTask);
+
+        PluginController controller = BuildController();
+
+        IActionResult result = await controller.Install(
+            FileNamed("Sample.Plugin.zip", "archive-bytes"),
+            CancellationToken.None
+        );
+
+        result.Should().BeOfType<OkObjectResult>();
+        Path.GetFileName(staged).Should().Be("Sample.Plugin.zip");
+
+        _pluginManager.Verify(
+            manager =>
+                manager.InstallPluginArchiveAsync(staged!, null, It.IsAny<CancellationToken>()),
+            Times.Once
+        );
+        _pluginManager.Verify(
+            manager =>
+                manager.InstallPluginAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
     }
 
