@@ -48,7 +48,8 @@ public class PluginLoaderTests
             NullLogger<PluginLoader>.Instance,
             pluginManager.Object,
             cronRegistrar.Object,
-            PartRegistrar()
+            PartRegistrar(),
+            Mock.Of<IPluginRepository>()
         );
 
         IReadOnlyList<PluginLoadResult> result = await loader.LoadPlugins(CancellationToken.None);
@@ -67,7 +68,8 @@ public class PluginLoaderTests
             NullLogger<PluginLoader>.Instance,
             pluginManager.Object,
             cronRegistrar.Object,
-            PartRegistrar()
+            PartRegistrar(),
+            Mock.Of<IPluginRepository>()
         );
 
         IReadOnlyList<PluginLoadResult> result = await loader.LoadPlugins(CancellationToken.None);
@@ -89,7 +91,8 @@ public class PluginLoaderTests
             NullLogger<PluginLoader>.Instance,
             pluginManager.Object,
             cronRegistrar.Object,
-            PartRegistrar()
+            PartRegistrar(),
+            Mock.Of<IPluginRepository>()
         );
         await loader.LoadPlugins(CancellationToken.None);
 
@@ -106,7 +109,8 @@ public class PluginLoaderTests
             NullLogger<PluginLoader>.Instance,
             pluginManager.Object,
             cronRegistrar.Object,
-            PartRegistrar()
+            PartRegistrar(),
+            Mock.Of<IPluginRepository>()
         );
         using CancellationTokenSource cts = new();
 
