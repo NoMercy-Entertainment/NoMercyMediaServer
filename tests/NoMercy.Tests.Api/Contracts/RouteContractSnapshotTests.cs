@@ -44,6 +44,8 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         "(any) /liveTranscodeHub/negotiate [(hub/other)]",
         "(any) /musicHub [(hub/other)]",
         "(any) /musicHub/negotiate [(hub/other)]",
+        "(any) /pluginHub [(hub/other)]",
+        "(any) /pluginHub/negotiate [(hub/other)]",
         "(any) /ripperHub [(hub/other)]",
         "(any) /ripperHub/negotiate [(hub/other)]",
         "(any) /videoHub [(hub/other)]",

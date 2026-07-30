@@ -128,6 +128,18 @@ public class HubContractSnapshotTests
         "StartPlaybackCommand(System.String, System.Object, System.Nullable<System.Int32>) -> System.Threading.Tasks.Task",
     ];
 
+    /// <summary>
+    /// One hub for every plugin, multiplexed by group. <see cref="PluginHubMethods"/>
+    /// is the surface a client talks to; what a plugin does behind
+    /// <c>Send</c> is the plugin's own contract and not part of this one.
+    /// </summary>
+    private static readonly string[] PluginHubMethods =
+    [
+        "Send(System.String, System.String, System.Text.Json.Nodes.JsonNode) -> System.Threading.Tasks.Task<System.Boolean>",
+        "Subscribe(System.String) -> System.Threading.Tasks.Task",
+        "Unsubscribe(System.String) -> System.Threading.Tasks.Task",
+    ];
+
     private static readonly string[] KnownHubTypeNames =
     [
         "CastHub",
@@ -137,6 +149,7 @@ public class HubContractSnapshotTests
         "DrivesHub",
         "LiveTranscodeHub",
         "MusicHub",
+        "PluginHub",
         "RipperHub",
         "VideoHub",
     ];
@@ -216,6 +229,10 @@ public class HubContractSnapshotTests
     [Fact]
     public void MusicHub_MatchesLockedContract() =>
         AssertHubContract(typeof(MusicHub), MusicHubMethods);
+
+    [Fact]
+    public void PluginHub_MatchesLockedContract() =>
+        AssertHubContract(typeof(PluginHub), PluginHubMethods);
 
     [Fact]
     public void RipperHub_MatchesLockedContract() =>

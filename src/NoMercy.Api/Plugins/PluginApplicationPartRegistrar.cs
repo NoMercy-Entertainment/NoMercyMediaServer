@@ -54,7 +54,10 @@ public class PluginApplicationPartRegistrar(
     {
         bool changed = false;
 
-        foreach (PluginInfo info in pluginManager.GetInstalledPlugins())
+        // The list is never null from the platform's own manager, but this runs
+        // against whatever IPluginManager the host registered, and a boot step
+        // must not be the thing that dies on someone else's implementation.
+        foreach (PluginInfo info in pluginManager.GetInstalledPlugins() ?? [])
         {
             if (info.Status != PluginStatus.Active)
                 continue;
