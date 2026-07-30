@@ -74,10 +74,8 @@
   </Entry>
   <Entry>
     <Key>An error occurred while saving the entity changes. See the inner exception for details.</Key>
-    <Value lang="nl"
-      >Er is een fout opgetreden bij het opslaan van de entiteitswijzigingen. Zie de
-      binnenste uitzondering voor details.</Value
-    >
+    <Value lang="nl">Er is een fout opgetreden bij het opslaan van de entiteitswijzigingen. Zie de
+      binnenste uitzondering voor details.</Value>
   </Entry>
   <Entry>
     <Key>Albums not found</Key>
@@ -357,9 +355,7 @@
   </Entry>
   <Entry>
     <Key>Something went wrong updating the library encoder profiles: {0}</Key>
-    <Value lang="nl"
-      >Er ging iets mis bij het bijwerken van de bibliotheek encoder profielen: {0}</Value
-    >
+    <Value lang="nl">Er ging iets mis bij het bijwerken van de bibliotheek encoder profielen: {0}</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to update the library</Key>
@@ -579,21 +575,15 @@
   </Entry>
   <Entry>
     <Key>Invalid backend_type 'floppy'. Allowed values: local, smb, nfs, s3, r2.</Key>
-    <Value lang="nl"
-      >Ongeldige backend_type 'floppy'. Toegestane waarden: local, smb, nfs, s3, r2.</Value
-    >
+    <Value lang="nl">Ongeldige backend_type 'floppy'. Toegestane waarden: local, smb, nfs, s3, r2.</Value>
   </Entry>
   <Entry>
     <Key>driver_config.endpoint is required for 'r2' (set to your R2 endpoint URL).</Key>
-    <Value lang="nl"
-      >driver_config.endpoint is vereist voor 'r2' (stel uw R2 eindpunt-URL in).</Value
-    >
+    <Value lang="nl">driver_config.endpoint is vereist voor 'r2' (stel uw R2 eindpunt-URL in).</Value>
   </Entry>
   <Entry>
     <Key>Invalid driver_type 'banana'. Allowed values: local, smb, nfs, s3, r2, webdav.</Key>
-    <Value lang="nl"
-      >Ongeldige driver_type 'banana'. Toegestane waarden: local, smb, nfs, s3, r2, webdav.</Value
-    >
+    <Value lang="nl">Ongeldige driver_type 'banana'. Toegestane waarden: local, smb, nfs, s3, r2, webdav.</Value>
   </Entry>
   <Entry>
     <Key>config.rootPath must be a non-empty string for 'local'.</Key>
@@ -645,15 +635,11 @@
   </Entry>
   <Entry>
     <Key>Movie is adult which is not allowed by the server configuration</Key>
-    <Value lang="nl"
-      >Film is voor volwassenen wat niet is toegestaan door de serverconfiguratie</Value
-    >
+    <Value lang="nl">Film is voor volwassenen wat niet is toegestaan door de serverconfiguratie</Value>
   </Entry>
   <Entry>
     <Key>Person is adult which is not allowed by the server configuration</Key>
-    <Value lang="nl"
-      >Persoon is voor volwassenen wat niet is toegestaan door de serverconfiguratie</Value
-    >
+    <Value lang="nl">Persoon is voor volwassenen wat niet is toegestaan door de serverconfiguratie</Value>
   </Entry>
   <Entry>
     <Key>Albums: #</Key>
@@ -818,5 +804,13 @@
   <Entry>
     <Key>Albums: S</Key>
     <Value lang="nl">Albums: S</Value>
+  </Entry>
+  <Entry>
+    <Key>Repository added</Key>
+    <Value lang="nl">Repository added</Value>
+  </Entry>
+  <Entry>
+    <Key>Repositories refreshed</Key>
+    <Value lang="nl">Repositories refreshed</Value>
   </Entry>
 </I18N>

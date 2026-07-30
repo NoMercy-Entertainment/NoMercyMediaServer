@@ -9,6 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.IO.Compression;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using NoMercy.Events;
@@ -187,6 +189,181 @@ public class PluginManager : IPluginManager, IDisposable
 
         await LoadPluginAssemblyAsync(destPath, ct);
     }
+
+    public async Task InstallPluginArchiveAsync(
+        string archivePath,
+        string? expectedChecksum = null,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(archivePath);
+
+        string fullPath = Path.GetFullPath(archivePath);
+
+        if (!_driver.FileExists(fullPath))
+        {
+            throw new FileNotFoundException($"Plugin archive not found: {fullPath}", fullPath);
+        }
+
+        // Before a single byte is unpacked. An archive that fails here must never
+        // have existed on disk anywhere the loader looks.
+        if (!string.IsNullOrWhiteSpace(expectedChecksum))
+        {
+            string actual = await ComputeSha256Async(fullPath, ct);
+
+            if (!actual.Equals(expectedChecksum.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new PluginVerificationException(
+                    $"Plugin archive failed verification: expected checksum {expectedChecksum}, got {actual}"
+                );
+            }
+        }
+
+        using ZipArchive archive = ZipFile.OpenRead(fullPath);
+
+        PluginManifestEntry manifest = FindManifest(archive, fullPath);
+        string pluginDir = Path.Combine(_pluginsPath, manifest.FolderName);
+
+        if (!_storage.Exists(pluginDir))
+        {
+            _storage.CreateDirectory(pluginDir);
+        }
+
+        string assemblyPath = await ExtractAsync(archive, manifest, pluginDir, ct);
+
+        await LoadPluginAssemblyAsync(assemblyPath, ct);
+    }
+
+    /// <summary>
+    /// The manifest decides what the archive is. Located rather than assumed:
+    /// a plugin is published either as its folder or as the folder's contents,
+    /// and both are the same plugin.
+    /// </summary>
+    private static PluginManifestEntry FindManifest(ZipArchive archive, string archivePath)
+    {
+        ZipArchiveEntry? entry = archive
+            .Entries.Where(candidate =>
+                Path.GetFileName(candidate.FullName)
+                    .Equals("plugin.json", StringComparison.OrdinalIgnoreCase)
+            )
+            // Shallowest wins, so a plugin that ships its own docs folder
+            // containing an example manifest cannot outrank the real one.
+            .MinBy(candidate => candidate.FullName.Count(ArchiveSeparators.Contains));
+
+        if (entry is null)
+        {
+            throw new PluginVerificationException(
+                $"Plugin archive has no plugin.json: {Path.GetFileName(archivePath)}"
+            );
+        }
+
+        string prefix = entry.FullName[..(entry.FullName.Length - "plugin.json".Length)];
+        PluginManifest parsed;
+
+        using (Stream stream = entry.Open())
+        using (StreamReader reader = new(stream))
+        {
+            parsed =
+                PluginManifestParser.Parse(reader.ReadToEnd())
+                ?? throw new PluginVerificationException(
+                    $"Plugin archive has an unreadable plugin.json: {Path.GetFileName(archivePath)}"
+                );
+        }
+
+        if (string.IsNullOrWhiteSpace(parsed.Assembly))
+        {
+            throw new PluginVerificationException(
+                "Plugin manifest does not name an assembly, so there is nothing to load."
+            );
+        }
+
+        return new(prefix, parsed.Assembly, Path.GetFileNameWithoutExtension(parsed.Assembly));
+    }
+
+    private async Task<string> ExtractAsync(
+        ZipArchive archive,
+        PluginManifestEntry manifest,
+        string pluginDir,
+        CancellationToken ct
+    )
+    {
+        string root = Path.GetFullPath(pluginDir);
+        string? assemblyPath = null;
+
+        foreach (ZipArchiveEntry entry in archive.Entries)
+        {
+            if (ArchiveSeparators.Contains(entry.FullName[^1]))
+            {
+                continue;
+            }
+
+            if (!entry.FullName.StartsWith(manifest.Prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string relative = entry.FullName[manifest.Prefix.Length..];
+            string destination = Path.GetFullPath(Path.Combine(root, relative));
+
+            // The archive names its own entries, so an entry may name a path.
+            // Resolve first and refuse anything that lands outside the plugin's
+            // own folder, or a zip writes wherever it likes on this machine.
+            if (
+                !destination.StartsWith(
+                    root + Path.DirectorySeparatorChar,
+                    StringComparison.Ordinal
+                )
+            )
+            {
+                throw new PluginVerificationException(
+                    $"Plugin archive tried to write outside its folder: {entry.FullName}"
+                );
+            }
+
+            string? parent = Path.GetDirectoryName(destination);
+            if (parent is not null && !_storage.Exists(parent))
+            {
+                _storage.CreateDirectory(parent);
+            }
+
+            await using (Stream source = entry.Open())
+            await using (Stream target = _driver.OpenWrite(destination, overwrite: true))
+            {
+                await source.CopyToAsync(target, ct);
+            }
+
+            if (
+                Path.GetFileName(destination)
+                    .Equals(manifest.AssemblyFileName, StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                assemblyPath = destination;
+            }
+        }
+
+        return assemblyPath
+            ?? throw new PluginVerificationException(
+                $"Plugin archive does not contain the assembly its manifest names: {manifest.AssemblyFileName}"
+            );
+    }
+
+    private async Task<string> ComputeSha256Async(string path, CancellationToken ct)
+    {
+        await using Stream stream = _driver.OpenRead(path);
+        byte[] hash = await SHA256.HashDataAsync(stream, ct);
+
+        return Convert.ToHexStringLower(hash);
+    }
+
+    // Zip entries name their own separator and a Windows-built archive uses the
+    // other one, so both count regardless of the host this runs on.
+    private static readonly char[] ArchiveSeparators = ['/', '\\'];
+
+    private sealed record PluginManifestEntry(
+        string Prefix,
+        string AssemblyFileName,
+        string FolderName
+    );
 
     public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
