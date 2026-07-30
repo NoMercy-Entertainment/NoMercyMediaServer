@@ -205,34 +205,17 @@ public partial class MusicRepository
 
     #region Projection Methods — Top Music (Favorites)
 
+    // These run the same queries the start page builds in parallel below. They
+    // were separate copies until one of them stopped projecting Link, which the
+    // card then dereferenced — the favorites row 500'd for anyone who had ever
+    // played a track.
     public async Task<TopMusicItemDto?> GetTopArtistAsync(
         Guid userId,
         CancellationToken ct = default
     )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        return await mediaContext
-            .MusicPlays.AsNoTracking()
-            .Where(mp => mp.UserId == userId)
-            .SelectMany(mp => mp.Track.ArtistTrack)
-            .GroupBy(at => new
-            {
-                at.Artist.Id,
-                at.Artist.Name,
-                at.Artist.Cover,
-                ColorPalette = at.Artist._colorPalette ?? string.Empty,
-            })
-            .OrderByDescending(g => g.Count())
-            .ThenBy(g => g.Key.Id)
-            .Select(g => new TopMusicItemDto
-            {
-                Id = g.Key.Id.ToString(),
-                Name = g.Key.Name,
-                Cover = g.Key.Cover,
-                ColorPalette = g.Key.ColorPalette,
-                Type = "artist",
-            })
-            .FirstOrDefaultAsync(ct);
+        return await GetTopArtistQuery(mediaContext, userId).FirstOrDefaultAsync(ct);
     }
 
     public async Task<TopMusicItemDto?> GetTopAlbumAsync(
@@ -241,28 +224,7 @@ public partial class MusicRepository
     )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        return await mediaContext
-            .MusicPlays.AsNoTracking()
-            .Where(mp => mp.UserId == userId)
-            .SelectMany(mp => mp.Track.AlbumTrack)
-            .GroupBy(at => new
-            {
-                at.Album.Id,
-                at.Album.Name,
-                at.Album.Cover,
-                ColorPalette = at.Album._colorPalette ?? string.Empty,
-            })
-            .OrderByDescending(g => g.Count())
-            .ThenBy(g => g.Key.Id)
-            .Select(g => new TopMusicItemDto
-            {
-                Id = g.Key.Id.ToString(),
-                Name = g.Key.Name,
-                Cover = g.Key.Cover,
-                ColorPalette = g.Key.ColorPalette,
-                Type = "album",
-            })
-            .FirstOrDefaultAsync(ct);
+        return await GetTopAlbumQuery(mediaContext, userId).FirstOrDefaultAsync(ct);
     }
 
     public async Task<TopMusicItemDto?> GetTopPlaylistAsync(
@@ -271,29 +233,7 @@ public partial class MusicRepository
     )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        return await mediaContext
-            .MusicPlays.AsNoTracking()
-            .Where(mp => mp.Track.PlaylistTrack.Any(pt => pt.Playlist.UserId == userId))
-            .SelectMany(mp => mp.Track.PlaylistTrack)
-            .Where(pt => pt.Playlist.UserId == userId)
-            .GroupBy(pt => new
-            {
-                pt.Playlist.Id,
-                pt.Playlist.Name,
-                pt.Playlist.Cover,
-                ColorPalette = pt.Playlist._colorPalette ?? string.Empty,
-            })
-            .OrderByDescending(g => g.Count())
-            .ThenBy(g => g.Key.Id)
-            .Select(g => new TopMusicItemDto
-            {
-                Id = g.Key.Id.ToString(),
-                Name = g.Key.Name,
-                Cover = g.Key.Cover,
-                ColorPalette = g.Key.ColorPalette,
-                Type = "playlist",
-            })
-            .FirstOrDefaultAsync(ct);
+        return await GetTopPlaylistQuery(mediaContext, userId).FirstOrDefaultAsync(ct);
     }
 
     #endregion
