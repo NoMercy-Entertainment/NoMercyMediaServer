@@ -337,6 +337,7 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         "POST api/v{version:apiVersion}/dashboard/optical/{drivePath}/rip [OpticalMedia.RipDisc]",
         "POST api/v{version:apiVersion}/dashboard/optical/{drivePath}/stop [OpticalMedia.StopMedia]",
         "POST api/v{version:apiVersion}/dashboard/plugins/credentials [Plugin.Credentials]",
+        "POST api/v{version:apiVersion}/dashboard/plugins/install [Plugin.Install]",
         "POST api/v{version:apiVersion}/dashboard/plugins/{id:guid}/consent [Plugin.Consent]",
         "POST api/v{version:apiVersion}/dashboard/plugins/{id:guid}/disable [Plugin.Disable]",
         "POST api/v{version:apiVersion}/dashboard/plugins/{id:guid}/enable [Plugin.Enable]",
