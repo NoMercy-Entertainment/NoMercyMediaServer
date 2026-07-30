@@ -143,9 +143,19 @@ public class PluginInstallEndpointTests
     /// <summary>
     /// The client names the upload, so the name is an input. A name carrying a
     /// path would otherwise pick the directory the staging write lands in.
+    /// <para>
+    /// Both separators, on every host. The first version of this asserted the
+    /// backslash form only and passed on Windows while failing on the Linux
+    /// runner, because there a backslash is an ordinary character — which is
+    /// exactly the disagreement the endpoint must not have.
+    /// </para>
     /// </summary>
-    [Fact]
-    public async Task Install_FileNameCarryingAPath_StagesUnderTheBareNameOnly()
+    [Theory]
+    [InlineData(@"..\..\..\Windows\System32\evil.dll")]
+    [InlineData("../../../etc/evil.dll")]
+    [InlineData(@"C:\Users\someone\evil.dll")]
+    [InlineData("/var/tmp/evil.dll")]
+    public async Task Install_FileNameCarryingAPath_StagesUnderTheBareNameOnly(string uploadedName)
     {
         string? staged = null;
 
@@ -156,14 +166,13 @@ public class PluginInstallEndpointTests
 
         PluginController controller = BuildController();
 
-        await controller.Install(
-            FileNamed(@"..\..\..\Windows\System32\evil.dll"),
-            CancellationToken.None
-        );
+        await controller.Install(FileNamed(uploadedName), CancellationToken.None);
 
         staged.Should().NotBeNull();
-        Path.GetFileName(staged).Should().Be("evil.dll");
+        staged.Should().EndWith("evil.dll");
         staged.Should().NotContain("..");
+        staged.Should().NotContain("System32");
+        staged.Should().NotContain("etc");
     }
 
     [Fact]

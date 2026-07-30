@@ -262,9 +262,7 @@ public class PluginController(
         if (file is null || file.Length == 0)
             return UnprocessableEntityResponse("No file was uploaded");
 
-        // GetFileName, not the raw header: the client names this and a name
-        // carrying a path would otherwise decide where the staging write lands.
-        string fileName = Path.GetFileName(file.FileName);
+        string fileName = BareFileName(file.FileName);
 
         if (string.IsNullOrWhiteSpace(fileName))
             return UnprocessableEntityResponse("The uploaded file has no name");
@@ -312,6 +310,24 @@ public class PluginController(
             if (storageDriver.DirectoryExists(stagingDirectory))
                 storageDriver.DeleteDirectory(stagingDirectory, recursive: true);
         }
+    }
+
+    /// <summary>
+    /// The last segment of a client-supplied name, on either separator.
+    /// <para>
+    /// Not <see cref="Path.GetFileName(string)"/>: that asks the platform, and
+    /// on Linux a backslash is an ordinary character — so an upload from a
+    /// Windows client reaching a Linux server keeps its whole path as one file
+    /// name there and loses it on Windows. The two hosts then disagree about
+    /// what was uploaded, and a rule about where bytes land cannot depend on
+    /// which machine is serving.
+    /// </para>
+    /// </summary>
+    private static string BareFileName(string candidate)
+    {
+        int lastSeparator = candidate.LastIndexOfAny(['/', '\\']);
+
+        return lastSeparator < 0 ? candidate : candidate[(lastSeparator + 1)..];
     }
 
     [HttpDelete("{id:guid}")]
