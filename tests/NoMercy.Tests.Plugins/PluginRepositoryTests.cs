@@ -393,13 +393,19 @@ public class PluginRepositoryTests : IDisposable
         plugins.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// A server that has never had a repository list gets the default index, so
+    /// the catalogue is reachable on a fresh install without anyone pasting a
+    /// URL. This used to assert empty, which was right before there was an index
+    /// to point at.
+    /// </summary>
     [Fact]
-    public async Task CreateAsync_NoRepositoriesFileOnDisk_ReturnsEmptyWithoutThrowing()
+    public async Task CreateAsync_NoRepositoriesFileOnDisk_SeedsTheDefaultWithoutThrowing()
     {
         IStorageDriver driver = TestStorageHelper.CreateBackend();
         IStorage storage = new LocalStorage(driver, new([_tempDir], driver));
 
-        // An unhandled exception here fails the test — the assertion below is
+        // An unhandled exception here fails the test — the assertions below are
         // reached only when CreateAsync completed without throwing.
         PluginRepository repo = await PluginRepository.CreateAsync(
             new(),
@@ -408,7 +414,40 @@ public class PluginRepositoryTests : IDisposable
             storage
         );
 
-        repo.GetRepositories().Should().BeEmpty();
+        PluginRepositoryInfo seeded = repo.GetRepositories().Should().ContainSingle().Subject;
+        seeded.Url.Should().StartWith("https://");
+        seeded.Enabled.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Seeded once, not every boot. Removing the default has to stay removed, and
+    /// it only does if the seed is written to the same file Remove then edits.
+    /// </summary>
+    [Fact]
+    public async Task CreateAsync_DefaultRemoved_StaysRemovedOnTheNextStart()
+    {
+        IStorageDriver driver = TestStorageHelper.CreateBackend();
+        IStorage storage = new LocalStorage(driver, new([_tempDir], driver));
+
+        PluginRepository first = await PluginRepository.CreateAsync(
+            new(),
+            NullLogger.Instance,
+            _tempDir,
+            storage
+        );
+        await first.RemoveRepositoryAsync(
+            first.GetRepositories().Single().Name,
+            CancellationToken.None
+        );
+
+        PluginRepository second = await PluginRepository.CreateAsync(
+            new(),
+            NullLogger.Instance,
+            _tempDir,
+            storage
+        );
+
+        second.GetRepositories().Should().BeEmpty();
     }
 
     [Fact]

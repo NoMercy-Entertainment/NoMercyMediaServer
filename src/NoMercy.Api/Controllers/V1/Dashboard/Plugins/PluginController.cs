@@ -18,9 +18,12 @@ using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Capabilities;
+using NoMercy.Plugins.Verification;
+using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Plugins;
 
@@ -33,9 +36,13 @@ public class PluginController(
     IPluginManager pluginManager,
     IPluginConsentService consentService,
     IPluginGrantStore grantStore,
-    IPluginRestartAdvisor restartAdvisor
+    IPluginRestartAdvisor restartAdvisor,
+    IStorageDriver storageDriver
 ) : BaseController
 {
+    private const long MaximumUploadBytes = 64L * 1024 * 1024;
+    private const string PluginAssemblyExtension = ".dll";
+
     [HttpGet]
     public IActionResult Index()
     {
@@ -230,6 +237,97 @@ public class PluginController(
         {
             return NotFoundResponse(ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Installs a plugin from a file the owner uploaded.
+    /// <para>
+    /// <see cref="IPluginManager.InstallPluginAsync(string, CancellationToken)"/>
+    /// has existed since the platform landed and had no caller: the only way to
+    /// add a plugin was to put a file in the plugins folder on the server and
+    /// restart it. Anyone who can do that does not need a dashboard, so this
+    /// takes the file over the wire and stages it where the manager expects.
+    /// </para>
+    /// <para>
+    /// The upload lands in a per-request staging directory, never in the plugins
+    /// folder. Copying it into place is the manager's decision and happens only
+    /// after verification passes, so a rejected file is never somewhere the
+    /// loader will find it on the next start.
+    /// </para>
+    /// </summary>
+    [HttpPost("install")]
+    [RequestSizeLimit(MaximumUploadBytes)]
+    public async Task<IActionResult> Install(IFormFile? file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return UnprocessableEntityResponse("No file was uploaded");
+
+        string fileName = BareFileName(file.FileName);
+
+        if (string.IsNullOrWhiteSpace(fileName))
+            return UnprocessableEntityResponse("The uploaded file has no name");
+
+        if (!fileName.EndsWith(PluginAssemblyExtension, StringComparison.OrdinalIgnoreCase))
+            return UnprocessableEntityResponse("A plugin is installed from its .dll");
+
+        string stagingDirectory = Path.Combine(
+            AppFiles.TempPath,
+            $"plugin-install-{Guid.NewGuid():N}"
+        );
+        string stagedPath = Path.Combine(stagingDirectory, fileName);
+
+        try
+        {
+            storageDriver.CreateDirectory(stagingDirectory);
+
+            await using (Stream destination = storageDriver.OpenWrite(stagedPath, overwrite: true))
+            {
+                await file.CopyToAsync(destination, ct);
+            }
+
+            await pluginManager.InstallPluginAsync(stagedPath, ct);
+
+            return Ok(
+                new StatusResponseDto<string>
+                {
+                    Status = "ok",
+                    Message = "Plugin installed successfully",
+                }
+            );
+        }
+        catch (PluginVerificationException ex)
+        {
+            return UnprocessableEntityResponse(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return UnprocessableEntityResponse(ex.Message);
+        }
+        finally
+        {
+            // The manager copied what it accepted; the upload itself is spent
+            // either way, and leaving it behind grows the cache on every retry.
+            if (storageDriver.DirectoryExists(stagingDirectory))
+                storageDriver.DeleteDirectory(stagingDirectory, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// The last segment of a client-supplied name, on either separator.
+    /// <para>
+    /// Not <see cref="Path.GetFileName(string)"/>: that asks the platform, and
+    /// on Linux a backslash is an ordinary character — so an upload from a
+    /// Windows client reaching a Linux server keeps its whole path as one file
+    /// name there and loses it on Windows. The two hosts then disagree about
+    /// what was uploaded, and a rule about where bytes land cannot depend on
+    /// which machine is serving.
+    /// </para>
+    /// </summary>
+    private static string BareFileName(string candidate)
+    {
+        int lastSeparator = candidate.LastIndexOfAny(['/', '\\']);
+
+        return lastSeparator < 0 ? candidate : candidate[(lastSeparator + 1)..];
     }
 
     [HttpDelete("{id:guid}")]

@@ -68,6 +68,21 @@ public static class PluginServiceCollectionExtensions
                     sp.GetService<IConfiguration>()?.GetSection("Plugins:Host").Bind(options)
             );
 
+        // The catalogue side of the platform. Built here rather than by the
+        // async factory: the container resolves synchronously, and startup
+        // calls LoadAsync once the host is up so no resolve waits on disk.
+        services.AddSingleton<IPluginRepository>(sp =>
+        {
+            IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
+
+            return new PluginRepository(
+                sp.GetRequiredService<IHttpClientFactory>().CreateClient(),
+                sp.GetRequiredService<ILogger<PluginRepository>>(),
+                pluginsPath,
+                new LocalStorage(driver, new([pluginsPath], driver))
+            );
+        });
+
         services.AddSingleton<IPluginConsentStore>(sp =>
         {
             IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();

@@ -75,6 +75,11 @@ public class PluginRepository : IPluginRepository
         return repository;
     }
 
+    public Task LoadAsync(CancellationToken ct = default)
+    {
+        return LoadRepositoriesFromDiskAsync(ct);
+    }
+
     public IReadOnlyList<PluginRepositoryInfo> GetRepositories()
     {
         lock (_lock)
@@ -148,7 +153,8 @@ public class PluginRepository : IPluginRepository
             catch (Exception ex)
             {
                 _logger.LogWarning(
-                    "Failed to refresh repository '{Name}' ({Url}): {Error}", [repo.Name, repo.Url, ex.Message]
+                    "Failed to refresh repository '{Name}' ({Url}): {Error}",
+                    [repo.Name, repo.Url, ex.Message]
                 );
             }
         }
@@ -223,15 +229,43 @@ public class PluginRepository : IPluginRepository
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to fetch repository '{Name}' ({Url}): {Error}", [name, url, ex.Message]
+                "Failed to fetch repository '{Name}' ({Url}): {Error}",
+                [name, url, ex.Message]
             );
         }
     }
 
-    private async Task LoadRepositoriesFromDiskAsync(CancellationToken ct)
+    /// <summary>
+    /// Reads the persisted repository list. Public because the container builds
+    /// this singleton synchronously and the file read is async: startup calls
+    /// this once, rather than the resolve blocking a thread on disk.
+    /// </summary>
+    /// <summary>
+    /// The index every server reads unless its owner removes it. Seeded on a
+    /// server that has never had a repository list, rather than hard-coded into
+    /// lookups: it lands in the same file every other repository lives in, so
+    /// removing it is the ordinary Remove and it stays removed.
+    /// </summary>
+    private static readonly PluginRepositoryInfo DefaultRepository = new()
+    {
+        Name = "NoMercy Plugins",
+        Url =
+            "https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-plugins/master/index.json",
+    };
+
+    public async Task LoadRepositoriesFromDiskAsync(CancellationToken ct = default)
     {
         if (!_storage.Exists(_repositoriesFilePath))
         {
+            lock (_lock)
+            {
+                if (_repositories.Count == 0)
+                {
+                    _repositories.Add(DefaultRepository);
+                }
+            }
+
+            await SaveRepositoriesToDiskAsync(ct);
             return;
         }
 
@@ -249,7 +283,8 @@ public class PluginRepository : IPluginRepository
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to load repositories from {Path}: {Error}", [_repositoriesFilePath, ex.Message]
+                "Failed to load repositories from {Path}: {Error}",
+                [_repositoriesFilePath, ex.Message]
             );
         }
     }
@@ -276,7 +311,8 @@ public class PluginRepository : IPluginRepository
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to save repositories to {Path}: {Error}", [_repositoriesFilePath, ex.Message]
+                "Failed to save repositories to {Path}: {Error}",
+                [_repositoriesFilePath, ex.Message]
             );
         }
     }
