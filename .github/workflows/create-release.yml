@@ -194,7 +194,7 @@ jobs:
           Build: \`${SHORT_SHA}\`
           NOTES_END
 
-      - name: Squash merge to master and bump version
+      - name: Sync dev tree to master and bump version
         env:
           PAT: ${{ secrets.PAT }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -256,41 +256,26 @@ jobs:
           echo "Generated changelog:"
           echo "$CHANGELOG"
 
-          # Checkout master and squash merge dev
+          # Make master's tree byte-identical to dev's. This used to be a
+          # squash merge (-X theirs), but a squash never records dev in
+          # master's ancestry, so the merge-base stays ancient and any hunk
+          # where only master differs from that stale base silently keeps
+          # master's lines — code dev deleted came back from the dead. One
+          # such zombie (AutoEncodeSubscriber's removed config-store gate)
+          # made master uncompilable from v0.1.411 through v0.1.449 and
+          # nothing noticed, because master itself is never built: binaries
+          # come from dev and the release commit is [skip ci]. dev is the
+          # release source and is what CI validated on this very push, so
+          # master mirrors it exactly — no merge, no drift, nothing to build.
           git checkout -f master
           git reset --hard origin/master
-
-          if ! git merge --squash -X theirs origin/dev; then
-            # Whatever -X theirs could not settle on its own, settle the same way it
-            # would have: dev is the release source, so every still-unmerged path takes
-            # dev's version, or is deleted when dev no longer has it. Matching only on
-            # "deleted in dev" used to be enough, but rename/rename conflicts leave both
-            # sides present and fell straight through. Git pairs a deleted file with an
-            # unrelated new one whenever they look similar, and in a repository where
-            # every file opens with the same ten-line licence header, two small files
-            # easily clear that bar.
-            while IFS= read -r conflict_file; do
-              if git cat-file -e "origin/dev:${conflict_file}" 2>/dev/null; then
-                git checkout origin/dev -- "${conflict_file}"
-                git add -- "${conflict_file}"
-              else
-                git rm --force -- "${conflict_file}"
-              fi
-            done < <(git ls-files -u | cut -f2 | sort -u)
-
-            # Fail if any unresolved conflicts remain
-            if git ls-files -u | grep -q .; then
-              echo "::error::Unresolved merge conflicts remain"
-              git ls-files -u
-              exit 1
-            fi
-          fi
+          git read-tree -u --reset origin/dev
 
           # Update version in Directory.Build.props
           sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" Directory.Build.props
           git add -A
 
-          # Create the squash commit with version and changelog.
+          # Create the release commit with version and changelog.
           # [skip ci]: the release commit is this pipeline's own output; letting the
           # master push start another run would cancel this run's promote_docker_images
           # job (cancel-in-progress concurrency) and leave :latest unpromoted.
@@ -299,7 +284,7 @@ jobs:
           # Push to master
           git push origin master
 
-          echo "Squash merged dev into master as v$NEW_VERSION"
+          echo "Synced dev tree onto master as v$NEW_VERSION"
 
       - name: Create Release and Upload Assets
         env:
@@ -319,7 +304,7 @@ jobs:
             FLAGS+=(--prerelease)
           fi
 
-          # Create release targeting master (where the squash merge commit is)
+          # Create release targeting master (where the release commit is)
           if gh release view "$TAG" &>/dev/null; then
             echo "Release $TAG already exists, updating..."
             gh release edit "$TAG" "${FLAGS[@]}"
