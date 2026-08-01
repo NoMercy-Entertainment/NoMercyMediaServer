@@ -89,8 +89,7 @@ public class AutoEncodeSubscriberLifecycleTests
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             ContextFactory(out SqliteConnection connection),
-            dispatcher.Object,
-            EnabledConfigStore()
+            dispatcher.Object
         );
 
         await subscriber.StartAsync(CancellationToken.None);
@@ -115,8 +114,7 @@ public class AutoEncodeSubscriberLifecycleTests
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             ContextFactory(out SqliteConnection connection),
-            dispatcher.Object,
-            EnabledConfigStore()
+            dispatcher.Object
         );
 
         await subscriber.StartAsync(CancellationToken.None);
@@ -137,8 +135,7 @@ public class AutoEncodeSubscriberLifecycleTests
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             ContextFactory(out SqliteConnection connection),
-            dispatcher.Object,
-            EnabledConfigStore()
+            dispatcher.Object
         );
 
         for (int i = 0; i < 3; i++)
@@ -180,8 +177,7 @@ public class AutoEncodeSubscriberLifecycleTests
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             factory,
-            dispatcher.Object,
-            EnabledConfigStore()
+            dispatcher.Object
         );
         await subscriber.StartAsync(CancellationToken.None);
 
@@ -220,14 +216,12 @@ public class AutoEncodeSubscriberLifecycleTests
         );
         await subscriber.StartAsync(CancellationToken.None);
 
-        await bus.PublishAsync(
-            new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
-        );
+        await bus.PublishAsync(new MediaFilesScannedEvent { MediaId = 1, LibraryId = libraryId });
 
         dispatcher.Verify(
             d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
             Times.Never,
-            "AutoEncodeOnScan defaults off and must not be bypassed by a preset-mapped folder"
+            "no encoding-preset folder link means no auto-encode"
         );
         connection.Dispose();
     }

@@ -85,7 +85,7 @@ jobs:
       version: ${{ needs.version_management.outputs.version }}
       ref: ${{ github.sha }}
 
-  # Step 6: Create Release, squash merge to master, and sync dev
+  # Step 6: Create Release and sync dev's tree onto master
   # Only runs after ALL builds succeed — version bump is atomic with release
   create_release:
     needs: [version_management, build_executables, build_packages, build_docker_images]

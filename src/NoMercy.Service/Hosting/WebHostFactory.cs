@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
-using System.Net.Sockets;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -166,7 +165,7 @@ public static class WebHostFactory
                 RuntimeServerSettings.Current.InternalServerPort + 1,
                 listenOptions =>
                 {
-                    listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
+                    listenOptions.Protocols = HttpProtocols.Http1;
                 }
             );
 
@@ -178,7 +177,7 @@ public static class WebHostFactory
                     Config.ManagementPipeName,
                     listenOptions =>
                     {
-                        listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
+                        listenOptions.Protocols = HttpProtocols.Http1;
                     }
                 );
 
@@ -196,7 +195,7 @@ public static class WebHostFactory
                     socketPath,
                     listenOptions =>
                     {
-                        listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
+                        listenOptions.Protocols = HttpProtocols.Http1;
                     }
                 );
 

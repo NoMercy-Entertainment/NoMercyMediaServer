@@ -25,7 +25,9 @@ namespace NoMercy.Tests.Api.Dashboard;
 /// <c>/list</c> and <c>/mkdir</c> deliberately answer runtime failures with
 /// HTTP 200 and <c>{ ok: false, error }</c> rather than a 4xx/5xx — that is
 /// the CURRENT contract this suite characterizes, not a bug to "fix" by
-/// asserting a 4xx. Mkdir tests never reach a real <c>CreateDirectoryAsync</c>
+/// asserting a 4xx. The one exception is a request the driver can never serve:
+/// an unscoped local driver asked for its own root is rejected up front, before
+/// any storage call. Mkdir tests never reach a real <c>CreateDirectoryAsync</c>
 /// call — every case here is rejected by the driver_id/path validation guard
 /// before the controller resolves a driver.
 /// </summary>
@@ -49,7 +51,9 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
             new { type = "local", config = new { } }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -126,7 +130,9 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
             new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -163,15 +169,33 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task List_KnownDriver_AlwaysReturns200WithOkField_WhenModerator()
+    public async Task List_UnscopedLocalDriverAtItsRoot_Returns400_BecauseItHasNoRoot()
     {
-        // Characterizes the current contract: a resolvable driver always yields HTTP 200
-        // with an "ok" flag, whatever the outcome of the underlying (real, read-only)
-        // storage.List call happens to be on this host — the endpoint never surfaces a
-        // storage-layer failure as a 4xx/5xx.
+        // Production seeds the system-local driver with an empty rootPath, so it applies
+        // no root restriction and has nothing of its own to enumerate — it stands for the
+        // host filesystem, which dashboard/filesystem serves. Answering 200 here let the
+        // path guard's rejection reach the picker as an empty folder.
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
             "/api/v1/dashboard/storage/list",
-            new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "" }
+            new { driver_id = NoMercyApiFactory.UnscopedLocalDriverId.ToString(), path = "" }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task List_KnownDriverBelowItsRoot_Returns200WithOkField_WhenModerator()
+    {
+        // Characterizes the rest of the contract: a resolvable driver with a real
+        // sub-path always yields HTTP 200 with an "ok" flag, whatever the outcome of
+        // the underlying (real, read-only) storage.List call happens to be on this host.
+        HttpResponseMessage response = await _authed.PostAsJsonAsync(
+            "/api/v1/dashboard/storage/list",
+            new
+            {
+                driver_id = Driver.SystemLocalDriverId.ToString(),
+                path = "nomercy-no-such-subpath",
+            }
         );
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -193,7 +217,9 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
             new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "some/sub/path" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

@@ -210,8 +210,39 @@ public class CertificateService : ICertificateService
     /// </summary>
     public bool EnsureHttpsCertificate()
     {
-        if (HasValidCertificate())
-            return true;
+        // Kestrel's certificate selector serves ONLY the in-memory cache, and every
+        // new DI container starts with that cache empty even when the real cert sits
+        // in the DB. Answering "HTTPS is ready" from DB presence alone made a freshly
+        // rebuilt host (the setup→HTTPS restart) bind TLS and then throw
+        // "No SSL certificate loaded" on every handshake. Load before answering.
+        bool cacheEmpty;
+        lock (_certLock)
+        {
+            cacheEmpty = _cachedCertificate is null;
+        }
+
+        if (cacheEmpty)
+        {
+            try
+            {
+                LoadFromDb();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(
+                    "Certificate cache preload failed, falling through to the self-signed fallback: {Message}",
+                    [ex.Message]
+                );
+            }
+        }
+
+        // Answer from the same caches the selector reads — never from DB/file
+        // presence — so "true" always means the first TLS handshake can be served.
+        lock (_certLock)
+        {
+            if (_cachedCertificate is not null && _cachedCertificate.NotAfter > DateTime.Now)
+                return true;
+        }
 
         return TryEnsureSelfSignedCertificate();
     }
@@ -355,8 +386,8 @@ public class CertificateService : ICertificateService
         // Never log PEM/key material — only the non-secret expiry.
         _logger.LogInformation(
             "Generated self-signed fallback certificate (expires {NotAfter:yyyy-MM-dd}) so HTTPS "
-                     + "stays reachable without a Let's Encrypt cert. Direct browser access will show a "
-                     + "trust warning until a real certificate is acquired.",
+                + "stays reachable without a Let's Encrypt cert. Direct browser access will show a "
+                + "trust warning until a real certificate is acquired.",
             generated.NotAfter
         );
     }

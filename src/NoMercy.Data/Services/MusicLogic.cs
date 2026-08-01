@@ -400,7 +400,8 @@ public partial class MusicLogic : IAsyncDisposable
             await mediaContext
                 .ReleaseGroups.Upsert(insert)
                 .On(e => new { e.Id })
-                .WhenMatched((s, i) =>
+                .WhenMatched(
+                    (s, i) =>
                         new()
                         {
                             Id = i.Id,
@@ -488,7 +489,8 @@ public partial class MusicLogic : IAsyncDisposable
             await mediaContext
                 .Albums.Upsert(insert)
                 .On(e => new { e.Id })
-                .WhenMatched((s, i) =>
+                .WhenMatched(
+                    (s, i) =>
                         new()
                         {
                             Id = i.Id,
@@ -573,7 +575,8 @@ public partial class MusicLogic : IAsyncDisposable
             await mediaContext
                 .Artists.Upsert(insert)
                 .On(e => new { e.Id })
-                .WhenMatched((s, i) =>
+                .WhenMatched(
+                    (s, i) =>
                         new()
                         {
                             Id = i.Id,
@@ -675,7 +678,8 @@ public partial class MusicLogic : IAsyncDisposable
             await mediaContext
                 .Tracks.Upsert(insert)
                 .On(e => new { e.Id })
-                .WhenMatched((ts, ti) =>
+                .WhenMatched(
+                    (ts, ti) =>
                         new()
                         {
                             Id = ti.Id,

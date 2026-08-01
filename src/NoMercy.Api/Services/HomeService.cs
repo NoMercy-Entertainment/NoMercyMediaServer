@@ -356,7 +356,10 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
         bool hasContinueWatching = continueWatching.Count > 0;
         string? continueId = hasContinueWatching ? "continue" : null;
 
-        string? lastCarouselId = genreCarousels.Count > 0 ? $"genre_{genreCarousels[^1].Id}" : null;
+        string? lastCarouselId =
+            genreCarousels.Count > 0 ? $"genre_{genreCarousels[^1].Id}"
+            : libraryCarousels.Count > 0 ? $"library_{libraryCarousels[^1].Id}"
+            : null;
 
         string? afterContinueId =
             libraryCarousels.Count > 0 ? $"library_{libraryCarousels[0].Id}"
@@ -408,7 +411,12 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
         {
             GenreCarouselData genre = genreCarousels[i];
 
-            string? prevId = i == 0 ? continueId : $"genre_{genreCarousels[i - 1].Id}";
+            string? prevId =
+                i == 0
+                    ? libraryCarousels.Count > 0
+                        ? $"library_{libraryCarousels[^1].Id}"
+                        : continueId
+                    : $"genre_{genreCarousels[i - 1].Id}";
             string? nextId =
                 i == genreCarousels.Count - 1 ? continueId : $"genre_{genreCarousels[i + 1].Id}";
 

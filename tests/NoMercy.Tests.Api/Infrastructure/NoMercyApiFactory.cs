@@ -196,6 +196,14 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
     public static readonly Ulid TvFolderId = Ulid.NewUlid();
     public static readonly Ulid MusicFolderId = Ulid.NewUlid();
 
+    /// <summary>
+    /// A local driver with an empty rootPath — the shape production actually
+    /// seeds for the system-local driver. The fixture's own system-local row
+    /// carries a real root so the seeded folders resolve, so an unscoped driver
+    /// needs a row of its own.
+    /// </summary>
+    public static readonly Ulid UnscopedLocalDriverId = Ulid.NewUlid();
+
     public static readonly Guid ArtistId1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
     public static readonly Guid AlbumId1 = Guid.Parse("22222222-2222-2222-2222-222222222222");
     public static readonly Guid TrackId1 = Guid.Parse("33333333-3333-3333-3333-333333333333");
@@ -327,7 +335,16 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
-        context.Drivers.Add(systemLocalDriver);
+        Driver unscopedLocalDriver = new()
+        {
+            Id = UnscopedLocalDriverId,
+            Name = "Unscoped Local",
+            Type = "local",
+            Config = """{"rootPath":""}""",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        context.Drivers.AddRange(systemLocalDriver, unscopedLocalDriver);
 
         Folder movieFolder = new()
         {

@@ -56,13 +56,6 @@ public class AutoEncodeSubscriber(
     IJobDispatcher dispatcher
 ) : IHostedService
 {
-    /// <summary>
-    /// Configuration key gating the whole auto-encode-on-scan behavior.
-    /// Absent or anything other than "true" (case-insensitive) keeps it off,
-    /// so a fresh install and every existing server stay opt-in by default.
-    /// </summary>
-    internal const string AutoEncodeOnScanKey = "encoder.auto_encode_on_scan";
-
     private readonly List<IDisposable> _subscriptions = [];
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -91,20 +84,8 @@ public class AutoEncodeSubscriber(
         return Task.CompletedTask;
     }
 
-    private bool IsAutoEncodeEnabled()
-    {
-        return string.Equals(
-            configurationStore.GetValue(AutoEncodeOnScanKey),
-            "true",
-            StringComparison.OrdinalIgnoreCase
-        );
-    }
-
     private async Task HandleAsync(MediaFilesScannedEvent evt, CancellationToken ct)
     {
-        if (!IsAutoEncodeEnabled())
-            return;
-
         try
         {
             await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
