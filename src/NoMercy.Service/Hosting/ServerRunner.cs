@@ -131,15 +131,23 @@ public class ServerRunner : IServerRunner
             hostStopping
         );
 
-        // Run post-auth (registration + cert) in background — this waits for
-        // Authenticated state, then runs Phase 3 and transitions to Complete.
+        // Run post-auth (registration + cert) in background — RunPostAuthAsync
+        // waits for Authenticated itself, then runs Phase 3 and transitions to
+        // Complete.
+        //
+        // It must be RunPostAuthAsync, not the bare RunRegistrationAsync: only the
+        // former marks BootStage.Auth and starts the background tasks that mark
+        // Binaries and Network. BootStage.All is Essential|Auth|Binaries|Network|
+        // Registered, and the library/import queues refuse to run until All is
+        // reached — so calling the inner method left a freshly onboarded server
+        // with every library scan queued forever and ffmpeg never downloaded,
+        // recoverable only by restarting.
         Task postAuthTask = Task.Run(
             async () =>
             {
                 try
                 {
-                    await setupState.WaitForPhaseAsync(SetupPhase.Authenticated, linkedCts.Token);
-                    await orchestrator.RunRegistrationAsync(linkedCts.Token);
+                    await orchestrator.RunPostAuthAsync(linkedCts.Token);
                 }
                 catch (OperationCanceledException)
                 {
