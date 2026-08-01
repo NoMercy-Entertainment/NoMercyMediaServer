@@ -958,6 +958,14 @@ public class SetupEndpoints
                     continue;
                 }
 
+                // An expired code is the normal fate of a QR nobody scanned in
+                // time — the setup page re-requests a fresh code shortly before
+                // expiry, so ending this poll quietly is the whole handling.
+                // Surfacing it as a setup ERROR told a brand-new user their
+                // onboarding failed when nothing was wrong yet.
+                if (errorCode == "expired_token")
+                    return;
+
                 if (errorCode != "authorization_pending")
                 {
                     // Transition first: TransitionTo clears ErrorMessage.
@@ -974,8 +982,8 @@ public class SetupEndpoints
             }
         }
 
-        _state.TransitionTo(SetupPhase.Unauthenticated);
-        _state.SetError("Device authorization timed out");
+        // Natural expiry without a grant: same story as expired_token above —
+        // the page mints a fresh code; this is not an error state.
     }
 
     // ── Private helpers ─────────────────────────────────────────────────────
