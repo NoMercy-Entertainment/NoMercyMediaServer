@@ -72,7 +72,7 @@ public class Socials
 
 public class Keys
 {
-    [JsonProperty("make_mkv_key")]
+    [JsonProperty("makemkv_key")]
     public string MakeMkvKey { get; set; } = string.Empty;
 
     [JsonProperty("tmdb_key")]
@@ -87,7 +87,7 @@ public class Keys
     [JsonProperty("rotten_tomatoes")]
     public string RottenTomatoes { get; set; } = string.Empty;
 
-    [JsonProperty("acoustic_id_key")]
+    [JsonProperty("acoustic_id")]
     public string AcousticIdKey { get; set; } = string.Empty;
 
     [JsonProperty("tadb_key")]
@@ -101,9 +101,6 @@ public class Keys
 
     [JsonProperty("musixmatch_key")]
     public string MusixmatchKey { get; set; } = string.Empty;
-
-    [JsonProperty("jwplayer_key")]
-    public string JwplayerKey { get; set; } = string.Empty;
 }
 
 public class Contact
