@@ -202,7 +202,9 @@ public class BootOrchestrator
             if (!string.IsNullOrEmpty(verificationUri))
             {
                 SetupTerminalUi ui = new();
-                ui.Show(verificationUri, deviceResponse.VerificationUri, userCode, "");
+                string setupPageUrl =
+                    $"http://localhost:{RuntimeServerSettings.Current.InternalServerPort}/setup";
+                ui.Show(verificationUri, deviceResponse.VerificationUri, userCode, setupPageUrl);
             }
 
             if (!string.IsNullOrEmpty(deviceCode))
@@ -296,7 +298,6 @@ public class BootOrchestrator
         }
         catch (Exception ex)
         {
-            _setupState.SetError($"Registration failed: {ex.Message}");
             Logger.Setup($"Registration failed: {ex.Message}", LogEventLevel.Error);
 
             // Don't block — DegradedModeRecovery will retry. Mark Registered as
@@ -307,7 +308,12 @@ public class BootOrchestrator
                 NmSystem.Lifecycle.BootStage.Registered
             );
 
+            // Transition BEFORE recording the error: TransitionTo clears
+            // _errorMessage as stale-progress cleanup, so the old order wiped the
+            // failure it had just recorded and /setup/status reported a clean
+            // Complete after a failed registration.
             _setupState.TransitionTo(SetupPhase.Complete);
+            _setupState.SetError($"Registration failed: {ex.Message}");
             return false;
         }
     }
