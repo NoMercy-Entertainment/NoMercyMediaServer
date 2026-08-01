@@ -68,6 +68,35 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
     }
 
+    /// <summary>
+    /// The release id for a file: the embedded MusicBrainz tag when present,
+    /// otherwise whatever acoustic fingerprinting can identify. Returns null only
+    /// when both fail, in which case the caller skips the file.
+    ///
+    /// Both import paths MUST go through this. The singles path fingerprinted
+    /// untagged files while the album path silently skipped them, so a library of
+    /// releases carrying no MusicBrainz tags (anything not tagged by Picard —
+    /// Bandcamp, Free Music Archive, CC albums) imported as literally nothing:
+    /// every folder recorded "MusicBrainz release could not be resolved" and the
+    /// user saw an empty music library with no error on screen.
+    /// </summary>
+    private async Task<Guid?> ResolveReleaseIdAsync(MediaFile mediaFile, AudioTagModel audioTag)
+    {
+        if (
+            audioTag.MusicBrainz?.ReleaseId is not null
+            && audioTag.MusicBrainz.ReleaseId != Guid.Empty
+        )
+            return audioTag.MusicBrainz.ReleaseId;
+
+        Guid? discoveredReleaseId = await TryDiscoverReleaseIdAsync(mediaFile);
+        if (discoveredReleaseId is null)
+            return null;
+
+        audioTag.MusicBrainz ??= new();
+        audioTag.MusicBrainz.ReleaseId = discoveredReleaseId.Value;
+        return discoveredReleaseId;
+    }
+
     // Identify a file with no embedded MusicBrainz id by acoustic fingerprint:
     // fingerprint via the injected IAudioFingerprinter, look it up against
     // AcoustId, and return the first MusicBrainz release id found (null on any
@@ -140,24 +169,11 @@ public class AudioImportJob : AbstractMusicFolderJob
             > processedSingles = new();
             await foreach ((MediaFile mediaFile, AudioTagModel audioTag) in audioFilesFactory())
             {
-                if (
-                    audioTag.MusicBrainz?.ReleaseId is null
-                    || audioTag.MusicBrainz.ReleaseId == Guid.Empty
-                )
-                {
-                    // No MusicBrainz id in the file tags — fall back to acoustic
-                    // fingerprinting to identify the release. Skip the file only if
-                    // fingerprinting also fails to find a match.
-                    Guid? discoveredReleaseId = await TryDiscoverReleaseIdAsync(mediaFile);
-                    if (discoveredReleaseId is null)
-                        continue;
-
-                    audioTag.MusicBrainz ??= new();
-                    audioTag.MusicBrainz.ReleaseId = discoveredReleaseId.Value;
-                }
+                if (await ResolveReleaseIdAsync(mediaFile, audioTag) is null)
+                    continue;
 
                 MusicBrainzReleaseAppends? releaseAppends =
-                    await musicBrainzReleaseClient.WithAllAppends(audioTag.MusicBrainz.ReleaseId);
+                    await musicBrainzReleaseClient.WithAllAppends(audioTag.MusicBrainz!.ReleaseId);
                 if (releaseAppends is null)
                     continue;
 
@@ -275,16 +291,13 @@ public class AudioImportJob : AbstractMusicFolderJob
             );
 
             // First pass: count releases without storing all tags in memory
-            await foreach ((_, AudioTagModel audioTag) in audioFilesFactory())
+            await foreach ((MediaFile mediaFile, AudioTagModel audioTag) in audioFilesFactory())
             {
-                if (
-                    audioTag.MusicBrainz?.ReleaseId is null
-                    || audioTag.MusicBrainz.ReleaseId == Guid.Empty
-                )
+                if (await ResolveReleaseIdAsync(mediaFile, audioTag) is null)
                     continue;
 
                 MusicBrainzReleaseAppends? releaseAppends =
-                    await musicBrainzReleaseClient.WithAllAppends(audioTag.MusicBrainz.ReleaseId);
+                    await musicBrainzReleaseClient.WithAllAppends(audioTag.MusicBrainz!.ReleaseId);
                 if (releaseAppends is null)
                     continue;
 
