@@ -141,7 +141,11 @@ public class ConnectionHub : Hub
         }
 
         // client_id is the only field the upsert keys on — without it, every such
-        // connection would collide on the same empty-string DeviceId row.
+        // connection would collide on the same empty-string DeviceId row, so no
+        // device is persisted and the id this client is carrying points at nothing.
+        if (string.IsNullOrEmpty(client.DeviceId))
+            ClearUnbackedDeviceId(client);
+
         if (!string.IsNullOrEmpty(client.DeviceId))
         {
             await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
@@ -227,10 +231,35 @@ public class ConnectionHub : Hub
         // Ulid never made it into the Devices table.
         if (device is not null)
             client.Id = device.Id;
+        else
+            ClearUnbackedDeviceId(client);
 
         client.CustomName = device?.CustomName;
         client.VolumePercent = device?.VolumePercent;
         client.IsActive = true;
+    }
+
+    /// <summary>
+    /// Drop the id of a client no Devices row backs, so nothing downstream
+    /// presents it as one.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="Device" /> base assigns a fresh Ulid at construction, which
+    /// looks exactly like a key and is not one. A connection that never reached
+    /// the upsert — no <c>client_id</c> on the query string, or a lookup that came
+    /// back empty — still went into the connected-client map carrying it, and
+    /// every activity row written against that client failed the foreign key and
+    /// was dropped after three retries. One guest on a live server had not a
+    /// single row recorded, ever, for that reason.
+    ///
+    /// Empty is the value the activity log already understands as "no device"
+    /// (<c>ActivityLogger.WriteAsync</c> maps it to null, and the column is
+    /// nullable for exactly this). Saying that records the event with the device
+    /// left blank instead of losing the event.
+    /// </remarks>
+    internal static void ClearUnbackedDeviceId(Client client)
+    {
+        client.Id = Ulid.Empty;
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

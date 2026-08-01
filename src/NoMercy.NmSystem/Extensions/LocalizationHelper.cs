@@ -68,6 +68,45 @@ public static class LocalizationHelper
         }
     }
 
+    /// <summary>
+    /// Path of the checked-in I18N.xml relative to a build output directory, or
+    /// null when it is not there — which is every installed server, because the
+    /// file only exists in a source checkout.
+    ///
+    /// Harvesting missing keys is a developer convenience, so on a real install it
+    /// must be a silent no-op. Without this check the walk resolved to
+    /// "/NoMercy.Api/Resources/I18N.xml", the load threw, and every untranslated
+    /// string logged "LocalizationHelper: failed to record missing key" at users
+    /// who can do nothing about it.
+    /// </summary>
+    internal static string? ResolveSourceI18NPath(string baseDirectory)
+    {
+        // Walk up rather than counting a fixed number of parents: the old
+        // five-deep hop assumed bin/<cfg>/<tfm> exactly, so it missed the "src"
+        // segment entirely (it looked for <repo>/NoMercy.Api/... instead of
+        // <repo>/src/NoMercy.Api/...) and a publish layout with a RID folder sits
+        // one level deeper again. Searching upward finds the checked-in file from
+        // any build output shape, and finds nothing on an installed server.
+        DirectoryInfo? directory = new DirectoryInfo(baseDirectory);
+
+        while (directory is not null)
+        {
+            string candidate = Path.Combine(
+                directory.FullName,
+                "src",
+                "NoMercy.Api",
+                "Resources",
+                "I18N.xml"
+            );
+            if (File.Exists(candidate))
+                return candidate;
+
+            directory = directory.Parent;
+        }
+
+        return null;
+    }
+
     private static void AppendMissingLocalization(string key)
     {
         // Cheap pre-check outside the lock — vast majority of calls are
@@ -78,14 +117,9 @@ public static class LocalizationHelper
                 return;
         }
 
-        string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        string? projectRoot = Directory
-            .GetParent(baseDirectory)
-            ?.Parent?.Parent?.Parent?.Parent?.FullName;
-        if (projectRoot is null)
+        string? filePath = ResolveSourceI18NPath(AppDomain.CurrentDomain.BaseDirectory);
+        if (filePath is null)
             return;
-
-        string filePath = Path.Combine(projectRoot, "NoMercy.Api", "Resources", "I18N.xml");
 
         lock (WriteLock)
         {
@@ -99,7 +133,11 @@ public static class LocalizationHelper
                 return;
 
             XElement newEntry = new(
-                "Entry", [new XElement("Key", key), new XElement("Value", [new XAttribute("lang", "nl"), key])]
+                "Entry",
+                [
+                    new XElement("Key", key),
+                    new XElement("Value", [new XAttribute("lang", "nl"), key]),
+                ]
             );
 
             doc.Root?.Add(newEntry);

@@ -221,6 +221,45 @@ public sealed class ConnectionHubTests : IDisposable
         Assert.Single(_connectedClients.Clients);
     }
 
+    /// <summary>
+    /// A tracked client no Devices row backs must not carry an id that looks like
+    /// one. Every activity row written against such a client failed the foreign
+    /// key and was dropped after three retries — one guest on a live server had
+    /// not a single row recorded, ever. Empty is what the activity log reads as
+    /// "no device", so the event lands with the device left blank.
+    /// </summary>
+    [Fact]
+    public async Task OnConnectedAsync_WithoutClientId_TracksClientWithNoDeviceId()
+    {
+        User user = new()
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@nomercy.tv",
+            Name = "Test",
+        };
+        TestableConnectionHub hub = BuildHub(user, out _, out _);
+
+        await hub.OnConnectedAsync();
+
+        Client tracked = Assert.Single(_connectedClients.Clients).Value;
+        Assert.Equal(Ulid.Empty, tracked.Id);
+    }
+
+    /// <summary>
+    /// The same rule for a client that DID reach the upsert but whose lookup came
+    /// back empty: the id it was constructed with still points at nothing.
+    /// </summary>
+    [Fact]
+    public void ClearUnbackedDeviceId_LeavesNoIdToMistakeForAKey()
+    {
+        Client client = new();
+        Assert.NotEqual(Ulid.Empty, client.Id);
+
+        ConnectionHub.ClearUnbackedDeviceId(client);
+
+        Assert.Equal(Ulid.Empty, client.Id);
+    }
+
     [Fact]
     public async Task OnConnectedAsync_Reconnect_PreservesPersistedCustomNameAndVolume()
     {
