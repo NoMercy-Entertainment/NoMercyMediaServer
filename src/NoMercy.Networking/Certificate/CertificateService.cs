@@ -613,6 +613,11 @@ public class CertificateService : ICertificateService
                     _logger.LogInformation("Skipping renewal: {Message}", ex.Message);
                     return;
                 }
+                catch (CertificateUnauthorizedException ex)
+                {
+                    _logger.LogError("Certificate request aborted: {Message}", ex.Message);
+                    return;
+                }
                 catch (Exception ex)
                     when (attempt < maxRetries
                         // An HttpClient timeout surfaces as TaskCanceledException wrapping a
@@ -664,6 +669,26 @@ public class CertificateService : ICertificateService
 
         if (response.StatusCode == HttpStatusCode.GatewayTimeout)
             throw new HttpRequestException("Gateway timeout waiting for certificate");
+
+        // 401/403 is terminal for this token — retrying cannot heal an invalid or
+        // expired token, and hammering the endpoint 30 times just delays boot by
+        // 5 minutes before failing anyway. Bail out; the daily cron / degraded-mode
+        // recovery retries later with a refreshed token.
+        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            string unauthorizedBody = await response.Content.ReadAsStringAsync();
+            string unauthorizedMessage = ExtractApiMessage(unauthorizedBody);
+            throw new CertificateUnauthorizedException(
+                $"Certificate API rejected the request with {(int)response.StatusCode} — "
+                    + "the auth token is invalid, expired, or this server is not registered to the "
+                    + "authenticated account."
+                    + (
+                        string.IsNullOrEmpty(unauthorizedMessage)
+                            ? string.Empty
+                            : $" API said: {unauthorizedMessage}"
+                    )
+            );
+        }
 
         // 400 from the renewal endpoint means the API doesn't think the cert is
         // due yet (it gates renewal at 14 days from expiry). Surface the body
@@ -760,6 +785,17 @@ public class CertificateService : ICertificateService
     private sealed class CertificateNotDueException : Exception
     {
         public CertificateNotDueException(string message)
+            : base(message) { }
+    }
+
+    /// <summary>
+    /// API responded 401/403 — the token is invalid/expired or the server is not
+    /// registered to this account. Terminal for the current attempt window: the
+    /// retry loop must bail instead of hammering with the same dead token.
+    /// </summary>
+    private sealed class CertificateUnauthorizedException : Exception
+    {
+        public CertificateUnauthorizedException(string message)
             : base(message) { }
     }
 

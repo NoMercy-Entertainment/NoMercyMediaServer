@@ -71,9 +71,6 @@ public sealed class ServerBootstrapper
         Stopwatch stopWatch = new();
         stopWatch.Start();
 
-        // Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
-        await Start.InitEssential();
-
         // Route storage-facade temp + transcode writes inside the NoMercy data
         // directory instead of the OS temp folder. StoragePaths default to
         // Path.GetTempPath(); the orchestrator + remote storage stage files
@@ -86,9 +83,19 @@ public sealed class ServerBootstrapper
         // container is built. Same pattern as Start.cs Binaries task.
         (IStorage preBootStorage, IStorageDriver preBootBackend) = BootstrapStorageFactory.Create();
 
+        // Folders, then schema, then Phase 1 — in that order. Phase 1's
+        // UserSettings task reads the Configuration table, so on a fresh install
+        // the schema must already exist or every first boot opens with a
+        // "no such table: Configuration" error and silently discards defaults.
+        // CreateAppFolders is idempotent; Phase 1 re-running it is harmless.
+        await AppFiles.CreateAppFolders();
+
         // Create a database schema before anything else can query it.
         // This does NOT require auth — only migrations + EnsureCreated.
         await DatabaseSeeder.InitSchema(preBootStorage);
+
+        // Phase 1 (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
+        await Start.InitEssential();
 
         // Seed offline data (config, languages, encoder profiles, etc.)
         // immediately so the UI has data before auth completes.

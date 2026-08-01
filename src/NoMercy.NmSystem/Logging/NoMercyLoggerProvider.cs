@@ -38,6 +38,7 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
     private readonly bool _color;
     private readonly StreamWriter? _file;
     private readonly bool _bridged;
+    private bool _disposed;
     private IExternalScopeProvider? _scopes;
 
     public NoMercyLoggerProvider(NoMercyLoggerOptions options, TextWriter? output = null)
@@ -90,6 +91,7 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
 
         lock (_gate)
         {
+            _disposed = true;
             _file?.Dispose();
         }
     }
@@ -122,7 +124,8 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
 
         lock (_gate)
         {
-            _file.WriteLine(JsonSerializer.Serialize(fileLine, JsonOptions));
+            if (!_disposed)
+                _file.WriteLine(JsonSerializer.Serialize(fileLine, JsonOptions));
         }
     }
 
@@ -207,10 +210,15 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
             exception?.ToString()
         );
 
+        // A logger resolved from an already-disposed DI container (e.g. the HTTP
+        // host's ServerRunner logging after the HTTPS restart swap) must degrade to
+        // console-only, never throw — an ObjectDisposedException here took down the
+        // whole process at the last step of first-boot setup.
         lock (_gate)
         {
             _output.WriteLine(line);
-            _file?.WriteLine(JsonSerializer.Serialize(fileLine, JsonOptions));
+            if (!_disposed)
+                _file?.WriteLine(JsonSerializer.Serialize(fileLine, JsonOptions));
         }
 
         if (_options.OnRecord is not null)

@@ -171,9 +171,14 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
 
         // maxRetries: 3 would otherwise sleep through the real 2s/5s backoff between
         // attempts; the 401 short-circuit means only ONE assign attempt should ever
-        // fire regardless of the retry budget, so this proves the break — not the loop.
-        await service.Init(maxRetries: 3);
+        // fire regardless of the retry budget — and it must FAIL the Init call.
+        // The old silent `break` let boot continue to certificate fetch with the
+        // same dead token, producing a 30-attempt 401 retry storm downstream.
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.Init(maxRetries: 3)
+        );
 
+        Assert.Contains("401", ex.Message);
         Assert.Equal(1, assignAttempts);
     }
 
@@ -194,14 +199,16 @@ public sealed class ServerRegistrationServiceHttpTests : IDisposable
 
         ServerRegistrationService service = Build(CreateFactory());
 
-        // RegisterServer's 401 handling is a silent `break` (log + return), not a
-        // throw — the SAME 401 also short-circuits AssignServerWithRetry immediately
-        // after (both hit the same server here), so the whole Init() call completes
-        // without throwing at all. Needs maxRetries >= 2: with maxRetries=1 the
-        // `when (attempt < maxRetries)` catch filter never matches and the exception
-        // propagates uncaught instead (covered by RegisterServer_SingleAttemptFailure_PropagatesException).
-        await service.Init(maxRetries: 3);
+        // A 401 on register is terminal for the token: exactly one attempt fires
+        // and Init fails loudly so the caller re-enters auth. Needs maxRetries >= 2
+        // so the `when (attempt < maxRetries)` filter is the code path under test
+        // (with maxRetries=1 the raw HttpRequestException propagates instead —
+        // covered by RegisterServer_SingleAttemptFailure_PropagatesException).
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.Init(maxRetries: 3)
+        );
 
+        Assert.Contains("401", ex.Message);
         Assert.Equal(1, registerAttempts);
     }
 
