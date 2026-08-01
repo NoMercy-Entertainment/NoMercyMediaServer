@@ -171,13 +171,13 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task List_UnscopedLocalDriverAtItsRoot_Returns400_BecauseItHasNoRoot()
     {
-        // The seeded system-local driver carries no rootPath, so it applies no root
-        // restriction and has nothing of its own to enumerate — it stands for the host
-        // filesystem, which dashboard/filesystem serves. Answering 200 here let the
+        // Production seeds the system-local driver with an empty rootPath, so it applies
+        // no root restriction and has nothing of its own to enumerate — it stands for the
+        // host filesystem, which dashboard/filesystem serves. Answering 200 here let the
         // path guard's rejection reach the picker as an empty folder.
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
             "/api/v1/dashboard/storage/list",
-            new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "" }
+            new { driver_id = NoMercyApiFactory.UnscopedLocalDriverId.ToString(), path = "" }
         );
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
