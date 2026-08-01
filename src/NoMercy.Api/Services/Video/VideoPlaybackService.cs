@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.Events.Playback;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Domain;
@@ -238,6 +239,23 @@ public class VideoPlaybackService
         );
     }
 
+    /// <summary>
+    /// Tells clients the continue-watching carousel is stale. Watch progress is
+    /// exactly what that row is built from, so without this the carousel only
+    /// caught up on a full page load: a title started on one device kept showing
+    /// its old position (or stayed missing entirely) on every other device.
+    /// Mirrors the key TvShowsController already publishes after a watch toggle.
+    /// </summary>
+    private async Task PublishContinueWatchingRefreshAsync()
+    {
+        IEventBus? bus =
+            _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+        if (bus is null)
+            return;
+
+        await bus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
+    }
+
     private async Task PublishCompletedEventAsync(Guid userId, VideoPlayerState state)
     {
         IEventBus? bus =
@@ -365,5 +383,7 @@ public class VideoPlaybackService
                     }
             )
             .RunAsync();
+
+        await PublishContinueWatchingRefreshAsync();
     }
 }
