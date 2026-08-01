@@ -24,6 +24,14 @@ public interface IFileRepository
     Task StoreVideoFile(VideoFile videoFile);
     Task<Ulid> StoreMetadata(Metadata metadata);
     Task<Episode?> GetEpisode(int? showId, MediaFile item);
+
+    /// <summary>
+    /// Records that a video file in a TV library resolved to no episode. Such a file is
+    /// stored with no episode and no movie, so nothing can ever list or play it, and the
+    /// library filter (which requires an episode with a playable file) hides the whole
+    /// show — leaving a library that looks empty for no stated reason.
+    /// </summary>
+    Task RecordUnmatchedEpisodeFileAsync(string filePath, Ulid libraryId, string reason);
     Task<(Movie? movie, Tv? show, string type)> MediaType(int id, Library library);
     Task<int> DeleteVideoFilesByHostFolderAsync(string hostFolder);
     Task<int> DeleteMetadataByHostFolderAsync(string hostFolder);
