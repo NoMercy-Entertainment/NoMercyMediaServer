@@ -24,30 +24,28 @@ namespace NoMercy.MediaProcessing.Files;
 /// </summary>
 public class FilesystemRepository(IStorageDriver driver)
 {
+    /// <summary>
+    /// Lists the browsable child directories of <paramref name="folder"/>.
+    /// An empty <paramref name="folder"/> means "no path chosen yet" and lists
+    /// nothing. Anything the host refuses to read throws, so the caller can tell
+    /// a typo'd or offline path apart from a folder that genuinely has no
+    /// subfolders.
+    /// </summary>
+    /// <exception cref="DirectoryNotFoundException">The folder does not exist.</exception>
+    /// <exception cref="UnauthorizedAccessException">The host denied access.</exception>
+    /// <exception cref="IOException">The host could not read the folder.</exception>
     public (string? parent, List<DirectoryTree> entries) List(string folder, bool withEmpty)
     {
         if (string.IsNullOrEmpty(folder))
             return (null, []);
 
         if (!driver.DirectoryExists(folder))
-            return (null, []);
+            throw new DirectoryNotFoundException($"folder does not exist: {folder}");
 
-        List<DirectoryTree> entries;
-        try
-        {
-            entries = EnumerateChildDirectories(folder)
-                .Select(child => Build(folder, child, withEmpty))
-                .OrderBy(e => e.Path, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-        }
-        catch (IOException)
-        {
-            return (ParentOf(folder), []);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return (ParentOf(folder), []);
-        }
+        List<DirectoryTree> entries = EnumerateChildDirectories(folder)
+            .Select(child => Build(folder, child, withEmpty))
+            .OrderBy(e => e.Path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         return (ParentOf(folder), entries);
     }
