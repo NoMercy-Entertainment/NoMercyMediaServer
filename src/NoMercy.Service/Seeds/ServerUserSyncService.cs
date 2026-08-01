@@ -70,10 +70,28 @@ public class ServerUserSyncService(IServerUserApiClient apiClient) : IServerUser
             return new(false, 0, 0);
         }
 
-        ServerUserDtoData[] serverUsers = await apiClient.GetServerUsersAsync(
-            accessToken,
-            cancellationToken
-        );
+        ServerUserDtoData[] serverUsers;
+        try
+        {
+            serverUsers = await apiClient.GetServerUsersAsync(accessToken, cancellationToken);
+        }
+        catch (HttpRequestException ex)
+            when (ex.Message.Contains("400") || ex.Message.Contains("403"))
+        {
+            // The API answers 400 "not allowed" when it has no server row owned by
+            // the authenticated account for this device id — the server row belongs
+            // to a DIFFERENT account (or assignment never completed). Retrying on a
+            // cron cannot fix that; only re-running setup/assignment can. Say so
+            // instead of spamming the raw envelope every sync interval.
+            Logger.Setup(
+                "Server-user sync rejected by the API: this server is not registered to the "
+                    + "authenticated account (ownership mismatch or incomplete assignment). "
+                    + "Re-run setup to re-assign the server. Raw: "
+                    + ex.Message,
+                LogEventLevel.Error
+            );
+            return new(false, 0, 0);
+        }
 
         Logger.Setup($"Found {serverUsers.Length} server users", LogEventLevel.Verbose);
 

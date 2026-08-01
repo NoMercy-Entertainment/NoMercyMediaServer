@@ -63,8 +63,8 @@ public static class WebHostFactory
                     return
                         int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int cols)
                         && cols > 0
-                            ? cols
-                            : 120;
+                        ? cols
+                        : 120;
                 },
             }
         );
@@ -82,11 +82,6 @@ public static class WebHostFactory
         builder.Services.AddSingleton<IServerConfiguration, ServerConfigurationWrapper>();
 
         builder.Services.AddSingleton(options);
-        builder.Services.AddSingleton<
-            IApiVersionDescriptionProvider,
-            DefaultApiVersionDescriptionProvider
-        >();
-        builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
 
         // Configure host options with reduced shutdown timeout
         builder.Services.Configure<HostOptions>(hostOptions =>

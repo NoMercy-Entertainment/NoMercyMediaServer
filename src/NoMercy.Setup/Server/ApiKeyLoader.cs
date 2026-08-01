@@ -108,10 +108,14 @@ public class ApiKeyLoader : IApiKeyLoader
             return;
         }
 
-        // 3. No network, no cache — cannot function without keys
+        // 3. No network, no cache — provider features are unavailable for now, but a
+        // first boot behind a flaky API (e.g. a Cloudflare 530 during setup) must
+        // self-heal: keep retrying in the background exactly like the stale-cache
+        // path instead of requiring a manual restart once the API is back.
         _logger.LogError(
-            "API unreachable and no cached keys available — provider features will be unavailable"
+            "API unreachable and no cached keys available — provider features will be unavailable until the API can be reached (retrying in background)"
         );
+        StartBackgroundRefresh(ct);
     }
 
     private async Task<ApiInfoResponse?> TryFetchFromNetwork()

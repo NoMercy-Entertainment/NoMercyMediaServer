@@ -122,14 +122,17 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
                 .Build();
             await _image.CreateAsync();
 
-            _container = new ContainerBuilder()
-                .WithImage(_image)
+            _container = new ContainerBuilder(_image)
                 // Host networking: the container binds the host's network
                 // namespace directly, so S3/WebDAV/NFS are reachable at their
                 // real ports with no per-port NAT forwarding. The NAT proxy
                 // mangles the NFSv4 mount RPC; host networking avoids it. Docker
                 // Desktop must have host networking enabled (it is here).
-                .WithCreateParameterModifier(p => p.HostConfig.NetworkMode = "host")
+                .WithCreateParameterModifier(p =>
+                {
+                    p.HostConfig ??= new();
+                    p.HostConfig.NetworkMode = "host";
+                })
                 // The kernel nfsd needs --privileged to mount nfsd/rpc_pipefs and
                 // export over the host's NFS module (Docker Desktop's Linux VM
                 // provides it). This is the proven path libnfs talks to cleanly.

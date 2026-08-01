@@ -58,6 +58,37 @@ public class NoMercyLoggerSinkTests
     }
 
     [Fact]
+    public void Write_AfterDispose_DegradesToConsoleInsteadOfThrowing()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"nm-logdir-{Guid.NewGuid():N}");
+        try
+        {
+            NoMercyLoggerOptions options = new() { Color = false, LogDirectory = dir };
+            StringWriter console = new();
+            NoMercyLoggerProvider provider = new(options, console);
+            ILogger logger = provider.CreateLogger("NoMercy.Service.Hosting.ServerRunner");
+
+            provider.Dispose();
+
+            // A logger resolved from a disposed DI container (the HTTP host after
+            // the first-boot HTTPS restart swap) still logs. This exact call used
+            // to throw ObjectDisposedException from the closed per-run StreamWriter
+            // and crash the whole process at the last step of setup.
+            Exception? thrown = Record.Exception(() =>
+                logger.LogInformation("HTTPS server starting...")
+            );
+
+            thrown.Should().BeNull();
+            console.ToString().Should().Contain("HTTPS server starting...");
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
     public void Retention_KeepsOnlyMaxRunFiles()
     {
         string dir = Path.Combine(Path.GetTempPath(), $"nm-logdir-{Guid.NewGuid():N}");

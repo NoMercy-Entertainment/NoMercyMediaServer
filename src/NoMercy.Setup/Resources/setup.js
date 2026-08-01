@@ -153,7 +153,18 @@
         el("qr-error").classList.remove("qr-hidden");
     }
 
+    var deviceRefreshTimer = null;
+
     function startDeviceGrant() {
+        if (deviceRefreshTimer) {
+            clearTimeout(deviceRefreshTimer);
+            deviceRefreshTimer = null;
+        }
+        if (devicePollTimer) {
+            clearInterval(devicePollTimer);
+            devicePollTimer = null;
+        }
+
         fetch("/setup/device-code", { method: "POST" })
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -164,6 +175,13 @@
 
                 showQrReady(data);
 
+                // A device code expires (typically 10 minutes) and a stale QR
+                // scans into nothing — mint a fresh one shortly before expiry
+                // so the code on screen is always redeemable.
+                var expiresIn = Number(data.expires_in) || 600;
+                var refreshInMs = Math.max((expiresIn - 30) * 1000, 30000);
+                deviceRefreshTimer = setTimeout(startDeviceGrant, refreshInMs);
+
                 // Poll until auth transitions away from Unauthenticated
                 devicePollTimer = setInterval(function() {
                     fetch("/setup/status")
@@ -173,6 +191,10 @@
                                     status.phase !== "Unauthenticated") {
                                 clearInterval(devicePollTimer);
                                 devicePollTimer = null;
+                                if (deviceRefreshTimer) {
+                                    clearTimeout(deviceRefreshTimer);
+                                    deviceRefreshTimer = null;
+                                }
                                 show("step-progress");
                                 startStatusStream();
                             }

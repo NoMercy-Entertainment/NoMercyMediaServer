@@ -145,14 +145,21 @@ public class ServerRegistrationService : IServerRegistrationService
             }
             catch (Exception ex) when (attempt < maxRetries)
             {
+                // 401 means the auth token is rejected — waiting cannot heal it, and
+                // silently continuing used to let boot march on to certificate fetch
+                // with the same dead token (a 30-attempt 401 retry storm downstream).
+                // Fail the registration loudly so the caller re-enters auth instead.
+                if (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+                    throw new InvalidOperationException(
+                        "Server registration rejected with 401 Unauthorized — the auth token is invalid or expired. Re-authenticate and retry.",
+                        ex
+                    );
+
                 int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
                 Logger.Register(
                     $"Registration failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
                     LogEventLevel.Warning
                 );
-
-                if (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
-                    break;
 
                 await Task.Delay(TimeSpan.FromSeconds(delay));
             }
@@ -170,14 +177,20 @@ public class ServerRegistrationService : IServerRegistrationService
             }
             catch (Exception ex) when (attempt < maxRetries)
             {
+                // Same rule as RegisterServer: a 401 is terminal for this token, and
+                // swallowing it left the server half-registered (no owner provisioned)
+                // while boot continued as if assignment had succeeded.
+                if (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+                    throw new InvalidOperationException(
+                        "Server assignment rejected with 401 Unauthorized — the auth token is invalid or expired. Re-authenticate and retry.",
+                        ex
+                    );
+
                 int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
                 Logger.Register(
                     $"Server assignment failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
                     LogEventLevel.Warning
                 );
-
-                if (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
-                    break;
 
                 await Task.Delay(TimeSpan.FromSeconds(delay));
             }

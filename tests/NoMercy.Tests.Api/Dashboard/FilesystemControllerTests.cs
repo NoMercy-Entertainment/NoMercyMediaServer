@@ -45,7 +45,9 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
             new { folder = "" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -69,6 +71,17 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
+    public async Task List_MissingFolder_Returns404_SoThePickerCannotAcceptIt()
+    {
+        HttpResponseMessage response = await _authed.PostAsJsonAsync(
+            "/api/v1/dashboard/filesystem/ls",
+            new { folder = "/nomercy-no-such-folder-9f2c41" }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Home_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsJsonAsync(
@@ -76,7 +89,9 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
             new { }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -108,7 +123,9 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
             new { }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -146,7 +163,9 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
             new { parent = "", name = "" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

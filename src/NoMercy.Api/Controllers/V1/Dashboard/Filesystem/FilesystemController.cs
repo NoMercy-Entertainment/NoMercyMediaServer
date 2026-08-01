@@ -51,6 +51,18 @@ public class FilesystemController(
                 }
             );
         }
+        catch (DirectoryNotFoundException e)
+        {
+            return NotFoundResponse(e.Message);
+        }
+        catch (UnauthorizedAccessException e)
+        {
+            return UnauthorizedResponse(e.Message);
+        }
+        catch (IOException e)
+        {
+            return BadRequestResponse(e.Message);
+        }
         catch (Exception e)
         {
             logger.LogError(e, "Filesystem request failed");
