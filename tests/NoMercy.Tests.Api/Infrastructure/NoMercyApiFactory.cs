@@ -147,11 +147,15 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             .ConfigureServices(services =>
             {
                 services.AddSingleton(new StartupOptions());
-                services.AddSingleton<ISunsetPolicyManager>(new NoOpSunsetPolicyManager());
-                services.AddSingleton<
-                    IApiVersionDescriptionProvider,
-                    DefaultApiVersionDescriptionProvider
-                >();
+                // Startup's constructor takes IApiVersionDescriptionProvider, which
+                // must exist in the host services before ConfigureServices runs.
+                // Asp.Versioning 10 made DefaultApiVersionDescriptionProvider
+                // internal (and dropped ISunsetPolicyManager entirely), so a stub
+                // with no descriptions stands in — swagger doc generation is not
+                // under test here.
+                services.AddSingleton<IApiVersionDescriptionProvider>(
+                    new EmptyApiVersionDescriptionProvider()
+                );
 
                 // CustomLogger<T> depends on NoMercyLoggerProvider (which needs
                 // NoMercyLoggerOptions); production wires all three in WebHostFactory.
@@ -750,17 +754,10 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             );
     }
 
-    private sealed class NoOpSunsetPolicyManager : ISunsetPolicyManager
+    private sealed class EmptyApiVersionDescriptionProvider : IApiVersionDescriptionProvider
     {
-        public bool TryGetPolicy(
-            string? name,
-            ApiVersion? apiVersion,
-            out SunsetPolicy sunsetPolicy
-        )
-        {
-            sunsetPolicy = default!;
-            return false;
-        }
+        public IReadOnlyList<ApiVersionDescription> ApiVersionDescriptions { get; } =
+            Array.Empty<ApiVersionDescription>();
     }
 
     private sealed class StubPluginManager : IPluginManager
