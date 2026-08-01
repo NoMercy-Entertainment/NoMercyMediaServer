@@ -32,16 +32,24 @@ public sealed partial class FfmpegChromaprintFingerprinter(
     ILogger<FfmpegChromaprintFingerprinter> logger
 ) : IAudioFingerprinter
 {
-    [GeneratedRegex(@"DURATION=([0-9]+(?:\.[0-9]+)?)", RegexOptions.IgnoreCase)]
-    private static partial Regex DurationRegex();
-
-    [GeneratedRegex(@"FINGERPRINT=([A-Za-z0-9_-]+)", RegexOptions.IgnoreCase)]
-    private static partial Regex FingerprintRegex();
+    /// <summary>
+    /// A chromaprint fingerprint in AcoustID's wire form: URL-safe base64. The
+    /// muxer writes nothing else on stdout, so the whole payload is the value —
+    /// this only strips whitespace and rejects anything that isn't base64.
+    /// </summary>
+    [GeneratedRegex(@"^[A-Za-z0-9_\-=]+$")]
+    private static partial Regex Base64FingerprintRegex();
 
     public async Task<AudioFingerprint?> FingerprintAsync(string filePath, CancellationToken ct)
     {
         await using LocalPathLease inputLease = storage.AcquireLocalPath(filePath);
 
+        // fp_format=base64, not "compressed": AcoustID's fingerprint parameter
+        // takes the base64 form, and the muxer emits the compressed form as raw
+        // binary with no FINGERPRINT=/DURATION= labels at all — those labels are
+        // fpcalc's output format, not ffmpeg's. Parsing for them meant the match
+        // never succeeded, every track logged "produced no FINGERPRINT" with a
+        // screenful of binary, and no untagged album could ever be identified.
         string[] arguments =
         [
             "-v",
@@ -59,7 +67,7 @@ public sealed partial class FfmpegChromaprintFingerprinter(
             "-f",
             "chromaprint",
             "-fp_format",
-            "compressed",
+            "base64",
             "-",
         ];
 
@@ -81,32 +89,64 @@ public sealed partial class FfmpegChromaprintFingerprinter(
             return null;
         }
 
-        string output = result.StdOut;
-        Match fingerprintMatch = FingerprintRegex().Match(output);
-        if (!fingerprintMatch.Success)
+        string fingerprint = result.StdOut.Trim();
+        if (fingerprint.Length == 0 || !Base64FingerprintRegex().IsMatch(fingerprint))
         {
             logger.LogWarning(
-                "chromaprint produced no FINGERPRINT for {Path}; output: {Output}",
+                "chromaprint produced no usable fingerprint for {Path}; output: {Output}",
                 filePath,
-                Truncate(output, 200)
+                Truncate(fingerprint, 200)
             );
             return null;
         }
 
-        int durationSeconds = 0;
-        Match durationMatch = DurationRegex().Match(output);
-        if (
-            durationMatch.Success
-            && double.TryParse(
-                durationMatch.Groups[1].Value,
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out double parsedDuration
-            )
-        )
-            durationSeconds = (int)Math.Round(parsedDuration);
+        int durationSeconds = await ProbeDurationSecondsAsync(inputLease.Path, ct);
+        if (durationSeconds <= 0)
+        {
+            // AcoustID matches on fingerprint AND duration; submitting 0 returns
+            // no results, so a failed probe is a failed fingerprint.
+            logger.LogWarning("Could not determine duration for {Path}", filePath);
+            return null;
+        }
 
-        return new(fingerprintMatch.Groups[1].Value, durationSeconds);
+        return new(fingerprint, durationSeconds);
+    }
+
+    /// <summary>
+    /// Track length in whole seconds via ffprobe, or 0 when it cannot be read.
+    /// The chromaprint muxer does not report duration, so it is probed separately.
+    /// </summary>
+    private async Task<int> ProbeDurationSecondsAsync(string localPath, CancellationToken ct)
+    {
+        string[] arguments =
+        [
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            localPath,
+        ];
+
+        ProcessResult result = await processRunner.RunAsync(
+            options.FfprobePath,
+            arguments,
+            workingDirectory: null,
+            cancellationToken: ct
+        );
+
+        if (!result.IsSuccess)
+            return 0;
+
+        return double.TryParse(
+            result.StdOut.Trim(),
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out double seconds
+        )
+            ? (int)Math.Round(seconds)
+            : 0;
     }
 
     private static string Truncate(string value, int max) =>
