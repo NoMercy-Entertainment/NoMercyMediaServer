@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Text.Json;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -41,6 +42,40 @@ public class StorageBrowserController(
     // a stale cache.
     private static Ulid SyntheticBrowseFolderId(Ulid driverId) => driverId;
 
+    /// <summary>
+    /// True for a <c>local</c> driver with no <c>rootPath</c>. Such a driver
+    /// applies no root restriction at all, so it has no root to enumerate —
+    /// it stands for the host filesystem itself.
+    /// </summary>
+    private static bool IsUnscopedLocal(Driver driver)
+    {
+        if (!driver.Type.Equals("local", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (string.IsNullOrWhiteSpace(driver.Config))
+            return true;
+
+        try
+        {
+            using JsonDocument config = JsonDocument.Parse(driver.Config);
+            if (config.RootElement.ValueKind != JsonValueKind.Object)
+                return false;
+
+            // The config is deserialized case-insensitively everywhere else, so
+            // the stored key casing is not something to rely on here either.
+            foreach (JsonProperty property in config.RootElement.EnumerateObject())
+                if (property.Name.Equals("rootPath", StringComparison.OrdinalIgnoreCase))
+                    return property.Value.ValueKind != JsonValueKind.String
+                        || string.IsNullOrWhiteSpace(property.Value.GetString());
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     // -----------------------------------------------------------------------
     // POST /api/v1/dashboard/storage/probe
     // Enumerate exports / connectivity check for a storage config.
@@ -50,7 +85,6 @@ public class StorageBrowserController(
     [Route("probe")]
     public async Task<IActionResult> Probe([FromBody] StorageProbeRequest request)
     {
-
         if (string.IsNullOrWhiteSpace(request.Type))
             return BadRequestResponse("type is required.");
 
@@ -129,7 +163,6 @@ public class StorageBrowserController(
     [Route("list")]
     public async Task<IActionResult> List([FromBody] StorageListRequest request)
     {
-
         if (string.IsNullOrWhiteSpace(request.DriverId))
             return BadRequestResponse("driver_id is required.");
 
@@ -141,6 +174,15 @@ public class StorageBrowserController(
             return NotFoundResponse($"Driver '{request.DriverId}' not found.");
 
         string subPath = (request.Path ?? string.Empty).Replace('\\', '/').TrimStart('/');
+
+        // A local driver with no rootPath is unscoped — it has no root of its
+        // own to list, because it IS the host filesystem. The path guard would
+        // reject the empty path with a validation code that reads like the
+        // folder was refused, so name the real condition instead.
+        if (subPath.Length == 0 && IsUnscopedLocal(driver))
+            return BadRequestResponse(
+                "This driver has no root of its own; browse the host through dashboard/filesystem."
+            );
 
         try
         {
@@ -208,7 +250,6 @@ public class StorageBrowserController(
     [Route("mkdir")]
     public async Task<IActionResult> Mkdir([FromBody] StorageMkdirRequest request)
     {
-
         if (string.IsNullOrWhiteSpace(request.DriverId))
             return BadRequestResponse("driver_id is required.");
 
