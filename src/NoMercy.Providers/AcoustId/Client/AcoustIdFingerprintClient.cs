@@ -17,6 +17,14 @@ namespace NoMercy.Providers.AcoustId.Client;
 
 public class AcoustIdFingerprintClient : AcoustIdBaseClient
 {
+    /// <summary>
+    /// Asking for <c>releasegroups</c> alongside <c>releases</c> makes AcoustID move the
+    /// releases a level down, into <c>recordings[].releasegroups[].releases[]</c>. Every
+    /// consumer here reads <c>recordings[].releases[]</c>, so that nesting left each one
+    /// with nothing to look up and no error to show for it.
+    /// </summary>
+    public static readonly string[] LookupMeta = ["recordings", "releases"];
+
     private readonly IAudioFingerprinter? _fingerprinter;
 
     public AcoustIdFingerprintClient(IAudioFingerprinter? fingerprinter = null)
@@ -78,10 +86,6 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
             Duration = fingerprint.DurationSeconds,
         };
 
-        return await WithFingerprint(
-            ["recordings", "releases", "releasegroups"],
-            fingerprintData,
-            priority
-        );
+        return await WithFingerprint(LookupMeta, fingerprintData, priority);
     }
 }

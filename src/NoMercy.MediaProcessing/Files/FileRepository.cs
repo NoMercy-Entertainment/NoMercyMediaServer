@@ -200,6 +200,16 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     // Tracks recent CoverArt search queries to avoid duplicate lookups within a scan.
     private static readonly List<string> PrevSearchQueries = [];
 
+    // AcoustID answers a well-known track with every pressing and compilation it
+    // appears on — a few hundred releases per file. Each one costs a rate-limited
+    // MusicBrainz call and then an ffprobe of the whole folder to score it, so the
+    // candidates are ranked first and only the plausible ones are fetched.
+    private const int MaxFingerprintReleaseLookups = 10;
+
+    // Test-only visibility (NoMercy.Tests.MediaProcessing has InternalsVisibleTo) so the
+    // ranking can be proven without a fingerprinter and a live AcoustID lookup.
+    internal readonly record struct ReleaseCandidate(Guid Id, int? TrackCount);
+
     public static async Task<List<FileItem>> GetMusicBrainzReleasesInDirectory(
         string folder,
         IStorageDriver storageDriver,
@@ -254,6 +264,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         string year = "0";
         List<MusicBrainzReleaseAppends> releases = [];
         object lockObject = new();
+        ConcurrentBag<ReleaseCandidate> fingerprintCandidates = [];
 
         await Parallel.ForEachAsync(
             mediaFiles,
@@ -277,61 +288,80 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 }
                 else
                 {
-                    prevMusicBrainzReleaseId =
-                        await FromFingerprint(
-                            musicBrainzReleaseClient,
+                    foreach (
+                        ReleaseCandidate candidate in await FromFingerprint(
                             mediaFile,
-                            lockObject,
-                            releases,
                             audioFingerprinter
-                        ) ?? prevMusicBrainzReleaseId;
+                        )
+                    )
+                        fingerprintCandidates.Add(candidate);
                 }
             }
         );
+
+        foreach (Guid releaseId in RankCandidates(fingerprintCandidates, mediaFiles.Count))
+        {
+            MusicBrainzReleaseAppends? release = await musicBrainzReleaseClient.WithAllAppends(
+                releaseId
+            );
+            if (release == null || release.Id == Guid.Empty)
+                continue;
+            releases.Add(release);
+        }
+
         releases = releases.Where(x => x.Id != Guid.Empty).DistinctBy(x => x.Id).ToList();
         return (releases, year);
     }
 
-    private static async Task<string?> FromFingerprint(
-        MusicBrainzReleaseClient musicBrainzReleaseClient,
+    /// <summary>
+    /// Picks the releases worth fetching from the ones AcoustID named. A release whose
+    /// track count differs from the number of files cannot be the album in this folder,
+    /// and the album the folder really is gets named by most of its tracks rather than
+    /// by one. Falls back to raw agreement when no release matches the file count, so a
+    /// folder that is missing a track still returns something to triage.
+    /// </summary>
+    internal static IEnumerable<Guid> RankCandidates(
+        IEnumerable<ReleaseCandidate> candidates,
+        int fileCount
+    )
+    {
+        List<IGrouping<Guid, ReleaseCandidate>> grouped = candidates
+            .GroupBy(candidate => candidate.Id)
+            .ToList();
+
+        List<IGrouping<Guid, ReleaseCandidate>> matchingTrackCount = grouped
+            .Where(group => group.Any(candidate => candidate.TrackCount == fileCount))
+            .ToList();
+
+        return (matchingTrackCount.Count > 0 ? matchingTrackCount : grouped)
+            .OrderByDescending(group => group.Count())
+            .Take(MaxFingerprintReleaseLookups)
+            .Select(group => group.Key);
+    }
+
+    /// <summary>
+    /// Names the releases AcoustID associates with one track. Deliberately does no
+    /// MusicBrainz lookups: a single track can point at hundreds of releases, and which
+    /// of them to fetch is only decidable once every track in the folder has voted.
+    /// One release is counted once per track, so the tally means "how many tracks agree".
+    /// </summary>
+    private static async Task<List<ReleaseCandidate>> FromFingerprint(
         MediaFile mediaFile,
-        object lockObject,
-        List<MusicBrainzReleaseAppends> releases,
         IAudioFingerprinter audioFingerprinter
     )
     {
-        string prevMusicBrainzReleaseId;
-        AcoustIdFingerprintClient acoustIdFingerprintClient = new(audioFingerprinter);
+        using AcoustIdFingerprintClient acoustIdFingerprintClient = new(audioFingerprinter);
         AcoustIdFingerprint? acoustIds = await acoustIdFingerprintClient.Lookup(mediaFile.Path);
         if (acoustIds == null)
-            return null;
-        foreach (AcoustIdFingerprintResult fingerPrint in acoustIds?.Results ?? [])
-        {
-            foreach (AcoustIdFingerprintRecording? recording in fingerPrint.Recordings ?? [])
-            {
-                if (recording?.Releases is null)
-                    continue;
-                foreach (
-                    AcoustIdFingerprintReleaseGroups acoustIdFingerprintReleaseGroups in recording.Releases
-                )
-                {
-                    MusicBrainzReleaseAppends? release =
-                        await musicBrainzReleaseClient.WithAllAppends(
-                            acoustIdFingerprintReleaseGroups.Id
-                        );
+            return [];
 
-                    if (release == null || release.Id == Guid.Empty)
-                        return null;
-                    prevMusicBrainzReleaseId = release.Id.ToString();
-                    lock (lockObject)
-                    {
-                        releases.Add(release);
-                    }
-                }
-            }
-        }
-
-        return null;
+        return acoustIds
+            .Results.SelectMany(fingerPrint => fingerPrint.Recordings ?? [])
+            .SelectMany(recording => recording?.Releases ?? [])
+            .Where(release => release.Id != Guid.Empty)
+            .Select(release => new ReleaseCandidate(release.Id, release.TrackCount))
+            .DistinctBy(candidate => candidate.Id)
+            .ToList();
     }
 
     private static async Task<(

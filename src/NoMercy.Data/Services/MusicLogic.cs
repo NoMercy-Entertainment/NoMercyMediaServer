@@ -333,7 +333,7 @@ public partial class MusicLogic : IAsyncDisposable
 
             // var ffProbeData = FFProbe.AnalyseAsync(file.Path).Result;
             double fileDuration = ffProbeData.Format.Duration.TotalSeconds;
-            int recordDuration = recording.Duration;
+            double recordDuration = recording.Duration;
             bool matchesDuration =
                 fileDuration > 0
                 && recordDuration > 0
