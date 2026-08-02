@@ -208,7 +208,19 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
     // Test-only visibility (NoMercy.Tests.MediaProcessing has InternalsVisibleTo) so the
     // ranking can be proven without a fingerprinter and a live AcoustID lookup.
-    internal readonly record struct ReleaseCandidate(Guid Id, int? TrackCount);
+    internal readonly record struct ReleaseCandidate(
+        Guid Id,
+        int? TrackCount,
+        string? Title,
+        string? Artist,
+        int? Year
+    );
+
+    /// <summary>
+    /// What the folder's own tags claim to be, agreed across its tracks. A folder can hold
+    /// one stray mistagged file, so each field is the value most of the tracks carry.
+    /// </summary>
+    internal readonly record struct FolderTags(string? Album, string? Artist, int? Year);
 
     public static async Task<List<FileItem>> GetMusicBrainzReleasesInDirectory(
         string folder,
@@ -265,6 +277,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         List<MusicBrainzReleaseAppends> releases = [];
         object lockObject = new();
         ConcurrentBag<ReleaseCandidate> fingerprintCandidates = [];
+        ConcurrentBag<AudioTagModel> tagModels = [];
 
         await Parallel.ForEachAsync(
             mediaFiles,
@@ -275,6 +288,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
                 if (audioTagModel.Tags == null)
                     return;
+
+                tagModels.Add(audioTagModel);
                 if (!string.IsNullOrEmpty(audioTagModel.Tags.MusicBrainzReleaseId))
                 {
                     (prevMusicBrainzReleaseId, year) = await FromMusicBrainzRelease(
@@ -299,7 +314,13 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             }
         );
 
-        foreach (Guid releaseId in RankCandidates(fingerprintCandidates, mediaFiles.Count))
+        foreach (
+            Guid releaseId in RankCandidates(
+                fingerprintCandidates,
+                mediaFiles.Count,
+                SummariseTags(tagModels)
+            )
+        )
         {
             MusicBrainzReleaseAppends? release = await musicBrainzReleaseClient.WithAllAppends(
                 releaseId
@@ -314,30 +335,104 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     }
 
     /// <summary>
-    /// Picks the releases worth fetching from the ones AcoustID named. A release whose
-    /// track count differs from the number of files cannot be the album in this folder,
-    /// and the album the folder really is gets named by most of its tracks rather than
-    /// by one. Falls back to raw agreement when no release matches the file count, so a
-    /// folder that is missing a track still returns something to triage.
+    /// Picks the releases worth fetching from the ones AcoustID named, scoring each on
+    /// every signal available before a single MusicBrainz call is spent.
+    /// <para>
+    /// Agreement alone is not enough: a well-known track names hundreds of compilations,
+    /// and the ones carrying it most often are the ones this folder is least likely to
+    /// be. Matching the folder's own tags is what separates the album from the
+    /// compilations that merely contain its songs, so a tagged folder ranks on its album,
+    /// artist and year even when no MusicBrainz id was ever embedded in it.
+    /// </para>
+    /// <para>
+    /// Nothing here is a filter. A folder missing a track, holding a bonus disc, or
+    /// tagged wrongly still returns its best guesses to triage — "no results" is the
+    /// failure this whole path exists to stop.
+    /// </para>
     /// </summary>
     internal static IEnumerable<Guid> RankCandidates(
         IEnumerable<ReleaseCandidate> candidates,
-        int fileCount
+        int fileCount,
+        FolderTags folderTags = default
     )
     {
         List<IGrouping<Guid, ReleaseCandidate>> grouped = candidates
             .GroupBy(candidate => candidate.Id)
             .ToList();
 
-        List<IGrouping<Guid, ReleaseCandidate>> matchingTrackCount = grouped
-            .Where(group => group.Any(candidate => candidate.TrackCount == fileCount))
-            .ToList();
+        int mostVotes = grouped.Count == 0 ? 0 : grouped.Max(group => group.Count());
 
-        return (matchingTrackCount.Count > 0 ? matchingTrackCount : grouped)
-            .OrderByDescending(group => group.Count())
+        return grouped
+            .OrderByDescending(group => ScoreCandidate(group, fileCount, folderTags, mostVotes))
+            .ThenByDescending(group => group.Count())
             .Take(MaxFingerprintReleaseLookups)
             .Select(group => group.Key);
     }
+
+    private static double ScoreCandidate(
+        IGrouping<Guid, ReleaseCandidate> group,
+        int fileCount,
+        FolderTags folderTags,
+        int mostVotes
+    )
+    {
+        ReleaseCandidate candidate = group.First();
+        double score = mostVotes == 0 ? 0 : (double)group.Count() / mostVotes;
+
+        if (group.Any(release => release.TrackCount == fileCount))
+            score += 2;
+
+        if (TitlesAgree(folderTags.Album, candidate.Title))
+            score += 3;
+
+        if (TitlesAgree(folderTags.Artist, candidate.Artist))
+            score += 1.5;
+
+        if (folderTags.Year is > 0 && folderTags.Year == candidate.Year)
+            score += 1;
+
+        return score;
+    }
+
+    private static bool TitlesAgree(string? left, string? right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+            return false;
+
+        return left.ContainsSanitized(right) || right.ContainsSanitized(left);
+    }
+
+    /// <summary>
+    /// The album the folder claims to be, taken from the value most of its tracks agree
+    /// on so one mistagged file cannot rename the folder.
+    /// </summary>
+    private static FolderTags SummariseTags(IEnumerable<AudioTagModel> tagModels)
+    {
+        List<TagLib.Tag> tags = tagModels
+            .Select(model => model.Tags)
+            .Where(tag => tag is not null)
+            .Select(tag => tag!)
+            .ToList();
+
+        return new(
+            MostCommon(tags.Select(tag => tag.Album)),
+            MostCommon(tags.Select(tag => tag.AlbumArtists.FirstOrDefault() ?? tag.FirstPerformer)),
+            tags.Select(tag => (int)tag.Year)
+                .Where(year => year > 0)
+                .GroupBy(year => year)
+                .OrderByDescending(group => group.Count())
+                .Select(group => (int?)group.Key)
+                .FirstOrDefault()
+        );
+    }
+
+    private static string? MostCommon(IEnumerable<string?> values) =>
+        values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .GroupBy(value => value!)
+            .OrderByDescending(group => group.Count())
+            .Select(group => group.Key)
+            .FirstOrDefault();
 
     /// <summary>
     /// Names the releases AcoustID associates with one track. Deliberately does no
@@ -359,7 +454,13 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             .Results.SelectMany(fingerPrint => fingerPrint.Recordings ?? [])
             .SelectMany(recording => recording?.Releases ?? [])
             .Where(release => release.Id != Guid.Empty)
-            .Select(release => new ReleaseCandidate(release.Id, release.TrackCount))
+            .Select(release => new ReleaseCandidate(
+                release.Id,
+                release.TrackCount,
+                release.Title,
+                release.Artists.FirstOrDefault()?.Name,
+                release.Date?.Year
+            ))
             .DistinctBy(candidate => candidate.Id)
             .ToList();
     }
@@ -565,16 +666,20 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 int score = await CalculateMatchScoreAsync(release, mediaFiles);
                 lock (lockObject)
                 {
-                    if (score < highestScore)
+                    if (score <= highestScore)
                         return;
                     highestScore = score;
-                    if (highestScore == mediaFiles.Count)
-                        bestRelease = release;
+                    bestRelease = release;
                 }
             }
         );
 
-        return bestRelease;
+        // A track counts only when its name, number and duration all agree, and the name
+        // test is a substring one — so a single retitled track ("Call Me" against "Call Me
+        // (Theme from American Gigolo)") used to cost the release the whole match and the
+        // folder came back with no best match at all. The best-scoring release wins now,
+        // provided most of the folder actually backs it.
+        return highestScore * 2 > mediaFiles.Count ? bestRelease : null;
     }
 
     private static async Task<int> CalculateMatchScoreAsync(

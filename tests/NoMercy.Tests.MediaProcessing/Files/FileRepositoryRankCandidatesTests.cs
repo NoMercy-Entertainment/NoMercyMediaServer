@@ -24,8 +24,8 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 [Trait("Category", "Unit")]
 public class FileRepositoryRankCandidatesTests
 {
-    // The three releases all three sampled tracks named, all 20 tracks long — every one
-    // of them a pressing of "Atomic: The Very Best of Blondie".
+    // Three pressings of "Atomic: The Very Best of Blondie" — the releases all three
+    // sampled tracks named, all 19 tracks long.
     private static readonly Guid AtomicFr = Guid.Parse("3fa7841a-81d5-4681-a1e4-838445c3a01c");
     private static readonly Guid AtomicAu = Guid.Parse("224f40e5-a693-482c-aac3-8041adad5760");
     private static readonly Guid AtomicJp = Guid.Parse("3b0c4ec5-a065-31ac-a006-50e8072f3de5");
@@ -36,18 +36,28 @@ public class FileRepositoryRankCandidatesTests
         "7047d8d5-e91c-4d48-90cc-eba5d6dc96ea"
     );
 
-    private const int FolderTrackCount = 20;
+    private const int FolderTrackCount = 19;
+
+    private static FileRepository.ReleaseCandidate Candidate(
+        Guid id,
+        int? trackCount = FolderTrackCount,
+        string? title = null,
+        string? artist = null,
+        int? year = null
+    ) => new(id, trackCount, title, artist, year);
 
     [Fact]
-    public void A_release_that_cannot_be_this_folder_is_never_fetched()
+    public void The_release_matching_the_file_count_outranks_one_that_cannot_be_this_folder()
     {
         List<FileRepository.ReleaseCandidate> candidates =
         [
-            new(AtomicFr, FolderTrackCount),
-            new(UnrelatedSingle, 2),
+            Candidate(UnrelatedSingle, trackCount: 2),
+            Candidate(UnrelatedSingle, trackCount: 2),
+            Candidate(UnrelatedSingle, trackCount: 2),
+            Candidate(AtomicFr),
         ];
 
-        FileRepository.RankCandidates(candidates, FolderTrackCount).Should().Equal(AtomicFr);
+        FileRepository.RankCandidates(candidates, FolderTrackCount).Should().StartWith(AtomicFr);
     }
 
     [Fact]
@@ -55,12 +65,12 @@ public class FileRepositoryRankCandidatesTests
     {
         List<FileRepository.ReleaseCandidate> candidates =
         [
-            new(AtomicAu, FolderTrackCount),
-            new(AtomicFr, FolderTrackCount),
-            new(AtomicFr, FolderTrackCount),
-            new(AtomicFr, FolderTrackCount),
-            new(AtomicAu, FolderTrackCount),
-            new(AtomicJp, FolderTrackCount),
+            Candidate(AtomicAu),
+            Candidate(AtomicFr),
+            Candidate(AtomicFr),
+            Candidate(AtomicFr),
+            Candidate(AtomicAu),
+            Candidate(AtomicJp),
         ];
 
         FileRepository
@@ -70,18 +80,55 @@ public class FileRepositoryRankCandidatesTests
     }
 
     /// <summary>
-    /// A folder missing a track, or one whose releases carry no track count, still has to
-    /// return something to triage — "no results" is the failure this whole path exists to
-    /// stop, so an unmatchable count falls back to agreement rather than to nothing.
+    /// The case the tag signal exists for. A greatest-hits folder's songs appear on far
+    /// more compilations than on the album itself, so raw agreement puts a compilation
+    /// first — and the folder has been saying which album it is the whole time.
     /// </summary>
     [Fact]
-    public void No_release_matching_the_file_count_falls_back_instead_of_returning_nothing()
+    public void The_album_the_tags_name_beats_a_compilation_more_tracks_appear_on()
     {
         List<FileRepository.ReleaseCandidate> candidates =
         [
-            new(AtomicFr, 19),
-            new(AtomicFr, 19),
-            new(UnrelatedSingle, null),
+            Candidate(UnrelatedSingle, title: "D.I.Y.: Blank Generation"),
+            Candidate(UnrelatedSingle, title: "D.I.Y.: Blank Generation"),
+            Candidate(UnrelatedSingle, title: "D.I.Y.: Blank Generation"),
+            Candidate(AtomicFr, title: "Greatest Hits"),
+        ];
+
+        FileRepository
+            .RankCandidates(candidates, FolderTrackCount, new("Greatest Hits", "Blondie", 2002))
+            .Should()
+            .StartWith(AtomicFr);
+    }
+
+    [Fact]
+    public void A_matching_year_breaks_a_tie_between_pressings()
+    {
+        List<FileRepository.ReleaseCandidate> candidates =
+        [
+            Candidate(AtomicAu, title: "Greatest Hits", year: 1998),
+            Candidate(AtomicJp, title: "Greatest Hits", year: 2002),
+        ];
+
+        FileRepository
+            .RankCandidates(candidates, FolderTrackCount, new("Greatest Hits", "Blondie", 2002))
+            .Should()
+            .StartWith(AtomicJp);
+    }
+
+    /// <summary>
+    /// A folder missing a track, or one whose releases carry no track count, still has to
+    /// return something to triage — "no results" is the failure this whole path exists to
+    /// stop, so nothing here is a filter.
+    /// </summary>
+    [Fact]
+    public void No_release_matching_the_file_count_still_returns_candidates()
+    {
+        List<FileRepository.ReleaseCandidate> candidates =
+        [
+            Candidate(AtomicFr, trackCount: 18),
+            Candidate(AtomicFr, trackCount: 18),
+            Candidate(UnrelatedSingle, trackCount: null),
         ];
 
         FileRepository
@@ -95,10 +142,7 @@ public class FileRepositoryRankCandidatesTests
     {
         List<FileRepository.ReleaseCandidate> candidates = Enumerable
             .Range(0, 324)
-            .Select(index => new FileRepository.ReleaseCandidate(
-                Guid.Parse($"00000000-0000-0000-0000-{index:D12}"),
-                FolderTrackCount
-            ))
+            .Select(index => Candidate(Guid.Parse($"00000000-0000-0000-0000-{index:D12}")))
             .ToList();
 
         FileRepository.RankCandidates(candidates, FolderTrackCount).Should().HaveCount(10);
@@ -108,5 +152,21 @@ public class FileRepositoryRankCandidatesTests
     public void No_candidates_yields_no_lookups()
     {
         FileRepository.RankCandidates([], FolderTrackCount).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Untagged_folders_still_rank_on_agreement_and_length()
+    {
+        List<FileRepository.ReleaseCandidate> candidates =
+        [
+            Candidate(AtomicFr),
+            Candidate(AtomicFr),
+            Candidate(UnrelatedSingle, trackCount: 2),
+        ];
+
+        FileRepository
+            .RankCandidates(candidates, FolderTrackCount, default)
+            .Should()
+            .StartWith(AtomicFr);
     }
 }
