@@ -129,7 +129,6 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
             state.CurrentItem = state.Playlist.First();
             state.Playlist.RemoveAt(0);
             state.SetPosition(0);
-            state.Duration = state.CurrentItem.Duration.ToMilliSeconds();
             state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         }
         else
@@ -215,7 +214,6 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         state.CurrentItem = state.Backlog.Last();
         state.Backlog.RemoveAt(state.Backlog.Count - 1);
         state.SetPosition(0);
-        state.Duration = state.CurrentItem.Duration.ToMilliSeconds();
         state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         state.PlayState = true;
         musicPlaybackService.StartPlaybackTimer(user);

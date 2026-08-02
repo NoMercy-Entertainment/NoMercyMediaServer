@@ -35,7 +35,6 @@ public class MusicPlayerStateFactory
             PlayState = true,
             Time = 0,
             PositionCapturedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-            Duration = item.Duration.ToMilliSeconds(),
             Shuffle = false,
             Repeat = "off",
             CurrentList = new($"/music/{ToRouteSegment(type)}/{listId}", UriKind.Relative),
