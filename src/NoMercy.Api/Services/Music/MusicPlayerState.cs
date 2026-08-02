@@ -146,6 +146,23 @@ public class MusicPlayerState
     public DateTime LastActiveHeartbeatUtc { get; set; } = DateTime.UtcNow;
 
     /// <summary>
+    /// Whether the device currently named in <see cref="DeviceId"/> has proven
+    /// life even once since it was named. Cleared by a device change, set by the
+    /// first heartbeat from that device.
+    ///
+    /// A device that has reported and then gone quiet is a device that died, and
+    /// the short timeout should find it. A device that has never reported yet may
+    /// simply not be up: a TV woken from sleep by Cast takes longer to boot,
+    /// connect and start playing than the short timeout allows, and ending its
+    /// session on that basis stops music that was seconds from playing. Measured
+    /// on a Nokia Streaming Box: handed playback at 11:24:46, first sample at
+    /// 11:25:04, session force-ended at 11:25:01. See
+    /// <see cref="MusicPlaybackService.IsActiveDeviceStale"/>.
+    /// </summary>
+    [JsonIgnore]
+    public bool ActiveDeviceProvenAlive { get; set; }
+
+    /// <summary>
     /// The single choke point for authoring Time: sets the position and stamps
     /// <see cref="PositionCapturedAtMs"/> to server-now in the same call, so the
     /// two can never travel out of sync. Every seek, track change, and accepted

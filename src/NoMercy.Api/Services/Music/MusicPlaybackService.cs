@@ -87,6 +87,16 @@ public class MusicPlaybackService
     // WebSocket lingers after its cast session has effectively ended.
     internal const int ActiveDeviceStaleTimeoutMs = 15_000;
 
+    // The window a device gets to prove life for the FIRST time after being handed
+    // playback, before it has ever reported. A device that reported and went quiet
+    // is dead and 15s finds it; a device that has never reported may simply not be
+    // up yet. A TV woken from sleep by Cast has to boot, connect its hub, take
+    // ownership and start its engine before a single position report exists —
+    // measured on a Nokia Streaming Box, that was 18s from handoff to first sample,
+    // so the short timeout ended the session three seconds before the music
+    // reached the speakers and the whole cast read as a failure.
+    internal const int ActiveDeviceFirstReportTimeoutMs = 45_000;
+
     // Safety margin added on top of the client-reported fadeDuration when computing
     // CrossfadeTimeout.  If CrossfadeComplete never arrives within that window the server
     // forces auto-advance anyway (handles client disconnect / network loss mid-crossfade).
@@ -260,8 +270,11 @@ public class MusicPlaybackService
         if (!state.PlayState || string.IsNullOrEmpty(state.DeviceId))
             return false;
 
-        return nowUtc - state.LastActiveHeartbeatUtc
-            > TimeSpan.FromMilliseconds(ActiveDeviceStaleTimeoutMs);
+        int timeoutMs = state.ActiveDeviceProvenAlive
+            ? ActiveDeviceStaleTimeoutMs
+            : ActiveDeviceFirstReportTimeoutMs;
+
+        return nowUtc - state.LastActiveHeartbeatUtc > TimeSpan.FromMilliseconds(timeoutMs);
     }
 
     /// <summary>
@@ -294,6 +307,7 @@ public class MusicPlaybackService
             return false;
 
         state.LastActiveHeartbeatUtc = DateTime.UtcNow;
+        state.ActiveDeviceProvenAlive = true;
         return true;
     }
 
@@ -333,7 +347,8 @@ public class MusicPlaybackService
         string? staleDeviceId = state.DeviceId;
 
         _logger?.LogWarning(
-            "Music session for user {UserId}: active device {DeviceId} stopped reporting position for over {TimeoutMs}ms — ending the session", [user.Id, staleDeviceId, ActiveDeviceStaleTimeoutMs]
+            "Music session for user {UserId}: active device {DeviceId} stopped reporting position for over {TimeoutMs}ms — ending the session",
+            [user.Id, staleDeviceId, ActiveDeviceStaleTimeoutMs]
         );
 
         RemoveTimer(user.Id);
@@ -457,7 +472,18 @@ public class MusicPlaybackService
                 long sentMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
                 _logger?.LogInformation(
-                    "{UserId}: [MusicPlaybackService.DebouncedUpdatePlaybackState] scheduledMs={ScheduledMs} firedMs={FiredMs} (+{FireDelayMs}ms) sentMs={SentMs} (+{SendMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount} backlog={BacklogCount}", [user.Id, scheduledMs, firedMs, firedMs - scheduledMs, sentMs, sentMs - firedMs, sentMs - scheduledMs, state.Playlist.Count, state.Backlog.Count]
+                    "{UserId}: [MusicPlaybackService.DebouncedUpdatePlaybackState] scheduledMs={ScheduledMs} firedMs={FiredMs} (+{FireDelayMs}ms) sentMs={SentMs} (+{SendMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount} backlog={BacklogCount}",
+                    [
+                        user.Id,
+                        scheduledMs,
+                        firedMs,
+                        firedMs - scheduledMs,
+                        sentMs,
+                        sentMs - firedMs,
+                        sentMs - scheduledMs,
+                        state.Playlist.Count,
+                        state.Backlog.Count,
+                    ]
                 );
             },
             null,
