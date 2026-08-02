@@ -99,6 +99,39 @@ public partial class FileManager(
     private Tv? Show { get; set; }
 
     private List<Folder> Folders { get; set; } = [];
+
+    /// <summary>
+    /// True when at least one of the library's configured root folders reads back. It is
+    /// the difference between "this title's media was deleted" and "the storage holding
+    /// every title went away", which an empty scan result alone cannot tell apart.
+    /// </summary>
+    private bool LibraryRootIsReachable()
+    {
+        ICollection<FolderLibrary> libraryFolders =
+            Show?.Library.FolderLibraries ?? Movie?.Library.FolderLibraries ?? [];
+
+        foreach (FolderLibrary libraryFolder in libraryFolders)
+            try
+            {
+                IStorage folderStorage = StorageFor(libraryFolder.Folder);
+                if (
+                    folderStorage.Exists(
+                        ResolveBackendPath(folderStorage, libraryFolder.Folder.Path)
+                    )
+                )
+                    return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.App(
+                    $"[FindFiles] could not read library root {libraryFolder.Folder.Path}: {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+
+        return false;
+    }
+
     private List<MediaFolderExtend> Files { get; set; } = [];
     public string Type { get; set; } = "";
 
@@ -167,11 +200,40 @@ public partial class FileManager(
         }
         else if (Filter is null && !hasCandidates)
         {
-            Logger.App(
-                $"[FindFiles] {Type} id={id}: scan found no parseable files — preserving existing "
-                    + "records instead of deleting (rescan is non-destructive on an empty result)",
-                LogEventLevel.Warning
-            );
+            // An empty scan has two very different causes and they need opposite
+            // handling. If the library's own root is unreachable — an NFS mount that
+            // dropped, an S3 bucket that timed out — every item looks deleted at once
+            // and clearing here would wipe a library that is still fully on disk. If
+            // the root reads fine and this item still resolved nothing, the media is
+            // genuinely gone and leaving the rows behind puts a title in the UI that
+            // plays nothing and holds a VideoFile other tables still point at.
+            if (LibraryRootIsReachable())
+            {
+                Logger.App(
+                    $"[FindFiles] {Type} id={id}: library root reachable and no files "
+                        + "resolved — removing the video file and metadata records",
+                    LogEventLevel.Information
+                );
+
+                switch (library.Type)
+                {
+                    case MediaTypes.MovieMediaType:
+                        await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
+                        break;
+                    case MediaTypes.TvMediaType:
+                    case MediaTypes.AnimeMediaType:
+                        await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
+                        break;
+                }
+            }
+            else
+            {
+                Logger.App(
+                    $"[FindFiles] {Type} id={id}: library root unreachable — preserving existing "
+                        + "records instead of deleting (storage outage is not a deletion)",
+                    LogEventLevel.Warning
+                );
+            }
         }
 
         switch (library.Type)
