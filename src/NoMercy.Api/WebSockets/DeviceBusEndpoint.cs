@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Linq.Expressions;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -259,13 +260,7 @@ public sealed class DeviceBusEndpoint(
     private async Task RetireSupersededRowsAsync(MediaContext ctx, Device device, Guid ownerUserId)
     {
         List<Device> superseded = await ctx
-            .Devices.Where(d =>
-                d.Id != device.Id
-                && d.OwnerUserId == ownerUserId
-                && d.Type == device.Type
-                && d.Name == device.Name
-                && d.Fingerprint != null
-            )
+            .Devices.Where(SupersededCandidateFilter(device, ownerUserId))
             .ToListAsync();
 
         List<Device> retired = SelectSuperseded(superseded, registry.IsOnline);
@@ -281,6 +276,37 @@ public sealed class DeviceBusEndpoint(
         // replace their list on a push, so a silent retire leaves the entry on
         // screen until something unrelated fires the next one.
         await registry.BroadcastChange(ownerUserId);
+    }
+
+    /// <summary>
+    /// The other rows that could be an earlier identity of <paramref name="device" />: same
+    /// owner, same type, and the same name as the picker renders it.
+    /// </summary>
+    /// <remarks>
+    /// The name compared is <c>CustomName ?? Name</c>, which is what the picker draws.
+    /// Comparing raw <c>Name</c> missed the case this exists for — the rows an earlier
+    /// identity leaves behind are written through different paths and carry different raw
+    /// names, so two entries a user cannot tell apart were never recognised as one device
+    /// and both kept being offered.
+    ///
+    /// An expression rather than an inline query so the rule itself can be tested, instead
+    /// of only the reachability filter applied to its results.
+    /// </remarks>
+    internal static Expression<Func<Device, bool>> SupersededCandidateFilter(
+        Device device,
+        Guid ownerUserId
+    )
+    {
+        string effectiveName = device.CustomName ?? device.Name;
+        Ulid deviceId = device.Id;
+        string deviceType = device.Type;
+
+        return candidate =>
+            candidate.Id != deviceId
+            && candidate.OwnerUserId == ownerUserId
+            && candidate.Type == deviceType
+            && (candidate.CustomName ?? candidate.Name) == effectiveName
+            && candidate.Fingerprint != null;
     }
 
     /// <summary>

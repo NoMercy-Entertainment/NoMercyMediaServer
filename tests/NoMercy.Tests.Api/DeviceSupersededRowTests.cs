@@ -95,4 +95,92 @@ public class DeviceSupersededRowTests
         Assert.Equal("Bedroom TV", stale.CustomName);
         Assert.Equal(42, stale.VolumePercent);
     }
+
+    [Fact]
+    public void RowsShowingTheSameNameAreTheSameDeviceEvenWhenTheirRawNamesDiffer()
+    {
+        Guid owner = Guid.NewGuid();
+
+        // What one physical TV actually looks like after it is written twice: the older row
+        // carries the model it registered under and was renamed by the user, the newer one
+        // hellos with the name it was given. The picker draws "Tv in woonkamer" for both.
+        Device legacy = Row("Nokia Streaming Box 8010");
+        legacy.CustomName = "Tv in woonkamer";
+        legacy.OwnerUserId = owner;
+
+        Device current = Row("Tv in woonkamer");
+        current.OwnerUserId = owner;
+
+        Func<Device, bool> matches = DeviceBusEndpoint
+            .SupersededCandidateFilter(current, owner)
+            .Compile();
+
+        Assert.True(matches(legacy));
+    }
+
+    [Fact]
+    public void ADeviceIsNeverItsOwnSupersededRow()
+    {
+        Guid owner = Guid.NewGuid();
+        Device device = Row("Tv in woonkamer");
+        device.OwnerUserId = owner;
+
+        Func<Device, bool> matches = DeviceBusEndpoint
+            .SupersededCandidateFilter(device, owner)
+            .Compile();
+
+        Assert.False(matches(device));
+    }
+
+    [Fact]
+    public void AnotherUsersRowIsNeverSuperseded()
+    {
+        Guid owner = Guid.NewGuid();
+        Device mine = Row("Tv in woonkamer");
+        mine.OwnerUserId = owner;
+
+        Device theirs = Row("Tv in woonkamer");
+        theirs.OwnerUserId = Guid.NewGuid();
+
+        Func<Device, bool> matches = DeviceBusEndpoint
+            .SupersededCandidateFilter(mine, owner)
+            .Compile();
+
+        Assert.False(matches(theirs));
+    }
+
+    [Fact]
+    public void ADifferentNameIsADifferentDevice()
+    {
+        Guid owner = Guid.NewGuid();
+        Device livingRoom = Row("Tv in woonkamer");
+        livingRoom.OwnerUserId = owner;
+
+        Device bedroom = Row("Bedroom TV");
+        bedroom.OwnerUserId = owner;
+
+        Func<Device, bool> matches = DeviceBusEndpoint
+            .SupersededCandidateFilter(livingRoom, owner)
+            .Compile();
+
+        Assert.False(matches(bedroom));
+    }
+
+    [Fact]
+    public void ARetiredRowIsNotSupersededAgain()
+    {
+        Guid owner = Guid.NewGuid();
+        Device current = Row("Tv in woonkamer");
+        current.OwnerUserId = owner;
+
+        Device alreadyRetired = Row("Tv in woonkamer");
+        alreadyRetired.OwnerUserId = owner;
+        alreadyRetired.Fingerprint = null;
+
+        Func<Device, bool> matches = DeviceBusEndpoint
+            .SupersededCandidateFilter(current, owner)
+            .Compile();
+
+        Assert.False(matches(alreadyRetired));
+    }
 }
