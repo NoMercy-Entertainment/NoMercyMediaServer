@@ -99,6 +99,12 @@ public partial class FileManager(
     private Tv? Show { get; set; }
 
     private List<Folder> Folders { get; set; } = [];
+
+    /// <summary>
+    /// Set by <c>Paths</c> when at least one of the library's root folders reads back.
+    /// False also covers "never asked", which is the safe direction: nothing is cleared.
+    /// </summary>
+    private bool AnyLibraryRootReadable { get; set; }
     private List<MediaFolderExtend> Files { get; set; } = [];
     public string Type { get; set; } = "";
 
@@ -165,11 +171,34 @@ public partial class FileManager(
                     break;
             }
         }
+        else if (Filter is null && !hasCandidates && AnyLibraryRootReadable)
+        {
+            // The library's own root reads back and this title still resolved nothing, so
+            // the media is gone rather than unreachable. Leaving the rows behind puts a
+            // title in the UI that plays nothing and keeps a VideoFile that other tables
+            // still point at.
+            Logger.App(
+                $"[FindFiles] {Type} id={id}: library root readable and nothing resolved — "
+                    + "removing the video file and metadata records",
+                LogEventLevel.Information
+            );
+
+            switch (library.Type)
+            {
+                case MediaTypes.MovieMediaType:
+                    await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
+                    break;
+                case MediaTypes.TvMediaType:
+                case MediaTypes.AnimeMediaType:
+                    await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
+                    break;
+            }
+        }
         else if (Filter is null && !hasCandidates)
         {
             Logger.App(
-                $"[FindFiles] {Type} id={id}: scan found no parseable files — preserving existing "
-                    + "records instead of deleting (rescan is non-destructive on an empty result)",
+                $"[FindFiles] {Type} id={id}: scan found no parseable files and the library root "
+                    + "did not read back — preserving existing records (an outage is not a deletion)",
                 LogEventLevel.Warning
             );
         }
