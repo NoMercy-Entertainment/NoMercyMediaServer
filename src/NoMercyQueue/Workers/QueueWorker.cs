@@ -213,6 +213,7 @@ public class QueueWorker(
                     break;
                 }
                 catch (ObjectDisposedException)
+                    when (stopToken.IsCancellationRequested || CannotRunAnotherJob())
                 {
                     // The service provider this worker scopes jobs against is gone
                     // (ExecuteWithTransientRetry → IServiceScopeFactory.CreateScope).
@@ -220,12 +221,15 @@ public class QueueWorker(
                     // the job is not at fault: release the reservation so a live worker
                     // or the next boot picks it up, and leave the loop.
                     //
-                    // This deliberately does NOT require stopToken to be cancelled. The
-                    // HTTPS restart disposes the setup host's container while its
-                    // workers are still polling and were never signalled, so the
-                    // cancellation-only form let every one of those jobs fall through
-                    // to FailJob below and be dead-lettered — 367 of them on a first
-                    // boot, including the scan for a library added after the restart.
+                    // Two ways to be sure of that, and both are needed. Shutdown
+                    // signals it directly. The HTTPS restart does not: it disposes the
+                    // setup host's container while its workers are still polling and
+                    // were never signalled, so the cancellation-only form dead-lettered
+                    // every one of those jobs — 367 on a first boot, including the scan
+                    // for a library added after the restart. Asking the provider itself
+                    // covers that. Neither condition holding means the provider is
+                    // alive and the job threw this on its own, which must spend an
+                    // attempt: no condition at all released such a job forever.
                     queue.ReleaseReservation(job, TimeSpan.Zero);
                     _currentJobId = null;
 
@@ -467,6 +471,31 @@ public class QueueWorker(
     /// job, not the one passed in, and post-run state the caller needs — see
     /// <see cref="ISelfRescheduling"/> — lives only on the instance that ran.</para>
     /// </summary>
+    /// <summary>
+    /// Whether this worker's service provider is gone, so no further job can be
+    /// scoped and the one that just threw was not at fault.
+    /// </summary>
+    /// <remarks>
+    /// Asked by creating a scope and throwing it away, because that is the exact
+    /// operation the job path performs. With no factory at all there is nothing to
+    /// dispose, so the exception came from the job itself.
+    /// </remarks>
+    private bool CannotRunAnotherJob()
+    {
+        if (scopeFactory is null)
+            return false;
+
+        try
+        {
+            using IServiceScope probe = scopeFactory.CreateScope();
+            return false;
+        }
+        catch (ObjectDisposedException)
+        {
+            return true;
+        }
+    }
+
     private IShouldQueue ExecuteWithTransientRetry(IShouldQueue job, QueueJobModel queueJob)
     {
         IServiceScope? scope = null;
