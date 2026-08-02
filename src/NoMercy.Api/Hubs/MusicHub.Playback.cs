@@ -607,7 +607,9 @@ public partial class MusicHub
     }
 
     // See the untagged-vs-tagged note on CurrentTimeCommand above.
-    public async Task ReportPositionCommand(int? positionMs, long? capturedAtMs = null)
+    public Task ReportPositionCommand(int? positionMs) => ReportPositionCoreAsync(positionMs, null);
+
+    private async Task ReportPositionCoreAsync(int? positionMs, long? capturedAtMs)
     {
         User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
@@ -658,7 +660,7 @@ public partial class MusicHub
     /// working exactly as they did.
     /// </summary>
     public Task ReportPositionAtCommand(int? positionMs, long? capturedAtMs) =>
-        ReportPositionCommand(positionMs, capturedAtMs);
+        ReportPositionCoreAsync(positionMs, capturedAtMs);
 
     /// <summary>
     /// Item-tagged twin of <see cref="CurrentTimeCommand"/> — seconds instead of

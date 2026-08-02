@@ -107,6 +107,7 @@ public class HubContractSnapshotTests
         "GetServerTime() -> System.Int64",
         "GetStateCommand() -> NoMercy.Api.Services.Music.MusicPlayerState",
         "PlaybackCommand(System.String, System.Object) -> System.Threading.Tasks.Task",
+        "ReportPositionAtCommand(System.Nullable<System.Int32>, System.Nullable<System.Int64>) -> System.Threading.Tasks.Task",
         "ReportPositionCommand(System.Nullable<System.Int32>) -> System.Threading.Tasks.Task",
         "ReportPositionForItemCommand(System.Nullable<System.Int64>, System.String) -> System.Threading.Tasks.Task",
         "SetDeviceVolumeCommand(System.String, System.Nullable<System.Int32>) -> System.Threading.Tasks.Task",
