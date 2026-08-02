@@ -91,6 +91,7 @@ public class JobDispatcher : IJobDispatcher
         TJob job = new()
         {
             LibraryId = libraryId,
+            FolderId = folderId,
             ReleaseId = releaseId,
             InputFolder = filePath,
         };
@@ -144,7 +145,8 @@ public class JobDispatcher : IJobDispatcher
         Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>() where TJob : AbstractJob, new()
+    public void DispatchJob<TJob>()
+        where TJob : AbstractJob, new()
     {
         TJob job = new();
         Dispatcher.Dispatch(job, job.QueueName, job.Priority);
