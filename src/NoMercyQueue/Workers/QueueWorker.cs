@@ -212,19 +212,25 @@ public class QueueWorker(
                     );
                     break;
                 }
-                catch (ObjectDisposedException) when (stopToken.IsCancellationRequested)
+                catch (ObjectDisposedException)
                 {
-                    // The host disposed the root service provider as it stopped,
-                    // while this job was being scoped (ExecuteWithTransientRetry →
-                    // IServiceScopeFactory.CreateScope). Same as the cancellation
-                    // case: this is shutdown, not a job fault — release the
-                    // reservation for a clean retry on next boot instead of
-                    // dead-lettering a job that never got to run.
+                    // The service provider this worker scopes jobs against is gone
+                    // (ExecuteWithTransientRetry → IServiceScopeFactory.CreateScope).
+                    // Whatever disposed it, this worker can never run another job, so
+                    // the job is not at fault: release the reservation so a live worker
+                    // or the next boot picks it up, and leave the loop.
+                    //
+                    // This deliberately does NOT require stopToken to be cancelled. The
+                    // HTTPS restart disposes the setup host's container while its
+                    // workers are still polling and were never signalled, so the
+                    // cancellation-only form let every one of those jobs fall through
+                    // to FailJob below and be dead-lettered — 367 of them on a first
+                    // boot, including the scan for a library added after the restart.
                     queue.ReleaseReservation(job, TimeSpan.Zero);
                     _currentJobId = null;
 
                     logger?.LogInformation(
-                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} scope disposed by shutdown — released for retry",
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} scope disposed — released for retry",
                         [name, CurrentIndex, job.Id]
                     );
                     break;
