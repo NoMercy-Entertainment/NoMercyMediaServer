@@ -18,8 +18,11 @@ public class AcoustIdFingerprintRecording
     [JsonProperty("artists")]
     public AcoustIdFingerprintArtist[] Artists { get; set; } = [];
 
+    // AcoustID reports this in fractional seconds ("duration": 205.291), which no
+    // int can hold: the bind failed, the global Newtonsoft error handler swallowed
+    // it, and every duration comparison ran against 0.
     [JsonProperty("duration")]
-    public int Duration { get; set; }
+    public double Duration { get; set; }
 
     [JsonProperty("id")]
     public Guid Id { get; set; }
