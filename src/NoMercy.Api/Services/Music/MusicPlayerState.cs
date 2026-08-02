@@ -152,10 +152,19 @@ public class MusicPlayerState
     /// position report must go through this rather than assigning
     /// <see cref="Time"/> directly.
     /// </summary>
-    public void SetPosition(int positionMs)
+    /// <param name="capturedAtMs">
+    /// Server-clock instant the reporting device actually read this position, when it knows
+    /// it. Stamping on arrival instead makes the stored position older than it claims by
+    /// however long the report took to get here, and every passive device inherits that lag
+    /// because it anchors its own interpolation to this instant. Zero or a value in the
+    /// future falls back to now, so a client that does not send one behaves as before.
+    /// </param>
+    public void SetPosition(int positionMs, long capturedAtMs = 0)
     {
+        long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
         Time = positionMs;
-        PositionCapturedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        PositionCapturedAtMs = capturedAtMs > 0 && capturedAtMs <= nowMs ? capturedAtMs : nowMs;
     }
 
     // The broadcast carries only a window of the queue, not the whole thing.
