@@ -49,6 +49,23 @@ public class VideoPlaybackService
 
     private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
     private readonly ConcurrentDictionary<Guid, int> _lastTimes = new();
+
+    /// <summary>
+    /// When each user last had the continue-watching carousel invalidated, and on which item.
+    /// </summary>
+    private readonly ConcurrentDictionary<
+        Guid,
+        (string Item, DateTime At)
+    > _lastContinueWatchingRefresh = new();
+
+    /// <summary>
+    /// How long the carousel is left alone between progress reports for the same item. Progress
+    /// arrives about once a second per playing device and every report reached every connected
+    /// client as a cache invalidation, so each one refetched the row once a second for the whole
+    /// length of a film. The row shows a resume position, not a running clock; it does not need
+    /// to be correct to the second on a device nobody is watching.
+    /// </summary>
+    private static readonly TimeSpan ContinueWatchingRefreshInterval = TimeSpan.FromSeconds(30);
     private const int TimerInterval = 100;
 
     internal void StartPlaybackTimer(User user)
@@ -246,14 +263,43 @@ public class VideoPlaybackService
     /// its old position (or stayed missing entirely) on every other device.
     /// Mirrors the key TvShowsController already publishes after a watch toggle.
     /// </summary>
-    private async Task PublishContinueWatchingRefreshAsync()
+    private async Task PublishContinueWatchingRefreshAsync(Guid userId, VideoPlayerState state)
     {
         IEventBus? bus =
             _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
         if (bus is null)
             return;
 
+        if (!ShouldRefreshContinueWatching(userId, state))
+            return;
+
         await bus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
+    }
+
+    /// <summary>
+    /// True when the carousel has actually gone stale: a different title is being watched, or
+    /// enough time has passed that the stored resume position is worth catching up on.
+    /// </summary>
+    private bool ShouldRefreshContinueWatching(Guid userId, VideoPlayerState state)
+    {
+        string item =
+            $"{state.CurrentItem?.PlaylistType}:{state.CurrentItem?.TmdbId}:{state.CurrentItem?.VideoId}";
+        DateTime now = DateTime.UtcNow;
+
+        if (!_lastContinueWatchingRefresh.TryGetValue(userId, out (string Item, DateTime At) last))
+        {
+            _lastContinueWatchingRefresh[userId] = (item, now);
+            return true;
+        }
+
+        bool itemChanged = !string.Equals(last.Item, item, StringComparison.Ordinal);
+        bool intervalElapsed = now - last.At >= ContinueWatchingRefreshInterval;
+
+        if (!itemChanged && !intervalElapsed)
+            return false;
+
+        _lastContinueWatchingRefresh[userId] = (item, now);
+        return true;
     }
 
     private async Task PublishCompletedEventAsync(Guid userId, VideoPlayerState state)
@@ -384,6 +430,6 @@ public class VideoPlaybackService
             )
             .RunAsync();
 
-        await PublishContinueWatchingRefreshAsync();
+        await PublishContinueWatchingRefreshAsync(user.Id, state);
     }
 }
