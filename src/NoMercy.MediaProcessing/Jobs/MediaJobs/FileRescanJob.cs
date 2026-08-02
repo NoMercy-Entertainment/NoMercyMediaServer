@@ -84,13 +84,20 @@ public class FileRescanJob : AbstractMediaJob
         {
             MediaTypes.TvMediaType or MediaTypes.AnimeMediaType => "tv",
             MediaTypes.MovieMediaType => "movie",
+            MediaTypes.MusicMediaType => "music",
             _ => "unknown",
         };
 
         if (EventBusProvider.IsConfigured)
         {
+            // Music is rescanned per library, not per title, so there is no id to
+            // scope the key to — Id is 0 here and ["music", "0"] matches nothing
+            // the client ever asked for.
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshedEvent { QueryKey = [type, Id.ToString()] }
+                new LibraryRefreshedEvent
+                {
+                    QueryKey = type == "music" ? [type] : [type, Id.ToString()],
+                }
             );
 
             await EventBusProvider.Current.PublishAsync(

@@ -438,15 +438,7 @@ public class LibrariesController(
 
         foreach (Library library in librariesList)
         {
-            foreach (LibraryMovie movie in library.LibraryMovies)
-            {
-                jobDispatcher.DispatchJob<FileRescanJob>(movie.MovieId, movie.LibraryId);
-            }
-
-            foreach (LibraryTv show in library.LibraryTvs)
-            {
-                jobDispatcher.DispatchJob<FileRescanJob>(show.TvId, show.LibraryId);
-            }
+            RescanLibraryFiles(library);
         }
 
         return Ok(
@@ -456,6 +448,31 @@ public class LibrariesController(
                 Message = "Rescanning all libraries.",
             }
         );
+    }
+
+    /// <summary>
+    /// A music library has no LibraryMovies and no LibraryTvs, so walking those two
+    /// collections dispatched nothing at all for it and the rescan reported success
+    /// having done no work. Music is not addressed per title either — its file matching
+    /// runs over the library's own folders — so it dispatches once for the library.
+    /// </summary>
+    private void RescanLibraryFiles(Library library)
+    {
+        if (library.Type == MediaTypes.MusicMediaType)
+        {
+            jobDispatcher.DispatchJob<FileRescanJob>(library.Id);
+            return;
+        }
+
+        foreach (LibraryMovie movie in library.LibraryMovies)
+        {
+            jobDispatcher.DispatchJob<FileRescanJob>(movie.MovieId, movie.LibraryId);
+        }
+
+        foreach (LibraryTv show in library.LibraryTvs)
+        {
+            jobDispatcher.DispatchJob<FileRescanJob>(show.TvId, show.LibraryId);
+        }
     }
 
     [HttpPost]
@@ -468,15 +485,7 @@ public class LibrariesController(
         if (library is null)
             return NotFoundResponse("Library not found");
 
-        foreach (LibraryMovie movie in library.LibraryMovies)
-        {
-            jobDispatcher.DispatchJob<FileRescanJob>(movie.MovieId, movie.LibraryId);
-        }
-
-        foreach (LibraryTv show in library.LibraryTvs)
-        {
-            jobDispatcher.DispatchJob<FileRescanJob>(show.TvId, show.LibraryId);
-        }
+        RescanLibraryFiles(library);
 
         return Ok(
             new StatusResponseDto<List<dynamic>>
