@@ -260,6 +260,12 @@ public partial class MusicHub
             // to prove it's alive.
             playerState.LastActiveHeartbeatUtc = DateTime.UtcNow;
 
+            // The incoming device has proven nothing yet, so it gets the longer
+            // first-report window rather than the one meant for finding a device
+            // that died mid-playback. A TV woken from sleep spends most of that
+            // window booting. See MusicPlaybackService.IsActiveDeviceStale.
+            playerState.ActiveDeviceProvenAlive = false;
+
             // Time itself doesn't change on a transfer, but the capture instant
             // must — the incoming device needs its own fresh drift-free reference
             // point rather than inheriting one that predates its own handoff.

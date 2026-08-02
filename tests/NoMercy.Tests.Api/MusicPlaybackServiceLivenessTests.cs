@@ -29,7 +29,15 @@ namespace NoMercy.Tests.Api;
 [Trait("Category", "Unit")]
 public class MusicPlaybackServiceLivenessTests
 {
-    private static MusicPlayerState MakePlayingState(string? deviceId, DateTime lastHeartbeatUtc)
+    // provenAlive defaults true: every case below models a device that HAD been
+    // reporting and went quiet, which is what the short timeout exists to find.
+    // A device that has never reported once gets a longer window and is covered
+    // separately.
+    private static MusicPlayerState MakePlayingState(
+        string? deviceId,
+        DateTime lastHeartbeatUtc,
+        bool provenAlive = true
+    )
     {
         return new()
         {
@@ -37,6 +45,7 @@ public class MusicPlaybackServiceLivenessTests
             PlayState = true,
             CurrentList = new("/music/albums/test", UriKind.Relative),
             LastActiveHeartbeatUtc = lastHeartbeatUtc,
+            ActiveDeviceProvenAlive = provenAlive,
         };
     }
 
@@ -83,6 +92,70 @@ public class MusicPlaybackServiceLivenessTests
         );
 
         return (service, stateManager, registry, messenger);
+    }
+
+    // ── IsActiveDeviceStale: a device that has never reported yet ────────────
+    // Measured on a Nokia Streaming Box woken from sleep by Cast: handed
+    // playback at 11:24:46, first audio sample at 11:25:04. The short timeout
+    // ended the session at 11:25:01 — three seconds before the music reached the
+    // speakers — so a cast that had worked was heard as one that failed.
+
+    [Fact]
+    public void IsActiveDeviceStale_False_WhileAJustHandedDeviceIsStillComingUp()
+    {
+        DateTime now = DateTime.UtcNow;
+        MusicPlayerState state = MakePlayingState(
+            "tv-waking-from-sleep",
+            now.AddMilliseconds(-(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1_000)),
+            provenAlive: false
+        );
+
+        MusicPlaybackService.IsActiveDeviceStale(state, now).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsActiveDeviceStale_True_WhenAJustHandedDeviceNeverComesUpAtAll()
+    {
+        // The longer window is patience, not surrender: a device that never
+        // arrives still has its session ended, just later.
+        DateTime now = DateTime.UtcNow;
+        MusicPlayerState state = MakePlayingState(
+            "tv-that-never-woke",
+            now.AddMilliseconds(-(MusicPlaybackService.ActiveDeviceFirstReportTimeoutMs + 1)),
+            provenAlive: false
+        );
+
+        MusicPlaybackService.IsActiveDeviceStale(state, now).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsActiveDeviceStale_True_AtTheShortTimeout_OnceTheDeviceHasReportedOnce()
+    {
+        // The first heartbeat is what narrows the window. A device that proved
+        // itself and then died must still be found in fifteen seconds, not
+        // forty-five — the longer window must not leak into steady state.
+        DateTime now = DateTime.UtcNow;
+        MusicPlayerState state = MakePlayingState("device-a", now, provenAlive: false);
+
+        MusicPlaybackService.TryRefreshHeartbeat(state, "device-a").Should().BeTrue();
+        state.ActiveDeviceProvenAlive.Should().BeTrue();
+
+        state.LastActiveHeartbeatUtc = now.AddMilliseconds(
+            -(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1)
+        );
+
+        MusicPlaybackService.IsActiveDeviceStale(state, now).Should().BeTrue();
+    }
+
+    [Fact]
+    public void TryRefreshHeartbeat_FromAPassiveCaller_DoesNotMarkTheActiveDeviceProven()
+    {
+        // A passive device's report must not narrow the window on behalf of an
+        // active device that still hasn't said anything.
+        MusicPlayerState state = MakePlayingState("device-a", DateTime.UtcNow, provenAlive: false);
+
+        MusicPlaybackService.TryRefreshHeartbeat(state, "device-b").Should().BeFalse();
+        state.ActiveDeviceProvenAlive.Should().BeFalse();
     }
 
     // ── IsActiveDeviceStale ──────────────────────────────────────────────────
