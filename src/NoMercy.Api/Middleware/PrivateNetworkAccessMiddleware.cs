@@ -25,21 +25,39 @@ namespace NoMercy.Api.Middleware;
 /// preflight that asks for it. Without it a modern browser kills the connection
 /// (Firefox blocks outright, Chrome is on a phased rollout), which shows up as
 /// "CORS request did not succeed" and a hub reconnect storm.
+/// <para>
+/// Chrome renamed the feature to Local Network Access and renamed the header pair
+/// with it, so a browser on the newer build asks with
+/// <c>Access-Control-Request-Local-Network-Access</c> and never sees the older
+/// answer. Both spellings are answered because the two live side by side across
+/// browser versions. The rename is only half of it: the newer model also gates the
+/// request on a user permission, and a denied prompt fails the fetch with
+/// "Permission was denied for this request to access the `local` address space"
+/// no matter what this middleware returns.
+/// </para>
 /// </summary>
 public class PrivateNetworkAccessMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context)
     {
-        if (
-            HttpMethods.IsOptions(context.Request.Method)
-            && string.Equals(
-                context.Request.Headers["Access-Control-Request-Private-Network"],
-                "true",
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
-            context.Response.Headers["Access-Control-Allow-Private-Network"] = "true";
+        if (HttpMethods.IsOptions(context.Request.Method))
+        {
+            if (AsksFor(context, "Access-Control-Request-Private-Network"))
+                context.Response.Headers["Access-Control-Allow-Private-Network"] = "true";
+
+            if (AsksFor(context, "Access-Control-Request-Local-Network-Access"))
+                context.Response.Headers["Access-Control-Allow-Local-Network-Access"] = "true";
+        }
 
         await next(context);
+    }
+
+    private static bool AsksFor(HttpContext context, string header)
+    {
+        return string.Equals(
+            context.Request.Headers[header],
+            "true",
+            StringComparison.OrdinalIgnoreCase
+        );
     }
 }

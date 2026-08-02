@@ -19,11 +19,19 @@ public sealed class PrivateNetworkAccessMiddlewareTests
 {
     private static async Task<HttpContext> Invoke(string method, string? requestPrivateNetwork)
     {
+        return await Invoke(
+            method,
+            "Access-Control-Request-Private-Network",
+            requestPrivateNetwork
+        );
+    }
+
+    private static async Task<HttpContext> Invoke(string method, string header, string? value)
+    {
         DefaultHttpContext context = new();
         context.Request.Method = method;
-        if (requestPrivateNetwork is not null)
-            context.Request.Headers["Access-Control-Request-Private-Network"] =
-                requestPrivateNetwork;
+        if (value is not null)
+            context.Request.Headers[header] = value;
 
         PrivateNetworkAccessMiddleware middleware = new(_ => Task.CompletedTask);
         await middleware.InvokeAsync(context);
@@ -49,6 +57,58 @@ public sealed class PrivateNetworkAccessMiddlewareTests
 
         context
             .Response.Headers.ContainsKey("Access-Control-Allow-Private-Network")
+            .Should()
+            .BeFalse();
+    }
+
+    /// <summary>
+    /// Chrome renamed the feature to Local Network Access and renamed the header pair with
+    /// it. A browser on the newer build asks with the local-network spelling and never
+    /// looks at the private-network answer, so answering only the old name leaves every
+    /// call from app.nomercy.tv to a LAN server failing with net::ERR_FAILED.
+    /// </summary>
+    [Fact]
+    public async Task Preflight_RequestingLocalNetworkAccess_GetsAllowHeader()
+    {
+        HttpContext context = await Invoke(
+            "OPTIONS",
+            "Access-Control-Request-Local-Network-Access",
+            "true"
+        );
+
+        context
+            .Response.Headers["Access-Control-Allow-Local-Network-Access"]
+            .ToString()
+            .Should()
+            .Be("true");
+    }
+
+    [Fact]
+    public async Task Preflight_WithoutLocalNetworkRequest_HasNoAllowHeader()
+    {
+        HttpContext context = await Invoke(
+            "OPTIONS",
+            "Access-Control-Request-Local-Network-Access",
+            null
+        );
+
+        context
+            .Response.Headers.ContainsKey("Access-Control-Allow-Local-Network-Access")
+            .Should()
+            .BeFalse();
+    }
+
+    [Fact]
+    public async Task NonPreflightRequest_RequestingLocalNetwork_IsNeverAnnotated()
+    {
+        HttpContext context = await Invoke(
+            "GET",
+            "Access-Control-Request-Local-Network-Access",
+            "true"
+        );
+
+        context
+            .Response.Headers.ContainsKey("Access-Control-Allow-Local-Network-Access")
             .Should()
             .BeFalse();
     }
