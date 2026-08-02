@@ -12,6 +12,7 @@
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Hubs.Shared;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Services.Music;
 
@@ -55,8 +56,22 @@ public class MusicPlayerState
     [JsonProperty("progress_ms")]
     public int Time { get; set; }
 
+    /// <summary>
+    /// The current track's length, derived rather than stored.
+    ///
+    /// It used to be a settable field kept in step by hand, and six call sites
+    /// remembered while every auto-advance in
+    /// <see cref="MusicPlaybackService"/> did not: those set
+    /// <see cref="CurrentItem"/> and <see cref="SetPosition"/>(0) and left
+    /// duration_ms describing the track before it. Clients that read the field
+    /// showed the wrong length for the rest of the session — the web player
+    /// reported a full scrubber and 00:00 remaining while the Android clients,
+    /// which parse the item's own duration instead, were correct on the same
+    /// broadcast. Reading it off the item is the one thing that cannot drift
+    /// out of step with the item.
+    /// </summary>
     [JsonProperty("duration_ms")]
-    public int Duration { get; set; }
+    public int Duration => CurrentItem?.Duration.ToMilliSeconds() ?? 0;
 
     [JsonProperty("repeat_state")]
     public string Repeat { get; set; } = "off";

@@ -343,7 +343,6 @@ public partial class MusicHub
             state.SetPosition(0);
             state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             state.PlayState = true;
-            state.Duration = item.Duration.ToMilliSeconds();
         }
         else
         {
@@ -367,7 +366,6 @@ public partial class MusicHub
                 state.SetPosition(0);
                 state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
                 state.PlayState = true;
-                state.Duration = item.Duration.ToMilliSeconds();
             }
             else
             {
@@ -450,7 +448,6 @@ public partial class MusicHub
         state.Backlog.Add(item);
         state.SetPosition(0);
         state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
-        state.Duration = item.Duration.ToMilliSeconds();
     }
 
     private void UpdateActionsDisallows(MusicPlayerState state)
