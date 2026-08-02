@@ -112,6 +112,13 @@ public partial class FileManager
         {
             IStorage folderStorage = StorageFor(rootFolder);
 
+            // Whether the library's own root reads back, recorded from the same rows and
+            // the same facade the resolution below uses. An empty result cannot say on
+            // its own whether a title's media was deleted or the storage holding every
+            // title went away, and those two need opposite handling downstream.
+            if (TryExists(folderStorage, rootFolder.Path))
+                AnyLibraryRootReadable = true;
+
             // Stay in scope-relative space: rootFolder.Path is the storage key
             // as the facade wants it (e.g. "Marvels/TV.Shows"), and the facade
             // Exists / List / downstream scan all reject absolute paths. Do NOT

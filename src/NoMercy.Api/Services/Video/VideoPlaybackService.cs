@@ -375,6 +375,27 @@ public class VideoPlaybackService
             IDbContextFactory<MediaContext>
         >();
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
+
+        // The id was captured when playback started. A rescan that runs mid-playback
+        // deletes and reinserts the VideoFile under a new id, so this one points at a
+        // row that no longer exists and the upsert fails the foreign key — once per
+        // tick, for the rest of the session. VideoHub.SetTime already refuses an
+        // unknown VideoFile; the timer has to make the same check or it turns a
+        // routine rescan into a wall of SQLite Error 19.
+        if (
+            !await mediaContext.VideoFiles.AnyAsync(videoFile =>
+                videoFile.Id == userdata.VideoFileId
+            )
+        )
+        {
+            Logger.App(
+                $"StoreWatchProgression: video file {userdata.VideoFileId} is gone "
+                    + "(re-indexed while playing), skipping progress write",
+                LogEventLevel.Warning
+            );
+            return;
+        }
+
         UpsertCommandBuilder<UserData> query = mediaContext.UserData.Upsert(userdata);
 
         query = state.CurrentItem.PlaylistType switch

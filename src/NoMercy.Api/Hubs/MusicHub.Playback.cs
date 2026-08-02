@@ -607,7 +607,9 @@ public partial class MusicHub
     }
 
     // See the untagged-vs-tagged note on CurrentTimeCommand above.
-    public async Task ReportPositionCommand(int? positionMs)
+    public Task ReportPositionCommand(int? positionMs) => ReportPositionCoreAsync(positionMs, null);
+
+    private async Task ReportPositionCoreAsync(int? positionMs, long? capturedAtMs)
     {
         User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
@@ -639,10 +641,26 @@ public partial class MusicHub
         if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
             return;
 
-        playerState.SetPosition(positionMs.Value);
+        playerState.SetPosition(positionMs.Value, capturedAtMs ?? 0);
 
         await _musicPlaybackService.UpdatePlaybackState(user, playerState);
     }
+
+    /// <summary>
+    /// <see cref="ReportPositionCommand"/> plus the server-clock instant the reporting device
+    /// actually read that position.
+    ///
+    /// Without it the position is stamped when the report lands, so the stored position is
+    /// already older than it claims by however long the report took to arrive. Every passive
+    /// device anchors its interpolation to that instant, so all of them run that far behind
+    /// the device making the sound — which is what put lyrics out of step.
+    ///
+    /// A separate method rather than an extra argument on the existing one: a hub method's
+    /// arity is part of its contract, and clients that still call the old one must keep
+    /// working exactly as they did.
+    /// </summary>
+    public Task ReportPositionAtCommand(int? positionMs, long? capturedAtMs) =>
+        ReportPositionCoreAsync(positionMs, capturedAtMs);
 
     /// <summary>
     /// Item-tagged twin of <see cref="CurrentTimeCommand"/> — seconds instead of

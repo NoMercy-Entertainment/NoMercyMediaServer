@@ -99,6 +99,15 @@ public class BootOrchestrator
                 NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
                     NmSystem.Lifecycle.BootStage.Registered
                 );
+
+                // Registration also carries the address clients are told to reach this
+                // server on, and it was only ever sent on the very first boot. A LAN
+                // address is not stable — a DHCP lease moves it, a container gets a new
+                // bridge IP — and the record kept the old one forever, so the heartbeat
+                // went on reporting the server online while every client resolved an
+                // address that answers nothing. Re-announcing is off the boot path
+                // because a registered server must not wait on the API to start serving.
+                _ = RefreshRegistrationAsync(ct);
             }
             else
             {
@@ -162,6 +171,41 @@ public class BootOrchestrator
 
         Logger.Setup("Headless environment detected — starting device code flow");
 
+        while (!ct.IsCancellationRequested && !_setupState.IsAuthenticated)
+        {
+            DeviceCodeOutcome outcome = await RunOneDeviceCodeAttemptAsync(ct);
+
+            if (outcome is DeviceCodeOutcome.Granted || ct.IsCancellationRequested)
+                return;
+
+            if (outcome is DeviceCodeOutcome.Unreachable)
+            {
+                // Nothing was shown to the user, so this is a retry rather than a
+                // new code. Backing off keeps a down auth server from spinning.
+                await Task.Delay(TimeSpan.FromSeconds(DeviceCodeRetryDelaySeconds), ct);
+                continue;
+            }
+
+            Logger.Setup("Setup code expired — issuing a new one");
+        }
+    }
+
+    private const int DeviceCodeRetryDelaySeconds = 10;
+
+    private enum DeviceCodeOutcome
+    {
+        /// <summary>The user approved the code and tokens are stored.</summary>
+        Granted,
+
+        /// <summary>The code was shown but ran out, or the user declined it.</summary>
+        Ended,
+
+        /// <summary>No code was ever shown — the request itself failed.</summary>
+        Unreachable,
+    }
+
+    private async Task<DeviceCodeOutcome> RunOneDeviceCodeAttemptAsync(CancellationToken ct)
+    {
         try
         {
             string deviceEndpoint =
@@ -180,7 +224,7 @@ public class BootOrchestrator
             if (!response.IsSuccessStatusCode)
             {
                 Logger.Setup("Device code request failed", LogEventLevel.Warning);
-                return;
+                return DeviceCodeOutcome.Unreachable;
             }
 
             string json = await response.Content.ReadAsStringAsync();
@@ -191,7 +235,7 @@ public class BootOrchestrator
             if (deviceResponse is null)
             {
                 Logger.Setup("Device code response could not be parsed", LogEventLevel.Warning);
-                return;
+                return DeviceCodeOutcome.Unreachable;
             }
 
             string verificationUri = deviceResponse.VerificationUriComplete;
@@ -207,14 +251,19 @@ public class BootOrchestrator
                 ui.Show(verificationUri, deviceResponse.VerificationUri, userCode, setupPageUrl);
             }
 
-            if (!string.IsNullOrEmpty(deviceCode))
-            {
-                await PollDeviceGrant(deviceCode, interval, ct);
-            }
+            if (string.IsNullOrEmpty(deviceCode))
+                return DeviceCodeOutcome.Unreachable;
+
+            return await PollDeviceGrant(deviceCode, interval, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return DeviceCodeOutcome.Ended;
         }
         catch (Exception ex)
         {
             Logger.Setup($"Device code flow error: {ex.Message}", LogEventLevel.Warning);
+            return DeviceCodeOutcome.Unreachable;
         }
     }
 
@@ -267,6 +316,26 @@ public class BootOrchestrator
                     LogEventLevel.Error
                 );
             }
+        }
+    }
+
+    /// <summary>
+    /// Re-sends this server's details for an already-registered boot, so a changed
+    /// address reaches the API. Failure is not fatal: the server is registered and
+    /// serving, and the next boot tries again.
+    /// </summary>
+    private async Task RefreshRegistrationAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _serverRegistrationService.Init();
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            Logger.Setup(
+                $"Could not refresh this server's registered address: {ex.Message}",
+                LogEventLevel.Warning
+            );
         }
     }
 
@@ -331,7 +400,20 @@ public class BootOrchestrator
         }
     }
 
-    private async Task PollDeviceGrant(string deviceCode, int interval, CancellationToken ct)
+    /// <summary>
+    /// Polls until the user approves the code or the code dies. The caller mints a
+    /// replacement when it dies: a first-time user has to register, accept the terms
+    /// and verify an email address inside the code's ten-minute life, which routinely
+    /// runs over, and before this returned an outcome the whole flow simply stopped —
+    /// leaving a server sitting in setup mode with no code and no way to reach one
+    /// short of a restart. The browser setup page has always minted a fresh code; the
+    /// console path is the one a Docker user has, and it did not.
+    /// </summary>
+    private async Task<DeviceCodeOutcome> PollDeviceGrant(
+        string deviceCode,
+        int interval,
+        CancellationToken ct
+    )
     {
         string tokenEndpoint =
             $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
@@ -364,7 +446,7 @@ public class BootOrchestrator
                         _setupState.TransitionTo(SetupPhase.Authenticating);
                         _setupState.TransitionTo(SetupPhase.Authenticated);
                         Logger.Setup("Device code authentication successful");
-                        return;
+                        return DeviceCodeOutcome.Granted;
                     }
                 }
 
@@ -373,7 +455,7 @@ public class BootOrchestrator
                 if (errorCode is "expired_token" or "access_denied")
                 {
                     Logger.Setup($"Device code flow ended: {errorCode}");
-                    return;
+                    return DeviceCodeOutcome.Ended;
                 }
             }
             catch (OperationCanceledException)
@@ -385,5 +467,7 @@ public class BootOrchestrator
                 Logger.Setup($"Device poll error: {ex.Message}", LogEventLevel.Warning);
             }
         }
+
+        return _setupState.IsAuthenticated ? DeviceCodeOutcome.Granted : DeviceCodeOutcome.Ended;
     }
 }
