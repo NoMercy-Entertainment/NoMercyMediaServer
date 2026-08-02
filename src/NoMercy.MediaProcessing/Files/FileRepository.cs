@@ -18,6 +18,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.NmSystem;
@@ -132,6 +133,21 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             .Where(e => e.SeasonNumber == item.Parsed!.Season)
             .Where(e => e.EpisodeNumber == item.Parsed!.Episode)
             .FirstOrDefaultAsync();
+    }
+
+    public async Task RecordUnmatchedEpisodeFileAsync(
+        string filePath,
+        Ulid libraryId,
+        string reason
+    )
+    {
+        await ImportFailureRecorder.RecordAsync(
+            context,
+            "EpisodeFileMatch",
+            filePath,
+            libraryId,
+            reason
+        );
     }
 
     public async Task<(Movie? movie, Tv? show, string type)> MediaType(int id, Library library)

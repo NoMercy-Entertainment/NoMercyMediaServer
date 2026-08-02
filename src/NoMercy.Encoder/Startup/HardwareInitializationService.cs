@@ -57,9 +57,38 @@ public class HardwareInitializationService(
     /// </summary>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        DetectionTask = Task.Run(() => RunDetectionAsync(cancellationToken), cancellationToken);
+        // The token handed to StartAsync signals a failed STARTUP, not shutdown, so on
+        // its own it never fires when the host is stopped. The probe below waits on
+        // BootStage.All, which is process-wide and deliberately survives the HTTP→HTTPS
+        // restart, so the setup host's copy of this service would sit waiting through
+        // its own disposal and then run against a dead container: the driver
+        // fingerprint could be neither read nor written, and the multi-minute hardware
+        // benchmark re-ran on every boot instead of reusing the cached one.
+        CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            _stopping.Token
+        );
+
+        DetectionTask = Task.Run(
+            async () =>
+            {
+                try
+                {
+                    await RunDetectionAsync(linked.Token);
+                }
+                catch (OperationCanceledException) { }
+                finally
+                {
+                    linked.Dispose();
+                }
+            },
+            linked.Token
+        );
+
         return Task.CompletedTask;
     }
+
+    private readonly CancellationTokenSource _stopping = new();
 
     private async Task RunDetectionAsync(CancellationToken ct)
     {
@@ -288,5 +317,13 @@ public class HardwareInitializationService(
         }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    /// <summary>
+    /// Cancels the deferred probe. Without this the detection task outlives the host
+    /// that owns the container it resolves its database context from.
+    /// </summary>
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        _stopping.Cancel();
+        return Task.CompletedTask;
+    }
 }

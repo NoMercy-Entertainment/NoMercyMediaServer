@@ -16,7 +16,6 @@ public interface IApiKeyStore
     string AcousticIdKey { get; }
     string FanArtApiKey { get; }
     string FanArtClientKey { get; }
-    string JwplayerKey { get; }
     string MakeMkvKey { get; }
     string MusixmatchKey { get; }
     string OmdbKey { get; }

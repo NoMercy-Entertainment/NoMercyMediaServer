@@ -167,7 +167,6 @@ public class ApiKeyLoader : IApiKeyLoader
             store.TmdbToken = data.Data.Keys.TmdbToken;
             store.TvdbKey = data.Data.Keys.TvdbKey;
             store.MusixmatchKey = data.Data.Keys.MusixmatchKey;
-            store.JwplayerKey = data.Data.Keys.JwplayerKey;
             store.KeysLoaded = true;
         }
     }

@@ -145,6 +145,20 @@ public partial class FileManager
 
         Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
 
+        // A show file that matches no episode still gets stored below, with neither an
+        // episode nor a movie on it — nothing can list or play it, and because the
+        // library only lists shows that have an episode with a playable file, the whole
+        // show disappears. Without this the user is left with an empty library and
+        // nowhere that says why. Seen with S00E00 specials, whose season/episode pair
+        // exists in no provider's episode list.
+        if (Show is not null && episode is null)
+            await fileRepository.RecordUnmatchedEpisodeFileAsync(
+                itemPath,
+                Show.LibraryId,
+                $"No episode matches season {item.Parsed?.Season?.ToString() ?? "?"} "
+                    + $"episode {item.Parsed?.Episode?.ToString() ?? "?"} of {Show.Title}."
+            );
+
         Metadata metadata = await MakeMetadata(
             storage,
             item,

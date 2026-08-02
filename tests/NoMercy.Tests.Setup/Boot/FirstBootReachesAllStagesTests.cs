@@ -25,6 +25,7 @@ using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Setup.Infrastructure;
+using NoMercyQueue;
 
 namespace NoMercy.Tests.Setup.Boot;
 
@@ -165,6 +166,36 @@ public sealed class FirstBootReachesAllStagesTests : IDisposable
 
         Assert.Contains("RunPostAuthAsync", source);
         Assert.DoesNotContain("orchestrator.RunRegistrationAsync", source);
+    }
+
+    /// <summary>
+    /// The setup host's queue workers must be stopped before its container is disposed.
+    /// They poll a queue that outlives the host, so a worker left running scopes every
+    /// job it reserves against a dead provider — 367 jobs dead-lettered on a measured
+    /// first boot, including the scan for a library added after the restart.
+    /// <see cref="QueueRunner.StopAll"/> existed for exactly this and had no callers.
+    /// </summary>
+    [Fact]
+    public void ServerRunner_StopsTheSetupHostsQueueWorkers_BeforeDisposingIt()
+    {
+        string source = ReadSource("src/NoMercy.Service/Hosting/ServerRunner.cs");
+
+        // Anchor on the restart itself — the file disposes httpHost on other paths too,
+        // and only the ordering inside this block is the thing being pinned.
+        int restart = source.IndexOf(
+            "Certificate ready — restarting with HTTPS",
+            StringComparison.Ordinal
+        );
+        Assert.True(restart >= 0, "the HTTPS restart block moved — this guard needs updating");
+
+        int stopAll = source.IndexOf("StopAll()", restart, StringComparison.Ordinal);
+        int dispose = source.IndexOf("httpHost.DisposeAsync()", restart, StringComparison.Ordinal);
+
+        Assert.True(stopAll >= 0, "the HTTPS restart must stop the setup host's workers");
+        Assert.True(
+            stopAll < dispose,
+            "workers must be stopped before the container they scope jobs against is disposed"
+        );
     }
 
     private static string ReadSource(string relativePath)
