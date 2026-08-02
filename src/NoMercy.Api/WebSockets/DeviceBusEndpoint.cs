@@ -230,11 +230,79 @@ public sealed class DeviceBusEndpoint(
 
         await registry.Register(device.Id, ws);
 
+        await RetireSupersededRowsAsync(ctx, device, user.Id);
+
         // If the device just moved to a different account, refresh the previous
         // owner so the device disappears from their list immediately.
         if (previousOwner is { } previous && previous != user.Id)
             await registry.BroadcastChange(previous);
         return device;
+    }
+
+    /// <summary>
+    /// Drop the rows an earlier identity of <paramref name="device" /> left behind,
+    /// so one physical device is offered once.
+    /// </summary>
+    /// <remarks>
+    /// A device that loses its stored id — a factory reset, a reinstall, or the
+    /// signing-key change that rotates ANDROID_ID — hellos under a value nothing
+    /// matches and gets a second row. Both rows carry a fingerprint, so the picker
+    /// listed one TV twice under one name with nothing to tell the entries apart,
+    /// and only the newest was ever on the bus: choosing the other sent a cast
+    /// nowhere.
+    ///
+    /// The row is retired, not deleted. Clearing the fingerprint takes it out of
+    /// <c>GetDevices</c> while its history, custom name and stored volume survive.
+    /// A row currently registered on the bus is never touched, so two devices that
+    /// genuinely share a name keep both entries as long as both are connected.
+    /// </remarks>
+    private async Task RetireSupersededRowsAsync(MediaContext ctx, Device device, Guid ownerUserId)
+    {
+        List<Device> superseded = await ctx
+            .Devices.Where(d =>
+                d.Id != device.Id
+                && d.OwnerUserId == ownerUserId
+                && d.Type == device.Type
+                && d.Name == device.Name
+                && d.Fingerprint != null
+            )
+            .ToListAsync();
+
+        List<Device> retired = SelectSuperseded(superseded, registry.IsOnline);
+        if (retired.Count == 0)
+            return;
+
+        foreach (Device stale in retired)
+            Retire(stale);
+
+        await ctx.SaveChangesAsync();
+
+        // Every mutation of Devices has to announce itself: the pickers only
+        // replace their list on a push, so a silent retire leaves the entry on
+        // screen until something unrelated fires the next one.
+        await registry.BroadcastChange(ownerUserId);
+    }
+
+    /// <summary>
+    /// Of the rows sharing this device's owner, name and type, the ones no longer
+    /// reachable. A row still on the bus is a second, genuinely present device.
+    /// </summary>
+    internal static List<Device> SelectSuperseded(
+        IEnumerable<Device> candidates,
+        Func<Ulid, bool> isOnline
+    )
+    {
+        return candidates.Where(candidate => !isOnline(candidate.Id)).ToList();
+    }
+
+    /// <summary>
+    /// Take a row out of the picker without losing it. Clearing the fingerprint is
+    /// what <c>GetDevices</c> filters on; the custom name, volume and history stay.
+    /// </summary>
+    internal static void Retire(Device device)
+    {
+        device.Fingerprint = null;
+        device.IsActive = false;
     }
 
     /// <summary>
