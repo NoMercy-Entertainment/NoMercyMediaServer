@@ -42,6 +42,7 @@ namespace NoMercy.Tests.Setup.Boot;
 /// </para>
 /// </summary>
 [Trait("Category", "Unit")]
+[Collection(ProcessWideSetupStateCollection.Name)]
 public class ExpiredDeviceCodeIsReplacedTests : IDisposable
 {
     private readonly string _originalAuthBaseUrl = ExternalServicesConfig.Current.AuthBaseUrl;

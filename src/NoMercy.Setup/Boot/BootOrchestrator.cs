@@ -99,6 +99,15 @@ public class BootOrchestrator
                 NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
                     NmSystem.Lifecycle.BootStage.Registered
                 );
+
+                // Registration also carries the address clients are told to reach this
+                // server on, and it was only ever sent on the very first boot. A LAN
+                // address is not stable — a DHCP lease moves it, a container gets a new
+                // bridge IP — and the record kept the old one forever, so the heartbeat
+                // went on reporting the server online while every client resolved an
+                // address that answers nothing. Re-announcing is off the boot path
+                // because a registered server must not wait on the API to start serving.
+                _ = RefreshRegistrationAsync(ct);
             }
             else
             {
@@ -307,6 +316,26 @@ public class BootOrchestrator
                     LogEventLevel.Error
                 );
             }
+        }
+    }
+
+    /// <summary>
+    /// Re-sends this server's details for an already-registered boot, so a changed
+    /// address reaches the API. Failure is not fatal: the server is registered and
+    /// serving, and the next boot tries again.
+    /// </summary>
+    private async Task RefreshRegistrationAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _serverRegistrationService.Init();
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            Logger.Setup(
+                $"Could not refresh this server's registered address: {ex.Message}",
+                LogEventLevel.Warning
+            );
         }
     }
 

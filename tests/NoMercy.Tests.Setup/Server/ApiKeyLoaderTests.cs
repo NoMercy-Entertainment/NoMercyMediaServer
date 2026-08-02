@@ -35,6 +35,7 @@ namespace NoMercy.Tests.Setup.Server;
 /// NOMERCY_APP_PATH temp tree the test harness already provides.
 /// </remarks>
 [Trait("Category", "Unit")]
+[Collection(ProcessWideSetupStateCollection.Name)]
 public sealed class ApiKeyLoaderTests : IDisposable
 {
     private readonly LocalStorageDriver _driver = new();
