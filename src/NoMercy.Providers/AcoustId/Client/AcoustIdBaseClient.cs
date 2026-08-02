@@ -55,8 +55,14 @@ public class AcoustIdBaseClient : ExternalApiClient
 
         try
         {
+            // POST the parameters as a form rather than hanging them off the URL. A
+            // chromaprint fingerprint is thousands of characters and grows with track
+            // length, so the GET form worked for short tracks and returned
+            // 414 (URI Too Long) for the rest — a per-track failure that looked like a
+            // fingerprinting fault. The cache key stays the composed URL so a hit still
+            // matches; only the wire format changes.
             string response = await RequestQueue.Enqueue(
-                () => Client.GetStringAsync(newUrl),
+                () => PostFormAsync(url, query),
                 newUrl,
                 priority
             );
@@ -68,6 +74,28 @@ public class AcoustIdBaseClient : ExternalApiClient
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Sends the lookup parameters as an <c>application/x-www-form-urlencoded</c> body.
+    /// The <c>meta</c> selector rides along in the path's own query string, which is
+    /// short and fixed; only the fingerprint is large enough to matter.
+    /// </summary>
+    private async Task<string> PostFormAsync(string url, Dictionary<string, string?> query)
+    {
+        using FormUrlEncodedContent content = new(
+            query
+                .Where(parameter => parameter.Value is not null)
+                .Select(parameter => new KeyValuePair<string, string>(
+                    parameter.Key,
+                    parameter.Value!
+                ))
+        );
+
+        using HttpResponseMessage response = await Client.PostAsync(url, content);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsStringAsync();
     }
 
     private static bool HasRecordings<T>(T? data)
