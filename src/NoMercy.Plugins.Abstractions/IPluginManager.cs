@@ -65,6 +65,13 @@ public interface IPluginManager
     PluginInfo? GetPluginInfo(Guid pluginId) =>
         GetInstalledPlugins().FirstOrDefault(info => info.Id == pluginId);
 
+    // The plugin's strings for one locale, read from the files it ships beside
+    // its assembly, falling back to the locale the plugin was authored in when
+    // it ships nothing for the one asked for. A default returning null keeps
+    // existing implementers compiling; a manager that knows where a plugin lives
+    // on disk overrides it.
+    Dictionary<string, string>? ReadTranslations(Guid pluginId, string locale) => null;
+
     // The live instance, for the platform endpoints that have to call into a
     // plugin (IUiPlugin.GetViewAsync). Null when nothing is loaded under that id.
     IPlugin? GetPluginInstance(Guid pluginId) => null;

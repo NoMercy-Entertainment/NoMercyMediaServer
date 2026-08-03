@@ -59,8 +59,36 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
     /// <summary>
     /// What a plugin wants rendered for one of its routes.
     /// </summary>
+    /// <summary>
+    /// The plugin's own strings for one locale.
+    ///
+    /// A plugin supplies the text in the components it builds, so the client has
+    /// no way to translate what it has never seen. Serving them under the
+    /// plugin's id lets the client merge them into its own catalogue as a
+    /// namespace, which is what keeps two plugins using the same key apart.
+    /// </summary>
+    [HttpGet("api/v{version:apiVersion}/plugins/{id:guid}/translations/{locale}")]
+    public IActionResult Translations(Guid id, string locale)
+    {
+        PluginInfo? info = pluginManager.GetPluginInfo(id);
+
+        if (info is null)
+            return NotFoundResponse("Plugin not found");
+
+        // The manager owns the fallback because it is the thing holding the
+        // manifest: a viewer whose language the plugin does not ship reads it in
+        // the language it was written in, never in empty labels.
+        Dictionary<string, string>? strings = pluginManager.ReadTranslations(id, locale);
+
+        return Ok(new DataResponseDto<Dictionary<string, string>> { Data = strings ?? [] });
+    }
+
     [HttpGet("api/v{version:apiVersion}/plugins/{id:guid}/view")]
-    public async Task<IActionResult> View(Guid id, [FromQuery] string? route, CancellationToken ct)
+    public async Task<IActionResult> View(
+        Guid id,
+        [FromQuery] string? route,
+        [FromQuery] string? surface,
+        CancellationToken ct)
     {
         PluginInfo? info = pluginManager.GetPluginInfo(id);
 
@@ -74,9 +102,13 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
         {
             Route = string.IsNullOrWhiteSpace(route) ? "/" : route,
             Query = Request
-                .Query.Where(entry => entry.Key != "route")
+                .Query.Where(entry => entry.Key != "route" && entry.Key != "surface")
                 .ToDictionary(entry => entry.Key, entry => entry.Value.ToString()),
             UserId = User.UserId().ToString(),
+            // An unknown surface falls back rather than being passed through. A
+            // plugin branching on it would hit its own default and serve the
+            // desktop shape to a television, which looks like a plugin bug.
+            Surface = PluginSurface.IsKnown(surface) ? surface! : PluginSurface.Web,
         };
 
         try
