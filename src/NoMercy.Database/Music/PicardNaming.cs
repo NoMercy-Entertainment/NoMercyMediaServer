@@ -54,12 +54,20 @@ public static partial class PicardNaming
     [GeneratedRegex(@"^(the|a|an)\s+", RegexOptions.IgnoreCase)]
     private static partial Regex LeadingArticle();
 
-    public static string BuildPath(MusicNamingContext context)
+    public static string BuildPath(MusicNamingContext context) =>
+        $"{BuildDirectory(context)}/{BuildFileName(context)}";
+
+    /// <summary>
+    /// The folder the release files into, relative to the library root. Separate from the
+    /// full path because the encoder needs somewhere to put its output directory, and
+    /// that destination is a folder rather than a file.
+    /// </summary>
+    public static string BuildDirectory(MusicNamingContext context)
     {
         string album = Truncate(Fallback(context.AlbumName, "[Unknown Album]"));
         string year = $"[{Year(context.Year)}]";
 
-        string path = context.AlbumType switch
+        return context.AlbumType switch
         {
             MusicAlbumType.Classical => $"{ClassicalFolder}/{year} {album}",
             MusicAlbumType.Soundtrack => $"{SoundtrackFolder}/{year} {album}",
@@ -68,8 +76,6 @@ public static partial class PicardNaming
                 $"{Initial(context.AlbumArtistSort)}/{Fallback(context.AlbumArtistSort, UnknownArtistFolder)}/{SinglesFolder}",
             _ => StandardPath(context, year, album),
         };
-
-        return $"{path}/{BuildFileName(context)}";
     }
 
     private static string StandardPath(MusicNamingContext context, string year, string album)
