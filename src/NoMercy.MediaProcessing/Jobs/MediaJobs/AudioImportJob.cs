@@ -291,6 +291,8 @@ public class AudioImportJob : AbstractMusicFolderJob
         using (musicBrainzRecordingClient)
         await using (_mediaContext)
         {
+            Log.LogInformation("AudioImportJob: importing {InputFolder}", InputFolder);
+
             bool wasEmpty = !await _mediaContext!.AlbumLibrary.AnyAsync(al =>
                 al.LibraryId == LibraryId
             );
@@ -477,6 +479,12 @@ public class AudioImportJob : AbstractMusicFolderJob
             return;
         }
 
+        Log.LogInformation(
+            "AudioImportJob: {Count} file(s) matched {Title}",
+            audioFiles.Count,
+            release.Title
+        );
+
         await releaseManager.Store(
             release,
             albumLibrary,
@@ -518,15 +526,24 @@ public class AudioImportJob : AbstractMusicFolderJob
                         && tag.MusicBrainz?.RecordingId != musicBrainzTrack.Id
                         && tag.MusicBrainz?.RecordingId != musicBrainzTrack.Recording.Id
                     )
-                    || (
+                    // A rip with no MusicBrainz tags fails every id comparison above, and
+                    // with || that alone skipped the track — so the title/duration/position
+                    // fallback underneath could never rescue a file and no untagged album
+                    // ever paired a track to encode.
+                    && (
                         !musicBrainzTrack.Title.ContainsSanitized(
                             tag.Tags?.Title ?? file.Parsed?.Title
                         )
                         && !(Math.Abs(tag.Duration - musicBrainzTrack.Duration) < 5)
                         && musicBrainzTrack.Position != tag.Tags?.Track
                         && musicBrainzTrack.Position != file.Parsed?.TrackNumber
-                        && musicBrainzTrack.Position != index + 1
-                        && musicBrainzTrack.Position * idx != index + 1
+                    // The two comparisons that used to close this list — position
+                    // against index + 1, and against index + 1 over the medium —
+                    // read the track's own place in the loop and never looked at
+                    // the file, so every track matched whichever file came first
+                    // and one file was handed to all eleven encodes. A file pairs
+                    // on something about that file: its title, its length, or the
+                    // track number it carries.
                     )
                 )
                     continue;
@@ -551,6 +568,12 @@ public class AudioImportJob : AbstractMusicFolderJob
                 mediaFile,
                 folderLibrary,
                 coverPalette
+            );
+
+            Log.LogInformation(
+                "AudioImportJob: encoding {Track} from {File}",
+                musicBrainzTrack.Title,
+                mediaFile.Path
             );
 
             MusicEncodeDispatcher.Dispatch(

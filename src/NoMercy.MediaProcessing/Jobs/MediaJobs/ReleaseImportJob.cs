@@ -58,6 +58,14 @@ public class ReleaseImportJob : AbstractMusicFolderJob
 
     public override async Task Handle()
     {
+        Log.LogInformation(
+            "ReleaseImportJob: {InputFolder} -> library {LibraryId} folder {FolderId} release {ReleaseId}",
+            InputFolder,
+            LibraryId,
+            FolderId,
+            ReleaseId
+        );
+
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
