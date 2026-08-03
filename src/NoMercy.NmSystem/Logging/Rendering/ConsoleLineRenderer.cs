@@ -52,9 +52,9 @@ public static class ConsoleLineRenderer
         head.Append(Paint(time, dim, color)).Append(' ');
         head.Append(Paint(marker, levelHex, color)).Append(' ');
         head.Append(Paint(label, categoryHex, color)).Append(' ');
-        head.Append(Paint("│", dim, color)).Append(' ');
+        head.Append(Rule(dim, color)).Append(' ');
 
-        string gutter = new string(' ', GutterColumn) + Paint("│", dim, color) + " ";
+        string gutter = new string(' ', GutterColumn) + Rule(dim, color) + " ";
 
         int wrapWidth = width > GutterColumn + 4 ? width - GutterColumn - 2 : 0;
         List<string> messageLines = SplitAndWrap(message ?? string.Empty, wrapWidth);
@@ -144,4 +144,15 @@ public static class ConsoleLineRenderer
 
     private static string Paint(string text, string hex, bool color) =>
         color ? text.Pastel(hex) : text;
+
+    /// <summary>
+    /// The column rule is drawn as a space with a background colour rather than a
+    /// box-drawing glyph. A terminal has no non-selectable pixels — everything on
+    /// screen is a character cell and copying takes the cells — so the only way to
+    /// keep the separator out of a pasted log line is to make the character itself
+    /// something harmless. It looks identical and pastes as whitespace. With colour
+    /// off, which is every redirected stream, it is simply a space.
+    /// </summary>
+    private static string Rule(string hex, bool color) =>
+        color ? " ".PastelBg(hex) : " ";
 }
