@@ -266,7 +266,7 @@ public class HardwareInitializationServiceTests
     [Fact]
     public async Task StartAsync_ReturnsImmediately_WithoutAwaitingDetection()
     {
-        // No stage is marked yet — detection gates on BootStage.All and would
+        // No stage is marked yet — detection gates on BootStage.Binaries and would
         // block indefinitely if StartAsync awaited it directly.
         ServerPhaseTracker tracker = new();
 
@@ -297,15 +297,53 @@ public class HardwareInitializationServiceTests
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
         await service.StartAsync(cts.Token);
 
-        // Service is not yet ready — detection is gated on BootStage.All.
+        // Service is not yet ready — detection is gated on BootStage.Binaries.
         service.IsReady.Should().BeFalse();
 
-        // Now unblock the gate (every stage in BootStage.All) and let detection finish.
-        tracker.MarkComplete(BootStage.Essential);
-        tracker.MarkComplete(BootStage.Auth);
+        // Now unblock the one stage detection actually waits on and let it finish.
         tracker.MarkComplete(BootStage.Binaries);
-        tracker.MarkComplete(BootStage.Network);
-        tracker.MarkComplete(BootStage.Registered);
+        await service.DetectionTask;
+
+        service.IsReady.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Hardware detection must not wait on Auth, Network or Registered — those
+    /// describe this server's relationship with nomercy-tv, not whether ffmpeg
+    /// is on disk. Regression guard for the boot-stage re-cut: a fresh install
+    /// stuck in setup mode (never authenticated, never registered) must still
+    /// get GPU detection and let its encoder queues start.
+    /// </summary>
+    [Fact]
+    public async Task StartAsync_DoesNotWaitOnAuthNetworkOrRegistered()
+    {
+        ServerPhaseTracker tracker = new();
+        tracker.MarkComplete(BootStage.Essential);
+        tracker.MarkComplete(BootStage.Binaries);
+
+        Mock<IHardwareDetector> detector = new();
+        detector
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
+
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerSuccess().Object);
+
+        HardwareInitializationService service = new(
+            detector.Object,
+            ffmpegCaps,
+            StubEncoderProbe(),
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            tracker,
+            probeRetryDelayMs: 0
+        );
+
+        await service.StartAsync(CancellationToken.None);
         await service.DetectionTask;
 
         service.IsReady.Should().BeTrue();

@@ -27,8 +27,12 @@ public enum BootStage
     /// <summary>Tokens loaded + validated (or interactive auth pending in setup mode).</summary>
     Auth = 1 << 1,
 
-    /// <summary>Every external binary (ffmpeg, yt-dlp, whisper models, tesseract) on disk
-    /// and not in flux — safe for the encoder worker to spawn ffmpeg.</summary>
+    /// <summary>ffmpeg and ffprobe on disk — safe for the encoder worker to spawn ffmpeg
+    /// and for any queue to call ffprobe. Marked as soon as those two binaries are
+    /// present, not when every downloadable binary is: yt-dlp, whisper models and
+    /// tesseract language data continue downloading in the background after this
+    /// fires, so a consumer that genuinely needs one of those must check for it
+    /// directly rather than assume this stage covers it.</summary>
     Binaries = 1 << 2,
 
     /// <summary>External IP discovered, UPnP / port-forward attempted, connectivity confirmed.</summary>

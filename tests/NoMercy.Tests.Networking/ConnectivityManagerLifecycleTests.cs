@@ -9,10 +9,13 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Connectivity;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Status;
 using Xunit;
 
@@ -338,5 +341,114 @@ public sealed class ConnectivityManagerLifecycleTests
         ConnectivityManager manager = BuildManager(discovery, boot, tokenStore);
 
         Assert.Equal(ConnectivityState.Starting, manager.CurrentState);
+    }
+
+    // ── LocalOnly's two meanings ─────────────────────────────────────────────
+    //
+    // LocalOnly is set both when the operator pins the mode (a real terminal choice) and when
+    // nothing worked this pass (not terminal). Backing off and logging "retrying" for the
+    // pinned case implied the server was still hunting for connectivity when it had
+    // deliberately stopped looking.
+
+    private sealed class CapturingLogger : ILogger<ConnectivityManager>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable BeginScope<TState>(TState state)
+            where TState : notnull => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter
+        )
+        {
+            lock (Messages)
+                Messages.Add(formatter(state, exception));
+        }
+
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+
+            public void Dispose() { }
+        }
+    }
+
+    [Fact]
+    public async Task Supervision_ModePinnedToLocalOnly_ReEvaluatesPeriodically_ButNeverLogsRetryBackoff()
+    {
+        ConnectivityMode previous = RuntimeServerSettings.Current.ConnectivityMode;
+        RuntimeServerSettings.Current.ConnectivityMode = ConnectivityMode.LocalOnly;
+
+        try
+        {
+            CapturingLogger logger = new();
+            BootStatus boot = new();
+            boot.MarkStarted();
+            AuthTokenStore tokenStore = new();
+            tokenStore.SetAccessToken("test-token");
+
+            ConnectivityManager manager = new(
+                logger,
+                tokenStore,
+                new FastNetworkDiscovery(),
+                [],
+                boot,
+                new ConnectivityStatus(),
+                null,
+                TimeSpan.FromMilliseconds(10)
+            );
+
+            await manager.StartAsync(CancellationToken.None);
+            await Task.Delay(200);
+            await manager.StopAsync(CancellationToken.None);
+
+            Assert.Equal(ConnectivityState.LocalOnly, manager.CurrentState);
+
+            int pinnedReEvaluations = logger.Messages.Count(m => m.Contains("pinned to LocalOnly"));
+            Assert.True(
+                pinnedReEvaluations > 1,
+                $"Expected more than one re-evaluation while pinned, got {pinnedReEvaluations}."
+            );
+            Assert.DoesNotContain(logger.Messages, m => m.Contains("retrying in"));
+        }
+        finally
+        {
+            RuntimeServerSettings.Current.ConnectivityMode = previous;
+        }
+    }
+
+    [Fact]
+    public async Task Supervision_LocalOnlyBecauseNothingWorked_LogsRetryBackoff()
+    {
+        BootStatus boot = new();
+        boot.MarkStarted();
+        AuthTokenStore tokenStore = new();
+        tokenStore.SetAccessToken("test-token");
+        CapturingLogger logger = new();
+        RecordingStrategy failing = new(succeeds: false);
+
+        ConnectivityManager manager = new(
+            logger,
+            tokenStore,
+            new FastNetworkDiscovery(),
+            [failing],
+            boot,
+            new ConnectivityStatus(),
+            null,
+            TimeSpan.FromMilliseconds(10)
+        );
+
+        await manager.StartAsync(CancellationToken.None);
+        await Task.Delay(100);
+        await manager.StopAsync(CancellationToken.None);
+
+        Assert.Equal(ConnectivityState.LocalOnly, manager.CurrentState);
+        Assert.Contains(logger.Messages, m => m.Contains("retrying in"));
     }
 }

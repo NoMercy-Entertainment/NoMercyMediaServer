@@ -492,27 +492,44 @@ public class Binaries
         {
             Logger.Setup("Downloading Binaries");
 
-            await DownloadApp();
-            await DownloadLauncher();
-            await DownloadCli();
-            await DownloadServerUpdate();
-            await DownloadFfmpeg();
-            await DownloadCloudflared();
-            await DownloadYtdlp();
-            await DownloadShakaPackager();
-            await DownloadWhisperModels(AppFiles.WhisperModel);
-
-            List<string> tesseractLanguages = ["eng", "jpn"];
-            if (!CultureInfo.CurrentCulture.Equals(CultureInfo.InvariantCulture))
+            // Scoped to exactly this DownloadAll() run: App/Launcher/CLI/ServerUpdate all
+            // resolve the SAME "nomercy-media-server/releases/latest" URL below, which used
+            // to mean 4 identical api.github.com requests for one repo, out of ~10 total per
+            // boot against GitHub's 60/hr anonymous limit. The flag is reset in the finally
+            // block below rather than left on: TesseractModelDownloader is a DI singleton
+            // that reuses ITS OWN long-lived Binaries instance for on-demand, days-apart
+            // per-language pulls — memoizing across THAT lifetime would mean a new signed
+            // tesseract release never gets picked up again after the first call.
+            _memoizeReleaseInfoForThisRun = true;
+            try
             {
-                string currentCulture = CultureInfo.CurrentCulture.EnglishLanguageTag();
-                if (
-                    !string.IsNullOrEmpty(currentCulture)
-                    && !tesseractLanguages.Contains(currentCulture)
-                )
-                    tesseractLanguages.Add(currentCulture);
+                await DownloadApp();
+                await DownloadLauncher();
+                await DownloadCli();
+                await DownloadServerUpdate();
+                await DownloadFfmpeg();
+                await DownloadCloudflared();
+                await DownloadYtdlp();
+                await DownloadShakaPackager();
+                await DownloadWhisperModels(AppFiles.WhisperModel);
+
+                List<string> tesseractLanguages = ["eng", "jpn"];
+                if (!CultureInfo.CurrentCulture.Equals(CultureInfo.InvariantCulture))
+                {
+                    string currentCulture = CultureInfo.CurrentCulture.EnglishLanguageTag();
+                    if (
+                        !string.IsNullOrEmpty(currentCulture)
+                        && !tesseractLanguages.Contains(currentCulture)
+                    )
+                        tesseractLanguages.Add(currentCulture);
+                }
+                await DownloadTesseractData(tesseractLanguages);
             }
-            await DownloadTesseractData(tesseractLanguages);
+            finally
+            {
+                _memoizeReleaseInfoForThisRun = false;
+                _releaseInfoMemo.Clear();
+            }
 
             if (_binaryReport.Count > 0)
             {
@@ -582,7 +599,35 @@ public class Binaries
     private const int MaxRateLimitedAttempts = 3;
     private static readonly TimeSpan MaxRateLimitWait = TimeSpan.FromMinutes(2);
 
+    // Per-run memo keyed on the API URL, active only while DownloadAll() is executing
+    // (see _memoizeReleaseInfoForThisRun there). DownloadAll's App/Launcher/CLI/
+    // ServerUpdate steps all resolve the SAME "nomercy-media-server/releases/latest"
+    // URL, so one run made 4 identical api.github.com requests for it alone (part of
+    // ~10 total per boot against GitHub's 60/hr anonymous limit). NOT active for a
+    // direct caller like TesseractModelDownloader — a DI singleton that reuses its own
+    // long-lived Binaries instance for on-demand, days-apart per-language pulls, where
+    // memoizing forever would mean a new signed release never gets picked up again.
+    // Deliberately not a persisted or TTL cache either: that would make
+    // CheckLocalVersion's self-correcting mtime-vs-published_at behavior depend on a
+    // stale claim about a prior run instead of this run's own live/fallback result.
+    private bool _memoizeReleaseInfoForThisRun;
+    private readonly Dictionary<string, GithubReleaseResponse> _releaseInfoMemo = new();
+
     internal async Task<GithubReleaseResponse> GetLatestReleaseInfo(string apiUrl)
+    {
+        if (
+            _memoizeReleaseInfoForThisRun
+            && _releaseInfoMemo.TryGetValue(apiUrl, out GithubReleaseResponse? memoized)
+        )
+            return memoized;
+
+        GithubReleaseResponse result = await FetchLatestReleaseInfoUncachedAsync(apiUrl);
+        if (_memoizeReleaseInfoForThisRun)
+            _releaseInfoMemo[apiUrl] = result;
+        return result;
+    }
+
+    private async Task<GithubReleaseResponse> FetchLatestReleaseInfoUncachedAsync(string apiUrl)
     {
         int attempt = 0;
         int rateLimitedAttempts = 0;
@@ -1836,7 +1881,24 @@ public class Binaries
         }
         else
         {
-            Logger.Setup($"Downloaded Whisper model to {paths[0]}");
+            // Single-asset releases still land at DependenciesPath/{assetName} (see
+            // DownloadWithVerificationAsync's destPath argument above) — without this
+            // move+stamp, CheckLocalVersion's next-boot check reads FfmpegFolder/{model}.bin,
+            // finds nothing, and re-downloads the ~2GB model on every single boot forever.
+            // FfmpegFolder normally already exists (DownloadFfmpeg's extraction step creates
+            // it, and runs earlier in DownloadAll's sequence) — mirrors ConcatenateModelParts'
+            // own guard for a caller that invokes DownloadWhisperModels directly.
+            if (!_driver.DirectoryExists(AppFiles.FfmpegFolder))
+                _storage.CreateDirectory(AppFiles.FfmpegFolder);
+
+            if (_driver.FileExists(destinationPath))
+                _driver.DeleteFile(destinationPath);
+
+            _driver.MoveFile(paths[0], destinationPath);
+
+            await FileAttributes.SetCreatedAttribute(destinationPath, releaseInfo.PublishedAt);
+
+            Logger.Setup($"Downloaded Whisper model to {destinationPath}");
         }
     }
 

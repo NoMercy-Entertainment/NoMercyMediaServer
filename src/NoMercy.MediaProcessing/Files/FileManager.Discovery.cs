@@ -60,23 +60,8 @@ public partial class FileManager
         return folders;
     }
 
-    // Resolve a scope-relative folder key ("Anime/Anime/Show") to the backend-
-    // absolute path the raw driver's file APIs (EnumerateFileSystemEntries,
-    // DirectoryExists, MediaScan) expect.
-    //
-    // A local library's root lives in the LocalStorage facade's path guard, not
-    // in the stateless LocalStorageDriver — its GetFullPath is a bare
-    // Path.GetFullPath that canonicalizes against the process CWD (/app in the
-    // container). Resolving a scope-relative key through the driver therefore
-    // produced "/app/Anime/Anime/Show" instead of the library root, and every
-    // local-library rescan / move silently found zero files. Remote backends
-    // (NFS / S3 / SMB / WebDAV) carry their own export/bucket root inside the
-    // driver and don't implement the facade's local-only GetFullPath escape
-    // hatch, so they must resolve through the driver.
     private static string ResolveBackendPath(IStorage storage, string scopeRelativePath) =>
-        storage.Driver is LocalStorageDriver
-            ? storage.GetFullPath(scopeRelativePath)
-            : storage.Driver.GetFullPath(scopeRelativePath);
+        storage.ResolveBackendPath(scopeRelativePath);
 
     private List<Folder> Paths(Library library, Movie? movie = null, Tv? show = null)
     {

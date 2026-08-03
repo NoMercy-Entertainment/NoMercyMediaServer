@@ -186,6 +186,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<HardwareInitializationService>();
         services.AddHostedService(sp => sp.GetRequiredService<HardwareInitializationService>());
 
+        // Marks BootStage.Binaries as soon as ffmpeg/ffprobe are on disk, independent
+        // of whisper-model/tesseract downloads that run after them and can take
+        // minutes — see FfmpegBinaryReadinessService for why every ffprobe-dependent
+        // queue needs this signal decoupled from the full binary bundle.
+        services.AddHostedService<FfmpegBinaryReadinessService>();
+
         // Hardware benchmark runs lazily — defers past ApplicationStarted, then
         // waits for the encoder to be idle (no active streams/jobs) before
         // spawning calibration ffmpeg processes. Startup is never blocked and

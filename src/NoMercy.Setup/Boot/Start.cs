@@ -35,6 +35,7 @@ public class Start
 
     private static List<StartupTask> _allTasks = [];
     private static HashSet<string> _phase1Completed = [];
+    private static bool _essentialInitialized;
 
     internal static List<StartupTask> BuildStartupTasks()
     {
@@ -130,6 +131,14 @@ public class Start
 
     public static async Task InitEssential()
     {
+        // ServerBootstrapper and BootOrchestrator both call this defensively (the latter
+        // as "a shim until Task 17 inlines task definitions") — a second call used to
+        // rebuild _allTasks from scratch (discarding Phase 2/3 task closures InitRemaining
+        // later reads) and re-run CreateAppFolders + UserSettings a second time for no
+        // reason. Phase 1 only ever needs to run once per process.
+        if (_essentialInitialized)
+            return;
+
         _allTasks = BuildStartupTasks();
 
         List<StartupTask> phase1Tasks = _allTasks.Where(t => t.Phase == 1).ToList();
@@ -138,6 +147,7 @@ public class Start
         await runner.RunAll();
 
         _phase1Completed = [.. runner.CompletedTasks];
+        _essentialInitialized = true;
     }
 
     public static async Task InitRemaining(
@@ -179,7 +189,12 @@ public class Start
                 Authenticated = !string.IsNullOrEmpty(accessToken),
                 NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
                 SeedsRun = true,
-                Registered = runner.CompletedTasks.Contains("Register"),
+                // No StartupTask is named "Register" — registration runs in BootOrchestrator,
+                // not in this task list — so checking CompletedTasks here was permanently
+                // false and left a fully-registered server re-entering registration (and
+                // its cooldown) forever inside DegradedModeRecovery. HasValidCertificate()
+                // is the same fact BootOrchestrator itself uses to decide isRegistered.
+                Registered = Certificate?.HasValidCertificate() ?? false,
                 BinariesReady = runner.CompletedTasks.Contains("Binaries"),
             };
             if (recovery is not null)

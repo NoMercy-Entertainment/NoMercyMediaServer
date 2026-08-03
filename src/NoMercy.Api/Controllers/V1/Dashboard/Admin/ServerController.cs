@@ -416,8 +416,16 @@ public partial class ServerController(
                 ? FileRepository.StorageDriverFromStorage(resolvedStorage)
                 : fileRepository.StorageDriver;
 
+            // MediaScan resolves through the raw driver, whose local GetFullPath
+            // canonicalizes against the process working directory. Handing it the
+            // browser's scope-relative key ("Download/complete/<album>") scanned a
+            // directory that does not exist and returned "no results" in 40ms without
+            // touching the disk. The video branch never hit this because it keeps the
+            // scoped IStorage.
+            string scanRoot = resolvedStorage?.ResolveBackendPath(request.Folder) ?? request.Folder;
+
             List<FileItem> fileList = await FileRepository.GetMusicBrainzReleasesInDirectory(
-                request.Folder,
+                scanRoot,
                 effectiveDriver,
                 audioFingerprinter
             );

@@ -208,17 +208,8 @@ public class LibraryManager(
     // through it. Using the driver for LOCAL would canonicalize against the
     // process CWD (the local driver is a shared, root-less singleton) and scan a
     // path that does not exist — the "0 subfolders" discovery bug.
-    internal static string ResolveScanRoot(IStorage storage, string folderPath)
-    {
-        try
-        {
-            return storage.GetFullPath(folderPath);
-        }
-        catch (NotSupportedException)
-        {
-            return storage.Driver.GetFullPath(folderPath);
-        }
-    }
+    internal static string ResolveScanRoot(IStorage storage, string folderPath) =>
+        storage.ResolveBackendPath(folderPath);
 
     private async Task<int> ScanNewVideoFolder(
         Folder folder,

@@ -228,6 +228,31 @@ public sealed class ApiKeyLoaderTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadKeys_KeysAlreadyLoaded_SkipsNetworkEntirely()
+    {
+        // ServerBootstrapper and BootOrchestrator both call LoadKeys unconditionally on
+        // the same IApiKeyStore singleton — without reading the flag ApplyKeys already
+        // sets, the second call always re-fetched from the network for no reason.
+        using LoopbackHttpServer server = new();
+        int requestCount = 0;
+        server.Handler = _ =>
+        {
+            Interlocked.Increment(ref requestCount);
+            return new(200, ApiInfoJson("fresh-tmdb-token"));
+        };
+        using ExternalServicesConfigScope scope = new(apiBaseUrl: server.BaseUrl);
+
+        ApiKeyLoader loader = BuildLoader();
+        await loader.LoadKeys();
+        Assert.Equal(1, requestCount);
+
+        await loader.LoadKeys();
+
+        Assert.Equal(1, requestCount);
+        Assert.Equal("fresh-tmdb-token", _apiKeyStore.TmdbToken);
+    }
+
+    [Fact]
     public async Task LoadKeys_NoCacheDirectoryYet_DoesNotThrowWhenWritingCache()
     {
         using LoopbackHttpServer server = new();

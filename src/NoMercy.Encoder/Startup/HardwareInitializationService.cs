@@ -52,18 +52,23 @@ public class HardwareInitializationService(
     /// <summary>
     /// Returns immediately so the hosted-service start pipeline is never
     /// blocked. Hardware detection runs on a background task and gates on
-    /// <see cref="BootStage.All"/> so the ffmpeg binary is on disk and the
-    /// server is fully ready before the deferred probe competes for CPU/GPU.
+    /// <see cref="BootStage.Binaries"/> — the only real dependency of
+    /// <c>ffmpeg -encoders</c> is ffmpeg itself being on disk. Auth, Network
+    /// and Registered (rolled up in <see cref="BootStage.All"/>) are about
+    /// this server's relationship with nomercy-tv and are irrelevant to
+    /// spawning a local ffmpeg process; waiting on them only delayed GPU
+    /// detection, and transitively the encoder queues, behind unrelated
+    /// setup work.
     /// </summary>
     public Task StartAsync(CancellationToken cancellationToken)
     {
         // The token handed to StartAsync signals a failed STARTUP, not shutdown, so on
         // its own it never fires when the host is stopped. The probe below waits on
-        // BootStage.All, which is process-wide and deliberately survives the HTTP→HTTPS
-        // restart, so the setup host's copy of this service would sit waiting through
-        // its own disposal and then run against a dead container: the driver
-        // fingerprint could be neither read nor written, and the multi-minute hardware
-        // benchmark re-ran on every boot instead of reusing the cached one.
+        // BootStage.Binaries, which is process-wide and deliberately survives the
+        // HTTP→HTTPS restart, so the setup host's copy of this service would sit
+        // waiting through its own disposal and then run against a dead container: the
+        // driver fingerprint could be neither read nor written, and the multi-minute
+        // hardware benchmark re-ran on every boot instead of reusing the cached one.
         CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             _stopping.Token
@@ -92,16 +97,17 @@ public class HardwareInitializationService(
 
     private async Task RunDetectionAsync(CancellationToken ct)
     {
-        // Wait until the binary-download/install task has finished placing the
-        // ffmpeg executable on disk. Without this gate the probe races the
-        // Binaries boot stage and can see a missing or partially-written binary,
-        // causing ffmpeg -encoders to fail and the GPU codec list to be empty
-        // for the entire server lifetime.
+        // Wait until ffmpeg is confirmed on disk. Without this gate the probe races
+        // provisioning and can see a missing or partially-written binary, causing
+        // ffmpeg -encoders to fail and the GPU codec list to be empty for the entire
+        // server lifetime.
         if (phaseTracker is not null)
         {
-            logger.LogInformation("Hardware detection waiting for BootStage.All (server ready)...");
-            await phaseTracker.WhenReachedAsync(BootStage.All, ct).ConfigureAwait(false);
-            logger.LogInformation("BootStage.All reached — starting hardware probe");
+            logger.LogInformation(
+                "Hardware detection waiting for BootStage.Binaries (ffmpeg on disk)..."
+            );
+            await phaseTracker.WhenReachedAsync(BootStage.Binaries, ct).ConfigureAwait(false);
+            logger.LogInformation("BootStage.Binaries reached — starting hardware probe");
         }
 
         if (ct.IsCancellationRequested)

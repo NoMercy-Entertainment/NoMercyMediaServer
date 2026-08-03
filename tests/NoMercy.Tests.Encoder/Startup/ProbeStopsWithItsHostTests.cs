@@ -21,7 +21,7 @@ using Xunit;
 namespace NoMercy.Tests.Encoder.Startup;
 
 /// <summary>
-/// The hardware probe defers itself until <see cref="NoMercy.NmSystem.Lifecycle.BootStage.All"/>,
+/// The hardware probe defers itself until <see cref="NoMercy.NmSystem.Lifecycle.BootStage.Binaries"/>,
 /// which is process-wide on purpose so it survives the HTTP→HTTPS restart of first boot.
 /// That makes stopping it on host shutdown essential: the token
 /// <see cref="Microsoft.Extensions.Hosting.IHostedService.StartAsync"/> receives signals a
@@ -83,8 +83,8 @@ public class ProbeStopsWithItsHostTests : IDisposable
         HardwareInitializationService service =
             provider.GetRequiredService<HardwareInitializationService>();
 
-        // No stage is ever marked, so the probe is parked on BootStage.All exactly as the
-        // setup host's copy is while the HTTPS host takes over.
+        // No stage is ever marked, so the probe is parked on BootStage.Binaries exactly as
+        // the setup host's copy is while the HTTPS host takes over.
         await service.StartAsync(CancellationToken.None);
         await service.StopAsync(CancellationToken.None);
 
