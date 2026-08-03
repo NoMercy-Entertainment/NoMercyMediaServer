@@ -45,13 +45,14 @@ public class ReleaseImportJob : AbstractMusicFolderJob
     public override string QueueName => "import";
 
     // The queue reserves by OrderByDescending(Priority), so the old 4 sat below
-    // PersonRefreshJob's 5 and never got a worker while any background refresh was
-    // outstanding — a manual import simply never started. This job is what "Add
-    // selection" dispatches and someone is watching the dashboard for it, so it matches
-    // the AudioImportJob children it spawns: both clear the metadata churn, and a release
-    // interleaves with its own children in dispatch order rather than fanning every
-    // release out before any audio is imported.
-    public override int Priority => 6;
+    // PersonRefreshJob's 5 and below the show/movie extras at 6, and a manual import
+    // never got the single import worker while any of that was outstanding. Matching 6
+    // was not enough either: equal priorities fall back to insertion order, so a fresh
+    // import still queued behind every enrichment job already waiting.
+    //
+    // This is what "Add selection" dispatches, with someone watching the dashboard for
+    // it, so it outranks background enrichment outright rather than tying with it.
+    public override int Priority => 9;
 
     // private bool _fromFingerprint;
 

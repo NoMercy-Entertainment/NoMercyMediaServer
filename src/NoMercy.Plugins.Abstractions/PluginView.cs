@@ -37,6 +37,15 @@ public class PluginView
     /// client guessing a poll interval, and a plugin with a hub connection
     /// pushes instead.
     /// </summary>
+    /// <summary>
+    /// The shell this view sits in, from <see cref="PluginLayout" />.
+    ///
+    /// A shape rather than a design: the client draws it in its own idiom, which
+    /// is what lets one declaration look right with a pointer and with a remote.
+    /// </summary>
+    [JsonPropertyName("layout")]
+    public string Layout { get; init; } = PluginLayout.Standard;
+
     [JsonPropertyName("refreshInterval")]
     public int RefreshInterval { get; init; }
 }

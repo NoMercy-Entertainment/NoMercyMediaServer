@@ -34,4 +34,7 @@
     <ProjectReference Include="..\NoMercy.Plugin.Samples.Dashboard\NoMercy.Plugin.Samples.Dashboard.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Service\NoMercy.Service.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Nm\fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
