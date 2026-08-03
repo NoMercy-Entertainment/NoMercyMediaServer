@@ -603,27 +603,53 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task DownloadWhisperModels_SinglePart_DownloadsDirectly()
+    public async Task DownloadWhisperModels_SinglePart_MovesToFfmpegFolderAndStampsCreatedAttribute()
     {
+        // Overturns the previous version of this test, which asserted the single-asset
+        // branch left the model at DependenciesPath/{assetName} without ever moving it
+        // to (or stamping) the FfmpegFolder/{model}.bin path CheckLocalVersion actually
+        // checks — that mismatch meant CheckLocalVersion never saw the file on the NEXT
+        // boot and re-downloaded the ~2GB model every single boot forever. The fix moves
+        // and stamps it exactly like the multi-part branch (ConcatenateModelParts) does.
         byte[] payload = "whisper-model-single-part"u8.ToArray();
         string assetUrl = "https://example.com/ggml-large-v3.bin";
+        DateTimeOffset publishedAt = DateTimeOffset.UtcNow.AddDays(-3);
 
         FakeHttpHandler handler = new();
         handler.Register(assetUrl, payload);
         handler.RegisterReleaseInfo(
             "https://api.github.com/repos/NoMercy-Entertainment/nomercy-whisper-models/releases/latest",
-            ReleaseWithAssets(MakeAsset("ggml-large-v3.bin", assetUrl, payload))
+            ReleaseWithAssets(
+                publishedAt,
+                "v1.0.0",
+                MakeAsset("ggml-large-v3.bin", assetUrl, payload)
+            )
         );
 
         Binaries binaries = BuildBinaries(handler);
         await binaries.DownloadWhisperModels("ggml-large-v3");
 
-        // Single-part downloads land directly at DependenciesPath/{assetName} —
-        // ConcatenateModelParts (and its FfmpegFolder destination) only runs when
-        // there is more than one part to merge (see the MultiPart test below).
-        string destination = Path.Combine(AppFiles.DependenciesPath, "ggml-large-v3.bin");
+        string destination = Path.Combine(AppFiles.FfmpegFolder, "ggml-large-v3.bin");
         Assert.True(File.Exists(destination));
         Assert.Equal(payload, await File.ReadAllBytesAsync(destination));
+        Assert.False(
+            File.Exists(Path.Combine(AppFiles.DependenciesPath, "ggml-large-v3.bin")),
+            "the staging download must be moved, not left behind, at DependenciesPath"
+        );
+
+        // Re-running against the SAME release must now see the model as already
+        // current — CheckLocalVersion reads the CreatedAttribute stamp this branch
+        // must apply exactly like the multi-part branch does.
+        bool alreadyCurrent = binaries.CheckLocalVersion(
+            ReleaseWithAssets(
+                publishedAt,
+                "v1.0.0",
+                MakeAsset("ggml-large-v3.bin", assetUrl, payload)
+            ),
+            destination,
+            out string _
+        );
+        Assert.True(alreadyCurrent, "the single-asset branch must stamp CreatedAttribute");
     }
 
     [Fact]
@@ -993,6 +1019,78 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         Assert.Equal("already-current", await File.ReadAllTextAsync(AppFiles.LauncherExePath));
         Assert.Equal("already-current", await File.ReadAllTextAsync(AppFiles.CliExePath));
     }
+
+    // -------------------------------------------------------------------------
+    // GetLatestReleaseInfo — per-run memo keyed on the API URL
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetLatestReleaseInfo_CalledDirectlyOutsideDownloadAll_NeverMemoizes()
+    {
+        // The memo is scoped to a DownloadAll() run, not to the Binaries instance's
+        // lifetime — TesseractModelDownloader is a DI singleton that reuses its own
+        // long-lived Binaries instance for on-demand, days-apart per-language pulls
+        // (see TesseractModelDownloaderTests.DownloadVerifiedAsync_RepeatedCalls_
+        // ReuseCachedManifest, which pins that its release-info GET runs once PER CALL).
+        // Memoizing outside DownloadAll would mean a new signed release never gets
+        // picked up again after the first on-demand call.
+        const string apiUrl =
+            "https://api.github.com/repos/NoMercy-Entertainment/nomercy-media-server/releases/latest";
+
+        FakeHttpHandler handler = new();
+        handler.RegisterReleaseInfo(apiUrl, ReleaseWithAssets());
+
+        Binaries binaries = BuildBinaries(handler);
+
+        await binaries.GetLatestReleaseInfo(apiUrl);
+        await binaries.GetLatestReleaseInfo(apiUrl);
+
+        Assert.Equal(2, handler.RequestCountFor(apiUrl));
+    }
+
+    [Fact]
+    public async Task DownloadAll_MediaServerReleaseUrl_FetchedOnlyOncePerRun()
+    {
+        const string mediaServerApiUrl =
+            "https://api.github.com/repos/NoMercy-Entertainment/nomercy-media-server/releases/latest";
+
+        Directory.CreateDirectory(AppFiles.FfmpegFolder);
+        await File.WriteAllTextAsync(AppFiles.FfmpegPath, "placeholder-ffmpeg");
+        NoMercy.NmSystem.Information.Software.Version = new(1, 0, 0);
+
+        FakeHttpHandler handler = new();
+        handler.RegisterReleaseInfo(
+            mediaServerApiUrl,
+            ReleaseWithAssets(DateTimeOffset.UtcNow.AddDays(-10), "v1.0.0")
+        );
+        foreach (
+            string apiUrl in new[]
+            {
+                "https://api.github.com/repos/NoMercy-Entertainment/nomercy-ffmpeg/releases/latest",
+                "https://api.github.com/repos/NoMercy-Entertainment/nomercy-tesseract/releases/latest",
+                "https://api.github.com/repos/NoMercy-Entertainment/nomercy-whisper-models/releases/latest",
+            }
+        )
+            handler.RegisterReleaseInfo(apiUrl, ReleaseWithAssets());
+        foreach (
+            string listUrl in new[]
+            {
+                "https://api.github.com/repos/yt-dlp/yt-dlp/releases?per_page=30",
+                "https://api.github.com/repos/cloudflare/cloudflared/releases?per_page=30",
+                "https://api.github.com/repos/shaka-project/shaka-packager/releases?per_page=30",
+            }
+        )
+            handler.RegisterReleaseList(listUrl, []);
+
+        Binaries binaries = BuildBinaries(handler);
+
+        await binaries.DownloadAll();
+
+        // App, Launcher, CLI and ServerUpdate all call GetLatestReleaseInfo against the
+        // exact same URL — without the per-run memo this was 4 separate api.github.com
+        // requests for one repo, out of ~10 total per boot against a 60/hr anonymous cap.
+        Assert.Equal(1, handler.RequestCountFor(mediaServerApiUrl));
+    }
 }
 
 /// <summary>
@@ -1009,6 +1107,11 @@ internal sealed class FakeHttpHandler : HttpMessageHandler
 {
     private readonly Dictionary<string, byte[]> _responses = new(StringComparer.OrdinalIgnoreCase);
 
+    // Per-URL request count — lets a test assert the per-run release-info memo
+    // (Binaries.GetLatestReleaseInfo) actually collapses repeated calls to the same
+    // apiUrl within one DownloadAll() run instead of hitting GitHub every time.
+    private readonly Dictionary<string, int> _requestCounts = new(StringComparer.OrdinalIgnoreCase);
+
     public void Register(string url, byte[] body) => _responses[url] = body;
 
     public void RegisterReleaseInfo(string apiUrl, GithubReleaseResponse release) =>
@@ -1017,12 +1120,17 @@ internal sealed class FakeHttpHandler : HttpMessageHandler
     public void RegisterReleaseList(string listUrl, GithubReleaseResponse[] releases) =>
         Register(listUrl, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(releases)));
 
+    public int RequestCountFor(string url) =>
+        _requestCounts.TryGetValue(url, out int count) ? count : 0;
+
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken
     )
     {
         string url = request.RequestUri?.ToString() ?? string.Empty;
+        _requestCounts[url] = RequestCountFor(url) + 1;
+
         if (_responses.TryGetValue(url, out byte[]? body))
         {
             HttpResponseMessage ok = new(HttpStatusCode.OK)

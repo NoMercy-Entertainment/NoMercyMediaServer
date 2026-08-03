@@ -183,11 +183,16 @@ public static class DatabaseSeeder
     /// Seed provider data (TMDB genres, languages, certifications, etc.).
     /// Requires API keys (no auth). Called early in startup before any import jobs.
     /// </summary>
+    /// <summary>
+    /// Requires the caller to have already run <see cref="SeedOfflineData"/> — the only
+    /// caller (<c>ServerBootstrapper</c>) runs it directly beforehand, immediately after
+    /// schema init, so the UI has config/library/encoder-preset data before auth
+    /// completes. Re-running it here doubled all six sub-seeds (44 SELECTs + 44 upserts
+    /// on encoder presets alone) on every boot for no reason.
+    /// </summary>
     public static async Task Run(IStorage storage, IStorageDriver storageDriver)
     {
         MediaContext mediaDbContext = new();
-
-        await SeedOfflineData(storage, storageDriver);
 
         Func<Task>[] seeds =
         [
@@ -195,7 +200,6 @@ public static class DatabaseSeeder
             () => CountriesSeed.Init(mediaDbContext),
             () => GenresSeed.Init(mediaDbContext),
             () => CertificationsSeed.Init(mediaDbContext),
-            () => MusicGenresSeed.Init(mediaDbContext),
         ];
 
         foreach (Func<Task> seed in seeds)
@@ -209,6 +213,24 @@ public static class DatabaseSeeder
                 Logger.Setup($"Seed failed: {ex.Message}", LogEventLevel.Warning);
             }
         }
+
+        // Music genres come from MusicBrainz, which serves one request per second and
+        // pages 2181 genres. Awaited here it put 77 seconds between a brand-new server
+        // starting and its owner being able to log in, measured on a from-zero boot.
+        // Nothing in signing in, browsing or playing needs them; the music scan that does
+        // is queue work that starts later, and MusicGenresSeed checks the table before it
+        // touches the network, so a server that already has them pays nothing either way.
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await MusicGenresSeed.Init(new MediaContext());
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup($"Music genres seed failed: {ex.Message}", LogEventLevel.Warning);
+            }
+        });
     }
 
     public static async Task LoadDiskOverlaysAsync(MediaContext context)
@@ -246,7 +268,7 @@ public static class DatabaseSeeder
             {
                 Logger.Setup(
                     $"Disk overlay '{entry.SourcePath}' has Ulid {p.Id} that collides with a built-in preset '{existing.Name}'. "
-                             + "Built-ins are immutable; disk overlay rejected. Use a different Ulid to coexist.",
+                        + "Built-ins are immutable; disk overlay rejected. Use a different Ulid to coexist.",
                     LogEventLevel.Warning
                 );
             }
@@ -464,10 +486,10 @@ public static class DatabaseSeeder
                 if (removedOrphans.Count > 0)
                     Logger.Setup(
                         $"{contextName}: Removed {removedOrphans.Values.Sum()} foreign-key-orphaned row(s) before migration: "
-                                 + string.Join(
-                                     ", ",
-                                     removedOrphans.Select(entry => $"{entry.Key}={entry.Value}")
-                                 ),
+                            + string.Join(
+                                ", ",
+                                removedOrphans.Select(entry => $"{entry.Key}={entry.Value}")
+                            ),
                         LogEventLevel.Warning
                     );
             }
@@ -507,11 +529,11 @@ public static class DatabaseSeeder
                 );
                 Logger.Setup(
                     $"{contextName}: Migration failed on a foreign-key constraint. "
-                             + (
-                                 violations.Count > 0
-                                     ? $"Orphaned rows: {string.Join("; ", violations)}"
-                                     : "No pre-existing orphans remain — the violation is in a migration's own data step."
-                             ),
+                        + (
+                            violations.Count > 0
+                                ? $"Orphaned rows: {string.Join("; ", violations)}"
+                                : "No pre-existing orphans remain — the violation is in a migration's own data step."
+                        ),
                     LogEventLevel.Fatal
                 );
                 throw;
@@ -566,7 +588,7 @@ public static class DatabaseSeeder
 
         Logger.Setup(
             $"{contextName}: Detected {toUnstamp.Count} stamped-but-missing migration(s), "
-                     + $"unstamping so they re-apply: {string.Join(", ", toUnstamp)}",
+                + $"unstamping so they re-apply: {string.Join(", ", toUnstamp)}",
             LogEventLevel.Warning
         );
 
@@ -675,7 +697,8 @@ public static class DatabaseSeeder
             try
             {
                 context.Database.ExecuteSqlRaw(
-                    "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})", [migration, version]
+                    "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})",
+                    [migration, version]
                 );
                 Logger.Setup($"Added migration {migration} to history", LogEventLevel.Verbose);
             }

@@ -64,6 +64,12 @@ public class ApiKeyLoader : IApiKeyLoader
 
     public async Task LoadKeys(CancellationToken ct = default)
     {
+        // ServerBootstrapper and BootOrchestrator both call this unconditionally on the
+        // same singleton — without reading the flag ApplyKeys already sets, the second
+        // call always tried the network again for no reason.
+        if (_apiKeyStore.KeysLoaded)
+            return;
+
         // 1. Try network first
         ApiInfoResponse? liveData = await TryFetchFromNetwork();
 

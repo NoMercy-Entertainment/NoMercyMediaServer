@@ -25,6 +25,16 @@ public static class MusicGenresSeed
     {
         Logger.Setup("Checking Music Genres seed", LogEventLevel.Verbose);
 
+        // Mirrors the sibling TMDB seeds beside this one (Languages/Countries/Genres/
+        // Certifications): check the DB before touching the network. The previous shape
+        // fetched MusicBrainz's first page BEFORE this check to learn `expected` for a
+        // count comparison — paying a rate-limited round-trip on the pre-auth blocking
+        // boot path every single boot, even once fully seeded, just to learn there was
+        // nothing to do.
+        bool hasGenres = await dbContext.MusicGenres.AnyAsync();
+        if (hasGenres)
+            return;
+
         try
         {
             MusicBrainzGenreClient musicBrainzGenreClient = new();
@@ -39,14 +49,8 @@ public static class MusicGenresSeed
                 return;
             }
 
-            long expected = firstPage.GenreCount;
-            long actual = await dbContext.MusicGenres.LongCountAsync();
-
-            if (actual >= expected)
-                return;
-
             Logger.Setup(
-                $"Adding Music Genres ({actual}/{expected} present)",
+                $"Adding Music Genres (0/{firstPage.GenreCount} present)",
                 LogEventLevel.Verbose
             );
 
