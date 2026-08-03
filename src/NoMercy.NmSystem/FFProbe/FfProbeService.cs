@@ -498,8 +498,29 @@ public class FfProbeService : IFfProbeService
         finally
         {
             FfProbeThrottle.Release();
+            KillIfStillRunning(process);
             process?.Dispose();
         }
+    }
+
+    /// <summary>
+    /// Dispose releases the handle; it does not stop the program. Only the timeout path
+    /// killed the child, so a cancelled probe — which is what a shutdown raises — left an
+    /// ffprobe running with no parent. Eight of them accumulated across one debugging
+    /// session, the oldest surviving fifteen hours and several server restarts.
+    /// </summary>
+    private static void KillIfStillRunning(Process? process)
+    {
+        if (process is null)
+            return;
+
+        try
+        {
+            if (!process.HasExited)
+                process.Kill(entireProcessTree: true);
+        }
+        catch (InvalidOperationException) { }
+        catch (NotSupportedException) { }
     }
 
     private async Task<string> RunFfprobeStdinWithRetry(
@@ -636,6 +657,7 @@ public class FfProbeService : IFfProbeService
         {
             FfProbeThrottle.Release();
             FfProbeThrottle.ReleaseRemote();
+            KillIfStillRunning(process);
             process?.Dispose();
         }
     }
