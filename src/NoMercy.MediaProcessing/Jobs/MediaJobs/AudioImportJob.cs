@@ -637,11 +637,15 @@ public class AudioImportJob : AbstractMusicFolderJob
 
     private async IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)> GetAudioFiles()
     {
+        // Depth 2, matching the file list that produced the release the operator chose.
+        // An album folder holds its tracks directly, and at depth 1 the scan returned no
+        // files for the very folder the file list had just read eleven out of — so the
+        // import had nothing to anchor the release to and stored nothing.
         await using MediaScan mediaScan = new(StorageDriver);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             .EnableFileListing()
-            .Process(InputFolder, 1);
+            .Process(InputFolder, 2);
 
         _rootFolder ??= rootFolders.FirstOrDefault();
 

@@ -22,6 +22,37 @@ public class DashboardSamplePlugin : IUiPlugin
 
     public Version Version => new(0, 1, 0);
 
+    /// <summary>
+    /// The pages this plugin serves, declared so the server can list them and a
+    /// client can register a named route for each when a server is chosen.
+    /// </summary>
+    public static readonly PluginRouteTable Table = new(
+        new PluginRoute
+        {
+            Name = "browse",
+            Path = "/",
+            Label = "title",
+            Layout = PluginLayout.Grid
+        },
+        new PluginRoute
+        {
+            Name = "detail",
+            Path = "/details/:id",
+            Label = "title",
+            Layout = PluginLayout.ListDetail,
+            LayoutBySurface = { [PluginSurface.Tv] = PluginLayout.Immersive }
+        },
+        new PluginRoute
+        {
+            Name = "settings",
+            Path = "/settings",
+            Label = "settings",
+            Layout = PluginLayout.Form,
+            Surfaces = [PluginSurface.Web]
+        });
+
+    public PluginRouteTable Routes => Table;
+
     public IReadOnlyList<PluginNavEntry> NavEntries =>
     [
         new()

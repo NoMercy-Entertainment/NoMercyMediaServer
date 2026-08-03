@@ -1,3 +1,4 @@
+using NoMercy.Plugin.Samples.Dashboard;
 using NoMercy.Plugins.Abstractions;
 using Xunit;
 
@@ -125,5 +126,49 @@ public class PluginRouteTableTests
         Guid id = Guid.NewGuid();
 
         Assert.Equal($"/music/plugins/{id}/stations/42", PluginNavigation.Resolve(intent, PluginKind.Music, id));
+    }
+}
+
+public class DeclaredPagesReachTheClientTests
+{
+    private static readonly DashboardSamplePlugin Plugin = new();
+
+    [Fact]
+    public void APluginThatDeclaresPagesReportsThem()
+    {
+        // The check that was skipped: the interface declares Routes with an
+        // empty default, so every plugin reported none and the whole dynamic
+        // registration path was a no-op against anything real.
+        Assert.NotEmpty(((IUiPlugin)Plugin).Routes.Routes);
+    }
+
+    [Fact]
+    public void ReportsOnlyThePagesASurfaceCanOpen()
+    {
+        Assert.Contains(Plugin.Routes.On(PluginSurface.Web), route => route.Name == "settings");
+        Assert.DoesNotContain(Plugin.Routes.On(PluginSurface.Tv), route => route.Name == "settings");
+    }
+
+    [Fact]
+    public void ResolvesEveryPathItSaysItServes()
+    {
+        foreach (PluginRoute route in Plugin.Routes.Routes)
+        {
+            string path = route.Path.Contains(':')
+                ? Plugin.Routes.PathTo(route.Name, new Dictionary<string, string> { ["id"] = "42" })
+                : route.Path;
+
+            Assert.NotNull(Plugin.Routes.Resolve(path));
+        }
+    }
+
+    [Fact]
+    public void GivesTheClientAShellForEveryPage()
+    {
+        // A page with no shell renders with the default one, which is the wrong
+        // shape for a grid of artwork and for a form alike.
+        foreach (PluginRoute route in Plugin.Routes.Routes)
+            foreach (string surface in PluginSurface.All)
+                Assert.True(PluginLayout.IsKnown(route.LayoutFor(surface)));
     }
 }

@@ -28,7 +28,12 @@ public class FfProbeService : IFfProbeService
 {
     public static FfProbeService Current { get; } = new();
 
-    private const int ExecutionTimeoutMs = 30000;
+    // A probe over a non-seekable stdin pipe scans to end-of-file on containers whose
+    // duration lives there, which this codebase already measures at ~30 s/file on a
+    // network mount — the same number this ceiling used, so a remote FLAC raced its own
+    // timeout and every track was dropped from the import as unreadable. This bounds a
+    // hung process, nothing else, so it is set well clear of the work it has to allow.
+    private const int ExecutionTimeoutMs = 180000;
     private const int MaxRetries = 3;
 
     public async Task<FfProbeData> CreateAsync(string file, CancellationToken ct = default)
