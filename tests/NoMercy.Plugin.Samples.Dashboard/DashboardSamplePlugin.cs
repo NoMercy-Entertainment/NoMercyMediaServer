@@ -26,12 +26,22 @@ public class DashboardSamplePlugin : IUiPlugin
     [
         new()
         {
-            Section = "Library",
+            Section = PluginKind.Music,
             // A key, not a label. The client resolves it under this plugin's
             // namespace, so a Dutch viewer reads Dutch here too.
             Label = "title",
             Route = "/",
             Icon = "grid"
+        },
+        new()
+        {
+            Section = PluginKind.Dashboard,
+            Label = "settings",
+            Route = "/settings",
+            Icon = "cog",
+            // Offered nowhere but a desktop: it is a form, and a form behind a
+            // remote control is a page nobody finishes.
+            Surfaces = [PluginSurface.Web]
         }
     ];
 
@@ -49,11 +59,19 @@ public class DashboardSamplePlugin : IUiPlugin
         // Branch only where the page is genuinely a different page. A television
         // at four metres is not a narrow desktop. Differences of a single hidden
         // element belong on that element's own box instead.
-        return Task.FromResult(request.Surface switch
+        // The plugin owns everything under its prefix. The route is its own
+        // route space, so nesting is just a path it recognises, and pages it
+        // does not know fall back to its own root rather than to nothing.
+        return Task.FromResult(request.Route switch
         {
-            PluginSurface.Tv => Screen(columns: 4, showDetails: false),
-            PluginSurface.Mobile => Screen(columns: 1, showDetails: false),
-            _ => Screen(columns: 3, showDetails: true)
+            "/settings" => SettingsScreen(),
+            var route when route.StartsWith("/details/") => DetailScreen(route["/details/".Length..]),
+            _ => request.Surface switch
+            {
+                PluginSurface.Tv => Screen(columns: 4, showDetails: false),
+                PluginSurface.Mobile => Screen(columns: 1, showDetails: false),
+                _ => Screen(columns: 3, showDetails: true)
+            }
         });
     }
 
@@ -87,7 +105,11 @@ public class DashboardSamplePlugin : IUiPlugin
                 {
                     Id = "play",
                     Component = "NMButton",
-                    Props = new() { ["ariaLabel"] = "play" }
+                    Props = new() { ["ariaLabel"] = "play" },
+                    // Relative to this plugin. It never writes its own prefix,
+                    // which is what lets the same tree work wherever it is
+                    // mounted and survive being moved to another kind.
+                    Action = PluginNavigation.To("/details/42")
                 }
             ]
         };
@@ -109,5 +131,62 @@ public class DashboardSamplePlugin : IUiPlugin
             });
 
         return new() { Components = [card] };
+    }
+
+    /// <summary>A nested page, reached from the card above.</summary>
+    private static PluginView DetailScreen(string id)
+    {
+        return new()
+        {
+            Components =
+            [
+                new()
+                {
+                    Id = "detail",
+                    Component = "NMCard",
+                    Items =
+                    [
+                        new()
+                        {
+                            Id = "detail-heading",
+                            Component = "NMContentHeader",
+                            Props = new() { ["titleText"] = "title", ["subtitleText"] = id }
+                        },
+                        new()
+                        {
+                            Id = "back",
+                            Component = "NMButton",
+                            Props = new() { ["ariaLabel"] = "back" },
+                            Action = PluginNavigation.To("/")
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    /// <summary>The settings page, which only a desktop is offered.</summary>
+    private static PluginView SettingsScreen()
+    {
+        return new()
+        {
+            Components =
+            [
+                new()
+                {
+                    Id = "settings",
+                    Component = "NMCard",
+                    Items =
+                    [
+                        new()
+                        {
+                            Id = "settings-heading",
+                            Component = "NMContentHeader",
+                            Props = new() { ["titleText"] = "settings" }
+                        }
+                    ]
+                }
+            ]
+        };
     }
 }

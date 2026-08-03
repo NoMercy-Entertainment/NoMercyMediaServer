@@ -48,8 +48,10 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
     /// agreeing on anything but the word.
     /// </summary>
     [HttpGet("api/v{version:apiVersion}/plugins/ui/browse")]
-    public IActionResult Browse()
+    public IActionResult Browse([FromQuery] string? surface)
     {
+        string asking = PluginSurface.IsKnown(surface) ? surface! : PluginSurface.Web;
+
         var groups = pluginManager
             .GetInstalledPlugins()
             .Where(HasUi)
@@ -61,12 +63,15 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
                     entry.Label,
                     entry.Icon,
                     Kind = PluginKind.IsKnown(entry.Section) ? entry.Section : PluginKind.Dashboard,
-                    entry.Route
+                    entry.Route,
+                    // Offered here at all, which is a different question from
+                    // what it looks like once opened.
+                    AppearsHere = entry.AppearsOn(asking)
                 }) ?? []
             )
             // A kind the server does not place is dropped rather than listed
             // with a route nothing answers, which would read as a broken plugin.
-            .Where(entry => PluginKind.DrawsUi(entry.Kind))
+            .Where(entry => PluginKind.DrawsUi(entry.Kind) && entry.AppearsHere)
             .GroupBy(entry => entry.Kind)
             .OrderBy(group => Array.IndexOf(PluginKind.All, group.Key))
             .Select(group => new

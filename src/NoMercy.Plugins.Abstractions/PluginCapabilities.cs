@@ -78,4 +78,26 @@ public class PluginUiMount
     /// </summary>
     [JsonPropertyName("requestsTopLevel")]
     public bool RequestsTopLevel { get; init; }
+
+    /// <summary>
+    /// The surfaces this mount appears on, from <see cref="PluginSurface" />.
+    ///
+    /// Empty means every one, which is the right default: a plugin author who
+    /// says nothing wants their screen everywhere, not nowhere. Naming a subset
+    /// is for a screen that genuinely cannot exist elsewhere, such as one built
+    /// around a file picker on a television.
+    ///
+    /// This is coarser than branching inside the view and answers a different
+    /// question: not what the page looks like on a television, but whether the
+    /// viewer is offered it at all. Listing a screen that cannot work there
+    /// reads as a broken plugin rather than one that was never meant to.
+    /// </summary>
+    [JsonPropertyName("surfaces")]
+    public List<string> Surfaces { get; init; } = [];
+
+    /// <summary>Whether this mount is offered on the given surface.</summary>
+    public bool AppearsOn(string surface)
+    {
+        return Surfaces.Count == 0 || Surfaces.Contains(surface);
+    }
 }
